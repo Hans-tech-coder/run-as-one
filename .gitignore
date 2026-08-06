@@ -39,3 +39,19 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# prisma
+/src/generated/prisma
+*.db
+*.db-journal
+
+# user uploads
+public/uploads/
+
+# IDE and agent settings
+.claude/
+.windsurf/
+screenshot.png
+
+# Keep env example
+!.env.example

@@ -1,0 +1,111 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Organizer {
+  id        String      @id @default(cuid())
+  email     String      @unique
+  password  String
+  name      String
+  role      String      @default("ORGANIZER") // ORGANIZER, SUPER_ADMIN
+  status    String      @default("PENDING") // PENDING, APPROVED, SUSPENDED
+  adminFee  Float       @default(60)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  events    Event[]
+  promoCodes PromoCode[]
+}
+
+model Event {
+  id               String         @id @default(cuid())
+  title            String
+  date             String
+  startTime        String?
+  endTime          String?
+  location         String
+  imageUrl         String
+  raceKitImageUrl  String?
+  description      String?
+  logisticsPickup  Boolean        @default(true)
+  logisticsDeliveryFee Float      @default(0)
+  organizerId      String
+  organizer        Organizer      @relation(fields: [organizerId], references: [id])
+  categories       Category[]
+  registrations    Registration[]
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String
+  distance  String
+  price     Float
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id])
+  runners   Runner[]
+}
+
+model Registration {
+  id                  String   @id @default(cuid())
+  eventId             String
+  event               Event    @relation(fields: [eventId], references: [id])
+  orderRef            String   @unique
+  customerEmail       String
+  customerName        String
+  customerPhone       String?
+  logisticsMethod     String   // "pickup" or "delivery"
+  deliveryAddress     String?
+  deliveryFee         Float    @default(0)
+  subtotal            Float
+  platformFee         Float    @default(0)
+  transactionFee      Float    @default(0)
+  totalAmount         Float
+  status              String   @default("PAID") // PENDING, PAID, FAILED
+  paymentMethod       String   @default("online") // e.g. "gcash", "card", "bank_transfer"
+  proofOfPayment      String?  // path to the uploaded deposit slip
+  transactionNumber   String?  // manually entered bank reference
+  checkoutSessionId   String?
+  runners             Runner[]
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model Runner {
+  id                    String       @id @default(cuid())
+  registrationId        String
+  registration          Registration @relation(fields: [registrationId], references: [id])
+  categoryId            String
+  category              Category     @relation(fields: [categoryId], references: [id])
+  firstName             String
+  lastName              String
+  email                 String
+  phone                 String
+  gender                String
+  birthdate             String
+  singletSize           String
+  emergencyContactName  String
+  emergencyContactPhone String
+  medicalConditions     String?
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+}
+
+model PromoCode {
+  id             String    @id @default(cuid())
+  code           String    @unique
+  discountType   String    // PERCENTAGE or FIXED
+  discountValue  Float
+  usageLimit     Int?
+  usageCount     Int       @default(0)
+  validFrom      DateTime?
+  validUntil     DateTime?
+  organizerId    String
+  organizer      Organizer @relation(fields: [organizerId], references: [id])
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
