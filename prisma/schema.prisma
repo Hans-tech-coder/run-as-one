@@ -36,6 +36,9 @@ model Event {
   organizer        Organizer      @relation(fields: [organizerId], references: [id])
   categories       Category[]
   registrations    Registration[]
+  raceResults      RaceResult[]
+  certificateTemplate String?
+  certificateCoordinates String?
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 }
@@ -48,6 +51,7 @@ model Category {
   eventId   String
   event     Event    @relation(fields: [eventId], references: [id])
   runners   Runner[]
+  raceResults RaceResult[]
 }
 
 model Registration {
@@ -108,4 +112,26 @@ model PromoCode {
   organizer      Organizer @relation(fields: [organizerId], references: [id])
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+}
+
+model RaceResult {
+  id             String    @id @default(cuid())
+  eventId        String
+  event          Event     @relation(fields: [eventId], references: [id])
+  categoryId     String
+  category       Category  @relation(fields: [categoryId], references: [id])
+  bibNumber      String
+  name           String
+  gender         String
+  chipTime       String    // e.g., "02:15:30"
+  chipTimeSecs   Int       // For sorting/ranking
+  gunTime        String?
+  overallRank    Int
+  genderRank     Int
+  categoryRank   Int
+  status         String    @default("FINISHED") // FINISHED, DNF, DNS
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([eventId, bibNumber])
 }

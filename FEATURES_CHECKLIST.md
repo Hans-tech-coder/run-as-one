@@ -34,6 +34,6 @@ Ang checklist na ito ay nakabase sa ating naaprubahang Implementation Plan. Iu-u
   - [x] Organizer Accounts Management (Approve, Suspend, Set Commission Fees)
 
 ## 5. Race Results & Analytics Module
-- [ ] Results Uploader for Organizers (CSV/Excel from RFID timing chips)
-- [ ] Runner Analytics Dashboard (Overall Rank, Gender/Age Category Rank, Pace Details)
-- [ ] Instant E-Certificates Generation (Auto-filled with name, time, and event logo)
+- [x] Results Uploader for Organizers (CSV/Excel from RFID timing chips)
+- [x] Runner Analytics Dashboard (Overall Rank, Gender/Age Category Rank, Pace Details)
+- [x] Instant E-Certificates Generation (Auto-filled with name, time, and event logo)

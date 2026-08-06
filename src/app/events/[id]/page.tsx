@@ -14,6 +14,10 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ i
     include: { categories: true }
   });
 
+  const resultsCount = await db.raceResult.count({
+    where: { eventId: id }
+  });
+
   if (!event) {
     notFound();
   }
@@ -109,9 +113,17 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ i
               {event.logisticsDeliveryFee > 0 && <span>• Delivery (+₱{event.logisticsDeliveryFee})</span>}
             </div>
 
-            <Link href={`/events/${event.id}/register`} className="btn-gradient w-full mt-6 register-btn">
-              Register Now <ChevronRight size={20} />
-            </Link>
+            <div className="flex flex-col gap-3 mt-6">
+              <Link href={`/events/${event.id}/register`} className="btn-gradient w-full register-btn text-center justify-center">
+                Register Now <ChevronRight size={20} />
+              </Link>
+              
+              {resultsCount > 0 && (
+                <Link href={`/events/${event.id}/results`} className="bg-dark border border-accent-blue text-accent-blue hover:bg-accent-blue hover:text-white transition-colors py-3 px-6 rounded-lg font-bold text-center uppercase tracking-wider flex items-center justify-center gap-2">
+                  View Results
+                </Link>
+              )}
+            </div>
           </div>
         </div>
       </section>

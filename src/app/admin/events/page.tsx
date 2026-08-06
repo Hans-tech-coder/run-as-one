@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { Plus, Edit, Users } from 'lucide-react';
+import { Plus, Edit, Users, Trophy } from 'lucide-react';
 import db from '@/lib/db';
 import { getAuthCookie } from '@/lib/auth';
 import { redirect } from 'next/navigation';
@@ -61,6 +61,9 @@ export default async function AdminEventsPage() {
                         <div className="flex items-center gap-2">
                           <Link href={`/admin/events/${event.id}/registrants`} className="p-2 hover:bg-white/10 rounded text-secondary hover:text-accent-blue" title="View Registrants">
                             <Users size={16} />
+                          </Link>
+                          <Link href={`/admin/events/${event.id}/results`} className="p-2 hover:bg-white/10 rounded text-secondary hover:text-accent-orange" title="Manage Results">
+                            <Trophy size={16} />
                           </Link>
                           <Link href={`/admin/events/${event.id}/edit`} className="p-2 hover:bg-white/10 rounded text-secondary hover:text-primary" title="Edit">
                             <Edit size={16} />
