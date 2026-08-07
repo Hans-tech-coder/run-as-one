@@ -25,10 +25,6 @@ export default function OrganizersManagementPage() {
   const [editAdminFee, setEditAdminFee] = useState<number>(0);
   const [isSaving, setIsSaving] = useState(false);
 
-  useEffect(() => {
-    fetchOrganizers();
-  }, []);
-
   const fetchOrganizers = async () => {
     try {
       const res = await fetch('/api/superadmin/organizers');
@@ -42,6 +38,10 @@ export default function OrganizersManagementPage() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchOrganizers();
+  }, []);
 
   const handleStatusChange = async (id: string, newStatus: string) => {
     if (!confirm(`Are you sure you want to change this organizer's status to ${newStatus}?`)) return;

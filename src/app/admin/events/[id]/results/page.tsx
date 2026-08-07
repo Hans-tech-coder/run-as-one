@@ -28,11 +28,10 @@ export default async function AdminResultsPage({ params }: { params: Promise<{ i
     <>
       <header className="admin-header flex items-center justify-between">
         <h1 className="admin-header-title">Race Results for {event.title}</h1>
-        <ResultsUploaderClient event={event} />
       </header>
 
       <div className="admin-content">
-        <ResultsTableClient results={results} />
+        <ResultsTableClient results={results} event={event} />
       </div>
     </>
   );
