@@ -115,7 +115,7 @@ export default function AdminRegister() {
           <button 
             type="submit" 
             disabled={isLoading || !!success}
-            className="btn-gradient auth-submit"
+            className="admin-btn-primary auth-submit"
           >
             {isLoading ? 'Submitting...' : 'Submit Application'}
           </button>

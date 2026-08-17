@@ -1,6 +1,8 @@
 import prisma from '@/lib/db';
 import { getAuthCookie } from '@/lib/auth';
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
 import ResultsUploaderClient from './ResultsUploaderClient';
 import ResultsTableClient from './ResultsTableClient';
 
@@ -27,7 +29,12 @@ export default async function AdminResultsPage({ params }: { params: Promise<{ i
   return (
     <>
       <header className="admin-header flex items-center justify-between">
-        <h1 className="admin-header-title">Race Results for {event.title}</h1>
+        <div className="flex items-center gap-4">
+          <Link href="/admin/events" className="text-secondary hover:text-primary transition-colors">
+            <ArrowLeft size={20} />
+          </Link>
+          <h1 className="admin-header-title">Race Results for {event.title}</h1>
+        </div>
       </header>
 
       <div className="admin-content">

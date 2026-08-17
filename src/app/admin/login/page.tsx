@@ -90,7 +90,7 @@ export default function AdminLogin() {
           <button 
             type="submit" 
             disabled={isLoading}
-            className="btn-gradient auth-submit"
+            className="admin-btn-primary auth-submit"
           >
             {isLoading ? 'Signing in...' : 'Sign In'}
           </button>

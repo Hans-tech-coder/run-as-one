@@ -22,7 +22,7 @@ export default async function PublicResultsPage({
 
   const query = q || '';
   
-  let results = [];
+  let results: any[] = [];
   if (query.length > 2) {
     results = await prisma.raceResult.findMany({
       where: {

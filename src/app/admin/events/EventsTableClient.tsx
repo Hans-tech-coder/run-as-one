@@ -1,11 +1,12 @@
-'use client';
+"use client";
 
-import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { createPortal } from 'react-dom';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
-  ChevronLeft, ChevronRight, ChevronFirst, ChevronLast, 
-  Search, X, Filter, Columns, Plus, ChevronUp, ChevronDown, Check
+  Search, Filter, Eye, X, Columns, Plus,
+  ChevronLeft, ChevronRight, ChevronFirst, ChevronLast, ChevronUp, ChevronDown, Check
 } from 'lucide-react';
+import Link from 'next/link';
+import EventActionsMenu from './EventActionsMenu';
 import {
   Table,
   TableBody,
@@ -23,64 +24,27 @@ import {
   getPaginationRowModel,
   useReactTable,
   SortingState,
-  FilterFn,
   VisibilityState,
 } from '@tanstack/react-table';
-import ResultsUploaderClient from './ResultsUploaderClient';
 
-interface Result {
-  id: string;
-  overallRank: number;
-  categoryRank: number;
-  genderRank: number;
-  bibNumber: string;
-  name: string;
-  gender: string;
-  category: { name: string };
-  chipTime: string;
-  gunTime: string | null;
+interface EventsTableClientProps {
+  events: any[];
 }
 
-interface ResultsTableClientProps {
-  results: Result[];
-  event?: any;
-}
-
-const globalSearchFilterFn: FilterFn<Result> = (row, columnId, filterValue) => {
-  const searchableRowContent = `${row.original.name} ${row.original.bibNumber}`.toLowerCase();
-  const searchTerm = (filterValue ?? "").toLowerCase();
-  return searchableRowContent.includes(searchTerm);
-};
-
-export default function ResultsTableClient({ results, event }: ResultsTableClientProps) {
+export default function EventsTableClient({ events }: EventsTableClientProps) {
+  // Table state
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
-  
-  const [isCategoryOpen, setIsCategoryOpen] = useState(false);
-  const [isGenderOpen, setIsGenderOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isPageSizeOpen, setIsPageSizeOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-  
-  const categoryRef = useRef<HTMLDivElement>(null);
-  const genderRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<HTMLDivElement>(null);
   const pageSizeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (categoryRef.current && !categoryRef.current.contains(event.target as Node)) {
-        setIsCategoryOpen(false);
-      }
-      if (genderRef.current && !genderRef.current.contains(event.target as Node)) {
-        setIsGenderOpen(false);
-      }
       if (viewRef.current && !viewRef.current.contains(event.target as Node)) {
         setIsViewOpen(false);
       }
@@ -92,7 +56,7 @@ export default function ResultsTableClient({ results, event }: ResultsTableClien
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const columns = useMemo<ColumnDef<Result>[]>(() => [
+  const columns = useMemo<ColumnDef<any>[]>(() => [
     {
       id: "select",
       header: ({ table }) => {
@@ -141,58 +105,37 @@ export default function ResultsTableClient({ results, event }: ResultsTableClien
       enableHiding: false,
     },
     {
-      accessorKey: "name",
-      header: "Name",
-      cell: ({ row }) => <span className="font-medium text-gray-200">{row.original.name}</span>,
+      accessorKey: "title",
+      header: "Event Name",
+      cell: ({ row }) => <span className="font-medium text-primary">{row.original.title}</span>,
     },
     {
-      accessorKey: "bibNumber",
-      header: "Bib Number",
-      cell: ({ row }) => <span className="text-gray-400">{row.original.bibNumber}</span>,
+      accessorKey: "date",
+      header: "Date",
+      cell: ({ row }) => row.original.date,
     },
     {
-      id: "category",
-      accessorFn: (row) => row.category.name,
-      header: "Category",
-      cell: ({ row }) => <span className="text-gray-400">{row.original.category.name}</span>,
-      filterFn: (row, columnId, filterValue) => {
-        if (!filterValue || filterValue.length === 0) return true;
-        return filterValue.includes(row.getValue(columnId));
-      }
+      id: "categories",
+      header: "Categories",
+      accessorFn: (row) => row.categories?.length || 0,
+      cell: ({ row }) => `${row.original.categories?.length || 0} categories`,
     },
     {
-      accessorKey: "gender",
-      header: "Gender",
-      cell: ({ row }) => <span className="text-gray-400">{row.original.gender}</span>,
-      filterFn: (row, columnId, filterValue) => {
-        if (!filterValue || filterValue.length === 0) return true;
-        return filterValue.includes(row.getValue(columnId));
-      }
+      accessorKey: "location",
+      header: "Location",
+      cell: ({ row }) => row.original.location,
     },
     {
-      accessorKey: "categoryRank",
-      header: "Overall Rank",
-      cell: ({ row }) => <span className="text-gray-400">#{row.original.categoryRank}</span>,
-    },
-    {
-      accessorKey: "genderRank",
-      header: "Gender Rank",
-      cell: ({ row }) => <span className="text-gray-400">#{row.original.genderRank}</span>,
-    },
-    {
-      accessorKey: "chipTime",
-      header: "Chip Time",
-      cell: ({ row }) => <span className="text-gray-400">{row.original.chipTime}</span>,
-    },
-    {
-      accessorKey: "gunTime",
-      header: "Gun Time",
-      cell: ({ row }) => <span className="text-gray-400">{row.original.gunTime || '-'}</span>,
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => <EventActionsMenu eventId={row.original.id} />,
+      enableSorting: false,
+      enableHiding: false,
     },
   ], []);
 
   const table = useReactTable({
-    data: results,
+    data: events,
     columns,
     state: {
       sorting,
@@ -205,133 +148,35 @@ export default function ResultsTableClient({ results, event }: ResultsTableClien
     onSortingChange: setSorting,
     onGlobalFilterChange: setGlobalFilter,
     onColumnVisibilityChange: setColumnVisibility,
-    globalFilterFn: globalSearchFilterFn,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    initialState: {
-      pagination: {
-        pageSize: 10,
-      }
-    }
   });
-
-  const uniqueCategories = useMemo(() => {
-    const cats = new Set(results.map(r => r.category.name));
-    return Array.from(cats).sort();
-  }, [results]);
-
-  const uniqueGenders = useMemo(() => {
-    const gens = new Set(results.map(r => r.gender).filter(Boolean));
-    return Array.from(gens).sort();
-  }, [results]);
-
-  const selectedCategories = (table.getColumn('category')?.getFilterValue() as string[]) || [];
-  const selectedGenders = (table.getColumn('gender')?.getFilterValue() as string[]) || [];
-
-  const toggleCategory = (cat: string) => {
-    const newSelected = selectedCategories.includes(cat)
-      ? selectedCategories.filter(c => c !== cat)
-      : [...selectedCategories, cat];
-    table.getColumn('category')?.setFilterValue(newSelected.length ? newSelected : undefined);
-  };
-
-  const toggleGender = (gen: string) => {
-    const newSelected = selectedGenders.includes(gen)
-      ? selectedGenders.filter(g => g !== gen)
-      : [...selectedGenders, gen];
-    table.getColumn('gender')?.setFilterValue(newSelected.length ? newSelected : undefined);
-  };
 
   return (
     <div className="flex flex-col gap-4 w-full text-white">
       {/* Top Toolbar */}
       <div className="admin-toolbar" style={{ padding: '0 0 16px 0', borderBottom: 'none' }}>
         <div className="toolbar-actions" style={{ flex: 1 }}>
-          
-          {/* Search Input */}
           <div className="search-wrapper">
             <Search className="search-icon" size={16} />
             <input
               value={globalFilter ?? ''}
               onChange={e => setGlobalFilter(e.target.value)}
               className="search-input"
-              placeholder="Filter by name or bib..."
+              placeholder="Search events by name or location..."
             />
-          </div>
-
-          {/* Category Filter Dropdown */}
-          <div ref={categoryRef} className="relative view-dropdown-container">
-            <button 
-              onClick={() => setIsCategoryOpen(!isCategoryOpen)}
-              className="btn-filter"
-            >
-              <Filter size={16} />
-              Category
-              {selectedCategories.length > 0 && (
-                <span className="ml-1 px-1 bg-white/10 rounded">
-                  {selectedCategories.length}
-                </span>
-              )}
-            </button>
-            {isCategoryOpen && (
-              <div className="absolute left-0 mt-2 bg-[#050505] border border-white/10 rounded-md p-2 min-w-[150px] z-50 shadow-2xl">
-                {uniqueCategories.map(cat => {
-                  const isSelected = selectedCategories.includes(cat);
-                  return (
-                    <div 
-                      key={cat}
-                      className={`flex items-center gap-2 px-2 py-1.5 hover:bg-white/5 cursor-pointer rounded-md text-sm text-white ${isSelected ? 'bg-white/5' : ''}`}
-                      onClick={() => toggleCategory(cat)}
-                    >
-                      <div className={`w-4 h-4 border border-white/10 rounded-sm flex items-center justify-center ${isSelected ? 'bg-white/10' : ''}`}>
-                        {isSelected && <div className="w-2 h-2 bg-white rounded-sm" />}
-                      </div>
-                      {cat}
-                    </div>
-                  );
-                })}
-              </div>
+            {globalFilter && (
+              <button 
+                onClick={() => setGlobalFilter('')}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-300 bg-transparent border-none cursor-pointer"
+              >
+                <X size={14} />
+              </button>
             )}
           </div>
-
-          {/* Gender Filter Dropdown */}
-          <div ref={genderRef} className="relative view-dropdown-container">
-            <button 
-              onClick={() => setIsGenderOpen(!isGenderOpen)}
-              className="btn-filter"
-            >
-              <Filter size={16} />
-              Gender
-              {selectedGenders.length > 0 && (
-                <span className="ml-1 px-1 bg-white/10 rounded">
-                  {selectedGenders.length}
-                </span>
-              )}
-            </button>
-            {isGenderOpen && (
-              <div className="absolute left-0 mt-2 bg-[#050505] border border-white/10 rounded-md p-2 min-w-[150px] z-50 shadow-2xl">
-                {uniqueGenders.map(gen => {
-                  const isSelected = selectedGenders.includes(gen);
-                  return (
-                    <div 
-                      key={gen}
-                      className={`flex items-center gap-2 px-2 py-1.5 hover:bg-white/5 cursor-pointer rounded-md text-sm text-white ${isSelected ? 'bg-white/5' : ''}`}
-                      onClick={() => toggleGender(gen)}
-                    >
-                      <div className={`w-4 h-4 border border-white/10 rounded-sm flex items-center justify-center ${isSelected ? 'bg-white/10' : ''}`}>
-                        {isSelected && <div className="w-2 h-2 bg-white rounded-sm" />}
-                      </div>
-                      {gen}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Column Visibility Dropdown */}
+          
           <div ref={viewRef} className="relative view-dropdown-container">
             <button 
               onClick={() => setIsViewOpen(!isViewOpen)}
@@ -340,7 +185,7 @@ export default function ResultsTableClient({ results, event }: ResultsTableClien
               <Columns size={16} /> View
             </button>
             {isViewOpen && (
-              <div className="absolute left-0 mt-2 bg-[#050505] border border-white/10 rounded-md p-2 min-w-[150px] z-50 shadow-2xl">
+              <div className="absolute right-0 mt-2 bg-[#050505] border border-white/10 rounded-md p-2 min-w-[150px] z-50 shadow-2xl">
                 {table.getAllLeafColumns().filter(col => col.getCanHide()).map(column => {
                   return (
                     <label key={column.id} className="flex items-center gap-2 px-2 py-1.5 hover:bg-white/5 cursor-pointer rounded-md text-sm text-white">
@@ -353,7 +198,7 @@ export default function ResultsTableClient({ results, event }: ResultsTableClien
                         />
                         {column.getIsVisible() && <div className="w-2 h-2 bg-white rounded-sm" />}
                       </div>
-                      <span className="capitalize">{column.id}</span>
+                      <span className="capitalize">{column.id === 'title' ? 'Event Name' : column.id}</span>
                     </label>
                   );
                 })}
@@ -363,7 +208,9 @@ export default function ResultsTableClient({ results, event }: ResultsTableClien
         </div>
 
         <div className="toolbar-actions">
-          {event && <ResultsUploaderClient event={event} />}
+          <Link href="/admin/events/new" className="flex items-center gap-2 border border-white/10 rounded-md h-10 px-4 text-sm text-zinc-200 bg-transparent hover:bg-white/5 transition-all">
+            <Plus size={16} /> Create Event
+          </Link>
         </div>
       </div>
 
@@ -375,12 +222,15 @@ export default function ResultsTableClient({ results, event }: ResultsTableClien
               <TableRow key={headerGroup.id} className="border-b border-white/10 hover:bg-transparent">
                 {headerGroup.headers.map(header => (
                   <TableHead 
-                    key={header.id} 
+                    key={header.id}
                     onClick={header.column.getToggleSortingHandler()}
-                    className={`py-4 px-4 text-gray-400 font-medium h-auto ${header.column.getCanSort() ? 'cursor-pointer select-none' : ''} ${header.column.id === 'index' ? 'pl-8' : ''}`}
+                    className={`py-4 px-4 text-gray-400 font-medium h-auto ${header.column.getCanSort() ? 'cursor-pointer select-none' : ''} ${header.column.id === 'title' ? 'pl-8' : ''}`}
                   >
                     <div className="flex items-center gap-2">
-                      {flexRender(header.column.columnDef.header, header.getContext())}
+                      {flexRender(
+                        header.column.columnDef.header,
+                        header.getContext()
+                      )}
                       {{
                         asc: <ChevronUp className="w-3.5 h-3.5" />,
                         desc: <ChevronDown className="w-3.5 h-3.5" />,
@@ -396,7 +246,7 @@ export default function ResultsTableClient({ results, event }: ResultsTableClien
               table.getRowModel().rows.map(row => (
                 <TableRow key={row.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                   {row.getVisibleCells().map(cell => (
-                    <TableCell key={cell.id} className={`py-4 px-4 text-white ${cell.column.id === 'index' ? 'pl-8' : ''}`}>
+                    <TableCell key={cell.id} className={`py-4 px-4 text-white ${cell.column.id === 'title' ? 'pl-8' : ''}`}>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
@@ -405,7 +255,7 @@ export default function ResultsTableClient({ results, event }: ResultsTableClien
             ) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="py-16 text-center text-gray-500">
-                  No results.
+                  No events found. Create one to get started.
                 </TableCell>
               </TableRow>
             )}
@@ -486,4 +336,3 @@ export default function ResultsTableClient({ results, event }: ResultsTableClien
     </div>
   );
 }
-

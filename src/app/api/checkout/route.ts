@@ -89,7 +89,7 @@ export async function POST(request: Request) {
     
     // Add runners
     participants.forEach((p: any, index: number) => {
-      const category = event.categories.find(c => c.id === p.categoryId);
+      const category = event.categories.find((c: any) => c.id === p.categoryId);
       if (category) {
         lineItems.push({
           currency: 'PHP',

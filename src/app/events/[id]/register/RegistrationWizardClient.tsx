@@ -114,7 +114,7 @@ export default function RegistrationWizardClient({ event, eventId, registration 
 
   // Calculations
   const subtotal = participants.reduce((total, p) => {
-    const cat = event.categories.find(c => c.id === p.categoryId);
+    const cat = event.categories.find((c: any) => c.id === p.categoryId);
     return total + (cat ? cat.price : 0);
   }, 0);
   
@@ -324,7 +324,7 @@ export default function RegistrationWizardClient({ event, eventId, registration 
             <div className="order-summary mt-6">
               <h4 className="mb-4 text-primary">Order Summary</h4>
               {participants.map((p, idx) => {
-                const cat = event.categories.find(c => c.id === p.categoryId);
+                const cat = event.categories.find((c: any) => c.id === p.categoryId);
                 return (
                   <div key={p.id} className="summary-line">
                     <span>Runner {idx + 1} {cat ? `(${cat.name})` : ''}</span>
@@ -413,7 +413,7 @@ export default function RegistrationWizardClient({ event, eventId, registration 
 
                     <h4 className="mb-3 text-secondary">Select Category</h4>
                     <div className="category-grid mb-6">
-                      {event.categories.map(cat => (
+                      {event.categories.map((cat: any) => (
                         <div 
                           key={cat.id} 
                           className={`category-card ${p.categoryId === cat.id ? 'selected' : ''}`}

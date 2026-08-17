@@ -171,23 +171,9 @@ export default function ResultsUploaderClient({ event }: { event: any }) {
     <>
       <button 
         onClick={() => setIsOpen(true)}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          borderRadius: '6px',
-          padding: '0.375rem 0.75rem',
-          fontSize: '0.875rem',
-          color: '#e4e4e7',
-          backgroundColor: 'transparent',
-          cursor: 'pointer',
-          transition: 'all 0.2s'
-        }}
-        onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
-        onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+        className="flex items-center gap-2 border border-white/10 rounded-md h-10 px-4 text-sm text-zinc-200 bg-transparent hover:bg-white/5 transition-all cursor-pointer"
       >
-        <Plus style={{ width: '14px', height: '14px' }} />
+        <Plus size={16} />
         Upload results
       </button>
 
