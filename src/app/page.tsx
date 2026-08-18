@@ -1,5 +1,4 @@
 import React from 'react';
-import Navbar from '@/components/Navbar';
 import HeroSection from '@/components/HeroSection';
 import EventGrid from '@/components/EventGrid';
 import db from '@/lib/db';
@@ -11,38 +10,15 @@ export default async function Home() {
   });
 
   return (
-    <main style={{ position: 'relative', overflow: 'hidden' }}>
+    <div className="relative overflow-hidden w-full flex flex-col items-center">
       {/* Background Orbs matching the mockup */}
-      <div style={{
-        position: 'absolute',
-        top: '-10%',
-        left: '-10%',
-        width: '800px',
-        height: '800px',
-        background: 'var(--accent-blue)',
-        filter: 'blur(200px)',
-        opacity: 0.15,
-        zIndex: -1,
-        borderRadius: '50%'
-      }} />
-      <div style={{
-        position: 'absolute',
-        top: '20%',
-        right: '-10%',
-        width: '600px',
-        height: '600px',
-        background: 'var(--accent-orange)',
-        filter: 'blur(200px)',
-        opacity: 0.15,
-        zIndex: -1,
-        borderRadius: '50%'
-      }} />
+      <div className="absolute -top-[10%] -left-[10%] w-[800px] h-[800px] bg-accent-blue opacity-15 blur-[200px] -z-10 rounded-full" />
+      <div className="absolute top-[20%] -right-[10%] w-[600px] h-[600px] bg-accent-orange opacity-15 blur-[200px] -z-10 rounded-full" />
       
-      <Navbar />
-      <div className="container" style={{ paddingTop: '160px' }}>
+      <div className="w-full relative z-10 flex flex-col items-center gap-16">
         <HeroSection />
         <EventGrid events={events} />
       </div>
-    </main>
+    </div>
   );
 }

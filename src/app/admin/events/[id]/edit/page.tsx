@@ -1,16 +1,23 @@
 "use client";
 
-import React, { useState, useEffect, use } from 'react';
-import { useRouter } from 'next/navigation';
-import { Plus, Trash2, ArrowLeft, UploadCloud, Trash } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, Save, Plus, X, AlertCircle, CheckCircle, Trash2, UploadCloud, Trash } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function EditEventPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
   const router = useRouter();
+  const { id } = React.use(params);
+  
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
   const [error, setError] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+  
+  const [successMsg, setSuccessMsg] = useState('');
+  const [isSuccessOpen, setIsSuccessOpen] = useState(false);
+  const [isSuccessClosing, setIsSuccessClosing] = useState(false);
   
   const [formData, setFormData] = useState({
     title: '',
@@ -23,6 +30,8 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
     description: '',
     logisticsPickup: true,
     logisticsDeliveryFee: 0,
+    certificateTemplate: '',
+    certificateCoordinates: JSON.stringify({ nameY: 50, timeY: 60, catY: 70 }),
   });
 
   const [categories, setCategories] = useState([
@@ -47,10 +56,13 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
           description: data.description || '',
           logisticsPickup: data.logisticsPickup ?? true,
           logisticsDeliveryFee: data.logisticsDeliveryFee || 0,
+          certificateTemplate: data.certificateTemplate || '',
+          certificateCoordinates: data.certificateCoordinates || JSON.stringify({ nameY: 50, timeY: 60, catY: 70 }),
         });
 
         if (data.categories && data.categories.length > 0) {
           setCategories(data.categories.map((c: any) => ({
+            id: c.id,
             name: c.name,
             distance: c.distance,
             price: c.price
@@ -119,11 +131,42 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
         return;
       }
 
-      router.push('/admin/events');
+      setSuccessMsg('Event updated successfully!');
     } catch (err) {
       setError('An unexpected error occurred');
       setIsLoading(false);
     }
+  };
+
+  useEffect(() => {
+    if (error) {
+      requestAnimationFrame(() => setIsOpen(true));
+    }
+  }, [error]);
+
+  const closeErrorModal = () => {
+    setIsOpen(false);
+    setIsClosing(true);
+    setTimeout(() => {
+      setIsClosing(false);
+      setError('');
+    }, 150);
+  };
+
+  useEffect(() => {
+    if (successMsg) {
+      requestAnimationFrame(() => setIsSuccessOpen(true));
+    }
+  }, [successMsg]);
+
+  const closeSuccessModal = () => {
+    setIsSuccessOpen(false);
+    setIsSuccessClosing(true);
+    setTimeout(() => {
+      setIsSuccessClosing(false);
+      setSuccessMsg('');
+      router.push('/admin/events');
+    }, 150);
   };
 
   if (isFetching) {
@@ -146,11 +189,68 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
       </header>
 
       <div className="admin-content max-w-4xl mx-auto">
-        {error && (
-          <div className="bg-red-500/10 border border-red-500/50 text-red-500 p-4 rounded-lg mb-6 text-sm">
-            {error}
+        <div 
+          className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
+            error && !isClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+          }`}
+          style={{ zIndex: 100 }}
+        >
+          <div 
+            className={`t-modal w-full max-w-md bg-[#111] border border-red-500/20 rounded-2xl shadow-2xl p-6 flex flex-col gap-6 ${isOpen ? 'is-open' : ''} ${isClosing ? 'is-closing' : ''}`}
+            role="dialog"
+          >
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-red-500/10 rounded-full text-red-500 shrink-0 mt-1">
+                <AlertCircle size={24} strokeWidth={2} />
+              </div>
+              <div className="flex flex-col gap-2">
+                <h3 className="text-xl font-semibold text-white">Action Failed</h3>
+                <p className="text-gray-400 text-sm leading-relaxed">{error}</p>
+              </div>
+            </div>
+            <div className="flex justify-end pt-2 border-t border-white/5">
+              <button 
+                type="button"
+                onClick={closeErrorModal} 
+                className="px-5 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm font-medium text-white transition-colors"
+              >
+                Acknowledge
+              </button>
+            </div>
           </div>
-        )}
+        </div>
+
+        {/* Success Modal */}
+        <div 
+          className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
+            successMsg && !isSuccessClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+          }`}
+          style={{ zIndex: 100 }}
+        >
+          <div 
+            className={`t-modal w-full max-w-md bg-[#111] border border-green-500/20 rounded-2xl shadow-2xl p-6 flex flex-col gap-6 ${isSuccessOpen ? 'is-open' : ''} ${isSuccessClosing ? 'is-closing' : ''}`}
+            role="dialog"
+          >
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-green-500/10 rounded-full text-green-500 shrink-0 mt-1">
+                <CheckCircle size={24} strokeWidth={2} />
+              </div>
+              <div className="flex flex-col gap-2">
+                <h3 className="text-xl font-semibold text-white">Success</h3>
+                <p className="text-gray-400 text-sm leading-relaxed">{successMsg}</p>
+              </div>
+            </div>
+            <div className="flex justify-end pt-2 border-t border-white/5">
+              <button 
+                type="button"
+                onClick={closeSuccessModal} 
+                className="px-5 py-2 bg-green-500 hover:bg-green-600 rounded-lg text-sm font-medium text-white transition-colors"
+              >
+                Continue
+              </button>
+            </div>
+          </div>
+        </div>
 
         <form onSubmit={handleSubmit} className="admin-form">
           {/* Basic Info */}
@@ -378,6 +478,190 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
                   />
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* E-Certificate Settings */}
+          <div className="admin-panel">
+            <div className="admin-panel-header">
+              <h2 className="admin-panel-title">E-Certificate Settings</h2>
+            </div>
+            <div className="admin-panel-content">
+              
+              <div className="form-group mb-6">
+                <label className="form-label">Certificate Template</label>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                  {/* Premade 1 */}
+                  <div 
+                    className={`border-2 rounded-lg cursor-pointer overflow-hidden transition-all ${formData.certificateTemplate === '/certificates/template_modern_dark.png' ? 'border-accent-blue shadow-lg shadow-accent-blue/20' : 'border-gray-700/50 hover:border-gray-500'}`}
+                    onClick={() => setFormData({...formData, certificateTemplate: '/certificates/template_modern_dark.png'})}
+                  >
+                    <img src="/certificates/template_modern_dark.png" alt="Modern Dark" className="w-full h-32 object-cover" />
+                    <div className="p-2 text-center text-sm font-medium text-primary">Modern Dark</div>
+                  </div>
+                  {/* Premade 2 */}
+                  <div 
+                    className={`border-2 rounded-lg cursor-pointer overflow-hidden transition-all ${formData.certificateTemplate === '/certificates/template_dynamic.png' ? 'border-accent-blue shadow-lg shadow-accent-blue/20' : 'border-gray-700/50 hover:border-gray-500'}`}
+                    onClick={() => setFormData({...formData, certificateTemplate: '/certificates/template_dynamic.png'})}
+                  >
+                    <img src="/certificates/template_dynamic.png" alt="Dynamic" className="w-full h-32 object-cover" />
+                    <div className="p-2 text-center text-sm font-medium text-primary">Dynamic Energy</div>
+                  </div>
+                  {/* Premade 3 */}
+                  <div 
+                    className={`border-2 rounded-lg cursor-pointer overflow-hidden transition-all ${formData.certificateTemplate === '/certificates/template_minimalist.png' ? 'border-accent-blue shadow-lg shadow-accent-blue/20' : 'border-gray-700/50 hover:border-gray-500'}`}
+                    onClick={() => setFormData({...formData, certificateTemplate: '/certificates/template_minimalist.png'})}
+                  >
+                    <img src="/certificates/template_minimalist.png" alt="Minimalist" className="w-full h-32 object-cover" />
+                    <div className="p-2 text-center text-sm font-medium text-primary">Minimalist Classic</div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="h-px bg-gray-700/50 flex-1"></div>
+                  <div className="text-secondary text-sm font-medium">OR</div>
+                  <div className="h-px bg-gray-700/50 flex-1"></div>
+                </div>
+
+                <div className="file-upload-wrapper">
+                  <input 
+                    type="file" 
+                    accept="image/png, image/jpeg, application/pdf"
+                    onChange={e => handleImageUpload(e, 'certificateTemplate')}
+                    className="file-upload-input"
+                  />
+                  <div className="file-upload-content">
+                    <div className="file-upload-icon">
+                      <UploadCloud size={32} />
+                    </div>
+                    <div className="file-upload-title">Upload Custom Template</div>
+                    <div className="file-upload-desc">PNG, JPG, or PDF (Landscape A4 recommended)</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Coordinates Preview */}
+              {formData.certificateTemplate && (
+                <div className="mt-8 border border-gray-700/50 rounded-lg p-6 bg-dark-card/50">
+                  <h3 className="text-lg font-bold text-primary mb-4">Visual Layout Preview</h3>
+                  <p className="text-secondary text-sm mb-6">Adjust the sliders to position the text exactly where you want it on your certificate.</p>
+                  
+                  <div className="flex flex-col lg:flex-row gap-8">
+                    {/* Sliders */}
+                    <div className="w-full lg:w-1/3 flex flex-col gap-6">
+                      {(() => {
+                        let coords = { nameY: 50, timeY: 60, catY: 70 };
+                        try {
+                          coords = JSON.parse(formData.certificateCoordinates || '{}');
+                        } catch(e) {}
+                        
+                        const updateCoord = (field: string, val: number) => {
+                          const newCoords = { ...coords, [field]: val };
+                          setFormData({ ...formData, certificateCoordinates: JSON.stringify(newCoords) });
+                        };
+
+                        return (
+                          <>
+                            <div>
+                              <label className="form-label flex justify-between">
+                                <span>Name Position (Y%)</span>
+                                <span className="text-accent-blue">{coords.nameY || 50}%</span>
+                              </label>
+                              <input 
+                                type="range" min="0" max="100" 
+                                value={coords.nameY || 50} 
+                                onChange={(e) => updateCoord('nameY', Number(e.target.value))}
+                                className="w-full accent-accent-blue"
+                              />
+                            </div>
+                            <div>
+                              <label className="form-label flex justify-between">
+                                <span>Finish Time Position (Y%)</span>
+                                <span className="text-accent-blue">{coords.timeY || 60}%</span>
+                              </label>
+                              <input 
+                                type="range" min="0" max="100" 
+                                value={coords.timeY || 60} 
+                                onChange={(e) => updateCoord('timeY', Number(e.target.value))}
+                                className="w-full accent-accent-blue"
+                              />
+                            </div>
+                            <div>
+                              <label className="form-label flex justify-between">
+                                <span>Category Position (Y%)</span>
+                                <span className="text-accent-blue">{coords.catY || 70}%</span>
+                              </label>
+                              <input 
+                                type="range" min="0" max="100" 
+                                value={coords.catY || 70} 
+                                onChange={(e) => updateCoord('catY', Number(e.target.value))}
+                                className="w-full accent-accent-blue"
+                              />
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+
+                    {/* Preview Box */}
+                    <div className="w-full lg:w-2/3">
+                      <div className="relative w-full aspect-[1.414] bg-dark-bg border border-gray-700/50 rounded-md overflow-hidden shadow-xl">
+                        {/* Background Image */}
+                        {formData.certificateTemplate.startsWith('data:application/pdf') ? (
+                          <div className="absolute inset-0 flex items-center justify-center p-8 text-center text-secondary bg-dark-bg/80 z-0">
+                            PDF Template Uploaded (Preview uses blank background)
+                          </div>
+                        ) : (
+                          <img 
+                            src={formData.certificateTemplate} 
+                            alt="Certificate Background" 
+                            className="absolute inset-0 w-full h-full object-cover z-0"
+                          />
+                        )}
+                        
+                        {/* Text Overlay */}
+                        {(() => {
+                          let coords = { nameY: 50, timeY: 60, catY: 70 };
+                          try { coords = JSON.parse(formData.certificateCoordinates || '{}'); } catch(e) {}
+                          
+                          // Modern dark theme uses neon/white text, minimalist/dynamic use darker text.
+                          // Just use a strong black with white stroke for maximum visibility on preview.
+                          const textStyle = {
+                            textShadow: '0 0 4px white, 0 0 10px white',
+                            color: '#111'
+                          };
+
+                          return (
+                            <div className="absolute inset-0 z-10 pointer-events-none">
+                              {/* Name */}
+                              <div 
+                                className="absolute w-full text-center font-bold"
+                                style={{ top: `${coords.nameY || 50}%`, transform: 'translateY(-50%)', fontSize: 'clamp(1rem, 3vw, 2.5rem)', ...textStyle }}
+                              >
+                                JUAN DELA CRUZ
+                              </div>
+                              {/* Time */}
+                              <div 
+                                className="absolute w-full text-center font-medium"
+                                style={{ top: `${coords.timeY || 60}%`, transform: 'translateY(-50%)', fontSize: 'clamp(0.8rem, 1.5vw, 1.25rem)', ...textStyle }}
+                              >
+                                FINISH TIME: 04:32:15
+                              </div>
+                              {/* Category */}
+                              <div 
+                                className="absolute w-full text-center font-medium"
+                                style={{ top: `${coords.catY || 70}%`, transform: 'translateY(-50%)', fontSize: 'clamp(0.7rem, 1.2vw, 1rem)', ...textStyle }}
+                              >
+                                CATEGORY: 42K FULL MARATHON
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

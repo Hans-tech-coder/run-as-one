@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   description: "Join the best running events in the Philippines. Register, run, and track your results in one place.",
 };
 
-import ConditionalFooter from "@/components/ConditionalFooter";
+import ClientLayoutWrapper from "./ClientLayoutWrapper";
 
 export default function RootLayout({
   children,
@@ -19,9 +19,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} ${outfit.variable}`} suppressHydrationWarning>
-        {children}
-        <ConditionalFooter />
+      <body className={`${inter.variable} ${outfit.variable} antialiased bg-dark text-white`} suppressHydrationWarning>
+        <ClientLayoutWrapper>
+          {children}
+        </ClientLayoutWrapper>
       </body>
     </html>
   );

@@ -4,7 +4,6 @@ import { Calendar, MapPin, CheckCircle2, ChevronRight, Clock } from 'lucide-reac
 import Link from 'next/link';
 import db from '@/lib/db';
 import './EventDetails.css';
-import Navbar from '@/components/Navbar';
 
 export default async function EventDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -31,9 +30,7 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ i
   ];
 
   return (
-    <main className="event-details-page">
-      <Navbar />
-      
+    <div className="event-details-page">
       {/* Hero Section */}
       <section className="event-hero">
         <div className="event-hero-bg">
@@ -127,6 +124,6 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ i
           </div>
         </div>
       </section>
-    </main>
+    </div>
   );
 }

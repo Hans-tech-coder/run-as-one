@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import Navbar from '@/components/Navbar';
 import { ChevronRight, ArrowLeft, Plus, Trash2, CheckCircle2, UploadCloud, FileImage, X, Info, Ruler } from 'lucide-react';
 import './RegistrationWizard.css';
 
@@ -286,9 +285,8 @@ export default function RegistrationWizardClient({ event, eventId, registration 
 
   if (isSuccessParam) {
     return (
-      <main className="wizard-page">
-        <Navbar />
-        <div className="container mt-navbar success-container">
+      <div className="wizard-page">
+        <div className="container success-container py-8">
           <div className="glass-panel success-card">
             <CheckCircle2 size={80} className="text-accent-blue mb-4" />
             <h1>Registration Successful!</h1>
@@ -301,14 +299,13 @@ export default function RegistrationWizardClient({ event, eventId, registration 
             <button className="btn-gradient w-full mt-6" onClick={() => router.push('/')}>Return to Homepage</button>
           </div>
         </div>
-      </main>
+      </div>
     );
   }
 
   return (
-    <main className="wizard-page">
-      <Navbar />
-      <div className="container mt-navbar wizard-container">
+    <div className="wizard-page">
+      <div className="container wizard-container py-8">
         
         {/* Sidebar Summary */}
         <aside className="wizard-sidebar">
@@ -818,6 +815,6 @@ export default function RegistrationWizardClient({ event, eventId, registration 
           </div>
         </div>
       )}
-    </main>
+    </div>
   );
 }

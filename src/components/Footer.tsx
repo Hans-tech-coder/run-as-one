@@ -3,52 +3,51 @@
 import React from 'react';
 import Link from 'next/link';
 import { Mail, Globe } from 'lucide-react';
-import './Footer.css';
 
 export default function Footer() {
   return (
-    <footer className="footer glass-panel">
-      <div className="container footer-container">
-        <div className="footer-brand">
-          <Link href="/" className="footer-logo">
-            <img src="/logo.png" alt="StrideSync Logo" width="40" height="40" style={{ borderRadius: '10px' }} />
-            <span className="logo-text">StrideSync</span>
+    <footer className="mt-32 pt-16 rounded-t-[40px] border-t border-white/5 bg-[#0a0a0c]/60 glass-panel border-b-0 border-l-0 border-r-0">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-[1.5fr_2fr] gap-12 lg:gap-16 pb-24">
+        <div className="flex flex-col gap-6">
+          <Link href="/" className="flex items-center gap-4 no-underline">
+            <img src="/logo.png" alt="StrideSync Logo" width="40" height="40" className="rounded-[10px]" />
+            <span className="font-sans font-bold text-2xl text-white tracking-tight">StrideSync</span>
           </Link>
-          <p className="footer-tagline">
+          <p className="text-secondary leading-relaxed text-base max-w-[400px]">
             Your premium destination for the best running events. Join the community, track your strides, and reach new finish lines.
           </p>
-          <div className="footer-socials">
-            <a href="#" className="social-icon"><Globe size={20} /></a>
-            <a href="#" className="social-icon"><Mail size={20} /></a>
+          <div className="flex gap-4 mt-6">
+            <a href="#" className="flex items-center justify-center w-10 h-10 rounded-full bg-white/5 text-white transition-all duration-300 hover:bg-gradient-to-r hover:from-accent-orange hover:to-accent-blue hover:text-white hover:-translate-y-0.5"><Globe size={20} /></a>
+            <a href="#" className="flex items-center justify-center w-10 h-10 rounded-full bg-white/5 text-white transition-all duration-300 hover:bg-gradient-to-r hover:from-accent-orange hover:to-accent-blue hover:text-white hover:-translate-y-0.5"><Mail size={20} /></a>
           </div>
         </div>
 
-        <div className="footer-links">
-          <div className="link-group">
-            <h3>Events</h3>
-            <Link href="/events/marathons">Marathons</Link>
-            <Link href="/events/half-marathons">Half Marathons</Link>
-            <Link href="/events/5k-10k">5K & 10K</Link>
-            <Link href="/events/virtual">Virtual Runs</Link>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+          <div className="flex flex-col gap-4">
+            <h3 className="font-sans text-[1.1rem] text-white mb-2">Events</h3>
+            <Link href="/events/marathons" className="text-secondary text-[0.95rem] transition-colors duration-200 hover:text-accent-orange no-underline">Marathons</Link>
+            <Link href="/events/half-marathons" className="text-secondary text-[0.95rem] transition-colors duration-200 hover:text-accent-orange no-underline">Half Marathons</Link>
+            <Link href="/events/5k-10k" className="text-secondary text-[0.95rem] transition-colors duration-200 hover:text-accent-orange no-underline">5K & 10K</Link>
+            <Link href="/events/virtual" className="text-secondary text-[0.95rem] transition-colors duration-200 hover:text-accent-orange no-underline">Virtual Runs</Link>
           </div>
-          <div className="link-group">
-            <h3>Organizers</h3>
-            <Link href="/organizers/host">Host an Event</Link>
-            <Link href="/organizers/pricing">Pricing</Link>
-            <Link href="/organizers/resources">Resources</Link>
-            <Link href="/organizers/login">Organizer Login</Link>
+          <div className="flex flex-col gap-4">
+            <h3 className="font-sans text-[1.1rem] text-white mb-2">Organizers</h3>
+            <Link href="/organizers/host" className="text-secondary text-[0.95rem] transition-colors duration-200 hover:text-accent-orange no-underline">Host an Event</Link>
+            <Link href="/organizers/pricing" className="text-secondary text-[0.95rem] transition-colors duration-200 hover:text-accent-orange no-underline">Pricing</Link>
+            <Link href="/organizers/resources" className="text-secondary text-[0.95rem] transition-colors duration-200 hover:text-accent-orange no-underline">Resources</Link>
+            <Link href="/organizers/login" className="text-secondary text-[0.95rem] transition-colors duration-200 hover:text-accent-orange no-underline">Organizer Login</Link>
           </div>
-          <div className="link-group">
-            <h3>Support</h3>
-            <Link href="/faq">FAQ</Link>
-            <Link href="/contact">Contact Us</Link>
-            <Link href="/terms">Terms of Service</Link>
-            <Link href="/privacy">Privacy Policy</Link>
+          <div className="flex flex-col gap-4">
+            <h3 className="font-sans text-[1.1rem] text-white mb-2">Support</h3>
+            <Link href="/faq" className="text-secondary text-[0.95rem] transition-colors duration-200 hover:text-accent-orange no-underline">FAQ</Link>
+            <Link href="/contact" className="text-secondary text-[0.95rem] transition-colors duration-200 hover:text-accent-orange no-underline">Contact Us</Link>
+            <Link href="/terms" className="text-secondary text-[0.95rem] transition-colors duration-200 hover:text-accent-orange no-underline">Terms of Service</Link>
+            <Link href="/privacy" className="text-secondary text-[0.95rem] transition-colors duration-200 hover:text-accent-orange no-underline">Privacy Policy</Link>
           </div>
         </div>
       </div>
       
-      <div className="footer-bottom">
+      <div className="text-center py-8 border-t border-white/5 text-secondary text-sm">
         <p>&copy; {new Date().getFullYear()} StrideSync. All rights reserved.</p>
       </div>
     </footer>

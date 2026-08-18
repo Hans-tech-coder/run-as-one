@@ -3,9 +3,10 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   Search, Filter, Eye, X, Columns, Plus,
-  ChevronLeft, ChevronRight, ChevronFirst, ChevronLast, ChevronUp, ChevronDown, Check
+  ChevronLeft, ChevronRight, ChevronFirst, ChevronLast, ChevronUp, ChevronDown, Check, Trash2, AlertCircle
 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import EventActionsMenu from './EventActionsMenu';
 import {
   Table,
@@ -39,6 +40,15 @@ export default function EventsTableClient({ events }: EventsTableClientProps) {
   const [rowSelection, setRowSelection] = useState({});
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isPageSizeOpen, setIsPageSizeOpen] = useState(false);
+  const [tableEvents, setTableEvents] = useState(events);
+  
+  const router = useRouter();
+
+  // Delete Modal State
+  const [deletingEvent, setDeletingEvent] = useState<any | null>(null);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isDeleteClosing, setIsDeleteClosing] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const viewRef = useRef<HTMLDivElement>(null);
   const pageSizeRef = useRef<HTMLDivElement>(null);
@@ -55,6 +65,37 @@ export default function EventsTableClient({ events }: EventsTableClientProps) {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const closeDeleteModal = () => {
+    setIsDeleteOpen(false);
+    setIsDeleteClosing(true);
+    setTimeout(() => {
+      setIsDeleteClosing(false);
+      setDeletingEvent(null);
+    }, 150);
+  };
+
+  const handleEventDeleteConfirm = async () => {
+    if (!deletingEvent) return;
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/admin/events/${deletingEvent.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to delete event');
+      }
+
+      setTableEvents(tableEvents.filter((e: any) => e.id !== deletingEvent.id));
+      closeDeleteModal();
+    } catch (error) {
+      console.error(error);
+      alert('An error occurred while deleting the event.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const columns = useMemo<ColumnDef<any>[]>(() => [
     {
@@ -127,15 +168,23 @@ export default function EventsTableClient({ events }: EventsTableClientProps) {
     },
     {
       id: "actions",
-      header: "Actions",
-      cell: ({ row }) => <EventActionsMenu eventId={row.original.id} />,
-      enableSorting: false,
-      enableHiding: false,
+      header: () => <div className="text-right">Actions</div>,
+      cell: ({ row }) => (
+        <div className="flex justify-end pr-2">
+          <EventActionsMenu 
+            eventId={row.original.id} 
+            onDelete={() => {
+              setDeletingEvent(row.original);
+              requestAnimationFrame(() => setIsDeleteOpen(true));
+            }}
+          />
+        </div>
+      ),
     },
   ], []);
 
   const table = useReactTable({
-    data: events,
+    data: tableEvents,
     columns,
     state: {
       sorting,
@@ -329,6 +378,47 @@ export default function EventsTableClient({ events }: EventsTableClientProps) {
               className="flex items-center justify-center w-8 h-8 border border-white/10 rounded-md bg-transparent text-gray-400 hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <ChevronLast className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Delete Confirmation Modal */}
+      <div 
+        className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
+          isDeleteOpen && !isDeleteClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+      >
+        <div 
+          className={`t-modal w-full max-w-md bg-[#111] border border-red-500/20 rounded-2xl shadow-2xl p-6 flex flex-col gap-6 ${isDeleteOpen ? 'is-open' : ''} ${isDeleteClosing ? 'is-closing' : ''}`}
+        >
+          <div className="flex items-start gap-4">
+            <div className="p-3 bg-red-500/10 rounded-full text-red-500 shrink-0 mt-1">
+              <AlertCircle size={24} strokeWidth={2} />
+            </div>
+            <div className="flex flex-col gap-2">
+              <h3 className="text-xl font-semibold text-white">Delete Event</h3>
+              <p className="text-gray-400 text-sm leading-relaxed">
+                Are you sure you want to delete <span className="font-semibold text-white">{deletingEvent?.title}</span>? This action cannot be undone and will permanently remove the event from the database.
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex justify-end gap-3 pt-2 border-t border-white/5">
+            <button 
+              type="button" 
+              onClick={closeDeleteModal} 
+              className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white transition-colors"
+            >
+              Cancel
+            </button>
+            <button 
+              type="button" 
+              onClick={handleEventDeleteConfirm}
+              disabled={isDeleting}
+              className="px-5 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete Event'}
             </button>
           </div>
         </div>

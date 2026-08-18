@@ -1,5 +1,4 @@
 import prisma from '@/lib/db';
-import Navbar from '@/components/Navbar';
 import { ArrowLeft, User, Trophy, Medal, Timer, Hash } from 'lucide-react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
@@ -35,10 +34,8 @@ export default async function RunnerAnalyticsPage({
   };
 
   return (
-    <main className="min-h-screen relative pb-20">
-      <Navbar />
-      
-      <div className="container mx-auto py-8 mt-navbar">
+    <div className="relative pb-20">
+      <div className="container mx-auto py-8">
         <div className="max-w-3xl mx-auto">
           <Link href={`/events/${id}/results`} className="inline-flex items-center gap-2 text-accent-blue hover:text-white transition-colors mb-8">
             <ArrowLeft size={20} /> Back to Search
@@ -111,6 +108,6 @@ export default async function RunnerAnalyticsPage({
 
         </div>
       </div>
-    </main>
+    </div>
   );
 }

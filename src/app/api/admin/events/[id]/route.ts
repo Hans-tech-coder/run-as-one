@@ -36,21 +36,32 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
     const { id } = await params;
     const data = await request.json();
-    const { title, date, startTime, endTime, location, imageUrl, raceKitImageUrl, description, logisticsPickup, logisticsDeliveryFee, categories } = data;
+    const { title, date, startTime, endTime, location, imageUrl, raceKitImageUrl, description, logisticsPickup, logisticsDeliveryFee, certificateTemplate, certificateCoordinates, categories } = data;
 
     if (!title || !date || !location) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Update event and replace categories
-    const updatedEvent = await db.$transaction(async (prisma) => {
-      // Delete existing categories
-      await prisma.category.deleteMany({
-        where: { eventId: id }
+    // Handle category deletion carefully to avoid FK constraints
+    const incomingIds = categories.filter((c: any) => c.id).map((c: any) => c.id);
+    
+    try {
+      await db.category.deleteMany({
+        where: { 
+          eventId: id,
+          id: { notIn: incomingIds }
+        }
       });
+    } catch (e: any) {
+      if (e.code === 'P2003') {
+        return NextResponse.json({ error: 'Cannot remove a category that already has registered runners or results.' }, { status: 400 });
+      }
+      throw e;
+    }
 
-      // Update event and create new categories
-      return await prisma.event.update({
+    // Update event and upsert categories
+    const updatedEvent = await db.$transaction(async (prisma) => {
+      const ev = await prisma.event.update({
         where: { id },
         data: {
           title,
@@ -63,24 +74,43 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
           description: description || '',
           logisticsPickup: Boolean(logisticsPickup),
           logisticsDeliveryFee: Number(logisticsDeliveryFee) || 0,
-          categories: {
-            create: categories.map((cat: any) => ({
+          certificateTemplate: certificateTemplate || null,
+          certificateCoordinates: certificateCoordinates || null,
+        }
+      });
+
+      for (const cat of categories) {
+        if (cat.id) {
+          await prisma.category.update({
+            where: { id: cat.id },
+            data: {
               name: cat.name,
               distance: cat.distance,
               price: Number(cat.price),
-            })),
-          },
-        },
-        include: {
-          categories: true,
-        },
+            }
+          });
+        } else {
+          await prisma.category.create({
+            data: {
+              name: cat.name,
+              distance: cat.distance,
+              price: Number(cat.price),
+              eventId: id,
+            }
+          });
+        }
+      }
+
+      return await prisma.event.findUnique({
+        where: { id },
+        include: { categories: true }
       });
     });
 
     return NextResponse.json(updatedEvent, { status: 200 });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update event error:', error);
-    return NextResponse.json({ error: 'Failed to update event' }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Failed to update event' }, { status: 500 });
   }
 }
 

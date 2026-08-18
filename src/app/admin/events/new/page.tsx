@@ -1,15 +1,21 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Trash2, ArrowLeft, UploadCloud, Trash } from 'lucide-react';
+import { Plus, Trash2, ArrowLeft, UploadCloud, Trash, AlertCircle, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 
 export default function NewEventPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
   
+  const [successMsg, setSuccessMsg] = useState('');
+  const [isSuccessOpen, setIsSuccessOpen] = useState(false);
+  const [isSuccessClosing, setIsSuccessClosing] = useState(false);
+
   const [formData, setFormData] = useState({
     title: '',
     date: '',
@@ -82,11 +88,42 @@ export default function NewEventPage() {
         return;
       }
 
-      router.push('/admin/events');
+      setSuccessMsg('Event created successfully!');
     } catch (err) {
       setError('An unexpected error occurred');
       setIsLoading(false);
     }
+  };
+
+  useEffect(() => {
+    if (error) {
+      requestAnimationFrame(() => setIsOpen(true));
+    }
+  }, [error]);
+
+  const closeErrorModal = () => {
+    setIsOpen(false);
+    setIsClosing(true);
+    setTimeout(() => {
+      setIsClosing(false);
+      setError('');
+    }, 150);
+  };
+
+  useEffect(() => {
+    if (successMsg) {
+      requestAnimationFrame(() => setIsSuccessOpen(true));
+    }
+  }, [successMsg]);
+
+  const closeSuccessModal = () => {
+    setIsSuccessOpen(false);
+    setIsSuccessClosing(true);
+    setTimeout(() => {
+      setIsSuccessClosing(false);
+      setSuccessMsg('');
+      router.push('/admin/events');
+    }, 150);
   };
 
   return (
@@ -101,11 +138,68 @@ export default function NewEventPage() {
       </header>
 
       <div className="admin-content max-w-4xl mx-auto">
-        {error && (
-          <div className="bg-red-500/10 border border-red-500/50 text-red-500 p-4 rounded-lg mb-6 text-sm">
-            {error}
+        <div 
+          className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
+            error && !isClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+          }`}
+          style={{ zIndex: 100 }}
+        >
+          <div 
+            className={`t-modal w-full max-w-md bg-[#111] border border-red-500/20 rounded-2xl shadow-2xl p-6 flex flex-col gap-6 ${isOpen ? 'is-open' : ''} ${isClosing ? 'is-closing' : ''}`}
+            role="dialog"
+          >
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-red-500/10 rounded-full text-red-500 shrink-0 mt-1">
+                <AlertCircle size={24} strokeWidth={2} />
+              </div>
+              <div className="flex flex-col gap-2">
+                <h3 className="text-xl font-semibold text-white">Action Failed</h3>
+                <p className="text-gray-400 text-sm leading-relaxed">{error}</p>
+              </div>
+            </div>
+            <div className="flex justify-end pt-2 border-t border-white/5">
+              <button 
+                type="button"
+                onClick={closeErrorModal} 
+                className="px-5 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm font-medium text-white transition-colors"
+              >
+                Acknowledge
+              </button>
+            </div>
           </div>
-        )}
+        </div>
+
+        {/* Success Modal */}
+        <div 
+          className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
+            successMsg && !isSuccessClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+          }`}
+          style={{ zIndex: 100 }}
+        >
+          <div 
+            className={`t-modal w-full max-w-md bg-[#111] border border-green-500/20 rounded-2xl shadow-2xl p-6 flex flex-col gap-6 ${isSuccessOpen ? 'is-open' : ''} ${isSuccessClosing ? 'is-closing' : ''}`}
+            role="dialog"
+          >
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-green-500/10 rounded-full text-green-500 shrink-0 mt-1">
+                <CheckCircle size={24} strokeWidth={2} />
+              </div>
+              <div className="flex flex-col gap-2">
+                <h3 className="text-xl font-semibold text-white">Success</h3>
+                <p className="text-gray-400 text-sm leading-relaxed">{successMsg}</p>
+              </div>
+            </div>
+            <div className="flex justify-end pt-2 border-t border-white/5">
+              <button 
+                type="button"
+                onClick={closeSuccessModal} 
+                className="px-5 py-2 bg-green-500 hover:bg-green-600 rounded-lg text-sm font-medium text-white transition-colors"
+              >
+                Continue
+              </button>
+            </div>
+          </div>
+        </div>
 
         <form onSubmit={handleSubmit} className="admin-form">
           {/* Basic Info */}

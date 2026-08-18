@@ -12,6 +12,8 @@ interface RegistrantActionsMenuProps {
   paymentMethod: string;
   updatingId: string | null;
   handleStatusChange: (registrationId: string, status: string) => void;
+  onEdit: (runnerId: string) => void;
+  onDelete: (runnerId: string) => void;
 }
 
 export default function RegistrantActionsMenu({ 
@@ -20,7 +22,9 @@ export default function RegistrantActionsMenu({
   status,
   paymentMethod,
   updatingId,
-  handleStatusChange
+  handleStatusChange,
+  onEdit,
+  onDelete
 }: RegistrantActionsMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0 });
@@ -135,7 +139,7 @@ export default function RegistrantActionsMenu({
           className="action-dropdown-item flex items-center gap-3 px-4 py-2 text-sm text-left"
           role="menuitem"
           onClick={() => {
-            alert('Edit registrant functionality coming soon');
+            onEdit(runnerId);
             closeMenu();
           }}
         >
@@ -160,7 +164,7 @@ export default function RegistrantActionsMenu({
           className="action-dropdown-item danger flex items-center gap-3 px-4 py-2 text-sm text-left"
           role="menuitem"
           onClick={() => {
-            alert('Delete registrant functionality coming soon');
+            onDelete(runnerId);
             closeMenu();
           }}
         >

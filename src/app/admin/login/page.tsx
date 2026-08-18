@@ -90,16 +90,16 @@ export default function AdminLogin() {
           <button 
             type="submit" 
             disabled={isLoading}
-            className="admin-btn-primary auth-submit"
+            className="btn-gradient auth-submit text-white font-medium"
           >
             {isLoading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
 
         <div className="auth-footer">
-          Don't have an account?{' '}
+          Want to organize events?{' '}
           <Link href="/admin/register" className="auth-link">
-            Apply for an account
+            Apply as an Organizer
           </Link>
         </div>
       </div>

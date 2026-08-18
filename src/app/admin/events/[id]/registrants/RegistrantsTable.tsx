@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
-  Search, Filter, Download, Eye, X, 
+  Search, Filter, Download, Eye, X, Trash2,
   ChevronLeft, ChevronRight, ChevronFirst, ChevronLast, Columns, ChevronUp, ChevronDown, CheckCircle, Check
 } from 'lucide-react';
 import RegistrantActionsMenu from './RegistrantActionsMenu';
@@ -35,6 +35,23 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
   const [runners, setRunners] = useState(initialRunners);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [viewingRunner, setViewingRunner] = useState<any | null>(null);
+
+  // Edit Modal State
+  const [editingRunner, setEditingRunner] = useState<any | null>(null);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isEditClosing, setIsEditClosing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Delete Modal State
+  const [deletingRunner, setDeletingRunner] = useState<any | null>(null);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isDeleteClosing, setIsDeleteClosing] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Bulk Delete Modal State
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
+  const [isBulkDeleteClosing, setIsBulkDeleteClosing] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   
   // Table state
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -85,6 +102,136 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
       setUpdatingId(null);
     }
   };
+
+  const openEditModal = (runnerId: string) => {
+    const runner = runners.find(r => r.id === runnerId);
+    if (runner) {
+      setEditingRunner({ ...runner });
+      setIsEditOpen(true);
+    }
+  };
+
+  const closeEditModal = () => {
+    setIsEditOpen(false);
+    setIsEditClosing(true);
+    setTimeout(() => {
+      setIsEditClosing(false);
+      setEditingRunner(null);
+    }, 150);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingRunner) return;
+    
+    setIsSaving(true);
+    try {
+      const res = await fetch(`/api/admin/runners/${editingRunner.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editingRunner),
+      });
+      
+      if (res.ok) {
+        const updatedRunnerData = await res.json();
+        // The API returns the updated runner. We need to merge it carefully
+        setRunners(runners.map(r => r.id === editingRunner.id ? { 
+          ...r, 
+          name: `${updatedRunnerData.firstName} ${updatedRunnerData.lastName}`,
+          email: updatedRunnerData.email,
+          size: updatedRunnerData.singletSize,
+          // Preserve other original properties like orderRef, amount, status which belong to Registration
+        } : r));
+        closeEditModal();
+      } else {
+        alert('Failed to update runner');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('An error occurred while updating runner');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const openDeleteModal = (runnerId: string) => {
+    const runner = runners.find(r => r.id === runnerId);
+    if (runner) {
+      setDeletingRunner(runner);
+      setIsDeleteOpen(true);
+    }
+  };
+
+  const closeDeleteModal = () => {
+    setIsDeleteOpen(false);
+    setIsDeleteClosing(true);
+    setTimeout(() => {
+      setIsDeleteClosing(false);
+      setDeletingRunner(null);
+    }, 150);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deletingRunner) return;
+    
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/admin/runners/${deletingRunner.id}`, {
+        method: 'DELETE',
+      });
+      
+      if (res.ok) {
+        setRunners(runners.filter(r => r.id !== deletingRunner.id));
+        closeDeleteModal();
+      } else {
+        alert('Failed to delete runner');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('An error occurred while deleting runner');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const closeBulkDeleteModal = () => {
+    setIsBulkDeleteOpen(false);
+    setIsBulkDeleteClosing(true);
+    setTimeout(() => {
+      setIsBulkDeleteClosing(false);
+    }, 150);
+  };
+
+  const handleBulkDeleteConfirm = async () => {
+    const selectedRows = table.getSelectedRowModel().rows;
+    if (selectedRows.length === 0) return;
+    
+    const runnerIds = selectedRows.map(row => row.original.id);
+    
+    setIsBulkDeleting(true);
+    try {
+      const res = await fetch('/api/admin/runners/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ runnerIds })
+      });
+      
+      if (res.ok) {
+        setRunners(runners.filter(r => !runnerIds.includes(r.id)));
+        setRowSelection({});
+        closeBulkDeleteModal();
+      } else {
+        alert('Failed to delete selected runners');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('An error occurred while deleting runners');
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+
 
   const columns = useMemo<ColumnDef<any>[]>(() => [
     {
@@ -221,6 +368,8 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
             paymentMethod={row.original.paymentMethod || ''}
             updatingId={updatingId}
             handleStatusChange={handleStatusChange}
+            onEdit={openEditModal}
+            onDelete={openDeleteModal}
           />
         </div>
       ),
@@ -296,8 +445,11 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
       'Medical Conditions', 'Logistics Method', 'Delivery Address', 'Payment Method', 'Status'
     ];
     
-    // Use filtered data from table
-    const csvRows = table.getFilteredRowModel().rows.map(r => {
+    // Use selected rows if any, otherwise fallback to all filtered rows
+    const selectedRows = table.getSelectedRowModel().rows;
+    const rowsToExport = selectedRows.length > 0 ? selectedRows : table.getFilteredRowModel().rows;
+
+    const csvRows = rowsToExport.map(r => {
       const runner = r.original;
       return [
         runner.orderRef, runner.firstName, runner.lastName, runner.email, runner.phone, runner.gender, runner.birthdate,
@@ -462,7 +614,15 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
           </div>
         </div>
 
-        <div className="toolbar-actions">
+        <div className="toolbar-actions flex items-center gap-2">
+          {table.getSelectedRowModel().rows.length > 0 && (
+            <button 
+              onClick={() => setIsBulkDeleteOpen(true)} 
+              className="btn-filter bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20 hover:text-red-400"
+            >
+              <Trash2 size={16} /> Delete Selected ({table.getSelectedRowModel().rows.length})
+            </button>
+          )}
           <button onClick={handleExportCSV} className="btn-filter">
             <Download size={16} /> Export to CSV
           </button>
@@ -704,6 +864,231 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
           </div>
         </div>
       )}
+
+      {/* Edit Modal */}
+      <div 
+        className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
+          isEditOpen && !isEditClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+      >
+        <div 
+          className={`t-modal w-full max-w-2xl bg-[#111] border border-white/10 rounded-2xl shadow-2xl flex flex-col max-h-[90vh] ${isEditOpen ? 'is-open' : ''} ${isEditClosing ? 'is-closing' : ''}`}
+        >
+          <div className="p-6 border-b border-white/10 flex justify-between items-center shrink-0">
+            <h3 className="text-xl font-semibold text-white">Edit Registrant</h3>
+            <button onClick={closeEditModal} className="text-gray-400 hover:text-white transition-colors">
+              <X size={20} />
+            </button>
+          </div>
+          
+          <div className="p-6 overflow-y-auto">
+            {editingRunner && (
+              <form id="edit-runner-form" onSubmit={handleEditSubmit} className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm text-gray-400">First Name</label>
+                    <input 
+                      type="text" 
+                      required 
+                      value={editingRunner.firstName || ''} 
+                      onChange={e => setEditingRunner({...editingRunner, firstName: e.target.value})}
+                      className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-white/30" 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm text-gray-400">Last Name</label>
+                    <input 
+                      type="text" 
+                      required 
+                      value={editingRunner.lastName || ''} 
+                      onChange={e => setEditingRunner({...editingRunner, lastName: e.target.value})}
+                      className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-white/30" 
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm text-gray-400">Email</label>
+                    <input 
+                      type="email" 
+                      required 
+                      value={editingRunner.email || ''} 
+                      onChange={e => setEditingRunner({...editingRunner, email: e.target.value})}
+                      className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-white/30" 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm text-gray-400">Phone</label>
+                    <input 
+                      type="text" 
+                      required 
+                      value={editingRunner.phone || ''} 
+                      onChange={e => setEditingRunner({...editingRunner, phone: e.target.value})}
+                      className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-white/30" 
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm text-gray-400">Gender</label>
+                    <select 
+                      value={editingRunner.gender || ''} 
+                      onChange={e => setEditingRunner({...editingRunner, gender: e.target.value})}
+                      className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-white/30"
+                    >
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm text-gray-400">Birthdate</label>
+                    <input 
+                      type="date" 
+                      required 
+                      value={editingRunner.birthdate || ''} 
+                      onChange={e => setEditingRunner({...editingRunner, birthdate: e.target.value})}
+                      className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-white/30" 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm text-gray-400">Singlet Size</label>
+                    <select 
+                      value={editingRunner.singletSize || ''} 
+                      onChange={e => setEditingRunner({...editingRunner, singletSize: e.target.value})}
+                      className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-white/30"
+                    >
+                      <option value="XS">XS</option>
+                      <option value="S">S</option>
+                      <option value="M">M</option>
+                      <option value="L">L</option>
+                      <option value="XL">XL</option>
+                      <option value="2XL">2XL</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-white/10">
+                  <h4 className="text-white font-medium mb-4">Emergency Contact</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm text-gray-400">Contact Name</label>
+                      <input 
+                        type="text" 
+                        required 
+                        value={editingRunner.emergencyContactName || ''} 
+                        onChange={e => setEditingRunner({...editingRunner, emergencyContactName: e.target.value})}
+                        className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-white/30" 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm text-gray-400">Contact Phone</label>
+                      <input 
+                        type="text" 
+                        required 
+                        value={editingRunner.emergencyContactPhone || ''} 
+                        onChange={e => setEditingRunner({...editingRunner, emergencyContactPhone: e.target.value})}
+                        className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-white/30" 
+                      />
+                    </div>
+                  </div>
+                </div>
+              </form>
+            )}
+          </div>
+
+          <div className="p-6 border-t border-white/10 flex justify-end gap-3 shrink-0 bg-black/20">
+            <button 
+              type="button" 
+              onClick={closeEditModal} 
+              className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white transition-colors"
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit" 
+              form="edit-runner-form"
+              disabled={isSaving}
+              className="px-6 py-2 bg-white text-black rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors disabled:opacity-50"
+            >
+              {isSaving ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Delete Confirmation Modal */}
+      <div 
+        className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
+          isDeleteOpen && !isDeleteClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+      >
+        <div 
+          className={`t-modal w-full max-w-md bg-[#111] border border-red-500/20 rounded-2xl shadow-2xl p-6 flex flex-col gap-6 ${isDeleteOpen ? 'is-open' : ''} ${isDeleteClosing ? 'is-closing' : ''}`}
+        >
+          <div className="flex flex-col gap-2">
+            <h3 className="text-xl font-semibold text-white">Delete Registrant</h3>
+            <p className="text-gray-400 text-sm leading-relaxed">
+              Are you sure you want to delete {deletingRunner?.name}? This action cannot be undone and will permanently remove them from the database.
+            </p>
+          </div>
+          
+          <div className="flex justify-end gap-3 pt-2 border-t border-white/5">
+            <button 
+              type="button" 
+              onClick={closeDeleteModal} 
+              className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white transition-colors"
+            >
+              Cancel
+            </button>
+            <button 
+              type="button" 
+              onClick={handleDeleteConfirm}
+              disabled={isDeleting}
+              className="px-5 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Bulk Delete Confirmation Modal */}
+      <div 
+        className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
+          isBulkDeleteOpen && !isBulkDeleteClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+      >
+        <div 
+          className={`t-modal w-full max-w-md bg-[#111] border border-red-500/20 rounded-2xl shadow-2xl p-6 flex flex-col gap-6 ${isBulkDeleteOpen ? 'is-open' : ''} ${isBulkDeleteClosing ? 'is-closing' : ''}`}
+        >
+          <div className="flex flex-col gap-2">
+            <h3 className="text-xl font-semibold text-white">Delete Selected Registrants</h3>
+            <p className="text-gray-400 text-sm leading-relaxed">
+              Are you sure you want to delete the {table.getSelectedRowModel().rows.length} selected registrants? This action cannot be undone and will permanently remove them from the database.
+            </p>
+          </div>
+          
+          <div className="flex justify-end gap-3 pt-2 border-t border-white/5">
+            <button 
+              type="button" 
+              onClick={closeBulkDeleteModal} 
+              className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white transition-colors"
+            >
+              Cancel
+            </button>
+            <button 
+              type="button" 
+              onClick={handleBulkDeleteConfirm}
+              disabled={isBulkDeleting}
+              className="px-5 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+            >
+              {isBulkDeleting ? 'Deleting...' : 'Delete Selected'}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
