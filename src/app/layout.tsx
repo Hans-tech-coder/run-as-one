@@ -19,7 +19,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} ${outfit.variable} antialiased bg-dark text-white`} suppressHydrationWarning>
+      <body className={`${inter.variable} ${outfit.variable} antialiased bg-[var(--bg-primary)] text-white`} suppressHydrationWarning>
         <ClientLayoutWrapper>
           {children}
         </ClientLayoutWrapper>

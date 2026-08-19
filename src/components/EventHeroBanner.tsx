@@ -20,9 +20,9 @@ export default function EventHeroBanner({ event }: EventHeroBannerProps) {
         {event.imageUrl && <img src={event.imageUrl} alt={event.title} />}
         <div className="event-hero-overlay"></div>
       </div>
-      <div className="container event-hero-content">
-        <h1 className="event-hero-title">{event.title}</h1>
-        <div className="event-hero-meta flex flex-wrap gap-6">
+      <div className="container event-hero-content t-stagger is-shown">
+        <h1 className="event-hero-title t-stagger-line t-stagger-line--1">{event.title}</h1>
+        <div className="event-hero-meta flex flex-wrap gap-6 t-stagger-line t-stagger-line--2">
           <div className="meta-item">
             <Calendar className="meta-icon" />
             <span>{event.date}</span>

@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Calendar, MapPin } from 'lucide-react';
+import { Calendar, MapPin, ChevronRight } from 'lucide-react';
 
 // Using a type that matches the Prisma Event model payload
 type DBEvent = {
@@ -33,8 +33,8 @@ function EventCard({ event }: { event: DBEvent }) {
             <MapPin size={18} /> <span>{event.location}</span>
           </div>
         </div>
-        <Link href={`/events/${event.id}`} className="block w-full text-center bg-gradient-to-r from-accent-orange to-accent-blue text-white rounded-xl py-3 sm:py-4 font-bold font-sans uppercase tracking-wider transition-all duration-200 hover:opacity-90 hover:-translate-y-0.5 no-underline">
-          Register
+        <Link href={`/events/${event.id}`} className="btn-gradient w-full py-4 text-base sm:text-lg rounded-2xl group shadow-xl shadow-accent-orange/20 no-underline">
+          Register Now <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform inline-block ml-1" />
         </Link>
       </div>
     </div>

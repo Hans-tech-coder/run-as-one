@@ -143,14 +143,18 @@ html, body {
   background: var(--gradient-primary);
   color: #fff;
   border: none;
-  border-radius: 8px;
-  padding: 0.75rem 1.5rem; /* 12px 24px */
+  border-radius: 1rem; /* 16px */
+  padding: 1rem 1.5rem; /* 16px 24px */
   font-weight: 700;
   font-family: var(--font-sans);
   cursor: pointer;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   transition: opacity 0.2s ease, transform 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
 }
 .btn-gradient:hover {
   opacity: 0.9;

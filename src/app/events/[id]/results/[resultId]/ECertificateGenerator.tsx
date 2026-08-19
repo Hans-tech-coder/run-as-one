@@ -205,19 +205,21 @@ export default function ECertificateGenerator({ result, event }: Props) {
             title="E-Certificate Preview"
           />
         </div>
-        <div className="flex gap-4 t-stagger-line t-stagger-line--3">
-          <button 
-            onClick={handleDownload}
-            className="btn-gradient flex-1 py-4 text-lg flex items-center justify-center gap-2 shadow-lg shadow-accent-blue/20"
-          >
-            <Download size={20} /> Download
-          </button>
-          <button 
-            onClick={handleShare}
-            className="bg-white/10 hover:bg-white/20 border border-white/10 flex-1 py-4 text-lg flex items-center justify-center gap-2 rounded-lg transition-colors text-white"
-          >
-            <Share2 size={20} /> Share
-          </button>
+        <div className="flex flex-col md:flex-row gap-4 w-full">
+          <div className="flex gap-4 w-full t-stagger-line t-stagger-line--3">
+            <button 
+              onClick={handleDownload}
+              className="btn-gradient flex-1 py-4 text-lg flex items-center justify-center gap-2 shadow-lg shadow-accent-blue/20"
+            >
+              <Download size={20} /> Download
+            </button>
+            <button 
+              onClick={handleShare}
+              className="bg-white/10 hover:bg-white/20 border border-white/10 flex-1 py-4 text-lg flex items-center justify-center gap-2 rounded-2xl transition-colors text-white font-bold"
+            >
+              <Share2 size={20} /> Share
+            </button>
+          </div>
         </div>
       </div>
     );

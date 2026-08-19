@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { verifyToken } from '@/lib/jwt';
 
-export async function middleware(request: NextRequest) {
+export default async function proxy(request: NextRequest) {
   // Check if trying to access superadmin routes
   if (request.nextUrl.pathname.startsWith('/superadmin')) {
     const token = request.cookies.get('admin_token')?.value;

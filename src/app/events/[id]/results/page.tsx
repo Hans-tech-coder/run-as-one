@@ -57,9 +57,9 @@ export default async function WinnersOverviewPage({
             
             {/* CTA to Full Leaderboard */}
             <div className="flex justify-center mb-16">
-              <Link href={`/events/${id}/results/full`} className="btn-gradient inline-flex items-center gap-2 text-sm sm:text-base no-underline group px-8 rounded-full">
+              <Link href={`/events/${id}/results/full`} className="btn-gradient w-full max-w-sm py-4 text-base sm:text-lg rounded-2xl group shadow-xl shadow-accent-orange/20 no-underline">
                 View Full Leaderboard
-                <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform inline-block ml-1" />
               </Link>
             </div>
           </div>
