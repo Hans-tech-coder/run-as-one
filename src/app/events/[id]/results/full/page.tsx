@@ -2,6 +2,7 @@ import prisma from '@/lib/db';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { redirect } from 'next/navigation';
+import { Suspense } from 'react';
 import FullResultsClient from './FullResultsClient';
 import EventHeroBanner from '@/components/EventHeroBanner';
 
@@ -55,7 +56,9 @@ export default async function FullResultsPage({
             <p className="text-secondary text-lg">{event.title}</p>
           </div>
 
-          <FullResultsClient results={results} event={event} />
+          <Suspense fallback={<div className="text-center text-white py-12">Loading results...</div>}>
+            <FullResultsClient results={results} event={event} />
+          </Suspense>
         </div>
       </div>
     </div>

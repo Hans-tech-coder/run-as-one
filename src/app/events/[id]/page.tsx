@@ -103,7 +103,7 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ i
                 </Link>
                 
                 {resultsCount > 0 && (
-                  <Link href={`/events/${event.id}/results`} className="w-full bg-white/5 border border-white/10 text-white hover:bg-white/10 hover:border-white/30 transition-all py-4 px-6 rounded-2xl font-bold text-center uppercase tracking-wider flex items-center justify-center gap-2">
+                  <Link href={`/events/${event.id}/results`} className="w-full bg-white/5 border border-white/10 text-white hover:bg-white/10 hover:border-white/30 transition-all py-4 px-6 rounded-[16px] font-bold text-center uppercase tracking-wider flex items-center justify-center gap-2">
                     View Results
                   </Link>
                 )}

@@ -57,7 +57,7 @@ export default async function WinnersOverviewPage({
             
             {/* CTA to Full Leaderboard */}
             <div className="flex justify-center mb-16">
-              <Link href={`/events/${id}/results/full`} className="btn-gradient w-full max-w-sm py-4 text-base sm:text-lg rounded-2xl group shadow-xl shadow-accent-orange/20 no-underline">
+              <Link href={`/events/${id}/results/full`} className="btn-gradient w-full max-w-sm py-4 text-base sm:text-lg rounded-[16px] group shadow-xl shadow-accent-orange/20 no-underline">
                 View Full Leaderboard
                 <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform inline-block ml-1" />
               </Link>
@@ -67,18 +67,24 @@ export default async function WinnersOverviewPage({
           {/* Winners Board */}
           <div className="space-y-16">
             {winnersByCategory.map(cat => (
-              <div key={cat.id} className="category-winners-section relative">
-                <div className="flex items-center justify-center gap-3 mb-8 relative z-10">
-                  <Medal className="text-accent-blue" size={28} />
-                  <h2 className="text-3xl font-bold text-transparent bg-clip-text" style={{ backgroundImage: 'linear-gradient(to right, #ffffff, #a1a1aa)' }}>
-                    {cat.name} ({cat.distance}) Winners
-                  </h2>
-                  <Medal className="text-accent-blue" size={28} />
-                </div>
+                <div key={cat.id} className="category-winners-section relative flex flex-col w-full">
+                  <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 mb-8 relative z-10 w-full">
+                    <div className="flex items-center gap-3">
+                      <Medal className="text-accent-blue" size={28} />
+                      <h2 className="text-2xl md:text-3xl font-bold text-transparent bg-clip-text" style={{ backgroundImage: 'linear-gradient(to right, #ffffff, #a1a1aa)' }}>
+                        {cat.name} ({cat.distance}) Winners
+                      </h2>
+                      <Medal className="text-accent-blue" size={28} />
+                    </div>
+                    <Link href={`/events/${id}/results/full?category=${cat.id}`} className="group bg-white/5 border border-white/10 text-white hover:bg-white/10 hover:border-white/30 transition-all py-2 px-4 rounded-[16px] font-bold text-sm tracking-wide flex items-center gap-1 shrink-0">
+                      View {cat.distance} Results
+                      <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform inline-block" />
+                    </Link>
+                  </div>
                 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full">
                   {/* Male Winners */}
-                  <div className="glass-panel p-6 rounded-2xl border border-white/5 relative overflow-hidden group hover:border-accent-blue/50 transition-colors">
+                  <div className="glass-panel p-6 rounded-[16px] border border-white/5 relative overflow-hidden group hover:border-accent-blue/50 transition-colors">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-accent-blue/5 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-accent-blue/10 transition-colors"></div>
                     
                     <div className="flex items-center gap-3 mb-6 border-b border-white/10 pb-4">
@@ -119,7 +125,7 @@ export default async function WinnersOverviewPage({
                   </div>
                   
                   {/* Female Winners */}
-                  <div className="glass-panel p-6 rounded-2xl border border-white/5 relative overflow-hidden group hover:border-accent-orange/50 transition-colors">
+                  <div className="glass-panel p-6 rounded-[16px] border border-white/5 relative overflow-hidden group hover:border-accent-orange/50 transition-colors">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-accent-orange/5 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-accent-orange/10 transition-colors"></div>
                     
                     <div className="flex items-center gap-3 mb-6 border-b border-white/10 pb-4">

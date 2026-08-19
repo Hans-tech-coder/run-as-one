@@ -407,7 +407,7 @@ export default function RegistrationWizardClient({
                 .
               </p>
 
-              <div className="w-full bg-black/40 border border-white/5 rounded-2xl p-6 mb-8 text-left">
+              <div className="w-full bg-black/40 border border-white/5 rounded-[16px] p-6 mb-8 text-left">
                 <div className="flex justify-between items-center mb-3 pb-3 border-b border-white/5">
                   <span className="text-secondary text-sm">
                     Order Reference
@@ -450,7 +450,7 @@ export default function RegistrationWizardClient({
               <img
                 src={event.imageUrl}
                 alt="Event"
-                className="mini-image w-20 h-20 rounded-2xl object-cover shadow-lg"
+                className="mini-image w-20 h-20 rounded-[16px] object-cover shadow-lg"
               />
               <div>
                 <h3 className="text-xl font-bold text-white mb-1">
@@ -462,7 +462,7 @@ export default function RegistrationWizardClient({
               </div>
             </div>
 
-            <div className="order-summary mt-6 bg-black/40 rounded-2xl p-6 border border-white/5">
+            <div className="order-summary mt-6 bg-black/40 rounded-[16px] p-6 border border-white/5">
               <h4 className="mb-4 text-white font-bold tracking-wide uppercase text-sm">
                 Order Summary
               </h4>
@@ -615,7 +615,7 @@ export default function RegistrationWizardClient({
                 {participants.map((p, idx) => (
                   <div
                     key={p.id}
-                    className="participant-form-block mb-10 p-6 rounded-2xl bg-black/20 border border-white/5 relative"
+                    className="participant-form-block mb-10 p-6 rounded-[16px] bg-black/20 border border-white/5 relative"
                   >
                     <div className="flex justify-between items-center mb-6 pb-4 border-b border-white/10">
                       <h3 className="text-xl font-bold text-white flex items-center gap-2">
@@ -641,7 +641,7 @@ export default function RegistrationWizardClient({
                       {event.categories.map((cat: any) => (
                         <div
                           key={cat.id}
-                          className={`group relative overflow-hidden border rounded-2xl p-5 cursor-pointer transition-all ${
+                          className={`group relative overflow-hidden border rounded-[16px] p-5 cursor-pointer transition-all ${
                             p.categoryId === cat.id
                               ? "border-accent-orange bg-accent-orange/10 shadow-[0_0_20px_rgba(255,107,43,0.15)]"
                               : "border-white/10 bg-black/40 hover:border-white/30 hover:bg-white/5"
@@ -861,7 +861,7 @@ export default function RegistrationWizardClient({
                 ))}
 
                 <button
-                  className="w-full mt-4 flex items-center justify-center gap-2 border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/30 text-white font-bold py-4 rounded-2xl transition-all"
+                  className="w-full mt-4 flex items-center justify-center gap-2 border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/30 text-white font-bold py-4 rounded-[16px] transition-all"
                   onClick={addParticipant}
                 >
                   <Plus size={20} /> Add Another Runner
@@ -869,7 +869,7 @@ export default function RegistrationWizardClient({
 
                 <div className="form-actions mt-10 flex justify-end">
                   <button
-                    className="btn-gradient flex items-center justify-center gap-2 px-10 py-4 rounded-2xl text-lg group shadow-xl shadow-accent-orange/20"
+                    className="btn-gradient flex items-center justify-center gap-2 px-10 py-4 rounded-[16px] text-lg group shadow-xl shadow-accent-orange/20"
                     onClick={handleNext}
                   >
                     Next: Logistics{" "}
@@ -892,7 +892,7 @@ export default function RegistrationWizardClient({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
                   {event.logisticsPickup && (
                     <div
-                      className={`group relative overflow-hidden border rounded-2xl p-6 cursor-pointer transition-all ${
+                      className={`group relative overflow-hidden border rounded-[16px] p-6 cursor-pointer transition-all ${
                         logisticsMethod === "pickup"
                           ? "border-accent-blue bg-accent-blue/10 shadow-[0_0_20px_rgba(0,122,255,0.15)]"
                           : "border-white/10 bg-black/40 hover:border-white/30 hover:bg-white/5"
@@ -925,7 +925,7 @@ export default function RegistrationWizardClient({
 
                   {event.logisticsDeliveryFee > 0 && (
                     <div
-                      className={`group relative overflow-hidden border rounded-2xl p-6 cursor-pointer transition-all ${
+                      className={`group relative overflow-hidden border rounded-[16px] p-6 cursor-pointer transition-all ${
                         logisticsMethod === "delivery"
                           ? "border-accent-blue bg-accent-blue/10 shadow-[0_0_20px_rgba(0,122,255,0.15)]"
                           : "border-white/10 bg-black/40 hover:border-white/30 hover:bg-white/5"
@@ -971,7 +971,7 @@ export default function RegistrationWizardClient({
 
                 <div className="form-actions mt-10 flex justify-end animate-fade-in">
                   <button
-                    className="btn-gradient flex items-center justify-center gap-2 px-10 py-4 rounded-2xl text-lg group shadow-xl shadow-accent-orange/20"
+                    className="btn-gradient flex items-center justify-center gap-2 px-10 py-4 rounded-[16px] text-lg group shadow-xl shadow-accent-orange/20"
                     onClick={handleNext}
                   >
                     Proceed to Checkout{" "}
@@ -993,7 +993,7 @@ export default function RegistrationWizardClient({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
                   <div
-                    className={`group relative overflow-hidden border ${paymentMethod === "gcash" ? "border-[#007DFE] bg-[#007DFE]/10" : "border-white/10 bg-black/40 hover:border-[#007DFE]/50"} rounded-2xl p-6 cursor-pointer transition-all flex items-center gap-4`}
+                    className={`group relative overflow-hidden border ${paymentMethod === "gcash" ? "border-[#007DFE] bg-[#007DFE]/10" : "border-white/10 bg-black/40 hover:border-[#007DFE]/50"} rounded-[16px] p-6 cursor-pointer transition-all flex items-center gap-4`}
                     onClick={() => setPaymentMethod("gcash")}
                   >
                     <div className="absolute top-0 right-0 w-24 h-24 bg-[#007DFE]/10 rounded-full blur-xl -mr-12 -mt-12 group-hover:bg-[#007DFE]/20"></div>
@@ -1013,7 +1013,7 @@ export default function RegistrationWizardClient({
                   </div>
 
                   <div
-                    className={`group relative overflow-hidden border ${paymentMethod === "maya" ? "border-[#00A164] bg-[#00A164]/10" : "border-white/10 bg-black/40 hover:border-[#00A164]/50"} rounded-2xl p-6 cursor-pointer transition-all flex items-center gap-4`}
+                    className={`group relative overflow-hidden border ${paymentMethod === "maya" ? "border-[#00A164] bg-[#00A164]/10" : "border-white/10 bg-black/40 hover:border-[#00A164]/50"} rounded-[16px] p-6 cursor-pointer transition-all flex items-center gap-4`}
                     onClick={() => setPaymentMethod("maya")}
                   >
                     <div className="absolute top-0 right-0 w-24 h-24 bg-[#00A164]/10 rounded-full blur-xl -mr-12 -mt-12 group-hover:bg-[#00A164]/20"></div>
@@ -1033,7 +1033,7 @@ export default function RegistrationWizardClient({
                   </div>
 
                   <div
-                    className={`group relative overflow-hidden border ${paymentMethod === "qrph" ? "border-accent-blue bg-accent-blue/10" : "border-white/10 bg-black/40 hover:border-accent-blue/50"} rounded-2xl p-6 cursor-pointer transition-all flex items-center gap-4`}
+                    className={`group relative overflow-hidden border ${paymentMethod === "qrph" ? "border-accent-blue bg-accent-blue/10" : "border-white/10 bg-black/40 hover:border-accent-blue/50"} rounded-[16px] p-6 cursor-pointer transition-all flex items-center gap-4`}
                     onClick={() => setPaymentMethod("qrph")}
                   >
                     <div className="absolute top-0 right-0 w-24 h-24 bg-accent-blue/10 rounded-full blur-xl -mr-12 -mt-12 group-hover:bg-accent-blue/20"></div>
@@ -1053,7 +1053,7 @@ export default function RegistrationWizardClient({
                   </div>
 
                   <div
-                    className={`group relative flex cursor-pointer items-center gap-4 overflow-hidden rounded-2xl border ${
+                    className={`group relative flex cursor-pointer items-center gap-4 overflow-hidden rounded-[16px] border ${
                       paymentMethod === "card"
                         ? "border-accent-blue bg-accent-blue/10"
                         : "border-white/10 bg-black/40 hover:border-accent-blue/50"
@@ -1081,7 +1081,7 @@ export default function RegistrationWizardClient({
                   </div>
 
                   <div
-                    className={`group relative overflow-hidden border ${paymentMethod === "bank_transfer" ? "border-accent-orange bg-accent-orange/10" : "border-white/10 bg-black/40 hover:border-accent-orange/50"} rounded-2xl p-6 cursor-pointer transition-all flex items-center gap-4`}
+                    className={`group relative overflow-hidden border ${paymentMethod === "bank_transfer" ? "border-accent-orange bg-accent-orange/10" : "border-white/10 bg-black/40 hover:border-accent-orange/50"} rounded-[16px] p-6 cursor-pointer transition-all flex items-center gap-4`}
                     onClick={() => setPaymentMethod("bank_transfer")}
                   >
                     <div className="absolute top-0 right-0 w-24 h-24 bg-accent-orange/10 rounded-full blur-xl -mr-12 -mt-12 group-hover:bg-accent-orange/20"></div>
@@ -1150,7 +1150,7 @@ export default function RegistrationWizardClient({
                   {bankOptions.map((bank) => (
                     <div
                       key={bank.id}
-                      className="group relative overflow-hidden border border-white/10 bg-black/40 hover:border-accent-blue hover:bg-white/5 rounded-2xl p-6 cursor-pointer transition-all text-center"
+                      className="group relative overflow-hidden border border-white/10 bg-black/40 hover:border-accent-blue hover:bg-white/5 rounded-[16px] p-6 cursor-pointer transition-all text-center"
                       onClick={() => setSelectedBankModal(bank)}
                     >
                       <div className="absolute top-0 right-0 w-24 h-24 bg-accent-blue/10 rounded-full blur-2xl -mr-12 -mt-12 group-hover:bg-accent-blue/20 transition-colors"></div>
@@ -1206,7 +1206,7 @@ export default function RegistrationWizardClient({
                 </div>
 
                 {proofFile && (
-                  <div className="file-preview animate-fade-in p-4 bg-white/5 border border-white/10 rounded-2xl mt-4 flex items-center justify-between">
+                  <div className="file-preview animate-fade-in p-4 bg-white/5 border border-white/10 rounded-[16px] mt-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <FileImage size={24} className="text-accent-blue" />
                       <div>

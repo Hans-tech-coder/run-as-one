@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Search, Trophy, User, Hash, ChevronDown, Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   useReactTable,
@@ -19,7 +20,7 @@ interface Result {
   name: string;
   bibNumber: string;
   gender: string;
-  category: { name: string };
+  category: { id: string, name: string };
   chipTime: string;
   gunTime?: string | null;
   categoryRank?: number;
@@ -167,6 +168,16 @@ function ActionMenu({ eventId, resultId }: { eventId: string, resultId: string }
 }
 
 export default function FullResultsClient({ results, event }: Props) {
+  const searchParams = useSearchParams();
+  const categoryParam = searchParams.get('category');
+  
+  // Find the category name corresponding to the ID if the param exists
+  const initialCategoryName = useMemo(() => {
+    if (!categoryParam) return null;
+    const matchedResult = results.find(r => r.category.id === categoryParam);
+    return matchedResult ? matchedResult.category.name : null;
+  }, [categoryParam, results]);
+
   const [globalFilter, setGlobalFilter] = useState('');
   const [sorting, setSorting] = useState<SortingState>([]);
   const [mounted, setMounted] = useState(false);
@@ -272,6 +283,7 @@ export default function FullResultsClient({ results, event }: Props) {
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     initialState: {
+      columnFilters: initialCategoryName ? [{ id: 'category', value: [initialCategoryName] }] : [],
       pagination: {
         pageSize: 10,
       }
