@@ -10,7 +10,8 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   SortingState,
-  ColumnDef
+  ColumnDef,
+  flexRender
 } from '@tanstack/react-table';
 
 interface Result {
@@ -20,6 +21,7 @@ interface Result {
   gender: string;
   category: { name: string };
   chipTime: string;
+  gunTime?: string | null;
   categoryRank?: number;
   genderRank?: number;
 }
@@ -96,6 +98,74 @@ function FilterDropdown({ title, options, selected, onToggle }: { title: string,
   );
 }
 
+// Custom Action Menu using transitions-dev
+function ActionMenu({ eventId, resultId }: { eventId: string, resultId: string }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        close();
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const close = () => {
+    if (!isOpen) return;
+    setIsOpen(false);
+    setIsClosing(true);
+    setTimeout(() => setIsClosing(false), 150);
+  };
+
+  const toggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isOpen) {
+      close();
+    } else {
+      setIsClosing(false);
+      setIsOpen(true);
+    }
+  };
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button 
+        onClick={toggle}
+        className="p-1.5 rounded-lg hover:bg-white/10 transition-colors text-secondary hover:text-white"
+        title="Actions"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+      </button>
+
+      <div 
+        className={`t-dropdown absolute top-full right-0 mt-2 w-40 bg-[#1a1a20] border border-white/10 rounded-xl shadow-xl z-50 overflow-hidden ${isOpen ? 'is-open' : ''} ${isClosing ? 'is-closing' : ''}`}
+        data-origin="top-right"
+      >
+        <div className="p-1">
+          <Link
+            href={`/events/${eventId}/results/${resultId}`}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full text-left block px-3 py-2 text-sm text-white rounded-lg hover:bg-white/5 transition-colors"
+          >
+            View Details
+          </Link>
+          <Link
+            href={`/events/${eventId}/results/${resultId}?cert=1`}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full text-left block px-3 py-2 text-sm text-accent-blue font-medium rounded-lg hover:bg-white/5 transition-colors"
+          >
+            View E-Cert
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function FullResultsClient({ results, event }: Props) {
   const [globalFilter, setGlobalFilter] = useState('');
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -107,13 +177,12 @@ export default function FullResultsClient({ results, event }: Props) {
 
   const columns = useMemo<ColumnDef<Result>[]>(() => [
     {
-      id: "rank",
-      header: "Rank",
-      cell: ({ row }) => (
-        <div className="w-8 h-8 rounded-full bg-dark flex items-center justify-center border border-gray-800 text-secondary font-bold text-sm">
-          {row.index + (table.getState().pagination.pageIndex * table.getState().pagination.pageSize) + 1}
-        </div>
-      ),
+      id: "index",
+      header: "No.",
+      cell: ({ row, table }) => {
+        const index = table.getSortedRowModel().flatRows.indexOf(row);
+        return <div className="text-secondary font-mono">{index + 1}</div>;
+      },
     },
     {
       accessorKey: "name",
@@ -145,6 +214,16 @@ export default function FullResultsClient({ results, event }: Props) {
       }
     },
     {
+      accessorKey: "categoryRank",
+      header: "Category Rank",
+      cell: ({ row }) => <span className="font-mono text-white">#{row.original.categoryRank}</span>,
+    },
+    {
+      accessorKey: "genderRank",
+      header: "Gender Rank",
+      cell: ({ row }) => <span className="font-mono text-white">#{row.original.genderRank}</span>,
+    },
+    {
       accessorKey: "gender",
       header: "Gender",
       filterFn: (row, columnId, filterValue) => {
@@ -157,7 +236,19 @@ export default function FullResultsClient({ results, event }: Props) {
       header: "Chip Time",
       cell: ({ row }) => <span className="font-mono font-bold text-lg">{row.original.chipTime}</span>,
     },
-  ], []);
+    {
+      accessorKey: "gunTime",
+      header: "Gun Time",
+      cell: ({ row }) => <span className="font-mono text-secondary">{row.original.gunTime || '-'}</span>,
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => {
+        return <ActionMenu eventId={event.id} resultId={row.original.id} />;
+      },
+    }
+  ], [event.id]);
 
   // Set up TanStack Table
   const table = useReactTable({
@@ -241,8 +332,8 @@ export default function FullResultsClient({ results, event }: Props) {
       </div>
 
       {/* Desktop Table View */}
-      <div className="hidden md:block glass-panel rounded-2xl overflow-hidden mb-6">
-        <div className="overflow-x-auto">
+      <div className="hidden md:block glass-panel rounded-2xl mb-6">
+        <div className="overflow-x-auto overflow-y-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-white/10 bg-dark/30">
@@ -275,7 +366,7 @@ export default function FullResultsClient({ results, event }: Props) {
                         if (cell.column.id === 'gender') return null;
                         return (
                           <td key={cell.id} className="p-4 align-middle">
-                            {cell.column.columnDef.cell(cell.getContext())}
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
                           </td>
                         );
                       })}
@@ -294,37 +385,60 @@ export default function FullResultsClient({ results, event }: Props) {
           <div className="glass-panel p-8 rounded-xl text-center text-secondary">No results found.</div>
         ) : (
           table.getRowModel().rows.map((row, i) => (
-            <Link 
+            <div 
               key={row.id} 
-              href={`/events/${event.id}/results/${row.original.id}`} 
+              onClick={() => window.location.href = `/events/${event.id}/results/${row.original.id}`}
               className={`block no-underline t-stagger-line t-stagger-line--${(i % 4) + 1}`}
             >
-              <div className="glass-panel p-5 rounded-xl hover:border-accent-blue transition-colors group">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-dark flex items-center justify-center border border-gray-800 text-secondary font-bold text-xs">
+              <div className="glass-panel p-5 rounded-xl hover:border-accent-blue transition-colors group cursor-pointer">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="flex items-start gap-3">
+                    <div className="text-secondary font-mono mt-0.5">
                       {row.index + (table.getState().pagination.pageIndex * table.getState().pagination.pageSize) + 1}
                     </div>
                     <div>
                       <h3 className="font-bold text-white group-hover:text-accent-blue transition-colors">{row.original.name}</h3>
-                      <div className="text-[11px] text-secondary flex items-center gap-2 mt-0.5">
+                      <div className="text-[11px] text-secondary flex items-center gap-2 mt-1">
                         <span className="flex items-center gap-1"><Hash size={10} /> {row.original.bibNumber}</span>
                         <span className="flex items-center gap-1"><User size={10} /> {row.original.gender}</span>
                       </div>
                     </div>
                   </div>
+                  <div className="-mt-1 -mr-2">
+                    <ActionMenu eventId={event.id} resultId={row.original.id} />
+                  </div>
                 </div>
+
+                <div className="grid grid-cols-2 gap-3 mb-3 text-xs">
+                  <div>
+                    <span className="text-secondary block mb-0.5">Category Rank</span>
+                    <span className="font-mono text-white">#{row.original.categoryRank}</span>
+                  </div>
+                  <div>
+                    <span className="text-secondary block mb-0.5">Gender Rank</span>
+                    <span className="font-mono text-white">#{row.original.genderRank}</span>
+                  </div>
+                </div>
+                
                 <div className="flex items-end justify-between border-t border-white/5 pt-3">
                   <span className="bg-accent-blue/10 text-accent-blue px-2 py-1 rounded-md text-[10px] font-bold border border-accent-blue/30">
                     {row.original.category.name}
                   </span>
-                  <div className="text-right">
-                    <span className="text-[10px] text-secondary block">Chip Time</span>
-                    <span className="font-mono font-bold text-white group-hover:text-accent-blue transition-colors">{row.original.chipTime}</span>
+                  <div className="text-right flex items-center gap-4">
+                    {row.original.gunTime && (
+                      <div className="text-right">
+                        <span className="text-[10px] text-secondary block">Gun Time</span>
+                        <span className="font-mono text-secondary text-xs">{row.original.gunTime}</span>
+                      </div>
+                    )}
+                    <div className="text-right">
+                      <span className="text-[10px] text-secondary block">Chip Time</span>
+                      <span className="font-mono font-bold text-white group-hover:text-accent-blue transition-colors text-sm">{row.original.chipTime}</span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </Link>
+            </div>
           ))
         )}
       </div>

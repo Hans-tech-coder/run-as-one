@@ -171,7 +171,7 @@ export default function ResultsTableClient({ results, event }: ResultsTableClien
     },
     {
       accessorKey: "categoryRank",
-      header: "Overall Rank",
+      header: "Category Rank",
       cell: ({ row }) => <span className="text-gray-400">#{row.original.categoryRank}</span>,
     },
     {

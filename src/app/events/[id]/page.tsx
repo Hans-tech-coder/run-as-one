@@ -5,6 +5,8 @@ import Link from 'next/link';
 import db from '@/lib/db';
 import './EventDetails.css';
 
+import EventHeroBanner from '@/components/EventHeroBanner';
+
 export default async function EventDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   
@@ -31,36 +33,7 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ i
 
   return (
     <div className="event-details-page">
-      {/* Hero Section */}
-      <section className="event-hero">
-        <div className="event-hero-bg">
-          <img src={event.imageUrl} alt={event.title} />
-          <div className="event-hero-overlay"></div>
-        </div>
-        <div className="container event-hero-content">
-          <h1 className="event-hero-title">{event.title}</h1>
-          <div className="event-hero-meta flex flex-wrap gap-6">
-            <div className="meta-item">
-              <Calendar className="meta-icon" />
-              <span>{event.date}</span>
-            </div>
-            {(event.startTime || event.endTime) && (
-              <div className="meta-item">
-                <Clock className="meta-icon" />
-                <span>
-                  {event.startTime ? event.startTime : ''} 
-                  {event.startTime && event.endTime ? ' - ' : ''} 
-                  {event.endTime ? event.endTime : ''}
-                </span>
-              </div>
-            )}
-            <div className="meta-item">
-              <MapPin className="meta-icon" />
-              <span>{event.location}</span>
-            </div>
-          </div>
-        </div>
-      </section>
+      <EventHeroBanner event={event as any} />
 
       {/* Main Content */}
       <section className="container event-main-content">

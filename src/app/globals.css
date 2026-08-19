@@ -327,3 +327,6 @@ html, body {
 @media (prefers-reduced-motion: reduce) {
   .t-modal { transition: none !important; }
 }
+
+html, body { overflow-x: hidden; }
+

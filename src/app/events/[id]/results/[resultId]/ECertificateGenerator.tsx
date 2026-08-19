@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Download, Loader2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Download, Loader2, Share2, FileText } from 'lucide-react';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { useSearchParams } from 'next/navigation';
 
 interface Props {
   result: any;
@@ -11,6 +12,8 @@ interface Props {
 
 export default function ECertificateGenerator({ result, event }: Props) {
   const [isGenerating, setIsGenerating] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const searchParams = useSearchParams();
 
   const generateCertificate = async () => {
     setIsGenerating(true);
@@ -141,16 +144,10 @@ export default function ECertificateGenerator({ result, event }: Props) {
       // Serialize the PDFDocument to bytes (a Uint8Array)
       const pdfBytes = await pdfDoc.save();
 
-      // Trigger the browser to download the PDF document
+      // Create blob URL for preview
       const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${result.name.replace(/\s+/g, '_')}_Certificate.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      setPdfUrl(url);
       
     } catch (error) {
       console.error('Error generating certificate:', error);
@@ -159,6 +156,72 @@ export default function ECertificateGenerator({ result, event }: Props) {
       setIsGenerating(false);
     }
   };
+
+  useEffect(() => {
+    if (searchParams.get('cert') === '1' && !pdfUrl && !isGenerating) {
+      generateCertificate();
+    }
+  }, [searchParams]);
+
+  const handleDownload = () => {
+    if (!pdfUrl) return;
+    const link = document.createElement('a');
+    link.href = pdfUrl;
+    link.download = `${result.name.replace(/\s+/g, '_')}_Certificate.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleShare = async () => {
+    if (!pdfUrl) return;
+    try {
+      // In a real app we might generate a public image URL or use Web Share API with files
+      // Here we will just use basic navigator.share if available with the current URL
+      if (navigator.share) {
+        await navigator.share({
+          title: `${result.name} - Certificate of Completion`,
+          text: `Check out my race result for ${event.title}!`,
+          url: window.location.href,
+        });
+      } else {
+        alert("Sharing is not supported on this browser. Try copying the URL.");
+      }
+    } catch (error) {
+      console.log('Error sharing', error);
+    }
+  };
+
+  if (pdfUrl) {
+    return (
+      <div className="mt-8 t-stagger is-shown">
+        <h3 className="text-xl font-bold text-white mb-4 t-stagger-line t-stagger-line--1 flex items-center gap-2">
+          <FileText className="text-accent-blue" /> Your E-Certificate
+        </h3>
+        <div className="glass-panel p-2 rounded-2xl mb-4 t-stagger-line t-stagger-line--2">
+          <iframe 
+            src={`${pdfUrl}#toolbar=0`} 
+            className="w-full h-[600px] rounded-xl border border-white/5"
+            title="E-Certificate Preview"
+          />
+        </div>
+        <div className="flex gap-4 t-stagger-line t-stagger-line--3">
+          <button 
+            onClick={handleDownload}
+            className="btn-gradient flex-1 py-4 text-lg flex items-center justify-center gap-2 shadow-lg shadow-accent-blue/20"
+          >
+            <Download size={20} /> Download
+          </button>
+          <button 
+            onClick={handleShare}
+            className="bg-white/10 hover:bg-white/20 border border-white/10 flex-1 py-4 text-lg flex items-center justify-center gap-2 rounded-lg transition-colors text-white"
+          >
+            <Share2 size={20} /> Share
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <button 
@@ -173,8 +236,8 @@ export default function ECertificateGenerator({ result, event }: Props) {
         </>
       ) : (
         <>
-          <Download size={24} />
-          Download E-Certificate
+          <FileText size={24} />
+          View E-Certificate
         </>
       )}
     </button>

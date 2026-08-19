@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { redirect } from 'next/navigation';
 import FullResultsClient from './FullResultsClient';
+import EventHeroBanner from '@/components/EventHeroBanner';
 
 export default async function FullResultsPage({ 
   params 
@@ -34,7 +35,8 @@ export default async function FullResultsPage({
 
   return (
     <div className="relative w-full">
-      <div className="w-full">
+      <EventHeroBanner event={event as any} />
+      <div className="w-full mt-12">
         <div className="w-full">
           {/* Back Button */}
           <div className="mb-6">

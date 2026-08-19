@@ -1,8 +1,10 @@
+import React from 'react';
 import prisma from '@/lib/db';
 import { ArrowLeft, User, Trophy, Medal, Timer, Hash } from 'lucide-react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import ECertificateGenerator from './ECertificateGenerator';
+import EventHeroBanner from '@/components/EventHeroBanner';
 
 export default async function RunnerAnalyticsPage({ 
   params 
@@ -34,7 +36,8 @@ export default async function RunnerAnalyticsPage({
   };
 
   return (
-    <div className="relative pb-20">
+    <div className="relative pb-20 w-full">
+      <EventHeroBanner event={result.event as any} />
       <div className="container mx-auto py-8">
         <div className="max-w-3xl mx-auto">
           <Link href={`/events/${id}/results`} className="inline-flex items-center gap-2 text-accent-blue hover:text-white transition-colors mb-8">
@@ -79,11 +82,11 @@ export default async function RunnerAnalyticsPage({
           <h2 className="text-2xl font-bold mb-4 text-white flex items-center gap-2">
             <Trophy className="text-accent-orange" /> Official Rankings
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             <div className="glass-panel p-6 rounded-2xl text-center relative overflow-hidden group hover:border-accent-blue/50 transition-colors">
               <div className="text-secondary text-sm mb-2 font-medium">Overall Rank</div>
-              <div className="text-5xl font-bold text-white mb-1">{formatRank(result.overallRank)}</div>
-              <div className="text-xs text-secondary">out of all runners</div>
+              <div className="text-5xl font-bold text-white mb-1">{formatRank(result.categoryRank)}</div>
+              <div className="text-xs text-secondary">in {result.category.name}</div>
             </div>
             
             <div className="glass-panel p-6 rounded-2xl text-center relative overflow-hidden group hover:border-accent-blue/50 transition-colors">
@@ -93,18 +96,12 @@ export default async function RunnerAnalyticsPage({
               </div>
               <div className="text-xs text-secondary">in {result.category.name} ({result.gender})</div>
             </div>
-            
-            <div className="glass-panel p-6 rounded-2xl text-center relative overflow-hidden group hover:border-accent-orange/50 transition-colors">
-              <div className="text-secondary text-sm mb-2 font-medium">Category Rank</div>
-              <div className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-br from-orange-400 to-accent-orange mb-1">
-                {formatRank(result.categoryRank)}
-              </div>
-              <div className="text-xs text-secondary">in {result.category.name}</div>
-            </div>
           </div>
 
           {/* Certificate Generator */}
-          <ECertificateGenerator result={result} event={result.event} />
+          <React.Suspense fallback={<div className="p-8 text-center text-secondary">Loading certificate...</div>}>
+            <ECertificateGenerator result={result} event={result.event} />
+          </React.Suspense>
 
         </div>
       </div>

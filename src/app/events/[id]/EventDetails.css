@@ -6,12 +6,17 @@
 /* Hero Section */
 .event-hero {
   position: relative;
+  /* Break out of max-w-7xl container */
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-top: -160px; /* Counteract ClientLayoutWrapper paddingTop: 160px */
+  margin-bottom: 2rem;
+  
   height: 60vh;
   min-height: 500px;
   display: flex;
   align-items: flex-end;
   padding-bottom: 4rem;
-  padding-top: 100px; /* Account for navbar */
 }
 
 .event-hero-bg {

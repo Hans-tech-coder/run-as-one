@@ -1,5 +1,4 @@
 import React from 'react';
-import Navbar from '@/components/Navbar';
 import Link from 'next/link';
 import { Calendar, MapPin, Trophy } from 'lucide-react';
 import db from '@/lib/db';
@@ -16,9 +15,7 @@ export default async function GlobalResultsPage() {
   });
 
   return (
-    <main className="min-h-screen relative">
-      <Navbar />
-      <div className="container mx-auto mt-navbar py-8">
+    <>
         <div className="text-center mb-12 t-stagger">
           <h1 
             className="text-4xl md:text-5xl font-bold mb-4 text-transparent bg-clip-text pb-1 inline-block t-stagger-line t-stagger-line--1" 
@@ -69,8 +66,7 @@ export default async function GlobalResultsPage() {
             ))}
           </div>
         )}
-      </div>
       <ResultsClientOrchestrator />
-    </main>
+    </>
   );
 }

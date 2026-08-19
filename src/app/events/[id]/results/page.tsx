@@ -2,6 +2,7 @@ import prisma from '@/lib/db';
 import Link from 'next/link';
 import { User, Medal, Hash, ChevronRight } from 'lucide-react';
 import { redirect } from 'next/navigation';
+import EventHeroBanner from '@/components/EventHeroBanner';
 
 export default async function WinnersOverviewPage({ 
   params 
@@ -42,7 +43,8 @@ export default async function WinnersOverviewPage({
 
   return (
     <div className="relative w-full">
-      <div className="w-full">
+      <EventHeroBanner event={event as any} />
+      <div className="w-full mt-12">
         <div className="w-full">
           <div className="text-center mb-10">
             <h1 
