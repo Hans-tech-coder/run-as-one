@@ -200,7 +200,7 @@ export default function FullResultsClient({ results, event }: Props) {
       header: "Runner",
       cell: ({ row }) => (
         <div>
-          <div className="font-bold text-white group-hover:text-accent-blue transition-colors">
+          <div className="font-bold text-white group-hover/row:text-accent-blue transition-colors">
             {row.original.name}
           </div>
           <div className="text-xs text-secondary mt-1 flex items-center gap-3">
@@ -343,58 +343,60 @@ export default function FullResultsClient({ results, event }: Props) {
         </div>
       </div>
 
-      {/* Desktop Table View */}
-      <div className="hidden md:block glass-panel rounded-2xl mb-6">
-        <div className="overflow-x-auto overflow-y-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-white/10 bg-dark/30">
-                {table.getFlatHeaders().map((header) => {
-                  if (header.id === 'gender') return null; // Hide raw gender column on desktop (merged with name)
-                  return (
-                    <th key={header.id} className="p-4 text-xs font-medium text-secondary uppercase tracking-wider">
-                      {header.isPlaceholder ? null : header.column.columnDef.header as React.ReactNode}
-                    </th>
-                  );
-                })}
-              </tr>
-            </thead>
-            <tbody className={`t-stagger ${mounted ? 'is-shown' : ''}`}>
-              {table.getRowModel().rows.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="p-8 text-center text-secondary">
-                    No results found.
-                  </td>
+        {/* Desktop Table View */}
+        <div className="hidden md:block relative rounded-[24px] bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.08] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)] mb-8 overflow-hidden group hover:border-white/[0.12] transition-colors duration-500">
+          <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-accent-blue/5 rounded-full blur-[100px] pointer-events-none"></div>
+          
+          <div className="relative z-10 overflow-x-auto overflow-y-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-white/[0.08] bg-black/40">
+                  {table.getFlatHeaders().map((header) => {
+                    if (header.id === 'gender') return null; // Hide raw gender column on desktop (merged with name)
+                    return (
+                      <th key={header.id} className="p-5 text-xs font-bold text-secondary uppercase tracking-[0.1em]">
+                        {header.isPlaceholder ? null : header.column.columnDef.header as React.ReactNode}
+                      </th>
+                    );
+                  })}
                 </tr>
-              ) : (
-                table.getRowModel().rows.map((row, i) => {
-                  return (
-                    <tr 
-                      key={row.id} 
-                      className="group border-b border-white/5 hover:bg-white/5 transition-colors cursor-pointer"
-                      onClick={() => window.location.href = `/events/${event.id}/results/${row.original.id}`}
-                    >
-                      {row.getVisibleCells().map((cell) => {
-                        if (cell.column.id === 'gender') return null;
-                        return (
-                          <td key={cell.id} className="p-4 align-middle">
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className={`t-stagger ${mounted ? 'is-shown' : ''}`}>
+                {table.getRowModel().rows.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="p-12 text-center text-secondary/50 italic font-medium">
+                      No results found matching your filters.
+                    </td>
+                  </tr>
+                ) : (
+                  table.getRowModel().rows.map((row, i) => {
+                    return (
+                      <tr 
+                        key={row.id} 
+                        className="group/row border-b border-white/[0.03] hover:bg-white/[0.04] transition-colors duration-300 cursor-pointer"
+                        onClick={() => window.location.href = `/events/${event.id}/results/${row.original.id}`}
+                      >
+                        {row.getVisibleCells().map((cell) => {
+                          if (cell.column.id === 'gender') return null;
+                          return (
+                            <td key={cell.id} className="p-5 align-middle">
+                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
 
       {/* Mobile Card View */}
       <div className={`md:hidden flex flex-col gap-3 mb-6 t-stagger ${mounted ? 'is-shown' : ''}`}>
         {table.getRowModel().rows.length === 0 ? (
-          <div className="glass-panel p-8 rounded-xl text-center text-secondary">No results found.</div>
+          <div className="bg-black/30 border border-white/5 p-8 rounded-[20px] text-center text-secondary/70 italic">No results found matching your filters.</div>
         ) : (
           table.getRowModel().rows.map((row, i) => (
             <div 
@@ -402,17 +404,19 @@ export default function FullResultsClient({ results, event }: Props) {
               onClick={() => window.location.href = `/events/${event.id}/results/${row.original.id}`}
               className={`block no-underline t-stagger-line t-stagger-line--${(i % 4) + 1}`}
             >
-              <div className="glass-panel p-5 rounded-xl hover:border-accent-blue transition-colors group cursor-pointer">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex items-start gap-3">
-                    <div className="text-secondary font-mono mt-0.5">
+              <div className="relative rounded-[20px] bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.08] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)] p-5 hover:border-accent-blue/30 hover:bg-white/[0.06] transition-all duration-300 group/row cursor-pointer overflow-hidden">
+                <div className="absolute top-0 right-0 w-[150px] h-[150px] bg-accent-blue/5 rounded-full blur-[50px] -mr-16 -mt-16 pointer-events-none"></div>
+                
+                <div className="flex justify-between items-start mb-4 relative z-10">
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 shrink-0 bg-white/5 rounded-full flex items-center justify-center border border-white/10 text-white font-bold text-sm shadow-[0_4px_10px_rgba(0,0,0,0.3)]">
                       {row.index + (table.getState().pagination.pageIndex * table.getState().pagination.pageSize) + 1}
                     </div>
                     <div>
-                      <h3 className="font-bold text-white group-hover:text-accent-blue transition-colors">{row.original.name}</h3>
-                      <div className="text-[11px] text-secondary flex items-center gap-2 mt-1">
-                        <span className="flex items-center gap-1"><Hash size={10} /> {row.original.bibNumber}</span>
-                        <span className="flex items-center gap-1"><User size={10} /> {row.original.gender}</span>
+                      <h3 className="font-bold text-white text-lg group-hover/row:text-accent-blue transition-colors leading-tight">{row.original.name}</h3>
+                      <div className="text-[11px] text-secondary flex items-center gap-2 mt-1.5 font-medium tracking-wide uppercase">
+                        <span className="flex items-center gap-1"><Hash size={11} className="text-accent-blue/70" /> {row.original.bibNumber}</span>
+                        <span className="flex items-center gap-1"><User size={11} className="text-accent-blue/70" /> {row.original.gender}</span>
                       </div>
                     </div>
                   </div>
@@ -421,7 +425,7 @@ export default function FullResultsClient({ results, event }: Props) {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 mb-3 text-xs">
+                <div className="grid grid-cols-2 gap-3 mb-3 text-xs relative z-10">
                   <div>
                     <span className="text-secondary block mb-0.5">Category Rank</span>
                     <span className="font-mono text-white">#{row.original.categoryRank}</span>
@@ -445,7 +449,7 @@ export default function FullResultsClient({ results, event }: Props) {
                     )}
                     <div className="text-right">
                       <span className="text-[10px] text-secondary block">Chip Time</span>
-                      <span className="font-mono font-bold text-white group-hover:text-accent-blue transition-colors text-sm">{row.original.chipTime}</span>
+                      <span className="font-mono font-bold text-white group-hover/row:text-accent-blue transition-colors text-sm">{row.original.chipTime}</span>
                     </div>
                   </div>
                 </div>

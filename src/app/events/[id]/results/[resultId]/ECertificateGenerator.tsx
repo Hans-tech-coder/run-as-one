@@ -192,56 +192,78 @@ export default function ECertificateGenerator({ result, event }: Props) {
     }
   };
 
-  if (pdfUrl) {
-    return (
-      <div className="mt-8 t-stagger is-shown">
-        <h3 className="text-xl font-bold text-white mb-4 t-stagger-line t-stagger-line--1 flex items-center gap-2">
-          <FileText className="text-accent-blue" /> Your E-Certificate
-        </h3>
-        <div className="glass-panel p-2 rounded-2xl mb-4 t-stagger-line t-stagger-line--2">
-          <iframe 
-            src={`${pdfUrl}#toolbar=0`} 
-            className="w-full h-[600px] rounded-xl border border-white/5"
-            title="E-Certificate Preview"
-          />
-        </div>
-        <div className="flex flex-col md:flex-row gap-4 w-full">
-          <div className="flex gap-4 w-full t-stagger-line t-stagger-line--3">
-            <button 
-              onClick={handleDownload}
-              className="btn-gradient flex-1 py-4 text-lg flex items-center justify-center gap-2 shadow-lg shadow-accent-blue/20"
-            >
-              <Download size={20} /> Download
-            </button>
-            <button 
-              onClick={handleShare}
-              className="bg-white/10 hover:bg-white/20 border border-white/10 flex-1 py-4 text-lg flex items-center justify-center gap-2 rounded-2xl transition-colors text-white font-bold"
-            >
-              <Share2 size={20} /> Share
-            </button>
+  return (
+    <>
+      <button 
+        onClick={generateCertificate}
+        disabled={isGenerating}
+        className="btn-gradient w-full py-4 text-lg flex items-center justify-center gap-3 mt-8 shadow-lg shadow-accent-blue/20 rounded-[16px] group"
+      >
+        {isGenerating ? (
+          <>
+            <Loader2 className="animate-spin" size={24} />
+            Generating E-Certificate...
+          </>
+        ) : (
+          <>
+            <FileText size={24} className="group-hover:scale-110 transition-transform" />
+            View E-Certificate
+          </>
+        )}
+      </button>
+
+      {/* Modal Overlay */}
+      {pdfUrl && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 animate-fade-in">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/90 backdrop-blur-md"
+            onClick={() => setPdfUrl(null)}
+          ></div>
+          
+          {/* Modal Content */}
+          <div className="relative w-full max-w-4xl rounded-[24px] bg-dark border border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-scale-in">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-5 border-b border-white/[0.05] bg-black/40">
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                <FileText className="text-accent-blue" size={20} /> Official E-Certificate
+              </h3>
+              <button 
+                onClick={() => setPdfUrl(null)}
+                className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-secondary hover:text-white hover:bg-white/10 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            
+            {/* Modal Body (Iframe) */}
+            <div className="flex-1 p-4 md:p-6 bg-black/60 overflow-hidden relative flex flex-col justify-center items-center min-h-0">
+              <iframe 
+                src={`${pdfUrl}#toolbar=0`} 
+                className="w-full aspect-[1.414] max-h-full rounded-lg shadow-xl bg-white relative z-10"
+                style={{ maxHeight: 'calc(85vh - 180px)' }}
+                title="E-Certificate Preview"
+              />
+            </div>
+            
+            {/* Modal Footer (Actions) */}
+            <div className="p-5 border-t border-white/[0.05] bg-black/40 flex flex-col sm:flex-row gap-3">
+              <button 
+                onClick={handleDownload}
+                className="btn-gradient flex-1 py-3.5 rounded-[16px] text-white font-bold flex items-center justify-center gap-2"
+              >
+                <Download size={20} /> Download PDF
+              </button>
+              <button 
+                onClick={handleShare}
+                className="flex-1 py-3.5 rounded-[16px] bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold flex items-center justify-center gap-2 transition-all duration-300"
+              >
+                <Share2 size={20} /> Share Result
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    );
-  }
-
-  return (
-    <button 
-      onClick={generateCertificate}
-      disabled={isGenerating}
-      className="btn-gradient w-full py-4 text-lg flex items-center justify-center gap-3 mt-8 shadow-lg shadow-accent-blue/20"
-    >
-      {isGenerating ? (
-        <>
-          <Loader2 className="animate-spin" size={24} />
-          Generating...
-        </>
-      ) : (
-        <>
-          <FileText size={24} />
-          View E-Certificate
-        </>
       )}
-    </button>
+    </>
   );
 }
