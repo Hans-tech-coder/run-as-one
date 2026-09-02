@@ -198,7 +198,6 @@ html, body {
 
 /* Transitions Dev - Texts Reveal (Stagger) */
 .t-stagger-line {
-  display: block;
   opacity: 0;
   transform: translateY(var(--stagger-distance));
   filter: blur(var(--stagger-blur));

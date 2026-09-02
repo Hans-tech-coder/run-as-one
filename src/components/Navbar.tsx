@@ -15,10 +15,7 @@ export default function Navbar() {
 
   const links = [
     { href: "/events", label: "Events" },
-    { href: "/results", label: "Results" },
-    { href: "/strides", label: "My Strides" },
-    { href: "/community", label: "Community" },
-    { href: "/profile", label: "Profile" }
+    { href: "/results", label: "Results" }
   ];
 
   return (
