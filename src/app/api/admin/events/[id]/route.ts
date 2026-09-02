@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { getAuthCookie } from '@/lib/auth';
+import { toCentavos } from '@/lib/money';
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -73,7 +74,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
           raceKitImageUrl: raceKitImageUrl || null,
           description: description || '',
           logisticsPickup: Boolean(logisticsPickup),
-          logisticsDeliveryFee: Number(logisticsDeliveryFee) || 0,
+          // The admin form collects pesos; storage is centavos.
+          logisticsDeliveryFee: toCentavos(logisticsDeliveryFee),
           certificateTemplate: certificateTemplate || null,
           certificateCoordinates: certificateCoordinates || null,
         }
@@ -86,7 +88,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
             data: {
               name: cat.name,
               distance: cat.distance,
-              price: Number(cat.price),
+              price: toCentavos(cat.price),
             }
           });
         } else {
@@ -94,7 +96,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
             data: {
               name: cat.name,
               distance: cat.distance,
-              price: Number(cat.price),
+              price: toCentavos(cat.price),
               eventId: id,
             }
           });

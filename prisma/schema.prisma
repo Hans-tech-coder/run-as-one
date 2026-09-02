@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 model Organizer {
@@ -13,7 +13,8 @@ model Organizer {
   name       String
   role       String      @default("ORGANIZER")
   status     String      @default("PENDING")
-  adminFee   Float       @default(60)
+  /// Centavos. 6000 = ₱60.00
+  adminFee   Int         @default(6000)
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
   events     Event[]
@@ -28,7 +29,8 @@ model Event {
   imageUrl               String
   description            String?
   logisticsPickup        Boolean        @default(true)
-  logisticsDeliveryFee   Float          @default(0)
+  /// Centavos
+  logisticsDeliveryFee   Int            @default(0)
   organizerId            String
   createdAt              DateTime       @default(now())
   updatedAt              DateTime       @updatedAt
@@ -47,7 +49,8 @@ model Category {
   id          String       @id @default(cuid())
   name        String
   distance    String
-  price       Float
+  /// Centavos
+  price       Int
   eventId     String
   event       Event        @relation(fields: [eventId], references: [id])
   raceResults RaceResult[]
@@ -63,11 +66,12 @@ model Registration {
   customerPhone     String?
   logisticsMethod   String
   deliveryAddress   String?
-  deliveryFee       Float    @default(0)
-  subtotal          Float
-  platformFee       Float    @default(0)
-  transactionFee    Float    @default(0)
-  totalAmount       Float
+  /// All amounts below are centavos
+  deliveryFee       Int      @default(0)
+  subtotal          Int
+  platformFee       Int      @default(0)
+  transactionFee    Int      @default(0)
+  totalAmount       Int
   status            String   @default("PAID")
   paymentMethod     String   @default("online")
   checkoutSessionId String?
@@ -103,7 +107,8 @@ model PromoCode {
   id            String    @id @default(cuid())
   code          String    @unique
   discountType  String
-  discountValue Float
+  /// Unit depends on discountType: FIXED = centavos, PERCENTAGE = basis points (1000 = 10%)
+  discountValue Int
   usageLimit    Int?
   usageCount    Int       @default(0)
   validFrom     DateTime?

@@ -29,14 +29,31 @@ export default function NewEventPage() {
     logisticsDeliveryFee: 0,
   });
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, field: string) => {
+  const [uploadingField, setUploadingField] = useState<string | null>(null);
+
+  // Uploads to blob storage and stores the returned URL. This used to inline the
+  // file as a base64 data URL, which meant every event row carried megabytes of
+  // text that each listing query then had to pull down.
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: string) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData(prev => ({ ...prev, [field]: reader.result as string }));
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    setUploadingField(field);
+    setError('');
+    try {
+      const body = new FormData();
+      body.append('file', file);
+
+      const res = await fetch('/api/upload', { method: 'POST', body });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
+
+      setFormData(prev => ({ ...prev, [field]: data.url }));
+    } catch (err: any) {
+      setError(err.message || 'Upload failed');
+      e.target.value = '';
+    } finally {
+      setUploadingField(null);
     }
   };
 
@@ -262,18 +279,21 @@ export default function NewEventPage() {
               <div className="form-group">
                 <label className="form-label">Cover Image</label>
                 {!formData.imageUrl ? (
-                  <div className="file-upload-wrapper">
-                    <input 
-                      type="file" 
+                  <div className="file-upload-wrapper" style={{ opacity: uploadingField ? 0.6 : 1 }}>
+                    <input
+                      type="file"
                       accept="image/*"
                       onChange={e => handleImageUpload(e, 'imageUrl')}
                       className="file-upload-input"
+                      disabled={uploadingField !== null}
                     />
                     <div className="file-upload-content">
                       <div className="file-upload-icon">
                         <UploadCloud size={32} />
                       </div>
-                      <div className="file-upload-title">Click to upload cover image</div>
+                      <div className="file-upload-title">
+                        {uploadingField === 'imageUrl' ? 'Uploading…' : 'Click to upload cover image'}
+                      </div>
                       <div className="file-upload-desc">SVG, PNG, JPG or GIF (max. 800x400px)</div>
                     </div>
                   </div>
@@ -296,18 +316,21 @@ export default function NewEventPage() {
               <div className="form-group">
                 <label className="form-label">Race Kit Poster (Optional)</label>
                 {!formData.raceKitImageUrl ? (
-                  <div className="file-upload-wrapper">
-                    <input 
-                      type="file" 
+                  <div className="file-upload-wrapper" style={{ opacity: uploadingField ? 0.6 : 1 }}>
+                    <input
+                      type="file"
                       accept="image/*"
                       onChange={e => handleImageUpload(e, 'raceKitImageUrl')}
                       className="file-upload-input"
+                      disabled={uploadingField !== null}
                     />
                     <div className="file-upload-content">
                       <div className="file-upload-icon">
                         <UploadCloud size={32} />
                       </div>
-                      <div className="file-upload-title">Click to upload race kit poster</div>
+                      <div className="file-upload-title">
+                        {uploadingField === 'raceKitImageUrl' ? 'Uploading…' : 'Click to upload race kit poster'}
+                      </div>
                       <div className="file-upload-desc">Optional • PNG, JPG (ideal for social sharing)</div>
                     </div>
                   </div>
@@ -434,9 +457,10 @@ export default function NewEventPage() {
             <Link href="/admin/events" className="btn-cancel">
               Cancel
             </Link>
-            <button 
-              type="submit" 
-              disabled={isLoading}
+            {/* Saving mid-upload would store the event without its image URL. */}
+            <button
+              type="submit"
+              disabled={isLoading || uploadingField !== null}
               className="btn-gradient px-8 py-3 rounded-lg font-medium"
             >
               {isLoading ? 'Saving...' : 'Save Event'}

@@ -1,26 +1,29 @@
 import "dotenv/config";
-import { PrismaClient } from '@prisma/client';
-import Database from 'better-sqlite3';
-import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
+import prisma from '../src/lib/db';
 
+/** Connectivity smoke test — confirms the app can reach Neon and read a table. */
 async function main() {
-  console.log("process.env.DATABASE_URL:", process.env.DATABASE_URL);
+  const url = process.env.DATABASE_URL ?? '';
+  // Never print the password.
+  console.log('Host:', url.replace(/^.*@/, '').split('/')[0] || '(DATABASE_URL not set)');
 
   try {
-    const adapter = new PrismaBetterSqlite3({ url: "file:./dev.db" });
-    console.log("Adapter initialized");
-    
-    const prisma = new PrismaClient({ adapter });
-    console.log("Prisma initialized");
-    
     await prisma.$connect();
-    console.log("Connected!");
-    
-    const count = await prisma.organizer.count();
-    console.log("Count:", count);
-    
+    console.log('Connected.');
+
+    const [organizers, events, registrations] = await Promise.all([
+      prisma.organizer.count(),
+      prisma.event.count(),
+      prisma.registration.count(),
+    ]);
+
+    console.log('Row counts:', { organizers, events, registrations });
   } catch (e) {
-    console.error("Error:", e);
+    console.error('Error:', e);
+    process.exitCode = 1;
+  } finally {
+    await prisma.$disconnect();
   }
 }
+
 main();

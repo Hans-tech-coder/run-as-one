@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import crypto from 'crypto';
-import { writeFile } from 'fs/promises';
-import path from 'path';
+import { uploadPrivateProof, UploadError } from '@/lib/blob';
 
 export async function POST(request: Request) {
   try {
@@ -14,11 +13,15 @@ export async function POST(request: Request) {
     const customerName = formData.get('customerName') as string;
     const logisticsMethod = formData.get('logisticsMethod') as string;
     const deliveryAddress = formData.get('deliveryAddress') as string;
-    const subtotal = parseFloat(formData.get('subtotal') as string);
-    const deliveryFee = parseFloat(formData.get('deliveryFee') as string);
-    const platformFee = parseFloat(formData.get('platformFee') as string);
-    const transactionFee = parseFloat(formData.get('transactionFee') as string);
-    const totalAmount = parseFloat(formData.get('totalAmount') as string);
+    // Amounts arrive as centavos. Round defensively — Prisma rejects a
+    // non-integer for an Int column, and a stray decimal here would 500.
+    const centavos = (field: string) => Math.round(Number(formData.get(field)) || 0);
+
+    const subtotal = centavos('subtotal');
+    const deliveryFee = centavos('deliveryFee');
+    const platformFee = centavos('platformFee');
+    const transactionFee = centavos('transactionFee');
+    const totalAmount = centavos('totalAmount');
     const paymentMethod = formData.get('paymentMethod') as string;
     const transactionNumber = formData.get('transactionNumber') as string;
     
@@ -29,24 +32,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Proof of payment is required' }, { status: 400 });
     }
 
-    // 1. Save the file locally
-    const bytes = await proofFile.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    
-    // Generate a unique filename
-    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-    const extension = path.extname(proofFile.name) || '.jpg';
-    const filename = `proof-${uniqueSuffix}${extension}`;
-    
-    // Set path to public/uploads/proofs directory
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'proofs');
-    const filePath = path.join(uploadDir, filename);
-    
-    // Save to disk
-    await writeFile(filePath, buffer);
-    
-    // Path to save in DB (accessible from frontend via /uploads/proofs/filename)
-    const publicPath = `/uploads/proofs/${filename}`;
+    // 1. Store the receipt as a private blob. This route is public — anyone can
+    // reach it — so uploadPrivateProof() enforces the type and size limits.
+    // What we keep is the blob pathname; admins view it through
+    // /api/admin/proof/[id], which signs a short-lived URL after checking auth.
+    const proofPathname = await uploadPrivateProof(proofFile);
 
     // 2. Generate Order Reference
     const orderRef = `RM-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
@@ -66,7 +56,7 @@ export async function POST(request: Request) {
         transactionFee,
         totalAmount,
         paymentMethod: paymentMethod,
-        proofOfPayment: publicPath,
+        proofOfPayment: proofPathname,
         transactionNumber: transactionNumber,
         status: 'PENDING', // Waiting for manual validation by admin
         runners: {
@@ -93,6 +83,10 @@ export async function POST(request: Request) {
     });
 
   } catch (error: any) {
+    // A rejected file is the runner's mistake, not ours — tell them what to fix.
+    if (error instanceof UploadError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     console.error('Manual Checkout Error:', error);
     return NextResponse.json(
       { error: 'Internal Server Error', message: error.message },

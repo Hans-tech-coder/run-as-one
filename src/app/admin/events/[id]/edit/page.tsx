@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Save, Plus, X, AlertCircle, CheckCircle, Trash2, UploadCloud, Trash } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { toPesos } from '@/lib/money';
 
 export default function EditEventPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -11,6 +12,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
   
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
+  const [uploadingField, setUploadingField] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
@@ -55,7 +57,9 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
           raceKitImageUrl: data.raceKitImageUrl || '',
           description: data.description || '',
           logisticsPickup: data.logisticsPickup ?? true,
-          logisticsDeliveryFee: data.logisticsDeliveryFee || 0,
+          // The API returns centavos; every money input on this form is pesos.
+          // The PUT route converts back with toCentavos().
+          logisticsDeliveryFee: toPesos(data.logisticsDeliveryFee),
           certificateTemplate: data.certificateTemplate || '',
           certificateCoordinates: data.certificateCoordinates || JSON.stringify({ nameY: 50, timeY: 60, catY: 70 }),
         });
@@ -65,7 +69,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
             id: c.id,
             name: c.name,
             distance: c.distance,
-            price: c.price
+            price: toPesos(c.price)
           })));
         }
       } catch (err) {
@@ -77,14 +81,34 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
     fetchEvent();
   }, [id]);
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, field: string) => {
+  // Uploads to blob storage and stores the returned URL. This used to inline the
+  // file as a base64 data URL, which meant every event row carried megabytes of
+  // text that each listing query then had to pull down.
+  const handleImageUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    field: string,
+    kind: 'image' | 'template' = 'image'
+  ) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData(prev => ({ ...prev, [field]: reader.result as string }));
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    setUploadingField(field);
+    setError('');
+    try {
+      const body = new FormData();
+      body.append('file', file);
+      body.append('kind', kind);
+
+      const res = await fetch('/api/upload', { method: 'POST', body });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
+
+      setFormData(prev => ({ ...prev, [field]: data.url }));
+    } catch (err: any) {
+      setError(err.message || 'Upload failed');
+      e.target.value = '';
+    } finally {
+      setUploadingField(null);
     }
   };
 
@@ -313,18 +337,21 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
               <div className="form-group">
                 <label className="form-label">Cover Image</label>
                 {!formData.imageUrl ? (
-                  <div className="file-upload-wrapper">
-                    <input 
-                      type="file" 
+                  <div className="file-upload-wrapper" style={{ opacity: uploadingField ? 0.6 : 1 }}>
+                    <input
+                      type="file"
                       accept="image/*"
                       onChange={e => handleImageUpload(e, 'imageUrl')}
                       className="file-upload-input"
+                      disabled={uploadingField !== null}
                     />
                     <div className="file-upload-content">
                       <div className="file-upload-icon">
                         <UploadCloud size={32} />
                       </div>
-                      <div className="file-upload-title">Click to upload cover image</div>
+                      <div className="file-upload-title">
+                        {uploadingField === 'imageUrl' ? 'Uploading…' : 'Click to upload cover image'}
+                      </div>
                       <div className="file-upload-desc">SVG, PNG, JPG or GIF (max. 800x400px)</div>
                     </div>
                   </div>
@@ -347,18 +374,21 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
               <div className="form-group">
                 <label className="form-label">Race Kit Poster (Optional)</label>
                 {!formData.raceKitImageUrl ? (
-                  <div className="file-upload-wrapper">
-                    <input 
-                      type="file" 
+                  <div className="file-upload-wrapper" style={{ opacity: uploadingField ? 0.6 : 1 }}>
+                    <input
+                      type="file"
                       accept="image/*"
                       onChange={e => handleImageUpload(e, 'raceKitImageUrl')}
                       className="file-upload-input"
+                      disabled={uploadingField !== null}
                     />
                     <div className="file-upload-content">
                       <div className="file-upload-icon">
                         <UploadCloud size={32} />
                       </div>
-                      <div className="file-upload-title">Click to upload race kit poster</div>
+                      <div className="file-upload-title">
+                        {uploadingField === 'raceKitImageUrl' ? 'Uploading…' : 'Click to upload race kit poster'}
+                      </div>
                       <div className="file-upload-desc">Optional • PNG, JPG (ideal for social sharing)</div>
                     </div>
                   </div>
@@ -523,18 +553,21 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
                   <div className="h-px bg-gray-700/50 flex-1"></div>
                 </div>
 
-                <div className="file-upload-wrapper">
-                  <input 
-                    type="file" 
+                <div className="file-upload-wrapper" style={{ opacity: uploadingField ? 0.6 : 1 }}>
+                  <input
+                    type="file"
                     accept="image/png, image/jpeg, application/pdf"
-                    onChange={e => handleImageUpload(e, 'certificateTemplate')}
+                    onChange={e => handleImageUpload(e, 'certificateTemplate', 'template')}
                     className="file-upload-input"
+                    disabled={uploadingField !== null}
                   />
                   <div className="file-upload-content">
                     <div className="file-upload-icon">
                       <UploadCloud size={32} />
                     </div>
-                    <div className="file-upload-title">Upload Custom Template</div>
+                    <div className="file-upload-title">
+                      {uploadingField === 'certificateTemplate' ? 'Uploading…' : 'Upload Custom Template'}
+                    </div>
                     <div className="file-upload-desc">PNG, JPG, or PDF (Landscape A4 recommended)</div>
                   </div>
                 </div>
@@ -669,9 +702,10 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
             <Link href="/admin/events" className="btn-cancel">
               Cancel
             </Link>
-            <button 
-              type="submit" 
-              disabled={isLoading}
+            {/* Saving mid-upload would store the event without its image URL. */}
+            <button
+              type="submit"
+              disabled={isLoading || uploadingField !== null}
               className="btn-gradient px-8 py-3 rounded-lg font-medium"
             >
               {isLoading ? 'Saving...' : 'Update Event'}

@@ -31,6 +31,15 @@ export async function POST(request: Request) {
       );
     }
 
+    // Amounts arrive as centavos. Round defensively — Prisma rejects a
+    // non-integer for an Int column, and a stray decimal here would 500.
+    const cents = (v: unknown) => Math.round(Number(v) || 0);
+    const amountCents = cents(amount);
+    const subtotalCents = cents(subtotal);
+    const deliveryFeeCents = cents(deliveryFee);
+    const platformFeeCents = cents(platformFee);
+    const transactionFeeCents = cents(transactionFee);
+
     const orderRef = `RM-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
 
     // Temporarily save to DB as PAID to populate dashboard immediately
@@ -42,11 +51,11 @@ export async function POST(request: Request) {
         customerName,
         logisticsMethod,
         deliveryAddress,
-        deliveryFee,
-        subtotal,
-        platformFee,
-        transactionFee,
-        totalAmount: amount,
+        deliveryFee: deliveryFeeCents,
+        subtotal: subtotalCents,
+        platformFee: platformFeeCents,
+        transactionFee: transactionFeeCents,
+        totalAmount: amountCents,
         paymentMethod: paymentMethod,
         status: 'PENDING', // All payments start as PENDING until verified by webhook or admin
         runners: {
@@ -85,15 +94,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     }
 
+    // Every amount below is already in centavos, which is also the unit
+    // PayMongo expects — so no conversion happens here.
     const lineItems: any[] = [];
-    
+
     // Add runners
     participants.forEach((p: any, index: number) => {
       const category = event.categories.find((c: any) => c.id === p.categoryId);
       if (category) {
         lineItems.push({
           currency: 'PHP',
-          amount: Math.round(category.price * 100),
+          amount: category.price,
           name: `Runner ${index + 1} (${category.name})`,
           quantity: 1
         });
@@ -101,30 +112,30 @@ export async function POST(request: Request) {
     });
 
     // Add Delivery Fee if any
-    if (deliveryFee > 0) {
+    if (deliveryFeeCents > 0) {
       lineItems.push({
         currency: 'PHP',
-        amount: Math.round(deliveryFee * 100),
+        amount: deliveryFeeCents,
         name: 'Delivery Fee',
         quantity: 1
       });
     }
 
     // Add Admin/Platform Fee
-    if (platformFee > 0) {
+    if (platformFeeCents > 0) {
       lineItems.push({
         currency: 'PHP',
-        amount: Math.round(platformFee * 100),
+        amount: platformFeeCents,
         name: 'Admin Fee',
         quantity: 1
       });
     }
 
     // Add Transaction Fee
-    if (transactionFee > 0) {
+    if (transactionFeeCents > 0) {
       lineItems.push({
         currency: 'PHP',
-        amount: Math.round(transactionFee * 100),
+        amount: transactionFeeCents,
         name: 'Transaction Fee',
         quantity: 1
       });
@@ -134,7 +145,7 @@ export async function POST(request: Request) {
     if (lineItems.length === 0) {
       lineItems.push({
         currency: 'PHP',
-        amount: Math.round(amount * 100),
+        amount: amountCents,
         name: 'Registration Fee',
         quantity: 1
       });
@@ -154,7 +165,7 @@ export async function POST(request: Request) {
         body: JSON.stringify({
           data: {
             attributes: {
-              amount: Math.round(amount * 100),
+              amount: amountCents,
               payment_method_allowed: [paymentMethod],
               currency: 'PHP',
               description: description

@@ -1,8 +1,15 @@
 import { SignJWT, jwtVerify } from 'jose';
 
-const SECRET_KEY = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'super-secret-stridesync-key-replace-in-production'
-);
+const secret = process.env.JWT_SECRET;
+
+if (!secret) {
+  throw new Error(
+    'JWT_SECRET is not set. Generate one with `node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'base64\'))"` ' +
+      'and add it to .env (local) or the Vercel project settings (deployed).'
+  );
+}
+
+const SECRET_KEY = new TextEncoder().encode(secret);
 
 export async function createToken(payload: any): Promise<string> {
   return await new SignJWT(payload)

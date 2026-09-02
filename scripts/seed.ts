@@ -1,17 +1,12 @@
 import "dotenv/config";
-import { PrismaClient } from '@prisma/client';
-import Database from 'better-sqlite3';
-import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
-import bcrypt from 'bcrypt';
-
-const adapter = new PrismaBetterSqlite3({ url: "file:./dev.db" });
-const prisma = new PrismaClient({ adapter });
+import bcrypt from 'bcryptjs';
+import prisma from '../src/lib/db';
 
 async function main() {
   console.log('Seeding database...');
-  
+
   const hashedPassword = await bcrypt.hash('admin123', 10);
-  
+
   const testOrganizer = await prisma.organizer.upsert({
     where: { email: 'admin@stridesync.com' },
     update: {},

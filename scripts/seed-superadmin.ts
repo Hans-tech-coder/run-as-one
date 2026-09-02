@@ -1,9 +1,10 @@
-import { hash } from 'bcrypt';
+import "dotenv/config";
+import { hash } from 'bcryptjs';
 import prisma from '../src/lib/db';
 
 async function main() {
   const superAdminEmail = 'superadmin@stridesync.com';
-  
+
   const existing = await prisma.organizer.findUnique({
     where: { email: superAdminEmail }
   });

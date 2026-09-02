@@ -1,9 +1,17 @@
 import { PrismaClient } from '@prisma/client';
-import Database from 'better-sqlite3';
-import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
+import { PrismaPg } from '@prisma/adapter-pg';
+
+const connectionString = process.env.DATABASE_URL;
+
+if (!connectionString) {
+  throw new Error(
+    'DATABASE_URL is not set. Copy it from the Neon dashboard into .env (local) or the Vercel project settings (deployed).'
+  );
+}
 
 const prismaClientSingleton = () => {
-  const adapter = new PrismaBetterSqlite3({ url: "file:./dev.db" });
+  // Pooled connection (PgBouncer). Migrations use DIRECT_URL instead — see prisma.config.ts.
+  const adapter = new PrismaPg({ connectionString });
   return new PrismaClient({ adapter });
 };
 

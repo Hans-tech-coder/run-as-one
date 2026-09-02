@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { Calendar, MapPin, CheckCircle2, ChevronRight, Clock } from 'lucide-react';
 import Link from 'next/link';
 import db from '@/lib/db';
+import { formatPesos } from '@/lib/money';
 import './EventDetails.css';
 
 import EventHeroBanner from '@/components/EventHeroBanner';
@@ -84,7 +85,7 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ i
                         <div className="text-sm text-secondary bg-white/10 inline-block px-3 py-1 rounded-full">{cat.distance}</div>
                       </div>
                       <div className="relative z-10 text-xl font-bold text-accent-orange">
-                        ₱{cat.price.toLocaleString()}
+                        ₱{formatPesos(cat.price)}
                       </div>
                     </div>
                   ))}
@@ -92,7 +93,7 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ i
                 
                 <div className="mt-6 pt-6 border-t border-white/10 text-sm text-secondary flex flex-col gap-2">
                   {event.logisticsPickup && <div className="flex items-center gap-2"><CheckCircle2 size={16} className="text-accent-blue" /> On-site Pickup Available</div>}
-                  {event.logisticsDeliveryFee > 0 && <div className="flex items-center gap-2"><CheckCircle2 size={16} className="text-accent-blue" /> Delivery (+₱{event.logisticsDeliveryFee})</div>}
+                  {event.logisticsDeliveryFee > 0 && <div className="flex items-center gap-2"><CheckCircle2 size={16} className="text-accent-blue" /> Delivery (+₱{formatPesos(event.logisticsDeliveryFee)})</div>}
                 </div>
               </div>
 

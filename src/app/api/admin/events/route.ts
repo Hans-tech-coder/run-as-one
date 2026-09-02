@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { getAuthCookie } from '@/lib/auth';
+import { toCentavos } from '@/lib/money';
 
 export async function POST(request: Request) {
   try {
@@ -27,13 +28,14 @@ export async function POST(request: Request) {
         raceKitImageUrl: raceKitImageUrl || null,
         description: description || '',
         logisticsPickup: Boolean(logisticsPickup),
-        logisticsDeliveryFee: Number(logisticsDeliveryFee) || 0,
+        // The admin form collects pesos; storage is centavos.
+        logisticsDeliveryFee: toCentavos(logisticsDeliveryFee),
         organizerId: auth.id,
         categories: {
           create: categories.map((cat: any) => ({
             name: cat.name,
             distance: cat.distance,
-            price: Number(cat.price),
+            price: toCentavos(cat.price),
           })),
         },
       },

@@ -1,6 +1,7 @@
 import React from 'react';
 import prisma from '@/lib/db';
 import { DollarSign, Users, Activity, FileSpreadsheet } from 'lucide-react';
+import { formatPesos } from '@/lib/money';
 
 export default async function SuperAdminDashboard() {
   // Fetch platform-wide stats
@@ -18,6 +19,7 @@ export default async function SuperAdminDashboard() {
     select: { totalAmount: true, platformFee: true }
   });
 
+  // Both are sums of centavos (integers), so they stay exact.
   const totalRevenue = allRegistrations.reduce((acc, curr) => acc + curr.totalAmount, 0);
   const totalPlatformFees = allRegistrations.reduce((acc, curr) => acc + curr.platformFee, 0);
 
@@ -43,7 +45,7 @@ export default async function SuperAdminDashboard() {
               <DollarSign size={20} className="metric-icon" style={{ color: 'var(--accent-orange)' }} />
             </div>
             <div className="metric-value" style={{ color: 'var(--accent-orange)' }}>
-              ₱{totalPlatformFees.toLocaleString()}
+              ₱{formatPesos(totalPlatformFees)}
             </div>
           </div>
 
@@ -52,7 +54,7 @@ export default async function SuperAdminDashboard() {
               <span className="metric-title">Total Transaction Volume</span>
               <Activity size={20} className="metric-icon" />
             </div>
-            <div className="metric-value">₱{totalRevenue.toLocaleString()}</div>
+            <div className="metric-value">₱{formatPesos(totalRevenue)}</div>
           </div>
 
           <div className="metric-card">

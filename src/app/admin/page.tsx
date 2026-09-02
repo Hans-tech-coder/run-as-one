@@ -2,6 +2,7 @@ import React from 'react';
 import { DollarSign, Users, CalendarDays, Activity } from 'lucide-react';
 import prisma from '@/lib/db';
 import { getAuthCookie } from '@/lib/auth';
+import { formatPesos } from '@/lib/money';
 import { redirect } from 'next/navigation';
 
 export default async function AdminDashboard() {
@@ -29,7 +30,8 @@ export default async function AdminDashboard() {
 
   events.forEach(event => {
     event.registrations.forEach(reg => {
-      // Net revenue for the organizer (Subtotal + Delivery Fee, excluding platform/transaction fees)
+      // Net revenue for the organizer (Subtotal + Delivery Fee, excluding platform/transaction fees).
+      // Both are centavos, so the running total stays an exact integer.
       totalRevenue += (reg.subtotal + reg.deliveryFee);
       totalRegistrants += reg.runners.length;
       
@@ -57,7 +59,7 @@ export default async function AdminDashboard() {
               <span className="metric-title">Total Revenue (Net)</span>
               <div className="metric-icon"><DollarSign size={20} /></div>
             </div>
-            <div className="metric-value">₱{totalRevenue.toLocaleString()}</div>
+            <div className="metric-value">₱{formatPesos(totalRevenue)}</div>
           </div>
           
           <div className="metric-card">
@@ -114,7 +116,7 @@ export default async function AdminDashboard() {
                       <td>{reg.orderRef}</td>
                       <td>{reg.customerName}</td>
                       <td>{reg.eventTitle}</td>
-                      <td>₱{reg.totalAmount.toLocaleString()}</td>
+                      <td>₱{formatPesos(reg.totalAmount)}</td>
                       <td>{reg.runners.length}</td>
                       <td>{new Date(reg.createdAt).toLocaleDateString()}</td>
                     </tr>

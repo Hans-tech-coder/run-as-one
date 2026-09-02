@@ -821,9 +821,14 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
                     <p className="text-gray-500 text-sm mb-2">Proof of Payment</p>
                     {viewingRunner.proofOfPayment ? (
                       <div className="rounded-lg overflow-hidden border border-white/10 max-h-[300px] flex items-center justify-center bg-black/50">
-                        <img 
-                          src={viewingRunner.proofOfPayment} 
-                          alt="Proof of Payment" 
+                        {/*
+                          Receipts are private blobs — there is no permanently valid
+                          URL for one. This route checks that the logged-in admin owns
+                          the event, then redirects to a short-lived signed URL.
+                        */}
+                        <img
+                          src={`/api/admin/proof/${viewingRunner.registrationId}`}
+                          alt="Proof of Payment"
                           className="max-w-full max-h-[300px] object-contain"
                         />
                       </div>

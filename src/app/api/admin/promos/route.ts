@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { getAuthCookie } from '@/lib/auth';
+import { toCentavos } from '@/lib/money';
 
 export async function POST(request: Request) {
   try {
@@ -21,11 +22,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Promo code already exists' }, { status: 400 });
     }
 
+    // discountValue is stored as an integer whose unit depends on discountType:
+    // PERCENTAGE -> basis points (10% is sent as 10, stored as 1000)
+    // FIXED      -> centavos    (₱500 is sent as 500, stored as 50000)
+    // Both scale by 100, but they are different units — keep them distinguishable.
+    const storedDiscountValue =
+      discountType === 'PERCENTAGE'
+        ? Math.round(Number(discountValue) * 100)
+        : toCentavos(discountValue);
+
     const promo = await prisma.promoCode.create({
       data: {
         code,
         discountType,
-        discountValue,
+        discountValue: storedDiscountValue,
         usageLimit,
         organizerId: auth.id
       }

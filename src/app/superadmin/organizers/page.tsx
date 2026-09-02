@@ -2,12 +2,14 @@
 
 import React, { useEffect, useState } from 'react';
 import { Search, Filter, Edit, CheckCircle, Ban, AlertCircle } from 'lucide-react';
+import { formatPesos, toPesos } from '@/lib/money';
 
 interface Organizer {
   id: string;
   name: string;
   email: string;
   status: string;
+  /** Centavos, as stored. The edit input below works in pesos. */
   adminFee: number;
   createdAt: string;
   _count: {
@@ -66,7 +68,8 @@ export default function OrganizersManagementPage() {
 
   const startEditing = (org: Organizer) => {
     setEditingId(org.id);
-    setEditAdminFee(org.adminFee);
+    // The input shows pesos; the PATCH route converts back to centavos.
+    setEditAdminFee(toPesos(org.adminFee));
   };
 
   const saveAdminFee = async (id: string) => {
@@ -190,7 +193,7 @@ export default function OrganizersManagementPage() {
                           </div>
                         ) : (
                           <div className="flex items-center gap-3">
-                            <span>₱{org.adminFee}</span>
+                            <span>₱{formatPesos(org.adminFee)}</span>
                             <button onClick={() => startEditing(org)} className="text-secondary hover:text-accent-blue" title="Edit Admin Fee">
                               <Edit size={14} />
                             </button>

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { getAuthCookie } from '@/lib/auth';
+import { toCentavos } from '@/lib/money';
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -15,7 +16,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
     const dataToUpdate: any = {};
     if (status !== undefined) dataToUpdate.status = status;
-    if (adminFee !== undefined) dataToUpdate.adminFee = parseFloat(adminFee);
+    // The superadmin UI collects pesos; storage is centavos.
+    if (adminFee !== undefined) dataToUpdate.adminFee = toCentavos(adminFee);
 
     if (Object.keys(dataToUpdate).length === 0) {
       return NextResponse.json({ error: 'No data provided to update' }, { status: 400 });

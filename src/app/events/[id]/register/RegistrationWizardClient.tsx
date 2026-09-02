@@ -15,6 +15,7 @@ import {
   Ruler,
   Calendar,
 } from "lucide-react";
+import { formatPesos } from "@/lib/money";
 import "./RegistrationWizard.css";
 
 interface Participant {
@@ -105,7 +106,8 @@ export default function RegistrationWizardClient({
   const [transactionNumber, setTransactionNumber] = useState("");
   const [showSizeGuideModal, setShowSizeGuideModal] = useState(false);
 
-  const [adminFeePerRunner, setAdminFeePerRunner] = useState(60);
+  // Centavos, like every other amount here. 6000 = ₱60.00
+  const [adminFeePerRunner, setAdminFeePerRunner] = useState(6000);
 
   React.useEffect(() => {
     if (isSuccessParam) {
@@ -166,7 +168,8 @@ export default function RegistrationWizardClient({
     }
   };
 
-  // Calculations
+  // Calculations. Every amount below is in centavos (integers), so these sums
+  // are exact — no floating point drift.
   const subtotal = participants.reduce((total, p) => {
     const cat = event.categories.find((c: any) => c.id === p.categoryId);
     return total + (cat ? cat.price : 0);
@@ -196,12 +199,13 @@ export default function RegistrationWizardClient({
       transactionFee = (baseAmountForFee * rate) / (1 - rate);
     } else if (paymentMethod === "card") {
       const rate = 0.035; // 3.5%
-      const fixed = 15; // ₱15
+      const fixed = 1500; // ₱15.00 in centavos
       transactionFee = (baseAmountForFee * rate + fixed) / (1 - rate);
     }
 
-    // Round to 2 decimal places to avoid floating point issues, or round to nearest integer.
-    // PayMongo accepts amounts in cents, so rounding to nearest integer is safer for whole pesos, but we can do Math.ceil to be safe and ensure the merchant doesn't lose out.
+    // Round up to the next whole centavo so the merchant never absorbs a
+    // fraction. This is the only place a non-integer can appear, because the
+    // rate multiplication above produces a fractional centavo.
     transactionFee = Math.ceil(transactionFee);
   }
 
@@ -419,10 +423,7 @@ export default function RegistrationWizardClient({
                 <div className="flex justify-between items-center">
                   <span className="text-secondary text-sm">Total Paid</span>
                   <span className="text-accent-orange font-bold text-xl">
-                    ₱
-                    {(
-                      registration?.totalAmount || totalAmount
-                    ).toLocaleString()}
+                    ₱{formatPesos(registration?.totalAmount || totalAmount)}
                   </span>
                 </div>
               </div>
@@ -485,7 +486,7 @@ export default function RegistrationWizardClient({
                         )}
                       </span>
                       <span className="font-bold text-white">
-                        ₱{cat ? cat.price.toLocaleString() : "0"}
+                        ₱{cat ? formatPesos(cat.price) : "0.00"}
                       </span>
                     </div>
                   );
@@ -495,7 +496,7 @@ export default function RegistrationWizardClient({
                   <div className="flex justify-between items-center text-sm mt-2 pt-2 border-t border-white/5">
                     <span className="text-secondary">Delivery Fee</span>
                     <span className="text-white">
-                      ₱{deliveryFee.toLocaleString()}
+                      ₱{formatPesos(deliveryFee)}
                     </span>
                   </div>
                 )}
@@ -503,7 +504,7 @@ export default function RegistrationWizardClient({
                 <div className="flex justify-between items-center text-sm mt-2 pt-2 border-t border-white/5">
                   <span className="text-secondary">Platform Fee</span>
                   <span className="text-white">
-                    ₱{platformFee.toLocaleString()}
+                    ₱{formatPesos(platformFee)}
                   </span>
                 </div>
 
@@ -511,7 +512,7 @@ export default function RegistrationWizardClient({
                   <div className="flex justify-between items-center text-sm mt-2 pt-2 border-t border-white/5">
                     <span className="text-secondary">Transaction Fee</span>
                     <span className="text-white">
-                      ₱{transactionFee.toLocaleString()}
+                      ₱{formatPesos(transactionFee)}
                     </span>
                   </div>
                 )}
@@ -522,7 +523,7 @@ export default function RegistrationWizardClient({
                   Total
                 </strong>
                 <strong className="text-accent-orange text-2xl font-bold">
-                  ₱{totalAmount.toLocaleString()}
+                  ₱{formatPesos(totalAmount)}
                 </strong>
               </div>
             </div>
@@ -668,7 +669,7 @@ export default function RegistrationWizardClient({
                             {cat.distance}
                           </div>
                           <div className="relative z-10 text-xl font-bold text-accent-orange">
-                            ₱{cat.price.toLocaleString()}
+                            ₱{formatPesos(cat.price)}
                           </div>
                         </div>
                       ))}
@@ -951,7 +952,7 @@ export default function RegistrationWizardClient({
                         address nationwide.
                       </div>
                       <div className="relative z-10 font-bold text-accent-blue">
-                        +₱{event.logisticsDeliveryFee.toLocaleString()}
+                        +₱{formatPesos(event.logisticsDeliveryFee)}
                       </div>
                     </div>
                   )}
@@ -1109,7 +1110,7 @@ export default function RegistrationWizardClient({
                     Total Amount to Pay
                   </div>
                   <div className="relative z-10 text-5xl font-extrabold text-white">
-                    ₱{totalAmount.toLocaleString()}
+                    ₱{formatPesos(totalAmount)}
                   </div>
                 </div>
 
@@ -1124,7 +1125,7 @@ export default function RegistrationWizardClient({
                         ? "Connecting to PayMongo..."
                         : "Processing..."
                       : paymentMethod !== "bank_transfer"
-                        ? `Pay ₱${totalAmount.toLocaleString()}`
+                        ? `Pay ₱${formatPesos(totalAmount)}`
                         : "Upload Deposit Slip"}
                   </button>
                 </div>
@@ -1138,7 +1139,7 @@ export default function RegistrationWizardClient({
                   You have selected Manual Bank Transfer. Please choose a bank
                   below to view our account details and transfer{" "}
                   <strong className="text-white font-bold tracking-wide">
-                    ₱{totalAmount.toLocaleString()}
+                    ₱{formatPesos(totalAmount)}
                   </strong>
                   . After payment, upload your deposit slip.
                 </p>

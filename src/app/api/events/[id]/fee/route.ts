@@ -10,13 +10,14 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       include: { organizer: true }
     });
 
+    // adminFee is in centavos; 6000 = ₱60.00
     if (!event) {
-      return NextResponse.json({ adminFee: 60 });
+      return NextResponse.json({ adminFee: 6000 });
     }
 
     return NextResponse.json({ adminFee: event.organizer.adminFee });
   } catch (error) {
     console.error('Failed to fetch admin fee:', error);
-    return NextResponse.json({ adminFee: 60 });
+    return NextResponse.json({ adminFee: 6000 });
   }
 }

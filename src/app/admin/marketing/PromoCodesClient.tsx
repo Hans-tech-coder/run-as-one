@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Plus, Tag, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { formatPesos } from '@/lib/money';
 
 export default function PromoCodesClient({ initialPromos, organizerId }: { initialPromos: any[], organizerId: string }) {
   const router = useRouter();
@@ -84,7 +85,8 @@ export default function PromoCodesClient({ initialPromos, organizerId }: { initi
                   <tr key={promo.id}>
                     <td className="font-bold text-accent-blue">{promo.code}</td>
                     <td>{promo.discountType}</td>
-                    <td>{promo.discountType === 'PERCENTAGE' ? `${promo.discountValue}%` : `₱${promo.discountValue.toLocaleString()}`}</td>
+                    {/* PERCENTAGE stores basis points (1000 = 10%); FIXED stores centavos. */}
+                    <td>{promo.discountType === 'PERCENTAGE' ? `${promo.discountValue / 100}%` : `₱${formatPesos(promo.discountValue)}`}</td>
                     <td>{promo.usageCount}</td>
                     <td>{promo.usageLimit || 'Unlimited'}</td>
                     <td>
