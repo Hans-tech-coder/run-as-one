@@ -3,6 +3,7 @@ import prisma from '@/lib/db';
 import { recordWriteInCommunities, runnerCommunity } from '@/lib/running-community-store';
 import crypto from 'crypto';
 import { asDeliveryZone, deliveryFeeFor } from '@/app/events/[id]/register/delivery';
+import { storedShirtSize, subtotalWithUpcharge } from '@/lib/shirt-size';
 
 export async function POST(request: Request) {
   try {
@@ -62,8 +63,20 @@ export async function POST(request: Request) {
     const zone = logisticsMethod === 'delivery' ? asDeliveryZone(deliveryZone) : null;
     const expectedDeliveryFee = deliveryFeeFor(event, zone);
     const expectedPlatformFee = event.adminFee * participants.length;
+    // Category prices plus the large-size surcharge. Checked rather than
+    // trusted: without this, a client could post a subtotal that leaves out the
+    // 4XL surcharge and pay the smaller amount.
+    const expectedSubtotal = subtotalWithUpcharge(
+      participants,
+      event.categories,
+      event.shirtSizeUpcharge
+    );
 
-    if (deliveryFeeCents !== expectedDeliveryFee || platformFeeCents !== expectedPlatformFee) {
+    if (
+      deliveryFeeCents !== expectedDeliveryFee ||
+      platformFeeCents !== expectedPlatformFee ||
+      subtotalCents !== expectedSubtotal
+    ) {
       return NextResponse.json(
         { error: 'Prices have changed. Please reload the page and try again.' },
         { status: 409 }
@@ -99,7 +112,7 @@ export async function POST(request: Request) {
             phone: p.phone,
             gender: p.gender,
             birthdate: p.birthdate,
-            singletSize: p.singletSize,
+            singletSize: storedShirtSize(p, event.categories),
             emergencyContactName: p.emergencyContactName,
             emergencyContactPhone: p.emergencyContactPhone,
             medicalConditions: p.medicalConditions,

@@ -25,6 +25,7 @@ import {
   SortingState,
   VisibilityState,
 } from '@tanstack/react-table';
+import { SHIRT_SIZES } from '@/lib/shirt-size';
 
 interface RegistrantsTableProps {
   eventId: string;
@@ -442,7 +443,7 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
   const handleExportCSV = () => {
     const headers = [
       'Order Ref', 'First Name', 'Last Name', 'Email', 'Phone', 'Gender', 'Birthdate', 
-      'Category', 'Distance', 'Singlet Size', 'Emergency Contact', 'Emergency Phone', 
+      'Category', 'Distance', 'Shirt Size', 'Emergency Contact', 'Emergency Phone', 
       'Running Community', 'Medical Conditions', 'Logistics Method', 'Delivery Area', 'Delivery Address', 'Payment Method', 'Status'
     ];
     
@@ -780,7 +781,7 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
                     {/* Fun-run packages have none, and a blank row reads like
                         missing data rather than an absent field. */}
                     {viewingRunner.distance && <p className="flex flex-col"><span className="text-gray-500">Distance</span> <span className="text-white font-medium">{viewingRunner.distance}</span></p>}
-                    <p className="flex flex-col"><span className="text-gray-500">Singlet Size</span> <span className="text-white font-medium">{viewingRunner.size}</span></p>
+                    <p className="flex flex-col"><span className="text-gray-500">Shirt Size</span> <span className="text-white font-medium">{viewingRunner.size}</span></p>
                   </div>
                 </div>
               </div>
@@ -968,19 +969,18 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm text-gray-400">Singlet Size</label>
-                    <select 
-                      value={editingRunner.singletSize || ''} 
+                    <label className="text-sm text-gray-400">Shirt Size</label>
+                    <input
+                      type="text"
+                      list="shirt-size-options"
+                      value={editingRunner.singletSize || ''}
                       onChange={e => setEditingRunner({...editingRunner, singletSize: e.target.value})}
+                      placeholder="Blank if no shirt in this package"
                       className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-white/30"
-                    >
-                      <option value="XS">XS</option>
-                      <option value="S">S</option>
-                      <option value="M">M</option>
-                      <option value="L">L</option>
-                      <option value="XL">XL</option>
-                      <option value="2XL">2XL</option>
-                    </select>
+                    />
+                    <datalist id="shirt-size-options">
+                      {SHIRT_SIZES.map(size => <option key={size} value={size} />)}
+                    </datalist>
                   </div>
                   <div className="space-y-2 col-span-2">
                     <label className="text-sm text-gray-400">Running Community</label>

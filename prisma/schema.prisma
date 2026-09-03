@@ -35,6 +35,10 @@ model Event {
   logisticsDeliveryFeeOutside Int       @default(0)
   /// Centavos, charged per runner. 6000 = ₱60.00
   adminFee               Int            @default(6000)
+  /// Centavos, charged once per runner whose shirt size is 4XL or above,
+  /// because the larger sizes cost the organizer more to produce. 0 disables
+  /// the surcharge. 10000 = ₱100.00, which is what the printed forms quote.
+  shirtSizeUpcharge      Int            @default(10000)
   /// Which checkout the runner sees: "ONLINE" (PayMongo + bank transfer) or
   /// "BANK_TRANSFER" (bank transfer only).
   registrationForm       String         @default("ONLINE")

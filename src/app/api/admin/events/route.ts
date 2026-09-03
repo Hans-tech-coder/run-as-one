@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     }
 
     const data = await request.json();
-    const { title, date, startTime, endTime, location, imageUrl, raceKitImageUrl, description, logisticsPickup, logisticsDeliveryFeeInside, logisticsDeliveryFeeOutside, adminFee, registrationForm, eventType, categories } = data;
+    const { title, date, startTime, endTime, location, imageUrl, raceKitImageUrl, description, logisticsPickup, logisticsDeliveryFeeInside, logisticsDeliveryFeeOutside, adminFee, shirtSizeUpcharge, registrationForm, eventType, categories } = data;
 
     if (!title || !date || !location) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -35,6 +35,7 @@ export async function POST(request: Request) {
         logisticsDeliveryFeeInside: toCentavos(logisticsDeliveryFeeInside),
         logisticsDeliveryFeeOutside: toCentavos(logisticsDeliveryFeeOutside),
         adminFee: toCentavos(adminFee),
+        shirtSizeUpcharge: toCentavos(shirtSizeUpcharge),
         registrationForm: asRegistrationForm(registrationForm),
         eventType: asEventType(eventType),
         organizerId: auth.id,

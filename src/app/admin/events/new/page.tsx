@@ -36,6 +36,7 @@ export default function NewEventPage() {
     // Pesos on this form; the API converts to centavos. ₱60 is the long-standing
     // default every event used back when the fee lived on the organizer.
     adminFee: 60,
+    shirtSizeUpcharge: 100,
     registrationForm: DEFAULT_REGISTRATION_FORM as RegistrationForm,
   });
 
@@ -427,6 +428,20 @@ export default function NewEventPage() {
                     className="form-input"
                     min={0}
                   />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Large Size Surcharge (₱) <span className="text-xs opacity-70">- added once per runner in 4XL or above</span></label>
+                  <input
+                    type="number"
+                    value={formData.shirtSizeUpcharge}
+                    onChange={e => setFormData({...formData, shirtSizeUpcharge: Number(e.target.value)})}
+                    className="form-input"
+                    min={0}
+                  />
+                  <p className="text-xs opacity-70 mt-1">
+                    Set to 0 if the larger sizes cost the same. Only charged to runners
+                    whose package actually includes a singlet or shirt.
+                  </p>
                 </div>
                 <div className="form-group">
                   <label className="form-label">Registration Form</label>

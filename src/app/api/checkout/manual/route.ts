@@ -4,6 +4,7 @@ import { recordWriteInCommunities, runnerCommunity } from '@/lib/running-communi
 import crypto from 'crypto';
 import { uploadPrivateProof, UploadError } from '@/lib/blob';
 import { asDeliveryZone, deliveryFeeFor } from '@/app/events/[id]/register/delivery';
+import { storedShirtSize, subtotalWithUpcharge } from '@/lib/shirt-size';
 
 export async function POST(request: Request) {
   try {
@@ -39,7 +40,10 @@ export async function POST(request: Request) {
     // the same thing, so the organizer's prices decide which pairs are legal —
     // otherwise a registration could record "outside province" while paying the
     // inside rate. Same for the admin fee, which is now per event.
-    const event = await prisma.event.findUnique({ where: { id: eventId } });
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+      include: { categories: true }
+    });
     if (!event) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     }
@@ -47,8 +51,20 @@ export async function POST(request: Request) {
     const zone = logisticsMethod === 'delivery' ? asDeliveryZone(deliveryZone) : null;
     const expectedDeliveryFee = deliveryFeeFor(event, zone);
     const expectedPlatformFee = event.adminFee * participants.length;
+    // Category prices plus the large-size surcharge. Checked rather than
+    // trusted: without this, a client could post a subtotal that leaves out the
+    // 4XL surcharge and pay the smaller amount.
+    const expectedSubtotal = subtotalWithUpcharge(
+      participants,
+      event.categories,
+      event.shirtSizeUpcharge
+    );
 
-    if (deliveryFee !== expectedDeliveryFee || platformFee !== expectedPlatformFee) {
+    if (
+      deliveryFee !== expectedDeliveryFee ||
+      platformFee !== expectedPlatformFee ||
+      subtotal !== expectedSubtotal
+    ) {
       return NextResponse.json(
         { error: 'Prices have changed. Please reload the page and try again.' },
         { status: 409 }
@@ -93,7 +109,7 @@ export async function POST(request: Request) {
             phone: p.phone,
             gender: p.gender,
             birthdate: p.birthdate,
-            singletSize: p.singletSize,
+            singletSize: storedShirtSize(p, event.categories),
             emergencyContactName: p.emergencyContactName,
             emergencyContactPhone: p.emergencyContactPhone,
             medicalConditions: p.medicalConditions,

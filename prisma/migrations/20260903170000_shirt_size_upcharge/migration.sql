@@ -1,0 +1,11 @@
+-- Per-event surcharge for the large shirt sizes.
+--
+-- 4XL and above cost the organizer more to produce, and the registration forms
+-- already quote a flat extra hundred pesos for them. Making it a column rather
+-- than a constant follows the admin fee and the delivery tiers: what an event
+-- charges is the organizer's call, and setting this to 0 turns it off.
+--
+-- Defaults to 10000 centavos (PHP 100.00), which is the figure the existing
+-- forms quote, so events that already advertise it keep charging it without
+-- anyone having to go and set it.
+ALTER TABLE "Event" ADD COLUMN "shirtSizeUpcharge" INTEGER NOT NULL DEFAULT 10000;

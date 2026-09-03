@@ -11,7 +11,6 @@ import {
   UploadCloud,
   FileImage,
   X,
-  Ruler,
   Calendar,
   Landmark,
 } from "lucide-react";
@@ -28,6 +27,12 @@ import BankDetailsModal from "./BankDetailsModal";
 import SizeGuideModal from "./SizeGuideModal";
 import CategoryPicker from "./CategoryPicker";
 import CommunityPicker from "./CommunityPicker";
+import ShirtSizeField from "./ShirtSizeField";
+import {
+  categoryNeedsShirtSize,
+  findCategory,
+  totalShirtSizeUpcharge,
+} from "@/lib/shirt-size";
 import { communitySlug } from "@/lib/running-community";
 import { sellsPackages } from "@/lib/event-type";
 import "./RegistrationWizard.css";
@@ -171,6 +176,24 @@ export default function BankTransferWizardClient({
     setParticipants(newParticipants);
   };
 
+  /**
+   * Switching category can retire the size question — a band-only package has
+   * nothing to size. Drop any size already typed so a runner who changed their
+   * mind does not ship a stale answer to the registrants export.
+   */
+  const handleCategoryChange = (index: number, categoryId: string) => {
+    const newParticipants = [...participants];
+    const keepSize = categoryNeedsShirtSize(
+      findCategory(event.categories, categoryId),
+    );
+    newParticipants[index] = {
+      ...newParticipants[index],
+      categoryId,
+      singletSize: keepSize ? newParticipants[index].singletSize : "",
+    };
+    setParticipants(newParticipants);
+  };
+
   const addParticipant = () => {
     setParticipants([
       ...participants,
@@ -206,10 +229,24 @@ export default function BankTransferWizardClient({
   // Calculations. Every amount below is in centavos (integers), so these sums
   // are exact — no floating point drift. There is no transaction fee to add:
   // a bank transfer costs the organizer nothing to receive.
-  const subtotal = participants.reduce((total, p) => {
+  const categoryTotal = participants.reduce((total, p) => {
     const cat = event.categories.find((c: any) => c.id === p.categoryId);
     return total + (cat ? cat.price : 0);
   }, 0);
+
+  // 4XL and above cost the organizer more to produce, so an event may add a
+  // flat amount for each runner in one. Charged only to runners who are
+  // actually getting a shirt — see totalShirtSizeUpcharge.
+  const shirtSizeUpcharge = event.shirtSizeUpcharge ?? 0;
+  const sizeUpcharge = totalShirtSizeUpcharge(
+    participants,
+    event.categories,
+    shirtSizeUpcharge,
+  );
+
+  // The surcharge is part of what the runner pays for goods, so it belongs in
+  // the subtotal the server re-derives and checks at checkout.
+  const subtotal = categoryTotal + sizeUpcharge;
 
   const deliveryFee =
     logisticsMethod === "delivery" ? deliveryFeeFor(event, deliveryZone) : 0;
@@ -230,7 +267,10 @@ export default function BankTransferWizardClient({
         p.phone &&
         p.gender &&
         p.birthdate &&
-        p.singletSize &&
+        // Only demanded when the chosen package actually includes something to
+        // wear; otherwise there is no size to give.
+        (!categoryNeedsShirtSize(findCategory(event.categories, p.categoryId)) ||
+          p.singletSize) &&
         p.emergencyContactName &&
         p.emergencyContactPhone,
     );
@@ -431,6 +471,17 @@ export default function BankTransferWizardClient({
                   );
                 })}
 
+                {sizeUpcharge > 0 && (
+                  <div className="flex justify-between items-center text-sm mt-2 pt-2 border-t border-white/5">
+                    <span className="text-secondary">
+                      Large size surcharge (4XL+)
+                    </span>
+                    <span className="text-white">
+                      ₱{formatPesos(sizeUpcharge)}
+                    </span>
+                  </div>
+                )}
+
                 {logisticsMethod === "delivery" && (
                   <div className="flex justify-between items-center text-sm mt-2 pt-2 border-t border-white/5">
                     <span className="text-secondary">
@@ -575,7 +626,7 @@ export default function BankTransferWizardClient({
                       event={event}
                       selectedId={p.categoryId}
                       onSelect={categoryId =>
-                        handleParticipantChange(idx, "categoryId", categoryId)
+                        handleCategoryChange(idx, categoryId)
                       }
                     />
 
@@ -666,43 +717,18 @@ export default function BankTransferWizardClient({
                           }
                         />
                       </div>
-                      <div className="input-group">
-                        <div className="flex justify-between items-center mb-1">
-                          <label className="mb-0">Singlet Size</label>
-                          <button
-                            type="button"
-                            style={{
-                              background: "transparent",
-                              border: "none",
-                              padding: 0,
-                              minWidth: 0,
-                            }}
-                            className="text-xs text-accent-blue flex items-center hover:text-white transition-colors"
-                            onClick={() => setShowSizeGuideModal(true)}
-                          >
-                            <Ruler size={14} style={{ marginRight: "4px" }} />{" "}
-                            Size Guide
-                          </button>
-                        </div>
-                        <select
+                      {categoryNeedsShirtSize(
+                        findCategory(event.categories, p.categoryId),
+                      ) && (
+                        <ShirtSizeField
                           value={p.singletSize}
-                          onChange={(e) =>
-                            handleParticipantChange(
-                              idx,
-                              "singletSize",
-                              e.target.value,
-                            )
+                          upcharge={shirtSizeUpcharge}
+                          onChange={(size) =>
+                            handleParticipantChange(idx, "singletSize", size)
                           }
-                        >
-                          <option value="">Select Size</option>
-                          <option value="XS">XS</option>
-                          <option value="S">S</option>
-                          <option value="M">M</option>
-                          <option value="L">L</option>
-                          <option value="XL">XL</option>
-                          <option value="XXL">XXL</option>
-                        </select>
-                      </div>
+                          onOpenSizeGuide={() => setShowSizeGuideModal(true)}
+                        />
+                      )}
 
                       <CommunityPicker
                         value={p.runningCommunity}
@@ -1101,7 +1127,10 @@ export default function BankTransferWizardClient({
       )}
 
       {showSizeGuideModal && (
-        <SizeGuideModal onClose={() => setShowSizeGuideModal(false)} />
+        <SizeGuideModal
+          upcharge={shirtSizeUpcharge}
+          onClose={() => setShowSizeGuideModal(false)}
+        />
       )}
     </div>
   );

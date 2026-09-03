@@ -40,7 +40,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
     const { id } = await params;
     const data = await request.json();
-    const { title, date, startTime, endTime, location, imageUrl, raceKitImageUrl, description, logisticsPickup, logisticsDeliveryFeeInside, logisticsDeliveryFeeOutside, adminFee, registrationForm, eventType, certificateTemplate, certificateCoordinates, categories } = data;
+    const { title, date, startTime, endTime, location, imageUrl, raceKitImageUrl, description, logisticsPickup, logisticsDeliveryFeeInside, logisticsDeliveryFeeOutside, adminFee, shirtSizeUpcharge, registrationForm, eventType, certificateTemplate, certificateCoordinates, categories } = data;
 
     if (!title || !date || !location) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -81,6 +81,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
           logisticsDeliveryFeeInside: toCentavos(logisticsDeliveryFeeInside),
           logisticsDeliveryFeeOutside: toCentavos(logisticsDeliveryFeeOutside),
           adminFee: toCentavos(adminFee),
+          shirtSizeUpcharge: toCentavos(shirtSizeUpcharge),
           registrationForm: asRegistrationForm(registrationForm),
           eventType: asEventType(eventType),
           certificateTemplate: certificateTemplate || null,

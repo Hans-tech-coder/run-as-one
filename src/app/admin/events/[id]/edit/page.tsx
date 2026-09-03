@@ -42,6 +42,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
     logisticsDeliveryFeeOutside: 0,
     // Pesos on this form; the PUT route converts to centavos.
     adminFee: 60,
+    shirtSizeUpcharge: 100,
     registrationForm: DEFAULT_REGISTRATION_FORM as RegistrationForm,
     certificateTemplate: '',
     certificateCoordinates: JSON.stringify({ nameY: 50, timeY: 60, catY: 70 }),
@@ -82,6 +83,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
           logisticsDeliveryFeeInside: toPesos(data.logisticsDeliveryFeeInside),
           logisticsDeliveryFeeOutside: toPesos(data.logisticsDeliveryFeeOutside),
           adminFee: toPesos(data.adminFee),
+          shirtSizeUpcharge: toPesos(data.shirtSizeUpcharge ?? 0),
           registrationForm: asRegistrationForm(data.registrationForm),
           certificateTemplate: data.certificateTemplate || '',
           certificateCoordinates: data.certificateCoordinates || JSON.stringify({ nameY: 50, timeY: 60, catY: 70 }),
@@ -513,6 +515,20 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
                     className="form-input"
                     min={0}
                   />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Large Size Surcharge (₱) <span className="text-xs opacity-70">- added once per runner in 4XL or above</span></label>
+                  <input
+                    type="number"
+                    value={formData.shirtSizeUpcharge}
+                    onChange={e => setFormData({...formData, shirtSizeUpcharge: Number(e.target.value)})}
+                    className="form-input"
+                    min={0}
+                  />
+                  <p className="text-xs opacity-70 mt-1">
+                    Set to 0 if the larger sizes cost the same. Only charged to runners
+                    whose package actually includes a singlet or shirt.
+                  </p>
                 </div>
                 <div className="form-group">
                   <label className="form-label">Registration Form</label>
