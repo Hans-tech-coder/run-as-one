@@ -1,20 +1,17 @@
 "use client";
 
-import React, { useState } from 'react';
-import { Plus, Trash2, Trash, UploadCloud } from 'lucide-react';
+import React from 'react';
+import { Plus, Trash2 } from 'lucide-react';
+import PosterField from './PosterField';
 import { blankCategory, type CategoryDraft } from './category-draft';
 
 /**
  * The packages editor for fun-run events.
  *
  * Stands where CategoriesPanel does on a race form. A package has no distance,
- * so that field is gone; what replaces it is a poster of the inclusions, which
- * is what runners actually compare when the only difference between options is
- * what comes in the kit.
- *
- * The poster upload lives here rather than in the pages because it targets a
- * row, not the event. Busy and error state is reported upward so the page's
- * existing Save button and error modal keep working unchanged.
+ * so that field is gone; what remains is the name, the price, and the poster of
+ * the inclusions, which is what runners actually compare when the only
+ * difference between options is what comes in the kit.
  */
 export default function PackagesPanel({
   packages,
@@ -27,8 +24,6 @@ export default function PackagesPanel({
   onError: (message: string) => void;
   onBusyChange: (busy: boolean) => void;
 }) {
-  const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
-
   const update = (index: number, field: keyof CategoryDraft, value: string | number) => {
     const next = [...packages];
     next[index] = { ...next[index], [field]: value };
@@ -41,32 +36,6 @@ export default function PackagesPanel({
     const next = [...packages];
     next.splice(index, 1);
     onChange(next);
-  };
-
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setUploadingIndex(index);
-    onBusyChange(true);
-    try {
-      const body = new FormData();
-      body.append('file', file);
-
-      const res = await fetch('/api/upload', { method: 'POST', body });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Upload failed');
-
-      update(index, 'imageUrl', data.url);
-    } catch (err: any) {
-      onError(err.message || 'Upload failed');
-      // Clearing lets the organizer retry the same file; otherwise the input
-      // holds it and re-picking it fires no change event.
-      e.target.value = '';
-    } finally {
-      setUploadingIndex(null);
-      onBusyChange(false);
-    }
   };
 
   return (
@@ -126,50 +95,13 @@ export default function PackagesPanel({
                   />
                 </div>
 
-                <div className="form-group form-group-full">
-                  <label className="form-label">
-                    Inclusions Poster{' '}
-                    <span className="text-xs opacity-70">- optional, shown to runners</span>
-                  </label>
-                  {!pkg.imageUrl ? (
-                    <div
-                      className="file-upload-wrapper"
-                      style={{ opacity: uploadingIndex !== null ? 0.6 : 1 }}
-                    >
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={e => handleUpload(e, idx)}
-                        className="file-upload-input"
-                        disabled={uploadingIndex !== null}
-                      />
-                      <div className="file-upload-content">
-                        <div className="file-upload-icon">
-                          <UploadCloud size={32} />
-                        </div>
-                        <div className="file-upload-title">
-                          {uploadingIndex === idx ? 'Uploading…' : 'Click to upload poster'}
-                        </div>
-                        <div className="file-upload-desc">
-                          PNG or JPG • the shirt, medal and race kit in this package
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="file-preview">
-                      <img src={pkg.imageUrl} alt={`${pkg.name || 'Package'} Preview`} />
-                      <div className="file-preview-overlay">
-                        <button
-                          type="button"
-                          onClick={() => update(idx, 'imageUrl', '')}
-                          className="btn-remove-preview"
-                        >
-                          <Trash size={16} /> Remove Poster
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <PosterField
+                  value={pkg.imageUrl || ''}
+                  onChange={url => update(idx, 'imageUrl', url)}
+                  onError={onError}
+                  onBusyChange={onBusyChange}
+                  alt={`${pkg.name || 'Package'} Preview`}
+                />
               </div>
             </div>
           ))}

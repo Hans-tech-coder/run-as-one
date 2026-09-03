@@ -40,6 +40,11 @@ export default function NewEventPage() {
   });
 
   const [uploadingField, setUploadingField] = useState<string | null>(null);
+  // How many category posters are uploading right now, for the same reason as
+  // uploadingField: saving mid-upload would store a category without its
+  // poster. A count rather than a boolean because two rows can upload at once,
+  // and a latched flag would clear on the first one to finish.
+  const [uploadingPosters, setUploadingPosters] = useState(0);
 
   // Uploads to blob storage and stores the returned URL. This used to inline the
   // file as a base64 data URL, which meant every event row carried megabytes of
@@ -343,7 +348,12 @@ export default function NewEventPage() {
           </div>
         </div>
 
-          <CategoriesPanel categories={categories} onChange={setCategories} />
+          <CategoriesPanel
+            categories={categories}
+            onChange={setCategories}
+            onError={setError}
+            onBusyChange={busy => setUploadingPosters(n => (busy ? n + 1 : n - 1))}
+          />
 
           {/* Logistics Options */}
           <div className="admin-panel">
@@ -424,7 +434,7 @@ export default function NewEventPage() {
             {/* Saving mid-upload would store the event without its image URL. */}
             <button
               type="submit"
-              disabled={isLoading || uploadingField !== null}
+              disabled={isLoading || uploadingField !== null || uploadingPosters > 0}
               className="btn-gradient px-8 py-3 rounded-lg font-medium"
             >
               {isLoading ? 'Saving...' : 'Save Event'}

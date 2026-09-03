@@ -53,7 +53,11 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
   const [eventType, setEventType] = useState<EventType>(DEFAULT_EVENT_TYPE);
 
   const [categories, setCategories] = useState<CategoryDraft[]>([blankCategory()]);
-  const [isUploadingPackage, setIsUploadingPackage] = useState(false);
+  // How many category/package posters are uploading right now, for the same
+  // reason as uploadingField: saving mid-upload would store a row without its
+  // poster. A count rather than a boolean because two rows can upload at once,
+  // and a latched flag would clear on the first one to finish.
+  const [uploadingPosters, setUploadingPosters] = useState(0);
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -422,10 +426,15 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
             packages={categories}
             onChange={setCategories}
             onError={setError}
-            onBusyChange={setIsUploadingPackage}
+            onBusyChange={busy => setUploadingPosters(n => (busy ? n + 1 : n - 1))}
           />
         ) : (
-          <CategoriesPanel categories={categories} onChange={setCategories} />
+          <CategoriesPanel
+            categories={categories}
+            onChange={setCategories}
+            onError={setError}
+            onBusyChange={busy => setUploadingPosters(n => (busy ? n + 1 : n - 1))}
+          />
         )}
 
           {/* Logistics Options */}
@@ -694,7 +703,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
             {/* Saving mid-upload would store the event without its image URL. */}
             <button
               type="submit"
-              disabled={isLoading || uploadingField !== null || isUploadingPackage}
+              disabled={isLoading || uploadingField !== null || uploadingPosters > 0}
               className="btn-gradient px-8 py-3 rounded-lg font-medium"
             >
               {isLoading ? 'Saving...' : 'Update Event'}

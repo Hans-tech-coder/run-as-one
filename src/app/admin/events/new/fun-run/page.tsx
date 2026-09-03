@@ -50,9 +50,11 @@ export default function NewFunRunEventPage() {
   });
 
   const [uploadingField, setUploadingField] = useState<string | null>(null);
-  // Set by PackagesPanel while a poster is uploading, for the same reason as
+  // How many package posters are uploading right now, for the same reason as
   // uploadingField: saving mid-upload would store a package without its poster.
-  const [isUploadingPackage, setIsUploadingPackage] = useState(false);
+  // A count rather than a boolean because two rows can upload at once, and a
+  // latched flag would clear on the first one to finish.
+  const [uploadingPosters, setUploadingPosters] = useState(0);
 
   // Uploads to blob storage and stores the returned URL. This used to inline the
   // file as a base64 data URL, which meant every event row carried megabytes of
@@ -360,7 +362,7 @@ export default function NewFunRunEventPage() {
             packages={categories}
             onChange={setCategories}
             onError={setError}
-            onBusyChange={setIsUploadingPackage}
+            onBusyChange={busy => setUploadingPosters(n => (busy ? n + 1 : n - 1))}
           />
 
           {/* Logistics Options */}
@@ -442,7 +444,7 @@ export default function NewFunRunEventPage() {
             {/* Saving mid-upload would store the event without its image URL. */}
             <button
               type="submit"
-              disabled={isLoading || uploadingField !== null || isUploadingPackage}
+              disabled={isLoading || uploadingField !== null || uploadingPosters > 0}
               className="btn-gradient px-8 py-3 rounded-lg font-medium"
             >
               {isLoading ? 'Saving...' : 'Save Event'}

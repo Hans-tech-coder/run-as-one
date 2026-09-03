@@ -388,48 +388,6 @@ select.form-input {
   grid-column: 1 / -1;
 }
 
-.category-row {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-  align-items: stretch;
-  background: rgba(0, 0, 0, 0.2);
-  padding: var(--space-lg);
-  border-radius: var(--radius-lg);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.category-item-row {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-  align-items: stretch;
-}
-
-.category-col {
-  flex: 1 1 0%;
-  min-width: 0;
-}
-
-.category-col-price {
-  flex: 1 1 0%;
-  min-width: 0;
-}
-
-@media (min-width: 768px) {
-  .category-row {
-    flex-direction: row;
-    align-items: flex-end;
-  }
-  .category-item-row {
-    flex-direction: row;
-    align-items: flex-end;
-  }
-  .category-col-price {
-    flex: 0 0 120px;
-  }
-}
-
 .checkbox-group {
   display: flex;
   align-items: center;

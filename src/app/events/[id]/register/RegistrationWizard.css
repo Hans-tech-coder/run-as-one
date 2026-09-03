@@ -567,6 +567,42 @@
   border: 4px solid white;
 }
 
+/* Inclusions poster viewer. Not .modal-content: that caps at 400px, which is
+   narrower than the poster it exists to show, and a Tailwind max-w-* utility
+   cannot widen it (utilities are layered, this file is not). */
+.poster-lightbox {
+  background: #1a1a1a;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+  animation: slideUp 0.3s ease forwards;
+  position: relative;
+  z-index: 10000;
+  width: min(92vw, 640px);
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.poster-lightbox-body {
+  /* The poster is the point, so it takes whatever the header and footer leave
+     and letterboxes inside it — object-fit: contain, never a crop. */
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0b0b0b;
+  padding: var(--space-md, 1rem);
+}
+
+.poster-lightbox-body img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
 .form-actions {
   display: flex;
   justify-content: flex-end;

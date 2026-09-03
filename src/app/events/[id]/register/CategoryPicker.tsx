@@ -1,18 +1,22 @@
 "use client";
 
-import React from 'react';
-import { CheckCircle2 } from 'lucide-react';
+import React, { useId, useState } from 'react';
+import { CheckCircle2, Maximize2 } from 'lucide-react';
 import { formatPesos } from '@/lib/money';
 import { sellsPackages } from '@/lib/event-type';
+import PosterLightbox from './PosterLightbox';
 
 /**
  * What a runner picks at sign-up, in whichever shape the event sells.
  *
  * A race sells distances, so the options are short and comparable at a glance
- * and fit a grid of cards. A fun run sells inclusion packages, where the price
- * difference is the only thing distinguishing them until you see what is in the
- * kit — so those stack full width with the organizer's poster underneath, which
- * is the part runners actually read before choosing.
+ * and fit a grid of cards. A fun run sells inclusion packages, which differ only
+ * in what comes in the kit, so those stack full width.
+ *
+ * Posters are thumbnails here, not full-size images. Rendered at their natural
+ * size a poster runs several hundred pixels tall, which pushes the next option
+ * off screen and turns a comparison into a scroll — the one thing this step
+ * exists to make easy. The full poster is a tap away in PosterLightbox instead.
  *
  * Shared by both wizards. The two had identical copies of the distance grid,
  * and a package picker that existed in only one of them would mean fun runs
@@ -28,98 +32,224 @@ export default function CategoryPicker({
   onSelect: (categoryId: string) => void;
 }) {
   const packages = sellsPackages(event);
+  const [posterFor, setPosterFor] = useState<any | null>(null);
+  // The wizards render one picker per runner. Without a unique group name every
+  // runner's radios would be one native group, so picking for the second runner
+  // would clear the first one's.
+  const groupName = useId();
+
+  const groupLabel = packages ? 'Select Package' : 'Select Category';
 
   return (
     <>
       <h4 className="mb-3 text-secondary text-sm font-bold uppercase tracking-wider">
-        {packages ? 'Select Package' : 'Select Category'}
+        {groupLabel}
       </h4>
 
       {packages ? (
-        <div className="flex flex-col gap-4 mb-8">
-          {event.categories.map((cat: any) => (
-            <div
-              key={cat.id}
-              role="radio"
-              aria-checked={selectedId === cat.id}
-              tabIndex={0}
-              className={`group relative overflow-hidden border rounded-[16px] cursor-pointer transition-all ${
-                selectedId === cat.id
-                  ? 'border-accent-orange bg-accent-orange/10 shadow-[0_0_20px_rgba(255,107,43,0.15)]'
-                  : 'border-white/10 bg-black/40 hover:border-white/30 hover:bg-white/5'
-              }`}
-              onClick={() => onSelect(cat.id)}
-              onKeyDown={e => {
-                if (e.key === ' ' || e.key === 'Enter') {
-                  e.preventDefault();
-                  onSelect(cat.id);
-                }
-              }}
-            >
-              <div className="flex items-center gap-3 p-5">
-                {/* A drawn circle, not an <input type="radio">, so the whole
-                    card stays the click target without a nested label. */}
-                <span
-                  className={`shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
-                    selectedId === cat.id ? 'border-accent-orange' : 'border-white/30'
-                  }`}
-                >
-                  {selectedId === cat.id && (
-                    <span className="w-2.5 h-2.5 rounded-full bg-accent-orange" />
-                  )}
-                </span>
-                <span className="font-bold text-lg text-white uppercase tracking-wide">
-                  {cat.name}
-                </span>
-                <span className="ml-auto text-xl font-bold text-accent-orange">
-                  ₱{formatPesos(cat.price)}
-                </span>
-                {selectedId === cat.id && (
-                  <CheckCircle2 size={20} className="text-accent-orange shrink-0" />
+        <div
+          role="radiogroup"
+          aria-label={groupLabel}
+          className="flex flex-col gap-3 mb-8"
+        >
+          {event.categories.map((cat: any) => {
+            const isSelected = selectedId === cat.id;
+            return (
+              <div
+                key={cat.id}
+                className={`flex items-stretch gap-3 border rounded-[16px] p-3 transition-all ${
+                  isSelected
+                    ? 'border-accent-orange bg-accent-orange/10 shadow-[0_0_20px_rgba(255,107,43,0.15)]'
+                    : 'border-white/10 bg-black/40 hover:border-white/30'
+                }`}
+              >
+                {cat.imageUrl && (
+                  <PosterThumb cat={cat} onOpen={() => setPosterFor(cat)} />
                 )}
-              </div>
 
-              {cat.imageUrl && (
-                <img
-                  src={cat.imageUrl}
-                  alt={`${cat.name} inclusions`}
-                  className="w-full border-t border-white/10"
-                />
-              )}
-            </div>
-          ))}
+                <div className="flex-1 min-w-0 flex flex-col justify-center">
+                  {/* A real radio input, visually hidden. The row used to be a
+                      div with role="radio", which cannot legally contain the
+                      poster button — a radio must have no focusable children.
+                      The "View inclusions" button is a sibling of the label,
+                      not a child, for the same reason. */}
+                  <label className="flex items-center gap-3 cursor-pointer py-1">
+                    <input
+                      type="radio"
+                      name={groupName}
+                      className="sr-only peer"
+                      checked={isSelected}
+                      onChange={() => onSelect(cat.id)}
+                    />
+                    <span
+                      aria-hidden="true"
+                      className={`shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-accent-orange peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-black ${
+                        isSelected ? 'border-accent-orange' : 'border-white/30'
+                      }`}
+                    >
+                      {isSelected && (
+                        <span className="w-2.5 h-2.5 rounded-full bg-accent-orange" />
+                      )}
+                    </span>
+                    <span className="font-bold text-base sm:text-lg text-white uppercase tracking-wide truncate">
+                      {cat.name}
+                    </span>
+                    <span className="ml-auto text-lg sm:text-xl font-bold text-accent-orange shrink-0">
+                      ₱{formatPesos(cat.price)}
+                    </span>
+                    {isSelected && (
+                      <CheckCircle2
+                        size={20}
+                        aria-hidden="true"
+                        className="text-accent-orange shrink-0"
+                      />
+                    )}
+                  </label>
+
+                  {cat.imageUrl && (
+                    <ViewInclusionsButton
+                      name={cat.name}
+                      onOpen={() => setPosterFor(cat)}
+                      className="ml-8"
+                    />
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-          {event.categories.map((cat: any) => (
-            <div
-              key={cat.id}
-              className={`group relative overflow-hidden border rounded-[16px] p-5 cursor-pointer transition-all ${
-                selectedId === cat.id
-                  ? 'border-accent-orange bg-accent-orange/10 shadow-[0_0_20px_rgba(255,107,43,0.15)]'
-                  : 'border-white/10 bg-black/40 hover:border-white/30 hover:bg-white/5'
-              }`}
-              onClick={() => onSelect(cat.id)}
-            >
+          {event.categories.map((cat: any) => {
+            const isSelected = selectedId === cat.id;
+            return (
               <div
-                className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl -mr-16 -mt-16 transition-colors ${selectedId === cat.id ? 'bg-accent-orange/20' : 'bg-white/5 group-hover:bg-white/10'}`}
-              ></div>
-              <div className="relative z-10 flex justify-between items-start mb-2">
-                <div className="font-bold text-lg text-white">{cat.name}</div>
-                {selectedId === cat.id && (
-                  <CheckCircle2 size={20} className="text-accent-orange" />
+                key={cat.id}
+                className={`group relative overflow-hidden border rounded-[16px] p-5 cursor-pointer transition-all ${
+                  isSelected
+                    ? 'border-accent-orange bg-accent-orange/10 shadow-[0_0_20px_rgba(255,107,43,0.15)]'
+                    : 'border-white/10 bg-black/40 hover:border-white/30 hover:bg-white/5'
+                }`}
+                onClick={() => onSelect(cat.id)}
+              >
+                <div
+                  className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl -mr-16 -mt-16 transition-colors ${isSelected ? 'bg-accent-orange/20' : 'bg-white/5 group-hover:bg-white/10'}`}
+                ></div>
+                <div className="relative z-10 flex justify-between items-start mb-2">
+                  <div className="font-bold text-lg text-white">{cat.name}</div>
+                  {isSelected && (
+                    <CheckCircle2
+                      size={20}
+                      aria-hidden="true"
+                      className="text-accent-orange"
+                    />
+                  )}
+                </div>
+                <div className="relative z-10 text-sm text-secondary bg-white/10 inline-block px-3 py-1 rounded-full mb-4">
+                  {cat.distance}
+                </div>
+                <div className="relative z-10 text-xl font-bold text-accent-orange">
+                  ₱{formatPesos(cat.price)}
+                </div>
+
+                {/* Optional on a race, so the card has to read correctly with
+                    and without it — hence a strip appended below the price
+                    rather than a hero image the layout depends on. */}
+                {cat.imageUrl && (
+                  <div className="relative z-10 mt-4 flex items-center gap-3">
+                    <PosterThumb
+                      cat={cat}
+                      size="sm"
+                      onOpen={() => setPosterFor(cat)}
+                    />
+                    <ViewInclusionsButton
+                      name={cat.name}
+                      onOpen={() => setPosterFor(cat)}
+                    />
+                  </div>
                 )}
               </div>
-              <div className="relative z-10 text-sm text-secondary bg-white/10 inline-block px-3 py-1 rounded-full mb-4">
-                {cat.distance}
-              </div>
-              <div className="relative z-10 text-xl font-bold text-accent-orange">
-                ₱{formatPesos(cat.price)}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
+
+      {posterFor && (
+        <PosterLightbox
+          category={posterFor}
+          isSelected={selectedId === posterFor.id}
+          onSelect={() => onSelect(posterFor.id)}
+          onClose={() => setPosterFor(null)}
+        />
+      )}
     </>
+  );
+}
+
+/**
+ * A square crop of the poster. Square regardless of the file's own proportions,
+ * so a portrait poster and a landscape one produce rows of the same height and
+ * the list stays scannable.
+ */
+function PosterThumb({
+  cat,
+  size = 'md',
+  onOpen,
+}: {
+  cat: any;
+  size?: 'sm' | 'md';
+  onOpen: () => void;
+}) {
+  const box = size === 'sm' ? 'w-12 h-12' : 'w-20 h-20 sm:w-24 sm:h-24';
+
+  return (
+    <button
+      type="button"
+      onClick={e => {
+        // Inside a clickable card on the race grid, where a bare click would
+        // also select the category.
+        e.stopPropagation();
+        onOpen();
+      }}
+      aria-label={`View ${cat.name} inclusions`}
+      className={`${box} relative shrink-0 rounded-xl overflow-hidden border border-white/10 bg-black/40 group/thumb`}
+    >
+      <img
+        src={cat.imageUrl}
+        alt=""
+        loading="lazy"
+        className="w-full h-full object-cover"
+      />
+      {/* Always visible, not hover-only: touch has no hover, and this is the
+          only cue that the thumbnail opens something. */}
+      <span className="absolute bottom-0.5 right-0.5 w-5 h-5 rounded-md bg-black/70 flex items-center justify-center text-white group-hover/thumb:bg-accent-orange transition-colors">
+        <Maximize2 size={11} aria-hidden="true" />
+      </span>
+    </button>
+  );
+}
+
+function ViewInclusionsButton({
+  name,
+  onOpen,
+  className = '',
+}: {
+  name: string;
+  onOpen: () => void;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={e => {
+        e.preventDefault();
+        e.stopPropagation();
+        onOpen();
+      }}
+      aria-label={`View ${name} inclusions`}
+      className={`self-start text-xs font-medium text-accent-blue hover:text-white underline underline-offset-2 py-2 pr-2 transition-colors ${className}`}
+    >
+      View inclusions
+    </button>
   );
 }
