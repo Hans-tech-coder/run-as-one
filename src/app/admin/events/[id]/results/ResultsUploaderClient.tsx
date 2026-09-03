@@ -260,8 +260,9 @@ export default function ResultsUploaderClient({ event }: { event: any }) {
                         onChange={(e) => handleMappingChange(sheetName, 'categoryId', e.target.value)}
                       >
                         <option value="">-- Do not import this sheet --</option>
+                        {/* A fun-run package has no distance to append. */}
                         {event.categories.map((cat: any) => (
-                          <option key={cat.id} value={cat.id}>{cat.name} ({cat.distance})</option>
+                          <option key={cat.id} value={cat.id}>{cat.name}{cat.distance ? ` (${cat.distance})` : ''}</option>
                         ))}
                       </select>
                     </div>

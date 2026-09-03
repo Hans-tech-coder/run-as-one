@@ -4,6 +4,7 @@ import { Calendar, MapPin, CheckCircle2, ChevronRight, Clock } from 'lucide-reac
 import Link from 'next/link';
 import db from '@/lib/db';
 import { formatPesos } from '@/lib/money';
+import { sellsPackages } from '@/lib/event-type';
 import './EventDetails.css';
 
 import EventHeroBanner from '@/components/EventHeroBanner';
@@ -75,14 +76,16 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ i
               
               {/* Categories Bento */}
               <div className="glass-panel p-6 rounded-3xl border border-white/10 bg-gradient-to-b from-white/5 to-transparent">
-                <h2 className="text-2xl font-bold mb-6 text-white">Categories</h2>
+                <h2 className="text-2xl font-bold mb-6 text-white">{sellsPackages(event) ? 'Packages' : 'Categories'}</h2>
                 <div className="flex flex-col gap-4">
                   {event.categories.map((cat: any) => (
                     <div key={cat.id} className="group relative overflow-hidden bg-black/40 border border-white/5 rounded-2xl p-5 hover:border-accent-orange/50 transition-colors flex items-center justify-between">
                       <div className="absolute top-0 right-0 w-32 h-32 bg-accent-orange/10 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-accent-orange/20 transition-all"></div>
                       <div className="relative z-10">
                         <div className="font-bold text-lg text-white mb-1">{cat.name}</div>
-                        <div className="text-sm text-secondary bg-white/10 inline-block px-3 py-1 rounded-full">{cat.distance}</div>
+                        {/* Packages have no distance; an empty pill is worse
+                            than no pill. */}
+                        {cat.distance && <div className="text-sm text-secondary bg-white/10 inline-block px-3 py-1 rounded-full">{cat.distance}</div>}
                       </div>
                       <div className="relative z-10 text-xl font-bold text-accent-orange">
                         ₱{formatPesos(cat.price)}
@@ -93,7 +96,8 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ i
                 
                 <div className="mt-6 pt-6 border-t border-white/10 text-sm text-secondary flex flex-col gap-2">
                   {event.logisticsPickup && <div className="flex items-center gap-2"><CheckCircle2 size={16} className="text-accent-blue" /> On-site Pickup Available</div>}
-                  {event.logisticsDeliveryFee > 0 && <div className="flex items-center gap-2"><CheckCircle2 size={16} className="text-accent-blue" /> Delivery (+₱{formatPesos(event.logisticsDeliveryFee)})</div>}
+                  {event.logisticsDeliveryFeeInside > 0 && <div className="flex items-center gap-2"><CheckCircle2 size={16} className="text-accent-blue" /> Delivery, inside province (+₱{formatPesos(event.logisticsDeliveryFeeInside)})</div>}
+                  {event.logisticsDeliveryFeeOutside > 0 && <div className="flex items-center gap-2"><CheckCircle2 size={16} className="text-accent-blue" /> Delivery, outside province (+₱{formatPesos(event.logisticsDeliveryFeeOutside)})</div>}
                 </div>
               </div>
 

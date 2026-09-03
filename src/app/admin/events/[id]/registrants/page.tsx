@@ -52,6 +52,9 @@ export default async function RegistrantsPage({ params }: { params: Promise<{ id
         emergencyContactPhone: runner.emergencyContactPhone,
         medicalConditions: runner.medicalConditions || 'None',
         logisticsMethod: reg.logisticsMethod,
+        // The zone the runner declared at checkout — it decides which delivery
+        // fee they were charged, so the organizer needs to see it.
+        deliveryZone: reg.deliveryZone || '',
         deliveryAddress: reg.deliveryAddress || 'N/A',
         paymentMethod: reg.paymentMethod,
         proofOfPayment: reg.proofOfPayment,

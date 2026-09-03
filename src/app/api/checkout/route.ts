@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import crypto from 'crypto';
+import { asDeliveryZone, deliveryFeeFor } from '@/app/events/[id]/register/delivery';
 
 export async function POST(request: Request) {
   try {
@@ -15,6 +16,7 @@ export async function POST(request: Request) {
       eventId,
       participants,
       logisticsMethod,
+      deliveryZone,
       deliveryAddress,
       subtotal,
       deliveryFee,
@@ -40,6 +42,33 @@ export async function POST(request: Request) {
     const platformFeeCents = cents(platformFee);
     const transactionFeeCents = cents(transactionFee);
 
+    // Fetched before anything is written, because the line items below are
+    // billed from these numbers — a payload that disagrees with the organizer's
+    // prices must not reach PayMongo, let alone leave a registration behind.
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+      include: { categories: true }
+    });
+
+    if (!event) {
+      return NextResponse.json({ error: 'Event not found' }, { status: 404 });
+    }
+
+    // The client sends both the zone and the fee. They are two ways of saying
+    // the same thing, so the organizer's prices decide which pairs are legal —
+    // otherwise a registration could record "outside province" while paying the
+    // inside rate. Same for the admin fee, which is now per event.
+    const zone = logisticsMethod === 'delivery' ? asDeliveryZone(deliveryZone) : null;
+    const expectedDeliveryFee = deliveryFeeFor(event, zone);
+    const expectedPlatformFee = event.adminFee * participants.length;
+
+    if (deliveryFeeCents !== expectedDeliveryFee || platformFeeCents !== expectedPlatformFee) {
+      return NextResponse.json(
+        { error: 'Prices have changed. Please reload the page and try again.' },
+        { status: 409 }
+      );
+    }
+
     const orderRef = `RM-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
 
     // Temporarily save to DB as PAID to populate dashboard immediately
@@ -50,6 +79,8 @@ export async function POST(request: Request) {
         customerEmail,
         customerName,
         logisticsMethod,
+        // Only meaningful for delivery; pickup leaves it null.
+        deliveryZone: zone,
         deliveryAddress,
         deliveryFee: deliveryFeeCents,
         subtotal: subtotalCents,
@@ -83,15 +114,6 @@ export async function POST(request: Request) {
       return NextResponse.json({
         checkout_url: finalSuccessUrl
       });
-    }
-
-    const event = await prisma.event.findUnique({
-      where: { id: eventId },
-      include: { categories: true }
-    });
-
-    if (!event) {
-      return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     }
 
     // Every amount below is already in centavos, which is also the unit

@@ -442,7 +442,7 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
     const headers = [
       'Order Ref', 'First Name', 'Last Name', 'Email', 'Phone', 'Gender', 'Birthdate', 
       'Category', 'Distance', 'Singlet Size', 'Emergency Contact', 'Emergency Phone', 
-      'Medical Conditions', 'Logistics Method', 'Delivery Address', 'Payment Method', 'Status'
+      'Medical Conditions', 'Logistics Method', 'Delivery Area', 'Delivery Address', 'Payment Method', 'Status'
     ];
     
     // Use selected rows if any, otherwise fallback to all filtered rows
@@ -454,7 +454,7 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
       return [
         runner.orderRef, runner.firstName, runner.lastName, runner.email, runner.phone, runner.gender, runner.birthdate,
         runner.category, runner.distance, runner.size, runner.emergencyContactName, runner.emergencyContactPhone,
-        `"${runner.medicalConditions}"`, runner.logisticsMethod, `"${runner.deliveryAddress}"`, runner.paymentMethod, runner.status
+        `"${runner.medicalConditions}"`, runner.logisticsMethod, runner.deliveryZone, `"${runner.deliveryAddress}"`, runner.paymentMethod, runner.status
       ].join(',')
     });
     
@@ -776,7 +776,9 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
                   <h4 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Race Details</h4>
                   <div className="space-y-2 text-sm">
                     <p className="flex flex-col"><span className="text-gray-500">Category</span> <span className="text-white font-medium">{viewingRunner.category}</span></p>
-                    <p className="flex flex-col"><span className="text-gray-500">Distance</span> <span className="text-white font-medium">{viewingRunner.distance}</span></p>
+                    {/* Fun-run packages have none, and a blank row reads like
+                        missing data rather than an absent field. */}
+                    {viewingRunner.distance && <p className="flex flex-col"><span className="text-gray-500">Distance</span> <span className="text-white font-medium">{viewingRunner.distance}</span></p>}
                     <p className="flex flex-col"><span className="text-gray-500">Singlet Size</span> <span className="text-white font-medium">{viewingRunner.size}</span></p>
                   </div>
                 </div>
@@ -808,6 +810,9 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
                   </p>
                   <p className="flex flex-col"><span className="text-gray-500">Payment Method</span> <span className="text-white font-medium capitalize">{viewingRunner.paymentMethod === 'bank_transfer' ? 'Bank Transfer' : viewingRunner.paymentMethod}</span></p>
                   <p className="flex flex-col"><span className="text-gray-500">Logistics</span> <span className="text-white font-medium capitalize">{viewingRunner.logisticsMethod}</span></p>
+                  {viewingRunner.logisticsMethod === 'delivery' && viewingRunner.deliveryZone && (
+                    <p className="flex flex-col"><span className="text-gray-500">Delivery Area</span> <span className="text-white font-medium">{viewingRunner.deliveryZone === 'outside' ? 'Outside Province' : 'Inside Province'}</span></p>
+                  )}
                   {viewingRunner.logisticsMethod === 'delivery' && (
                     <p className="flex flex-col sm:col-span-2"><span className="text-gray-500">Address</span> <span className="text-white font-medium">{viewingRunner.deliveryAddress}</span></p>
                   )}

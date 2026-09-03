@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { getAuthCookie } from '@/lib/auth';
 import { toCentavos } from '@/lib/money';
+import { asRegistrationForm } from '@/lib/registration-form';
+import { asEventType } from '@/lib/event-type';
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -37,7 +39,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
     const { id } = await params;
     const data = await request.json();
-    const { title, date, startTime, endTime, location, imageUrl, raceKitImageUrl, description, logisticsPickup, logisticsDeliveryFee, certificateTemplate, certificateCoordinates, categories } = data;
+    const { title, date, startTime, endTime, location, imageUrl, raceKitImageUrl, description, logisticsPickup, logisticsDeliveryFeeInside, logisticsDeliveryFeeOutside, adminFee, registrationForm, eventType, certificateTemplate, certificateCoordinates, categories } = data;
 
     if (!title || !date || !location) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -75,7 +77,11 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
           description: description || '',
           logisticsPickup: Boolean(logisticsPickup),
           // The admin form collects pesos; storage is centavos.
-          logisticsDeliveryFee: toCentavos(logisticsDeliveryFee),
+          logisticsDeliveryFeeInside: toCentavos(logisticsDeliveryFeeInside),
+          logisticsDeliveryFeeOutside: toCentavos(logisticsDeliveryFeeOutside),
+          adminFee: toCentavos(adminFee),
+          registrationForm: asRegistrationForm(registrationForm),
+          eventType: asEventType(eventType),
           certificateTemplate: certificateTemplate || null,
           certificateCoordinates: certificateCoordinates || null,
         }
@@ -87,16 +93,20 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
             where: { id: cat.id },
             data: {
               name: cat.name,
-              distance: cat.distance,
+              // A fun-run package has neither of these: no distance to run, and
+              // a poster only if the organizer uploaded one.
+              distance: cat.distance || '',
               price: toCentavos(cat.price),
+              imageUrl: cat.imageUrl || null,
             }
           });
         } else {
           await prisma.category.create({
             data: {
               name: cat.name,
-              distance: cat.distance,
+              distance: cat.distance || '',
               price: toCentavos(cat.price),
+              imageUrl: cat.imageUrl || null,
               eventId: id,
             }
           });

@@ -29,8 +29,10 @@ export default function EventCard({ event }: EventCardProps) {
         </div>
 
         <div className="flex flex-wrap gap-2 mb-6 mt-auto">
+          {/* A fun run's categories are packages, which carry no distance —
+              their name is the label a runner recognises. */}
           {event.categories.map((cat, index) => (
-            <span key={index} className="bg-white/10 px-2 py-1 rounded text-xs font-semibold text-white">{cat.distance}</span>
+            <span key={index} className="bg-white/10 px-2 py-1 rounded text-xs font-semibold text-white">{cat.distance || cat.name}</span>
           ))}
         </div>
 

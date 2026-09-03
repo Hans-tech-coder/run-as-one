@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import crypto from 'crypto';
 import { uploadPrivateProof, UploadError } from '@/lib/blob';
+import { asDeliveryZone, deliveryFeeFor } from '@/app/events/[id]/register/delivery';
 
 export async function POST(request: Request) {
   try {
@@ -12,6 +13,7 @@ export async function POST(request: Request) {
     const customerEmail = formData.get('customerEmail') as string;
     const customerName = formData.get('customerName') as string;
     const logisticsMethod = formData.get('logisticsMethod') as string;
+    const deliveryZone = formData.get('deliveryZone') as string;
     const deliveryAddress = formData.get('deliveryAddress') as string;
     // Amounts arrive as centavos. Round defensively — Prisma rejects a
     // non-integer for an Int column, and a stray decimal here would 500.
@@ -32,6 +34,26 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Proof of payment is required' }, { status: 400 });
     }
 
+    // The client sends both the zone and the fee. They are two ways of saying
+    // the same thing, so the organizer's prices decide which pairs are legal —
+    // otherwise a registration could record "outside province" while paying the
+    // inside rate. Same for the admin fee, which is now per event.
+    const event = await prisma.event.findUnique({ where: { id: eventId } });
+    if (!event) {
+      return NextResponse.json({ error: 'Event not found' }, { status: 404 });
+    }
+
+    const zone = logisticsMethod === 'delivery' ? asDeliveryZone(deliveryZone) : null;
+    const expectedDeliveryFee = deliveryFeeFor(event, zone);
+    const expectedPlatformFee = event.adminFee * participants.length;
+
+    if (deliveryFee !== expectedDeliveryFee || platformFee !== expectedPlatformFee) {
+      return NextResponse.json(
+        { error: 'Prices have changed. Please reload the page and try again.' },
+        { status: 409 }
+      );
+    }
+
     // 1. Store the receipt as a private blob. This route is public — anyone can
     // reach it — so uploadPrivateProof() enforces the type and size limits.
     // What we keep is the blob pathname; admins view it through
@@ -49,6 +71,8 @@ export async function POST(request: Request) {
         customerEmail,
         customerName,
         logisticsMethod,
+        // Only meaningful for delivery; pickup leaves it null.
+        deliveryZone: zone,
         deliveryAddress,
         deliveryFee,
         subtotal,

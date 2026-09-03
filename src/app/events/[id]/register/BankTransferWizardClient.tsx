@@ -13,6 +13,7 @@ import {
   X,
   Ruler,
   Calendar,
+  Landmark,
 } from "lucide-react";
 import { formatPesos } from "@/lib/money";
 import {
@@ -29,6 +30,22 @@ import CategoryPicker from "./CategoryPicker";
 import { sellsPackages } from "@/lib/event-type";
 import "./RegistrationWizard.css";
 
+/**
+ * The bank-transfer-only registration wizard.
+ *
+ * A deliberate sibling of RegistrationWizardClient rather than a mode of it.
+ * Events on this form take payment manually: the runner transfers, uploads a
+ * receipt, and the organizer approves. There is no PayMongo call anywhere in
+ * this file, and therefore no transaction fee — the runner pays exactly
+ * subtotal + delivery + admin fee.
+ *
+ * That also collapses the flow to three steps. The online wizard needs a fourth
+ * because its payment step is a choice; here the choice is already made.
+ *
+ * Delivery pricing is imported from ./delivery so the two wizards can never
+ * disagree about what a tier costs.
+ */
+
 interface Participant {
   id: number;
   categoryId: string;
@@ -44,7 +61,9 @@ interface Participant {
   medicalConditions: string;
 }
 
-export default function RegistrationWizardClient({
+const TOTAL_STEPS = 3;
+
+export default function BankTransferWizardClient({
   event,
   eventId,
   registration,
@@ -56,69 +75,41 @@ export default function RegistrationWizardClient({
   const router = useRouter();
   const searchParams = useSearchParams();
   const isSuccessParam = searchParams.get("success") === "true";
-  const isCancelParam = searchParams.get("cancel") === "true";
 
-  const [step, setStep] = useState(isCancelParam && registration ? 3 : 1);
-  const [participants, setParticipants] = useState<Participant[]>(
-    isCancelParam && registration?.runners?.length > 0
-      ? registration.runners.map((r: any, idx: number) => ({
-          id: r.id || Date.now() + idx,
-          categoryId: r.categoryId || "",
-          firstName: r.firstName || "",
-          lastName: r.lastName || "",
-          email: r.email || "",
-          phone: r.phone || "",
-          gender: r.gender || "",
-          birthdate: r.birthdate || "",
-          singletSize: r.singletSize || "",
-          emergencyContactName: r.emergencyContactName || "",
-          emergencyContactPhone: r.emergencyContactPhone || "",
-          medicalConditions: r.medicalConditions || "",
-        }))
-      : [
-          {
-            id: Date.now(),
-            categoryId: "",
-            firstName: "",
-            lastName: "",
-            email: "",
-            phone: "",
-            gender: "",
-            birthdate: "",
-            singletSize: "",
-            emergencyContactName: "",
-            emergencyContactPhone: "",
-            medicalConditions: "",
-          },
-        ],
-  );
+  const [step, setStep] = useState(1);
+  const [participants, setParticipants] = useState<Participant[]>([
+    {
+      id: Date.now(),
+      categoryId: "",
+      firstName: "",
+      lastName: "",
+      email: "",
+      phone: "",
+      gender: "",
+      birthdate: "",
+      singletSize: "",
+      emergencyContactName: "",
+      emergencyContactPhone: "",
+      medicalConditions: "",
+    },
+  ]);
 
   // Logistics state
   const [logisticsMethod, setLogisticsMethod] = useState<"pickup" | "delivery">(
-    isCancelParam && registration
-      ? registration.logisticsMethod || "pickup"
-      : "pickup",
+    "pickup",
   );
-  const [deliveryAddress, setDeliveryAddress] = useState(
-    isCancelParam && registration ? registration.deliveryAddress || "" : "",
-  );
+  const [deliveryAddress, setDeliveryAddress] = useState("");
   const [deliveryZone, setDeliveryZone] = useState<DeliveryZone | null>(
-    isCancelParam && registration?.deliveryZone
-      ? registration.deliveryZone
-      : defaultDeliveryZone(event),
+    defaultDeliveryZone(event),
   );
 
   const availableTiers = deliveryTiers(event);
   const selectedTier = availableTiers.find((t) => t.zone === deliveryZone);
 
-  // Payment state
-  const [paymentMethod, setPaymentMethod] = useState<
-    "gcash" | "maya" | "qrph" | "card" | "bank_transfer"
-  >("gcash");
+  // Payment state. The method is fixed — this wizard exists precisely because
+  // the organizer chose not to offer anything else.
   const [isProcessing, setIsProcessing] = useState(false);
-  const [orderRef, setOrderRef] = useState<string>(
-    isCancelParam && registration ? registration.orderRef : "",
-  );
+  const [orderRef, setOrderRef] = useState<string>("");
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [selectedBankModal, setSelectedBankModal] = useState<BankOption | null>(
@@ -178,7 +169,8 @@ export default function RegistrationWizardClient({
   };
 
   // Calculations. Every amount below is in centavos (integers), so these sums
-  // are exact — no floating point drift.
+  // are exact — no floating point drift. There is no transaction fee to add:
+  // a bank transfer costs the organizer nothing to receive.
   const subtotal = participants.reduce((total, p) => {
     const cat = event.categories.find((c: any) => c.id === p.categoryId);
     return total + (cat ? cat.price : 0);
@@ -187,38 +179,10 @@ export default function RegistrationWizardClient({
   const deliveryFee =
     logisticsMethod === "delivery" ? deliveryFeeFor(event, deliveryZone) : 0;
 
-  // Platform Fee (DB-driven per participant)
+  // Platform Fee (per participant, set per event by the organizer)
   const platformFee = adminFeePerRunner * participants.length;
 
-  // Dynamic Transaction Fee based on payment method
-  let transactionFee = 0;
-  if (step === 3 && paymentMethod !== "bank_transfer") {
-    const baseAmountForFee = subtotal + deliveryFee + platformFee; // Include admin fee in computation as requested
-
-    // Using VAT-inclusive rates (PayMongo deducts this from the total gross amount)
-    // Formula to perfectly cover the fee: Fee = (Base * rate + fixed) / (1 - rate)
-    if (paymentMethod === "gcash") {
-      const rate = 0.025; // 2.5%
-      transactionFee = (baseAmountForFee * rate) / (1 - rate);
-    } else if (paymentMethod === "maya") {
-      const rate = 0.02; // 2.0%
-      transactionFee = (baseAmountForFee * rate) / (1 - rate);
-    } else if (paymentMethod === "qrph") {
-      const rate = 0.015; // 1.5%
-      transactionFee = (baseAmountForFee * rate) / (1 - rate);
-    } else if (paymentMethod === "card") {
-      const rate = 0.035; // 3.5%
-      const fixed = 1500; // ₱15.00 in centavos
-      transactionFee = (baseAmountForFee * rate + fixed) / (1 - rate);
-    }
-
-    // Round up to the next whole centavo so the merchant never absorbs a
-    // fraction. This is the only place a non-integer can appear, because the
-    // rate multiplication above produces a fractional centavo.
-    transactionFee = Math.ceil(transactionFee);
-  }
-
-  const totalAmount = subtotal + deliveryFee + platformFee + transactionFee;
+  const totalAmount = subtotal + deliveryFee + platformFee;
 
   // Validation checks
   const validateStep1 = () => {
@@ -262,56 +226,6 @@ export default function RegistrationWizardClient({
 
   const handleBack = () => setStep((prev) => prev - 1);
 
-  const handleCheckout = async () => {
-    if (paymentMethod === "bank_transfer") {
-      setStep(4);
-      return;
-    }
-
-    setIsProcessing(true);
-    try {
-      const baseUrl = window.location.origin;
-      const response = await fetch("/api/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          amount: totalAmount,
-          description: `Registration for ${event.title}`,
-          successUrl: `${baseUrl}/events/${eventId}/register?success=true`,
-          cancelUrl: `${baseUrl}/events/${eventId}/register`,
-          customerEmail: participants[0].email,
-          customerName: `${participants[0].firstName} ${participants[0].lastName}`,
-          eventId: eventId,
-          participants: participants,
-          logisticsMethod: logisticsMethod,
-          deliveryZone: deliveryZone,
-          deliveryAddress: deliveryAddress,
-          subtotal: subtotal,
-          deliveryFee: deliveryFee,
-          platformFee: platformFee,
-          transactionFee: transactionFee,
-          paymentMethod: paymentMethod,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.checkout_url) {
-        window.location.href = data.checkout_url;
-      } else {
-        alert(
-          data.error ||
-            "Failed to create checkout session. Please check your PayMongo API keys in .env.local.",
-        );
-        setIsProcessing(false);
-      }
-    } catch (error) {
-      console.error(error);
-      alert("An unexpected error occurred.");
-      setIsProcessing(false);
-    }
-  };
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       setProofFile(e.target.files[0]);
@@ -342,9 +256,9 @@ export default function RegistrationWizardClient({
       formData.append("subtotal", subtotal.toString());
       formData.append("deliveryFee", deliveryFee.toString());
       formData.append("platformFee", platformFee.toString());
-      formData.append("transactionFee", transactionFee.toString());
+      formData.append("transactionFee", "0");
       formData.append("totalAmount", totalAmount.toString());
-      formData.append("paymentMethod", paymentMethod);
+      formData.append("paymentMethod", "bank_transfer");
       formData.append("transactionNumber", transactionNumber);
 
       // Append complex data as JSON string
@@ -358,7 +272,6 @@ export default function RegistrationWizardClient({
       const data = await response.json();
 
       if (response.ok) {
-        // Redirect to success UI within this wizard
         router.push(
           `/events/${eventId}/register?success=true&orderRef=${data.orderRef}`,
         );
@@ -385,15 +298,17 @@ export default function RegistrationWizardClient({
                 <CheckCircle2 size={48} className="text-accent-blue" />
               </div>
               <h1 className="text-4xl font-extrabold text-white tracking-tight mb-4">
-                Registration Successful!
+                Registration Submitted!
               </h1>
               <p className="text-secondary text-lg mb-8">
-                You have successfully registered for{" "}
-                <strong>{event.title}</strong>.
+                Your registration for <strong>{event.title}</strong> has been
+                received.
               </p>
+              {/* Unlike the online wizard, nothing here is settled yet — the
+                  organizer still has to check the receipt against their bank. */}
               <p className="text-sm text-secondary mb-8 max-w-md mx-auto">
-                Your registration confirmation and simulated e-receipt have been
-                sent to{" "}
+                The organizer will verify your bank transfer and confirm your
+                slot. You will be notified at{" "}
                 <span className="text-white">
                   {registration?.customerEmail || participants[0].email}
                 </span>
@@ -410,7 +325,7 @@ export default function RegistrationWizardClient({
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-secondary text-sm">Total Paid</span>
+                  <span className="text-secondary text-sm">Amount Due</span>
                   <span className="text-accent-orange font-bold text-xl">
                     ₱{formatPesos(registration?.totalAmount || totalAmount)}
                   </span>
@@ -499,15 +414,6 @@ export default function RegistrationWizardClient({
                     ₱{formatPesos(platformFee)}
                   </span>
                 </div>
-
-                {step === 3 && paymentMethod !== "bank_transfer" && (
-                  <div className="flex justify-between items-center text-sm mt-2 pt-2 border-t border-white/5">
-                    <span className="text-secondary">Transaction Fee</span>
-                    <span className="text-white">
-                      ₱{formatPesos(transactionFee)}
-                    </span>
-                  </div>
-                )}
               </div>
 
               <div className="flex justify-between items-center mt-6 pt-4 border-t border-white/10">
@@ -517,6 +423,10 @@ export default function RegistrationWizardClient({
                 <strong className="text-accent-orange text-2xl font-bold">
                   ₱{formatPesos(totalAmount)}
                 </strong>
+              </div>
+
+              <div className="mt-3 text-xs text-secondary">
+                No transaction fee — payment is by bank transfer.
               </div>
             </div>
 
@@ -529,15 +439,11 @@ export default function RegistrationWizardClient({
               <div
                 className="absolute top-1/2 left-0 h-[3px] bg-accent-orange -translate-y-1/2 z-0 transition-all duration-700 ease-in-out rounded-full shadow-[0_0_12px_rgba(255,107,43,0.8)]"
                 style={{
-                  width: `${((step - 1) / (paymentMethod === "bank_transfer" || step === 4 ? 3 : 2)) * 100}%`,
+                  width: `${((step - 1) / (TOTAL_STEPS - 1)) * 100}%`,
                 }}
               ></div>
 
-              {[1, 2, 3, 4].map((s) => {
-                const totalStepsShown =
-                  paymentMethod === "bank_transfer" || step === 4 ? 4 : 3;
-                if (s === 4 && totalStepsShown === 3) return null;
-
+              {[1, 2, 3].map((s) => {
                 const isActive = step === s;
                 const isPast = step > s;
 
@@ -595,8 +501,7 @@ export default function RegistrationWizardClient({
                     ? "Runner Details & Packages"
                     : "Runner Details & Categories")}
                 {step === 2 && "Logistics"}
-                {step === 3 && "Checkout & Payment"}
-                {step === 4 && "Upload Proof of Payment"}
+                {step === 3 && "Bank Transfer & Proof of Payment"}
               </h2>
             </div>
 
@@ -679,11 +584,7 @@ export default function RegistrationWizardClient({
                           type="email"
                           value={p.email}
                           onChange={(e) =>
-                            handleParticipantChange(
-                              idx,
-                              "email",
-                              e.target.value,
-                            )
+                            handleParticipantChange(idx, "email", e.target.value)
                           }
                           placeholder="juan@example.com"
                         />
@@ -694,11 +595,7 @@ export default function RegistrationWizardClient({
                           type="tel"
                           value={p.phone}
                           onChange={(e) =>
-                            handleParticipantChange(
-                              idx,
-                              "phone",
-                              e.target.value,
-                            )
+                            handleParticipantChange(idx, "phone", e.target.value)
                           }
                           placeholder="09xxxxxxxxx"
                         />
@@ -774,7 +671,7 @@ export default function RegistrationWizardClient({
                     </div>
 
                     <h4 className="mt-6 mb-3 text-secondary">
-                      Health & Emergency Info
+                      Health &amp; Emergency Info
                     </h4>
                     <div className="form-grid">
                       <div className="input-group">
@@ -985,7 +882,7 @@ export default function RegistrationWizardClient({
                     className="btn-gradient flex items-center justify-center gap-2 px-10 py-4 rounded-[16px] text-lg group shadow-xl shadow-accent-orange/20"
                     onClick={handleNext}
                   >
-                    Proceed to Checkout{" "}
+                    Proceed to Payment{" "}
                     <ChevronRight
                       size={20}
                       className="group-hover:translate-x-1 transition-transform"
@@ -995,164 +892,32 @@ export default function RegistrationWizardClient({
               </div>
             )}
 
-            {/* STEP 3: Checkout */}
+            {/* STEP 3: Bank Transfer & Proof Upload */}
             {step === 3 && (
               <div className="step-content relative z-10 animate-fade-in">
-                <p className="text-secondary text-lg mb-8">
-                  Choose how you want to pay for your registration.
-                </p>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-                  <div
-                    className={`group relative overflow-hidden border ${paymentMethod === "gcash" ? "border-[#007DFE] bg-[#007DFE]/10" : "border-white/10 bg-black/40 hover:border-[#007DFE]/50"} rounded-[16px] p-6 cursor-pointer transition-all flex items-center gap-4`}
-                    onClick={() => setPaymentMethod("gcash")}
-                  >
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-[#007DFE]/10 rounded-full blur-xl -mr-12 -mt-12 group-hover:bg-[#007DFE]/20"></div>
-                    <div
-                      className={`w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 ${paymentMethod === "gcash" ? "border-[#007DFE]" : "border-white/20"}`}
-                    >
-                      {paymentMethod === "gcash" && (
-                        <div className="w-4 h-4 rounded-full bg-[#007DFE]"></div>
-                      )}
-                    </div>
-                    <div>
-                      <div className="font-bold text-white text-lg">GCash</div>
-                      <div className="text-sm text-secondary">
-                        Pay securely via PayMongo
-                      </div>
-                    </div>
-                  </div>
-
-                  <div
-                    className={`group relative overflow-hidden border ${paymentMethod === "maya" ? "border-[#00A164] bg-[#00A164]/10" : "border-white/10 bg-black/40 hover:border-[#00A164]/50"} rounded-[16px] p-6 cursor-pointer transition-all flex items-center gap-4`}
-                    onClick={() => setPaymentMethod("maya")}
-                  >
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-[#00A164]/10 rounded-full blur-xl -mr-12 -mt-12 group-hover:bg-[#00A164]/20"></div>
-                    <div
-                      className={`w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 ${paymentMethod === "maya" ? "border-[#00A164]" : "border-white/20"}`}
-                    >
-                      {paymentMethod === "maya" && (
-                        <div className="w-4 h-4 rounded-full bg-[#00A164]"></div>
-                      )}
-                    </div>
-                    <div>
-                      <div className="font-bold text-white text-lg">Maya</div>
-                      <div className="text-sm text-secondary">
-                        Pay securely via PayMongo
-                      </div>
-                    </div>
-                  </div>
-
-                  <div
-                    className={`group relative overflow-hidden border ${paymentMethod === "qrph" ? "border-accent-blue bg-accent-blue/10" : "border-white/10 bg-black/40 hover:border-accent-blue/50"} rounded-[16px] p-6 cursor-pointer transition-all flex items-center gap-4`}
-                    onClick={() => setPaymentMethod("qrph")}
-                  >
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-accent-blue/10 rounded-full blur-xl -mr-12 -mt-12 group-hover:bg-accent-blue/20"></div>
-                    <div
-                      className={`w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 ${paymentMethod === "qrph" ? "border-accent-blue" : "border-white/20"}`}
-                    >
-                      {paymentMethod === "qrph" && (
-                        <div className="w-4 h-4 rounded-full bg-accent-blue"></div>
-                      )}
-                    </div>
-                    <div>
-                      <div className="text-lg font-bold text-white">QR Ph</div>
-                      <div className="text-sm text-secondary">
-                        Pay securely via PayMongo
-                      </div>
-                    </div>
-                  </div>
-
-                  <div
-                    className={`group relative flex cursor-pointer items-center gap-4 overflow-hidden rounded-[16px] border ${
-                      paymentMethod === "card"
-                        ? "border-accent-blue bg-accent-blue/10"
-                        : "border-white/10 bg-black/40 hover:border-accent-blue/50"
-                    } p-6 transition-all`}
-                    onClick={() => setPaymentMethod("card")}
-                  >
-                    <div className="absolute right-0 top-0 -mr-12 -mt-12 h-24 w-24 rounded-full bg-accent-blue/10 blur-xl group-hover:bg-accent-blue/20"></div>
-                    <div
-                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 ${
-                        paymentMethod === "card"
-                          ? "border-accent-blue"
-                          : "border-white/20"
-                      }`}
-                    >
-                      {paymentMethod === "card" && (
-                        <div className="h-4 w-4 rounded-full bg-accent-blue"></div>
-                      )}
-                    </div>
-                    <div>
-                      <div className="text-lg font-bold text-white">Credit/Debit Card</div>
-                      <div className="text-sm text-secondary">
-                        Visa or Mastercard via PayMongo
-                      </div>
-                    </div>
-                  </div>
-
-                  <div
-                    className={`group relative overflow-hidden border ${paymentMethod === "bank_transfer" ? "border-accent-orange bg-accent-orange/10" : "border-white/10 bg-black/40 hover:border-accent-orange/50"} rounded-[16px] p-6 cursor-pointer transition-all flex items-center gap-4`}
-                    onClick={() => setPaymentMethod("bank_transfer")}
-                  >
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-accent-orange/10 rounded-full blur-xl -mr-12 -mt-12 group-hover:bg-accent-orange/20"></div>
-                    <div
-                      className={`w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 ${paymentMethod === "bank_transfer" ? "border-accent-orange" : "border-white/20"}`}
-                    >
-                      {paymentMethod === "bank_transfer" && (
-                        <div className="w-4 h-4 rounded-full bg-accent-orange"></div>
-                      )}
-                    </div>
-                    <div>
-                      <div className="font-bold text-white text-lg">
-                        Bank Transfer
-                      </div>
-                      <div className="text-sm text-secondary">
-                        Manual upload of deposit slip
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
                 <div className="checkout-total-box bg-accent-orange/10 border border-accent-orange/20 rounded-3xl mb-8 text-center py-10 relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-64 h-64 bg-accent-orange/20 rounded-full blur-[80px] -mr-32 -mt-32"></div>
                   <div className="relative z-10 text-secondary mb-2 uppercase tracking-widest text-sm font-bold">
-                    Total Amount to Pay
+                    Total Amount to Transfer
                   </div>
                   <div className="relative z-10 text-5xl font-extrabold text-white">
                     ₱{formatPesos(totalAmount)}
                   </div>
                 </div>
 
-                <div className="form-actions mt-10 flex justify-end">
-                  <button
-                    className={`btn-gradient flex items-center justify-center gap-2 px-10 py-4 text-lg group shadow-xl shadow-accent-orange/20 ${isProcessing ? "opacity-50 pointer-events-none" : ""}`}
-                    onClick={handleCheckout}
-                    disabled={isProcessing}
-                  >
-                    {isProcessing
-                      ? paymentMethod !== "bank_transfer"
-                        ? "Connecting to PayMongo..."
-                        : "Processing..."
-                      : paymentMethod !== "bank_transfer"
-                        ? `Pay ₱${formatPesos(totalAmount)}`
-                        : "Upload Deposit Slip"}
-                  </button>
+                <div className="flex items-start gap-3 mb-8 p-5 rounded-[16px] border border-accent-blue/20 bg-accent-blue/5">
+                  <Landmark
+                    size={22}
+                    className="text-accent-blue shrink-0 mt-0.5"
+                  />
+                  <p className="text-secondary leading-relaxed m-0">
+                    This event accepts{" "}
+                    <strong className="text-white">bank transfer only</strong>.
+                    Pick a bank below to see the account details, transfer the
+                    exact amount, then upload your receipt. Your slot is
+                    confirmed once the organizer verifies the payment.
+                  </p>
                 </div>
-              </div>
-            )}
-
-            {/* STEP 4: Bank Transfer Upload */}
-            {step === 4 && (
-              <div className="step-content relative z-10 animate-fade-in">
-                <p className="text-secondary text-lg mb-8 leading-relaxed">
-                  You have selected Manual Bank Transfer. Please choose a bank
-                  below to view our account details and transfer{" "}
-                  <strong className="text-white font-bold tracking-wide">
-                    ₱{formatPesos(totalAmount)}
-                  </strong>
-                  . After payment, upload your deposit slip.
-                </p>
 
                 <h4 className="mb-4 text-accent-blue font-bold tracking-wide">
                   Select a Bank for Transfer
@@ -1169,7 +934,7 @@ export default function RegistrationWizardClient({
                         {bank.name}
                       </div>
                       <div className="relative z-10 text-sm text-secondary">
-                        Click to view details & QR
+                        Click to view details &amp; QR
                       </div>
                     </div>
                   ))}
@@ -1205,7 +970,7 @@ export default function RegistrationWizardClient({
                       <UploadCloud size={36} className="text-accent-blue" />
                     </div>
                     <div className="text-xl font-bold text-white">
-                      Drag & Drop your receipt here
+                      Drag &amp; Drop your receipt here
                     </div>
                     <div className="text-secondary mb-2">
                       or click to browse from your device

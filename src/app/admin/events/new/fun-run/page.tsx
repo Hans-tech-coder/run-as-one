@@ -4,19 +4,29 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, UploadCloud, Trash, AlertCircle, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
-import RegistrationFormPicker from '../RegistrationFormPicker';
-import CategoriesPanel from '../CategoriesPanel';
-import { blankCategory, type CategoryDraft } from '../category-draft';
+import RegistrationFormPicker from '../../RegistrationFormPicker';
+import PackagesPanel from '../../PackagesPanel';
+import { blankCategory, type CategoryDraft } from '../../category-draft';
 import { DEFAULT_REGISTRATION_FORM, type RegistrationForm } from '@/lib/registration-form';
 import { EVENT_TYPES } from '@/lib/event-type';
 
-export default function NewEventPage() {
+/**
+ * The create form for fun runs, reached from the event-type modal.
+ *
+ * Everything an organizer fills in here is the same as on the race form except
+ * the one panel that differs: PackagesPanel instead of CategoriesPanel. The two
+ * pages are kept side by side rather than merged behind a flag because a form
+ * that reshapes itself mid-entry is the thing the modal exists to avoid, and
+ * the parts that would actually drift — the two panels, the form picker — are
+ * already shared components.
+ */
+export default function NewFunRunEventPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
-  
+
   const [successMsg, setSuccessMsg] = useState('');
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
   const [isSuccessClosing, setIsSuccessClosing] = useState(false);
@@ -40,6 +50,9 @@ export default function NewEventPage() {
   });
 
   const [uploadingField, setUploadingField] = useState<string | null>(null);
+  // Set by PackagesPanel while a poster is uploading, for the same reason as
+  // uploadingField: saving mid-upload would store a package without its poster.
+  const [isUploadingPackage, setIsUploadingPackage] = useState(false);
 
   // Uploads to blob storage and stores the returned URL. This used to inline the
   // file as a base64 data URL, which meant every event row carried megabytes of
@@ -85,7 +98,7 @@ export default function NewEventPage() {
       const res = await fetch('/api/admin/events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, eventType: EVENT_TYPES.RACE, categories }),
+        body: JSON.stringify({ ...formData, eventType: EVENT_TYPES.FUN_RUN, categories }),
       });
 
       if (!res.ok) {
@@ -140,18 +153,18 @@ export default function NewEventPage() {
           <Link href="/admin/events" className="text-secondary hover:text-primary transition-colors">
             <ArrowLeft size={20} />
           </Link>
-          <h1 className="admin-header-title">Create New Event</h1>
+          <h1 className="admin-header-title">Create Fun Run Event</h1>
         </div>
       </header>
 
       <div className="admin-content max-w-4xl mx-auto">
-        <div 
+        <div
           className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
             error && !isClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
           }`}
           style={{ zIndex: 100 }}
         >
-          <div 
+          <div
             className={`t-modal w-full max-w-md bg-[#111] border border-red-500/20 rounded-2xl shadow-2xl p-6 flex flex-col gap-6 ${isOpen ? 'is-open' : ''} ${isClosing ? 'is-closing' : ''}`}
             role="dialog"
           >
@@ -165,9 +178,9 @@ export default function NewEventPage() {
               </div>
             </div>
             <div className="flex justify-end pt-2 border-t border-white/5">
-              <button 
+              <button
                 type="button"
-                onClick={closeErrorModal} 
+                onClick={closeErrorModal}
                 className="px-5 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm font-medium text-white transition-colors"
               >
                 Acknowledge
@@ -177,13 +190,13 @@ export default function NewEventPage() {
         </div>
 
         {/* Success Modal */}
-        <div 
+        <div
           className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
             successMsg && !isSuccessClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
           }`}
           style={{ zIndex: 100 }}
         >
-          <div 
+          <div
             className={`t-modal w-full max-w-md bg-[#111] border border-green-500/20 rounded-2xl shadow-2xl p-6 flex flex-col gap-6 ${isSuccessOpen ? 'is-open' : ''} ${isSuccessClosing ? 'is-closing' : ''}`}
             role="dialog"
           >
@@ -197,9 +210,9 @@ export default function NewEventPage() {
               </div>
             </div>
             <div className="flex justify-end pt-2 border-t border-white/5">
-              <button 
+              <button
                 type="button"
-                onClick={closeSuccessModal} 
+                onClick={closeSuccessModal}
                 className="px-5 py-2 bg-green-500 hover:bg-green-600 rounded-lg text-sm font-medium text-white transition-colors"
               >
                 Continue
@@ -218,19 +231,19 @@ export default function NewEventPage() {
               <div className="form-grid">
               <div className="form-group form-group-full">
                 <label className="form-label">Event Title</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={formData.title}
                   onChange={e => setFormData({...formData, title: e.target.value})}
                   className="form-input"
-                  placeholder="e.g. Manila Midnight Marathon 2025"
+                  placeholder="e.g. Run for a Cause 2025"
                   required
                 />
               </div>
               <div className="form-group">
                 <label className="form-label">Date</label>
-                <input 
-                  type="date" 
+                <input
+                  type="date"
                   value={formData.date}
                   onChange={e => setFormData({...formData, date: e.target.value})}
                   className="form-input"
@@ -239,8 +252,8 @@ export default function NewEventPage() {
               </div>
               <div className="form-group">
                 <label className="form-label">Location</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={formData.location}
                   onChange={e => setFormData({...formData, location: e.target.value})}
                   className="form-input"
@@ -250,8 +263,8 @@ export default function NewEventPage() {
               </div>
               <div className="form-group">
                 <label className="form-label">Start Time</label>
-                <input 
-                  type="time" 
+                <input
+                  type="time"
                   value={formData.startTime}
                   onChange={e => setFormData({...formData, startTime: e.target.value})}
                   className="form-input"
@@ -259,8 +272,8 @@ export default function NewEventPage() {
               </div>
               <div className="form-group">
                 <label className="form-label">End Time</label>
-                <input 
-                  type="time" 
+                <input
+                  type="time"
                   value={formData.endTime}
                   onChange={e => setFormData({...formData, endTime: e.target.value})}
                   className="form-input"
@@ -291,8 +304,8 @@ export default function NewEventPage() {
                   <div className="file-preview">
                     <img src={formData.imageUrl} alt="Cover Preview" />
                     <div className="file-preview-overlay">
-                      <button 
-                        type="button" 
+                      <button
+                        type="button"
                         onClick={() => setFormData(prev => ({ ...prev, imageUrl: '' }))}
                         className="btn-remove-preview"
                       >
@@ -302,7 +315,7 @@ export default function NewEventPage() {
                   </div>
                 )}
               </div>
-              
+
               <div className="form-group">
                 <label className="form-label">Race Kit Poster (Optional)</label>
                 {!formData.raceKitImageUrl ? (
@@ -328,8 +341,8 @@ export default function NewEventPage() {
                   <div className="file-preview">
                     <img src={formData.raceKitImageUrl} alt="Race Kit Preview" />
                     <div className="file-preview-overlay">
-                      <button 
-                        type="button" 
+                      <button
+                        type="button"
                         onClick={() => setFormData(prev => ({ ...prev, raceKitImageUrl: '' }))}
                         className="btn-remove-preview"
                       >
@@ -343,7 +356,12 @@ export default function NewEventPage() {
           </div>
         </div>
 
-          <CategoriesPanel categories={categories} onChange={setCategories} />
+          <PackagesPanel
+            packages={categories}
+            onChange={setCategories}
+            onError={setError}
+            onBusyChange={setIsUploadingPackage}
+          />
 
           {/* Logistics Options */}
           <div className="admin-panel">
@@ -424,7 +442,7 @@ export default function NewEventPage() {
             {/* Saving mid-upload would store the event without its image URL. */}
             <button
               type="submit"
-              disabled={isLoading || uploadingField !== null}
+              disabled={isLoading || uploadingField !== null || isUploadingPackage}
               className="btn-gradient px-8 py-3 rounded-lg font-medium"
             >
               {isLoading ? 'Saving...' : 'Save Event'}

@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { getAuthCookie } from '@/lib/auth';
 import { toCentavos } from '@/lib/money';
+import { asRegistrationForm } from '@/lib/registration-form';
+import { asEventType } from '@/lib/event-type';
 
 export async function POST(request: Request) {
   try {
@@ -11,7 +13,7 @@ export async function POST(request: Request) {
     }
 
     const data = await request.json();
-    const { title, date, startTime, endTime, location, imageUrl, raceKitImageUrl, description, logisticsPickup, logisticsDeliveryFee, categories } = data;
+    const { title, date, startTime, endTime, location, imageUrl, raceKitImageUrl, description, logisticsPickup, logisticsDeliveryFeeInside, logisticsDeliveryFeeOutside, adminFee, registrationForm, eventType, categories } = data;
 
     if (!title || !date || !location) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -29,13 +31,20 @@ export async function POST(request: Request) {
         description: description || '',
         logisticsPickup: Boolean(logisticsPickup),
         // The admin form collects pesos; storage is centavos.
-        logisticsDeliveryFee: toCentavos(logisticsDeliveryFee),
+        logisticsDeliveryFeeInside: toCentavos(logisticsDeliveryFeeInside),
+        logisticsDeliveryFeeOutside: toCentavos(logisticsDeliveryFeeOutside),
+        adminFee: toCentavos(adminFee),
+        registrationForm: asRegistrationForm(registrationForm),
+        eventType: asEventType(eventType),
         organizerId: auth.id,
         categories: {
           create: categories.map((cat: any) => ({
             name: cat.name,
-            distance: cat.distance,
+            // A fun-run package has neither of these: no distance to run, and a
+            // poster only if the organizer uploaded one.
+            distance: cat.distance || '',
             price: toCentavos(cat.price),
+            imageUrl: cat.imageUrl || null,
           })),
         },
       },

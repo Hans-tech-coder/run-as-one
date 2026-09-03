@@ -72,12 +72,14 @@ export default async function WinnersOverviewPage({
                     <div className="flex items-center gap-3">
                       <Medal className="text-accent-blue" size={28} />
                       <h2 className="text-2xl md:text-3xl font-bold text-transparent bg-clip-text" style={{ backgroundImage: 'linear-gradient(to right, #ffffff, #a1a1aa)' }}>
-                        {cat.name} ({cat.distance}) Winners
+                        {/* A package has no distance, so the parenthetical
+                            would read "( )". */}
+                        {cat.name}{cat.distance ? ` (${cat.distance})` : ''} Winners
                       </h2>
                       <Medal className="text-accent-blue" size={28} />
                     </div>
                     <Link href={`/events/${id}/results/full?category=${cat.id}`} className="group bg-white/5 border border-white/10 text-white hover:bg-white/10 hover:border-white/30 transition-all py-2 px-4 rounded-[16px] font-bold text-sm tracking-wide flex items-center gap-1 shrink-0">
-                      View {cat.distance} Results
+                      View {cat.distance || cat.name} Results
                       <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform inline-block" />
                     </Link>
                   </div>

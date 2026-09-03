@@ -1,10 +1,16 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Save, Plus, X, AlertCircle, CheckCircle, Trash2, UploadCloud, Trash } from 'lucide-react';
+import { ArrowLeft, Save, X, AlertCircle, CheckCircle, UploadCloud, Trash } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toPesos } from '@/lib/money';
+import RegistrationFormPicker from '../../RegistrationFormPicker';
+import CategoriesPanel from '../../CategoriesPanel';
+import PackagesPanel from '../../PackagesPanel';
+import { blankCategory, type CategoryDraft } from '../../category-draft';
+import { DEFAULT_REGISTRATION_FORM, asRegistrationForm, type RegistrationForm } from '@/lib/registration-form';
+import { DEFAULT_EVENT_TYPE, EVENT_TYPES, asEventType, type EventType } from '@/lib/event-type';
 
 export default function EditEventPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -31,14 +37,23 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
     raceKitImageUrl: '',
     description: '',
     logisticsPickup: true,
-    logisticsDeliveryFee: 0,
+    logisticsDeliveryFeeInside: 0,
+    logisticsDeliveryFeeOutside: 0,
+    // Pesos on this form; the PUT route converts to centavos.
+    adminFee: 60,
+    registrationForm: DEFAULT_REGISTRATION_FORM as RegistrationForm,
     certificateTemplate: '',
     certificateCoordinates: JSON.stringify({ nameY: 50, timeY: 60, catY: 70 }),
   });
 
-  const [categories, setCategories] = useState([
-    { name: '', distance: '', price: 0 }
-  ]);
+  // Not part of formData because it is not editable here — an event that has
+  // sold packages cannot become one that sells distances. It is held in state
+  // only so the PUT can echo it back; leaving it out would make asEventType()
+  // fall back to RACE and silently retype every fun run on its next save.
+  const [eventType, setEventType] = useState<EventType>(DEFAULT_EVENT_TYPE);
+
+  const [categories, setCategories] = useState<CategoryDraft[]>([blankCategory()]);
+  const [isUploadingPackage, setIsUploadingPackage] = useState(false);
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -59,17 +74,23 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
           logisticsPickup: data.logisticsPickup ?? true,
           // The API returns centavos; every money input on this form is pesos.
           // The PUT route converts back with toCentavos().
-          logisticsDeliveryFee: toPesos(data.logisticsDeliveryFee),
+          logisticsDeliveryFeeInside: toPesos(data.logisticsDeliveryFeeInside),
+          logisticsDeliveryFeeOutside: toPesos(data.logisticsDeliveryFeeOutside),
+          adminFee: toPesos(data.adminFee),
+          registrationForm: asRegistrationForm(data.registrationForm),
           certificateTemplate: data.certificateTemplate || '',
           certificateCoordinates: data.certificateCoordinates || JSON.stringify({ nameY: 50, timeY: 60, catY: 70 }),
         });
+
+        setEventType(asEventType(data.eventType));
 
         if (data.categories && data.categories.length > 0) {
           setCategories(data.categories.map((c: any) => ({
             id: c.id,
             name: c.name,
             distance: c.distance,
-            price: toPesos(c.price)
+            price: toPesos(c.price),
+            imageUrl: c.imageUrl || ''
           })));
         }
       } catch (err) {
@@ -112,24 +133,6 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
     }
   };
 
-  const handleAddCategory = () => {
-    setCategories([...categories, { name: '', distance: '', price: 0 }]);
-  };
-
-  const handleRemoveCategory = (index: number) => {
-    if (categories.length > 1) {
-      const newCats = [...categories];
-      newCats.splice(index, 1);
-      setCategories(newCats);
-    }
-  };
-
-  const handleCategoryChange = (index: number, field: string, value: string | number) => {
-    const newCats = [...categories];
-    newCats[index] = { ...newCats[index], [field]: value };
-    setCategories(newCats);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -145,7 +148,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
       const res = await fetch(`/api/admin/events/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, categories }),
+        body: JSON.stringify({ ...formData, eventType, categories }),
       });
 
       if (!res.ok) {
@@ -411,74 +414,19 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
           </div>
         </div>
 
-        {/* Categories */}
-          <div className="admin-panel">
-            <div className="admin-panel-header">
-              <h2 className="admin-panel-title">Distance Categories</h2>
-            </div>
-            <div className="admin-panel-content">
-              <div className="flex flex-col gap-4">
-                {categories.map((cat, idx) => (
-                  <div key={idx} className="category-item-row">
-                    <div className="form-group category-col">
-                      {idx === 0 && <label className="form-label">Category Name</label>}
-                      <input 
-                        type="text" 
-                        value={cat.name}
-                        onChange={e => handleCategoryChange(idx, 'name', e.target.value)}
-                        className="form-input"
-                        placeholder="e.g. Full Marathon"
-                        required
-                      />
-                    </div>
-                    <div className="form-group category-col">
-                      {idx === 0 && <label className="form-label">Distance</label>}
-                      <input 
-                        type="text" 
-                        value={cat.distance}
-                        onChange={e => handleCategoryChange(idx, 'distance', e.target.value)}
-                        className="form-input"
-                        placeholder="e.g. 42K"
-                        required
-                      />
-                    </div>
-                    <div className="form-group category-col-price">
-                      {idx === 0 && <label className="form-label">Price (₱)</label>}
-                      <input 
-                        type="number" 
-                        value={cat.price}
-                        onChange={e => handleCategoryChange(idx, 'price', Number(e.target.value))}
-                        className="form-input"
-                        required
-                        min={0}
-                      />
-                    </div>
-                    {categories.length > 1 && (
-                      <button 
-                        type="button" 
-                        onClick={() => handleRemoveCategory(idx)}
-                        className="btn-remove mb-1"
-                        title="Remove Category"
-                        style={{ height: '42px' }}
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    )}
-                  </div>
-                ))}
-                
-                <div className="pt-2">
-                  <button 
-                    type="button" 
-                    onClick={handleAddCategory}
-                    className="btn-add"
-                  >
-                    <Plus size={16} /> Add Another Category
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+        {/* What the event sells: distances for a race, packages for a fun run.
+            The type is fixed at creation, so this never switches under the
+            organizer mid-edit. */}
+        {eventType === EVENT_TYPES.FUN_RUN ? (
+          <PackagesPanel
+            packages={categories}
+            onChange={setCategories}
+            onError={setError}
+            onBusyChange={setIsUploadingPackage}
+          />
+        ) : (
+          <CategoriesPanel categories={categories} onChange={setCategories} />
+        )}
 
           {/* Logistics Options */}
           <div className="admin-panel">
@@ -487,10 +435,10 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
             </div>
             <div className="admin-panel-content">
               <div className="form-grid">
-                <div className="checkbox-group">
-                  <input 
-                    type="checkbox" 
-                    id="pickup" 
+                <div className="checkbox-group form-group-full">
+                  <input
+                    type="checkbox"
+                    id="pickup"
                     checked={formData.logisticsPickup}
                     onChange={e => setFormData({...formData, logisticsPickup: e.target.checked})}
                     className="w-5 h-5 accent-accent-blue"
@@ -498,13 +446,54 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
                   <label htmlFor="pickup" className="text-primary font-medium">Allow On-site Pickup (Free)</label>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Delivery Fee (₱) <span className="text-xs opacity-70">- Set to 0 to disable delivery</span></label>
-                  <input 
-                    type="number" 
-                    value={formData.logisticsDeliveryFee}
-                    onChange={e => setFormData({...formData, logisticsDeliveryFee: Number(e.target.value)})}
+                  <label className="form-label">Delivery — Inside Province (₱) <span className="text-xs opacity-70">- 0 to hide this option</span></label>
+                  <input
+                    type="number"
+                    value={formData.logisticsDeliveryFeeInside}
+                    onChange={e => setFormData({...formData, logisticsDeliveryFeeInside: Number(e.target.value)})}
                     className="form-input"
                     min={0}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Delivery — Outside Province (₱) <span className="text-xs opacity-70">- 0 to hide this option</span></label>
+                  <input
+                    type="number"
+                    value={formData.logisticsDeliveryFeeOutside}
+                    onChange={e => setFormData({...formData, logisticsDeliveryFeeOutside: Number(e.target.value)})}
+                    className="form-input"
+                    min={0}
+                  />
+                </div>
+                <p className="form-group-full text-xs text-secondary">
+                  Runners pick their own zone at checkout. Leave both at 0 to offer pickup only.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Registration & Fees */}
+          <div className="admin-panel">
+            <div className="admin-panel-header">
+              <h2 className="admin-panel-title">Registration & Fees</h2>
+            </div>
+            <div className="admin-panel-content">
+              <div className="flex flex-col gap-6">
+                <div className="form-group">
+                  <label className="form-label">Admin Fee (₱) <span className="text-xs opacity-70">- charged per runner</span></label>
+                  <input
+                    type="number"
+                    value={formData.adminFee}
+                    onChange={e => setFormData({...formData, adminFee: Number(e.target.value)})}
+                    className="form-input"
+                    min={0}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Registration Form</label>
+                  <RegistrationFormPicker
+                    value={formData.registrationForm}
+                    onChange={value => setFormData({...formData, registrationForm: value})}
                   />
                 </div>
               </div>
@@ -705,7 +694,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
             {/* Saving mid-upload would store the event without its image URL. */}
             <button
               type="submit"
-              disabled={isLoading || uploadingField !== null}
+              disabled={isLoading || uploadingField !== null || isUploadingPackage}
               className="btn-gradient px-8 py-3 rounded-lg font-medium"
             >
               {isLoading ? 'Saving...' : 'Update Event'}

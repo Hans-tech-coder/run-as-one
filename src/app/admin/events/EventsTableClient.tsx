@@ -5,9 +5,9 @@ import {
   Search, Filter, Eye, X, Columns, Plus,
   ChevronLeft, ChevronRight, ChevronFirst, ChevronLast, ChevronUp, ChevronDown, Check, Trash2, AlertCircle
 } from 'lucide-react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import EventActionsMenu from './EventActionsMenu';
+import EventTypeModal from './EventTypeModal';
 import {
   Table,
   TableBody,
@@ -50,6 +50,10 @@ export default function EventsTableClient({ events }: EventsTableClientProps) {
   const [isDeleteClosing, setIsDeleteClosing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Event type picker, shown before either create form opens
+  const [isTypeOpen, setIsTypeOpen] = useState(false);
+  const [isTypeClosing, setIsTypeClosing] = useState(false);
+
   const viewRef = useRef<HTMLDivElement>(null);
   const pageSizeRef = useRef<HTMLDivElement>(null);
 
@@ -65,6 +69,12 @@ export default function EventsTableClient({ events }: EventsTableClientProps) {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const closeTypeModal = () => {
+    setIsTypeOpen(false);
+    setIsTypeClosing(true);
+    setTimeout(() => setIsTypeClosing(false), 150);
+  };
 
   const closeDeleteModal = () => {
     setIsDeleteOpen(false);
@@ -257,9 +267,14 @@ export default function EventsTableClient({ events }: EventsTableClientProps) {
         </div>
 
         <div className="toolbar-actions">
-          <Link href="/admin/events/new" className="flex items-center gap-2 border border-white/10 rounded-md h-10 px-4 text-sm text-zinc-200 bg-transparent hover:bg-white/5 transition-all">
+          {/* Not a Link: which form to open depends on the type picked next. */}
+          <button
+            type="button"
+            onClick={() => setIsTypeOpen(true)}
+            className="flex items-center gap-2 border border-white/10 rounded-md h-10 px-4 text-sm text-zinc-200 bg-transparent hover:bg-white/5 transition-all cursor-pointer"
+          >
             <Plus size={16} /> Create Event
-          </Link>
+          </button>
         </div>
       </div>
 
@@ -382,6 +397,8 @@ export default function EventsTableClient({ events }: EventsTableClientProps) {
           </div>
         </div>
       </div>
+
+      <EventTypeModal open={isTypeOpen} closing={isTypeClosing} onClose={closeTypeModal} />
 
       {/* Delete Confirmation Modal */}
       <div 

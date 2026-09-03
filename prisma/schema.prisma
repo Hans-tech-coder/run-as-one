@@ -29,8 +29,18 @@ model Event {
   imageUrl               String
   description            String?
   logisticsPickup        Boolean        @default(true)
-  /// Centavos
-  logisticsDeliveryFee   Int            @default(0)
+  /// Centavos. Delivery within the event's province. 0 = tier not offered.
+  logisticsDeliveryFeeInside  Int       @default(0)
+  /// Centavos. Delivery outside the event's province. 0 = tier not offered.
+  logisticsDeliveryFeeOutside Int       @default(0)
+  /// Centavos, charged per runner. 6000 = ₱60.00
+  adminFee               Int            @default(6000)
+  /// Which checkout the runner sees: "ONLINE" (PayMongo + bank transfer) or
+  /// "BANK_TRANSFER" (bank transfer only).
+  registrationForm       String         @default("ONLINE")
+  /// What the event sells: "RACE" (distance categories) or "FUN_RUN"
+  /// (inclusion packages, no distances).
+  eventType              String         @default("RACE")
   organizerId            String
   createdAt              DateTime       @default(now())
   updatedAt              DateTime       @updatedAt
@@ -48,9 +58,12 @@ model Event {
 model Category {
   id          String       @id @default(cuid())
   name        String
+  /// "42K" for a race. Empty for a fun run package, which has no distance.
   distance    String
   /// Centavos
   price       Int
+  /// Poster showing what a package includes. Races leave this null.
+  imageUrl    String?
   eventId     String
   event       Event        @relation(fields: [eventId], references: [id])
   raceResults RaceResult[]
@@ -65,6 +78,9 @@ model Registration {
   customerName      String
   customerPhone     String?
   logisticsMethod   String
+  /// "inside" or "outside" province, when logisticsMethod is "delivery".
+  /// The runner's own declaration — it decides which fee was charged.
+  deliveryZone      String?
   deliveryAddress   String?
   /// All amounts below are centavos
   deliveryFee       Int      @default(0)
