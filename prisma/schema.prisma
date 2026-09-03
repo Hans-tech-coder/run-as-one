@@ -64,6 +64,10 @@ model Category {
   price       Int
   /// Poster showing what a package includes. Races leave this null.
   imageUrl    String?
+  /// What this option gets you — "Race Singlet", "Finisher Medal". Per category
+  /// rather than per event, because a 10K and a 5K rarely include the same
+  /// things. Empty means the event page shows no inclusions block.
+  inclusions  String[]     @default([])
   eventId     String
   event       Event        @relation(fields: [eventId], references: [id])
   raceResults RaceResult[]
@@ -113,10 +117,34 @@ model Runner {
   emergencyContactName  String
   emergencyContactPhone String
   medicalConditions     String?
+  /// The club this runner represents. Free text rather than a relation to
+  /// RunningCommunity on purpose: it is what they answered on the day, and it
+  /// must not change if the super admin later renames or removes that club.
+  /// Blank answers are stored as "INDEPENDENT RUNNER", itself a listed option.
+  runningCommunity      String       @default("INDEPENDENT RUNNER")
   createdAt             DateTime     @default(now())
   updatedAt             DateTime     @updatedAt
   category              Category     @relation(fields: [categoryId], references: [id])
   registration          Registration @relation(fields: [registrationId], references: [id])
+}
+
+/// The running clubs a runner can pick from at sign-up. One master list across
+/// every event, because the same clubs turn up race after race.
+model RunningCommunity {
+  id        String   @id @default(cuid())
+  /// Display name, exactly as the runner will see it in the picker.
+  name      String
+  /// Uppercased `name`, which is what uniqueness is enforced on. Stored rather
+  /// than derived so the database itself can reject "Team Army" joining a list
+  /// that already has "TEAM ARMY".
+  slug      String   @unique
+  /// "APPROVED" appears in the runner-facing pickers. "PENDING" is a runner's
+  /// write-in that only the super admin has seen. Rejecting one deletes it.
+  status    String   @default("PENDING")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, name])
 }
 
 model PromoCode {

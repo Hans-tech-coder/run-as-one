@@ -5,6 +5,7 @@ import { ArrowLeft, Save, X, AlertCircle, CheckCircle, UploadCloud, Trash } from
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toPesos } from '@/lib/money';
+import { formatInclusions } from '@/lib/inclusions';
 import RegistrationFormPicker from '../../RegistrationFormPicker';
 import CategoriesPanel from '../../CategoriesPanel';
 import PackagesPanel from '../../PackagesPanel';
@@ -94,7 +95,10 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
             name: c.name,
             distance: c.distance,
             price: toPesos(c.price),
-            imageUrl: c.imageUrl || ''
+            imageUrl: c.imageUrl || '',
+            // Stored as an array, edited as lines — the same conversion the
+            // money fields get, in the other direction.
+            inclusions: formatInclusions(c.inclusions),
           })));
         }
       } catch (err) {
@@ -300,6 +304,18 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
                   className="form-input"
                   placeholder="e.g. Manila Midnight Marathon 2025"
                   required
+                />
+              </div>
+              <div className="form-group form-group-full">
+                <label className="form-label">
+                  About This Event <span className="text-xs opacity-70">- optional</span>
+                </label>
+                <textarea
+                  value={formData.description}
+                  onChange={e => setFormData({...formData, description: e.target.value})}
+                  className="form-input"
+                  rows={5}
+                  placeholder="Route, assembly time, cut-off, what runners should bring — anything they'd ask about before signing up."
                 />
               </div>
               <div className="form-group">

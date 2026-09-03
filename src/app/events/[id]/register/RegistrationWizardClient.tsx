@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   ChevronRight,
@@ -26,6 +26,8 @@ import { BANK_OPTIONS, type BankOption } from "./banks";
 import BankDetailsModal from "./BankDetailsModal";
 import SizeGuideModal from "./SizeGuideModal";
 import CategoryPicker from "./CategoryPicker";
+import CommunityPicker from "./CommunityPicker";
+import { communitySlug } from "@/lib/running-community";
 import { sellsPackages } from "@/lib/event-type";
 import "./RegistrationWizard.css";
 
@@ -42,16 +44,20 @@ interface Participant {
   emergencyContactName: string;
   emergencyContactPhone: string;
   medicalConditions: string;
+  runningCommunity: string;
 }
 
 export default function RegistrationWizardClient({
   event,
   eventId,
   registration,
+  communities,
 }: {
   event: any;
   eventId: string;
   registration?: any;
+  /** Approved running clubs, alphabetical, from the server. */
+  communities: string[];
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -74,6 +80,7 @@ export default function RegistrationWizardClient({
           emergencyContactName: r.emergencyContactName || "",
           emergencyContactPhone: r.emergencyContactPhone || "",
           medicalConditions: r.medicalConditions || "",
+          runningCommunity: r.runningCommunity || "",
         }))
       : [
           {
@@ -89,6 +96,7 @@ export default function RegistrationWizardClient({
             emergencyContactName: "",
             emergencyContactPhone: "",
             medicalConditions: "",
+            runningCommunity: "",
           },
         ],
   );
@@ -138,6 +146,30 @@ export default function RegistrationWizardClient({
     }
   }, [isSuccessParam]);
 
+  // Clubs written in during this sitting. The server has not sent these back
+  // — they are pending review — but a second runner from the same club should
+  // still be able to pick the one their team-mate just typed.
+  const [addedCommunities, setAddedCommunities] = useState<string[]>([]);
+
+  const communityOptions = useMemo(() => {
+    // Keyed by slug so a write-in that duplicates an approved club in different
+    // casing does not show up twice.
+    const bySlug = new Map<string, string>();
+    for (const name of [...communities, ...addedCommunities]) {
+      const key = communitySlug(name);
+      if (key && !bySlug.has(key)) bySlug.set(key, name);
+    }
+    return [...bySlug.values()].sort((a, b) => a.localeCompare(b));
+  }, [communities, addedCommunities]);
+
+  const rememberCommunity = (name: string) => {
+    setAddedCommunities((prev) =>
+      prev.some((existing) => communitySlug(existing) === communitySlug(name))
+        ? prev
+        : [...prev, name],
+    );
+  };
+
   // Handlers
   const handleParticipantChange = (
     index: number,
@@ -155,6 +187,10 @@ export default function RegistrationWizardClient({
       {
         id: Date.now(),
         categoryId: participants[0].categoryId || "",
+        // Carried over for the same reason as the category: a second runner
+        // added to one order is usually a club-mate or family member. It is a
+        // starting value, not a lock — the picker is editable per runner.
+        runningCommunity: participants[0].runningCommunity || "",
         firstName: "",
         lastName: "",
         email: "",
@@ -771,6 +807,19 @@ export default function RegistrationWizardClient({
                           <option value="XXL">XXL</option>
                         </select>
                       </div>
+
+                      <CommunityPicker
+                        value={p.runningCommunity}
+                        options={communityOptions}
+                        onChange={(name) =>
+                          handleParticipantChange(
+                            idx,
+                            "runningCommunity",
+                            name,
+                          )
+                        }
+                        onAdd={rememberCommunity}
+                      />
                     </div>
 
                     <h4 className="mt-6 mb-3 text-secondary">

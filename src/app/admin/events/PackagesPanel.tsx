@@ -3,6 +3,7 @@
 import React from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import PosterField from './PosterField';
+import InclusionsField from './InclusionsField';
 import { blankCategory, type CategoryDraft } from './category-draft';
 
 /**
@@ -94,6 +95,12 @@ export default function PackagesPanel({
                     min={0}
                   />
                 </div>
+
+                <InclusionsField
+                  value={pkg.inclusions || ''}
+                  onChange={text => update(idx, 'inclusions', text)}
+                  placeholder={'Registration Band\nRaffle Entry\nSnacks\nEvent Entitlement'}
+                />
 
                 <PosterField
                   value={pkg.imageUrl || ''}

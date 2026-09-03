@@ -4,6 +4,7 @@ import { getAuthCookie } from '@/lib/auth';
 import { toCentavos } from '@/lib/money';
 import { asRegistrationForm } from '@/lib/registration-form';
 import { asEventType } from '@/lib/event-type';
+import { asInclusions } from '@/lib/inclusions';
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -98,6 +99,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
               distance: cat.distance || '',
               price: toCentavos(cat.price),
               imageUrl: cat.imageUrl || null,
+              // The form posts the textarea as typed; the list is what gets
+              // stored, so blank lines and pasted bullets never reach the DB.
+              inclusions: asInclusions(cat.inclusions),
             }
           });
         } else {
@@ -107,6 +111,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
               distance: cat.distance || '',
               price: toCentavos(cat.price),
               imageUrl: cat.imageUrl || null,
+              inclusions: asInclusions(cat.inclusions),
               eventId: id,
             }
           });

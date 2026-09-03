@@ -242,6 +242,18 @@ export default function NewFunRunEventPage() {
                   required
                 />
               </div>
+              <div className="form-group form-group-full">
+                <label className="form-label">
+                  About This Event <span className="text-xs opacity-70">- optional</span>
+                </label>
+                <textarea
+                  value={formData.description}
+                  onChange={e => setFormData({...formData, description: e.target.value})}
+                  className="form-input"
+                  rows={5}
+                  placeholder="The cause, assembly time, the route — anything runners would ask about before signing up."
+                />
+              </div>
               <div className="form-group">
                 <label className="form-label">Date</label>
                 <input

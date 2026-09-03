@@ -2,11 +2,12 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Check } from 'lucide-react';
+import { X, Check, CheckCircle2 } from 'lucide-react';
 import { formatPesos } from '@/lib/money';
 
 /**
- * Full view of one option's inclusions poster.
+ * Full view of what one option includes — the organizer's list, the poster, or
+ * both, since either is optional.
  *
  * The picker shows posters as fixed-size thumbnails so every option stays
  * comparable at a glance; this is where a runner actually reads one. Selecting
@@ -25,13 +26,19 @@ export default function PosterLightbox({
   onSelect,
   onClose,
 }: {
-  category: { name: string; price: number; imageUrl?: string | null };
+  category: {
+    name: string;
+    price: number;
+    imageUrl?: string | null;
+    inclusions?: string[] | null;
+  };
   isSelected: boolean;
   onSelect: () => void;
   onClose: () => void;
 }) {
   const closeRef = useRef<HTMLButtonElement>(null);
   const [mounted, setMounted] = useState(false);
+  const inclusions = category.inclusions ?? [];
 
   useEffect(() => {
     setMounted(true);
@@ -80,8 +87,29 @@ export default function PosterLightbox({
           </button>
         </div>
 
-        <div className="poster-lightbox-body">
-          <img src={category.imageUrl || ''} alt={`${category.name} inclusions`} />
+        {/* Scrolls as one, so a long list under a tall poster stays reachable
+            without the header or the choose button leaving the screen. */}
+        <div className="poster-lightbox-scroll">
+          {category.imageUrl && (
+            <div className="poster-lightbox-body">
+              <img src={category.imageUrl} alt={`${category.name} inclusions`} />
+            </div>
+          )}
+
+          {inclusions.length > 0 && (
+            <ul className="flex flex-col gap-2 p-4">
+              {inclusions.map((item, idx) => (
+                <li key={idx} className="flex items-center gap-3 text-white/90">
+                  <CheckCircle2
+                    size={18}
+                    aria-hidden="true"
+                    className="text-accent-blue shrink-0"
+                  />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
         <div className="p-4 border-t border-white/10">

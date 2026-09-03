@@ -3,6 +3,7 @@
 import React from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import PosterField from './PosterField';
+import InclusionsField from './InclusionsField';
 import { blankCategory, type CategoryDraft } from './category-draft';
 
 /**
@@ -97,6 +98,12 @@ export default function CategoriesPanel({
                     min={0}
                   />
                 </div>
+
+                <InclusionsField
+                  value={cat.inclusions || ''}
+                  onChange={text => update(idx, 'inclusions', text)}
+                  placeholder={'Race Singlet\nFinisher Medal\nRace Bib with Timing Chip\nSponsor Lootbag'}
+                />
 
                 <PosterField
                   value={cat.imageUrl || ''}

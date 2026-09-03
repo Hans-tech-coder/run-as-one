@@ -47,6 +47,7 @@ export default async function RegistrantsPage({ params }: { params: Promise<{ id
         category: runner.category.name,
         distance: runner.category.distance,
         size: runner.singletSize,
+        runningCommunity: runner.runningCommunity,
         status: reg.status,
         emergencyContactName: runner.emergencyContactName,
         emergencyContactPhone: runner.emergencyContactPhone,

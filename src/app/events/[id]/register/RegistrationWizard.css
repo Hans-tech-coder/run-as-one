@@ -585,11 +585,19 @@
   overflow: hidden;
 }
 
-.poster-lightbox-body {
-  /* The poster is the point, so it takes whatever the header and footer leave
-     and letterboxes inside it — object-fit: contain, never a crop. */
+.poster-lightbox-scroll {
+  /* Takes whatever the header and the choose button leave. Both of those stay
+     put while this scrolls, so a poster with a long list under it never pushes
+     the CTA off screen. */
   flex: 1 1 auto;
   min-height: 0;
+  overflow-y: auto;
+}
+
+.poster-lightbox-body {
+  /* The poster letterboxes rather than crops — object-fit: contain. Capped
+     against the viewport so a tall poster still leaves the list below it
+     visible enough to notice and scroll to. */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -599,7 +607,7 @@
 
 .poster-lightbox-body img {
   max-width: 100%;
-  max-height: 100%;
+  max-height: 60vh;
   object-fit: contain;
 }
 

@@ -232,6 +232,18 @@ export default function NewEventPage() {
                   required
                 />
               </div>
+              <div className="form-group form-group-full">
+                <label className="form-label">
+                  About This Event <span className="text-xs opacity-70">- optional</span>
+                </label>
+                <textarea
+                  value={formData.description}
+                  onChange={e => setFormData({...formData, description: e.target.value})}
+                  className="form-input"
+                  rows={5}
+                  placeholder="Route, assembly time, cut-off, what runners should bring — anything they'd ask about before signing up."
+                />
+              </div>
               <div className="form-group">
                 <label className="form-label">Date</label>
                 <input 

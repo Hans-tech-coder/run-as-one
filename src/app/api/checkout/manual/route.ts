@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
+import { recordWriteInCommunities, runnerCommunity } from '@/lib/running-community-store';
 import crypto from 'crypto';
 import { uploadPrivateProof, UploadError } from '@/lib/blob';
 import { asDeliveryZone, deliveryFeeFor } from '@/app/events/[id]/register/delivery';
@@ -96,10 +97,17 @@ export async function POST(request: Request) {
             emergencyContactName: p.emergencyContactName,
             emergencyContactPhone: p.emergencyContactPhone,
             medicalConditions: p.medicalConditions,
+            // Blank answers land on INDEPENDENT RUNNER; the field is optional.
+            runningCommunity: runnerCommunity(p),
           }))
         }
       }
     });
+
+    // Clubs nobody has approved yet go to the super admin's queue. This is
+    // the only way a row enters that queue, so the list cannot be written to
+    // by anyone who has not actually registered.
+    await recordWriteInCommunities(participants);
 
     return NextResponse.json({ 
       success: true, 

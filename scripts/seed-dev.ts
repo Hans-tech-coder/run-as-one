@@ -4,6 +4,11 @@ import prisma from '../src/lib/db';
 import { toCentavos } from '../src/lib/money';
 import { REGISTRATION_FORMS } from '../src/lib/registration-form';
 import { EVENT_TYPES, type EventType } from '../src/lib/event-type';
+import {
+  COMMUNITY_STATUS,
+  SEED_RUNNING_COMMUNITIES,
+  communitySlug,
+} from '../src/lib/running-community';
 
 /**
  * Development data: one organizer plus the events used for manual testing.
@@ -44,6 +49,12 @@ interface SeedCategory {
   pricePesos: number;
   /** Inclusions poster. Races have none. */
   imageUrl?: string;
+  /**
+   * What this option includes. Deliberately not identical across every event:
+   * the event page collapses to a single list when all options match and groups
+   * by option when they differ, and only seeded data exercises both.
+   */
+  inclusions?: string[];
 }
 
 interface SeedEvent {
@@ -80,9 +91,33 @@ const events: SeedEvent[] = [
     registrationForm: REGISTRATION_FORMS.ONLINE,
     eventType: EVENT_TYPES.RACE,
     categories: [
-      { id: 'seed-crc-fun-3k', name: '3K', distance: '3K', pricePesos: 500 },
-      { id: 'seed-crc-fun-5k', name: '5K', distance: '5K', pricePesos: 750 },
-      { id: 'seed-crc-fun-10k', name: '10K', distance: '10K', pricePesos: 1000 },
+      // Different lists per distance, so the event page has to group them.
+      {
+        id: 'seed-crc-fun-3k',
+        name: '3K',
+        distance: '3K',
+        pricePesos: 500,
+        inclusions: ['Race Singlet', 'Race Bib'],
+      },
+      {
+        id: 'seed-crc-fun-5k',
+        name: '5K',
+        distance: '5K',
+        pricePesos: 750,
+        inclusions: ['Race Singlet', 'Finisher Medal', 'Race Bib'],
+      },
+      {
+        id: 'seed-crc-fun-10k',
+        name: '10K',
+        distance: '10K',
+        pricePesos: 1000,
+        inclusions: [
+          'Race Singlet',
+          'Finisher Medal',
+          'Race Bib with Timing Chip',
+          'Sponsor Lootbag',
+        ],
+      },
     ],
   },
   {
@@ -101,8 +136,20 @@ const events: SeedEvent[] = [
     registrationForm: REGISTRATION_FORMS.ONLINE,
     eventType: EVENT_TYPES.RACE,
     categories: [
-      { id: 'seed-crc-hm-10k', name: '10K', distance: '10K', pricePesos: 1200 },
-      { id: 'seed-crc-hm-21k', name: '21K', distance: '21K', pricePesos: 1800 },
+      {
+        id: 'seed-crc-hm-10k',
+        name: '10K',
+        distance: '10K',
+        pricePesos: 1200,
+        inclusions: ['Singlet', 'Medal'],
+      },
+      {
+        id: 'seed-crc-hm-21k',
+        name: '21K',
+        distance: '21K',
+        pricePesos: 1800,
+        inclusions: ['Singlet', 'Medal', 'Finisher Shirt'],
+      },
     ],
   },
   {
@@ -124,8 +171,22 @@ const events: SeedEvent[] = [
     registrationForm: REGISTRATION_FORMS.BANK_TRANSFER,
     eventType: EVENT_TYPES.RACE,
     categories: [
-      { id: 'seed-crc-trail-11k', name: '11K', distance: '11K', pricePesos: 1400 },
-      { id: 'seed-crc-trail-22k', name: '22K', distance: '22K', pricePesos: 2000 },
+      // Identical lists, which is what collapses the event page's inclusions
+      // into one ungrouped block. The other seeded races cover the split.
+      {
+        id: 'seed-crc-trail-11k',
+        name: '11K',
+        distance: '11K',
+        pricePesos: 1400,
+        inclusions: ['Trail Singlet', 'Finisher Medal', 'Hydration Flask'],
+      },
+      {
+        id: 'seed-crc-trail-22k',
+        name: '22K',
+        distance: '22K',
+        pricePesos: 2000,
+        inclusions: ['Trail Singlet', 'Finisher Medal', 'Hydration Flask'],
+      },
     ],
   },
   {
@@ -152,6 +213,12 @@ const events: SeedEvent[] = [
         distance: '',
         pricePesos: 199,
         imageUrl: image('seed-crc-charity-basic'),
+        inclusions: [
+          'Registration Band',
+          'Raffle Entry',
+          'Snacks',
+          'Event Entitlement',
+        ],
       },
       {
         id: 'seed-crc-charity-full',
@@ -159,6 +226,13 @@ const events: SeedEvent[] = [
         distance: '',
         pricePesos: 699,
         imageUrl: image('seed-crc-charity-full'),
+        inclusions: [
+          'Registration Band',
+          'Limited Edition Shirt',
+          'Raffle Entry',
+          'Snacks',
+          'Event Entitlement',
+        ],
       },
     ],
   },
@@ -166,6 +240,19 @@ const events: SeedEvent[] = [
 
 async function main() {
   const password = await bcrypt.hash(PASSWORD, 10);
+
+  // The shared club list. The migration seeds these too, so this only matters
+  // after `prisma migrate reset` on a branch where that migration has already
+  // run — but without them the registration form has nothing to suggest.
+  await prisma.runningCommunity.createMany({
+    data: SEED_RUNNING_COMMUNITIES.map(name => ({
+      name,
+      slug: communitySlug(name),
+      status: COMMUNITY_STATUS.APPROVED,
+    })),
+    skipDuplicates: true,
+  });
+  console.log(`Running communities: ${SEED_RUNNING_COMMUNITIES.length} seeded`);
 
   const organizer = await prisma.organizer.upsert({
     where: { id: ORGANIZER_ID },
@@ -216,13 +303,16 @@ async function main() {
     for (const c of categories) {
       await prisma.category.upsert({
         where: { id: c.id },
-        update: { price: toCentavos(c.pricePesos) },
+        // Inclusions join price in the update so re-seeding heals rows created
+        // before this column existed, which is every seeded row today.
+        update: { price: toCentavos(c.pricePesos), inclusions: c.inclusions ?? [] },
         create: {
           id: c.id,
           name: c.name,
           distance: c.distance,
           price: toCentavos(c.pricePesos),
           imageUrl: c.imageUrl ?? null,
+          inclusions: c.inclusions ?? [],
           eventId: event.id,
         },
       });

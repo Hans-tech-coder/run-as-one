@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { asRunnerCommunity } from '@/lib/running-community';
 import db from '@/lib/db';
 import { getAuthCookie } from '@/lib/auth';
 
@@ -42,7 +43,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       singletSize,
       emergencyContactName,
       emergencyContactPhone,
-      medicalConditions
+      medicalConditions,
+      runningCommunity
     } = body;
 
     const updatedRunner = await db.runner.update({
@@ -57,7 +59,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         singletSize,
         emergencyContactName,
         emergencyContactPhone,
-        medicalConditions
+        medicalConditions,
+        // Blank clears back to the default rather than storing an empty
+        // string, so a club tally still adds up to the head count.
+        runningCommunity: asRunnerCommunity(runningCommunity)
       },
       include: {
         category: true // To match the return type expected by UI

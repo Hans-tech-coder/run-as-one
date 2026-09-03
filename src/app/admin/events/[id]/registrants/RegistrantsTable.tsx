@@ -140,6 +140,7 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
           name: `${updatedRunnerData.firstName} ${updatedRunnerData.lastName}`,
           email: updatedRunnerData.email,
           size: updatedRunnerData.singletSize,
+          runningCommunity: updatedRunnerData.runningCommunity,
           // Preserve other original properties like orderRef, amount, status which belong to Registration
         } : r));
         closeEditModal();
@@ -442,7 +443,7 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
     const headers = [
       'Order Ref', 'First Name', 'Last Name', 'Email', 'Phone', 'Gender', 'Birthdate', 
       'Category', 'Distance', 'Singlet Size', 'Emergency Contact', 'Emergency Phone', 
-      'Medical Conditions', 'Logistics Method', 'Delivery Area', 'Delivery Address', 'Payment Method', 'Status'
+      'Running Community', 'Medical Conditions', 'Logistics Method', 'Delivery Area', 'Delivery Address', 'Payment Method', 'Status'
     ];
     
     // Use selected rows if any, otherwise fallback to all filtered rows
@@ -454,7 +455,7 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
       return [
         runner.orderRef, runner.firstName, runner.lastName, runner.email, runner.phone, runner.gender, runner.birthdate,
         runner.category, runner.distance, runner.size, runner.emergencyContactName, runner.emergencyContactPhone,
-        `"${runner.medicalConditions}"`, runner.logisticsMethod, runner.deliveryZone, `"${runner.deliveryAddress}"`, runner.paymentMethod, runner.status
+        `"${runner.runningCommunity || ''}"`, `"${runner.medicalConditions}"`, runner.logisticsMethod, runner.deliveryZone, `"${runner.deliveryAddress}"`, runner.paymentMethod, runner.status
       ].join(',')
     });
     
@@ -797,6 +798,10 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
                   <h4 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Medical Info</h4>
                   <div className="text-sm text-white font-medium whitespace-pre-wrap">{viewingRunner.medicalConditions || 'None provided'}</div>
                 </div>
+                <div className="space-y-4">
+                  <h4 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Running Community</h4>
+                  <div className="text-sm text-white font-medium">{viewingRunner.runningCommunity || 'Independent Runner'}</div>
+                </div>
               </div>
 
               <div className="mt-8 pt-8 border-t border-white/10 space-y-4">
@@ -976,6 +981,16 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
                       <option value="XL">XL</option>
                       <option value="2XL">2XL</option>
                     </select>
+                  </div>
+                  <div className="space-y-2 col-span-2">
+                    <label className="text-sm text-gray-400">Running Community</label>
+                    <input
+                      type="text"
+                      value={editingRunner.runningCommunity || ''}
+                      onChange={e => setEditingRunner({...editingRunner, runningCommunity: e.target.value})}
+                      placeholder="Independent Runner"
+                      className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-white/30"
+                    />
                   </div>
                 </div>
 

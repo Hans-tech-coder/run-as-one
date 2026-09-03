@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Users, LogOut, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Users, Flag, LogOut, Menu, X } from 'lucide-react';
 import '../admin/Admin.css';
 
 export default function SuperAdminLayout({
@@ -23,6 +23,7 @@ export default function SuperAdminLayout({
   const navItems = [
     { name: 'Dashboard', path: '/superadmin', icon: <LayoutDashboard size={20} /> },
     { name: 'Organizers', path: '/superadmin/organizers', icon: <Users size={20} /> },
+    { name: 'Communities', path: '/superadmin/communities', icon: <Flag size={20} /> },
   ];
 
   return (

@@ -106,7 +106,7 @@ export default function CategoryPicker({
                     )}
                   </label>
 
-                  {cat.imageUrl && (
+                  {hasInclusions(cat) && (
                     <ViewInclusionsButton
                       name={cat.name}
                       onOpen={() => setPosterFor(cat)}
@@ -155,13 +155,15 @@ export default function CategoryPicker({
                 {/* Optional on a race, so the card has to read correctly with
                     and without it — hence a strip appended below the price
                     rather than a hero image the layout depends on. */}
-                {cat.imageUrl && (
+                {hasInclusions(cat) && (
                   <div className="relative z-10 mt-4 flex items-center gap-3">
-                    <PosterThumb
-                      cat={cat}
-                      size="sm"
-                      onOpen={() => setPosterFor(cat)}
-                    />
+                    {cat.imageUrl && (
+                      <PosterThumb
+                        cat={cat}
+                        size="sm"
+                        onOpen={() => setPosterFor(cat)}
+                      />
+                    )}
                     <ViewInclusionsButton
                       name={cat.name}
                       onOpen={() => setPosterFor(cat)}
@@ -184,6 +186,15 @@ export default function CategoryPicker({
       )}
     </>
   );
+}
+
+/**
+ * Whether this option has anything to show in the lightbox. Poster and list are
+ * each optional and independent — an organizer may type the inclusions without
+ * making a poster, and that has to be just as visible at sign-up.
+ */
+function hasInclusions(cat: any) {
+  return Boolean(cat.imageUrl) || (cat.inclusions?.length ?? 0) > 0;
 }
 
 /**
