@@ -825,6 +825,23 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
                   {viewingRunner.paymentMethod === 'bank_transfer' && viewingRunner.transactionNumber && (
                     <p className="flex flex-col"><span className="text-gray-500">Transaction No.</span> <span className="text-white font-medium">{viewingRunner.transactionNumber}</span></p>
                   )}
+                  <p className="flex flex-col">
+                    <span className="text-gray-500">Waiver Consent</span>
+                    {viewingRunner.consentGiven ? (
+                      <span className="inline-flex items-center gap-1 text-green-400 font-medium w-fit mt-1">
+                        Agreed
+                        {viewingRunner.consentGivenAt && (
+                          <span className="text-gray-500 font-normal">
+                            &middot; {new Date(viewingRunner.consentGivenAt).toLocaleString()}
+                          </span>
+                        )}
+                      </span>
+                    ) : (
+                      <span className="text-orange-400 font-medium w-fit mt-1">
+                        Not on record
+                      </span>
+                    )}
+                  </p>
                 </div>
                   
                 {viewingRunner.paymentMethod === 'bank_transfer' && (

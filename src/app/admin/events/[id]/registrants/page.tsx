@@ -59,7 +59,9 @@ export default async function RegistrantsPage({ params }: { params: Promise<{ id
         deliveryAddress: reg.deliveryAddress || 'N/A',
         paymentMethod: reg.paymentMethod,
         proofOfPayment: reg.proofOfPayment,
-        transactionNumber: reg.transactionNumber
+        transactionNumber: reg.transactionNumber,
+        consentGiven: reg.consentGiven,
+        consentGivenAt: reg.consentGivenAt
       });
     });
   });

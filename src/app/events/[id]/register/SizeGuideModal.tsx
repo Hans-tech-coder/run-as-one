@@ -8,6 +8,11 @@ import { SHIRT_SIZE_CHART, isUpchargeShirtSize } from "@/lib/shirt-size";
 /**
  * The printed size chart, on screen.
  *
+ * A 9-row table reads as a long, boring scroll on a phone. Sizes are short
+ * labels a runner scans for their own, not data compared row over row, so a
+ * grid of chips does the same job in roughly a third of the height — three
+ * rows instead of nine, no header row of its own, no per-row borders.
+ *
  * Measurements come from SHIRT_SIZE_CHART so the guide and the size field can
  * never quote different numbers. Singlets and shirts share one chart — that is
  * why the field asks for a single "Shirt Size" rather than one measurement per
@@ -24,79 +29,66 @@ export default function SizeGuideModal({
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div
-        className="modal-content glass-panel max-w-lg"
+        className="modal-content glass-panel max-w-md"
         onClick={(e) => e.stopPropagation()}
       >
-        <button className="modal-close-btn" onClick={onClose}>
-          <X size={24} />
+        <button
+          className="modal-close-btn"
+          onClick={onClose}
+          aria-label="Close size chart"
+        >
+          <X size={22} />
         </button>
-        <h3 className="text-xl mb-1 text-accent-blue flex items-center gap-2">
-          <Info size={24} /> Size Chart
-        </h3>
-        <p className="text-secondary text-sm mb-6 uppercase tracking-wider">
-          Running Singlet &amp; Shirt
+
+        <div className="flex items-baseline gap-2 mb-1">
+          <Info size={18} className="text-accent-blue shrink-0" />
+          <h3 className="text-lg font-bold text-white">Size Chart</h3>
+        </div>
+        <p className="text-secondary text-xs mb-4">
+          Singlet &amp; shirt, in inches &middot; &plusmn;0.5&ndash;1&Prime; tolerance
         </p>
 
-        <div className="overflow-x-auto mb-4">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-gray-700">
-                <th className="py-3 px-4 text-white font-medium">Size</th>
-                <th className="py-3 px-4 text-white font-medium">
-                  Width (inches)
-                </th>
-                <th className="py-3 px-4 text-white font-medium">
-                  Length (inches)
-                </th>
-              </tr>
-            </thead>
-            <tbody className="text-secondary">
-              {SHIRT_SIZE_CHART.map((row, idx) => (
-                <tr
-                  key={row.size}
-                  className={`hover:bg-white/5 transition-colors ${
-                    idx < SHIRT_SIZE_CHART.length - 1
-                      ? "border-b border-gray-800/50"
-                      : ""
-                  }`}
-                >
-                  <td className="py-3 px-4 font-medium text-white">
-                    {row.size}
-                    {upcharge > 0 && isUpchargeShirtSize(row.size) && (
-                      <span className="ml-2 text-xs text-accent-orange font-normal">
-                        +&#8369;{formatPesos(upcharge)}
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-3 px-4">{row.width}</td>
-                  <td className="py-3 px-4">{row.length}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="grid grid-cols-3 gap-2 mb-4">
+          {SHIRT_SIZE_CHART.map((row) => {
+            const costsMore = upcharge > 0 && isUpchargeShirtSize(row.size);
+            return (
+              <div
+                key={row.size}
+                className={`relative rounded-lg border p-2.5 text-center ${
+                  costsMore
+                    ? "border-accent-orange/50 bg-accent-orange/10"
+                    : "border-white/10 bg-white/5"
+                }`}
+              >
+                {costsMore && (
+                  <span className="absolute -top-2 -right-1.5 text-[9px] leading-none font-bold text-white bg-accent-orange rounded-full px-1.5 py-1">
+                    +&#8369;{formatPesos(upcharge)}
+                  </span>
+                )}
+                <div className="font-bold text-white text-sm">{row.size}</div>
+                <div className="text-secondary text-[11px] mt-0.5 whitespace-nowrap">
+                  {row.width}&quot;&times;{row.length}&quot;
+                </div>
+              </div>
+            );
+          })}
         </div>
 
-        <p className="text-secondary text-xs mb-4 text-center">
-          Measurements may vary by ±0.5 to 1 inch.
-        </p>
-
-        <div className="bg-dark/50 border border-blue p-4 rounded-lg text-sm text-secondary">
-          <span className="text-accent-blue font-medium block mb-1">Note:</span>
-          When in between sizes, we recommend sizing up. The singlet and the
-          shirt follow this same chart, so one size covers both.
+        <div className="bg-dark/50 border border-blue px-4 py-3 rounded-lg text-xs text-secondary leading-relaxed">
+          <span className="text-accent-blue font-medium">Tip:</span>{" "}
+          Between sizes? Size up &mdash; one chart covers both the singlet
+          and the shirt.
           {upcharge > 0 && (
             <>
               {" "}
-              Sizes 4XL and above add ₱{formatPesos(upcharge)} per runner.
+              4XL and above adds ₱{formatPesos(upcharge)} per runner.
             </>
           )}
         </div>
 
-        <div className="text-center mt-6">
-          <button className="btn-gradient w-full" onClick={onClose}>
-            Got it
-          </button>
-        </div>
+        <button className="btn-gradient w-full mt-4 py-2.5" onClick={onClose}>
+          Got it
+        </button>
       </div>
     </div>
   );

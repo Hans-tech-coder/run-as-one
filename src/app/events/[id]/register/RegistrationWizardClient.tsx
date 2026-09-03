@@ -26,6 +26,7 @@ import BankDetailsModal from "./BankDetailsModal";
 import SizeGuideModal from "./SizeGuideModal";
 import CategoryPicker from "./CategoryPicker";
 import CommunityPicker from "./CommunityPicker";
+import ConsentWaiver from "./ConsentWaiver";
 import ShirtSizeField from "./ShirtSizeField";
 import {
   categoryNeedsShirtSize,
@@ -139,6 +140,11 @@ export default function RegistrationWizardClient({
   );
   const [transactionNumber, setTransactionNumber] = useState("");
   const [showSizeGuideModal, setShowSizeGuideModal] = useState(false);
+  // Required once per registration, not once per runner — the waiver this
+  // is drawn from asks it the same way. Always starts unchecked, even when
+  // resuming a cancelled PayMongo attempt: consent is re-affirmed on every
+  // submission attempt, not carried over from an earlier one.
+  const [consentGiven, setConsentGiven] = useState(false);
 
   // Centavos, like every other amount here. 6000 = ₱60.00. Set per event by the
   // organizer and rendered server-side, so the summary never briefly shows a
@@ -339,6 +345,14 @@ export default function RegistrationWizardClient({
   const handleBack = () => setStep((prev) => prev - 1);
 
   const handleCheckout = async () => {
+    // The button is already disabled without this, but the check is repeated
+    // here in case state gets here some other way — the same defensive style
+    // as the proofFile check in handleManualSubmit below.
+    if (!consentGiven) {
+      alert("Please agree to the Disclaimer, Consent & Data Privacy Waiver to continue.");
+      return;
+    }
+
     if (paymentMethod === "bank_transfer") {
       setStep(4);
       return;
@@ -367,6 +381,7 @@ export default function RegistrationWizardClient({
           platformFee: platformFee,
           transactionFee: transactionFee,
           paymentMethod: paymentMethod,
+          consentGiven: consentGiven,
         }),
       });
 
@@ -400,6 +415,13 @@ export default function RegistrationWizardClient({
       return;
     }
 
+    // Reaching step 4 already required checking the box on step 3 — this
+    // guards the case where that never happened for some other reason.
+    if (!consentGiven) {
+      alert("Please agree to the Disclaimer, Consent & Data Privacy Waiver to continue.");
+      return;
+    }
+
     setIsProcessing(true);
     try {
       const formData = new FormData();
@@ -422,6 +444,7 @@ export default function RegistrationWizardClient({
       formData.append("totalAmount", totalAmount.toString());
       formData.append("paymentMethod", paymentMethod);
       formData.append("transactionNumber", transactionNumber);
+      formData.append("consentGiven", String(consentGiven));
 
       // Append complex data as JSON string
       formData.append("participants", JSON.stringify(participants));
@@ -1199,11 +1222,17 @@ export default function RegistrationWizardClient({
                   </div>
                 </div>
 
+                <ConsentWaiver
+                  eventTitle={event.title}
+                  checked={consentGiven}
+                  onChange={setConsentGiven}
+                />
+
                 <div className="form-actions mt-10 flex justify-end">
                   <button
-                    className={`btn-gradient flex items-center justify-center gap-2 px-10 py-4 text-lg group shadow-xl shadow-accent-orange/20 ${isProcessing ? "opacity-50 pointer-events-none" : ""}`}
+                    className={`btn-gradient flex items-center justify-center gap-2 px-10 py-4 text-lg group shadow-xl shadow-accent-orange/20 ${isProcessing || !consentGiven ? "opacity-50 pointer-events-none" : ""}`}
                     onClick={handleCheckout}
-                    disabled={isProcessing}
+                    disabled={isProcessing || !consentGiven}
                   >
                     {isProcessing
                       ? paymentMethod !== "bank_transfer"

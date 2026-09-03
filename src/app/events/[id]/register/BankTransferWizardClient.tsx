@@ -27,6 +27,7 @@ import BankDetailsModal from "./BankDetailsModal";
 import SizeGuideModal from "./SizeGuideModal";
 import CategoryPicker from "./CategoryPicker";
 import CommunityPicker from "./CommunityPicker";
+import ConsentWaiver from "./ConsentWaiver";
 import ShirtSizeField from "./ShirtSizeField";
 import {
   categoryNeedsShirtSize,
@@ -129,6 +130,9 @@ export default function BankTransferWizardClient({
   );
   const [transactionNumber, setTransactionNumber] = useState("");
   const [showSizeGuideModal, setShowSizeGuideModal] = useState(false);
+  // Required once per registration, not once per runner — the waiver this
+  // is drawn from asks it the same way.
+  const [consentGiven, setConsentGiven] = useState(false);
 
   // Centavos, like every other amount here. 6000 = ₱60.00. Set per event by the
   // organizer and rendered server-side, so the summary never briefly shows a
@@ -313,6 +317,13 @@ export default function BankTransferWizardClient({
       return;
     }
 
+    // The button is already disabled without this, but the check is repeated
+    // here in case state gets here some other way.
+    if (!consentGiven) {
+      alert("Please agree to the Disclaimer, Consent & Data Privacy Waiver to continue.");
+      return;
+    }
+
     setIsProcessing(true);
     try {
       const formData = new FormData();
@@ -335,6 +346,7 @@ export default function BankTransferWizardClient({
       formData.append("totalAmount", totalAmount.toString());
       formData.append("paymentMethod", "bank_transfer");
       formData.append("transactionNumber", transactionNumber);
+      formData.append("consentGiven", String(consentGiven));
 
       // Append complex data as JSON string
       formData.append("participants", JSON.stringify(participants));
@@ -1100,12 +1112,21 @@ export default function BankTransferWizardClient({
                   />
                 </div>
 
+                <ConsentWaiver
+                  eventTitle={event.title}
+                  checked={consentGiven}
+                  onChange={setConsentGiven}
+                />
+
                 <div className="form-actions mt-10 flex justify-end">
                   <button
-                    className={`btn-gradient flex items-center justify-center gap-2 px-10 py-4 text-lg group shadow-xl shadow-accent-orange/20 ${isProcessing || !proofFile || !transactionNumber.trim() ? "opacity-50 pointer-events-none" : ""}`}
+                    className={`btn-gradient flex items-center justify-center gap-2 px-10 py-4 text-lg group shadow-xl shadow-accent-orange/20 ${isProcessing || !proofFile || !transactionNumber.trim() || !consentGiven ? "opacity-50 pointer-events-none" : ""}`}
                     onClick={handleManualSubmit}
                     disabled={
-                      isProcessing || !proofFile || !transactionNumber.trim()
+                      isProcessing ||
+                      !proofFile ||
+                      !transactionNumber.trim() ||
+                      !consentGiven
                     }
                   >
                     {isProcessing

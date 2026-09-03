@@ -22,41 +22,41 @@ model Organizer {
 }
 
 model Event {
-  id                     String         @id @default(cuid())
-  title                  String
-  date                   String
-  location               String
-  imageUrl               String
-  description            String?
-  logisticsPickup        Boolean        @default(true)
+  id                          String         @id @default(cuid())
+  title                       String
+  date                        String
+  location                    String
+  imageUrl                    String
+  description                 String?
+  logisticsPickup             Boolean        @default(true)
   /// Centavos. Delivery within the event's province. 0 = tier not offered.
-  logisticsDeliveryFeeInside  Int       @default(0)
+  logisticsDeliveryFeeInside  Int            @default(0)
   /// Centavos. Delivery outside the event's province. 0 = tier not offered.
-  logisticsDeliveryFeeOutside Int       @default(0)
+  logisticsDeliveryFeeOutside Int            @default(0)
   /// Centavos, charged per runner. 6000 = ₱60.00
-  adminFee               Int            @default(6000)
+  adminFee                    Int            @default(6000)
   /// Centavos, charged once per runner whose shirt size is 4XL or above,
   /// because the larger sizes cost the organizer more to produce. 0 disables
   /// the surcharge. 10000 = ₱100.00, which is what the printed forms quote.
-  shirtSizeUpcharge      Int            @default(10000)
+  shirtSizeUpcharge           Int            @default(10000)
   /// Which checkout the runner sees: "ONLINE" (PayMongo + bank transfer) or
   /// "BANK_TRANSFER" (bank transfer only).
-  registrationForm       String         @default("ONLINE")
+  registrationForm            String         @default("ONLINE")
   /// What the event sells: "RACE" (distance categories) or "FUN_RUN"
   /// (inclusion packages, no distances).
-  eventType              String         @default("RACE")
-  organizerId            String
-  createdAt              DateTime       @default(now())
-  updatedAt              DateTime       @updatedAt
-  endTime                String?
-  raceKitImageUrl        String?
-  startTime              String?
-  certificateCoordinates String?
-  certificateTemplate    String?
-  categories             Category[]
-  organizer              Organizer      @relation(fields: [organizerId], references: [id])
-  raceResults            RaceResult[]
-  registrations          Registration[]
+  eventType                   String         @default("RACE")
+  organizerId                 String
+  createdAt                   DateTime       @default(now())
+  updatedAt                   DateTime       @updatedAt
+  endTime                     String?
+  raceKitImageUrl             String?
+  startTime                   String?
+  certificateCoordinates      String?
+  certificateTemplate         String?
+  categories                  Category[]
+  organizer                   Organizer      @relation(fields: [organizerId], references: [id])
+  raceResults                 RaceResult[]
+  registrations               Registration[]
 }
 
 model Category {
@@ -79,9 +79,9 @@ model Category {
 }
 
 model Registration {
-  id                String   @id @default(cuid())
+  id                String    @id @default(cuid())
   eventId           String
-  orderRef          String   @unique
+  orderRef          String    @unique
   customerEmail     String
   customerName      String
   customerPhone     String?
@@ -91,19 +91,25 @@ model Registration {
   deliveryZone      String?
   deliveryAddress   String?
   /// All amounts below are centavos
-  deliveryFee       Int      @default(0)
+  deliveryFee       Int       @default(0)
   subtotal          Int
-  platformFee       Int      @default(0)
-  transactionFee    Int      @default(0)
+  platformFee       Int       @default(0)
+  transactionFee    Int       @default(0)
   totalAmount       Int
-  status            String   @default("PAID")
-  paymentMethod     String   @default("online")
+  status            String    @default("PAID")
+  paymentMethod     String    @default("online")
   checkoutSessionId String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
   proofOfPayment    String?
   transactionNumber String?
-  event             Event    @relation(fields: [eventId], references: [id])
+  /// Whether the customer checked the liability & data-privacy consent box at
+  /// submission. false on registrations made before this was required, since
+  /// they were never actually asked — not a claim that they refused.
+  consentGiven      Boolean   @default(false)
+  /// When consentGiven was recorded. Null whenever consentGiven is false.
+  consentGivenAt    DateTime?
+  event             Event     @relation(fields: [eventId], references: [id])
   runners           Runner[]
 }
 

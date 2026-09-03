@@ -24,8 +24,19 @@ export async function POST(request: Request) {
       deliveryFee,
       platformFee,
       transactionFee,
-      paymentMethod
+      paymentMethod,
+      consentGiven
     } = body;
+
+    // The wizard already disables its submit button without this, but the
+    // waiver is a legal gate, not a data-completeness one — an unauthorized
+    // request that skips the UI must not be able to skip it either.
+    if (consentGiven !== true) {
+      return NextResponse.json(
+        { error: 'Please agree to the Disclaimer, Consent & Data Privacy Waiver to continue.' },
+        { status: 400 }
+      );
+    }
 
     const secretKey = process.env.PAYMONGO_SECRET_KEY;
     if (!secretKey || secretKey === 'sk_test_PLACEHOLDER_KEY') {
@@ -103,6 +114,10 @@ export async function POST(request: Request) {
         totalAmount: amountCents,
         paymentMethod: paymentMethod,
         status: 'PENDING', // All payments start as PENDING until verified by webhook or admin
+        // Checked above; recorded here as the organizer's evidence that the
+        // waiver was agreed to at the moment of this specific submission.
+        consentGiven: true,
+        consentGivenAt: new Date(),
         runners: {
           create: participants.map((p: any) => ({
             categoryId: p.categoryId,

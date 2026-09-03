@@ -28,12 +28,23 @@ export async function POST(request: Request) {
     const totalAmount = centavos('totalAmount');
     const paymentMethod = formData.get('paymentMethod') as string;
     const transactionNumber = formData.get('transactionNumber') as string;
-    
+    const consentGiven = formData.get('consentGiven') === 'true';
+
     const participantsStr = formData.get('participants') as string;
     const participants = JSON.parse(participantsStr || '[]');
 
     if (!proofFile) {
       return NextResponse.json({ error: 'Proof of payment is required' }, { status: 400 });
+    }
+
+    // The wizard already disables its submit button without this, but the
+    // waiver is a legal gate, not a data-completeness one — an unauthorized
+    // request that skips the UI must not be able to skip it either.
+    if (!consentGiven) {
+      return NextResponse.json(
+        { error: 'Please agree to the Disclaimer, Consent & Data Privacy Waiver to continue.' },
+        { status: 400 }
+      );
     }
 
     // The client sends both the zone and the fee. They are two ways of saying
@@ -100,6 +111,10 @@ export async function POST(request: Request) {
         proofOfPayment: proofPathname,
         transactionNumber: transactionNumber,
         status: 'PENDING', // Waiting for manual validation by admin
+        // Checked above; recorded here as the organizer's evidence that the
+        // waiver was agreed to at the moment of this specific submission.
+        consentGiven: true,
+        consentGivenAt: new Date(),
         runners: {
           create: participants.map((p: any) => ({
             categoryId: p.categoryId,
