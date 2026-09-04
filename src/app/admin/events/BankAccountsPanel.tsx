@@ -14,7 +14,7 @@ import { blankBankAccount, type BankAccountDraft } from './bank-account-draft';
  *
  * Each account is a card rather than a table row because of the QR, which is a
  * full-width image with nowhere to sit in a row of three inputs — the same
- * reason CategoriesPanel uses cards.
+ * reason EventOptionsPanel lays its rows out as cards.
  */
 export default function BankAccountsPanel({
   accounts,

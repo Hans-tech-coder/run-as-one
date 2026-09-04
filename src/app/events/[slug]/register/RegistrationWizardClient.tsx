@@ -37,6 +37,7 @@ import {
 } from "@/lib/shirt-size";
 import { communitySlug } from "@/lib/running-community";
 import { sellsPackages } from "@/lib/event-type";
+import EventImage from "@/components/EventImage";
 import "./RegistrationWizard.css";
 
 interface Participant {
@@ -63,6 +64,11 @@ export default function RegistrationWizardClient({
   defaultCountry,
 }: {
   event: any;
+  /**
+   * The event's cuid, for the API payloads. URLs use event.slug — the two
+   * are not interchangeable, and a redirect is not what you want a payment
+   * provider to land on.
+   */
   eventId: string;
   registration?: any;
   /** Approved running clubs, alphabetical, from the server. */
@@ -376,8 +382,8 @@ export default function RegistrationWizardClient({
         body: JSON.stringify({
           amount: totalAmount,
           description: `Registration for ${event.title}`,
-          successUrl: `${baseUrl}/events/${eventId}/register?success=true`,
-          cancelUrl: `${baseUrl}/events/${eventId}/register`,
+          successUrl: `${baseUrl}/events/${event.slug}/register?success=true`,
+          cancelUrl: `${baseUrl}/events/${event.slug}/register`,
           customerEmail: participants[0].email,
           customerName: `${participants[0].firstName} ${participants[0].lastName}`,
           eventId: eventId,
@@ -468,7 +474,7 @@ export default function RegistrationWizardClient({
       if (response.ok) {
         // Redirect to success UI within this wizard
         router.push(
-          `/events/${eventId}/register?success=true&orderRef=${data.orderRef}`,
+          `/events/${event.slug}/register?success=true&orderRef=${data.orderRef}`,
         );
       } else {
         alert(data.error || "Failed to submit registration. Please try again.");
@@ -545,10 +551,11 @@ export default function RegistrationWizardClient({
         <aside className="wizard-sidebar t-stagger-line t-stagger-line--1">
           <div className="glass-panel sticky-sidebar p-8 border border-white/10 bg-gradient-to-b from-white/5 to-transparent rounded-3xl">
             <div className="event-mini-info border-b border-white/10 pb-6 mb-6">
-              <img
+              <EventImage
                 src={event.imageUrl}
-                alt="Event"
+                alt={event.title}
                 className="mini-image w-20 h-20 rounded-[16px] object-cover shadow-lg"
+                iconSize={24}
               />
               <div>
                 <h3 className="text-xl font-bold text-white mb-1">

@@ -38,6 +38,7 @@ import {
 } from "@/lib/shirt-size";
 import { communitySlug } from "@/lib/running-community";
 import { sellsPackages } from "@/lib/event-type";
+import EventImage from "@/components/EventImage";
 import "./RegistrationWizard.css";
 
 /**
@@ -82,6 +83,9 @@ export default function BankTransferWizardClient({
   defaultCountry,
 }: {
   event: any;
+  /**
+   * The event's cuid, for the API payloads. URLs use event.slug.
+   */
   eventId: string;
   registration?: any;
   /** Approved running clubs, alphabetical, from the server. */
@@ -369,7 +373,7 @@ export default function BankTransferWizardClient({
 
       if (response.ok) {
         router.push(
-          `/events/${eventId}/register?success=true&orderRef=${data.orderRef}`,
+          `/events/${event.slug}/register?success=true&orderRef=${data.orderRef}`,
         );
       } else {
         alert(data.error || "Failed to submit registration. Please try again.");
@@ -448,10 +452,11 @@ export default function BankTransferWizardClient({
         <aside className="wizard-sidebar t-stagger-line t-stagger-line--1">
           <div className="glass-panel sticky-sidebar p-8 border border-white/10 bg-gradient-to-b from-white/5 to-transparent rounded-3xl">
             <div className="event-mini-info border-b border-white/10 pb-6 mb-6">
-              <img
+              <EventImage
                 src={event.imageUrl}
-                alt="Event"
+                alt={event.title}
                 className="mini-image w-20 h-20 rounded-[16px] object-cover shadow-lg"
+                iconSize={24}
               />
               <div>
                 <h3 className="text-xl font-bold text-white mb-1">

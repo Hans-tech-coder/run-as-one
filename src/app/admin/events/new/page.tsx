@@ -5,10 +5,10 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, UploadCloud, Trash, AlertCircle, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 import RegistrationFormPicker from '../RegistrationFormPicker';
-import CategoriesPanel from '../CategoriesPanel';
+import EventOptionsPanel from '../EventOptionsPanel';
 import { blankCategory, type CategoryDraft } from '../category-draft';
 import { DEFAULT_REGISTRATION_FORM, type RegistrationForm } from '@/lib/registration-form';
-import { EVENT_TYPES } from '@/lib/event-type';
+import { DEFAULT_EVENT_TYPE, type EventType } from '@/lib/event-type';
 import ConsentWaiverField from '@/app/admin/events/ConsentWaiverField';
 import BankAccountsPanel from '@/app/admin/events/BankAccountsPanel';
 import { cleanBankAccounts, type BankAccountDraft } from '@/app/admin/events/bank-account-draft';
@@ -52,6 +52,8 @@ export default function NewEventPage() {
   // and a latched flag would clear on the first one to finish.
   const [uploadingPosters, setUploadingPosters] = useState(0);
   const [bankAccounts, setBankAccounts] = useState<BankAccountDraft[]>([]);
+  // Distances or packages. Freely switchable here — nothing is sold yet.
+  const [eventType, setEventType] = useState<EventType>(DEFAULT_EVENT_TYPE);
 
   // Uploads to blob storage and stores the returned URL. This used to inline the
   // file as a base64 data URL, which meant every event row carried megabytes of
@@ -97,7 +99,7 @@ export default function NewEventPage() {
       const res = await fetch('/api/admin/events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, eventType: EVENT_TYPES.RACE, categories, bankAccounts: cleanBankAccounts(bankAccounts) }),
+        body: JSON.stringify({ ...formData, eventType, categories, bankAccounts: cleanBankAccounts(bankAccounts) }),
       });
 
       if (!res.ok) {
@@ -367,8 +369,10 @@ export default function NewEventPage() {
           </div>
         </div>
 
-          <CategoriesPanel
-            categories={categories}
+          <EventOptionsPanel
+            eventType={eventType}
+            onEventTypeChange={setEventType}
+            options={categories}
             onChange={setCategories}
             onError={setError}
             onBusyChange={busy => setUploadingPosters(n => (busy ? n + 1 : n - 1))}

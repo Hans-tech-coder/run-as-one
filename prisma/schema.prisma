@@ -24,6 +24,10 @@ model Organizer {
 model Event {
   id                          String         @id @default(cuid())
   title                       String
+  /// The event's segment in its public URL, derived from the title so a link
+  /// says what it points at. Unique because two organizers will eventually
+  /// both run a "Fun Run"; see src/lib/event-slug.ts.
+  slug                        String         @unique
   date                        String
   location                    String
   imageUrl                    String

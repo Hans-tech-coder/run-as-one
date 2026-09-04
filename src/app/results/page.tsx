@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Calendar, MapPin, Trophy } from 'lucide-react';
 import db from '@/lib/db';
 import ResultsClientOrchestrator from '@/components/ResultsClientOrchestrator';
+import EventImage from '@/components/EventImage';
 
 export default async function GlobalResultsPage() {
   const events = await db.event.findMany({
@@ -44,13 +45,14 @@ export default async function GlobalResultsPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {events.map(event => (
-              <Link href={`/events/${event.id}/results`} key={event.id} className="t-tilt block">
+              <Link href={`/events/${event.slug}/results`} key={event.id} className="t-tilt block">
                 <div className="t-tilt-card glass-panel p-0 rounded-2xl overflow-hidden hover:border-accent-blue transition-colors cursor-pointer group h-full flex flex-col border border-white/5 hover:shadow-[0_0_15px_rgba(0,122,255,0.3)] bg-dark/50">
                   <div className="h-48 overflow-hidden relative">
-                    <img 
-                      src={event.imageUrl} 
-                      alt={event.title} 
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                    <EventImage
+                      src={event.imageUrl}
+                      alt={event.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      iconSize={40}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#050505] to-transparent opacity-90"></div>
                   </div>

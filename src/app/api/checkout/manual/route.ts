@@ -3,7 +3,7 @@ import prisma from '@/lib/db';
 import { recordWriteInCommunities, runnerCommunity } from '@/lib/running-community-store';
 import crypto from 'crypto';
 import { uploadPrivateProof, UploadError } from '@/lib/blob';
-import { asDeliveryZone, deliveryFeeFor } from '@/app/events/[id]/register/delivery';
+import { asDeliveryZone, deliveryFeeFor } from '@/app/events/[slug]/register/delivery';
 import { storedShirtSize, subtotalWithUpcharge } from '@/lib/shirt-size';
 
 export async function POST(request: Request) {

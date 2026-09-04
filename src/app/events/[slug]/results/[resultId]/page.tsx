@@ -5,13 +5,14 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import ECertificateGenerator from './ECertificateGenerator';
 import EventHeroBanner from '@/components/EventHeroBanner';
+import { canonicalEventPath } from '@/lib/event-slug';
 
 export default async function RunnerAnalyticsPage({ 
   params 
 }: { 
-  params: Promise<{ id: string, resultId: string }>
+  params: Promise<{ slug: string, resultId: string }>
 }) {
-  const { id, resultId } = await params;
+  const { slug, resultId } = await params;
 
   const result = await prisma.raceResult.findUnique({
     where: { id: resultId },
@@ -21,9 +22,15 @@ export default async function RunnerAnalyticsPage({
     }
   });
 
-  if (!result || result.eventId !== id) {
-    redirect(`/events/${id}/results`);
+  // The result still has to belong to the event named in the URL, so a runner
+  // cannot be shown under someone else's race. Either form of the event segment
+  // counts, because the cuid links predate slugs.
+  if (!result || (result.event.slug !== slug && result.eventId !== slug)) {
+    redirect(`/events/${slug}/results`);
   }
+
+  const canonical = canonicalEventPath(result.event, slug, `/results/${resultId}`);
+  if (canonical) redirect(canonical);
 
   // Fetch total runners in this category to show "X out of Y"
   const totalInCategory = await prisma.raceResult.count({
@@ -88,7 +95,7 @@ export default async function RunnerAnalyticsPage({
       <EventHeroBanner event={result.event as any} />
       <div className="container mx-auto py-8">
         <div className="max-w-3xl mx-auto">
-          <Link href={`/events/${id}/results`} className="inline-flex items-center gap-2 text-accent-blue hover:text-white transition-colors mb-8">
+          <Link href={`/events/${result.event.slug}/results`} className="inline-flex items-center gap-2 text-accent-blue hover:text-white transition-colors mb-8">
             <ArrowLeft size={20} /> Back to Search
           </Link>
 

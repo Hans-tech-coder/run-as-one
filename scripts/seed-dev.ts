@@ -4,6 +4,7 @@ import prisma from '../src/lib/db';
 import { toCentavos } from '../src/lib/money';
 import { REGISTRATION_FORMS } from '../src/lib/registration-form';
 import { EVENT_TYPES, type EventType } from '../src/lib/event-type';
+import { slugifyEventTitle } from '../src/lib/event-slug';
 import {
   COMMUNITY_STATUS,
   SEED_RUNNING_COMMUNITIES,
@@ -316,6 +317,9 @@ async function main() {
       create: {
         ...event,
         ...pricing,
+        // The seeded titles are distinct, so the plain slug is already unique
+        // and there is no counter to negotiate.
+        slug: slugifyEventTitle(event.title),
         imageUrl: image(event.id),
         organizerId: organizer.id,
       },

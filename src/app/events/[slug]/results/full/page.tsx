@@ -5,24 +5,29 @@ import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import FullResultsClient from './FullResultsClient';
 import EventHeroBanner from '@/components/EventHeroBanner';
+import { canonicalEventPath, eventByParam } from '@/lib/event-slug';
 
 export default async function FullResultsPage({ 
   params 
 }: { 
-  params: Promise<{ id: string }>
+  params: Promise<{ slug: string }>
 }) {
-  const { id } = await params;
-  
-  const event = await prisma.event.findUnique({
-    where: { id },
+  const { slug } = await params;
+
+  // Slug or cuid — the old id links stay alive; see eventByParam.
+  const event = await prisma.event.findFirst({
+    where: eventByParam(slug),
   });
 
   if (!event) redirect('/');
 
+  const canonical = canonicalEventPath(event, slug, '/results/full');
+  if (canonical) redirect(canonical);
+
   // Fetch ALL finished results for the event to hand off to the client-side table
   const results = await prisma.raceResult.findMany({
     where: {
-      eventId: id,
+      eventId: event.id,
       status: 'FINISHED'
     },
     include: {
@@ -41,7 +46,7 @@ export default async function FullResultsPage({
         <div className="w-full">
           {/* Back Button */}
           <div className="mb-6">
-            <Link href={`/events/${id}/results`} className="inline-flex items-center gap-2 text-secondary hover:text-white transition-colors no-underline text-sm font-medium">
+            <Link href={`/events/${event.slug}/results`} className="inline-flex items-center gap-2 text-secondary hover:text-white transition-colors no-underline text-sm font-medium">
               <ArrowLeft size={16} /> Back to Winners
             </Link>
           </div>

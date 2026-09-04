@@ -7,6 +7,7 @@ import { asRegistrationForm } from '@/lib/registration-form';
 import { asEventType } from '@/lib/event-type';
 import { asInclusions } from '@/lib/inclusions';
 import { asBankAccounts } from '@/lib/bank-accounts';
+import { uniqueEventSlug } from '@/lib/event-slug';
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -19,7 +20,14 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
     const event = await db.event.findUnique({
       where: { id },
-      include: { categories: true, bankAccounts: { orderBy: { sortOrder: 'asc' } } }
+      include: {
+        categories: true,
+        bankAccounts: { orderBy: { sortOrder: 'asc' } },
+        // Only the count: the edit form locks the distances-or-packages choice
+        // once anyone has registered, because switching it changes what those
+        // runners already bought.
+        _count: { select: { registrations: true } },
+      }
     });
 
     if (!event) {
@@ -48,6 +56,35 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    // The public URL follows the title, so renaming an event renames its link.
+    // The slug is only recomputed when the title actually changed: a save that
+    // leaves the title alone must never move the event's address, and an event
+    // that took a "-2" suffix keeps it rather than reshuffling on every save.
+    //
+    // Renaming does retire the old slug. Links shared under it stop resolving,
+    // though the /events/<cuid> form still redirects here, so a mid-campaign
+    // title fix costs whoever shared the slug URL.
+    const current = await db.event.findUnique({
+      where: { id },
+      select: { title: true, slug: true },
+    });
+
+    if (!current) {
+      return NextResponse.json({ error: 'Event not found' }, { status: 404 });
+    }
+
+    const slug = current.title === title
+      ? current.slug
+      : await uniqueEventSlug(title, async (candidate) => {
+          const clash = await db.event.findUnique({
+            where: { slug: candidate },
+            select: { id: true },
+          });
+          // Its own row is not a clash — otherwise an event could never keep
+          // the slug it already holds.
+          return clash !== null && clash.id !== id;
+        });
+
     // Handle category deletion carefully to avoid FK constraints
     const incomingIds = categories.filter((c: any) => c.id).map((c: any) => c.id);
     
@@ -71,6 +108,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         where: { id },
         data: {
           title,
+          slug,
           date,
           startTime: startTime || null,
           endTime: endTime || null,

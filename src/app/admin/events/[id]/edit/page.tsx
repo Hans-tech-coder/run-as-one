@@ -7,16 +7,22 @@ import { useRouter } from 'next/navigation';
 import { toPesos } from '@/lib/money';
 import { formatInclusions } from '@/lib/inclusions';
 import RegistrationFormPicker from '../../RegistrationFormPicker';
-import CategoriesPanel from '../../CategoriesPanel';
-import PackagesPanel from '../../PackagesPanel';
+import EventOptionsPanel from '../../EventOptionsPanel';
 import { blankCategory, type CategoryDraft } from '../../category-draft';
 import { DEFAULT_REGISTRATION_FORM, asRegistrationForm, type RegistrationForm } from '@/lib/registration-form';
-import { DEFAULT_EVENT_TYPE, EVENT_TYPES, asEventType, type EventType } from '@/lib/event-type';
+import { DEFAULT_EVENT_TYPE, asEventType, type EventType } from '@/lib/event-type';
 import ConsentWaiverField from '@/app/admin/events/ConsentWaiverField';
 import { formatWaiverParagraphs } from '@/lib/consent-waiver';
 import BankAccountsPanel from '@/app/admin/events/BankAccountsPanel';
 import { cleanBankAccounts, type BankAccountDraft } from '@/app/admin/events/bank-account-draft';
 import { offersBankTransfer } from '@/lib/registration-form';
+
+// The premade templates that used to sit under /public/certificates are gone —
+// the only way to get a certificate background now is to upload one. An event
+// saved back when the picker existed still points at a deleted file, so drop
+// that path instead of previewing a 404.
+const uploadedTemplate = (value: unknown) =>
+  typeof value === 'string' && !value.startsWith('/certificates/template_') ? value : '';
 
 export default function EditEventPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -54,11 +60,13 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
     certificateCoordinates: JSON.stringify({ nameY: 50, timeY: 60, catY: 70 }),
   });
 
-  // Not part of formData because it is not editable here — an event that has
-  // sold packages cannot become one that sells distances. It is held in state
-  // only so the PUT can echo it back; leaving it out would make asEventType()
-  // fall back to RACE and silently retype every fun run on its next save.
+  // Not part of formData because EventOptionsPanel owns it rather than a plain
+  // input. Editable while the event has no registrations and locked after —
+  // see lockedReason where the panel is rendered. It has to be echoed back on
+  // save regardless: leaving it out of the PUT would make asEventType() fall
+  // back to RACE and silently retype every fun run.
   const [eventType, setEventType] = useState<EventType>(DEFAULT_EVENT_TYPE);
+  const [registrationCount, setRegistrationCount] = useState(0);
 
   const [categories, setCategories] = useState<CategoryDraft[]>([blankCategory()]);
   // How many category/package posters are uploading right now, for the same
@@ -93,7 +101,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
           shirtSizeUpcharge: toPesos(data.shirtSizeUpcharge ?? 0),
           consentWaiver: formatWaiverParagraphs(data.consentWaiver),
           registrationForm: asRegistrationForm(data.registrationForm),
-          certificateTemplate: data.certificateTemplate || '',
+          certificateTemplate: uploadedTemplate(data.certificateTemplate),
           certificateCoordinates: data.certificateCoordinates || JSON.stringify({ nameY: 50, timeY: 60, catY: 70 }),
         });
 
@@ -108,6 +116,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
         );
 
         setEventType(asEventType(data.eventType));
+        setRegistrationCount(data._count?.registrations ?? 0);
 
         if (data.categories && data.categories.length > 0) {
           setCategories(data.categories.map((c: any) => ({
@@ -454,24 +463,21 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
           </div>
         </div>
 
-        {/* What the event sells: distances for a race, packages for a fun run.
-            The type is fixed at creation, so this never switches under the
-            organizer mid-edit. */}
-        {eventType === EVENT_TYPES.FUN_RUN ? (
-          <PackagesPanel
-            packages={categories}
+        {/* What the event sells. Switchable while nothing has been sold; locked
+            once registrations exist — see lockedReason below. */}
+        <EventOptionsPanel
+            eventType={eventType}
+            onEventTypeChange={setEventType}
+            lockedReason={
+              registrationCount > 0
+                ? `Locked because ${registrationCount} registration${registrationCount === 1 ? ' has' : 's have'} already been taken. Switching now would change what those runners already paid for.`
+                : null
+            }
+            options={categories}
             onChange={setCategories}
             onError={setError}
             onBusyChange={busy => setUploadingPosters(n => (busy ? n + 1 : n - 1))}
           />
-        ) : (
-          <CategoriesPanel
-            categories={categories}
-            onChange={setCategories}
-            onError={setError}
-            onBusyChange={busy => setUploadingPosters(n => (busy ? n + 1 : n - 1))}
-          />
-        )}
 
           <BankAccountsPanel
             accounts={bankAccounts}
@@ -581,39 +587,6 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
               
               <div className="form-group mb-6">
                 <label className="form-label">Certificate Template</label>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                  {/* Premade 1 */}
-                  <div 
-                    className={`border-2 rounded-lg cursor-pointer overflow-hidden transition-all ${formData.certificateTemplate === '/certificates/template_modern_dark.png' ? 'border-accent-blue shadow-lg shadow-accent-blue/20' : 'border-gray-700/50 hover:border-gray-500'}`}
-                    onClick={() => setFormData({...formData, certificateTemplate: '/certificates/template_modern_dark.png'})}
-                  >
-                    <img src="/certificates/template_modern_dark.png" alt="Modern Dark" className="w-full h-32 object-cover" />
-                    <div className="p-2 text-center text-sm font-medium text-primary">Modern Dark</div>
-                  </div>
-                  {/* Premade 2 */}
-                  <div 
-                    className={`border-2 rounded-lg cursor-pointer overflow-hidden transition-all ${formData.certificateTemplate === '/certificates/template_dynamic.png' ? 'border-accent-blue shadow-lg shadow-accent-blue/20' : 'border-gray-700/50 hover:border-gray-500'}`}
-                    onClick={() => setFormData({...formData, certificateTemplate: '/certificates/template_dynamic.png'})}
-                  >
-                    <img src="/certificates/template_dynamic.png" alt="Dynamic" className="w-full h-32 object-cover" />
-                    <div className="p-2 text-center text-sm font-medium text-primary">Dynamic Energy</div>
-                  </div>
-                  {/* Premade 3 */}
-                  <div 
-                    className={`border-2 rounded-lg cursor-pointer overflow-hidden transition-all ${formData.certificateTemplate === '/certificates/template_minimalist.png' ? 'border-accent-blue shadow-lg shadow-accent-blue/20' : 'border-gray-700/50 hover:border-gray-500'}`}
-                    onClick={() => setFormData({...formData, certificateTemplate: '/certificates/template_minimalist.png'})}
-                  >
-                    <img src="/certificates/template_minimalist.png" alt="Minimalist" className="w-full h-32 object-cover" />
-                    <div className="p-2 text-center text-sm font-medium text-primary">Minimalist Classic</div>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="h-px bg-gray-700/50 flex-1"></div>
-                  <div className="text-secondary text-sm font-medium">OR</div>
-                  <div className="h-px bg-gray-700/50 flex-1"></div>
-                </div>
-
                 <div className="file-upload-wrapper" style={{ opacity: uploadingField ? 0.6 : 1 }}>
                   <input
                     type="file"
@@ -627,7 +600,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
                       <UploadCloud size={32} />
                     </div>
                     <div className="file-upload-title">
-                      {uploadingField === 'certificateTemplate' ? 'Uploading…' : 'Upload Custom Template'}
+                      {uploadingField === 'certificateTemplate' ? 'Uploading…' : 'Upload Certificate Template'}
                     </div>
                     <div className="file-upload-desc">PNG, JPG, or PDF (Landscape A4 recommended)</div>
                   </div>

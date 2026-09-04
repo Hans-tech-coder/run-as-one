@@ -7,6 +7,7 @@ import { asRegistrationForm } from '@/lib/registration-form';
 import { asEventType } from '@/lib/event-type';
 import { asInclusions } from '@/lib/inclusions';
 import { asBankAccounts } from '@/lib/bank-accounts';
+import { uniqueEventSlug } from '@/lib/event-slug';
 
 export async function POST(request: Request) {
   try {
@@ -22,9 +23,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    // The public URL is made from the title, so it is settled here, once, with
+    // a counter appended if some other organizer already has that slug.
+    const slug = await uniqueEventSlug(title, async (candidate) => {
+      const clash = await db.event.findUnique({ where: { slug: candidate }, select: { id: true } });
+      return clash !== null;
+    });
+
     const newEvent = await db.event.create({
       data: {
         title,
+        slug,
         date,
         startTime: startTime || null,
         endTime: endTime || null,
