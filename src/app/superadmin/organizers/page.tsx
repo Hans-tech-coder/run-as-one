@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Search, Filter, Edit, CheckCircle, Ban, AlertCircle } from 'lucide-react';
 import { formatPesos, toPesos } from '@/lib/money';
+import { useAlert } from '@/components/ui/AlertProvider';
 
 interface Organizer {
   id: string;
@@ -18,6 +19,8 @@ interface Organizer {
 }
 
 export default function OrganizersManagementPage() {
+  // Shadows window.alert / window.confirm on purpose — see AlertProvider.
+  const { alert, confirm } = useAlert();
   const [organizers, setOrganizers] = useState<Organizer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -46,7 +49,13 @@ export default function OrganizersManagementPage() {
   }, []);
 
   const handleStatusChange = async (id: string, newStatus: string) => {
-    if (!confirm(`Are you sure you want to change this organizer's status to ${newStatus}?`)) return;
+    const confirmed = await confirm({
+      variant: 'info',
+      title: 'Change Organizer Status',
+      message: `Are you sure you want to change this organizer's status to ${newStatus}?`,
+      confirmLabel: `Set to ${newStatus}`,
+    });
+    if (!confirmed) return;
     
     try {
       const res = await fetch(`/api/superadmin/organizers/${id}`, {

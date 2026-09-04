@@ -4,9 +4,12 @@ import React, { useState } from 'react';
 import { Plus, Tag, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { formatPesos } from '@/lib/money';
+import { useAlert } from '@/components/ui/AlertProvider';
 
 export default function PromoCodesClient({ initialPromos, organizerId }: { initialPromos: any[], organizerId: string }) {
   const router = useRouter();
+  // Shadows window.alert on purpose — see AlertProvider.
+  const { alert } = useAlert();
   const [promos, setPromos] = useState(initialPromos);
   const [showModal, setShowModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);

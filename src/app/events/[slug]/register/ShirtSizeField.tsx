@@ -30,12 +30,18 @@ export default function ShirtSizeField({
   upcharge,
   onChange,
   onOpenSizeGuide,
+  id,
+  error,
 }: {
   value: string;
   /** Centavos added for 4XL and above on this event. 0 means no upcharge. */
   upcharge: number;
   onChange: (size: string) => void;
   onOpenSizeGuide: () => void;
+  /** Overrides the generated id so validation can send the caret here. */
+  id?: string;
+  /** Set when a category that includes a shirt has no size chosen. */
+  error?: string;
 }) {
   const typed = normalizeShirtSize(value);
 
@@ -100,6 +106,8 @@ export default function ShirtSizeField({
     <Combobox
       label="Shirt Size"
       listboxLabel="Shirt sizes"
+      id={id}
+      error={error}
       value={value}
       rows={rows}
       maxLength={MAX_SHIRT_SIZE_LENGTH}

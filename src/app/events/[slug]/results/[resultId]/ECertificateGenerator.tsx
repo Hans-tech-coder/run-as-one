@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Download, Loader2, Share2, FileText } from 'lucide-react';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { useSearchParams } from 'next/navigation';
+import { useAlert } from '@/components/ui/AlertProvider';
 
 interface Props {
   result: any;
@@ -14,6 +15,8 @@ export default function ECertificateGenerator({ result, event }: Props) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const searchParams = useSearchParams();
+  // Shadows window.alert on purpose — see AlertProvider.
+  const { alert } = useAlert();
 
   const generateCertificate = async () => {
     setIsGenerating(true);
@@ -151,7 +154,10 @@ export default function ECertificateGenerator({ result, event }: Props) {
       
     } catch (error) {
       console.error('Error generating certificate:', error);
-      alert('Could not generate the certificate. The organizer might not have uploaded a valid template yet.');
+      alert({
+        title: 'Certificate Unavailable',
+        message: 'Could not generate the certificate. The organizer might not have uploaded a valid template yet.',
+      });
     } finally {
       setIsGenerating(false);
     }
@@ -185,7 +191,11 @@ export default function ECertificateGenerator({ result, event }: Props) {
           url: window.location.href,
         });
       } else {
-        alert("Sharing is not supported on this browser. Try copying the URL.");
+        alert({
+          variant: 'info',
+          title: 'Sharing Unavailable',
+          message: 'Sharing is not supported on this browser. Try copying the URL.',
+        });
       }
     } catch (error) {
       console.log('Error sharing', error);

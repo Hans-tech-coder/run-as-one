@@ -5,6 +5,7 @@ import { CheckCircle2, Maximize2 } from 'lucide-react';
 import { formatPesos } from '@/lib/money';
 import { sellsPackages } from '@/lib/event-type';
 import PosterLightbox from './PosterLightbox';
+import FieldError from './FieldError';
 
 /**
  * What a runner picks at sign-up, in whichever shape the event sells.
@@ -26,10 +27,16 @@ export default function CategoryPicker({
   event,
   selectedId,
   onSelect,
+  id,
+  error,
 }: {
   event: { eventType?: unknown; categories: any[] };
   selectedId: string;
   onSelect: (categoryId: string) => void;
+  /** Marks the group as the caret's destination when nothing is picked. */
+  id?: string;
+  /** Set when the runner tried to move on without choosing. */
+  error?: string;
 }) {
   const packages = sellsPackages(event);
   const [posterFor, setPosterFor] = useState<any | null>(null);
@@ -39,17 +46,35 @@ export default function CategoryPicker({
   const groupName = useId();
 
   const groupLabel = packages ? 'Select Package' : 'Select Category';
+  const errorId = id ? `${id}-error` : `${groupName}-error`;
 
   return (
     <>
-      <h4 className="mb-3 text-secondary text-sm font-bold uppercase tracking-wider">
-        {groupLabel}
-      </h4>
+      {/* tabIndex -1 so the summary dialog can send the caret to the group as a
+          whole. The distance cards are not focusable and the package radios are
+          many; the heading is the one place that means "start here". */}
+      <div
+        id={id}
+        tabIndex={-1}
+        aria-describedby={error ? errorId : undefined}
+        className="focus:outline-none scroll-mt-32"
+      >
+        <h4 className="mb-3 text-secondary text-sm font-bold uppercase tracking-wider">
+          {groupLabel}
+        </h4>
+
+        {error && (
+          <div className="mb-3">
+            <FieldError id={errorId} message={error} />
+          </div>
+        )}
+      </div>
 
       {packages ? (
         <div
           role="radiogroup"
           aria-label={groupLabel}
+          aria-invalid={error ? true : undefined}
           className="flex flex-col gap-3 mb-8"
         >
           {event.categories.map((cat: any) => {

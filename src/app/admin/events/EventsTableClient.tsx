@@ -8,6 +8,7 @@ import {
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import EventActionsMenu from './EventActionsMenu';
+import { useAlert } from '@/components/ui/AlertProvider';
 import {
   Table,
   TableBody,
@@ -43,6 +44,8 @@ export default function EventsTableClient({ events }: EventsTableClientProps) {
   const [tableEvents, setTableEvents] = useState(events);
   
   const router = useRouter();
+  // Shadows window.alert on purpose — see AlertProvider.
+  const { alert } = useAlert();
 
   // Delete Modal State
   const [deletingEvent, setDeletingEvent] = useState<any | null>(null);

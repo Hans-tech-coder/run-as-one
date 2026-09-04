@@ -6,6 +6,7 @@ import {
   ChevronLeft, ChevronRight, ChevronFirst, ChevronLast, Columns, ChevronUp, ChevronDown, CheckCircle, Check
 } from 'lucide-react';
 import RegistrantActionsMenu from './RegistrantActionsMenu';
+import { useAlert } from '@/components/ui/AlertProvider';
 import {
   Table,
   TableBody,
@@ -33,6 +34,8 @@ interface RegistrantsTableProps {
 }
 
 export default function RegistrantsTable({ eventId, runners: initialRunners }: RegistrantsTableProps) {
+  // Shadows window.alert on purpose — see AlertProvider.
+  const { alert } = useAlert();
   const [runners, setRunners] = useState(initialRunners);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [viewingRunner, setViewingRunner] = useState<any | null>(null);

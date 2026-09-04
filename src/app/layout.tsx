@@ -11,6 +11,7 @@ export const metadata: Metadata = {
 };
 
 import ClientLayoutWrapper from "./ClientLayoutWrapper";
+import { AlertProvider } from "@/components/ui/AlertProvider";
 
 export default function RootLayout({
   children,
@@ -20,9 +21,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} ${outfit.variable} antialiased bg-[var(--bg-primary)] text-white`} suppressHydrationWarning>
-        <ClientLayoutWrapper>
-          {children}
-        </ClientLayoutWrapper>
+        {/* Outside ClientLayoutWrapper: that component returns early for
+            /admin and /superadmin, so a provider mounted inside it would
+            cover only half the app. */}
+        <AlertProvider>
+          <ClientLayoutWrapper>
+            {children}
+          </ClientLayoutWrapper>
+        </AlertProvider>
       </body>
     </html>
   );

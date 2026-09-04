@@ -2,6 +2,7 @@
 
 import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Check, ChevronDown, Search } from "lucide-react";
+import FieldError from "./FieldError";
 import {
   allCountries,
   countryFor,
@@ -68,6 +69,8 @@ export default function PhoneField({
   defaultCountry,
   onChange,
   placeholder = "9171234567",
+  id,
+  error,
 }: {
   label: string;
   /** E.164, or a legacy local number from before this field existed. */
@@ -76,6 +79,10 @@ export default function PhoneField({
   defaultCountry: string;
   onChange: (e164: string) => void;
   placeholder?: string;
+  /** Overrides the generated id so validation can send the caret here. */
+  id?: string;
+  /** What is wrong with this number, or nothing when it is fine. */
+  error?: string;
 }) {
   const parsed = useMemo(() => parseE164(value), [value]);
   // The country is local: an empty number carries no country of its own, and
@@ -89,8 +96,9 @@ export default function PhoneField({
   const listRef = useRef<HTMLUListElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const baseId = useId();
-  const inputId = `${baseId}-national`;
+  const inputId = id ?? `${baseId}-national`;
   const listboxId = `${baseId}-countries`;
+  const errorId = `${inputId}-error`;
 
   // A number pasted or restored with its own country wins over the local pick.
   useEffect(() => {
@@ -188,7 +196,10 @@ export default function PhoneField({
       <label htmlFor={inputId}>{label}</label>
 
       <div ref={wrapperRef} className="relative">
-        <div className="flex items-stretch rounded-[8px] border border-white/10 bg-black/30 focus-within:border-accent-blue focus-within:shadow-[0_0_0_3px_rgba(43,192,255,0.2)] transition-all">
+        <div
+          className="control-shell flex items-stretch rounded-[8px] border border-white/10 bg-black/30 focus-within:border-accent-blue focus-within:shadow-[0_0_0_3px_rgba(43,192,255,0.2)] transition-all"
+          aria-invalid={error ? true : undefined}
+        >
           <button
             type="button"
             onClick={() => (isOpen ? close() : setIsOpen(true))}
@@ -210,6 +221,8 @@ export default function PhoneField({
             value={shown}
             onChange={e => handleNationalChange(e.target.value)}
             placeholder={placeholder}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? errorId : undefined}
             className="flex-1 min-w-0 text-white placeholder-gray-500 focus:outline-none"
             // Inline rather than utility classes on purpose. RegistrationWizard
             // .css styles `.input-group input` at specificity (0,1,1), which
@@ -291,6 +304,8 @@ export default function PhoneField({
           </div>
         )}
       </div>
+
+      <FieldError id={errorId} message={error} />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useId, useRef, useState } from 'react';
+import FieldError from './FieldError';
 
 /**
  * A text field that suggests, but does not restrict.
@@ -40,6 +41,8 @@ export default function Combobox({
   listboxLabel,
   onChange,
   onNormalize,
+  id,
+  error,
 }: {
   label: string;
   value: string;
@@ -57,6 +60,10 @@ export default function Combobox({
    * snapping to a listed spelling. Returning the input unchanged is fine.
    */
   onNormalize?: (typed: string) => string;
+  /** Overrides the generated id so validation can send the caret here. */
+  id?: string;
+  /** What the field still wants, or nothing when it is satisfied. */
+  error?: string;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
@@ -66,7 +73,8 @@ export default function Combobox({
   // runner two's listbox would be labelled by runner one's input.
   const baseId = useId();
   const listboxId = `${baseId}-listbox`;
-  const inputId = `${baseId}-input`;
+  const inputId = id ?? `${baseId}-input`;
+  const errorId = `${inputId}-error`;
 
   const close = () => {
     setIsOpen(false);
@@ -166,6 +174,8 @@ export default function Combobox({
           aria-expanded={isOpen}
           aria-controls={listboxId}
           aria-autocomplete="list"
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? errorId : undefined}
           aria-activedescendant={
             isOpen && activeIndex >= 0 ? `${baseId}-row-${activeIndex}` : undefined
           }
@@ -215,6 +225,8 @@ export default function Combobox({
           </ul>
         )}
       </div>
+
+      <FieldError id={errorId} message={error} />
 
       {hint && <p className="text-xs text-secondary">{hint}</p>}
     </div>

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { Search, Edit, CheckCircle, Trash2, Plus, Clock } from 'lucide-react';
+import { useAlert } from '@/components/ui/AlertProvider';
 
 /**
  * The shared list of running clubs every event's registration form suggests.
@@ -22,6 +23,8 @@ interface Community {
 }
 
 export default function CommunitiesManagementPage() {
+  // Shadows window.alert / window.confirm on purpose — see AlertProvider.
+  const { alert, confirm } = useAlert();
   const [communities, setCommunities] = useState<Community[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -81,7 +84,13 @@ export default function CommunitiesManagementPage() {
       c.runnerCount > 0
         ? `${c.name} has ${c.runnerCount} runner${c.runnerCount === 1 ? '' : 's'} registered under it. Removing it only takes it out of the suggestions — their registrations keep the name. Continue?`
         : `Remove "${c.name}" from the list?`;
-    if (!confirm(warning)) return;
+    const confirmed = await confirm({
+      variant: 'danger',
+      title: 'Remove from Suggestions',
+      message: warning,
+      confirmLabel: 'Remove',
+    });
+    if (!confirmed) return;
     await send(`/api/superadmin/communities/${c.id}`, { method: 'DELETE' });
   };
 

@@ -29,6 +29,7 @@ import CategoryPicker from "./CategoryPicker";
 import CommunityPicker from "./CommunityPicker";
 import ConsentWaiver from "./ConsentWaiver";
 import PhoneField from "./PhoneField";
+import GenderField from "./GenderField";
 import { resolveConsentWaiver } from "@/lib/consent-waiver";
 import ShirtSizeField from "./ShirtSizeField";
 import {
@@ -39,6 +40,17 @@ import {
 import { communitySlug } from "@/lib/running-community";
 import { sellsPackages } from "@/lib/event-type";
 import EventImage from "@/components/EventImage";
+import { useAlert } from "@/components/ui/AlertProvider";
+import FieldError from "./FieldError";
+import {
+  focusField,
+  hasErrors,
+  nothingAnsweredYet,
+  runnerFieldId,
+  summarizeRunners,
+  validateRunners,
+  type RunnerField,
+} from "./validation";
 import "./RegistrationWizard.css";
 
 /**
@@ -95,6 +107,8 @@ export default function BankTransferWizardClient({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  // Shadows window.alert on purpose — see AlertProvider.
+  const { alert } = useAlert();
   const isSuccessParam = searchParams.get("success") === "true";
 
   const [step, setStep] = useState(1);
@@ -274,45 +288,119 @@ export default function BankTransferWizardClient({
   const totalAmount = subtotal + deliveryFee + platformFee;
 
   // Validation checks
-  const validateStep1 = () => {
-    return participants.every(
-      (p) =>
-        p.categoryId &&
-        p.firstName &&
-        p.lastName &&
-        p.email &&
-        p.phone &&
-        p.gender &&
-        p.birthdate &&
-        // Only demanded when the chosen package actually includes something to
-        // wear; otherwise there is no size to give.
-        (!categoryNeedsShirtSize(findCategory(event.categories, p.categoryId)) ||
-          p.singletSize) &&
-        p.emergencyContactName &&
-        p.emergencyContactPhone,
-    );
+  //
+  // What each runner still owes, recomputed from state on every keystroke. One
+  // source feeds three things that must never disagree: the red state on each
+  // control, the list the dialog reads out, and where the caret lands.
+  const runnerErrors = useMemo(
+    () => validateRunners(participants, event),
+    [participants, event],
+  );
+
+  // Nothing turns red until the runner has actually tried to move on. Marking
+  // up a form they have not finished typing into is nagging, not guidance.
+  const [showErrors, setShowErrors] = useState(false);
+
+  const errorFor = (idx: number, field: RunnerField) =>
+    showErrors ? runnerErrors[idx]?.[field] : undefined;
+
+  /** The id and the two ARIA attributes an invalid control needs, in one spread. */
+  const fieldAria = (idx: number, field: RunnerField) => {
+    const id = runnerFieldId(idx, field);
+    const message = errorFor(idx, field);
+    return {
+      id,
+      "aria-invalid": message ? true : undefined,
+      "aria-describedby": message ? `${id}-error` : undefined,
+    } as const;
   };
+
+  const deliveryAddressError =
+    showErrors &&
+    logisticsMethod === "delivery" &&
+    deliveryZone !== null &&
+    deliveryAddress.trim() === ""
+      ? "Enter a complete delivery address"
+      : undefined;
 
   const validateStep2 = () => {
     if (logisticsMethod === "pickup") return true;
     return deliveryZone !== null && deliveryAddress.trim() !== "";
   };
 
-  const handleNext = () => {
-    if (step === 1 && !validateStep1()) {
-      alert(
-        "Please complete all required fields and select a category for all runners.",
-      );
+  const handleNext = async () => {
+    if (step === 1 && hasErrors(runnerErrors)) {
+      setShowErrors(true);
+
+      // Built from the gaps that are actually there, so a runner who has
+      // already picked a category is never told to pick one.
+      const summary = summarizeRunners(runnerErrors, event);
+      const missing = summary.reduce((n, r) => n + r.labels.length, 0);
+      const manyRunners = participants.length > 1;
+
+      // A form nobody has typed into yet needs the opposite copy. There is no
+      // progress to reassure anyone about, and listing all nine gaps is only
+      // the form read back to them — so point at the first step instead.
+      const untouched = nothingAnsweredYet(participants, runnerErrors, event);
+      const choice = sellsPackages(event) ? "package" : "category";
+
+      await alert({
+        variant: "info",
+        title: untouched
+          ? "Let's get you registered"
+          : missing === 1
+            ? "One detail still missing"
+            : `${missing} details still missing`,
+        confirmLabel: untouched ? "Get started" : "Take me there",
+        message: untouched ? (
+          <>
+            Select a {choice} first, then fill in the runner details below.
+            Every answer we still need is marked in red.
+          </>
+        ) : (
+          <>
+            <span className="block mb-3">
+              Everything you have filled in is kept. Only these are still
+              blank:
+            </span>
+            <ul className="flex flex-col gap-2">
+              {summary.map((r) => (
+                <li key={r.index}>
+                  {manyRunners && (
+                    <span className="block text-white text-xs font-semibold uppercase tracking-wider">
+                      Runner {r.runner}
+                    </span>
+                  )}
+                  <span className="block">{r.labels.join(" \u00b7 ")}</span>
+                </li>
+              ))}
+            </ul>
+          </>
+        ),
+      });
+
+      // Dismissing the dialog is the runner saying "show me" - so put them in
+      // the first empty field rather than leaving them to hunt for the red.
+      focusField(summary[0].firstFieldId);
       return;
     }
+
     if (step === 2 && !validateStep2()) {
-      alert(
-        deliveryZone === null
-          ? "Please choose whether delivery is inside or outside the province."
-          : "Please provide a complete delivery address.",
-      );
+      setShowErrors(true);
+      await alert({
+        variant: "info",
+        title:
+          deliveryZone === null ? "Choose a delivery area" : "Address needed",
+        message:
+          deliveryZone === null
+            ? "Please choose whether delivery is inside or outside the province."
+            : "Please provide a complete delivery address so the kit reaches you.",
+      });
+      if (deliveryZone !== null) focusField("delivery-address");
       return;
     }
+
+    setShowErrors(false);
     setStep((prev) => prev + 1);
   };
 
@@ -326,14 +414,23 @@ export default function BankTransferWizardClient({
 
   const handleManualSubmit = async () => {
     if (!proofFile) {
-      alert("Please upload your deposit slip or proof of payment.");
+      alert({
+        variant: "info",
+        title: "Proof of Payment Required",
+        message: "Please upload your deposit slip or proof of payment.",
+      });
       return;
     }
 
     // The button is already disabled without this, but the check is repeated
     // here in case state gets here some other way.
     if (!consentGiven) {
-      alert("Please agree to the Disclaimer, Consent & Data Privacy Waiver to continue.");
+      alert({
+        variant: "info",
+        title: "Waiver Required",
+        message:
+          "Please agree to the Disclaimer, Consent & Data Privacy Waiver to continue.",
+      });
       return;
     }
 
@@ -649,6 +746,8 @@ export default function BankTransferWizardClient({
                     </div>
 
                     <CategoryPicker
+                      id={runnerFieldId(idx, "categoryId")}
+                      error={errorFor(idx, "categoryId")}
                       event={event}
                       selectedId={p.categoryId}
                       onSelect={categoryId =>
@@ -661,8 +760,11 @@ export default function BankTransferWizardClient({
                     </h4>
                     <div className="form-grid">
                       <div className="input-group">
-                        <label>First Name</label>
+                        <label htmlFor={runnerFieldId(idx, "firstName")}>
+                          First Name
+                        </label>
                         <input
+                          {...fieldAria(idx, "firstName")}
                           type="text"
                           value={p.firstName}
                           onChange={(e) =>
@@ -674,10 +776,17 @@ export default function BankTransferWizardClient({
                           }
                           placeholder="Juan"
                         />
+                        <FieldError
+                          id={`${runnerFieldId(idx, "firstName")}-error`}
+                          message={errorFor(idx, "firstName")}
+                        />
                       </div>
                       <div className="input-group">
-                        <label>Last Name</label>
+                        <label htmlFor={runnerFieldId(idx, "lastName")}>
+                          Last Name
+                        </label>
                         <input
+                          {...fieldAria(idx, "lastName")}
                           type="text"
                           value={p.lastName}
                           onChange={(e) =>
@@ -689,10 +798,17 @@ export default function BankTransferWizardClient({
                           }
                           placeholder="Dela Cruz"
                         />
+                        <FieldError
+                          id={`${runnerFieldId(idx, "lastName")}-error`}
+                          message={errorFor(idx, "lastName")}
+                        />
                       </div>
                       <div className="input-group">
-                        <label>Email Address</label>
+                        <label htmlFor={runnerFieldId(idx, "email")}>
+                          Email Address
+                        </label>
                         <input
+                          {...fieldAria(idx, "email")}
                           type="email"
                           value={p.email}
                           onChange={(e) =>
@@ -700,35 +816,35 @@ export default function BankTransferWizardClient({
                           }
                           placeholder="juan@example.com"
                         />
+                        <FieldError
+                          id={`${runnerFieldId(idx, "email")}-error`}
+                          message={errorFor(idx, "email")}
+                        />
                       </div>
                       <PhoneField
                         label="Mobile Number"
+                        id={runnerFieldId(idx, "phone")}
+                        error={errorFor(idx, "phone")}
                         value={p.phone}
                         defaultCountry={defaultCountry}
                         onChange={(e164) =>
                           handleParticipantChange(idx, "phone", e164)
                         }
                       />
+                      <GenderField
+                        id={runnerFieldId(idx, "gender")}
+                        error={errorFor(idx, "gender")}
+                        value={p.gender}
+                        onChange={(gender) =>
+                          handleParticipantChange(idx, "gender", gender)
+                        }
+                      />
                       <div className="input-group">
-                        <label>Gender</label>
-                        <select
-                          value={p.gender}
-                          onChange={(e) =>
-                            handleParticipantChange(
-                              idx,
-                              "gender",
-                              e.target.value,
-                            )
-                          }
-                        >
-                          <option value="">Select Gender</option>
-                          <option value="Male">Male</option>
-                          <option value="Female">Female</option>
-                        </select>
-                      </div>
-                      <div className="input-group">
-                        <label>Birthdate</label>
+                        <label htmlFor={runnerFieldId(idx, "birthdate")}>
+                          Birthdate
+                        </label>
                         <input
+                          {...fieldAria(idx, "birthdate")}
                           type="date"
                           value={p.birthdate}
                           onChange={(e) =>
@@ -739,11 +855,17 @@ export default function BankTransferWizardClient({
                             )
                           }
                         />
+                        <FieldError
+                          id={`${runnerFieldId(idx, "birthdate")}-error`}
+                          message={errorFor(idx, "birthdate")}
+                        />
                       </div>
                       {categoryNeedsShirtSize(
                         findCategory(event.categories, p.categoryId),
                       ) && (
                         <ShirtSizeField
+                          id={runnerFieldId(idx, "singletSize")}
+                          error={errorFor(idx, "singletSize")}
                           value={p.singletSize}
                           upcharge={shirtSizeUpcharge}
                           onChange={(size) =>
@@ -772,8 +894,13 @@ export default function BankTransferWizardClient({
                     </h4>
                     <div className="form-grid">
                       <div className="input-group">
-                        <label>Emergency Contact Name</label>
+                        <label
+                          htmlFor={runnerFieldId(idx, "emergencyContactName")}
+                        >
+                          Emergency Contact Name
+                        </label>
                         <input
+                          {...fieldAria(idx, "emergencyContactName")}
                           type="text"
                           value={p.emergencyContactName}
                           onChange={(e) =>
@@ -785,9 +912,15 @@ export default function BankTransferWizardClient({
                           }
                           placeholder="Maria Dela Cruz"
                         />
+                        <FieldError
+                          id={`${runnerFieldId(idx, "emergencyContactName")}-error`}
+                          message={errorFor(idx, "emergencyContactName")}
+                        />
                       </div>
                       <PhoneField
                         label="Emergency Contact No."
+                        id={runnerFieldId(idx, "emergencyContactPhone")}
+                        error={errorFor(idx, "emergencyContactPhone")}
                         value={p.emergencyContactPhone}
                         defaultCountry={defaultCountry}
                         onChange={(e164) =>
@@ -960,13 +1093,26 @@ export default function BankTransferWizardClient({
                     )}
 
                     <div className="input-group full-width">
-                      <label>Complete Delivery Address</label>
+                      <label htmlFor="delivery-address">
+                        Complete Delivery Address
+                      </label>
                       <textarea
+                        id="delivery-address"
+                        aria-invalid={deliveryAddressError ? true : undefined}
+                        aria-describedby={
+                          deliveryAddressError
+                            ? "delivery-address-error"
+                            : undefined
+                        }
                         value={deliveryAddress}
                         onChange={(e) => setDeliveryAddress(e.target.value)}
                         placeholder="House/Unit No., Street, Barangay, City/Municipality, Province, Zip Code"
                         rows={4}
                       ></textarea>
+                      <FieldError
+                        id="delivery-address-error"
+                        message={deliveryAddressError}
+                      />
                     </div>
                   </div>
                 )}
