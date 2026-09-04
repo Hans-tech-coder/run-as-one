@@ -486,7 +486,7 @@ export default function BankTransferWizardClient({
   if (isSuccessParam) {
     return (
       <div className="wizard-page">
-        <div className="container success-container py-12 t-stagger is-shown flex justify-center items-center min-h-[70vh]">
+        <div className="success-container py-12 t-stagger is-shown flex justify-center items-center min-h-[70vh]">
           <div className="glass-panel p-12 form-panel border border-white/10 bg-gradient-to-b from-white/5 to-transparent rounded-3xl relative overflow-hidden text-center max-w-2xl w-full t-stagger-line t-stagger-line--1">
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-accent-blue/20 rounded-full blur-[80px] pointer-events-none"></div>
 
@@ -494,10 +494,10 @@ export default function BankTransferWizardClient({
               <div className="w-24 h-24 rounded-full bg-accent-blue/10 flex items-center justify-center mb-6">
                 <CheckCircle2 size={48} className="text-accent-blue" />
               </div>
-              <h1 className="text-4xl font-extrabold text-white tracking-tight mb-4">
+              <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight mb-4">
                 Registration Submitted!
               </h1>
-              <p className="text-secondary text-lg mb-8">
+              <p className="text-secondary text-base sm:text-lg mb-6 sm:mb-8">
                 Your registration for <strong>{event.title}</strong> has been
                 received.
               </p>
@@ -544,10 +544,10 @@ export default function BankTransferWizardClient({
 
   return (
     <div className="wizard-page">
-      <div className="container wizard-container py-12 t-stagger is-shown">
+      <div className="wizard-container py-12 t-stagger is-shown">
         {/* Sidebar Summary */}
         <aside className="wizard-sidebar t-stagger-line t-stagger-line--1">
-          <div className="glass-panel sticky-sidebar p-8 border border-white/10 bg-gradient-to-b from-white/5 to-transparent rounded-3xl">
+          <div className="glass-panel sticky-sidebar p-5 sm:p-8 border border-white/10 bg-gradient-to-b from-white/5 to-transparent rounded-3xl">
             <div className="event-mini-info border-b border-white/10 pb-6 mb-6">
               <EventImage
                 src={event.imageUrl}
@@ -556,7 +556,7 @@ export default function BankTransferWizardClient({
                 iconSize={24}
               />
               <div>
-                <h3 className="text-xl font-bold text-white mb-1">
+                <h3 className="text-lg sm:text-xl font-bold text-white mb-1">
                   {event.title}
                 </h3>
                 <div className="text-sm text-secondary flex items-center gap-1">
@@ -565,7 +565,7 @@ export default function BankTransferWizardClient({
               </div>
             </div>
 
-            <div className="order-summary mt-6 bg-black/40 rounded-[16px] p-6 border border-white/5">
+            <div className="order-summary mt-6 bg-black/40 rounded-[16px] p-4 sm:p-6 border border-white/5">
               <h4 className="mb-4 text-white font-bold tracking-wide uppercase text-sm">
                 Order Summary
               </h4>
@@ -694,7 +694,7 @@ export default function BankTransferWizardClient({
             <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-accent-orange/5 rounded-full blur-[100px] -mr-40 -mt-40 pointer-events-none"></div>
 
             {/* Header / Back button */}
-            <div className="flex items-center gap-4 mb-8 pb-6 border-b border-white/10 relative z-10">
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4 mb-6 sm:mb-8 pb-5 sm:pb-6 border-b border-white/10 relative z-10">
               {step > 1 && (
                 <button
                   className="flex items-center gap-2 text-secondary hover:text-white transition-colors"
@@ -704,7 +704,7 @@ export default function BankTransferWizardClient({
                   <span className="font-bold">Back</span>
                 </button>
               )}
-              <h2 className="text-3xl font-bold text-white tracking-tight m-0">
+              <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight m-0">
                 {step === 1 &&
                   (sellsPackages(event)
                     ? "Runner Details & Packages"
@@ -717,7 +717,7 @@ export default function BankTransferWizardClient({
             {/* STEP 1: Categories & Details */}
             {step === 1 && (
               <div className="step-content relative z-10 animate-fade-in">
-                <p className="text-secondary text-lg mb-8">
+                <p className="text-secondary text-base sm:text-lg mb-6 sm:mb-8">
                   {sellsPackages(event)
                     ? "Select a registration package and fill out the details for each runner. You can add multiple runners in one transaction."
                     : "Select a distance category and fill out the details for each runner. You can add multiple runners in one transaction."}
@@ -1175,20 +1175,20 @@ export default function BankTransferWizardClient({
                 <h4 className="mb-4 text-accent-blue font-bold tracking-wide">
                   Select a Bank for Transfer
                 </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-8">
                   {bankAccounts.map((bank) => (
                     <div
                       key={bank.id}
-                      className="group relative overflow-hidden border border-white/10 bg-black/40 hover:border-accent-blue hover:bg-white/5 rounded-[16px] p-6 cursor-pointer transition-all text-center"
+                      className="group relative overflow-hidden border border-white/10 bg-black/40 hover:border-accent-blue hover:bg-white/5 rounded-[16px] p-5 sm:p-6 cursor-pointer transition-all text-center"
                       onClick={() => setSelectedBankModal(bank)}
                     >
                       <div className="absolute top-0 right-0 w-24 h-24 bg-accent-blue/10 rounded-full blur-2xl -mr-12 -mt-12 group-hover:bg-accent-blue/20 transition-colors"></div>
-                      <div className="relative z-10 font-bold text-xl text-white mb-1">
+                      <div className="relative z-10 font-bold text-lg sm:text-xl text-white mb-1">
                         {bank.bankName}
                       </div>
                       <div className="relative z-10 text-sm text-secondary">
                         {bank.qrImageUrl
-                          ? "Click to view details &amp; QR"
+                          ? "Click to view details & QR"
                           : "Click to view account details"}
                       </div>
                     </div>
@@ -1196,7 +1196,7 @@ export default function BankTransferWizardClient({
                 </div>
 
                 <div
-                  className={`relative overflow-hidden border-2 border-dashed rounded-3xl p-12 text-center transition-all cursor-pointer ${isDragging ? "border-accent-blue bg-accent-blue/10" : "border-white/20 bg-black/20 hover:border-white/40 hover:bg-white/5"}`}
+                  className={`relative overflow-hidden border-2 border-dashed rounded-3xl p-6 sm:p-12 text-center transition-all cursor-pointer ${isDragging ? "border-accent-blue bg-accent-blue/10" : "border-white/20 bg-black/20 hover:border-white/40 hover:bg-white/5"}`}
                   onDragOver={(e) => {
                     e.preventDefault();
                     setIsDragging(true);
@@ -1238,10 +1238,16 @@ export default function BankTransferWizardClient({
 
                 {proofFile && (
                   <div className="file-preview animate-fade-in p-4 bg-white/5 border border-white/10 rounded-[16px] mt-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <FileImage size={24} className="text-accent-blue" />
-                      <div>
-                        <div className="font-bold text-white text-sm">
+                    <div className="file-preview-meta flex items-center gap-3 min-w-0">
+                      <FileImage
+                        size={24}
+                        className="text-accent-blue shrink-0"
+                      />
+                      <div className="file-preview-meta min-w-0">
+                        <div
+                          className="file-preview-name font-bold text-white text-sm"
+                          title={proofFile.name}
+                        >
                           {proofFile.name}
                         </div>
                         <div className="text-xs text-secondary">
@@ -1250,7 +1256,7 @@ export default function BankTransferWizardClient({
                       </div>
                     </div>
                     <button
-                      className="text-secondary hover:text-red-400 bg-black/40 hover:bg-red-500/10 p-2 rounded-full transition-all"
+                      className="text-secondary hover:text-red-400 bg-black/40 hover:bg-red-500/10 p-2 rounded-full transition-all shrink-0"
                       onClick={(e) => {
                         e.stopPropagation();
                         setProofFile(null);

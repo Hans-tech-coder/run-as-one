@@ -93,7 +93,7 @@ export default async function RunnerAnalyticsPage({
   return (
     <div className="relative pb-20 w-full">
       <EventHeroBanner event={result.event as any} />
-      <div className="container mx-auto py-8">
+      <div className="py-8">
         <div className="max-w-3xl mx-auto">
           <Link href={`/events/${result.event.slug}/results`} className="inline-flex items-center gap-2 text-accent-blue hover:text-white transition-colors mb-8">
             <ArrowLeft size={20} /> Back to Search

@@ -8,10 +8,10 @@ async function main() {
   const hashedPassword = await bcrypt.hash('admin123', 10);
 
   const testOrganizer = await prisma.organizer.upsert({
-    where: { email: 'admin@stridesync.com' },
+    where: { email: 'admin@runasone.com' },
     update: {},
     create: {
-      email: 'admin@stridesync.com',
+      email: 'admin@runasone.com',
       name: 'Super Admin Test',
       password: hashedPassword,
       status: 'APPROVED',

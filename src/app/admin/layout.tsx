@@ -52,8 +52,7 @@ export default function AdminLayout({
       {/* Sidebar */}
       <aside className={`admin-sidebar ${isMobileMenuOpen ? 'open' : ''}`}>
         <div className="admin-brand flex items-center gap-3 font-bold text-xl px-6 py-4">
-          <img src="/logo.png" alt="StrideSync Logo" width="32" height="32" style={{ borderRadius: '8px' }} />
-          StrideSync
+          <img src="/run-as-one-logo.png" alt="RunAsOne" width={1536} height={1024} style={{ height: '48px', width: 'auto' }} />
         </div>
 
         <nav className="admin-nav">

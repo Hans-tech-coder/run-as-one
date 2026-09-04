@@ -57,7 +57,7 @@ export default function AdminRegister() {
       
       <div className="auth-card">
         <div className="auth-header">
-          <img src="/logo.png" alt="StrideSync Logo" width="64" height="64" style={{ borderRadius: '16px', marginBottom: '1.25rem', boxShadow: '0 8px 16px rgba(0,0,0,0.3)' }} />
+          <img src="/run-as-one-logo.png" alt="RunAsOne" width={1536} height={1024} style={{ height: '72px', width: 'auto', marginBottom: '1.25rem' }} />
           <h1 className="auth-title">Apply as Organizer</h1>
           <p className="auth-subtitle">Register to manage your running events.</p>
         </div>

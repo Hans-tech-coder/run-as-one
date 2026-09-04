@@ -6,7 +6,7 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-body" });
 const outfit = Outfit({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
-  title: "StrideSync | Premium Running Event Registration",
+  title: "RunAsOne | Premium Running Event Registration",
   description: "Join the best running events in the Philippines. Register, run, and track your results in one place.",
 };
 

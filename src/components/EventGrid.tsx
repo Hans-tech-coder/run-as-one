@@ -24,7 +24,7 @@ function EventCard({ event }: { event: DBEvent }) {
         <EventImage src={event.imageUrl} alt={event.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" iconSize={48} />
         <div className="absolute inset-0 z-20 bg-gradient-to-t from-[#0f0f14]/95 via-[#0f0f14]/70 to-[#0f0f14]/10"></div>
       </div>
-      <div className="relative z-30 flex flex-col justify-end h-full p-6 sm:p-8">
+      <div className="relative z-30 flex flex-col justify-end h-full p-5 sm:p-8">
         <h2 className="font-sans text-2xl sm:text-3xl font-bold uppercase mb-4 leading-tight text-white tracking-tight">
           {event.title}
         </h2>
@@ -47,7 +47,7 @@ function EventCard({ event }: { event: DBEvent }) {
 export default function EventGrid({ events }: { events: DBEvent[] }) {
   return (
     <section className="w-full">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 mb-24 w-full">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 w-full">
         {events.map((event, index) => (
           <motion.div
             key={event.id}

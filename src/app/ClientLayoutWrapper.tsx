@@ -15,7 +15,10 @@ export default function ClientLayoutWrapper({ children }: { children: React.Reac
   return (
     <>
       <Navbar />
-      <main className="pb-16 min-h-screen container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl" style={{ paddingTop: '160px' }}>
+      {/* The gutter and the clearance under the floating navbar both come from
+          .container / --nav-offset, so a phone gets 16px and a desktop 32px
+          without this file knowing the numbers. */}
+      <main className="pb-16 min-h-screen container" style={{ paddingTop: 'var(--nav-offset)' }}>
         {children}
       </main>
       <Footer />

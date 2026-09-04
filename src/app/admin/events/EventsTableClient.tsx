@@ -87,14 +87,22 @@ export default function EventsTableClient({ events }: EventsTableClientProps) {
       });
 
       if (!res.ok) {
-        throw new Error('Failed to delete event');
+        // The route answers with a reason; show that rather than a blank
+        // failure, so the organizer knows whether to retry or to fix something.
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error || `The server rejected the request (HTTP ${res.status}).`);
       }
 
       setTableEvents(tableEvents.filter((e: any) => e.id !== deletingEvent.id));
       closeDeleteModal();
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert('An error occurred while deleting the event.');
+      // The confirmation modal stays open underneath: the event is still
+      // there, and the organizer can read the reason and try again.
+      await alert({
+        title: 'Event not deleted',
+        message: `${deletingEvent.title} is still here. ${error?.message ?? 'The request did not reach the server.'}`,
+      });
     } finally {
       setIsDeleting(false);
     }
@@ -410,6 +418,15 @@ export default function EventsTableClient({ events }: EventsTableClientProps) {
               </p>
             </div>
           </div>
+
+          {deletingEvent?._count?.registrations > 0 && (
+            <div className="bg-red-500/10 border border-red-500/50 p-4 rounded-lg flex items-center gap-3 text-red-500">
+              <AlertCircle size={20} className="shrink-0" />
+              <p className="text-sm">
+                This event has {deletingEvent._count.registrations} registration{deletingEvent._count.registrations === 1 ? '' : 's'}. Deleting it also erases those registrations, their runners, and any uploaded race results.
+              </p>
+            </div>
+          )}
           
           <div className="flex justify-end gap-3 pt-2 border-t border-white/5">
             <button 

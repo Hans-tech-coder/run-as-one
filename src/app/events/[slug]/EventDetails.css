@@ -9,14 +9,27 @@
   /* Break out of max-w-7xl container */
   width: 100vw;
   margin-left: calc(50% - 50vw);
-  margin-top: -160px; /* Counteract ClientLayoutWrapper paddingTop: 160px */
+  /* Cancels the clearance <main> holds for the floating navbar, so the poster
+     runs under it. Reads the same token <main> pads with — the two numbers
+     have to stay equal, and a literal here drifted from it before. */
+  margin-top: calc(-1 * var(--nav-offset));
   margin-bottom: 2rem;
-  
-  height: 60vh;
-  min-height: 500px;
+
+  /* min-height rather than height: a long race title wraps to three lines on a
+     phone, and a definite height would push the meta row out of the poster. */
+  min-height: 60svh;
   display: flex;
   align-items: flex-end;
-  padding-bottom: 4rem;
+  /* Keeps the title clear of the navbar it is sliding under. */
+  padding-top: calc(var(--nav-offset) + 1rem);
+  padding-bottom: 2.5rem;
+}
+
+@media (min-width: 768px) {
+  .event-hero {
+    min-height: 500px;
+    padding-bottom: 4rem;
+  }
 }
 
 .event-hero-bg {
@@ -50,7 +63,9 @@
 
 .event-hero-title {
   font-family: var(--font-sans);
-  font-size: clamp(3rem, 5vw, 5rem);
+  /* The old 3rem floor never scaled down, so a two-word race name took three
+     lines of 48px type across a 375px screen. */
+  font-size: clamp(2rem, 8vw, 5rem);
   font-weight: 800;
   line-height: 1.1;
   text-transform: uppercase;
@@ -61,16 +76,24 @@
 
 .event-hero-meta {
   display: flex;
-  gap: 2rem;
+  gap: 0.75rem 1.5rem;
   flex-wrap: wrap;
+}
+
+@media (min-width: 768px) {
+  .event-hero-meta { gap: 2rem; }
 }
 
 .meta-item {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  font-size: 1.1rem;
+  font-size: 1rem;
   color: rgba(255, 255, 255, 0.9);
+}
+
+@media (min-width: 768px) {
+  .meta-item { font-size: 1.1rem; }
 }
 
 .meta-icon {
@@ -87,7 +110,9 @@
 }
 
 .info-block {
-  padding: 48px; /* 8dp rhythm */
+  /* Fluid rather than stepped: this panel sits inside the page gutter, so a
+     flat 48px was charging a phone a third of its width for chrome. */
+  padding: clamp(1.25rem, 4vw, 3rem);
 }
 
 .info-block h2 {
@@ -206,10 +231,6 @@
 }
 
 @media (max-width: 768px) {
-  .info-block {
-    padding: 24px;
-  }
-
   .sticky-sidebar {
     padding: 24px;
   }

@@ -69,6 +69,13 @@ input[type="checkbox"],
   --modal-scale-close: 0.96;
   --modal-ease: cubic-bezier(0.22, 1, 0.36, 1);
 
+  /* ── Layout ──────────────────────────────────────────────────
+     The page gutter, and how far the content has to start below the floating
+     navbar. Both are read in more than one place — .event-hero cancels the
+     offset to run full-bleed under the nav — so neither can be a literal. */
+  --gutter: 1rem;
+  --nav-offset: 112px;
+
   --bg-primary: #050505;
   --bg-secondary: rgba(255, 255, 255, 0.03);
   --text-primary: #ffffff;
@@ -118,8 +125,23 @@ input[type="checkbox"],
   --tilt-glare-ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+@media (min-width: 640px) {
+  :root { --gutter: 1.5rem; }
+}
+
+@media (min-width: 768px) {
+  :root { --nav-offset: 160px; }
+}
+
+@media (min-width: 1024px) {
+  :root { --gutter: 2rem; }
+}
+
 html, body {
   min-height: 100vh;
+  /* dvh tracks the mobile browser chrome as it collapses; the 100vh above
+     stays as the fallback for anything that does not support it. */
+  min-height: 100dvh;
   font-family: var(--font-body);
   background-color: var(--bg-primary);
   color: var(--text-primary);
@@ -127,10 +149,15 @@ html, body {
 }
 
 .container {
+  width: 100%;
   max-width: 1280px;
   margin: 0 auto;
-  padding: 0 2rem;
+  /* Steps up with the viewport. A flat 2rem cost a 375px phone a sixth of its
+     width before a single character was drawn, and where one .container sat
+     inside another it cost twice that. */
+  padding: 0 var(--gutter);
 }
+
 
 .glass-panel {
   background: var(--glass-bg);
@@ -144,7 +171,8 @@ html, body {
   color: #fff;
   border: none;
   border-radius: 1rem; /* 16px */
-  padding: 1rem 1.5rem; /* 16px 24px */
+  padding: 1rem 1.25rem; /* 16px 20px */
+  min-height: 48px;
   font-weight: 700;
   font-family: var(--font-sans);
   cursor: pointer;
@@ -159,6 +187,19 @@ html, body {
 .btn-gradient:hover {
   opacity: 0.9;
   transform: translateY(-2px);
+}
+
+@media (min-width: 640px) {
+  .btn-gradient { padding: 1rem 1.5rem; }
+}
+
+/* A phone is narrow enough that the tracking on a two-word label is what
+   pushes it onto a second line. Buy the width back below the sm breakpoint. */
+@media (max-width: 639px) {
+  .btn-gradient {
+    letter-spacing: 0.02em;
+    text-wrap: balance;
+  }
 }
 
 @layer utilities {

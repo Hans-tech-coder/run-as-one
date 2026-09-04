@@ -109,7 +109,7 @@ export default function CategoryPicker({
                       rather than inset-0 because inset-0 stops at the padding
                       box and would leave the 1px border ring dead. The two
                       buttons below sit above the overlay on z-10. */}
-                  <label className="flex items-center gap-3 cursor-pointer py-1 after:absolute after:-inset-px after:rounded-[16px]">
+                  <label className="flex flex-wrap items-center gap-x-3 gap-y-1 cursor-pointer py-1 after:absolute after:-inset-px after:rounded-[16px]">
                     <input
                       type="radio"
                       name={groupName}
@@ -127,7 +127,7 @@ export default function CategoryPicker({
                         <span className="w-2.5 h-2.5 rounded-full bg-accent-orange" />
                       )}
                     </span>
-                    <span className="font-bold text-base sm:text-lg text-white uppercase tracking-wide truncate">
+                    <span className="min-w-[7rem] flex-1 font-bold text-base sm:text-lg text-white uppercase tracking-wide break-words sm:truncate">
                       {cat.name}
                     </span>
                     <span className="ml-auto text-lg sm:text-xl font-bold text-accent-orange shrink-0">
@@ -249,7 +249,7 @@ function PosterThumb({
   onOpen: () => void;
   className?: string;
 }) {
-  const box = size === 'sm' ? 'w-12 h-12' : 'w-20 h-20 sm:w-24 sm:h-24';
+  const box = size === 'sm' ? 'w-12 h-12' : 'w-16 h-16 sm:w-24 sm:h-24';
 
   return (
     <button

@@ -14,7 +14,9 @@ export default async function AdminEventsPage() {
     where: { organizerId: auth.id },
     include: {
       categories: true,
-      // Registrations count can be added here if Registration model is created
+      // The delete confirmation names how many registrations go with the
+      // event, because removing one now removes those rows too.
+      _count: { select: { registrations: true } },
     },
     orderBy: { createdAt: 'desc' },
   });

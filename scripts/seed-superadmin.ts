@@ -3,7 +3,7 @@ import { hash } from 'bcryptjs';
 import prisma from '../src/lib/db';
 
 async function main() {
-  const superAdminEmail = 'superadmin@stridesync.com';
+  const superAdminEmail = 'superadmin@runasone.com';
 
   const existing = await prisma.organizer.findUnique({
     where: { email: superAdminEmail }

@@ -14,6 +14,14 @@
   gap: 3rem;
 }
 
+/* Grid items default to min-width:auto, so any wide/unbreakable content in the
+   form column (e.g. a long uploaded file name) would otherwise steal width from
+   the sidebar and collapse the order summary. */
+.wizard-sidebar,
+.wizard-content {
+  min-width: 0;
+}
+
 .sticky-sidebar {
   position: sticky;
   top: 120px;
@@ -44,6 +52,7 @@
 .summary-line {
   display: flex;
   justify-content: space-between;
+  gap: 0.75rem;
   margin-bottom: 0.75rem;
   font-family: var(--font-body);
 }
@@ -144,7 +153,9 @@
 
 .category-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  /* min() so the 180px floor yields to the column when the column is narrower
+     — otherwise the track overflows and the card is clipped. */
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
   gap: 1rem;
 }
 
@@ -219,6 +230,16 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  /* As a grid item this defaults to min-width:auto, which floors the track at
+     the input's intrinsic ~20-character width. On a phone that held every
+     field at 334px inside a 199px panel, and .form-panel's overflow:hidden
+     quietly sliced the right-hand side off every label, hint and control. */
+  min-width: 0;
+}
+
+.form-grid > *,
+.logistics-options > * {
+  min-width: 0;
 }
 
 .input-group.full-width {
@@ -234,6 +255,10 @@
 .input-group input,
 .input-group select,
 .input-group textarea {
+  /* Same reason as .input-group's min-width: a bare input never shrinks below
+     its default size unless told to. */
+  width: 100%;
+  min-width: 0;
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
@@ -388,7 +413,9 @@
 
 .bank-detail-item {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
+  gap: 0.25rem 1rem;
   margin-bottom: 0.5rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   padding-bottom: 0.5rem;
@@ -408,6 +435,9 @@
   font-weight: 600;
   font-family: monospace;
   font-size: 1.1rem;
+  /* An account number is a single unbreakable token, and a runner has to be
+     able to read all of it to type it into their banking app. */
+  overflow-wrap: anywhere;
 }
 
 .upload-zone {
@@ -477,7 +507,19 @@
 
 .file-name {
   font-weight: 500;
-  max-width: 250px;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Uploaded receipt chip: the file name is a single long, unbreakable token, so
+   it has to be clipped rather than allowed to run past the panel edge. */
+.file-preview-meta {
+  min-width: 0;
+}
+
+.file-preview-name {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -507,7 +549,7 @@
 
 .bank-options-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
   gap: 1rem;
 }
 
@@ -534,10 +576,11 @@
 
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
+  inset: 0;
+  /* dvh, not vh: with a phone's address bar showing, 100vh is taller than what
+     the user can actually see and the dialog centres partly off screen. */
+  height: 100dvh;
+  padding: 1rem;
   background: rgba(0, 0, 0, 0.7);
   backdrop-filter: blur(4px);
   display: flex;
@@ -549,10 +592,12 @@
 
 .modal-content {
   background: #1a1a1a;
-  padding: 2rem;
+  padding: 1.5rem;
   border-radius: var(--radius-lg);
   max-width: 400px;
-  width: 90%;
+  width: 100%;
+  max-height: 100%;
+  overflow-y: auto;
   position: relative;
   border: 1px solid var(--glass-border);
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
@@ -636,16 +681,17 @@
 }
 
 /* Responsive (Mobile First adjustments) */
+
 @media (max-width: 1024px) {
   .wizard-container {
     grid-template-columns: 1fr;
     gap: 32px;
   }
-  
+
   .wizard-sidebar {
     order: -1;
   }
-  
+
   .sticky-sidebar {
     position: static;
   }
@@ -658,14 +704,50 @@
   }
 
   .form-panel {
-    padding: 24px !important;
+    padding: 20px !important;
   }
 
   .success-card {
-    padding: 32px 24px;
+    padding: 32px 20px;
   }
 
   .category-grid {
     grid-template-columns: 1fr;
+  }
+
+  /* Every nested panel charges its own padding, so on a 375px screen the four
+     of them together were leaving the form about 147px to work in. */
+  .participant-form-block {
+    padding: 16px !important;
+  }
+
+  .order-summary,
+  .bank-details-card {
+    padding: 1rem;
+  }
+
+  .upload-zone {
+    padding: 2rem 1rem;
+  }
+
+  /* The thumbnail and a race title cannot share one line at this width without
+     the title breaking after every word. */
+  .event-mini-info {
+    gap: 1rem;
+  }
+
+  .mini-image {
+    width: 56px;
+    height: 56px;
+  }
+
+  /* A phone's primary action goes full width rather than hugging the right
+     edge, where it competes with the thumb's resting position. */
+  .form-actions {
+    justify-content: stretch;
+  }
+
+  .form-actions > * {
+    width: 100%;
   }
 }

@@ -199,7 +199,8 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
 
     // Verify ownership
     const existingEvent = await db.event.findUnique({
-      where: { id }
+      where: { id },
+      select: { id: true, organizerId: true },
     });
 
     if (!existingEvent) {
@@ -210,20 +211,25 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Delete event (Categories are set to cascade delete in prisma schema, but we'll do a transaction just in case or trust Prisma)
+    // Nothing cascades: every foreign key pointing at an event is ON DELETE
+    // RESTRICT, so the dependent rows have to be removed children-first or
+    // Postgres rejects the delete outright. Order matters — a runner points at
+    // both a registration and a category, and a race result at both an event
+    // and a category, so those go before the categories they reference.
     await db.$transaction(async (prisma) => {
-      await prisma.category.deleteMany({
-        where: { eventId: id }
-      });
-      
-      await prisma.event.delete({
-        where: { id }
-      });
+      await prisma.runner.deleteMany({ where: { registration: { eventId: id } } });
+      await prisma.registration.deleteMany({ where: { eventId: id } });
+      await prisma.raceResult.deleteMany({ where: { eventId: id } });
+      await prisma.category.deleteMany({ where: { eventId: id } });
+      await prisma.bankAccount.deleteMany({ where: { eventId: id } });
+      await prisma.event.delete({ where: { id } });
     });
 
     return NextResponse.json({ message: 'Event deleted successfully' }, { status: 200 });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Delete event error:', error);
-    return NextResponse.json({ error: 'Failed to delete event' }, { status: 500 });
+    // The message travels to the confirmation modal, so a failure names what
+    // actually went wrong instead of a blank "something happened".
+    return NextResponse.json({ error: error.message || 'Failed to delete event' }, { status: 500 });
   }
 }
