@@ -179,9 +179,9 @@ export default function EventsTableClient({ events }: EventsTableClientProps) {
     },
     {
       id: "actions",
-      header: () => <div className="text-right">Actions</div>,
+      header: "Actions",
       cell: ({ row }) => (
-        <div className="flex justify-end pr-2">
+        <div className="action-dropdown-container flex">
           <EventActionsMenu 
             eventId={row.original.id} 
             onDelete={() => {
