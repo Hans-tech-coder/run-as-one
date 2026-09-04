@@ -22,12 +22,14 @@ import {
   defaultDeliveryZone,
   type DeliveryZone,
 } from "./delivery";
-import { BANK_OPTIONS, type BankOption } from "./banks";
+import { type BankAccountView } from "@/lib/bank-accounts";
 import BankDetailsModal from "./BankDetailsModal";
 import SizeGuideModal from "./SizeGuideModal";
 import CategoryPicker from "./CategoryPicker";
 import CommunityPicker from "./CommunityPicker";
 import ConsentWaiver from "./ConsentWaiver";
+import PhoneField from "./PhoneField";
+import { resolveConsentWaiver } from "@/lib/consent-waiver";
 import ShirtSizeField from "./ShirtSizeField";
 import {
   categoryNeedsShirtSize,
@@ -77,12 +79,15 @@ export default function BankTransferWizardClient({
   eventId,
   registration,
   communities,
+  defaultCountry,
 }: {
   event: any;
   eventId: string;
   registration?: any;
   /** Approved running clubs, alphabetical, from the server. */
   communities: string[];
+  /** ISO country the phone fields start on, guessed from the request. */
+  defaultCountry: string;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -125,7 +130,7 @@ export default function BankTransferWizardClient({
   const [orderRef, setOrderRef] = useState<string>("");
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [selectedBankModal, setSelectedBankModal] = useState<BankOption | null>(
+  const [selectedBankModal, setSelectedBankModal] = useState<BankAccountView | null>(
     null,
   );
   const [transactionNumber, setTransactionNumber] = useState("");
@@ -133,6 +138,10 @@ export default function BankTransferWizardClient({
   // Required once per registration, not once per runner — the waiver this
   // is drawn from asks it the same way.
   const [consentGiven, setConsentGiven] = useState(false);
+  const consentWaiverParagraphs = resolveConsentWaiver(event);
+  // Set by the organizer on this event. Empty means bank transfer cannot
+  // be offered at all — there is nowhere for the money to go.
+  const bankAccounts: BankAccountView[] = event.bankAccounts ?? [];
 
   // Centavos, like every other amount here. 6000 = ₱60.00. Set per event by the
   // organizer and rendered server-side, so the summary never briefly shows a
@@ -687,17 +696,14 @@ export default function BankTransferWizardClient({
                           placeholder="juan@example.com"
                         />
                       </div>
-                      <div className="input-group">
-                        <label>Mobile Number</label>
-                        <input
-                          type="tel"
-                          value={p.phone}
-                          onChange={(e) =>
-                            handleParticipantChange(idx, "phone", e.target.value)
-                          }
-                          placeholder="09xxxxxxxxx"
-                        />
-                      </div>
+                      <PhoneField
+                        label="Mobile Number"
+                        value={p.phone}
+                        defaultCountry={defaultCountry}
+                        onChange={(e164) =>
+                          handleParticipantChange(idx, "phone", e164)
+                        }
+                      />
                       <div className="input-group">
                         <label>Gender</label>
                         <select
@@ -775,21 +781,18 @@ export default function BankTransferWizardClient({
                           placeholder="Maria Dela Cruz"
                         />
                       </div>
-                      <div className="input-group">
-                        <label>Emergency Contact No.</label>
-                        <input
-                          type="tel"
-                          value={p.emergencyContactPhone}
-                          onChange={(e) =>
-                            handleParticipantChange(
-                              idx,
-                              "emergencyContactPhone",
-                              e.target.value,
-                            )
-                          }
-                          placeholder="09xxxxxxxxx"
-                        />
-                      </div>
+                      <PhoneField
+                        label="Emergency Contact No."
+                        value={p.emergencyContactPhone}
+                        defaultCountry={defaultCountry}
+                        onChange={(e164) =>
+                          handleParticipantChange(
+                            idx,
+                            "emergencyContactPhone",
+                            e164,
+                          )
+                        }
+                      />
                       <div className="input-group full-width">
                         <label>Medical Conditions (Optional)</label>
                         <textarea
@@ -1005,11 +1008,24 @@ export default function BankTransferWizardClient({
                   </p>
                 </div>
 
+                {bankAccounts.length === 0 && (
+                  <div className="mb-8 p-5 rounded-[16px] border border-accent-orange/30 bg-accent-orange/10">
+                    <p className="text-white font-bold m-0 mb-1">
+                      Payment details are not ready yet
+                    </p>
+                    <p className="text-secondary m-0">
+                      The organizer has not published an account for this event
+                      yet, so registration cannot be completed right now. Please
+                      check back, or contact them directly.
+                    </p>
+                  </div>
+                )}
+
                 <h4 className="mb-4 text-accent-blue font-bold tracking-wide">
                   Select a Bank for Transfer
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-                  {BANK_OPTIONS.map((bank) => (
+                  {bankAccounts.map((bank) => (
                     <div
                       key={bank.id}
                       className="group relative overflow-hidden border border-white/10 bg-black/40 hover:border-accent-blue hover:bg-white/5 rounded-[16px] p-6 cursor-pointer transition-all text-center"
@@ -1017,10 +1033,12 @@ export default function BankTransferWizardClient({
                     >
                       <div className="absolute top-0 right-0 w-24 h-24 bg-accent-blue/10 rounded-full blur-2xl -mr-12 -mt-12 group-hover:bg-accent-blue/20 transition-colors"></div>
                       <div className="relative z-10 font-bold text-xl text-white mb-1">
-                        {bank.name}
+                        {bank.bankName}
                       </div>
                       <div className="relative z-10 text-sm text-secondary">
-                        Click to view details &amp; QR
+                        {bank.qrImageUrl
+                          ? "Click to view details &amp; QR"
+                          : "Click to view account details"}
                       </div>
                     </div>
                   ))}
@@ -1113,20 +1131,21 @@ export default function BankTransferWizardClient({
                 </div>
 
                 <ConsentWaiver
-                  eventTitle={event.title}
+                  paragraphs={consentWaiverParagraphs}
                   checked={consentGiven}
                   onChange={setConsentGiven}
                 />
 
                 <div className="form-actions mt-10 flex justify-end">
                   <button
-                    className={`btn-gradient flex items-center justify-center gap-2 px-10 py-4 text-lg group shadow-xl shadow-accent-orange/20 ${isProcessing || !proofFile || !transactionNumber.trim() || !consentGiven ? "opacity-50 pointer-events-none" : ""}`}
+                    className={`btn-gradient flex items-center justify-center gap-2 px-10 py-4 text-lg group shadow-xl shadow-accent-orange/20 ${isProcessing || !proofFile || !transactionNumber.trim() || !consentGiven || bankAccounts.length === 0 ? "opacity-50 pointer-events-none" : ""}`}
                     onClick={handleManualSubmit}
                     disabled={
                       isProcessing ||
                       !proofFile ||
                       !transactionNumber.trim() ||
-                      !consentGiven
+                      !consentGiven ||
+                      bankAccounts.length === 0
                     }
                   >
                     {isProcessing

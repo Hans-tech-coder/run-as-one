@@ -9,6 +9,10 @@ import PackagesPanel from '../../PackagesPanel';
 import { blankCategory, type CategoryDraft } from '../../category-draft';
 import { DEFAULT_REGISTRATION_FORM, type RegistrationForm } from '@/lib/registration-form';
 import { EVENT_TYPES } from '@/lib/event-type';
+import ConsentWaiverField from '@/app/admin/events/ConsentWaiverField';
+import BankAccountsPanel from '@/app/admin/events/BankAccountsPanel';
+import { cleanBankAccounts, type BankAccountDraft } from '@/app/admin/events/bank-account-draft';
+import { offersBankTransfer } from '@/lib/registration-form';
 
 /**
  * The create form for fun runs, reached from the event-type modal.
@@ -47,6 +51,7 @@ export default function NewFunRunEventPage() {
     // default every event used back when the fee lived on the organizer.
     adminFee: 60,
     shirtSizeUpcharge: 100,
+    consentWaiver: '',
     registrationForm: DEFAULT_REGISTRATION_FORM as RegistrationForm,
   });
 
@@ -56,6 +61,7 @@ export default function NewFunRunEventPage() {
   // A count rather than a boolean because two rows can upload at once, and a
   // latched flag would clear on the first one to finish.
   const [uploadingPosters, setUploadingPosters] = useState(0);
+  const [bankAccounts, setBankAccounts] = useState<BankAccountDraft[]>([]);
 
   // Uploads to blob storage and stores the returned URL. This used to inline the
   // file as a base64 data URL, which meant every event row carried megabytes of
@@ -101,7 +107,7 @@ export default function NewFunRunEventPage() {
       const res = await fetch('/api/admin/events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, eventType: EVENT_TYPES.FUN_RUN, categories }),
+        body: JSON.stringify({ ...formData, eventType: EVENT_TYPES.FUN_RUN, categories, bankAccounts: cleanBankAccounts(bankAccounts) }),
       });
 
       if (!res.ok) {
@@ -378,6 +384,14 @@ export default function NewFunRunEventPage() {
             onBusyChange={busy => setUploadingPosters(n => (busy ? n + 1 : n - 1))}
           />
 
+          <BankAccountsPanel
+            accounts={bankAccounts}
+            offersBankTransfer={offersBankTransfer(formData.registrationForm)}
+            onChange={setBankAccounts}
+            onError={setError}
+            onBusyChange={busy => setUploadingPosters(n => (busy ? n + 1 : n - 1))}
+          />
+
           {/* Logistics Options */}
           <div className="admin-panel">
             <div className="admin-panel-header">
@@ -460,6 +474,11 @@ export default function NewFunRunEventPage() {
                     onChange={value => setFormData({...formData, registrationForm: value})}
                   />
                 </div>
+                <ConsentWaiverField
+                  value={formData.consentWaiver}
+                  eventTitle={formData.title}
+                  onChange={next => setFormData({...formData, consentWaiver: next})}
+                />
               </div>
             </div>
           </div>

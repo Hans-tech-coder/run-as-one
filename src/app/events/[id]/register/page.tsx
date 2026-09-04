@@ -5,6 +5,7 @@ import { REGISTRATION_FORMS, asRegistrationForm } from '@/lib/registration-form'
 import RegistrationWizardClient from './RegistrationWizardClient';
 import BankTransferWizardClient from './BankTransferWizardClient';
 import { approvedCommunityNames } from '@/lib/running-community-store';
+import { requestCountry } from '@/lib/request-country';
 
 export default async function RegisterPage(props: { 
   params: Promise<{ id: string }>;
@@ -20,10 +21,16 @@ export default async function RegisterPage(props: {
   const [event, communities] = await Promise.all([
     db.event.findUnique({
       where: { id },
-      include: { categories: true }
+      include: {
+        categories: true,
+        bankAccounts: { orderBy: { sortOrder: 'asc' } },
+      }
     }),
     approvedCommunityNames(),
   ]);
+
+  // A starting guess for the phone fields' country code, from the request.
+  const defaultCountry = await requestCountry();
 
   if (!event) {
     notFound();
@@ -43,8 +50,20 @@ export default async function RegisterPage(props: {
   const form = asRegistrationForm(event.registrationForm);
 
   if (form === REGISTRATION_FORMS.BANK_TRANSFER) {
-    return <BankTransferWizardClient event={event} eventId={id} registration={registration} communities={communities} />;
+    return <BankTransferWizardClient
+        event={event}
+        eventId={id}
+        registration={registration}
+        communities={communities}
+        defaultCountry={defaultCountry}
+      />;
   }
 
-  return <RegistrationWizardClient event={event} eventId={id} registration={registration} communities={communities} />;
+  return <RegistrationWizardClient
+        event={event}
+        eventId={id}
+        registration={registration}
+        communities={communities}
+        defaultCountry={defaultCountry}
+      />;
 }

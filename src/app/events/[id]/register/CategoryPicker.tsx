@@ -57,14 +57,18 @@ export default function CategoryPicker({
             return (
               <div
                 key={cat.id}
-                className={`flex items-stretch gap-3 border rounded-[16px] p-3 transition-all ${
+                className={`relative flex items-stretch gap-3 border rounded-[16px] p-3 transition-all ${
                   isSelected
                     ? 'border-accent-orange bg-accent-orange/10 shadow-[0_0_20px_rgba(255,107,43,0.15)]'
                     : 'border-white/10 bg-black/40 hover:border-white/30'
                 }`}
               >
                 {cat.imageUrl && (
-                  <PosterThumb cat={cat} onOpen={() => setPosterFor(cat)} />
+                  <PosterThumb
+                    cat={cat}
+                    onOpen={() => setPosterFor(cat)}
+                    className="relative z-10"
+                  />
                 )}
 
                 <div className="flex-1 min-w-0 flex flex-col justify-center">
@@ -73,7 +77,14 @@ export default function CategoryPicker({
                       poster button — a radio must have no focusable children.
                       The "View inclusions" button is a sibling of the label,
                       not a child, for the same reason. */}
-                  <label className="flex items-center gap-3 cursor-pointer py-1">
+                  {/* after:inset-0 stretches the label's hit area over the whole
+                      card, so the padding and the space beside the poster select
+                      the package too. Without it only the text row was clickable
+                      and the top and bottom of the card did nothing. -inset-px
+                      rather than inset-0 because inset-0 stops at the padding
+                      box and would leave the 1px border ring dead. The two
+                      buttons below sit above the overlay on z-10. */}
+                  <label className="flex items-center gap-3 cursor-pointer py-1 after:absolute after:-inset-px after:rounded-[16px]">
                     <input
                       type="radio"
                       name={groupName}
@@ -110,7 +121,7 @@ export default function CategoryPicker({
                     <ViewInclusionsButton
                       name={cat.name}
                       onOpen={() => setPosterFor(cat)}
-                      className="ml-8"
+                      className="ml-8 relative z-10"
                     />
                   )}
                 </div>
@@ -206,10 +217,12 @@ function PosterThumb({
   cat,
   size = 'md',
   onOpen,
+  className = '',
 }: {
   cat: any;
   size?: 'sm' | 'md';
   onOpen: () => void;
+  className?: string;
 }) {
   const box = size === 'sm' ? 'w-12 h-12' : 'w-20 h-20 sm:w-24 sm:h-24';
 
@@ -223,7 +236,7 @@ function PosterThumb({
         onOpen();
       }}
       aria-label={`View ${cat.name} inclusions`}
-      className={`${box} relative shrink-0 rounded-xl overflow-hidden border border-white/10 bg-black/40 group/thumb`}
+      className={`${box} relative shrink-0 rounded-xl overflow-hidden border border-white/10 bg-black/40 group/thumb ${className}`}
     >
       <img
         src={cat.imageUrl}

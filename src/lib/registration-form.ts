@@ -29,3 +29,19 @@ export function asRegistrationForm(value: unknown): RegistrationForm {
     ? REGISTRATION_FORMS.BANK_TRANSFER
     : DEFAULT_REGISTRATION_FORM;
 }
+
+/**
+ * Whether this form can take a bank transfer at all.
+ *
+ * Both of them can, today — ONLINE offers it alongside PayMongo and
+ * BANK_TRANSFER offers nothing else — so this exists to say *why* the bank
+ * accounts panel is shown rather than to hide it, and to keep the answer in one
+ * place if a form that takes only card payments is ever added.
+ */
+export function offersBankTransfer(value: unknown): boolean {
+  const form = asRegistrationForm(value);
+  return (
+    form === REGISTRATION_FORMS.ONLINE ||
+    form === REGISTRATION_FORMS.BANK_TRANSFER
+  );
+}

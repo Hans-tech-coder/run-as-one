@@ -2,9 +2,11 @@ import { NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { getAuthCookie } from '@/lib/auth';
 import { toCentavos } from '@/lib/money';
+import { asWaiverParagraphs } from '@/lib/consent-waiver';
 import { asRegistrationForm } from '@/lib/registration-form';
 import { asEventType } from '@/lib/event-type';
 import { asInclusions } from '@/lib/inclusions';
+import { asBankAccounts } from '@/lib/bank-accounts';
 
 export async function POST(request: Request) {
   try {
@@ -14,7 +16,7 @@ export async function POST(request: Request) {
     }
 
     const data = await request.json();
-    const { title, date, startTime, endTime, location, imageUrl, raceKitImageUrl, description, logisticsPickup, logisticsDeliveryFeeInside, logisticsDeliveryFeeOutside, adminFee, shirtSizeUpcharge, registrationForm, eventType, categories } = data;
+    const { title, date, startTime, endTime, location, imageUrl, raceKitImageUrl, description, logisticsPickup, logisticsDeliveryFeeInside, logisticsDeliveryFeeOutside, adminFee, shirtSizeUpcharge, consentWaiver, registrationForm, eventType, categories, bankAccounts } = data;
 
     if (!title || !date || !location) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -36,9 +38,17 @@ export async function POST(request: Request) {
         logisticsDeliveryFeeOutside: toCentavos(logisticsDeliveryFeeOutside),
         adminFee: toCentavos(adminFee),
         shirtSizeUpcharge: toCentavos(shirtSizeUpcharge),
+        // Empty means "use the standard wording" — see resolveConsentWaiver.
+        consentWaiver: asWaiverParagraphs(consentWaiver),
         registrationForm: asRegistrationForm(registrationForm),
         eventType: asEventType(eventType),
         organizerId: auth.id,
+        bankAccounts: {
+          create: asBankAccounts(bankAccounts).map((account, index) => ({
+            ...account,
+            sortOrder: index,
+          })),
+        },
         categories: {
           create: categories.map((cat: any) => ({
             name: cat.name,

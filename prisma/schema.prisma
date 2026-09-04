@@ -39,6 +39,11 @@ model Event {
   /// because the larger sizes cost the organizer more to produce. 0 disables
   /// the surcharge. 10000 = ₱100.00, which is what the printed forms quote.
   shirtSizeUpcharge           Int            @default(10000)
+  /// The liability, media, and data-privacy waiver shown above the consent
+  /// checkbox, one string per paragraph. Empty means the organizer never wrote
+  /// their own, and the standard wording is used instead — see
+  /// resolveConsentWaiver. Never present an empty waiver.
+  consentWaiver               String[]       @default([])
   /// Which checkout the runner sees: "ONLINE" (PayMongo + bank transfer) or
   /// "BANK_TRANSFER" (bank transfer only).
   registrationForm            String         @default("ONLINE")
@@ -53,10 +58,38 @@ model Event {
   startTime                   String?
   certificateCoordinates      String?
   certificateTemplate         String?
+  bankAccounts                BankAccount[]
   categories                  Category[]
   organizer                   Organizer      @relation(fields: [organizerId], references: [id])
   raceResults                 RaceResult[]
   registrations               Registration[]
+}
+
+/// One account a runner can transfer to for this event.
+///
+/// Per event rather than per organizer or hardcoded: an organizer may collect
+/// a charity run into a different account than their usual one, and the
+/// accounts used to be a constant in the bundle, which meant every event
+/// pointed runners at the same three banks no matter whose event it was.
+model BankAccount {
+  id            String   @id @default(cuid())
+  /// What the runner will recognise: "BDO Unibank", "GCash", "Maya".
+  bankName      String
+  /// Whose account it is, as the bank prints it.
+  accountName   String
+  /// Kept exactly as typed, spacing and all — a runner copies this by hand.
+  accountNumber String
+  /// Optional QR to scan, uploaded like every other image here. Null is normal:
+  /// plenty of accounts have no QR, and the numbers alone are enough to pay.
+  qrImageUrl    String?
+  /// The order the runner sees them in.
+  sortOrder     Int      @default(0)
+  eventId       String
+  event         Event    @relation(fields: [eventId], references: [id])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([eventId, sortOrder])
 }
 
 model Category {

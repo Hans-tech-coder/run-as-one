@@ -1,0 +1,244 @@
+/**
+ * Phone numbers: the country list, and the rules for turning what a runner
+ * types into something storable.
+ *
+ * Numbers are stored in E.164 — "+639171234567" — because that is the one
+ * format that is unambiguous no matter who reads it later: the organizer
+ * exporting a CSV, an SMS gateway, or a marshal calling an emergency contact
+ * on race day. What the runner types is only the national part; the country
+ * they picked supplies the rest.
+ *
+ * Only the dial code is written down here. Country names come from
+ * Intl.DisplayNames and flags are derived from the ISO code, so there are no
+ * hand-typed names to fall out of date or contradict the browser's own locale.
+ */
+
+/** ISO 3166-1 alpha-2 code to its E.164 country calling code. */
+const DIAL_CODES: Readonly<Record<string, string>> = {
+  AD: '376', AE: '971', AF: '93', AG: '1', AI: '1', AL: '355', AM: '374',
+  AO: '244', AR: '54', AS: '1', AT: '43', AU: '61', AW: '297', AX: '358',
+  AZ: '994', BA: '387', BB: '1', BD: '880', BE: '32', BF: '226', BG: '359',
+  BH: '973', BI: '257', BJ: '229', BL: '590', BM: '1', BN: '673', BO: '591',
+  BQ: '599', BR: '55', BS: '1', BT: '975', BW: '267', BY: '375', BZ: '501',
+  CA: '1', CD: '243', CF: '236', CG: '242', CH: '41', CI: '225', CK: '682',
+  CL: '56', CM: '237', CN: '86', CO: '57', CR: '506', CU: '53', CV: '238',
+  CW: '599', CY: '357', CZ: '420', DE: '49', DJ: '253', DK: '45', DM: '1',
+  DO: '1', DZ: '213', EC: '593', EE: '372', EG: '20', ER: '291', ES: '34',
+  ET: '251', FI: '358', FJ: '679', FK: '500', FM: '691', FO: '298', FR: '33',
+  GA: '241', GB: '44', GD: '1', GE: '995', GF: '594', GG: '44', GH: '233',
+  GI: '350', GL: '299', GM: '220', GN: '224', GP: '590', GQ: '240', GR: '30',
+  GT: '502', GU: '1', GW: '245', GY: '592', HK: '852', HN: '504', HR: '385',
+  HT: '509', HU: '36', ID: '62', IE: '353', IL: '972', IM: '44', IN: '91',
+  IO: '246', IQ: '964', IR: '98', IS: '354', IT: '39', JE: '44', JM: '1',
+  JO: '962', JP: '81', KE: '254', KG: '996', KH: '855', KI: '686', KM: '269',
+  KN: '1', KP: '850', KR: '82', KW: '965', KY: '1', KZ: '7', LA: '856',
+  LB: '961', LC: '1', LI: '423', LK: '94', LR: '231', LS: '266', LT: '370',
+  LU: '352', LV: '371', LY: '218', MA: '212', MC: '377', MD: '373', ME: '382',
+  MF: '590', MG: '261', MH: '692', MK: '389', ML: '223', MM: '95', MN: '976',
+  MO: '853', MP: '1', MQ: '596', MR: '222', MS: '1', MT: '356', MU: '230',
+  MV: '960', MW: '265', MX: '52', MY: '60', MZ: '258', NA: '264', NC: '687',
+  NE: '227', NF: '672', NG: '234', NI: '505', NL: '31', NO: '47', NP: '977',
+  NR: '674', NU: '683', NZ: '64', OM: '968', PA: '507', PE: '51', PF: '689',
+  PG: '675', PH: '63', PK: '92', PL: '48', PM: '508', PR: '1', PS: '970',
+  PT: '351', PW: '680', PY: '595', QA: '974', RE: '262', RO: '40', RS: '381',
+  RU: '7', RW: '250', SA: '966', SB: '677', SC: '248', SD: '249', SE: '46',
+  SG: '65', SH: '290', SI: '386', SJ: '47', SK: '421', SL: '232', SM: '378',
+  SN: '221', SO: '252', SR: '597', SS: '211', ST: '239', SV: '503', SX: '1',
+  SY: '963', SZ: '268', TC: '1', TD: '235', TG: '228', TH: '66', TJ: '992',
+  TK: '690', TL: '670', TM: '993', TN: '216', TO: '676', TR: '90', TT: '1',
+  TV: '688', TW: '886', TZ: '255', UA: '380', UG: '256', US: '1', UY: '598',
+  UZ: '998', VA: '39', VC: '1', VE: '58', VG: '1', VI: '1', VN: '84',
+  VU: '678', WF: '681', WS: '685', YE: '967', YT: '262', ZA: '27', ZM: '260',
+  ZW: '263',
+};
+
+export interface Country {
+  /** ISO 3166-1 alpha-2, uppercase. */
+  iso2: string;
+  /** Calling code without the plus. */
+  dial: string;
+  /** Localised country name. */
+  name: string;
+  /** Regional-indicator emoji for the ISO code. */
+  flag: string;
+}
+
+/** Where a runner is assumed to be when nothing better is known. */
+export const DEFAULT_COUNTRY = 'PH';
+
+/** E.164 allows at most 15 digits including the country code. */
+export const MAX_E164_DIGITS = 15;
+
+/**
+ * The flag emoji for an ISO code, built from regional indicator symbols.
+ *
+ * Kept as the fallback rather than the main event: Windows renders these as the
+ * two letters rather than a flag, because its emoji font ships no flag glyphs.
+ * The picker draws flagUrl() images instead and falls back to this only when
+ * the image cannot be fetched.
+ */
+export function flagFor(iso2: string): string {
+  const code = iso2.toUpperCase();
+  if (!/^[A-Z]{2}$/.test(code)) return '';
+  return String.fromCodePoint(
+    ...[...code].map(c => 0x1f1e6 + c.charCodeAt(0) - 65)
+  );
+}
+
+/**
+ * Which country to show when several share one calling code.
+ *
+ * Twenty-four countries answer to +1, and nothing in the number itself says
+ * which — telling them apart needs area-code tables this deliberately does not
+ * carry. This only decides which flag the picker shows when reading a stored
+ * number back; the number itself is unchanged and dials the same either way.
+ * The runner can always correct the country, and the pick here is simply the
+ * most populous user of each code.
+ */
+const PRIMARY_FOR_DIAL: Readonly<Record<string, string>> = {
+  '1': 'US',
+  '7': 'RU',
+  '39': 'IT',
+  '44': 'GB',
+  '47': 'NO',
+  '262': 'RE',
+  '358': 'FI',
+  '590': 'GP',
+  '599': 'CW',
+};
+
+/**
+ * A real flag image for an ISO code.
+ *
+ * flagcdn.com rather than an icon package: every country's flag as a bundled
+ * SVG set runs to hundreds of kilobytes for a field most runners fill in once,
+ * while these are 150-350 bytes each and only the rows actually on screen get
+ * fetched. The cost is a third party — so every use pairs this with the emoji
+ * fallback above, and a blocked CDN degrades to a flag-less picker rather than
+ * a broken one.
+ *
+ * `size` is the CSS width in pixels; the CDN serves matching raster widths.
+ */
+export function flagUrl(iso2: string, size: 20 | 40 = 20): string {
+  const code = iso2.toLowerCase();
+  if (!/^[a-z]{2}$/.test(code)) return '';
+  return `https://flagcdn.com/w${size}/${code}.png`;
+}
+
+let cachedCountries: Country[] | null = null;
+
+/**
+ * Every country, alphabetical by name.
+ *
+ * Names come from the runtime rather than a hand-typed table, so they match
+ * what the rest of the browser calls the same place. Built once and cached —
+ * this runs for every phone field on the page otherwise.
+ */
+export function allCountries(): Country[] {
+  if (cachedCountries) return cachedCountries;
+
+  let display: Intl.DisplayNames | null = null;
+  try {
+    display = new Intl.DisplayNames(['en'], { type: 'region' });
+  } catch {
+    display = null;
+  }
+
+  cachedCountries = Object.entries(DIAL_CODES)
+    .map(([iso2, dial]) => ({
+      iso2,
+      dial,
+      name: display?.of(iso2) ?? iso2,
+      flag: flagFor(iso2),
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  return cachedCountries;
+}
+
+/** One country by ISO code, or the default when it is not one we carry. */
+export function countryFor(iso2: string | null | undefined): Country {
+  const code = (iso2 ?? '').toUpperCase();
+  const found = allCountries().find(c => c.iso2 === code);
+  return found ?? allCountries().find(c => c.iso2 === DEFAULT_COUNTRY)!;
+}
+
+/** Just the digits, with everything else dropped. */
+export function digitsOnly(value: string): string {
+  return (value ?? '').replace(/\D/g, '');
+}
+
+/**
+ * The national part as it should be stored, given the country.
+ *
+ * Philippine numbers are written locally with a leading 0 — 0917… — which is a
+ * trunk prefix, not part of the number, and must come off before the country
+ * code goes on. Other countries are left as typed: the trunk prefix rules vary
+ * (Italy, for one, keeps its leading zero), and quietly deleting a digit we are
+ * not sure about is worse than keeping one too many.
+ */
+export function normalizeNational(iso2: string, national: string): string {
+  const digits = digitsOnly(national);
+  if (iso2.toUpperCase() === 'PH') return digits.replace(/^0+/, '');
+  return digits;
+}
+
+/** Country and national part into the stored "+<dial><national>" form. */
+export function toE164(iso2: string, national: string): string {
+  const country = countryFor(iso2);
+  const digits = normalizeNational(country.iso2, national);
+  if (!digits) return '';
+  return `+${country.dial}${digits}`.slice(0, MAX_E164_DIGITS + 1);
+}
+
+/**
+ * A stored number back into the country and the national part.
+ *
+ * The longest matching dial code wins, so +1809… reads as the Dominican
+ * Republic's shared code rather than stopping at +1. Anything that is not E.164
+ * — the local "0917…" strings written before this field existed — comes back
+ * with no country and the digits intact, so old records still display.
+ */
+export function parseE164(value: string | null | undefined): {
+  iso2: string | null;
+  national: string;
+} {
+  const raw = (value ?? '').trim();
+  if (!raw.startsWith('+')) {
+    return { iso2: null, national: digitsOnly(raw) };
+  }
+
+  const digits = digitsOnly(raw);
+  let best: Country | null = null;
+  for (const country of allCountries()) {
+    if (!digits.startsWith(country.dial)) continue;
+    if (!best || country.dial.length > best.dial.length) best = country;
+  }
+
+  if (!best) return { iso2: null, national: digits };
+
+  // Several countries can answer to the winning code; show the primary one.
+  const primary = PRIMARY_FOR_DIAL[best.dial];
+  const iso2 = primary ?? best.iso2;
+  return { iso2, national: digits.slice(best.dial.length) };
+}
+
+/**
+ * Whether a national part is long enough to be a real number.
+ *
+ * Deliberately loose. Per-country length tables are the kind of thing that goes
+ * stale silently and rejects a number that is perfectly valid, which is a much
+ * worse failure here than accepting a typo — the organizer can still ring the
+ * runner and ask. The one firm rule is E.164's own 15-digit ceiling.
+ */
+export function isPlausiblePhone(iso2: string, national: string): boolean {
+  const country = countryFor(iso2);
+  const digits = normalizeNational(country.iso2, national);
+  if (digits.length < 4) return false;
+  return country.dial.length + digits.length <= MAX_E164_DIGITS;
+}
+
+/** How many national digits are still allowed for this country. */
+export function maxNationalDigits(iso2: string): number {
+  return MAX_E164_DIGITS - countryFor(iso2).dial.length;
+}

@@ -1,16 +1,16 @@
 /**
  * The liability, media, and data-privacy waiver every runner agrees to.
  *
- * Wording comes from the organizer's own registration form — the "Disclaimer,
- * Consent & Data Privacy Waiver" section of the Tarlac Meet and Run 2026
- * Google Form — carried over near verbatim so every event states the same
+ * The default wording comes from the organizer's own registration form — the
+ * "Disclaimer, Consent & Data Privacy Waiver" section of the Tarlac Meet and
+ * Run 2026 Google Form — so an event that says nothing still states the
  * commitments the organizer already put in writing. The one line that named
- * that specific event is parameterized so the same text is honest on any
- * event's registration page.
+ * that specific event is parameterized, and an organizer who needs different
+ * terms can replace the whole thing per event from the admin form.
  */
 
-/** The waiver's paragraphs, in reading order, for the given event. */
-export function consentWaiverParagraphs(eventTitle: string): string[] {
+/** The wording an event falls back to when the organizer has not written its own. */
+export function defaultConsentWaiverParagraphs(eventTitle: string): string[] {
   const name = eventTitle?.trim() || 'this event';
   return [
     `By registering for ${name}, the participant acknowledges and understands the nature of the activity and confirms that all information provided is given willingly.`,
@@ -20,6 +20,64 @@ export function consentWaiverParagraphs(eventTitle: string): string[] {
     'The participant also consents to the use of photos and videos taken during the event for documentation and promotional purposes, without expectation of compensation.',
     'In compliance with the Data Privacy Act of 2012 (RA 10173), the participant agrees that personal information provided during registration may be collected, stored, and processed solely for event administration, safety, and communication purposes. Data will be kept confidential and will not be shared with unauthorized parties. Participants may request access, correction, or deletion of their data by contacting the organizers.',
   ];
+}
+
+/**
+ * Editor text to the paragraphs that get stored.
+ *
+ * Two ways of separating paragraphs are accepted, because organizers write
+ * both. Pasting from a document usually brings blank lines between paragraphs,
+ * so a blank line splits. Typing straight into the box, people tend to press
+ * Enter once per paragraph, so when there is no blank line anywhere, each line
+ * is its own paragraph instead. Line breaks inside a paragraph collapse to
+ * spaces, which is how the browser would render them anyway.
+ */
+export function parseWaiverParagraphs(text: string): string[] {
+  if (typeof text !== 'string') return [];
+  const normalized = text.replace(/\r\n?/g, '\n');
+  const hasBlankLine = /\n[ \t]*\n/.test(normalized);
+  const blocks = hasBlankLine ? normalized.split(/\n[ \t]*\n+/) : normalized.split('\n');
+  return blocks.map(block => block.replace(/\s+/g, ' ').trim()).filter(Boolean);
+}
+
+/** Stored paragraphs back into editor text, one blank line between each. */
+export function formatWaiverParagraphs(
+  list: readonly string[] | null | undefined
+): string {
+  return (list ?? []).join('\n\n');
+}
+
+/**
+ * Whatever the request body carried, as clean paragraphs.
+ *
+ * Accepts both shapes on purpose: the admin form posts the raw textarea
+ * string, while a caller holding an already-split list can post that instead.
+ */
+export function asWaiverParagraphs(value: unknown): string[] {
+  if (typeof value === 'string') return parseWaiverParagraphs(value);
+  if (Array.isArray(value)) {
+    return value
+      .filter((item): item is string => typeof item === 'string')
+      .map(item => item.replace(/\s+/g, ' ').trim())
+      .filter(Boolean);
+  }
+  return [];
+}
+
+/**
+ * The waiver a runner actually sees for this event.
+ *
+ * The organizer's own wording when they wrote some, and the standard wording
+ * otherwise — an event must never present an empty waiver above a checkbox
+ * that claims the runner read one.
+ */
+export function resolveConsentWaiver(event: {
+  title?: string | null;
+  consentWaiver?: readonly string[] | null;
+}): string[] {
+  const stored = asWaiverParagraphs(event?.consentWaiver);
+  if (stored.length > 0) return stored;
+  return defaultConsentWaiverParagraphs(event?.title ?? '');
 }
 
 /** The checkbox's own label, next to the waiver text rather than inside it. */

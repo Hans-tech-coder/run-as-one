@@ -12,6 +12,11 @@ import PackagesPanel from '../../PackagesPanel';
 import { blankCategory, type CategoryDraft } from '../../category-draft';
 import { DEFAULT_REGISTRATION_FORM, asRegistrationForm, type RegistrationForm } from '@/lib/registration-form';
 import { DEFAULT_EVENT_TYPE, EVENT_TYPES, asEventType, type EventType } from '@/lib/event-type';
+import ConsentWaiverField from '@/app/admin/events/ConsentWaiverField';
+import { formatWaiverParagraphs } from '@/lib/consent-waiver';
+import BankAccountsPanel from '@/app/admin/events/BankAccountsPanel';
+import { cleanBankAccounts, type BankAccountDraft } from '@/app/admin/events/bank-account-draft';
+import { offersBankTransfer } from '@/lib/registration-form';
 
 export default function EditEventPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -43,6 +48,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
     // Pesos on this form; the PUT route converts to centavos.
     adminFee: 60,
     shirtSizeUpcharge: 100,
+    consentWaiver: '',
     registrationForm: DEFAULT_REGISTRATION_FORM as RegistrationForm,
     certificateTemplate: '',
     certificateCoordinates: JSON.stringify({ nameY: 50, timeY: 60, catY: 70 }),
@@ -60,6 +66,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
   // poster. A count rather than a boolean because two rows can upload at once,
   // and a latched flag would clear on the first one to finish.
   const [uploadingPosters, setUploadingPosters] = useState(0);
+  const [bankAccounts, setBankAccounts] = useState<BankAccountDraft[]>([]);
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -84,10 +91,21 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
           logisticsDeliveryFeeOutside: toPesos(data.logisticsDeliveryFeeOutside),
           adminFee: toPesos(data.adminFee),
           shirtSizeUpcharge: toPesos(data.shirtSizeUpcharge ?? 0),
+          consentWaiver: formatWaiverParagraphs(data.consentWaiver),
           registrationForm: asRegistrationForm(data.registrationForm),
           certificateTemplate: data.certificateTemplate || '',
           certificateCoordinates: data.certificateCoordinates || JSON.stringify({ nameY: 50, timeY: 60, catY: 70 }),
         });
+
+        setBankAccounts(
+          (data.bankAccounts ?? []).map((b: any) => ({
+            id: b.id,
+            bankName: b.bankName ?? '',
+            accountName: b.accountName ?? '',
+            accountNumber: b.accountNumber ?? '',
+            qrImageUrl: b.qrImageUrl ?? '',
+          })),
+        );
 
         setEventType(asEventType(data.eventType));
 
@@ -158,7 +176,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
       const res = await fetch(`/api/admin/events/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, eventType, categories }),
+        body: JSON.stringify({ ...formData, eventType, categories, bankAccounts: cleanBankAccounts(bankAccounts) }),
       });
 
       if (!res.ok) {
@@ -455,6 +473,14 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
           />
         )}
 
+          <BankAccountsPanel
+            accounts={bankAccounts}
+            offersBankTransfer={offersBankTransfer(formData.registrationForm)}
+            onChange={setBankAccounts}
+            onError={setError}
+            onBusyChange={busy => setUploadingPosters(n => (busy ? n + 1 : n - 1))}
+          />
+
           {/* Logistics Options */}
           <div className="admin-panel">
             <div className="admin-panel-header">
@@ -537,6 +563,11 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
                     onChange={value => setFormData({...formData, registrationForm: value})}
                   />
                 </div>
+                <ConsentWaiverField
+                  value={formData.consentWaiver}
+                  eventTitle={formData.title}
+                  onChange={next => setFormData({...formData, consentWaiver: next})}
+                />
               </div>
             </div>
           </div>

@@ -21,12 +21,14 @@ import {
   defaultDeliveryZone,
   type DeliveryZone,
 } from "./delivery";
-import { BANK_OPTIONS, type BankOption } from "./banks";
+import { type BankAccountView } from "@/lib/bank-accounts";
 import BankDetailsModal from "./BankDetailsModal";
 import SizeGuideModal from "./SizeGuideModal";
 import CategoryPicker from "./CategoryPicker";
 import CommunityPicker from "./CommunityPicker";
 import ConsentWaiver from "./ConsentWaiver";
+import PhoneField from "./PhoneField";
+import { resolveConsentWaiver } from "@/lib/consent-waiver";
 import ShirtSizeField from "./ShirtSizeField";
 import {
   categoryNeedsShirtSize,
@@ -58,12 +60,15 @@ export default function RegistrationWizardClient({
   eventId,
   registration,
   communities,
+  defaultCountry,
 }: {
   event: any;
   eventId: string;
   registration?: any;
   /** Approved running clubs, alphabetical, from the server. */
   communities: string[];
+  /** ISO country the phone fields start on, guessed from the request. */
+  defaultCountry: string;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -135,7 +140,7 @@ export default function RegistrationWizardClient({
   );
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [selectedBankModal, setSelectedBankModal] = useState<BankOption | null>(
+  const [selectedBankModal, setSelectedBankModal] = useState<BankAccountView | null>(
     null,
   );
   const [transactionNumber, setTransactionNumber] = useState("");
@@ -145,6 +150,10 @@ export default function RegistrationWizardClient({
   // resuming a cancelled PayMongo attempt: consent is re-affirmed on every
   // submission attempt, not carried over from an earlier one.
   const [consentGiven, setConsentGiven] = useState(false);
+  const consentWaiverParagraphs = resolveConsentWaiver(event);
+  // Set by the organizer on this event. Empty means bank transfer cannot
+  // be offered at all — there is nowhere for the money to go.
+  const bankAccounts: BankAccountView[] = event.bankAccounts ?? [];
 
   // Centavos, like every other amount here. 6000 = ₱60.00. Set per event by the
   // organizer and rendered server-side, so the summary never briefly shows a
@@ -798,21 +807,14 @@ export default function RegistrationWizardClient({
                           placeholder="juan@example.com"
                         />
                       </div>
-                      <div className="input-group">
-                        <label>Mobile Number</label>
-                        <input
-                          type="tel"
-                          value={p.phone}
-                          onChange={(e) =>
-                            handleParticipantChange(
-                              idx,
-                              "phone",
-                              e.target.value,
-                            )
-                          }
-                          placeholder="09xxxxxxxxx"
-                        />
-                      </div>
+                      <PhoneField
+                        label="Mobile Number"
+                        value={p.phone}
+                        defaultCountry={defaultCountry}
+                        onChange={(e164) =>
+                          handleParticipantChange(idx, "phone", e164)
+                        }
+                      />
                       <div className="input-group">
                         <label>Gender</label>
                         <select
@@ -890,21 +892,18 @@ export default function RegistrationWizardClient({
                           placeholder="Maria Dela Cruz"
                         />
                       </div>
-                      <div className="input-group">
-                        <label>Emergency Contact No.</label>
-                        <input
-                          type="tel"
-                          value={p.emergencyContactPhone}
-                          onChange={(e) =>
-                            handleParticipantChange(
-                              idx,
-                              "emergencyContactPhone",
-                              e.target.value,
-                            )
-                          }
-                          placeholder="09xxxxxxxxx"
-                        />
-                      </div>
+                      <PhoneField
+                        label="Emergency Contact No."
+                        value={p.emergencyContactPhone}
+                        defaultCountry={defaultCountry}
+                        onChange={(e164) =>
+                          handleParticipantChange(
+                            idx,
+                            "emergencyContactPhone",
+                            e164,
+                          )
+                        }
+                      />
                       <div className="input-group full-width">
                         <label>Medical Conditions (Optional)</label>
                         <textarea
@@ -1189,6 +1188,10 @@ export default function RegistrationWizardClient({
                     </div>
                   </div>
 
+                  {/* Offered only when the organizer has given somewhere to
+                      send the money. Without an account this option would take
+                      the runner to a step that cannot be completed. */}
+                  {bankAccounts.length > 0 && (
                   <div
                     className={`group relative overflow-hidden border ${paymentMethod === "bank_transfer" ? "border-accent-orange bg-accent-orange/10" : "border-white/10 bg-black/40 hover:border-accent-orange/50"} rounded-[16px] p-6 cursor-pointer transition-all flex items-center gap-4`}
                     onClick={() => setPaymentMethod("bank_transfer")}
@@ -1210,6 +1213,7 @@ export default function RegistrationWizardClient({
                       </div>
                     </div>
                   </div>
+                  )}
                 </div>
 
                 <div className="checkout-total-box bg-accent-orange/10 border border-accent-orange/20 rounded-3xl mb-8 text-center py-10 relative overflow-hidden">
@@ -1223,7 +1227,7 @@ export default function RegistrationWizardClient({
                 </div>
 
                 <ConsentWaiver
-                  eventTitle={event.title}
+                  paragraphs={consentWaiverParagraphs}
                   checked={consentGiven}
                   onChange={setConsentGiven}
                 />
@@ -1262,7 +1266,7 @@ export default function RegistrationWizardClient({
                   Select a Bank for Transfer
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-                  {BANK_OPTIONS.map((bank) => (
+                  {bankAccounts.map((bank) => (
                     <div
                       key={bank.id}
                       className="group relative overflow-hidden border border-white/10 bg-black/40 hover:border-accent-blue hover:bg-white/5 rounded-[16px] p-6 cursor-pointer transition-all text-center"
@@ -1270,10 +1274,12 @@ export default function RegistrationWizardClient({
                     >
                       <div className="absolute top-0 right-0 w-24 h-24 bg-accent-blue/10 rounded-full blur-2xl -mr-12 -mt-12 group-hover:bg-accent-blue/20 transition-colors"></div>
                       <div className="relative z-10 font-bold text-xl text-white mb-1">
-                        {bank.name}
+                        {bank.bankName}
                       </div>
                       <div className="relative z-10 text-sm text-secondary">
-                        Click to view details & QR
+                        {bank.qrImageUrl
+                          ? "Click to view details & QR"
+                          : "Click to view account details"}
                       </div>
                     </div>
                   ))}

@@ -2,9 +2,11 @@ import { NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { getAuthCookie } from '@/lib/auth';
 import { toCentavos } from '@/lib/money';
+import { asWaiverParagraphs } from '@/lib/consent-waiver';
 import { asRegistrationForm } from '@/lib/registration-form';
 import { asEventType } from '@/lib/event-type';
 import { asInclusions } from '@/lib/inclusions';
+import { asBankAccounts } from '@/lib/bank-accounts';
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -17,7 +19,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
     const event = await db.event.findUnique({
       where: { id },
-      include: { categories: true }
+      include: { categories: true, bankAccounts: { orderBy: { sortOrder: 'asc' } } }
     });
 
     if (!event) {
@@ -40,7 +42,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
     const { id } = await params;
     const data = await request.json();
-    const { title, date, startTime, endTime, location, imageUrl, raceKitImageUrl, description, logisticsPickup, logisticsDeliveryFeeInside, logisticsDeliveryFeeOutside, adminFee, shirtSizeUpcharge, registrationForm, eventType, certificateTemplate, certificateCoordinates, categories } = data;
+    const { title, date, startTime, endTime, location, imageUrl, raceKitImageUrl, description, logisticsPickup, logisticsDeliveryFeeInside, logisticsDeliveryFeeOutside, adminFee, shirtSizeUpcharge, consentWaiver, registrationForm, eventType, certificateTemplate, certificateCoordinates, categories, bankAccounts } = data;
 
     if (!title || !date || !location) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -82,12 +84,28 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
           logisticsDeliveryFeeOutside: toCentavos(logisticsDeliveryFeeOutside),
           adminFee: toCentavos(adminFee),
           shirtSizeUpcharge: toCentavos(shirtSizeUpcharge),
+          // Empty means "use the standard wording" — see resolveConsentWaiver.
+          consentWaiver: asWaiverParagraphs(consentWaiver),
           registrationForm: asRegistrationForm(registrationForm),
           eventType: asEventType(eventType),
           certificateTemplate: certificateTemplate || null,
           certificateCoordinates: certificateCoordinates || null,
         }
       });
+
+      // Nothing in the schema references a bank account, so the simplest
+      // correct update is to replace the set outright.
+      await prisma.bankAccount.deleteMany({ where: { eventId: id } });
+      const cleanAccounts = asBankAccounts(bankAccounts);
+      if (cleanAccounts.length > 0) {
+        await prisma.bankAccount.createMany({
+          data: cleanAccounts.map((account, index) => ({
+            ...account,
+            sortOrder: index,
+            eventId: id,
+          })),
+        });
+      }
 
       for (const cat of categories) {
         if (cat.id) {
@@ -121,7 +139,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
       return await prisma.event.findUnique({
         where: { id },
-        include: { categories: true }
+        include: { categories: true, bankAccounts: { orderBy: { sortOrder: 'asc' } } }
       });
     });
 

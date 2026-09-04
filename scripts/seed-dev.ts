@@ -74,6 +74,27 @@ interface SeedEvent {
   categories: SeedCategory[];
 }
 
+/**
+ * Placeholder accounts for the seeded events only. Deliberately obvious as
+ * fakes: a real event's accounts are set by its organizer in the admin form,
+ * and a plausible-looking number here would be one someone could accidentally
+ * pay into.
+ */
+const SEED_BANK_ACCOUNTS = [
+  {
+    bankName: 'BDO Unibank',
+    accountName: 'SEED TEST ACCOUNT — NOT REAL',
+    accountNumber: '0000 0000 0000',
+    qrImageUrl: null,
+  },
+  {
+    bankName: 'GCash',
+    accountName: 'SEED TEST ACCOUNT — NOT REAL',
+    accountNumber: '0900 000 0000',
+    qrImageUrl: null,
+  },
+];
+
 const events: SeedEvent[] = [
   {
     id: 'seed-crc-event-fun-run',
@@ -299,6 +320,18 @@ async function main() {
         organizerId: organizer.id,
       },
     });
+
+    // Somewhere for a bank transfer to go. Without these the wizard correctly
+    // refuses to take one, which makes the seeded bank-transfer event untestable.
+    // Fixed ids so re-seeding updates rather than piles up duplicates.
+    for (const [index, account] of SEED_BANK_ACCOUNTS.entries()) {
+      const id = `${event.id}-bank-${index}`;
+      await prisma.bankAccount.upsert({
+        where: { id },
+        update: { ...account, sortOrder: index },
+        create: { id, ...account, sortOrder: index, eventId: event.id },
+      });
+    }
 
     for (const c of categories) {
       await prisma.category.upsert({
