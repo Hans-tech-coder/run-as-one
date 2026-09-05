@@ -189,6 +189,16 @@ html, body {
   transform: translateY(-2px);
 }
 
+/* A button that cannot be pressed must not answer the mouse as though it can:
+   without this, a Save with nothing to save still lifts and brightens on
+   hover, which reads as "click me" right up until the click does nothing. */
+.btn-gradient:disabled,
+.btn-gradient:disabled:hover {
+  opacity: 0.45;
+  transform: none;
+  cursor: not-allowed;
+}
+
 @media (min-width: 640px) {
   .btn-gradient { padding: 1rem 1.5rem; }
 }

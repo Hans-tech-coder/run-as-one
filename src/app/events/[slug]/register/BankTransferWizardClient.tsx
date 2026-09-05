@@ -41,7 +41,7 @@ import { communitySlug } from "@/lib/running-community";
 import { sellsPackages } from "@/lib/event-type";
 import EventImage from "@/components/EventImage";
 import { useAlert } from "@/components/ui/AlertProvider";
-import FieldError from "./FieldError";
+import FieldError from "@/components/ui/FieldError";
 import {
   focusField,
   hasErrors,
