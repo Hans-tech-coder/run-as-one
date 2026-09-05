@@ -1,81 +1,19 @@
-"use client";
+import React from 'react';
+import { getSignedInUser } from '@/lib/signed-in-user';
+import SuperAdminShell from './SuperAdminShell';
 
-import React, { useState } from 'react';
-import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Users, Flag, LogOut, Menu, X } from 'lucide-react';
-import '../admin/Admin.css';
-
-export default function SuperAdminLayout({
+/**
+ * Same split as the organizer layout: the server reads who is signed in, the
+ * client shell owns the mobile menu and the active-link state. A superadmin is
+ * an Organizer row with role SUPER_ADMIN, so the name comes from the same
+ * place — the sidebar shows the person, not the literal words "Super Admin".
+ */
+export default async function SuperAdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
-  const router = useRouter();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const user = await getSignedInUser();
 
-  const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
-    router.push('/admin/login');
-  };
-
-  const navItems = [
-    { name: 'Dashboard', path: '/superadmin', icon: <LayoutDashboard size={20} /> },
-    { name: 'Organizers', path: '/superadmin/organizers', icon: <Users size={20} /> },
-    { name: 'Communities', path: '/superadmin/communities', icon: <Flag size={20} /> },
-  ];
-
-  return (
-    <div className="admin-layout">
-      {/* Mobile Menu Toggle */}
-      <div className="mobile-menu-toggle">
-        <button 
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="mobile-menu-btn"
-        >
-          {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
-      </div>
-
-      {/* Sidebar */}
-      <aside className={`admin-sidebar ${isMobileMenuOpen ? 'open' : ''}`}>
-        <div className="admin-brand flex items-center gap-3 font-bold text-xl px-6 py-4">
-          <img src="/run-as-one-logo.png" alt="RunAsOne" width={1536} height={1024} style={{ height: '48px', width: 'auto' }} />
-        </div>
-
-        <nav className="admin-nav">
-          {navItems.map((item) => (
-            <Link 
-              key={item.path} 
-              href={item.path}
-              className={`admin-nav-item ${pathname === item.path ? 'active' : ''}`}
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              {item.icon}
-              {item.name}
-            </Link>
-          ))}
-        </nav>
-
-        <div className="admin-user">
-          <div className="admin-user-avatar" style={{ background: 'var(--accent-blue)' }}>
-            S
-          </div>
-          <div className="admin-user-info">
-            <div className="admin-user-name">Super Admin</div>
-            <div className="admin-user-role">System Owner</div>
-          </div>
-          <button onClick={handleLogout} className="admin-logout" title="Logout">
-            <LogOut size={18} />
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="admin-main">
-        {children}
-      </main>
-    </div>
-  );
+  return <SuperAdminShell user={user}>{children}</SuperAdminShell>;
 }
