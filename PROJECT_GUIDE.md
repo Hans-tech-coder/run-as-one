@@ -178,7 +178,7 @@ logic again.
 | `/events` | Full upcoming listing |
 | `/events/[slug]` | Event detail and registration entry point (closed once the race is over) |
 | `/events/[slug]/register` | The wizard — `RegistrationWizardClient` (ONLINE: 3 steps, plus step 4 for proof when the runner picks bank transfer) or `BankTransferWizardClient` (3 steps). Steps: **1** runners & categories, **2** logistics, **3** checkout/payment, **4** proof upload. |
-| `/results` | Finished-event landing, most recent first |
+| `/results` | Finished-event landing, most recent first — the same `EventGrid` card as `/events`, with `action="results"` |
 | `/events/[slug]/results` | Winners board |
 | `/events/[slug]/results/full` | Full searchable table; category filter via query param |
 | `/events/[slug]/results/[resultId]` | One runner's result plus `ECertificateGenerator` (pdf-lib) |
@@ -279,6 +279,11 @@ These are the user's own standing preferences. Follow them without being asked.
 - String columns instead of Postgres enums (`status`, `role`, `paymentMethod`,
   `eventType`, `registrationForm`) — which is exactly why each has an `asX()`
   guard in `lib/` that the API must call on untrusted input.
+- **One public event card.** `components/EventGrid` renders every public event
+  listing — `/`, `/events`, `/results` — so an event looks like itself wherever
+  it appears. It differs only by its `action` prop (`'register'` → the event
+  page, `'results'` → the winners board), a string rather than a callback
+  because the pages rendering it are Server Components. Never fork a rival card.
 - Styling: Tailwind utilities plus the CSS variables in `globals.css` (motion,
   spacing, radius, glass, gradient tokens). The admin has `Admin.css` and
   `Auth.css`; the wizard and event page have their own CSS files. Dark,

@@ -1,10 +1,10 @@
 import React from 'react';
 import Link from 'next/link';
-import { Calendar, ChevronRight, MapPin, Trophy } from 'lucide-react';
+import { ChevronRight, Trophy } from 'lucide-react';
 import db from '@/lib/db';
 import ResultsClientOrchestrator from '@/components/ResultsClientOrchestrator';
-import EventImage from '@/components/EventImage';
-import { formatEventDayShort, mostRecentFirst } from '@/lib/event-schedule';
+import EventGrid from '@/components/EventGrid';
+import { mostRecentFirst } from '@/lib/event-schedule';
 
 export default async function GlobalResultsPage() {
   // Only races whose organizer has actually uploaded times. A race that is over
@@ -47,39 +47,9 @@ export default async function GlobalResultsPage() {
         {events.length === 0 ? (
           <NoResultsYet />
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {events.map(event => (
-              <Link href={`/events/${event.slug}/results`} key={event.id} className="t-tilt block">
-                <div className="t-tilt-card glass-panel p-0 rounded-2xl overflow-hidden hover:border-accent-blue transition-colors cursor-pointer group h-full flex flex-col border border-white/5 hover:shadow-[0_0_15px_rgba(0,122,255,0.3)] bg-dark/50">
-                  <div className="h-48 overflow-hidden relative">
-                    <EventImage
-                      src={event.imageUrl}
-                      alt={event.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      iconSize={40}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#050505] to-transparent opacity-90"></div>
-                  </div>
-                  <div className="p-6 flex flex-col flex-1 relative z-10 -mt-8">
-                    <h2 className="text-xl font-bold text-white mb-3 group-hover:text-accent-blue transition-colors line-clamp-2">
-                      {event.title}
-                    </h2>
-                    <div className="space-y-2 mt-auto text-sm text-secondary">
-                      <div className="flex items-center gap-2">
-                        <Calendar size={16} className="text-accent-orange" />
-                        <span>{formatEventDayShort(event.date)}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <MapPin size={16} className="text-accent-orange" />
-                        <span className="line-clamp-1">{event.location}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="t-tilt-glare"></div>
-                </div>
-              </Link>
-            ))}
-          </div>
+          // Same card as /events, so an event looks like itself whether it is
+          // open for registration or already run — only the button changes.
+          <EventGrid events={events} action="results" />
         )}
       <ResultsClientOrchestrator />
       </div>
