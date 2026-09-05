@@ -6,12 +6,105 @@ import { UploadCloud, CheckCircle2, AlertCircle, FileSpreadsheet, Play, X, Plus 
 import * as XLSX from 'xlsx';
 import { useRouter } from 'next/navigation';
 
+type Column = { label: string; index: number };
+
+/* Timing software almost never puts the column labels in row 1. A chip-timing
+   export normally opens with a banner — the event name, the word "Results", the
+   distance — and a few spacer rows before the real header. Reading row 1 as the
+   header turns the whole mapper into a single nonsense option, so the header row
+   is detected instead of assumed. */
+const HEADER_KEYWORDS = [
+  'bib', 'name', 'gender', 'sex', 'chip', 'gun', 'net', 'gross', 'time',
+  'pos', 'rank', 'place', 'age', 'cat', 'team', 'club', 'finish', 'div',
+];
+
+const cellText = (value: any) => String(value ?? '').trim();
+
+const nonEmptyCells = (row: any[] | undefined) => (row || []).map(cellText).filter(Boolean);
+
+const detectHeaderRow = (rows: any[][]) => {
+  const limit = Math.min(rows.length, 30);
+  let fallback = -1;
+
+  for (let r = 0; r < limit; r++) {
+    const cells = nonEmptyCells(rows[r]);
+    if (cells.length < 2) continue;
+
+    // Two or more recognisable labels on one row is a header. A banner line
+    // ("BizRun Ver 2.0 2026") carries none, and a data row carries at most one.
+    const hits = cells.filter(c =>
+      HEADER_KEYWORDS.some(k => c.toLowerCase().includes(k))
+    ).length;
+    if (hits >= 2) return r;
+
+    if (fallback === -1 && cells.length >= 3) fallback = r;
+  }
+
+  return fallback === -1 ? 0 : fallback;
+};
+
+/* Columns carry their real position in the sheet, so blank spacer columns and
+   repeated labels ("TIME" twice) can never aim the import at the wrong cell. */
+const buildColumns = (rows: any[][], headerRow: number): Column[] =>
+  (rows[headerRow] || [])
+    .map((label: any, index: number) => ({ label: cellText(label), index }))
+    .filter((col: Column) => col.label !== '');
+
+const findColumn = (columns: Column[], needles: string[], exclude: string[] = []) => {
+  const hit = columns.find(col => {
+    const label = col.label.toLowerCase();
+    if (exclude.some(x => label.includes(x))) return false;
+    return needles.some(n => label.includes(n));
+  });
+  return hit ? String(hit.index) : '';
+};
+
+const buildMapping = (rows: any[][], headerRow: number, categoryId = '') => {
+  const columns = buildColumns(rows, headerRow);
+
+  // A sheet with one unlabelled time column means chip time, so it is claimed
+  // first; a second time column is then the gun time.
+  const chipCol =
+    findColumn(columns, ['chip', 'net']) || findColumn(columns, ['time'], ['gun', 'gross']);
+  const gunCol =
+    findColumn(columns, ['gun', 'gross']) ||
+    columns
+      .filter(c => c.label.toLowerCase().includes('time') && String(c.index) !== chipCol)
+      .map(c => String(c.index))[0] ||
+    '';
+
+  return {
+    categoryId,
+    headerRow,
+    columns,
+    bibCol: findColumn(columns, ['bib']),
+    nameCol: findColumn(columns, ['name', 'participant', 'runner']),
+    genderCol: findColumn(columns, ['gender', 'sex', 'sx']),
+    chipCol,
+    gunCol,
+  };
+};
+
+const dataRows = (rows: any[][], headerRow: number) =>
+  rows.slice(headerRow + 1).filter(row => nonEmptyCells(row).length > 0);
+
+const REQUIRED_FIELDS: Record<string, string> = {
+  bibCol: 'Bib Number',
+  nameCol: 'Runner Name',
+  genderCol: 'Gender',
+  chipCol: 'Chip Time',
+};
+
+const listPhrase = (items: string[]) =>
+  items.length > 1 ? `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}` : items[0];
+
 export default function ResultsUploaderClient({ event }: { event: any }) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
-  const [sheetsData, setSheetsData] = useState<Record<string, any[]>>({});
+  const [sheetsData, setSheetsData] = useState<Record<string, any[][]>>({});
   const [sheetNames, setSheetNames] = useState<string[]>([]);
+  const [invalidFields, setInvalidFields] = useState<Record<string, string[]>>({});
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -31,38 +124,29 @@ export default function ResultsUploaderClient({ event }: { event: any }) {
     if (!selectedFile) return;
     setFile(selectedFile);
     setError('');
-    
+    setSuccess('');
+    setInvalidFields({});
+
     const reader = new FileReader();
     reader.onload = (evt) => {
       try {
         const bstr = evt.target?.result;
         const wb = XLSX.read(bstr, { type: 'binary' });
-        
-        const newSheetsData: Record<string, any[]> = {};
+
+        const newSheetsData: Record<string, any[][]> = {};
         const initialMappings: Record<string, any> = {};
-        
+
         wb.SheetNames.forEach(name => {
-          // Read first row as headers
+          // Every row is kept: the header row is found below, not assumed.
           const ws = wb.Sheets[name];
-          const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "", raw: false, dateNF: "hh:mm:ss" });
-          newSheetsData[name] = data.slice(1); // Keep the data rows
-          
-          if (data.length > 0) {
-            // First row represents the headers
-            const headers = (data[0] as any[]).map(String);
-            
-            initialMappings[name] = {
-              categoryId: '',
-              bibCol: headers.find(h => h.toLowerCase().includes('bib')) || '',
-              nameCol: headers.find(h => h.toLowerCase().includes('name') || h.toLowerCase().includes('participant')) || '',
-              genderCol: headers.find(h => h.toLowerCase().includes('gender') || h.toLowerCase().includes('sex') || h.toLowerCase() === 'sx') || '',
-              chipCol: headers.find(h => h.toLowerCase().includes('chip') || h.toLowerCase().includes('net')) || '',
-              gunCol: headers.find(h => h.toLowerCase().includes('gun') || h.toLowerCase().includes('gross')) || '',
-              availableHeaders: headers.filter(h => h.trim() !== '')
-            };
+          const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "", raw: false, dateNF: "hh:mm:ss" }) as any[][];
+          newSheetsData[name] = rows;
+
+          if (rows.length > 0) {
+            initialMappings[name] = buildMapping(rows, detectHeaderRow(rows));
           }
         });
-        
+
         setSheetNames(wb.SheetNames);
         setSheetsData(newSheetsData);
         setMappings(initialMappings);
@@ -81,6 +165,30 @@ export default function ResultsUploaderClient({ event }: { event: any }) {
         [field]: value
       }
     }));
+    // The field just answered the complaint against it, so drop the red border.
+    setInvalidFields(prev => {
+      if (!prev[sheetName]?.includes(field)) return prev;
+      const remaining = prev[sheetName].filter(f => f !== field);
+      const next = { ...prev };
+      if (remaining.length) next[sheetName] = remaining;
+      else delete next[sheetName];
+      return next;
+    });
+  };
+
+  // Re-reading the sheet from a different header row re-guesses every column,
+  // so a wrong detection is one dropdown away from being corrected.
+  const handleHeaderRowChange = (sheetName: string, headerRow: number) => {
+    setMappings(prev => ({
+      ...prev,
+      [sheetName]: buildMapping(sheetsData[sheetName] || [], headerRow, prev[sheetName]?.categoryId || '')
+    }));
+    setInvalidFields(prev => {
+      if (!prev[sheetName]) return prev;
+      const next = { ...prev };
+      delete next[sheetName];
+      return next;
+    });
   };
 
   const formatExcelTime = (val: any) => {
@@ -109,24 +217,46 @@ export default function ResultsUploaderClient({ event }: { event: any }) {
     try {
       const finalResults: any[] = [];
 
-      for (const sheetName of sheetNames) {
-        const mapping = mappings[sheetName];
-        if (!mapping.categoryId) continue; // Skip unmapped sheets
-        
-        if (!mapping.bibCol || !mapping.nameCol || !mapping.genderCol || !mapping.chipCol) {
-          throw new Error(`Please map all required columns for sheet: ${sheetName}`);
-        }
+      const importedSheets = sheetNames.filter(name => mappings[name]?.categoryId);
+      if (importedSheets.length === 0) {
+        throw new Error('No sheet is set to be imported. Choose a Target Category for at least one sheet.');
+      }
 
-        const data = sheetsData[sheetName];
-        const headers = mappings[sheetName].availableHeaders;
-        const bibIdx = headers.indexOf(mapping.bibCol);
-        const nameIdx = headers.indexOf(mapping.nameCol);
-        const genderIdx = headers.indexOf(mapping.genderCol);
-        const chipIdx = headers.indexOf(mapping.chipCol);
-        const gunIdx = headers.indexOf(mapping.gunCol);
-        
-        data.forEach((row: any[]) => {
+      // Name every unmapped field on every sheet in one go, and mark them, so the
+      // organizer never has to guess which dropdown the complaint is about.
+      const missingBySheet: Record<string, string[]> = {};
+      importedSheets.forEach(name => {
+        const missing = Object.keys(REQUIRED_FIELDS).filter(field => !mappings[name][field]);
+        if (missing.length) missingBySheet[name] = missing;
+      });
+
+      if (Object.keys(missingBySheet).length > 0) {
+        setInvalidFields(missingBySheet);
+        throw new Error(
+          Object.entries(missingBySheet)
+            .map(([name, fields]) =>
+              `${name}: choose a column for ${listPhrase(fields.map(f => REQUIRED_FIELDS[f]))}.`)
+            .join(' ')
+        );
+      }
+      setInvalidFields({});
+
+      const emptySheets: string[] = [];
+
+      for (const sheetName of importedSheets) {
+        const mapping = mappings[sheetName];
+
+        // Values are real sheet column indexes, so they are used as they are.
+        const bibIdx = Number(mapping.bibCol);
+        const nameIdx = Number(mapping.nameCol);
+        const genderIdx = Number(mapping.genderCol);
+        const chipIdx = Number(mapping.chipCol);
+        const gunIdx = mapping.gunCol === '' ? -1 : Number(mapping.gunCol);
+
+        let kept = 0;
+        dataRows(sheetsData[sheetName] || [], mapping.headerRow).forEach((row: any[]) => {
           if (row[bibIdx] && row[nameIdx] && row[chipIdx]) {
+            kept++;
             finalResults.push({
               categoryId: mapping.categoryId,
               bibNumber: String(row[bibIdx]).trim(),
@@ -138,10 +268,14 @@ export default function ResultsUploaderClient({ event }: { event: any }) {
             });
           }
         });
+
+        if (kept === 0) emptySheets.push(sheetName);
       }
 
       if (finalResults.length === 0) {
-        throw new Error('No valid records found to upload. Please check your column mappings.');
+        throw new Error(
+          `No rows could be read from ${listPhrase(emptySheets)}. Check that the Header Row points at the row holding the column labels.`
+        );
       }
 
       const res = await fetch(`/api/admin/events/${event.id}/results/upload`, {
@@ -154,7 +288,10 @@ export default function ResultsUploaderClient({ event }: { event: any }) {
 
       if (!res.ok) throw new Error(resultData.error || 'Upload failed');
 
-      setSuccess(`Successfully processed and uploaded ${resultData.count} records. Overall and Gender ranks have been automatically computed!`);
+      const skipped = emptySheets.length
+        ? ` No usable rows were found in ${listPhrase(emptySheets)}, so ${emptySheets.length > 1 ? 'those sheets were' : 'that sheet was'} skipped.`
+        : '';
+      setSuccess(`Successfully processed and uploaded ${resultData.count} records. Overall and Gender ranks have been automatically computed!${skipped}`);
       setTimeout(() => {
         setIsOpen(false);
         router.refresh();
@@ -238,7 +375,17 @@ export default function ResultsUploaderClient({ event }: { event: any }) {
             {sheetNames.map(sheetName => {
               const map = mappings[sheetName];
               if (!map) return null;
-              const headers = map.availableHeaders || [];
+              const columns: Column[] = map.columns || [];
+              const rows: any[][] = sheetsData[sheetName] || [];
+              const rowCount = dataRows(rows, map.headerRow).length;
+              const missing: string[] = invalidFields[sheetName] || [];
+
+              // Only the top of the sheet can plausibly hold labels, and a row
+              // has to say something to be worth offering.
+              const headerRowOptions = rows
+                .slice(0, 30)
+                .map((row, index) => ({ index, preview: nonEmptyCells(row).slice(0, 5).join(', ') }))
+                .filter(opt => opt.preview !== '' || opt.index === map.headerRow);
 
               return (
                 <div key={sheetName} className="admin-panel mb-8 border border-white/10 hover:border-accent-blue/30 transition-colors">
@@ -248,7 +395,7 @@ export default function ResultsUploaderClient({ event }: { event: any }) {
                         <FileSpreadsheet size={18} className="text-accent-blue" /> {sheetName}
                       </h4>
                       <p className="text-xs text-secondary mt-1">
-                        Found {sheetsData[sheetName]?.length} rows in this sheet
+                        Found {rowCount} {rowCount === 1 ? 'row' : 'rows'} below the header on row {map.headerRow + 1}
                       </p>
                     </div>
                     
@@ -270,43 +417,57 @@ export default function ResultsUploaderClient({ event }: { event: any }) {
 
                   {map.categoryId ? (
                     <div className="admin-panel-content">
-                      <div className="mb-4">
+                      <div className="mb-4 flex flex-col md:flex-row md:items-end justify-between gap-4">
                         <p className="text-sm text-secondary">Match your Excel columns to the required database fields below:</p>
+                        <div className="form-group mb-0" style={{ flex: '0 1 320px' }}>
+                          <label className="form-label mb-1">Header Row</label>
+                          <select
+                            className="form-input"
+                            value={String(map.headerRow)}
+                            onChange={(e) => handleHeaderRowChange(sheetName, Number(e.target.value))}
+                          >
+                            {headerRowOptions.map(opt => (
+                              <option key={opt.index} value={String(opt.index)}>
+                                Row {opt.index + 1}{opt.preview ? ` — ${opt.preview}` : ''}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
                       </div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
                         <div className="form-group" style={{ flex: '1 1 160px' }}>
                           <label className="form-label mb-1 flex items-center gap-1">Bib Number <span style={{ color: '#ff4d4f' }}>*</span></label>
-                          <select className="form-input" value={map.bibCol} onChange={(e) => handleMappingChange(sheetName, 'bibCol', e.target.value)}>
+                          <select className="form-input" aria-invalid={missing.includes('bibCol')} value={map.bibCol} onChange={(e) => handleMappingChange(sheetName, 'bibCol', e.target.value)}>
                             <option value="" disabled>Select Column</option>
-                            {headers.map((h: string) => <option key={h} value={h}>{h}</option>)}
+                            {columns.map(col => <option key={col.index} value={String(col.index)}>{col.label}</option>)}
                           </select>
                         </div>
                         <div className="form-group" style={{ flex: '1 1 160px' }}>
                           <label className="form-label mb-1 flex items-center gap-1">Runner Name <span style={{ color: '#ff4d4f' }}>*</span></label>
-                          <select className="form-input" value={map.nameCol} onChange={(e) => handleMappingChange(sheetName, 'nameCol', e.target.value)}>
+                          <select className="form-input" aria-invalid={missing.includes('nameCol')} value={map.nameCol} onChange={(e) => handleMappingChange(sheetName, 'nameCol', e.target.value)}>
                             <option value="" disabled>Select Column</option>
-                            {headers.map((h: string) => <option key={h} value={h}>{h}</option>)}
+                            {columns.map(col => <option key={col.index} value={String(col.index)}>{col.label}</option>)}
                           </select>
                         </div>
                         <div className="form-group" style={{ flex: '1 1 160px' }}>
                           <label className="form-label mb-1 flex items-center gap-1">Gender <span style={{ color: '#ff4d4f' }}>*</span></label>
-                          <select className="form-input" value={map.genderCol} onChange={(e) => handleMappingChange(sheetName, 'genderCol', e.target.value)}>
+                          <select className="form-input" aria-invalid={missing.includes('genderCol')} value={map.genderCol} onChange={(e) => handleMappingChange(sheetName, 'genderCol', e.target.value)}>
                             <option value="" disabled>Select Column</option>
-                            {headers.map((h: string) => <option key={h} value={h}>{h}</option>)}
+                            {columns.map(col => <option key={col.index} value={String(col.index)}>{col.label}</option>)}
                           </select>
                         </div>
                         <div className="form-group" style={{ flex: '1 1 160px' }}>
                           <label className="form-label mb-1 flex items-center gap-1">Chip Time <span style={{ color: '#ff4d4f' }}>*</span></label>
-                          <select className="form-input" value={map.chipCol} onChange={(e) => handleMappingChange(sheetName, 'chipCol', e.target.value)}>
+                          <select className="form-input" aria-invalid={missing.includes('chipCol')} value={map.chipCol} onChange={(e) => handleMappingChange(sheetName, 'chipCol', e.target.value)}>
                             <option value="" disabled>Select Column</option>
-                            {headers.map((h: string) => <option key={h} value={h}>{h}</option>)}
+                            {columns.map(col => <option key={col.index} value={String(col.index)}>{col.label}</option>)}
                           </select>
                         </div>
                         <div className="form-group" style={{ flex: '1 1 160px' }}>
                           <label className="form-label mb-1 flex items-center gap-1">Gun Time <span className="text-secondary">(Optional)</span></label>
                           <select className="form-input" value={map.gunCol} onChange={(e) => handleMappingChange(sheetName, 'gunCol', e.target.value)}>
                             <option value="">None / Not Available</option>
-                            {headers.map((h: string) => <option key={h} value={h}>{h}</option>)}
+                            {columns.map(col => <option key={col.index} value={String(col.index)}>{col.label}</option>)}
                           </select>
                         </div>
                       </div>

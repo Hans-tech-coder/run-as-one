@@ -110,9 +110,15 @@ export async function POST(
         where: { eventId }
       });
 
-      // 2. Insert new results
+      // 2. Insert new results.
+      // Chip times commonly carry tenths ("1:18:56.9"). The tenths decide the
+      // ranking above, but chipTimeSecs is a whole-second column, so the value
+      // is rounded here rather than left for the database to round.
       await tx.raceResult.createMany({
-        data: processedResults
+        data: processedResults.map(({ chipTimeSecs, ...rest }) => ({
+          ...rest,
+          chipTimeSecs: Math.round(chipTimeSecs)
+        }))
       });
     });
 
