@@ -2,7 +2,7 @@
 
 import React, { useEffect, useId, useRef, useState } from "react";
 import { Check, ChevronDown } from "lucide-react";
-import FieldError from "./FieldError";
+import FieldError from "@/components/ui/FieldError";
 
 /**
  * A short, closed list of answers, drawn by us rather than by the browser.

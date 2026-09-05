@@ -5,7 +5,7 @@ import { CheckCircle2, Maximize2 } from 'lucide-react';
 import { formatPesos } from '@/lib/money';
 import { sellsPackages } from '@/lib/event-type';
 import PosterLightbox from './PosterLightbox';
-import FieldError from './FieldError';
+import FieldError from '@/components/ui/FieldError';
 
 /**
  * What a runner picks at sign-up, in whichever shape the event sells.

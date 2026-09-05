@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useId, useRef, useState } from 'react';
-import FieldError from './FieldError';
+import FieldError from '@/components/ui/FieldError';
 
 /**
  * A text field that suggests, but does not restrict.

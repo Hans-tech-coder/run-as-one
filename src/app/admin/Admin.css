@@ -356,6 +356,25 @@
   color: rgba(255, 255, 255, 0.3);
 }
 
+.form-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Invalid state.
+   Driven off aria-invalid rather than a class, the same way the registration
+   wizard does it, so the red border and the thing a screen reader announces
+   can never drift apart — one attribute sets both. */
+.form-input[aria-invalid="true"] {
+  border-color: rgba(239, 68, 68, 0.7);
+  background: rgba(239, 68, 68, 0.06);
+}
+
+.form-input[aria-invalid="true"]:focus {
+  border-color: rgba(239, 68, 68, 0.9);
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.2);
+}
+
 select.form-input {
   padding-right: 2.5rem;
   appearance: none;
@@ -389,6 +408,80 @@ textarea.form-input {
   color: rgba(255, 255, 255, 0.85);
   font-size: 0.75rem;
   line-height: 1.4;
+}
+
+/* Password Field
+   The plain .form-input with room made on the right for a reveal button, so a
+   password box and the name box above it are visibly the same control. */
+.password-field {
+  position: relative;
+  display: flex;
+}
+
+.password-field .form-input {
+  /* Clears the toggle even when the value is long enough to scroll. */
+  padding-right: 3.25rem;
+}
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  /* 44px square: the smallest target a thumb hits reliably. */
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.password-toggle:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+}
+
+.password-toggle:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
+}
+
+.password-toggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Settings */
+.settings-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+}
+
+/* .form-actions puts the button on the right; this makes room for the "saved"
+   line on the left of the same rule, and separates it from the fields above. */
+.settings-actions {
+  justify-content: space-between;
+  align-items: center;
+  margin-top: var(--space-xl);
+  flex-wrap: wrap;
+}
+
+.settings-saved {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  min-height: 1.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #52c41a;
 }
 
 /* Form Layouts */
