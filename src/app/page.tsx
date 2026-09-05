@@ -2,6 +2,7 @@ import React from 'react';
 import HeroSection from '@/components/HeroSection';
 import HomeEventBrowser from '@/components/HomeEventBrowser';
 import db from '@/lib/db';
+import { soonestFirst, upcomingEvents } from '@/lib/event-schedule';
 
 const HOME_EVENT_LIMIT = 6;
 
@@ -9,12 +10,18 @@ export default async function Home() {
   // Two rows of cards on a desktop grid rather than one, so the section that
   // the page exists for looks like a listing instead of a leftover. The count
   // decides whether a "view all" link is worth showing at all.
+  //
+  // Upcoming races only, soonest first: this section is headed "Open For
+  // Registration", and a race that has already been run is neither. Finished
+  // races move to /results — see src/lib/event-schedule.ts.
+  const upcoming = upcomingEvents();
   const [events, totalEvents] = await Promise.all([
     db.event.findMany({
-      orderBy: { createdAt: 'desc' },
+      where: upcoming,
+      orderBy: soonestFirst,
       take: HOME_EVENT_LIMIT,
     }),
-    db.event.count(),
+    db.event.count({ where: upcoming }),
   ]);
 
   return (

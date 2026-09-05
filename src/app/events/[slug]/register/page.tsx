@@ -7,6 +7,7 @@ import BankTransferWizardClient from './BankTransferWizardClient';
 import { approvedCommunityNames } from '@/lib/running-community-store';
 import { requestCountry } from '@/lib/request-country';
 import { canonicalEventPath, eventByParam } from '@/lib/event-slug';
+import { hasFinished } from '@/lib/event-schedule';
 
 export default async function RegisterPage(props: { 
   params: Promise<{ slug: string }>;
@@ -53,6 +54,17 @@ export default async function RegisterPage(props: {
   const canonical = canonicalEventPath(event, slug, '/register');
   if (canonical) {
     redirect(query ? `${canonical}?${query}` : canonical);
+  }
+
+  // A race that has already been run cannot be entered. The event page no
+  // longer offers the button, but the URL is still typeable and still sitting
+  // in someone's history, and that page is where the explanation lives.
+  //
+  // An orderRef is let through: that is a runner coming back from the payment
+  // gateway to see what they already paid for, not someone starting a new
+  // registration, and bouncing them would lose them their receipt.
+  if (!orderRef && hasFinished(event)) {
+    redirect(`/events/${event.slug}`);
   }
 
   let registration = null;

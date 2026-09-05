@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Calendar, MapPin, ChevronRight } from 'lucide-react';
 import EventImage from './EventImage';
+import { formatEventDayShort } from '@/lib/event-schedule';
 
 // Using a type that matches the Prisma Event model payload
 type DBEvent = {
@@ -30,7 +31,7 @@ function EventCard({ event }: { event: DBEvent }) {
         </h2>
         <div className="flex flex-col gap-2 mb-6">
           <div className="flex items-center gap-3 text-white/80 font-body text-sm sm:text-base">
-            <Calendar size={18} /> <span>{event.date}</span>
+            <Calendar size={18} /> <span>{formatEventDayShort(event.date)}</span>
           </div>
           <div className="flex items-center gap-3 text-white/80 font-body text-sm sm:text-base">
             <MapPin size={18} /> <span>{event.location}</span>

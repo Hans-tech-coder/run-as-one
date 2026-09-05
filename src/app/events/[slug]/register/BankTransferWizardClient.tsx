@@ -51,6 +51,7 @@ import {
   validateRunners,
   type RunnerField,
 } from "./validation";
+import { formatEventDayShort } from "@/lib/event-schedule";
 import "./RegistrationWizard.css";
 
 /**
@@ -560,7 +561,7 @@ export default function BankTransferWizardClient({
                   {event.title}
                 </h3>
                 <div className="text-sm text-secondary flex items-center gap-1">
-                  <Calendar size={14} /> {event.date}
+                  <Calendar size={14} /> {formatEventDayShort(event.date)}
                 </div>
               </div>
             </div>

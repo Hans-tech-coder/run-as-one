@@ -8,6 +8,7 @@ import { asEventType } from '@/lib/event-type';
 import { asInclusions } from '@/lib/inclusions';
 import { asBankAccounts } from '@/lib/bank-accounts';
 import { uniqueEventSlug } from '@/lib/event-slug';
+import { isCalendarDay } from '@/lib/event-schedule';
 
 export async function POST(request: Request) {
   try {
@@ -21,6 +22,17 @@ export async function POST(request: Request) {
 
     if (!title || !date || !location) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    // Which listing an event lands in is decided by comparing this string, so
+    // the column has to hold a calendar day and nothing else. The admin form's
+    // date picker only ever produces one; this is the guard for everything
+    // else, because a "April 12, 2026" in here would sit in Upcoming forever.
+    if (!isCalendarDay(date)) {
+      return NextResponse.json(
+        { error: 'Event date must be a calendar date in YYYY-MM-DD form.' },
+        { status: 400 }
+      );
     }
 
     // The public URL is made from the title, so it is settled here, once, with

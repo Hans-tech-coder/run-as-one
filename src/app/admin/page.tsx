@@ -4,6 +4,7 @@ import prisma from '@/lib/db';
 import { getAuthCookie } from '@/lib/auth';
 import { formatPesos } from '@/lib/money';
 import { redirect } from 'next/navigation';
+import { hasFinished, today } from '@/lib/event-schedule';
 
 export default async function AdminDashboard() {
   const auth = await getAuthCookie();
@@ -11,6 +12,8 @@ export default async function AdminDashboard() {
     redirect('/admin/login');
   }
   
+  const activeAsOf = today();
+
   const events = await prisma.event.findMany({
     where: { organizerId: auth.id },
     include: {
@@ -21,7 +24,14 @@ export default async function AdminDashboard() {
     }
   });
 
-  const activeEventsCount = events.length;
+  // Races the organizer still has ahead of them, race day itself included —
+  // the same line the public listings draw, so the tile and /events can never
+  // disagree about which races are still live. See src/lib/event-schedule.ts.
+  // A single reading of "today" is shared, so an event cannot be counted
+  // differently by two calls that straddle midnight in Manila.
+  const activeEventsCount = events.filter(
+    event => !hasFinished(event, activeAsOf)
+  ).length;
   
   let totalRevenue = 0;
   let totalRegistrants = 0;

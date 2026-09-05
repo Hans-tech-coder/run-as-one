@@ -5,6 +5,7 @@ import crypto from 'crypto';
 import { uploadPrivateProof, UploadError } from '@/lib/blob';
 import { asDeliveryZone, deliveryFeeFor } from '@/app/events/[slug]/register/delivery';
 import { storedShirtSize, subtotalWithUpcharge } from '@/lib/shirt-size';
+import { hasFinished } from '@/lib/event-schedule';
 
 export async function POST(request: Request) {
   try {
@@ -57,6 +58,17 @@ export async function POST(request: Request) {
     });
     if (!event) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
+    }
+
+    // The event page stops offering registration once a race has been run, but
+    // a tab left open the day before would still post here. Taking money for a
+    // race that is over is not something the UI alone should be trusted to
+    // prevent.
+    if (hasFinished(event)) {
+      return NextResponse.json(
+        { error: 'This race has already been held, so registration is closed.' },
+        { status: 409 }
+      );
     }
 
     const zone = logisticsMethod === 'delivery' ? asDeliveryZone(deliveryZone) : null;

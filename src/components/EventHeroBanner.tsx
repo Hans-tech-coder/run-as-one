@@ -1,5 +1,6 @@
 import React from 'react';
 import { Calendar, MapPin, Clock } from 'lucide-react';
+import { formatEventDay, formatEventTime } from '@/lib/event-schedule';
 import '../app/events/[slug]/EventDetails.css'; // Reuse existing CSS for now, but will modify it to handle breakout
 
 interface EventHeroBannerProps {
@@ -25,15 +26,16 @@ export default function EventHeroBanner({ event }: EventHeroBannerProps) {
         <div className="event-hero-meta flex flex-wrap gap-6 t-stagger-line t-stagger-line--2">
           <div className="meta-item">
             <Calendar className="meta-icon" />
-            <span>{event.date}</span>
+            <span>{formatEventDay(event.date)}</span>
           </div>
           {(event.startTime || event.endTime) && (
             <div className="meta-item">
               <Clock className="meta-icon" />
               <span>
-                {event.startTime ? event.startTime : ''} 
-                {event.startTime && event.endTime ? ' - ' : ''} 
-                {event.endTime ? event.endTime : ''}
+                {[event.startTime, event.endTime]
+                  .filter((time): time is string => Boolean(time))
+                  .map(formatEventTime)
+                  .join(' - ')}
               </span>
             </div>
           )}

@@ -4,15 +4,23 @@ import { Calendar, ChevronRight, MapPin, Trophy } from 'lucide-react';
 import db from '@/lib/db';
 import ResultsClientOrchestrator from '@/components/ResultsClientOrchestrator';
 import EventImage from '@/components/EventImage';
+import { formatEventDayShort, mostRecentFirst } from '@/lib/event-schedule';
 
 export default async function GlobalResultsPage() {
+  // Only races whose organizer has actually uploaded times. A race that is over
+  // but has no results yet appears nowhere on the site — it has left /events,
+  // and there is nothing here to read — which is deliberate: an entry that
+  // opened onto an empty ranking would be a dead end.
+  //
+  // Ordered most recent first, so the race people have just come home from is
+  // the one at the top. See src/lib/event-schedule.ts.
   const events = await db.event.findMany({
     where: {
       raceResults: {
         some: {}
       }
     },
-    orderBy: { date: 'desc' }
+    orderBy: mostRecentFirst,
   });
 
   return (
@@ -59,7 +67,7 @@ export default async function GlobalResultsPage() {
                     <div className="space-y-2 mt-auto text-sm text-secondary">
                       <div className="flex items-center gap-2">
                         <Calendar size={16} className="text-accent-orange" />
-                        <span>{event.date}</span>
+                        <span>{formatEventDayShort(event.date)}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <MapPin size={16} className="text-accent-orange" />
