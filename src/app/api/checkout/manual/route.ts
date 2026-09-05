@@ -6,6 +6,7 @@ import { uploadPrivateProof, UploadError } from '@/lib/blob';
 import { asDeliveryZone, deliveryFeeFor } from '@/app/events/[slug]/register/delivery';
 import { storedShirtSize, subtotalWithUpcharge } from '@/lib/shirt-size';
 import { hasFinished } from '@/lib/event-schedule';
+import { sendRegistrationReceivedEmail } from '@/lib/email';
 
 export async function POST(request: Request) {
   try {
@@ -144,7 +145,8 @@ export async function POST(request: Request) {
             runningCommunity: runnerCommunity(p),
           }))
         }
-      }
+      },
+      include: { event: true, runners: { include: { category: true } } },
     });
 
     // Clubs nobody has approved yet go to the super admin's queue. This is
@@ -152,7 +154,12 @@ export async function POST(request: Request) {
     // by anyone who has not actually registered.
     await recordWriteInCommunities(participants);
 
-    return NextResponse.json({ 
+    // Sent now, not the receipt: a bank transfer is unverified money until an
+    // admin looks at the proof, so this only confirms the submission — the
+    // receipt (sendRegistrationConfirmationEmail) waits for that admin action.
+    await sendRegistrationReceivedEmail(registration);
+
+    return NextResponse.json({
       success: true, 
       orderRef: registration.orderRef 
     });

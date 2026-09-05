@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
+import { sendRegistrationConfirmationEmail } from '@/lib/email';
 
 export async function PATCH(
   request: Request,
@@ -18,6 +19,17 @@ export async function PATCH(
       where: { id },
       data: { status }
     });
+
+    // Manual (bank transfer) registrations only reach PAID here, once an admin
+    // checks the proof — the online flow's equivalent moment is the PayMongo
+    // webhook, which sends the same email from there instead.
+    if (status === 'PAID') {
+      const full = await prisma.registration.findUnique({
+        where: { id },
+        include: { event: true, runners: { include: { category: true } } },
+      });
+      if (full) await sendRegistrationConfirmationEmail(full);
+    }
 
     return NextResponse.json({ success: true, registration: updatedRegistration });
   } catch (error: any) {

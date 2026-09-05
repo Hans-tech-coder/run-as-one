@@ -72,6 +72,7 @@ DDL through `DIRECT_URL` (see `prisma.config.ts`); the app itself uses the poole
 | `BLOB_READ_WRITE_TOKEN` | **Public** blob store: event banners, race-kit posters, certificate templates |
 | `PROOFS_BLOB_READ_WRITE_TOKEN` | **Private** blob store: payment receipts |
 | `PAYMONGO_SECRET_KEY`, `NEXT_PUBLIC_PAYMONGO_PUBLIC_KEY`, `PAYMONGO_WEBHOOK_SECRET` | PayMongo |
+| `RESEND_API_KEY` | Resend — sends registration confirmation emails from `info@cresendorunningcommunity.com`. Unset in dev just skips the send (see `lib/email.ts`) |
 
 Two blob stores, not one: a store's access level is fixed at creation, so a
 single store cannot hold both public and private blobs.
@@ -165,7 +166,8 @@ logic again.
 | `blob.ts` | Every upload. `uploadPublicFile` (returns a URL) vs `uploadPrivateProof` (returns a **pathname**) + `signedProofUrl`. 4 MB cap, because a Vercel function body caps at 4.5 MB. |
 | `auth.ts` / `jwt.ts` | bcrypt hashing, the `admin_token` httpOnly cookie (1 day), `getAuthCookie()` in server code. |
 | `signed-in-user.ts` | The name and initial the admin sidebars show — read from the record, not the token, so a rename is never stale. |
-| `site-contact.ts` | Site name, contact email, legal "last updated", social channels. **Site-wide details belong here**, destined to become superadmin-editable settings — never inline them in a component. |
+| `site-contact.ts` | Site name, contact email, the `ARCHIVE_EMAIL` every transactional email is blind-copied to, legal "last updated", social channels. **Site-wide details belong here**, destined to become superadmin-editable settings — never inline them in a component. |
+| `email.ts` | Transactional email via Resend, sent from `CONTACT_EMAIL`. Two emails per registration, never one, and they differ in purpose, not just timing: `sendRegistrationReceivedEmail` fires the moment the row is created (`checkout` for online, `checkout/manual` for bank transfer) — before any payment is confirmed — and shows every field submitted (per-runner emergency contact, gender, birthdate, community, etc.) so a typo is caught before payment. `sendRegistrationConfirmationEmail` (the receipt) fires only once status reaches `PAID` — from the PayMongo webhook, or the admin status route once a bank transfer is verified — and stays focused on the money (compact runner list, full cost breakdown), since the received email already covered the data. No artificial delay sits between the two; the PayMongo webhook is itself asynchronous, so "received" always lands first. The HTML template mirrors the app's own look (the real site logo on a dark header, orange→blue gradient accent bar, a color-coded status pill — blue "pending" for received, green "success" for the receipt — instead of plain caption text). **The whole body is one table, and that is the layout strategy — do not split it back into separate tables per section.** Gmail's Android app renders every nested table shrink-to-fit: it sizes each to its own content and ignores the declared width, whether that width is a percentage, a pixel value, an HTML `width` attribute or `table-layout: fixed` (all four were tried; all four failed, as did wrapping each section in a bordered card). Separate tables therefore end up at *different* widths, so a block of short money values stops well short of the right edge while a block holding a long venue name reaches it. Rows of a single table cannot disagree that way — one set of columns means every value right-aligns to the same edge by construction — and the long paragraphs, sitting in that same table as full-width rows, are what push the shared width out to the container. `cardRow()` is the one sanctioned exception: it nests a bordered block inside a full-width row, and **only blocks whose values are long** (event title, venue, email, phone) may go in one, because those fill the width on their own content — which is why they always rendered correctly. Blocks of short values (the money summary, the compact runner list) must stay plain rows of the body table. Every email is blind-copied to `ARCHIVE_EMAIL`, so the team inbox holds a copy of everything the app has sent. Subjects include the order reference so Gmail can't thread two emails together and hide one behind "Show trimmed content". Any layout change here is a mobile-first bug: verify in the Gmail app, since desktop looks fine either way. A send failure is logged and swallowed, never thrown, so a bounced email can't undo a payment. |
 
 ---
 
@@ -262,9 +264,14 @@ These are the user's own standing preferences. Follow them without being asked.
    for superadmin-editable settings — never inline in a component.
 8. **Work must reach the user's dev server.** They test on their own
    `localhost:3000` running the **main checkout**, so anything left in a git
-   worktree is invisible to them. Land it on `main`.
-9. **Weigh storage cost** (Neon's free 0.5 GB tier) before growing the schema.
-10. **Comment the *why*.** This codebase's header comments explain the reasoning
+   worktree is invisible to them. Edit in the main checkout — that alone is
+   enough for them to see the change.
+9. **Never commit or push until the user says so.** Finish the work, verify it,
+   report it, and leave it uncommitted in the working tree. `git commit` and
+   `git push` wait for their explicit command — say plainly that the change is
+   sitting there unstaged rather than assuming a finished change should land.
+10. **Weigh storage cost** (Neon's free 0.5 GB tier) before growing the schema.
+11. **Comment the *why*.** This codebase's header comments explain the reasoning
     behind a decision, not what the code does. Match that voice.
 
 ---
@@ -302,6 +309,11 @@ the results and e-certificate module. Known open threads:
 - Site contact and social links are constants awaiting a **superadmin settings
   screen**; the social icons currently point at `/coming-soon`.
 - PayMongo runs in **test mode**.
+- Registration emails send via **Resend** from
+  `info@cresendorunningcommunity.com` (a Hostinger Titan mailbox; Resend only
+  handles outbound sending, not the inbox) — a "received" email at submission
+  plus a "receipt" email once PAID (see `email.ts`). No results-ready or
+  reminder emails yet.
 - `src/data/mockEvents.ts` is legacy and is no longer the source for real pages.
 
 ---

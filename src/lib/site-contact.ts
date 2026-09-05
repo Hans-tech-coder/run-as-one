@@ -16,6 +16,17 @@ export const CONTACT_EMAIL = 'info@cresendorunningcommunity.com';
 export const SUPPORT_MAILTO = `mailto:${CONTACT_EMAIL}`;
 
 /**
+ * A silent copy of every transactional email lands here, so the team has one
+ * inbox holding every registration and receipt the app has ever sent.
+ *
+ * Blind-copied rather than CC'd: a runner has no reason to see an internal
+ * address on their receipt, and a visible CC invites a reply-all that would
+ * land in the wrong mailbox. Replies already reach the team, because every
+ * email sets Reply-To to CONTACT_EMAIL above.
+ */
+export const ARCHIVE_EMAIL = 'cresendorunningcommunity@gmail.com';
+
+/**
  * The date the Terms and the Privacy Policy were last rewritten.
  *
  * Both pages show it, because a legal page with no date tells a reader nothing

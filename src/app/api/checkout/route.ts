@@ -5,6 +5,7 @@ import crypto from 'crypto';
 import { asDeliveryZone, deliveryFeeFor } from '@/app/events/[slug]/register/delivery';
 import { storedShirtSize, subtotalWithUpcharge } from '@/lib/shirt-size';
 import { hasFinished } from '@/lib/event-schedule';
+import { sendRegistrationReceivedEmail } from '@/lib/email';
 
 export async function POST(request: Request) {
   try {
@@ -147,13 +148,19 @@ export async function POST(request: Request) {
             runningCommunity: runnerCommunity(p),
           }))
         }
-      }
+      },
+      include: { event: true, runners: { include: { category: true } } },
     });
 
     // Clubs nobody has approved yet go to the super admin's queue. This is
     // the only way a row enters that queue, so the list cannot be written to
     // by anyone who has not actually registered.
     await recordWriteInCommunities(participants);
+
+    // Sent now, not after payment: the runner should see their submitted
+    // details are correct before they've even reached PayMongo's page. The
+    // actual receipt only goes out once the webhook confirms PAID.
+    await sendRegistrationReceivedEmail(registration);
 
     const finalSuccessUrl = successUrl.includes('?') ? `${successUrl}&orderRef=${orderRef}` : `${successUrl}?orderRef=${orderRef}`;
     const finalCancelUrl = cancelUrl.includes('?') ? `${cancelUrl}&orderRef=${orderRef}&cancel=true` : `${cancelUrl}?orderRef=${orderRef}&cancel=true`;
