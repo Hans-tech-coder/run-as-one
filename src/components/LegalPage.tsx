@@ -139,17 +139,17 @@ export default function LegalPage({
             of that event is the fastest route, and their details are on the
             event page.
           </p>
-          <div className="flex w-full flex-col items-stretch justify-center gap-3 sm:w-auto sm:flex-row">
+          <div className="flex w-full flex-col items-stretch justify-center gap-3 sm:w-auto sm:flex-row sm:flex-wrap">
             <a
               href={SUPPORT_MAILTO}
-              className="flex min-h-[48px] items-center justify-center gap-2 rounded-[16px] border border-white/10 bg-white/[0.04] px-6 py-3 text-sm text-white no-underline transition-colors duration-200 hover:border-accent-orange/40 sm:text-[0.95rem] hover:bg-white/[0.08]"
+              className="flex min-h-[48px] shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-[16px] border border-white/10 bg-white/[0.04] px-5 py-3 text-sm text-white no-underline transition-colors duration-200 hover:border-accent-orange/40 hover:bg-white/[0.08]"
             >
               <Mail size={18} aria-hidden="true" className="shrink-0 text-accent-orange" />
-              <span className="break-words">{CONTACT_EMAIL}</span>
+              <span>{CONTACT_EMAIL}</span>
             </a>
             <Link
               href="/events"
-              className="btn-gradient group justify-center rounded-[16px] px-6 py-3 text-[0.95rem] no-underline"
+              className="btn-gradient group shrink-0 justify-center whitespace-nowrap rounded-[16px] px-6 py-3 text-[0.95rem] no-underline"
             >
               <span>Browse Events</span>
               <ChevronRight

@@ -51,10 +51,14 @@ export default async function ComingSoonPage({
             </p>
           </div>
 
-          <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row">
+          {/* Both buttons keep their intrinsic width — shrink-0 — and wrap onto
+              a second row rather than squeezing. Letting them shrink is what
+              broke "Browse Events" across two lines beside a much wider email
+              address, leaving one tall button next to one short one. */}
+          <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:flex-wrap">
             <Link
               href="/events"
-              className="btn-gradient group w-full justify-center rounded-[16px] px-8 py-4 text-center text-base no-underline shadow-xl shadow-accent-orange/20 sm:w-auto"
+              className="btn-gradient group w-full shrink-0 justify-center whitespace-nowrap rounded-[16px] px-8 py-4 text-center text-base no-underline shadow-xl shadow-accent-orange/20 sm:w-auto"
             >
               <span>Browse Events</span>
               <ChevronRight
@@ -65,10 +69,10 @@ export default async function ComingSoonPage({
             </Link>
             <a
               href={SUPPORT_MAILTO}
-              className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-[16px] border border-white/10 bg-white/[0.04] px-6 py-4 text-center text-sm text-white no-underline transition-colors duration-200 hover:border-accent-orange/40 sm:text-base hover:bg-white/[0.08] sm:w-auto"
+              className="flex min-h-[56px] w-full shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-[16px] border border-white/10 bg-white/[0.04] px-5 py-4 text-center text-sm text-white no-underline transition-colors duration-200 hover:border-accent-orange/40 hover:bg-white/[0.08] sm:w-auto"
             >
               <Mail size={18} aria-hidden="true" className="shrink-0 text-accent-orange" />
-              <span className="break-words">{CONTACT_EMAIL}</span>
+              <span>{CONTACT_EMAIL}</span>
             </a>
           </div>
         </StatusPanel>

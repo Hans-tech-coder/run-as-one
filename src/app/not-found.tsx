@@ -58,10 +58,10 @@ export default function NotFound() {
             </p>
           </div>
 
-          <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row">
+          <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:flex-wrap">
             <Link
               href="/events"
-              className="btn-gradient group w-full justify-center rounded-[16px] px-8 py-4 text-center text-base no-underline shadow-xl shadow-accent-orange/20 sm:w-auto"
+              className="btn-gradient group w-full shrink-0 justify-center whitespace-nowrap rounded-[16px] px-8 py-4 text-center text-base no-underline shadow-xl shadow-accent-orange/20 sm:w-auto"
             >
               <span>Browse Events</span>
               <ChevronRight
@@ -72,7 +72,7 @@ export default function NotFound() {
             </Link>
             <Link
               href="/"
-              className="flex min-h-[48px] w-full items-center justify-center rounded-[16px] border border-white/10 bg-white/[0.04] px-8 py-4 text-center font-sans text-base font-bold uppercase tracking-[0.05em] text-white no-underline transition-colors duration-200 hover:border-white/20 hover:bg-white/[0.08] sm:w-auto"
+              className="flex min-h-[48px] w-full shrink-0 items-center justify-center whitespace-nowrap rounded-[16px] border border-white/10 bg-white/[0.04] px-8 py-4 text-center font-sans text-base font-bold uppercase tracking-[0.05em] text-white no-underline transition-colors duration-200 hover:border-white/20 hover:bg-white/[0.08] sm:w-auto"
             >
               Back to Home
             </Link>
