@@ -54,6 +54,16 @@ model Event {
   /// What the event sells: "RACE" (distance categories) or "FUN_RUN"
   /// (inclusion packages, no distances).
   eventType                   String         @default("RACE")
+  /// A manual hold on sign-ups, set by the organizer. Distinct from a race
+  /// that is over and from an event whose every option has sold out: those
+  /// two are facts the app works out for itself, this one is a decision — the
+  /// slots and the days both remain, and the organizer has stopped anyway.
+  registrationPaused          Boolean        @default(false)
+  /// What runners are told while the hold is on, in the organizer's own words
+  /// ("Registration reopens once the new singlets arrive"). Null falls back to
+  /// the standard sentence — see src/lib/registration-gate.ts. Never left
+  /// unexplained: a runner turned away deserves a reason.
+  registrationPauseNote       String?
   organizerId                 String
   createdAt                   DateTime       @default(now())
   updatedAt                   DateTime       @updatedAt
@@ -105,6 +115,11 @@ model Category {
   price       Int
   /// Poster showing what a package includes. Races leave this null.
   imageUrl    String?
+  /// How many runners this option can take. Null means uncapped, which is what
+  /// every option was before limits existed. The cap belongs here rather than
+  /// on the Event because a 10K filling up says nothing about the 5K beside
+  /// it: the event closes only once every option has.
+  slotLimit   Int?
   /// What this option gets you — "Race Singlet", "Finisher Medal". Per category
   /// rather than per event, because a 10K and a 5K rarely include the same
   /// things. Empty means the event page shows no inclusions block.
@@ -173,6 +188,12 @@ model Runner {
   updatedAt             DateTime     @updatedAt
   category              Category     @relation(fields: [categoryId], references: [id])
   registration          Registration @relation(fields: [registrationId], references: [id])
+
+  /// Slot limits are counted by grouping these rows per category, on every
+  /// event page and every public listing. Postgres does not index a foreign
+  /// key on its own, so without this the count is a sequential scan of every
+  /// runner the platform has ever taken.
+  @@index([categoryId])
 }
 
 /// The running clubs a runner can pick from at sign-up. One master list across

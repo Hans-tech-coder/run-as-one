@@ -10,6 +10,7 @@ import { upperCaseForStorage } from '@/lib/text-case';
 import { asBankAccounts } from '@/lib/bank-accounts';
 import { uniqueEventSlug } from '@/lib/event-slug';
 import { isCalendarDay } from '@/lib/event-schedule';
+import { asSlotLimit } from '@/lib/registration-gate';
 
 export async function POST(request: Request) {
   try {
@@ -84,6 +85,8 @@ export async function POST(request: Request) {
             // The form posts the textarea as typed; the list is what gets
             // stored, so blank lines and pasted bullets never reach the DB.
             inclusions: asInclusions(cat.inclusions),
+            // Blank, 0 and anything unparseable all mean uncapped.
+            slotLimit: asSlotLimit(cat.slotLimit),
           })),
         },
       },

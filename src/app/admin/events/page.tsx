@@ -4,6 +4,12 @@ import { Plus } from 'lucide-react';
 import db from '@/lib/db';
 import { getAuthCookie } from '@/lib/auth';
 import { redirect } from 'next/navigation';
+import { hasFinished } from '@/lib/event-schedule';
+import {
+  registrationState,
+  takenSlotsByCategory,
+  withSlotCounts,
+} from '@/lib/registration-gate';
 import EventsTableClient from './EventsTableClient';
 
 export default async function AdminEventsPage() {
@@ -21,6 +27,21 @@ export default async function AdminEventsPage() {
     orderBy: { createdAt: 'desc' },
   });
 
+  // Whether each event is taking sign-ups, and why not. Worked out here rather
+  // than in the table because it is a database count: one grouped query across
+  // every option on the page, not one per row.
+  const taken = await takenSlotsByCategory(
+    events.flatMap((event) => event.categories.map((category) => category.id)),
+  );
+  const rows = events.map((event) => ({
+    ...event,
+    registrationState: registrationState(
+      event,
+      withSlotCounts(event.categories, taken),
+      hasFinished(event),
+    ),
+  }));
+
   return (
     <>
       <header className="admin-header">
@@ -28,7 +49,7 @@ export default async function AdminEventsPage() {
       </header>
 
       <div className="admin-content">
-        <EventsTableClient events={events} />
+        <EventsTableClient events={rows} />
       </div>
     </>
   );

@@ -284,6 +284,14 @@
   color: #faad14;
 }
 
+/* For a state that is neither good news nor a warning — a sold-out event, a
+   race that has been run. Green would congratulate and amber would alarm; both
+   would be wrong about a fact that simply is. */
+.status-badge.neutral {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.65);
+}
+
 /* Empty State */
 .empty-state {
   padding: 64px 24px;

@@ -10,6 +10,7 @@ import { upperCaseForStorage } from '@/lib/text-case';
 import { asBankAccounts } from '@/lib/bank-accounts';
 import { uniqueEventSlug } from '@/lib/event-slug';
 import { isCalendarDay } from '@/lib/event-schedule';
+import { asSlotLimit, takenSlotsByCategory } from '@/lib/registration-gate';
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -36,7 +37,19 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     }
 
-    return NextResponse.json(event);
+    // How full each option already is, sent alongside it. An organizer typing
+    // a slot limit needs to know they are capping at 100 an option that 120
+    // runners are already in — the form says so under the field rather than
+    // letting them find out from the public page.
+    const taken = await takenSlotsByCategory(event.categories.map((c) => c.id));
+
+    return NextResponse.json({
+      ...event,
+      categories: event.categories.map((category) => ({
+        ...category,
+        slotsTaken: taken.get(category.id) ?? 0,
+      })),
+    });
   } catch (error) {
     console.error('Fetch event error:', error);
     return NextResponse.json({ error: 'Failed to fetch event' }, { status: 500 });
@@ -52,7 +65,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
     const { id } = await params;
     const data = await request.json();
-    const { title, date, startTime, endTime, location, imageUrl, raceKitImageUrl, description, logisticsPickup, logisticsDeliveryFeeInside, logisticsDeliveryFeeOutside, adminFee, shirtSizeUpcharge, consentWaiver, registrationForm, eventType, certificateTemplate, certificateCoordinates, categories, bankAccounts } = data;
+    const { title, date, startTime, endTime, location, imageUrl, raceKitImageUrl, description, logisticsPickup, logisticsDeliveryFeeInside, logisticsDeliveryFeeOutside, adminFee, shirtSizeUpcharge, consentWaiver, registrationForm, eventType, registrationPaused, registrationPauseNote, certificateTemplate, certificateCoordinates, categories, bankAccounts } = data;
 
     if (!title || !date || !location) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -139,6 +152,11 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
           consentWaiver: asWaiverParagraphs(consentWaiver),
           registrationForm: asRegistrationForm(registrationForm),
           eventType: asEventType(eventType),
+          // The organizer's manual hold on sign-ups. The note is theirs to
+          // write and optional; blank falls back to the standard sentence in
+          // lib/registration-gate.ts rather than leaving a runner unexplained.
+          registrationPaused: Boolean(registrationPaused),
+          registrationPauseNote: registrationPauseNote?.trim() || null,
           certificateTemplate: certificateTemplate || null,
           certificateCoordinates: certificateCoordinates || null,
         }
@@ -174,6 +192,11 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
               // The form posts the textarea as typed; the list is what gets
               // stored, so blank lines and pasted bullets never reach the DB.
               inclusions: asInclusions(cat.inclusions),
+              // Blank, 0 and anything unparseable all mean uncapped. A limit
+              // below what the option already holds is allowed on purpose:
+              // that is how an organizer closes an option early, and the
+              // runners already in it keep their places.
+              slotLimit: asSlotLimit(cat.slotLimit),
             }
           });
         } else {
@@ -184,6 +207,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
               price: toCentavos(cat.price),
               imageUrl: cat.imageUrl || null,
               inclusions: asInclusions(cat.inclusions),
+              slotLimit: asSlotLimit(cat.slotLimit),
               eventId: id,
             }
           });
@@ -200,6 +224,72 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   } catch (error: any) {
     console.error('Update event error:', error);
     return NextResponse.json({ error: error.message || 'Failed to update event' }, { status: 500 });
+  }
+}
+
+/**
+ * The registration hold, on its own.
+ *
+ * Separate from PUT because the events table toggles it in place: sending the
+ * whole event back to flip one boolean would mean the table holding — and
+ * re-posting — every field of a form it does not show, and any of those it got
+ * subtly wrong would be silently written.
+ *
+ * Unlike PUT, this scopes the update to the signed-in organizer's own events.
+ * A pause is reachable from a list rather than from a form that only ever
+ * opened one of their own events, so "who owns this id" is a question that has
+ * to be asked here.
+ */
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const auth = await getAuthCookie();
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { id } = await params;
+    const { registrationPaused, registrationPauseNote } = await request.json();
+
+    if (typeof registrationPaused !== 'boolean') {
+      return NextResponse.json(
+        { error: 'registrationPaused must be true or false.' },
+        { status: 400 }
+      );
+    }
+
+    const event = await db.event.findUnique({
+      where: { id },
+      select: { id: true, organizerId: true },
+    });
+
+    if (!event) {
+      return NextResponse.json({ error: 'Event not found' }, { status: 404 });
+    }
+
+    if (event.organizerId !== auth.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const updated = await db.event.update({
+      where: { id },
+      data: {
+        registrationPaused,
+        // Only written when the caller sent one, so toggling from the events
+        // table never wipes a note the organizer wrote in the edit form.
+        ...(registrationPauseNote === undefined
+          ? {}
+          : { registrationPauseNote: registrationPauseNote?.trim() || null }),
+      },
+      select: { id: true, registrationPaused: true, registrationPauseNote: true },
+    });
+
+    return NextResponse.json(updated);
+  } catch (error: any) {
+    console.error('Pause registration error:', error);
+    return NextResponse.json(
+      { error: error.message || 'Failed to update registration status' },
+      { status: 500 }
+    );
   }
 }
 

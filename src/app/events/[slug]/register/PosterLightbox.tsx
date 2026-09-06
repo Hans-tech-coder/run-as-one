@@ -23,6 +23,7 @@ import { formatPesos } from '@/lib/money';
 export default function PosterLightbox({
   category,
   isSelected,
+  isFull = false,
   onSelect,
   onClose,
 }: {
@@ -33,6 +34,12 @@ export default function PosterLightbox({
     inclusions?: string[] | null;
   };
   isSelected: boolean;
+  /**
+   * Whether this option has reached its slot limit. The picker's own row is
+   * already disabled in that case, and this button would otherwise be a second
+   * way to choose the same sold-out option.
+   */
+  isFull?: boolean;
   onSelect: () => void;
   onClose: () => void;
 }) {
@@ -115,17 +122,25 @@ export default function PosterLightbox({
         <div className="p-4 border-t border-white/10">
           <button
             type="button"
+            disabled={isFull}
             onClick={() => {
               onSelect();
               onClose();
             }}
             className={`w-full min-h-11 rounded-xl font-bold uppercase tracking-wide transition-colors ${
-              isSelected
-                ? 'bg-accent-orange/15 text-accent-orange border border-accent-orange'
-                : 'bg-accent-orange text-black hover:bg-accent-orange/90'
+              isFull
+                ? 'bg-white/5 text-white/50 border border-white/10 cursor-not-allowed'
+                : isSelected
+                  ? 'bg-accent-orange/15 text-accent-orange border border-accent-orange'
+                  : 'bg-accent-orange text-black hover:bg-accent-orange/90'
             }`}
           >
-            {isSelected ? (
+            {isFull ? (
+              // Says which option is gone, not just that something is. The
+              // runner opened this panel to compare, and they are still free
+              // to read what it included and pick another.
+              `${category.name} Is Full`
+            ) : isSelected ? (
               <span className="flex items-center justify-center gap-2">
                 <Check size={18} aria-hidden="true" /> Selected
               </span>

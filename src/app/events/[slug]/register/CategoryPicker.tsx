@@ -29,6 +29,15 @@ import FieldError from '@/components/ui/FieldError';
  * Shared by both wizards. The two had identical copies of the distance grid,
  * and a package picker that existed in only one of them would mean fun runs
  * silently work under PayMongo but not bank transfer.
+ *
+ * A capped option that has filled up stays on the list rather than vanishing
+ * from it: a runner who came for the 10K needs to see that the 10K is what is
+ * full, not be left wondering whether they misremembered the distances. It is
+ * dimmed, chipped FULL, and its radio is disabled — and when a capped option is
+ * down to its last slots, the row says how many, because a group of four has to
+ * learn that three remain before they fill in four forms rather than after.
+ * The counts come from lib/registration-gate.ts, and the checkout routes count
+ * again inside their write: this picker is a courtesy, not the gate.
  */
 export default function CategoryPicker({
   event,
@@ -85,13 +94,19 @@ export default function CategoryPicker({
       >
         {event.categories.map((cat: any) => {
           const isSelected = selectedId === cat.id;
+          // Annotated by the register page from lib/registration-gate.ts. An
+          // event with no caps sets neither, and every row behaves as before.
+          const isFull = Boolean(cat.isFull);
+          const slotsLeft: number | null = cat.isLastCall ? cat.slotsLeft : null;
           return (
             <div
               key={cat.id}
               className={`relative flex items-stretch gap-3 border rounded-[16px] p-3 transition-all ${
-                isSelected
-                  ? 'border-accent-orange bg-accent-orange/10 shadow-[0_0_20px_rgba(255,107,43,0.15)]'
-                  : 'border-white/10 bg-black/40 hover:border-white/30'
+                isFull
+                  ? 'border-white/5 bg-black/20 opacity-60'
+                  : isSelected
+                    ? 'border-accent-orange bg-accent-orange/10 shadow-[0_0_20px_rgba(255,107,43,0.15)]'
+                    : 'border-white/10 bg-black/40 hover:border-white/30'
               }`}
             >
               {cat.imageUrl && (
@@ -115,12 +130,20 @@ export default function CategoryPicker({
                     rather than inset-0 because inset-0 stops at the padding
                     box and would leave the 1px border ring dead. The two
                     buttons below sit above the overlay on z-10. */}
-                <label className="flex flex-wrap items-center gap-x-3 gap-y-1 cursor-pointer py-1 after:absolute after:-inset-px after:rounded-[16px]">
+                <label
+                  className={`flex flex-wrap items-center gap-x-3 gap-y-1 py-1 after:absolute after:-inset-px after:rounded-[16px] ${
+                    isFull ? 'cursor-not-allowed' : 'cursor-pointer'
+                  }`}
+                >
                   <input
                     type="radio"
                     name={groupName}
                     className="sr-only peer"
                     checked={isSelected}
+                    /* Disabled rather than merely styled: the row is still
+                       reachable by keyboard, and a full option must refuse the
+                       press there too. */
+                    disabled={isFull}
                     onChange={() => onSelect(cat.id)}
                   />
                   <span
@@ -137,7 +160,11 @@ export default function CategoryPicker({
                       reading as part of the name instead of drifting across
                       the row toward the price. */}
                   <span className="min-w-[7rem] flex-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <span className="font-bold text-base sm:text-lg text-white uppercase tracking-wide break-words">
+                    <span
+                      className={`font-bold text-base sm:text-lg uppercase tracking-wide break-words ${
+                        isFull ? 'text-white/60' : 'text-white'
+                      }`}
+                    >
                       {cat.name}
                     </span>
                     {cat.distance && (
@@ -145,8 +172,24 @@ export default function CategoryPicker({
                         {cat.distance}
                       </span>
                     )}
+                    {/* Same chip shape as the distance, so the row gains a
+                        fact rather than a new kind of ornament. */}
+                    {isFull && (
+                      <span className="shrink-0 text-xs font-bold text-white/70 bg-white/10 border border-white/10 px-2.5 py-0.5 rounded-full uppercase tracking-wide">
+                        Full
+                      </span>
+                    )}
+                    {slotsLeft !== null && (
+                      <span className="shrink-0 text-xs font-bold text-accent-orange bg-accent-orange/15 px-2.5 py-0.5 rounded-full uppercase tracking-wide">
+                        {slotsLeft} slot{slotsLeft === 1 ? '' : 's'} left
+                      </span>
+                    )}
                   </span>
-                  <span className="ml-auto text-lg sm:text-xl font-bold text-accent-orange shrink-0">
+                  <span
+                    className={`ml-auto text-lg sm:text-xl font-bold shrink-0 ${
+                      isFull ? 'text-white/40' : 'text-accent-orange'
+                    }`}
+                  >
                     ₱{formatPesos(cat.price)}
                   </span>
                   {isSelected && (
@@ -175,6 +218,7 @@ export default function CategoryPicker({
         <PosterLightbox
           category={posterFor}
           isSelected={selectedId === posterFor.id}
+          isFull={Boolean(posterFor.isFull)}
           onSelect={() => onSelect(posterFor.id)}
           onClose={() => setPosterFor(null)}
         />

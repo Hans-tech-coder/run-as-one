@@ -33,6 +33,21 @@ interface EventsTableClientProps {
   events: any[];
 }
 
+/**
+ * What the Registration column says, and in what tone.
+ *
+ * Green for open and amber for paused, matching the badges on the registrants
+ * screen. Full and finished are neither: they are not warnings and not good
+ * news, they are simply what is true, so they take the neutral badge added for
+ * them in Admin.css.
+ */
+const REGISTRATION_STATES = {
+  OPEN: { label: 'Open', tone: 'success' },
+  PAUSED: { label: 'Paused', tone: 'pending' },
+  FULL: { label: 'Full', tone: 'neutral' },
+  FINISHED: { label: 'Race Over', tone: 'neutral' },
+} as const;
+
 export default function EventsTableClient({ events }: EventsTableClientProps) {
   // Table state
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -46,6 +61,10 @@ export default function EventsTableClient({ events }: EventsTableClientProps) {
   const router = useRouter();
   // Shadows window.alert on purpose — see AlertProvider.
   const { alert } = useAlert();
+
+  // Which event's pause toggle is mid-flight, so its menu item can say so and
+  // refuse a second press. One id rather than a boolean: the menu is per row.
+  const [pausingId, setPausingId] = useState<string | null>(null);
 
   // Delete Modal State
   const [deletingEvent, setDeletingEvent] = useState<any | null>(null);
@@ -76,6 +95,61 @@ export default function EventsTableClient({ events }: EventsTableClientProps) {
       setIsDeleteClosing(false);
       setDeletingEvent(null);
     }, 150);
+  };
+
+  /**
+   * Flips the organizer's manual hold on sign-ups.
+   *
+   * A PATCH rather than a re-save of the whole event: this table does not hold
+   * the other fields, and posting a form it never rendered would be the way to
+   * silently overwrite them. The row updates from the server's answer rather
+   * than optimistically — a hold that looks on but is not would be the worst of
+   * the three possible outcomes.
+   */
+  const handleTogglePause = async (event: any) => {
+    const nextPaused = event.registrationState !== 'PAUSED';
+    setPausingId(event.id);
+    try {
+      const res = await fetch(`/api/admin/events/${event.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ registrationPaused: nextPaused }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error || `The server rejected the request (HTTP ${res.status}).`);
+      }
+
+      setTableEvents(prev =>
+        prev.map((row: any) =>
+          row.id === event.id
+            ? {
+                ...row,
+                registrationPaused: nextPaused,
+                // Resuming hands the row back to whatever the counts say, and a
+                // resumed event whose options are all full is FULL, not open.
+                registrationState: nextPaused
+                  ? 'PAUSED'
+                  : row.registrationState === 'PAUSED'
+                    ? 'OPEN'
+                    : row.registrationState,
+              }
+            : row,
+        ),
+      );
+
+      // The public pages read this on the server, so the change only reaches
+      // them on the next request — which is what this refresh causes.
+      router.refresh();
+    } catch (error: any) {
+      await alert({
+        title: nextPaused ? 'Registration not paused' : 'Registration not resumed',
+        message: `${event.title} is unchanged. ${error?.message ?? 'The request did not reach the server.'}`,
+      });
+    } finally {
+      setPausingId(null);
+    }
   };
 
   const handleEventDeleteConfirm = async () => {
@@ -178,12 +252,26 @@ export default function EventsTableClient({ events }: EventsTableClientProps) {
       cell: ({ row }) => row.original.location,
     },
     {
+      id: "registration",
+      header: "Registration",
+      accessorFn: (row) => row.registrationState ?? 'OPEN',
+      cell: ({ row }) => {
+        const state = REGISTRATION_STATES[
+          (row.original.registrationState ?? 'OPEN') as keyof typeof REGISTRATION_STATES
+        ];
+        return <span className={`status-badge ${state.tone} whitespace-nowrap`}>{state.label}</span>;
+      },
+    },
+    {
       id: "actions",
       header: "Actions",
       cell: ({ row }) => (
         <div className="action-dropdown-container flex">
-          <EventActionsMenu 
-            eventId={row.original.id} 
+          <EventActionsMenu
+            eventId={row.original.id}
+            registrationState={row.original.registrationState ?? 'OPEN'}
+            isPausing={pausingId === row.original.id}
+            onTogglePause={() => handleTogglePause(row.original)}
             onDelete={() => {
               setDeletingEvent(row.original);
               requestAnimationFrame(() => setIsDeleteOpen(true));
@@ -192,7 +280,7 @@ export default function EventsTableClient({ events }: EventsTableClientProps) {
         </div>
       ),
     },
-  ], []);
+  ], [pausingId]);
 
   const table = useReactTable({
     data: tableEvents,

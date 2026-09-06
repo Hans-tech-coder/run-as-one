@@ -16,8 +16,8 @@ commits, not us.
 | --- | --- | --- | --- |
 | A | 12, 5, 6 | none | Done |
 | B | 4, 7, 13 | none | Done |
-| C | 2, 3 | yes | **Next** |
-| D | 1, 10 | yes | Not started |
+| C | 2, 3 | yes | Done |
+| D | 1, 10 | yes | **Next** |
 | E | 11, 9 (+ security fix) | yes | Not started |
 | F | 14 | yes | Not started |
 | G | 8 | yes | Not started |
@@ -158,7 +158,47 @@ silent.
 
 ---
 
-## Batch C — registration gates (migration)
+## Batch C — registration gates (migration) — **Done**
+
+Both items landed as planned, on one migration
+(`20260906120000_registration_gates`) and one new module,
+`src/lib/registration-gate.ts`, which owns the counting, the wording and the
+gate. Five things are worth carrying forward:
+
+- **The lock, not just the transaction.** The plan said "enforce inside a
+  transaction that re-counts before writing". A transaction alone is not enough
+  at Postgres's default isolation: two orders for the last three slots would
+  each count three and each be allowed, because neither sees the other's
+  uncommitted rows. `reserveSlots` therefore takes `SELECT ... FOR UPDATE` on
+  the capped `Category` rows *before* counting, ordered by id so two orders for
+  the same event cannot deadlock. Uncapped events take no lock and run no count.
+- **A `Runner(categoryId)` index came with it.** Postgres does not index a
+  foreign key by itself, and this count now runs on the event page, both
+  wizards, both checkout routes and every public listing.
+- **The picker says how many are left, not only whether it is full.** A group of
+  four picking an option with three slots left would otherwise fill in four
+  forms and be refused at checkout. Under twenty left (`LAST_CALL_SLOTS`), the
+  option carries the number; above it, a running count on a 500-slot race is
+  noise. The checkout error names the option and the shortfall either way.
+- **Paused events got the badge too.** The plan asked for a FULL badge on
+  `EventGrid`; a paused event still showing "Register Now" would have been the
+  same lie in a different colour, so one mechanism carries both, and the button
+  becomes a plain "View Event" that still opens the page where the reason is.
+- **The pause toggle is a menu item, not a switch.** `/admin/events` had no
+  switch primitive to copy, and inventing one would have broken the "a new
+  control copies an existing one" rule. It is an item in the existing
+  `EventActionsMenu` plus a Registration column showing OPEN / PAUSED / FULL /
+  RACE OVER, on the existing `status-badge` (a `neutral` variant was added for
+  the two states that are neither good news nor a warning). The toggle sends a
+  new `PATCH /api/admin/events/[id]` rather than re-posting the whole event, and
+  the *note* is written in the edit form, where there is room for it.
+
+Also worth knowing, found while verifying: **`/` and `/events` are prerendered
+at build time**, so on Vercel their badges are a deploy-time snapshot. That
+predates this batch — a newly published event has the same problem — and the
+dynamic pages and both checkout routes are always current, so nothing can be
+registered against a stale card. Noted in `PROJECT_GUIDE.md` §10; making those
+two pages dynamic is a decision, not a fix to slip in here.
 
 ### 2. Per-category slot limit
 The limit belongs to the **`Category`**, not the event: 500 slots on the 10K and

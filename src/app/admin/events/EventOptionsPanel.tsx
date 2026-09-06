@@ -22,6 +22,10 @@ import { upperCaseAsTyped } from '@/lib/text-case';
  * The type can be switched freely while an event has no registrants. Once
  * someone has paid it locks, because a 10K entry that silently becomes a
  * package changes what an existing runner already bought.
+ *
+ * Each row also carries its own slot limit. It belongs to the option rather
+ * than the event because filling the 10K is not the same as closing the race —
+ * see src/lib/registration-gate.ts, which owns the counting.
  */
 
 const TYPE_OPTIONS: {
@@ -86,7 +90,11 @@ export default function EventOptionsPanel({
   const words = wording(eventType);
   const locked = Boolean(lockedReason);
 
-  const update = (index: number, field: keyof CategoryDraft, value: string | number) => {
+  const update = (
+    index: number,
+    field: keyof CategoryDraft,
+    value: string | number,
+  ) => {
     const next = [...options];
     next[index] = { ...next[index], [field]: value };
     onChange(next);
@@ -223,6 +231,36 @@ export default function EventOptionsPanel({
                     required
                     min={0}
                   />
+                </div>
+
+                {/* The cap is per option, not per event: 500 singlets in the
+                    10K says nothing about the 5K, and when the 10K fills the
+                    5K stays open. Blank rather than 0 for "no limit" — 0 would
+                    read as an option nobody can enter. */}
+                <div className="form-group">
+                  <label className="form-label">
+                    Slot Limit{' '}
+                    <span className="text-xs opacity-70">- leave blank for no limit</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={row.slotLimit ?? ''}
+                    onChange={e =>
+                      update(
+                        idx,
+                        'slotLimit',
+                        e.target.value === '' ? '' : Number(e.target.value),
+                      )
+                    }
+                    className="form-input"
+                    min={1}
+                    placeholder="e.g. 500"
+                  />
+                  <p className="text-xs opacity-70 mt-1">
+                    {typeof row.slotsTaken === 'number' && row.slotsTaken > 0
+                      ? `${row.slotsTaken} runner${row.slotsTaken === 1 ? ' is' : 's are'} already in this ${words.rowLabel.toLowerCase()}. Paid and pending registrations both hold a slot.`
+                      : 'Paid and pending registrations both hold a slot — a bank transfer takes its place the moment it is submitted, not when you verify it.'}
+                  </p>
                 </div>
 
                 <InclusionsField

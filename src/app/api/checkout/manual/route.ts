@@ -11,6 +11,11 @@ import {
 } from '@/lib/registration-codes';
 import { storedShirtSize, subtotalWithUpcharge } from '@/lib/shirt-size';
 import { hasFinished } from '@/lib/event-schedule';
+import {
+  SlotsUnavailableError,
+  pauseNote,
+  reserveSlots,
+} from '@/lib/registration-gate';
 import { sendRegistrationReceivedEmail } from '@/lib/email';
 import {
   optionalUpperCaseForStorage,
@@ -81,6 +86,15 @@ export async function POST(request: Request) {
       );
     }
 
+    // The organizer's manual hold. Same reasoning as the finished check and
+    // the consent gate: the event page and the wizard both stop offering
+    // registration, and neither of them is the last word — a tab opened before
+    // the hold went on will still post. The runner gets the organizer's own
+    // wording, not a bare refusal.
+    if (event.registrationPaused) {
+      return NextResponse.json({ error: pauseNote(event) }, { status: 409 });
+    }
+
     // Both codes go into the database uppercase, like every other coded
     // column (lib/registration-codes.ts), and through their guards rather than
     // straight off the request: a stale tab still posts the old lowercase
@@ -130,51 +144,58 @@ export async function POST(request: Request) {
     // 2. Generate Order Reference
     const orderRef = `RM-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
 
-    // 3. Save to database
-    const registration = await prisma.registration.create({
-      data: {
-        eventId,
-        orderRef,
-        customerEmail,
-        customerName: storedCustomerName,
-        logisticsMethod: storedLogisticsMethod,
-        // Only meaningful for delivery; pickup leaves it null.
-        deliveryZone: zone,
-        deliveryAddress: storedDeliveryAddress,
-        deliveryFee,
-        subtotal,
-        platformFee,
-        transactionFee,
-        totalAmount,
-        paymentMethod: storedPaymentMethod,
-        proofOfPayment: proofPathname,
-        transactionNumber: transactionNumber,
-        status: 'PENDING', // Waiting for manual validation by admin
-        // Checked above; recorded here as the organizer's evidence that the
-        // waiver was agreed to at the moment of this specific submission.
-        consentGiven: true,
-        consentGivenAt: new Date(),
-        runners: {
-          create: participants.map((p: any) => ({
-            categoryId: p.categoryId,
-            firstName: upperCaseForStorage(p.firstName),
-            lastName: upperCaseForStorage(p.lastName),
-            // Not uppercased: the local part of an address is case-sensitive
-            // on some mail servers, so touching it can stop delivery.
-            email: p.email,
-            phone: p.phone,
-            gender: upperCaseForStorage(p.gender),
-            birthdate: p.birthdate,
-            singletSize: storedShirtSize(p, event.categories),
-            emergencyContactName: upperCaseForStorage(p.emergencyContactName),
-            emergencyContactPhone: p.emergencyContactPhone,
-            medicalConditions: optionalUpperCaseForStorage(p.medicalConditions),
-            // Blank answers land on INDEPENDENT RUNNER; the field is optional.
-            runningCommunity: runnerCommunity(p),
-          }))
-        }
-      },
-      include: { event: true, runners: { include: { category: true } } },
+    // 3. Save to database. Slot limits are checked inside the write, not
+    // before it: a count taken before the create is a count two simultaneous
+    // orders can both pass. See reserveSlots, which locks the capped options
+    // first.
+    const registration = await prisma.$transaction(async (tx) => {
+      await reserveSlots(tx, event.categories, participants);
+
+      return tx.registration.create({
+        data: {
+          eventId,
+          orderRef,
+          customerEmail,
+          customerName: storedCustomerName,
+          logisticsMethod: storedLogisticsMethod,
+          // Only meaningful for delivery; pickup leaves it null.
+          deliveryZone: zone,
+          deliveryAddress: storedDeliveryAddress,
+          deliveryFee,
+          subtotal,
+          platformFee,
+          transactionFee,
+          totalAmount,
+          paymentMethod: storedPaymentMethod,
+          proofOfPayment: proofPathname,
+          transactionNumber: transactionNumber,
+          status: 'PENDING', // Waiting for manual validation by admin
+          // Checked above; recorded here as the organizer's evidence that the
+          // waiver was agreed to at the moment of this specific submission.
+          consentGiven: true,
+          consentGivenAt: new Date(),
+          runners: {
+            create: participants.map((p: any) => ({
+              categoryId: p.categoryId,
+              firstName: upperCaseForStorage(p.firstName),
+              lastName: upperCaseForStorage(p.lastName),
+              // Not uppercased: the local part of an address is case-sensitive
+              // on some mail servers, so touching it can stop delivery.
+              email: p.email,
+              phone: p.phone,
+              gender: upperCaseForStorage(p.gender),
+              birthdate: p.birthdate,
+              singletSize: storedShirtSize(p, event.categories),
+              emergencyContactName: upperCaseForStorage(p.emergencyContactName),
+              emergencyContactPhone: p.emergencyContactPhone,
+              medicalConditions: optionalUpperCaseForStorage(p.medicalConditions),
+              // Blank answers land on INDEPENDENT RUNNER; the field is optional.
+              runningCommunity: runnerCommunity(p),
+            }))
+          }
+        },
+        include: { event: true, runners: { include: { category: true } } },
+      });
     });
 
     // Clubs nobody has approved yet go to the super admin's queue. This is
@@ -196,6 +217,14 @@ export async function POST(request: Request) {
     // A rejected file is the runner's mistake, not ours — tell them what to fix.
     if (error instanceof UploadError) {
       return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+    // The order no longer fits — which option and by how much is already in
+    // the message, so it goes back as it is rather than as a generic failure.
+    // The proof is already in blob storage at this point and is left there:
+    // the runner is about to resubmit, and deleting a receipt they may have
+    // paid against is the worse mistake.
+    if (error instanceof SlotsUnavailableError) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
     }
     console.error('Manual Checkout Error:', error);
     return NextResponse.json(

@@ -3,14 +3,22 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
-import { MoreVertical, Users, Trophy, Edit, Trash2 } from 'lucide-react';
+import { MoreVertical, Users, Trophy, Edit, Trash2, PauseCircle, PlayCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-export default function EventActionsMenu({ 
-  eventId, 
-  onDelete 
-}: { 
+export default function EventActionsMenu({
+  eventId,
+  registrationState = 'OPEN',
+  isPausing = false,
+  onTogglePause,
+  onDelete
+}: {
   eventId: string;
+  /** Why sign-ups are closed, or OPEN — see src/lib/registration-gate.ts. */
+  registrationState?: 'OPEN' | 'FINISHED' | 'PAUSED' | 'FULL';
+  /** True while this row's pause request is in flight. */
+  isPausing?: boolean;
+  onTogglePause?: () => void;
   onDelete?: () => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -103,6 +111,17 @@ export default function EventActionsMenu({
     }, closeMs);
   };
 
+  const isPaused = registrationState === 'PAUSED';
+  // A race that has been run cannot be paused — it is already closed, and
+  // offering a hold on it would suggest sign-ups could come back.
+  const canPause = registrationState !== 'FINISHED' && Boolean(onTogglePause);
+
+  const handleTogglePause = (e: React.MouseEvent) => {
+    e.preventDefault();
+    closeMenu();
+    onTogglePause?.();
+  };
+
   const handleDelete = (e: React.MouseEvent) => {
     e.preventDefault();
     closeMenu();
@@ -153,8 +172,26 @@ export default function EventActionsMenu({
           <Edit size={16} />
           Edit Event
         </Link>
+        {canPause && (
+          <button
+            onClick={handleTogglePause}
+            disabled={isPausing}
+            className={`action-dropdown-item w-full flex items-center gap-3 px-4 py-2 text-sm text-left ${isPausing ? 'opacity-50 cursor-not-allowed' : ''}`}
+            role="menuitem"
+          >
+            {isPaused ? <PlayCircle size={16} /> : <PauseCircle size={16} />}
+            {/* "Sign-Ups" rather than "Registration": the menu is 175px
+                wide, and the longer word wrapped every one of these onto two
+                lines while every other item sat on one. */}
+            {isPausing
+              ? 'Saving'
+              : isPaused
+                ? 'Resume Sign-Ups'
+                : 'Pause Sign-Ups'}
+          </button>
+        )}
         <div className="action-dropdown-divider"></div>
-        <button 
+        <button
           onClick={handleDelete}
           className={`action-dropdown-item danger w-full flex items-center gap-3 px-4 py-2 text-sm text-left`}
           role="menuitem"

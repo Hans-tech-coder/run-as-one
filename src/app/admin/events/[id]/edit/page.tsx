@@ -56,6 +56,11 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
     shirtSizeUpcharge: 100,
     consentWaiver: '',
     registrationForm: DEFAULT_REGISTRATION_FORM as RegistrationForm,
+    // The organizer's manual hold on sign-ups, and what runners are told while
+    // it is on. Blank note means the standard sentence — see
+    // src/lib/registration-gate.ts.
+    registrationPaused: false,
+    registrationPauseNote: '',
     certificateTemplate: '',
     certificateCoordinates: JSON.stringify({ nameY: 50, timeY: 60, catY: 70 }),
   });
@@ -101,6 +106,8 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
           shirtSizeUpcharge: toPesos(data.shirtSizeUpcharge ?? 0),
           consentWaiver: formatWaiverParagraphs(data.consentWaiver),
           registrationForm: asRegistrationForm(data.registrationForm),
+          registrationPaused: Boolean(data.registrationPaused),
+          registrationPauseNote: data.registrationPauseNote || '',
           certificateTemplate: uploadedTemplate(data.certificateTemplate),
           certificateCoordinates: data.certificateCoordinates || JSON.stringify({ nameY: 50, timeY: 60, catY: 70 }),
         });
@@ -128,6 +135,10 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
             // Stored as an array, edited as lines — the same conversion the
             // money fields get, in the other direction.
             inclusions: formatInclusions(c.inclusions),
+            // Null means uncapped, and a number input cannot hold null.
+            slotLimit: c.slotLimit ?? '',
+            // Read-only, so the organizer can see what they are capping.
+            slotsTaken: c.slotsTaken ?? 0,
           })));
         }
       } catch (err) {
@@ -538,6 +549,51 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
             </div>
             <div className="admin-panel-content">
               <div className="flex flex-col gap-6">
+                {/* A manual hold, distinct from an event whose options have all
+                    sold out: the slots and the days both remain, and the
+                    organizer has stopped anyway. It is enforced in both
+                    checkout routes, not only here, because a tab opened before
+                    the hold went on will still post. */}
+                <div className="form-group">
+                  <div className="checkbox-group">
+                    <input
+                      type="checkbox"
+                      id="registrationPaused"
+                      checked={formData.registrationPaused}
+                      onChange={e => setFormData({...formData, registrationPaused: e.target.checked})}
+                      className="w-5 h-5 accent-accent-blue"
+                    />
+                    <label htmlFor="registrationPaused" className="text-primary font-medium">
+                      Pause Registration
+                    </label>
+                  </div>
+                  <p className="text-xs opacity-70 mt-1">
+                    Stops new sign-ups immediately. The event stays listed and its
+                    page stays readable — runners are told it is paused rather than
+                    finding a button that fails.
+                  </p>
+                </div>
+
+                {formData.registrationPaused && (
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="registrationPauseNote">
+                      What Runners Are Told <span className="text-xs opacity-70">- optional</span>
+                    </label>
+                    <textarea
+                      id="registrationPauseNote"
+                      value={formData.registrationPauseNote}
+                      onChange={e => setFormData({...formData, registrationPauseNote: e.target.value})}
+                      className="form-input"
+                      rows={3}
+                      placeholder="e.g. Sign-ups reopen on 15 April once the new singlets arrive."
+                    />
+                    <p className="text-xs opacity-70 mt-1">
+                      Shown on the event page and in place of the registration form.
+                      Leave it blank and we say sign-ups are paused and may reopen.
+                    </p>
+                  </div>
+                )}
+
                 <div className="form-group">
                   <label className="form-label">Admin Fee (₱) <span className="text-xs opacity-70">- charged per runner</span></label>
                   <input

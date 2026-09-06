@@ -3,6 +3,7 @@ import HeroSection from '@/components/HeroSection';
 import HomeEventBrowser from '@/components/HomeEventBrowser';
 import db from '@/lib/db';
 import { soonestFirst, upcomingEvents } from '@/lib/event-schedule';
+import { forListing } from '@/lib/registration-gate';
 
 const HOME_EVENT_LIMIT = 6;
 
@@ -15,14 +16,22 @@ export default async function Home() {
   // Registration", and a race that has already been run is neither. Finished
   // races move to /results — see src/lib/event-schedule.ts.
   const upcoming = upcomingEvents();
-  const [events, totalEvents] = await Promise.all([
+  const [openForRegistration, totalEvents] = await Promise.all([
     db.event.findMany({
       where: upcoming,
       orderBy: soonestFirst,
       take: HOME_EVENT_LIMIT,
+      // The slot limits are what decide whether a card is badged FULL;
+      // forListing counts against them and then drops them, so nothing about
+      // capacity is shipped to the browser.
+      include: { categories: { select: { id: true, slotLimit: true } } },
     }),
     db.event.count({ where: upcoming }),
   ]);
+
+  // A race that is full or paused keeps its place here — it is still upcoming,
+  // and this section is the site's front door to it.
+  const events = await forListing(openForRegistration);
 
   return (
     <div className="relative overflow-hidden w-full flex flex-col items-center">

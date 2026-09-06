@@ -18,8 +18,17 @@ export interface CategoryDraft {
   price: number;
   imageUrl?: string;
   inclusions?: string;
+  /**
+   * How many runners this option may take. An empty string is the form's way
+   * of saying "no cap" — a number input cannot hold null, and 0 would mean
+   * something different — and asSlotLimit() turns it into the null the column
+   * stores. `slotsTaken` is read-only, filled in by the edit form from the
+   * server so an organizer capping an option can see what is already in it.
+   */
+  slotLimit?: number | '';
+  slotsTaken?: number;
 }
 
 export function blankCategory(): CategoryDraft {
-  return { name: '', distance: '', price: 0, imageUrl: '', inclusions: '' };
+  return { name: '', distance: '', price: 0, imageUrl: '', inclusions: '', slotLimit: '' };
 }

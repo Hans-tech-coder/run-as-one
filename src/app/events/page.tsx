@@ -3,6 +3,7 @@ import Link from 'next/link';
 import EventGrid from '@/components/EventGrid';
 import db from '@/lib/db';
 import { soonestFirst, upcomingEvents } from '@/lib/event-schedule';
+import { forListing } from '@/lib/registration-gate';
 import { Calendar, CalendarCheck2, ChevronRight, Trophy } from 'lucide-react';
 
 export default async function EventsPage() {
@@ -14,14 +15,23 @@ export default async function EventsPage() {
   // something different when the platform has never had a race than when every
   // race it has had is already finished, and the runner deserves to be told
   // which one they are looking at.
-  const [events, totalEvents, eventsWithResults] = await Promise.all([
+  const [upcoming, totalEvents, eventsWithResults] = await Promise.all([
     db.event.findMany({
       where: upcomingEvents(),
       orderBy: soonestFirst,
+      // The slot limits are what decide whether a card is badged FULL;
+      // forListing counts against them and then drops them, so nothing about
+      // capacity is shipped to the browser.
+      include: { categories: { select: { id: true, slotLimit: true } } },
     }),
     db.event.count(),
     db.event.count({ where: { raceResults: { some: {} } } }),
   ]);
+
+  // A race that is full or on hold stays in this listing rather than
+  // disappearing from it: it is still upcoming, and a runner who heard about it
+  // deserves to find it and read why they cannot enter.
+  const events = await forListing(upcoming);
 
   return (
     <div className="relative overflow-hidden w-full flex flex-col items-center">

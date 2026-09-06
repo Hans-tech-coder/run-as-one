@@ -16,6 +16,12 @@ type DBEvent = {
   date: string;
   location: string;
   imageUrl: string;
+  /**
+   * Set by `forListing` in lib/registration-gate.ts when this race cannot be
+   * signed up for: every option sold out, or the organizer paused it. Absent on
+   * /results, where every event is finished and the card offers times instead.
+   */
+  registrationClosed?: 'PAUSED' | 'FULL' | null;
 }
 
 /**
@@ -32,8 +38,23 @@ const ACTIONS: Record<EventCardAction, { label: string; path: (slug: string) => 
   results: { label: 'View Results', path: (slug) => `/events/${slug}/results` },
 };
 
+/** The corner chip, and the word the button uses instead of "Register Now". */
+const CLOSURES = {
+  FULL: { badge: 'Full', label: 'View Event' },
+  PAUSED: { badge: 'Paused', label: 'View Event' },
+} as const;
+
 function EventCard({ event, action }: { event: DBEvent; action: EventCardAction }) {
   const { label, path } = ACTIONS[action];
+  // A race nobody can enter still links to its own page: that page is where
+  // the reason lives, and the categories, inclusions and race kit are all
+  // still worth reading. What changes is that the card stops promising a
+  // sign-up it cannot deliver — the button drops the gradient it shares with
+  // every live card and says what it actually does.
+  const closure =
+    action === 'register' && event.registrationClosed
+      ? CLOSURES[event.registrationClosed]
+      : null;
 
   return (
     <div className="relative flex flex-col overflow-hidden rounded-[20px] border border-white/5 aspect-[4/5] transition-all duration-300 cursor-pointer hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(0,0,0,0.5)] group">
@@ -41,6 +62,13 @@ function EventCard({ event, action }: { event: DBEvent; action: EventCardAction 
         <EventImage src={event.imageUrl} alt={event.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" iconSize={48} />
         <div className="absolute inset-0 z-20 bg-gradient-to-t from-[#0f0f14]/95 via-[#0f0f14]/70 to-[#0f0f14]/10"></div>
       </div>
+      {/* Over the image rather than down beside the title, so a runner
+          scanning a grid of six reads it without reading anything else. */}
+      {closure && (
+        <span className="absolute right-4 top-4 z-30 rounded-full border border-white/20 bg-black/70 px-3 py-1 text-xs font-bold uppercase tracking-widest text-white backdrop-blur-sm">
+          {closure.badge}
+        </span>
+      )}
       <div className="relative z-30 flex flex-col justify-end h-full p-5 sm:p-8">
         <h2 className="font-sans text-2xl sm:text-3xl font-bold uppercase mb-4 leading-tight text-white tracking-tight">
           {event.title}
@@ -53,9 +81,15 @@ function EventCard({ event, action }: { event: DBEvent; action: EventCardAction 
             <MapPin size={18} /> <span>{event.location}</span>
           </div>
         </div>
-        <Link href={path(event.slug)} className="btn-gradient w-full py-4 text-base sm:text-lg rounded-[16px] group shadow-xl shadow-accent-orange/20 no-underline">
-          {label} <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform inline-block ml-1" />
-        </Link>
+        {closure ? (
+          <Link href={path(event.slug)} className="w-full flex items-center justify-center gap-2 py-4 text-base sm:text-lg rounded-[16px] border border-white/15 bg-white/[0.06] font-bold uppercase tracking-wider text-white no-underline transition-colors hover:border-white/30 hover:bg-white/10 group">
+            {closure.label} <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform inline-block" />
+          </Link>
+        ) : (
+          <Link href={path(event.slug)} className="btn-gradient w-full py-4 text-base sm:text-lg rounded-[16px] group shadow-xl shadow-accent-orange/20 no-underline">
+            {label} <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform inline-block ml-1" />
+          </Link>
+        )}
       </div>
     </div>
   );

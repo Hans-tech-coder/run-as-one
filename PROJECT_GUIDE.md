@@ -117,12 +117,15 @@ shape:
 - **Event** — title, unique **`slug`**, `date` (**string `YYYY-MM-DD`**, not
   DateTime), location, imagery, logistics fees, `adminFee`, `shirtSizeUpcharge`,
   `consentWaiver` (string[] of paragraphs), `registrationForm`
-  (`ONLINE` | `BANK_TRANSFER`), `eventType` (`RACE` | `FUN_RUN`), certificate
-  template + coordinates. Owns `Category[]`, `BankAccount[]`, `Registration[]`,
-  `RaceResult[]`.
+  (`ONLINE` | `BANK_TRANSFER`), `eventType` (`RACE` | `FUN_RUN`),
+  `registrationPaused` + `registrationPauseNote` (the organizer's manual hold on
+  sign-ups and what runners are told), certificate template + coordinates. Owns
+  `Category[]`, `BankAccount[]`, `Registration[]`, `RaceResult[]`.
 - **Category** — what a runner buys. A `RACE` event's categories carry a
   `distance` (`"10K"`); a `FUN_RUN`'s carry a package `imageUrl` and no distance.
-  `inclusions` is a string[]. `price` in centavos.
+  `inclusions` is a string[]. `price` in centavos. `slotLimit` caps how many
+  runners it can take (null = uncapped) — per option rather than per event,
+  because a full 10K says nothing about the 5K beside it.
 - **BankAccount** — per event, not per organizer: bank/account name, number kept
   exactly as typed, optional QR image, `sortOrder`.
 - **Registration** — one order. `orderRef` unique; all amounts centavos
@@ -132,7 +135,8 @@ shape:
   Owns `Runner[]`.
 - **Runner** — one participant on an order: name, contact, gender, birthdate,
   `singletSize`, emergency contact, medical notes, `runningCommunity` (free-text
-  snapshot, defaults to `"INDEPENDENT RUNNER"`).
+  snapshot, defaults to `"INDEPENDENT RUNNER"`). Indexed on `categoryId`, which
+  is how taken slots are counted.
 - **RunningCommunity** — the shared master club list. `slug` is the uppercased
   name and carries uniqueness; `status` is `PENDING` (a runner's write-in) or
   `APPROVED` (appears in pickers). Rejecting deletes the row.
@@ -153,6 +157,7 @@ logic again.
 | --- | --- |
 | `money.ts` | **All money is integer centavos.** Convert pesos→centavos when data *enters*, centavos→pesos only when *displayed*, never in between. `toCentavos`, `toPesos`, `formatPesos` (no ₱ symbol; add it at the call site). |
 | `event-schedule.ts` | The line between upcoming and finished. "Today" is **Asia/Manila**, not the server's UTC. A race stays upcoming through race day itself. `upcomingEvents()`/`finishedEvents()` return Prisma `where`s; `soonestFirst`/`mostRecentFirst` the orderings; `hasFinished()` the per-event check; `formatEventDay(Short)` and `formatEventTime` for display. `isCalendarDay` guards the `YYYY-MM-DD` format at the API door. |
+| `registration-gate.ts` | **Whether an event is taking sign-ups, and why not.** Three things close registration and a runner turned away must be told which: the race has been run (that line stays in `event-schedule.ts`), every option is full, or the organizer paused it. A cap is per `Category` (`slotLimit`), so `everyOptionIsFull` is what closes an event — one uncapped option keeps it open. **A slot is held by a `PAID` *or* `PENDING` registration**, because a bank transfer sits pending for days and counting only PAID would oversell every event that takes them. `takenSlotsByCategory` counts in one grouped query (the same call inside a transaction when a checkout route passes its `tx`), `withSlotCounts` does the arithmetic (`isFull`, and `isLastCall` under `LAST_CALL_SLOTS` = 20, which is when the picker starts naming the number), `registrationState` gives the one answer every screen asks for, `pauseNote` falls back to standard wording so a hold is never unexplained, and `forListing` tags public cards and drops the categories so capacity data never ships to the browser. **`reserveSlots` is the gate.** Both checkout routes call it inside the transaction that writes the registration: it locks the capped `Category` rows `FOR UPDATE` (ordered by id, so two orders cannot deadlock) *before* counting, because a check made before the write is one two simultaneous orders both pass. It throws `SlotsUnavailableError` carrying a message that names the option and the shortfall — "FULL PACKAGE has only 2 slots left and you entered 3 runners" — which both wizards show as-is. |
 | `event-slug.ts` | Public event URLs. `slugifyEventTitle` → `uniqueEventSlug` on write; `eventByParam` matches slug **or** legacy cuid on read, and `canonicalEventPath` redirects old cuid links to the slug. |
 | `event-type.ts` | `RACE` vs `FUN_RUN`. `asEventType` guards untrusted input (defaults to `RACE`); `sellsPackages(event)` is the branch the forms and wizards use. |
 | `registration-form.ts` | `ONLINE` vs `BANK_TRANSFER` checkout. `asRegistrationForm` defaults to `ONLINE`; `offersBankTransfer`. |
@@ -211,7 +216,7 @@ reject clubs) · `/superadmin/[...missing]`.
 | `checkout/manual` | POST | Bank transfer: multipart, proof file → private blob |
 | `webhooks/paymongo` | POST | HMAC-verified; marks the registration `PAID` |
 | `upload` | POST | Organizer-only image upload (public store) |
-| `admin/events`, `admin/events/[id]` | POST / GET, PUT, DELETE | Event CRUD including categories and bank accounts |
+| `admin/events`, `admin/events/[id]` | POST / GET, PUT, PATCH, DELETE | Event CRUD including categories and bank accounts. `PATCH` is the registration hold on its own (the events table toggles it without re-posting a form it never rendered) and is scoped to the signed-in organizer's own events |
 | `admin/events/[id]/results/upload` | POST | CSV/XLSX results import; dedupes by bib, computes seconds and the three ranks |
 | `admin/registrations/[id]/status` | PATCH | Confirm or reject a manual payment |
 | `admin/runners/[id]`, `admin/runners/bulk-delete` | PUT/DELETE, POST | Registrant editing |
@@ -234,9 +239,12 @@ reject clubs) · `/superadmin/[...missing]`.
 - **Never trust client amounts.** `checkout` and `checkout/manual` refetch the
   event and recompute the delivery fee, platform fee, and subtotal (including the
   shirt upcharge) before writing or billing. Mismatches are rejected.
-- **Server-side gates, not just UI ones.** Consent (`consentGiven !== true`) and
-  the finished-race check (`hasFinished`) are enforced in the API, because a tab
-  left open yesterday will still POST.
+- **Server-side gates, not just UI ones.** Consent (`consentGiven !== true`),
+  the finished-race check (`hasFinished`), the organizer's registration hold and
+  the per-category slot limits are all enforced in the API, because a tab left
+  open yesterday will still POST. The slot check runs *inside* the write
+  transaction and locks the capped category rows first (`reserveSlots`), since a
+  count taken before the write is a count two simultaneous orders both pass.
 - Payment proofs are **private** blobs, served only through
   `/api/admin/proof/[id]` with a roughly five-minute signed URL.
 - Passwords are bcrypt-hashed; the session cookie is httpOnly, `sameSite=lax`,
@@ -343,6 +351,13 @@ Known open threads:
   recipients, so the ceiling is roughly 50 registrations a day; making that
   ceiling visible rather than silent is Batch F of `IMPROVEMENTS_PLAN.md`.
 - `src/data/mockEvents.ts` is legacy and is no longer the source for real pages.
+- **`/` and `/events` are prerendered at build time** (they take no dynamic
+  API), so on Vercel their cards — including the new FULL and PAUSED badges —
+  are a snapshot of the last deploy rather than live. This predates the badges
+  and applies equally to a newly published event; the event page, the register
+  page and both checkout routes are dynamic and always current, so nothing can
+  be *registered* against a stale listing. Making those two pages dynamic is a
+  decision that has not been taken yet.
 
 ---
 
