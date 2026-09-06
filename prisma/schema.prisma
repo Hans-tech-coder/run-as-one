@@ -170,6 +170,29 @@ model Registration {
   consentGiven      Boolean   @default(false)
   /// When consentGiven was recorded. Null whenever consentGiven is false.
   consentGivenAt    DateTime?
+  /// The full name the person submitting typed as their digital signature,
+  /// stored UPPERCASE like every other registrant field. A tick records only
+  /// that a box was clicked; a name typed by hand is the thing an organizer
+  /// can hold up afterwards and say who agreed.
+  ///
+  /// It has to match one of the runners on this order (see
+  /// lib/consent-signature.ts) rather than any name at all -- one member of a
+  /// group registers for everyone, so demanding the *first* runner would stop
+  /// whoever is actually doing the paperwork. Null on registrations made
+  /// before this was asked for: they were never asked, which is not the same
+  /// as having refused.
+  consentSignature  String?
+  /// What the organizer's payment validator wrote about this order, and who
+  /// wrote it when. Internal only -- the runner never sees it and no email
+  /// goes out; an assigned staff member reaches out by hand. It is where
+  /// "deposit slip is for the wrong amount" lives, so the next person to open
+  /// the row does not start the same phone call over again.
+  remarks           String?
+  /// Who last wrote the remarks, stored as their name rather than a relation
+  /// to the account: it is a line in a log, and it has to keep reading
+  /// correctly if that account is later removed.
+  remarksBy         String?
+  remarksAt         DateTime?
   event             Event     @relation(fields: [eventId], references: [id])
   runners           Runner[]
 }

@@ -3,7 +3,8 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   Search, Filter, Download, Eye, X, Trash2,
-  ChevronLeft, ChevronRight, ChevronFirst, ChevronLast, Columns, ChevronUp, ChevronDown, CheckCircle, Check
+  ChevronLeft, ChevronRight, ChevronFirst, ChevronLast, Columns, ChevronUp, ChevronDown, CheckCircle, Check,
+  MessageSquare, MessageSquareText
 } from 'lucide-react';
 import RegistrantActionsMenu from './RegistrantActionsMenu';
 import { useAlert } from '@/components/ui/AlertProvider';
@@ -52,6 +53,15 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isDeleteClosing, setIsDeleteClosing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Remarks Modal State. The note belongs to the registration, not the
+  // runner, so the row is only how the organizer reached it — a group of five
+  // shares one note, and the modal says so.
+  const [remarkingRunner, setRemarkingRunner] = useState<any | null>(null);
+  const [remarksDraft, setRemarksDraft] = useState('');
+  const [isRemarksOpen, setIsRemarksOpen] = useState(false);
+  const [isRemarksClosing, setIsRemarksClosing] = useState(false);
+  const [isSavingRemarks, setIsSavingRemarks] = useState(false);
 
   // Bulk Delete Modal State
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
@@ -105,6 +115,84 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
       console.error(e);
     } finally {
       setUpdatingId(null);
+    }
+  };
+
+  const runnersOnOrder = (runner: any) =>
+    runners.filter(r => r.registrationId === runner.registrationId).length;
+
+  const openRemarksModal = (runnerId: string) => {
+    const runner = runners.find(r => r.id === runnerId);
+    if (!runner) return;
+    setRemarkingRunner(runner);
+    setRemarksDraft(runner.remarks || '');
+    setIsRemarksOpen(true);
+  };
+
+  const closeRemarksModal = () => {
+    setIsRemarksOpen(false);
+    setIsRemarksClosing(true);
+    setTimeout(() => {
+      setIsRemarksClosing(false);
+      setRemarkingRunner(null);
+      setRemarksDraft('');
+    }, 150);
+  };
+
+  const handleRemarksSave = async () => {
+    if (!remarkingRunner) return;
+    const registrationId = remarkingRunner.registrationId;
+    const text = remarksDraft.trim();
+
+    setIsSavingRemarks(true);
+    try {
+      const res = await fetch(`/api/admin/registrations/${registrationId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ remarks: text }),
+      });
+
+      if (res.ok) {
+        const { registration } = await res.json();
+        // Every runner on the order carries the same note, so all of their
+        // rows are updated — otherwise the icon would light up on one member
+        // of a group and stay grey on the other four.
+        setRunners(runners.map(r => r.registrationId === registrationId ? {
+          ...r,
+          remarks: registration.remarks,
+          remarksBy: registration.remarksBy,
+          remarksAt: registration.remarksAt,
+        } : r));
+        // The detail modal, if it is the one open behind this, is holding a
+        // copy of the row rather than reading it back out of the list.
+        setViewingRunner((current: any) =>
+          current && current.registrationId === registrationId
+            ? {
+                ...current,
+                remarks: registration.remarks,
+                remarksBy: registration.remarksBy,
+                remarksAt: registration.remarksAt,
+              }
+            : current
+        );
+        closeRemarksModal();
+      } else {
+        const { error } = await res.json().catch(() => ({ error: '' }));
+        alert({
+          variant: 'error',
+          title: 'Remarks Not Saved',
+          message: error || 'The remarks could not be saved. Please try again.',
+        });
+      }
+    } catch (e) {
+      console.error(e);
+      alert({
+        variant: 'error',
+        title: 'Remarks Not Saved',
+        message: 'Something went wrong while saving the remarks. Please try again.',
+      });
+    } finally {
+      setIsSavingRemarks(false);
     }
   };
 
@@ -367,8 +455,20 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
     {
       id: "actions",
       header: "Actions",
+      // Both controls sit at the start of the cell, under the column label,
+      // rather than pushed to the row's right edge (PROJECT_GUIDE §8.6).
       cell: ({ row }) => (
-        <div className="action-dropdown-container">
+        <div className="action-dropdown-container flex items-center gap-1">
+          <button
+            onClick={() => openRemarksModal(row.original.id)}
+            className={`icon-btn ${row.original.remarks ? 'primary' : ''}`}
+            title={row.original.remarks ? 'Remarks on file' : 'Add remarks'}
+            aria-label={row.original.remarks ? 'Edit remarks' : 'Add remarks'}
+          >
+            {/* A different icon, not just a different colour: colour alone is
+                the one signal a colour-blind organizer cannot read. */}
+            {row.original.remarks ? <MessageSquareText size={16} /> : <MessageSquare size={16} />}
+          </button>
           <RegistrantActionsMenu 
             runnerId={row.original.id}
             registrationId={row.original.registrationId}
@@ -384,7 +484,7 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
       enableSorting: false,
       enableHiding: false,
     },
-  ], [updatingId]);
+  ], [updatingId, runners]);
 
   const table = useReactTable({
     data: runners,
@@ -907,6 +1007,43 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
                       </span>
                     )}
                   </p>
+                  <p className="flex flex-col">
+                    <span className="text-gray-500">Signed By</span>
+                    {/* The name typed under the tick. Registrations taken
+                        before a signature was asked for say so plainly rather
+                        than showing an empty line that reads like a bug. */}
+                    <span className={`font-medium ${viewingRunner.consentSignature ? 'text-white' : 'text-gray-500 italic'}`}>
+                      {viewingRunner.consentSignature || 'Not asked at the time'}
+                    </span>
+                  </p>
+                </div>
+
+                {/* The validator's notes. Internal - this block has no
+                    equivalent anywhere the runner can see, and nothing here
+                    emails them. */}
+                <div className="mt-6">
+                  <div className="flex items-center justify-between gap-4 mb-2">
+                    <p className="text-gray-500 text-sm m-0">Remarks (internal)</p>
+                    <button
+                      onClick={() => openRemarksModal(viewingRunner.id)}
+                      className="text-xs font-medium text-accent-blue hover:underline bg-transparent border-none cursor-pointer p-0"
+                    >
+                      {viewingRunner.remarks ? 'Edit remarks' : 'Add remarks'}
+                    </button>
+                  </div>
+                  {viewingRunner.remarks ? (
+                    <div className="rounded-lg border border-white/10 bg-black/30 p-4">
+                      <p className="text-sm text-white whitespace-pre-wrap m-0">{viewingRunner.remarks}</p>
+                      {(viewingRunner.remarksBy || viewingRunner.remarksAt) && (
+                        <p className="text-xs text-gray-500 mt-3 m-0">
+                          {viewingRunner.remarksBy || 'Unknown'}
+                          {viewingRunner.remarksAt && ` \u00b7 ${new Date(viewingRunner.remarksAt).toLocaleString()}`}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500 italic m-0">No remarks yet.</p>
+                  )}
                 </div>
                   
                 {viewingRunner.isBankTransfer && (
@@ -1196,6 +1333,94 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
               className="px-5 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
             >
               {isBulkDeleting ? 'Deleting...' : 'Delete Selected'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/*
+        Remarks Modal.
+
+        Built from the same panel the edit and delete modals use rather than a
+        browser prompt(): an OS dialog ignores the dark palette entirely and
+        blocks the thread, which is exactly why AlertProvider replaced
+        window.alert. It is not AlertModal itself because that dialog carries a
+        message, not an input - a textarea inside its ReactNode message would be
+        captured at enqueue time and go stale on the first keystroke.
+
+        Internal by design. Saving a note sends nothing to the runner; an
+        assigned staff member follows up by hand.
+      */}
+      <div
+        className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
+          isRemarksOpen && !isRemarksClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+      >
+        <div
+          className={`t-modal w-full max-w-lg bg-[#111] border border-white/10 rounded-2xl shadow-2xl flex flex-col ${isRemarksOpen ? 'is-open' : ''} ${isRemarksClosing ? 'is-closing' : ''}`}
+        >
+          <div className="p-6 border-b border-white/10 flex justify-between items-start gap-4">
+            <div>
+              <h3 className="text-xl font-semibold text-white m-0">Payment Remarks</h3>
+              {remarkingRunner && (
+                <p className="text-sm text-gray-400 mt-1 m-0">
+                  Order {remarkingRunner.orderRef} &middot;{' '}
+                  {runnersOnOrder(remarkingRunner) > 1
+                    ? `${runnersOnOrder(remarkingRunner)} runners`
+                    : remarkingRunner.name}
+                </p>
+              )}
+            </div>
+            <button onClick={closeRemarksModal} className="text-gray-400 hover:text-white transition-colors bg-transparent border-none cursor-pointer p-0">
+              <X size={20} />
+            </button>
+          </div>
+
+          <div className="p-6 space-y-3">
+            <label htmlFor="registration-remarks" className="block text-sm text-gray-400">
+              What did you find when you checked this payment?
+            </label>
+            <textarea
+              id="registration-remarks"
+              value={remarksDraft}
+              onChange={e => setRemarksDraft(e.target.value)}
+              rows={5}
+              placeholder="e.g. Deposit slip is for ₱1,200 but the order total is ₱1,500. Called the runner on 09/06."
+              className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-white/30 resize-y"
+            />
+            <p className="text-xs text-gray-500 m-0">
+              Internal only. The runner is never shown this and no email is sent
+              {remarkingRunner && runnersOnOrder(remarkingRunner) > 1
+                ? '. It applies to every runner on this order.'
+                : '.'}
+            </p>
+            {remarkingRunner?.remarksBy && remarkingRunner?.remarksAt && (
+              <p className="text-xs text-gray-500 m-0">
+                Last written by {remarkingRunner.remarksBy} on{' '}
+                {new Date(remarkingRunner.remarksAt).toLocaleString()}.
+              </p>
+            )}
+          </div>
+
+          <div className="p-6 border-t border-white/10 flex justify-end gap-3 bg-black/20">
+            <button
+              type="button"
+              onClick={closeRemarksModal}
+              className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white transition-colors bg-transparent border-none cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleRemarksSave}
+              disabled={isSavingRemarks || (!remarksDraft.trim() && !remarkingRunner?.remarks)}
+              className="px-6 py-2 bg-white text-black rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors disabled:opacity-50"
+            >
+              {isSavingRemarks
+                ? 'Saving...'
+                : !remarksDraft.trim() && remarkingRunner?.remarks
+                  ? 'Clear Remarks'
+                  : 'Save Remarks'}
             </button>
           </div>
         </div>

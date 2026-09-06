@@ -133,8 +133,11 @@ shape:
 - **Registration** — one order. `orderRef` unique; all amounts centavos
   (`subtotal`, `deliveryFee`, `platformFee`, `transactionFee`, `totalAmount`);
   `status` (`PAID`, `PENDING`…), `paymentMethod`, `proofOfPayment` (private blob
-  **pathname**, not URL), `transactionNumber`, `consentGiven` + `consentGivenAt`.
-  Owns `Runner[]`.
+  **pathname**, not URL), `transactionNumber`, `consentGiven` + `consentGivenAt` + `consentSignature`
+  (the full name typed under the tick, which must match a runner on the order —
+  see `consent-signature.ts`), and `remarks` + `remarksBy` + `remarksAt` (the
+  payment validator's **internal** notes; the runner never sees them and no
+  email is built on them). Owns `Runner[]`.
 - **Runner** — one participant on an order: `runnerNo` (their 1..n position on
   the order, and the tail of the reference they quote — see `order-ref.ts`;
   unique per registration), name, contact, gender, birthdate, `singletSize`,
@@ -169,6 +172,7 @@ logic again.
 | `app/events/[slug]/register/delivery.ts` | Race-kit delivery tiers — the **money** only. A fee of `0` means **not offered**. `deliveryTiers`, `deliveryFeeFor`. Shared by both wizards so they can never charge differently. The zone codes, their guard and their labels moved to `registration-codes.ts`; this module re-exports them. |
 | `app/events/[slug]/register/validation.ts` | What step 1 requires. Returns *which* fields are wrong, driving the red states, the summary dialog, and where the caret lands. Missing answers are most of it; a phone number that is present but the wrong length for its country is the exception, and it is named as such ("Mobile number must be 10 digits") rather than reported as blank. |
 | `consent-waiver.ts` | The liability/media/data-privacy waiver. Organizers may override it per event; the default wording is supplied here. **Never present an empty waiver.** |
+| `consent-signature.ts` | **Who signed the waiver, and what counts as their name.** The tick records that a box was clicked; the typed signature records a person, which is the thing an organizer can hold up afterwards. The rule is that it must match **any one runner on the order**, not the first: a group registers together constantly, and demanding runner 1's name would stop whoever is actually doing the paperwork from signing their own. `normalizeSignature` decides what is not part of a name — case, runs of whitespace, and the full stops and commas around a suffix — so "DELA CRUZ, JR." and "Dela Cruz Jr" are one signature; a hyphen survives, because it is part of the name. Either name order is accepted (`JUAN DELA CRUZ` / `DELA CRUZ JUAN`), since Filipino forms ask for the surname first about as often as last. `consentSignatureError` returns the two failures separately — an empty box is asked for the name, a filled one quotes what was typed and names an actual runner as the example — per the project's rule that validation says what is wrong. Both wizards and both checkout routes import it, because a signature accepted on screen and refused by the server would be worse than the checkbox alone. |
 | `running-community.ts` + `running-community-store.ts` | Club names, `INDEPENDENT RUNNER`, and the pending/approved flow for runner write-ins. `asRunnerCommunity` is what a runner's club is stored as: normalized, then **uppercased** like every other registrant field (see `text-case.ts`), with a blank answer landing on `INDEPENDENT RUNNER`. The picker snaps a typed club to an approved entry's own casing *before* that, so matching is still on the list's terms. |
 | `inclusions.ts` | Free text (one item per line) ⇄ stored string[] for what a category includes. |
 | `text-case.ts` | **Registrant text is stored UPPERCASE** — first and last name, gender, emergency contact name, delivery address, medical conditions, running community. The stored value, not a CSS transform: the same runner is read back by the admin table, the runner modal, the CSV export, both emails and the e-certificate, and a `text-transform` fixes exactly one of those. `upperCaseAsTyped` runs in both wizards and the admin's runner-edit modal (it does not trim, or a space between two given names would vanish as it is typed); `upperCaseForStorage` / `optionalUpperCaseForStorage` run in both checkout routes and the runner PUT, because a tab left open can POST past the UI. **Email is never uppercased** — the local part is case-sensitive on some mail servers — and neither are passwords, phone numbers, blob URLs, or most of what an organizer types about their own event. The **category / package name is the exception** and *is* uppercased (in `EventOptionsPanel` as it is typed, and in both admin event routes on the write): it is printed beside runner data in the registrants table, the export and the emails, so it has to match them. A closed picker carries the casing in its own options (`GenderField` offers `MALE`/`FEMALE`), and a **sample** placeholder is uppercase too — `JUAN`, `DELA CRUZ` — so the hint matches what will appear in the box. A placeholder that *describes the shape of the answer* counts as a sample and is uppercased too — the delivery address reads "HOUSE/UNIT NO., STREET, BARANGAY, CITY/MUNICIPALITY, PROVINCE, ZIP CODE". Only a placeholder that tells the runner what to **do** stays in sentence case: "Select Gender", "Select or type a size", the club picker's "Type to search, or add your own", and the email address. Where such an instruction **quotes a sample**, that quoted part alone is uppercased — medical conditions reads "e.g. ASTHMA, ALLERGIES (Leave blank if none)". |
@@ -224,7 +228,7 @@ reject clubs) · `/superadmin/[...missing]`.
 | `upload` | POST | Organizer-only image upload (public store) |
 | `admin/events`, `admin/events/[id]` | POST / GET, PUT, PATCH, DELETE | Event CRUD including categories and bank accounts. `PATCH` is the registration hold on its own (the events table toggles it without re-posting a form it never rendered) and is scoped to the signed-in organizer's own events |
 | `admin/events/[id]/results/upload` | POST | CSV/XLSX results import; dedupes by bib, computes seconds and the three ranks |
-| `admin/registrations/[id]/status` | PATCH | Confirm or reject a manual payment |
+| `admin/registrations/[id]/status` | PATCH | Confirm or reject a manual payment, and write the validator's internal `remarks`. Takes either or both; the status is guarded against a fixed list and the receipt email fires only on the *transition* into `PAID`, so a later remarks-only PATCH cannot send a second receipt. Auth-checked and scoped to the signed-in organizer's own events — **this route had none at all until Batch E**, which made it the one way for anyone on the internet to mark a registration `PAID` |
 | `admin/runners/[id]`, `admin/runners/bulk-delete` | PUT/DELETE, POST | Registrant editing |
 | `admin/proof/[id]` | GET | Auth-checked redirect to a short-lived signed proof URL |
 | `admin/promos` | POST | Promo codes |
@@ -357,6 +361,11 @@ Known open threads:
   recipients, so the ceiling is roughly 50 registrations a day; making that
   ceiling visible rather than silent is Batch F of `IMPROVEMENTS_PLAN.md`.
 - `src/data/mockEvents.ts` is legacy and is no longer the source for real pages.
+- A **Prisma schema change needs the dev server restarted** before it takes
+  effect: `next dev` bundles the generated client, so a running server keeps
+  the pre-migration data model and rejects a write to a brand-new column with
+  a 500 even though the column exists. `npx prisma generate` alone is not
+  enough.
 - **`/` and `/events` are prerendered at build time** (they take no dynamic
   API), so on Vercel their cards — including the new FULL and PAUSED badges —
   are a snapshot of the last deploy rather than live. This predates the badges

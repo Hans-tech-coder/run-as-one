@@ -34,7 +34,8 @@ import BankDetailsModal from "./BankDetailsModal";
 import SizeGuideModal from "./SizeGuideModal";
 import CategoryPicker from "./CategoryPicker";
 import CommunityPicker from "./CommunityPicker";
-import ConsentWaiver from "./ConsentWaiver";
+import ConsentWaiver, { SIGNATURE_FIELD_ID } from "./ConsentWaiver";
+import { consentSignatureError } from "@/lib/consent-signature";
 import PhoneField from "./PhoneField";
 import GenderField from "./GenderField";
 import { resolveConsentWaiver } from "@/lib/consent-waiver";
@@ -186,6 +187,16 @@ export default function RegistrationWizardClient({
   // resuming a cancelled PayMongo attempt: consent is re-affirmed on every
   // submission attempt, not carried over from an earlier one.
   const [consentGiven, setConsentGiven] = useState(false);
+  // The typed signature that goes with the tick. Held here rather than in
+  // ConsentWaiver so the submit handlers can check it before they send, and so
+  // it can be sent — a signature the server never sees is not evidence of
+  // anything. Its error only appears once the runner has left the box or tried
+  // to submit: complaining that a name is not a runner's while it is still
+  // half-typed would be true of every name on its way in.
+  const [consentSignature, setConsentSignature] = useState("");
+  const [signatureTouched, setSignatureTouched] = useState(false);
+  const signatureProblem = consentSignatureError(consentSignature, participants);
+  const signatureError = signatureTouched ? signatureProblem : undefined;
   const consentWaiverParagraphs = resolveConsentWaiver(event);
   // Set by the organizer on this event. Empty means bank transfer cannot
   // be offered at all — there is nowhere for the money to go.
@@ -490,6 +501,20 @@ export default function RegistrationWizardClient({
       return;
     }
 
+    // The waiver is signed, not only ticked. The name is checked against the
+    // runners on this order rather than against the first of them, because one
+    // person routinely registers a whole group — see lib/consent-signature.ts.
+    if (signatureProblem) {
+      setSignatureTouched(true);
+      await alert({
+        variant: "info",
+        title: "Signature Required",
+        message: signatureProblem,
+      });
+      focusField(SIGNATURE_FIELD_ID);
+      return;
+    }
+
     if (paymentMethod === "BANK_TRANSFER") {
       setStep(4);
       return;
@@ -519,6 +544,7 @@ export default function RegistrationWizardClient({
           transactionFee: transactionFee,
           paymentMethod: paymentMethod,
           consentGiven: consentGiven,
+          consentSignature: consentSignature,
         }),
       });
 
@@ -568,6 +594,20 @@ export default function RegistrationWizardClient({
       return;
     }
 
+    // The waiver is signed, not only ticked. The name is checked against the
+    // runners on this order rather than against the first of them, because one
+    // person routinely registers a whole group — see lib/consent-signature.ts.
+    if (signatureProblem) {
+      setSignatureTouched(true);
+      await alert({
+        variant: "info",
+        title: "Signature Required",
+        message: signatureProblem,
+      });
+      focusField(SIGNATURE_FIELD_ID);
+      return;
+    }
+
     setIsProcessing(true);
     try {
       const formData = new FormData();
@@ -591,6 +631,7 @@ export default function RegistrationWizardClient({
       formData.append("paymentMethod", paymentMethod);
       formData.append("transactionNumber", transactionNumber);
       formData.append("consentGiven", String(consentGiven));
+      formData.append("consentSignature", consentSignature);
 
       // Append complex data as JSON string
       formData.append("participants", JSON.stringify(participants));
@@ -1492,6 +1533,10 @@ export default function RegistrationWizardClient({
                   paragraphs={consentWaiverParagraphs}
                   checked={consentGiven}
                   onChange={setConsentGiven}
+                  signature={consentSignature}
+                  onSignatureChange={setConsentSignature}
+                  signatureError={signatureError}
+                  onSignatureBlur={() => setSignatureTouched(true)}
                 />
 
                 <div className="form-actions mt-10 flex justify-end">

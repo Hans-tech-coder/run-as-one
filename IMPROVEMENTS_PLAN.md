@@ -18,8 +18,8 @@ commits, not us.
 | B | 4, 7, 13 | none | Done |
 | C | 2, 3 | yes | Done |
 | D | 1, 10 | yes | Done |
-| E | 11, 9 (+ security fix) | yes | **Next** |
-| F | 14 | yes | Not started |
+| E | 11, 9 (+ security fix) | yes | Done |
+| F | 14 | yes | **Next** |
 | G | 8 | yes | Not started |
 
 Batch F is deliberately ahead of the voucher work: the app is going to
@@ -284,7 +284,54 @@ says *where*.
 
 ---
 
-## Batch E — consent and payment review (migration)
+## Batch E — consent and payment review (migration) — **Done**
+
+Landed on one migration (`20260906160000_consent_signature_and_remarks`) and
+one new module, `src/lib/consent-signature.ts`. Five things are worth carrying
+forward:
+
+- **The match is deliberately loose about everything that is not the name.**
+  Case, runs of whitespace, and the punctuation around a suffix are stripped
+  before comparing, so "DELA CRUZ, JR." and "Dela Cruz Jr" are one signature —
+  and **either name order is accepted**, because Filipino forms ask for the
+  surname first about as often as last, and refusing `DELA CRUZ MARIA` would
+  reject a correct name on a technicality. A hyphen survives normalization: it
+  is part of the name, not typing noise.
+- **The error is shown on blur, not on every keystroke.** Every correct name is
+  a mismatch while it is half-typed, so complaining as the runner types would
+  be true and useless. The inline message under the field quotes what was typed
+  and names an actual runner as the example; the same string is what the server
+  returns, so the two can never say different things.
+- **The signature does not disable the submit button.** The consent tick still
+  does, but a filled box holding the wrong name has something specific to say,
+  and a greyed-out button says nothing — so clicking submit is what produces
+  the named error and puts the caret back in the box.
+- **The status route's receipt email now fires on the transition only.** It
+  used to send whenever a PATCH carried `status: 'PAID'`. With remarks sharing
+  that route, a second PATCH on an already-paid registration would have sent
+  the runner a second receipt, so the send is now gated on the previous status.
+  The status itself is guarded against a fixed list, like every other coded
+  column.
+- **A remark belongs to the order, not the row it was opened from.** A group of
+  five shares one note, so saving updates every one of their rows and the modal
+  says "2 runners" rather than naming one of them. `remarksBy` stores the
+  organizer's *name*, not their id: it is a line in a log and has to keep
+  reading correctly after an account is removed.
+
+Also worth knowing, found while verifying: **a Prisma schema change needs the
+dev server restarted.** `next dev` bundles the generated client, so a running
+server keeps the pre-migration data model and 500s on a write to a brand-new
+column even though `prisma generate` has already run and the column exists.
+Noted in `PROJECT_GUIDE.md` §10.
+
+And one thing deliberately left alone: three admin routes
+(`admin/events/[id]`, `admin/runners/[id]`, `admin/runners/bulk-delete`) test
+`auth.role !== 'SUPERADMIN'` where the role is actually spelled `SUPER_ADMIN`,
+so the super-admin bypass in them never fires. It fails *closed* — those routes
+still scope to the organizer — so it is a correctness wart rather than a hole,
+and fixing it is a change to who can reach what, which is not this batch's
+call. The new code in the status route uses the correct spelling.
+
 
 ### 11. Typed signature on the disclaimer
 Beyond the existing checkbox, the runner types their full name as a digital

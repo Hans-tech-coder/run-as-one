@@ -91,7 +91,21 @@ export default async function RegistrantsPage({ params }: { params: Promise<{ id
         proofOfPayment: reg.proofOfPayment,
         transactionNumber: reg.transactionNumber,
         consentGiven: reg.consentGiven,
-        consentGivenAt: reg.consentGivenAt
+        consentGivenAt: reg.consentGivenAt,
+        // The name the person submitting typed under the tick. Null on any
+        // registration made before it was asked for, which the detail modal
+        // says rather than leaving a blank line.
+        consentSignature: reg.consentSignature,
+        // The payment validator's own notes on this order. Internal, so they
+        // ride the row but never the CSV export the organizer hands out and
+        // never an email. Carried on every runner of a group because the note
+        // is about the order all of them are on.
+        remarks: reg.remarks,
+        remarksBy: reg.remarksBy,
+        // Serialized here rather than in the client component: the table is a
+        // client island and a Date crossing that boundary arrives as a string
+        // anyway, so it is made one deliberately.
+        remarksAt: reg.remarksAt ? reg.remarksAt.toISOString() : null
       });
     });
   });

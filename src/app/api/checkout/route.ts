@@ -22,6 +22,7 @@ import {
   optionalUpperCaseForStorage,
   upperCaseForStorage,
 } from '@/lib/text-case';
+import { consentSignatureError } from '@/lib/consent-signature';
 
 export async function POST(request: Request) {
   try {
@@ -43,7 +44,8 @@ export async function POST(request: Request) {
       platformFee,
       transactionFee,
       paymentMethod,
-      consentGiven
+      consentGiven,
+      consentSignature
     } = body;
 
     // The wizard already disables its submit button without this, but the
@@ -54,6 +56,20 @@ export async function POST(request: Request) {
         { error: 'Please agree to the Disclaimer, Consent & Data Privacy Waiver to continue.' },
         { status: 400 }
       );
+    }
+
+    // The signature is the other half of that gate, and it is checked here for
+    // the same reason: a tick can be posted by anything, while a name that has
+    // to match a runner on this very order is a claim the request itself has to
+    // make good on. Uppercased first so the check runs on the value that will
+    // be stored — see lib/consent-signature.ts, which both wizards share.
+    const storedConsentSignature = upperCaseForStorage(consentSignature);
+    const signatureProblem = consentSignatureError(
+      storedConsentSignature,
+      participants ?? []
+    );
+    if (signatureProblem) {
+      return NextResponse.json({ error: signatureProblem }, { status: 400 });
     }
 
     const secretKey = process.env.PAYMONGO_SECRET_KEY;
@@ -178,6 +194,9 @@ export async function POST(request: Request) {
           // waiver was agreed to at the moment of this specific submission.
           consentGiven: true,
           consentGivenAt: new Date(),
+          // Already uppercase by the time it is checked, and stored that way
+          // like every other registrant field.
+          consentSignature: storedConsentSignature,
           runners: {
             create: participants.map((p: any, index: number) => ({
               // 1..n, in the order the wizard collected them. This is the tail
