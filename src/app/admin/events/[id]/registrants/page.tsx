@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import prisma from '@/lib/db';
 import RegistrantsTable from './RegistrantsTable';
+import { runnerRef } from '@/lib/order-ref';
 import {
   LOGISTICS_METHODS,
   asLogisticsMethod,
@@ -45,6 +46,12 @@ export default async function RegistrantsPage({ params }: { params: Promise<{ id
         id: runner.id,
         registrationId: reg.id,
         orderRef: reg.orderRef,
+        runnerNo: runner.runnerNo,
+        // One orderRef covers the whole order, so on a screen with one row per
+        // runner it cannot say which of them this is. Built here rather than in
+        // the table so the reference the admin reads is the same string the
+        // runner was emailed — see lib/order-ref.ts.
+        runnerRef: runnerRef(reg.orderRef, runner.runnerNo),
         firstName: runner.firstName,
         lastName: runner.lastName,
         name: `${runner.firstName} ${runner.lastName}`,

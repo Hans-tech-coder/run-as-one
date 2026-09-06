@@ -17,8 +17,8 @@ commits, not us.
 | A | 12, 5, 6 | none | Done |
 | B | 4, 7, 13 | none | Done |
 | C | 2, 3 | yes | Done |
-| D | 1, 10 | yes | **Next** |
-| E | 11, 9 (+ security fix) | yes | Not started |
+| D | 1, 10 | yes | Done |
+| E | 11, 9 (+ security fix) | yes | **Next** |
 | F | 14 | yes | Not started |
 | G | 8 | yes | Not started |
 
@@ -227,7 +227,40 @@ sign-ups even though slots remain and the race has not happened.
 
 ---
 
-## Batch D — order identity and logistics (migration)
+## Batch D — order identity and logistics (migration) — **Done**
+
+Landed on one migration
+(`20260906140000_runner_number_and_pickup_details`) and two new modules,
+`src/lib/order-ref.ts` and `src/lib/pickup.ts`. Four things are worth carrying
+forward:
+
+- **The order reference is not replaced, it is joined.** The registrants table
+  and the CSV now lead with the runner's own reference, but the order reference
+  stays beside it in both the export and the detail modal. They answer
+  different questions: the runner reference identifies a person, the order
+  reference is what the group paid under and what an organizer matches against
+  a line on their bank statement.
+- **`newOrderRef` moved into `order-ref.ts` with it**, because the same
+  `crypto.randomBytes(4)` was written out in both checkout routes and the
+  format now has a second half that must agree with it. It uses **Web Crypto**
+  rather than node's `crypto` module: the registrants table is a client
+  component and imports the same file, and pulling a node built-in into the
+  browser bundle to format a string would be a poor trade.
+- **`runnerNo` has no default and is unique per registration.** The migration
+  adds it nullable, backfills with `ROW_NUMBER()` over each registration, then
+  sets NOT NULL — a blanket `DEFAULT 1` would have made every member of an
+  existing group "runner 1". Leaving the default off afterwards means a future
+  write has to say which position it is rather than silently claiming the
+  first. The emails sort by it rather than trusting the order a Prisma include
+  returns rows in.
+- **The pick-up card was the whole point of item 10.** It used to read "Pick up
+  your race kit at designated partner stores 3 days before the event" — wording
+  invented by the app, naming no store and no date. It now carries the
+  organizer's own address and hours, and where they have not settled them yet,
+  a sentence saying the organizer will confirm. The same words repeat on the
+  confirmation screen and in the received email, which is what the runner
+  actually still has on race week.
+
 
 ### 1. Per-runner sub-reference
 One `orderRef` covers a whole group today. Give each runner

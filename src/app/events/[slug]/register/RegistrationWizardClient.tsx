@@ -12,8 +12,11 @@ import {
   FileImage,
   X,
   Calendar,
+  MapPin,
+  Clock,
 } from "lucide-react";
 import { formatPesos } from "@/lib/money";
+import { PICKUP_FALLBACK, pickupDetails } from "@/lib/pickup";
 import {
   deliveryTiers,
   offersDelivery,
@@ -187,6 +190,10 @@ export default function RegistrationWizardClient({
   // Set by the organizer on this event. Empty means bank transfer cannot
   // be offered at all — there is nowhere for the money to go.
   const bankAccounts: BankAccountView[] = event.bankAccounts ?? [];
+  // Where and when a race kit is collected, as the organizer wrote it. Either
+  // half may be blank, so the pickup card and the confirmation screen fall
+  // back to standard wording rather than leave a gap — see lib/pickup.ts.
+  const pickup = pickupDetails(event);
 
   // Centavos, like every other amount here. 6000 = ₱60.00. Set per event by the
   // organizer and rendered server-side, so the summary never briefly shows a
@@ -654,6 +661,49 @@ export default function RegistrationWizardClient({
                   </span>
                 </div>
               </div>
+
+              {/* Race-kit pickup, repeated here on purpose: the runner chose
+                  this option two steps ago and this screen is the one they
+                  screenshot. Shown only when the saved registration says
+                  pickup — the wizard's own state is back at its default after
+                  the round trip through the payment page, so it cannot be
+                  trusted to say which option was taken. */}
+              {registration &&
+                asLogisticsMethod(registration.logisticsMethod) === "PICKUP" && (
+                  <div className="w-full bg-black/40 border border-white/5 rounded-[16px] p-6 mb-8 text-left">
+                    <div className="mb-3 text-xs font-bold uppercase tracking-wider text-secondary">
+                      Race Kit Pickup
+                    </div>
+                    {pickup.location || pickup.schedule ? (
+                      <div className="flex flex-col gap-2 text-sm">
+                        {pickup.location && (
+                          <div className="flex items-start gap-2">
+                            <MapPin
+                              size={16}
+                              className="mt-[2px] shrink-0 text-accent-blue"
+                            />
+                            <span className="text-white">{pickup.location}</span>
+                          </div>
+                        )}
+                        {pickup.schedule && (
+                          <div className="flex items-start gap-2">
+                            <Clock
+                              size={16}
+                              className="mt-[2px] shrink-0 text-accent-blue"
+                            />
+                            <span className="text-secondary">
+                              {pickup.schedule}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="m-0 text-sm text-secondary">
+                        {PICKUP_FALLBACK}
+                      </p>
+                    )}
+                  </div>
+                )}
 
               <button
                 className="btn-gradient w-full py-4 text-lg font-bold shadow-xl shadow-accent-orange/20"
@@ -1143,9 +1193,38 @@ export default function RegistrationWizardClient({
                           />
                         )}
                       </div>
-                      <div className="relative z-10 text-sm text-secondary mb-4 line-clamp-2">
-                        Pick up your race kit at designated partner stores 3
-                        days before the event.
+                      {/* Where and when, in the organizer's own words. A
+                          runner choosing pickup needs the address at the
+                          moment they choose it, not in a later email — and
+                          what the organizer has not yet settled falls back to
+                          a sentence that says so (lib/pickup.ts). */}
+                      <div className="relative z-10 text-sm text-secondary mb-4 flex flex-col gap-1.5">
+                        {pickup.location || pickup.schedule ? (
+                          <>
+                            {pickup.location && (
+                              <span className="flex items-start gap-1.5">
+                                <MapPin
+                                  size={14}
+                                  className="mt-[3px] shrink-0 text-accent-blue"
+                                />
+                                <span className="text-white/90">
+                                  {pickup.location}
+                                </span>
+                              </span>
+                            )}
+                            {pickup.schedule && (
+                              <span className="flex items-start gap-1.5">
+                                <Clock
+                                  size={14}
+                                  className="mt-[3px] shrink-0 text-accent-blue"
+                                />
+                                <span>{pickup.schedule}</span>
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <span>{PICKUP_FALLBACK}</span>
+                        )}
                       </div>
                       <div className="relative z-10 font-bold text-accent-blue">
                         FREE

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
+import { newOrderRef } from '@/lib/order-ref';
 import { recordWriteInCommunities, runnerCommunity } from '@/lib/running-community-store';
-import crypto from 'crypto';
 import { uploadPrivateProof, UploadError } from '@/lib/blob';
 import { asDeliveryZone, deliveryFeeFor } from '@/app/events/[slug]/register/delivery';
 import {
@@ -142,7 +142,7 @@ export async function POST(request: Request) {
     const storedDeliveryAddress = optionalUpperCaseForStorage(deliveryAddress);
 
     // 2. Generate Order Reference
-    const orderRef = `RM-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+    const orderRef = newOrderRef();
 
     // 3. Save to database. Slot limits are checked inside the write, not
     // before it: a count taken before the create is a count two simultaneous
@@ -175,7 +175,11 @@ export async function POST(request: Request) {
           consentGiven: true,
           consentGivenAt: new Date(),
           runners: {
-            create: participants.map((p: any) => ({
+            create: participants.map((p: any, index: number) => ({
+              // 1..n, in the order the wizard collected them. This is the tail
+              // of the reference this runner quotes back at us — see
+              // lib/order-ref.ts — so it is written now and never recomputed.
+              runnerNo: index + 1,
               categoryId: p.categoryId,
               firstName: upperCaseForStorage(p.firstName),
               lastName: upperCaseForStorage(p.lastName),

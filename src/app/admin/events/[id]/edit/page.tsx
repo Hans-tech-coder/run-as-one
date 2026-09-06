@@ -49,6 +49,10 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
     raceKitImageUrl: '',
     description: '',
     logisticsPickup: true,
+    // Where and when a race kit is collected. Only meaningful while
+    // pickup is offered, and both are optional — see lib/pickup.ts.
+    pickupLocation: '',
+    pickupSchedule: '',
     logisticsDeliveryFeeInside: 0,
     logisticsDeliveryFeeOutside: 0,
     // Pesos on this form; the PUT route converts to centavos.
@@ -98,6 +102,8 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
           raceKitImageUrl: data.raceKitImageUrl || '',
           description: data.description || '',
           logisticsPickup: data.logisticsPickup ?? true,
+          pickupLocation: data.pickupLocation || '',
+          pickupSchedule: data.pickupSchedule || '',
           // The API returns centavos; every money input on this form is pesos.
           // The PUT route converts back with toCentavos().
           logisticsDeliveryFeeInside: toPesos(data.logisticsDeliveryFeeInside),
@@ -515,6 +521,37 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
                   />
                   <label htmlFor="pickup" className="text-primary font-medium">Allow On-site Pickup (Free)</label>
                 </div>
+                {formData.logisticsPickup && (
+                  <>
+                    <div className="form-group form-group-full">
+                      <label className="form-label">
+                        Pickup Location <span className="text-xs opacity-70">- where runners collect their kit</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.pickupLocation}
+                        onChange={e => setFormData({...formData, pickupLocation: e.target.value})}
+                        className="form-input"
+                        placeholder="e.g. Toby's Sports, SM City Clark, 2nd Floor"
+                      />
+                    </div>
+                    <div className="form-group form-group-full">
+                      <label className="form-label">
+                        Pickup Schedule <span className="text-xs opacity-70">- when that window is open</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.pickupSchedule}
+                        onChange={e => setFormData({...formData, pickupSchedule: e.target.value})}
+                        className="form-input"
+                        placeholder="e.g. March 12-14, 10AM to 7PM"
+                      />
+                    </div>
+                    {/* Both are optional because a venue is usually settled
+                        weeks before the hours are. Left blank, the wizard says
+                        the organizer will confirm — never a blank line. */}
+                  </>
+                )}
                 <div className="form-group">
                   <label className="form-label">Delivery — Inside Province (₱) <span className="text-xs opacity-70">- 0 to hide this option</span></label>
                   <input

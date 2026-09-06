@@ -3,6 +3,8 @@ import { Resend } from 'resend';
 import { CONTACT_EMAIL, SITE_NAME } from './site-contact';
 import { formatPesos } from './money';
 import { formatEventDay } from './event-schedule';
+import { runnerRef } from './order-ref';
+import { PICKUP_FALLBACK, pickupDetails } from './pickup';
 import {
   LOGISTICS_METHODS,
   asLogisticsMethod,
@@ -219,10 +221,23 @@ function orderRows(registration: RegistrationWithDetails, extraRows: string): st
     ${extraRows}`;
 }
 
-/** Pickup or delivery (+ zone and address), as one order row. */
+/**
+ * Pickup or delivery, as order rows.
+ *
+ * Pickup carries the organizer's address and hours (lib/pickup.ts) rather than
+ * the bare word "Pickup": this email is what the runner still has in their
+ * inbox on race week, and "Pickup at Venue" does not tell them which venue.
+ * When the organizer has not settled it yet, the fallback sentence says so —
+ * an empty row would read as though we simply forgot.
+ */
 function logisticsRow(registration: RegistrationWithDetails): string {
   if (asLogisticsMethod(registration.logisticsMethod) !== LOGISTICS_METHODS.DELIVERY) {
-    return infoRow('Logistics', 'Pickup at Venue');
+    const { location, schedule } = pickupDetails(registration.event);
+    return `
+    ${infoRow('Logistics', 'Race Kit Pickup')}
+    ${location || schedule ? '' : infoRow('Pickup Details', PICKUP_FALLBACK)}
+    ${location ? infoRow('Pickup Location', location) : ''}
+    ${schedule ? infoRow('Pickup Schedule', schedule) : ''}`;
   }
   const zoneLabel = deliveryZoneLabel(registration.deliveryZone) || 'Delivery';
   const value = registration.deliveryAddress ? `${zoneLabel} — ${registration.deliveryAddress}` : zoneLabel;
@@ -231,7 +246,10 @@ function logisticsRow(registration: RegistrationWithDetails): string {
 
 /** The compact runner line the receipt uses: who ran, in what, at what size. */
 function runnerRows(registration: RegistrationWithDetails): string {
-  const { runners } = registration;
+  // By position on the order, not by whatever order the query returned them
+  // in: the reference printed beside each name has to match the one in the
+  // received email and in the organizer's registrants table.
+  const runners = byRunnerNo(registration);
   return runners
     .map((runner, i) => {
       const border = i === runners.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.08)';
@@ -245,7 +263,7 @@ function runnerRows(registration: RegistrationWithDetails): string {
     <tr>
       <td style="padding: 10px 12px 10px 0; border-bottom: ${border}; font-family: Arial, Helvetica, sans-serif;">
         <div style="font-size: 14px; font-weight: 600; color: #f4f4f6;">${runner.firstName} ${runner.lastName}</div>
-        <div style="font-size: 12px; color: #8b8b96; margin-top: 3px;">${runner.category.name}</div>
+        <div style="font-size: 12px; color: #8b8b96; margin-top: 3px;">${runnerRef(registration.orderRef, runner.runnerNo)} &middot; ${runner.category.name}</div>
         ${
           runner.runningCommunity
             ? `<div style="font-size: 12px; color: #8b8b96; margin-top: 2px;">${runner.runningCommunity}</div>`
@@ -259,17 +277,28 @@ function runnerRows(registration: RegistrationWithDetails): string {
 }
 
 /**
+ * The runners in their order-reference order.
+ *
+ * A Prisma include gives no ordering guarantee, and these rows are labelled
+ * with a number a runner will quote back at us — so the list is sorted by the
+ * stored position rather than by however the rows arrived.
+ */
+function byRunnerNo(registration: RegistrationWithDetails) {
+  return [...registration.runners].sort((a, b) => a.runnerNo - b.runnerNo);
+}
+
+/**
  * Every field a runner typed into the wizard, one block each. This is what
  * the "received" email shows — the receipt keeps the compact line above,
  * since by then the runner has already had a chance to catch a typo here.
  */
 function runnerDetailRows(registration: RegistrationWithDetails): string {
-  const { runners } = registration;
+  const runners = byRunnerNo(registration);
   return runners
     .map((runner, index) => {
       const heading =
         runners.length > 1
-          ? `Runner ${index + 1} — ${runner.firstName} ${runner.lastName}`
+          ? `Runner ${runner.runnerNo} — ${runner.firstName} ${runner.lastName}`
           : `${runner.firstName} ${runner.lastName}`;
 
       return `
@@ -277,6 +306,7 @@ function runnerDetailRows(registration: RegistrationWithDetails): string {
       heading,
       `padding: ${index === 0 ? 4 : 22}px 0 6px; font-family: Arial, Helvetica, sans-serif; font-size: 14px; font-weight: 700; color: #f4f4f6;`
     )}
+    ${infoRow('Runner Reference', runnerRef(registration.orderRef, runner.runnerNo))}
     ${infoRow('Category', runner.category.name)}
     ${runner.singletSize ? infoRow('Shirt Size', runner.singletSize) : ''}
     ${infoRow('Gender', runner.gender)}

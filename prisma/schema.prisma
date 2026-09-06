@@ -33,6 +33,15 @@ model Event {
   imageUrl                    String
   description                 String?
   logisticsPickup             Boolean        @default(true)
+  /// Where a race kit is collected when the runner picks pickup, in the
+  /// organizer's own words ("Toby's Sports, SM Clark, 2nd floor"). Null falls
+  /// back to standard wording — see src/lib/pickup.ts. It is shown on the
+  /// pickup card itself, because a runner choosing pickup needs the address
+  /// at the moment they choose it, not in a follow-up email.
+  pickupLocation              String?
+  /// When that pickup window is open ("March 12-14, 10AM-7PM"). Separate from
+  /// the location because an organizer often knows one before the other.
+  pickupSchedule              String?
   /// Centavos. Delivery within the event's province. 0 = tier not offered.
   logisticsDeliveryFeeInside  Int            @default(0)
   /// Centavos. Delivery outside the event's province. 0 = tier not offered.
@@ -168,6 +177,16 @@ model Registration {
 model Runner {
   id                    String       @id @default(cuid())
   registrationId        String
+  /// Which runner on this order, 1..n — the tail of the reference this person
+  /// quotes back at us ("RM-D918005C-2"; see src/lib/order-ref.ts). One
+  /// orderRef covers a whole group, so without this three colleagues who
+  /// registered together have no way to say which of them they are.
+  ///
+  /// Stored rather than derived from row order: createMany does not guarantee
+  /// read-back order, and a reference that changes between two page loads is
+  /// worse than none. No default — the position is the checkout route's to
+  /// assign, and a default would quietly make everyone runner 1.
+  runnerNo              Int
   categoryId            String
   firstName             String
   lastName              String
@@ -194,6 +213,10 @@ model Runner {
   /// key on its own, so without this the count is a sequential scan of every
   /// runner the platform has ever taken.
   @@index([categoryId])
+
+  /// Two runners sharing "-2" on the same order would hand two people the
+  /// same reference, which is the ambiguity runnerNo exists to remove.
+  @@unique([registrationId, runnerNo])
 }
 
 /// The running clubs a runner can pick from at sign-up. One master list across

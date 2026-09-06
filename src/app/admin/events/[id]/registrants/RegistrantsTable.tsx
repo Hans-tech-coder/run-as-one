@@ -288,11 +288,16 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
       enableHiding: false,
     },
     {
-      accessorKey: "orderRef",
-      header: "Order Ref",
+      // The runner's own reference — the order reference plus their position
+      // on it (RM-D918005C-2). Sorting and searching run on this rather than
+      // on the bare order reference: it contains the order reference, so
+      // looking up a whole group still works, and it keeps the members of a
+      // group in their own order instead of an arbitrary one.
+      accessorKey: "runnerRef",
+      header: "Reference",
       cell: ({ row }) => (
         <div className="flex items-center gap-2 text-secondary">
-          {row.original.orderRef}
+          {row.original.runnerRef}
           <button 
             onClick={() => setViewingRunner(row.original)}
             className="icon-btn"
@@ -472,7 +477,7 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
 
   const handleExportCSV = () => {
     const headers = [
-      'Order Ref', 'First Name', 'Last Name', 'Email', 'Phone', 'Gender', 'Birthdate', 
+      'Runner Ref', 'Order Ref', 'First Name', 'Last Name', 'Email', 'Phone', 'Gender', 'Birthdate', 
       'Category', 'Distance', 'Shirt Size', 'Emergency Contact', 'Emergency Phone', 
       'Running Community', 'Medical Conditions', 'Logistics Method', 'Delivery Area', 'Delivery Address', 'Payment Method', 'Status'
     ];
@@ -484,6 +489,7 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
     const csvRows = rowsToExport.map(r => {
       const runner = r.original;
       return [
+        csvField(runner.runnerRef),
         csvField(runner.orderRef),
         csvField(runner.firstName),
         csvField(runner.lastName),
@@ -662,7 +668,7 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
                         />
                         {column.getIsVisible() && <div className="w-2 h-2 bg-white rounded-sm" />}
                       </div>
-                      <span className="capitalize">{column.id === 'orderRef' ? 'Order Ref' : column.id}</span>
+                      <span className="capitalize">{column.id === 'runnerRef' ? 'Reference' : column.id}</span>
                     </label>
                   );
                 })}
@@ -696,7 +702,7 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
                   <TableHead 
                     key={header.id}
                     onClick={header.column.getToggleSortingHandler()}
-                    className={`py-4 px-4 text-gray-400 font-medium h-auto ${header.column.getCanSort() ? 'cursor-pointer select-none' : ''} ${header.column.id === 'orderRef' ? 'pl-8' : ''}`}
+                    className={`py-4 px-4 text-gray-400 font-medium h-auto ${header.column.getCanSort() ? 'cursor-pointer select-none' : ''} ${header.column.id === 'runnerRef' ? 'pl-8' : ''}`}
                   >
                     <div className="flex items-center gap-2">
                       {flexRender(
@@ -718,7 +724,7 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
               table.getRowModel().rows.map(row => (
                 <TableRow key={row.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                   {row.getVisibleCells().map(cell => (
-                    <TableCell key={cell.id} className={`py-4 px-4 text-white ${cell.column.id === 'orderRef' ? 'pl-8' : ''}`}>
+                    <TableCell key={cell.id} className={`py-4 px-4 text-white ${cell.column.id === 'runnerRef' ? 'pl-8' : ''}`}>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
@@ -863,6 +869,10 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
               <div className="mt-8 pt-8 border-t border-white/10 space-y-4">
                 <h4 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Transaction Details</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                  <p className="flex flex-col"><span className="text-gray-500">Runner Ref</span> <span className="text-white font-medium">{viewingRunner.runnerRef}</span></p>
+                  {/* The order reference is kept beside it: this runner's ref
+                      identifies the person, the order ref is what the whole
+                      group paid under and what a bank line will match. */}
                   <p className="flex flex-col"><span className="text-gray-500">Order Ref</span> <span className="text-white font-medium">{viewingRunner.orderRef}</span></p>
                   <p className="flex flex-col"><span className="text-gray-500">Status</span> 
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium w-fit mt-1 ${viewingRunner.status === 'PAID' ? 'bg-green-500/20 text-green-400 border border-green-500/20' : 'bg-orange-500/20 text-orange-400 border border-orange-500/20'}`}>

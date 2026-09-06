@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     }
 
     const data = await request.json();
-    const { title, date, startTime, endTime, location, imageUrl, raceKitImageUrl, description, logisticsPickup, logisticsDeliveryFeeInside, logisticsDeliveryFeeOutside, adminFee, shirtSizeUpcharge, consentWaiver, registrationForm, eventType, categories, bankAccounts } = data;
+    const { title, date, startTime, endTime, location, imageUrl, raceKitImageUrl, description, logisticsPickup, pickupLocation, pickupSchedule, logisticsDeliveryFeeInside, logisticsDeliveryFeeOutside, adminFee, shirtSizeUpcharge, consentWaiver, registrationForm, eventType, categories, bankAccounts } = data;
 
     if (!title || !date || !location) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -56,6 +56,12 @@ export async function POST(request: Request) {
         raceKitImageUrl: raceKitImageUrl || null,
         description: description || '',
         logisticsPickup: Boolean(logisticsPickup),
+        // Where and when a kit is collected, in the organizer's own words.
+        // Blank stays null rather than becoming an empty string: the wizards
+        // fall back to standard wording on null (lib/pickup.ts), and an empty
+        // string would render as a blank line under the pickup option.
+        pickupLocation: pickupLocation?.trim() || null,
+        pickupSchedule: pickupSchedule?.trim() || null,
         // The admin form collects pesos; storage is centavos.
         logisticsDeliveryFeeInside: toCentavos(logisticsDeliveryFeeInside),
         logisticsDeliveryFeeOutside: toCentavos(logisticsDeliveryFeeOutside),
