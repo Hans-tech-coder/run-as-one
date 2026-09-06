@@ -33,6 +33,7 @@ import { resolveConsentWaiver } from "@/lib/consent-waiver";
 import ShirtSizeField from "./ShirtSizeField";
 import {
   categoryNeedsShirtSize,
+  shouldAskShirtSize,
   findCategory,
   totalShirtSizeUpcharge,
 } from "@/lib/shirt-size";
@@ -979,8 +980,9 @@ export default function RegistrationWizardClient({
                           message={errorFor(idx, "birthdate")}
                         />
                       </div>
-                      {categoryNeedsShirtSize(
-                        findCategory(event.categories, p.categoryId),
+                      {shouldAskShirtSize(
+                        event.categories,
+                        p.categoryId,
                       ) && (
                         <ShirtSizeField
                           id={runnerFieldId(idx, "singletSize")}

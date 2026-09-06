@@ -1,7 +1,6 @@
 import { sellsPackages } from "@/lib/event-type";
 import {
-  categoryNeedsShirtSize,
-  findCategory,
+  shouldAskShirtSize,
   type SizableCategory,
 } from "@/lib/shirt-size";
 
@@ -98,19 +97,13 @@ export function runnerFieldId(index: number, field: RunnerField): string {
 }
 
 /**
- * The fields this runner still owes, in form order.
- *
- * Shirt size is only asked when the chosen category actually includes something
- * to wear, and it is skipped entirely while no category is chosen — there is
- * nothing to size yet, and listing it would be one more thing the runner cannot
- * act on.
- */
-/**
  * The required questions this runner is actually being asked.
  *
- * Shirt size is only one of them when the chosen category includes something to
- * wear, and never while no category is chosen — there is nothing to size yet,
- * and listing it would be one more thing the runner cannot act on.
+ * Shirt size is one of them exactly when the wizard is showing the field —
+ * whenever the chosen category includes something to wear, and, while nothing
+ * is chosen yet, whenever every option this event sells does. An event that
+ * also sells something with nothing to wear leaves the question undecided until
+ * a category is picked, so it is not owed yet either.
  */
 export function requiredFieldsFor(
   participant: ValidatedRunner,
@@ -118,10 +111,10 @@ export function requiredFieldsFor(
 ): RunnerField[] {
   const chosenId =
     typeof participant.categoryId === "string" ? participant.categoryId : "";
-  const category = findCategory(event.categories, chosenId);
 
   return FIELD_ORDER.filter(
-    (field) => field !== "singletSize" || categoryNeedsShirtSize(category),
+    (field) =>
+      field !== "singletSize" || shouldAskShirtSize(event.categories, chosenId),
   );
 }
 

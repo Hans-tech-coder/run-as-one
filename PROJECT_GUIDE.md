@@ -155,7 +155,7 @@ logic again.
 | `event-slug.ts` | Public event URLs. `slugifyEventTitle` → `uniqueEventSlug` on write; `eventByParam` matches slug **or** legacy cuid on read, and `canonicalEventPath` redirects old cuid links to the slug. |
 | `event-type.ts` | `RACE` vs `FUN_RUN`. `asEventType` guards untrusted input (defaults to `RACE`); `sellsPackages(event)` is the branch the forms and wizards use. |
 | `registration-form.ts` | `ONLINE` vs `BANK_TRANSFER` checkout. `asRegistrationForm` defaults to `ONLINE`; `offersBankTransfer`. |
-| `shirt-size.ts` | The size chart, whether a category needs a size at all, and the 4XL-and-up upcharge. `subtotalWithUpcharge` is the priced truth. |
+| `shirt-size.ts` | The size chart, whether a category needs a size at all, and the 4XL-and-up upcharge. `subtotalWithUpcharge` is the priced truth. `shouldAskShirtSize(categories, categoryId)` decides whether the wizards show the field and whether validation requires it: the chosen category decides once one is picked, and before then the field is already visible when **every** option the event sells includes something to wear. It hides up front only for an event that also sells an option with nothing to wear (the Tarlac band-only package), where the answer is genuinely undecided. |
 | `app/events/[slug]/register/delivery.ts` | Race-kit delivery tiers. A fee of `0` means **not offered**. `deliveryTiers`, `deliveryFeeFor`, `asDeliveryZone`. Shared by both wizards so they can never charge differently. |
 | `app/events/[slug]/register/validation.ts` | What step 1 requires. Returns *which* fields are missing, driving the red states, the summary dialog, and where the caret lands. |
 | `consent-waiver.ts` | The liability/media/data-privacy waiver. Organizers may override it per event; the default wording is supplied here. **Never present an empty waiver.** |
@@ -291,6 +291,11 @@ These are the user's own standing preferences. Follow them without being asked.
   it appears. It differs only by its `action` prop (`'register'` → the event
   page, `'results'` → the winners board), a string rather than a callback
   because the pages rendering it are Server Components. Never fork a rival card.
+- **One option row at sign-up.** `events/[slug]/register/CategoryPicker` renders
+  a race's distances and a fun run's packages with the *same* full-width radio
+  row — poster thumbnail, name, price on a shared right edge — because to the
+  runner it is one decision either way. A race's distance is a chip beside the
+  name; that chip is the only difference. Do not bring back a separate grid.
 - Styling: Tailwind utilities plus the CSS variables in `globals.css` (motion,
   spacing, radius, glass, gradient tokens). The admin has `Admin.css` and
   `Auth.css`; the wizard and event page have their own CSS files. Dark,

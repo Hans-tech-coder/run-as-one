@@ -131,6 +131,40 @@ export function findCategory(
 }
 
 /**
+ * Whether every option this event sells includes something to wear.
+ *
+ * An event with no categories is not "all wearable" — there is nothing to size
+ * and nothing to choose, so it answers false.
+ */
+export function everyCategoryNeedsShirtSize(
+  categories: readonly SizableCategory[] | null | undefined
+): boolean {
+  const list = categories ?? [];
+  if (list.length === 0) return false;
+  return list.every(category => categoryNeedsShirtSize(category));
+}
+
+/**
+ * Whether the shirt size question belongs on screen for this runner.
+ *
+ * Once a category is chosen, that category decides it. Before then the answer
+ * depends on what the event sells: when every option includes something to
+ * wear, the size is going to be asked no matter which one the runner picks, so
+ * hiding it until they pick only makes the form grow under them. It stays
+ * hidden up front only when the event sells at least one option with nothing to
+ * wear — there the question is genuinely undecided, and showing it early would
+ * ask a band-only runner for a size they will never need.
+ */
+export function shouldAskShirtSize(
+  categories: readonly SizableCategory[] | null | undefined,
+  categoryId: string
+): boolean {
+  const chosen = findCategory(categories, categoryId);
+  if (chosen) return categoryNeedsShirtSize(chosen);
+  return everyCategoryNeedsShirtSize(categories);
+}
+
+/**
  * The large-size upcharge owed for one runner, in centavos.
  *
  * Zero unless the runner is actually being sized (a band-only package is never
