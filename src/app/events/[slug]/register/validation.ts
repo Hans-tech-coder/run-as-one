@@ -1,5 +1,10 @@
 import { sellsPackages } from "@/lib/event-type";
 import {
+  expectedNationalDigits,
+  normalizeNational,
+  parseE164,
+} from "@/lib/phone";
+import {
   shouldAskShirtSize,
   type SizableCategory,
 } from "@/lib/shirt-size";
@@ -76,6 +81,37 @@ const MESSAGES: Record<RunnerField, string> = {
   emergencyContactPhone: "Enter an emergency contact number",
 };
 
+/**
+ * The two numbers that have to be dialable, and what to say when one is not.
+ *
+ * A number that is present but too short passed every check here before, so a
+ * runner could finish the form with four digits in it and nobody would find out
+ * until race morning. The field itself already caps the length (see
+ * lib/phone), so the only failure left is a number cut short — and the message
+ * says the rule out loud rather than repeating "enter a number" at someone who
+ * plainly has.
+ *
+ * Countries whose length we do not claim to know are left alone: no rule, no
+ * complaint.
+ */
+const PHONE_FIELDS: readonly RunnerField[] = ["phone", "emergencyContactPhone"];
+
+function phoneLengthMessage(
+  field: RunnerField,
+  value: unknown,
+): string | undefined {
+  if (typeof value !== "string" || value.trim() === "") return undefined;
+
+  const { iso2, national } = parseE164(value);
+  const expected = expectedNationalDigits(iso2);
+  if (expected === null) return undefined;
+
+  const digits = normalizeNational(iso2!, national);
+  if (digits.length === expected) return undefined;
+
+  return `${LABELS[field]} must be ${expected} digits`;
+}
+
 export type RunnerErrors = Partial<Record<RunnerField, string>>;
 
 /**
@@ -135,6 +171,12 @@ export function validateRunner(
       field === "categoryId" && packages
         ? "Select a package"
         : MESSAGES[field];
+  }
+
+  for (const field of PHONE_FIELDS) {
+    if (errors[field]) continue;
+    const message = phoneLengthMessage(field, participant[field]);
+    if (message) errors[field] = message;
   }
 
   return errors;

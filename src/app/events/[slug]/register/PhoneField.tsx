@@ -6,7 +6,6 @@ import FieldError from "@/components/ui/FieldError";
 import {
   allCountries,
   countryFor,
-  digitsOnly,
   flagUrl,
   maxNationalDigits,
   normalizeNational,
@@ -182,8 +181,14 @@ export default function PhoneField({
   };
 
   const handleNationalChange = (raw: string) => {
-    // Digits only, and never more than E.164 has room for after the code.
-    const digits = digitsOnly(raw).slice(0, maxNationalDigits(country.iso2));
+    // Normalize before capping, not after. A Filipino runner pasting the number
+    // as it is written locally — 09171234567 — hands over eleven digits, and
+    // trimming to the ten a Philippine number has before the trunk zero comes
+    // off spends the cap on that zero and loses a real digit off the end.
+    const digits = normalizeNational(country.iso2, raw).slice(
+      0,
+      maxNationalDigits(country.iso2)
+    );
     onChange(toE164(country.iso2, digits));
   };
 

@@ -224,21 +224,58 @@ export function parseE164(value: string | null | undefined): {
 }
 
 /**
- * Whether a national part is long enough to be a real number.
+ * How many digits a country's national numbers actually have.
  *
- * Deliberately loose. Per-country length tables are the kind of thing that goes
- * stale silently and rejects a number that is perfectly valid, which is a much
- * worse failure here than accepting a typo — the organizer can still ring the
- * runner and ask. The one firm rule is E.164's own 15-digit ceiling.
+ * Only the countries we are sure of are listed, and the list stays short on
+ * purpose: a wrong entry here rejects a number that is perfectly valid, which
+ * is a worse failure than accepting a typo. Anything unlisted keeps the loose
+ * behaviour below and is bounded only by E.164's own ceiling.
+ *
+ * The Philippines is the one that matters. A mobile number is ten digits once
+ * the trunk zero comes off — 917 123 4567 — so deriving the cap from E.164
+ * alone allowed thirteen, and a runner who typed eleven left nobody able to
+ * ring them on race morning.
+ */
+const NATIONAL_DIGITS: Readonly<Record<string, number>> = {
+  PH: 10,
+};
+
+/** The exact national length this country's numbers have, where we know it. */
+export function expectedNationalDigits(
+  iso2: string | null | undefined
+): number | null {
+  if (!iso2) return null;
+  return NATIONAL_DIGITS[iso2.toUpperCase()] ?? null;
+}
+
+/**
+ * Whether a national part is a real number for its country.
+ *
+ * Where the length is known it is the whole rule — the number either dials or
+ * it does not. Everywhere else this stays deliberately loose: four digits at
+ * the bottom, E.164's 15-digit ceiling at the top, because a stale per-country
+ * table rejecting a valid number is worse than accepting a typo the organizer
+ * can still ring about.
  */
 export function isPlausiblePhone(iso2: string, national: string): boolean {
   const country = countryFor(iso2);
   const digits = normalizeNational(country.iso2, national);
+  const expected = expectedNationalDigits(country.iso2);
+  if (expected !== null) return digits.length === expected;
   if (digits.length < 4) return false;
   return country.dial.length + digits.length <= MAX_E164_DIGITS;
 }
 
-/** How many national digits are still allowed for this country. */
+/**
+ * How many national digits the field still accepts for this country.
+ *
+ * The country's own length wins where we know it, so a Philippine field stops
+ * accepting at ten rather than at the thirteen E.164 would allow. The cap is
+ * what prevents the too-long number being typed at all; validation then only
+ * has to explain the too-short ones.
+ */
 export function maxNationalDigits(iso2: string): number {
-  return MAX_E164_DIGITS - countryFor(iso2).dial.length;
+  const country = countryFor(iso2);
+  const expected = expectedNationalDigits(country.iso2);
+  return expected ?? MAX_E164_DIGITS - country.dial.length;
 }

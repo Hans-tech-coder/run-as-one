@@ -157,12 +157,13 @@ logic again.
 | `registration-form.ts` | `ONLINE` vs `BANK_TRANSFER` checkout. `asRegistrationForm` defaults to `ONLINE`; `offersBankTransfer`. |
 | `shirt-size.ts` | The size chart, whether a category needs a size at all, and the 4XL-and-up upcharge. `subtotalWithUpcharge` is the priced truth. `shouldAskShirtSize(categories, categoryId)` decides whether the wizards show the field and whether validation requires it: the chosen category decides once one is picked, and before then the field is already visible when **every** option the event sells includes something to wear. It hides up front only for an event that also sells an option with nothing to wear (the Tarlac band-only package), where the answer is genuinely undecided. |
 | `app/events/[slug]/register/delivery.ts` | Race-kit delivery tiers. A fee of `0` means **not offered**. `deliveryTiers`, `deliveryFeeFor`, `asDeliveryZone`. Shared by both wizards so they can never charge differently. |
-| `app/events/[slug]/register/validation.ts` | What step 1 requires. Returns *which* fields are missing, driving the red states, the summary dialog, and where the caret lands. |
+| `app/events/[slug]/register/validation.ts` | What step 1 requires. Returns *which* fields are wrong, driving the red states, the summary dialog, and where the caret lands. Missing answers are most of it; a phone number that is present but the wrong length for its country is the exception, and it is named as such ("Mobile number must be 10 digits") rather than reported as blank. |
 | `consent-waiver.ts` | The liability/media/data-privacy waiver. Organizers may override it per event; the default wording is supplied here. **Never present an empty waiver.** |
 | `running-community.ts` + `running-community-store.ts` | Club names, `INDEPENDENT RUNNER`, and the pending/approved flow for runner write-ins. |
 | `inclusions.ts` | Free text (one item per line) ⇄ stored string[] for what a category includes. |
+| `inclusion-icon.ts` | Which icon stands for a line of "What's Included". Keyword → icon, whole-word matched with an optional plural, first rule wins, and a plain `Check` for anything unrecognised — a wrong icon misinforms, a check merely fails to inform. It lives here so the same inclusion never draws a different icon on a different screen. The vocabulary is the organizer's: a **bib** is the chequered race flag, the **ticket** belongs to a *raffle*, a **band** or wristband is `Watch`, a **pin** or badge is `Badge`, an **entitlement** is `Gift`, a **bandana** or scarf is the bandana icon — plus `Shirt`, `Medal`, `Timer`, `GlassWater`, `Utensils`, `Camera`, `Backpack` (last, so "race kit" never beats a line naming what is in it). The race flag and the bandana are not in lucide, so they are drawn here through lucide's own `createLucideIcon` and inherit its grid, stroke and props. |
 | `bank-accounts.ts` | Validating and normalizing per-event bank accounts between form, API and wizard. |
-| `phone.ts` + `request-country.ts` | Phone numbers stored in **E.164**. Country list from dial codes; names via `Intl.DisplayNames`. The country is *guessed* from `x-vercel-ip-country` and always overridable. |
+| `phone.ts` + `request-country.ts` | Phone numbers stored in **E.164**. Country list from dial codes; names via `Intl.DisplayNames`. The country is *guessed* from `x-vercel-ip-country` and always overridable. `NATIONAL_DIGITS` carries the exact national length for the countries we are sure of (**PH = 10**) and is deliberately short: `maxNationalDigits` caps the field at it, `isPlausiblePhone` requires it, and everything unlisted stays loose under E.164's 15-digit ceiling. The trunk zero is stripped **before** the cap applies, or a pasted `09171234567` loses its last digit. |
 | `blob.ts` | Every upload. `uploadPublicFile` (returns a URL) vs `uploadPrivateProof` (returns a **pathname**) + `signedProofUrl`. 4 MB cap, because a Vercel function body caps at 4.5 MB. |
 | `auth.ts` / `jwt.ts` | bcrypt hashing, the `admin_token` httpOnly cookie (1 day), `getAuthCookie()` in server code. |
 | `signed-in-user.ts` | The name and initial the admin sidebars show — read from the record, not the token, so a rename is never stale. |
@@ -309,7 +310,15 @@ These are the user's own standing preferences. Follow them without being asked.
 ## 10. Current state
 
 `FEATURES_CHECKLIST.md` tracks the roadmap; every major section is ticked through
-the results and e-certificate module. Known open threads:
+the results and e-certificate module.
+
+**`IMPROVEMENTS_PLAN.md` is the active work queue.** Fourteen agreed improvements
+in seven batches, with the decisions behind each one already settled. The user
+works it **one batch per session** to keep conversations short, so a session
+picking it up should read the batch marked *Next*, do only that batch, mark it
+Done, and stop. Delete the file once every batch is done.
+
+Known open threads:
 
 - Site contact and social links are constants awaiting a **superadmin settings
   screen**; the social icons currently point at `/coming-soon`.

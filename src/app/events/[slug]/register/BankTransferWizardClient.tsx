@@ -351,8 +351,8 @@ export default function BankTransferWizardClient({
         title: untouched
           ? "Let's get you registered"
           : missing === 1
-            ? "One detail still missing"
-            : `${missing} details still missing`,
+            ? "One detail needs your attention"
+            : `${missing} details need your attention`,
         confirmLabel: untouched ? "Get started" : "Take me there",
         message: untouched ? (
           <>
@@ -362,8 +362,8 @@ export default function BankTransferWizardClient({
         ) : (
           <>
             <span className="block mb-3">
-              Everything you have filled in is kept. Only these are still
-              blank:
+              Everything you have filled in is kept. Only these still need
+              your attention:
             </span>
             <ul className="flex flex-col gap-2">
               {summary.map((r) => (
@@ -1309,7 +1309,7 @@ export default function BankTransferWizardClient({
                     }
                   >
                     {isProcessing
-                      ? "Submitting Registration..."
+                      ? "Submitting Registration"
                       : "Submit & Finish Registration"}
                   </button>
                 </div>
