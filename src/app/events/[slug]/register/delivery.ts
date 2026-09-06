@@ -1,3 +1,9 @@
+import {
+  DELIVERY_ZONES,
+  deliveryZoneLabel,
+  type DeliveryZone,
+} from '@/lib/registration-codes';
+
 /**
  * Delivery pricing, shared by both registration wizards.
  *
@@ -7,7 +13,12 @@
  * in one place, and both import it.
  */
 
-export type DeliveryZone = 'inside' | 'outside';
+/**
+ * The zone codes and the guard now live in lib/registration-codes.ts, beside
+ * the other two coded columns on a Registration, so the stored spelling is
+ * decided in one place. This module keeps what it was always for: the money.
+ */
+export { asDeliveryZone, type DeliveryZone } from '@/lib/registration-codes';
 
 export interface DeliveryTier {
   zone: DeliveryZone;
@@ -31,16 +42,16 @@ export function deliveryTiers(event: {
 
   if (event.logisticsDeliveryFeeInside > 0) {
     tiers.push({
-      zone: 'inside',
-      label: 'Inside Province',
+      zone: DELIVERY_ZONES.INSIDE,
+      label: deliveryZoneLabel(DELIVERY_ZONES.INSIDE),
       fee: event.logisticsDeliveryFeeInside,
     });
   }
 
   if (event.logisticsDeliveryFeeOutside > 0) {
     tiers.push({
-      zone: 'outside',
-      label: 'Outside Province',
+      zone: DELIVERY_ZONES.OUTSIDE,
+      label: deliveryZoneLabel(DELIVERY_ZONES.OUTSIDE),
       fee: event.logisticsDeliveryFeeOutside,
     });
   }
@@ -68,14 +79,6 @@ export function deliveryFeeFor(
 ): number {
   const tier = deliveryTiers(event).find((t) => t.zone === zone);
   return tier ? tier.fee : 0;
-}
-
-/**
- * Narrows an untrusted value to a zone. Anything else is null, which
- * deliveryFeeFor() prices at 0 — so a junk zone can never bill anyone.
- */
-export function asDeliveryZone(value: unknown): DeliveryZone | null {
-  return value === 'inside' || value === 'outside' ? value : null;
 }
 
 /**

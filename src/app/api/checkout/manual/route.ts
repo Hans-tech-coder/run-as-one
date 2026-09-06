@@ -4,9 +4,18 @@ import { recordWriteInCommunities, runnerCommunity } from '@/lib/running-communi
 import crypto from 'crypto';
 import { uploadPrivateProof, UploadError } from '@/lib/blob';
 import { asDeliveryZone, deliveryFeeFor } from '@/app/events/[slug]/register/delivery';
+import {
+  LOGISTICS_METHODS,
+  asLogisticsMethod,
+  asPaymentMethod,
+} from '@/lib/registration-codes';
 import { storedShirtSize, subtotalWithUpcharge } from '@/lib/shirt-size';
 import { hasFinished } from '@/lib/event-schedule';
 import { sendRegistrationReceivedEmail } from '@/lib/email';
+import {
+  optionalUpperCaseForStorage,
+  upperCaseForStorage,
+} from '@/lib/text-case';
 
 export async function POST(request: Request) {
   try {
@@ -72,7 +81,16 @@ export async function POST(request: Request) {
       );
     }
 
-    const zone = logisticsMethod === 'delivery' ? asDeliveryZone(deliveryZone) : null;
+    // Both codes go into the database uppercase, like every other coded
+    // column (lib/registration-codes.ts), and through their guards rather than
+    // straight off the request: a stale tab still posts the old lowercase
+    // spelling, and it has to keep pricing correctly.
+    const storedLogisticsMethod = asLogisticsMethod(logisticsMethod);
+    const storedPaymentMethod = asPaymentMethod(paymentMethod);
+    const zone =
+      storedLogisticsMethod === LOGISTICS_METHODS.DELIVERY
+        ? asDeliveryZone(deliveryZone)
+        : null;
     const expectedDeliveryFee = deliveryFeeFor(event, zone);
     const expectedPlatformFee = event.adminFee * participants.length;
     // Category prices plus the large-size surcharge. Checked rather than
@@ -101,6 +119,14 @@ export async function POST(request: Request) {
     // /api/admin/proof/[id], which signs a short-lived URL after checking auth.
     const proofPathname = await uploadPrivateProof(proofFile);
 
+    // Registrant text is stored uppercase (lib/text-case.ts). The wizard
+    // already uppercases as the runner types, but this request did not have to
+    // come from the wizard — a tab left open can POST straight here — so the
+    // server is the one that decides what the column holds. The email address
+    // is deliberately not in this list.
+    const storedCustomerName = upperCaseForStorage(customerName);
+    const storedDeliveryAddress = optionalUpperCaseForStorage(deliveryAddress);
+
     // 2. Generate Order Reference
     const orderRef = `RM-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
 
@@ -110,17 +136,17 @@ export async function POST(request: Request) {
         eventId,
         orderRef,
         customerEmail,
-        customerName,
-        logisticsMethod,
+        customerName: storedCustomerName,
+        logisticsMethod: storedLogisticsMethod,
         // Only meaningful for delivery; pickup leaves it null.
         deliveryZone: zone,
-        deliveryAddress,
+        deliveryAddress: storedDeliveryAddress,
         deliveryFee,
         subtotal,
         platformFee,
         transactionFee,
         totalAmount,
-        paymentMethod: paymentMethod,
+        paymentMethod: storedPaymentMethod,
         proofOfPayment: proofPathname,
         transactionNumber: transactionNumber,
         status: 'PENDING', // Waiting for manual validation by admin
@@ -131,16 +157,18 @@ export async function POST(request: Request) {
         runners: {
           create: participants.map((p: any) => ({
             categoryId: p.categoryId,
-            firstName: p.firstName,
-            lastName: p.lastName,
+            firstName: upperCaseForStorage(p.firstName),
+            lastName: upperCaseForStorage(p.lastName),
+            // Not uppercased: the local part of an address is case-sensitive
+            // on some mail servers, so touching it can stop delivery.
             email: p.email,
             phone: p.phone,
-            gender: p.gender,
+            gender: upperCaseForStorage(p.gender),
             birthdate: p.birthdate,
             singletSize: storedShirtSize(p, event.categories),
-            emergencyContactName: p.emergencyContactName,
+            emergencyContactName: upperCaseForStorage(p.emergencyContactName),
             emergencyContactPhone: p.emergencyContactPhone,
-            medicalConditions: p.medicalConditions,
+            medicalConditions: optionalUpperCaseForStorage(p.medicalConditions),
             // Blank answers land on INDEPENDENT RUNNER; the field is optional.
             runningCommunity: runnerCommunity(p),
           }))

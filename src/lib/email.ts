@@ -1,8 +1,15 @@
 import type { Prisma } from '@prisma/client';
 import { Resend } from 'resend';
-import { ARCHIVE_EMAIL, CONTACT_EMAIL, SITE_NAME } from './site-contact';
+import { CONTACT_EMAIL, SITE_NAME } from './site-contact';
 import { formatPesos } from './money';
 import { formatEventDay } from './event-schedule';
+import {
+  LOGISTICS_METHODS,
+  asLogisticsMethod,
+  deliveryZoneLabel,
+  isBankTransfer,
+  paymentMethodLabel,
+} from './registration-codes';
 
 /**
  * Transactional email, sent through Resend from the verified
@@ -68,10 +75,13 @@ async function sendEmail(to: string, subject: string, html: string): Promise<voi
   try {
     const { error } = await resend.emails.send({
       from: FROM_ADDRESS,
+      // One recipient, deliberately. Resend meters its free tier by
+      // *recipient*, not by message, and counts a bcc as one of them — so the
+      // archive copy this used to carry doubled the quota cost of every send,
+      // putting a registration's two emails at four units against a ceiling of
+      // a hundred a day. Resend's own dashboard already keeps a log of
+      // everything sent, which is what the archive mailbox was for.
       to,
-      // Every email is archived to the team inbox; see ARCHIVE_EMAIL for why
-      // this is a blind copy rather than a visible one.
-      bcc: ARCHIVE_EMAIL,
       replyTo: CONTACT_EMAIL,
       subject,
       html,
@@ -87,40 +97,14 @@ type RegistrationWithDetails = Prisma.RegistrationGetPayload<{
   include: { event: true; runners: { include: { category: true } } };
 }>;
 
-/**
- * PayMongo's payment_method_types are lowercase, underscored API values —
- * never what a runner should read on a receipt. Anything not listed here
- * (a new method PayMongo adds later) still degrades to a readable label
- * instead of a raw code.
- */
-const PAYMENT_METHOD_LABELS: Record<string, string> = {
-  card: 'Credit / Debit Card',
-  gcash: 'GCash',
-  paymaya: 'Maya',
-  grab_pay: 'GrabPay',
-  bank_transfer: 'Bank Transfer',
-};
-
-function paymentMethodLabel(method: string): string {
-  return (
-    PAYMENT_METHOD_LABELS[method] ??
-    method
-      .split('_')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ')
-  );
-}
-
 function peso(centavos: number): string {
   return `&#8369;${formatPesos(centavos)}`;
 }
 
-/** Mirrors the tier labels in the register wizard's delivery.ts, without importing
- *  an app-layer module into lib/ for a two-line lookup. */
+/** The money line's own wording, built from the shared zone label. */
 function deliveryFeeLabel(zone: string | null): string {
-  if (zone === 'inside') return 'Delivery — Inside Province';
-  if (zone === 'outside') return 'Delivery — Outside Province';
-  return 'Delivery Fee';
+  const label = deliveryZoneLabel(zone);
+  return label ? `Delivery — ${label}` : 'Delivery Fee';
 }
 
 /* ────────────────────────────────────────────────────────────────────────
@@ -235,17 +219,12 @@ function orderRows(registration: RegistrationWithDetails, extraRows: string): st
     ${extraRows}`;
 }
 
-/** "pickup" or "delivery" (+ zone and address), as one order row. */
+/** Pickup or delivery (+ zone and address), as one order row. */
 function logisticsRow(registration: RegistrationWithDetails): string {
-  if (registration.logisticsMethod !== 'delivery') {
+  if (asLogisticsMethod(registration.logisticsMethod) !== LOGISTICS_METHODS.DELIVERY) {
     return infoRow('Logistics', 'Pickup at Venue');
   }
-  const zoneLabel =
-    registration.deliveryZone === 'inside'
-      ? 'Inside Province'
-      : registration.deliveryZone === 'outside'
-        ? 'Outside Province'
-        : 'Delivery';
+  const zoneLabel = deliveryZoneLabel(registration.deliveryZone) || 'Delivery';
   const value = registration.deliveryAddress ? `${zoneLabel} — ${registration.deliveryAddress}` : zoneLabel;
   return infoRow('Delivery', value);
 }
@@ -416,10 +395,10 @@ export async function sendRegistrationReceivedEmail(
   registration: RegistrationWithDetails
 ): Promise<void> {
   const { event } = registration;
-  const isBankTransfer = registration.paymentMethod === 'bank_transfer';
+  const paidByBankTransfer = isBankTransfer(registration.paymentMethod);
   const firstName = registration.customerName.split(' ')[0] || registration.customerName;
 
-  const nextStep = isBankTransfer
+  const nextStep = paidByBankTransfer
     ? "Our team will verify your proof of payment and email you an official receipt once it's confirmed."
     : "Once your payment is confirmed, we'll email you an official receipt.";
 
@@ -439,7 +418,7 @@ export async function sendRegistrationReceivedEmail(
          ${infoRow('Contact Email', registration.customerEmail)}
          ${registration.customerPhone ? infoRow('Contact Phone', registration.customerPhone) : ''}
          ${logisticsRow(registration)}
-         ${isBankTransfer && registration.transactionNumber ? infoRow('Transaction No.', registration.transactionNumber) : ''}`
+         ${paidByBankTransfer && registration.transactionNumber ? infoRow('Transaction No.', registration.transactionNumber) : ''}`
       )
     )}
 
@@ -447,7 +426,7 @@ export async function sendRegistrationReceivedEmail(
     ${cardRow(runnerDetailRows(registration))}
 
     ${sectionHeading('Order Summary')}
-    ${summaryRows(registration, isBankTransfer ? 'Amount Due' : 'Total Amount')}
+    ${summaryRows(registration, paidByBankTransfer ? 'Amount Due' : 'Total Amount')}
 
     ${fullWidthRow(
       `<p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 13px; line-height: 1.6; color: #8b8b96;">
@@ -476,13 +455,13 @@ export async function sendRegistrationConfirmationEmail(
   registration: RegistrationWithDetails
 ): Promise<void> {
   const { event, runners } = registration;
-  const isBankTransfer = registration.paymentMethod === 'bank_transfer';
+  const paidByBankTransfer = isBankTransfer(registration.paymentMethod);
   const firstName = registration.customerName.split(' ')[0] || registration.customerName;
 
   const body = bodyTable(`
     ${paragraphRow(
       `Hi ${firstName}, ${
-        isBankTransfer
+        paidByBankTransfer
           ? "we've verified your bank transfer — you're officially registered for"
           : "your payment went through — you're officially registered for"
       }
@@ -494,7 +473,7 @@ export async function sendRegistrationConfirmationEmail(
     ${cardRow(
       orderRows(
         registration,
-        isBankTransfer && registration.transactionNumber
+        paidByBankTransfer && registration.transactionNumber
           ? infoRow('Transaction No.', registration.transactionNumber)
           : ''
       )
@@ -517,7 +496,7 @@ export async function sendRegistrationConfirmationEmail(
     registration.customerEmail,
     `Payment confirmed — ${event.title} (${registration.orderRef})`,
     emailShell(
-      { label: isBankTransfer ? 'Payment Verified' : 'Payment Confirmed', tone: 'success' },
+      { label: paidByBankTransfer ? 'Payment Verified' : 'Payment Confirmed', tone: 'success' },
       body
     )
   );

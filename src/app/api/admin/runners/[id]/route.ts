@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
 import { asRunnerCommunity } from '@/lib/running-community';
+import {
+  optionalUpperCaseForStorage,
+  upperCaseForStorage,
+} from '@/lib/text-case';
 import db from '@/lib/db';
 import { getAuthCookie } from '@/lib/auth';
 
@@ -50,16 +54,20 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     const updatedRunner = await db.runner.update({
       where: { id },
       data: {
-        firstName,
-        lastName,
+        // Registrant text is stored uppercase, exactly as the wizards store it
+        // (lib/text-case.ts) — an organizer fixing a typo must not be the one
+        // row in the export that reads differently. Email is left alone: its
+        // local part is case-sensitive on some mail servers.
+        firstName: upperCaseForStorage(firstName),
+        lastName: upperCaseForStorage(lastName),
         email,
         phone,
-        gender,
+        gender: upperCaseForStorage(gender),
         birthdate,
         singletSize,
-        emergencyContactName,
+        emergencyContactName: upperCaseForStorage(emergencyContactName),
         emergencyContactPhone,
-        medicalConditions,
+        medicalConditions: optionalUpperCaseForStorage(medicalConditions),
         // Blank clears back to the default rather than storing an empty
         // string, so a club tally still adds up to the head count.
         runningCommunity: asRunnerCommunity(runningCommunity)

@@ -3,9 +3,20 @@ import prisma from '@/lib/db';
 import { recordWriteInCommunities, runnerCommunity } from '@/lib/running-community-store';
 import crypto from 'crypto';
 import { asDeliveryZone, deliveryFeeFor } from '@/app/events/[slug]/register/delivery';
+import {
+  LOGISTICS_METHODS,
+  PAYMENT_METHODS,
+  asLogisticsMethod,
+  asPaymentMethod,
+  paymongoPaymentType,
+} from '@/lib/registration-codes';
 import { storedShirtSize, subtotalWithUpcharge } from '@/lib/shirt-size';
 import { hasFinished } from '@/lib/event-schedule';
 import { sendRegistrationReceivedEmail } from '@/lib/email';
+import {
+  optionalUpperCaseForStorage,
+  upperCaseForStorage,
+} from '@/lib/text-case';
 
 export async function POST(request: Request) {
   try {
@@ -84,7 +95,16 @@ export async function POST(request: Request) {
     // the same thing, so the organizer's prices decide which pairs are legal —
     // otherwise a registration could record "outside province" while paying the
     // inside rate. Same for the admin fee, which is now per event.
-    const zone = logisticsMethod === 'delivery' ? asDeliveryZone(deliveryZone) : null;
+    // Both codes go into the database uppercase, like every other coded
+    // column (lib/registration-codes.ts), and through their guards rather than
+    // straight off the request: a stale tab still posts the old lowercase
+    // spelling, and it has to keep pricing correctly.
+    const storedLogisticsMethod = asLogisticsMethod(logisticsMethod);
+    const storedPaymentMethod = asPaymentMethod(paymentMethod);
+    const zone =
+      storedLogisticsMethod === LOGISTICS_METHODS.DELIVERY
+        ? asDeliveryZone(deliveryZone)
+        : null;
     const expectedDeliveryFee = deliveryFeeFor(event, zone);
     const expectedPlatformFee = event.adminFee * participants.length;
     // Category prices plus the large-size surcharge. Checked rather than
@@ -107,6 +127,14 @@ export async function POST(request: Request) {
       );
     }
 
+    // Registrant text is stored uppercase (lib/text-case.ts). The wizard
+    // already uppercases as the runner types, but this request did not have to
+    // come from the wizard — a tab left open can POST straight here — so the
+    // server is the one that decides what the column holds. The email address
+    // is deliberately not in this list.
+    const storedCustomerName = upperCaseForStorage(customerName);
+    const storedDeliveryAddress = optionalUpperCaseForStorage(deliveryAddress);
+
     const orderRef = `RM-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
 
     // Temporarily save to DB as PAID to populate dashboard immediately
@@ -115,17 +143,17 @@ export async function POST(request: Request) {
         eventId,
         orderRef,
         customerEmail,
-        customerName,
-        logisticsMethod,
+        customerName: storedCustomerName,
+        logisticsMethod: storedLogisticsMethod,
         // Only meaningful for delivery; pickup leaves it null.
         deliveryZone: zone,
-        deliveryAddress,
+        deliveryAddress: storedDeliveryAddress,
         deliveryFee: deliveryFeeCents,
         subtotal: subtotalCents,
         platformFee: platformFeeCents,
         transactionFee: transactionFeeCents,
         totalAmount: amountCents,
-        paymentMethod: paymentMethod,
+        paymentMethod: storedPaymentMethod,
         status: 'PENDING', // All payments start as PENDING until verified by webhook or admin
         // Checked above; recorded here as the organizer's evidence that the
         // waiver was agreed to at the moment of this specific submission.
@@ -134,16 +162,18 @@ export async function POST(request: Request) {
         runners: {
           create: participants.map((p: any) => ({
             categoryId: p.categoryId,
-            firstName: p.firstName,
-            lastName: p.lastName,
+            firstName: upperCaseForStorage(p.firstName),
+            lastName: upperCaseForStorage(p.lastName),
+            // Not uppercased: the local part of an address is case-sensitive
+            // on some mail servers, so touching it can stop delivery.
             email: p.email,
             phone: p.phone,
-            gender: p.gender,
+            gender: upperCaseForStorage(p.gender),
             birthdate: p.birthdate,
             singletSize: storedShirtSize(p, event.categories),
-            emergencyContactName: p.emergencyContactName,
+            emergencyContactName: upperCaseForStorage(p.emergencyContactName),
             emergencyContactPhone: p.emergencyContactPhone,
-            medicalConditions: p.medicalConditions,
+            medicalConditions: optionalUpperCaseForStorage(p.medicalConditions),
             // Blank answers land on INDEPENDENT RUNNER; the field is optional.
             runningCommunity: runnerCommunity(p),
           }))
@@ -165,7 +195,7 @@ export async function POST(request: Request) {
     const finalSuccessUrl = successUrl.includes('?') ? `${successUrl}&orderRef=${orderRef}` : `${successUrl}?orderRef=${orderRef}`;
     const finalCancelUrl = cancelUrl.includes('?') ? `${cancelUrl}&orderRef=${orderRef}&cancel=true` : `${cancelUrl}?orderRef=${orderRef}&cancel=true`;
 
-    if (paymentMethod === 'bank_transfer') {
+    if (storedPaymentMethod === PAYMENT_METHODS.BANK_TRANSFER) {
       return NextResponse.json({
         checkout_url: finalSuccessUrl
       });
@@ -229,7 +259,7 @@ export async function POST(request: Request) {
     }
 
     // Branch logic: Use Payment Intents API for direct e-wallets redirect, otherwise use Checkout Session
-    if (paymentMethod === 'gcash' || paymentMethod === 'paymaya') {
+    if (storedPaymentMethod === 'GCASH' || storedPaymentMethod === 'PAYMAYA') {
       const auth = `Basic ${Buffer.from(secretKey).toString('base64')}`;
 
       // 1. Create Payment Intent
@@ -243,7 +273,7 @@ export async function POST(request: Request) {
           data: {
             attributes: {
               amount: amountCents,
-              payment_method_allowed: [paymentMethod],
+              payment_method_allowed: [paymongoPaymentType(storedPaymentMethod)],
               currency: 'PHP',
               description: description
             }
@@ -266,9 +296,9 @@ export async function POST(request: Request) {
         body: JSON.stringify({
           data: {
             attributes: {
-              type: paymentMethod,
+              type: paymongoPaymentType(storedPaymentMethod),
               billing: {
-                name: customerName,
+                name: storedCustomerName,
                 email: customerEmail
               }
             }
@@ -336,13 +366,13 @@ export async function POST(request: Request) {
             reference_number: orderRef,
             line_items: lineItems,
             payment_method_types: [
-              paymentMethod
+              paymongoPaymentType(storedPaymentMethod)
             ],
             success_url: finalSuccessUrl,
             cancel_url: finalCancelUrl,
             customer_email: customerEmail,
             billing: {
-              name: customerName,
+              name: storedCustomerName,
               email: customerEmail
             }
           }

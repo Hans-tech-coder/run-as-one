@@ -6,6 +6,7 @@ import { asWaiverParagraphs } from '@/lib/consent-waiver';
 import { asRegistrationForm } from '@/lib/registration-form';
 import { asEventType } from '@/lib/event-type';
 import { asInclusions } from '@/lib/inclusions';
+import { upperCaseForStorage } from '@/lib/text-case';
 import { asBankAccounts } from '@/lib/bank-accounts';
 import { uniqueEventSlug } from '@/lib/event-slug';
 import { isCalendarDay } from '@/lib/event-schedule';
@@ -72,7 +73,9 @@ export async function POST(request: Request) {
         },
         categories: {
           create: categories.map((cat: any) => ({
-            name: cat.name,
+            // Uppercased like the runner's own fields: this name is printed
+            // beside them in the registrants table, the export and the emails.
+            name: upperCaseForStorage(cat.name),
             // A fun-run package has neither of these: no distance to run, and a
             // poster only if the organizer uploaded one.
             distance: cat.distance || '',

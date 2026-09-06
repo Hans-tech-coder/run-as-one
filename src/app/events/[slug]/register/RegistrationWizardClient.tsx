@@ -22,6 +22,11 @@ import {
   type DeliveryZone,
 } from "./delivery";
 import { type BankAccountView } from "@/lib/bank-accounts";
+import {
+  asDeliveryZone,
+  asLogisticsMethod,
+  type LogisticsMethod,
+} from "@/lib/registration-codes";
 import BankDetailsModal from "./BankDetailsModal";
 import SizeGuideModal from "./SizeGuideModal";
 import CategoryPicker from "./CategoryPicker";
@@ -38,6 +43,10 @@ import {
   totalShirtSizeUpcharge,
 } from "@/lib/shirt-size";
 import { communitySlug } from "@/lib/running-community";
+import {
+  isUppercasedRunnerField,
+  upperCaseAsTyped,
+} from "@/lib/text-case";
 import { sellsPackages } from "@/lib/event-type";
 import EventImage from "@/components/EventImage";
 import { useAlert } from "@/components/ui/AlertProvider";
@@ -135,17 +144,19 @@ export default function RegistrationWizardClient({
   );
 
   // Logistics state
-  const [logisticsMethod, setLogisticsMethod] = useState<"pickup" | "delivery">(
+  const [logisticsMethod, setLogisticsMethod] = useState<LogisticsMethod>(
+    // Through the guard, not straight off the record: a registration written
+    // before these codes were uppercased still says "delivery".
     isCancelParam && registration
-      ? registration.logisticsMethod || "pickup"
-      : "pickup",
+      ? asLogisticsMethod(registration.logisticsMethod)
+      : "PICKUP",
   );
   const [deliveryAddress, setDeliveryAddress] = useState(
     isCancelParam && registration ? registration.deliveryAddress || "" : "",
   );
   const [deliveryZone, setDeliveryZone] = useState<DeliveryZone | null>(
     isCancelParam && registration?.deliveryZone
-      ? registration.deliveryZone
+      ? asDeliveryZone(registration.deliveryZone)
       : defaultDeliveryZone(event),
   );
 
@@ -154,8 +165,8 @@ export default function RegistrationWizardClient({
 
   // Payment state
   const [paymentMethod, setPaymentMethod] = useState<
-    "gcash" | "maya" | "qrph" | "card" | "bank_transfer"
-  >("gcash");
+    "GCASH" | "MAYA" | "QRPH" | "CARD" | "BANK_TRANSFER"
+  >("GCASH");
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderRef, setOrderRef] = useState<string>(
     isCancelParam && registration ? registration.orderRef : "",
@@ -219,7 +230,16 @@ export default function RegistrationWizardClient({
     value: string,
   ) => {
     const newParticipants = [...participants];
-    newParticipants[index] = { ...newParticipants[index], [field]: value };
+    // Names and free-text notes are stored uppercase (lib/text-case.ts), so
+    // they are uppercased here rather than only in the API — the runner should
+    // read back the value the database will actually hold, not discover it on
+    // their confirmation email.
+    newParticipants[index] = {
+      ...newParticipants[index],
+      [field]: isUppercasedRunnerField(field)
+        ? upperCaseAsTyped(value)
+        : value,
+    };
     setParticipants(newParticipants);
   };
 
@@ -295,28 +315,28 @@ export default function RegistrationWizardClient({
   const subtotal = categoryTotal + sizeUpcharge;
 
   const deliveryFee =
-    logisticsMethod === "delivery" ? deliveryFeeFor(event, deliveryZone) : 0;
+    logisticsMethod === "DELIVERY" ? deliveryFeeFor(event, deliveryZone) : 0;
 
   // Platform Fee (DB-driven per participant)
   const platformFee = adminFeePerRunner * participants.length;
 
   // Dynamic Transaction Fee based on payment method
   let transactionFee = 0;
-  if (step === 3 && paymentMethod !== "bank_transfer") {
+  if (step === 3 && paymentMethod !== "BANK_TRANSFER") {
     const baseAmountForFee = subtotal + deliveryFee + platformFee; // Include admin fee in computation as requested
 
     // Using VAT-inclusive rates (PayMongo deducts this from the total gross amount)
     // Formula to perfectly cover the fee: Fee = (Base * rate + fixed) / (1 - rate)
-    if (paymentMethod === "gcash") {
+    if (paymentMethod === "GCASH") {
       const rate = 0.025; // 2.5%
       transactionFee = (baseAmountForFee * rate) / (1 - rate);
-    } else if (paymentMethod === "maya") {
+    } else if (paymentMethod === "MAYA") {
       const rate = 0.02; // 2.0%
       transactionFee = (baseAmountForFee * rate) / (1 - rate);
-    } else if (paymentMethod === "qrph") {
+    } else if (paymentMethod === "QRPH") {
       const rate = 0.015; // 1.5%
       transactionFee = (baseAmountForFee * rate) / (1 - rate);
-    } else if (paymentMethod === "card") {
+    } else if (paymentMethod === "CARD") {
       const rate = 0.035; // 3.5%
       const fixed = 1500; // ₱15.00 in centavos
       transactionFee = (baseAmountForFee * rate + fixed) / (1 - rate);
@@ -360,14 +380,14 @@ export default function RegistrationWizardClient({
 
   const deliveryAddressError =
     showErrors &&
-    logisticsMethod === "delivery" &&
+    logisticsMethod === "DELIVERY" &&
     deliveryZone !== null &&
     deliveryAddress.trim() === ""
       ? "Enter a complete delivery address"
       : undefined;
 
   const validateStep2 = () => {
-    if (logisticsMethod === "pickup") return true;
+    if (logisticsMethod === "PICKUP") return true;
     return deliveryZone !== null && deliveryAddress.trim() !== "";
   };
 
@@ -463,7 +483,7 @@ export default function RegistrationWizardClient({
       return;
     }
 
-    if (paymentMethod === "bank_transfer") {
+    if (paymentMethod === "BANK_TRANSFER") {
       setStep(4);
       return;
     }
@@ -711,7 +731,7 @@ export default function RegistrationWizardClient({
                   </div>
                 )}
 
-                {logisticsMethod === "delivery" && (
+                {logisticsMethod === "DELIVERY" && (
                   <div className="flex justify-between items-center text-sm mt-2 pt-2 border-t border-white/5">
                     <span className="text-secondary">
                       Delivery Fee
@@ -730,7 +750,7 @@ export default function RegistrationWizardClient({
                   </span>
                 </div>
 
-                {step === 3 && paymentMethod !== "bank_transfer" && (
+                {step === 3 && paymentMethod !== "BANK_TRANSFER" && (
                   <div className="flex justify-between items-center text-sm mt-2 pt-2 border-t border-white/5">
                     <span className="text-secondary">Transaction Fee</span>
                     <span className="text-white">
@@ -759,13 +779,13 @@ export default function RegistrationWizardClient({
               <div
                 className="absolute top-1/2 left-0 h-[3px] bg-accent-orange -translate-y-1/2 z-0 transition-all duration-700 ease-in-out rounded-full shadow-[0_0_12px_rgba(255,107,43,0.8)]"
                 style={{
-                  width: `${((step - 1) / (paymentMethod === "bank_transfer" || step === 4 ? 3 : 2)) * 100}%`,
+                  width: `${((step - 1) / (paymentMethod === "BANK_TRANSFER" || step === 4 ? 3 : 2)) * 100}%`,
                 }}
               ></div>
 
               {[1, 2, 3, 4].map((s) => {
                 const totalStepsShown =
-                  paymentMethod === "bank_transfer" || step === 4 ? 4 : 3;
+                  paymentMethod === "BANK_TRANSFER" || step === 4 ? 4 : 3;
                 if (s === 4 && totalStepsShown === 3) return null;
 
                 const isActive = step === s;
@@ -890,7 +910,7 @@ export default function RegistrationWizardClient({
                               e.target.value,
                             )
                           }
-                          placeholder="Juan"
+                          placeholder="JUAN"
                         />
                         <FieldError
                           id={`${runnerFieldId(idx, "firstName")}-error`}
@@ -912,7 +932,7 @@ export default function RegistrationWizardClient({
                               e.target.value,
                             )
                           }
-                          placeholder="Dela Cruz"
+                          placeholder="DELA CRUZ"
                         />
                         <FieldError
                           id={`${runnerFieldId(idx, "lastName")}-error`}
@@ -1031,7 +1051,7 @@ export default function RegistrationWizardClient({
                               e.target.value,
                             )
                           }
-                          placeholder="Maria Dela Cruz"
+                          placeholder="MARIA DELA CRUZ"
                         />
                         <FieldError
                           id={`${runnerFieldId(idx, "emergencyContactName")}-error`}
@@ -1063,7 +1083,7 @@ export default function RegistrationWizardClient({
                               e.target.value,
                             )
                           }
-                          placeholder="e.g. Asthma, Allergies (Leave blank if none)"
+                          placeholder="e.g. ASTHMA, ALLERGIES (Leave blank if none)"
                         ></textarea>
                       </div>
                     </div>
@@ -1103,20 +1123,20 @@ export default function RegistrationWizardClient({
                   {event.logisticsPickup && (
                     <div
                       className={`group relative overflow-hidden border rounded-[16px] p-6 cursor-pointer transition-all ${
-                        logisticsMethod === "pickup"
+                        logisticsMethod === "PICKUP"
                           ? "border-accent-blue bg-accent-blue/10 shadow-[0_0_20px_rgba(0,122,255,0.15)]"
                           : "border-white/10 bg-black/40 hover:border-white/30 hover:bg-white/5"
                       }`}
-                      onClick={() => setLogisticsMethod("pickup")}
+                      onClick={() => setLogisticsMethod("PICKUP")}
                     >
                       <div
-                        className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl -mr-16 -mt-16 transition-colors ${logisticsMethod === "pickup" ? "bg-accent-blue/20" : "bg-white/5 group-hover:bg-white/10"}`}
+                        className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl -mr-16 -mt-16 transition-colors ${logisticsMethod === "PICKUP" ? "bg-accent-blue/20" : "bg-white/5 group-hover:bg-white/10"}`}
                       ></div>
                       <div className="relative z-10 flex justify-between items-start mb-3">
                         <div className="font-bold text-xl text-white">
                           On-site Pickup
                         </div>
-                        {logisticsMethod === "pickup" && (
+                        {logisticsMethod === "PICKUP" && (
                           <CheckCircle2
                             size={24}
                             className="text-accent-blue"
@@ -1136,20 +1156,20 @@ export default function RegistrationWizardClient({
                   {offersDelivery(event) && (
                     <div
                       className={`group relative overflow-hidden border rounded-[16px] p-6 cursor-pointer transition-all ${
-                        logisticsMethod === "delivery"
+                        logisticsMethod === "DELIVERY"
                           ? "border-accent-blue bg-accent-blue/10 shadow-[0_0_20px_rgba(0,122,255,0.15)]"
                           : "border-white/10 bg-black/40 hover:border-white/30 hover:bg-white/5"
                       }`}
-                      onClick={() => setLogisticsMethod("delivery")}
+                      onClick={() => setLogisticsMethod("DELIVERY")}
                     >
                       <div
-                        className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl -mr-16 -mt-16 transition-colors ${logisticsMethod === "delivery" ? "bg-accent-blue/20" : "bg-white/5 group-hover:bg-white/10"}`}
+                        className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl -mr-16 -mt-16 transition-colors ${logisticsMethod === "DELIVERY" ? "bg-accent-blue/20" : "bg-white/5 group-hover:bg-white/10"}`}
                       ></div>
                       <div className="relative z-10 flex justify-between items-start mb-3">
                         <div className="font-bold text-xl text-white">
                           Door-to-Door Delivery
                         </div>
-                        {logisticsMethod === "delivery" && (
+                        {logisticsMethod === "DELIVERY" && (
                           <CheckCircle2
                             size={24}
                             className="text-accent-blue"
@@ -1171,7 +1191,7 @@ export default function RegistrationWizardClient({
                   )}
                 </div>
 
-                {logisticsMethod === "delivery" && (
+                {logisticsMethod === "DELIVERY" && (
                   <div className="animate-fade-in flex flex-col gap-6">
                     {/* Only worth asking when there is an actual choice. With a
                         single tier the zone is already selected for them. */}
@@ -1226,8 +1246,10 @@ export default function RegistrationWizardClient({
                             : undefined
                         }
                         value={deliveryAddress}
-                        onChange={(e) => setDeliveryAddress(e.target.value)}
-                        placeholder="House/Unit No., Street, Barangay, City/Municipality, Province, Zip Code"
+                        onChange={(e) =>
+                          setDeliveryAddress(upperCaseAsTyped(e.target.value))
+                        }
+                        placeholder="HOUSE/UNIT NO., STREET, BARANGAY, CITY/MUNICIPALITY, PROVINCE, ZIP CODE"
                         rows={4}
                       ></textarea>
                       <FieldError
@@ -1262,14 +1284,14 @@ export default function RegistrationWizardClient({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
                   <div
-                    className={`group relative overflow-hidden border ${paymentMethod === "gcash" ? "border-[#007DFE] bg-[#007DFE]/10" : "border-white/10 bg-black/40 hover:border-[#007DFE]/50"} rounded-[16px] p-6 cursor-pointer transition-all flex items-center gap-4`}
-                    onClick={() => setPaymentMethod("gcash")}
+                    className={`group relative overflow-hidden border ${paymentMethod === "GCASH" ? "border-[#007DFE] bg-[#007DFE]/10" : "border-white/10 bg-black/40 hover:border-[#007DFE]/50"} rounded-[16px] p-6 cursor-pointer transition-all flex items-center gap-4`}
+                    onClick={() => setPaymentMethod("GCASH")}
                   >
                     <div className="absolute top-0 right-0 w-24 h-24 bg-[#007DFE]/10 rounded-full blur-xl -mr-12 -mt-12 group-hover:bg-[#007DFE]/20"></div>
                     <div
-                      className={`w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 ${paymentMethod === "gcash" ? "border-[#007DFE]" : "border-white/20"}`}
+                      className={`w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 ${paymentMethod === "GCASH" ? "border-[#007DFE]" : "border-white/20"}`}
                     >
-                      {paymentMethod === "gcash" && (
+                      {paymentMethod === "GCASH" && (
                         <div className="w-4 h-4 rounded-full bg-[#007DFE]"></div>
                       )}
                     </div>
@@ -1282,14 +1304,14 @@ export default function RegistrationWizardClient({
                   </div>
 
                   <div
-                    className={`group relative overflow-hidden border ${paymentMethod === "maya" ? "border-[#00A164] bg-[#00A164]/10" : "border-white/10 bg-black/40 hover:border-[#00A164]/50"} rounded-[16px] p-6 cursor-pointer transition-all flex items-center gap-4`}
-                    onClick={() => setPaymentMethod("maya")}
+                    className={`group relative overflow-hidden border ${paymentMethod === "MAYA" ? "border-[#00A164] bg-[#00A164]/10" : "border-white/10 bg-black/40 hover:border-[#00A164]/50"} rounded-[16px] p-6 cursor-pointer transition-all flex items-center gap-4`}
+                    onClick={() => setPaymentMethod("MAYA")}
                   >
                     <div className="absolute top-0 right-0 w-24 h-24 bg-[#00A164]/10 rounded-full blur-xl -mr-12 -mt-12 group-hover:bg-[#00A164]/20"></div>
                     <div
-                      className={`w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 ${paymentMethod === "maya" ? "border-[#00A164]" : "border-white/20"}`}
+                      className={`w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 ${paymentMethod === "MAYA" ? "border-[#00A164]" : "border-white/20"}`}
                     >
-                      {paymentMethod === "maya" && (
+                      {paymentMethod === "MAYA" && (
                         <div className="w-4 h-4 rounded-full bg-[#00A164]"></div>
                       )}
                     </div>
@@ -1302,14 +1324,14 @@ export default function RegistrationWizardClient({
                   </div>
 
                   <div
-                    className={`group relative overflow-hidden border ${paymentMethod === "qrph" ? "border-accent-blue bg-accent-blue/10" : "border-white/10 bg-black/40 hover:border-accent-blue/50"} rounded-[16px] p-6 cursor-pointer transition-all flex items-center gap-4`}
-                    onClick={() => setPaymentMethod("qrph")}
+                    className={`group relative overflow-hidden border ${paymentMethod === "QRPH" ? "border-accent-blue bg-accent-blue/10" : "border-white/10 bg-black/40 hover:border-accent-blue/50"} rounded-[16px] p-6 cursor-pointer transition-all flex items-center gap-4`}
+                    onClick={() => setPaymentMethod("QRPH")}
                   >
                     <div className="absolute top-0 right-0 w-24 h-24 bg-accent-blue/10 rounded-full blur-xl -mr-12 -mt-12 group-hover:bg-accent-blue/20"></div>
                     <div
-                      className={`w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 ${paymentMethod === "qrph" ? "border-accent-blue" : "border-white/20"}`}
+                      className={`w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 ${paymentMethod === "QRPH" ? "border-accent-blue" : "border-white/20"}`}
                     >
-                      {paymentMethod === "qrph" && (
+                      {paymentMethod === "QRPH" && (
                         <div className="w-4 h-4 rounded-full bg-accent-blue"></div>
                       )}
                     </div>
@@ -1323,21 +1345,21 @@ export default function RegistrationWizardClient({
 
                   <div
                     className={`group relative flex cursor-pointer items-center gap-4 overflow-hidden rounded-[16px] border ${
-                      paymentMethod === "card"
+                      paymentMethod === "CARD"
                         ? "border-accent-blue bg-accent-blue/10"
                         : "border-white/10 bg-black/40 hover:border-accent-blue/50"
                     } p-6 transition-all`}
-                    onClick={() => setPaymentMethod("card")}
+                    onClick={() => setPaymentMethod("CARD")}
                   >
                     <div className="absolute right-0 top-0 -mr-12 -mt-12 h-24 w-24 rounded-full bg-accent-blue/10 blur-xl group-hover:bg-accent-blue/20"></div>
                     <div
                       className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 ${
-                        paymentMethod === "card"
+                        paymentMethod === "CARD"
                           ? "border-accent-blue"
                           : "border-white/20"
                       }`}
                     >
-                      {paymentMethod === "card" && (
+                      {paymentMethod === "CARD" && (
                         <div className="h-4 w-4 rounded-full bg-accent-blue"></div>
                       )}
                     </div>
@@ -1354,14 +1376,14 @@ export default function RegistrationWizardClient({
                       the runner to a step that cannot be completed. */}
                   {bankAccounts.length > 0 && (
                   <div
-                    className={`group relative overflow-hidden border ${paymentMethod === "bank_transfer" ? "border-accent-orange bg-accent-orange/10" : "border-white/10 bg-black/40 hover:border-accent-orange/50"} rounded-[16px] p-6 cursor-pointer transition-all flex items-center gap-4`}
-                    onClick={() => setPaymentMethod("bank_transfer")}
+                    className={`group relative overflow-hidden border ${paymentMethod === "BANK_TRANSFER" ? "border-accent-orange bg-accent-orange/10" : "border-white/10 bg-black/40 hover:border-accent-orange/50"} rounded-[16px] p-6 cursor-pointer transition-all flex items-center gap-4`}
+                    onClick={() => setPaymentMethod("BANK_TRANSFER")}
                   >
                     <div className="absolute top-0 right-0 w-24 h-24 bg-accent-orange/10 rounded-full blur-xl -mr-12 -mt-12 group-hover:bg-accent-orange/20"></div>
                     <div
-                      className={`w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 ${paymentMethod === "bank_transfer" ? "border-accent-orange" : "border-white/20"}`}
+                      className={`w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 ${paymentMethod === "BANK_TRANSFER" ? "border-accent-orange" : "border-white/20"}`}
                     >
-                      {paymentMethod === "bank_transfer" && (
+                      {paymentMethod === "BANK_TRANSFER" && (
                         <div className="w-4 h-4 rounded-full bg-accent-orange"></div>
                       )}
                     </div>
@@ -1400,10 +1422,10 @@ export default function RegistrationWizardClient({
                     disabled={isProcessing || !consentGiven}
                   >
                     {isProcessing
-                      ? paymentMethod !== "bank_transfer"
+                      ? paymentMethod !== "BANK_TRANSFER"
                         ? "Connecting to PayMongo..."
                         : "Processing"
-                      : paymentMethod !== "bank_transfer"
+                      : paymentMethod !== "BANK_TRANSFER"
                         ? `Pay ₱${formatPesos(totalAmount)}`
                         : "Upload Deposit Slip"}
                   </button>

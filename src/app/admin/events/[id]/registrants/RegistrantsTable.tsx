@@ -27,6 +27,7 @@ import {
   VisibilityState,
 } from '@tanstack/react-table';
 import { SHIRT_SIZES } from '@/lib/shirt-size';
+import { upperCaseAsTyped } from '@/lib/text-case';
 
 interface RegistrantsTableProps {
   eventId: string;
@@ -342,11 +343,8 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
     {
       accessorKey: "paymentMethod",
       header: "Payment",
-      cell: ({ row }) => (
-        <span className="capitalize">
-          {row.original.paymentMethod === 'bank_transfer' ? 'Bank Transfer' : row.original.paymentMethod}
-        </span>
-      ),
+      // Already the readable uppercase label; see registrants/page.tsx.
+      cell: ({ row }) => <span>{row.original.paymentMethod}</span>,
       filterFn: (row, columnId, filterValue) => {
         if (!filterValue || filterValue.length === 0) return true;
         return filterValue.includes(row.getValue(columnId));
@@ -370,7 +368,7 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
             runnerId={row.original.id}
             registrationId={row.original.registrationId}
             status={row.original.status}
-            paymentMethod={row.original.paymentMethod || ''}
+            isBankTransfer={row.original.isBankTransfer}
             updatingId={updatingId}
             handleStatusChange={handleStatusChange}
             onEdit={openEditModal}
@@ -443,6 +441,35 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
     table.getColumn('paymentMethod')?.setFilterValue(newSelected.length ? newSelected : undefined);
   };
 
+  /**
+   * The registrants export, written to survive Excel.
+   *
+   * Three things had to be true and were not:
+   *
+   *  - **Every field is quoted.** Only some of them used to be, so a runner
+   *    named "DELA CRUZ, JR." or a category called "10K, Open" pushed every
+   *    following column one to the right for that row alone — the kind of
+   *    damage nobody notices until the race-day list is already printed.
+   *  - **Phone numbers reach Excel as text.** `+639171234567` bare is read as
+   *    a formula, because a leading `+` starts one, and lands in the cell as
+   *    the number 639171234567 with the plus gone. The `="…"` form is the one
+   *    spelling Excel, Google Sheets and LibreOffice all read back as the
+   *    literal string.
+   *  - **A UTF-8 BOM leads the file.** Without it Excel opens a UTF-8 CSV as
+   *    the system codepage, and the first "Ñ" in a Filipino name arrives as
+   *    mojibake.
+   *
+   * CRLF line endings for the same reason: RFC 4180 asks for them, and Excel
+   * is the reader this file exists for.
+   */
+  const csvField = (value: unknown): string =>
+    `"${String(value ?? '').replace(/"/g, '""')}"`;
+
+  const csvPhone = (value: unknown): string => {
+    const number = String(value ?? '').replace(/"/g, '');
+    return number ? `"=""${number}"""` : csvField('');
+  };
+
   const handleExportCSV = () => {
     const headers = [
       'Order Ref', 'First Name', 'Last Name', 'Email', 'Phone', 'Gender', 'Birthdate', 
@@ -457,14 +484,34 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
     const csvRows = rowsToExport.map(r => {
       const runner = r.original;
       return [
-        runner.orderRef, runner.firstName, runner.lastName, runner.email, runner.phone, runner.gender, runner.birthdate,
-        runner.category, runner.distance, runner.size, runner.emergencyContactName, runner.emergencyContactPhone,
-        `"${runner.runningCommunity || ''}"`, `"${runner.medicalConditions}"`, runner.logisticsMethod, runner.deliveryZone, `"${runner.deliveryAddress}"`, runner.paymentMethod, runner.status
-      ].join(',')
+        csvField(runner.orderRef),
+        csvField(runner.firstName),
+        csvField(runner.lastName),
+        csvField(runner.email),
+        csvPhone(runner.phone),
+        csvField(runner.gender),
+        csvField(runner.birthdate),
+        csvField(runner.category),
+        csvField(runner.distance),
+        csvField(runner.size),
+        csvField(runner.emergencyContactName),
+        csvPhone(runner.emergencyContactPhone),
+        csvField(runner.runningCommunity),
+        csvField(runner.medicalConditions || 'None'),
+        csvField(runner.logisticsMethod),
+        csvField(runner.deliveryZone),
+        csvField(runner.deliveryAddress),
+        csvField(runner.paymentMethod),
+        csvField(runner.status),
+      ].join(',');
     });
     
-    const csvContent = [headers.join(','), ...csvRows].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const csvContent = [headers.map(csvField).join(','), ...csvRows].join('\r\n');
+    // U+FEFF, the byte order mark, spelled out rather than pasted in as the
+    // invisible character it is. It has to be the very first thing in the file
+    // or Excel reads the rest as the system codepage instead of UTF-8.
+    const BOM = String.fromCharCode(0xfeff);
+    const blob = new Blob([BOM, csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     
     const link = document.createElement('a');
@@ -473,6 +520,12 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    // The blob stays in memory for the life of the document otherwise, and an
+    // organizer exports the same list over and over while checking payments.
+    // Released on the next tick, not immediately: some browsers have not
+    // finished handing the URL to the download manager when click() returns,
+    // and revoking under them cancels the download.
+    setTimeout(() => URL.revokeObjectURL(url), 0);
   };
 
   return (
@@ -571,7 +624,6 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
               <div className="absolute left-0 mt-2 bg-[#050505] border border-white/10 rounded-md p-2 min-w-[150px] z-50 shadow-2xl">
                 {uniquePayment.map(pay => {
                   const isSelected = selectedPayment.includes(pay);
-                  const displayPay = pay === 'bank_transfer' ? 'Bank Transfer' : pay;
                   return (
                     <div 
                       key={pay}
@@ -581,7 +633,7 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
                       <div className={`w-4 h-4 border border-white/10 rounded-sm flex items-center justify-center ${isSelected ? 'bg-white/10' : ''}`}>
                         {isSelected && <div className="w-2 h-2 bg-white rounded-sm" />}
                       </div>
-                      {displayPay}
+                      {pay}
                     </div>
                   );
                 })}
@@ -817,15 +869,15 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
                       {viewingRunner.status}
                     </span>
                   </p>
-                  <p className="flex flex-col"><span className="text-gray-500">Payment Method</span> <span className="text-white font-medium capitalize">{viewingRunner.paymentMethod === 'bank_transfer' ? 'Bank Transfer' : viewingRunner.paymentMethod}</span></p>
-                  <p className="flex flex-col"><span className="text-gray-500">Logistics</span> <span className="text-white font-medium capitalize">{viewingRunner.logisticsMethod}</span></p>
-                  {viewingRunner.logisticsMethod === 'delivery' && viewingRunner.deliveryZone && (
-                    <p className="flex flex-col"><span className="text-gray-500">Delivery Area</span> <span className="text-white font-medium">{viewingRunner.deliveryZone === 'outside' ? 'Outside Province' : 'Inside Province'}</span></p>
+                  <p className="flex flex-col"><span className="text-gray-500">Payment Method</span> <span className="text-white font-medium">{viewingRunner.paymentMethod}</span></p>
+                  <p className="flex flex-col"><span className="text-gray-500">Logistics</span> <span className="text-white font-medium">{viewingRunner.logisticsMethod}</span></p>
+                  {viewingRunner.isDelivery && viewingRunner.deliveryZone && (
+                    <p className="flex flex-col"><span className="text-gray-500">Delivery Area</span> <span className="text-white font-medium">{viewingRunner.deliveryZone}</span></p>
                   )}
-                  {viewingRunner.logisticsMethod === 'delivery' && (
+                  {viewingRunner.isDelivery && (
                     <p className="flex flex-col sm:col-span-2"><span className="text-gray-500">Address</span> <span className="text-white font-medium">{viewingRunner.deliveryAddress}</span></p>
                   )}
-                  {viewingRunner.paymentMethod === 'bank_transfer' && viewingRunner.transactionNumber && (
+                  {viewingRunner.isBankTransfer && viewingRunner.transactionNumber && (
                     <p className="flex flex-col"><span className="text-gray-500">Transaction No.</span> <span className="text-white font-medium">{viewingRunner.transactionNumber}</span></p>
                   )}
                   <p className="flex flex-col">
@@ -847,7 +899,7 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
                   </p>
                 </div>
                   
-                {viewingRunner.paymentMethod === 'bank_transfer' && (
+                {viewingRunner.isBankTransfer && (
                   <div className="mt-6">
                     <p className="text-gray-500 text-sm mb-2">Proof of Payment</p>
                     {viewingRunner.proofOfPayment ? (
@@ -876,7 +928,7 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
             
             <div className="p-6 border-t border-white/10 flex justify-between items-center bg-black/20">
               <div>
-                {viewingRunner.status === 'PENDING' && viewingRunner.paymentMethod === 'bank_transfer' && (
+                {viewingRunner.status === 'PENDING' && viewingRunner.isBankTransfer && (
                   <button 
                     onClick={() => {
                       handleStatusChange(viewingRunner.registrationId, 'PAID');
@@ -927,7 +979,7 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
                       type="text" 
                       required 
                       value={editingRunner.firstName || ''} 
-                      onChange={e => setEditingRunner({...editingRunner, firstName: e.target.value})}
+                      onChange={e => setEditingRunner({...editingRunner, firstName: upperCaseAsTyped(e.target.value)})}
                       className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-white/30" 
                     />
                   </div>
@@ -937,7 +989,7 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
                       type="text" 
                       required 
                       value={editingRunner.lastName || ''} 
-                      onChange={e => setEditingRunner({...editingRunner, lastName: e.target.value})}
+                      onChange={e => setEditingRunner({...editingRunner, lastName: upperCaseAsTyped(e.target.value)})}
                       className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-white/30" 
                     />
                   </div>
@@ -969,13 +1021,17 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <label className="text-sm text-gray-400">Gender</label>
-                    <select 
-                      value={editingRunner.gender || ''} 
+                    {/* Uppercased on read as well as on write: rows created
+                        before gender was stored uppercase still hold "Male",
+                        and a value matching no option would silently show the
+                        wrong one. */}
+                    <select
+                      value={(editingRunner.gender || '').toUpperCase()}
                       onChange={e => setEditingRunner({...editingRunner, gender: e.target.value})}
                       className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-white/30"
                     >
-                      <option value="Male">Male</option>
-                      <option value="Female">Female</option>
+                      <option value="MALE">MALE</option>
+                      <option value="FEMALE">FEMALE</option>
                     </select>
                   </div>
                   <div className="space-y-2">
@@ -1007,7 +1063,7 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
                     <input
                       type="text"
                       value={editingRunner.runningCommunity || ''}
-                      onChange={e => setEditingRunner({...editingRunner, runningCommunity: e.target.value})}
+                      onChange={e => setEditingRunner({...editingRunner, runningCommunity: upperCaseAsTyped(e.target.value)})}
                       placeholder="Independent Runner"
                       className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-white/30"
                     />
@@ -1023,7 +1079,7 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
                         type="text" 
                         required 
                         value={editingRunner.emergencyContactName || ''} 
-                        onChange={e => setEditingRunner({...editingRunner, emergencyContactName: e.target.value})}
+                        onChange={e => setEditingRunner({...editingRunner, emergencyContactName: upperCaseAsTyped(e.target.value)})}
                         className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-white/30" 
                       />
                     </div>

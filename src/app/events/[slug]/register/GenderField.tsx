@@ -16,15 +16,24 @@ import SelectField, { type SelectOption } from "./SelectField";
  * Shared by both wizards, so a fun run and a race ask it the same way.
  */
 
+/**
+ * Uppercase, like every other registrant answer (lib/text-case.ts). The value
+ * and the label are the same string on purpose: what the runner reads in the
+ * list is exactly what the registrants table, the CSV export and the emails
+ * will show.
+ *
+ * The placeholder below stays sentence case, because it is an instruction
+ * rather than a sample of the answer — nobody's gender is "Select Gender".
+ */
 const GENDER_OPTIONS: readonly SelectOption[] = [
   {
-    value: "Male",
-    label: "Male",
+    value: "MALE",
+    label: "MALE",
     icon: <Mars size={16} aria-hidden="true" />,
   },
   {
-    value: "Female",
-    label: "Female",
+    value: "FEMALE",
+    label: "FEMALE",
     icon: <Venus size={16} aria-hidden="true" />,
   },
 ];

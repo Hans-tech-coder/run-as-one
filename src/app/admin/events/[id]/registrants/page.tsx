@@ -3,6 +3,14 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import prisma from '@/lib/db';
 import RegistrantsTable from './RegistrantsTable';
+import {
+  LOGISTICS_METHODS,
+  asLogisticsMethod,
+  deliveryZoneLabel,
+  isBankTransfer,
+  logisticsMethodLabel,
+  paymentMethodLabel,
+} from '@/lib/registration-codes';
 
 export default async function RegistrantsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -51,13 +59,28 @@ export default async function RegistrantsPage({ params }: { params: Promise<{ id
         status: reg.status,
         emergencyContactName: runner.emergencyContactName,
         emergencyContactPhone: runner.emergencyContactPhone,
-        medicalConditions: runner.medicalConditions || 'None',
-        logisticsMethod: reg.logisticsMethod,
+        // Kept raw, not defaulted to a readable "None": the edit modal PUTs
+        // this row straight back, so a display word here would be saved as the
+        // runner's actual medical history. The table, the modal and the export
+        // each supply their own wording for an empty answer.
+        medicalConditions: runner.medicalConditions || '',
+        // The three coded columns arrive here as codes (BANK_TRANSFER,
+        // DELIVERY, INSIDE) and leave as the uppercase words a person reads.
+        // Done once, here, so the table, the filters, the detail modal and the
+        // CSV export can never format them three different ways again — and
+        // uppercase, because on this screen they are stored data sitting beside
+        // a runner's uppercase name, not a choice being offered.
+        logisticsMethod: logisticsMethodLabel(reg.logisticsMethod).toUpperCase(),
         // The zone the runner declared at checkout — it decides which delivery
         // fee they were charged, so the organizer needs to see it.
-        deliveryZone: reg.deliveryZone || '',
+        deliveryZone: deliveryZoneLabel(reg.deliveryZone).toUpperCase(),
         deliveryAddress: reg.deliveryAddress || 'N/A',
-        paymentMethod: reg.paymentMethod,
+        paymentMethod: paymentMethodLabel(reg.paymentMethod).toUpperCase(),
+        // The branches the screen actually needs, decided from the code rather
+        // than by matching the label back against a string.
+        isDelivery:
+          asLogisticsMethod(reg.logisticsMethod) === LOGISTICS_METHODS.DELIVERY,
+        isBankTransfer: isBankTransfer(reg.paymentMethod),
         proofOfPayment: reg.proofOfPayment,
         transactionNumber: reg.transactionNumber,
         consentGiven: reg.consentGiven,

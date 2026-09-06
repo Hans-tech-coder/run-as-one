@@ -62,9 +62,16 @@ export function communitySlug(name: string): string {
  * The field is optional in the form, so a blank answer lands on
  * INDEPENDENT_RUNNER rather than an empty string. That keeps the registrants
  * export free of holes and makes a club tally add up to the head count.
+ *
+ * Uppercased, like every other registrant field (see text-case.ts): the club
+ * is read back in the admin table, the CSV export and the emails, and
+ * INDEPENDENT_RUNNER — the default sitting beside it in the same column — has
+ * always been uppercase. A picker that snaps a write-in to an approved club's
+ * own casing runs before this, so the club is still matched on the list's terms
+ * and only the stored casing is ours.
  */
 export function asRunnerCommunity(value: unknown): string {
-  return normalizeCommunityName(value) || INDEPENDENT_RUNNER;
+  return normalizeCommunityName(value).toUpperCase() || INDEPENDENT_RUNNER;
 }
 
 /**

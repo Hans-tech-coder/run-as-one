@@ -9,7 +9,7 @@ interface RegistrantActionsMenuProps {
   runnerId: string;
   registrationId: string;
   status: string;
-  paymentMethod: string;
+  isBankTransfer: boolean;
   updatingId: string | null;
   handleStatusChange: (registrationId: string, status: string) => void;
   onEdit: (runnerId: string) => void;
@@ -20,7 +20,7 @@ export default function RegistrantActionsMenu({
   runnerId,
   registrationId,
   status,
-  paymentMethod,
+  isBankTransfer,
   updatingId,
   handleStatusChange,
   onEdit,
@@ -147,7 +147,7 @@ export default function RegistrantActionsMenu({
           Edit Registrant
         </button>
 
-        {status === 'PENDING' && paymentMethod === 'bank_transfer' && (
+        {status === 'PENDING' && isBankTransfer && (
           <button 
             onClick={() => onStatusChange('PAID')}
             disabled={updatingId === registrationId}

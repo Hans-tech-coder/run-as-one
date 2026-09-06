@@ -6,6 +6,7 @@ import PosterField from './PosterField';
 import InclusionsField from './InclusionsField';
 import { blankCategory, type CategoryDraft } from './category-draft';
 import { EVENT_TYPES, type EventType } from '@/lib/event-type';
+import { upperCaseAsTyped } from '@/lib/text-case';
 
 /**
  * What an event sells, and the rows that make it up.
@@ -52,7 +53,7 @@ function wording(eventType: EventType) {
     panelTitle: packages ? 'Registration Packages' : 'Distance Categories',
     rowLabel: packages ? 'Package' : 'Category',
     nameLabel: packages ? 'Package Name' : 'Category Name',
-    namePlaceholder: packages ? 'e.g. Basic Package' : 'e.g. Full Marathon',
+    namePlaceholder: packages ? 'e.g. BASIC PACKAGE' : 'e.g. FULL MARATHON',
     addLabel: packages ? 'Add Another Package' : 'Add Another Category',
     inclusionsPlaceholder: packages
       ? 'Registration Band\nRaffle Entry\nSnacks\nEvent Entitlement'
@@ -178,10 +179,17 @@ export default function EventOptionsPanel({
               <div className="form-grid">
                 <div className="form-group">
                   <label className="form-label">{words.nameLabel}</label>
+                  {/* Uppercased as it is typed, and again in the API. The
+                      option's name is not really the organizer's private copy:
+                      it is printed on the registrants table, the CSV export and
+                      both registration emails beside runner data that is all
+                      uppercase, so it has to match. */}
                   <input
                     type="text"
                     value={row.name}
-                    onChange={e => update(idx, 'name', e.target.value)}
+                    onChange={e =>
+                      update(idx, 'name', upperCaseAsTyped(e.target.value))
+                    }
                     className="form-input"
                     placeholder={words.namePlaceholder}
                     required

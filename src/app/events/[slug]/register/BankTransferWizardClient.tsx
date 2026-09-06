@@ -23,6 +23,7 @@ import {
   type DeliveryZone,
 } from "./delivery";
 import { type BankAccountView } from "@/lib/bank-accounts";
+import { type LogisticsMethod } from "@/lib/registration-codes";
 import BankDetailsModal from "./BankDetailsModal";
 import SizeGuideModal from "./SizeGuideModal";
 import CategoryPicker from "./CategoryPicker";
@@ -39,6 +40,10 @@ import {
   totalShirtSizeUpcharge,
 } from "@/lib/shirt-size";
 import { communitySlug } from "@/lib/running-community";
+import {
+  isUppercasedRunnerField,
+  upperCaseAsTyped,
+} from "@/lib/text-case";
 import { sellsPackages } from "@/lib/event-type";
 import EventImage from "@/components/EventImage";
 import { useAlert } from "@/components/ui/AlertProvider";
@@ -133,9 +138,8 @@ export default function BankTransferWizardClient({
   ]);
 
   // Logistics state
-  const [logisticsMethod, setLogisticsMethod] = useState<"pickup" | "delivery">(
-    "pickup",
-  );
+  const [logisticsMethod, setLogisticsMethod] =
+    useState<LogisticsMethod>("PICKUP");
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [deliveryZone, setDeliveryZone] = useState<DeliveryZone | null>(
     defaultDeliveryZone(event),
@@ -205,7 +209,16 @@ export default function BankTransferWizardClient({
     value: string,
   ) => {
     const newParticipants = [...participants];
-    newParticipants[index] = { ...newParticipants[index], [field]: value };
+    // Names and free-text notes are stored uppercase (lib/text-case.ts), so
+    // they are uppercased here rather than only in the API — the runner should
+    // read back the value the database will actually hold, not discover it on
+    // their confirmation email.
+    newParticipants[index] = {
+      ...newParticipants[index],
+      [field]: isUppercasedRunnerField(field)
+        ? upperCaseAsTyped(value)
+        : value,
+    };
     setParticipants(newParticipants);
   };
 
@@ -282,7 +295,7 @@ export default function BankTransferWizardClient({
   const subtotal = categoryTotal + sizeUpcharge;
 
   const deliveryFee =
-    logisticsMethod === "delivery" ? deliveryFeeFor(event, deliveryZone) : 0;
+    logisticsMethod === "DELIVERY" ? deliveryFeeFor(event, deliveryZone) : 0;
 
   // Platform Fee (per participant, set per event by the organizer)
   const platformFee = adminFeePerRunner * participants.length;
@@ -319,14 +332,14 @@ export default function BankTransferWizardClient({
 
   const deliveryAddressError =
     showErrors &&
-    logisticsMethod === "delivery" &&
+    logisticsMethod === "DELIVERY" &&
     deliveryZone !== null &&
     deliveryAddress.trim() === ""
       ? "Enter a complete delivery address"
       : undefined;
 
   const validateStep2 = () => {
-    if (logisticsMethod === "pickup") return true;
+    if (logisticsMethod === "PICKUP") return true;
     return deliveryZone !== null && deliveryAddress.trim() !== "";
   };
 
@@ -456,7 +469,7 @@ export default function BankTransferWizardClient({
       formData.append("platformFee", platformFee.toString());
       formData.append("transactionFee", "0");
       formData.append("totalAmount", totalAmount.toString());
-      formData.append("paymentMethod", "bank_transfer");
+      formData.append("paymentMethod", "BANK_TRANSFER");
       formData.append("transactionNumber", transactionNumber);
       formData.append("consentGiven", String(consentGiven));
 
@@ -607,7 +620,7 @@ export default function BankTransferWizardClient({
                   </div>
                 )}
 
-                {logisticsMethod === "delivery" && (
+                {logisticsMethod === "DELIVERY" && (
                   <div className="flex justify-between items-center text-sm mt-2 pt-2 border-t border-white/5">
                     <span className="text-secondary">
                       Delivery Fee
@@ -776,7 +789,7 @@ export default function BankTransferWizardClient({
                               e.target.value,
                             )
                           }
-                          placeholder="Juan"
+                          placeholder="JUAN"
                         />
                         <FieldError
                           id={`${runnerFieldId(idx, "firstName")}-error`}
@@ -798,7 +811,7 @@ export default function BankTransferWizardClient({
                               e.target.value,
                             )
                           }
-                          placeholder="Dela Cruz"
+                          placeholder="DELA CRUZ"
                         />
                         <FieldError
                           id={`${runnerFieldId(idx, "lastName")}-error`}
@@ -913,7 +926,7 @@ export default function BankTransferWizardClient({
                               e.target.value,
                             )
                           }
-                          placeholder="Maria Dela Cruz"
+                          placeholder="MARIA DELA CRUZ"
                         />
                         <FieldError
                           id={`${runnerFieldId(idx, "emergencyContactName")}-error`}
@@ -945,7 +958,7 @@ export default function BankTransferWizardClient({
                               e.target.value,
                             )
                           }
-                          placeholder="e.g. Asthma, Allergies (Leave blank if none)"
+                          placeholder="e.g. ASTHMA, ALLERGIES (Leave blank if none)"
                         ></textarea>
                       </div>
                     </div>
@@ -985,20 +998,20 @@ export default function BankTransferWizardClient({
                   {event.logisticsPickup && (
                     <div
                       className={`group relative overflow-hidden border rounded-[16px] p-6 cursor-pointer transition-all ${
-                        logisticsMethod === "pickup"
+                        logisticsMethod === "PICKUP"
                           ? "border-accent-blue bg-accent-blue/10 shadow-[0_0_20px_rgba(0,122,255,0.15)]"
                           : "border-white/10 bg-black/40 hover:border-white/30 hover:bg-white/5"
                       }`}
-                      onClick={() => setLogisticsMethod("pickup")}
+                      onClick={() => setLogisticsMethod("PICKUP")}
                     >
                       <div
-                        className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl -mr-16 -mt-16 transition-colors ${logisticsMethod === "pickup" ? "bg-accent-blue/20" : "bg-white/5 group-hover:bg-white/10"}`}
+                        className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl -mr-16 -mt-16 transition-colors ${logisticsMethod === "PICKUP" ? "bg-accent-blue/20" : "bg-white/5 group-hover:bg-white/10"}`}
                       ></div>
                       <div className="relative z-10 flex justify-between items-start mb-3">
                         <div className="font-bold text-xl text-white">
                           On-site Pickup
                         </div>
-                        {logisticsMethod === "pickup" && (
+                        {logisticsMethod === "PICKUP" && (
                           <CheckCircle2
                             size={24}
                             className="text-accent-blue"
@@ -1018,20 +1031,20 @@ export default function BankTransferWizardClient({
                   {offersDelivery(event) && (
                     <div
                       className={`group relative overflow-hidden border rounded-[16px] p-6 cursor-pointer transition-all ${
-                        logisticsMethod === "delivery"
+                        logisticsMethod === "DELIVERY"
                           ? "border-accent-blue bg-accent-blue/10 shadow-[0_0_20px_rgba(0,122,255,0.15)]"
                           : "border-white/10 bg-black/40 hover:border-white/30 hover:bg-white/5"
                       }`}
-                      onClick={() => setLogisticsMethod("delivery")}
+                      onClick={() => setLogisticsMethod("DELIVERY")}
                     >
                       <div
-                        className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl -mr-16 -mt-16 transition-colors ${logisticsMethod === "delivery" ? "bg-accent-blue/20" : "bg-white/5 group-hover:bg-white/10"}`}
+                        className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl -mr-16 -mt-16 transition-colors ${logisticsMethod === "DELIVERY" ? "bg-accent-blue/20" : "bg-white/5 group-hover:bg-white/10"}`}
                       ></div>
                       <div className="relative z-10 flex justify-between items-start mb-3">
                         <div className="font-bold text-xl text-white">
                           Door-to-Door Delivery
                         </div>
-                        {logisticsMethod === "delivery" && (
+                        {logisticsMethod === "DELIVERY" && (
                           <CheckCircle2
                             size={24}
                             className="text-accent-blue"
@@ -1053,7 +1066,7 @@ export default function BankTransferWizardClient({
                   )}
                 </div>
 
-                {logisticsMethod === "delivery" && (
+                {logisticsMethod === "DELIVERY" && (
                   <div className="animate-fade-in flex flex-col gap-6">
                     {/* Only worth asking when there is an actual choice. With a
                         single tier the zone is already selected for them. */}
@@ -1108,8 +1121,10 @@ export default function BankTransferWizardClient({
                             : undefined
                         }
                         value={deliveryAddress}
-                        onChange={(e) => setDeliveryAddress(e.target.value)}
-                        placeholder="House/Unit No., Street, Barangay, City/Municipality, Province, Zip Code"
+                        onChange={(e) =>
+                          setDeliveryAddress(upperCaseAsTyped(e.target.value))
+                        }
+                        placeholder="HOUSE/UNIT NO., STREET, BARANGAY, CITY/MUNICIPALITY, PROVINCE, ZIP CODE"
                         rows={4}
                       ></textarea>
                       <FieldError

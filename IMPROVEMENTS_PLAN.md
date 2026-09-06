@@ -15,8 +15,8 @@ commits, not us.
 | Batch | Items | Migration | Status |
 | --- | --- | --- | --- |
 | A | 12, 5, 6 | none | Done |
-| B | 4, 7, 13 | none | **Next** |
-| C | 2, 3 | yes | Not started |
+| B | 4, 7, 13 | none | Done |
+| C | 2, 3 | yes | **Next** |
 | D | 1, 10 | yes | Not started |
 | E | 11, 9 (+ security fix) | yes | Not started |
 | F | 14 | yes | Not started |
@@ -76,7 +76,38 @@ tall.
 
 ---
 
-## Batch B — casing and export
+## Batch B — casing and export — **Done**
+
+Three things worth carrying forward:
+
+- The uppercasing lives in `src/lib/text-case.ts`, which also names the field
+  list (`UPPERCASED_RUNNER_FIELDS`) so the two wizards, the admin edit modal and
+  the two checkout routes cannot drift apart on *which* fields are uppercased.
+  The runner's club was the exception: it is uppercased one level down, in
+  `asRunnerCommunity`, because that function already owned the whole shape of a
+  stored club name and the picker's snap-to-approved-casing has to run first.
+- The backfill script *was* written in the end, and run. It was skipped at first
+  (the test data was going to be deleted anyway), but once the uppercase rule
+  reached the category name and the coded columns, existing rows were visibly
+  wrong on screen. `scripts/uppercase-existing-data.ts` (`npm run
+  uppercase:existing`, `-- --write` to apply) brings any pre-rule row into line;
+  it is a dry run by default, idempotent, and leaves every email address alone.
+- The uppercase rule then grew past the plan's "leave admin fields alone", on
+  the user's instruction and twice over. The **category / package name** is
+  uppercased, because it is printed beside runner data in the registrants table,
+  the export and the emails. And the three coded columns on a Registration —
+  `paymentMethod`, `logisticsMethod`, `deliveryZone` — now store `BANK_TRANSFER`
+  / `DELIVERY` / `INSIDE` instead of PayMongo's lowercase, which is what the
+  rest of the schema (`status`, `role`, `eventType`, `registrationForm`) always
+  did. `src/lib/registration-codes.ts` owns those codes, their guards (which
+  accept either casing, so no backfill is needed) and their labels;
+  `paymongoPaymentType()` is the only place anything is lowercased again.
+- `registrants/page.tsx` was flattening `medicalConditions` to the display word
+  `"None"`, and the edit modal PUTs that same row straight back — so every
+  admin edit was saving `"None"` as the runner's actual medical history. The row
+  now carries the raw value and each screen supplies its own empty wording. It
+  was found because item 4 put an uppercase helper on that exact column.
+
 
 ### 4. Registrant details stored in UPPERCASE
 The point is the **stored value**, not a CSS transform: uppercase on entry so
