@@ -263,7 +263,7 @@ function runnerRows(registration: RegistrationWithDetails): string {
     <tr>
       <td style="padding: 10px 12px 10px 0; border-bottom: ${border}; font-family: Arial, Helvetica, sans-serif;">
         <div style="font-size: 14px; font-weight: 600; color: #f4f4f6;">${runner.firstName} ${runner.lastName}</div>
-        <div style="font-size: 12px; color: #8b8b96; margin-top: 3px;">${runnerRef(registration.orderRef, runner.runnerNo)} &middot; ${runner.category.name}</div>
+        <div style="font-size: 12px; color: #8b8b96; margin-top: 3px;">${runnerRef(registration.orderRef, runner.runnerNo, runners.length)} &middot; ${runner.category.name}</div>
         ${
           runner.runningCommunity
             ? `<div style="font-size: 12px; color: #8b8b96; margin-top: 2px;">${runner.runningCommunity}</div>`
@@ -306,7 +306,7 @@ function runnerDetailRows(registration: RegistrationWithDetails): string {
       heading,
       `padding: ${index === 0 ? 4 : 22}px 0 6px; font-family: Arial, Helvetica, sans-serif; font-size: 14px; font-weight: 700; color: #f4f4f6;`
     )}
-    ${infoRow('Runner Reference', runnerRef(registration.orderRef, runner.runnerNo))}
+    ${infoRow('Runner Reference', runnerRef(registration.orderRef, runner.runnerNo, runners.length))}
     ${infoRow('Category', runner.category.name)}
     ${runner.singletSize ? infoRow('Shirt Size', runner.singletSize) : ''}
     ${infoRow('Gender', runner.gender)}

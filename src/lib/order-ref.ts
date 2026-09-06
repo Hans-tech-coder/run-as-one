@@ -31,7 +31,24 @@ export function newOrderRef(): string {
 /**
  * One runner's own reference. `runnerNo` is their position on the order, which
  * the checkout routes assign at creation and never recompute.
+ *
+ * **A solo registration keeps the bare order reference.** The suffix exists to
+ * tell members of a group apart, so on an order of one it distinguishes
+ * nothing and only makes the reference longer to read down a phone line and
+ * easier to mistype. `RM-11FDE818` is that runner's reference *and* their
+ * order's, because for them the two are the same thing.
+ *
+ * `runnersOnOrder` is required rather than optional so both call sites have to
+ * answer the question. Note it is the order's *current* size: a group of two
+ * whose second runner is later deleted by the organizer leaves the first
+ * holding a bare reference, where their email said `-1`. That is the price of
+ * deciding it from the order rather than storing a second column for it, and
+ * removing a runner from an order already changes what that order is.
  */
-export function runnerRef(orderRef: string, runnerNo: number): string {
-  return `${orderRef}-${runnerNo}`;
+export function runnerRef(
+  orderRef: string,
+  runnerNo: number,
+  runnersOnOrder: number
+): string {
+  return runnersOnOrder > 1 ? `${orderRef}-${runnerNo}` : orderRef;
 }

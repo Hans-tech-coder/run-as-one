@@ -969,7 +969,12 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
               <div className="mt-8 pt-8 border-t border-white/10 space-y-4">
                 <h4 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Transaction Details</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                  <p className="flex flex-col"><span className="text-gray-500">Runner Ref</span> <span className="text-white font-medium">{viewingRunner.runnerRef}</span></p>
+                  {/* Only on a group order, where the two differ. A solo
+                      registration's runner reference *is* its order reference,
+                      so printing it twice would say nothing twice. */}
+                  {viewingRunner.runnerRef !== viewingRunner.orderRef && (
+                    <p className="flex flex-col"><span className="text-gray-500">Runner Ref</span> <span className="text-white font-medium">{viewingRunner.runnerRef}</span></p>
+                  )}
                   {/* The order reference is kept beside it: this runner's ref
                       identifies the person, the order ref is what the whole
                       group paid under and what a bank line will match. */}

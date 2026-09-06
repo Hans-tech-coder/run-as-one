@@ -234,6 +234,12 @@ Landed on one migration
 `src/lib/order-ref.ts` and `src/lib/pickup.ts`. Four things are worth carrying
 forward:
 
+- **A solo registration keeps the bare order reference.** The suffix only
+  appears on a group order. On an order of one it distinguishes nothing and
+  only makes the reference longer to read down a phone line, so
+  `RM-11FDE818` stays `RM-11FDE818` — that runner's reference and their
+  order's are the same thing. `runnerRef` takes the order's size as a required
+  argument so no call site can forget this.
 - **The order reference is not replaced, it is joined.** The registrants table
   and the CSV now lead with the runner's own reference, but the order reference
   stays beside it in both the export and the detail modal. They answer
