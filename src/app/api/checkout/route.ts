@@ -17,7 +17,7 @@ import {
   pauseNote,
   reserveSlots,
 } from '@/lib/registration-gate';
-import { sendRegistrationReceivedEmail } from '@/lib/email';
+import { deliverReceivedEmail } from '@/lib/email-delivery';
 import {
   optionalUpperCaseForStorage,
   upperCaseForStorage,
@@ -232,8 +232,10 @@ export async function POST(request: Request) {
 
     // Sent now, not after payment: the runner should see their submitted
     // details are correct before they've even reached PayMongo's page. The
-    // actual receipt only goes out once the webhook confirms PAID.
-    await sendRegistrationReceivedEmail(registration);
+    // actual receipt only goes out once the webhook confirms PAID. Whether the
+    // send actually happened is written onto the registration, since on
+    // Resend's free tier it may simply not have — see lib/email-delivery.ts.
+    await deliverReceivedEmail(registration);
 
     const finalSuccessUrl = successUrl.includes('?') ? `${successUrl}&orderRef=${orderRef}` : `${successUrl}?orderRef=${orderRef}`;
     const finalCancelUrl = cancelUrl.includes('?') ? `${cancelUrl}&orderRef=${orderRef}&cancel=true` : `${cancelUrl}?orderRef=${orderRef}&cancel=true`;

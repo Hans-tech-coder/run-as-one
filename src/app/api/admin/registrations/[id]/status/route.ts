@@ -20,7 +20,7 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { getAuthCookie } from '@/lib/auth';
 import { getSignedInUser } from '@/lib/signed-in-user';
-import { sendRegistrationConfirmationEmail } from '@/lib/email';
+import { deliverConfirmationEmail } from '@/lib/email-delivery';
 
 /**
  * The statuses an organizer may set from the admin. Guarded rather than
@@ -120,7 +120,7 @@ export async function PATCH(
         where: { id },
         include: { event: true, runners: { include: { category: true } } },
       });
-      if (full) await sendRegistrationConfirmationEmail(full);
+      if (full) await deliverConfirmationEmail(full);
     }
 
     return NextResponse.json({ success: true, registration: updatedRegistration });

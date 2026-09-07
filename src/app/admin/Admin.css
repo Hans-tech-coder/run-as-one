@@ -284,6 +284,14 @@
   color: #faad14;
 }
 
+/* Something failed and a person has to act: an email that never went out, for
+   one. Amber is already spoken for by PENDING, which is a state that is simply
+   waiting and needs nobody. */
+.status-badge.danger {
+  background: rgba(255, 77, 79, 0.1);
+  color: #ff4d4f;
+}
+
 /* For a state that is neither good news nor a warning — a sold-out event, a
    race that has been run. Green would congratulate and amber would alarm; both
    would be wrong about a fact that simply is. */

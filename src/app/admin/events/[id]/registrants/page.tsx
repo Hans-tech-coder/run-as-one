@@ -4,6 +4,7 @@ import { ArrowLeft } from 'lucide-react';
 import prisma from '@/lib/db';
 import RegistrantsTable from './RegistrantsTable';
 import { runnerRef } from '@/lib/order-ref';
+import { EMAIL_KIND_LABELS, outstandingEmail } from '@/lib/email-delivery';
 import {
   LOGISTICS_METHODS,
   asLogisticsMethod,
@@ -41,6 +42,11 @@ export default async function RegistrantsPage({ params }: { params: Promise<{ id
   // Flatten the runners from all registrations
   const runners: any[] = [];
   event.registrations.forEach(reg => {
+    // Which transactional email this order still owes, decided once here from
+    // the rule in lib/email-delivery.ts rather than re-derived in the table:
+    // the same answer drives the row's mark, the backlog filter and the
+    // manual-send modal, and three copies of it would eventually disagree.
+    const pendingEmail = outstandingEmail(reg);
     reg.runners.forEach(runner => {
       runners.push({
         id: runner.id,
@@ -107,7 +113,22 @@ export default async function RegistrantsPage({ params }: { params: Promise<{ id
         // Serialized here rather than in the client component: the table is a
         // client island and a Date crossing that boundary arrives as a string
         // anyway, so it is made one deliberately.
-        remarksAt: reg.remarksAt ? reg.remarksAt.toISOString() : null
+        remarksAt: reg.remarksAt ? reg.remarksAt.toISOString() : null,
+        // Email delivery, on every runner of the order for the same reason the
+        // remarks are: the email is about the order, and a mark that lit up on
+        // one member of a group would leave the other four looking fine.
+        emailPending: pendingEmail !== null,
+        emailPendingKind: pendingEmail,
+        emailPendingLabel: pendingEmail ? EMAIL_KIND_LABELS[pendingEmail] : null,
+        // Resend's own words for the last failure — a quota stop reads
+        // differently from a bad address, and the modal shows which.
+        lastEmailError: reg.lastEmailError,
+        receivedEmailSentAt: reg.receivedEmailSentAt ? reg.receivedEmailSentAt.toISOString() : null,
+        confirmationEmailSentAt: reg.confirmationEmailSentAt
+          ? reg.confirmationEmailSentAt.toISOString()
+          : null,
+        manualEmailSentAt: reg.manualEmailSentAt ? reg.manualEmailSentAt.toISOString() : null,
+        manualEmailSentBy: reg.manualEmailSentBy
       });
     });
   });

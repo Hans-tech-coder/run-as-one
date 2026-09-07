@@ -193,6 +193,27 @@ model Registration {
   /// correctly if that account is later removed.
   remarksBy         String?
   remarksAt         DateTime?
+  /// When each of the two transactional emails actually reached the runner --
+  /// null means it never did. Resend's free tier is 100 recipients a day and
+  /// stops rather than bills, so a send can simply not happen; before these
+  /// columns existed sendEmail() logged the failure and returned void, and a
+  /// registration could sit unconfirmed with nothing on the row to say so.
+  ///
+  /// "received" is owed by every registration; "confirmation" only once the
+  /// status reaches PAID. A hand-sent email stamps the same column, because
+  /// what these record is that the runner *has* the email, not which system
+  /// delivered it -- see src/lib/email-delivery.ts.
+  receivedEmailSentAt     DateTime?
+  confirmationEmailSentAt DateTime?
+  /// Resend's own reason for the last failure, kept so a quota stop ("daily
+  /// limit reached") is distinguishable from a bad address at a glance. It is
+  /// diagnostic text for the organizer, not a coded column.
+  lastEmailError          String?
+  /// The staff member who sent an outstanding email by hand, and when. Their
+  /// name rather than an account id, like remarksBy: it is a line in a log and
+  /// has to keep reading correctly after an account is removed.
+  manualEmailSentAt       DateTime?
+  manualEmailSentBy       String?
   event             Event     @relation(fields: [eventId], references: [id])
   runners           Runner[]
 }

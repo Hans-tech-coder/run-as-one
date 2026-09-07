@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import crypto from 'crypto';
-import { sendRegistrationConfirmationEmail } from '@/lib/email';
+import { deliverConfirmationEmail } from '@/lib/email-delivery';
 
 export async function POST(request: Request) {
   try {
@@ -88,7 +88,7 @@ export async function POST(request: Request) {
           where: { id: registration.id },
           include: { event: true, runners: { include: { category: true } } },
         });
-        if (full) await sendRegistrationConfirmationEmail(full);
+        if (full) await deliverConfirmationEmail(full);
       } else {
         console.warn(`PayMongo Webhook: Registration not found for reference ${referenceNumber} or PI ${paymentIntentId}`);
       }

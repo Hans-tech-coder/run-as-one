@@ -4,7 +4,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   Search, Filter, Download, Eye, X, Trash2,
   ChevronLeft, ChevronRight, ChevronFirst, ChevronLast, Columns, ChevronUp, ChevronDown, CheckCircle, Check,
-  MessageSquare, MessageSquareText
+  MessageSquare, MessageSquareText, Mail, MailWarning, Copy, ExternalLink
 } from 'lucide-react';
 import RegistrantActionsMenu from './RegistrantActionsMenu';
 import { useAlert } from '@/components/ui/AlertProvider';
@@ -62,6 +62,22 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
   const [isRemarksOpen, setIsRemarksOpen] = useState(false);
   const [isRemarksClosing, setIsRemarksClosing] = useState(false);
   const [isSavingRemarks, setIsSavingRemarks] = useState(false);
+
+  // Manual Email Modal State. The email belongs to the order, like the
+  // remarks do, so the row is only how the staff member reached it.
+  const [emailRunner, setEmailRunner] = useState<any | null>(null);
+  const [emailMessage, setEmailMessage] = useState<any | null>(null);
+  const [isEmailOpen, setIsEmailOpen] = useState(false);
+  const [isEmailClosing, setIsEmailClosing] = useState(false);
+  const [isLoadingEmail, setIsLoadingEmail] = useState(false);
+  const [emailLoadError, setEmailLoadError] = useState('');
+  const [isMarkingSent, setIsMarkingSent] = useState(false);
+  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'text-only'>('idle');
+
+  // The backlog view: on a day the daily send quota runs out, the whole list
+  // of runners nobody has emailed has to be reachable in one click rather than
+  // hunted for row by row.
+  const [showOnlyUnsentEmail, setShowOnlyUnsentEmail] = useState(false);
 
   // Bulk Delete Modal State
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
@@ -193,6 +209,153 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
       });
     } finally {
       setIsSavingRemarks(false);
+    }
+  };
+
+  /**
+   * The manual send.
+   *
+   * Resend's free tier stops at 100 recipients a day rather than billing, so a
+   * registration can be left with no email at all. The row is marked, and this
+   * modal hands the staff member the exact message the runner should have had,
+   * to send from their own mailbox.
+   *
+   * The rendering is fetched rather than built here: it comes from the same
+   * template the app itself sends (lib/email.ts), so what is pasted into Gmail
+   * cannot drift from what Resend would have delivered.
+   */
+  const openEmailModal = async (runnerId: string) => {
+    const runner = runners.find(r => r.id === runnerId);
+    if (!runner) return;
+    setEmailRunner(runner);
+    setEmailMessage(null);
+    setEmailLoadError('');
+    setCopyState('idle');
+    setIsEmailOpen(true);
+    setIsLoadingEmail(true);
+    try {
+      const res = await fetch(`/api/admin/registrations/${runner.registrationId}/email`);
+      if (res.ok) {
+        setEmailMessage(await res.json());
+      } else {
+        const { error } = await res.json().catch(() => ({ error: '' }));
+        setEmailLoadError(error || 'The email could not be prepared. Please try again.');
+      }
+    } catch (e) {
+      console.error(e);
+      setEmailLoadError('Something went wrong while preparing the email. Please try again.');
+    } finally {
+      setIsLoadingEmail(false);
+    }
+  };
+
+  const closeEmailModal = () => {
+    setIsEmailOpen(false);
+    setIsEmailClosing(true);
+    setTimeout(() => {
+      setIsEmailClosing(false);
+      setEmailRunner(null);
+      setEmailMessage(null);
+      setEmailLoadError('');
+      setCopyState('idle');
+    }, 150);
+  };
+
+  /**
+   * The design, on the clipboard.
+   *
+   * This is the half that actually preserves the email: pasting text/html into
+   * Gmail's compose window keeps the logo, the gradient bar and the status
+   * pill. A mailto: cannot — its body is plain text by definition — which is
+   * why both routes out of this modal exist and neither replaces the other.
+   */
+  const handleCopyFormattedEmail = async () => {
+    if (!emailMessage) return;
+    try {
+      const item = new ClipboardItem({
+        'text/html': new Blob([emailMessage.html], { type: 'text/html' }),
+        'text/plain': new Blob([emailMessage.text], { type: 'text/plain' }),
+      });
+      await navigator.clipboard.write([item]);
+      setCopyState('copied');
+    } catch (e) {
+      // Some browsers refuse the rich-text write. The plain-text rendering is
+      // still worth having, and saying which one landed is better than a
+      // silent half-success.
+      console.error(e);
+      try {
+        await navigator.clipboard.writeText(emailMessage.text);
+        setCopyState('text-only');
+      } catch (err) {
+        console.error(err);
+        alert({
+          variant: 'error',
+          title: 'Nothing Copied',
+          message: 'This browser blocked the clipboard. Select the preview text and copy it by hand.',
+        });
+      }
+    }
+  };
+
+  /**
+   * The addressing, in their own mail app: recipient and subject prefilled,
+   * the plain-text rendering as the body. Long emails can be truncated by the
+   * client's own URL limit, which the modal says out loud — the clipboard
+   * button above is the complete one.
+   */
+  const handleOpenInMailApp = () => {
+    if (!emailMessage) return;
+    const href = `mailto:${emailMessage.to}?subject=${encodeURIComponent(emailMessage.subject)}&body=${encodeURIComponent(emailMessage.text)}`;
+    window.location.href = href;
+  };
+
+  /** Sent by hand, so the order leaves the backlog. */
+  const handleMarkEmailSent = async () => {
+    if (!emailRunner || !emailMessage) return;
+    const registrationId = emailRunner.registrationId;
+
+    setIsMarkingSent(true);
+    try {
+      const res = await fetch(`/api/admin/registrations/${registrationId}/email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: emailMessage.kind }),
+      });
+
+      if (res.ok) {
+        const { registration, outstanding } = await res.json();
+        // Every runner on the order carries the same mark, for the same reason
+        // the remarks do — otherwise one member of a group would look handled
+        // and the other four would not.
+        setRunners(runners.map(r => r.registrationId === registrationId ? {
+          ...r,
+          emailPending: outstanding !== null,
+          emailPendingKind: outstanding,
+          emailPendingLabel: outstanding === 'CONFIRMATION' ? 'Payment Receipt' : outstanding === 'RECEIVED' ? 'Registration Received' : null,
+          lastEmailError: registration?.lastEmailError ?? null,
+          receivedEmailSentAt: registration?.receivedEmailSentAt ?? r.receivedEmailSentAt,
+          confirmationEmailSentAt: registration?.confirmationEmailSentAt ?? r.confirmationEmailSentAt,
+          manualEmailSentAt: registration?.manualEmailSentAt ?? null,
+          manualEmailSentBy: registration?.manualEmailSentBy ?? null,
+        } : r));
+        closeEmailModal();
+      } else {
+        const { error } = await res.json().catch(() => ({ error: '' }));
+        alert({
+          variant: 'error',
+          title: 'Not Marked As Sent',
+          message: error || 'The registration could not be marked. Please try again.',
+        });
+      }
+    } catch (e) {
+      console.error(e);
+      alert({
+        variant: 'error',
+        title: 'Not Marked As Sent',
+        message: 'Something went wrong while marking this email as sent. Please try again.',
+      });
+    } finally {
+      setIsMarkingSent(false);
     }
   };
 
@@ -446,10 +609,29 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
     {
       accessorKey: "status",
       header: "Status",
+      // The payment status, and under it the one thing that can be wrong about
+      // this row without the payment being wrong: the email never went out.
+      // It sits here rather than in a column of its own because it is an
+      // exception — most rows have nothing to say — and a column that is empty
+      // for ninety-nine rows in a hundred costs width every organizer pays.
       cell: ({ row }) => (
-        <span className={`status-badge ${row.original.status === 'PAID' ? 'success' : 'pending'}`}>
-          {row.original.status}
-        </span>
+        <div className="flex flex-col items-start gap-1.5">
+          <span className={`status-badge ${row.original.status === 'PAID' ? 'success' : 'pending'}`}>
+            {row.original.status}
+          </span>
+          {row.original.emailPending && (
+            /* The project's own badge rather than a new one (standing rule
+               §8.2), in the danger tone: an unsent email is a failure, not a
+               waiting state, and amber would put it in the same voice as the
+               PENDING badge directly above it. */
+            <span
+              className="status-badge danger gap-1"
+              title={`The ${row.original.emailPendingLabel} email has not gone out.`}
+            >
+              <MailWarning size={12} /> Email Unsent
+            </span>
+          )}
+        </div>
       ),
     },
     {
@@ -469,6 +651,18 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
                 the one signal a colour-blind organizer cannot read. */}
             {row.original.remarks ? <MessageSquareText size={16} /> : <MessageSquare size={16} />}
           </button>
+          <button
+            onClick={() => openEmailModal(row.original.id)}
+            className={`icon-btn ${row.original.emailPending ? 'danger' : ''}`}
+            title={row.original.emailPending
+              ? `Send the ${row.original.emailPendingLabel} email by hand`
+              : 'View the email this runner was sent'}
+            aria-label={row.original.emailPending ? 'Send email by hand' : 'View sent email'}
+          >
+            {/* A different icon, not just a different colour — colour alone is
+                the one signal a colour-blind organizer cannot read. */}
+            {row.original.emailPending ? <MailWarning size={16} /> : <Mail size={16} />}
+          </button>
           <RegistrantActionsMenu 
             runnerId={row.original.id}
             registrationId={row.original.registrationId}
@@ -486,8 +680,20 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
     },
   ], [updatingId, runners]);
 
+  /**
+   * The backlog view, applied to the data rather than as a column filter: the
+   * mark it filters on is not a column, and every other filter here already
+   * narrows the same list the export and the pagination read.
+   */
+  const visibleRunners = useMemo(
+    () => (showOnlyUnsentEmail ? runners.filter(r => r.emailPending) : runners),
+    [runners, showOnlyUnsentEmail]
+  );
+
+  const unsentEmailCount = useMemo(() => runners.filter(r => r.emailPending).length, [runners]);
+
   const table = useReactTable({
-    data: runners,
+    data: visibleRunners,
     columns,
     state: {
       sorting,
@@ -747,6 +953,26 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
             )}
           </div>
           
+          {/*
+            The backlog, in one click.
+
+            On a day the daily send quota runs out this is the difference
+            between a staff member working a list and hunting a table for the
+            rows nobody was emailed. It is a toggle rather than a dropdown
+            because there is exactly one thing to ask for.
+          */}
+          <button
+            onClick={() => setShowOnlyUnsentEmail(!showOnlyUnsentEmail)}
+            disabled={unsentEmailCount === 0 && !showOnlyUnsentEmail}
+            className={`btn-filter ${showOnlyUnsentEmail ? 'bg-red-500/10 text-red-400 border-red-500/20' : ''} disabled:opacity-50 disabled:cursor-not-allowed`}
+            title={unsentEmailCount === 0
+              ? 'Every registrant here has had their email'
+              : 'Show only the registrants whose email never went out'}
+          >
+            <MailWarning size={16} /> Unsent Email
+            {unsentEmailCount > 0 && <span className="ml-1 px-1 bg-white/10 rounded">{unsentEmailCount}</span>}
+          </button>
+
           <div ref={viewRef} className="relative view-dropdown-container">
             <button 
               onClick={() => setIsViewOpen(!isViewOpen)}
@@ -1050,7 +1276,40 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
                     <p className="text-sm text-gray-500 italic m-0">No remarks yet.</p>
                   )}
                 </div>
-                  
+
+                {/* Whether this order's emails actually left the building. It
+                    belongs beside the payment details rather than in the runner
+                    section above: like the remarks, it is a fact about the
+                    order, not about the person on this row. */}
+                <div className="mt-6">
+                  <div className="flex items-center justify-between gap-4 mb-2">
+                    <p className="text-gray-500 text-sm m-0">Email Delivery</p>
+                    <button
+                      onClick={() => openEmailModal(viewingRunner.id)}
+                      className="text-xs font-medium text-accent-blue hover:underline bg-transparent border-none cursor-pointer p-0"
+                    >
+                      {viewingRunner.emailPending ? 'Send by hand' : 'View email'}
+                    </button>
+                  </div>
+                  {viewingRunner.emailPending ? (
+                    <div className="space-y-1">
+                      <p className="text-sm text-red-400 m-0">
+                        The {viewingRunner.emailPendingLabel} email has not gone out.
+                      </p>
+                      {viewingRunner.lastEmailError && (
+                        <p className="text-xs text-gray-500 m-0">{viewingRunner.lastEmailError}</p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-green-400 m-0">
+                      Sent
+                      {viewingRunner.manualEmailSentBy
+                        ? ` · last one by hand, by ${viewingRunner.manualEmailSentBy}`
+                        : ''}
+                    </p>
+                  )}
+                </div>
+
                 {viewingRunner.isBankTransfer && (
                   <div className="mt-6">
                     <p className="text-gray-500 text-sm mb-2">Proof of Payment</p>
@@ -1427,6 +1686,156 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
                   ? 'Clear Remarks'
                   : 'Save Remarks'}
             </button>
+          </div>
+        </div>
+      </div>
+
+      {/*
+        Manual Email Modal.
+
+        The app sends on Resend's free tier: 100 recipients a day, and it stops
+        rather than bills. When a send does not happen the registration is
+        marked (lib/email-delivery.ts) and a person sends the email themselves
+        — this is where they get it.
+
+        Two ways out, and both are needed:
+
+         - *Open in my email app* fills in the recipient and subject through a
+           mailto:, whose body is plain text by definition. It cannot carry the
+           design, and a long body can be cut short by the client's own URL
+           limit. The same constraint rules out a Gmail compose deep link.
+         - *Copy formatted email* puts the HTML on the clipboard, so pasting
+           into Gmail's compose window keeps the logo, the gradient bar and the
+           status pill.
+
+        The preview is an iframe rather than the markup dropped into this page:
+        the email is a whole document with its own dark palette, and inlining it
+        would leak its styles into the admin and inherit the admin's own.
+      */}
+      <div
+        className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
+          isEmailOpen && !isEmailClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+      >
+        <div
+          className={`t-modal w-full max-w-2xl bg-[#111] border border-white/10 rounded-2xl shadow-2xl flex flex-col max-h-[90vh] ${isEmailOpen ? 'is-open' : ''} ${isEmailClosing ? 'is-closing' : ''}`}
+        >
+          <div className="p-6 border-b border-white/10 flex justify-between items-start gap-4 shrink-0">
+            <div>
+              <h3 className="text-xl font-semibold text-white m-0">
+                {emailMessage && !emailMessage.outstanding ? 'Email Already Sent' : 'Send This Email By Hand'}
+              </h3>
+              {emailRunner && (
+                <p className="text-sm text-gray-400 mt-1 m-0">
+                  Order {emailRunner.orderRef} &middot;{' '}
+                  {runnersOnOrder(emailRunner) > 1
+                    ? `${runnersOnOrder(emailRunner)} runners`
+                    : emailRunner.name}
+                  {emailMessage ? ` · ${emailMessage.label}` : ''}
+                </p>
+              )}
+            </div>
+            <button onClick={closeEmailModal} className="text-gray-400 hover:text-white transition-colors bg-transparent border-none cursor-pointer p-0">
+              <X size={20} />
+            </button>
+          </div>
+
+          <div className="p-6 overflow-y-auto flex-1 space-y-4">
+            {isLoadingEmail && <p className="text-sm text-gray-400 m-0">Preparing the email&hellip;</p>}
+
+            {!isLoadingEmail && emailLoadError && (
+              <p className="text-sm text-red-400 m-0">{emailLoadError}</p>
+            )}
+
+            {!isLoadingEmail && emailMessage && (
+              <>
+                <div className="rounded-lg border border-white/10 bg-black/30 p-4 space-y-3 text-sm">
+                  <span className="flex flex-col">
+                    <span className="text-gray-500">To</span>
+                    <span className="text-white font-medium break-all select-all">{emailMessage.to}</span>
+                  </span>
+                  <span className="flex flex-col">
+                    <span className="text-gray-500">Subject</span>
+                    <span className="text-white font-medium select-all">{emailMessage.subject}</span>
+                  </span>
+                </div>
+
+                {/* Resend's own words, so a quota stop is not mistaken for a
+                    bad address — the two need opposite responses. */}
+                {emailMessage.lastEmailError && (
+                  <p className="text-xs text-red-400 m-0">
+                    Last delivery attempt failed: {emailMessage.lastEmailError}
+                  </p>
+                )}
+
+                {!emailMessage.outstanding && (
+                  <p className="text-xs text-gray-500 m-0">
+                    This one already went out
+                    {emailMessage.manualEmailSentAt && emailMessage.manualEmailSentBy
+                      ? `, sent by hand by ${emailMessage.manualEmailSentBy} on ${new Date(emailMessage.manualEmailSentAt).toLocaleString()}`
+                      : ''}
+                    . It is here so you can send it again if the runner asks.
+                  </p>
+                )}
+
+                <div className="rounded-lg overflow-hidden border border-white/10 bg-black/50">
+                  <iframe
+                    srcDoc={emailMessage.html}
+                    sandbox=""
+                    title="Email preview"
+                    className="w-full h-[320px] border-none bg-transparent"
+                  />
+                </div>
+
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    onClick={handleCopyFormattedEmail}
+                    className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors border-none cursor-pointer"
+                  >
+                    <Copy size={16} />
+                    {copyState === 'copied'
+                      ? 'Copied — paste into Gmail'
+                      : copyState === 'text-only'
+                        ? 'Copied as plain text only'
+                        : 'Copy Formatted Email'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleOpenInMailApp}
+                    className="flex items-center gap-2 px-4 py-2 border border-white/10 text-white rounded-lg text-sm font-medium hover:bg-white/5 transition-colors bg-transparent cursor-pointer"
+                  >
+                    <ExternalLink size={16} /> Open In My Email App
+                  </button>
+                </div>
+
+                <p className="text-xs text-gray-500 m-0">
+                  Copying keeps the design. Your email app opens with the recipient and subject
+                  filled in but a plain-text body, which a long email can have cut short. Send it
+                  from your own address, then mark it below so it leaves the list.
+                </p>
+              </>
+            )}
+          </div>
+
+          <div className="p-6 border-t border-white/10 flex justify-end gap-3 bg-black/20 shrink-0">
+            <button
+              type="button"
+              onClick={closeEmailModal}
+              className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white transition-colors bg-transparent border-none cursor-pointer"
+            >
+              Close
+            </button>
+            {emailMessage?.outstanding && (
+              <button
+                type="button"
+                onClick={handleMarkEmailSent}
+                disabled={isMarkingSent}
+                className="px-6 py-2 bg-gradient-to-r from-[#FF6B00] to-[#007AFF] text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50 border-none cursor-pointer"
+              >
+                {isMarkingSent ? 'Marking...' : 'Mark As Sent'}
+              </button>
+            )}
           </div>
         </div>
       </div>

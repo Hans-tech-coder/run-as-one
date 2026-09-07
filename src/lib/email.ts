@@ -40,8 +40,19 @@ import {
  * function for no benefit.
  *
  * A failed send never fails the caller — registration and payment state must
- * never depend on Resend being up. sendEmail() below logs and swallows every
- * error rather than throwing.
+ * never depend on Resend being up. sendEmail() below still catches everything
+ * and never throws. What changed is that it now *reports*: it returns an
+ * EmailOutcome, and lib/email-delivery.ts writes that outcome onto the
+ * registration. On Resend's free tier (100 recipients a day, which stops
+ * rather than bills) a send can simply not happen, and a swallowed failure
+ * left a runner unconfirmed with nothing on the row to show for it.
+ *
+ * **Each email is one document rendered twice.** The block list below is what
+ * an email *is*; renderHtml() produces what Resend sends, renderText() the
+ * plain-text rendering the admin's manual-send modal drops into a mailto:.
+ * Two renderings of one source rather than two templates, because a second
+ * template is a second thing to keep in step and it would drift the first
+ * time a line changes in only one of them.
  */
 
 const FROM_ADDRESS = `${SITE_NAME} <${CONTACT_EMAIL}>`;
@@ -70,9 +81,32 @@ function resendClient(): Resend | null {
   return client;
 }
 
-async function sendEmail(to: string, subject: string, html: string): Promise<void> {
+/** One email in both of its renderings: ready to send, or to hand to a person. */
+export interface EmailMessage {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+}
+
+/**
+ * Whether a send actually happened, and why not when it did not.
+ *
+ * The reason is kept in Resend's own words rather than mapped to a code of
+ * ours: the distinction that matters to whoever clears the backlog is a quota
+ * stop ("daily limit reached") against a bad address, and their message says
+ * which without us having to enumerate their failures in advance.
+ */
+export type EmailOutcome = { sent: true } | { sent: false; error: string };
+
+async function sendEmail(message: EmailMessage): Promise<EmailOutcome> {
   const resend = resendClient();
-  if (!resend) return;
+  // Not a failure being swallowed: nothing is configured, so nothing was
+  // sent, and the registration should say exactly that rather than imply the
+  // runner has an email they never got.
+  if (!resend) {
+    return { sent: false, error: 'Email is not configured (RESEND_API_KEY is unset), so nothing was sent.' };
+  }
 
   try {
     const { error } = await resend.emails.send({
@@ -83,33 +117,91 @@ async function sendEmail(to: string, subject: string, html: string): Promise<voi
       // putting a registration's two emails at four units against a ceiling of
       // a hundred a day. Resend's own dashboard already keeps a log of
       // everything sent, which is what the archive mailbox was for.
-      to,
+      to: message.to,
       replyTo: CONTACT_EMAIL,
-      subject,
-      html,
+      subject: message.subject,
+      html: message.html,
+      // The text alternative exists anyway now that the template renders one,
+      // and every spam filter that looks treats a multipart email as less
+      // suspect than an HTML-only one.
+      text: message.text,
     });
-    if (error) console.error('Resend send failed:', error);
+    if (error) {
+      console.error('Resend send failed:', error);
+      return { sent: false, error: error.message || String(error) };
+    }
+    return { sent: true };
   } catch (err) {
     console.error('Resend send threw:', err);
+    return { sent: false, error: err instanceof Error ? err.message : String(err) };
   }
 }
 
 /** The exact shape every call site already queries: Registration + event + runners + category. */
-type RegistrationWithDetails = Prisma.RegistrationGetPayload<{
+export type RegistrationWithDetails = Prisma.RegistrationGetPayload<{
   include: { event: true; runners: { include: { category: true } } };
 }>;
 
-function peso(centavos: number): string {
-  return `&#8369;${formatPesos(centavos)}`;
-}
+/* ────────────────────────────────────────────────────────────────────────
+ * The document model.
+ *
+ * Values are held plain here — an event title, a runner's name — and escaped
+ * by the HTML renderer, so a club called "Tri & Run" can no longer reach an
+ * inbox as broken markup. Amounts stay numbers until a renderer formats them,
+ * because the peso sign is an entity in one rendering and a character in the
+ * other.
+ * ──────────────────────────────────────────────────────────────────────── */
 
-/** The money line's own wording, built from the shared zone label. */
-function deliveryFeeLabel(zone: string | null): string {
-  const label = deliveryZoneLabel(zone);
-  return label ? `Delivery — ${label}` : 'Delivery Fee';
+/** A run of text, optionally emphasised. Bold in HTML, plain in text. */
+type Segment = string | { strong: string };
+
+type Row =
+  /** A label and its value, right-aligned on the shared right edge. */
+  | { kind: 'info'; label: string; value: string }
+  /** A money line. Muted, because the total below it is the number that matters. */
+  | { kind: 'amount'; label: string; centavos: number }
+  /** The one loud number. */
+  | { kind: 'total'; label: string; centavos: number }
+  | { kind: 'rule' }
+  /** One runner's heading in the "please verify" block. */
+  | { kind: 'runnerHeading'; text: string; first: boolean }
+  /**
+   * The receipt's compact line: who ran, in what, at what size. The reference
+   * and the category are kept apart rather than pre-joined, because the
+   * separator between them differs by rendering — an entity in HTML, the
+   * character itself in text.
+   */
+  | {
+      kind: 'runner';
+      name: string;
+      reference: string;
+      category: string;
+      community: string | null;
+      size: string | null;
+    };
+
+type Block =
+  | { kind: 'paragraph'; segments: Segment[] }
+  | { kind: 'heading'; text: string }
+  /** A bordered card. **Long values only** — see cardHtml(). */
+  | { kind: 'card'; rows: Row[] }
+  /** Plain rows of the one body table. */
+  | { kind: 'rows'; rows: Row[] }
+  /** The small grey closing paragraph. */
+  | { kind: 'note'; segments: Segment[] };
+
+type StatusTone = 'pending' | 'success';
+
+interface EmailDocument {
+  to: string;
+  subject: string;
+  status: { label: string; tone: StatusTone };
+  blocks: Block[];
 }
 
 /* ────────────────────────────────────────────────────────────────────────
+ * HTML rendering.
+ *
  * The body is ONE table, and that is the whole layout strategy.
  *
  * Gmail's Android app renders each nested table shrink-to-fit: it sizes a
@@ -133,22 +225,27 @@ const LABEL_STYLE =
 const VALUE_STYLE =
   'padding: 7px 0; font-size: 14px; color: #f4f4f6; font-family: Arial, Helvetica, sans-serif; font-weight: 600; text-align: right; vertical-align: top;';
 
-/** A label on the left, its value right-aligned on the shared right edge. */
-function infoRow(label: string, value: string): string {
-  return `
-    <tr>
-      <td style="${LABEL_STYLE}">${label}</td>
-      <td align="right" style="${VALUE_STYLE}">${value}</td>
-    </tr>`;
+/** Registrant text reaches the template exactly as it was typed, so it is escaped on the way in. */
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
-/** A money line. Muted, because the total below it is the number that matters. */
-function amountRow(label: string, centavos: number): string {
-  return `
-    <tr>
-      <td style="padding: 6px 12px 6px 0; font-size: 13px; color: #8b8b96; font-family: Arial, Helvetica, sans-serif;">${label}</td>
-      <td align="right" style="padding: 6px 0; font-size: 13px; color: #8b8b96; font-family: Arial, Helvetica, sans-serif; text-align: right; white-space: nowrap;">${peso(centavos)}</td>
-    </tr>`;
+function pesoHtml(centavos: number): string {
+  return `&#8369;${formatPesos(centavos)}`;
+}
+
+function segmentsHtml(segments: Segment[]): string {
+  return segments
+    .map(segment =>
+      typeof segment === 'string'
+        ? escapeHtml(segment)
+        : `<strong style="color: #f4f4f6;">${escapeHtml(segment.strong)}</strong>`
+    )
+    .join('');
 }
 
 /** Anything that spans both columns: a paragraph, a section heading, a rule. */
@@ -157,6 +254,67 @@ function fullWidthRow(content: string, style = ''): string {
     <tr>
       <td colspan="2" style="${style}">${content}</td>
     </tr>`;
+}
+
+function rowHtml(row: Row, isLastRunner: boolean): string {
+  switch (row.kind) {
+    case 'info':
+      return `
+    <tr>
+      <td style="${LABEL_STYLE}">${escapeHtml(row.label)}</td>
+      <td align="right" style="${VALUE_STYLE}">${escapeHtml(row.value)}</td>
+    </tr>`;
+    case 'amount':
+      return `
+    <tr>
+      <td style="padding: 6px 12px 6px 0; font-size: 13px; color: #8b8b96; font-family: Arial, Helvetica, sans-serif;">${escapeHtml(row.label)}</td>
+      <td align="right" style="padding: 6px 0; font-size: 13px; color: #8b8b96; font-family: Arial, Helvetica, sans-serif; text-align: right; white-space: nowrap;">${pesoHtml(row.centavos)}</td>
+    </tr>`;
+    case 'total':
+      return `
+    <tr>
+      <td style="padding: 14px 12px 0 0; font-family: Arial, Helvetica, sans-serif; font-size: 15px; font-weight: 700; color: #ffffff;">${escapeHtml(row.label)}</td>
+      <td align="right" style="padding: 14px 0 0; font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 800; color: ${BRAND_ORANGE}; text-align: right; white-space: nowrap;">${pesoHtml(row.centavos)}</td>
+    </tr>`;
+    case 'rule':
+      return fullWidthRow(
+        `<div style="border-top: 1px solid rgba(255,255,255,0.1); font-size: 0; line-height: 0;">&nbsp;</div>`,
+        'padding-top: 10px; font-size: 0; line-height: 0;'
+      );
+    case 'runnerHeading':
+      return fullWidthRow(
+        escapeHtml(row.text),
+        `padding: ${row.first ? 4 : 22}px 0 6px; font-family: Arial, Helvetica, sans-serif; font-size: 14px; font-weight: 700; color: #f4f4f6;`
+      );
+    case 'runner': {
+      const border = isLastRunner ? 'none' : '1px solid rgba(255,255,255,0.08)';
+      // Fun-run packages carry no shirt size (see shirt-size.ts), so an empty
+      // singletSize means "not applicable" — not a value worth printing blank.
+      const size = row.size
+        ? `<div style="font-size: 12px; color: #8b8b96;">SIZE</div>
+           <div style="font-size: 13px; font-weight: 600; color: #f4f4f6; margin-top: 2px;">${escapeHtml(row.size)}</div>`
+        : '&nbsp;';
+      return `
+    <tr>
+      <td style="padding: 10px 12px 10px 0; border-bottom: ${border}; font-family: Arial, Helvetica, sans-serif;">
+        <div style="font-size: 14px; font-weight: 600; color: #f4f4f6;">${escapeHtml(row.name)}</div>
+        <div style="font-size: 12px; color: #8b8b96; margin-top: 3px;">${escapeHtml(row.reference)} &middot; ${escapeHtml(row.category)}</div>
+        ${
+          row.community
+            ? `<div style="font-size: 12px; color: #8b8b96; margin-top: 2px;">${escapeHtml(row.community)}</div>`
+            : ''
+        }
+      </td>
+      <td align="right" style="padding: 10px 0; border-bottom: ${border}; font-family: Arial, Helvetica, sans-serif; text-align: right; vertical-align: top; white-space: nowrap;">${size}</td>
+    </tr>`;
+    }
+  }
+}
+
+/** The last runner line in a block loses its divider, so the block ends on the card's own edge. */
+function rowsHtml(rows: Row[]): string {
+  const lastRunner = rows.map(row => row.kind).lastIndexOf('runner');
+  return rows.map((row, index) => rowHtml(row, index === lastRunner)).join('');
 }
 
 /**
@@ -169,172 +327,38 @@ function fullWidthRow(content: string, style = ''): string {
  * stay as plain rows of the one body table. These blocks fill the width on
  * their own content, which is why they always rendered correctly.
  */
-function cardRow(rowsHtml: string): string {
+function cardHtml(rows: Row[]): string {
   return fullWidthRow(
     `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 16px 20px;">
-        ${rowsHtml}
+        ${rowsHtml(rows)}
       </table>`,
     'padding: 2px 0 0;'
   );
 }
 
-function sectionHeading(text: string): string {
-  return fullWidthRow(
-    text,
-    'padding: 30px 0 6px; font-family: Arial, Helvetica, sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 1.5px; color: #8b8b96; text-transform: uppercase;'
-  );
-}
-
-function ruleRow(marginTop = 10): string {
-  return fullWidthRow(
-    `<div style="border-top: 1px solid rgba(255,255,255,0.1); font-size: 0; line-height: 0;">&nbsp;</div>`,
-    `padding-top: ${marginTop}px; font-size: 0; line-height: 0;`
-  );
-}
-
-function paragraphRow(html: string, style = 'padding: 0 0 8px;'): string {
-  return fullWidthRow(
-    `<p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 15px; line-height: 1.6; color: #c8c8d0;">${html}</p>`,
-    style
-  );
-}
-
-/** The single table every row above is written into. */
-function bodyTable(rows: string): string {
-  return `
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-      ${rows}
-    </table>`;
-}
-
-/* ──────────────────────────────────────────────────────────────────────── */
-
-/** The order block both emails open with; each adds a row or two of its own. */
-function orderRows(registration: RegistrationWithDetails, extraRows: string): string {
-  const { event } = registration;
-  return `
-    ${infoRow('Order Reference', registration.orderRef)}
-    ${infoRow('Event', event.title)}
-    ${infoRow('Date', formatEventDay(event.date))}
-    ${infoRow('Location', event.location)}
-    ${infoRow('Payment Method', paymentMethodLabel(registration.paymentMethod))}
-    ${extraRows}`;
-}
-
-/**
- * Pickup or delivery, as order rows.
- *
- * Pickup carries the organizer's address and hours (lib/pickup.ts) rather than
- * the bare word "Pickup": this email is what the runner still has in their
- * inbox on race week, and "Pickup at Venue" does not tell them which venue.
- * When the organizer has not settled it yet, the fallback sentence says so —
- * an empty row would read as though we simply forgot.
- */
-function logisticsRow(registration: RegistrationWithDetails): string {
-  if (asLogisticsMethod(registration.logisticsMethod) !== LOGISTICS_METHODS.DELIVERY) {
-    const { location, schedule } = pickupDetails(registration.event);
-    return `
-    ${infoRow('Logistics', 'Race Kit Pickup')}
-    ${location || schedule ? '' : infoRow('Pickup Details', PICKUP_FALLBACK)}
-    ${location ? infoRow('Pickup Location', location) : ''}
-    ${schedule ? infoRow('Pickup Schedule', schedule) : ''}`;
+function blockHtml(block: Block, index: number): string {
+  switch (block.kind) {
+    case 'paragraph':
+      return fullWidthRow(
+        `<p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 15px; line-height: 1.6; color: #c8c8d0;">${segmentsHtml(block.segments)}</p>`,
+        'padding: 0 0 14px;'
+      );
+    case 'heading':
+      return fullWidthRow(
+        escapeHtml(block.text),
+        'padding: 30px 0 6px; font-family: Arial, Helvetica, sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 1.5px; color: #8b8b96; text-transform: uppercase;'
+      );
+    case 'card':
+      return cardHtml(block.rows);
+    case 'rows':
+      return rowsHtml(block.rows);
+    case 'note':
+      return fullWidthRow(
+        `<p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 13px; line-height: 1.6; color: #8b8b96;">${segmentsHtml(block.segments)}</p>`,
+        `padding: ${index === 0 ? 0 : 30}px 0 0;`
+      );
   }
-  const zoneLabel = deliveryZoneLabel(registration.deliveryZone) || 'Delivery';
-  const value = registration.deliveryAddress ? `${zoneLabel} — ${registration.deliveryAddress}` : zoneLabel;
-  return infoRow('Delivery', value);
 }
-
-/** The compact runner line the receipt uses: who ran, in what, at what size. */
-function runnerRows(registration: RegistrationWithDetails): string {
-  // By position on the order, not by whatever order the query returned them
-  // in: the reference printed beside each name has to match the one in the
-  // received email and in the organizer's registrants table.
-  const runners = byRunnerNo(registration);
-  return runners
-    .map((runner, i) => {
-      const border = i === runners.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.08)';
-      // Fun-run packages carry no shirt size (see shirt-size.ts), so an empty
-      // singletSize means "not applicable" — not a value worth printing blank.
-      const size = runner.singletSize
-        ? `<div style="font-size: 12px; color: #8b8b96;">SIZE</div>
-           <div style="font-size: 13px; font-weight: 600; color: #f4f4f6; margin-top: 2px;">${runner.singletSize}</div>`
-        : '&nbsp;';
-      return `
-    <tr>
-      <td style="padding: 10px 12px 10px 0; border-bottom: ${border}; font-family: Arial, Helvetica, sans-serif;">
-        <div style="font-size: 14px; font-weight: 600; color: #f4f4f6;">${runner.firstName} ${runner.lastName}</div>
-        <div style="font-size: 12px; color: #8b8b96; margin-top: 3px;">${runnerRef(registration.orderRef, runner.runnerNo, runners.length)} &middot; ${runner.category.name}</div>
-        ${
-          runner.runningCommunity
-            ? `<div style="font-size: 12px; color: #8b8b96; margin-top: 2px;">${runner.runningCommunity}</div>`
-            : ''
-        }
-      </td>
-      <td align="right" style="padding: 10px 0; border-bottom: ${border}; font-family: Arial, Helvetica, sans-serif; text-align: right; vertical-align: top; white-space: nowrap;">${size}</td>
-    </tr>`;
-    })
-    .join('');
-}
-
-/**
- * The runners in their order-reference order.
- *
- * A Prisma include gives no ordering guarantee, and these rows are labelled
- * with a number a runner will quote back at us — so the list is sorted by the
- * stored position rather than by however the rows arrived.
- */
-function byRunnerNo(registration: RegistrationWithDetails) {
-  return [...registration.runners].sort((a, b) => a.runnerNo - b.runnerNo);
-}
-
-/**
- * Every field a runner typed into the wizard, one block each. This is what
- * the "received" email shows — the receipt keeps the compact line above,
- * since by then the runner has already had a chance to catch a typo here.
- */
-function runnerDetailRows(registration: RegistrationWithDetails): string {
-  const runners = byRunnerNo(registration);
-  return runners
-    .map((runner, index) => {
-      const heading =
-        runners.length > 1
-          ? `Runner ${runner.runnerNo} — ${runner.firstName} ${runner.lastName}`
-          : `${runner.firstName} ${runner.lastName}`;
-
-      return `
-    ${fullWidthRow(
-      heading,
-      `padding: ${index === 0 ? 4 : 22}px 0 6px; font-family: Arial, Helvetica, sans-serif; font-size: 14px; font-weight: 700; color: #f4f4f6;`
-    )}
-    ${infoRow('Runner Reference', runnerRef(registration.orderRef, runner.runnerNo, runners.length))}
-    ${infoRow('Category', runner.category.name)}
-    ${runner.singletSize ? infoRow('Shirt Size', runner.singletSize) : ''}
-    ${infoRow('Gender', runner.gender)}
-    ${infoRow('Birthdate', runner.birthdate)}
-    ${infoRow('Email', runner.email)}
-    ${infoRow('Phone', runner.phone)}
-    ${infoRow('Emergency Contact', `${runner.emergencyContactName} (${runner.emergencyContactPhone})`)}
-    ${runner.medicalConditions ? infoRow('Medical Conditions', runner.medicalConditions) : ''}
-    ${infoRow('Running Community', runner.runningCommunity)}`;
-    })
-    .join('');
-}
-
-/** The cost breakdown and its total. Only the last line's wording differs. */
-function summaryRows(registration: RegistrationWithDetails, totalLabel: string): string {
-  return `
-    ${amountRow('Subtotal', registration.subtotal)}
-    ${registration.deliveryFee > 0 ? amountRow(deliveryFeeLabel(registration.deliveryZone), registration.deliveryFee) : ''}
-    ${registration.platformFee > 0 ? amountRow('Platform Fee', registration.platformFee) : ''}
-    ${registration.transactionFee > 0 ? amountRow('Transaction Fee', registration.transactionFee) : ''}
-    ${ruleRow()}
-    <tr>
-      <td style="padding: 14px 12px 0 0; font-family: Arial, Helvetica, sans-serif; font-size: 15px; font-weight: 700; color: #ffffff;">${totalLabel}</td>
-      <td align="right" style="padding: 14px 0 0; font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 800; color: ${BRAND_ORANGE}; text-align: right; white-space: nowrap;">${peso(registration.totalAmount)}</td>
-    </tr>`;
-}
-
-type StatusTone = 'pending' | 'success';
 
 /**
  * Two tones, not one label style: "pending" (blue-tinted) reads as an
@@ -355,10 +379,14 @@ const STATUS_STYLES: Record<StatusTone, { bg: string; border: string; color: str
  * gradient — the logo's own wordmark is already orange-and-blue, so a
  * gradient behind it would fight it for contrast instead of framing it),
  * a thin gradient bar as the one accent touch, a status pill, and the same
- * footer. `status` is the one thing each email varies in the header.
+ * footer. The status is the one thing each email varies in the header.
  */
-function emailShell(status: { label: string; tone: StatusTone }, bodyHtml: string): string {
-  const style = STATUS_STYLES[status.tone];
+function renderHtml(doc: EmailDocument): string {
+  const style = STATUS_STYLES[doc.status.tone];
+  const body = `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      ${doc.blocks.map(blockHtml).join('')}
+    </table>`;
 
   return `
 <!DOCTYPE html>
@@ -380,7 +408,7 @@ function emailShell(status: { label: string; tone: StatusTone }, bodyHtml: strin
                   <tr>
                     <td style="background-color: ${style.bg}; border: 1px solid ${style.border}; border-radius: 999px; padding: 7px 16px;">
                       <span style="font-family: Arial, Helvetica, sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 1px; color: ${style.color}; text-transform: uppercase; white-space: nowrap;">
-                        ${style.icon}&nbsp; ${status.label}
+                        ${style.icon}&nbsp; ${escapeHtml(doc.status.label)}
                       </span>
                     </td>
                   </tr>
@@ -391,7 +419,7 @@ function emailShell(status: { label: string; tone: StatusTone }, bodyHtml: strin
             <!-- Body -->
             <tr>
               <td style="padding: 30px 32px 32px;">
-                ${bodyHtml}
+                ${body}
               </td>
             </tr>
 
@@ -414,6 +442,226 @@ function emailShell(status: { label: string; tone: StatusTone }, bodyHtml: strin
 </html>`;
 }
 
+/* ────────────────────────────────────────────────────────────────────────
+ * Plain-text rendering.
+ *
+ * This is the body a mailto: carries when a staff member sends an email by
+ * hand, and the text alternative Resend attaches. A mailto: cannot carry the
+ * design — its body is plain text, and URL length limits truncate a long one —
+ * which is precisely why the manual-send modal also puts the HTML on the
+ * clipboard. This rendering is the substance; the clipboard is the design.
+ * ──────────────────────────────────────────────────────────────────────── */
+
+/**
+ * The peso sign and the separator as characters, where the HTML rendering
+ * uses entities: this text goes into a mailto: body and into a plain-text
+ * email part, and "&#8369;" would arrive there literally.
+ */
+const PESO_SIGN = '₱';
+const MIDDOT = ' · ';
+
+function segmentsText(segments: Segment[]): string {
+  return segments.map(segment => (typeof segment === 'string' ? segment : segment.strong)).join('');
+}
+
+function pesoText(centavos: number): string {
+  return `${PESO_SIGN}${formatPesos(centavos)}`;
+}
+
+function rowText(row: Row): string[] {
+  switch (row.kind) {
+    case 'info':
+      return [`${row.label}: ${row.value}`];
+    case 'amount':
+      return [`${row.label}: ${pesoText(row.centavos)}`];
+    case 'total':
+      // Blank line first: without the rule that separates it in the HTML, the
+      // total would otherwise read as one more line of the breakdown.
+      return ['', `${row.label.toUpperCase()}: ${pesoText(row.centavos)}`];
+    case 'rule':
+      return [];
+    case 'runnerHeading':
+      return [row.first ? row.text : `\n${row.text}`];
+    case 'runner':
+      return [
+        row.name,
+        `  ${row.reference}${MIDDOT}${row.category}`,
+        ...(row.community ? [`  ${row.community}`] : []),
+        ...(row.size ? [`  Size: ${row.size}`] : []),
+        '',
+      ];
+  }
+}
+
+function blockText(block: Block): string {
+  switch (block.kind) {
+    case 'paragraph':
+    case 'note':
+      return segmentsText(block.segments);
+    case 'heading':
+      return block.text.toUpperCase();
+    case 'card':
+    case 'rows':
+      return block.rows.flatMap(rowText).join('\n');
+  }
+}
+
+function renderText(doc: EmailDocument): string {
+  const body = doc.blocks
+    .map(blockText)
+    .join('\n\n')
+    // A runner block ends on a blank line of its own and the next heading adds
+    // another; three in a row reads as a gap rather than a break.
+    .replace(/\n{3,}/g, '\n\n');
+
+  return [
+    `${SITE_NAME} — ${doc.status.label.toUpperCase()}`,
+    '',
+    body,
+    '',
+    '—',
+    `Questions about this order? Reply to this email or reach us at ${CONTACT_EMAIL}.`,
+    `(c) ${new Date().getFullYear()} ${SITE_NAME}. All rights reserved.`,
+  ].join('\n');
+}
+
+function renderMessage(doc: EmailDocument): EmailMessage {
+  return { to: doc.to, subject: doc.subject, html: renderHtml(doc), text: renderText(doc) };
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+ * The two documents.
+ * ──────────────────────────────────────────────────────────────────────── */
+
+/** The money line's own wording, built from the shared zone label. */
+function deliveryFeeLabel(zone: string | null): string {
+  const label = deliveryZoneLabel(zone);
+  return label ? `Delivery — ${label}` : 'Delivery Fee';
+}
+
+/** The order block both emails open with; each adds a row or two of its own. */
+function orderRows(registration: RegistrationWithDetails, extraRows: Row[]): Row[] {
+  const { event } = registration;
+  return [
+    { kind: 'info', label: 'Order Reference', value: registration.orderRef },
+    { kind: 'info', label: 'Event', value: event.title },
+    { kind: 'info', label: 'Date', value: formatEventDay(event.date) },
+    { kind: 'info', label: 'Location', value: event.location },
+    { kind: 'info', label: 'Payment Method', value: paymentMethodLabel(registration.paymentMethod) },
+    ...extraRows,
+  ];
+}
+
+/**
+ * Pickup or delivery, as order rows.
+ *
+ * Pickup carries the organizer's address and hours (lib/pickup.ts) rather than
+ * the bare word "Pickup": this email is what the runner still has in their
+ * inbox on race week, and "Pickup at Venue" does not tell them which venue.
+ * When the organizer has not settled it yet, the fallback sentence says so —
+ * an empty row would read as though we simply forgot.
+ */
+function logisticsRows(registration: RegistrationWithDetails): Row[] {
+  if (asLogisticsMethod(registration.logisticsMethod) !== LOGISTICS_METHODS.DELIVERY) {
+    const { location, schedule } = pickupDetails(registration.event);
+    const rows: Row[] = [{ kind: 'info', label: 'Logistics', value: 'Race Kit Pickup' }];
+    if (!location && !schedule) rows.push({ kind: 'info', label: 'Pickup Details', value: PICKUP_FALLBACK });
+    if (location) rows.push({ kind: 'info', label: 'Pickup Location', value: location });
+    if (schedule) rows.push({ kind: 'info', label: 'Pickup Schedule', value: schedule });
+    return rows;
+  }
+  const zoneLabel = deliveryZoneLabel(registration.deliveryZone) || 'Delivery';
+  const value = registration.deliveryAddress ? `${zoneLabel} — ${registration.deliveryAddress}` : zoneLabel;
+  return [{ kind: 'info', label: 'Delivery', value }];
+}
+
+/**
+ * The runners in their order-reference order.
+ *
+ * A Prisma include gives no ordering guarantee, and these rows are labelled
+ * with a number a runner will quote back at us — so the list is sorted by the
+ * stored position rather than by however the rows arrived.
+ */
+function byRunnerNo(registration: RegistrationWithDetails) {
+  return [...registration.runners].sort((a, b) => a.runnerNo - b.runnerNo);
+}
+
+/** The compact runner line the receipt uses: who ran, in what, at what size. */
+function runnerRows(registration: RegistrationWithDetails): Row[] {
+  const runners = byRunnerNo(registration);
+  return runners.map(runner => ({
+    kind: 'runner' as const,
+    name: `${runner.firstName} ${runner.lastName}`,
+    reference: runnerRef(registration.orderRef, runner.runnerNo, runners.length),
+    category: runner.category.name,
+    community: runner.runningCommunity || null,
+    size: runner.singletSize || null,
+  }));
+}
+
+/**
+ * Every field a runner typed into the wizard, one block each. This is what
+ * the "received" email shows — the receipt keeps the compact line above,
+ * since by then the runner has already had a chance to catch a typo here.
+ */
+function runnerDetailRows(registration: RegistrationWithDetails): Row[] {
+  const runners = byRunnerNo(registration);
+  return runners.flatMap((runner, index): Row[] => {
+    const heading =
+      runners.length > 1
+        ? `Runner ${runner.runnerNo} — ${runner.firstName} ${runner.lastName}`
+        : `${runner.firstName} ${runner.lastName}`;
+
+    return [
+      { kind: 'runnerHeading', text: heading, first: index === 0 },
+      {
+        kind: 'info',
+        label: 'Runner Reference',
+        value: runnerRef(registration.orderRef, runner.runnerNo, runners.length),
+      },
+      { kind: 'info', label: 'Category', value: runner.category.name },
+      ...(runner.singletSize ? [{ kind: 'info' as const, label: 'Shirt Size', value: runner.singletSize }] : []),
+      { kind: 'info', label: 'Gender', value: runner.gender },
+      { kind: 'info', label: 'Birthdate', value: runner.birthdate },
+      { kind: 'info', label: 'Email', value: runner.email },
+      { kind: 'info', label: 'Phone', value: runner.phone },
+      {
+        kind: 'info',
+        label: 'Emergency Contact',
+        value: `${runner.emergencyContactName} (${runner.emergencyContactPhone})`,
+      },
+      ...(runner.medicalConditions
+        ? [{ kind: 'info' as const, label: 'Medical Conditions', value: runner.medicalConditions }]
+        : []),
+      { kind: 'info', label: 'Running Community', value: runner.runningCommunity },
+    ];
+  });
+}
+
+/** The cost breakdown and its total. Only the last line's wording differs. */
+function summaryRows(registration: RegistrationWithDetails, totalLabel: string): Row[] {
+  return [
+    { kind: 'amount', label: 'Subtotal', centavos: registration.subtotal },
+    ...(registration.deliveryFee > 0
+      ? [
+          {
+            kind: 'amount' as const,
+            label: deliveryFeeLabel(registration.deliveryZone),
+            centavos: registration.deliveryFee,
+          },
+        ]
+      : []),
+    ...(registration.platformFee > 0
+      ? [{ kind: 'amount' as const, label: 'Platform Fee', centavos: registration.platformFee }]
+      : []),
+    ...(registration.transactionFee > 0
+      ? [{ kind: 'amount' as const, label: 'Transaction Fee', centavos: registration.transactionFee }]
+      : []),
+    { kind: 'rule' },
+    { kind: 'total', label: totalLabel, centavos: registration.totalAmount },
+  ];
+}
+
 /**
  * Sent the moment a registration is created — before any payment is
  * confirmed. Shows the runner exactly what they submitted (so a typo in a
@@ -421,9 +669,7 @@ function emailShell(status: { label: string; tone: StatusTone }, bodyHtml: strin
  * deliberately does not claim the money has been received, only that the
  * registration has.
  */
-export async function sendRegistrationReceivedEmail(
-  registration: RegistrationWithDetails
-): Promise<void> {
+export function registrationReceivedEmail(registration: RegistrationWithDetails): EmailMessage {
   const { event } = registration;
   const paidByBankTransfer = isBankTransfer(registration.paymentMethod);
   const firstName = registration.customerName.split(' ')[0] || registration.customerName;
@@ -432,102 +678,114 @@ export async function sendRegistrationReceivedEmail(
     ? "Our team will verify your proof of payment and email you an official receipt once it's confirmed."
     : "Once your payment is confirmed, we'll email you an official receipt.";
 
-  const body = bodyTable(`
-    ${paragraphRow(
-      `Hi ${firstName}, we've received your registration for
-       <strong style="color: #f4f4f6;">${event.title}</strong>. Here's what you submitted —
-       please check every detail below carefully, especially each runner's info.`,
-      'padding: 0 0 14px;'
-    )}
-
-    ${sectionHeading('Order Details')}
-    ${cardRow(
-      orderRows(
-        registration,
-        `${infoRow('Submitted By', registration.customerName)}
-         ${infoRow('Contact Email', registration.customerEmail)}
-         ${registration.customerPhone ? infoRow('Contact Phone', registration.customerPhone) : ''}
-         ${logisticsRow(registration)}
-         ${paidByBankTransfer && registration.transactionNumber ? infoRow('Transaction No.', registration.transactionNumber) : ''}`
-      )
-    )}
-
-    ${sectionHeading('Runner Details — Please Verify')}
-    ${cardRow(runnerDetailRows(registration))}
-
-    ${sectionHeading('Order Summary')}
-    ${summaryRows(registration, paidByBankTransfer ? 'Amount Due' : 'Total Amount')}
-
-    ${fullWidthRow(
-      `<p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 13px; line-height: 1.6; color: #8b8b96;">
-        ${nextStep} If anything above looks wrong, reply to this email right away.
-      </p>`,
-      'padding: 30px 0 0;'
-    )}`);
-
-  // The order reference keeps every email its own conversation. Without it
-  // Gmail threads same-subject messages together and hides the body behind
-  // "Show trimmed content" as if it were a quoted reply.
-  await sendEmail(
-    registration.customerEmail,
-    `We've received your registration — ${event.title} (${registration.orderRef})`,
-    emailShell({ label: 'Registration Received', tone: 'pending' }, body)
-  );
+  return renderMessage({
+    to: registration.customerEmail,
+    // The order reference keeps every email its own conversation. Without it
+    // Gmail threads same-subject messages together and hides the body behind
+    // "Show trimmed content" as if it were a quoted reply.
+    subject: `We've received your registration — ${event.title} (${registration.orderRef})`,
+    status: { label: 'Registration Received', tone: 'pending' },
+    blocks: [
+      {
+        kind: 'paragraph',
+        segments: [
+          `Hi ${firstName}, we've received your registration for `,
+          { strong: event.title },
+          ". Here's what you submitted — please check every detail below carefully, especially each runner's info.",
+        ],
+      },
+      { kind: 'heading', text: 'Order Details' },
+      {
+        kind: 'card',
+        rows: orderRows(registration, [
+          { kind: 'info', label: 'Submitted By', value: registration.customerName },
+          { kind: 'info', label: 'Contact Email', value: registration.customerEmail },
+          ...(registration.customerPhone
+            ? [{ kind: 'info' as const, label: 'Contact Phone', value: registration.customerPhone }]
+            : []),
+          ...logisticsRows(registration),
+          ...(paidByBankTransfer && registration.transactionNumber
+            ? [{ kind: 'info' as const, label: 'Transaction No.', value: registration.transactionNumber }]
+            : []),
+        ]),
+      },
+      { kind: 'heading', text: 'Runner Details — Please Verify' },
+      { kind: 'card', rows: runnerDetailRows(registration) },
+      { kind: 'heading', text: 'Order Summary' },
+      { kind: 'rows', rows: summaryRows(registration, paidByBankTransfer ? 'Amount Due' : 'Total Amount') },
+      {
+        kind: 'note',
+        segments: [`${nextStep} If anything above looks wrong, reply to this email right away.`],
+      },
+    ],
+  });
 }
 
 /**
  * Sent once a registration reaches PAID — online via the PayMongo webhook, or
  * manual once an admin confirms a bank transfer proof. This is the official
- * receipt; sendRegistrationReceivedEmail() above already told the runner
- * their details were captured, so this one is entirely about the money.
+ * receipt; the received email above already told the runner their details
+ * were captured, so this one is entirely about the money.
  */
-export async function sendRegistrationConfirmationEmail(
-  registration: RegistrationWithDetails
-): Promise<void> {
+export function registrationConfirmationEmail(registration: RegistrationWithDetails): EmailMessage {
   const { event, runners } = registration;
   const paidByBankTransfer = isBankTransfer(registration.paymentMethod);
   const firstName = registration.customerName.split(' ')[0] || registration.customerName;
 
-  const body = bodyTable(`
-    ${paragraphRow(
-      `Hi ${firstName}, ${
-        paidByBankTransfer
-          ? "we've verified your bank transfer — you're officially registered for"
-          : "your payment went through — you're officially registered for"
-      }
-       <strong style="color: #f4f4f6;">${event.title}</strong>. Here's your receipt.`,
-      'padding: 0 0 14px;'
-    )}
+  return renderMessage({
+    to: registration.customerEmail,
+    subject: `Payment confirmed — ${event.title} (${registration.orderRef})`,
+    status: { label: paidByBankTransfer ? 'Payment Verified' : 'Payment Confirmed', tone: 'success' },
+    blocks: [
+      {
+        kind: 'paragraph',
+        segments: [
+          `Hi ${firstName}, ${
+            paidByBankTransfer
+              ? "we've verified your bank transfer — you're officially registered for "
+              : "your payment went through — you're officially registered for "
+          }`,
+          { strong: event.title },
+          ". Here's your receipt.",
+        ],
+      },
+      { kind: 'heading', text: 'Order Details' },
+      {
+        kind: 'card',
+        rows: orderRows(
+          registration,
+          paidByBankTransfer && registration.transactionNumber
+            ? [{ kind: 'info', label: 'Transaction No.', value: registration.transactionNumber }]
+            : []
+        ),
+      },
+      { kind: 'heading', text: `Registered Runner${runners.length > 1 ? 's' : ''}` },
+      { kind: 'rows', rows: runnerRows(registration) },
+      { kind: 'heading', text: 'Payment Summary' },
+      { kind: 'rows', rows: summaryRows(registration, 'Total Paid') },
+      {
+        kind: 'note',
+        segments: [
+          'Keep this email as your receipt. Results and your e-certificate will be posted here once the race is done.',
+        ],
+      },
+    ],
+  });
+}
 
-    ${sectionHeading('Order Details')}
-    ${cardRow(
-      orderRows(
-        registration,
-        paidByBankTransfer && registration.transactionNumber
-          ? infoRow('Transaction No.', registration.transactionNumber)
-          : ''
-      )
-    )}
+/**
+ * The two sends. Each reports whether it actually happened; lib/email-delivery.ts
+ * is what writes that onto the registration, and the call sites go through it
+ * rather than calling these directly.
+ */
+export function sendRegistrationReceivedEmail(
+  registration: RegistrationWithDetails
+): Promise<EmailOutcome> {
+  return sendEmail(registrationReceivedEmail(registration));
+}
 
-    ${sectionHeading(`Registered Runner${runners.length > 1 ? 's' : ''}`)}
-    ${runnerRows(registration)}
-
-    ${sectionHeading('Payment Summary')}
-    ${summaryRows(registration, 'Total Paid')}
-
-    ${fullWidthRow(
-      `<p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 13px; line-height: 1.6; color: #8b8b96;">
-        Keep this email as your receipt. Results and your e-certificate will be posted here once the race is done.
-      </p>`,
-      'padding: 30px 0 0;'
-    )}`);
-
-  await sendEmail(
-    registration.customerEmail,
-    `Payment confirmed — ${event.title} (${registration.orderRef})`,
-    emailShell(
-      { label: paidByBankTransfer ? 'Payment Verified' : 'Payment Confirmed', tone: 'success' },
-      body
-    )
-  );
+export function sendRegistrationConfirmationEmail(
+  registration: RegistrationWithDetails
+): Promise<EmailOutcome> {
+  return sendEmail(registrationConfirmationEmail(registration));
 }

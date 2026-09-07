@@ -16,7 +16,7 @@ import {
   pauseNote,
   reserveSlots,
 } from '@/lib/registration-gate';
-import { sendRegistrationReceivedEmail } from '@/lib/email';
+import { deliverReceivedEmail } from '@/lib/email-delivery';
 import {
   optionalUpperCaseForStorage,
   upperCaseForStorage,
@@ -228,8 +228,10 @@ export async function POST(request: Request) {
 
     // Sent now, not the receipt: a bank transfer is unverified money until an
     // admin looks at the proof, so this only confirms the submission — the
-    // receipt (sendRegistrationConfirmationEmail) waits for that admin action.
-    await sendRegistrationReceivedEmail(registration);
+    // receipt (deliverConfirmationEmail) waits for that admin action. Whether
+    // the send actually happened is written onto the registration, since on
+    // Resend's free tier it may simply not have — see lib/email-delivery.ts.
+    await deliverReceivedEmail(registration);
 
     return NextResponse.json({
       success: true, 

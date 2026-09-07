@@ -19,11 +19,11 @@ commits, not us.
 | C | 2, 3 | yes | Done |
 | D | 1, 10 | yes | Done |
 | E | 11, 9 (+ security fix) | yes | Done |
-| F | 14 | yes | **Next** |
-| G | 8 | yes | Not started |
+| F | 14 | yes | Done |
+| G | 8 | yes | **Next** |
 
-Batch F is deliberately ahead of the voucher work: the app is going to
-production **on Resend's free tier**, so the quota fallback matters before
+Batch F was deliberately ahead of the voucher work: the app is going to
+production **on Resend's free tier**, so the quota fallback mattered before
 discounts do.
 
 ---
@@ -376,7 +376,7 @@ leaving it alone.
 
 ---
 
-## Batch F — email quota fallback (migration)
+## Batch F — email quota fallback (migration) — **Done**
 
 ### 14. Flag unsent emails, and let a person send them by hand
 The app stays on Resend's free tier in production: 100 recipients a day, no
@@ -420,6 +420,49 @@ Build the plain-text rendering from the **same source** as the HTML — one
 template producing two renderings, never two templates that can drift apart.
 
 Mark the registration as handled once sent, so it leaves the backlog.
+
+### What landed, and what is worth carrying forward
+
+One migration (`20260906180000_email_delivery_record`), one new module
+(`src/lib/email-delivery.ts`), one new route
+(`api/admin/registrations/[id]/email`), and a rewritten `src/lib/email.ts`.
+
+- **The template is now one document rendered twice.** `email.ts` builds a
+  block list and renders it as HTML *and* as plain text, rather than holding
+  two templates that would drift apart the first time a line changed in only
+  one of them. The HTML output was checked against the version that shipped:
+  identical for a solo order, a group order, a delivery, a pickup with no
+  details settled, and both emails — whitespace between tags aside. Values are
+  held plain in the blocks and escaped by the renderer, so an event or club
+  name containing `&` no longer reaches an inbox as broken markup.
+- **A hand-sent email stamps the same column an automatic one would.** What
+  the column records is that the runner *has* the email, not which system
+  delivered it. So the row leaves the backlog when a person sends it, and if a
+  later email fails the row rejoins on its own — no separate "handled" flag to
+  go stale. Who sent it by hand is kept beside it, as a name.
+- **The migration backfills, where Batch E's deliberately did not.** Every
+  existing registration *was* emailed — the old code called both sends
+  unconditionally, it simply never wrote it down — so leaving the columns null
+  would have put the platform's whole history into the backlog on the first
+  page load and buried the rows the feature exists to surface. `createdAt` for
+  the received email, `updatedAt` for a PAID row's receipt: approximations, and
+  the migration says so.
+- **The mark is a `danger` badge, not an amber one.** Amber is already spoken
+  for by the PENDING status badge sitting directly above it, and an unsent
+  email is a failure, not a state that is waiting. `.status-badge.danger` was
+  added to `Admin.css` as a reusable tone rather than a one-off pill.
+- **Both buttons in the modal are needed and neither replaces the other.** A
+  `mailto:` body is plain text by definition and a long one can be cut short by
+  the client's own URL limit, so it carries the addressing; the clipboard write
+  (`text/html` + `text/plain`) is what preserves the design when it is pasted
+  into Gmail. The preview is an iframe, so the email's dark palette neither
+  leaks into the admin nor inherits from it.
+- **Not verified in the admin UI.** Everything else was — the build, the
+  rendered templates against the old ones, and the new route refusing
+  unauthenticated `GET` and `POST` with a 401 — but signing into the admin
+  needs a password typed into a login form, which the assistant will not do.
+  The registrants screen itself is the one part still waiting on a human to
+  look at it.
 
 ---
 
