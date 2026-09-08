@@ -52,7 +52,7 @@ platform takes a per-runner admin fee.
 
 ```bash
 npm run dev        # dev server on :3000 (use the Browser pane / launch.json, never a raw shell server)
-npm run build
+npm run build      # prisma generate + next build (see below)
 npm run lint
 npm run seed:dev   # scripts/seed-dev.ts
 npm run uppercase:existing  # brings pre-uppercase-rule rows into line; --write to apply
@@ -62,6 +62,12 @@ npm run test:blob  # scripts/test-blob.ts — exercises both blob stores
 `npx prisma migrate dev` / `npx prisma generate` for schema work. Migrations run
 DDL through `DIRECT_URL` (see `prisma.config.ts`); the app itself uses the pooled
 `DATABASE_URL` (see `src/lib/db.ts`).
+
+**`npm run build` runs `prisma generate` before `next build`, and must keep doing
+so.** The generated client is git-ignored, and a fresh install on Vercel does not
+run Prisma's postinstall hook (npm now withholds install scripts it has not been
+told to allow), so without that step the build type-checks against a client that
+is not there and fails.
 
 ### Environment (`.env`, mirrored in `.env.example`)
 
