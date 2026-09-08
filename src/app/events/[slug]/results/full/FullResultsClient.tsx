@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Search, Trophy, User, Hash, ChevronDown, Check, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -99,71 +100,152 @@ function FilterDropdown({ title, options, selected, onToggle }: { title: string,
   );
 }
 
-// Custom Action Menu using transitions-dev
+// Custom Action Menu using transitions-dev.
+// The menu is rendered into <body> and positioned against the trigger's viewport
+// rect, because the results card and its horizontal scroller both clip their
+// overflow — a menu laid out inside the row was cut off on the last rows. It
+// also flips above the trigger when the space below it cannot hold the menu.
 function ActionMenu({ eventSlug, resultId }: { eventSlug: string, resultId: string }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [isClosing, setIsClosing] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const MENU_WIDTH = 160;   // matches w-40
+  const MENU_HEIGHT = 96;   // the two items plus padding, used before the first measure
+  const GAP = 8;            // the old mt-2
+  const EDGE = 8;           // breathing room against the viewport edges
 
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        close();
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+  const [isOpen, setIsOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [placement, setPlacement] = useState<{ top: number, left: number, origin: 'top-right' | 'bottom-right' }>({
+    top: 0,
+    left: 0,
+    origin: 'top-right',
+  });
+
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => setMounted(true), []);
+
+  const updatePosition = useCallback(() => {
+    const button = buttonRef.current;
+    if (!button) return;
+
+    const rect = button.getBoundingClientRect();
+    const height = menuRef.current?.offsetHeight || MENU_HEIGHT;
+
+    const roomBelow = window.innerHeight - rect.bottom - GAP - EDGE;
+    const roomAbove = rect.top - GAP - EDGE;
+    const flipUp = height > roomBelow && roomAbove >= height;
+
+    setPlacement({
+      top: flipUp ? rect.top - GAP - height : rect.bottom + GAP,
+      left: Math.min(
+        Math.max(rect.right - MENU_WIDTH, EDGE),
+        Math.max(window.innerWidth - MENU_WIDTH - EDGE, EDGE)
+      ),
+      origin: flipUp ? 'bottom-right' : 'top-right',
+    });
   }, []);
 
-  const close = () => {
+  const close = useCallback(() => {
+    const el = menuRef.current;
+    if (!el) {
+      setIsOpen(false);
+      return;
+    }
+    const closeMs = parseFloat(
+      getComputedStyle(document.documentElement).getPropertyValue('--dropdown-close-dur')
+    ) || 150;
+
+    el.classList.remove('is-open');
+    el.classList.add('is-closing');
+    setTimeout(() => setIsOpen(false), closeMs);
+  }, []);
+
+  // Once the menu is in the DOM its real height is known, so measure again and
+  // play the open transition on the next frame.
+  useEffect(() => {
     if (!isOpen) return;
-    setIsOpen(false);
-    setIsClosing(true);
-    setTimeout(() => setIsClosing(false), 150);
-  };
+    updatePosition();
+    const frame = requestAnimationFrame(() => {
+      menuRef.current?.classList.remove('is-closing');
+      menuRef.current?.classList.add('is-open');
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [isOpen, updatePosition]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    function handleClickOutside(event: MouseEvent) {
+      const target = event.target as Node;
+      if (menuRef.current?.contains(target) || buttonRef.current?.contains(target)) return;
+      close();
+    }
+    function handleScrollOrResize() {
+      updatePosition();
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    window.addEventListener('scroll', handleScrollOrResize, true);
+    window.addEventListener('resize', handleScrollOrResize);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('scroll', handleScrollOrResize, true);
+      window.removeEventListener('resize', handleScrollOrResize);
+    };
+  }, [isOpen, close, updatePosition]);
 
   const toggle = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (isOpen) {
       close();
     } else {
-      setIsClosing(false);
+      updatePosition();
       setIsOpen(true);
     }
   };
 
+  const menu = (
+    <div
+      ref={menuRef}
+      onClick={(e) => e.stopPropagation()}
+      className="t-dropdown fixed w-40 bg-[#1a1a20] border border-white/10 rounded-xl shadow-xl overflow-hidden"
+      data-origin={placement.origin}
+      style={{ top: placement.top, left: placement.left, zIndex: 9999 }}
+    >
+      <div className="p-1">
+        <Link
+          href={`/events/${eventSlug}/results/${resultId}`}
+          onClick={(e) => e.stopPropagation()}
+          className="w-full text-left block px-3 py-2 text-sm text-white rounded-lg hover:bg-white/5 transition-colors"
+        >
+          View Details
+        </Link>
+        <Link
+          href={`/events/${eventSlug}/results/${resultId}?cert=1`}
+          onClick={(e) => e.stopPropagation()}
+          className="w-full text-left block px-3 py-2 text-sm text-accent-blue font-medium rounded-lg hover:bg-white/5 transition-colors"
+        >
+          View E-Cert
+        </Link>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="relative" ref={dropdownRef}>
-      <button 
+    <>
+      <button
+        ref={buttonRef}
         onClick={toggle}
         className="p-1.5 rounded-lg hover:bg-white/10 transition-colors text-secondary hover:text-white"
         title="Actions"
+        aria-haspopup="true"
+        aria-expanded={isOpen}
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
       </button>
 
-      <div 
-        className={`t-dropdown absolute top-full right-0 mt-2 w-40 bg-[#1a1a20] border border-white/10 rounded-xl shadow-xl z-50 overflow-hidden ${isOpen ? 'is-open' : ''} ${isClosing ? 'is-closing' : ''}`}
-        data-origin="top-right"
-      >
-        <div className="p-1">
-          <Link
-            href={`/events/${eventSlug}/results/${resultId}`}
-            onClick={(e) => e.stopPropagation()}
-            className="w-full text-left block px-3 py-2 text-sm text-white rounded-lg hover:bg-white/5 transition-colors"
-          >
-            View Details
-          </Link>
-          <Link
-            href={`/events/${eventSlug}/results/${resultId}?cert=1`}
-            onClick={(e) => e.stopPropagation()}
-            className="w-full text-left block px-3 py-2 text-sm text-accent-blue font-medium rounded-lg hover:bg-white/5 transition-colors"
-          >
-            View E-Cert
-          </Link>
-        </div>
-      </div>
-    </div>
+      {mounted && isOpen && createPortal(menu, document.body)}
+    </>
   );
 }
 

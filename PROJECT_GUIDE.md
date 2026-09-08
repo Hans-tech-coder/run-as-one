@@ -458,6 +458,15 @@ These are the user's own standing preferences. Follow them without being asked.
   rather than one because they live in different design systems. The admin's
   remaining native selects (the results uploader, the registrants table's size
   field) are the ones to move onto it as they are next touched.
+- **A row's action menu is portalled to `<body>`.** Every card and table in the
+  app clips its own overflow (rounded corners, horizontal scrollers), so a menu
+  laid out inside the row is cut off on the last rows. The admin menus
+  (`admin/events/EventActionsMenu` and its siblings) and the public leaderboard's
+  `ActionMenu` (`events/[slug]/results/full/FullResultsClient`) all render into
+  `document.body` with `position: fixed`, place themselves from the trigger's
+  `getBoundingClientRect()`, reposition on scroll and resize, and — the
+  leaderboard's — flip above the trigger when the space below it cannot hold the
+  menu. Copy that rather than an `absolute top-full` menu.
 - **One status badge, four tones** (`Admin.css`): `success` for done, `pending`
   (amber) for a state that is simply waiting and needs nobody, `danger` for
   something that failed and a person must act on — an email that never went out
