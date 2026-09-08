@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { MoreVertical, Edit, Trash2 } from 'lucide-react';
+import { MoreVertical, Edit, PauseCircle, PlayCircle, Trash2 } from 'lucide-react';
 
 /**
  * The row menu on the marketing table.
@@ -17,12 +17,20 @@ import { MoreVertical, Edit, Trash2 } from 'lucide-react';
  */
 export default function PromoActionsMenu({
   label,
+  isPaused,
+  isTogglingPause = false,
   onEdit,
+  onTogglePause,
   onDelete,
 }: {
   /** What this row is, for the buttons and for a screen reader. */
   label: string;
+  /** Whether the organizer has this promotion switched off. */
+  isPaused: boolean;
+  /** True while this row's pause request is in flight. */
+  isTogglingPause?: boolean;
   onEdit: () => void;
+  onTogglePause: () => void;
   onDelete: () => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -130,6 +138,23 @@ export default function PromoActionsMenu({
         >
           <Edit size={16} />
           Edit
+        </button>
+        {/* Between editing and deleting on purpose: it is the reversible
+            answer to "stop this", and an organizer who reaches past Edit
+            should meet it before they reach Delete. */}
+        <button
+          onClick={() => {
+            closeMenu();
+            onTogglePause();
+          }}
+          disabled={isTogglingPause}
+          className={`action-dropdown-item w-full flex items-center gap-3 px-4 py-2 text-sm text-left ${
+            isTogglingPause ? 'opacity-50 cursor-not-allowed' : ''
+          }`}
+          role="menuitem"
+        >
+          {isPaused ? <PlayCircle size={16} /> : <PauseCircle size={16} />}
+          {isTogglingPause ? 'Saving' : isPaused ? 'Resume' : 'Pause'}
         </button>
         <div className="action-dropdown-divider"></div>
         <button

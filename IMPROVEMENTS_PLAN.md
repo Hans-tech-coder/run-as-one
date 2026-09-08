@@ -640,6 +640,44 @@ table.
 
 ---
 
+## Follow-up — pausing a promotion
+
+Deleting was the only way to stop a promotion, and it is the wrong tool: a
+code printed on a poster or shared in a group chat does not stop existing
+because the row did, and a runner typing it then gets "we don't have a code
+called that" for something the organizer put in their hands.
+
+One migration (`20260908140000_pause_a_promotion`, adding `PromoCode.paused`),
+a `Pause` / `Resume` item in the row menu, and a `promoStatus` rule in
+`discount.ts`.
+
+- **"Pause", not "Deactivate" or "Close".** Shopify calls it Deactivate, but
+  this app already had the exact idea under its own word: the events table
+  pauses sign-ups, `Event.registrationPaused` stores it, and `status-badge`
+  already had a `neutral` tone for "a state that is neither good news nor a
+  warning". Reusing the vocabulary was worth more than matching Shopify's.
+  "Close" and "Stop" were rejected for sounding permanent, which is the one
+  thing this action is not — being reversible is the whole point of having it
+  beside Delete.
+- **The Status column had to start telling the truth.** It said only "Active"
+  or "Fully Used", so an expired code and one that had not started yet both
+  read as Active. Shipping PAUSED beside that would have been half a job, so
+  `promoStatus` now answers with all five and the badge, the event page, the
+  metric card and the runner-facing gate all read it.
+- **Pausing is its own request.** `{ paused }` alone toggles the switch and
+  touches nothing else — the row menu has no form open, so making it re-post
+  a full set of terms would be inventing values it never rendered. A fuller
+  body is still a real edit and still fully validated.
+- **An edit does not silently resume.** The edit form does not carry the
+  switch, so `paused` survives a change to the terms. An organizer who paused
+  a promotion, fixed its percentage and saved has still paused it.
+- The runner-facing lookup still **returns** a paused code rather than
+  pretending it does not exist, so the wizard can say "not being accepted at
+  the moment, contact the organizer" instead of "check the spelling" about a
+  code that is spelled perfectly.
+
+---
+
 ## Decisions already settled — do not relitigate
 
 - Slot limits are **per category**, not per event.
@@ -662,3 +700,5 @@ table.
 - A **batch of vouchers is one promotion**: editing or deleting any of them
   does the whole batch.
 - **How a promotion is claimed cannot be edited** — only what it gives.
+- Stopping a promotion is **Pause / Resume**, matching the events table's
+  registration hold. Deleting is for a mistake, not for a decision.

@@ -350,6 +350,16 @@ model PromoCode {
   /// their order. Where two promotions both apply, only the larger one does --
   /// see bestDiscount in src/lib/discount.ts.
   automatic     Boolean   @default(false)
+  /// The organizer's hand on the switch, exactly like Event.registrationPaused
+  /// and for the same reason: a promotion that has run out, expired or not
+  /// started yet is a fact the app works out for itself, and this one is a
+  /// decision -- the dates and the redemptions both remain, and the organizer
+  /// has stopped it anyway.
+  ///
+  /// It is what an organizer reaches for instead of deleting: a code printed
+  /// on a poster can be switched off and back on, while deleting it leaves a
+  /// runner typing a code nobody can explain.
+  paused        Boolean   @default(false)
   organizerId   String
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt

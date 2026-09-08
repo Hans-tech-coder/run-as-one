@@ -1,6 +1,6 @@
 import React from 'react';
 import { Gift } from 'lucide-react';
-import { PromoTerms, describePromo, isExhausted, promoConditions } from '@/lib/discount';
+import { PromoTerms, describePromo, promoConditions, promoStatus } from '@/lib/discount';
 
 /**
  * The promotions running on an event, on the event page, before the runner has
@@ -19,11 +19,11 @@ import { PromoTerms, describePromo, isExhausted, promoConditions } from '@/lib/d
  * named invitees.
  */
 export default function PromoHighlights({ promos }: { promos: PromoTerms[] }) {
-  // Expired, not yet started, or fully claimed. Filtered here rather than in
-  // the query because the rule for whether a promotion is live belongs to
-  // discount.ts, and half of it re-expressed as a `where` clause is how a badge
-  // starts disagreeing with the discount it is advertising.
-  const live = promos.filter(promo => !isExhausted(promo) && !hasEnded(promo));
+  // Expired, not yet started, fully claimed, or switched off by the
+  // organizer. Filtered through `promoStatus` rather than re-expressed here,
+  // because half of that rule copied into a `where` clause is how a badge
+  // starts advertising a discount the checkout will refuse.
+  const live = promos.filter(promo => promoStatus(promo) === 'ACTIVE');
   if (live.length === 0) return null;
 
   return (
@@ -63,11 +63,4 @@ export default function PromoHighlights({ promos }: { promos: PromoTerms[] }) {
       </p>
     </div>
   );
-}
-
-/** Whether a promotion's window has closed. */
-function hasEnded(promo: PromoTerms): boolean {
-  if (!promo.validUntil) return false;
-  const until = new Date(promo.validUntil);
-  return !Number.isNaN(until.getTime()) && until.getTime() < Date.now();
 }

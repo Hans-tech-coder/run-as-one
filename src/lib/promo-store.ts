@@ -33,6 +33,7 @@ export const PROMO_TERMS_SELECT = {
   buyQuantity: true,
   getQuantity: true,
   automatic: true,
+  paused: true,
 } as const;
 
 export type StoredPromo = PromoTerms & { id: string };

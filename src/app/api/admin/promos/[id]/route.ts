@@ -19,6 +19,12 @@ import { promoTermsFromInput, wholeNumber } from '@/lib/promo-input';
  * promotion can be removed without rewriting anyone's receipt. What deletion
  * takes away is the ability to redeem it again, not the record that it was.
  *
+ * **Pausing is its own request.** A body carrying only `{ paused }` toggles
+ * the switch and touches nothing else, the same way
+ * `PATCH /api/admin/events/[id]` is the registration hold on its own: the row
+ * menu has no form open, so it has no terms to re-post, and making it send
+ * some would be inventing values it never rendered.
+ *
  * Auth-checked and scoped to the signed-in organizer's own promotions, like
  * every other admin route: an id from the browser is not proof it belongs to
  * the browser's owner.
@@ -41,6 +47,17 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     }
 
     const body = await request.json();
+
+    // The hold on its own. Checked before the terms are read, because a body
+    // that carries only this has no terms in it to validate and must not be
+    // refused for the discount type it never claimed to be setting.
+    if (typeof body?.paused === 'boolean' && Object.keys(body).length === 1) {
+      const held = await prisma.promoCode.updateMany({
+        where: batchWhere(existing, auth.id),
+        data: { paused: body.paused },
+      });
+      return NextResponse.json({ updated: held.count, paused: body.paused });
+    }
     const terms = await promoTermsFromInput(
       // `automatic` is not editable. Turning a code into a codeless promotion,
       // or the reverse, changes what the row *is* — every runner holding the
@@ -95,12 +112,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       code = cleaned;
     }
 
-    const where = existing.batchLabel
-      ? { organizerId: auth.id, batchLabel: existing.batchLabel }
-      : { id: existing.id };
-
     const updated = await prisma.promoCode.updateMany({
-      where,
+      where: batchWhere(existing, auth.id),
       data: {
         ...terms.data,
         ...(code ? { code } : {}),
@@ -135,9 +148,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
     }
 
     const deleted = await prisma.promoCode.deleteMany({
-      where: existing.batchLabel
-        ? { organizerId: auth.id, batchLabel: existing.batchLabel }
-        : { id: existing.id },
+      where: batchWhere(existing, auth.id),
     });
 
     return NextResponse.json({ deleted: deleted.count });
@@ -145,4 +156,21 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
     console.error('Promo Delete Error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
+}
+
+/**
+ * The rows an operation on this promotion should touch.
+ *
+ * A batch is one promotion, so every voucher sharing its label goes with it.
+ * Named once because editing, pausing and deleting all have to agree about
+ * that — a pause that caught only one voucher out of two hundred would leave
+ * a promotion quietly disagreeing with itself.
+ */
+function batchWhere(
+  promo: { id: string; batchLabel: string | null },
+  organizerId: string,
+) {
+  return promo.batchLabel
+    ? { organizerId, batchLabel: promo.batchLabel }
+    : { id: promo.id };
 }

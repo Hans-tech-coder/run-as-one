@@ -40,9 +40,16 @@ export default async function AdminDashboard() {
 
   events.forEach(event => {
     event.registrations.forEach(reg => {
-      // Net revenue for the organizer (Subtotal + Delivery Fee, excluding platform/transaction fees).
-      // Both are centavos, so the running total stays an exact integer.
-      totalRevenue += (reg.subtotal + reg.deliveryFee);
+      // Net revenue for the organizer: subtotal + delivery fee, less whatever a
+      // promotion took off, and excluding the platform and transaction fees
+      // that were never theirs. Every amount is centavos, so the running total
+      // stays an exact integer.
+      //
+      // The discount has to come off here. It is the organizer's own money that
+      // was given away — a percentage and a free runner both reduce the goods,
+      // not the platform's cut — so a total that ignored it would report
+      // revenue the organizer never actually received.
+      totalRevenue += (reg.subtotal + reg.deliveryFee - reg.discountAmount);
       totalRegistrants += reg.runners.length;
       
       recentRegistrations.push({

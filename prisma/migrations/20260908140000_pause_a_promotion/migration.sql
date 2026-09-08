@@ -1,0 +1,12 @@
+-- The organizer's hand on the switch.
+--
+-- Until now the only way to stop a promotion was to delete it, which is the
+-- wrong tool: a code printed on a poster or shared in a group chat does not
+-- stop existing because the row did, and a runner typing it then gets "we
+-- don't have a code called that" for something the organizer themselves put in
+-- their hands. Pausing keeps the promotion, its terms and its redemption
+-- history, and simply stops it applying until it is resumed.
+--
+-- A Boolean rather than a timestamp, to match Event.registrationPaused, which
+-- is the same idea about the same kind of hold.
+ALTER TABLE "PromoCode" ADD COLUMN "paused" BOOLEAN NOT NULL DEFAULT false;

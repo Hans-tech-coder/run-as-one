@@ -47,10 +47,13 @@ import {
   DISCOUNT_TYPE_LABELS,
   DiscountType,
   MAX_PROMO_CODE_LENGTH,
+  PROMO_STATUS_LABELS,
+  PROMO_STATUS_TONES,
   describePromo,
   isExhausted,
   normalizePromoCode,
   promoConditions,
+  promoStatus,
 } from '@/lib/discount';
 import { MAX_VOUCHER_BATCH } from '@/lib/voucher-codes';
 
@@ -79,6 +82,7 @@ type PromoRow = {
   getQuantity: number | null;
   batchLabel: string | null;
   automatic: boolean;
+  paused: boolean;
   eventId: string | null;
   event: { id: string; title: string } | null;
 };
@@ -186,6 +190,9 @@ export default function PromoCodesClient({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+  // Which row's pause request is in flight, so its menu item can say so
+  // rather than looking like nothing happened.
+  const [pausingKey, setPausingKey] = useState<string | null>(null);
   // The promotion the modal is editing, or null when it is creating one.
   // One form serves both, so an edit can never offer a field the create
   // form validates differently.
@@ -304,6 +311,29 @@ export default function PromoCodesClient({
       window.setTimeout(() => setCopied(null), 2000);
     } catch {
       alert('Your browser would not let us reach the clipboard. Select the codes and copy them by hand.');
+    }
+  };
+
+  const handleTogglePause = async (group: Group) => {
+    const next = !group.terms.paused;
+    setPausingKey(group.key);
+    try {
+      // Only the switch. The row menu has no form open, so it has no terms
+      // to re-post — sending some would be inventing values it never
+      // rendered, which is the same reason the events table PATCHes its
+      // registration hold on its own.
+      const res = await fetch(`/api/admin/promos/${group.terms.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paused: next }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to save');
+      router.refresh();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setPausingKey(null);
     }
   };
 
@@ -487,12 +517,17 @@ export default function PromoCodesClient({
     {
       id: "status",
       header: "Status",
-      accessorFn: row => (row.left !== null && row.left <= 0 ? 'Fully Used' : 'Active'),
+      // Five states, not two. The column used to call an expired promotion
+      // and one that has not started yet "Active", which is the opposite of
+      // what an organizer needs from a status column — and now that Pause is
+      // one of the answers, the other four have to be honest beside it.
+      // promoStatus is the same rule the checkout gates on.
+      accessorFn: row => PROMO_STATUS_LABELS[promoStatus(groupTerms(row))],
       cell: ({ row }) => {
-        const spent = row.original.left !== null && row.original.left <= 0;
+        const status = promoStatus(groupTerms(row.original));
         return (
-          <span className={`status-badge ${spent ? 'neutral' : 'success'}`}>
-            {spent ? 'Fully Used' : 'Active'}
+          <span className={`status-badge ${PROMO_STATUS_TONES[status]}`}>
+            {PROMO_STATUS_LABELS[status]}
           </span>
         );
       },
@@ -507,14 +542,17 @@ export default function PromoCodesClient({
         <div className="action-dropdown-container flex">
           <PromoActionsMenu
             label={row.original.batchLabel ?? row.original.terms.code}
+            isPaused={row.original.terms.paused}
+            isTogglingPause={pausingKey === row.original.key}
             onEdit={() => openEdit(row.original)}
+            onTogglePause={() => handleTogglePause(row.original)}
             onDelete={() => handleDelete(row.original)}
           />
         </div>
       ),
       enableSorting: false,
     },
-  ], [expanded]);
+  ], [expanded, pausingKey]);
 
   const table = useReactTable({
     data: groups,
@@ -1176,6 +1214,22 @@ function groupPromos(promos: PromoRow[]): Group[] {
   }
 
   return [...groups.values()];
+}
+
+/**
+ * A group's terms as `promoStatus` wants them: the shared columns, with the
+ * redemptions counted across the whole batch.
+ *
+ * A batch's rows each carry a limit of 1, so asking any single one of them
+ * whether the promotion is used up would answer about that voucher rather
+ * than about the promotion the table is showing.
+ */
+function groupTerms(group: Group) {
+  return {
+    ...group.terms,
+    usageCount: group.used,
+    usageLimit: group.left === null ? null : group.used + group.left,
+  };
 }
 
 /** Redemptions still available on one code, or null when it is unlimited. */

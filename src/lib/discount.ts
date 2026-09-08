@@ -80,6 +80,12 @@ export interface PromoTerms {
    * the event page badge and the order summary show.
    */
   automatic: boolean;
+  /**
+   * The organizer has switched it off. Distinct from every other reason a
+   * promotion is not running: those are facts about dates and counts, this
+   * is a decision, and it is the one that can be undone with one click.
+   */
+  paused?: boolean;
 }
 
 /** The order a code is being applied to. Every amount is centavos. */
@@ -329,6 +335,59 @@ export function describePromo(promo: PromoTerms): string {
 }
 
 /**
+ * Why a promotion is not running right now, or ACTIVE when it is.
+ *
+ * Five states, and an organizer glancing at the marketing table has to be
+ * able to tell them apart, because three of them are their own doing and two
+ * are not. The order matters: a paused promotion is paused whatever its dates
+ * say, since that is the switch they just flipped and the one they will look
+ * for; a promotion that has been fully claimed is finished even if its window
+ * is still open.
+ *
+ * This is the same rule `promoCodeError` gates on, so a badge saying EXPIRED
+ * and a runner being told the code still works is not a state this app can
+ * reach.
+ */
+export type PromoStatus = 'ACTIVE' | 'PAUSED' | 'SCHEDULED' | 'EXPIRED' | 'USED_UP';
+
+export function promoStatus(promo: PromoTerms): PromoStatus {
+  if (promo.paused) return 'PAUSED';
+  if (isExhausted(promo)) return 'USED_UP';
+
+  const from = asDate(promo.validFrom);
+  if (from && from.getTime() > Date.now()) return 'SCHEDULED';
+
+  const until = asDate(promo.validUntil);
+  if (until && until.getTime() < Date.now()) return 'EXPIRED';
+
+  return 'ACTIVE';
+}
+
+/** What each state is called, and the badge tone it wears (see Admin.css). */
+export const PROMO_STATUS_LABELS: Record<PromoStatus, string> = {
+  ACTIVE: 'Active',
+  PAUSED: 'Paused',
+  SCHEDULED: 'Scheduled',
+  EXPIRED: 'Expired',
+  USED_UP: 'Fully Used',
+};
+
+/**
+ * Green only for a promotion that is actually running. Amber for one that is
+ * simply waiting for its start date and needs nobody, which is exactly what
+ * the `pending` tone means everywhere else in the admin. Neutral for the three
+ * that are neither good news nor a warning — a fact, or a decision already
+ * taken.
+ */
+export const PROMO_STATUS_TONES: Record<PromoStatus, 'success' | 'pending' | 'neutral'> = {
+  ACTIVE: 'success',
+  PAUSED: 'neutral',
+  SCHEDULED: 'pending',
+  EXPIRED: 'neutral',
+  USED_UP: 'neutral',
+};
+
+/**
  * The strings a person reads under a promotion: what it needs, and how long it
  * lasts.
  *
@@ -380,6 +439,13 @@ export function promoCodeError(
   const type = asDiscountType(promo.discountType);
   if (!type) {
     return `${promo.code} can't be applied right now. Please contact the organizer.`;
+  }
+
+  // The organizer switched it off. Deliberately vague about *why* — that is
+  // between them and their own reasons — but not vague about the fact, and it
+  // does not blame the runner for a code that was real when they were given it.
+  if (promo.paused) {
+    return `${promo.code} is not being accepted at the moment. Contact the organizer if you were given it.`;
   }
 
   if (isExhausted(promo)) {

@@ -4,7 +4,7 @@ import { Tag, Ticket } from 'lucide-react';
 import PromoCodesClient from './PromoCodesClient';
 import { getAuthCookie } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import { isExhausted } from '@/lib/discount';
+import { promoStatus } from '@/lib/discount';
 import { soonestFirst } from '@/lib/event-schedule';
 
 export default async function MarketingPage() {
@@ -32,7 +32,11 @@ export default async function MarketingPage() {
   // A batch of single-use vouchers is one promotion, not two hundred of them.
   // Counting redemptions here rather than in the client keeps the metric and
   // the table reading from the same rows.
-  const live = promoCodes.filter(promo => !isExhausted(promo));
+  // Actually running, not merely un-exhausted: an expired code, one waiting
+  // for its start date and one the organizer has paused are all things a
+  // runner cannot use today, and counting them here would make this number a
+  // reassurance rather than a fact.
+  const live = promoCodes.filter(promo => promoStatus(promo) === 'ACTIVE');
   const redeemed = promoCodes.reduce((sum, promo) => sum + promo.usageCount, 0);
 
   return (
@@ -45,7 +49,7 @@ export default async function MarketingPage() {
         <div className="metrics-grid mb-8">
           <div className="metric-card">
             <div className="metric-header">
-              <span className="metric-title">Codes Still Usable</span>
+              <span className="metric-title">Running Now</span>
               <div className="metric-icon"><Tag size={20} /></div>
             </div>
             <div className="metric-value">{live.length}</div>
