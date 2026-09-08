@@ -45,6 +45,15 @@ platform takes a per-runner admin fee.
 - Other notable deps: `jose` (JWT), `bcryptjs`, `pdf-lib` (e-certificates),
   `xlsx` (results import / registrant export), `@tanstack/react-table`,
   `framer-motion`, `gsap`, `lucide-react`.
+- **Production is live** at `https://run-as-one.vercel.app` — Vercel project
+  `run-as-one`, linked to `Hans-tech-coder/run-as-one`. Every push to `main`
+  deploys to production; there is no manual deploy step.
+- **Work lands on `dev`, not `main`.** Because a push to `main` ships to
+  production, day-to-day commits go to the long-lived `dev` branch, and every
+  push to `dev` gets its own Vercel preview deployment. `main` is only advanced
+  — by fast-forwarding it onto `dev` and pushing — when the owner explicitly
+  asks to deploy. The local checkout (which the owner runs `localhost:3000`
+  from) tracks `dev`. Never push to `main` without being told to.
 - **Hosting budget matters.** Vercel + Neon's free 0.5 GB Postgres tier. Weigh
   storage cost before proposing schema growth, and say so when you do.
 
