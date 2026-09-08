@@ -1,0 +1,16 @@
+-- Release what an abandoned online checkout is holding.
+--
+-- An online checkout nobody pays has always stayed PENDING for ever. PENDING
+-- holds a category slot (SLOT_HOLDING_STATUSES counts it, so that a bank
+-- transfer waiting on a human is not oversold), and since promotions shipped it
+-- holds a voucher redemption too -- a code is spent when the order is placed,
+-- not when it is paid. Nothing in the app has ever cleaned these up, so a
+-- sold-out race could be sold out on orders that were never going to arrive.
+--
+-- One nullable column, no new table: the sweep marks the row it already has.
+-- The proof, the runners and the money on that order all stay readable, which
+-- is why the row is marked rather than deleted.
+--
+-- The EXPIRED status itself needs no DDL -- Registration.status is a guarded
+-- string column, not a Postgres enum -- so this is the whole migration.
+ALTER TABLE "Registration" ADD COLUMN "expiredAt" TIMESTAMP(3);

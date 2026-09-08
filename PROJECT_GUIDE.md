@@ -74,9 +74,17 @@ DDL through `DIRECT_URL` (see `prisma.config.ts`); the app itself uses the poole
 | `PROOFS_BLOB_READ_WRITE_TOKEN` | **Private** blob store: payment receipts |
 | `PAYMONGO_SECRET_KEY`, `NEXT_PUBLIC_PAYMONGO_PUBLIC_KEY`, `PAYMONGO_WEBHOOK_SECRET` | PayMongo |
 | `RESEND_API_KEY` | Resend — sends registration confirmation emails from `info@cresendorunningcommunity.com`. Unset in dev just skips the send (see `lib/email.ts`) |
+| `CRON_SECRET` | Guards `/api/cron/expire-pending`, the daily abandoned-checkout sweep. Vercel Cron sends it as `Authorization: Bearer …`; **unset, the route refuses to run rather than running unguarded** |
 
 Two blob stores, not one: a store's access level is fixed at creation, so a
 single store cannot hold both public and private blobs.
+
+**Scheduled work lives in `vercel.json`.** One cron entry today — the
+abandoned-checkout sweep at `0 18 * * *` (18:00 UTC = 02:00 Manila, the quietest
+hour for a job that cancels orders). **Vercel's Hobby plan runs a cron at most
+once a day** and within the hour rather than on the minute, so nothing here may
+be designed around a tighter schedule. Vercel Cron issues a **GET**, which is
+why that route answers GET as well as POST.
 
 ---
 
@@ -100,6 +108,7 @@ src/
   lib/                      # domain logic — see §5. Read these before re-deriving a rule.
   data/mockEvents.ts        # legacy mock data
 prisma/schema.prisma        # the data model, heavily commented
+vercel.json                 # scheduled work (crons) — see §2
 scripts/                    # seed + one-off maintenance scripts
 .claude/skills/             # project-scoped skills (ui-ux-pro-max, 21st-*, prisma-*)
 ```
@@ -143,8 +152,13 @@ shape:
   `manualEmailSentAt` + `manualEmailSentBy` (who sent an outstanding one by
   hand) — see `email-delivery.ts`. A redeemed promo leaves `discountAmount`
   (centavos, 0 on most orders) and `promoCode` (the code text, snapshotted like
-  `runningCommunity` so a deleted `PromoCode` cannot rewrite a receipt). Owns
-  `Runner[]`.
+  `runningCommunity` so a deleted `PromoCode` cannot rewrite a receipt). The
+  `status` vocabulary is `PAID`, `PENDING`, `CANCELLED`, `REFUNDED` and
+  **`EXPIRED`**, guarded against that list wherever it is written. `EXPIRED` is
+  not a synonym for `CANCELLED` — one is a decision somebody made, the other is
+  an online checkout nobody came back to finish — and `expiredAt` records when
+  the sweep in `pending-expiry.ts` released it, which is also the mark that
+  stops a row being expired twice. Owns `Runner[]`.
 - **Runner** — one participant on an order: `runnerNo` (their 1..n position on
   the order, and the tail of the reference they quote — see `order-ref.ts`;
   unique per registration), name, contact, gender, birthdate, `singletSize`,
@@ -188,6 +202,7 @@ logic again.
 | `money.ts` | **All money is integer centavos.** Convert pesos→centavos when data *enters*, centavos→pesos only when *displayed*, never in between. `toCentavos`, `toPesos`, `formatPesos` (no ₱ symbol; add it at the call site). |
 | `event-schedule.ts` | The line between upcoming and finished. "Today" is **Asia/Manila**, not the server's UTC. A race stays upcoming through race day itself. `upcomingEvents()`/`finishedEvents()` return Prisma `where`s; `soonestFirst`/`mostRecentFirst` the orderings; `hasFinished()` the per-event check; `formatEventDay(Short)` and `formatEventTime` for display. `isCalendarDay` guards the `YYYY-MM-DD` format at the API door. |
 | `registration-gate.ts` | **Whether an event is taking sign-ups, and why not.** Three things close registration and a runner turned away must be told which: the race has been run (that line stays in `event-schedule.ts`), every option is full, or the organizer paused it. A cap is per `Category` (`slotLimit`), so `everyOptionIsFull` is what closes an event — one uncapped option keeps it open. **A slot is held by a `PAID` *or* `PENDING` registration**, because a bank transfer sits pending for days and counting only PAID would oversell every event that takes them. `takenSlotsByCategory` counts in one grouped query (the same call inside a transaction when a checkout route passes its `tx`), `withSlotCounts` does the arithmetic (`isFull`, and `isLastCall` under `LAST_CALL_SLOTS` = 20, which is when the picker starts naming the number), `registrationState` gives the one answer every screen asks for, `pauseNote` falls back to standard wording so a hold is never unexplained, and `forListing` tags public cards and drops the categories so capacity data never ships to the browser. **`reserveSlots` is the gate.** Both checkout routes call it inside the transaction that writes the registration: it locks the capped `Category` rows `FOR UPDATE` (ordered by id, so two orders cannot deadlock) *before* counting, because a check made before the write is one two simultaneous orders both pass. It throws `SlotsUnavailableError` carrying a message that names the option and the shortfall — "FULL PACKAGE has only 2 slots left and you entered 3 runners" — which both wizards show as-is. |
+| `pending-expiry.ts` | **When an unpaid online checkout stops holding what it took.** A runner who opens PayMongo and closes the tab leaves a `PENDING` registration that holds two things for ever: a category slot (`SLOT_HOLDING_STATUSES` counts PENDING, so a bank transfer waiting on a human is not oversold) and a promo redemption (`redeemPromoCode` spends the code when the order is *placed*, or one voucher could sit on any number of unfinished checkouts). Both are right at checkout and neither had ever been undone, so a race could read as sold out on orders that were never going to arrive. `PENDING_EXPIRY_HOURS` is **24** — long enough that somebody who wandered off mid-payment and came back after dinner still has their order, short enough that a sold-out race frees its seats the next day — and it is a named constant so changing the window is one edit with its reasoning attached. **A `BANK_TRANSFER` is never swept**, whatever its casing: it is *supposed* to sit PENDING while an organizer looks at a deposit slip, and the exclusion is case-insensitive because rows written before `registration-codes.ts` uppercased the coded columns still hold `bank_transfer`. **One transaction per registration, not one for the sweep**, so a checkout landing mid-run never queues behind housekeeping; inside it the row is *claimed* first with a conditional `updateMany` (still PENDING, still unexpired) and the redemption released only if that claim won, which is what makes two overlapping sweeps unable to hand the same redemption back twice. The redemption is attributed by **code text scoped to the organizer**, exactly as `promo-redemptions.ts` does it and for the same reason, locked `FOR UPDATE` like `redeemPromoCode`, and **clamped at zero** — a promotion recreated under an old code inherits its history, so a fresh row can legitimately be handed back a redemption it never sold. The slot needs no action at all: it is held by the status, so it is freed by the act of changing it. `MAX_SWEEP` (200) keeps one run inside a serverless timeout and the result says when it was cut short. **The runner is not emailed** — Resend's free tier stops at 100 recipients a day and the worst use of one is telling somebody their abandoned checkout was tidied up; the organizer sees it on the registrants screen instead, where `EXPIRED` wears the neutral badge and the detail modal says when it happened and what went back. |
 | `discount.ts` | **What a promo code is worth, and why it cannot be used.** `PromoCode` rows existed for a long time and were never wired into checkout — an organizer could create a code and nothing could spend it. This is the rule that makes one real, and it lives here because *four* screens have to agree about it: both wizards price the code as the runner types, and both checkout routes recompute it from the database and are the last word. Four kinds — `PERCENTAGE` (basis points), `FIXED` (centavos), `FREE_DELIVERY` (exactly the order's delivery fee, so the line always cancels) and `BUY_X_GET_Y` (whole groups only, and the **cheapest** runners are the free ones). **Fees are never discounted**: the platform fee is the platform's and the transaction fee is PayMongo's, so a percentage applies to the goods alone. Every branch is capped at what it discounts, so a ₱500 code on a ₱300 order takes off ₱300. `promoCodeError` returns one sentence naming the code and the condition it failed — "SUMMER10 needs at least 5 runners on one order — you have 3" — and the wizards and the routes return the identical string, because a code accepted on screen and refused by the server would be worse than no code box. **A promotion may need no code at all** (`automatic`): an early bird is a discount tied to a date, and a group deal is one a group discovers by being a group — neither should depend on having been told a password. `bestDiscount` weighs every qualifying promotion, automatic and typed alike, and returns the largest; stacking is refused because two promotions at once is a number the organizer never agreed to, and a tie goes to the automatic one so a typed voucher stays unspent. A good code that merely lost is not an error — `outshoneByMessage` says so in a neutral voice. `freeSlotOffer` is what makes buy-X-get-Y claimable: the promotion pays nothing at five runners, so step 1 offers the sixth rather than leaving a group of five looking at a discount that does nothing, and it stays silent whenever the next free one would cost more paid entries than it gives. **`promoStatus` is the one answer to "is this running?"** — ACTIVE, PAUSED, SCHEDULED, EXPIRED or USED_UP, in that order of precedence, since the switch an organizer just flipped is the answer they will look for and a promotion that has been fully claimed is finished even with its window still open. The marketing table's badge, the event page's offers block, the "Running Now" metric and `promoCodeError` all read it, so a badge saying EXPIRED while the checkout still honours the code is not a state this app can reach. `freeRunnerIndexes` says which cards wear the FREE badge, breaking ties towards the **last** runner, because a group of six at one price plainly means the sixth. `redeemPromoCode` is the gate, and mirrors `reserveSlots`: it locks the row `FOR UPDATE` inside the write transaction before incrementing, since a usage cap checked before the write is one two simultaneous orders both pass. **A code is spent when the order is placed, not when it is paid** — the same moment a slot is taken, or one voucher could be attached to any number of pending orders. Deliberately free of Prisma, so the wizards can import it. |
 | `promo-store.ts` | Reading promo codes out of the database, kept apart from `discount.ts` for the same reason `running-community-store.ts` is kept apart from `running-community.ts`: the rule is imported by client components and must not drag Prisma into the browser bundle. `findPromoCode` scopes a lookup to the event's organizer and then to the event (or to a code that names none) and **skips automatic promotions, which are not codes**; `automaticPromosFor` is the query the event page and both wizards run on load; `resolveDiscount` weighs the automatic promotions and any typed code together and is what both checkout routes call instead of reading a discount off the request. |
 | `components/PromoHighlights.tsx` | The offers on a race, on the event page. Only **automatic** promotions appear: a code is the organizer's to publish where they choose, and printing every code on a public page would hand out the single-use vouchers meant for named invitees. It reads `describePromo` and `promoConditions`, the same two functions the wizard and the admin table read, so what this page promises and what the order summary applies cannot be worded differently. |
@@ -276,6 +291,7 @@ reject clubs) · `/superadmin/[...missing]`.
 | `admin/promos` | POST | Creates one code, a whole batch of single-use vouchers in one call, or an automatic promotion. Refuses rather than repairs, naming the field it refused, and scopes `eventId` to the signed-in organizer's own events |
 | `admin/promos/[id]/redemptions` | GET | Which orders used this promotion — order reference, event, runner count, status, `discountAmount`, `createdAt`, and for a voucher batch the specific code that was used. Covers **all** of the promotion's codes, since a batch is one promotion, and is capped at 500 with a flag saying when it was cut short. Auth-checked and scoped to the organizer's own events, which matters twice here: an id from the browser is not proof of ownership and neither is the code text |
 | `admin/promos/[id]` | PATCH, DELETE | Edits, pauses or removes a promotion. A body carrying **only** `{ paused }` is the hold on its own and touches nothing else — the row menu has no form open, so it has no terms to re-post, exactly as `admin/events/[id]` PATCHes its registration hold. Any fuller body is a real edit and is validated in full. **A batch is one promotion, not two hundred**, so an operation on any of its vouchers is an operation on all of them, and the response says how many rows it touched. What a promotion *is* cannot be edited — a code cannot become codeless, a batch's shared label and its random codes stay put, and a voucher stays single-use — because those changes would take the promotion away from people already holding it. Deleting is safe for history: `Registration.promoCode` and `discountAmount` are snapshots, so it removes the ability to redeem, not the record of a redemption. Auth-checked and scoped to the organizer's own rows |
+| `cron/expire-pending` | GET, POST | The daily abandoned-checkout sweep (`lib/pending-expiry.ts`). **Not an admin route** — a scheduled job has no cookie — so it is guarded by the `CRON_SECRET` shared secret in `Authorization: Bearer …` (what Vercel Cron sends) or `x-cron-secret` (a person with curl). With the secret **unset it returns 503 rather than running unguarded**, since the deployment that forgot the variable is exactly the one nobody would check. GET and POST do the same thing because Vercel Cron only issues GET; nothing reaches the sweep without the secret. Returns what it did — how many expired, how many redemptions went back, and whether `MAX_SWEEP` cut it short — and logs the order references, since the caller reads nothing |
 | `admin/profile`, `admin/profile/password` | PATCH | Self-service only; the id comes from the cookie, never the body |
 | `superadmin/organizers`, `superadmin/organizers/[id]` | GET, PATCH | Status and commission |
 | `superadmin/communities`, `superadmin/communities/[id]` | GET/POST, PATCH/DELETE | Club curation |
@@ -460,8 +476,8 @@ promotions feature, in three batches, with the decisions behind each already
 settled. The user works it **one batch per session** to keep conversations
 short, so a session picking it up should read the batch marked *Next*, do only
 that batch, mark it Done, and stop. Delete the file once every batch is done.
-**Batch A is done**; Batch B — releasing what an abandoned checkout holds, and
-the one migration in the plan — is next.
+**Batches A and B are done**; Batch C — the four smaller gaps, with no
+migration between them — is next.
 
 Known open threads:
 
@@ -502,11 +518,22 @@ Known open threads:
   look like an arithmetic error — see `promo-redemptions.ts`.
   The organizer dashboard's revenue tile
   subtracts `discountAmount` — it did not until the promotions work landed,
-  and was reporting money that had been given away. Two things are still deliberately left out, and are
-  decisions rather than oversights: **an abandoned online checkout keeps its
-  redemption**, exactly as it keeps its slot — a PENDING order holds both
-  until it is cleaned up, which is `PROMOTIONS_PLAN.md` Batch B — and the
-  public code-lookup route has **no rate limit**, which is Batch C.
+  and was reporting money that had been given away. An abandoned online
+  checkout no longer keeps its redemption or its slot for ever: the daily sweep
+  in `pending-expiry.ts` releases both after 24 hours, and its trigger is
+  `POST/GET /api/cron/expire-pending`. One thing is still deliberately left
+  out, and is a decision rather than an oversight: the public code-lookup route
+  has **no rate limit**, which is `PROMOTIONS_PLAN.md` Batch C.
+- **Abandoned online checkouts are swept daily** (Promotions Batch B). An
+  unpaid online order older than 24 hours becomes `EXPIRED`, gets an
+  `expiredAt` stamp, gives its promo redemption back and — by the act of
+  leaving `PENDING` — its category slot too. A **bank transfer is never
+  swept**; it is supposed to sit pending while a person looks at the proof. The
+  rule is `lib/pending-expiry.ts`, the trigger is `/api/cron/expire-pending`
+  behind `CRON_SECRET`, and the schedule is the single entry in `vercel.json`.
+  The runner is not emailed; the organizer sees the neutral `EXPIRED` badge on
+  the registrants screen, and the detail modal says when it happened and what
+  went back.
 - `src/data/mockEvents.ts` is legacy and is no longer the source for real pages.
 - A **Prisma schema change needs the dev server restarted** before it takes
   effect: `next dev` bundles the generated client, so a running server keeps

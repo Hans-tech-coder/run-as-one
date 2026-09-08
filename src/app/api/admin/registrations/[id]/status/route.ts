@@ -27,8 +27,16 @@ import { deliverConfirmationEmail } from '@/lib/email-delivery';
  * trusted, like every other coded column in the schema (PROJECT_GUIDE §9): an
  * unrecognised string here would sit in the column forever and quietly drop
  * the row out of the slot count, which reads PAID and PENDING only.
+ *
+ * EXPIRED is listed because it is a status this app can hold, and a vocabulary
+ * that refuses a value already in the column would make an organizer unable to
+ * put a row back the way they found it. It is normally written by the sweep in
+ * lib/pending-expiry.ts rather than by hand — and setting it here is not the
+ * same act: the sweep also hands back the promo redemption that order took,
+ * which nothing on this route does. Cancelling an order an organizer decided
+ * about is what CANCELLED is for.
  */
-const ALLOWED_STATUSES = ['PAID', 'PENDING', 'CANCELLED', 'REFUNDED'] as const;
+const ALLOWED_STATUSES = ['PAID', 'PENDING', 'CANCELLED', 'REFUNDED', 'EXPIRED'] as const;
 
 export async function PATCH(
   request: Request,

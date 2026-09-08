@@ -46,6 +46,29 @@ interface RegistrantsTableProps {
   initialSearch?: string;
 }
 
+/**
+ * The badge tone a payment status wears.
+ *
+ * EXPIRED is **neutral**, not amber and not red. It is an online checkout
+ * nobody came back to finish, swept by lib/pending-expiry.ts so its slot and
+ * its promo redemption go back into circulation — a fact that simply is, in
+ * the same voice as a race that has been run. Amber would put it beside
+ * PENDING, which is a payment still expected; red would call the organizer to
+ * act on something already handled on their behalf.
+ */
+function statusTone(status: string): string {
+  if (status === 'PAID') return 'success';
+  if (status === 'EXPIRED') return 'neutral';
+  return 'pending';
+}
+
+/** The same three tones as Tailwind classes, for the detail modal's pill. */
+function statusPillClass(status: string): string {
+  if (status === 'PAID') return 'bg-green-500/20 text-green-400 border border-green-500/20';
+  if (status === 'EXPIRED') return 'bg-white/10 text-gray-300 border border-white/10';
+  return 'bg-orange-500/20 text-orange-400 border border-orange-500/20';
+}
+
 export default function RegistrantsTable({
   eventId,
   runners: initialRunners,
@@ -631,7 +654,12 @@ export default function RegistrantsTable({
       // for ninety-nine rows in a hundred costs width every organizer pays.
       cell: ({ row }) => (
         <div className="flex flex-col items-start gap-1.5">
-          <span className={`status-badge ${row.original.status === 'PAID' ? 'success' : 'pending'}`}>
+          <span
+            className={`status-badge ${statusTone(row.original.status)}`}
+            title={row.original.status === 'EXPIRED'
+              ? 'This online checkout was never paid, so its slot and any promo code it used were released.'
+              : undefined}
+          >
             {row.original.status}
           </span>
           {row.original.emailPending && (
@@ -1228,9 +1256,22 @@ export default function RegistrantsTable({
                       group paid under and what a bank line will match. */}
                   <p className="flex flex-col"><span className="text-gray-500">Order Ref</span> <span className="text-white font-medium">{viewingRunner.orderRef}</span></p>
                   <p className="flex flex-col"><span className="text-gray-500">Status</span> 
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium w-fit mt-1 ${viewingRunner.status === 'PAID' ? 'bg-green-500/20 text-green-400 border border-green-500/20' : 'bg-orange-500/20 text-orange-400 border border-orange-500/20'}`}>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium w-fit mt-1 ${statusPillClass(viewingRunner.status)}`}>
                       {viewingRunner.status}
                     </span>
+                    {/* An EXPIRED row is the one status nobody chose, so it is
+                        the one that has to explain itself: what happened, when,
+                        and what it gave back. Without this the organizer is
+                        looking at an order that changed on its own. */}
+                    {viewingRunner.status === 'EXPIRED' && (
+                      <span className="text-xs text-gray-500 mt-1.5">
+                        Unpaid online checkout, released
+                        {viewingRunner.expiredAt
+                          ? ` on ${new Date(viewingRunner.expiredAt).toLocaleString()}`
+                          : ''}
+                        . The slot{viewingRunner.promoCode ? ' and the promo code' : ''} went back.
+                      </span>
+                    )}
                   </p>
                   <p className="flex flex-col"><span className="text-gray-500">Payment Method</span> <span className="text-white font-medium">{viewingRunner.paymentMethod}</span></p>
                   <p className="flex flex-col"><span className="text-gray-500">Logistics</span> <span className="text-white font-medium">{viewingRunner.logisticsMethod}</span></p>

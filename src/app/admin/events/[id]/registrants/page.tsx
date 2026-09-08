@@ -98,6 +98,11 @@ export default async function RegistrantsPage({
         size: runner.singletSize,
         runningCommunity: runner.runningCommunity,
         status: reg.status,
+        // When the abandoned-checkout sweep expired this order, or null on the
+        // overwhelming majority of rows that were never swept. Carried so the
+        // detail modal can say *when* rather than leaving EXPIRED unexplained
+        // — see lib/pending-expiry.ts.
+        expiredAt: reg.expiredAt ? reg.expiredAt.toISOString() : null,
         emergencyContactName: runner.emergencyContactName,
         emergencyContactPhone: runner.emergencyContactPhone,
         // Kept raw, not defaulted to a readable "None": the edit modal PUTs

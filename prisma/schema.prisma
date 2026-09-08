@@ -169,7 +169,27 @@ model Registration {
   /// normal case -- most orders carry no discount at all.
   discountAmount    Int       @default(0)
   promoCode         String?
+  /// PAID, PENDING, CANCELLED, REFUNDED or EXPIRED -- guarded against that
+  /// list wherever it is written (see api/admin/registrations/[id]/status).
+  ///
+  /// EXPIRED is not a synonym for CANCELLED. CANCELLED is a decision somebody
+  /// made about an order; EXPIRED is an online checkout nobody ever came back
+  /// to finish, swept by src/lib/pending-expiry.ts. The registrants screen has
+  /// to be able to tell an organizer which of the two it is looking at, and a
+  /// shared word would have made that impossible after the fact.
+  ///
+  /// Only PAID and PENDING hold a slot (see lib/registration-gate.ts), so the
+  /// sweep releases the seat by the act of changing this column.
   status            String    @default("PAID")
+  /// When the sweep expired this order. Null on every row that was never
+  /// swept, which is almost all of them.
+  ///
+  /// It exists for two reasons. It makes the sweep auditable -- an organizer
+  /// asking why a registration went away has a timestamp rather than a guess
+  /// -- and it is the mark that stops a row being expired twice, which matters
+  /// because expiring also hands a promo redemption back and a second pass
+  /// would hand back a redemption that was never spent.
+  expiredAt         DateTime?
   paymentMethod     String    @default("online")
   checkoutSessionId String?
   createdAt         DateTime  @default(now())

@@ -19,8 +19,8 @@ is finished and is kept only for its reasoning; **this** one is the queue.
 | Batch | Items | Migration | Status |
 | --- | --- | --- | --- |
 | A | 1, 2 | none | Done |
-| B | 3 | yes | **Next** |
-| C | 4, 5, 6, 7 | none | Not started |
+| B | 3 | yes | Done |
+| C | 4, 5, 6, 7 | none | **Next** |
 
 ---
 
@@ -121,7 +121,21 @@ answers *sulit ba ang promo na ito?*
 
 ---
 
-## Batch B — release what an abandoned checkout is holding (migration)
+## Batch B — release what an abandoned checkout is holding — **DONE**
+
+Shipped as: `src/lib/pending-expiry.ts` (the 24-hour window, the never-a-bank-
+transfer condition, the per-registration transaction and the clamped redemption
+release), `GET`/`POST /api/cron/expire-pending` behind `CRON_SECRET`, the one
+cron entry in a new `vercel.json`, `Registration.expiredAt` plus `EXPIRED` in
+`ALLOWED_STATUSES`, and the neutral `EXPIRED` badge and its explanation on
+`/admin/events/[id]/registrants`. `PROJECT_GUIDE.md` §2, §3, §4, §5, §6 and §10
+updated in the same change.
+
+Two notes for whoever comes next. **Vercel Cron issues a GET**, not a POST, so
+the route answers both — the secret is what guards it, not the verb. And the
+route **refuses to run when `CRON_SECRET` is unset** rather than skipping the
+check, because the deployment that forgot the variable is the one nobody would
+look at.
 
 ### 3. Stale PENDING registrations hold a slot and a voucher forever
 
