@@ -18,6 +18,7 @@ import {
   takenSlotsByCategory,
   withSlotCounts,
 } from '@/lib/registration-gate';
+import { automaticPromosFor, promoTerms } from '@/lib/promo-store';
 
 export default async function RegisterPage(props: { 
   params: Promise<{ slug: string }>;
@@ -106,6 +107,12 @@ export default async function RegisterPage(props: {
     );
   }
 
+  // The promotions this event applies on its own. Fetched here rather than by
+  // the wizard for the same reason the club list is: a discount that appeared a
+  // moment after the summary first drew would look like a price change. Only
+  // the terms cross into the client — never the row's id or who owns it.
+  const automaticPromos = (await automaticPromosFor(event)).map(promoTerms);
+
   let registration = null;
   if (orderRef) {
     registration = await db.registration.findUnique({
@@ -126,6 +133,7 @@ export default async function RegisterPage(props: {
         registration={registration}
         communities={communities}
         defaultCountry={defaultCountry}
+        automaticPromos={automaticPromos}
       />;
   }
 
@@ -135,6 +143,7 @@ export default async function RegisterPage(props: {
         registration={registration}
         communities={communities}
         defaultCountry={defaultCountry}
+        automaticPromos={automaticPromos}
       />;
 }
 

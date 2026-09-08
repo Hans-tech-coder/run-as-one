@@ -235,7 +235,11 @@ function escapeHtml(value: string): string {
 }
 
 function pesoHtml(centavos: number): string {
-  return `&#8369;${formatPesos(centavos)}`;
+  // The sign goes outside the peso symbol. A discount is the only negative
+  // amount an email carries, and "₱-150.00" reads as a broken number rather
+  // than as money taken off.
+  const sign = centavos < 0 ? '&#8722;' : '';
+  return `${sign}&#8369;${formatPesos(Math.abs(centavos))}`;
 }
 
 function segmentsHtml(segments: Segment[]): string {
@@ -465,7 +469,8 @@ function segmentsText(segments: Segment[]): string {
 }
 
 function pesoText(centavos: number): string {
-  return `${PESO_SIGN}${formatPesos(centavos)}`;
+  const sign = centavos < 0 ? '-' : '';
+  return `${sign}${PESO_SIGN}${formatPesos(Math.abs(centavos))}`;
 }
 
 function rowText(row: Row): string[] {
@@ -648,6 +653,20 @@ function summaryRows(registration: RegistrationWithDetails, totalLabel: string):
             kind: 'amount' as const,
             label: deliveryFeeLabel(registration.deliveryZone),
             centavos: registration.deliveryFee,
+          },
+        ]
+      : []),
+    // Directly under the goods it came off, and before the fees, because that
+    // is the order the wizard's summary showed it in and this email is what
+    // the runner checks the charge against.
+    ...(registration.discountAmount > 0
+      ? [
+          {
+            kind: 'amount' as const,
+            label: registration.promoCode
+              ? `Discount (${registration.promoCode})`
+              : 'Discount',
+            centavos: -registration.discountAmount,
           },
         ]
       : []),

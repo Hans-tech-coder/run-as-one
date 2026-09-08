@@ -29,6 +29,7 @@ import {
 } from '@tanstack/react-table';
 import { SHIRT_SIZES } from '@/lib/shirt-size';
 import { upperCaseAsTyped } from '@/lib/text-case';
+import { formatPesos } from '@/lib/money';
 
 interface RegistrantsTableProps {
   eventId: string;
@@ -785,7 +786,7 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
     const headers = [
       'Runner Ref', 'Order Ref', 'First Name', 'Last Name', 'Email', 'Phone', 'Gender', 'Birthdate', 
       'Category', 'Distance', 'Shirt Size', 'Emergency Contact', 'Emergency Phone', 
-      'Running Community', 'Medical Conditions', 'Logistics Method', 'Delivery Area', 'Delivery Address', 'Payment Method', 'Status'
+      'Running Community', 'Medical Conditions', 'Logistics Method', 'Delivery Area', 'Delivery Address', 'Payment Method', 'Promo Code', 'Order Discount', 'Order Total', 'Status'
     ];
     
     // Use selected rows if any, otherwise fallback to all filtered rows
@@ -814,6 +815,13 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
         csvField(runner.deliveryZone),
         csvField(runner.deliveryAddress),
         csvField(runner.paymentMethod),
+        // The order's money, repeated on each of its runners. A group's five
+        // rows carry the same three figures because they are one payment —
+        // summing this column would double-count, and an organizer matching a
+        // bank line needs the figure on whichever row they searched for.
+        csvField(runner.promoCode || ''),
+        csvField(runner.discountAmount ? formatPesos(runner.discountAmount) : ''),
+        csvField(formatPesos(runner.totalAmount)),
         csvField(runner.status),
       ].join(',');
     });
@@ -1221,6 +1229,22 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
                   {viewingRunner.isBankTransfer && viewingRunner.transactionNumber && (
                     <p className="flex flex-col"><span className="text-gray-500">Transaction No.</span> <span className="text-white font-medium">{viewingRunner.transactionNumber}</span></p>
                   )}
+                  {/* Only when there was one. A discount is the usual reason a
+                      transfer arrives short of the sticker price, so the code
+                      that caused it belongs next to the amount rather than in
+                      a report nobody opens mid-phone-call. */}
+                  {viewingRunner.discountAmount > 0 && (
+                    <p className="flex flex-col">
+                      <span className="text-gray-500">Discount</span>
+                      <span className="text-white font-medium">
+                        −₱{formatPesos(viewingRunner.discountAmount)}
+                        {viewingRunner.promoCode && (
+                          <span className="text-gray-500 font-normal"> &middot; {viewingRunner.promoCode}</span>
+                        )}
+                      </span>
+                    </p>
+                  )}
+                  <p className="flex flex-col"><span className="text-gray-500">Order Total</span> <span className="text-white font-medium">₱{formatPesos(viewingRunner.totalAmount)}</span></p>
                   <p className="flex flex-col">
                     <span className="text-gray-500">Waiver Consent</span>
                     {viewingRunner.consentGiven ? (

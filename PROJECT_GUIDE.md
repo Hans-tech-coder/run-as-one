@@ -141,7 +141,10 @@ shape:
   `receivedEmailSentAt` / `confirmationEmailSentAt` (null = the runner never
   got it), `lastEmailError` (Resend's own reason for the last failure) and
   `manualEmailSentAt` + `manualEmailSentBy` (who sent an outstanding one by
-  hand) — see `email-delivery.ts`. Owns `Runner[]`.
+  hand) — see `email-delivery.ts`. A redeemed promo leaves `discountAmount`
+  (centavos, 0 on most orders) and `promoCode` (the code text, snapshotted like
+  `runningCommunity` so a deleted `PromoCode` cannot rewrite a receipt). Owns
+  `Runner[]`.
 - **Runner** — one participant on an order: `runnerNo` (their 1..n position on
   the order, and the tail of the reference they quote — see `order-ref.ts`;
   unique per registration), name, contact, gender, birthdate, `singletSize`,
@@ -151,8 +154,21 @@ shape:
 - **RunningCommunity** — the shared master club list. `slug` is the uppercased
   name and carries uniqueness; `status` is `PENDING` (a runner's write-in) or
   `APPROVED` (appears in pickers). Rejecting deletes the row.
-- **PromoCode** — per organizer. `discountType` `FIXED` (centavos) or
-  `PERCENTAGE` (**basis points**, 1000 = 10%).
+- **PromoCode** — a discount an organizer hands out, redeemed at checkout.
+  `discountType` is `PERCENTAGE` (**basis points**, 1000 = 10%), `FIXED`
+  (centavos), `FREE_DELIVERY` or `BUY_X_GET_Y` (`buyQuantity`/`getQuantity`).
+  `eventId` scopes it to one event; null means every event that organizer runs.
+  Conditions are `minSubtotal`, `minRunners`, `validFrom`/`validUntil` and
+  `usageLimit` — **a single-use voucher is just a limit of 1**, so there is no
+  separate flag, and `batchLabel` is what makes two hundred bulk-generated
+  vouchers read as one promotion. **`automatic`** is the promotion nobody
+  types: it applies on its own to any qualifying order, and `code` then holds
+  its *name* ("EARLY BIRD"), which is what the event page and the receipt
+  show. Only one discount is ever given — where several qualify, the largest
+  wins. Unique on **`[organizerId, code]`**, not on
+  the code alone: a lookup always arrives through an event, so we know whose
+  code we want, and the global constraint only stopped the second organizer to
+  think of "EARLYBIRD". See `discount.ts`.
 - **RaceResult** — one finisher: bib (unique per event), name, gender, chip/gun
   time, `chipTimeSecs`, and the three ranks (overall, gender, category).
 
@@ -169,6 +185,11 @@ logic again.
 | `money.ts` | **All money is integer centavos.** Convert pesos→centavos when data *enters*, centavos→pesos only when *displayed*, never in between. `toCentavos`, `toPesos`, `formatPesos` (no ₱ symbol; add it at the call site). |
 | `event-schedule.ts` | The line between upcoming and finished. "Today" is **Asia/Manila**, not the server's UTC. A race stays upcoming through race day itself. `upcomingEvents()`/`finishedEvents()` return Prisma `where`s; `soonestFirst`/`mostRecentFirst` the orderings; `hasFinished()` the per-event check; `formatEventDay(Short)` and `formatEventTime` for display. `isCalendarDay` guards the `YYYY-MM-DD` format at the API door. |
 | `registration-gate.ts` | **Whether an event is taking sign-ups, and why not.** Three things close registration and a runner turned away must be told which: the race has been run (that line stays in `event-schedule.ts`), every option is full, or the organizer paused it. A cap is per `Category` (`slotLimit`), so `everyOptionIsFull` is what closes an event — one uncapped option keeps it open. **A slot is held by a `PAID` *or* `PENDING` registration**, because a bank transfer sits pending for days and counting only PAID would oversell every event that takes them. `takenSlotsByCategory` counts in one grouped query (the same call inside a transaction when a checkout route passes its `tx`), `withSlotCounts` does the arithmetic (`isFull`, and `isLastCall` under `LAST_CALL_SLOTS` = 20, which is when the picker starts naming the number), `registrationState` gives the one answer every screen asks for, `pauseNote` falls back to standard wording so a hold is never unexplained, and `forListing` tags public cards and drops the categories so capacity data never ships to the browser. **`reserveSlots` is the gate.** Both checkout routes call it inside the transaction that writes the registration: it locks the capped `Category` rows `FOR UPDATE` (ordered by id, so two orders cannot deadlock) *before* counting, because a check made before the write is one two simultaneous orders both pass. It throws `SlotsUnavailableError` carrying a message that names the option and the shortfall — "FULL PACKAGE has only 2 slots left and you entered 3 runners" — which both wizards show as-is. |
+| `discount.ts` | **What a promo code is worth, and why it cannot be used.** `PromoCode` rows existed for a long time and were never wired into checkout — an organizer could create a code and nothing could spend it. This is the rule that makes one real, and it lives here because *four* screens have to agree about it: both wizards price the code as the runner types, and both checkout routes recompute it from the database and are the last word. Four kinds — `PERCENTAGE` (basis points), `FIXED` (centavos), `FREE_DELIVERY` (exactly the order's delivery fee, so the line always cancels) and `BUY_X_GET_Y` (whole groups only, and the **cheapest** runners are the free ones). **Fees are never discounted**: the platform fee is the platform's and the transaction fee is PayMongo's, so a percentage applies to the goods alone. Every branch is capped at what it discounts, so a ₱500 code on a ₱300 order takes off ₱300. `promoCodeError` returns one sentence naming the code and the condition it failed — "SUMMER10 needs at least 5 runners on one order — you have 3" — and the wizards and the routes return the identical string, because a code accepted on screen and refused by the server would be worse than no code box. **A promotion may need no code at all** (`automatic`): an early bird is a discount tied to a date, and a group deal is one a group discovers by being a group — neither should depend on having been told a password. `bestDiscount` weighs every qualifying promotion, automatic and typed alike, and returns the largest; stacking is refused because two promotions at once is a number the organizer never agreed to, and a tie goes to the automatic one so a typed voucher stays unspent. A good code that merely lost is not an error — `outshoneByMessage` says so in a neutral voice. `freeSlotOffer` is what makes buy-X-get-Y claimable: the promotion pays nothing at five runners, so step 1 offers the sixth rather than leaving a group of five looking at a discount that does nothing, and it stays silent whenever the next free one would cost more paid entries than it gives. `freeRunnerIndexes` says which cards wear the FREE badge, breaking ties towards the **last** runner, because a group of six at one price plainly means the sixth. `redeemPromoCode` is the gate, and mirrors `reserveSlots`: it locks the row `FOR UPDATE` inside the write transaction before incrementing, since a usage cap checked before the write is one two simultaneous orders both pass. **A code is spent when the order is placed, not when it is paid** — the same moment a slot is taken, or one voucher could be attached to any number of pending orders. Deliberately free of Prisma, so the wizards can import it. |
+| `promo-store.ts` | Reading promo codes out of the database, kept apart from `discount.ts` for the same reason `running-community-store.ts` is kept apart from `running-community.ts`: the rule is imported by client components and must not drag Prisma into the browser bundle. `findPromoCode` scopes a lookup to the event's organizer and then to the event (or to a code that names none) and **skips automatic promotions, which are not codes**; `automaticPromosFor` is the query the event page and both wizards run on load; `resolveDiscount` weighs the automatic promotions and any typed code together and is what both checkout routes call instead of reading a discount off the request. |
+| `components/PromoHighlights.tsx` | The offers on a race, on the event page. Only **automatic** promotions appear: a code is the organizer's to publish where they choose, and printing every code on a public page would hand out the single-use vouchers meant for named invitees. It reads `describePromo` and `promoConditions`, the same two functions the wizard and the admin table read, so what this page promises and what the order summary applies cannot be worded differently. |
+| `promo-input.ts` | **What the marketing form is allowed to say about a promotion.** Turning the posted fields into the columns they become, and refusing them by name when they cannot be — a percentage outside 1-100, a buy-X-get-Y with no X, an end date before its start. It lives apart from the routes because *two* of them need exactly this check: creating a promotion and editing one, and a create route that caught a 500% discount while an edit route let it through would be worse than neither checking. It also owns the Manila day boundaries: a window that starts on the 1st starts at 00:00 Manila and one that ends on the 30th runs to 23:59 of it, because `new Date('2026-03-30')` is midnight **UTC**, eight hours early. |
+| `voucher-codes.ts` | Generating a batch of single-use vouchers. The alphabet drops every character that can be misread off a printed card — no O against 0, no I or L against 1, no S against 5, no U against V — and codes are **random rather than sequential**, because SUMMER-001…200 hands anyone who receives one the other 199. `MAX_VOUCHER_BATCH` (500) is a ceiling on the free Postgres tier as much as on the promotion. Web Crypto, not `Math.random`. |
 | `event-slug.ts` | Public event URLs. `slugifyEventTitle` → `uniqueEventSlug` on write; `eventByParam` matches slug **or** legacy cuid on read, and `canonicalEventPath` redirects old cuid links to the slug. |
 | `event-type.ts` | `RACE` vs `FUN_RUN`. `asEventType` guards untrusted input (defaults to `RACE`); `sellsPackages(event)` is the branch the forms and wizards use. |
 | `registration-form.ts` | `ONLINE` vs `BANK_TRANSFER` checkout. `asRegistrationForm` defaults to `ONLINE`; `offersBankTransfer`. |
@@ -190,7 +211,7 @@ logic again.
 | `auth.ts` / `jwt.ts` | bcrypt hashing, the `admin_token` httpOnly cookie (1 day), `getAuthCookie()` in server code. |
 | `signed-in-user.ts` | The name and initial the admin sidebars show — read from the record, not the token, so a rename is never stale. |
 | `site-contact.ts` | Site name, contact email, legal "last updated", social channels. **Site-wide details belong here**, destined to become superadmin-editable settings — never inline them in a component. |
-| `email.ts` | Transactional email via Resend, sent from `CONTACT_EMAIL`. Two emails per registration, never one, and they differ in purpose, not just timing: `sendRegistrationReceivedEmail` fires the moment the row is created (`checkout` for online, `checkout/manual` for bank transfer) — before any payment is confirmed — and shows every field submitted (per-runner emergency contact, gender, birthdate, community, etc.) so a typo is caught before payment. `sendRegistrationConfirmationEmail` (the receipt) fires only once status reaches `PAID` — from the PayMongo webhook, or the admin status route once a bank transfer is verified — and stays focused on the money (compact runner list, full cost breakdown), since the received email already covered the data. No artificial delay sits between the two; the PayMongo webhook is itself asynchronous, so "received" always lands first. The HTML template mirrors the app's own look (the real site logo on a dark header, orange→blue gradient accent bar, a color-coded status pill — blue "pending" for received, green "success" for the receipt — instead of plain caption text). **The whole body is one table, and that is the layout strategy — do not split it back into separate tables per section.** Gmail's Android app renders every nested table shrink-to-fit: it sizes each to its own content and ignores the declared width, whether that width is a percentage, a pixel value, an HTML `width` attribute or `table-layout: fixed` (all four were tried; all four failed, as did wrapping each section in a bordered card). Separate tables therefore end up at *different* widths, so a block of short money values stops well short of the right edge while a block holding a long venue name reaches it. Rows of a single table cannot disagree that way — one set of columns means every value right-aligns to the same edge by construction — and the long paragraphs, sitting in that same table as full-width rows, are what push the shared width out to the container. `cardHtml()` is the one sanctioned exception: it nests a bordered block inside a full-width row, and **only blocks whose values are long** (event title, venue, email, phone) may go in one, because those fill the width on their own content — which is why they always rendered correctly. Blocks of short values (the money summary, the compact runner list) must stay plain rows of the body table. **One recipient per send, and no bcc.** Resend meters its free tier by *recipient*, counting a bcc as one of them, so the archive copy this used to carry doubled the quota cost of every email and put a registration at four units against a ceiling of a hundred a day. Resend's own dashboard keeps the log that mailbox existed for. Subjects include the order reference so Gmail can't thread two emails together and hide one behind "Show trimmed content". Each runner block carries that runner's own reference (`order-ref.ts`) and the pick-up email now names the venue and hours rather than saying "Pickup at Venue", since this email is what the runner still has on race week. Any layout change here is a mobile-first bug: verify in the Gmail app, since desktop looks fine either way. **Each email is one document rendered twice**: the block list (`paragraph`, `heading`, `card`, `rows`, `note`, and typed rows inside them) is what the email *is*, `renderHtml` produces what Resend sends and `renderText` the plain-text rendering a person pastes into a `mailto:` — two renderings of one source, never two templates that can drift. Values are held plain in the blocks and escaped by the HTML renderer, so an event or club name containing `&` can no longer arrive as broken markup. A send failure is still logged and swallowed, never thrown, so a bounced email can't undo a payment — but `sendEmail` now *reports* it as an `EmailOutcome`, which is what `email-delivery.ts` writes down. |
+| `email.ts` | Transactional email via Resend, sent from `CONTACT_EMAIL`. Two emails per registration, never one, and they differ in purpose, not just timing: `sendRegistrationReceivedEmail` fires the moment the row is created (`checkout` for online, `checkout/manual` for bank transfer) — before any payment is confirmed — and shows every field submitted (per-runner emergency contact, gender, birthdate, community, etc.) so a typo is caught before payment. `sendRegistrationConfirmationEmail` (the receipt) fires only once status reaches `PAID` — from the PayMongo webhook, or the admin status route once a bank transfer is verified — and stays focused on the money (compact runner list, full cost breakdown), since the received email already covered the data. No artificial delay sits between the two; the PayMongo webhook is itself asynchronous, so "received" always lands first. The HTML template mirrors the app's own look (the real site logo on a dark header, orange→blue gradient accent bar, a color-coded status pill — blue "pending" for received, green "success" for the receipt — instead of plain caption text). **The whole body is one table, and that is the layout strategy — do not split it back into separate tables per section.** Gmail's Android app renders every nested table shrink-to-fit: it sizes each to its own content and ignores the declared width, whether that width is a percentage, a pixel value, an HTML `width` attribute or `table-layout: fixed` (all four were tried; all four failed, as did wrapping each section in a bordered card). Separate tables therefore end up at *different* widths, so a block of short money values stops well short of the right edge while a block holding a long venue name reaches it. Rows of a single table cannot disagree that way — one set of columns means every value right-aligns to the same edge by construction — and the long paragraphs, sitting in that same table as full-width rows, are what push the shared width out to the container. `cardHtml()` is the one sanctioned exception: it nests a bordered block inside a full-width row, and **only blocks whose values are long** (event title, venue, email, phone) may go in one, because those fill the width on their own content — which is why they always rendered correctly. Blocks of short values (the money summary, the compact runner list) must stay plain rows of the body table. **One recipient per send, and no bcc.** Resend meters its free tier by *recipient*, counting a bcc as one of them, so the archive copy this used to carry doubled the quota cost of every email and put a registration at four units against a ceiling of a hundred a day. Resend's own dashboard keeps the log that mailbox existed for. Subjects include the order reference so Gmail can't thread two emails together and hide one behind "Show trimmed content". Each runner block carries that runner's own reference (`order-ref.ts`) and the pick-up email now names the venue and hours rather than saying "Pickup at Venue", since this email is what the runner still has on race week. Any layout change here is a mobile-first bug: verify in the Gmail app, since desktop looks fine either way. **Each email is one document rendered twice**: the block list (`paragraph`, `heading`, `card`, `rows`, `note`, and typed rows inside them) is what the email *is*, `renderHtml` produces what Resend sends and `renderText` the plain-text rendering a person pastes into a `mailto:` — two renderings of one source, never two templates that can drift. Values are held plain in the blocks and escaped by the HTML renderer, so an event or club name containing `&` can no longer arrive as broken markup. A discount, when there is one, is a negative amount row directly under the goods it came off and before the fees — the same order the wizard's summary showed it in, since this email is what the runner checks the charge against; the sign sits outside the peso symbol, because "₱-150.00" reads as a broken number. A send failure is still logged and swallowed, never thrown, so a bounced email can't undo a payment — but `sendEmail` now *reports* it as an `EmailOutcome`, which is what `email-delivery.ts` writes down. |
 | `email-delivery.ts` | **Whether the runner actually got their email, and what happens when they did not.** Every send in the app goes through here rather than calling `email.ts` directly — `deliverReceivedEmail` / `deliverConfirmationEmail` send and then write the outcome onto the registration — because a send whose outcome nobody recorded is exactly the silence this exists to end: the free tier stops at 100 recipients a day, and a swallowed failure left a registration unconfirmed with nothing on the row to say so. The recording is itself wrapped in a try/catch and never throws: bookkeeping about an email must not fail a checkout, and a lost record only shows the row in the backlog, which is the safe direction to be wrong in. **`outstandingEmail` is the rule everything reads**: every registration owes the received email (it is sent at submission, so a row without it never got one), and the receipt is owed only once status is `PAID` — a bank transfer sits `PENDING` for days with no receipt to be missing yet. **A hand-sent email stamps the same column an automatic one would**, because what the column records is that the runner *has* the email, not which system delivered it; the row therefore leaves the backlog, and rejoins on its own if a later email fails. `recordManualSend` stamps that column plus `manualEmailSentBy`/`At` — a name, not an account id, for the same reason as `remarksBy`. `asEmailKind` guards the kind at the API door. |
 
 ---
@@ -202,7 +223,7 @@ logic again.
 | --- | --- |
 | `/` | Home. Hero + up to 6 **upcoming** events, soonest first. Events are the point of this page. |
 | `/events` | Full upcoming listing |
-| `/events/[slug]` | Event detail and registration entry point (closed once the race is over) |
+| `/events/[slug]` | Event detail and registration entry point (closed once the race is over). Carries `PromoHighlights`: the automatic promotions running on this race, named before the runner starts. Codes are never listed there — those are the organizer's to hand out |
 | `/events/[slug]/register` | The wizard — `RegistrationWizardClient` (ONLINE: 3 steps, plus step 4 for proof when the runner picks bank transfer) or `BankTransferWizardClient` (3 steps). Steps: **1** runners & categories, **2** logistics, **3** checkout/payment, **4** proof upload. |
 | `/results` | Finished-event landing, most recent first — the same `EventGrid` card as `/events`, with `action="results"` |
 | `/events/[slug]/results` | Winners board |
@@ -217,7 +238,10 @@ never went out carry an **Email Unsent** badge, an *Unsent Email* toolbar toggle
 lists exactly those, and a mail icon opens the manual-send modal) ·
 `/admin/events/[id]/results` (the uploader detects the sheet's real header row —
 timing exports open with banner rows — and maps columns by sheet index, not by
-label) · `/admin/marketing` (promo codes) ·
+label) · `/admin/marketing` (promotions: the kind, the event it is scoped to, its
+conditions, whether it is claimed by a code, a voucher batch or automatically,
+and a row menu to edit or delete — a batch collapses into one row that opens
+to be copied) ·
 `/admin/settings` (profile + password) · `/admin/[...missing]` → the admin's own 404.
 
 ### Super admin (`/superadmin`)
@@ -239,7 +263,9 @@ reject clubs) · `/superadmin/[...missing]`.
 | `admin/registrations/[id]/email` | GET, POST | The email a registration is owed, rendered for a person to send by hand — `GET` returns the recipient, subject and **both** renderings (HTML for the clipboard, plain text for a `mailto:`), `POST` records that a staff member sent it. Auth-checked and scoped like the status route, which matters more here than most: the rendered email carries every runner's contact details, birthdate and emergency contact |
 | `admin/runners/[id]`, `admin/runners/bulk-delete` | PUT/DELETE, POST | Registrant editing |
 | `admin/proof/[id]` | GET | Auth-checked redirect to a short-lived signed proof URL |
-| `admin/promos` | POST | Promo codes |
+| `promos/lookup` | POST | **Public.** The terms of a code a runner just typed, scoped to the event they are registering for. Returns the *terms*, not a computed discount — the order keeps changing under the runner, so the wizard recomputes with `applyPromo` and nothing here is trusted at checkout. A code we do not have comes back as `{ promo: null }` with a 200, since "we don't have that" is an answer rather than a failure; the response carries no id, organizer or batch |
+| `admin/promos` | POST | Creates one code, a whole batch of single-use vouchers in one call, or an automatic promotion. Refuses rather than repairs, naming the field it refused, and scopes `eventId` to the signed-in organizer's own events |
+| `admin/promos/[id]` | PATCH, DELETE | Edits or removes a promotion. **A batch is one promotion, not two hundred**, so an operation on any of its vouchers is an operation on all of them, and the response says how many rows it touched. What a promotion *is* cannot be edited — a code cannot become codeless, a batch's shared label and its random codes stay put, and a voucher stays single-use — because those changes would take the promotion away from people already holding it. Deleting is safe for history: `Registration.promoCode` and `discountAmount` are snapshots, so it removes the ability to redeem, not the record of a redemption. Auth-checked and scoped to the organizer's own rows |
 | `admin/profile`, `admin/profile/password` | PATCH | Self-service only; the id comes from the cookie, never the body |
 | `superadmin/organizers`, `superadmin/organizers/[id]` | GET, PATCH | Status and commission |
 | `superadmin/communities`, `superadmin/communities/[id]` | GET/POST, PATCH/DELETE | Club curation |
@@ -255,14 +281,21 @@ reject clubs) · `/superadmin/[...missing]`.
   `/api/**`, so every admin route calls `getAuthCookie()` and scopes its queries
   to the signed-in organizer.
 - **Never trust client amounts.** `checkout` and `checkout/manual` refetch the
-  event and recompute the delivery fee, platform fee, and subtotal (including the
-  shirt upcharge) before writing or billing. Mismatches are rejected.
+  event and recompute the delivery fee, platform fee, subtotal (including the
+  shirt upcharge) and **the promo discount** before writing or billing.
+  Mismatches are rejected. The request carries the promo *code*, never what it
+  is worth. Both routes now also pin the **total** — with a discount in play, an
+  order that under-reports it would be billed more than the summary promised and
+  one that over-reports it would be billed less.
 - **Server-side gates, not just UI ones.** Consent (`consentGiven !== true`),
-  the finished-race check (`hasFinished`), the organizer's registration hold and
-  the per-category slot limits are all enforced in the API, because a tab left
-  open yesterday will still POST. The slot check runs *inside* the write
+  the finished-race check (`hasFinished`), the organizer's registration hold,
+  the per-category slot limits and **every promo condition** are all enforced in
+  the API, because a tab left open yesterday will still POST — a code that has
+  expired or filled up since the page loaded is refused with the same sentence
+  the wizard would have shown. The slot check runs *inside* the write
   transaction and locks the capped category rows first (`reserveSlots`), since a
-  count taken before the write is a count two simultaneous orders both pass.
+  count taken before the write is a count two simultaneous orders both pass. A
+  code's usage cap is spent the same way, by `redeemPromoCode`.
 - Payment proofs are **private** blobs, served only through
   `/api/admin/proof/[id]` with a roughly five-minute signed URL.
 - Passwords are bcrypt-hashed; the session cookie is httpOnly, `sameSite=lax`,
@@ -333,6 +366,13 @@ These are the user's own standing preferences. Follow them without being asked.
   row — poster thumbnail, name, price on a shared right edge — because to the
   runner it is one decision either way. A race's distance is a chip beside the
   name; that chip is the only difference. Do not bring back a separate grid.
+- **A discount is never a surprise at the end.** An automatic promotion is named on the event page, priced into the order summary from the first render of step 1, and — for a group deal — offered as a free slot with a FREE badge on the runner it belongs to. A promotion the runner only meets on the payment step cannot do the thing it was created to do.
+- **A closed list of answers is never a native `<select>`.** The wizard has
+  `events/[slug]/register/SelectField`; the admin now has `admin/AdminSelect`,
+  the same interaction wearing `.form-label` / `.form-input`. Two components
+  rather than one because they live in different design systems. The admin's
+  remaining native selects (the results uploader, the registrants table's size
+  field) are the ones to move onto it as they are next touched.
 - **One status badge, four tones** (`Admin.css`): `success` for done, `pending`
   (amber) for a state that is simply waiting and needs nobody, `danger` for
   something that failed and a person must act on — an email that never went out
@@ -353,11 +393,10 @@ These are the user's own standing preferences. Follow them without being asked.
 `FEATURES_CHECKLIST.md` tracks the roadmap; every major section is ticked through
 the results and e-certificate module.
 
-**`IMPROVEMENTS_PLAN.md` is the active work queue.** Fourteen agreed improvements
-in seven batches, with the decisions behind each one already settled. The user
-works it **one batch per session** to keep conversations short, so a session
-picking it up should read the batch marked *Next*, do only that batch, mark it
-Done, and stop. Delete the file once every batch is done.
+**`IMPROVEMENTS_PLAN.md` is finished.** All fourteen improvements across its
+seven batches have landed; the file is kept only for the reasoning behind each
+one, and it records the decisions that must not be relitigated. It is no longer
+a queue.
 
 Known open threads:
 
@@ -378,6 +417,21 @@ Known open threads:
   missing email themselves from the manual-send modal — copying the formatted
   email for Gmail, or opening their own mail app through a `mailto:` — then
   marks it sent.
+- **Discounts are live end to end** (Batch G, extended). An organizer scopes a
+  promotion to one event or to all of theirs, picks percentage / fixed / free
+  delivery / buy-X-get-Y, sets conditions, and chooses how it is claimed: one
+  shared code, a batch of single-use vouchers, or **automatically, with no code
+  at all**. A runner types a code in step 3 of either wizard; an automatic
+  promotion is on their order from the first render and named on the event page
+  before they start. Both checkout routes recompute whichever applies, and only
+  one discount is ever given.
+  A promotion can be edited or deleted from the row menu on
+  `/admin/marketing`. Two things are still deliberately left out, and are
+  decisions rather than oversights: **an abandoned online checkout keeps its
+  redemption**, exactly as it keeps its slot — a PENDING order holds both
+  until it is cleaned up — and the public code-lookup route has **no rate
+  limit**, since there is no infrastructure here for one and a promo code is
+  meant to be shared.
 - `src/data/mockEvents.ts` is legacy and is no longer the source for real pages.
 - A **Prisma schema change needs the dev server restarted** before it takes
   effect: `next dev` bundles the generated client, so a running server keeps

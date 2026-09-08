@@ -1,0 +1,148 @@
+import { NextResponse } from 'next/server';
+import prisma from '@/lib/db';
+import { getAuthCookie } from '@/lib/auth';
+import { MAX_PROMO_CODE_LENGTH, normalizePromoCode } from '@/lib/discount';
+import { promoTermsFromInput, wholeNumber } from '@/lib/promo-input';
+
+/**
+ * Editing and deleting a promotion.
+ *
+ * **A batch is one promotion, not two hundred.** The marketing table already
+ * presents a bulk-generated batch as a single row, because that is how an
+ * organizer thinks about it, and an edit that changed one voucher out of two
+ * hundred would leave a promotion quietly disagreeing with itself. So an
+ * operation on any member of a batch is an operation on the whole batch, and
+ * the response says how many rows it touched.
+ *
+ * **Deleting is safe for history.** `Registration.promoCode` and
+ * `discountAmount` are snapshots taken at checkout precisely so that a
+ * promotion can be removed without rewriting anyone's receipt. What deletion
+ * takes away is the ability to redeem it again, not the record that it was.
+ *
+ * Auth-checked and scoped to the signed-in organizer's own promotions, like
+ * every other admin route: an id from the browser is not proof it belongs to
+ * the browser's owner.
+ */
+
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const auth = await getAuthCookie();
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { id } = await params;
+    const existing = await prisma.promoCode.findFirst({
+      where: { id, organizerId: auth.id },
+      select: { id: true, code: true, batchLabel: true, automatic: true },
+    });
+    if (!existing) {
+      return NextResponse.json({ error: 'Promotion not found.' }, { status: 404 });
+    }
+
+    const body = await request.json();
+    const terms = await promoTermsFromInput(
+      // `automatic` is not editable. Turning a code into a codeless promotion,
+      // or the reverse, changes what the row *is* — every runner holding the
+      // code would find it gone, or a promotion nobody was told about would
+      // suddenly need telling. Creating the other one is the honest way.
+      { ...body, automatic: existing.automatic },
+      auth.id,
+    );
+    if ('problem' in terms) {
+      return NextResponse.json(terms.problem, { status: 400 });
+    }
+
+    // A batch's codes are random and per-row; only its shared terms are the
+    // organizer's to edit. A single promotion may be renamed.
+    let code: string | undefined;
+    if (!existing.batchLabel) {
+      const cleaned = normalizePromoCode(body.code);
+      if (!cleaned) {
+        return NextResponse.json(
+          {
+            error: existing.automatic
+              ? 'Name this promotion. Runners see the name on the event page and on their receipt.'
+              : 'Enter the code runners will type at checkout.',
+            field: 'code',
+          },
+          { status: 400 }
+        );
+      }
+      if (cleaned.length > MAX_PROMO_CODE_LENGTH) {
+        return NextResponse.json(
+          { error: `A code can be at most ${MAX_PROMO_CODE_LENGTH} characters.`, field: 'code' },
+          { status: 400 }
+        );
+      }
+      if (cleaned !== existing.code) {
+        const clash = await prisma.promoCode.findFirst({
+          where: { organizerId: auth.id, code: cleaned },
+          select: { id: true },
+        });
+        if (clash) {
+          return NextResponse.json(
+            {
+              error: existing.automatic
+                ? `You already have a promotion called ${cleaned}.`
+                : `You already have a code called ${cleaned}.`,
+              field: 'code',
+            },
+            { status: 400 }
+          );
+        }
+      }
+      code = cleaned;
+    }
+
+    const where = existing.batchLabel
+      ? { organizerId: auth.id, batchLabel: existing.batchLabel }
+      : { id: existing.id };
+
+    const updated = await prisma.promoCode.updateMany({
+      where,
+      data: {
+        ...terms.data,
+        ...(code ? { code } : {}),
+        // A voucher is single-use by definition, so a batch's limit is not the
+        // organizer's to raise — doing so would turn the promotion into
+        // something other than the vouchers they handed out.
+        ...(existing.batchLabel ? {} : { usageLimit: wholeNumber(body.usageLimit) }),
+      },
+    });
+
+    return NextResponse.json({ updated: updated.count });
+  } catch (error: any) {
+    console.error('Promo Update Error:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}
+
+export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const auth = await getAuthCookie();
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { id } = await params;
+    const existing = await prisma.promoCode.findFirst({
+      where: { id, organizerId: auth.id },
+      select: { id: true, batchLabel: true },
+    });
+    if (!existing) {
+      return NextResponse.json({ error: 'Promotion not found.' }, { status: 404 });
+    }
+
+    const deleted = await prisma.promoCode.deleteMany({
+      where: existing.batchLabel
+        ? { organizerId: auth.id, batchLabel: existing.batchLabel }
+        : { id: existing.id },
+    });
+
+    return NextResponse.json({ deleted: deleted.count });
+  } catch (error: any) {
+    console.error('Promo Delete Error:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}

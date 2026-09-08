@@ -10,7 +10,7 @@ import {
   asPaymentMethod,
   paymongoPaymentType,
 } from '@/lib/registration-codes';
-import { storedShirtSize, subtotalWithUpcharge } from '@/lib/shirt-size';
+import { runnerPrices, storedShirtSize, subtotalWithUpcharge } from '@/lib/shirt-size';
 import { hasFinished } from '@/lib/event-schedule';
 import {
   SlotsUnavailableError,
@@ -23,6 +23,8 @@ import {
   upperCaseForStorage,
 } from '@/lib/text-case';
 import { consentSignatureError } from '@/lib/consent-signature';
+import { PromoUnavailableError, redeemPromoCode } from '@/lib/discount';
+import { resolveDiscount } from '@/lib/promo-store';
 
 export async function POST(request: Request) {
   try {
@@ -45,7 +47,8 @@ export async function POST(request: Request) {
       transactionFee,
       paymentMethod,
       consentGiven,
-      consentSignature
+      consentSignature,
+      promoCode
     } = body;
 
     // The wizard already disables its submit button without this, but the
@@ -157,6 +160,41 @@ export async function POST(request: Request) {
       );
     }
 
+    // The discount is recomputed from the PromoCode row, never read off the
+    // request — the same rule the subtotal and the fees above already live
+    // under. A code that expired, filled up or stopped applying since the
+    // wizard priced it is refused here with the sentence the wizard itself
+    // would have shown, because the two run the same check.
+    const discount = await resolveDiscount(event, promoCode, {
+      runnerPrices: runnerPrices(participants, event.categories, event.shirtSizeUpcharge),
+      subtotal: expectedSubtotal,
+      deliveryFee: expectedDeliveryFee,
+      deliveryChosen: storedLogisticsMethod === LOGISTICS_METHODS.DELIVERY,
+    });
+    if (discount.error) {
+      return NextResponse.json({ error: discount.error }, { status: 400 });
+    }
+    const discountAmount = discount.applied?.amount ?? 0;
+
+    // The one amount that was never checked before, and it has to be now: with
+    // a discount in play, an order that under-reports it would be billed more
+    // than the summary promised and one that over-reports it would be billed
+    // less. The transaction fee is still the client's own figure — PayMongo's
+    // rate table lives in the wizard — so this pins the total against it
+    // rather than re-deriving it.
+    const expectedTotal =
+      expectedSubtotal +
+      expectedDeliveryFee +
+      expectedPlatformFee +
+      transactionFeeCents -
+      discountAmount;
+    if (amountCents !== expectedTotal) {
+      return NextResponse.json(
+        { error: 'Prices have changed. Please reload the page and try again.' },
+        { status: 409 }
+      );
+    }
+
     // Registrant text is stored uppercase (lib/text-case.ts). The wizard
     // already uppercases as the runner types, but this request did not have to
     // come from the wizard — a tab left open can POST straight here — so the
@@ -173,6 +211,13 @@ export async function POST(request: Request) {
     const registration = await prisma.$transaction(async (tx) => {
       await reserveSlots(tx, event.categories, participants);
 
+      // Spent when the order is placed, not when it is paid — the same moment
+      // a slot is taken, and for the same reason: a voucher that only counted
+      // on payment could be attached to any number of pending orders at once.
+      if (discount.promo && discountAmount > 0) {
+        await redeemPromoCode(tx, discount.promo.id, discount.promo.code);
+      }
+
       return tx.registration.create({
         data: {
           eventId,
@@ -188,6 +233,11 @@ export async function POST(request: Request) {
           platformFee: platformFeeCents,
           transactionFee: transactionFeeCents,
           totalAmount: amountCents,
+          // What the code took off and which code it was, snapshotted onto the
+          // order: the PromoCode row can be edited or deleted, and a receipt
+          // has to keep saying what this runner was actually charged.
+          discountAmount,
+          promoCode: discountAmount > 0 ? discount.applied?.code ?? null : null,
           paymentMethod: storedPaymentMethod,
           status: 'PENDING', // All payments start as PENDING until verified by webhook or admin
           // Checked above; recorded here as the organizer's evidence that the
@@ -250,18 +300,41 @@ export async function POST(request: Request) {
     // PayMongo expects — so no conversion happens here.
     const lineItems: any[] = [];
 
-    // Add runners
-    participants.forEach((p: any, index: number) => {
-      const category = event.categories.find((c: any) => c.id === p.categoryId);
-      if (category) {
+    // Add runners.
+    //
+    // A discounted order is billed as one collapsed goods line instead.
+    // PayMongo totals a checkout session from its line items and will not take
+    // a negative one, so a discount cannot be shown as its own subtracted row
+    // — and per-runner prices that still added up to the full subtotal would
+    // charge the runner more than the summary promised. The itemisation the
+    // runner needs is in the wizard's summary and in both emails; what this
+    // list has to be is exactly the amount being charged.
+    if (discountAmount > 0) {
+      // A code that covers the goods entirely leaves nothing to bill for them,
+      // and PayMongo rejects a zero-amount line — the fees below are then the
+      // whole charge.
+      const goodsAfterDiscount = expectedSubtotal - discountAmount;
+      if (goodsAfterDiscount > 0) {
         lineItems.push({
           currency: 'PHP',
-          amount: category.price,
-          name: `Runner ${index + 1} (${category.name})`,
+          amount: goodsAfterDiscount,
+          name: `Registration — ${participants.length} runner${participants.length === 1 ? '' : 's'} (${discount.applied?.code} applied)`,
           quantity: 1
         });
       }
-    });
+    } else {
+      participants.forEach((p: any, index: number) => {
+        const category = event.categories.find((c: any) => c.id === p.categoryId);
+        if (category) {
+          lineItems.push({
+            currency: 'PHP',
+            amount: category.price,
+            name: `Runner ${index + 1} (${category.name})`,
+            quantity: 1
+          });
+        }
+      });
+    }
 
     // Add Delivery Fee if any
     if (deliveryFeeCents > 0) {
@@ -450,6 +523,12 @@ export async function POST(request: Request) {
     // The order no longer fits — which option and by how much is already in
     // the message, so it goes back as it is rather than as a generic failure.
     if (error instanceof SlotsUnavailableError) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
+    }
+    // Somebody else took the last redemption between the summary being drawn
+    // and this write landing. Same shape as a slot shortfall: the message
+    // already says what to do, so it goes back as it is.
+    if (error instanceof PromoUnavailableError) {
       return NextResponse.json({ error: error.message }, { status: 409 });
     }
     console.error('Checkout Error:', error);

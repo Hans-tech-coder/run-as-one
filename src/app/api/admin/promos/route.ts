@@ -1,7 +1,18 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { getAuthCookie } from '@/lib/auth';
-import { toCentavos } from '@/lib/money';
+import { MAX_PROMO_CODE_LENGTH, normalizePromoCode } from '@/lib/discount';
+import { MAX_VOUCHER_BATCH, newVoucherCodes } from '@/lib/voucher-codes';
+import { promoTermsFromInput, wholeNumber } from '@/lib/promo-input';
+
+/**
+ * Creating a promotion: one code, a batch of single-use vouchers in one go, or
+ * one that needs no code at all.
+ *
+ * The terms themselves are validated by `lib/promo-input.ts`, which the edit
+ * route shares — a check that lived here alone would be a check an edit could
+ * walk straight past.
+ */
 
 export async function POST(request: Request) {
   try {
@@ -11,34 +22,108 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { code, discountType, discountValue, usageLimit } = body;
+    const { code, usageLimit, batchLabel, batchCount, batchPrefix } = body;
 
-    if (!code || !discountType || !discountValue) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    // A promotion nobody has to be told about: it applies on its own to any
+    // order that meets its conditions. Its `code` column then holds its name,
+    // and the runner-facing code lookup skips it entirely.
+    const isAutomatic = body.automatic === true;
+
+    const terms = await promoTermsFromInput(body, auth.id);
+    if ('problem' in terms) {
+      return NextResponse.json(terms.problem, { status: 400 });
+    }
+    const shared = { ...terms.data, organizerId: auth.id };
+
+    // ── A batch of single-use vouchers ────────────────────────────────────
+    //
+    // "Single use" is a usage limit of 1 rather than a flag of its own: the
+    // cap already existed and one redemption is exactly what it describes.
+    // What makes a batch a batch is the label they share, so two hundred codes
+    // read as one promotion on the marketing screen.
+    //
+    // A batch of vouchers is codes by definition, so an automatic promotion
+    // never takes this branch however the form was filled in.
+    const count = isAutomatic ? null : wholeNumber(batchCount);
+    if (count) {
+      if (count > MAX_VOUCHER_BATCH) {
+        return NextResponse.json(
+          { error: `Generate at most ${MAX_VOUCHER_BATCH} vouchers at a time.`, field: 'batchCount' },
+          { status: 400 }
+        );
+      }
+      const label = String(batchLabel ?? '').trim();
+      if (!label) {
+        return NextResponse.json(
+          { error: 'Name this batch, so its vouchers can be told apart from the next one.', field: 'batchLabel' },
+          { status: 400 }
+        );
+      }
+
+      const prefix = normalizePromoCode(batchPrefix).replace(/[^A-Z0-9]/g, '');
+      const codes = newVoucherCodes(prefix, count);
+
+      // createMany with skipDuplicates rather than a uniqueness check first:
+      // the codes are random, a collision is vanishingly unlikely, and asking
+      // the database to enforce it is both correct and one round trip.
+      const created = await prisma.promoCode.createMany({
+        data: codes.map(voucher => ({
+          ...shared,
+          code: voucher,
+          usageLimit: 1,
+          batchLabel: label,
+        })),
+        skipDuplicates: true,
+      });
+
+      return NextResponse.json({ batchLabel: label, created: created.count });
     }
 
-    const existingCode = await prisma.promoCode.findUnique({ where: { code } });
-    if (existingCode) {
-      return NextResponse.json({ error: 'Promo code already exists' }, { status: 400 });
+    // ── One code, or one automatic promotion ──────────────────────────────
+    //
+    // Both land in the same column, because both answer the same question:
+    // what do we call this promotion when we show it to a runner.
+    const cleaned = normalizePromoCode(code);
+    if (!cleaned) {
+      return NextResponse.json(
+        {
+          error: isAutomatic
+            ? 'Name this promotion. Runners see the name on the event page and on their receipt.'
+            : 'Enter the code runners will type at checkout.',
+          field: 'code',
+        },
+        { status: 400 }
+      );
+    }
+    if (cleaned.length > MAX_PROMO_CODE_LENGTH) {
+      return NextResponse.json(
+        { error: `A code can be at most ${MAX_PROMO_CODE_LENGTH} characters.`, field: 'code' },
+        { status: 400 }
+      );
     }
 
-    // discountValue is stored as an integer whose unit depends on discountType:
-    // PERCENTAGE -> basis points (10% is sent as 10, stored as 1000)
-    // FIXED      -> centavos    (₱500 is sent as 500, stored as 50000)
-    // Both scale by 100, but they are different units — keep them distinguishable.
-    const storedDiscountValue =
-      discountType === 'PERCENTAGE'
-        ? Math.round(Number(discountValue) * 100)
-        : toCentavos(discountValue);
+    const clash = await prisma.promoCode.findFirst({
+      where: { organizerId: auth.id, code: cleaned },
+      select: { id: true },
+    });
+    if (clash) {
+      return NextResponse.json(
+        {
+          error: isAutomatic
+            ? `You already have a promotion called ${cleaned}.`
+            : `You already have a code called ${cleaned}.`,
+          field: 'code',
+        },
+        { status: 400 }
+      );
+    }
 
     const promo = await prisma.promoCode.create({
       data: {
-        code,
-        discountType,
-        discountValue: storedDiscountValue,
-        usageLimit,
-        organizerId: auth.id
-      }
+        ...shared,
+        code: cleaned,
+        usageLimit: wholeNumber(usageLimit),
+      },
     });
 
     return NextResponse.json(promo);

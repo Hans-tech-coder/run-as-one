@@ -128,7 +128,14 @@ export default async function RegistrantsPage({ params }: { params: Promise<{ id
           ? reg.confirmationEmailSentAt.toISOString()
           : null,
         manualEmailSentAt: reg.manualEmailSentAt ? reg.manualEmailSentAt.toISOString() : null,
-        manualEmailSentBy: reg.manualEmailSentBy
+        manualEmailSentBy: reg.manualEmailSentBy,
+        // The order's money, carried on every runner of it for the same reason
+        // the remarks are: it belongs to the order, not to one member. Only
+        // what a person reconciling a payment needs — the discount explains why
+        // a transfer came in short, and the total is what it should have been.
+        promoCode: reg.promoCode,
+        discountAmount: reg.discountAmount,
+        totalAmount: reg.totalAmount
       });
     });
   });

@@ -229,9 +229,34 @@ export function subtotalWithUpcharge(
   categories: readonly PricedCategory[] | null | undefined,
   upchargePerRunner: number
 ): number {
-  const categoryTotal = participants.reduce((total, p) => {
+  return runnerPrices(participants, categories, upchargePerRunner).reduce(
+    (total, price) => total + price,
+    0
+  );
+}
+
+/**
+ * What each runner on the order costs on their own, in centavos: their
+ * category's price plus their own large-size upcharge.
+ *
+ * The subtotal is the sum of these, which is why it is derived from them
+ * rather than computed beside them -- a discount that makes one runner free
+ * (BUY_X_GET_Y, see lib/discount.ts) has to take off exactly what that runner
+ * added, and two ways of working out what a runner costs would eventually
+ * disagree by the price of a 4XL shirt.
+ *
+ * Positionally aligned with `participants`, so index i is participant i.
+ */
+export function runnerPrices(
+  participants: readonly { categoryId: string; singletSize: string }[],
+  categories: readonly PricedCategory[] | null | undefined,
+  upchargePerRunner: number
+): number[] {
+  return participants.map(p => {
     const category = (categories ?? []).find(c => c.id === p.categoryId);
-    return total + (category ? category.price : 0);
-  }, 0);
-  return categoryTotal + totalShirtSizeUpcharge(participants, categories, upchargePerRunner);
+    return (
+      (category ? category.price : 0) +
+      shirtSizeUpchargeFor(p, categories, upchargePerRunner)
+    );
+  });
 }

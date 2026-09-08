@@ -45,7 +45,18 @@ import {
   shouldAskShirtSize,
   findCategory,
   totalShirtSizeUpcharge,
+  runnerPrices,
 } from "@/lib/shirt-size";
+import {
+  applyPromo,
+  bestDiscount,
+  freeSlotOffer,
+  outshoneByMessage,
+  promoCodeError,
+  type PromoTerms,
+} from "@/lib/discount";
+import PromoCodeField from "./PromoCodeField";
+import FreeSlotOffer from "./FreeSlotOffer";
 import { communitySlug } from "@/lib/running-community";
 import {
   isUppercasedRunnerField,
@@ -89,6 +100,7 @@ export default function RegistrationWizardClient({
   registration,
   communities,
   defaultCountry,
+  automaticPromos,
 }: {
   event: any;
   /**
@@ -102,6 +114,13 @@ export default function RegistrationWizardClient({
   communities: string[];
   /** ISO country the phone fields start on, guessed from the request. */
   defaultCountry: string;
+  /**
+   * Promotions this event applies with no code typed — the early bird, the
+   * group deal. Passed from the server so they are priced into the summary
+   * from the first render rather than appearing a moment later, which would
+   * read as the price changing.
+   */
+  automaticPromos: PromoTerms[];
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -279,16 +298,24 @@ export default function RegistrationWizardClient({
     setParticipants(newParticipants);
   };
 
-  const addParticipant = () => {
-    setParticipants([
-      ...participants,
-      {
-        id: Date.now(),
-        categoryId: participants[0].categoryId || "",
+  /**
+   * Adds `count` runners in one update.
+   *
+   * Functional rather than spreading the current array, because the group
+   * offer adds more than one at a time and a loop over the captured
+   * `participants` would add exactly one of them — and hand them all the same
+   * `Date.now()` key.
+   */
+  const addParticipants = (count: number) => {
+    setParticipants((prev) => [
+      ...prev,
+      ...Array.from({ length: Math.max(1, count) }, (_unused, offset) => ({
+        id: Date.now() + offset,
+        categoryId: prev[0].categoryId || "",
         // Carried over for the same reason as the category: a second runner
         // added to one order is usually a club-mate or family member. It is a
         // starting value, not a lock — the picker is editable per runner.
-        runningCommunity: participants[0].runningCommunity || "",
+        runningCommunity: prev[0].runningCommunity || "",
         firstName: "",
         lastName: "",
         email: "",
@@ -299,9 +326,13 @@ export default function RegistrationWizardClient({
         emergencyContactName: "",
         emergencyContactPhone: "",
         medicalConditions: "",
-      },
+      })),
     ]);
   };
+
+  // Zero-argument on purpose: it is wired straight to a button's onClick,
+  // which would otherwise pass the click event in as the count.
+  const addParticipant = () => addParticipants(1);
 
   const removeParticipant = (index: number) => {
     if (participants.length > 1) {
@@ -310,6 +341,13 @@ export default function RegistrationWizardClient({
       setParticipants(newParticipants);
     }
   };
+
+  // The code the runner has applied, or null. Only its *terms* are held: what
+  // it is worth is recomputed below on every render, because the order it
+  // applies to keeps moving — a fifth runner joins, delivery becomes pickup —
+  // and a discount frozen at the moment it was typed would quietly stop
+  // matching the total being charged.
+  const [promo, setPromo] = useState<PromoTerms | null>(null);
 
   // Calculations. Every amount below is in centavos (integers), so these sums
   // are exact — no floating point drift.
@@ -338,10 +376,55 @@ export default function RegistrationWizardClient({
   // Platform Fee (DB-driven per participant)
   const platformFee = adminFeePerRunner * participants.length;
 
+  // What the applied code is worth right now, from the same module the
+  // checkout route uses as its last word (lib/discount.ts) — so what this
+  // summary promises and what the server bills cannot disagree. A code that
+  // has stopped qualifying keeps its box but takes nothing off, and says why.
+  const promoOrder = {
+    runnerPrices: runnerPrices(participants, event.categories, shirtSizeUpcharge),
+    subtotal,
+    deliveryFee,
+    deliveryChosen: logisticsMethod === "DELIVERY",
+  };
+  const promoProblem = promo ? promoCodeError(promo, promoOrder, promo.code) : null;
+
+  // Only one discount is ever given. The automatic promotions and the typed
+  // code are weighed together and the largest wins — an early bird stacking on
+  // top of a voucher is a number the organizer never agreed to.
+  const discount = bestDiscount(
+    [...automaticPromos, promoProblem ? null : promo],
+    promoOrder,
+  );
+  const discountAmount = discount?.amount ?? 0;
+
+  // A good code that simply lost. Not an error — nothing is wrong with it and
+  // it stays unspent — but saying nothing would look like the box was broken.
+  const typedApplied = promoProblem ? null : applyPromo(promo, promoOrder);
+  const promoOutshone =
+    promo && !promoProblem && discount && discount.code !== promo.code
+      ? outshoneByMessage(promo.code, discount)
+      : null;
+
+  // Which cards wear the FREE badge, and the offer that gets a group to the
+  // point where one of them can.
+  const freeRunners = new Set(discount?.freeRunners ?? []);
+  const groupOffer = freeSlotOffer(
+    // The promotion that would give the free slot, whether or not it is
+    // currently the winning discount: an order sitting one runner short of it
+    // has no discount at all yet, so the offer cannot be read off the winner.
+    [...automaticPromos, promo].find(
+      candidate => candidate && candidate.discountType === "BUY_X_GET_Y",
+    ),
+    participants.length,
+  );
+
   // Dynamic Transaction Fee based on payment method
   let transactionFee = 0;
   if (step === 3 && paymentMethod !== "BANK_TRANSFER") {
-    const baseAmountForFee = subtotal + deliveryFee + platformFee; // Include admin fee in computation as requested
+    // Net of the discount: PayMongo's cut is a share of what they actually
+    // process, so charging the runner a fee on money nobody is collecting
+    // would hand the difference to no one.
+    const baseAmountForFee = subtotal + deliveryFee + platformFee - discountAmount;
 
     // Using VAT-inclusive rates (PayMongo deducts this from the total gross amount)
     // Formula to perfectly cover the fee: Fee = (Base * rate + fixed) / (1 - rate)
@@ -366,7 +449,8 @@ export default function RegistrationWizardClient({
     transactionFee = Math.ceil(transactionFee);
   }
 
-  const totalAmount = subtotal + deliveryFee + platformFee + transactionFee;
+  const totalAmount =
+    subtotal + deliveryFee + platformFee + transactionFee - discountAmount;
 
   // Validation checks
   //
@@ -545,6 +629,9 @@ export default function RegistrationWizardClient({
           paymentMethod: paymentMethod,
           consentGiven: consentGiven,
           consentSignature: consentSignature,
+          // The code only. The amount it is worth is the server's to work out
+          // again, exactly like the subtotal above it.
+          promoCode: discount?.code ?? "",
         }),
       });
 
@@ -632,6 +719,9 @@ export default function RegistrationWizardClient({
       formData.append("transactionNumber", transactionNumber);
       formData.append("consentGiven", String(consentGiven));
       formData.append("consentSignature", consentSignature);
+      // The code only. The amount it is worth is the server's to work out
+      // again, exactly like the subtotal above it.
+      formData.append("promoCode", discount?.code ?? "");
 
       // Append complex data as JSON string
       formData.append("participants", JSON.stringify(participants));
@@ -834,6 +924,30 @@ export default function RegistrationWizardClient({
                   </div>
                 )}
 
+                {discount && (
+                  <div className="flex justify-between items-start gap-3 text-sm mt-2 pt-2 border-t border-white/5">
+                    <span className="text-secondary">
+                      <span className="text-white">{discount.code}</span>
+                      {" — "}
+                      {discount.label}
+                      {/* Which person the free entry belongs to. A group has
+                          to be able to see that the promotion landed on a real
+                          runner rather than on an unexplained line. */}
+                      {discount.freeRunners.length > 0 && (
+                        <span className="block text-xs mt-0.5">
+                          Free:{" "}
+                          {discount.freeRunners
+                            .map((index) => `Runner ${index + 1}`)
+                            .join(", ")}
+                        </span>
+                      )}
+                    </span>
+                    <span className="font-bold text-emerald-400 whitespace-nowrap">
+                      −₱{formatPesos(discount.amount)}
+                    </span>
+                  </div>
+                )}
+
                 <div className="flex justify-between items-center text-sm mt-2 pt-2 border-t border-white/5">
                   <span className="text-secondary">Platform Fee</span>
                   <span className="text-white">
@@ -956,11 +1070,19 @@ export default function RegistrationWizardClient({
                     className="participant-form-block mb-10 p-6 rounded-[16px] bg-black/20 border border-white/5 relative"
                   >
                     <div className="flex justify-between items-center mb-6 pb-4 border-b border-white/10">
-                      <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                      <h3 className="text-xl font-bold text-white flex items-center gap-2 flex-wrap">
                         <span className="bg-white/10 w-8 h-8 rounded-full flex items-center justify-center text-sm">
                           {idx + 1}
                         </span>
                         Runner Details
+                        {/* The badge follows the cheapest entry, so it moves
+                            when a runner changes category. That is the rule
+                            being shown, not a decoration. */}
+                        {freeRunners.has(idx) && (
+                          <span className="rounded-full border border-emerald-400/40 bg-emerald-400/10 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider text-emerald-300">
+                            Free
+                          </span>
+                        )}
                       </h3>
                       {idx > 0 && (
                         <button
@@ -1180,6 +1302,14 @@ export default function RegistrationWizardClient({
                     </div>
                   </div>
                 ))}
+
+                {groupOffer && (
+                  <FreeSlotOffer
+                    needed={groupOffer.needed}
+                    free={groupOffer.free}
+                    onAdd={() => addParticipants(groupOffer.needed)}
+                  />
+                )}
 
                 <button
                   className="w-full mt-4 flex items-center justify-center gap-2 border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/30 text-white font-bold py-4 rounded-[16px] transition-all"
@@ -1518,6 +1648,16 @@ export default function RegistrationWizardClient({
                   </div>
                   )}
                 </div>
+
+                <PromoCodeField
+                  eventId={eventId}
+                  promo={promo}
+                  applied={promoOutshone ? null : typedApplied}
+                  problem={promoProblem}
+                  note={promoOutshone}
+                  onApply={setPromo}
+                  onRemove={() => setPromo(null)}
+                />
 
                 <div className="checkout-total-box bg-accent-orange/10 border border-accent-orange/20 rounded-3xl mb-8 text-center py-10 relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-64 h-64 bg-accent-orange/20 rounded-full blur-[80px] -mr-32 -mt-32"></div>

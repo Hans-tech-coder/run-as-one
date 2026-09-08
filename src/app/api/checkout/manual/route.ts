@@ -9,7 +9,7 @@ import {
   asLogisticsMethod,
   asPaymentMethod,
 } from '@/lib/registration-codes';
-import { storedShirtSize, subtotalWithUpcharge } from '@/lib/shirt-size';
+import { runnerPrices, storedShirtSize, subtotalWithUpcharge } from '@/lib/shirt-size';
 import { hasFinished } from '@/lib/event-schedule';
 import {
   SlotsUnavailableError,
@@ -22,6 +22,8 @@ import {
   upperCaseForStorage,
 } from '@/lib/text-case';
 import { consentSignatureError } from '@/lib/consent-signature';
+import { PromoUnavailableError, redeemPromoCode } from '@/lib/discount';
+import { resolveDiscount } from '@/lib/promo-store';
 
 export async function POST(request: Request) {
   try {
@@ -47,6 +49,7 @@ export async function POST(request: Request) {
     const transactionNumber = formData.get('transactionNumber') as string;
     const consentGiven = formData.get('consentGiven') === 'true';
     const consentSignature = formData.get('consentSignature') as string;
+    const promoCode = formData.get('promoCode') as string;
 
     const participantsStr = formData.get('participants') as string;
     const participants = JSON.parse(participantsStr || '[]');
@@ -143,6 +146,35 @@ export async function POST(request: Request) {
       );
     }
 
+    // The discount is recomputed from the PromoCode row, never read off the
+    // request — the same rule the subtotal and the fees above already live
+    // under. A code that expired, filled up or stopped applying since the
+    // wizard priced it is refused here with the sentence the wizard itself
+    // would have shown, because the two run the same check.
+    const discount = await resolveDiscount(event, promoCode, {
+      runnerPrices: runnerPrices(participants, event.categories, event.shirtSizeUpcharge),
+      subtotal: expectedSubtotal,
+      deliveryFee: expectedDeliveryFee,
+      deliveryChosen: storedLogisticsMethod === LOGISTICS_METHODS.DELIVERY,
+    });
+    if (discount.error) {
+      return NextResponse.json({ error: discount.error }, { status: 400 });
+    }
+    const discountAmount = discount.applied?.amount ?? 0;
+
+    // The total matters more here than on the online route: this runner has
+    // already transferred the money and is uploading the slip, so the amount
+    // written on the order is what an organizer will reconcile against their
+    // bank statement. A bank transfer carries no transaction fee.
+    const expectedTotal =
+      expectedSubtotal + expectedDeliveryFee + expectedPlatformFee + transactionFee - discountAmount;
+    if (totalAmount !== expectedTotal) {
+      return NextResponse.json(
+        { error: 'Prices have changed. Please reload the page and try again.' },
+        { status: 409 }
+      );
+    }
+
     // 1. Store the receipt as a private blob. This route is public — anyone can
     // reach it — so uploadPrivateProof() enforces the type and size limits.
     // What we keep is the blob pathname; admins view it through
@@ -167,6 +199,14 @@ export async function POST(request: Request) {
     const registration = await prisma.$transaction(async (tx) => {
       await reserveSlots(tx, event.categories, participants);
 
+      // Spent when the order is placed, not when the transfer is verified — a
+      // bank transfer sits PENDING for days, and a voucher that only counted
+      // on verification could be attached to any number of unverified orders
+      // in the meantime. The same reasoning holds the slot.
+      if (discount.promo && discountAmount > 0) {
+        await redeemPromoCode(tx, discount.promo.id, discount.promo.code);
+      }
+
       return tx.registration.create({
         data: {
           eventId,
@@ -182,6 +222,11 @@ export async function POST(request: Request) {
           platformFee,
           transactionFee,
           totalAmount,
+          // What the code took off and which code it was, snapshotted onto the
+          // order: the PromoCode row can be edited or deleted, and a receipt
+          // has to keep saying what this runner was actually charged.
+          discountAmount,
+          promoCode: discountAmount > 0 ? discount.applied?.code ?? null : null,
           paymentMethod: storedPaymentMethod,
           proofOfPayment: proofPathname,
           transactionNumber: transactionNumber,
@@ -249,6 +294,12 @@ export async function POST(request: Request) {
     // the runner is about to resubmit, and deleting a receipt they may have
     // paid against is the worse mistake.
     if (error instanceof SlotsUnavailableError) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
+    }
+    // Somebody else took the last redemption between the summary being drawn
+    // and this write landing. Same shape as a slot shortfall: the message
+    // already says what to do, so it goes back as it is.
+    if (error instanceof PromoUnavailableError) {
       return NextResponse.json({ error: error.message }, { status: 409 });
     }
     console.error('Manual Checkout Error:', error);

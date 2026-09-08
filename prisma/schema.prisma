@@ -84,6 +84,7 @@ model Event {
   bankAccounts                BankAccount[]
   categories                  Category[]
   organizer                   Organizer      @relation(fields: [organizerId], references: [id])
+  promoCodes                  PromoCode[]
   raceResults                 RaceResult[]
   registrations               Registration[]
 }
@@ -157,6 +158,17 @@ model Registration {
   platformFee       Int       @default(0)
   transactionFee    Int       @default(0)
   totalAmount       Int
+  /// What the promo code took off, in centavos, and which code it was. The
+  /// amount is stored rather than recomputed on read: a code's percentage can
+  /// be edited or the code deleted outright, and a receipt has to keep saying
+  /// what this runner was actually charged.
+  ///
+  /// The code is a snapshot of the text, not a relation, for the same reason
+  /// runningCommunity is: it is what was quoted on the day, and it must keep
+  /// reading correctly after the PromoCode row is gone. 0 and null are the
+  /// normal case -- most orders carry no discount at all.
+  discountAmount    Int       @default(0)
+  promoCode         String?
   status            String    @default("PAID")
   paymentMethod     String    @default("online")
   checkoutSessionId String?
@@ -282,20 +294,79 @@ model RunningCommunity {
   @@index([status, name])
 }
 
+/// A discount an organizer can hand out, redeemed by a runner at checkout.
+///
+/// Codes used to be organizer-wide and were never wired into checkout at all,
+/// which made them admin bookkeeping rather than a discount. Both halves are
+/// now real: a code belongs to one event (or to every event the organizer
+/// runs), and the checkout routes recompute its value from this row rather
+/// than trusting an amount the browser sent -- exactly as they already do with
+/// the subtotal and the fees. See src/lib/discount.ts.
 model PromoCode {
   id            String    @id @default(cuid())
-  code          String    @unique
+  /// What the runner types at checkout -- or, when `automatic` is set, the
+  /// promotion's own name, since there is nothing to type. One column for both
+  /// because both answer the same question: what do we call this promotion
+  /// when we show it to a runner. Uppercase like every other coded column, and
+  /// spaces are allowed, so "EARLY BIRD" reads correctly on a badge.
+  code          String
+  /// "PERCENTAGE" | "FIXED" | "FREE_DELIVERY" | "BUY_X_GET_Y" -- uppercase like
+  /// every other coded column, and guarded by asDiscountType at the API door.
   discountType  String
-  /// Unit depends on discountType: FIXED = centavos, PERCENTAGE = basis points (1000 = 10%)
+  /// Unit depends on discountType: FIXED = centavos, PERCENTAGE = basis points
+  /// (1000 = 10%). FREE_DELIVERY takes its amount from the order's delivery
+  /// fee and BUY_X_GET_Y from buyQuantity/getQuantity, so both store 0 here.
   discountValue Int
+  /// How many times this code may be redeemed in total. Null = unlimited. A
+  /// single-use voucher is simply a limit of 1, which is why there is no
+  /// separate flag: "used once" is a cap, and the cap already exists.
   usageLimit    Int?
   usageCount    Int       @default(0)
   validFrom     DateTime?
   validUntil    DateTime?
+  /// The event this code is for. Null means every event this organizer runs,
+  /// which is what every code created before scoping existed was.
+  eventId       String?
+  /// Centavos the order's goods must come to before this code applies. Null =
+  /// no minimum. The condition is on the subtotal rather than the total,
+  /// because the platform and transaction fees are not the organizer's to
+  /// discount and a runner should not reach a minimum by paying more in fees.
+  minSubtotal   Int?
+  /// How many runners must be on one order. Null = no minimum.
+  minRunners    Int?
+  /// BUY_X_GET_Y only: buy this many at full price and get that many free.
+  /// "Register 5, the 6th is free" is buyQuantity 5, getQuantity 1.
+  buyQuantity   Int?
+  getQuantity   Int?
+  /// The batch a bulk-generated voucher was born in ("SUMMER VIP"), so two
+  /// hundred single-use codes read as one promotion in the admin instead of
+  /// two hundred unrelated rows. Null for a code created on its own.
+  batchLabel    String?
+  /// A promotion that needs no code: it applies on its own to any order that
+  /// meets its conditions. This is what an early bird is -- a discount tied to
+  /// a date rather than to something the runner had to be told about. It is
+  /// deliberately not offered in the promo box either, since a runner typing
+  /// "EARLY BIRD" is not how it is meant to be claimed and it is already on
+  /// their order. Where two promotions both apply, only the larger one does --
+  /// see bestDiscount in src/lib/discount.ts.
+  automatic     Boolean   @default(false)
   organizerId   String
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  event         Event?    @relation(fields: [eventId], references: [id])
   organizer     Organizer @relation(fields: [organizerId], references: [id])
+
+  /// Unique per organizer rather than globally. A code is now looked up
+  /// through the event a runner is registering for, so we always know whose it
+  /// is -- and a global constraint meant the second organizer to think of
+  /// "EARLYBIRD" could not have it.
+  @@unique([organizerId, code])
+  @@index([eventId])
+  @@index([organizerId, batchLabel])
+  /// Every event page and both wizards ask for this organizer's automatic
+  /// promotions on load, which is the one promo query that runs on a public
+  /// page and so the one that has to stay cheap.
+  @@index([organizerId, automatic])
 }
 
 model RaceResult {

@@ -1,14 +1,9 @@
-# Improvements Plan — 14 items, 7 batches
+# Improvements Plan — 14 items, 7 batches — **all done**
 
-This is an agreed, in-progress work plan. It exists because the work is done
-**one batch per session**: a fresh session knows nothing about the conversation
-the plan was agreed in, so the decisions live here rather than in a chat.
-
-**How to use this file.** Read the batch marked *Next*, do only that batch, mark
-it Done, and stop. Do not roll into the following batch. Update
-`PROJECT_GUIDE.md` in the same change (§4 for schema, §5 for new `lib` modules,
-§6 for routes). Leave the work **uncommitted** in the main checkout — the user
-commits, not us.
+This was an agreed work plan, done **one batch per session**. Every batch has
+now landed. The file is kept for the reasoning behind each decision and for the
+list at the bottom of things that must not be relitigated — it is no longer a
+queue, and nothing here is waiting to be built.
 
 ## Status
 
@@ -20,7 +15,7 @@ commits, not us.
 | D | 1, 10 | yes | Done |
 | E | 11, 9 (+ security fix) | yes | Done |
 | F | 14 | yes | Done |
-| G | 8 | yes | **Next** |
+| G | 8 | yes | Done |
 
 Batch F was deliberately ahead of the voucher work: the app is going to
 production **on Resend's free tier**, so the quota fallback mattered before
@@ -466,7 +461,7 @@ One migration (`20260906180000_email_delivery_record`), one new module
 
 ---
 
-## Batch G — discounts and vouchers (migration)
+## Batch G — discounts and vouchers (migration) — **Done**
 
 ### 8. Event-scoped discount engine
 Modelled on Shopify's discounts: the admin chooses **what kind** of promo to
@@ -490,6 +485,159 @@ builds the runner-facing half from scratch.
 Existing conventions to respect: percentages are stored as **basis points**
 (1000 = 10%) and fixed amounts as **centavos**, per §4 of the guide.
 
+### What landed, and what is worth carrying forward
+
+One migration (`20260907120000_event_scoped_discounts`), three new modules
+(`src/lib/discount.ts`, `src/lib/promo-store.ts`, `src/lib/voucher-codes.ts`),
+one new public route (`api/promos/lookup`), one shared wizard control
+(`PromoCodeField`) and one new admin primitive (`admin/AdminSelect`).
+
+- **"Single use" turned out to be a usage limit of 1, not a new concept.** The
+  plan asked for unique vouchers alongside a total usage cap; the cap already
+  described exactly what a voucher is. So a batch is *n* rows sharing a
+  `batchLabel`, each capped at one redemption, and the marketing table collapses
+  them into a single line that opens to be copied — two hundred codes are one
+  promotion an organizer thinks about as one thing.
+- **Uniqueness moved from the code to `[organizerId, code]`.** Scoping a code to
+  an event means the runner-facing lookup always arrives through an event, so we
+  always know whose code we are looking for. The global constraint was only ever
+  stopping the second organizer to think of "EARLYBIRD".
+- **The wizard is handed the code's terms, not a computed discount.** The order
+  keeps moving under the runner — a fifth runner joins, delivery becomes pickup
+  — so an amount worked out at the moment the code was typed would quietly stop
+  matching the total being charged. The lookup route returns the terms, both
+  wizards recompute with `applyPromo` on every render, and both checkout routes
+  recompute again and are the last word.
+- **The total is now checked, which it never was before.** The routes verified
+  the subtotal, the delivery fee and the platform fee but billed whatever
+  `amount` the client sent. That was survivable while every line was pinned;
+  with a discount in play it is not, in either direction. The transaction fee is
+  still the client's own figure — PayMongo's rate table lives in the wizard —
+  so the check pins the total against it rather than re-deriving it.
+- **PayMongo cannot show a discount as its own line.** It totals a checkout
+  session from its line items and will not take a negative one, so a discounted
+  order is billed as a single collapsed goods line naming the code. Per-runner
+  lines that still summed to the full subtotal would have charged the runner
+  more than the summary promised, which is the one outcome that matters.
+- **A code is spent when the order is placed, not when it is paid**, exactly as
+  a slot is held by a PENDING registration. A voucher that only counted on
+  payment could be attached to any number of unpaid orders at once. The cost is
+  that an abandoned PayMongo checkout keeps its redemption — the same known
+  cost the slot limits already carry.
+- **Fees are never discounted.** The platform fee is the platform's and the
+  transaction fee is PayMongo's; a percentage that quietly ate the commission
+  would be a bug nobody notices until the month's payout.
+- **The admin got its own closed-list select.** The marketing modal needed an
+  event picker and a type picker, and the project's rule is that a new control
+  copies an existing one — but the wizard's `SelectField` wears the wizard's CSS.
+  `admin/AdminSelect` is the same interaction in the admin's own styling, and
+  the admin's remaining native `<select>`s now have somewhere to move to.
+
+Also worth knowing, found while verifying: **the dev server has to be restarted
+after a migration**, again. The promo lookup returned a 500 —
+`Unknown argument 'eventId'` — from a `next dev` process started before the
+columns existed, exactly as §10 of the guide warns. It also exposed a real bug
+worth keeping: the promo field was reporting *any* failed lookup as "we don't
+have a code called X", which would send a runner hunting a typo that isn't
+there. A non-OK response now says the check failed and that they can continue
+without it.
+
+Deliberately not built, and decisions rather than omissions: **a code cannot be
+edited or deleted from the admin** — creating one and letting it expire is the
+whole of the feature for now — and the public lookup route has **no rate
+limit**, since there is no infrastructure here for one and a promo code is meant
+to be shared.
+
+---
+
+## Follow-up to Batch G — automatic promotions
+
+Asked for after Batch G landed, and built in the same working tree. Two things
+the code-only engine could not do: an **early bird**, which is a discount tied
+to a date rather than to something a runner was told, and a **group deal** that
+a group should discover by being a group.
+
+One migration (`20260908090000_automatic_promotions`, adding `PromoCode.automatic`),
+one new component (`components/PromoHighlights.tsx`), one new wizard control
+(`register/FreeSlotOffer.tsx`), and new rules in `discount.ts`.
+
+Four decisions were the user's, and all four were taken as recommended:
+
+- **The free slot is offered, not added.** A sixth runner card appearing on its
+  own is a required form nobody asked for, and a group that really is five would
+  have to work out that they must delete it before they can move on.
+- **The cheapest entry on the order is the free one**, which keeps the existing
+  engine rule. The FREE badge therefore *moves* when a runner changes category,
+  which is the rule being shown rather than a decoration — and it is why the
+  summary names which runner it landed on.
+- **Best-one-wins, never stacking.** An early bird on top of a voucher is a
+  number the organizer never agreed to. A tie goes to the automatic promotion,
+  so the typed voucher stays unspent for its next use.
+- **Shown on the event page as well as in the wizard**, because a promotion
+  nobody knows about cannot bring a decision forward, which is the whole point
+  of an early bird.
+
+Worth carrying forward:
+
+- **A promotion's name lives in the `code` column.** Both answer the same
+  question — what do we call this when we show it to a runner — and one column
+  keeps the unique constraint, the receipt and the badge reading from one place.
+  The runner-facing code lookup skips `automatic` rows, so typing "EARLY BIRD"
+  into the promo box finds nothing: it is already on the order.
+- **The offer stays silent when the next free runner is not actually free.** At
+  ten runners on a buy-5-get-1, reaching the next free one costs two more paid
+  entries. "Add 2 more and 1 is free" is an upsell, not a free runner, so the
+  banner only appears when the group has already covered the paid part of the
+  cycle.
+- **Ties on the FREE badge break towards the last runner.** Six runners at one
+  price are six identical numbers; badging Runner 1 would be true arithmetic and
+  a confusing thing to read beside the card the group filled in first.
+- **A code that merely lost is not an error.** It keeps its box, is marked "not
+  applied", and gets a plain sentence saying the bigger promotion was kept and
+  its own code has not been used — in the secondary voice, not the red one
+  reserved for a field that needs fixing.
+
+---
+
+## Follow-up — editing and deleting a promotion
+
+The one thing Batch G and the automatic-promotions follow-up both left out.
+An organizer who mistyped a discount had no way back except waiting for it to
+expire.
+
+One new module (`lib/promo-input.ts`), one new route
+(`api/admin/promos/[id]`, PATCH and DELETE), one new control
+(`marketing/PromoActionsMenu.tsx`), and an Actions column on the marketing
+table.
+
+- **The validation moved out of the create route before the edit route was
+  written.** Two routes needed exactly the same check, and a create route that
+  caught a 500% discount while an edit route quietly let it through would be
+  worse than neither of them checking. `promoTermsFromInput` is now the only
+  place that reads the form.
+- **A batch is one promotion.** The table already showed two hundred vouchers
+  as one row because that is how an organizer thinks about them, so an edit or
+  a delete aimed at any one of them applies to the whole batch. What is *not*
+  editable there is the batch label (it is the key the rows are grouped on, so
+  renaming it would split the batch rather than rename it), the codes
+  themselves (already printed and handed out), and the single-use limit (that
+  is what a voucher is).
+- **What a promotion is cannot be edited, only what it gives.** A code cannot
+  become codeless and the reverse: the first would take it away from everyone
+  already holding the code, the second would leave a promotion nobody was ever
+  told about. The route refuses the change and the form hides the control, so
+  the rule is stated in both places rather than enforced silently in one.
+- **Deleting is safe for history, and the dialog says so.** The confirm names
+  how many times the promotion has been used and adds that those registrations
+  keep the discount they were given — `Registration.promoCode` and
+  `discountAmount` were made snapshots in Batch G for exactly this. Without
+  that sentence an organizer would reasonably assume deletion unwinds a
+  discount somebody has already been charged against.
+- **The menu is a copy of `EventActionsMenu`, not a new idea.** Same three
+  dots, same portal (a dropdown inside a table cell is clipped by the table's
+  own `overflow-x: auto`), same closing animation, and the icon sits under its
+  own column header rather than at the row's right edge, per the standing rule.
+
 ---
 
 ## Decisions already settled — do not relitigate
@@ -503,3 +651,14 @@ Existing conventions to respect: percentages are stored as **basis points**
   plan again — Batch F is the agreed answer to the daily ceiling.
 - The manual send in Batch F goes out from the staff member's **own** address,
   not the app's, and reuses the same template through the clipboard route.
+- A **single-use voucher is a usage limit of 1**, not a separate flag.
+- A discount **never touches the platform fee or the transaction fee**.
+- A promo code is **spent when the order is placed**, not when it is paid.
+- Buy-X-get-Y counts **whole groups only**, and the **cheapest** runners on the
+  order are the ones that go free.
+- Promotions **never stack**: where more than one qualifies, only the largest
+  applies, and a tie goes to the automatic one.
+- A free slot is **offered in step 1, never added silently**.
+- A **batch of vouchers is one promotion**: editing or deleting any of them
+  does the whole batch.
+- **How a promotion is claimed cannot be edited** — only what it gives.

@@ -1,9 +1,11 @@
 import React from 'react';
 import prisma from '@/lib/db';
-import { Tag, Plus } from 'lucide-react';
+import { Tag, Ticket } from 'lucide-react';
 import PromoCodesClient from './PromoCodesClient';
 import { getAuthCookie } from '@/lib/auth';
 import { redirect } from 'next/navigation';
+import { isExhausted } from '@/lib/discount';
+import { soonestFirst } from '@/lib/event-schedule';
 
 export default async function MarketingPage() {
   const auth = await getAuthCookie();
@@ -11,10 +13,27 @@ export default async function MarketingPage() {
     redirect('/admin/login');
   }
 
-  const promoCodes = await prisma.promoCode.findMany({
-    where: { organizerId: auth.id },
-    orderBy: { createdAt: 'desc' }
-  });
+  const [promoCodes, events] = await Promise.all([
+    prisma.promoCode.findMany({
+      where: { organizerId: auth.id },
+      orderBy: { createdAt: 'desc' },
+      include: { event: { select: { id: true, title: true } } },
+    }),
+    // The organizer's own events, for the "which event is this code for?"
+    // picker. Soonest first, because a code is almost always being written for
+    // the race that is about to open.
+    prisma.event.findMany({
+      where: { organizerId: auth.id },
+      orderBy: soonestFirst,
+      select: { id: true, title: true, date: true },
+    }),
+  ]);
+
+  // A batch of single-use vouchers is one promotion, not two hundred of them.
+  // Counting redemptions here rather than in the client keeps the metric and
+  // the table reading from the same rows.
+  const live = promoCodes.filter(promo => !isExhausted(promo));
+  const redeemed = promoCodes.reduce((sum, promo) => sum + promo.usageCount, 0);
 
   return (
     <>
@@ -26,14 +45,29 @@ export default async function MarketingPage() {
         <div className="metrics-grid mb-8">
           <div className="metric-card">
             <div className="metric-header">
-              <span className="metric-title">Active Promos</span>
+              <span className="metric-title">Codes Still Usable</span>
               <div className="metric-icon"><Tag size={20} /></div>
             </div>
-            <div className="metric-value">{promoCodes.length}</div>
+            <div className="metric-value">{live.length}</div>
+          </div>
+          <div className="metric-card">
+            <div className="metric-header">
+              <span className="metric-title">Times Redeemed</span>
+              <div className="metric-icon"><Ticket size={20} /></div>
+            </div>
+            <div className="metric-value">{redeemed}</div>
           </div>
         </div>
 
-        <PromoCodesClient initialPromos={promoCodes} organizerId={auth.id} />
+        <PromoCodesClient
+          initialPromos={promoCodes.map(promo => ({
+            ...promo,
+            validFrom: promo.validFrom ? promo.validFrom.toISOString() : null,
+            validUntil: promo.validUntil ? promo.validUntil.toISOString() : null,
+            createdAt: promo.createdAt.toISOString(),
+          }))}
+          events={events}
+        />
       </div>
     </>
   );
