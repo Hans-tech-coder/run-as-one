@@ -94,6 +94,81 @@ export async function automaticPromosFor(event: {
   });
 }
 
+/**
+ * Every promotion running on one race, as the event's own screen lists them.
+ *
+ * The same scope `findPromoCode` and `automaticPromosFor` use — this
+ * organizer's promotions that either name this event or name none — so what
+ * the edit screen says is running on a race is exactly what a runner
+ * registering for it could be given. A code scoped to *another* of their races
+ * is deliberately absent: it cannot be spent here, and listing it would make
+ * this panel a second, wrong copy of the marketing screen.
+ *
+ * **A batch of vouchers is one promotion**, collapsed here the way the
+ * marketing table collapses it, or an event with a two-hundred-voucher batch
+ * on it would render a two-hundred-row panel. Its redemptions and its cap are
+ * summed across the batch for the same reason they are there: each voucher
+ * carries a limit of 1, so asking one of them whether the promotion is used up
+ * answers about that voucher.
+ */
+export interface EventPromotion {
+  key: string;
+  /** The batch's label, or the code — which for an automatic promotion is its name. */
+  name: string;
+  /** How many codes make it up: a batch's size, and 1 for everything else. */
+  codes: number;
+  /** True when it covers every event this organizer runs rather than this one alone. */
+  allEvents: boolean;
+  /** The shared terms, batch counts summed, for `describePromo` and `promoStatus`. */
+  terms: PromoTerms;
+}
+
+export async function eventPromotions(event: {
+  id: string;
+  organizerId: string;
+}): Promise<EventPromotion[]> {
+  const promos = await prisma.promoCode.findMany({
+    where: {
+      organizerId: event.organizerId,
+      OR: [{ eventId: null }, { eventId: event.id }],
+    },
+    select: { ...PROMO_TERMS_SELECT, eventId: true, batchLabel: true },
+    // Newest first, matching the marketing table an organizer clicks through
+    // to from here.
+    orderBy: { createdAt: 'desc' },
+  });
+
+  const grouped = new Map<string, EventPromotion>();
+
+  for (const promo of promos) {
+    const { id: _id, eventId, batchLabel, ...terms } = promo;
+    const key = batchLabel ? `batch:${batchLabel}` : `code:${promo.id}`;
+
+    const existing = grouped.get(key);
+    if (existing) {
+      existing.codes += 1;
+      existing.terms.usageCount += terms.usageCount;
+      // One unlimited voucher makes the promotion unlimited; otherwise the
+      // caps add up, exactly as the marketing table's `groupTerms` does it.
+      existing.terms.usageLimit =
+        existing.terms.usageLimit === null || terms.usageLimit === null
+          ? null
+          : existing.terms.usageLimit + terms.usageLimit;
+      continue;
+    }
+
+    grouped.set(key, {
+      key,
+      name: batchLabel ?? terms.code,
+      codes: 1,
+      allEvents: eventId === null,
+      terms: { ...terms },
+    });
+  }
+
+  return [...grouped.values()];
+}
+
 /** The public projection — terms only, never the id or who owns it. */
 export function promoTerms(promo: StoredPromo): PromoTerms {
   const { id: _id, ...terms } = promo;

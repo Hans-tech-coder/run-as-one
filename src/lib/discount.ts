@@ -1,4 +1,8 @@
 import { formatPesos } from '@/lib/money';
+// Only `today()`, for the Manila calendar day. event-schedule's single Prisma
+// import is a `import type`, so it is erased at build and this module stays
+// safe for the wizards to import — see the note below.
+import { today } from '@/lib/event-schedule';
 
 /**
  * Promo codes: what kinds exist, when one applies, and what it takes off.
@@ -386,6 +390,56 @@ export const PROMO_STATUS_TONES: Record<PromoStatus, 'success' | 'pending' | 'ne
   EXPIRED: 'neutral',
   USED_UP: 'neutral',
 };
+
+/**
+ * How close to its last day a running promotion has to be before the admin
+ * says so. Three days is a working week's notice: long enough to extend it,
+ * print more posters or decide to let it end, short enough that it is not
+ * warning about something a fortnight away on every screen.
+ */
+export const PROMO_ENDING_SOON_DAYS = 3;
+
+/**
+ * "Ends tomorrow", for a promotion that is running and about to stop — or
+ * null, which is most of them.
+ *
+ * The marketing table's Status column is honest about the five states but says
+ * nothing until one of them has already happened, so the first an organizer
+ * hears of a promotion ending is the word EXPIRED beside it. This is the
+ * warning, and it is **in-app only**: an email about it would cost a recipient
+ * against a free-tier ceiling of 100 a day (§10) to tell somebody something
+ * their own dashboard can show them.
+ *
+ * Counted in Manila calendar days rather than in hours, because that is what
+ * the organizer typed — a code ending "on the 30th" ends today on the 30th
+ * however many hours are left of it, and rounding 20 hours to "in 1 day" would
+ * be the app disagreeing with the date on its own screen.
+ */
+export function promoEndingSoon(promo: PromoTerms): string | null {
+  // Only a promotion that is actually running: a paused or exhausted one is
+  // not about to end, it has already stopped, and its badge says so.
+  if (promoStatus(promo) !== 'ACTIVE') return null;
+
+  const until = asDate(promo.validUntil);
+  if (!until) return null;
+
+  const days = manilaDaysUntil(until);
+  if (days === null || days < 0 || days > PROMO_ENDING_SOON_DAYS) return null;
+  if (days === 0) return 'Ends today';
+  if (days === 1) return 'Ends tomorrow';
+  return `Ends in ${days} days`;
+}
+
+/** Whole Manila days from today to that instant's Manila day. */
+function manilaDaysUntil(date: Date): number | null {
+  // Both ends flattened to their Manila calendar day and compared as plain
+  // UTC midnights: subtracting the instants themselves would make a window
+  // closing at 23:59 tonight read as "in 0 days" only after lunch.
+  const from = Date.parse(`${today()}T00:00:00Z`);
+  const to = Date.parse(`${today(date)}T00:00:00Z`);
+  if (Number.isNaN(from) || Number.isNaN(to)) return null;
+  return Math.round((to - from) / 86_400_000);
+}
 
 /**
  * The strings a person reads under a promotion: what it needs, and how long it

@@ -14,6 +14,8 @@ import { DEFAULT_EVENT_TYPE, asEventType, type EventType } from '@/lib/event-typ
 import ConsentWaiverField from '@/app/admin/events/ConsentWaiverField';
 import { formatWaiverParagraphs } from '@/lib/consent-waiver';
 import BankAccountsPanel from '@/app/admin/events/BankAccountsPanel';
+import EventPromotionsPanel from '@/app/admin/events/EventPromotionsPanel';
+import type { EventPromotion } from '@/lib/promo-store';
 import { cleanBankAccounts, type BankAccountDraft } from '@/app/admin/events/bank-account-draft';
 import { offersBankTransfer } from '@/lib/registration-form';
 
@@ -84,6 +86,9 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
   // and a latched flag would clear on the first one to finish.
   const [uploadingPosters, setUploadingPosters] = useState(0);
   const [bankAccounts, setBankAccounts] = useState<BankAccountDraft[]>([]);
+  // Read-only, and not part of formData for that reason: promotions belong to
+  // the marketing screen and nothing here posts them back.
+  const [promotions, setPromotions] = useState<EventPromotion[]>([]);
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -130,6 +135,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
 
         setEventType(asEventType(data.eventType));
         setRegistrationCount(data._count?.registrations ?? 0);
+        setPromotions(data.promotions ?? []);
 
         if (data.categories && data.categories.length > 0) {
           setCategories(data.categories.map((c: any) => ({
@@ -824,6 +830,12 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
               )}
             </div>
           </div>
+
+          {/* Last, and read-only: what a runner can be given on this race,
+              so a price set on this screen is not set without the discounts
+              against it in view. Changing one is a link away rather than a
+              control here — see the panel's own comment. */}
+          <EventPromotionsPanel promotions={promotions} />
 
           <div className="form-actions">
             <Link href="/admin/events" className="btn-cancel">

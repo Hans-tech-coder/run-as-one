@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { MoreVertical, Edit, PauseCircle, PlayCircle, Receipt, Trash2 } from 'lucide-react';
+import { MoreVertical, CopyPlus, Edit, PauseCircle, PlayCircle, Receipt, Trash2 } from 'lucide-react';
 
 /**
  * The row menu on the marketing table.
@@ -21,6 +21,7 @@ export default function PromoActionsMenu({
   isTogglingPause = false,
   onViewRedemptions,
   onEdit,
+  onDuplicate,
   onTogglePause,
   onDelete,
 }: {
@@ -32,6 +33,7 @@ export default function PromoActionsMenu({
   isTogglingPause?: boolean;
   onViewRedemptions: () => void;
   onEdit: () => void;
+  onDuplicate: () => void;
   onTogglePause: () => void;
   onDelete: () => void;
 }) {
@@ -159,6 +161,21 @@ export default function PromoActionsMenu({
         >
           <Edit size={16} />
           Edit
+        </button>
+        {/* Straight after Edit, because it is the same form: an organizer
+            who opened this menu to change a promotion and realised they
+            wanted a second one alongside it should not have to close the
+            menu and start from an empty modal. */}
+        <button
+          onClick={() => {
+            closeMenu();
+            onDuplicate();
+          }}
+          className="action-dropdown-item w-full flex items-center gap-3 px-4 py-2 text-sm text-left"
+          role="menuitem"
+        >
+          <CopyPlus size={16} />
+          Duplicate
         </button>
         {/* Between editing and deleting on purpose: it is the reversible
             answer to "stop this", and an organizer who reaches past Edit

@@ -11,6 +11,7 @@ import { asBankAccounts } from '@/lib/bank-accounts';
 import { uniqueEventSlug } from '@/lib/event-slug';
 import { isCalendarDay } from '@/lib/event-schedule';
 import { asSlotLimit, takenSlotsByCategory } from '@/lib/registration-gate';
+import { eventPromotions } from '@/lib/promo-store';
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -47,12 +48,21 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     // letting them find out from the public page.
     const taken = await takenSlotsByCategory(event.categories.map((c) => c.id));
 
+    // What promotions are running on this race, read-only. An organizer
+    // editing an event had no way of knowing a 20% code was live on it
+    // without leaving for the marketing screen and reading the Applies To
+    // column of every row. Scoped by `eventPromotions` to this organizer's
+    // own promotions that reach this event — the same scope checkout uses, so
+    // the panel cannot promise something a runner could not be given.
+    const promotions = await eventPromotions(event);
+
     return NextResponse.json({
       ...event,
       categories: event.categories.map((category) => ({
         ...category,
         slotsTaken: taken.get(category.id) ?? 0,
       })),
+      promotions,
     });
   } catch (error) {
     console.error('Fetch event error:', error);

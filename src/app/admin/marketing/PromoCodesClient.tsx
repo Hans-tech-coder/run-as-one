@@ -55,6 +55,7 @@ import {
   isExhausted,
   normalizePromoCode,
   promoConditions,
+  promoEndingSoon,
   promoStatus,
 } from '@/lib/discount';
 import { MAX_VOUCHER_BATCH } from '@/lib/voucher-codes';
@@ -237,6 +238,15 @@ export default function PromoCodesClient({
   // form validates differently.
   const [editing, setEditing] = useState<Group | null>(null);
 
+  // The promotion a new one is being copied from, by name, or null. This is a
+  // *create* — the form posts to the create route and says so on its button —
+  // and the name is kept only to tell the organizer where the values in front
+  // of them came from.
+  const [duplicating, setDuplicating] = useState<string | null>(null);
+  // Whether the copy arrived with its dates stripped, so the sentence
+  // explaining that is written once beside the reason for it.
+  const [datesCleared, setDatesCleared] = useState(false);
+
   // Which field the API refused, so the message lands under the control that
   // caused it rather than in a dialog that names none of them.
   const [fieldError, setFieldError] = useState<{ field: string; message: string } | null>(null);
@@ -279,14 +289,60 @@ export default function PromoCodesClient({
 
   const openCreate = () => {
     setEditing(null);
+    setDuplicating(null);
+    setDatesCleared(false);
     setClaim('CODE');
     setForm(BLANK_FORM);
     setFieldError(null);
     setShowModal(true);
   };
 
+  /**
+   * The same promotion again, ready to be given its own name.
+   *
+   * No route of its own: this is the create form with values in it, which is
+   * why `formFrom` — written to put a stored promotion back into the form that
+   * made it — does almost all of the work. Only what has to be unique is
+   * blanked: a code, a promotion name and a batch label are one per organizer,
+   * and a batch's size is a decision rather than a term to inherit.
+   */
+  const openDuplicate = (group: Group) => {
+    const source = formFrom(group);
+    // A copy of a promotion whose window has already closed would be created
+    // expired — a promotion born dead, and one an organizer would have to
+    // notice the badge on to find out about. The dates come out and the
+    // sentence above the form says so, rather than the app silently keeping
+    // last summer's.
+    const ended = Boolean(group.terms.validUntil)
+      && new Date(group.terms.validUntil as string).getTime() < Date.now();
+
+    setEditing(null);
+    setDuplicating(group.batchLabel ?? group.terms.code);
+    setDatesCleared(ended);
+    setClaim(group.terms.automatic ? 'AUTOMATIC' : group.batchLabel ? 'VOUCHERS' : 'CODE');
+    setForm({
+      ...source,
+      // The identity, in whichever shape this promotion is claimed.
+      code: '',
+      batchLabel: '',
+      batchPrefix: '',
+      batchCount: '',
+      // A voucher's limit of 1 belongs to the batch machinery rather than to
+      // the organizer's intent, and carrying it into a form where the field is
+      // hidden would put a 1 in the Total uses box the moment they changed
+      // this copy into a shared code.
+      usageLimit: group.batchLabel ? '' : source.usageLimit,
+      validFrom: ended ? '' : source.validFrom,
+      validUntil: ended ? '' : source.validUntil,
+    });
+    setFieldError(null);
+    setShowModal(true);
+  };
+
   const openEdit = (group: Group) => {
     setEditing(group);
+    setDuplicating(null);
+    setDatesCleared(false);
     // The shape is not editable: turning a code into a codeless promotion
     // would take it away from everyone already holding the code. The
     // segmented control is hidden while editing for the same reason.
@@ -333,6 +389,8 @@ export default function PromoCodesClient({
 
       setShowModal(false);
       setEditing(null);
+      setDuplicating(null);
+      setDatesCleared(false);
       setClaim('CODE');
       setForm(BLANK_FORM);
       router.refresh();
@@ -630,11 +688,20 @@ export default function PromoCodesClient({
       // promoStatus is the same rule the checkout gates on.
       accessorFn: row => PROMO_STATUS_LABELS[promoStatus(groupTerms(row))],
       cell: ({ row }) => {
-        const status = promoStatus(groupTerms(row.original));
+        const terms = groupTerms(row.original);
+        const status = promoStatus(terms);
+        // The one thing the five states cannot say: a promotion that is
+        // running now and stops this week. Without it the first an organizer
+        // hears of the end is the word EXPIRED, by which point extending it
+        // is a decision they can no longer make in time.
+        const endingSoon = promoEndingSoon(terms);
         return (
-          <span className={`status-badge ${PROMO_STATUS_TONES[status]}`}>
-            {PROMO_STATUS_LABELS[status]}
-          </span>
+          <>
+            <span className={`status-badge ${PROMO_STATUS_TONES[status]}`}>
+              {PROMO_STATUS_LABELS[status]}
+            </span>
+            {endingSoon && <span className="status-note pending">{endingSoon}</span>}
+          </>
         );
       },
     },
@@ -652,6 +719,7 @@ export default function PromoCodesClient({
             isTogglingPause={pausingKey === row.original.key}
             onViewRedemptions={() => openRedemptions(row.original)}
             onEdit={() => openEdit(row.original)}
+            onDuplicate={() => openDuplicate(row.original)}
             onTogglePause={() => handleTogglePause(row.original)}
             onDelete={() => handleDelete(row.original)}
           />
@@ -1063,7 +1131,7 @@ export default function PromoCodesClient({
 
             <h2 className="text-xl font-bold mb-2 flex items-center gap-2">
               <Tag size={20} className="text-accent-orange" />
-              {editing ? 'Edit Promotion' : 'Create Discount'}
+              {editing ? 'Edit Promotion' : duplicating ? 'Duplicate Promotion' : 'Create Discount'}
             </h2>
 
             {/* What an edit cannot change, said once at the top rather than
@@ -1075,6 +1143,19 @@ export default function PromoCodesClient({
                   : editing.used > 0
                     ? `Used ${editing.used} time${editing.used === 1 ? '' : 's'} already. Those registrations keep the discount they were given — a change here only affects new ones.`
                     : 'Not used yet, so a change here affects every registration from now on.'}
+              </p>
+            )}
+
+            {/* Where these values came from, said once at the top — the form
+                below is the ordinary create form, and an organizer who is not
+                told would reasonably read a filled-in modal as an edit and
+                expect the original to change. */}
+            {!editing && duplicating && (
+              <p className="mb-6 text-sm text-secondary">
+                {`Copied from ${duplicating}. Give this one its own ${
+                  claim === 'VOUCHERS' ? 'batch name' : claim === 'AUTOMATIC' ? 'name' : 'code'
+                } — everything else came across and can be changed before you save.`}
+                {datesCleared && ' Its dates are blank because the promotion you copied has already ended.'}
               </p>
             )}
 

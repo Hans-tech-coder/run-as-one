@@ -300,6 +300,22 @@
   color: rgba(255, 255, 255, 0.65);
 }
 
+/* A quiet line under a badge, for something that has not happened yet but is
+   about to — a promotion in its last few days. Not a second badge: two pills
+   in one cell read as two states, and a promotion ending on Friday is still
+   simply Active today. It wears the badge tones' own colours so the amber here
+   and the amber there mean the same thing: waiting, and needing nobody yet. */
+.status-note {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.status-note.pending {
+  color: #faad14;
+}
+
 /* Empty State */
 .empty-state {
   padding: 64px 24px;
