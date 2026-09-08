@@ -241,7 +241,8 @@ timing exports open with banner rows — and maps columns by sheet index, not by
 label) · `/admin/marketing` (promotions: the kind, the event it is scoped to, its
 conditions, whether it is claimed by a code, a voucher batch or automatically,
 and a row menu to edit or delete — a batch collapses into one row that opens
-to be copied) ·
+to be copied, on the same searchable, sortable, paginated table the events
+and registrants screens use) ·
 `/admin/settings` (profile + password) · `/admin/[...missing]` → the admin's own 404.
 
 ### Super admin (`/superadmin`)
@@ -356,6 +357,18 @@ These are the user's own standing preferences. Follow them without being asked.
   accept either casing so rows written before that rule still read correctly.
   PayMongo is the one consumer that needs lowercase, and
   `paymongoPaymentType()` is the only place that converts.
+- **One admin table.** Every table in the dashboard — events, registrants,
+  results and marketing — is `components/ui/table` driven by TanStack, wearing
+  the same furniture: an `.admin-toolbar` above it holding the search box, the
+  dark `.btn-filter` chips (View, and whatever else that screen filters by) and
+  the one `.btn-light` primary action; a bordered, rounded table with a select
+  column, a `No.` column and sortable headers; and the rows-per-page menu and
+  pager beneath. Copy that arrangement rather than hand-rolling a `<table>`, so
+  an organizer reads a promotion the way they read a registrant. A row that
+  opens (the marketing screen's voucher batches) is a second `TableRow` under
+  the first, not a column of its own. The `No.` cell counts by row **id**, not
+  by object identity: sorting rebuilds the rows, so an `indexOf` on them finds
+  nothing and every line numbers itself 0 the moment a header is clicked.
 - **One public event card.** `components/EventGrid` renders every public event
   listing — `/`, `/events`, `/results` — so an event looks like itself wherever
   it appears. It differs only by its `action` prop (`'register'` → the event

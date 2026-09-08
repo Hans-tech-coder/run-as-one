@@ -1,7 +1,42 @@
 "use client";
 
-import React, { useMemo, useState } from 'react';
-import { Check, ChevronDown, Copy, Plus, Tag, Ticket, X } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Check,
+  ChevronDown,
+  ChevronFirst,
+  ChevronLast,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  Columns,
+  Copy,
+  Plus,
+  Search,
+  Tag,
+  Ticket,
+  X,
+} from 'lucide-react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  ColumnDef,
+  FilterFn,
+  SortingState,
+  VisibilityState,
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+} from '@tanstack/react-table';
 import PromoActionsMenu from './PromoActionsMenu';
 import { useRouter } from 'next/navigation';
 import { useAlert } from '@/components/ui/AlertProvider';
@@ -108,6 +143,35 @@ const CLAIMS: { value: Claim; label: string; hint: string }[] = [
   },
 ];
 
+/** What the View menu calls a column, where its id is not the whole name. */
+const COLUMN_LABELS: Record<string, string> = {
+  code: 'Code',
+  discount: 'Discount',
+  event: 'Applies To',
+  conditions: 'Conditions',
+  used: 'Used',
+  status: 'Status',
+  actions: 'Actions',
+};
+
+/**
+ * What the search box looks at.
+ *
+ * Every code in a batch, not just its label: an organizer holding a voucher
+ * somebody could not redeem types *that* code, and the row they need is the
+ * batch it came from. The event title is in there too, because "which codes
+ * are on this race" is the other question this box is asked.
+ */
+const searchPromos: FilterFn<Group> = (row, _columnId, filterValue) => {
+  const term = String(filterValue ?? '').trim().toLowerCase();
+  if (!term) return true;
+  const group = row.original;
+  return [group.batchLabel ?? '', group.terms.event?.title ?? '', ...group.codes.map(c => c.code)]
+    .join(' ')
+    .toLowerCase()
+    .includes(term);
+};
+
 export default function PromoCodesClient({
   initialPromos,
   events,
@@ -135,6 +199,32 @@ export default function PromoCodesClient({
   // a batch of one-shot vouchers, or nothing to type at all.
   const [claim, setClaim] = useState<Claim>('CODE');
   const [form, setForm] = useState(BLANK_FORM);
+
+  // The table's own state, in the shape the other admin tables keep it:
+  // sorting, one search box, which columns are showing, and which rows are
+  // ticked.
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [globalFilter, setGlobalFilter] = useState('');
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [rowSelection, setRowSelection] = useState({});
+  const [isViewOpen, setIsViewOpen] = useState(false);
+  const [isPageSizeOpen, setIsPageSizeOpen] = useState(false);
+
+  const viewRef = useRef<HTMLDivElement>(null);
+  const pageSizeRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (viewRef.current && !viewRef.current.contains(event.target as Node)) {
+        setIsViewOpen(false);
+      }
+      if (pageSizeRef.current && !pageSizeRef.current.contains(event.target as Node)) {
+        setIsPageSizeOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const set = (patch: Partial<typeof form>) => {
     setForm(prev => ({ ...prev, ...patch }));
@@ -250,6 +340,207 @@ export default function PromoCodesClient({
       alert(err.message);
     }
   };
+  /**
+   * The table itself is the one the events, registrants and results screens
+   * use — `components/ui/table` driven by TanStack — so a promotion is read
+   * the same way an event or a registrant is: the same search box, the same
+   * View menu, the same sort arrows and the same pager. The only thing this
+   * table does that the others do not is open a batch, and that stays a row
+   * rather than becoming a column.
+   */
+  const columns = useMemo<ColumnDef<Group>[]>(() => [
+    {
+      id: "select",
+      header: ({ table }) => {
+        const isChecked = table.getIsAllPageRowsSelected();
+        return (
+          <div className="flex items-center justify-center px-1 w-8">
+            <div className="relative flex items-center justify-center">
+              <input
+                type="checkbox"
+                checked={isChecked}
+                onChange={table.getToggleAllPageRowsSelectedHandler()}
+                className="appearance-none w-4 h-4 rounded border border-white/20 bg-transparent checked:bg-white checked:border-white cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-white/20"
+              />
+              {isChecked && <Check className="absolute text-black pointer-events-none" size={12} strokeWidth={3} />}
+            </div>
+          </div>
+        );
+      },
+      cell: ({ row }) => {
+        const isChecked = row.getIsSelected();
+        return (
+          <div className="flex items-center justify-center px-1 w-8">
+            <div className="relative flex items-center justify-center">
+              <input
+                type="checkbox"
+                checked={isChecked}
+                onChange={row.getToggleSelectedHandler()}
+                className="appearance-none w-4 h-4 rounded border border-white/20 bg-transparent checked:bg-white checked:border-white cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-white/20"
+              />
+              {isChecked && <Check className="absolute text-black pointer-events-none" size={12} strokeWidth={3} />}
+            </div>
+          </div>
+        );
+      },
+      enableSorting: false,
+      enableHiding: false,
+    },
+    {
+      id: "index",
+      header: "No.",
+      // Counted by row id rather than by object identity: sorting rebuilds
+      // the rows, so an `indexOf` on them finds nothing and every line numbers
+      // itself 0 the moment a column header is clicked.
+      cell: ({ row, table }) => {
+        const index = table.getSortedRowModel().flatRows.findIndex(sorted => sorted.id === row.id);
+        return <span className="text-gray-400 font-mono">{index + 1}</span>;
+      },
+      enableSorting: false,
+      enableHiding: false,
+    },
+    {
+      id: "code",
+      header: "Code",
+      // A batch sorts and searches under its label, because that is the name
+      // the organizer gave the promotion; the vouchers inside it are reached
+      // by opening the row.
+      accessorFn: row => row.batchLabel ?? row.terms.code,
+      cell: ({ row }) => {
+        const group = row.original;
+        const isBatch = group.codes.length > 1;
+        const isOpen = expanded === group.key;
+
+        return isBatch ? (
+          <button
+            type="button"
+            onClick={() => setExpanded(isOpen ? null : group.key)}
+            aria-expanded={isOpen}
+            className="flex items-center gap-2 text-left"
+          >
+            <ChevronDown
+              size={14}
+              aria-hidden="true"
+              className={`text-secondary transition-transform ${isOpen ? 'rotate-180' : ''}`}
+            />
+            <span>
+              <span className="font-bold text-accent-blue block">{group.batchLabel}</span>
+              <span className="text-xs text-secondary">
+                {group.codes.length} single-use vouchers
+              </span>
+            </span>
+          </button>
+        ) : (
+          <span>
+            <span className="font-bold text-accent-blue block">{group.terms.code}</span>
+            {/* Naming it here rather than in a column of its own: what an
+                organizer needs at a glance is whether this is something they
+                have to hand out. */}
+            {group.terms.automatic && (
+              <span className="text-xs text-secondary">
+                Automatic &middot; no code to give out
+              </span>
+            )}
+          </span>
+        );
+      },
+    },
+    {
+      id: "discount",
+      header: "Discount",
+      accessorFn: row => describePromo(row.terms),
+      cell: ({ row }) => describePromo(row.original.terms),
+    },
+    {
+      id: "event",
+      header: "Applies To",
+      accessorFn: row => row.terms.event ? row.terms.event.title : 'All my events',
+      cell: ({ row }) => (
+        <span className="text-secondary">
+          {row.original.terms.event ? row.original.terms.event.title : 'All my events'}
+        </span>
+      ),
+    },
+    {
+      id: "conditions",
+      header: "Conditions",
+      cell: ({ row }) => (
+        <span className="text-secondary text-xs">
+          {promoConditions(row.original.terms).join(' · ') || '—'}
+        </span>
+      ),
+      enableSorting: false,
+    },
+    {
+      id: "used",
+      header: "Used",
+      accessorFn: row => row.used,
+      cell: ({ row }) => (
+        <>
+          {row.original.used}
+          {row.original.left !== null && (
+            <span className="text-secondary"> / {row.original.used + row.original.left}</span>
+          )}
+        </>
+      ),
+    },
+    {
+      id: "status",
+      header: "Status",
+      accessorFn: row => (row.left !== null && row.left <= 0 ? 'Fully Used' : 'Active'),
+      cell: ({ row }) => {
+        const spent = row.original.left !== null && row.original.left <= 0;
+        return (
+          <span className={`status-badge ${spent ? 'neutral' : 'success'}`}>
+            {spent ? 'Fully Used' : 'Active'}
+          </span>
+        );
+      },
+    },
+    {
+      // The menu sits at the column's left edge, under its own header, rather
+      // than pushed to the row's right edge — standing rule, and the same
+      // thing the events and registrants tables do.
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => (
+        <div className="action-dropdown-container flex">
+          <PromoActionsMenu
+            label={row.original.batchLabel ?? row.original.terms.code}
+            onEdit={() => openEdit(row.original)}
+            onDelete={() => handleDelete(row.original)}
+          />
+        </div>
+      ),
+      enableSorting: false,
+    },
+  ], [expanded]);
+
+  const table = useReactTable({
+    data: groups,
+    columns,
+    state: {
+      sorting,
+      globalFilter,
+      columnVisibility,
+      rowSelection,
+    },
+    enableRowSelection: true,
+    onRowSelectionChange: setRowSelection,
+    onSortingChange: setSorting,
+    onGlobalFilterChange: setGlobalFilter,
+    onColumnVisibilityChange: setColumnVisibility,
+    globalFilterFn: searchPromos,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    initialState: {
+      pagination: {
+        pageSize: 10,
+      },
+    },
+  });
 
   const errorFor = (field: string) =>
     fieldError?.field === field ? fieldError.message : undefined;
@@ -258,122 +549,115 @@ export default function PromoCodesClient({
 
   return (
     <>
-      <div className="admin-panel">
-        <div className="admin-panel-header">
-          <h2 className="admin-panel-title">Discount Codes</h2>
-          <button
-            onClick={openCreate}
-            className="btn-light"
-          >
-            <Plus size={16} /> New Promotion
-          </button>
+      <div className="flex flex-col gap-4 w-full text-white">
+        {/* Top Toolbar */}
+        <div className="admin-toolbar" style={{ padding: '0 0 16px 0', borderBottom: 'none' }}>
+          <div className="toolbar-actions" style={{ flex: 1 }}>
+            <div className="search-wrapper">
+              <Search className="search-icon" size={16} />
+              <input
+                value={globalFilter ?? ''}
+                onChange={e => setGlobalFilter(e.target.value)}
+                className="search-input"
+                placeholder="Search promotions by code, batch or event..."
+              />
+              {globalFilter && (
+                <button
+                  onClick={() => setGlobalFilter('')}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-300 bg-transparent border-none cursor-pointer"
+                  aria-label="Clear search"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+
+            <div ref={viewRef} className="relative view-dropdown-container">
+              <button
+                onClick={() => setIsViewOpen(!isViewOpen)}
+                className="btn-filter"
+              >
+                <Columns size={16} /> View
+              </button>
+              {isViewOpen && (
+                <div className="absolute right-0 mt-2 bg-[#050505] border border-white/10 rounded-md p-2 min-w-[150px] z-50 shadow-2xl">
+                  {table.getAllLeafColumns().filter(col => col.getCanHide()).map(column => (
+                    <label key={column.id} className="flex items-center gap-2 px-2 py-1.5 hover:bg-white/5 cursor-pointer rounded-md text-sm text-white">
+                      <div className={`w-4 h-4 border border-white/10 rounded-sm flex items-center justify-center ${column.getIsVisible() ? 'bg-white/10' : ''}`}>
+                        <input
+                          type="checkbox"
+                          checked={column.getIsVisible()}
+                          onChange={column.getToggleVisibilityHandler()}
+                          className="opacity-0 absolute w-0 h-0"
+                        />
+                        {column.getIsVisible() && <div className="w-2 h-2 bg-white rounded-sm" />}
+                      </div>
+                      <span className="capitalize">{COLUMN_LABELS[column.id] ?? column.id}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="toolbar-actions">
+            <button onClick={openCreate} className="btn-light">
+              <Plus size={16} /> New Promotion
+            </button>
+          </div>
         </div>
 
-        <div className="data-table-wrapper">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Code</th>
-                <th>Discount</th>
-                <th>Applies To</th>
-                <th>Conditions</th>
-                <th>Used</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {groups.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="text-center py-12 text-secondary">
-                    No promotions yet. A code you create here is redeemed by runners in the
-                    registration wizard, and an automatic promotion applies on its own.
-                  </td>
-                </tr>
-              ) : (
-                groups.map(group => {
+        {/* Table Area */}
+        <div className="border border-white/10 rounded-lg overflow-hidden bg-transparent">
+          <Table>
+            <TableHeader className="bg-transparent">
+              {table.getHeaderGroups().map(headerGroup => (
+                <TableRow key={headerGroup.id} className="border-b border-white/10 hover:bg-transparent">
+                  {headerGroup.headers.map(header => (
+                    <TableHead
+                      key={header.id}
+                      onClick={header.column.getToggleSortingHandler()}
+                      className={`py-4 px-4 text-gray-400 font-medium h-auto ${header.column.getCanSort() ? 'cursor-pointer select-none' : ''} ${header.column.id === 'code' ? 'pl-8' : ''}`}
+                    >
+                      <div className="flex items-center gap-2">
+                        {flexRender(header.column.columnDef.header, header.getContext())}
+                        {{
+                          asc: <ChevronUp className="w-3.5 h-3.5" />,
+                          desc: <ChevronDown className="w-3.5 h-3.5" />,
+                        }[header.column.getIsSorted() as string] ?? null}
+                      </div>
+                    </TableHead>
+                  ))}
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows.length > 0 ? (
+                table.getRowModel().rows.map(row => {
+                  const group = row.original;
                   const isBatch = group.codes.length > 1;
                   const isOpen = expanded === group.key;
-                  const spent = group.left !== null && group.left <= 0;
 
                   return (
-                    <React.Fragment key={group.key}>
-                      <tr>
-                        <td>
-                          {isBatch ? (
-                            <button
-                              type="button"
-                              onClick={() => setExpanded(isOpen ? null : group.key)}
-                              aria-expanded={isOpen}
-                              className="flex items-center gap-2 text-left"
-                            >
-                              <ChevronDown
-                                size={14}
-                                aria-hidden="true"
-                                className={`text-secondary transition-transform ${isOpen ? 'rotate-180' : ''}`}
-                              />
-                              <span>
-                                <span className="font-bold text-accent-blue block">
-                                  {group.batchLabel}
-                                </span>
-                                <span className="text-xs text-secondary">
-                                  {group.codes.length} single-use vouchers
-                                </span>
-                              </span>
-                            </button>
-                          ) : (
-                            <span>
-                              <span className="font-bold text-accent-blue block">
-                                {group.terms.code}
-                              </span>
-                              {/* Naming it here rather than in a column of
-                                  its own: what an organizer needs at a glance
-                                  is whether this is something they have to
-                                  hand out. */}
-                              {group.terms.automatic && (
-                                <span className="text-xs text-secondary">
-                                  Automatic &middot; no code to give out
-                                </span>
-                              )}
-                            </span>
-                          )}
-                        </td>
-                        <td>{describePromo(group.terms)}</td>
-                        <td className="text-secondary">
-                          {group.terms.event ? group.terms.event.title : 'All my events'}
-                        </td>
-                        <td className="text-secondary text-xs">
-                          {promoConditions(group.terms).join(' \u00b7 ') || '—'}
-                        </td>
-                        <td>
-                          {group.used}
-                          {group.left !== null && (
-                            <span className="text-secondary"> / {group.used + group.left}</span>
-                          )}
-                        </td>
-                        <td>
-                          <span className={`status-badge ${spent ? 'neutral' : 'success'}`}>
-                            {spent ? 'Fully Used' : 'Active'}
-                          </span>
-                        </td>
-                        {/* The menu sits at the column's left edge, under its
-                            own header, rather than pushed to the row's right
-                            edge — standing rule, and the same thing the events
-                            and registrants tables do. */}
-                        <td>
-                          <div className="action-dropdown-container flex">
-                            <PromoActionsMenu
-                              label={group.batchLabel ?? group.terms.code}
-                              onEdit={() => openEdit(group)}
-                              onDelete={() => handleDelete(group)}
-                            />
-                          </div>
-                        </td>
-                      </tr>
+                    <React.Fragment key={row.id}>
+                      <TableRow className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                        {row.getVisibleCells().map(cell => (
+                          <TableCell
+                            key={cell.id}
+                            className={`py-4 px-4 text-white ${cell.column.id === 'code' ? 'pl-8' : ''}`}
+                          >
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </TableCell>
+                        ))}
+                      </TableRow>
 
+                      {/* The batch, opened. A row of its own rather than a
+                          modal: the organizer opened it to copy the codes out,
+                          and a panel covering the table is in the way of
+                          checking them against the rest of the list. */}
                       {isBatch && isOpen && (
-                        <tr>
-                          <td colSpan={7} className="bg-black/30">
+                        <TableRow className="border-b border-white/5 hover:bg-transparent">
+                          <TableCell colSpan={row.getVisibleCells().length} className="bg-black/30 px-8 py-4">
                             <div className="flex items-center justify-between mb-3">
                               <span className="text-xs uppercase tracking-wider text-secondary">
                                 Vouchers in {group.batchLabel}
@@ -401,15 +685,94 @@ export default function PromoCodesClient({
                                 </span>
                               ))}
                             </div>
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       )}
                     </React.Fragment>
                   );
                 })
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={columns.length} className="py-16 text-center text-gray-500">
+                    {groups.length === 0
+                      ? 'No promotions yet. A code you create here is redeemed by runners in the registration wizard, and an automatic promotion applies on its own.'
+                      : 'No promotion matches that search.'}
+                  </TableCell>
+                </TableRow>
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
+        </div>
+
+        {/* Pagination Controls */}
+        <div className="flex justify-between items-center flex-wrap gap-4 mt-1">
+          <div className="flex items-center gap-3 text-white text-sm font-medium">
+            <span className="text-secondary">Rows per page</span>
+
+            <div ref={pageSizeRef} className="relative">
+              <button
+                onClick={() => setIsPageSizeOpen(!isPageSizeOpen)}
+                className="flex items-center gap-3 border border-white/10 rounded-md px-3 py-1.5 text-sm text-white bg-transparent hover:bg-white/5 transition-colors cursor-pointer"
+              >
+                {table.getState().pagination.pageSize}
+                <ChevronDown size={14} className="text-gray-400" />
+              </button>
+
+              {isPageSizeOpen && (
+                <div className="absolute bottom-[calc(100%+4px)] left-0 bg-[#050505] border border-white/10 rounded-md p-1 min-w-[80px] z-50 shadow-2xl">
+                  {[5, 10, 25, 50].map(pageSize => (
+                    <div
+                      key={pageSize}
+                      className={`flex items-center justify-between px-3 py-1.5 cursor-pointer rounded-md text-sm transition-colors ${table.getState().pagination.pageSize === pageSize ? 'bg-white/5 text-white' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
+                      onClick={() => {
+                        table.setPageSize(pageSize);
+                        setIsPageSizeOpen(false);
+                      }}
+                    >
+                      <span>{pageSize}</span>
+                      {table.getState().pagination.pageSize === pageSize && <Check size={14} />}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-6">
+            <div className="text-white text-sm font-medium">
+              {table.getFilteredRowModel().rows.length === 0 ? '0-0 of 0' :
+               `${table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1}-${Math.min((table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize, table.getFilteredRowModel().rows.length)} of ${table.getFilteredRowModel().rows.length}`}
+            </div>
+            <div className="flex gap-1">
+              <button
+                onClick={() => table.firstPage()}
+                disabled={!table.getCanPreviousPage()}
+                className="flex items-center justify-center w-8 h-8 border border-white/10 rounded-md bg-transparent text-gray-400 hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronFirst className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
+                className="flex items-center justify-center w-8 h-8 border border-white/10 rounded-md bg-transparent text-gray-400 hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => table.nextPage()}
+                disabled={!table.getCanNextPage()}
+                className="flex items-center justify-center w-8 h-8 border border-white/10 rounded-md bg-transparent text-gray-400 hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => table.lastPage()}
+                disabled={!table.getCanNextPage()}
+                className="flex items-center justify-center w-8 h-8 border border-white/10 rounded-md bg-transparent text-gray-400 hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLast className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
