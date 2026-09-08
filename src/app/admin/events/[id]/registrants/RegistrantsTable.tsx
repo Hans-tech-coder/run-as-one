@@ -1020,7 +1020,7 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
               <Trash2 size={16} /> Delete Selected ({table.getSelectedRowModel().rows.length})
             </button>
           )}
-          <button onClick={handleExportCSV} className="btn-filter">
+          <button onClick={handleExportCSV} className="btn-light">
             <Download size={16} /> Export to CSV
           </button>
         </div>

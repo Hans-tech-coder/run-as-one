@@ -263,7 +263,7 @@ export default function PromoCodesClient({
           <h2 className="admin-panel-title">Discount Codes</h2>
           <button
             onClick={openCreate}
-            className="btn-gradient px-4 py-2 flex items-center gap-2 text-sm"
+            className="btn-light"
           >
             <Plus size={16} /> New Promotion
           </button>
@@ -762,7 +762,7 @@ export default function PromoCodesClient({
 
               <button
                 type="submit"
-                className="btn-gradient w-full mt-2 flex items-center justify-center gap-2"
+                className="btn-light w-full mt-2"
                 disabled={isSubmitting}
               >
                 {claim === 'VOUCHERS' ? <Ticket size={16} /> : <Tag size={16} />}

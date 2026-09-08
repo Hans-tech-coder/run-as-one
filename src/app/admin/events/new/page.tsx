@@ -520,7 +520,7 @@ export default function NewEventPage() {
             <button
               type="submit"
               disabled={isLoading || uploadingField !== null || uploadingPosters > 0}
-              className="btn-gradient px-8 py-3 rounded-lg font-medium"
+              className="btn-light"
             >
               {isLoading ? 'Saving...' : 'Save Event'}
             </button>

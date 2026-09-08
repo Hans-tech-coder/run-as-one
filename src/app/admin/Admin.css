@@ -662,29 +662,64 @@ textarea.form-input {
   background: rgba(255, 255, 255, 0.05);
 }
 
-.btn-export {
-  display: flex;
+/* The standing action button of the admin side. It replaces the orange
+   gradient on every in-dashboard action: a workspace where each panel wants
+   its own button cannot afford ten marketing CTAs shouting at once. It is
+   the inverse of the panel it sits on — a light fill with a dark label — so
+   the one thing worth pressing is the brightest thing on the screen without
+   borrowing the gradient to say so. The gradient stays where it earns its
+   weight: the public site and the sign-in screens. */
+.btn-light {
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   padding: 0 16px;
-  height: 40px;
-  border: none;
+  /* 48px, not the toolbar chip's 40px: a Save at the foot of a long form is
+     the end of the work, and it should sit under the thumb like one. The
+     form footer stretched it to this height anyway; making it the rule means
+     a panel-header or modal submit is no shorter than the one beside a
+     Cancel link. */
+  min-height: 48px;
+  /* Transparent rather than none: the border still owns its 2px of the box,
+     so a .btn-light and a .btn-filter set to the same height measure the
+     same in the row they share. */
+  border: 1px solid transparent;
   border-radius: var(--radius-md);
-  background: var(--gradient-primary);
-  color: white;
+  /* zinc-950 on zinc-200. The icons are lucide, drawn in currentColor, so
+     they darken with the label rather than needing their own rule. */
+  color: #09090b;
+  background: #e4e4e7;
   font-size: 0.875rem;
-  font-weight: 600;
-  font-family: var(--font-sans);
+  font-weight: 500;
+  font-family: var(--font-body);
+  text-decoration: none;
   cursor: pointer;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
-.btn-export:hover {
-  opacity: 0.9;
-  transform: translateY(-2px);
+/* A light button cannot lift by brightening its background much, so it goes
+   the last step to white — the same "brighter on hover" reading the dark
+   controls get from rgba(255,255,255,0.05). */
+.btn-light:hover {
+  background: #fafafa;
 }
+
+/* A button that cannot be pressed must not answer the mouse as though it can. */
+.btn-light:disabled,
+.btn-light:disabled:hover {
+  opacity: 0.45;
+  background: #e4e4e7;
+  cursor: not-allowed;
+}
+
+/* In a table toolbar the button shares its row with .btn-filter chips, so it
+   takes their height instead — a 48px action next to a 40px filter reads as
+   a misalignment, not as emphasis. */
+.toolbar-actions .btn-light {
+  min-height: 40px;
+}
+
 
 /* Responsive */
 @media (max-width: 1024px) {

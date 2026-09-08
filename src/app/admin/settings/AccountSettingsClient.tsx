@@ -204,7 +204,7 @@ function ProfilePanel({
           />
           <button
             type="submit"
-            className="btn-gradient px-8 py-3"
+            className="btn-light"
             disabled={isSaving || !isDirty}
           >
             {isSaving ? 'Saving…' : 'Save Changes'}
@@ -354,7 +354,7 @@ function PasswordPanel({ alert }: { alert: AlertFn }) {
           />
           <button
             type="submit"
-            className="btn-gradient px-8 py-3"
+            className="btn-light"
             disabled={isSaving || !hasInput}
           >
             {isSaving ? 'Changing…' : 'Change Password'}

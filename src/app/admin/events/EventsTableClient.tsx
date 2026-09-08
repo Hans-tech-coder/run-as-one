@@ -358,7 +358,7 @@ export default function EventsTableClient({ events }: EventsTableClientProps) {
         <div className="toolbar-actions">
           <Link
             href="/admin/events/new"
-            className="flex items-center gap-2 border border-white/10 rounded-md h-10 px-4 text-sm text-zinc-200 bg-transparent hover:bg-white/5 transition-all cursor-pointer"
+            className="btn-light"
           >
             <Plus size={16} /> Create Event
           </Link>

@@ -833,7 +833,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
             <button
               type="submit"
               disabled={isLoading || uploadingField !== null || uploadingPosters > 0}
-              className="btn-gradient px-8 py-3 rounded-lg font-medium"
+              className="btn-light"
             >
               {isLoading ? 'Saving...' : 'Update Event'}
             </button>

@@ -49,7 +49,7 @@ export default function AdminNotFound({
 
             <Link
               href={homeHref}
-              className="btn-gradient mt-2 px-8 py-3 no-underline"
+              className="btn-light mt-2"
             >
               {homeLabel}
             </Link>

@@ -308,7 +308,7 @@ export default function ResultsUploaderClient({ event }: { event: any }) {
     <>
       <button 
         onClick={() => setIsOpen(true)}
-        className="flex items-center gap-2 border border-white/10 rounded-md h-10 px-4 text-sm text-zinc-200 bg-transparent hover:bg-white/5 transition-all cursor-pointer"
+        className="btn-light"
       >
         <Plus size={16} />
         Upload results
@@ -484,7 +484,7 @@ export default function ResultsUploaderClient({ event }: { event: any }) {
           
           <div className="form-actions" style={{ marginTop: '24px' }}>
             <button 
-              className="btn-gradient flex items-center gap-2"
+              className="btn-light"
               onClick={processAndUpload}
               disabled={isProcessing}
             >

@@ -378,6 +378,23 @@ These are the user's own standing preferences. Follow them without being asked.
   something that failed and a person must act on — an email that never went out
   — and `neutral` for a fact that is neither, like a sold-out event. Reach for
   one of these rather than a one-off pill.
+- **No gradient buttons inside the admin.** Every action in the dashboard —
+  toolbar, panel header, form footer, modal submit — wears `.btn-light`
+  (`Admin.css`): a **light pill** — `#e4e4e7` fill, `#09090b` label, white on
+  hover — inverting the near-black panel it sits on, so the one thing worth
+  pressing is the brightest thing on the screen. Icons are lucide and draw in
+  `currentColor`, so they darken with the label on their own. It stands
+  **48px** tall everywhere except inside `.toolbar-actions`, where it drops to
+  the 40px of the `.btn-filter` chips sharing its row. A table toolbar holds
+  exactly one `.btn-light` — its page's primary action, and the four are
+  peers that must look alike: Create Event, New Promotion, Upload results,
+  Export to CSV. Everything else in that row (Category, Logistics, Payment,
+  View, Unsent Email) stays a dark `.btn-filter` chip, and a destructive one
+  like Delete Selected keeps its red. The orange gradient
+  (`.btn-gradient`) keeps the surfaces a runner sees: the public site, the
+  registration wizard, and the `/admin/login` and `/admin/register` sign-in
+  CTAs. Do not add Tailwind padding or flex utilities on top of
+  `.btn-light` — sizing it per site is what made the admin uneven before.
 - Styling: Tailwind utilities plus the CSS variables in `globals.css` (motion,
   spacing, radius, glass, gradient tokens). The admin has `Admin.css` and
   `Auth.css`; the wizard and event page have their own CSS files. Dark,
