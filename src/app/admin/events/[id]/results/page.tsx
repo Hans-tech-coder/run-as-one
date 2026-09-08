@@ -11,8 +11,16 @@ export default async function AdminResultsPage({ params }: { params: Promise<{ i
   const auth = await getAuthCookie();
   if (!auth) redirect('/admin/login');
 
-  const event = await prisma.event.findUnique({
-    where: { id },
+  // Scoped to the signed-in organizer's own events: the session check above
+  // only proves *someone* is signed in, and an id in the URL is not proof the
+  // event belongs to them. Unscoped, this screen would hand any approved
+  // organizer another's category list and finishing times — and the uploader
+  // below writes results against whatever event it is given.
+  //
+  // No super admin branch: `src/proxy.ts` sends a `SUPER_ADMIN` off `/admin/**`
+  // to `/superadmin` before this page runs.
+  const event = await prisma.event.findFirst({
+    where: { id, organizerId: auth.id },
     include: {
       categories: true
     }

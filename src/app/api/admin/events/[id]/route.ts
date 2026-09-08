@@ -21,8 +21,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
     const { id } = await params;
 
-    const event = await db.event.findUnique({
-      where: { id },
+    // Scoped to the signed-in organizer's own events. This is what the edit
+    // form reads, and it carries the event's bank accounts — an id from the
+    // browser is not proof it belongs to the browser's owner, so the scope has
+    // to be in the query rather than assumed from the link that was followed.
+    const event = await db.event.findFirst({
+      where: { id, organizerId: auth.id },
       include: {
         categories: true,
         bankAccounts: { orderBy: { sortOrder: 'asc' } },
@@ -90,8 +94,13 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     // Renaming does retire the old slug. Links shared under it stop resolving,
     // though the /events/<cuid> form still redirects here, so a mid-campaign
     // title fix costs whoever shared the slug URL.
-    const current = await db.event.findUnique({
-      where: { id },
+    //
+    // Scoped to the signed-in organizer, like the GET above and the PATCH
+    // below: this is the write the edit form makes, and an unscoped one would
+    // let any approved organizer rewrite another's event — its prices, its
+    // bank accounts, its categories — from an id alone.
+    const current = await db.event.findFirst({
+      where: { id, organizerId: auth.id },
       select: { title: true, slug: true },
     });
 
@@ -241,10 +250,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
  * re-posting — every field of a form it does not show, and any of those it got
  * subtly wrong would be silently written.
  *
- * Unlike PUT, this scopes the update to the signed-in organizer's own events.
- * A pause is reachable from a list rather than from a form that only ever
- * opened one of their own events, so "who owns this id" is a question that has
- * to be asked here.
+ * Like PUT, this scopes the update to the signed-in organizer's own events:
+ * "who owns this id" is a question every handler here has to ask, since the id
+ * arrives from the browser.
  */
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {

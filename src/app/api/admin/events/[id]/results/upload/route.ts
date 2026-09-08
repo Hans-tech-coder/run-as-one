@@ -25,6 +25,18 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // The session says someone is signed in; it does not say this event is
+    // theirs. Without this check an approved organizer could overwrite another
+    // organizer's published finishing times from an id alone — the write half
+    // of the same gap the results screen had on the read side.
+    const event = await prisma.event.findFirst({
+      where: { id, organizerId: auth.id },
+      select: { id: true },
+    });
+    if (!event) {
+      return NextResponse.json({ error: 'Event not found' }, { status: 404 });
+    }
+
     const eventId = id;
     const body = await req.json();
     const { results } = body;

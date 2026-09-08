@@ -2,6 +2,8 @@ import React from 'react';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import prisma from '@/lib/db';
+import { getAuthCookie } from '@/lib/auth';
+import { redirect } from 'next/navigation';
 import RegistrantsTable from './RegistrantsTable';
 import { runnerRef } from '@/lib/order-ref';
 import { EMAIL_KIND_LABELS, outstandingEmail } from '@/lib/email-delivery';
@@ -27,9 +29,23 @@ export default async function RegistrantsPage({
   const { id } = await params;
   const { search } = await searchParams;
 
+  // Scoped to the signed-in organizer's own events, the way every admin route
+  // is. This screen carries the most sensitive data in the app — every
+  // runner's email, phone, birthdate, emergency contact and medical notes — and
+  // an id in the URL is not proof it belongs to the browser's owner: without
+  // the `organizerId` here, any approved organizer handed another's event id
+  // could read their whole registrant list.
+  //
+  // A no-match reads as "Event not found." rather than "not yours", so the
+  // screen cannot be used to confirm that some id exists. There is no super
+  // admin branch because there is no super admin here: `src/proxy.ts` sends a
+  // `SUPER_ADMIN` off `/admin/**` to `/superadmin` before this page runs.
+  const auth = await getAuthCookie();
+  if (!auth) redirect('/admin/login');
+
   // Fetch real runners for this event via the Registrations table
-  const event = await prisma.event.findUnique({
-    where: { id },
+  const event = await prisma.event.findFirst({
+    where: { id, organizerId: auth.id },
     include: {
       registrations: {
         include: {

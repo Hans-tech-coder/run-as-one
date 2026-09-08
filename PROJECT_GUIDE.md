@@ -290,6 +290,19 @@ reject clubs) · `/superadmin/[...missing]`.
 - **Route handlers re-check auth themselves.** The proxy does not cover
   `/api/**`, so every admin route calls `getAuthCookie()` and scopes its queries
   to the signed-in organizer.
+- **Admin server pages scope too, not just the API.** The proxy proves a session
+  exists; it never asks whose event the `[id]` in the URL is. So every page under
+  `/admin/events/[id]/**` calls `getAuthCookie()` and reads the event with
+  `findFirst({ where: { id, organizerId: auth.id } })`, rendering its own
+  "Event not found." on a miss — the same wording as a genuinely missing event,
+  so the screen cannot be used to probe which ids exist. `registrants` and
+  `results` both do this; the `edit` screen is a client component, so its scope
+  lives in `GET`/`PUT /api/admin/events/[id]`, and the results uploader's in
+  `POST /api/admin/events/[id]/results/upload`. **Never read an event by id
+  alone on an admin surface** — the registrants screen carries every runner's
+  email, phone, birthdate, emergency contact and medical notes, and an id is not
+  proof of ownership. These pages need no `SUPER_ADMIN` branch, because the
+  proxy redirects a super admin off `/admin/**` before they render.
 - **Never trust client amounts.** `checkout` and `checkout/manual` refetch the
   event and recompute the delivery fee, platform fee, subtotal (including the
   shirt upcharge) and **the promo discount** before writing or billing.
