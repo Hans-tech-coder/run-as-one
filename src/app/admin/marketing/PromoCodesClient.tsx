@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import {
   Check,
   ChevronDown,
@@ -11,6 +12,7 @@ import {
   ChevronUp,
   Columns,
   Copy,
+  ExternalLink,
   Plus,
   Search,
   Tag,
@@ -56,6 +58,8 @@ import {
   promoStatus,
 } from '@/lib/discount';
 import { MAX_VOUCHER_BATCH } from '@/lib/voucher-codes';
+import { formatPesos } from '@/lib/money';
+import type { PromoRedemption } from '@/lib/promo-redemptions';
 
 /**
  * The organizer's discount codes: what exists, and the form that makes more.
@@ -74,6 +78,14 @@ type PromoRow = {
   discountValue: number;
   usageLimit: number | null;
   usageCount: number;
+  /**
+   * Centavos this code has actually taken off, and how many of its orders
+   * were paid. Counted on the server from the code text stamped on each
+   * registration (lib/promo-redemptions.ts), because `promoCode` is a
+   * snapshot string rather than a relation there is an id to join on.
+   */
+  given: number;
+  paidOrders: number;
   validFrom: string | null;
   validUntil: string | null;
   minSubtotal: number | null;
@@ -104,6 +116,10 @@ type Group = {
   used: number;
   /** Redemptions still available across the group, or null when unlimited. */
   left: number | null;
+  /** Centavos given away across every code of this promotion, paid orders only. */
+  given: number;
+  /** How many of those redemptions reached PAID. */
+  paid: number;
 };
 
 const ALL_EVENTS = '';
@@ -124,6 +140,18 @@ const BLANK_FORM = {
   batchLabel: '',
   batchPrefix: '',
   batchCount: '',
+};
+
+/** What `GET /api/admin/promos/[id]/redemptions` answers with. */
+type RedemptionsResponse = {
+  name: string;
+  /** Whether a row should name which voucher of a batch was used. */
+  isBatch: boolean;
+  automatic: boolean;
+  redemptions: PromoRedemption[];
+  /** True when there were more orders than one listing returns. */
+  truncated: boolean;
+  limit: number;
 };
 
 /** How a runner comes to have this promotion. */
@@ -154,6 +182,7 @@ const COLUMN_LABELS: Record<string, string> = {
   event: 'Applies To',
   conditions: 'Conditions',
   used: 'Used',
+  given: 'Given',
   status: 'Status',
   actions: 'Actions',
 };
@@ -193,6 +222,16 @@ export default function PromoCodesClient({
   // Which row's pause request is in flight, so its menu item can say so
   // rather than looking like nothing happened.
   const [pausingKey, setPausingKey] = useState<string | null>(null);
+  // The redemptions panel: which promotion it is showing, and what came back.
+  // Closing runs through the same open/closing pair the registrants screen's
+  // modals use, so the panel animates out rather than vanishing.
+  const [redemptionsOf, setRedemptionsOf] = useState<Group | null>(null);
+  const [isRedemptionsOpen, setIsRedemptionsOpen] = useState(false);
+  const [isRedemptionsClosing, setIsRedemptionsClosing] = useState(false);
+  const [isLoadingRedemptions, setIsLoadingRedemptions] = useState(false);
+  const [redemptions, setRedemptions] = useState<RedemptionsResponse | null>(null);
+  const [redemptionsError, setRedemptionsError] = useState('');
+
   // The promotion the modal is editing, or null when it is creating one.
   // One form serves both, so an edit can never offer a field the create
   // form validates differently.
@@ -371,6 +410,43 @@ export default function PromoCodesClient({
     }
   };
   /**
+   * Who used this promotion.
+   *
+   * Fetched when the panel opens rather than shipped with the page: the table
+   * shows every promotion an organizer has, and loading every order behind
+   * every one of them to fill a modal nobody may open is a page that stops
+   * loading the first time somebody generates two hundred vouchers.
+   */
+  const openRedemptions = async (group: Group) => {
+    setRedemptionsOf(group);
+    setRedemptions(null);
+    setRedemptionsError('');
+    setIsRedemptionsOpen(true);
+    setIsLoadingRedemptions(true);
+    try {
+      const res = await fetch(`/api/admin/promos/${group.terms.id}/redemptions`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'The redemptions could not be loaded.');
+      setRedemptions(data);
+    } catch (err: any) {
+      setRedemptionsError(err.message || 'Something went wrong while loading the redemptions.');
+    } finally {
+      setIsLoadingRedemptions(false);
+    }
+  };
+
+  const closeRedemptions = () => {
+    setIsRedemptionsOpen(false);
+    setIsRedemptionsClosing(true);
+    setTimeout(() => {
+      setIsRedemptionsClosing(false);
+      setRedemptionsOf(null);
+      setRedemptions(null);
+      setRedemptionsError('');
+    }, 150);
+  };
+
+  /**
    * The table itself is the one the events, registrants and results screens
    * use — `components/ui/table` driven by TanStack — so a promotion is read
    * the same way an event or a registrant is: the same search box, the same
@@ -505,13 +581,43 @@ export default function PromoCodesClient({
       id: "used",
       header: "Used",
       accessorFn: row => row.used,
+      cell: ({ row }) => {
+        const group = row.original;
+        return (
+          <>
+            <span className="block">
+              {group.used}
+              {group.left !== null && (
+                <span className="text-secondary"> / {group.used + group.left}</span>
+              )}
+            </span>
+            {/* A code is spent the moment the order is placed, the same
+                instant a slot is taken, but the money only moves when that
+                order is paid. An abandoned online checkout therefore leaves a
+                redemption behind with nothing in the Given column to match it,
+                and saying so here is what stops the gap looking like an
+                arithmetic error. Silent when the two agree, which is most
+                rows. */}
+            {group.paid !== group.used && (
+              <span className="text-xs text-secondary">
+                {`${group.used} redeemed · ${group.paid} paid`}
+              </span>
+            )}
+          </>
+        );
+      },
+    },
+    {
+      // Beside Used rather than instead of it: "twelve times" and "₱4,500"
+      // are different questions, and only the second one answers whether the
+      // promotion was worth running.
+      id: "given",
+      header: "Given",
+      accessorFn: row => row.given,
       cell: ({ row }) => (
-        <>
-          {row.original.used}
-          {row.original.left !== null && (
-            <span className="text-secondary"> / {row.original.used + row.original.left}</span>
-          )}
-        </>
+        <span className={row.original.given > 0 ? '' : 'text-secondary'}>
+          &#8369;{formatPesos(row.original.given)}
+        </span>
       ),
     },
     {
@@ -544,6 +650,7 @@ export default function PromoCodesClient({
             label={row.original.batchLabel ?? row.original.terms.code}
             isPaused={row.original.terms.paused}
             isTogglingPause={pausingKey === row.original.key}
+            onViewRedemptions={() => openRedemptions(row.original)}
             onEdit={() => openEdit(row.original)}
             onTogglePause={() => handleTogglePause(row.original)}
             onDelete={() => handleDelete(row.original)}
@@ -810,6 +917,135 @@ export default function PromoCodesClient({
                 <ChevronLast className="w-4 h-4" />
               </button>
             </div>
+          </div>
+        </div>
+      </div>
+
+
+      {/*
+        Redemptions.
+
+        A purpose-built panel rather than AlertModal, for the same reason the
+        registrants screen's manual-email modal is one: AlertModal asks a
+        question and takes an answer, and this is a list. It borrows that
+        modal's frame exactly — the t-modal open/closing pair, the header, the
+        scrolling body and the quiet footer — because the project's rule is
+        that a new control copies an existing one.
+
+        Every row is a link into that event's registrants screen with the order
+        reference already in the search box, so "who is this?" is one click
+        rather than a hunt through a table of a thousand runners.
+      */}
+      <div
+        className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
+          isRedemptionsOpen && !isRedemptionsClosing
+            ? 'opacity-100 pointer-events-auto'
+            : 'opacity-0 pointer-events-none'
+        }`}
+      >
+        <div
+          className={`t-modal w-full max-w-2xl bg-[#111] border border-white/10 rounded-2xl shadow-2xl flex flex-col max-h-[90vh] ${isRedemptionsOpen ? 'is-open' : ''} ${isRedemptionsClosing ? 'is-closing' : ''}`}
+        >
+          <div className="p-6 border-b border-white/10 flex justify-between items-start gap-4 shrink-0">
+            <div>
+              <h3 className="text-xl font-semibold text-white m-0">Redemptions</h3>
+              {redemptionsOf && (
+                <p className="text-sm text-gray-400 mt-1 m-0">
+                  {`${redemptionsOf.batchLabel ?? redemptionsOf.terms.code} · ${redemptionsOf.used} redeemed · ₱${formatPesos(redemptionsOf.given)} given away`}
+                </p>
+              )}
+            </div>
+            <button
+              onClick={closeRedemptions}
+              className="text-gray-400 hover:text-white transition-colors bg-transparent border-none cursor-pointer p-0"
+              aria-label="Close"
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          <div className="p-6 overflow-y-auto flex-1 space-y-3">
+            {isLoadingRedemptions && (
+              <p className="text-sm text-gray-400 m-0">Looking up the orders&hellip;</p>
+            )}
+
+            {!isLoadingRedemptions && redemptionsError && (
+              <p className="text-sm text-red-400 m-0">{redemptionsError}</p>
+            )}
+
+            {/* An empty state that says so, rather than a hidden panel: "nobody
+                has used this yet" is an answer, and the organizer asked. */}
+            {!isLoadingRedemptions && redemptions && redemptions.redemptions.length === 0 && (
+              <p className="text-sm text-gray-400 m-0">
+                {`Nobody has used this ${
+                  redemptions.automatic ? 'promotion' : 'code'
+                } yet, so it has given away ₱0.00.`}
+              </p>
+            )}
+
+            {!isLoadingRedemptions &&
+              redemptions?.redemptions.map(order => (
+                <Link
+                  key={order.id}
+                  href={`/admin/events/${order.eventId}/registrants?search=${encodeURIComponent(order.orderRef)}`}
+                  className="flex items-start justify-between gap-4 rounded-lg border border-white/10 bg-black/30 p-4 no-underline transition-colors hover:border-white/20 hover:bg-white/5"
+                >
+                  <span className="flex flex-col gap-1 min-w-0">
+                    <span className="font-mono text-sm font-bold text-white flex items-center gap-2">
+                      {order.orderRef}
+                      <ExternalLink size={13} className="text-secondary shrink-0" aria-hidden="true" />
+                    </span>
+                    <span className="text-xs text-secondary truncate">
+                      {`${order.eventTitle} · ${order.runners} ${
+                        order.runners === 1 ? 'runner' : 'runners'
+                      } · ${new Date(order.createdAt).toLocaleDateString('en-PH', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                      })}`}
+                    </span>
+                    {/* Inside a batch this is the only thing telling one
+                        redemption from another — which voucher went where. */}
+                    {redemptions.isBatch && order.code && (
+                      <span className="font-mono text-xs text-accent-blue">{order.code}</span>
+                    )}
+                  </span>
+                  <span className="flex flex-col items-end gap-1 shrink-0">
+                    <span className="text-sm font-bold text-white">
+                      {`−₱${formatPesos(order.discountAmount)}`}
+                    </span>
+                    <span
+                      className={`status-badge ${order.status === 'PAID' ? 'success' : 'pending'}`}
+                    >
+                      {order.status}
+                    </span>
+                  </span>
+                </Link>
+              ))}
+
+            {!isLoadingRedemptions && redemptions?.truncated && (
+              <p className="text-xs text-gray-500 m-0">
+                {`Showing the ${redemptions.limit} most recent orders. There are more.`}
+              </p>
+            )}
+
+            {!isLoadingRedemptions && redemptions && redemptions.redemptions.length > 0 && (
+              <p className="text-xs text-gray-500 m-0">
+                A code is spent when the order is placed, so an order still waiting on payment
+                appears here and counts as a redemption &mdash; but nothing it was given is
+                counted as money until it is paid.
+              </p>
+            )}
+          </div>
+
+          <div className="p-6 border-t border-white/10 flex justify-end bg-black/20 shrink-0">
+            <button
+              type="button"
+              onClick={closeRedemptions}
+              className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white transition-colors bg-transparent border-none cursor-pointer"
+            >
+              Close
+            </button>
           </div>
         </div>
       </div>
@@ -1198,6 +1434,8 @@ function groupPromos(promos: PromoRow[]): Group[] {
     if (existing) {
       existing.codes.push(promo);
       existing.used += promo.usageCount;
+      existing.given += promo.given;
+      existing.paid += promo.paidOrders;
       if (existing.left !== null) {
         existing.left += remaining(promo) ?? 0;
       }
@@ -1210,6 +1448,8 @@ function groupPromos(promos: PromoRow[]): Group[] {
       terms: promo,
       used: promo.usageCount,
       left: remaining(promo),
+      given: promo.given,
+      paid: promo.paidOrders,
     });
   }
 

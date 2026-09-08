@@ -14,8 +14,18 @@ import {
   paymentMethodLabel,
 } from '@/lib/registration-codes';
 
-export default async function RegistrantsPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function RegistrantsPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  // `?search=` prefills the table's search box. The marketing screen's
+  // redemptions panel links here with an order reference in it, so tracing a
+  // discount back to the people who used it is one click.
+  searchParams: Promise<{ search?: string }>;
+}) {
   const { id } = await params;
+  const { search } = await searchParams;
 
   // Fetch real runners for this event via the Registrations table
   const event = await prisma.event.findUnique({
@@ -152,7 +162,7 @@ export default async function RegistrantsPage({ params }: { params: Promise<{ id
       </header>
 
       <div className="admin-content">
-        <RegistrantsTable runners={runners} eventId={id} />
+        <RegistrantsTable runners={runners} eventId={id} initialSearch={search ?? ''} />
       </div>
     </>
   );

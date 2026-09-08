@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { MoreVertical, Edit, PauseCircle, PlayCircle, Trash2 } from 'lucide-react';
+import { MoreVertical, Edit, PauseCircle, PlayCircle, Receipt, Trash2 } from 'lucide-react';
 
 /**
  * The row menu on the marketing table.
@@ -19,6 +19,7 @@ export default function PromoActionsMenu({
   label,
   isPaused,
   isTogglingPause = false,
+  onViewRedemptions,
   onEdit,
   onTogglePause,
   onDelete,
@@ -29,6 +30,7 @@ export default function PromoActionsMenu({
   isPaused: boolean;
   /** True while this row's pause request is in flight. */
   isTogglingPause?: boolean;
+  onViewRedemptions: () => void;
   onEdit: () => void;
   onTogglePause: () => void;
   onDelete: () => void;
@@ -128,6 +130,25 @@ export default function PromoActionsMenu({
       }}
     >
       <div className="py-1 flex flex-col" role="menu" aria-orientation="vertical">
+        {/* Above Edit on purpose: reading who used a promotion is what an
+            organizer opens this menu for far more often than changing it, and
+            the item that only looks at something should sit before the ones
+            that alter it. */}
+        <button
+          onClick={() => {
+            closeMenu();
+            onViewRedemptions();
+          }}
+          className="action-dropdown-item w-full flex items-center gap-3 px-4 py-2 text-sm text-left"
+          role="menuitem"
+        >
+          <Receipt size={16} />
+          {/* One word, not "View Redemptions": the dropdown is a fixed 180px
+              shared with the events table's menu, and the longer label wraps
+              onto a second line while every other item sits on one. Widening
+              this menu alone would make the two stop matching. */}
+          Redemptions
+        </button>
         <button
           onClick={() => {
             closeMenu();

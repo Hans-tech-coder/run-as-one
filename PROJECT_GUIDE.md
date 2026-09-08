@@ -191,6 +191,7 @@ logic again.
 | `discount.ts` | **What a promo code is worth, and why it cannot be used.** `PromoCode` rows existed for a long time and were never wired into checkout — an organizer could create a code and nothing could spend it. This is the rule that makes one real, and it lives here because *four* screens have to agree about it: both wizards price the code as the runner types, and both checkout routes recompute it from the database and are the last word. Four kinds — `PERCENTAGE` (basis points), `FIXED` (centavos), `FREE_DELIVERY` (exactly the order's delivery fee, so the line always cancels) and `BUY_X_GET_Y` (whole groups only, and the **cheapest** runners are the free ones). **Fees are never discounted**: the platform fee is the platform's and the transaction fee is PayMongo's, so a percentage applies to the goods alone. Every branch is capped at what it discounts, so a ₱500 code on a ₱300 order takes off ₱300. `promoCodeError` returns one sentence naming the code and the condition it failed — "SUMMER10 needs at least 5 runners on one order — you have 3" — and the wizards and the routes return the identical string, because a code accepted on screen and refused by the server would be worse than no code box. **A promotion may need no code at all** (`automatic`): an early bird is a discount tied to a date, and a group deal is one a group discovers by being a group — neither should depend on having been told a password. `bestDiscount` weighs every qualifying promotion, automatic and typed alike, and returns the largest; stacking is refused because two promotions at once is a number the organizer never agreed to, and a tie goes to the automatic one so a typed voucher stays unspent. A good code that merely lost is not an error — `outshoneByMessage` says so in a neutral voice. `freeSlotOffer` is what makes buy-X-get-Y claimable: the promotion pays nothing at five runners, so step 1 offers the sixth rather than leaving a group of five looking at a discount that does nothing, and it stays silent whenever the next free one would cost more paid entries than it gives. **`promoStatus` is the one answer to "is this running?"** — ACTIVE, PAUSED, SCHEDULED, EXPIRED or USED_UP, in that order of precedence, since the switch an organizer just flipped is the answer they will look for and a promotion that has been fully claimed is finished even with its window still open. The marketing table's badge, the event page's offers block, the "Running Now" metric and `promoCodeError` all read it, so a badge saying EXPIRED while the checkout still honours the code is not a state this app can reach. `freeRunnerIndexes` says which cards wear the FREE badge, breaking ties towards the **last** runner, because a group of six at one price plainly means the sixth. `redeemPromoCode` is the gate, and mirrors `reserveSlots`: it locks the row `FOR UPDATE` inside the write transaction before incrementing, since a usage cap checked before the write is one two simultaneous orders both pass. **A code is spent when the order is placed, not when it is paid** — the same moment a slot is taken, or one voucher could be attached to any number of pending orders. Deliberately free of Prisma, so the wizards can import it. |
 | `promo-store.ts` | Reading promo codes out of the database, kept apart from `discount.ts` for the same reason `running-community-store.ts` is kept apart from `running-community.ts`: the rule is imported by client components and must not drag Prisma into the browser bundle. `findPromoCode` scopes a lookup to the event's organizer and then to the event (or to a code that names none) and **skips automatic promotions, which are not codes**; `automaticPromosFor` is the query the event page and both wizards run on load; `resolveDiscount` weighs the automatic promotions and any typed code together and is what both checkout routes call instead of reading a discount off the request. |
 | `components/PromoHighlights.tsx` | The offers on a race, on the event page. Only **automatic** promotions appear: a code is the organizer's to publish where they choose, and printing every code on a public page would hand out the single-use vouchers meant for named invitees. It reads `describePromo` and `promoConditions`, the same two functions the wizard and the admin table read, so what this page promises and what the order summary applies cannot be worded differently. |
+| `promo-redemptions.ts` | **What a promotion actually cost, and which orders spent it.** "Times Redeemed: 12" says how many, never how much, and an organizer deciding whether to run a promotion again is asking the second question. The peso column on the marketing table, the *Given Away* metric card and the list behind *View redemptions* all read from here, so a column saying ₱4,500 and a modal adding up to ₱5,200 is not a state this app can reach. **Attribution is by the code text, scoped to the organizer's own events** — `Registration.promoCode` is a snapshot string rather than a relation (kept that way so a deleted promotion cannot rewrite a receipt), so there is no id to join on and the text is all there is. Two accepted consequences: a promotion deleted and recreated under the same code inherits its own history, and an **automatic** promotion is attributed the same way, since checkout snapshots its *name* into that column. Scoping is done in the query, not after it: the code text is not proof of ownership, and two organizers may each run an `EARLYBIRD`. **Money is counted on `PAID` rows only, redemptions on placement** — a code is spent the moment the order is created, the same instant a slot is taken, so an abandoned online checkout leaves a redemption with no money behind it; counting it would overstate the cost of every promotion with an abandoned checkout in its past. Both numbers are shown rather than one being quietly preferred (the Used column grows a second line, `12 redeemed · 9 paid`, exactly when they disagree). `spendByCode` is **one grouped query for the whole screen**, not one per row, because a page with a voucher batch on it would otherwise make two hundred round trips; `redemptionsFor` takes *every* code of the promotion, since a batch is one promotion, and stops at `MAX_REDEMPTIONS_LISTED` (500) saying so rather than showing part of the truth silently. Server-only, like `promo-store.ts` and for the same reason. |
 | `promo-input.ts` | **What the marketing form is allowed to say about a promotion.** Turning the posted fields into the columns they become, and refusing them by name when they cannot be — a percentage outside 1-100, a buy-X-get-Y with no X, an end date before its start. It lives apart from the routes because *two* of them need exactly this check: creating a promotion and editing one, and a create route that caught a 500% discount while an edit route let it through would be worse than neither checking. It also owns the Manila day boundaries: a window that starts on the 1st starts at 00:00 Manila and one that ends on the 30th runs to 23:59 of it, because `new Date('2026-03-30')` is midnight **UTC**, eight hours early. |
 | `voucher-codes.ts` | Generating a batch of single-use vouchers. The alphabet drops every character that can be misread off a printed card — no O against 0, no I or L against 1, no S against 5, no U against V — and codes are **random rather than sequential**, because SUMMER-001…200 hands anyone who receives one the other 199. `MAX_VOUCHER_BATCH` (500) is a ceiling on the free Postgres tier as much as on the promotion. Web Crypto, not `Math.random`. |
 | `event-slug.ts` | Public event URLs. `slugifyEventTitle` → `uniqueEventSlug` on write; `eventByParam` matches slug **or** legacy cuid on read, and `canonicalEventPath` redirects old cuid links to the slug. |
@@ -238,14 +239,18 @@ logic again.
 `/admin` dashboard · `/admin/login` · `/admin/register` · `/admin/events` (plus
 `/new` and `/[id]/edit`) · `/admin/events/[id]/registrants` (rows whose email
 never went out carry an **Email Unsent** badge, an *Unsent Email* toolbar toggle
-lists exactly those, and a mail icon opens the manual-send modal) ·
+lists exactly those, and a mail icon opens the manual-send modal; **`?search=`
+prefills the search box**, which is how the marketing screen's redemptions panel
+links straight to one order) ·
 `/admin/events/[id]/results` (the uploader detects the sheet's real header row —
 timing exports open with banner rows — and maps columns by sheet index, not by
 label) · `/admin/marketing` (promotions: the kind, the event it is scoped to, its
 conditions, whether it is claimed by a code, a voucher batch or automatically,
-and a row menu to edit or delete — a batch collapses into one row that opens
-to be copied, on the same searchable, sortable, paginated table the events
-and registrants screens use) ·
+**how much it has given away**, and a row menu to view its redemptions, edit,
+pause or delete — a batch collapses into one row that opens to be copied, on
+the same searchable, sortable, paginated table the events and registrants
+screens use. Three metric cards: Running Now, Times Redeemed and **Given
+Away**, the last being the Given column added up) ·
 `/admin/settings` (profile + password) · `/admin/[...missing]` → the admin's own 404.
 
 ### Super admin (`/superadmin`)
@@ -269,6 +274,7 @@ reject clubs) · `/superadmin/[...missing]`.
 | `admin/proof/[id]` | GET | Auth-checked redirect to a short-lived signed proof URL |
 | `promos/lookup` | POST | **Public.** The terms of a code a runner just typed, scoped to the event they are registering for. Returns the *terms*, not a computed discount — the order keeps changing under the runner, so the wizard recomputes with `applyPromo` and nothing here is trusted at checkout. A code we do not have comes back as `{ promo: null }` with a 200, since "we don't have that" is an answer rather than a failure; the response carries no id, organizer or batch |
 | `admin/promos` | POST | Creates one code, a whole batch of single-use vouchers in one call, or an automatic promotion. Refuses rather than repairs, naming the field it refused, and scopes `eventId` to the signed-in organizer's own events |
+| `admin/promos/[id]/redemptions` | GET | Which orders used this promotion — order reference, event, runner count, status, `discountAmount`, `createdAt`, and for a voucher batch the specific code that was used. Covers **all** of the promotion's codes, since a batch is one promotion, and is capped at 500 with a flag saying when it was cut short. Auth-checked and scoped to the organizer's own events, which matters twice here: an id from the browser is not proof of ownership and neither is the code text |
 | `admin/promos/[id]` | PATCH, DELETE | Edits, pauses or removes a promotion. A body carrying **only** `{ paused }` is the hold on its own and touches nothing else — the row menu has no form open, so it has no terms to re-post, exactly as `admin/events/[id]` PATCHes its registration hold. Any fuller body is a real edit and is validated in full. **A batch is one promotion, not two hundred**, so an operation on any of its vouchers is an operation on all of them, and the response says how many rows it touched. What a promotion *is* cannot be edited — a code cannot become codeless, a batch's shared label and its random codes stay put, and a voucher stays single-use — because those changes would take the promotion away from people already holding it. Deleting is safe for history: `Registration.promoCode` and `discountAmount` are snapshots, so it removes the ability to redeem, not the record of a redemption. Auth-checked and scoped to the organizer's own rows |
 | `admin/profile`, `admin/profile/password` | PATCH | Self-service only; the id comes from the cookie, never the body |
 | `superadmin/organizers`, `superadmin/organizers/[id]` | GET, PATCH | Status and commission |
@@ -441,6 +447,8 @@ promotions feature, in three batches, with the decisions behind each already
 settled. The user works it **one batch per session** to keep conversations
 short, so a session picking it up should read the batch marked *Next*, do only
 that batch, mark it Done, and stop. Delete the file once every batch is done.
+**Batch A is done**; Batch B — releasing what an abandoned checkout holds, and
+the one migration in the plan — is next.
 
 Known open threads:
 
@@ -471,14 +479,21 @@ Known open threads:
   one discount is ever given.
   A promotion can be edited, paused or deleted from the row menu on
   `/admin/marketing`, and its Status column names all five states rather than
-  calling an expired code "Active". The organizer dashboard's revenue tile
+  calling an expired code "Active". **What a promotion cost is now on the same
+  screen** (Promotions Batch A): a **Given** column of pesos beside Used, a
+  *Given Away* metric card totalling it, and a *View redemptions* panel listing
+  the orders that spent it, each linking through to that event's registrants
+  with the order reference already in the search box. Money is counted on paid
+  orders only and redemptions on placement, and the Used column reads
+  `12 redeemed · 9 paid` whenever the two disagree rather than letting the gap
+  look like an arithmetic error — see `promo-redemptions.ts`.
+  The organizer dashboard's revenue tile
   subtracts `discountAmount` — it did not until the promotions work landed,
   and was reporting money that had been given away. Two things are still deliberately left out, and are
   decisions rather than oversights: **an abandoned online checkout keeps its
   redemption**, exactly as it keeps its slot — a PENDING order holds both
-  until it is cleaned up — and the public code-lookup route has **no rate
-  limit**, since there is no infrastructure here for one and a promo code is
-  meant to be shared.
+  until it is cleaned up, which is `PROMOTIONS_PLAN.md` Batch B — and the
+  public code-lookup route has **no rate limit**, which is Batch C.
 - `src/data/mockEvents.ts` is legacy and is no longer the source for real pages.
 - A **Prisma schema change needs the dev server restarted** before it takes
   effect: `next dev` bundles the generated client, so a running server keeps

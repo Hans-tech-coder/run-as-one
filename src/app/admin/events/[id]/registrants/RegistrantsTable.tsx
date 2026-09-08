@@ -34,9 +34,23 @@ import { formatPesos } from '@/lib/money';
 interface RegistrantsTableProps {
   eventId: string;
   runners: any[];
+  /**
+   * What the search box starts with, from `?search=` on the URL.
+   *
+   * The marketing screen's redemptions panel links here with an order
+   * reference in it, so an organizer looking at "this promotion gave ₱500 to
+   * RM-D918005C" lands on that order rather than on a thousand runners to
+   * scroll through. It is the box's starting value, not a lock — clearing it
+   * shows everyone, and no filter is hidden from the person using it.
+   */
+  initialSearch?: string;
 }
 
-export default function RegistrantsTable({ eventId, runners: initialRunners }: RegistrantsTableProps) {
+export default function RegistrantsTable({
+  eventId,
+  runners: initialRunners,
+  initialSearch = '',
+}: RegistrantsTableProps) {
   // Shadows window.alert on purpose — see AlertProvider.
   const { alert } = useAlert();
   const [runners, setRunners] = useState(initialRunners);
@@ -87,7 +101,7 @@ export default function RegistrantsTable({ eventId, runners: initialRunners }: R
   
   // Table state
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [globalFilter, setGlobalFilter] = useState("");
+  const [globalFilter, setGlobalFilter] = useState(initialSearch);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
   const [isViewOpen, setIsViewOpen] = useState(false);

@@ -18,8 +18,8 @@ is finished and is kept only for its reasoning; **this** one is the queue.
 
 | Batch | Items | Migration | Status |
 | --- | --- | --- | --- |
-| A | 1, 2 | none | **Next** |
-| B | 3 | yes | Not started |
+| A | 1, 2 | none | Done |
+| B | 3 | yes | **Next** |
 | C | 4, 5, 6, 7 | none | Not started |
 
 ---
@@ -60,7 +60,15 @@ comment, and `PROJECT_GUIDE.md` §5 lists them all.
 
 ---
 
-## Batch A — what a promotion actually cost, and who used it
+## Batch A — what a promotion actually cost, and who used it — **DONE**
+
+Shipped as: `src/lib/promo-redemptions.ts` (attribution, the spend query and
+the listing), `GET /api/admin/promos/[id]/redemptions`, the **Given** column,
+the *Given Away* metric card and the *View redemptions* panel on
+`/admin/marketing`, and `?search=` on `/admin/events/[id]/registrants` so a
+redemption links straight to its order. `PROJECT_GUIDE.md` §5, §6 and §10
+updated in the same change.
+
 
 Two questions an organizer cannot answer today, sharing one query, so they are
 one batch.
