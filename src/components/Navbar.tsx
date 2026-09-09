@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
+import { RunAsOneLogo } from './RunAsOneLogo';
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -68,7 +69,7 @@ export default function Navbar() {
         <header className="w-full h-[70px] flex items-center rounded-full bg-white/5 backdrop-blur-xl border border-white/5 shadow-[0_8px_30px_rgba(0,0,0,0.12)]">
           <div className="flex justify-between items-center w-full px-5 sm:px-12">
             <Link href="/" className="flex items-center gap-3 no-underline">
-              <img src="/run-as-one-logo.png" alt="RunAsOne" width={1536} height={1024} className="h-9 sm:h-11 w-auto" />
+              <RunAsOneLogo className="[--rao-logo-size:32px] sm:[--rao-logo-size:38px]" />
             </Link>
 
             <nav className="hidden md:flex gap-8 lg:gap-10">

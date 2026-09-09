@@ -1,6 +1,6 @@
 import type { Prisma } from '@prisma/client';
 import { Resend } from 'resend';
-import { CONTACT_EMAIL, SITE_NAME } from './site-contact';
+import { CONTACT_EMAIL, SITE_NAME, SITE_URL } from './site-contact';
 import { formatPesos } from './money';
 import { isPricedIn } from './discount';
 import { formatEventDay } from './event-schedule';
@@ -61,13 +61,22 @@ const BRAND_ORANGE = '#FF6B00';
 const BRAND_BLUE = '#007AFF';
 
 /**
- * Uploaded once to the public Blob store (see blob.ts) from the site's own
- * public/run-as-one-logo.png. An email client fetches images over the open
- * internet, not from this app's filesystem, so the logo needs a durable
- * public URL rather than a local /public path — Blob's URL works regardless
- * of whatever the custom domain's DNS is doing.
+ * The site's own brand lockup, the same one the navbar shows, exported as a
+ * PNG because Gmail strips inline SVG and no email client resolves the app's
+ * CSS variables. An email client fetches images over the open internet rather
+ * than from this app's filesystem, so it needs an absolute URL — but it is
+ * served from `public/` on the site's own CDN rather than from the Blob store
+ * it used to live in. Blob meant the logo was a file somebody had uploaded by
+ * hand, versioned nowhere and updated out of band; in `public/` it ships with
+ * the code that renders it and can never disagree with the site.
+ *
+ * Drawn at 3x (672x168) for a 224px display width, white ink on a transparent
+ * ground. It relies on the header cell behind it holding its #050505: a client
+ * that drops that background renders white on white. That is a deliberate
+ * trade — every brand asset in this app is exported transparent — not an
+ * oversight, so do not quietly bake a background plate back in.
  */
-const LOGO_URL = 'https://7yksnqfk5t2ii6xo.public.blob.vercel-storage.com/email-assets/run-as-one-logo.png';
+const LOGO_URL = `${SITE_URL}/email/run-as-one-logo.png`;
 
 let client: Resend | null = null;
 
@@ -408,7 +417,7 @@ function renderHtml(doc: EmailDocument): string {
             </tr>
             <tr>
               <td align="center" style="background-color: #050505; padding: 28px 32px 26px;">
-                <img src="${LOGO_URL}" alt="${SITE_NAME}" width="140" style="width: 140px; max-width: 40%; height: auto; display: block; margin: 0 auto;" />
+                <img src="${LOGO_URL}" alt="${SITE_NAME}" width="224" style="width: 224px; max-width: 62%; height: auto; display: block; margin: 0 auto;" />
                 <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 16px auto 0;">
                   <tr>
                     <td style="background-color: ${style.bg}; border: 1px solid ${style.border}; border-radius: 999px; padding: 7px 16px;">

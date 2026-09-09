@@ -35,7 +35,7 @@ export default function HeroSection() {
         <div className="flex flex-row w-fit mx-auto items-center justify-center gap-2 mb-4">
           <Flag size={20} className="text-accent-blue" />
           <span className="text-sm font-bold tracking-widest uppercase text-accent-orange">
-            Philippine Running Events
+            Running Events
           </span>
         </div>
 

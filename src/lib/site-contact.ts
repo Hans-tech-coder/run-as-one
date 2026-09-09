@@ -10,6 +10,19 @@
 
 export const SITE_NAME = 'RunAsOne';
 
+/**
+ * Where the site lives on the open internet.
+ *
+ * Two things need an absolute URL rather than a path: the Open Graph card a
+ * link preview scrapes, and the logo an email client fetches from outside the
+ * app entirely. `NEXT_PUBLIC_SITE_URL` lets a preview deployment describe
+ * itself correctly; production falls back to the real domain rather than to
+ * `VERCEL_URL`, whose per-deployment hostname would put a URL that dies with
+ * the deployment into an email a runner keeps.
+ */
+export const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ?? 'https://run-as-one.vercel.app';
+
 /** The inbox a runner or an organizer actually reaches. */
 export const CONTACT_EMAIL = 'info@cresendorunningcommunity.com';
 

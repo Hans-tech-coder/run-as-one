@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { LayoutDashboard, Calendar, Settings, LogOut, Menu, X, Megaphone } from 'lucide-react';
+import { RunAsOneLogo } from '@/components/RunAsOneLogo';
 import LinkPending from '@/components/ui/LinkPending';
 import type { SignedInUser } from '@/lib/signed-in-user';
 import './Admin.css';
@@ -55,7 +56,7 @@ export default function AdminShell({
       {/* Sidebar */}
       <aside className={`admin-sidebar ${isMobileMenuOpen ? 'open' : ''}`}>
         <div className="admin-brand flex items-center gap-3 font-bold text-xl px-6 py-4">
-          <img src="/run-as-one-logo.png" alt="RunAsOne" width={1536} height={1024} style={{ height: '48px', width: 'auto' }} />
+          <RunAsOneLogo className="[--rao-logo-size:38px]" />
         </div>
 
         <nav className="admin-nav">

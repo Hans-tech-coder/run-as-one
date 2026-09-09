@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { RunAsOneLogo } from '@/components/RunAsOneLogo';
 
 import './../Auth.css';
 
@@ -57,7 +58,7 @@ export default function AdminRegister() {
       
       <div className="auth-card">
         <div className="auth-header">
-          <img src="/run-as-one-logo.png" alt="RunAsOne" width={1536} height={1024} style={{ height: '72px', width: 'auto', marginBottom: '1.25rem' }} />
+          <RunAsOneLogo variant="stacked" className="[--rao-logo-size:64px] mb-5" />
           <h1 className="auth-title">Apply as Organizer</h1>
           <p className="auth-subtitle">Register to manage your running events.</p>
         </div>

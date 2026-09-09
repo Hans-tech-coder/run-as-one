@@ -112,6 +112,17 @@ input[type="checkbox"],
   --accent-orange: #FF6B00;
   --accent-blue: #007AFF;
   --gradient-primary: linear-gradient(90deg, var(--accent-orange) 0%, var(--accent-blue) 100%);
+
+  /* ── Brand lockup colours ────────────────────────────────────
+     The four inks `components/RunAsOneLogo` draws with, named by their job in
+     the logo rather than by hue, so the same component can serve the dark app
+     today and the light theme the day the switch lands: only this block moves.
+     They point at the site tokens rather than repeating the hexes, so the logo
+     can never drift from the accents beside it. */
+  --logo-ink: var(--text-primary);
+  --logo-mid: var(--accent-blue);
+  --logo-accent: var(--accent-orange);
+  --logo-muted: var(--text-secondary);
   
   --glass-bg: rgba(255, 255, 255, 0.05);
   --glass-border: rgba(255, 255, 255, 0.1);
@@ -620,3 +631,97 @@ input[type="datetime-local"]:focus::-webkit-calendar-picker-indicator {
 
 html, body { overflow-x: hidden; }
 
+
+/* ── Brand lockup — components/RunAsOneLogo ────────────────────
+   One number sizes the whole thing. `--rao-logo-size` is the height of the
+   drawn mark and everything else — wordmark, tagline, every gap — is `em` off
+   it, so a call site sets one value (responsively, if it wants) and the lockup
+   keeps its proportions rather than each surface re-tuning a font size beside a
+   pixel height, which is what left the old raster logo a different size in
+   every corner of the app. */
+.rao-logo {
+  --rao-logo-size: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.34em;
+  font-size: var(--rao-logo-size);
+  line-height: 1;
+  color: var(--logo-ink);
+}
+
+.rao-logo--stacked {
+  flex-direction: column;
+  gap: 0.18em;
+}
+
+.rao-logo__mark {
+  display: block;
+  flex: none;
+  height: 1em;
+  width: auto;
+}
+
+.rao-logo__words {
+  display: flex;
+  flex-direction: column;
+  gap: 0.09em;
+}
+
+.rao-logo--stacked .rao-logo__words {
+  align-items: center;
+}
+
+/* Wide tracking is what makes a short uppercase wordmark read as a mark rather
+   than as a word. Tracking adds its space *after* the final letter too, so the
+   negative margin pulls that phantom column back off the right edge and the
+   lockup sits optically flush — visible the moment the logo is centred, as it
+   is on the auth cards. */
+.rao-logo__word {
+  font-family: var(--font-sans, 'Outfit'), 'Outfit', ui-sans-serif, system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 0.5em;
+  line-height: 1;
+  letter-spacing: 0.155em;
+  margin-right: -0.155em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--logo-ink);
+}
+
+/* The endorsement line. Left-aligned by construction — `.rao-logo__words` is a
+   flex column, so it shares the wordmark's own left edge and the two lines have
+   one alignment axis between them instead of two. Right-aligning it would hang
+   it off an edge that the wordmark's letter-spacing keeps moving.
+
+   The size has a floor rather than being pure `em`. 0.17em keeps the byline at
+   about a third of the wordmark — the ratio that reads as an endorsement rather
+   than as a second line of the name — but that is 5.4px in the navbar, so the
+   `max()` holds it at a legible 9.5px in chrome too small to carry the ratio.
+   Small text does not scale down linearly and stay readable, and letting it go
+   proportionally larger there is what optical sizing does anyway. Mixed case,
+   not the wordmark's caps: the contrast is what marks it as the quieter line. */
+.rao-logo__byline {
+  font-family: var(--font-body, 'Inter'), 'Inter', ui-sans-serif, system-ui, sans-serif;
+  font-weight: 500;
+  font-size: max(9.5px, 0.17em);
+  line-height: 1;
+  letter-spacing: 0.06em;
+  margin-right: -0.06em;
+  white-space: nowrap;
+  color: var(--logo-muted);
+}
+
+/* The light half of the logo's palette, sitting here ahead of the theme switch
+   itself. Ink and muted simply invert, but the two accents are *deeper* than
+   the site's own `--accent-orange` / `--accent-blue`: brand orange on white is
+   2.8:1, and a 5.5-unit stroke at that contrast reads as a smudge rather than
+   as a line. These two clear 3:1 against white, which is what WCAG asks of a
+   graphical object — a logotype is formally exempt, but a logo you have to
+   squint at is a bad logo whatever the exemption says. When the switch lands it
+   only has to set `data-theme` on the root; nothing in the component changes. */
+:root[data-theme="light"] {
+  --logo-ink: #0a0a0b;
+  --logo-mid: #0062d6;
+  --logo-accent: #d95f00;
+  --logo-muted: #52525b;
+}

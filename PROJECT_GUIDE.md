@@ -119,7 +119,8 @@ src/
     admin/                  # organizer portal (AdminShell, Admin.css, Auth.css)
     superadmin/             # platform-owner portal (SuperAdminShell)
     api/                    # all route handlers — see §6
-  components/               # public-site components (Navbar, Footer, EventGrid, StatusPanel…)
+  components/               # public-site components (Navbar, Footer, EventGrid,
+                            #   StatusPanel, RunAsOneLogo…)
   components/ui/            # cross-app primitives: AlertProvider, AlertModal, Toast,
                             #   Skeleton, LoadingDots, LinkPending, FieldError, table
   lib/                      # domain logic — see §5. Read these before re-deriving a rule.
@@ -650,6 +651,113 @@ These are the user's own standing preferences. Follow them without being asked.
   siblings. (`.claude/` is gitignored, so the skill is per-checkout: reinstall
   it from `github.com/Jakubantalik/transitions.dev` under `skills/`.)
 - Fonts: Outfit (`--font-sans`, headings), Inter (`--font-body`).
+- **The logo is a component, not an image** (`components/RunAsOneLogo.tsx`,
+  `.rao-logo` in `globals.css`, geometry in `lib/brand-mark.ts` — the one copy
+  of the path data, which the component, the themed favicon and the icon
+  raster scripts all draw from; `app/icon.svg` is the sole exception, a static
+  file that can import nothing, so change it in the same edit). It replaced `public/run-as-one-logo.png`
+  everywhere a person sees the app: the public navbar and footer, both
+  dashboards' sidebars, and the two auth cards. Two halves made of deliberately
+  different material — **the mark is SVG geometry** (three concentric arcs, ink
+  then blue then orange, with a solid orange dot carrying on past the outer
+  arc: a track curve with the pack inside it and one runner already clear), and
+  **the wordmark is real HTML text**, because SVG `<text>` is laid out in
+  whatever font actually resolved, so its width — and with it the cropping of a
+  fixed `viewBox` — changes between the fallback face and the real one. Live
+  text sidesteps that, scales crisply, and is what a screen reader announces
+  when the lockup sits in a link (which is why the mark beside it is
+  `aria-hidden`, and why the DOM text is mixed-case and uppercased in CSS).
+  Three variants — `full`, `stacked`, `mark`. **Flat colour, never the
+  orange→blue gradient**: this logo has to survive a bib, a shirt and a
+  tarpaulin, and a ramp is the first thing a printer loses.
+- **"by CRC" is part of the lockup, not an option.** RunAsOne is Cresendo
+  Running Community's platform, and a parent brand that appears on some
+  surfaces and not others stops reading as a parent brand — so the endorsement
+  line renders on every variant that has a wordmark, and there is no prop to
+  turn it off. It sits **flush with the left edge of the wordmark** in the
+  horizontal lockup and centred in the stacked one, sharing the wordmark's own
+  alignment axis so the two lines have one edge between them rather than two;
+  right-aligning it would hang it off an edge that letter-spacing keeps moving.
+  Mixed case against the wordmark's caps is what marks it as the quieter line.
+  Its size is `max(9.5px, 0.24em)` rather than pure `em`: small text does not
+  scale down linearly and stay readable, so the floor holds it legible at the
+  32px the navbar uses while it still grows on the surfaces that can carry it.
+  It replaced a "Race registration" tagline that never shipped — one sub-line
+  is all the slot holds, and the parent brand earns it.
+- **Sizing the logo is one number.** `--rao-logo-size` is the height of the
+  mark and everything else — wordmark, tagline, every gap — is `em` off it, so
+  a call site sets one value and the proportions hold:
+  `className="[--rao-logo-size:32px] sm:[--rao-logo-size:38px]"`. Do not size
+  the wordmark or the gaps per surface; that is what left the old raster logo a
+  different size in every corner of the app.
+- **The logo draws in four variables, not hexes** — `--logo-ink`, `--logo-mid`,
+  `--logo-accent`, `--logo-muted`, defined in `globals.css` and pointing at the
+  site tokens so the logo cannot drift from the accents beside it. A
+  `:root[data-theme="light"]` block already holds the light values, with the
+  two accents deepened (`#d95f00`, `#0062d6`) because brand orange on white is
+  2.8:1 and a thin stroke at that contrast reads as a smudge. **When the
+  light/dark switch lands it only has to set `data-theme` on the root** — the
+  component does not change. A logo on an unusual surface can likewise be
+  re-tinted by setting `--logo-ink` on its container.
+- **The three brand assets outside the component, and why each is a different
+  file.** They are not interchangeable and the favicon is not any of the others:
+  - **`app/icon.svg`, `app/favicon.ico`, `app/apple-icon.png` — the mark alone,
+    no wordmark**, since a tab icon is ~16px. The SVG carries literal colours and
+    its own `prefers-color-scheme` rule (a favicon is fetched as a standalone
+    document and never sees the page's stylesheet) and wins in every modern
+    browser; the `.ico` is the old-browser and crawler fallback and the Apple
+    icon is what iOS puts on a home screen. Both are regenerated from the mark
+    with `sharp` — pure geometry, so they rasterise without needing a font.
+  - **`app/opengraph-image.png` — the 1200x630 card a shared link shows.** This
+    is what Messenger, Viber, Facebook, X and Slack scrape, and **it has nothing
+    to do with the favicon**: before it existed a shared link showed no image at
+    all. Next turns the file into `og:image` on its own, but only once
+    `metadataBase` is set in `layout.tsx` — a preview will not resolve a relative
+    path. `SITE_URL` in `site-contact.ts` is that base.
+  - **`public/email/run-as-one-logo.png` — the full lockup for the email
+    header**, 3x for a 224px display width. Email needs a raster: Gmail strips
+    inline SVG and no client resolves the app's CSS variables. It moved out of
+    the Blob store it used to live in and into `public/`, so it ships with the
+    code that renders it instead of being a file somebody uploaded by hand and
+    versioned nowhere.
+  **Every one of them is exported with a transparent background** — this is the
+  project's rule for brand assets, decided knowing the cost, so never bake a
+  full-bleed background plate back in to make one safer. The ink is white, so
+  each asset depends on the surface behind it being dark; the email header cell
+  holds `#050505`, and the icons sit on browser and OS chrome that is dark more
+  often than not.
+
+  **The Open Graph card is the one asset that carries its own ground**, because
+  it is the one nobody else's surface can be trusted for: it was demonstrably
+  reduced to two coloured arcs when a light-mode preview composited it onto
+  white. It gets an **inset rounded panel, not a full-bleed plate** — `#050505`
+  with the app's own hairline border, a 30px transparent margin all round, and
+  the radial glows and the orange→blue rule living inside it. 30px is not
+  arbitrary: some platforms crop a 1.91:1 card to 2:1, taking 15px off the top
+  and bottom, and a tighter margin would leave the panel looking clipped rather
+  than deliberately inset.
+- **The favicon follows the theme; the Open Graph card cannot, ever.** This is
+  the one asymmetry worth understanding before someone tries to "fix" the
+  second. `components/ThemedFavicon` (mounted in the root layout) rewrites the
+  SVG icon link to a data URI whenever the theme changes, taking an explicit
+  `data-theme` first and the system `prefers-color-scheme` otherwise — the same
+  precedence `globals.css` uses, so the light/dark switch will not have to
+  remember to tell the favicon about itself. It swaps the `href` rather than
+  leaning on the `prefers-color-scheme` rule inside `app/icon.svg`, because
+  whether a browser *evaluates* a media query inside a favicon differs between
+  Firefox, Chrome and Safari and has changed more than once; the static file
+  stays as the pre-hydration and no-JavaScript default. **The Open Graph card
+  has no equivalent and no workaround**: `og:image` is one static URL that
+  Facebook's, Slack's and X's crawlers fetch server-side, cache on their own
+  infrastructure and serve to every viewer alike. The crawler sends no
+  colour-scheme signal, the cached image is shared between a light-mode and a
+  dark-mode viewer, and no platform negotiates alternates. A card therefore has
+  to be legible on any ground *by design*, which is exactly why this one carries
+  its own inset dark panel rather than borrowing the platform's background.
+  **Regenerating the two with a wordmark means rendering them in a browser**,
+  where the real Outfit face is loaded — rasterising SVG `<text>` outside one
+  picks up whatever font the rasteriser happens to find. `public/run-as-one-logo.png`
+  is the previous CRC artwork; nothing references it any more.
 - Commit style: `feat:` / `fix:` / `refactor:` plus a sentence saying what changed
   for the user.
 

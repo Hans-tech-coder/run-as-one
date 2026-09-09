@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Mail } from 'lucide-react';
 import { BrandGlyph } from './BrandIcons';
+import { RunAsOneLogo } from './RunAsOneLogo';
 import {
   CONTACT_EMAIL,
   SITE_NAME,
@@ -95,17 +96,11 @@ export default function Footer() {
       <div className="relative grid w-full max-w-7xl grid-cols-1 gap-10 px-4 pt-12 pb-10 sm:px-6 sm:pt-16 lg:grid-cols-[1.4fr_2fr] lg:gap-16 lg:px-8 mx-auto">
         <div className="flex flex-col gap-6">
           <Link href="/" className="w-fit no-underline" aria-label={`${SITE_NAME} home`}>
-            <img
-              src="/run-as-one-logo.png"
-              alt={SITE_NAME}
-              width={1536}
-              height={1024}
-              className="h-11 w-auto sm:h-14"
-            />
+            <RunAsOneLogo className="[--rao-logo-size:40px] sm:[--rao-logo-size:48px]" decorative />
           </Link>
 
           <p className="m-0 max-w-[420px] text-base leading-relaxed text-secondary">
-            Race registration for the Philippine running community. Browse open
+            Race registration for the running community. Browse open
             events, sign your whole group up in one transaction, and collect
             your official time and e-certificate once the organizer publishes
             them.

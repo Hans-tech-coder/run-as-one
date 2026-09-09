@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="40 44 96 76" role="img" aria-label="RunAsOne">
+  <!-- The mark from components/RunAsOneLogo, as the browser-tab icon. Colours are
+       literal here rather than the app's --logo-* variables: a favicon is fetched
+       as a standalone document and never sees the page's stylesheet. The ink
+       stroke follows the browser chrome instead, which is the one thing an SVG
+       favicon can still do for itself. -->
+  <style>
+    .ink { stroke: #0a0a0b; }
+    @media (prefers-color-scheme: dark) { .ink { stroke: #ffffff; } }
+  </style>
+  <g fill="none" stroke-linecap="round">
+    <path class="ink" d="M52.5 110.4 A42 42 0 0 1 109.8 57.9" stroke-width="9"/>
+    <path d="M65.6 101.6 A27 27 0 0 1 101.2 70.6" stroke="#007AFF" stroke-width="7"/>
+    <path d="M79.4 99.4 A13 13 0 0 1 95.4 83.4" stroke="#FF6B00" stroke-width="5.5"/>
+    <circle cx="124.7" cy="66.6" r="6.5" fill="#FF6B00"/>
+  </g>
+</svg>
