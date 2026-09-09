@@ -45,9 +45,11 @@ platform takes a per-runner admin fee.
 - Other notable deps: `jose` (JWT), `bcryptjs`, `pdf-lib` (e-certificates),
   `xlsx` (results import / registrant export), `@tanstack/react-table`,
   `framer-motion`, `gsap`, `lucide-react`.
-- **Production is live** at `https://run-as-one.vercel.app` — Vercel project
-  `run-as-one`, linked to `Hans-tech-coder/run-as-one`. Every push to `main`
-  deploys to production; there is no manual deploy step.
+- **Production is live** at `https://run-as-one.cresendorunningcommunity.com`
+  — Vercel project `run-as-one`, linked to `Hans-tech-coder/run-as-one`. Every
+  push to `main` deploys to production; there is no manual deploy step. That
+  custom domain is the *only* public hostname the project answers on, and it is
+  what `SITE_URL` in `lib/site-contact.ts` must name.
 - **Work lands on `dev`, not `main`.** Because a push to `main` ships to
   production, day-to-day commits go to the long-lived `dev` branch, and every
   push to `dev` gets its own Vercel preview deployment. `main` is only advanced
@@ -713,7 +715,13 @@ These are the user's own standing preferences. Follow them without being asked.
     to do with the favicon**: before it existed a shared link showed no image at
     all. Next turns the file into `og:image` on its own, but only once
     `metadataBase` is set in `layout.tsx` — a preview will not resolve a relative
-    path. `SITE_URL` in `site-contact.ts` is that base.
+    path. `SITE_URL` in `site-contact.ts` is that base, and **it has to be a
+    hostname this Vercel project actually serves**: it once named a
+    `*.vercel.app` host the project had never been assigned, which broke nothing
+    in a browser but pointed `og:image` at a URL Facebook could not fetch, so
+    the crawler substituted the featured event's poster and captioned the card
+    with a domain that did not exist. `opengraph-image.alt.txt` beside the PNG
+    supplies the card's `og:image:alt`.
   - **`public/email/run-as-one-logo.png` — the full lockup for the email
     header**, 3x for a 224px display width. Email needs a raster: Gmail strips
     inline SVG and no client resolves the app's CSS variables. It moved out of

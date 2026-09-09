@@ -19,9 +19,19 @@ export const SITE_NAME = 'RunAsOne';
  * itself correctly; production falls back to the real domain rather than to
  * `VERCEL_URL`, whose per-deployment hostname would put a URL that dies with
  * the deployment into an email a runner keeps.
+ *
+ * **This has to be a hostname the Vercel project actually serves.** The
+ * fallback used to be `run-as-one.vercel.app`, which was never one of the
+ * project's domains — the only production domain is the one below. Everything
+ * on the page still rendered, so the mistake was invisible in a browser, but
+ * `metadataBase` made `og:image` absolute against that dead host: Facebook's
+ * crawler could not fetch the card, fell back to the largest image on the page,
+ * and showed the featured event's poster instead of the RunAsOne card, over a
+ * `run-as-one.vercel.app` byline nobody could open.
  */
 export const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL ?? 'https://run-as-one.vercel.app';
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  'https://run-as-one.cresendorunningcommunity.com';
 
 /** The inbox a runner or an organizer actually reaches. */
 export const CONTACT_EMAIL = 'info@cresendorunningcommunity.com';
