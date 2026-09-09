@@ -40,7 +40,8 @@ const SIGNATURE_HINT_ID = "consent-signature-hint";
  * Under the tick sits the typed signature. It is a separate act on purpose:
  * ticking a box is something a browser can be told to do, while typing your
  * own name is the part a person has to mean. The two together are what the
- * organizer keeps — see lib/consent-signature.ts for what counts as a match.
+ * organizer keeps. Whatever the runner types is accepted — see
+ * lib/consent-signature.ts for why the box no longer checks the name.
  *
  * Wording comes from the event, so an organizer can replace it with their own
  * terms — see resolveConsentWaiver for the fallback.

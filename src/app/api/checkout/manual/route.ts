@@ -78,15 +78,12 @@ export async function POST(request: Request) {
     }
 
     // The signature is the other half of that gate, and it is checked here for
-    // the same reason: a tick can be posted by anything, while a name that has
-    // to match a runner on this very order is a claim the request itself has to
-    // make good on. Uppercased first so the check runs on the value that will
-    // be stored — see lib/consent-signature.ts, which both wizards share.
+    // the same reason: a tick can be posted by anything, while a name someone
+    // typed is a person putting themselves on the record. Only its presence is
+    // required — see lib/consent-signature.ts, which both wizards share.
+    // Uppercased first so the check runs on the value that will be stored.
     const storedConsentSignature = upperCaseForStorage(consentSignature);
-    const signatureProblem = consentSignatureError(
-      storedConsentSignature,
-      participants ?? []
-    );
+    const signatureProblem = consentSignatureError(storedConsentSignature);
     if (signatureProblem) {
       return NextResponse.json({ error: signatureProblem }, { status: 400 });
     }

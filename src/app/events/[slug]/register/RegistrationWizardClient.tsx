@@ -215,12 +215,12 @@ export default function RegistrationWizardClient({
   // The typed signature that goes with the tick. Held here rather than in
   // ConsentWaiver so the submit handlers can check it before they send, and so
   // it can be sent — a signature the server never sees is not evidence of
-  // anything. Its error only appears once the runner has left the box or tried
-  // to submit: complaining that a name is not a runner's while it is still
-  // half-typed would be true of every name on its way in.
+  // anything. Whatever the runner types is accepted; only an empty box is an
+  // error, and it waits until they have left the box or tried to submit rather
+  // than nagging a name on its way in.
   const [consentSignature, setConsentSignature] = useState("");
   const [signatureTouched, setSignatureTouched] = useState(false);
-  const signatureProblem = consentSignatureError(consentSignature, participants);
+  const signatureProblem = consentSignatureError(consentSignature);
   const signatureError = signatureTouched ? signatureProblem : undefined;
   const consentWaiverParagraphs = resolveConsentWaiver(event);
   // Set by the organizer on this event. Empty means bank transfer cannot
@@ -621,9 +621,8 @@ export default function RegistrationWizardClient({
       return;
     }
 
-    // The waiver is signed, not only ticked. The name is checked against the
-    // runners on this order rather than against the first of them, because one
-    // person routinely registers a whole group — see lib/consent-signature.ts.
+    // The waiver is signed, not only ticked. Any name the runner types counts —
+    // the box only has to be filled in — see lib/consent-signature.ts.
     if (signatureProblem) {
       setSignatureTouched(true);
       await alert({
@@ -717,9 +716,8 @@ export default function RegistrationWizardClient({
       return;
     }
 
-    // The waiver is signed, not only ticked. The name is checked against the
-    // runners on this order rather than against the first of them, because one
-    // person routinely registers a whole group — see lib/consent-signature.ts.
+    // The waiver is signed, not only ticked. Any name the runner types counts —
+    // the box only has to be filled in — see lib/consent-signature.ts.
     if (signatureProblem) {
       setSignatureTouched(true);
       await alert({
