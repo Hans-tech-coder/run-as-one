@@ -121,7 +121,7 @@ src/
     api/                    # all route handlers — see §6
   components/               # public-site components (Navbar, Footer, EventGrid, StatusPanel…)
   components/ui/            # cross-app primitives: AlertProvider, AlertModal, Toast,
-                            #   Skeleton, FieldError, table
+                            #   Skeleton, LoadingDots, LinkPending, FieldError, table
   lib/                      # domain logic — see §5. Read these before re-deriving a rule.
   data/mockEvents.ts        # legacy mock data
 prisma/schema.prisma        # the data model, heavily commented
@@ -564,6 +564,59 @@ These are the user's own standing preferences. Follow them without being asked.
   a list and jumping height. The redemptions panel on `/admin/marketing` is the
   worked example. Bars must be direct children of the skeleton layer or they
   will not pulse.
+- **A whole screen waits differently from a panel.** Every admin and superadmin
+  page is a database read behind an auth cookie, so a click on the sidebar can
+  sit for a second with the page being left still on screen — and an organizer
+  who cannot tell a slow page from an ignored click will click again. Two things
+  answer that, and both are already wired:
+  - `admin/loading.tsx` and `superadmin/loading.tsx` render
+    `admin/AdminRouteLoading` — the page frame every screen in the dashboard
+    shares (an 80px `.admin-header` with a pulsing skeleton bar where the title
+    goes, then `.admin-content`) with the brand loader centred in it. Next.js
+    makes that the Suspense fallback for the segment **and everything nested
+    under it**, so a slow registrants table or results upload is covered with
+    nothing to add per route. A new admin section needs no `loading.tsx` of its
+    own unless it wants a different one.
+  - `components/ui/LinkPending` marks *which* link was clicked, because the
+    sidebar's active state comes from `usePathname()` and does not move until
+    the navigation commits. It reads `useLinkStatus()` (Next 15.3+, and it only
+    works inside a `<Link>`), sits in a slot that is always in the layout so
+    appearing costs no layout shift, and fades in after 120ms so a fast
+    navigation never flashes it. It rides the sidebar's nav items **and** the
+    three destinations in `events/EventActionsMenu`.
+- **A row's action menu stays open on the page it opened.** The menu used to
+  close the instant an item was clicked, which on a slow destination left the
+  events table sitting there unchanged — indistinguishable from a button that
+  did nothing. Clicking Registrants, Manage Results or Edit Event now puts the
+  menu in `.is-navigating`: the other items dim back and stop taking clicks,
+  the chosen one keeps full contrast with `LinkPending`'s dots beside it, and
+  an outside click can no longer dismiss it. The page it opened is what
+  replaces it. Pause and Delete are unchanged — they act in place and close.
+- **The dashboard's page transition is the skeleton reveal, applied to a
+  route.** `.admin-content` and `.admin-header-title` fade and un-blur on mount
+  over `--skel-reveal-dur` / `--skel-reveal-ease` — the same numbers `.t-skel`
+  uses on the marketing panel, so a route swap and a panel swap move alike. The
+  two halves cannot share a grid cell the way `.t-skel` does (React unmounts
+  the fallback and mounts the page in its place, so they are never on screen
+  together), which is why the motion rather than the markup is what carries
+  across. It is CSS on those two selectors rather than a wrapper component
+  because every page in the dashboard already renders both, and a client
+  navigation builds them fresh — which is what makes the animation replay. The
+  `.admin-header` bar is deliberately left out: it is identical chrome on both
+  sides of the swap, and fading it would flicker the frame the reveal exists to
+  hold still. The fallback's own reveal is dropped to `--duration-quick`,
+  because 400ms of fade before the dots appear is 400ms still looking like
+  nothing happened.
+- **The loader is three pulsing dots in solid brand orange**
+  (`components/ui/LoadingDots`, `.t-dots` in `globals.css`). Solid, not the
+  orange→blue gradient: at 12px a ramp averages into a grey-lavender that reads
+  as neither colour, and the one element on screen saying "your click was
+  heard" has to be unmistakable. Three sizes — `sm` beside a word, `md`, `lg`
+  filling a page. All the motion is CSS, deliberately: the component renders
+  inside `loading.tsx` fallbacks, and a framer-motion version would drag every
+  one of them across the client boundary for an animation a keyframe already
+  does. Reduced motion swaps the swell for a fade rather than for nothing — the
+  element exists to say something is happening.
 - **No gradient buttons inside the admin.** Every action in the dashboard —
   toolbar, panel header, form footer, modal submit — wears `.btn-light`
   (`Admin.css`): a **light pill** — `#e4e4e7` fill, `#09090b` label, white on

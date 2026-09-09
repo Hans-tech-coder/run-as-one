@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { LayoutDashboard, Users, Flag, LogOut, Menu, X } from 'lucide-react';
+import LinkPending from '@/components/ui/LinkPending';
 import type { SignedInUser } from '@/lib/signed-in-user';
 import '../admin/Admin.css';
 
@@ -57,6 +58,7 @@ export default function SuperAdminShell({
             >
               {item.icon}
               {item.name}
+              <LinkPending />
             </Link>
           ))}
         </nav>

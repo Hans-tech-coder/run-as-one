@@ -77,6 +77,19 @@ input[type="checkbox"],
   --toast-scale: 0.97;
   --toast-ease: cubic-bezier(0.22, 1, 0.36, 1);
 
+  /* Three-dot brand loader (route waits, pending nav links)
+     One pulse shared by every size: the variants below only re-set these, so
+     the loader in a sidebar link and the one filling a page keep the same
+     rhythm. The stagger is negative on the first two dots so the wave is
+     already mid-flight on the first frame — a loader that starts flat reads
+     as a frozen screen for its first half-second, which is exactly the moment
+     it exists to answer. */
+  --dots-size: 10px;
+  --dots-gap: 10px;
+  --dots-scale: 1.5;
+  --dots-dur: 1200ms;
+  --dots-stagger: 200ms;
+
   /* Skeleton loader and reveal */
   --skel-pulse-dur: 1000ms;
   --skel-pulse-min: 0.5;
@@ -527,6 +540,82 @@ input[type="datetime-local"]:focus::-webkit-calendar-picker-indicator {
 @media (prefers-reduced-motion: reduce) {
   .t-skel-skeleton, .t-skel-content { transition: none !important; }
   .t-skel-skeleton.is-pulsing > * { animation: none !important; }
+}
+
+/* Three-dot brand loader ─────────────────────────────────────────────────
+   Shown wherever the app is fetching a whole screen: the admin and superadmin
+   route fallbacks (`loading.tsx`) and the pending marker on a sidebar link.
+
+   Solid brand orange, not the orange→blue gradient. The gradient is the app's
+   signature on big surfaces — a button, a heading — but a 12px circle is too
+   small to show a ramp: both ends average into a grey-lavender that reads as
+   neither colour and looks like a rendering fault. The one thing on screen
+   saying "your click was heard" has to be unmistakable, so it takes the
+   brand's loudest single colour against the near-black panel.
+
+   The row is `align-items: flex-end` and stands `size + jump` tall, so the
+   dots rise inside a box that never changes height. Nothing around the loader
+   moves while it runs. */
+.t-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--dots-gap);
+  /* Tall enough for a dot at full swell. `scale` is a transform and so costs
+     the layout nothing, but a box sized to the resting dot would let the peak
+     of the pulse spill past it — and the row action menu, which is one of the
+     places this runs, clips its own overflow. */
+  height: calc(var(--dots-size) * var(--dots-scale));
+}
+
+.t-dots-dot {
+  width: var(--dots-size);
+  height: var(--dots-size);
+  border-radius: 50%;
+  background-color: var(--accent-orange);
+  will-change: transform;
+  animation: t-dots-pulse var(--dots-dur) var(--ease-in-out) infinite;
+}
+
+/* Negative delays rather than positive ones: a positive stagger holds the
+   later dots still until their turn comes round the first time. */
+.t-dots-dot:nth-child(1) { animation-delay: calc(var(--dots-stagger) * -2); }
+.t-dots-dot:nth-child(2) { animation-delay: calc(var(--dots-stagger) * -1); }
+.t-dots-dot:nth-child(3) { animation-delay: 0ms; }
+
+/* Swells and settles within the one cycle, so the animation runs `infinite`
+   rather than `alternate` — the return trip is already in the keyframes. */
+@keyframes t-dots-pulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(var(--dots-scale)); }
+}
+
+/* A hint beside a word, not a loader in its own right. */
+.t-dots--sm {
+  --dots-size: 4px;
+  --dots-gap: 4px;
+  --dots-dur: 1000ms;
+  --dots-stagger: 160ms;
+}
+
+/* Filling the content area of a page that is still on its way. */
+.t-dots--lg {
+  --dots-size: 12px;
+  --dots-gap: 12px;
+}
+
+/* Reduced motion still has to say "working" — the point of this element is
+   that something is happening — so the swell becomes a fade rather than
+   nothing at all. */
+@media (prefers-reduced-motion: reduce) {
+  .t-dots-dot {
+    animation-name: t-dots-fade;
+    animation-direction: alternate;
+    animation-duration: 1000ms;
+  }
+}
+@keyframes t-dots-fade {
+  from { opacity: 1; }
+  to   { opacity: 0.35; }
 }
 
 html, body { overflow-x: hidden; }

@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { MoreVertical, Users, Trophy, Edit, Trash2, PauseCircle, PlayCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import LinkPending from '@/components/ui/LinkPending';
 
 export default function EventActionsMenu({
   eventId,
@@ -24,6 +25,13 @@ export default function EventActionsMenu({
   const [isOpen, setIsOpen] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0 });
   const [mounted, setMounted] = useState(false);
+  // Which destination the organizer has asked for, once they have asked for
+  // one. Every item in this menu except Pause and Delete leads to a page that
+  // is a database read behind an auth cookie, and the old menu closed the
+  // instant it was clicked — so a slow one left the events table sitting
+  // there unchanged, which reads as a button that did nothing. The menu now
+  // stays open on the answer it is waiting for.
+  const [navigatingTo, setNavigatingTo] = useState<string | null>(null);
   
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -45,6 +53,10 @@ export default function EventActionsMenu({
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
+      // A navigation already in flight owns the menu until the page arrives:
+      // closing it here would take away the only thing on screen saying the
+      // click was heard.
+      if (navigatingTo) return;
       if (
         dropdownRef.current && 
         !dropdownRef.current.contains(event.target as Node) &&
@@ -71,7 +83,7 @@ export default function EventActionsMenu({
       window.removeEventListener('scroll', handleScrollOrResize, true);
       window.removeEventListener('resize', handleScrollOrResize);
     };
-  }, [isOpen, updatePosition]);
+  }, [isOpen, updatePosition, navigatingTo]);
 
   const toggleMenu = () => {
     if (isOpen) {
@@ -130,10 +142,18 @@ export default function EventActionsMenu({
     }
   };
 
+  /* The three destinations, built from one shape so the pending treatment
+     cannot end up on two of them and not the third. */
+  const destinations = [
+    { href: `/admin/events/${eventId}/registrants`, icon: <Users size={16} />, label: 'Registrants' },
+    { href: `/admin/events/${eventId}/results`, icon: <Trophy size={16} />, label: 'Manage Results' },
+    { href: `/admin/events/${eventId}/edit`, icon: <Edit size={16} />, label: 'Edit Event' },
+  ];
+
   const dropdownContent = (
     <div 
       ref={dropdownRef}
-      className={`action-dropdown-menu t-dropdown`} 
+      className={`action-dropdown-menu t-dropdown ${navigatingTo ? 'is-navigating' : ''}`}
       data-origin="top-right"
       style={{
         position: 'fixed',
@@ -145,33 +165,23 @@ export default function EventActionsMenu({
       }}
     >
       <div className="py-1 flex flex-col" role="menu" aria-orientation="vertical">
-        <Link 
-          href={`/admin/events/${eventId}/registrants`} 
-          className="action-dropdown-item flex items-center gap-3 px-4 py-2 text-sm"
-          role="menuitem"
-          onClick={closeMenu}
-        >
-          <Users size={16} />
-          Registrants
-        </Link>
-        <Link 
-          href={`/admin/events/${eventId}/results`} 
-          className="action-dropdown-item flex items-center gap-3 px-4 py-2 text-sm"
-          role="menuitem"
-          onClick={closeMenu}
-        >
-          <Trophy size={16} />
-          Manage Results
-        </Link>
-        <Link 
-          href={`/admin/events/${eventId}/edit`} 
-          className="action-dropdown-item flex items-center gap-3 px-4 py-2 text-sm"
-          role="menuitem"
-          onClick={closeMenu}
-        >
-          <Edit size={16} />
-          Edit Event
-        </Link>
+        {destinations.map((destination) => (
+          <Link
+            key={destination.href}
+            href={destination.href}
+            className={`action-dropdown-item flex items-center gap-3 px-4 py-2 text-sm ${
+              navigatingTo === destination.href ? 'is-navigating' : ''
+            }`}
+            role="menuitem"
+            onClick={() => setNavigatingTo(destination.href)}
+          >
+            {destination.icon}
+            {destination.label}
+            {/* Reads the pending state of the Link above it, so only the item
+                actually clicked shows the dots. */}
+            <LinkPending />
+          </Link>
+        ))}
         {canPause && (
           <button
             onClick={handleTogglePause}
