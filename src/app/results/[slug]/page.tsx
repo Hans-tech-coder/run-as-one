@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { User, Medal, Hash, ChevronRight } from 'lucide-react';
 import { redirect } from 'next/navigation';
 import EventHeroBanner from '@/components/EventHeroBanner';
-import { canonicalEventPath, eventByParam } from '@/lib/event-slug';
+import { canonicalResultsPath, eventByParam, runnerResultPath } from '@/lib/event-slug';
 import { toWholeSeconds } from '@/lib/race-time';
 
 export default async function WinnersOverviewPage({ 
@@ -20,7 +20,7 @@ export default async function WinnersOverviewPage({
 
   if (!event) redirect('/');
 
-  const canonical = canonicalEventPath(event, slug, '/results');
+  const canonical = canonicalResultsPath(event, slug);
   if (canonical) redirect(canonical);
 
   // Fetch categories and top 3 results per gender
@@ -63,7 +63,7 @@ export default async function WinnersOverviewPage({
             
             {/* CTA to Full Leaderboard */}
             <div className="flex justify-center mb-16">
-              <Link href={`/events/${event.slug}/results/full`} className="btn-gradient w-full max-w-sm py-4 text-base sm:text-lg rounded-[16px] group shadow-xl shadow-accent-orange/20 no-underline">
+              <Link href={`/results/${event.slug}/full`} className="btn-gradient w-full max-w-sm py-4 text-base sm:text-lg rounded-[16px] group shadow-xl shadow-accent-orange/20 no-underline">
                 View Full Leaderboard
                 <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform inline-block ml-1" />
               </Link>
@@ -84,7 +84,7 @@ export default async function WinnersOverviewPage({
                       </h2>
                       <Medal className="text-accent-blue" size={28} />
                     </div>
-                    <Link href={`/events/${event.slug}/results/full?category=${cat.id}`} className="group bg-white/5 border border-white/10 text-white hover:bg-white/10 hover:border-white/30 transition-all py-2 px-4 rounded-[16px] font-bold text-sm tracking-wide flex items-center gap-1 shrink-0">
+                    <Link href={`/results/${event.slug}/full?category=${cat.id}`} className="group bg-white/5 border border-white/10 text-white hover:bg-white/10 hover:border-white/30 transition-all py-2 px-4 rounded-[16px] font-bold text-sm tracking-wide flex items-center gap-1 shrink-0">
                       View {cat.distance || cat.name} Results
                       <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform inline-block" />
                     </Link>
@@ -107,7 +107,7 @@ export default async function WinnersOverviewPage({
                           <div className="text-center py-10 text-secondary/50 italic bg-black/20 rounded-[16px] border border-white/5">No results recorded yet</div>
                         ) : (
                           cat.winners.Male.map((winner: any, idx: number) => (
-                            <Link href={`/events/${event.slug}/results/${winner.id}`} key={winner.id} className="block no-underline">
+                            <Link href={runnerResultPath(event, winner)} key={winner.id} className="block no-underline">
                               <div className="group/row flex items-center gap-5 p-4 rounded-[16px] bg-black/40 border border-white/[0.05] hover:bg-white/[0.06] hover:border-white/[0.15] hover:shadow-[0_8px_30px_rgba(0,0,0,0.5)] transition-all duration-300 cursor-pointer">
                                 <div className={`w-12 h-12 rounded-full flex items-center justify-center font-black text-xl shrink-0
                                   ${idx === 0 ? 'bg-gradient-to-tr from-yellow-600 via-yellow-200 to-yellow-500 shadow-[0_0_20px_rgba(234,179,8,0.4),inset_0_2px_4px_rgba(255,255,255,0.6)] text-yellow-950 border border-yellow-300' : 
@@ -148,7 +148,7 @@ export default async function WinnersOverviewPage({
                           <div className="text-center py-10 text-secondary/50 italic bg-black/20 rounded-[16px] border border-white/5">No results recorded yet</div>
                         ) : (
                           cat.winners.Female.map((winner: any, idx: number) => (
-                            <Link href={`/events/${event.slug}/results/${winner.id}`} key={winner.id} className="block no-underline">
+                            <Link href={runnerResultPath(event, winner)} key={winner.id} className="block no-underline">
                               <div className="group/row flex items-center gap-5 p-4 rounded-[16px] bg-black/40 border border-white/[0.05] hover:bg-white/[0.06] hover:border-white/[0.15] hover:shadow-[0_8px_30px_rgba(0,0,0,0.5)] transition-all duration-300 cursor-pointer">
                                 <div className={`w-12 h-12 rounded-full flex items-center justify-center font-black text-xl shrink-0
                                   ${idx === 0 ? 'bg-gradient-to-tr from-yellow-600 via-yellow-200 to-yellow-500 shadow-[0_0_20px_rgba(234,179,8,0.4),inset_0_2px_4px_rgba(255,255,255,0.6)] text-yellow-950 border border-yellow-300' : 

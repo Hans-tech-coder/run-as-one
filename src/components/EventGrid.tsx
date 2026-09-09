@@ -35,7 +35,7 @@ export type EventCardAction = 'register' | 'results';
 
 const ACTIONS: Record<EventCardAction, { label: string; path: (slug: string) => string }> = {
   register: { label: 'Register Now', path: (slug) => `/events/${slug}` },
-  results: { label: 'View Results', path: (slug) => `/events/${slug}/results` },
+  results: { label: 'View Results', path: (slug) => `/results/${slug}` },
 };
 
 /** The corner chip, and the word the button uses instead of "Register Now". */

@@ -5,32 +5,60 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import ECertificateGenerator from './ECertificateGenerator';
 import EventHeroBanner from '@/components/EventHeroBanner';
-import { canonicalEventPath } from '@/lib/event-slug';
+import { canonicalResultsPath, eventByParam, resultsPath, runnerResultPath } from '@/lib/event-slug';
 import { toWholeSeconds } from '@/lib/race-time';
 
+/**
+ * One runner's result, addressed by the number they wore: /results/[slug]/1042.
+ *
+ * The segment is read as a bib first and as a row cuid only if that finds
+ * nothing, which is what keeps every link ever handed to a runner alive. The
+ * page used to be addressed by the cuid, so those URLs are in people's messages
+ * already; they still resolve here and are then sent on to the bib address, the
+ * same way an old cuid *event* link is sent on to its slug.
+ *
+ * Reading the bib first also means a bib that happens to look like a cuid is
+ * still read as the bib — the runner's own number wins over a collision that
+ * would show them somebody else.
+ */
 export default async function RunnerAnalyticsPage({ 
   params 
 }: { 
-  params: Promise<{ slug: string, resultId: string }>
+  params: Promise<{ slug: string, bib: string }>
 }) {
-  const { slug, resultId } = await params;
+  const { slug, bib } = await params;
 
-  const result = await prisma.raceResult.findUnique({
-    where: { id: resultId },
-    include: {
-      category: true,
-      event: true
-    }
+  // The event comes first here, unlike the old cuid lookup: a bib only means
+  // something inside one race, so there is nothing to look up until we know
+  // which race the URL is naming.
+  const event = await prisma.event.findFirst({ where: eventByParam(slug) });
+  if (!event) redirect('/results');
+
+  const include = { category: true, event: true } as const;
+
+  let result = await prisma.raceResult.findUnique({
+    where: { eventId_bibNumber: { eventId: event.id, bibNumber: bib } },
+    include,
   });
 
-  // The result still has to belong to the event named in the URL, so a runner
-  // cannot be shown under someone else's race. Either form of the event segment
-  // counts, because the cuid links predate slugs.
-  if (!result || (result.event.slug !== slug && result.eventId !== slug)) {
-    redirect(`/events/${slug}/results`);
+  if (!result) {
+    // An old link, or a blank-bib row that never had a bib address. Either way
+    // the cuid is the only thing left to try.
+    const byId = await prisma.raceResult.findUnique({ where: { id: bib }, include });
+
+    // The row still has to belong to the race named in the URL, so a runner
+    // cannot be shown under someone else's event.
+    if (!byId || byId.eventId !== event.id) redirect(resultsPath(event));
+
+    const bibAddress = runnerResultPath(event, byId);
+    if (bibAddress !== `/results/${slug}/${bib}`) redirect(bibAddress);
+
+    result = byId;
   }
 
-  const canonical = canonicalEventPath(result.event, slug, `/results/${resultId}`);
+  // Whatever the URL carried, the canonical address spells the event as its
+  // slug and the runner as their bib.
+  const canonical = canonicalResultsPath(event, slug, `/${encodeURIComponent(result.bibNumber.trim() || result.id)}`);
   if (canonical) redirect(canonical);
 
   // Fetch total runners in this category to show "X out of Y"
@@ -113,7 +141,7 @@ export default async function RunnerAnalyticsPage({
         {/* Wide enough that the four analytics tiles each get a real column
             instead of squeezing their labels onto two lines. */}
         <div className="max-w-5xl mx-auto">
-          <Link href={`/events/${result.event.slug}/results`} className="inline-flex items-center gap-2 text-accent-blue hover:text-white transition-colors mb-8">
+          <Link href={`/results/${result.event.slug}`} className="inline-flex items-center gap-2 text-accent-blue hover:text-white transition-colors mb-8">
             <ArrowLeft size={20} /> Back to Search
           </Link>
 

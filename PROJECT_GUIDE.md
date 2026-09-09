@@ -19,7 +19,7 @@ Philippines**. Three groups use it:
 
 | Who | What they do | Where |
 | --- | --- | --- |
-| **Runners** (public, no account) | Browse upcoming races, register solo or as a group, pay, and later look up their times and download an e-certificate | `/`, `/events`, `/events/[slug]`, `/results` |
+| **Runners** (public, no account) | Browse upcoming races, register solo or as a group, pay, and later look up their times and download an e-certificate | `/`, `/events`, `/events/[slug]`, `/results`, `/results/[slug]` |
 | **Organizers** (the paying clients) | Create and manage their own events, see registrants, upload race results, run promo codes | `/admin/**` |
 | **Super admin** (the platform owner) | Approve organizer accounts, set per-organizer commission, curate the shared running-club list, watch platform revenue | `/superadmin/**` |
 
@@ -112,8 +112,9 @@ src/
     layout.tsx              # fonts, metadata, AlertProvider, ClientLayoutWrapper
     globals.css             # design tokens + most global styling
     page.tsx                # home — showcases upcoming events
-    events/                 # public listing, event page, registration wizards, results
-    results/                # public results landing (finished events)
+    events/                 # public listing, event page, registration wizards
+    results/                # everything about a race that has been run:
+                            #   landing, winners board, leaderboard, one runner
     coming-soon/ privacy/ terms/ not-found.tsx
     admin/                  # organizer portal (AdminShell, Admin.css, Auth.css)
     superadmin/             # platform-owner portal (SuperAdminShell)
@@ -294,13 +295,37 @@ logic again.
 | --- | --- |
 | `/` | Home. Hero + up to 6 **upcoming** events, soonest first. Events are the point of this page. |
 | `/events` | Full upcoming listing |
-| `/events/[slug]` | Event detail and registration entry point (closed once the race is over). Carries `PromoHighlights`: the automatic promotions running on this race, named before the runner starts. Codes are never listed there — those are the organizer's to hand out |
+| `/events/[slug]` | Event detail and registration entry point. **Redirects to `/results/[slug]` once the race is over and its times are uploaded** — see the section rule below. A finished race with no times yet stays here and says so. Carries `PromoHighlights`: the automatic promotions running on this race, named before the runner starts. Codes are never listed there — those are the organizer's to hand out |
 | `/events/[slug]/register` | The wizard — `RegistrationWizardClient` (ONLINE: 3 steps, plus step 4 for proof when the runner picks bank transfer) or `BankTransferWizardClient` (3 steps). Steps: **1** runners & categories, **2** logistics, **3** checkout/payment, **4** proof upload. |
 | `/results` | Finished-event landing, most recent first — the same `EventGrid` card as `/events`, with `action="results"` |
-| `/events/[slug]/results` | Winners board |
-| `/events/[slug]/results/full` | Full searchable table; category filter via query param |
-| `/events/[slug]/results/[resultId]` | One runner's result plus `ECertificateGenerator` (pdf-lib). Container is `max-w-5xl`, wide enough that the four analytics tiles get a real column each — they go four across from **860px**, the width at which a tile can hold "Overall Rank" on one line, and sit two across below that. The hero splits into name + time panel at `md`, where the name column is at its narrowest (~300px); the name sizes are tuned against that width so no word ever has to break in half. The card is built to hold **any** name: the time panel never shrinks and the name's display size steps down as the name gets longer (see §9), so a 30-character name and a 9-character one produce the same card. The certificate shrinks the drawn name to fit the page for the same reason. The *View E-Certificate* button is full-width on phones and a centred `w-fit` on desktop |
+| `/results/[slug]` | Winners board |
+| `/results/[slug]/full` | Full searchable table; category filter via query param |
+| `/results/[slug]/[bib]` | One runner's result, addressed by **the number they wore** — `/results/bizrun-v2-0/1042`, not a 25-character cuid — because this is the link a runner shares and should be able to read, recognise and even type. `@@unique([eventId, bibNumber])` is what makes a bib a valid address. The segment is read as a bib first and as a row cuid only if that finds nothing, so every cuid link already sent to a runner still resolves and is then redirected to its bib address. Build these with `runnerResultPath(event, result)`. Plus `ECertificateGenerator` (pdf-lib). Container is `max-w-5xl`, wide enough that the four analytics tiles get a real column each — they go four across from **860px**, the width at which a tile can hold "Overall Rank" on one line, and sit two across below that. The hero splits into name + time panel at `md`, where the name column is at its narrowest (~300px); the name sizes are tuned against that width so no word ever has to break in half. The card is built to hold **any** name: the time panel never shrinks and the name's display size steps down as the name gets longer (see §9), so a 30-character name and a 9-character one produce the same card. The certificate shrinks the drawn name to fit the page for the same reason. The *View E-Certificate* button is full-width on phones and a centred `w-fit` on desktop |
 | `/coming-soon`, `/privacy`, `/terms`, `not-found` | Real designed pages — see the no-dead-links rule in §8 |
+
+**A race lives in one section at a time, and the URL says which.** While a race
+can still be entered it is under `/events`. The moment its organizer uploads
+times it moves wholesale to `/results` — it drops off the `/events` listing, and
+`/events/[slug]` itself redirects to `/results/[slug]`. The reason is that the
+address should tell a runner which part of the site they are in, judged by what
+the page actually shows them: nobody opening a finished race is looking at an
+event any more, they are reading a result. A finished race whose times are *not*
+up yet is the one in-between case — it is in neither listing, and `/events/[slug]`
+keeps it, saying registration is closed and the times are still coming.
+
+Old `/events/[slug]/results...` URLs are permanent (308) redirects in
+`next.config.ts` rather than deleted routes, because they are already out in the
+world. They pass the event segment straight through, so a stale **cuid** link
+still resolves: the destination reads either form via `eventByParam` and sends
+the visitor on to the canonical slug via `canonicalResultsPath`
+(`src/lib/event-slug.ts`). Build results links with `resultsPath(event)` from
+that module rather than writing the path out by hand.
+
+**A runner is addressed by their bib, not by a row id.** `runnerResultPath`
+(same module) spells `/results/[slug]/[bib]`. The one exception it carries is a
+results sheet imported with a blank bib column — the importer does not reject
+those — and such a row falls back to its cuid, because the bare event path is
+the winners board and would otherwise swallow it.
 
 ### Organizer (`/admin`, gated by `src/proxy.ts`)
 `/admin` dashboard · `/admin/login` · `/admin/register` · `/admin/events` (plus
@@ -457,7 +482,7 @@ These are the user's own standing preferences. Follow them without being asked.
   `min-w-0` — otherwise the name holds the column open and mangles what is beside
   it. In a list the name then truncates; on the runner's own result card it is the
   headline, so instead its size steps down by name length (`nameScale` in
-  `results/[resultId]/page.tsx`) and the block is capped at about two lines with
+  `results/[slug]/[bib]/page.tsx`) and the block is capped at about two lines with
   `text-balance`. Never fix a long name by hard-coding a line break.
 - A pill or badge never wraps inside itself: chips sit in a `flex flex-wrap` row
   and each carries `whitespace-nowrap`. A chip holding organizer-typed text (a
@@ -511,7 +536,7 @@ These are the user's own standing preferences. Follow them without being asked.
   app clips its own overflow (rounded corners, horizontal scrollers), so a menu
   laid out inside the row is cut off on the last rows. The admin menus
   (`admin/events/EventActionsMenu` and its siblings) and the public leaderboard's
-  `ActionMenu` (`events/[slug]/results/full/FullResultsClient`) all render into
+  `ActionMenu` (`results/[slug]/full/FullResultsClient`) all render into
   `document.body` with `position: fixed`, place themselves from the trigger's
   `getBoundingClientRect()`, reposition on scroll and resize, and — the
   leaderboard's — flip above the trigger when the space below it cannot hold the

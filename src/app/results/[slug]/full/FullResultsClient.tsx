@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Search, Trophy, User, Hash, ChevronDown, Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toWholeSeconds } from '@/lib/race-time';
+import { runnerResultPath } from '@/lib/event-slug';
 import {
   useReactTable,
   getCoreRowModel,
@@ -106,7 +107,7 @@ function FilterDropdown({ title, options, selected, onToggle }: { title: string,
 // rect, because the results card and its horizontal scroller both clip their
 // overflow — a menu laid out inside the row was cut off on the last rows. It
 // also flips above the trigger when the space below it cannot hold the menu.
-function ActionMenu({ eventSlug, resultId }: { eventSlug: string, resultId: string }) {
+function ActionMenu({ path }: { path: string }) {
   const MENU_WIDTH = 160;   // matches w-40
   const MENU_HEIGHT = 96;   // the two items plus padding, used before the first measure
   const GAP = 8;            // the old mt-2
@@ -215,14 +216,14 @@ function ActionMenu({ eventSlug, resultId }: { eventSlug: string, resultId: stri
     >
       <div className="p-1">
         <Link
-          href={`/events/${eventSlug}/results/${resultId}`}
+          href={path}
           onClick={(e) => e.stopPropagation()}
           className="w-full text-left block px-3 py-2 text-sm text-white rounded-lg hover:bg-white/5 transition-colors"
         >
           View Details
         </Link>
         <Link
-          href={`/events/${eventSlug}/results/${resultId}?cert=1`}
+          href={`${path}?cert=1`}
           onClick={(e) => e.stopPropagation()}
           className="w-full text-left block px-3 py-2 text-sm text-accent-blue font-medium rounded-lg hover:bg-white/5 transition-colors"
         >
@@ -339,7 +340,7 @@ export default function FullResultsClient({ results, event }: Props) {
       id: "actions",
       header: "Actions",
       cell: ({ row }) => {
-        return <ActionMenu eventSlug={event.slug} resultId={row.original.id} />;
+        return <ActionMenu path={runnerResultPath(event, row.original)} />;
       },
     }
   ], [event.id]);
@@ -457,7 +458,7 @@ export default function FullResultsClient({ results, event }: Props) {
                       <tr 
                         key={row.id} 
                         className="group/row border-b border-white/[0.03] hover:bg-white/[0.04] transition-colors duration-300 cursor-pointer"
-                        onClick={() => window.location.href = `/events/${event.slug}/results/${row.original.id}`}
+                        onClick={() => window.location.href = runnerResultPath(event, row.original)}
                       >
                         {row.getVisibleCells().map((cell) => {
                           if (cell.column.id === 'gender') return null;
@@ -484,7 +485,7 @@ export default function FullResultsClient({ results, event }: Props) {
           table.getRowModel().rows.map((row, i) => (
             <div 
               key={row.id} 
-              onClick={() => window.location.href = `/events/${event.slug}/results/${row.original.id}`}
+              onClick={() => window.location.href = runnerResultPath(event, row.original)}
               className={`block no-underline t-stagger-line t-stagger-line--${(i % 4) + 1}`}
             >
               <div className="relative rounded-[20px] bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.08] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)] p-5 hover:border-accent-blue/30 hover:bg-white/[0.06] transition-all duration-300 group/row cursor-pointer overflow-hidden">
@@ -504,7 +505,7 @@ export default function FullResultsClient({ results, event }: Props) {
                     </div>
                   </div>
                   <div className="-mt-1 -mr-2">
-                    <ActionMenu eventSlug={event.slug} resultId={row.original.id} />
+                    <ActionMenu path={runnerResultPath(event, row.original)} />
                   </div>
                 </div>
 

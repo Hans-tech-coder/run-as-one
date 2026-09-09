@@ -4,7 +4,7 @@ import React from 'react';
  * The surface a page uses when it has no content to show — a 404, a channel
  * that is not live yet, an empty results list.
  *
- * It is the winners-board panel from /events/[slug]/results, lifted out so the
+ * It is the winners-board panel from /results/[slug], lifted out so the
  * pages that say "there is nothing here" all say it on the same object: 24px
  * radius, a barely-there gradient fill, an inset highlight along the top edge,
  * and one warm and one cool orb bleeding in from opposite corners. A runner

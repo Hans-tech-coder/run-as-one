@@ -98,8 +98,9 @@ export function eventByParam(param: string) {
  * Where a visitor who arrived on an old cuid link belongs, or null if the URL
  * they used is already the canonical one.
  *
- * `suffix` is whatever follows the event segment — '/register', '/results' —
- * so every route under /events can reuse this.
+ * `suffix` is whatever follows the event segment — '/register' — so every route
+ * under /events can reuse this. Results live in their own section of the site
+ * and have their own version of this; see canonicalResultsPath.
  */
 export function canonicalEventPath(
   event: { slug: string },
@@ -107,4 +108,52 @@ export function canonicalEventPath(
   suffix = '',
 ): string | null {
   return param === event.slug ? null : `/events/${event.slug}${suffix}`;
+}
+
+/**
+ * The same rule for the results section: /results/[slug], /results/[slug]/full
+ * and /results/[slug]/[bib].
+ *
+ * A finished race whose times are published is not something you sign up for
+ * any more, so it does not live under /events — it lives under /results, which
+ * is the part of the site a runner is actually in when they open it. That the
+ * two sections need two of these is the price of that, and a small one: the
+ * cuid links printed on old posters still resolve, they just land in the
+ * section the page belongs to.
+ */
+export function canonicalResultsPath(
+  event: { slug: string },
+  param: string,
+  suffix = '',
+): string | null {
+  return param === event.slug ? null : `/results/${event.slug}${suffix}`;
+}
+
+/** Where a race's published times live. The one place this path is spelled. */
+export function resultsPath(event: { slug: string }, suffix = ''): string {
+  return `/results/${event.slug}${suffix}`;
+}
+
+/**
+ * One runner's result page, addressed by the number they wore.
+ *
+ * The bib is used rather than the row's cuid because this is the link a runner
+ * actually shares — texted to a friend, pasted into a group chat — and
+ * /results/bizrun-v2-0/1042 is a link they can read, recognise as theirs and
+ * even type from memory, where
+ * /results/bizrun-v2-0/cmtttip8j00n9s4etkrlnn7n0 is a link they can only
+ * copy. `@@unique([eventId, bibNumber])` on RaceResult is what makes it a
+ * valid address: within one race, a bib points at exactly one runner.
+ *
+ * The cuid is kept as a fallback for the one case the bib cannot cover — a
+ * results sheet uploaded with a blank bib column, which the importer does not
+ * currently reject. Such a row would otherwise have no address at all, and the
+ * bare event path is the winners board, not that runner.
+ */
+export function runnerResultPath(
+  event: { slug: string },
+  result: { id: string; bibNumber: string },
+): string {
+  const bib = result.bibNumber?.trim();
+  return `/results/${event.slug}/${encodeURIComponent(bib || result.id)}`;
 }

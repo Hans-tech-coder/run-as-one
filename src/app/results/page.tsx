@@ -63,7 +63,7 @@ export default async function GlobalResultsPage() {
  * A runner reaching /results early is not looking at a broken page — they are
  * early — so this states that plainly, says who publishes results and when, and
  * hands them the one thing they can still do: go find a race. The panel is the
- * winners-board panel from /events/[slug]/results (same 24px radius, gradient
+ * winners-board panel from /results/[slug] (same 24px radius, gradient
  * fill, inset highlight, blurred accent orb) so an empty results page and a
  * full one are recognisably the same surface.
  */

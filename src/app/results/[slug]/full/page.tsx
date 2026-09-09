@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import FullResultsClient from './FullResultsClient';
 import EventHeroBanner from '@/components/EventHeroBanner';
-import { canonicalEventPath, eventByParam } from '@/lib/event-slug';
+import { canonicalResultsPath, eventByParam } from '@/lib/event-slug';
 
 export default async function FullResultsPage({ 
   params 
@@ -21,7 +21,7 @@ export default async function FullResultsPage({
 
   if (!event) redirect('/');
 
-  const canonical = canonicalEventPath(event, slug, '/results/full');
+  const canonical = canonicalResultsPath(event, slug, '/full');
   if (canonical) redirect(canonical);
 
   // Fetch ALL finished results for the event to hand off to the client-side table
@@ -46,7 +46,7 @@ export default async function FullResultsPage({
         <div className="w-full">
           {/* Back Button */}
           <div className="mb-6">
-            <Link href={`/events/${event.slug}/results`} className="inline-flex items-center gap-2 text-secondary hover:text-white transition-colors no-underline text-sm font-medium">
+            <Link href={`/results/${event.slug}`} className="inline-flex items-center gap-2 text-secondary hover:text-white transition-colors no-underline text-sm font-medium">
               <ArrowLeft size={16} /> Back to Winners
             </Link>
           </div>
