@@ -403,14 +403,44 @@ export function categorySeatsClaimed(
   return claimed;
 }
 
-/** How many runners this order gets free under a buy-X-get-Y code. */
-export function freeRunnerCount(promo: PromoTerms, runners: number): number {
+/**
+ * The one group a buy-X-get-Y promotion covers — `buy + get` runners — or null
+ * for any other kind of promotion, and for one missing either number.
+ *
+ * **One group per registration.** "Register 5, get 1 free" covers six runners
+ * on one order and no more: a group of seven is six on this registration and
+ * one on another, each with its own receipt. Registering twelve on a single
+ * order does not buy two free runners, because the promotion is a deal on a
+ * group rather than a rate per head, and an organizer who wants to give away
+ * two writes "register 10, get 2".
+ *
+ * This is the number step 1 stops a group at, the number the event page
+ * promises, and the number the checkout pays out on, so the three cannot say
+ * different things about the same promotion.
+ */
+export function promoGroupSize(promo: PromoTerms | null | undefined): number | null {
+  if (!promo) return null;
+  if (asDiscountType(promo.discountType) !== DISCOUNT_TYPES.BUY_X_GET_Y) return null;
   const buy = positive(promo.buyQuantity);
   const get = positive(promo.getQuantity);
-  if (!buy || !get) return 0;
-  // Whole groups only. Five runners on a "buy 5 get 1" get nothing: the sixth
-  // is the free one, and there is no sixth.
-  return Math.floor(runners / (buy + get)) * get;
+  if (!buy || !get) return null;
+  return buy + get;
+}
+
+/**
+ * How many runners this order gets free under a buy-X-get-Y code.
+ *
+ * Whole groups only, and **one group per order**: five runners on a "register
+ * 5, get 1" get nothing — the sixth is the free one, and there is no sixth —
+ * and twelve get one free rather than two, per `promoGroupSize`. Step 1 will
+ * not let a group past `buy + get` in the first place; this is the same rule
+ * said again where the money is decided, so an order that arrived some other
+ * way is worth what the wizard would have quoted.
+ */
+export function freeRunnerCount(promo: PromoTerms, runners: number): number {
+  const group = promoGroupSize(promo);
+  if (!group) return 0;
+  return runners >= group ? (positive(promo.getQuantity) ?? 0) : 0;
 }
 
 /**
@@ -453,24 +483,28 @@ export function freeRunnerIndexes(promo: PromoTerms, runnerPrices: number[]): nu
  * Offered rather than added for them — an extra required form nobody asked for
  * would block a group that really is only five, and this way the group of five
  * simply declines.
+ *
+ * It goes quiet once the group is whole. The promotion covers `buy + get` and
+ * no more (`promoGroupSize`), which is where step 1 stops accepting runners,
+ * so an order sitting at six on a "register 5, get 1" has claimed everything
+ * there is to claim — a second offer there would be inviting a group into a
+ * seventh runner the promotion cannot pay for.
  */
 export function freeSlotOffer(
   promo: PromoTerms | null | undefined,
   runners: number,
 ): { needed: number; free: number } | null {
-  if (!promo) return null;
-  if (asDiscountType(promo.discountType) !== DISCOUNT_TYPES.BUY_X_GET_Y) return null;
+  const group = promoGroupSize(promo);
+  const buy = positive(promo?.buyQuantity);
+  const get = positive(promo?.getQuantity);
+  if (!group || !buy || !get) return null;
 
-  const buy = positive(promo.buyQuantity);
-  const get = positive(promo.getQuantity);
-  if (!buy || !get) return null;
+  // Below `buy` there is nothing to offer yet — they have not paid for the
+  // free one — and at `group` the promotion is fully claimed and step 1 stops
+  // accepting runners, so there is nothing left to offer either.
+  if (runners < buy || runners >= group) return null;
 
-  // Where this order sits inside the current group of (buy + get). Below `buy`
-  // there is nothing to offer yet — they have not paid for the free one.
-  const remainder = runners % (buy + get);
-  if (runners < buy || remainder < buy) return null;
-
-  return { needed: buy + get - remainder, free: get };
+  return { needed: group - runners, free: get };
 }
 
 /**
@@ -704,10 +738,10 @@ export function promoConditions(promo: PromoTerms): string[] {
   const parts: string[] = [];
 
   // A group deal states its own size, since nothing else on the row does.
-  if (asDiscountType(promo.discountType) === DISCOUNT_TYPES.BUY_X_GET_Y) {
-    const group = (positive(promo.buyQuantity) ?? 0) + (positive(promo.getQuantity) ?? 0);
-    if (group > 0) parts.push(`${group}+ runners on one order`);
-  }
+  // Exactly that many, not "6+": one registration covers one group, so a
+  // seventh runner belongs on a second order rather than earning more.
+  const group = promoGroupSize(promo);
+  if (group) parts.push(`${group} runners on one order`);
 
   const from = asDate(promo.validFrom);
   const until = asDate(promo.validUntil);
@@ -845,11 +879,9 @@ export function promoCodeError(
 
   const runners = order.runnerPrices.length;
 
-  if (type === DISCOUNT_TYPES.BUY_X_GET_Y) {
-    const group = (positive(promo.buyQuantity) ?? 0) + (positive(promo.getQuantity) ?? 0);
-    if (group > 0 && runners < group) {
-      return `${promo.code} gives you ${positive(promo.getQuantity)} free for every ${positive(promo.buyQuantity)} registered, so it needs ${group} runners on one order — you have ${runners}.`;
-    }
+  const group = promoGroupSize(promo);
+  if (group && runners < group) {
+    return `${promo.code} gives you ${positive(promo.getQuantity)} free when ${positive(promo.buyQuantity)} register, so it needs ${group} runners on one order — you have ${runners}.`;
   }
 
   if (discountAmountFor(promo, order) <= 0) {

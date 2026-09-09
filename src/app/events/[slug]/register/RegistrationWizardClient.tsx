@@ -53,13 +53,16 @@ import {
   bestDiscount,
   categorySalePrices,
   chargedRunnerPrice,
+  describePromo,
   freeSlotOffer,
   outshoneByMessage,
   promoCodeError,
+  promoGroupSize,
   type PromoTerms,
 } from "@/lib/discount";
 import PromoCodeField from "./PromoCodeField";
 import FreeSlotOffer from "./FreeSlotOffer";
+import GroupLimitNotice from "./GroupLimitNotice";
 import { communitySlug } from "@/lib/running-community";
 import {
   isUppercasedRunnerField,
@@ -308,29 +311,42 @@ export default function RegistrationWizardClient({
    * offer adds more than one at a time and a loop over the captured
    * `participants` would add exactly one of them — and hand them all the same
    * `Date.now()` key.
+   *
+   * **Clamped to what a group promotion covers.** "Register 5, get 1 free"
+   * covers six runners on one registration and no more, so a group of seven is
+   * six here and one on a second registration — see `groupLimit` below, which
+   * is declared further down the render but read here at click time. The
+   * button is disabled at the ceiling; this is the same rule again where the
+   * array is actually written, so no path can slip a runner past it.
    */
   const addParticipants = (count: number) => {
-    setParticipants((prev) => [
-      ...prev,
-      ...Array.from({ length: Math.max(1, count) }, (_unused, offset) => ({
-        id: Date.now() + offset,
-        categoryId: prev[0].categoryId || "",
-        // Carried over for the same reason as the category: a second runner
-        // added to one order is usually a club-mate or family member. It is a
-        // starting value, not a lock — the picker is editable per runner.
-        runningCommunity: prev[0].runningCommunity || "",
-        firstName: "",
-        lastName: "",
-        email: "",
-        phone: "",
-        gender: "",
-        birthdate: "",
-        singletSize: "",
-        emergencyContactName: "",
-        emergencyContactPhone: "",
-        medicalConditions: "",
-      })),
-    ]);
+    setParticipants((prev) => {
+      const room = groupLimit === null ? Infinity : groupLimit - prev.length;
+      const adding = Math.min(Math.max(1, count), room);
+      if (adding < 1) return prev;
+
+      return [
+        ...prev,
+        ...Array.from({ length: adding }, (_unused, offset) => ({
+          id: Date.now() + offset,
+          categoryId: prev[0].categoryId || "",
+          // Carried over for the same reason as the category: a second runner
+          // added to one order is usually a club-mate or family member. It is a
+          // starting value, not a lock — the picker is editable per runner.
+          runningCommunity: prev[0].runningCommunity || "",
+          firstName: "",
+          lastName: "",
+          email: "",
+          phone: "",
+          gender: "",
+          birthdate: "",
+          singletSize: "",
+          emergencyContactName: "",
+          emergencyContactPhone: "",
+          medicalConditions: "",
+        })),
+      ];
+    });
   };
 
   // Zero-argument on purpose: it is wired straight to a button's onClick,
@@ -421,15 +437,22 @@ export default function RegistrationWizardClient({
   // Which cards wear the FREE badge, and the offer that gets a group to the
   // point where one of them can.
   const freeRunners = new Set(discount?.freeRunners ?? []);
-  const groupOffer = freeSlotOffer(
-    // The promotion that would give the free slot, whether or not it is
-    // currently the winning discount: an order sitting one runner short of it
-    // has no discount at all yet, so the offer cannot be read off the winner.
-    [...automaticPromos, promo].find(
-      candidate => candidate && candidate.discountType === "BUY_X_GET_Y",
-    ),
-    participants.length,
+
+  // The promotion that would give the free slot, whether or not it is
+  // currently the winning discount: an order sitting one runner short of it
+  // has no discount at all yet, so the offer cannot be read off the winner.
+  const groupPromo = [...automaticPromos, promo].find(
+    (candidate) => candidate && candidate.discountType === "BUY_X_GET_Y",
   );
+  const groupOffer = freeSlotOffer(groupPromo, participants.length);
+
+  // And where that group ends. One registration covers one group: at buy + get
+  // the promotion is fully claimed, so step 1 stops taking runners and the
+  // seventh member of a group on a "register 5, get 1" starts a registration
+  // of their own. Kept in step with `promoGroupSize`, which is what the
+  // checkout pays out on.
+  const groupLimit = promoGroupSize(groupPromo);
+  const atGroupLimit = groupLimit !== null && participants.length >= groupLimit;
 
   // Dynamic Transaction Fee based on payment method
   let transactionFee = 0;
@@ -1350,9 +1373,25 @@ export default function RegistrationWizardClient({
                   />
                 )}
 
+                {/* The other end of that offer: the group is whole, the button
+                    below is disabled, and this is the reason why. */}
+                {atGroupLimit && groupPromo && groupLimit !== null && (
+                  <GroupLimitNotice
+                    id="group-limit-notice"
+                    runners={participants.length}
+                    limit={groupLimit}
+                    free={groupPromo.getQuantity ?? 0}
+                    label={describePromo(groupPromo)}
+                  />
+                )}
+
                 <button
-                  className="w-full mt-4 flex items-center justify-center gap-2 border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/30 text-white font-bold py-4 rounded-[16px] transition-all"
+                  className="w-full mt-4 flex items-center justify-center gap-2 border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/30 text-white font-bold py-4 rounded-[16px] transition-all disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-white/10 disabled:hover:bg-white/5"
                   onClick={addParticipant}
+                  disabled={atGroupLimit}
+                  aria-describedby={
+                    atGroupLimit ? "group-limit-notice" : undefined
+                  }
                 >
                   <Plus size={20} /> Add Another Runner
                 </button>

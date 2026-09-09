@@ -1529,8 +1529,10 @@ export default function PromoCodesClient({
                     </div>
                   </div>
                   <p className="text-xs text-secondary -mt-2">
-                    Counted per whole group on one order, and the cheapest entries are the free
-                    ones. Register 5 and get 1 means a group of six pays for five.
+                    One whole group per registration, and the cheapest entries are the free
+                    ones. Register 5 and get 1 means a group of six pays for five — the
+                    seventh runner registers separately, and twelve on one order is still
+                    one free.
                   </p>
                 </>
               )}
