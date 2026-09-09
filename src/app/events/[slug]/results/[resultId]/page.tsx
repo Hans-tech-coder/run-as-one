@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation';
 import ECertificateGenerator from './ECertificateGenerator';
 import EventHeroBanner from '@/components/EventHeroBanner';
 import { canonicalEventPath } from '@/lib/event-slug';
+import { toWholeSeconds } from '@/lib/race-time';
 
 export default async function RunnerAnalyticsPage({ 
   params 
@@ -90,11 +91,28 @@ export default async function RunnerAnalyticsPage({
     }
   }
 
+  // The name is the loudest thing on the card, but a 30-character name set at
+  // the same size as a 9-character one wraps to four lines and leaves the time
+  // panel floating in a hole. Step the display size down as the name grows so
+  // every runner gets the same silhouette — roughly two lines — and let each
+  // step stay fluid rather than snapping at a breakpoint: the vw term is what
+  // keeps a long word from having to break in half in the narrow column at md,
+  // and the cap is the size the name reaches once the card is wide enough to
+  // carry it. Sizing by length beats forcing line breaks into the name.
+  const nameLength = result.name.trim().length;
+  const nameScale =
+    nameLength > 30 ? 'text-[clamp(1.5rem,4.4vw,2.375rem)]' :
+    nameLength > 22 ? 'text-[clamp(1.75rem,4.7vw,2.75rem)]' :
+    nameLength > 14 ? 'text-[clamp(2rem,5.5vw,3.25rem)]' :
+    'text-[clamp(2.25rem,7vw,3.75rem)]';
+
   return (
     <div className="relative pb-20 w-full">
       <EventHeroBanner event={result.event as any} />
       <div className="py-8">
-        <div className="max-w-3xl mx-auto">
+        {/* Wide enough that the four analytics tiles each get a real column
+            instead of squeezing their labels onto two lines. */}
+        <div className="max-w-5xl mx-auto">
           <Link href={`/events/${result.event.slug}/results`} className="inline-flex items-center gap-2 text-accent-blue hover:text-white transition-colors mb-8">
             <ArrowLeft size={20} /> Back to Search
           </Link>
@@ -105,41 +123,55 @@ export default async function RunnerAnalyticsPage({
             <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-accent-orange/5 rounded-full blur-[80px] translate-y-1/2 -translate-x-1/4 pointer-events-none"></div>
             
             <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-10 border-b border-white/[0.05] pb-10">
-              <div>
+              {/* min-w-0 lets this column give way to the time panel instead of
+                  holding itself open and squeezing the badges into a ragged second
+                  row. The name sizes below are set so that even at 768 — where the
+                  column is at its narrowest, about 300px — no word has to break in
+                  half. */}
+              <div className="w-full md:flex-1 md:min-w-0">
                 <div className="flex flex-wrap items-center gap-3 text-secondary mb-5">
-                  <span className="bg-accent-blue/10 text-accent-blue border border-accent-blue/20 px-3 py-1.5 rounded-[12px] text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
-                    <CheckCircle2 size={14} /> FINISHER
+                  <span className="bg-accent-blue/10 text-accent-blue border border-accent-blue/20 px-3 py-1.5 rounded-[12px] text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap">
+                    <CheckCircle2 size={14} className="shrink-0" /> FINISHER
                   </span>
-                  <span className="bg-white/5 border border-white/10 px-3 py-1.5 rounded-[12px] text-xs font-bold uppercase tracking-wider text-white">
+                  {/* An organizer names their own categories, so this one is the
+                      unpredictable label: it keeps to a single line and truncates
+                      rather than wrapping inside its pill — the full name is spelled
+                      out again under Overall Rank below. */}
+                  <span className="bg-white/5 border border-white/10 px-3 py-1.5 rounded-[12px] text-xs font-bold uppercase tracking-wider text-white whitespace-nowrap truncate max-w-full" title={result.category.name}>
                     {result.category.name}
                   </span>
-                  <span className="flex items-center gap-1.5 text-sm bg-black/40 px-3 py-1.5 rounded-[12px] border border-white/5"><Hash size={14} className="text-secondary" /> {result.bibNumber}</span>
-                  <span className="flex items-center gap-1.5 text-sm bg-black/40 px-3 py-1.5 rounded-[12px] border border-white/5"><User size={14} className="text-secondary" /> {result.gender}</span>
+                  <span className="flex items-center gap-1.5 text-sm bg-black/40 px-3 py-1.5 rounded-[12px] border border-white/5 whitespace-nowrap"><Hash size={14} className="text-secondary shrink-0" /> {result.bibNumber}</span>
+                  <span className="flex items-center gap-1.5 text-sm bg-black/40 px-3 py-1.5 rounded-[12px] border border-white/5 whitespace-nowrap"><User size={14} className="text-secondary shrink-0" /> {result.gender}</span>
                 </div>
                 
-                <h1 className="text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-gray-200 to-gray-500 uppercase tracking-tighter leading-none t-reveal t-delay-1 drop-shadow-[0_4px_24px_rgba(255,255,255,0.1)]">
+                <h1 className={`${nameScale} font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-gray-200 to-gray-500 uppercase tracking-tighter leading-[1.05] text-balance break-words t-reveal t-delay-1 drop-shadow-[0_4px_24px_rgba(255,255,255,0.1)]`}>
                   {result.name}
                 </h1>
               </div>
 
-              {/* Huge Chip Time display */}
-              <div className="text-right md:text-center w-full md:w-auto bg-black/40 border border-white/[0.08] p-6 rounded-[24px] shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)] t-reveal t-delay-2 backdrop-blur-md">
-                <div className="text-secondary text-xs uppercase tracking-[0.2em] mb-3 font-bold flex items-center justify-start md:justify-end gap-2">
-                  <Timer size={14} className="text-accent-orange" /> Official Chip Time
+              {/* Huge Chip Time display — shrink-0 with a floor on its width, so
+                  the time sits in the same place at the same size on every
+                  runner's card no matter how long the name beside it is. */}
+              <div className="shrink-0 text-center w-full md:w-auto md:min-w-[17rem] bg-black/40 border border-white/[0.08] px-6 py-5 rounded-[24px] shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)] t-reveal t-delay-2 backdrop-blur-md">
+                <div className="text-secondary text-xs uppercase tracking-[0.2em] mb-2 font-bold flex items-center justify-center gap-2">
+                  <Timer size={14} className="text-accent-orange shrink-0" /> Official Chip Time
                 </div>
-                <div className="text-6xl md:text-7xl font-mono font-black text-accent-orange drop-shadow-[0_0_25px_rgba(249,115,22,0.4)] tracking-tighter">
-                  {result.chipTime}
+                <div className="text-[clamp(2.75rem,7.5vw,4.5rem)] leading-[1.1] font-mono font-black text-accent-orange drop-shadow-[0_0_25px_rgba(249,115,22,0.4)] tracking-tighter tabular-nums">
+                  {toWholeSeconds(result.chipTime)}
                 </div>
                 {result.gunTime && (
-                  <div className="text-xs text-secondary/70 font-mono mt-3 uppercase tracking-wider">
-                    Gun Time: {result.gunTime}
+                  <div className="text-xs text-secondary/70 font-mono mt-2 uppercase tracking-wider">
+                    Gun Time: {toWholeSeconds(result.gunTime)}
                   </div>
                 )}
               </div>
             </div>
 
             {/* Detailed Analytics Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 relative z-10 t-stagger is-shown">
+            {/* Four across from 860px, the width at which each tile is finally wide
+                enough to hold "Overall Rank" on one line; below that, two roomy
+                columns read better than four cramped ones. */}
+            <div className="grid grid-cols-2 min-[860px]:grid-cols-4 gap-4 md:gap-6 relative z-10 t-stagger is-shown">
               {/* Overall Rank */}
               <div className="bg-white/[0.03] border border-white/[0.05] p-5 rounded-[20px] hover:bg-white/[0.06] hover:border-white/[0.1] transition-all duration-300 group cursor-default shadow-[0_4px_20px_rgba(0,0,0,0.2)]">
                 <div className="text-secondary text-[11px] uppercase tracking-wider mb-3 font-medium flex items-center gap-2">

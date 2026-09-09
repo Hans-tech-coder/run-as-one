@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Search, Trophy, User, Hash, ChevronDown, Check, ChevronLeft, ChevronRight } from 'lucide-react';
+import { toWholeSeconds } from '@/lib/race-time';
 import {
   useReactTable,
   getCoreRowModel,
@@ -327,12 +328,12 @@ export default function FullResultsClient({ results, event }: Props) {
     {
       accessorKey: "chipTime",
       header: "Chip Time",
-      cell: ({ row }) => <span className="font-mono font-bold text-lg">{row.original.chipTime}</span>,
+      cell: ({ row }) => <span className="font-mono font-bold text-lg">{toWholeSeconds(row.original.chipTime)}</span>,
     },
     {
       accessorKey: "gunTime",
       header: "Gun Time",
-      cell: ({ row }) => <span className="font-mono text-secondary">{row.original.gunTime || '-'}</span>,
+      cell: ({ row }) => <span className="font-mono text-secondary">{toWholeSeconds(row.original.gunTime) || '-'}</span>,
     },
     {
       id: "actions",
@@ -526,12 +527,12 @@ export default function FullResultsClient({ results, event }: Props) {
                     {row.original.gunTime && (
                       <div className="text-right">
                         <span className="text-[10px] text-secondary block">Gun Time</span>
-                        <span className="font-mono text-secondary text-xs">{row.original.gunTime}</span>
+                        <span className="font-mono text-secondary text-xs">{toWholeSeconds(row.original.gunTime)}</span>
                       </div>
                     )}
                     <div className="text-right">
                       <span className="text-[10px] text-secondary block">Chip Time</span>
-                      <span className="font-mono font-bold text-white group-hover/row:text-accent-blue transition-colors text-sm">{row.original.chipTime}</span>
+                      <span className="font-mono font-bold text-white group-hover/row:text-accent-blue transition-colors text-sm">{toWholeSeconds(row.original.chipTime)}</span>
                     </div>
                   </div>
                 </div>

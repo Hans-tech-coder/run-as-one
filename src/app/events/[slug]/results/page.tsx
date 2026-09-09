@@ -4,6 +4,7 @@ import { User, Medal, Hash, ChevronRight } from 'lucide-react';
 import { redirect } from 'next/navigation';
 import EventHeroBanner from '@/components/EventHeroBanner';
 import { canonicalEventPath, eventByParam } from '@/lib/event-slug';
+import { toWholeSeconds } from '@/lib/race-time';
 
 export default async function WinnersOverviewPage({ 
   params 
@@ -122,7 +123,7 @@ export default async function WinnersOverviewPage({
                                   </div>
                                 </div>
                                 <div className="text-right shrink-0 pl-2">
-                                  <span className="font-mono text-xl font-bold text-accent-orange drop-shadow-[0_2px_10px_rgba(249,115,22,0.3)]">{winner.chipTime}</span>
+                                  <span className="font-mono text-xl font-bold text-accent-orange drop-shadow-[0_2px_10px_rgba(249,115,22,0.3)]">{toWholeSeconds(winner.chipTime)}</span>
                                 </div>
                               </div>
                             </Link>
@@ -163,7 +164,7 @@ export default async function WinnersOverviewPage({
                                   </div>
                                 </div>
                                 <div className="text-right shrink-0 pl-2">
-                                  <span className="font-mono text-xl font-bold text-accent-orange drop-shadow-[0_2px_10px_rgba(249,115,22,0.3)]">{winner.chipTime}</span>
+                                  <span className="font-mono text-xl font-bold text-accent-orange drop-shadow-[0_2px_10px_rgba(249,115,22,0.3)]">{toWholeSeconds(winner.chipTime)}</span>
                                 </div>
                               </div>
                             </Link>

@@ -27,6 +27,7 @@ import {
   VisibilityState,
 } from '@tanstack/react-table';
 import ResultsUploaderClient from './ResultsUploaderClient';
+import { toWholeSeconds } from '@/lib/race-time';
 
 interface Result {
   id: string;
@@ -182,12 +183,12 @@ export default function ResultsTableClient({ results, event }: ResultsTableClien
     {
       accessorKey: "chipTime",
       header: "Chip Time",
-      cell: ({ row }) => <span className="text-gray-400">{row.original.chipTime}</span>,
+      cell: ({ row }) => <span className="text-gray-400">{toWholeSeconds(row.original.chipTime)}</span>,
     },
     {
       accessorKey: "gunTime",
       header: "Gun Time",
-      cell: ({ row }) => <span className="text-gray-400">{row.original.gunTime || '-'}</span>,
+      cell: ({ row }) => <span className="text-gray-400">{row.original.gunTime ? toWholeSeconds(row.original.gunTime) : '-'}</span>,
     },
   ], []);
 

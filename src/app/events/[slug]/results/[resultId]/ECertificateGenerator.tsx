@@ -5,6 +5,7 @@ import { Download, Loader2, Share2, FileText } from 'lucide-react';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { useSearchParams } from 'next/navigation';
 import { useAlert } from '@/components/ui/AlertProvider';
+import { toWholeSeconds } from '@/lib/race-time';
 
 interface Props {
   result: any;
@@ -110,7 +111,14 @@ export default function ECertificateGenerator({ result, event }: Props) {
 
       // Draw Name (Centered)
       const nameText = result.name.toUpperCase();
-      const nameSize = 36;
+      // Shrink the name until it fits the certificate rather than drawing every
+      // name at 36pt: a long one centred at a fixed size runs off both edges of
+      // the page, and the runner has no way to fix it.
+      const maxNameWidth = width * 0.8;
+      let nameSize = 36;
+      while (nameSize > 16 && font.widthOfTextAtSize(nameText, nameSize) > maxNameWidth) {
+        nameSize -= 1;
+      }
       const nameWidth = font.widthOfTextAtSize(nameText, nameSize);
       firstPage.drawText(nameText, {
         x: (width - nameWidth) / 2,
@@ -121,7 +129,7 @@ export default function ECertificateGenerator({ result, event }: Props) {
       });
 
       // Draw Time
-      const timeText = `FINISH TIME: ${result.chipTime}`;
+      const timeText = `FINISH TIME: ${toWholeSeconds(result.chipTime)}`;
       const timeSize = 18;
       const timeWidth = fontRegular.widthOfTextAtSize(timeText, timeSize);
       firstPage.drawText(timeText, {
@@ -207,7 +215,7 @@ export default function ECertificateGenerator({ result, event }: Props) {
       <button 
         onClick={generateCertificate}
         disabled={isGenerating}
-        className="btn-gradient w-full py-4 text-lg flex items-center justify-center gap-3 mt-8 shadow-lg shadow-accent-blue/20 rounded-[16px] group"
+        className="btn-gradient w-full sm:w-fit sm:min-w-[20rem] sm:px-10 mx-auto py-4 text-lg flex items-center justify-center gap-3 mt-8 shadow-lg shadow-accent-blue/20 rounded-[16px] group"
       >
         {isGenerating ? (
           <>
