@@ -43,6 +43,7 @@ import PromoActionsMenu from './PromoActionsMenu';
 import { useRouter } from 'next/navigation';
 import { useAlert } from '@/components/ui/AlertProvider';
 import FieldError from '@/components/ui/FieldError';
+import SkeletonSwap, { SkeletonBar } from '@/components/ui/Skeleton';
 import AdminSelect from '../AdminSelect';
 import {
   DISCOUNT_TYPES,
@@ -206,6 +207,38 @@ const searchPromos: FilterFn<Group> = (row, _columnId, filterValue) => {
     .includes(term);
 };
 
+/**
+ * Three orders that have not arrived yet.
+ *
+ * Deliberately the same box as the real redemption row — same border, same
+ * radius, same padding, a code and a line of meta on the left against an
+ * amount and a badge on the right — because a placeholder that is not the
+ * shape of the answer is just a grey rectangle saying "wait". Three rows
+ * rather than one: the panel is a list, and one row would promise a list of
+ * one. They are direct children of the pulsing layer so each one breathes.
+ */
+function RedemptionsPlaceholder() {
+  return (
+    <>
+      {[0, 1, 2].map(i => (
+        <div
+          key={i}
+          className="flex items-start justify-between gap-4 rounded-lg border border-white/10 bg-black/30 p-4 mb-3 last:mb-0"
+        >
+          <span className="flex flex-col gap-2 min-w-0 flex-1">
+            <SkeletonBar className="h-4 w-32" />
+            <SkeletonBar className="h-3 w-full max-w-[15rem]" />
+          </span>
+          <span className="flex flex-col items-end gap-2 shrink-0">
+            <SkeletonBar className="h-4 w-16" />
+            <SkeletonBar className="h-4 w-14" />
+          </span>
+        </div>
+      ))}
+    </>
+  );
+}
+
 export default function PromoCodesClient({
   initialPromos,
   events,
@@ -215,7 +248,7 @@ export default function PromoCodesClient({
 }) {
   const router = useRouter();
   // Shadows window.alert on purpose — see AlertProvider.
-  const { alert, confirm } = useAlert();
+  const { alert, confirm, toast } = useAlert();
   const [showModal, setShowModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -387,6 +420,17 @@ export default function PromoCodesClient({
         throw new Error(data.error || 'Failed to save');
       }
 
+      // Worded before the resets below, which are the lines that wipe the two
+      // facts the sentence is made of. The modal closing is not by itself an
+      // answer: it closes on cancel too.
+      const saved = editing
+        ? 'Promotion saved.'
+        : claim === 'VOUCHERS'
+          ? `${form.batchCount} vouchers generated.`
+          : claim === 'AUTOMATIC'
+            ? 'Automatic promotion is live.'
+            : `${form.code} is live.`;
+
       setShowModal(false);
       setEditing(null);
       setDuplicating(null);
@@ -394,6 +438,7 @@ export default function PromoCodesClient({
       setClaim('CODE');
       setForm(BLANK_FORM);
       router.refresh();
+      toast(saved);
     } catch (err: any) {
       alert(err.message);
     } finally {
@@ -427,6 +472,14 @@ export default function PromoCodesClient({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to save');
       router.refresh();
+      // Pausing is a decision with consequences off this screen — a code on a
+      // poster stops working — so it says what it did rather than leaving the
+      // organizer to read a badge in the row they just clicked away from.
+      toast(
+        next
+          ? `${group.batchLabel ?? group.terms.code} paused. Runners can no longer use it.`
+          : `${group.batchLabel ?? group.terms.code} is live again.`,
+      );
     } catch (err: any) {
       alert(err.message);
     } finally {
@@ -463,6 +516,7 @@ export default function PromoCodesClient({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to delete');
       router.refresh();
+      toast(`${name} deleted.`);
     } catch (err: any) {
       alert(err.message);
     }
@@ -1032,78 +1086,85 @@ export default function PromoCodesClient({
             </button>
           </div>
 
-          <div className="p-6 overflow-y-auto flex-1 space-y-3">
-            {isLoadingRedemptions && (
-              <p className="text-sm text-gray-400 m-0">Looking up the orders&hellip;</p>
-            )}
+          {/* The placeholder is the shape of the answer rather than a sentence
+              about waiting, and it cross-fades into the orders in place, so
+              the panel does not jump from one height to another as they land.
+              Every branch below drops its !isLoadingRedemptions guard because
+              the swap already hides the content layer while the fetch runs. */}
+          <div className="p-6 overflow-y-auto flex-1">
+            <SkeletonSwap
+              loading={isLoadingRedemptions}
+              skeleton={<RedemptionsPlaceholder />}
+            >
+              <div className="space-y-3">
+                {redemptionsError && (
+                  <p className="text-sm text-red-400 m-0">{redemptionsError}</p>
+                )}
 
-            {!isLoadingRedemptions && redemptionsError && (
-              <p className="text-sm text-red-400 m-0">{redemptionsError}</p>
-            )}
+                {/* An empty state that says so, rather than a hidden panel: "nobody
+                    has used this yet" is an answer, and the organizer asked. */}
+                {redemptions && redemptions.redemptions.length === 0 && (
+                  <p className="text-sm text-gray-400 m-0">
+                    {`Nobody has used this ${
+                      redemptions.automatic ? 'promotion' : 'code'
+                    } yet, so it has given away ₱0.00.`}
+                  </p>
+                )}
 
-            {/* An empty state that says so, rather than a hidden panel: "nobody
-                has used this yet" is an answer, and the organizer asked. */}
-            {!isLoadingRedemptions && redemptions && redemptions.redemptions.length === 0 && (
-              <p className="text-sm text-gray-400 m-0">
-                {`Nobody has used this ${
-                  redemptions.automatic ? 'promotion' : 'code'
-                } yet, so it has given away ₱0.00.`}
-              </p>
-            )}
-
-            {!isLoadingRedemptions &&
-              redemptions?.redemptions.map(order => (
-                <Link
-                  key={order.id}
-                  href={`/admin/events/${order.eventId}/registrants?search=${encodeURIComponent(order.orderRef)}`}
-                  className="flex items-start justify-between gap-4 rounded-lg border border-white/10 bg-black/30 p-4 no-underline transition-colors hover:border-white/20 hover:bg-white/5"
-                >
-                  <span className="flex flex-col gap-1 min-w-0">
-                    <span className="font-mono text-sm font-bold text-white flex items-center gap-2">
-                      {order.orderRef}
-                      <ExternalLink size={13} className="text-secondary shrink-0" aria-hidden="true" />
+                {redemptions?.redemptions.map(order => (
+                  <Link
+                    key={order.id}
+                    href={`/admin/events/${order.eventId}/registrants?search=${encodeURIComponent(order.orderRef)}`}
+                    className="flex items-start justify-between gap-4 rounded-lg border border-white/10 bg-black/30 p-4 no-underline transition-colors hover:border-white/20 hover:bg-white/5"
+                  >
+                    <span className="flex flex-col gap-1 min-w-0">
+                      <span className="font-mono text-sm font-bold text-white flex items-center gap-2">
+                        {order.orderRef}
+                        <ExternalLink size={13} className="text-secondary shrink-0" aria-hidden="true" />
+                      </span>
+                      <span className="text-xs text-secondary truncate">
+                        {`${order.eventTitle} · ${order.runners} ${
+                          order.runners === 1 ? 'runner' : 'runners'
+                        } · ${new Date(order.createdAt).toLocaleDateString('en-PH', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                        })}`}
+                      </span>
+                      {/* Inside a batch this is the only thing telling one
+                          redemption from another — which voucher went where. */}
+                      {redemptions.isBatch && order.code && (
+                        <span className="font-mono text-xs text-accent-blue">{order.code}</span>
+                      )}
                     </span>
-                    <span className="text-xs text-secondary truncate">
-                      {`${order.eventTitle} · ${order.runners} ${
-                        order.runners === 1 ? 'runner' : 'runners'
-                      } · ${new Date(order.createdAt).toLocaleDateString('en-PH', {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                      })}`}
+                    <span className="flex flex-col items-end gap-1 shrink-0">
+                      <span className="text-sm font-bold text-white">
+                        {`−₱${formatPesos(order.discountAmount)}`}
+                      </span>
+                      <span
+                        className={`status-badge ${order.status === 'PAID' ? 'success' : 'pending'}`}
+                      >
+                        {order.status}
+                      </span>
                     </span>
-                    {/* Inside a batch this is the only thing telling one
-                        redemption from another — which voucher went where. */}
-                    {redemptions.isBatch && order.code && (
-                      <span className="font-mono text-xs text-accent-blue">{order.code}</span>
-                    )}
-                  </span>
-                  <span className="flex flex-col items-end gap-1 shrink-0">
-                    <span className="text-sm font-bold text-white">
-                      {`−₱${formatPesos(order.discountAmount)}`}
-                    </span>
-                    <span
-                      className={`status-badge ${order.status === 'PAID' ? 'success' : 'pending'}`}
-                    >
-                      {order.status}
-                    </span>
-                  </span>
-                </Link>
-              ))}
+                  </Link>
+                ))}
 
-            {!isLoadingRedemptions && redemptions?.truncated && (
-              <p className="text-xs text-gray-500 m-0">
-                {`Showing the ${redemptions.limit} most recent orders. There are more.`}
-              </p>
-            )}
+                {redemptions?.truncated && (
+                  <p className="text-xs text-gray-500 m-0">
+                    {`Showing the ${redemptions.limit} most recent orders. There are more.`}
+                  </p>
+                )}
 
-            {!isLoadingRedemptions && redemptions && redemptions.redemptions.length > 0 && (
-              <p className="text-xs text-gray-500 m-0">
-                A code is spent when the order is placed, so an order still waiting on payment
-                appears here and counts as a redemption &mdash; but nothing it was given is
-                counted as money until it is paid.
-              </p>
-            )}
+                {redemptions && redemptions.redemptions.length > 0 && (
+                  <p className="text-xs text-gray-500 m-0">
+                    A code is spent when the order is placed, so an order still waiting on payment
+                    appears here and counts as a redemption &mdash; but nothing it was given is
+                    counted as money until it is paid.
+                  </p>
+                )}
+              </div>
+            </SkeletonSwap>
           </div>
 
           <div className="p-6 border-t border-white/10 flex justify-end bg-black/20 shrink-0">

@@ -17,7 +17,14 @@ export type AlertVariant = "error" | "success" | "danger" | "info";
  * Animation rides on .t-modal in globals.css, which already honours
  * prefers-reduced-motion. This component only toggles is-open / is-closing.
  */
-const VARIANTS: Record<
+/**
+ * The tone of a variant — icon, colours, default wording — in one table.
+ *
+ * Exported because a toast is the same four variants in a smaller shape: a
+ * success raised as a toast has to wear the same green check as a success
+ * raised as a dialog, or the two read as different objects.
+ */
+export const ALERT_VARIANTS: Record<
   AlertVariant,
   {
     Icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
@@ -88,7 +95,7 @@ export default function AlertModal({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
-  const v = VARIANTS[variant];
+  const v = ALERT_VARIANTS[variant];
   const titleId = useId();
   const bodyId = useId();
 

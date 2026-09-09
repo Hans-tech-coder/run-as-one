@@ -119,7 +119,8 @@ src/
     superadmin/             # platform-owner portal (SuperAdminShell)
     api/                    # all route handlers — see §6
   components/               # public-site components (Navbar, Footer, EventGrid, StatusPanel…)
-  components/ui/            # cross-app primitives: AlertProvider, AlertModal, FieldError, table
+  components/ui/            # cross-app primitives: AlertProvider, AlertModal, Toast,
+                            #   Skeleton, FieldError, table
   lib/                      # domain logic — see §5. Read these before re-deriving a rule.
   data/mockEvents.ts        # legacy mock data
 prisma/schema.prisma        # the data model, heavily commented
@@ -472,6 +473,24 @@ These are the user's own standing preferences. Follow them without being asked.
   something that failed and a person must act on — an email that never went out
   — and `neutral` for a fact that is neither, like a sold-out event. Reach for
   one of these rather than a one-off pill.
+- **A failure is answered, a success is announced.** `useAlert()` hands out
+  three things and they are not interchangeable. `alert` and `confirm` open the
+  blocking dialog and are for what a person must read or decide — a validation
+  summary, a delete. `toast` raises a small panel at the bottom-right that
+  leaves on its own after four seconds, and is for what merely worked: a
+  promotion created, paused, resumed or deleted. Do not make an organizer
+  dismiss a box to be told a thing they just asked for happened, and do not
+  demote a failure to a toast that can time out unread. Toasts stack (dialogs
+  queue) and wear the same four variants as the dialog, so a success is the
+  same green check in both. Marketing is the screen that uses them; every other
+  silent `router.refresh()` in the admin is a candidate.
+- **A wait is the shape of the answer.** A panel that fetches shows
+  `components/ui/Skeleton`'s `SkeletonSwap` — placeholder rows built from
+  `SkeletonBar` at the widths the real rows have — and cross-fades them into
+  the content in one grid cell, rather than swapping a "Loading…" sentence for
+  a list and jumping height. The redemptions panel on `/admin/marketing` is the
+  worked example. Bars must be direct children of the skeleton layer or they
+  will not pulse.
 - **No gradient buttons inside the admin.** Every action in the dashboard —
   toolbar, panel header, form footer, modal submit — wears `.btn-light`
   (`Admin.css`): a **light pill** — `#e4e4e7` fill, `#09090b` label, white on
@@ -493,6 +512,17 @@ These are the user's own standing preferences. Follow them without being asked.
   spacing, radius, glass, gradient tokens). The admin has `Admin.css` and
   `Auth.css`; the wizard and event page have their own CSS files. Dark,
   glassmorphic, with an orange (`#FF6B00`) → blue (`#007AFF`) gradient.
+- **Motion comes from transitions.dev.** The `--duration-*` / `--ease-*` /
+  `--distance-*` scale at the top of `globals.css` is that library's shared
+  motion scale, and the `t-*` classes below it are its snippets: `t-modal`,
+  `t-dropdown`, `t-tilt`, `t-stagger`, `t-toast`, `t-skel`. Each snippet keeps
+  its `@media (prefers-reduced-motion: reduce)` guard — never drop it — and its
+  own token block in `:root` so a duration can be tuned in one place. The
+  reference for all 32 free transitions is installed as an agent skill at
+  `.claude/skills/transitions-dev/`; reach for one of those before hand-rolling
+  an animation, and add the CSS at the bottom of `globals.css` next to its
+  siblings. (`.claude/` is gitignored, so the skill is per-checkout: reinstall
+  it from `github.com/Jakubantalik/transitions.dev` under `skills/`.)
 - Fonts: Outfit (`--font-sans`, headings), Inter (`--font-body`).
 - Commit style: `feat:` / `fix:` / `refactor:` plus a sentence saying what changed
   for the user.

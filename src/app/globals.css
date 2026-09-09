@@ -69,6 +69,21 @@ input[type="checkbox"],
   --modal-scale-close: 0.96;
   --modal-ease: cubic-bezier(0.22, 1, 0.36, 1);
 
+  /* Toast open / close */
+  --toast-open-dur: 350ms;
+  --toast-close-dur: 250ms;
+  --toast-distance: 16px;
+  --toast-blur: 2px;
+  --toast-scale: 0.97;
+  --toast-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Skeleton loader and reveal */
+  --skel-pulse-dur: 1000ms;
+  --skel-pulse-min: 0.5;
+  --skel-reveal-dur: 400ms;
+  --skel-reveal-blur: 2px;
+  --skel-reveal-ease: ease-in-out;
+
   /* ── Layout ──────────────────────────────────────────────────
      The page gutter, and how far the content has to start below the floating
      navbar. Both are read in more than one place — .event-hero cancels the
@@ -428,6 +443,90 @@ input[type="datetime-local"]:focus::-webkit-calendar-picker-indicator {
 
 @media (prefers-reduced-motion: reduce) {
   .t-modal { transition: none !important; }
+}
+
+/* Transitions.dev Toast open / close */
+.t-toast {
+  opacity: 0;
+  transform: translateY(var(--toast-distance)) scale(var(--toast-scale));
+  filter: blur(var(--toast-blur));
+  will-change: transform, opacity, filter;
+  /* The resting state carries the close clock, so a single class toggle
+     gives the asymmetry: arriving is deliberate, leaving is snappy. */
+  transition:
+    opacity   var(--toast-close-dur) var(--toast-ease),
+    transform var(--toast-close-dur) var(--toast-ease),
+    filter    var(--toast-close-dur) var(--toast-ease);
+}
+.t-toast.is-open {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  filter: blur(0);
+  transition:
+    opacity   var(--toast-open-dur) var(--toast-ease),
+    transform var(--toast-open-dur) var(--toast-ease),
+    filter    var(--toast-open-dur) var(--toast-ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-toast { transition: none !important; }
+}
+
+/* Transitions.dev Skeleton loader and reveal */
+/* The two layers share one grid cell rather than the snippet's absolute
+   inset-0: a list has no height of its own until its rows arrive, so an
+   absolutely-positioned skeleton would collapse the panel holding it. Grid
+   sizes the wrap to whichever layer is taller, which is the skeleton while
+   loading and the content after. */
+.t-skel { display: grid; }
+.t-skel-skeleton,
+.t-skel-content { grid-area: 1 / 1; }
+
+.t-skel-skeleton {
+  z-index: 1;
+  opacity: 1;
+  filter: blur(0);
+  transition:
+    opacity var(--skel-reveal-dur) var(--skel-reveal-ease),
+    filter  var(--skel-reveal-dur) var(--skel-reveal-ease);
+}
+.t-skel-content {
+  z-index: 2;
+  opacity: 0;
+  filter: blur(var(--skel-reveal-blur));
+  transition:
+    opacity var(--skel-reveal-dur) var(--skel-reveal-ease),
+    filter  var(--skel-reveal-dur) var(--skel-reveal-ease);
+}
+.t-skel.is-revealed .t-skel-skeleton {
+  opacity: 0;
+  filter: blur(var(--skel-reveal-blur));
+}
+.t-skel.is-revealed .t-skel-content {
+  opacity: 1;
+  filter: blur(0);
+}
+
+/* The pulse rides the bars, not the skeleton itself, so the skeleton's own
+   opacity and filter stay free for the cross-fade above. It repeats until the
+   data lands rather than counting a fixed number of beats: a slow query is
+   exactly when a still placeholder starts reading as a broken screen. */
+.t-skel-skeleton.is-pulsing > * {
+  animation: t-skel-pulse var(--skel-pulse-dur) ease-in-out infinite;
+}
+@keyframes t-skel-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: var(--skel-pulse-min); }
+}
+
+.t-skel-bar {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-skel-skeleton, .t-skel-content { transition: none !important; }
+  .t-skel-skeleton.is-pulsing > * { animation: none !important; }
 }
 
 html, body { overflow-x: hidden; }
