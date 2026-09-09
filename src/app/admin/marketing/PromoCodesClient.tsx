@@ -52,6 +52,9 @@ import {
   MAX_PROMO_CODE_LENGTH,
   PROMO_STATUS_LABELS,
   PROMO_STATUS_TONES,
+  PromoCategoryPrice,
+  categoryPriceField,
+  categorySeatsField,
   describePromo,
   isExhausted,
   normalizePromoCode,
@@ -90,10 +93,10 @@ type PromoRow = {
   paidOrders: number;
   validFrom: string | null;
   validUntil: string | null;
-  minSubtotal: number | null;
-  minRunners: number | null;
   buyQuantity: number | null;
   getQuantity: number | null;
+  /** CATEGORY_PRICE only: what this promotion puts each category on. */
+  categoryPrices: PromoCategoryPrice[];
   batchLabel: string | null;
   automatic: boolean;
   paused: boolean;
@@ -101,7 +104,20 @@ type PromoRow = {
   event: { id: string; title: string } | null;
 };
 
-type EventOption = { id: string; title: string; date: string };
+/**
+ * One of the organizer's races, and the options it sells.
+ *
+ * The categories travel with the event because a CATEGORY_PRICE promotion is
+ * edited against them: the form shows each option's own price and asks for the
+ * lower one beside it, so picking a race has to reveal its price list without
+ * a round trip.
+ */
+type EventOption = {
+  id: string;
+  title: string;
+  date: string;
+  categories: { id: string; name: string; distance: string; price: number }[];
+};
 
 /** One line of the table: a single code, or a whole batch of vouchers. */
 type Group = {
@@ -130,13 +146,21 @@ const ALL_EVENTS = '';
 const BLANK_FORM = {
   code: '',
   eventId: ALL_EVENTS,
-  discountType: DISCOUNT_TYPES.PERCENTAGE as DiscountType,
-  discountValue: '',
+  discountType: DISCOUNT_TYPES.CATEGORY_PRICE as DiscountType,
   buyQuantity: '',
   getQuantity: '',
-  usageLimit: '',
-  minSubtotal: '',
-  minRunners: '',
+  /**
+   * The discounted price per category, in pesos, keyed by category id — the
+   * boxes of the price editor. Blank means that option keeps its own price,
+   * which is why this is a sparse map rather than a value per category.
+   */
+  categoryPrices: {} as Record<string, string>,
+  /**
+   * How many runners may take each category's promotion price, keyed the same
+   * way. Only read when the promotion is limited by uses; blank means that
+   * category's price has no cap of its own.
+   */
+  categoryLimits: {} as Record<string, string>,
   validFrom: '',
   validUntil: '',
   batchLabel: '',
@@ -173,7 +197,7 @@ const CLAIMS: { value: Claim; label: string; hint: string }[] = [
   {
     value: 'AUTOMATIC',
     label: 'Automatic',
-    hint: 'No code at all. It applies on its own to every order that meets the conditions below, and it is shown on the event page. This is what an early bird is.',
+    hint: 'No code at all. It applies on its own to every qualifying order and is shown on the event page. This is what an early bird is, and the only way a discounted category price can be given.',
   },
 ];
 
@@ -324,7 +348,10 @@ export default function PromoCodesClient({
     setEditing(null);
     setDuplicating(null);
     setDatesCleared(false);
-    setClaim('CODE');
+    // Matching BLANK_FORM's discount type, which is the category price — the
+    // one kind that can only be automatic. A form that opened on CODE would
+    // contradict its own type picker before anything had been typed.
+    setClaim('AUTOMATIC');
     setForm(BLANK_FORM);
     setFieldError(null);
     setShowModal(true);
@@ -360,11 +387,6 @@ export default function PromoCodesClient({
       batchLabel: '',
       batchPrefix: '',
       batchCount: '',
-      // A voucher's limit of 1 belongs to the batch machinery rather than to
-      // the organizer's intent, and carrying it into a form where the field is
-      // hidden would put a 1 in the Total uses box the moment they changed
-      // this copy into a shared code.
-      usageLimit: group.batchLabel ? '' : source.usageLimit,
       validFrom: ended ? '' : source.validFrom,
       validUntil: ended ? '' : source.validUntil,
     });
@@ -407,6 +429,19 @@ export default function PromoCodesClient({
             // shapes send none, which is what the route branches on.
             batchCount: claim === 'VOUCHERS' ? form.batchCount : '',
             automatic: claim === 'AUTOMATIC',
+            // Only the kind that has a price list sends one. Posting the
+            // boxes a group deal left behind would have the route store
+            // prices for a promotion that never charges by them.
+            categoryPrices:
+              form.discountType === DISCOUNT_TYPES.CATEGORY_PRICE
+                ? form.categoryPrices
+                : {},
+            // Only the kind that has a price list to cap. A group deal
+            // posting the boxes it never rendered would be inventing values.
+            categoryLimits:
+              form.discountType === DISCOUNT_TYPES.CATEGORY_PRICE
+                ? form.categoryLimits
+                : {},
           }),
         },
       );
@@ -435,7 +470,7 @@ export default function PromoCodesClient({
       setEditing(null);
       setDuplicating(null);
       setDatesCleared(false);
-      setClaim('CODE');
+      setClaim('AUTOMATIC');
       setForm(BLANK_FORM);
       router.refresh();
       toast(saved);
@@ -813,6 +848,68 @@ export default function PromoCodesClient({
     fieldError?.field === field ? fieldError.message : undefined;
 
   const type = form.discountType;
+
+  // The options of the race this promotion is scoped to. Empty for "All my
+  // events", which is exactly why a price list cannot be organizer-wide:
+  // there is no single set of categories to put a price on.
+  const scopedCategories =
+    events.find(event => event.id === form.eventId)?.categories ?? [];
+
+  // Seats already sold at this promotion's price, per category, for the note
+  // under each box while editing a live promotion. Empty while creating one.
+  const claimed = useMemo(
+    () =>
+      new Map(
+        (editing?.terms.categoryPrices ?? []).map(entry => [
+          entry.categoryId,
+          entry.usageCount ?? 0,
+        ]),
+      ),
+    [editing],
+  );
+
+  /**
+   * Changing the kind of promotion.
+   *
+   * A discounted category price is drawn onto the options a runner is choosing
+   * between, so it has to be claimable by everyone looking at the page: the
+   * claim is forced to Automatic here rather than left to be refused on save,
+   * because a segmented control that silently produces a 400 is worse than one
+   * that moves.
+   */
+  const chooseType = (next: DiscountType) => {
+    set({ discountType: next });
+    if (next === DISCOUNT_TYPES.CATEGORY_PRICE) setClaim('AUTOMATIC');
+  };
+
+  /**
+   * Changing the race.
+   *
+   * The price boxes are keyed by category id, and the categories belong to the
+   * event — so a list typed against one race would otherwise be posted against
+   * another, where the route would find no matching categories and refuse a
+   * form that looks filled in.
+   */
+  const chooseEvent = (next: string) => {
+    set({ eventId: next, categoryPrices: {} });
+  };
+
+  /** One option's promotion price, as the organizer types it. */
+  const setCategoryPrice = (categoryId: string, value: string) => {
+    set({ categoryPrices: { ...form.categoryPrices, [categoryId]: value } });
+  };
+
+  /** How many runners may take that option's promotion price. */
+  const setCategoryLimit = (categoryId: string, value: string) => {
+    set({ categoryLimits: { ...form.categoryLimits, [categoryId]: value } });
+  };
+
+  // A repricing promotion is capped per category rather than per order, so the
+  // count boxes belong beside the prices — always, now that they are the only
+  // count a promotion has. A cap and a date window are not alternatives here:
+  // "50 runners at this price, until the 30th" is one perfectly ordinary
+  // early bird.
+  const perCategoryLimits = type === DISCOUNT_TYPES.CATEGORY_PRICE;
 
   return (
     <>
@@ -1227,7 +1324,7 @@ export default function PromoCodesClient({
                 label="Applies to"
                 listboxLabel="Event this code applies to"
                 value={form.eventId}
-                onChange={next => set({ eventId: next })}
+                onChange={chooseEvent}
                 error={errorFor('eventId')}
                 options={[
                   { value: ALL_EVENTS, label: 'All my events', hint: 'Every event you run, now and later' },
@@ -1243,59 +1340,160 @@ export default function PromoCodesClient({
                 label="Discount type"
                 listboxLabel="Kind of discount"
                 value={type}
-                onChange={next => set({ discountType: next as DiscountType })}
+                onChange={next => chooseType(next as DiscountType)}
                 error={errorFor('discountType')}
                 options={[
-                  { value: DISCOUNT_TYPES.PERCENTAGE, label: DISCOUNT_TYPE_LABELS.PERCENTAGE, hint: 'A share of the entry fees' },
-                  { value: DISCOUNT_TYPES.FIXED, label: DISCOUNT_TYPE_LABELS.FIXED, hint: 'A flat peso amount off' },
-                  { value: DISCOUNT_TYPES.FREE_DELIVERY, label: DISCOUNT_TYPE_LABELS.FREE_DELIVERY, hint: 'Waives the race-kit delivery fee' },
-                  { value: DISCOUNT_TYPES.BUY_X_GET_Y, label: DISCOUNT_TYPE_LABELS.BUY_X_GET_Y, hint: 'Register 5, the 6th is free' },
+                  {
+                    value: DISCOUNT_TYPES.CATEGORY_PRICE,
+                    label: DISCOUNT_TYPE_LABELS.CATEGORY_PRICE,
+                    hint: 'A lower price on the distances you choose',
+                  },
+                  {
+                    value: DISCOUNT_TYPES.BUY_X_GET_Y,
+                    label: DISCOUNT_TYPE_LABELS.BUY_X_GET_Y,
+                    hint: 'Register 5, the 6th is free',
+                  },
                 ]}
               />
 
-              {type === DISCOUNT_TYPES.PERCENTAGE && (
-                <div className="form-group">
-                  <label className="form-label" htmlFor="promo-value">Percentage off</label>
-                  <input
-                    id="promo-value"
-                    type="number"
-                    min="1"
-                    max="100"
-                    step="0.5"
-                    className="form-input"
-                    placeholder="10"
-                    aria-invalid={errorFor('discountValue') ? true : undefined}
-                    value={form.discountValue}
-                    onChange={e => set({ discountValue: e.target.value })}
-                  />
-                  <FieldError id="promo-value-error" message={errorFor('discountValue')} />
-                </div>
-              )}
+              {/* The price list.
 
-              {type === DISCOUNT_TYPES.FIXED && (
-                <div className="form-group">
-                  <label className="form-label" htmlFor="promo-value">Amount off (₱)</label>
-                  <input
-                    id="promo-value"
-                    type="number"
-                    min="1"
-                    step="0.01"
-                    className="form-input"
-                    placeholder="200"
-                    aria-invalid={errorFor('discountValue') ? true : undefined}
-                    value={form.discountValue}
-                    onChange={e => set({ discountValue: e.target.value })}
-                  />
-                  <FieldError id="promo-value-error" message={errorFor('discountValue')} />
-                </div>
-              )}
+                  A row per option: its own price on the left and the box for
+                  the promotion's price on the right, so the pair reads the way
+                  a runner will meet it on the event page — struck through, then
+                  lower. Blank is a real answer and the commonest one, since an
+                  early bird on the 10K should not oblige anyone to invent a
+                  number for the 5K.
 
-              {type === DISCOUNT_TYPES.FREE_DELIVERY && (
-                <p className="text-xs text-secondary -mt-2">
-                  Takes the whole delivery fee off. A runner who chose to collect their race kit
-                  themselves has no fee to waive, and is told so rather than shown a discount of
-                  nothing.
-                </p>
+                  Every box carries its own inline error, keyed by category the
+                  same way the route refuses it, because "that price is not
+                  lower" is a fact about one option and a message at the top of
+                  five identical inputs names none of them. */}
+              {type === DISCOUNT_TYPES.CATEGORY_PRICE && (
+                <div className="form-group">
+                  <span className="form-label">Promotion prices</span>
+
+                  {!form.eventId ? (
+                    /* Not an error — nothing has been submitted — but the panel
+                       cannot be drawn without a race, and naming the control
+                       that unblocks it beats an empty box. */
+                    <p className="m-0 text-xs text-secondary">
+                      Pick the event above first. Prices belong to its categories, so this kind of
+                      promotion is always for one race.
+                    </p>
+                  ) : scopedCategories.length === 0 ? (
+                    <p className="m-0 text-xs text-secondary">
+                      That event has no categories yet. Add them on the event first, then come back
+                      and price them.
+                    </p>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      {scopedCategories.map(category => {
+                        const field = categoryPriceField(category.id);
+                        const seatField = categorySeatsField(category.id);
+                        const typed = form.categoryPrices[category.id] ?? '';
+                        return (
+                          <div
+                            key={category.id}
+                            className="rounded-[10px] border border-white/10 bg-black/30 p-3"
+                          >
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                              <span className="min-w-[6rem] flex-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                                <span className="text-sm font-bold uppercase tracking-wide text-white">
+                                  {category.name}
+                                </span>
+                                {category.distance && (
+                                  <span className="shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-secondary">
+                                    {category.distance}
+                                  </span>
+                                )}
+                              </span>
+                              {/* The number being discounted from, shown rather
+                                  than remembered: an organizer typing 900 has to
+                                  see it is coming off 1,200 without leaving the
+                                  modal. It strikes itself through once there is
+                                  a price to replace it, which is the same thing
+                                  the event page will do. */}
+                              <span
+                                className={`shrink-0 text-sm tabular-nums text-secondary ${
+                                  typed.trim() ? 'line-through' : ''
+                                }`}
+                              >
+                                &#8369;{formatPesos(category.price)}
+                              </span>
+                              <label className="sr-only" htmlFor={`promo-price-${category.id}`}>
+                                {`Promotion price for ${category.name}`}
+                              </label>
+                              <input
+                                id={`promo-price-${category.id}`}
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                inputMode="decimal"
+                                className="form-input w-32 shrink-0"
+                                placeholder="Keep price"
+                                aria-invalid={errorFor(field) ? true : undefined}
+                                value={typed}
+                                onChange={e => setCategoryPrice(category.id, e.target.value)}
+                              />
+                              {/* How many runners may take it. Beside the
+                                  price rather than in a section of its own,
+                                  because "₱900, fifty of them" is one decision
+                                  about one distance and splitting it across
+                                  the form would make an organizer set it
+                                  twice. Only shown while the promotion is
+                                  limited by uses; a date window has nothing to
+                                  count. */}
+                              {perCategoryLimits && (
+                                <>
+                                  <label
+                                    className="sr-only"
+                                    htmlFor={`promo-seats-${category.id}`}
+                                  >
+                                    {`How many runners get the ${category.name} promotion price`}
+                                  </label>
+                                  <input
+                                    id={`promo-seats-${category.id}`}
+                                    type="number"
+                                    min="1"
+                                    step="1"
+                                    inputMode="numeric"
+                                    className="form-input w-28 shrink-0"
+                                    placeholder="No limit"
+                                    aria-invalid={errorFor(seatField) ? true : undefined}
+                                    value={form.categoryLimits[category.id] ?? ''}
+                                    onChange={e => setCategoryLimit(category.id, e.target.value)}
+                                  />
+                                </>
+                              )}
+                            </div>
+                            {/* The seats already taken, so an organizer
+                                editing a live promotion can see what raising
+                                or lowering the cap would mean. Silent until
+                                somebody has actually claimed one. */}
+                            {perCategoryLimits && (claimed.get(category.id) ?? 0) > 0 && (
+                              <p className="m-0 mt-1 text-xs text-secondary">
+                                {`${claimed.get(category.id)} runner${
+                                  claimed.get(category.id) === 1 ? ' has' : 's have'
+                                } already taken this price.`}
+                              </p>
+                            )}
+                            <FieldError id={`${field}-error`} message={errorFor(field)} />
+                            <FieldError id={`${seatField}-error`} message={errorFor(seatField)} />
+                          </div>
+                        );
+                      })}
+                      <p className="text-xs text-secondary">
+                        Leave a category blank to keep its own price. Runners see the old price
+                        struck through and the new one beside it, both on the event page and while
+                        they register.
+                        {perCategoryLimits
+                          ? ' The second box is how many runners may take that price — leave it blank for no limit. It counts runners, not orders, so a group of three takes three.'
+                          : ''}
+                      </p>
+                    </div>
+                  )}
+                </div>
               )}
 
               {type === DISCOUNT_TYPES.BUY_X_GET_Y && (
@@ -1349,24 +1547,39 @@ export default function PromoCodesClient({
               <div className="form-group" hidden={Boolean(editing)}>
                 <span className="form-label">How runners get it</span>
                 <div className="flex rounded-[10px] border border-white/10 bg-black/30 p-1">
-                  {CLAIMS.map(option => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => { setClaim(option.value); setFieldError(null); }}
-                      aria-pressed={claim === option.value}
-                      className={`flex-1 rounded-[8px] px-3 py-2 text-sm font-bold transition-colors ${
-                        claim === option.value
-                          ? 'bg-white/10 text-white'
-                          : 'text-secondary hover:text-white'
-                      }`}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
+                  {CLAIMS.map(option => {
+                    // A discounted category price is drawn onto the options a
+                    // runner is choosing between, so it cannot be something
+                    // only the people holding a code may claim. The other two
+                    // are disabled rather than hidden: a control that loses
+                    // buttons when a select changes reads as a bug, and a
+                    // disabled one with a reason under it reads as a rule.
+                    const unavailable =
+                      type === DISCOUNT_TYPES.CATEGORY_PRICE && option.value !== 'AUTOMATIC';
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        disabled={unavailable}
+                        onClick={() => { setClaim(option.value); setFieldError(null); }}
+                        aria-pressed={claim === option.value}
+                        className={`flex-1 rounded-[8px] px-3 py-2 text-sm font-bold transition-colors ${
+                          claim === option.value
+                            ? 'bg-white/10 text-white'
+                            : unavailable
+                              ? 'text-secondary/40 cursor-not-allowed'
+                              : 'text-secondary hover:text-white'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    );
+                  })}
                 </div>
                 <p className="text-xs text-secondary">
-                  {CLAIMS.find(option => option.value === claim)?.hint}
+                  {type === DISCOUNT_TYPES.CATEGORY_PRICE
+                    ? 'A discounted category price is shown on the event page beside the option it reprices, so there is nothing to hand out and no code to type.'
+                    : CLAIMS.find(option => option.value === claim)?.hint}
                 </p>
               </div>
 
@@ -1460,52 +1673,34 @@ export default function PromoCodesClient({
                     <FieldError id="promo-code-error" message={errorFor('code')} />
                   </div>
 
-                  <div className="form-group">
-                    <label className="form-label" htmlFor="promo-limit">
-                      Total uses (leave blank for unlimited)
-                    </label>
-                    <input
-                      id="promo-limit"
-                      type="number"
-                      min="1"
-                      className="form-input"
-                      value={form.usageLimit}
-                      onChange={e => set({ usageLimit: e.target.value })}
-                    />
-                  </div>
                 </>
               )}
 
-              <details className="rounded-[10px] border border-white/10 bg-black/20 p-4">
-                <summary className="cursor-pointer text-sm font-bold text-white">
-                  Conditions (optional)
-                </summary>
-                <div className="mt-4 flex flex-col gap-4">
-                  <div className="flex gap-4">
-                    <div className="form-group flex-1">
-                      <label className="form-label" htmlFor="promo-min-spend">Minimum spend (₱)</label>
-                      <input
-                        id="promo-min-spend"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        className="form-input"
-                        value={form.minSubtotal}
-                        onChange={e => set({ minSubtotal: e.target.value })}
-                      />
-                    </div>
-                    <div className="form-group flex-1">
-                      <label className="form-label" htmlFor="promo-min-runners">Minimum runners</label>
-                      <input
-                        id="promo-min-runners"
-                        type="number"
-                        min="1"
-                        className="form-input"
-                        value={form.minRunners}
-                        onChange={e => set({ minRunners: e.target.value })}
-                      />
-                    </div>
-                  </div>
+              {/* When it runs.
+
+                  A date window and nothing else. There used to be a choice
+                  here — a window, or a count of redemptions — but the count
+                  had no kind of promotion left to limit once the percentage
+                  and flat-amount codes went: a repricing promotion is capped
+                  per category on its own price rows, in runners, and a group
+                  deal is bounded by the group it needs. An option that governs
+                  nothing is worse than no option, because an organizer has to
+                  read it before working that out.
+
+                  Both dates stay optional, so a promotion with neither simply
+                  runs until it is paused — which is what an uncapped one
+                  always did. */}
+              <div className="form-group">
+                <span className="form-label">When it runs</span>
+
+                {claim === 'VOUCHERS' && (
+                  <p className="m-0 mb-1 text-xs text-secondary">
+                    Each voucher is claimed once, so the batch runs until they are all used. Give it
+                    dates as well if it should stop on a day whether or not any are left.
+                  </p>
+                )}
+
+                <div className="mt-2 flex flex-col gap-4">
                   <div className="flex gap-4">
                     <div className="form-group flex-1">
                       <label className="form-label" htmlFor="promo-from">Starts</label>
@@ -1533,11 +1728,11 @@ export default function PromoCodesClient({
                     </div>
                   </div>
                   <p className="text-xs text-secondary">
-                    Dates are Manila days: a code that ends on the 30th works to the end of the
-                    30th. The minimum is on the entry fees, not on the platform fee.
+                    Dates are Manila days: a promotion that ends on the 30th works to the end of
+                    the 30th. Leave both blank and it runs until you pause it.
                   </p>
                 </div>
-              </details>
+              </div>
 
               <button
                 type="submit"
@@ -1635,18 +1830,19 @@ function formFrom(group: Group): typeof BLANK_FORM {
     // A batch has no single code to show; its name is the batch label.
     code: group.batchLabel ?? promo.code,
     eventId: promo.eventId ?? ALL_EVENTS,
-    discountType: (promo.discountType as DiscountType) ?? DISCOUNT_TYPES.PERCENTAGE,
-    discountValue:
-      promo.discountType === DISCOUNT_TYPES.PERCENTAGE
-        ? String(promo.discountValue / 100)
-        : promo.discountType === DISCOUNT_TYPES.FIXED
-          ? String(promo.discountValue / 100)
-          : '',
+    discountType: (promo.discountType as DiscountType) ?? DISCOUNT_TYPES.CATEGORY_PRICE,
     buyQuantity: promo.buyQuantity ? String(promo.buyQuantity) : '',
     getQuantity: promo.getQuantity ? String(promo.getQuantity) : '',
-    usageLimit: promo.usageLimit ? String(promo.usageLimit) : '',
-    minSubtotal: promo.minSubtotal ? String(promo.minSubtotal / 100) : '',
-    minRunners: promo.minRunners ? String(promo.minRunners) : '',
+    // Centavos back to the pesos the organizer typed. Getting this backwards
+    // would show a 900 peso price as 90,000 and invite them to "correct" it.
+    categoryPrices: Object.fromEntries(
+      promo.categoryPrices.map(entry => [entry.categoryId, String(entry.price / 100)]),
+    ),
+    categoryLimits: Object.fromEntries(
+      promo.categoryPrices
+        .filter(entry => (entry.usageLimit ?? 0) > 0)
+        .map(entry => [entry.categoryId, String(entry.usageLimit)]),
+    ),
     // The date inputs want a Manila calendar day, not an instant: a window
     // that ends at 23:59 Manila is already the next day in UTC, and reading it
     // back as one would move every end date forward by a day on every save.

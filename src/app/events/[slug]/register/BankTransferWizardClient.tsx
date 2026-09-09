@@ -45,11 +45,14 @@ import {
   shouldAskShirtSize,
   findCategory,
   totalShirtSizeUpcharge,
+  runnerCategories,
   runnerPrices,
 } from "@/lib/shirt-size";
 import {
   applyPromo,
   bestDiscount,
+  categorySalePrices,
+  chargedRunnerPrice,
   freeSlotOffer,
   outshoneByMessage,
   promoCodeError,
@@ -364,11 +367,21 @@ export default function BankTransferWizardClient({
   // summary promises and what the organizer expects in their account cannot
   // disagree. A code that has stopped qualifying keeps its box but takes
   // nothing off, and says why.
+  // The options an automatic promotion has repriced, so each card quotes the
+  // same two numbers the event page did. It is the same call that page makes
+  // and the same rule the summary charges by: the picker shows the new price
+  // on the option, and the summary reaches it by subtracting the discount from
+  // the list total, which is what the receipt and the organizer's Given column
+  // both count.
+  const salePrices = useMemo(
+    () => categorySalePrices(automaticPromos, event.categories),
+    [automaticPromos, event.categories],
+  );
+
   const promoOrder = {
     runnerPrices: runnerPrices(participants, event.categories, shirtSizeUpcharge),
+    runnerCategories: runnerCategories(participants, event.categories),
     subtotal,
-    deliveryFee,
-    deliveryChosen: logisticsMethod === "DELIVERY",
   };
   const promoProblem = promo ? promoCodeError(promo, promoOrder, promo.code) : null;
 
@@ -765,8 +778,20 @@ export default function BankTransferWizardClient({
                           ""
                         )}
                       </span>
+                      {/* A sale is a price, not a deduction: when the
+                          category is on promotion this line says the promotion
+                          price and no discount row follows it, exactly the way
+                          a sale reads anywhere else. Every other kind leaves
+                          the goods at list and shows itself below. The total
+                          is the same either way — see AppliedDiscount.pricedIn
+                          in lib/discount.ts. */}
                       <span className="font-bold text-white">
-                        ₱{cat ? formatPesos(cat.price) : "0.00"}
+                        ₱
+                        {cat
+                          ? formatPesos(
+                              chargedRunnerPrice(discount, idx, cat.price),
+                            )
+                          : "0.00"}
                       </span>
                     </div>
                   );
@@ -812,9 +837,22 @@ export default function BankTransferWizardClient({
                             .join(", ")}
                         </span>
                       )}
+                      {discount.pricedIn && (
+                        <span className="block text-xs mt-0.5">
+                          Already in the prices above — you save ₱
+                          {formatPesos(discount.amount)}
+                        </span>
+                      )}
                     </span>
+                    {/* Named but not subtracted again when the prices
+                        above are already the promotion's. Saying nothing at
+                        all would leave a runner unable to see which promotion
+                        gave them the price, and a second −₱ would read as a
+                        discount they are not getting twice. */}
                     <span className="font-bold text-emerald-400 whitespace-nowrap">
-                      −₱{formatPesos(discount.amount)}
+                      {discount.pricedIn
+                        ? "Applied"
+                        : `−₱${formatPesos(discount.amount)}`}
                     </span>
                   </div>
                 )}
@@ -960,6 +998,7 @@ export default function BankTransferWizardClient({
                       error={errorFor(idx, "categoryId")}
                       event={event}
                       selectedId={p.categoryId}
+                      salePrices={salePrices}
                       onSelect={categoryId =>
                         handleCategoryChange(idx, categoryId)
                       }

@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { code, usageLimit, batchLabel, batchCount, batchPrefix } = body;
+    const { code, batchLabel, batchCount, batchPrefix } = body;
 
     // A promotion nobody has to be told about: it applies on its own to any
     // order that meets its conditions. Its `code` column then holds its name,
@@ -70,6 +70,9 @@ export async function POST(request: Request) {
         data: codes.map(voucher => ({
           ...shared,
           code: voucher,
+          // Single use by construction, whichever limit the form chose: what
+          // makes a voucher a voucher is that it is spent once. A date window
+          // set beside it still applies, since `shared` carries it.
           usageLimit: 1,
           batchLabel: label,
         })),
@@ -122,7 +125,13 @@ export async function POST(request: Request) {
       data: {
         ...shared,
         code: cleaned,
-        usageLimit: wholeNumber(usageLimit),
+        // Written in the same statement as the promotion rather than after it:
+        // a CATEGORY_PRICE promotion with no prices is one the event page
+        // would advertise and the checkout would ignore, and two statements
+        // are two chances to end up in exactly that state.
+        ...(terms.categoryPrices.length > 0
+          ? { categoryPrices: { create: terms.categoryPrices } }
+          : {}),
       },
     });
 

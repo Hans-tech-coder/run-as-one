@@ -138,6 +138,9 @@ model Category {
   event       Event        @relation(fields: [eventId], references: [id])
   raceResults RaceResult[]
   runners     Runner[]
+  /// The promotions that put this option on a lower price -- see
+  /// PromoCategoryPrice.
+  promoPrices PromoCategoryPrice[]
 }
 
 model Registration {
@@ -169,6 +172,20 @@ model Registration {
   /// normal case -- most orders carry no discount at all.
   discountAmount    Int       @default(0)
   promoCode         String?
+  /// Which kind of promotion it was -- "CATEGORY_PRICE" or "BUY_X_GET_Y" --
+  /// snapshotted for the same reason promoCode is, and needed for a reason
+  /// promoCode alone cannot serve: the receipt has to know whether the
+  /// discount was a *price* or a *deduction*.
+  ///
+  /// A sale is shown as the price itself (subtotal already net, no discount
+  /// row); every other kind is a line off the order. The email renders from
+  /// this row long after checkout, and the PromoCode it came from may have
+  /// been edited or deleted by then, so reading the kind back off the
+  /// promotion is not available -- see isPricedIn in src/lib/discount.ts.
+  ///
+  /// Null on the orders that carry no discount, and on every order written
+  /// before this column existed.
+  discountType      String?
   /// PAID, PENDING, CANCELLED, REFUNDED or EXPIRED -- guarded against that
   /// list wherever it is written (see api/admin/registrations/[id]/status).
   ///
@@ -271,6 +288,21 @@ model Runner {
   gender                String
   birthdate             String
   singletSize           String
+  /// Centavos this runner's category was charged at, when a repricing
+  /// promotion gave them a seat at its price -- null when they paid the
+  /// category's own price, which is every runner on every other kind of order.
+  ///
+  /// Per runner rather than per order because a promotion can run out halfway
+  /// through one: a group of three on a 10K with two seats left has two
+  /// runners at P900 and one at P1,200, and an order-level column could only
+  /// record one of those.
+  ///
+  /// It is a snapshot, like Registration.promoCode, so editing or deleting the
+  /// promotion cannot rewrite what somebody was charged -- and it is what the
+  /// abandoned-checkout sweep counts to hand the right number of seats back
+  /// (src/lib/pending-expiry.ts). Recomputing that from the promotion instead
+  /// would hand back three seats for an order that only ever took two.
+  promoPrice            Int?
   emergencyContactName  String
   emergencyContactPhone String
   medicalConditions     String?
@@ -330,16 +362,25 @@ model PromoCode {
   /// when we show it to a runner. Uppercase like every other coded column, and
   /// spaces are allowed, so "EARLY BIRD" reads correctly on a badge.
   code          String
-  /// "PERCENTAGE" | "FIXED" | "FREE_DELIVERY" | "BUY_X_GET_Y" -- uppercase like
-  /// every other coded column, and guarded by asDiscountType at the API door.
+  /// "CATEGORY_PRICE" | "BUY_X_GET_Y" -- uppercase like every other coded
+  /// column, and guarded by asDiscountType at the API door.
   discountType  String
-  /// Unit depends on discountType: FIXED = centavos, PERCENTAGE = basis points
-  /// (1000 = 10%). FREE_DELIVERY takes its amount from the order's delivery
-  /// fee and BUY_X_GET_Y from buyQuantity/getQuantity, so both store 0 here.
+  /// Kept at 0 by both surviving kinds and read by neither: CATEGORY_PRICE
+  /// takes its amounts from the categoryPrices rows below and BUY_X_GET_Y from
+  /// buyQuantity/getQuantity. The column stays because it is the one place a
+  /// future kind whose worth is a single number would put it, and dropping it
+  /// would cost a migration to add back.
   discountValue Int
   /// How many times this code may be redeemed in total. Null = unlimited. A
   /// single-use voucher is simply a limit of 1, which is why there is no
   /// separate flag: "used once" is a cap, and the cap already exists.
+  ///
+  /// A promotion is limited **either** by this count **or** by the window
+  /// below, never by both, and the marketing form makes that an explicit
+  /// choice -- see promo-input.ts. There is no column recording which was
+  /// chosen because the rows already say it: a usageLimit means the count, and
+  /// its absence means the window (or nothing at all). A voucher batch is the
+  /// one exception, since every voucher carries a limit of 1 by construction.
   usageLimit    Int?
   usageCount    Int       @default(0)
   validFrom     DateTime?
@@ -347,13 +388,6 @@ model PromoCode {
   /// The event this code is for. Null means every event this organizer runs,
   /// which is what every code created before scoping existed was.
   eventId       String?
-  /// Centavos the order's goods must come to before this code applies. Null =
-  /// no minimum. The condition is on the subtotal rather than the total,
-  /// because the platform and transaction fees are not the organizer's to
-  /// discount and a runner should not reach a minimum by paying more in fees.
-  minSubtotal   Int?
-  /// How many runners must be on one order. Null = no minimum.
-  minRunners    Int?
   /// BUY_X_GET_Y only: buy this many at full price and get that many free.
   /// "Register 5, the 6th is free" is buyQuantity 5, getQuantity 1.
   buyQuantity   Int?
@@ -385,6 +419,9 @@ model PromoCode {
   updatedAt     DateTime  @updatedAt
   event         Event?    @relation(fields: [eventId], references: [id])
   organizer     Organizer @relation(fields: [organizerId], references: [id])
+  /// CATEGORY_PRICE only: the discounted price this promotion puts each
+  /// category on. Empty for every other kind.
+  categoryPrices PromoCategoryPrice[]
 
   /// Unique per organizer rather than globally. A code is now looked up
   /// through the event a runner is registering for, so we always know whose it
@@ -397,6 +434,53 @@ model PromoCode {
   /// promotions on load, which is the one promo query that runs on a public
   /// page and so the one that has to stay cheap.
   @@index([organizerId, automatic])
+}
+
+/// One category put on a lower price by one promotion.
+///
+/// A CATEGORY_PRICE promotion is not a share or a flat amount off the order --
+/// it is a second price list for one race, so the 10K can be cut from P1,200 to
+/// P900 while the 5K stays where it is. That is a value per category, which is
+/// a row per category rather than a column on PromoCode.
+///
+/// **Only the discounted price is stored.** The price it is discounted *from*
+/// is Category.price, read live, so an organizer who later raises the 10K does
+/// not leave a promotion quoting a struck-through number the event page no
+/// longer charges. What the runner sees slashed is always the category's own
+/// price today.
+///
+/// Cascades on both sides: the prices are part of the promotion, and a category
+/// that no longer exists has no price to discount.
+model PromoCategoryPrice {
+  id          String    @id @default(cuid())
+  promoCodeId String
+  categoryId  String
+  /// Centavos. Below Category.price, and validated as such at the API door --
+  /// a "discount" that costs more is a price rise nobody meant to publish.
+  price       Int
+  /// How many **runners** may take this price, or null for as many as come.
+  ///
+  /// Runners rather than orders, unlike PromoCode.usageLimit, and the
+  /// difference is the point: this is a number of seats at a price, the same
+  /// thing Category.slotLimit counts, so a group of three eats three of them.
+  /// An early bird capped at 50 orders could be claimed by 50 groups of four.
+  ///
+  /// It sits here rather than on PromoCode because that is the whole request:
+  /// 50 at the promo price on the 10K and 30 on the 5K are two different
+  /// decisions, and one column could only ever hold one of them.
+  usageLimit  Int?
+  /// Runners already sold at this price. Incremented inside the checkout
+  /// transaction by redeemPromoCode, under the same FOR UPDATE lock
+  /// reserveSlots takes, since a cap checked before the write is a cap two
+  /// simultaneous orders both pass.
+  usageCount  Int       @default(0)
+  promo       PromoCode @relation(fields: [promoCodeId], references: [id], onDelete: Cascade)
+  category    Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  /// One price per category per promotion: a promotion cannot quote the 10K
+  /// twice and leave the checkout to pick.
+  @@unique([promoCodeId, categoryId])
+  @@index([categoryId])
 }
 
 model RaceResult {

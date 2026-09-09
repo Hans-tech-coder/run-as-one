@@ -28,12 +28,17 @@ export const PROMO_TERMS_SELECT = {
   usageCount: true,
   validFrom: true,
   validUntil: true,
-  minSubtotal: true,
-  minRunners: true,
   buyQuantity: true,
   getQuantity: true,
   automatic: true,
   paused: true,
+  // The price list of a CATEGORY_PRICE promotion, selected here rather than at
+  // each call site: the event page slashes prices with it, the wizard's picker
+  // repeats them, and the checkout charges by them, so a query that forgot to
+  // ask would leave a promotion silently worth nothing.
+  categoryPrices: {
+    select: { categoryId: true, price: true, usageLimit: true, usageCount: true },
+  },
 } as const;
 
 export type StoredPromo = PromoTerms & { id: string };
@@ -199,7 +204,7 @@ export interface ResolvedDiscount {
 export async function resolveDiscount(
   event: { id: string; organizerId: string },
   code: unknown,
-  order: OrderBasis & { deliveryChosen: boolean },
+  order: OrderBasis,
 ): Promise<ResolvedDiscount> {
   const cleaned = normalizePromoCode(code);
 

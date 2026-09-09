@@ -2,7 +2,8 @@
 
 import React, { useId, useState } from 'react';
 import { CheckCircle2, Maximize2 } from 'lucide-react';
-import { formatPesos } from '@/lib/money';
+import CategoryPrice from '@/components/CategoryPrice';
+import { CategorySalePrice } from '@/lib/discount';
 import { sellsPackages } from '@/lib/event-type';
 import PosterLightbox from './PosterLightbox';
 import FieldError from '@/components/ui/FieldError';
@@ -43,12 +44,21 @@ export default function CategoryPicker({
   event,
   selectedId,
   onSelect,
+  salePrices,
   id,
   error,
 }: {
   event: { eventType?: unknown; categories: any[] };
   selectedId: string;
   onSelect: (categoryId: string) => void;
+  /**
+   * The options an automatic promotion has repriced, keyed by category, from
+   * `categorySalePrices`. The same map the event page slashed its prices with,
+   * so a runner who came here from that page meets the same two numbers on the
+   * same option — a picker still quoting the old price would read as the offer
+   * having been withdrawn between one screen and the next.
+   */
+  salePrices?: Map<string, CategorySalePrice>;
   /** Marks the group as the caret's destination when nothing is picked. */
   id?: string;
   /** Set when the runner tried to move on without choosing. */
@@ -185,12 +195,15 @@ export default function CategoryPicker({
                       </span>
                     )}
                   </span>
-                  <span
-                    className={`ml-auto text-lg sm:text-xl font-bold shrink-0 ${
-                      isFull ? 'text-white/40' : 'text-accent-orange'
-                    }`}
-                  >
-                    ₱{formatPesos(cat.price)}
+                  <span className="ml-auto shrink-0">
+                    <CategoryPrice
+                      price={cat.price}
+                      sale={salePrices?.get(cat.id)}
+                      dimmed={isFull}
+                      className={`text-lg sm:text-xl font-bold shrink-0 ${
+                        isFull ? 'text-white/40' : 'text-accent-orange'
+                      }`}
+                    />
                   </span>
                   {isSelected && (
                     <CheckCircle2
@@ -219,6 +232,7 @@ export default function CategoryPicker({
           category={posterFor}
           isSelected={selectedId === posterFor.id}
           isFull={Boolean(posterFor.isFull)}
+          sale={salePrices?.get(posterFor.id)}
           onSelect={() => onSelect(posterFor.id)}
           onClose={() => setPosterFor(null)}
         />

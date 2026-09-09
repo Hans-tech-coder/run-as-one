@@ -1,36 +1,49 @@
 import prisma from '@/lib/db';
-import { toCentavos } from '@/lib/money';
-import { DISCOUNT_TYPES, asDiscountType } from '@/lib/discount';
+import { formatPesos, toCentavos } from '@/lib/money';
+import {
+  DISCOUNT_TYPES,
+  PromoCategoryPrice,
+  asDiscountType,
+  categoryPriceField,
+  categorySeatsField,
+} from '@/lib/discount';
 
 /**
  * Turning what the marketing form posted into what the `PromoCode` columns
  * should hold — and refusing it when it cannot.
  *
  * It lives apart from the routes because **two of them need exactly this**:
- * creating a promotion and editing one. A percentage read as centavos, or a
- * "buy 5 get 1" with no 5, is money the organizer did not mean to give away,
- * and a create route that caught it while an edit route quietly let it through
- * would be worse than neither checking.
+ * creating a promotion and editing one. A price typed as pesos and stored as
+ * centavos, or a "buy 5 get 1" with no 5, is money the organizer did not mean
+ * to give away, and a create route that caught it while an edit route quietly
+ * let it through would be worse than neither checking.
  *
  * The route refuses rather than repairs, and every rejection names the field it
  * came from, per the project's rule that validation says exactly what is wrong.
+ *
+ * A promotion's window is simply its dates now. There was briefly a choice
+ * between a date window and a count of redemptions, and the count was removed
+ * because it had no kind of promotion left to limit: a repricing promotion is
+ * capped per category on its own price rows, in runners, and a group deal is
+ * bounded by the group it needs.
  */
-
-/** Percentages are stored as basis points; 100% is the ceiling. */
-export const MAX_PERCENTAGE = 100;
 
 /** What the marketing form can say about a promotion. */
 export interface PromoInput {
   discountType?: unknown;
-  discountValue?: unknown;
   eventId?: unknown;
   validFrom?: unknown;
   validUntil?: unknown;
-  minSubtotal?: unknown;
-  minRunners?: unknown;
   buyQuantity?: unknown;
   getQuantity?: unknown;
   automatic?: unknown;
+  /** CATEGORY_PRICE only: `{ [categoryId]: pesos }`, as the form posts it. */
+  categoryPrices?: unknown;
+  /**
+   * CATEGORY_PRICE limited by uses: `{ [categoryId]: runners }`. Blank or
+   * missing for a category means its price has no cap of its own.
+   */
+  categoryLimits?: unknown;
 }
 
 /** The columns every promotion carries, whatever shape it is claimed in. */
@@ -38,10 +51,10 @@ export interface PromoTermsData {
   discountType: string;
   discountValue: number;
   eventId: string | null;
+  /** Always null from the form; the batch branch of the create route sets 1. */
+  usageLimit: number | null;
   validFrom: Date | null;
   validUntil: Date | null;
-  minSubtotal: number | null;
-  minRunners: number | null;
   buyQuantity: number | null;
   getQuantity: number | null;
   automatic: boolean;
@@ -54,20 +67,39 @@ export interface PromoInputError {
 }
 
 /**
+ * A validated promotion: the `PromoCode` columns, and the price list that goes
+ * in the rows beside them.
+ *
+ * `categoryPrices` is always present, and empty for every kind but
+ * CATEGORY_PRICE — so an edit that changed a promotion's kind clears the rows
+ * the old one left behind rather than leaving them for a later query that has
+ * no reason to expect them.
+ */
+export interface PromoData {
+  data: PromoTermsData;
+  categoryPrices: PromoCategoryPrice[];
+}
+
+/**
  * The terms as the database should hold them, or the reason they cannot be.
  *
  * `organizerId` is the signed-in organizer, and the event is checked against it
  * — an id from the browser is not proof that the browser may spend against it,
- * which is the same rule every other admin route follows.
+ * which is the same rule every other admin route follows. The categories of a
+ * CATEGORY_PRICE promotion are checked the same way and against that same
+ * event, for the same reason twice over: an id is not ownership, and a price
+ * list naming another race's 10K is a promotion that could never apply.
  */
 export async function promoTermsFromInput(
   input: PromoInput,
   organizerId: string,
-): Promise<{ data: PromoTermsData } | { problem: PromoInputError }> {
+): Promise<PromoData | { problem: PromoInputError }> {
   const type = asDiscountType(input.discountType);
   if (!type) {
     return problem('Choose what kind of discount this gives.', 'discountType');
   }
+
+  const automatic = input.automatic === true;
 
   let scopedEventId: string | null = null;
   if (input.eventId) {
@@ -77,31 +109,6 @@ export async function promoTermsFromInput(
     });
     if (!event) return problem('That event is not one of yours.', 'eventId');
     scopedEventId = event.id;
-  }
-
-  // discountValue is an integer whose unit depends on discountType:
-  // PERCENTAGE -> basis points (10% is sent as 10, stored as 1000)
-  // FIXED      -> centavos    (₱500 is sent as 500, stored as 50000)
-  // Both scale by 100, but they are different units — keep them
-  // distinguishable. FREE_DELIVERY takes its amount from the order's own
-  // delivery fee and BUY_X_GET_Y from the quantities below, so neither stores a
-  // value here at all.
-  let storedDiscountValue = 0;
-  if (type === DISCOUNT_TYPES.PERCENTAGE) {
-    const percent = Number(input.discountValue);
-    if (!Number.isFinite(percent) || percent <= 0 || percent > MAX_PERCENTAGE) {
-      return problem(
-        `Enter the percentage to take off, between 1 and ${MAX_PERCENTAGE}.`,
-        'discountValue',
-      );
-    }
-    storedDiscountValue = Math.round(percent * 100);
-  } else if (type === DISCOUNT_TYPES.FIXED) {
-    const centavos = toCentavos(input.discountValue as number);
-    if (centavos <= 0) {
-      return problem('Enter the amount in pesos to take off.', 'discountValue');
-    }
-    storedDiscountValue = centavos;
   }
 
   let buy: number | null = null;
@@ -115,6 +122,13 @@ export async function promoTermsFromInput(
     if (!get) return problem('Say how many runners go free.', 'getQuantity');
   }
 
+  let categoryPrices: PromoCategoryPrice[] = [];
+  if (type === DISCOUNT_TYPES.CATEGORY_PRICE) {
+    const priced = await categoryPricesFromInput(input, scopedEventId, automatic);
+    if ('problem' in priced) return priced;
+    categoryPrices = priced.categoryPrices;
+  }
+
   const from = startOfManilaDay(input.validFrom);
   // The end of the day, not its start: an organizer typing a single date as the
   // last day means the whole of it.
@@ -126,17 +140,142 @@ export async function promoTermsFromInput(
   return {
     data: {
       discountType: type,
-      discountValue: storedDiscountValue,
+      // Read by neither surviving kind; see the column's own note in
+      // schema.prisma for why it is still there.
+      discountValue: 0,
       eventId: scopedEventId,
+      // Never set from the form. Written as null rather than omitted so an
+      // edit clears any cap a promotion carried from before the marketing form
+      // stopped offering one; the create route's batch branch overrides it
+      // with 1, which is what makes a voucher single-use.
+      usageLimit: null,
       validFrom: from,
       validUntil: until,
-      minSubtotal: input.minSubtotal ? toCentavos(input.minSubtotal as number) || null : null,
-      minRunners: wholeNumber(input.minRunners),
       buyQuantity: buy,
       getQuantity: get,
-      automatic: input.automatic === true,
+      automatic,
     },
+    categoryPrices,
   };
+}
+
+/**
+ * The price list of a CATEGORY_PRICE promotion, checked against the race it
+ * names.
+ *
+ * Four things have to be true, and each is refused by name rather than
+ * repaired, because every one of them is a number an organizer will publish:
+ *
+ * 1. **It names one race.** Prices belong to categories and categories belong
+ *    to an event, so "all my events" has no list to set. This is the only kind
+ *    of promotion that cannot be organizer-wide.
+ * 2. **It needs no code.** A price list is the most public thing a promotion
+ *    can be — it is drawn straight onto the option a runner is choosing
+ *    between — and a struck-through price nobody can claim without a code they
+ *    were never given would be the event page lying about what the race costs.
+ * 3. **At least one category is repriced.** A promotion that reprices nothing
+ *    is a badge on the event page promising a discount of zero.
+ * 4. **Every price is below the category's own.** A "discount" that costs more
+ *    is a price rise, and the checkout would decline to apply it anyway — so it
+ *    is turned away here, where the organizer can still see which one it was.
+ */
+async function categoryPricesFromInput(
+  input: PromoInput,
+  eventId: string | null,
+  automatic: boolean,
+): Promise<{ categoryPrices: PromoCategoryPrice[] } | { problem: PromoInputError }> {
+  if (!eventId) {
+    return problem(
+      'A discounted category price applies to one race, so pick the event it is for.',
+      'eventId',
+    );
+  }
+  if (!automatic) {
+    return problem(
+      'A discounted category price is shown on the event page, so it cannot need a code. Choose Automatic under "How runners get it".',
+      'discountType',
+    );
+  }
+
+  const categories = await prisma.category.findMany({
+    where: { eventId },
+    select: { id: true, name: true, price: true },
+  });
+
+  const entries = asMap(input.categoryPrices);
+  const limits = asMap(input.categoryLimits);
+
+  // What each category has already sold at this promotion's price. An edit may
+  // not cap a category below the number of runners already holding it — that
+  // cap is a promise those people were given, and lowering it under them would
+  // make the count read as oversold for ever.
+  const sold = new Map<string, number>();
+  const existing = await prisma.promoCategoryPrice.findMany({
+    where: { promo: { eventId } },
+    select: { categoryId: true, usageCount: true },
+  });
+  for (const row of existing) sold.set(row.categoryId, row.usageCount);
+
+  const categoryPrices: PromoCategoryPrice[] = [];
+  for (const category of categories) {
+    const raw = entries[category.id];
+    // Blank means "leave this one at its own price", which is the whole point
+    // of a per-category promotion: an early bird on the 10K should not have to
+    // invent a number for the 5K.
+    if (raw === null || raw === undefined || String(raw).trim() === '') continue;
+
+    const price = toCentavos(raw as number);
+    if (!Number.isFinite(price) || price < 0) {
+      return problem(
+        `Enter a discounted price for ${category.name}, or leave it blank to keep its own price.`,
+        categoryPriceField(category.id),
+      );
+    }
+    if (price >= category.price) {
+      return problem(
+        `${category.name} already costs ₱${formatPesos(category.price)}. Its promotion price has to be lower than that.`,
+        categoryPriceField(category.id),
+      );
+    }
+    // The seats, where the promotion is limited by them. Blank is a real
+    // answer: that category's price simply has no cap.
+    let usageLimit: number | null = null;
+    const rawLimit = limits[category.id];
+    if (rawLimit !== null && rawLimit !== undefined && String(rawLimit).trim() !== '') {
+      usageLimit = wholeNumber(rawLimit);
+      if (!usageLimit) {
+        return problem(
+          `Enter how many runners get the ${category.name} promotion price, or leave it blank for no limit.`,
+          categorySeatsField(category.id),
+        );
+      }
+      const taken = sold.get(category.id) ?? 0;
+      if (usageLimit < taken) {
+        return problem(
+          `${taken} runner${taken === 1 ? ' has' : 's have'} already taken the ${category.name} promotion price, so it cannot be capped below ${taken}.`,
+          categorySeatsField(category.id),
+        );
+      }
+    }
+
+    categoryPrices.push({ categoryId: category.id, price, usageLimit });
+  }
+
+  if (categoryPrices.length === 0) {
+    return problem(
+      'Set a discounted price on at least one category — a promotion that reprices nothing takes nothing off.',
+      categories[0] ? categoryPriceField(categories[0].id) : 'discountType',
+    );
+  }
+
+  return { categoryPrices };
+}
+
+/** A posted `{ [categoryId]: value }` object, or an empty one. */
+function asMap(posted: unknown): Record<string, unknown> {
+  return posted && typeof posted === 'object' && !Array.isArray(posted)
+    ? (posted as Record<string, unknown>)
+    : {};
 }
 
 /** A count or a limit as the column should hold it: a positive int, or null. */

@@ -9,7 +9,12 @@ import {
   asLogisticsMethod,
   asPaymentMethod,
 } from '@/lib/registration-codes';
-import { runnerPrices, storedShirtSize, subtotalWithUpcharge } from '@/lib/shirt-size';
+import {
+  runnerCategories,
+  runnerPrices,
+  storedShirtSize,
+  subtotalWithUpcharge,
+} from '@/lib/shirt-size';
 import { hasFinished } from '@/lib/event-schedule';
 import {
   SlotsUnavailableError,
@@ -22,7 +27,11 @@ import {
   upperCaseForStorage,
 } from '@/lib/text-case';
 import { consentSignatureError } from '@/lib/consent-signature';
-import { PromoUnavailableError, redeemPromoCode } from '@/lib/discount';
+import {
+  PromoUnavailableError,
+  categorySeatsClaimed,
+  redeemPromoCode,
+} from '@/lib/discount';
 import { resolveDiscount } from '@/lib/promo-store';
 
 export async function POST(request: Request) {
@@ -151,12 +160,15 @@ export async function POST(request: Request) {
     // under. A code that expired, filled up or stopped applying since the
     // wizard priced it is refused here with the sentence the wizard itself
     // would have shown, because the two run the same check.
-    const discount = await resolveDiscount(event, promoCode, {
+    // Named rather than inline because the write below needs the same basis:
+    // the seats a repricing promotion claims have to come from the walk that
+    // priced the order, not from a second one built slightly differently.
+    const promoOrder = {
       runnerPrices: runnerPrices(participants, event.categories, event.shirtSizeUpcharge),
+      runnerCategories: runnerCategories(participants, event.categories),
       subtotal: expectedSubtotal,
-      deliveryFee: expectedDeliveryFee,
-      deliveryChosen: storedLogisticsMethod === LOGISTICS_METHODS.DELIVERY,
-    });
+    };
+    const discount = await resolveDiscount(event, promoCode, promoOrder);
     if (discount.error) {
       return NextResponse.json({ error: discount.error }, { status: 400 });
     }
@@ -204,7 +216,15 @@ export async function POST(request: Request) {
       // on verification could be attached to any number of unverified orders
       // in the meantime. The same reasoning holds the slot.
       if (discount.promo && discountAmount > 0) {
-        await redeemPromoCode(tx, discount.promo.id, discount.promo.code);
+        await redeemPromoCode(
+          tx,
+          discount.promo.id,
+          discount.promo.code,
+          // The seats at the promotion price this order claims, from the same
+          // walk that priced it — so the seats spent and the money taken off
+          // can never describe different orders.
+          categorySeatsClaimed(discount.promo, promoOrder),
+        );
       }
 
       return tx.registration.create({
@@ -227,6 +247,12 @@ export async function POST(request: Request) {
           // has to keep saying what this runner was actually charged.
           discountAmount,
           promoCode: discountAmount > 0 ? discount.applied?.code ?? null : null,
+          // Snapshotted beside the code, and for the same reason: the receipt
+          // is rendered from this row long after the PromoCode it came from
+          // may have been edited or deleted, and it has to know whether the
+          // discount was a price the goods were sold at or a deduction from
+          // them. See isPricedIn in lib/discount.ts.
+          discountType: discountAmount > 0 ? discount.applied?.type ?? null : null,
           paymentMethod: storedPaymentMethod,
           proofOfPayment: proofPathname,
           transactionNumber: transactionNumber,
@@ -254,6 +280,11 @@ export async function POST(request: Request) {
               gender: upperCaseForStorage(p.gender),
               birthdate: p.birthdate,
               singletSize: storedShirtSize(p, event.categories),
+              // The promotion price this runner got a seat at, or null. A
+              // snapshot for the same reason promoCode is, and the thing the
+              // expiry sweep counts to hand back exactly the seats this order
+              // took — see lib/pending-expiry.ts.
+              promoPrice: discount.applied?.salePriceByRunner[index] ?? null,
               emergencyContactName: upperCaseForStorage(p.emergencyContactName),
               emergencyContactPhone: p.emergencyContactPhone,
               medicalConditions: optionalUpperCaseForStorage(p.medicalConditions),

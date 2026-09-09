@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { getAuthCookie } from '@/lib/auth';
 import { MAX_PROMO_CODE_LENGTH, normalizePromoCode } from '@/lib/discount';
-import { promoTermsFromInput, wholeNumber } from '@/lib/promo-input';
+import { promoTermsFromInput } from '@/lib/promo-input';
 
 /**
  * Editing and deleting a promotion.
@@ -112,19 +112,56 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       code = cleaned;
     }
 
-    const updated = await prisma.promoCode.updateMany({
-      where: batchWhere(existing, auth.id),
-      data: {
-        ...terms.data,
-        ...(code ? { code } : {}),
-        // A voucher is single-use by definition, so a batch's limit is not the
-        // organizer's to raise — doing so would turn the promotion into
-        // something other than the vouchers they handed out.
-        ...(existing.batchLabel ? {} : { usageLimit: wholeNumber(body.usageLimit) }),
-      },
+    // The terms and the price list move together or not at all. A promotion
+    // whose columns saved and whose prices did not is one the event page would
+    // advertise at numbers the checkout no longer holds, which is the exact
+    // disagreement this feature exists to prevent.
+    const updated = await prisma.$transaction(async tx => {
+      const rows = await tx.promoCode.updateMany({
+        where: batchWhere(existing, auth.id),
+        data: {
+          ...terms.data,
+          ...(code ? { code } : {}),
+          // A voucher is single-use by definition, so a batch's limit is not
+          // the organizer's to raise — doing so would turn the promotion into
+          // something other than the vouchers they handed out.
+          ...(existing.batchLabel ? { usageLimit: 1 } : {}),
+        },
+      });
+
+      // The price rows are **updated in place, never replaced**. Each carries
+      // `usageCount` — how many runners have already taken that price — and
+      // deleting the row to write a new one would reset that to zero, which
+      // would let a capped early bird be sold all over again. Only the
+      // categories the organizer actually cleared are removed.
+      //
+      // A batch never reaches here with prices, since CATEGORY_PRICE is
+      // automatic-only, so these are always the one promotion's own rows.
+      const keep = terms.categoryPrices.map(entry => entry.categoryId);
+      await tx.promoCategoryPrice.deleteMany({
+        where: { promoCodeId: existing.id, categoryId: { notIn: keep } },
+      });
+
+      for (const entry of terms.categoryPrices) {
+        await tx.promoCategoryPrice.upsert({
+          where: {
+            promoCodeId_categoryId: {
+              promoCodeId: existing.id,
+              categoryId: entry.categoryId,
+            },
+          },
+          // usageCount is absent from both branches on purpose: on create the
+          // column defaults to 0, and on update it is the one thing here that
+          // is not the organizer's to set.
+          create: { ...entry, promoCodeId: existing.id },
+          update: { price: entry.price, usageLimit: entry.usageLimit ?? null },
+        });
+      }
+
+      return rows.count;
     });
 
-    return NextResponse.json({ updated: updated.count });
+    return NextResponse.json({ updated });
   } catch (error: any) {
     console.error('Promo Update Error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

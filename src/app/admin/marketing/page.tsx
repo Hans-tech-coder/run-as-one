@@ -19,7 +19,16 @@ export default async function MarketingPage() {
     prisma.promoCode.findMany({
       where: { organizerId: auth.id },
       orderBy: { createdAt: 'desc' },
-      include: { event: { select: { id: true, title: true } } },
+      include: {
+        event: { select: { id: true, title: true } },
+        // What a CATEGORY_PRICE promotion puts each option on. The table
+        // counts them in its Discount column and the edit form fills its price
+        // boxes from them, so leaving them out would show an organizer a
+        // promotion with an empty price list and invite them to retype it.
+        categoryPrices: {
+          select: { categoryId: true, price: true, usageLimit: true, usageCount: true },
+        },
+      },
     }),
     // The organizer's own events, for the "which event is this code for?"
     // picker. Soonest first, because a code is almost always being written for
@@ -27,7 +36,18 @@ export default async function MarketingPage() {
     prisma.event.findMany({
       where: { organizerId: auth.id },
       orderBy: soonestFirst,
-      select: { id: true, title: true, date: true },
+      select: {
+        id: true,
+        title: true,
+        date: true,
+        // The options each race sells, so picking an event in the form reveals
+        // its price list without a round trip. An organizer's whole catalogue
+        // is a handful of rows per race — cheaper than a fetch per selection,
+        // and it keeps the modal instant.
+        categories: {
+          select: { id: true, name: true, distance: true, price: true },
+        },
+      },
     }),
     // What each promotion has actually given away, in one grouped query for
     // the whole screen rather than one per row. Attribution is by the code

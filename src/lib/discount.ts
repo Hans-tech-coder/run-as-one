@@ -1,4 +1,3 @@
-import { formatPesos } from '@/lib/money';
 // Only `today()`, for the Manila calendar day. event-schedule's single Prisma
 // import is a `import type`, so it is erased at build and this module stays
 // safe for the wizards to import — see the note below.
@@ -23,16 +22,24 @@ import { today } from '@/lib/event-schedule';
  */
 
 /**
- * The four kinds of promotion, modelled on the ones a Shopify merchant would
- * recognise. Stored UPPERCASE like every other coded column in this schema.
+ * The two kinds of promotion. Stored UPPERCASE like every other coded column
+ * in this schema.
+ *
+ * There used to be four — a percentage, a flat amount, and free delivery
+ * alongside these two — and all three were removed together. They were the
+ * kinds a general-purpose store needs, and this is not a store: an organizer
+ * running a race thinks in *prices per distance*, not in percentages off a
+ * basket. `CATEGORY_PRICE` is that thought said directly, and it is the one a
+ * runner can read off the event page without arithmetic.
  */
 export const DISCOUNT_TYPES = {
-  /** A share of the goods, stored as basis points: 1000 = 10%. */
-  PERCENTAGE: 'PERCENTAGE',
-  /** A flat amount off the goods, in centavos. */
-  FIXED: 'FIXED',
-  /** Waives the race-kit delivery fee — the local answer to free shipping. */
-  FREE_DELIVERY: 'FREE_DELIVERY',
+  /**
+   * A second price list for one race: the 10K at ₱900 instead of ₱1,200 while
+   * the 5K stays where it is. The amounts live in `categoryPrices`, one per
+   * category, and the price each is discounted *from* is the category's own
+   * price read live — see PromoCategoryPrice in schema.prisma.
+   */
+  CATEGORY_PRICE: 'CATEGORY_PRICE',
   /** "Register 5, the 6th is free." */
   BUY_X_GET_Y: 'BUY_X_GET_Y',
 } as const;
@@ -57,27 +64,97 @@ export function asDiscountType(value: unknown): DiscountType | null {
 
 /** What an organizer picking a kind of promotion reads. */
 export const DISCOUNT_TYPE_LABELS: Record<DiscountType, string> = {
-  PERCENTAGE: 'Percentage off',
-  FIXED: 'Fixed amount off',
-  FREE_DELIVERY: 'Free delivery',
+  CATEGORY_PRICE: 'Discounted category price',
   BUY_X_GET_Y: 'Buy X, get Y free',
 };
+
+/**
+ * One category on a promotion's price list: which option, and what it costs
+ * while the promotion runs.
+ *
+ * The price it is discounted *from* is deliberately absent — that is
+ * `Category.price`, read live wherever this is used, so an organizer who later
+ * raises the 10K cannot leave a promotion quoting a struck-through number the
+ * event page no longer charges.
+ */
+export interface PromoCategoryPrice {
+  categoryId: string;
+  /** Centavos. Below the category's own price. */
+  price: number;
+  /**
+   * How many **runners** may take this price, or null for as many as come.
+   *
+   * Runners rather than orders, unlike `PromoTerms.usageLimit`, and the
+   * difference is the point: this counts seats at a price, the way
+   * `Category.slotLimit` counts seats in a race, so a group of three eats
+   * three of them. An early bird capped at 50 *orders* could be claimed by 50
+   * groups of four.
+   */
+  usageLimit?: number | null;
+  /** Runners already sold at this price. */
+  usageCount?: number;
+}
+
+/** How many more runners this category can take at the promotion's price. */
+export function categoryPriceRemaining(entry: PromoCategoryPrice): number | null {
+  const limit = positive(entry.usageLimit);
+  if (limit === null) return null;
+  return Math.max(0, limit - Math.max(0, Math.floor(Number(entry.usageCount) || 0)));
+}
+
+/**
+ * Which price box a refusal belongs under.
+ *
+ * One category's price is refused, not the list, so the message has to land on
+ * that row rather than at the top of a panel holding five identical inputs. The
+ * form builds the same key from the same id, which is why it is written here
+ * once instead of as a template literal at each end.
+ */
+export function categoryPriceField(categoryId: string): string {
+  return `categoryPrice:${categoryId}`;
+}
+
+/**
+ * Which seat-count box a refusal belongs under.
+ *
+ * Its own key rather than sharing the price's, because the two boxes sit side
+ * by side on one row and refuse for different reasons — "that price is not
+ * lower" and "that is fewer seats than have already been sold" must not land
+ * on each other.
+ */
+export function categorySeatsField(categoryId: string): string {
+  return `categorySeats:${categoryId}`;
+}
 
 /** The row this module reasons about — the runner-facing half of a PromoCode. */
 export interface PromoTerms {
   code: string;
   discountType: string;
-  /** Basis points for PERCENTAGE, centavos for FIXED, 0 otherwise. */
+  /** Unused by both surviving kinds; kept because the column is. */
   discountValue: number;
+  /**
+   * How many redemptions the promotion allows in total, or null.
+   *
+   * No longer set by the marketing form. It survives because a **voucher is a
+   * limit of 1** — that is what makes a batch single-use — and because
+   * `isExhausted` still has to answer for the promotions that carry one. A
+   * repricing promotion is capped per category on its price rows instead, in
+   * runners rather than orders, which is a different question this column
+   * could never have answered.
+   */
   usageLimit: number | null;
   usageCount: number;
   /** ISO strings once they have crossed the wire to a client component. */
   validFrom: string | Date | null;
   validUntil: string | Date | null;
-  minSubtotal: number | null;
-  minRunners: number | null;
   buyQuantity: number | null;
   getQuantity: number | null;
+  /**
+   * CATEGORY_PRICE only: what each category costs while this runs. Optional
+   * because every other kind has none, and absent rather than empty when a
+   * query simply did not ask for them — `categoryPricesOf` normalises both.
+   */
+  categoryPrices?: PromoCategoryPrice[];
   /**
    * True when this promotion needs no code — it applies on its own to any
    * order that meets its conditions. `code` is then its *name*, which is what
@@ -92,6 +169,13 @@ export interface PromoTerms {
   paused?: boolean;
 }
 
+/** One runner's category, and what that category lists at today. */
+export interface RunnerCategory {
+  categoryId: string;
+  /** Centavos, before any promotion. `Category.price`. */
+  listPrice: number;
+}
+
 /** The order a code is being applied to. Every amount is centavos. */
 export interface OrderBasis {
   /**
@@ -100,10 +184,20 @@ export interface OrderBasis {
    * takes off exactly what the free runner added.
    */
   runnerPrices: number[];
+  /**
+   * Which category each runner entered and what it lists at, positionally
+   * aligned with `runnerPrices`. From `runnerCategories` in shirt-size.ts,
+   * which derives both from the same participants array, so index i is the
+   * same runner in both.
+   *
+   * CATEGORY_PRICE needs the list price separately from `runnerPrices`
+   * because the two differ by the runner's own shirt upcharge, and a
+   * promotion that repriced the 10K must not also give away the ₱150 a 3XL
+   * singlet costs.
+   */
+  runnerCategories: RunnerCategory[];
   /** The goods total. Equal to the sum of runnerPrices. */
   subtotal: number;
-  /** What delivery is costing this order; 0 when the runner picks up. */
-  deliveryFee: number;
 }
 
 /** A code that applies, and what it is worth on this order. */
@@ -123,6 +217,79 @@ export interface AppliedDiscount {
    * person in the summary.
    */
   freeRunners: number[];
+  /**
+   * Whether this discount is already inside the prices the runner is shown.
+   *
+   * A **sale is a price, not a deduction.** When a category is on promotion at
+   * ₱900, the order summary says ₱900 on that runner's line and shows no
+   * discount row at all — because that is how a sale reads everywhere else,
+   * and quoting ₱1,200 with a ₱300 credit underneath invites the runner to
+   * check arithmetic nobody asked them to do. Every other kind is the
+   * opposite: the goods stay at list and the promotion is a line off the
+   * order, so a typed code can be seen doing its job.
+   *
+   * **This changes nothing about the money.** The total is
+   * `subtotal + fees − amount` either way, and the registration still stores
+   * the list subtotal beside the amount taken off, so what a promotion cost is
+   * still one subtraction away — see `Registration.discountAmount`.
+   */
+  pricedIn: boolean;
+  /**
+   * What each runner is charged for their category, by index into
+   * `runnerPrices` — the promotion's price where they got a seat at it, and
+   * the category's own price where they did not. Null for every runner when
+   * the discount is not `pricedIn`.
+   *
+   * Per runner rather than per category because a promotion can run out
+   * halfway through one order: a group of three on a 10K with two seats left
+   * has two cards at ₱900 and one at ₱1,200, and a lookup keyed by category
+   * could only ever answer with one of those two numbers.
+   */
+  salePriceByRunner: (number | null)[];
+}
+
+/**
+ * Whether a discount of this kind is shown as a price or as a deduction.
+ *
+ * One function rather than a `=== 'CATEGORY_PRICE'` in each of the four places
+ * that render a cost breakdown — both wizards' order summaries and both
+ * emails. A breakdown that disagreed with the one beside it about whether the
+ * discount had already been taken off would be the worst kind of bug here: it
+ * would look like a different price.
+ */
+export function isPricedIn(discountType: unknown): boolean {
+  return asDiscountType(discountType) === DISCOUNT_TYPES.CATEGORY_PRICE;
+}
+
+/**
+ * What one runner's category costs them on this order, given the discount that
+ * won.
+ *
+ * The list price unless a priced-in promotion had a seat left for this
+ * particular runner. Taking the runner's index rather than their category is
+ * the whole point: two runners on the same distance can be charged different
+ * prices when the promotion runs out between them.
+ */
+export function chargedRunnerPrice(
+  applied: AppliedDiscount | null | undefined,
+  runnerIndex: number,
+  listPrice: number,
+): number {
+  if (!applied?.pricedIn) return listPrice;
+  const sale = applied.salePriceByRunner[runnerIndex];
+  return sale !== null && sale !== undefined && sale < listPrice ? sale : listPrice;
+}
+
+/**
+ * A promotion's price list, whether the query asked for it or not.
+ *
+ * Written once because four places read it — the arithmetic below, the phrase
+ * the admin table prints, the slashed prices on the event page and the same
+ * prices in the wizard's picker — and a promotion whose rows were not selected
+ * must read as "no prices", never as a crash.
+ */
+export function categoryPricesOf(promo: PromoTerms): PromoCategoryPrice[] {
+  return Array.isArray(promo.categoryPrices) ? promo.categoryPrices : [];
 }
 
 /**
@@ -143,20 +310,11 @@ export function discountAmountFor(promo: PromoTerms, order: OrderBasis): number 
   if (!type) return 0;
 
   switch (type) {
-    case DISCOUNT_TYPES.PERCENTAGE: {
-      // Basis points, so 1000 = 10%. Floored: a fractional centavo has to go
-      // somewhere, and rounding it towards the organizer is the direction that
-      // never charges a runner more than the summary said.
-      const off = Math.floor((order.subtotal * promo.discountValue) / 10000);
-      return clamp(off, order.subtotal);
-    }
-    case DISCOUNT_TYPES.FIXED:
-      return clamp(promo.discountValue, order.subtotal);
-    case DISCOUNT_TYPES.FREE_DELIVERY:
-      // Exactly the fee being charged, so the line always cancels out. An
-      // order that chose pickup has no fee, which is why promoCodeError turns
-      // that combination away rather than silently applying nothing.
-      return clamp(order.deliveryFee, order.deliveryFee);
+    case DISCOUNT_TYPES.CATEGORY_PRICE:
+      return clamp(
+        categoryPriceSavings(promo, order).reduce((sum, saving) => sum + saving, 0),
+        order.subtotal,
+      );
     case DISCOUNT_TYPES.BUY_X_GET_Y: {
       const free = freeRunnerCount(promo, order.runnerPrices.length);
       if (free <= 0) return 0;
@@ -169,6 +327,80 @@ export function discountAmountFor(promo: PromoTerms, order: OrderBasis): number 
       return clamp(off, order.subtotal);
     }
   }
+}
+
+/**
+ * What each runner on this order saves under a repricing promotion, by index.
+ *
+ * The one place the per-category caps are spent, so the amount charged, the
+ * price printed on each runner's line and the seats claimed at checkout are
+ * three readings of a single walk through the order. Zero for a runner whose
+ * category is not repriced, or whose category has run out.
+ *
+ * **A short promotion is split rather than refused.** A group of three on a
+ * 10K with two seats left pays the promotion price for two of them and the
+ * full price for the third, which is what a runner expects from a sale that is
+ * nearly gone — the alternative is telling a group of three that a promotion
+ * with seats left applies to none of them.
+ *
+ * **The earlier runners get them.** Every runner in one category saves the
+ * same amount, so the order changes nothing about the money; it decides only
+ * which cards say the promotion price, and "the first two of you" is the one
+ * rule a group can check against the form they filled in.
+ */
+export function categoryPriceSavings(promo: PromoTerms, order: OrderBasis): number[] {
+  if (asDiscountType(promo.discountType) !== DISCOUNT_TYPES.CATEGORY_PRICE) {
+    return order.runnerCategories.map(() => 0);
+  }
+
+  const priced = new Map(categoryPricesOf(promo).map(entry => [entry.categoryId, entry]));
+  // Seats are spent as the walk goes, so the second runner on a category with
+  // one left sees it gone. Infinity for an uncapped price, which needs no
+  // special case anywhere below.
+  const left = new Map(
+    [...priced].map(([categoryId, entry]) => {
+      const remaining = categoryPriceRemaining(entry);
+      return [categoryId, remaining === null ? Number.POSITIVE_INFINITY : remaining];
+    }),
+  );
+
+  return order.runnerCategories.map((runner, index) => {
+    const entry = priced.get(runner.categoryId);
+    if (!entry) return 0;
+
+    const seats = left.get(runner.categoryId) ?? 0;
+    if (seats <= 0) return 0;
+
+    const saving = runner.listPrice - entry.price;
+    if (saving <= 0) return 0;
+
+    left.set(runner.categoryId, seats - 1);
+    // Capped at what this runner is actually paying, so a stale row left over
+    // from a category whose price has since fallen cannot discount the runner
+    // beside them.
+    return Math.min(saving, order.runnerPrices[index] ?? 0);
+  });
+}
+
+/**
+ * How many seats at the promotion price this order would claim, per category.
+ *
+ * What `redeemPromoCode` spends inside the checkout transaction. Derived from
+ * the same walk that priced the order, so the seats taken and the money taken
+ * off can never describe different orders.
+ */
+export function categorySeatsClaimed(
+  promo: PromoTerms,
+  order: OrderBasis,
+): Map<string, number> {
+  const claimed = new Map<string, number>();
+  categoryPriceSavings(promo, order).forEach((saving, index) => {
+    if (saving <= 0) return;
+    const categoryId = order.runnerCategories[index]?.categoryId;
+    if (!categoryId) return;
+    claimed.set(categoryId, (claimed.get(categoryId) ?? 0) + 1);
+  });
+  return claimed;
 }
 
 /** How many runners this order gets free under a buy-X-get-Y code. */
@@ -255,7 +487,7 @@ export function freeSlotOffer(
  */
 export function bestDiscount(
   promos: (PromoTerms | null | undefined)[],
-  order: OrderBasis & { deliveryChosen: boolean },
+  order: OrderBasis,
 ): AppliedDiscount | null {
   let best: AppliedDiscount | null = null;
 
@@ -308,6 +540,11 @@ export function applyPromo(
   if (!type) return null;
   const amount = discountAmountFor(promo, order);
   if (amount <= 0) return null;
+  const pricedIn = type === DISCOUNT_TYPES.CATEGORY_PRICE;
+  // From the same walk that produced `amount`, so the price on a runner's line
+  // and the money coming off the order cannot describe different orders.
+  const savings = pricedIn ? categoryPriceSavings(promo, order) : [];
+
   return {
     code: promo.code,
     type,
@@ -315,6 +552,12 @@ export function applyPromo(
     label: describePromo(promo),
     automatic: promo.automatic === true,
     freeRunners: freeRunnerIndexes(promo, order.runnerPrices),
+    pricedIn,
+    salePriceByRunner: pricedIn
+      ? order.runnerCategories.map((runner, index) =>
+          savings[index] > 0 ? runner.listPrice - savings[index] : null,
+        )
+      : order.runnerCategories.map(() => null),
   };
 }
 
@@ -322,12 +565,14 @@ export function applyPromo(
 export function describePromo(promo: PromoTerms): string {
   const type = asDiscountType(promo.discountType);
   switch (type) {
-    case DISCOUNT_TYPES.PERCENTAGE:
-      return `${formatBasisPoints(promo.discountValue)}% off`;
-    case DISCOUNT_TYPES.FIXED:
-      return `₱${formatPesos(promo.discountValue)} off`;
-    case DISCOUNT_TYPES.FREE_DELIVERY:
-      return 'Free delivery';
+    case DISCOUNT_TYPES.CATEGORY_PRICE: {
+      const priced = categoryPricesOf(promo).length;
+      if (priced === 0) return 'Discounted category price';
+      // The prices themselves are not named here on purpose: this phrase is
+      // read beside a promotion in a table and above a list of options on the
+      // event page, and the second of those is already showing every number.
+      return `Special price on ${priced} categor${priced === 1 ? 'y' : 'ies'}`;
+    }
     case DISCOUNT_TYPES.BUY_X_GET_Y: {
       const buy = positive(promo.buyQuantity) ?? 0;
       const get = positive(promo.getQuantity) ?? 0;
@@ -350,7 +595,8 @@ export function describePromo(promo: PromoTerms): string {
  *
  * This is the same rule `promoCodeError` gates on, so a badge saying EXPIRED
  * and a runner being told the code still works is not a state this app can
- * reach.
+ * reach. `USED_UP` covers both shapes of cap — a spent order limit, and a
+ * repricing promotion whose every category has filled; see `isExhausted`.
  */
 export type PromoStatus = 'ACTIVE' | 'PAUSED' | 'SCHEDULED' | 'EXPIRED' | 'USED_UP';
 
@@ -445,16 +691,23 @@ function manilaDaysUntil(date: Date): number | null {
  * The strings a person reads under a promotion: what it needs, and how long it
  * lasts.
  *
+ * There are no order minimums left to list. A promotion is limited by a count
+ * of redemptions or by a window of dates, and the only thing a promotion can
+ * still *require* of an order is the group size a buy-X-get-Y needs to pay
+ * anything at all.
+ *
  * One list, used by the organizer's marketing table and by the badge a runner
  * sees on the event page, so the conditions an organizer set and the
  * conditions a runner is promised cannot be worded two different ways.
  */
 export function promoConditions(promo: PromoTerms): string[] {
   const parts: string[] = [];
-  const minRunners = positive(promo.minRunners);
-  if (minRunners) parts.push(`${minRunners}+ runners`);
-  const minSubtotal = positive(promo.minSubtotal);
-  if (minSubtotal) parts.push(`₱${formatPesos(minSubtotal)}+ spend`);
+
+  // A group deal states its own size, since nothing else on the row does.
+  if (asDiscountType(promo.discountType) === DISCOUNT_TYPES.BUY_X_GET_Y) {
+    const group = (positive(promo.buyQuantity) ?? 0) + (positive(promo.getQuantity) ?? 0);
+    if (group > 0) parts.push(`${group}+ runners on one order`);
+  }
 
   const from = asDate(promo.validFrom);
   const until = asDate(promo.validUntil);
@@ -464,10 +717,82 @@ export function promoConditions(promo: PromoTerms): string[] {
   return parts;
 }
 
-/** Basis points as a percentage a person reads: 1000 → "10", 1250 → "12.5". */
-export function formatBasisPoints(basisPoints: number): string {
-  const percent = (Number(basisPoints) || 0) / 100;
-  return Number.isInteger(percent) ? String(percent) : String(Number(percent.toFixed(2)));
+/**
+ * What one option costs while a promotion is running: its own price, and the
+ * lower one to show beside it.
+ */
+export interface CategorySalePrice {
+  /** `Category.price` — the number that gets struck through. */
+  listPrice: number;
+  /** What the runner actually pays for this option. Always below listPrice. */
+  salePrice: number;
+  /** The promotion doing it, by name, so a page can credit it. */
+  promoName: string;
+  /**
+   * Seats left at this price, or null when the promotion set no cap.
+   *
+   * Always above zero — a category with none left is not on sale, so it never
+   * reaches this map at all. What the "8 left at this price" chip counts.
+   */
+  remaining: number | null;
+}
+
+/**
+ * The struck-through prices for one race, keyed by category.
+ *
+ * The event page, the wizard's option picker and its poster lightbox all show
+ * a price per category, and all three have to slash the same ones — so the
+ * rule is written here rather than three times, next to the arithmetic that
+ * charges for it. A category with no entry is simply at its own price.
+ *
+ * **Only promotions that are actually running**, through `promoStatus` rather
+ * than a re-expressed set of date checks, because half of that rule copied
+ * into a page is how a slashed price starts advertising something the checkout
+ * will not honour. And only `automatic` ones: a code is the organizer's to
+ * publish where they choose, and a price list is the most public thing a
+ * promotion can be.
+ *
+ * Where two promotions reprice the same category, the **cheaper** wins, which
+ * matches `bestDiscount` giving the order the largest discount it qualifies
+ * for. A promotion quoting a price at or above the category's own is ignored
+ * outright: there is nothing to slash, and drawing a line through ₱1,200 to
+ * show ₱1,200 is worse than showing nothing.
+ */
+export function categorySalePrices(
+  promos: readonly PromoTerms[],
+  categories: readonly { id: string; price: number }[],
+): Map<string, CategorySalePrice> {
+  const sale = new Map<string, CategorySalePrice>();
+  const listPrices = new Map(categories.map(category => [category.id, category.price]));
+
+  for (const promo of promos) {
+    if (!promo.automatic) continue;
+    if (asDiscountType(promo.discountType) !== DISCOUNT_TYPES.CATEGORY_PRICE) continue;
+    if (promoStatus(promo) !== 'ACTIVE') continue;
+
+    for (const entry of categoryPricesOf(promo)) {
+      const listPrice = listPrices.get(entry.categoryId);
+      if (listPrice === undefined || entry.price >= listPrice) continue;
+
+      // A category whose seats have gone is simply back at its own price. It
+      // is dropped here rather than shown struck through with "0 left",
+      // because a price nobody can still get is not a price.
+      const remaining = categoryPriceRemaining(entry);
+      if (remaining !== null && remaining <= 0) continue;
+
+      const existing = sale.get(entry.categoryId);
+      if (existing && existing.salePrice <= entry.price) continue;
+
+      sale.set(entry.categoryId, {
+        listPrice,
+        salePrice: entry.price,
+        promoName: promo.code,
+        remaining,
+      });
+    }
+  }
+
+  return sale;
 }
 
 /**
@@ -482,7 +807,7 @@ export function formatBasisPoints(basisPoints: number): string {
  */
 export function promoCodeError(
   promo: PromoTerms | null | undefined,
-  order: OrderBasis & { deliveryChosen: boolean },
+  order: OrderBasis,
   typedCode: string,
 ): string | null {
   const cleaned = normalizePromoCode(typedCode);
@@ -519,19 +844,6 @@ export function promoCodeError(
   }
 
   const runners = order.runnerPrices.length;
-  const minRunners = positive(promo.minRunners);
-  if (minRunners && runners < minRunners) {
-    return `${promo.code} needs at least ${minRunners} runner${minRunners === 1 ? '' : 's'} on one order — you have ${runners}.`;
-  }
-
-  const minSubtotal = positive(promo.minSubtotal);
-  if (minSubtotal && order.subtotal < minSubtotal) {
-    return `${promo.code} needs a subtotal of at least ₱${formatPesos(minSubtotal)} — yours is ₱${formatPesos(order.subtotal)}.`;
-  }
-
-  if (type === DISCOUNT_TYPES.FREE_DELIVERY && !order.deliveryChosen) {
-    return `${promo.code} waives the delivery fee, and you chose to collect your race kit yourself. Switch to delivery in step 2 to use it.`;
-  }
 
   if (type === DISCOUNT_TYPES.BUY_X_GET_Y) {
     const group = (positive(promo.buyQuantity) ?? 0) + (positive(promo.getQuantity) ?? 0);
@@ -559,8 +871,29 @@ export function unknownPromoCodeError(code: string): string {
   return `We don't have a code called "${normalizePromoCode(code)}" for this event. Check the spelling, or leave the box empty.`;
 }
 
-/** Whether every redemption this code allows has been taken. */
-export function isExhausted(promo: Pick<PromoTerms, 'usageLimit' | 'usageCount'>): boolean {
+/**
+ * Whether every redemption this promotion allows has been taken.
+ *
+ * Two shapes of cap, because a repricing promotion is limited per category
+ * rather than per order: 50 seats on the 10K and 30 on the 5K are two
+ * decisions, and one `usageLimit` could only hold one of them. Such a
+ * promotion is finished when **every** category it reprices has filled — while
+ * one still has a seat, the promotion is still doing something for somebody,
+ * and calling it Fully Used would take it off the event page early.
+ *
+ * A promotion with no caps of any kind is never exhausted, which is the same
+ * answer this gave before either kind existed.
+ */
+export function isExhausted(
+  promo: Pick<PromoTerms, 'usageLimit' | 'usageCount' | 'categoryPrices'>,
+): boolean {
+  const capped = categoryPricesOf(promo as PromoTerms).filter(
+    entry => categoryPriceRemaining(entry) !== null,
+  );
+  if (capped.length > 0) {
+    return capped.every(entry => (categoryPriceRemaining(entry) ?? 0) <= 0);
+  }
+
   const limit = positive(promo.usageLimit);
   return limit !== null && promo.usageCount >= limit;
 }
@@ -604,11 +937,23 @@ export class PromoUnavailableError extends Error {
  * moment a slot is taken, and for the same reason. An unpaid PayMongo checkout
  * holds both until it is cleaned up; a voucher that only counted on payment
  * could be attached to any number of pending orders at once.
+ *
+ * A repricing promotion spends **seats as well as a redemption**: its caps are
+ * per category and counted in runners, so a group of three takes three of
+ * them. Those are locked and re-counted here too, and the categories are
+ * visited in id order so two orders on the same promotion cannot deadlock —
+ * exactly what `reserveSlots` does with a category's own slots.
  */
 export async function redeemPromoCode(
   tx: any,
   promoId: string,
   code: string,
+  /**
+   * Seats to claim per category, from `categorySeatsClaimed` — empty for every
+   * kind but a repricing promotion. Passed in rather than recomputed here so
+   * the seats spent are the ones the order was actually priced with.
+   */
+  seats: Map<string, number> = new Map(),
 ): Promise<void> {
   // Tagged template rather than Prisma.sql: this module is imported by both
   // wizards, which are client components, and pulling @prisma/client into the
@@ -624,12 +969,57 @@ export async function redeemPromoCode(
     );
   }
 
-  if (isExhausted(row)) {
+  // The order cap, where there is one. A repricing promotion sets none — its
+  // limits are the per-category seats below — so this is skipped for it.
+  if (row.usageLimit !== null && row.usageCount >= row.usageLimit) {
     throw new PromoUnavailableError(
       row.usageLimit === 1
         ? `${code} was claimed by someone else while you were checking out. Remove it and try again — nothing has been charged.`
         : `${code} reached its usage limit while you were checking out. Remove it and try again — nothing has been charged.`,
     );
+  }
+
+  // The seats at the promotion price, claimed the way reserveSlots claims a
+  // category's own slots: locked first, re-counted, then spent. A cap checked
+  // when the summary was drawn is a cap two simultaneous groups both pass, and
+  // the whole point of a capped early bird is that it cannot be oversold.
+  for (const categoryId of [...seats.keys()].sort()) {
+    const wanted = seats.get(categoryId) ?? 0;
+    if (wanted <= 0) continue;
+
+    // Ordered by category id above, so two orders on the same promotion always
+    // take these rows in the same order and cannot deadlock on each other —
+    // the same reason reserveSlots sorts before locking.
+    const held: { usageLimit: number | null; usageCount: number }[] = await tx.$queryRaw`
+      SELECT "usageLimit", "usageCount" FROM "PromoCategoryPrice"
+      WHERE "promoCodeId" = ${promoId} AND "categoryId" = ${categoryId} FOR UPDATE`;
+
+    const seat = held[0];
+    // The price row is gone, which means the promotion was edited mid-checkout
+    // and this order was priced against terms that no longer exist.
+    if (!seat) {
+      throw new PromoUnavailableError(
+        `${code} changed while you were checking out. Remove it and try again — nothing has been charged.`,
+      );
+    }
+
+    if (seat.usageLimit === null) continue;
+
+    const left = seat.usageLimit - seat.usageCount;
+    if (left < wanted) {
+      // Named in runners, because that is what ran out and what the group can
+      // act on: they can still register, just not all at the promotion price.
+      throw new PromoUnavailableError(
+        left <= 0
+          ? `${code} ran out at that price while you were checking out. Remove it and try again — nothing has been charged.`
+          : `Only ${left} more runner${left === 1 ? '' : 's'} can still get the ${code} price, and you have ${wanted} on it. Remove it and try again — nothing has been charged.`,
+      );
+    }
+
+    await tx.promoCategoryPrice.updateMany({
+      where: { promoCodeId: promoId, categoryId },
+      data: { usageCount: { increment: wanted } },
+    });
   }
 
   await tx.promoCode.update({

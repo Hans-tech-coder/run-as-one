@@ -69,6 +69,13 @@ type Sweepable = {
   orderRef: string;
   promoCode: string | null;
   event: { organizerId: string };
+  /**
+   * Only what a released seat needs: which category each runner entered, and
+   * whether they were given a promotion price in it. A repricing promotion is
+   * capped in runners, so an abandoned group of three that took two seats has
+   * to hand back exactly two.
+   */
+  runners: { categoryId: string; promoPrice: number | null }[];
 };
 
 /** What one sweep did, in the words the cron route reports back. */
@@ -152,6 +159,10 @@ export async function expirePendingRegistrations(
       orderRef: true,
       promoCode: true,
       event: { select: { organizerId: true } },
+      // Only what a released seat needs. A repricing promotion is capped in
+      // runners, so the sweep has to know how many of this order's runners
+      // were actually sold at its price — see releaseRedemption.
+      runners: { select: { categoryId: true, promoPrice: true } },
     },
   });
 
@@ -202,6 +213,14 @@ export async function expirePendingRegistrations(
  * back a redemption it never sold. Clamping is the honest answer: the count
  * means "how many are spent", and a negative one would sell an extra voucher.
  *
+ * **A repricing promotion hands back seats as well**, and those are counted in
+ * runners rather than orders. The number comes from the runners themselves —
+ * each carries the price it was actually sold at in `Runner.promoPrice` — and
+ * never from the promotion's current price list, because an order that took
+ * two of the last three seats must give back two. Recomputing it from the
+ * promotion would give back three, quietly inflating a capped early bird every
+ * time a group abandoned a checkout. Same lock, same clamp, same reasons.
+ *
  * Returns whether anything was actually handed back — a promotion since
  * deleted, or an order that used no code at all, is not a failure.
  */
@@ -219,6 +238,36 @@ async function releaseRedemption(tx: any, registration: Sweepable): Promise<bool
     SELECT "usageCount" FROM "PromoCode" WHERE "id" = ${promo.id} FOR UPDATE`;
   const row = locked[0];
   if (!row) return false;
+
+  // The seats this order actually took, per category, read off the runners.
+  const seats = new Map<string, number>();
+  for (const runner of registration.runners) {
+    if (runner.promoPrice === null) continue;
+    seats.set(runner.categoryId, (seats.get(runner.categoryId) ?? 0) + 1);
+  }
+
+  // Sorted for the same reason redeemPromoCode sorts: two transactions
+  // touching the same promotion's categories must take them in one order.
+  for (const categoryId of [...seats.keys()].sort()) {
+    const back = seats.get(categoryId) ?? 0;
+    if (back <= 0) continue;
+
+    const held: { usageCount: number }[] = await tx.$queryRaw`
+      SELECT "usageCount" FROM "PromoCategoryPrice"
+      WHERE "promoCodeId" = ${promo.id} AND "categoryId" = ${categoryId} FOR UPDATE`;
+    const seat = held[0];
+    // The price row is gone — the organizer stopped repricing that category.
+    // There is no seat to hand back, and that is not a failure.
+    if (!seat) continue;
+
+    await tx.promoCategoryPrice.updateMany({
+      where: { promoCodeId: promo.id, categoryId },
+      // Clamped for the same reason the redemption count is: a promotion
+      // recreated under an old code inherits its history, so a fresh row can
+      // legitimately be handed back seats it never sold.
+      data: { usageCount: Math.max(0, seat.usageCount - back) },
+    });
+  }
 
   await tx.promoCode.update({
     where: { id: promo.id },

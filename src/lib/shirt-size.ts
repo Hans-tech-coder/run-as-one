@@ -1,3 +1,5 @@
+import type { RunnerCategory } from '@/lib/discount';
+
 /**
  * Shirt sizing: the chart, when to ask for a size at all, and what the large
  * sizes cost extra.
@@ -258,5 +260,32 @@ export function runnerPrices(
       (category ? category.price : 0) +
       shirtSizeUpchargeFor(p, categories, upchargePerRunner)
     );
+  });
+}
+
+/**
+ * Which category each runner entered and what that category lists at, in the
+ * shape `OrderBasis` wants it.
+ *
+ * Positionally aligned with `runnerPrices` because it is derived from the same
+ * participants array in the same order — index i is participant i in both, and
+ * a CATEGORY_PRICE promotion pairs them up by index to work out what it takes
+ * off each runner.
+ *
+ * The list price is carried separately from `runnerPrices` rather than
+ * recovered from it, because the two differ by that runner's own large-size
+ * upcharge: a promotion that reprices the 10K must not also give away the
+ * extra a 3XL singlet costs.
+ */
+export function runnerCategories(
+  participants: readonly { categoryId: string; singletSize: string }[],
+  categories: readonly PricedCategory[] | null | undefined
+): RunnerCategory[] {
+  return participants.map(p => {
+    const category = (categories ?? []).find(c => c.id === p.categoryId);
+    return {
+      categoryId: p.categoryId,
+      listPrice: category ? category.price : 0,
+    };
   });
 }

@@ -2,6 +2,7 @@ import type { Prisma } from '@prisma/client';
 import { Resend } from 'resend';
 import { CONTACT_EMAIL, SITE_NAME } from './site-contact';
 import { formatPesos } from './money';
+import { isPricedIn } from './discount';
 import { formatEventDay } from './event-schedule';
 import { runnerRef } from './order-ref';
 import { PICKUP_FALLBACK, pickupDetails } from './pickup';
@@ -643,10 +644,36 @@ function runnerDetailRows(registration: RegistrationWithDetails): Row[] {
   });
 }
 
-/** The cost breakdown and its total. Only the last line's wording differs. */
+/**
+ * The cost breakdown and its total. Only the last line's wording differs.
+ *
+ * **A sale is a price, not a deduction**, and this email has to say it the way
+ * the wizard's summary did — a runner who was shown ₱900 a race and then reads
+ * a receipt quoting ₱1,200 with a credit underneath will believe they were
+ * charged the higher number. So a priced-in promotion nets the Subtotal line
+ * and replaces the discount row with a note naming it; every other kind leaves
+ * the goods at list and shows itself as the negative row it is. Which one it
+ * was is read off `Registration.discountType`, snapshotted at checkout,
+ * because the promotion it came from may have been edited or deleted between
+ * then and now.
+ *
+ * The stored row is untouched by any of this: `subtotal` is the list total and
+ * `discountAmount` what came off it, whichever way they are printed, so the
+ * organizer's revenue and the *Given* column keep counting the same money.
+ */
 function summaryRows(registration: RegistrationWithDetails, totalLabel: string): Row[] {
+  const discounted = registration.discountAmount > 0;
+  const pricedIn = discounted && isPricedIn(registration.discountType);
+  const promoName = registration.promoCode ?? 'Promotion';
+
   return [
-    { kind: 'amount', label: 'Subtotal', centavos: registration.subtotal },
+    {
+      kind: 'amount',
+      label: pricedIn ? `Subtotal (${promoName} price)` : 'Subtotal',
+      centavos: pricedIn
+        ? registration.subtotal - registration.discountAmount
+        : registration.subtotal,
+    },
     ...(registration.deliveryFee > 0
       ? [
           {
@@ -659,7 +686,7 @@ function summaryRows(registration: RegistrationWithDetails, totalLabel: string):
     // Directly under the goods it came off, and before the fees, because that
     // is the order the wizard's summary showed it in and this email is what
     // the runner checks the charge against.
-    ...(registration.discountAmount > 0
+    ...(discounted && !pricedIn
       ? [
           {
             kind: 'amount' as const,
@@ -667,6 +694,18 @@ function summaryRows(registration: RegistrationWithDetails, totalLabel: string):
               ? `Discount (${registration.promoCode})`
               : 'Discount',
             centavos: -registration.discountAmount,
+          },
+        ]
+      : []),
+    // The saving is still stated when it is priced in — it is the whole reason
+    // the subtotal above is what it is — but as a fact rather than as a second
+    // subtraction, which would take it off twice.
+    ...(pricedIn
+      ? [
+          {
+            kind: 'info' as const,
+            label: 'You saved',
+            value: `${PESO_SIGN}${formatPesos(registration.discountAmount)} on ${promoName}`,
           },
         ]
       : []),

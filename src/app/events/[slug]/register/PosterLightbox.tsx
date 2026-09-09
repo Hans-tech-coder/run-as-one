@@ -3,7 +3,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Check, CheckCircle2 } from 'lucide-react';
-import { formatPesos } from '@/lib/money';
+import CategoryPrice from '@/components/CategoryPrice';
+import { CategorySalePrice } from '@/lib/discount';
 
 /**
  * Full view of what one option includes — the organizer's list, the poster, or
@@ -24,6 +25,7 @@ export default function PosterLightbox({
   category,
   isSelected,
   isFull = false,
+  sale,
   onSelect,
   onClose,
 }: {
@@ -40,6 +42,13 @@ export default function PosterLightbox({
    * way to choose the same sold-out option.
    */
   isFull?: boolean;
+  /**
+   * What a promotion has repriced this option to, if one has. Passed down from
+   * the picker so the poster quotes the same pair of numbers as the row it was
+   * opened from — this panel covers that row, and a price that changed on the
+   * way in would be the one thing the runner could compare it against.
+   */
+  sale?: CategorySalePrice;
   onSelect: () => void;
   onClose: () => void;
 }) {
@@ -80,8 +89,13 @@ export default function PosterLightbox({
             </div>
             <div className="text-sm text-secondary">What&apos;s included</div>
           </div>
-          <div className="ml-auto text-lg font-bold text-accent-orange shrink-0">
-            ₱{formatPesos(category.price)}
+          <div className="ml-auto shrink-0">
+            <CategoryPrice
+              price={category.price}
+              sale={sale}
+              dimmed={isFull}
+              className="text-lg font-bold text-accent-orange shrink-0"
+            />
           </div>
           <button
             ref={closeRef}
