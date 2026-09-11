@@ -3,10 +3,10 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { ChevronRight, Mail, Radar } from 'lucide-react';
 import { IconBadge, PageOrbs, StatusPanel } from '@/components/StatusPanel';
-import { CONTACT_EMAIL, SOCIAL_CHANNELS, SUPPORT_MAILTO } from '@/lib/site-contact';
+import { CONTACT_EMAIL, SITE_NAME, SOCIAL_CHANNELS, SUPPORT_MAILTO } from '@/lib/site-contact';
 
 export const metadata: Metadata = {
-  title: 'Coming Soon | RunAsOne',
+  title: `Coming Soon | ${SITE_NAME}`,
   description:
     'Our social channels are still being set up. In the meantime, browse open running events or email us directly.',
 };

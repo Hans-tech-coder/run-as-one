@@ -1,5 +1,5 @@
 /**
- * The geometry of the RunAsOne mark, in one place.
+ * The geometry of the Run As One by: CRC mark, in one place.
  *
  * Three surfaces draw these same four shapes and none of them can reach the
  * others' copy: `components/RunAsOneLogo` renders them as JSX with CSS

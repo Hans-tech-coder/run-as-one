@@ -83,7 +83,7 @@ export default function AdminRegister() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="form-input"
-              placeholder="Run As One Events"
+              placeholder="Sunrise Running Club"
               required
             />
           </div>

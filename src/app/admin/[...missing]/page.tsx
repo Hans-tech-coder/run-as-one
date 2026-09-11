@@ -1,11 +1,12 @@
 import { notFound, redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { getAuthCookie } from '@/lib/auth';
+import { SITE_NAME } from '@/lib/site-contact';
 
 // Set here rather than on ../not-found.tsx: a not-found file renders as a
 // boundary, and Next.js takes the title from the route that matched.
 export const metadata: Metadata = {
-  title: 'Page Not Found | RunAsOne Admin',
+  title: `Page Not Found | ${SITE_NAME} Admin`,
 };
 
 /**

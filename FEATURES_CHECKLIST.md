@@ -1,4 +1,4 @@
-# RunAsOne - Major Features Checklist 🏃‍♂️
+# Run As One by: CRC - Major Features Checklist 🏃‍♂️
 
 Ang checklist na ito ay nakabase sa ating naaprubahang Implementation Plan. Iu-update natin ito sa bawat major feature na matatapos natin.
 

@@ -1,9 +1,10 @@
 import { notFound, redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { getAuthCookie } from '@/lib/auth';
+import { SITE_NAME } from '@/lib/site-contact';
 
 export const metadata: Metadata = {
-  title: 'Page Not Found | RunAsOne Super Admin',
+  title: `Page Not Found | ${SITE_NAME} Super Admin`,
 };
 
 /**

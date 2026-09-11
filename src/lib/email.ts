@@ -56,7 +56,16 @@ import {
  * time a line changes in only one of them.
  */
 
-const FROM_ADDRESS = `${SITE_NAME} <${CONTACT_EMAIL}>`;
+/**
+ * The sender line every email goes out under.
+ *
+ * The display name is **quoted**, which it has to be now that the brand is
+ * "Run As One by: CRC": a colon is one of RFC 5322's specials, and a bare
+ * phrase containing one is not a legal display-name — the parser stops at the
+ * colon and the rest of the name lands wherever the receiving client decides.
+ * Quoting it makes the whole name one atom and the address parses as intended.
+ */
+const FROM_ADDRESS = `"${SITE_NAME}" <${CONTACT_EMAIL}>`;
 const BRAND_ORANGE = '#FF6B00';
 const BRAND_BLUE = '#007AFF';
 

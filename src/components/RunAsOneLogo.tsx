@@ -3,7 +3,7 @@ import { SITE_NAME } from '@/lib/site-contact';
 import { MARK_ARCS, MARK_DOT, MARK_VIEWBOX, type MarkInk } from '@/lib/brand-mark';
 
 /**
- * The RunAsOne brand lockup.
+ * The Run As One by: CRC brand lockup.
  *
  * Two halves that are deliberately made of different material:
  *
@@ -108,8 +108,8 @@ export function RunAsOneLogo({
       <span className="rao-logo__words">
         {/* Written in mixed case and uppercased in CSS: a screen reader reading
             the DOM text says the brand rather than spelling out four capitals. */}
-        <span className="rao-logo__word">Run as One</span>
-        <span className="rao-logo__byline">by CRC</span>
+        <span className="rao-logo__word">Run As One</span>
+        <span className="rao-logo__byline">by: CRC</span>
       </span>
     </span>
   );

@@ -2,6 +2,7 @@ import React from 'react';
 import prisma from '@/lib/db';
 import { DollarSign, Users, Activity, FileSpreadsheet } from 'lucide-react';
 import { formatPesos } from '@/lib/money';
+import { SITE_NAME } from '@/lib/site-contact';
 
 export default async function SuperAdminDashboard() {
   // Fetch platform-wide stats
@@ -72,7 +73,7 @@ export default async function SuperAdminDashboard() {
           </div>
           <div className="admin-panel-content">
             <p className="text-secondary">
-              Welcome to the RunAsOne Super Admin Portal. From here, you can monitor the health of the entire platform and manage organizer accounts.
+              Welcome to the {SITE_NAME} Super Admin Portal. From here, you can monitor the health of the entire platform and manage organizer accounts.
             </p>
             <p className="text-secondary mt-4">
               Use the sidebar to navigate to the Organizers page to approve new applications, suspend accounts, or set specific admin fees for each organizer.

@@ -5,9 +5,9 @@ import LegalPage, { type LegalSection } from '@/components/LegalPage';
 import { CONTACT_EMAIL, SITE_NAME } from '@/lib/site-contact';
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy | RunAsOne',
+  title: `Privacy Policy | ${SITE_NAME}`,
   description:
-    'What personal data RunAsOne collects when you register for a running event, why we collect it, who sees it, and the rights you have over it under the Data Privacy Act of 2012.',
+    `What personal data ${SITE_NAME} collects when you register for a running event, why we collect it, who sees it, and the rights you have over it under the Data Privacy Act of 2012.`,
 };
 
 /**

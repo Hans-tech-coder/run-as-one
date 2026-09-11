@@ -6,7 +6,7 @@ import { SITE_NAME, SITE_URL } from "@/lib/site-contact";
 const inter = Inter({ subsets: ["latin"], variable: "--font-body" });
 const outfit = Outfit({ subsets: ["latin"], variable: "--font-sans" });
 
-const TITLE = "RunAsOne | Premium Running Event Registration";
+const TITLE = `${SITE_NAME} | Premium Running Event Registration`;
 const DESCRIPTION =
   "Join the best running events. Register, run, and track your results in one place.";
 

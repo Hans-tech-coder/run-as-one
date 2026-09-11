@@ -5,9 +5,9 @@ import LegalPage, { type LegalSection } from '@/components/LegalPage';
 import { CONTACT_EMAIL, SITE_NAME } from '@/lib/site-contact';
 
 export const metadata: Metadata = {
-  title: 'Terms of Service | RunAsOne',
+  title: `Terms of Service | ${SITE_NAME}`,
   description:
-    'The terms that apply when you register for a running event through RunAsOne, and the split of responsibilities between the platform and the event organizer.',
+    `The terms that apply when you register for a running event through ${SITE_NAME}, and the split of responsibilities between the platform and the event organizer.`,
 };
 
 /**
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
  */
 const SECTIONS: LegalSection[] = [
   {
-    heading: 'What RunAsOne is',
+    heading: `What ${SITE_NAME} is`,
     body: [
       `${SITE_NAME} is a registration platform. We list running events, take your entry and your payment, and pass your details to the organizer who is actually putting on the race.`,
       'We do not organize, marshal, time, or insure any event on this site. Each event is run by an independent organizer, and the route, the start time, the race kit, the water stations, the safety marshals and the results are theirs.',
@@ -125,7 +125,7 @@ export default function TermsPage() {
     <LegalPage
       eyebrow="The Fine Print"
       title="Terms of Service"
-      intro="What you agree to when you register through RunAsOne, and where our responsibility ends and the event organizer's begins."
+      intro={`What you agree to when you register through ${SITE_NAME}, and where our responsibility ends and the event organizer's begins.`}
       icon={<Scale size={20} aria-hidden="true" />}
       sections={SECTIONS}
     />

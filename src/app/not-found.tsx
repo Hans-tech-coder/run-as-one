@@ -3,10 +3,10 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { Calendar, ChevronRight, Compass, Mail, Trophy } from 'lucide-react';
 import { IconBadge, PageOrbs, StatusPanel } from '@/components/StatusPanel';
-import { SUPPORT_MAILTO } from '@/lib/site-contact';
+import { SITE_NAME, SUPPORT_MAILTO } from '@/lib/site-contact';
 
 export const metadata: Metadata = {
-  title: 'Page Not Found | RunAsOne',
+  title: `Page Not Found | ${SITE_NAME}`,
   description:
     'That page is not here. Browse open running events, look up official race results, or get in touch.',
 };

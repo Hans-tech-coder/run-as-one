@@ -3,10 +3,11 @@ import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import prisma from '@/lib/db';
 import { getAuthCookie } from '@/lib/auth';
+import { SITE_NAME } from '@/lib/site-contact';
 import AccountSettingsClient from './AccountSettingsClient';
 
 export const metadata: Metadata = {
-  title: 'Settings | RunAsOne Admin',
+  title: `Settings | ${SITE_NAME} Admin`,
 };
 
 /**

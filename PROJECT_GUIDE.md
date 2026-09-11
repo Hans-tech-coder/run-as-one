@@ -1,4 +1,4 @@
-# RunAsOne — Project Guide
+# Run As One by: CRC — Project Guide
 
 **Read this file before touching the codebase.** It is the single briefing on what
 this app is, how it is built, and the rules it holds itself to, so a fresh session
@@ -14,7 +14,7 @@ updated](#keeping-this-file-updated) at the bottom.
 
 ## 1. What the product is
 
-RunAsOne is a **running-event registration and results platform for the
+Run As One by: CRC is a **running-event registration and results platform for the
 Philippines**. Three groups use it:
 
 | Who | What they do | Where |
@@ -672,7 +672,24 @@ These are the user's own standing preferences. Follow them without being asked.
   Three variants — `full`, `stacked`, `mark`. **Flat colour, never the
   orange→blue gradient**: this logo has to survive a bib, a shirt and a
   tarpaulin, and a ramp is the first thing a printer loses.
-- **"by CRC" is part of the lockup, not an option.** RunAsOne is Cresendo
+- **The brand is "Run As One by: CRC", and `SITE_NAME` is the only place it is
+  spelled.** It used to be written "RunAsOne" and the parent brand only rode
+  along on the logo; both halves are now one name, and every surface that names
+  the platform in prose — the root `<title>` and every page title, the Open
+  Graph `siteName`, the two legal pages, the footer copyright, the sender name
+  and footer on every email — builds its string from `SITE_NAME` in
+  `lib/site-contact.ts` rather than typing it. **Never retype the name**: the
+  first version of this rename left half the page titles behind because they
+  were string literals, which is why they are template literals off the
+  constant now. Two consequences worth knowing: the email sender's display name
+  is **quoted** (`"${SITE_NAME}" <…>`), because a colon is one of RFC 5322's
+  specials and a bare phrase containing one is not a legal display-name; and the
+  lockup's own two lines are the *only* copies of the name that are not read
+  from the constant, because they are separately styled DOM text — the wordmark
+  says "Run As One" and the byline "by: CRC", and the two must be edited
+  together with it. The `RunAsOneLogo` component, its file and the `.rao-logo`
+  class keep their old identifiers; they are code names, not text a person sees.
+- **"by: CRC" is part of the lockup, not an option.** Run As One by: CRC is Cresendo
   Running Community's platform, and a parent brand that appears on some
   surfaces and not others stops reading as a parent brand — so the endorsement
   line renders on every variant that has a wordmark, and there is no prop to
@@ -766,6 +783,20 @@ These are the user's own standing preferences. Follow them without being asked.
   where the real Outfit face is loaded — rasterising SVG `<text>` outside one
   picks up whatever font the rasteriser happens to find. `public/run-as-one-logo.png`
   is the previous CRC artwork; nothing references it any more.
+
+  **Renaming the brand means re-rendering both wordmark rasters**, and neither
+  can be regenerated from source, because there is no source — they were
+  rasterised from a browser once and committed. The way they were re-cut for
+  the "by: CRC" rename is the way to do it again: measure the existing byline's
+  glyph runs, baseline and colour out of the PNG itself, reproduce them in a
+  canvas on a page where the real Inter face is loaded (Inter 500, `0.06em`
+  tracking, `#A1A1AA` — the byline is Inter, not the wordmark's Outfit), and
+  composite only that line back. The OG card's byline sits on the panel's
+  gradient, so its box is rebuilt by interpolating each column between the clean
+  rows above and below rather than filled flat; the email lockup's byline sits
+  on transparent ground and its box is simply cleared. Patching the one line
+  leaves every other pixel of both assets byte-identical, which is worth more
+  than a clean re-render that would drift.
 - Commit style: `feat:` / `fix:` / `refactor:` plus a sentence saying what changed
   for the user.
 
