@@ -132,7 +132,7 @@ export default function CategoryPicker({
           return (
             <div
               key={cat.id}
-              className={`relative flex items-stretch gap-3 border rounded-[16px] p-3 transition-all ${
+              className={`relative flex items-center gap-3 sm:gap-4 border rounded-[16px] p-3 transition-all ${
                 isFull
                   ? 'border-white/5 bg-black/20 opacity-60'
                   : isSelected
@@ -161,8 +161,17 @@ export default function CategoryPicker({
                     rather than inset-0 because inset-0 stops at the padding
                     box and would leave the 1px border ring dead. The two
                     buttons below sit above the overlay on z-10. */}
+                {/* A grid rather than a wrapping flex row, so the phone layout
+                    is designed rather than whatever the wrap leaves behind. On
+                    a phone the row used to break wherever the text ran out —
+                    the chip under the name on one card and beside it on the
+                    next, the price stranded on a line of its own — so no two
+                    cards were the same height. Now it is two lines: name with
+                    the radio at its right, then the chips with the price on
+                    the right edge. From sm up there is room for one line,
+                    radio first, as before. */}
                 <label
-                  className={`flex flex-wrap items-center gap-x-3 gap-y-1 py-1 after:absolute after:-inset-px after:rounded-[16px] ${
+                  className={`grid grid-cols-[minmax(0,1fr)_auto] [grid-template-areas:'name_radio'_'meta_meta'] items-center gap-x-3 gap-y-2 py-1 sm:grid-cols-[auto_minmax(0,max-content)_minmax(0,1fr)_auto_auto] sm:[grid-template-areas:'radio_name_meta_price_check'] after:absolute after:-inset-px after:rounded-[16px] ${
                     isFull ? 'cursor-not-allowed' : 'cursor-pointer'
                   }`}
                 >
@@ -177,9 +186,11 @@ export default function CategoryPicker({
                     disabled={isFull}
                     onChange={() => onSelect(cat.id)}
                   />
+                  {/* Top-aligned on a phone so it sits level with the first
+                      line of a name that wraps to two. */}
                   <span
                     aria-hidden="true"
-                    className={`shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-accent-orange peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-black ${
+                    className={`[grid-area:radio] self-start justify-self-end sm:self-center w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-accent-orange peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-black ${
                       isSelected ? 'border-accent-orange' : 'border-white/30'
                     }`}
                   >
@@ -187,59 +198,77 @@ export default function CategoryPicker({
                       <span className="w-2.5 h-2.5 rounded-full bg-accent-orange" />
                     )}
                   </span>
-                  {/* Name and distance travel together, so the chip keeps
-                      reading as part of the name instead of drifting across
-                      the row toward the price. */}
-                  <span className="min-w-[7rem] flex-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <span
-                      className={`font-bold text-base sm:text-lg uppercase tracking-wide break-words ${
-                        isFull ? 'text-white/60' : 'text-white'
-                      }`}
-                    >
-                      {cat.name}
+                  <span
+                    className={`[grid-area:name] font-bold text-base sm:text-lg leading-tight uppercase tracking-wide break-words hyphens-auto ${
+                      isFull ? 'text-white/60' : 'text-white'
+                    }`}
+                  >
+                    {cat.name}
+                  </span>
+                  {/* The phone's second line. A wrapping row of its own rather
+                      than two grid cells, so on the narrowest screens the
+                      price drops under the chips instead of sliding over
+                      them. From sm up it dissolves (display: contents) and
+                      the chips and price take their own cells in the row. */}
+                  <span className="[grid-area:meta] min-w-0 flex flex-wrap items-center gap-x-2 gap-y-1.5 sm:contents">
+                    {/* The chips sit right after the name on a wide screen and
+                        under it on a phone, so the distance keeps reading as
+                        part of the name rather than as a note beside the price. */}
+                    <span className="sm:[grid-area:meta] min-w-0 flex flex-wrap items-center gap-1.5 empty:hidden">
+                      {cat.distance && (
+                        <span className="shrink-0 text-xs font-semibold text-secondary bg-white/10 px-2.5 py-0.5 rounded-full uppercase tracking-wide">
+                          {cat.distance}
+                        </span>
+                      )}
+                      {/* Same chip shape as the distance, so the row gains a
+                          fact rather than a new kind of ornament. */}
+                      {isFull && (
+                        <span className="shrink-0 text-xs font-bold text-white/70 bg-white/10 border border-white/10 px-2.5 py-0.5 rounded-full uppercase tracking-wide">
+                          Full
+                        </span>
+                      )}
+                      {slotsLeft !== null && (
+                        <span className="shrink-0 text-xs font-bold text-accent-orange bg-accent-orange/15 px-2.5 py-0.5 rounded-full uppercase tracking-wide">
+                          {slotsLeft} slot{slotsLeft === 1 ? '' : 's'} left
+                        </span>
+                      )}
                     </span>
-                    {cat.distance && (
-                      <span className="shrink-0 text-xs font-semibold text-secondary bg-white/10 px-2.5 py-0.5 rounded-full uppercase tracking-wide">
-                        {cat.distance}
-                      </span>
-                    )}
-                    {/* Same chip shape as the distance, so the row gains a
-                        fact rather than a new kind of ornament. */}
-                    {isFull && (
-                      <span className="shrink-0 text-xs font-bold text-white/70 bg-white/10 border border-white/10 px-2.5 py-0.5 rounded-full uppercase tracking-wide">
-                        Full
-                      </span>
-                    )}
-                    {slotsLeft !== null && (
-                      <span className="shrink-0 text-xs font-bold text-accent-orange bg-accent-orange/15 px-2.5 py-0.5 rounded-full uppercase tracking-wide">
-                        {slotsLeft} slot{slotsLeft === 1 ? '' : 's'} left
-                      </span>
-                    )}
+                    <span className="ml-auto sm:ml-0 sm:[grid-area:price] sm:justify-self-end">
+                      <CategoryPrice
+                        price={cat.price}
+                        sale={salePrices?.get(cat.id)}
+                        dimmed={isFull}
+                        className={`text-lg sm:text-xl font-bold tabular-nums shrink-0 ${
+                          isFull ? 'text-white/40' : 'text-accent-orange'
+                        }`}
+                      />
+                    </span>
                   </span>
-                  <span className="ml-auto shrink-0">
-                    <CategoryPrice
-                      price={cat.price}
-                      sale={salePrices?.get(cat.id)}
-                      dimmed={isFull}
-                      className={`text-lg sm:text-xl font-bold shrink-0 ${
-                        isFull ? 'text-white/40' : 'text-accent-orange'
-                      }`}
-                    />
-                  </span>
-                  {isSelected && (
-                    <CheckCircle2
-                      size={20}
-                      aria-hidden="true"
-                      className="text-accent-orange shrink-0"
-                    />
-                  )}
+                  {/* Wide screens only: on a phone the filled radio already says
+                      it, and the width is worth more to the name. Its column is
+                      kept while unticked (invisible, not absent) so ticking an
+                      option does not shove its price off the shared right edge. */}
+                  <CheckCircle2
+                    size={20}
+                    aria-hidden="true"
+                    className={`[grid-area:check] hidden sm:block text-accent-orange ${
+                      isSelected ? '' : 'invisible'
+                    }`}
+                  />
                 </label>
 
+                {/* A phone gets the poster thumbnail as the one way in: it
+                    already opens the same lightbox and carries the expand
+                    badge, and a second line of link text under every option
+                    was most of what made the rows tall. With no poster the
+                    link is the only way in, so it stays on every screen. */}
                 {hasInclusions(cat) && (
                   <ViewInclusionsButton
                     name={cat.name}
                     onOpen={() => setPosterFor(cat)}
-                    className="ml-8 relative z-10"
+                    className={`relative z-10 sm:ml-8 ${
+                      cat.imageUrl ? 'hidden sm:block' : ''
+                    }`}
                   />
                 )}
               </div>
@@ -304,9 +333,10 @@ function PosterThumb({
         className="w-full h-full object-cover"
       />
       {/* Always visible, not hover-only: touch has no hover, and this is the
-          only cue that the thumbnail opens something. */}
-      <span className="absolute bottom-0.5 right-0.5 w-5 h-5 rounded-md bg-black/70 flex items-center justify-center text-white group-hover/thumb:bg-accent-orange transition-colors">
-        <Maximize2 size={11} aria-hidden="true" />
+          only cue that the thumbnail opens something. On a phone it is also
+          the only way to the inclusions, so it is sized to be seen. */}
+      <span className="absolute bottom-1 right-1 w-6 h-6 rounded-lg bg-black/75 ring-1 ring-white/15 flex items-center justify-center text-white group-hover/thumb:bg-accent-orange transition-colors">
+        <Maximize2 size={12} aria-hidden="true" />
       </span>
     </button>
   );

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Download, Share2, FileText } from 'lucide-react';
+import { Download, Share2, FileText, X, CheckCircle2 } from 'lucide-react';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { useSearchParams } from 'next/navigation';
 import { useAlert } from '@/components/ui/AlertProvider';
@@ -18,7 +18,7 @@ export default function ECertificateGenerator({ result, event }: Props) {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const searchParams = useSearchParams();
   // Shadows window.alert on purpose — see AlertProvider.
-  const { alert } = useAlert();
+  const { alert, toast } = useAlert();
 
   const generateCertificate = async () => {
     setIsGenerating(true);
@@ -190,33 +190,73 @@ export default function ECertificateGenerator({ result, event }: Props) {
 
   const handleShare = async () => {
     if (!pdfUrl) return;
+    const url = window.location.href.split('?')[0];
     try {
-      // In a real app we might generate a public image URL or use Web Share API with files
-      // Here we will just use basic navigator.share if available with the current URL
       if (navigator.share) {
         await navigator.share({
           title: `${result.name} - Certificate of Completion`,
           text: `Check out my race result for ${event.title}!`,
-          url: window.location.href,
+          url,
         });
-      } else {
-        alert({
-          variant: 'info',
-          title: 'Sharing Unavailable',
-          message: 'Sharing is not supported on this browser. Try copying the URL.',
-        });
+        return;
       }
+      // No share sheet (most desktop browsers): copying the link is the same
+      // outcome in one step, where the old dialog told the runner to go and
+      // copy it themselves.
+      await navigator.clipboard.writeText(url);
+      toast({ variant: 'success', title: 'Link copied', message: 'Your result link is ready to paste.' });
     } catch (error) {
-      console.log('Error sharing', error);
+      // A dismissed share sheet rejects too; that is the runner changing
+      // their mind, not a failure worth a dialog.
+      if ((error as DOMException)?.name === 'AbortError') return;
+      alert({
+        variant: 'info',
+        title: 'Sharing Unavailable',
+        message: `Sharing is not supported on this browser. Copy this link instead: ${url}`,
+      });
     }
   };
 
+  const closeModal = () => {
+    if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+    setPdfUrl(null);
+  };
+
+  // A PDF in an iframe renders only where the browser has a built-in viewer
+  // *and* the page can drive it. Chrome on Android has none and paints an
+  // empty grey box; Safari on an iPhone shows the page at its print size,
+  // cropped to the corner. So the inline preview is kept for a mouse-driven
+  // browser that reports a viewer, and a phone gets a summary of what the
+  // certificate says with the download — which opens the phone's own viewer —
+  // as the way to see it.
+  // Read when the modal opens rather than on mount — it is only ever needed
+  // then, and the modal cannot open before the page is in the browser.
+  const canPreviewInline = () =>
+    navigator.pdfViewerEnabled === true &&
+    window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+  useEffect(() => {
+    if (!pdfUrl) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      URL.revokeObjectURL(pdfUrl);
+      setPdfUrl(null);
+    };
+    const { overflow } = document.body.style;
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = overflow;
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [pdfUrl]);
+
   return (
     <>
-      <button 
+      <button
         onClick={generateCertificate}
         disabled={isGenerating}
-        className="btn-gradient w-full sm:w-fit sm:min-w-[20rem] sm:px-10 mx-auto py-4 text-lg flex items-center justify-center gap-3 mt-8 shadow-lg shadow-accent-blue/20 rounded-[16px] group"
+        className="btn-gradient w-full sm:w-fit sm:min-w-[20rem] sm:px-10 mx-auto py-4 text-base sm:text-lg flex items-center justify-center gap-3 mt-6 sm:mt-8 shadow-lg shadow-accent-blue/20 rounded-[16px] group"
       >
         {isGenerating ? (
           <>
@@ -225,55 +265,80 @@ export default function ECertificateGenerator({ result, event }: Props) {
           </>
         ) : (
           <>
-            <FileText size={24} className="group-hover:scale-110 transition-transform" />
+            <FileText size={22} className="group-hover:scale-110 transition-transform" />
             View E-Certificate
           </>
         )}
       </button>
 
-      {/* Modal Overlay */}
+      {/* Modal Overlay. A bottom sheet on a phone, where the thumb already
+          is; a centred dialog from sm up. */}
       {pdfUrl && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 animate-fade-in">
+        <div
+          className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-6 animate-fade-in"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="ecert-title"
+        >
           {/* Backdrop */}
-          <div 
+          <div
             className="absolute inset-0 bg-black/90 backdrop-blur-md"
-            onClick={() => setPdfUrl(null)}
+            onClick={closeModal}
           ></div>
-          
+
           {/* Modal Content */}
-          <div className="relative w-full max-w-4xl rounded-[24px] bg-dark border border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-scale-in">
+          <div className="relative w-full max-w-4xl rounded-t-[24px] sm:rounded-[24px] bg-dark border border-white/10 border-b-0 sm:border-b shadow-2xl overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[85dvh] animate-scale-in">
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-5 border-b border-white/[0.05] bg-black/40">
-              <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                <FileText className="text-accent-blue" size={20} /> Official E-Certificate
+            <div className="flex items-center justify-between gap-3 px-5 py-4 sm:p-5 border-b border-white/[0.05] bg-black/40">
+              <h3 id="ecert-title" className="text-lg sm:text-xl font-bold text-white flex items-center gap-2 min-w-0">
+                <FileText className="text-accent-blue shrink-0" size={20} /> <span className="truncate">Official E-Certificate</span>
               </h3>
-              <button 
-                onClick={() => setPdfUrl(null)}
-                className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-secondary hover:text-white hover:bg-white/10 transition-colors"
+              <button
+                type="button"
+                onClick={closeModal}
+                aria-label="Close certificate"
+                className="w-10 h-10 shrink-0 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-secondary hover:text-white hover:bg-white/10 transition-colors"
               >
-                ✕
+                <X size={18} />
               </button>
             </div>
-            
-            {/* Modal Body (Iframe) */}
-            <div className="flex-1 p-4 md:p-6 bg-black/60 overflow-hidden relative flex flex-col justify-center items-center min-h-0">
-              <iframe 
-                src={`${pdfUrl}#toolbar=0`} 
-                className="w-full aspect-[1.414] max-h-full rounded-lg shadow-xl bg-white relative z-10"
-                style={{ maxHeight: 'calc(85vh - 180px)' }}
-                title="E-Certificate Preview"
-              />
+
+            {/* Modal Body */}
+            <div className="flex-1 p-4 md:p-6 bg-black/60 overflow-y-auto relative flex flex-col justify-center items-center min-h-0">
+              {canPreviewInline() ? (
+                <iframe
+                  src={`${pdfUrl}#toolbar=0&navpanes=0&view=Fit`}
+                  className="w-full aspect-[1.414] max-h-full rounded-lg shadow-xl bg-white relative z-10"
+                  style={{ maxHeight: 'calc(85dvh - 180px)' }}
+                  title="E-Certificate Preview"
+                />
+              ) : (
+                <div className="w-full rounded-[18px] border border-white/10 bg-gradient-to-br from-white/[0.06] to-white/[0.02] px-5 py-7 text-center">
+                  <div className="mx-auto mb-4 w-12 h-12 rounded-[14px] bg-accent-blue/10 border border-accent-blue/20 flex items-center justify-center text-accent-blue">
+                    <CheckCircle2 size={24} />
+                  </div>
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-secondary font-bold mb-2">Certificate of Completion</p>
+                  <p className="text-xl font-black text-white uppercase leading-tight text-balance break-words">{result.name}</p>
+                  <p className="mt-3 font-mono text-2xl font-bold text-accent-orange tabular-nums">{toWholeSeconds(result.chipTime)}</p>
+                  <p className="mt-1 text-sm text-secondary break-words">{result.category.name} · {event.title}</p>
+                  <p className="mt-5 text-xs text-secondary/80 leading-relaxed text-balance">
+                    Your certificate is ready. Download the PDF to open it in full and save it to your phone.
+                  </p>
+                </div>
+              )}
             </div>
-            
+
             {/* Modal Footer (Actions) */}
-            <div className="p-5 border-t border-white/[0.05] bg-black/40 flex flex-col sm:flex-row gap-3">
-              <button 
+            <div className="p-4 sm:p-5 pb-[max(1rem,env(safe-area-inset-bottom))] sm:pb-5 border-t border-white/[0.05] bg-black/40 flex flex-col sm:flex-row gap-3">
+              <button
+                type="button"
                 onClick={handleDownload}
                 className="btn-gradient flex-1 py-3.5 rounded-[16px] text-white font-bold flex items-center justify-center gap-2"
               >
                 <Download size={20} /> Download PDF
               </button>
-              <button 
+              <button
+                type="button"
                 onClick={handleShare}
                 className="flex-1 py-3.5 rounded-[16px] bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold flex items-center justify-center gap-2 transition-all duration-300"
               >
