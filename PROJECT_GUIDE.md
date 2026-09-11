@@ -158,7 +158,10 @@ shape:
   `distance` (`"10K"`); a `FUN_RUN`'s carry a package `imageUrl` and no distance.
   `inclusions` is a string[]. `price` in centavos. `slotLimit` caps how many
   runners it can take (null = uncapped) — per option rather than per event,
-  because a full 10K says nothing about the 5K beside it.
+  because a full 10K says nothing about the 5K beside it. **`sortOrder` is its
+  place in the event's list, fixed at creation** (the order the organizer
+  entered them): an edit never renumbers an existing option, and one added
+  later joins the end. Read through `CATEGORY_ORDER` (§5).
 - **BankAccount** — per event, not per organizer: bank/account name, number kept
   exactly as typed, optional QR image, `sortOrder`.
 - **Registration** — one order. `orderRef` unique; all amounts centavos
@@ -267,6 +270,7 @@ logic again.
 | `voucher-codes.ts` | Generating a batch of single-use vouchers. The alphabet drops every character that can be misread off a printed card — no O against 0, no I or L against 1, no S against 5, no U against V — and codes are **random rather than sequential**, because SUMMER-001…200 hands anyone who receives one the other 199. `MAX_VOUCHER_BATCH` (500) is a ceiling on the free Postgres tier as much as on the promotion. Web Crypto, not `Math.random`. |
 | `rate-limit.ts` | **Throttling the routes anyone on the internet can call**, and being honest about how far that reaches. A sliding window in one instance's memory, keyed by the first hop of `x-forwarded-for` — Vercel runs however many instances it likes and they share nothing, so this stops a naive script hammering one endpoint from one address and does **not** stop a distributed one. The honest fix is a shared counter in Redis, and there is no Redis here: adding one for a promo-code endpoint would cost more monthly than the abuse it prevents (§2). `PROMO_LOOKUP_RULE` is 20 tries a minute, deliberately far above anything a person does by hand, because of what a refusal looks like — `promos/lookup` answers a throttled caller **exactly as it answers a code we do not have**, so a real runner who somehow hit the wall would be told their code does not exist, and being wrong in that direction is worse than letting a slow script keep guessing. The map of callers is swept, and if still full cleared, past `MAX_TRACKED_KEYS` (5,000): forgetting who has been asking is the safe direction to fail, since the alternative is a route that refuses everyone because its own bookkeeping filled up. The window lives on `globalThis` for the same reason the Prisma client does — `next dev` re-evaluates modules on every edit. |
 | `event-slug.ts` | Public event URLs. `slugifyEventTitle` → `uniqueEventSlug` on write; `eventByParam` matches slug **or** legacy cuid on read, and `canonicalEventPath` redirects old cuid links to the slug. **`registerPath(event, category?)`** spells the wizard's address, and with a category adds `?category=` — the option's **name, slugged** (`?category=10k`), because that link gets pasted into group chats, falling back to its id only when two options on the race slug alike. `categoryFromParam` reads it back (id first, then a slug exactly one option answers to) and finds nothing for a stale link rather than guessing. |
+| `category-order.ts` | **The order an event's categories are listed in, everywhere.** `CATEGORY_ORDER` (`sortOrder`, then `id`) goes on every read of an event's categories that a person sees — the edit form's GET and PUT response, the create response, the events table, the event page, the wizard, the admin results screen, the winners board, the marketing form's price list and `promo-input.ts`. Nothing used to order them, so they came back in Postgres's physical row order, and an UPDATE writes the new row version at the end of the table: every save of the edit form moved the options it touched to the bottom, and a race's first category came back fourth. The create route numbers them by their position in the form; the edit route leaves `sortOrder` out of its update and gives an option added in that edit the next number after the event's highest. Rows that existed before the column were backfilled from their cuids, which sort in creation order. |
 | `event-type.ts` | `RACE` vs `FUN_RUN`. `asEventType` guards untrusted input (defaults to `RACE`); `sellsPackages(event)` is the branch the forms and wizards use. |
 | `registration-form.ts` | `ONLINE` vs `BANK_TRANSFER` checkout. `asRegistrationForm` defaults to `ONLINE`; `offersBankTransfer`. |
 | `shirt-size.ts` | The size chart, whether a category needs a size at all, and the 4XL-and-up upcharge. `subtotalWithUpcharge` is the priced truth. `shouldAskShirtSize(categories, categoryId)` decides whether the wizards show the field and whether validation requires it: the chosen category decides once one is picked, and before then the field is already visible when **every** option the event sells includes something to wear. It hides up front only for an event that also sells an option with nothing to wear (the Tarlac band-only package), where the answer is genuinely undecided. |
@@ -374,7 +378,7 @@ reject clubs) · `/superadmin/[...missing]`.
 | `checkout/manual` | POST | Bank transfer: multipart, proof file → private blob |
 | `webhooks/paymongo` | POST | HMAC-verified; marks the registration `PAID` |
 | `upload` | POST | Organizer-only image upload (public store) |
-| `admin/events`, `admin/events/[id]` | POST / GET, PUT, PATCH, DELETE | Event CRUD including categories and bank accounts. `PATCH` is the registration hold on its own (the events table toggles it without re-posting a form it never rendered) and is scoped to the signed-in organizer's own events. `GET` also carries `promotions` — what `eventPromotions` says is running on this race — for the read-only panel at the foot of the edit screen |
+| `admin/events`, `admin/events/[id]` | POST / GET, PUT, PATCH, DELETE | Event CRUD including categories and bank accounts. Categories keep the position they were created in across every `PUT` — see `category-order.ts`. `PATCH` is the registration hold on its own (the events table toggles it without re-posting a form it never rendered) and is scoped to the signed-in organizer's own events. `GET` also carries `promotions` — what `eventPromotions` says is running on this race — for the read-only panel at the foot of the edit screen |
 | `admin/events/[id]/results/upload` | POST | CSV/XLSX results import; dedupes by bib, computes seconds and the three ranks |
 | `admin/registrations/[id]/status` | PATCH | Confirm or reject a manual payment, and write the validator's internal `remarks`. Takes either or both; the status is guarded against a fixed list and the receipt email fires only on the *transition* into `PAID`, so a later remarks-only PATCH cannot send a second receipt. Auth-checked and scoped to the signed-in organizer's own events — **this route had none at all until Batch E**, which made it the one way for anyone on the internet to mark a registration `PAID` |
 | `admin/registrations/[id]/email` | GET, POST | The email a registration is owed, rendered for a person to send by hand — `GET` returns the recipient, subject and **both** renderings (HTML for the clipboard, plain text for a `mailto:`), `POST` records that a staff member sent it. Auth-checked and scoped like the status route, which matters more here than most: the rendered email carries every runner's contact details, birthdate and emergency contact |
@@ -587,10 +591,18 @@ These are the user's own standing preferences. Follow them without being asked.
     `admin/AdminRouteLoading` — the page frame every screen in the dashboard
     shares (an 80px `.admin-header` with a pulsing skeleton bar where the title
     goes, then `.admin-content`) with the brand loader centred in it. Next.js
-    makes that the Suspense fallback for the segment **and everything nested
-    under it**, so a slow registrants table or results upload is covered with
-    nothing to add per route. A new admin section needs no `loading.tsx` of its
-    own unless it wants a different one.
+    makes that the Suspense fallback for the segment and everything nested
+    under it — **but a fallback shows only when the segment directly under it
+    changes**. `admin/loading.tsx` answers a sidebar click (`events` →
+    `marketing`), not a click that stays inside a section: the events table →
+    Edit / Registrants / Manage Results / New Event keeps `events` as the
+    segment under `admin`, so it sat on screen unchanged until the page came.
+    That is what `admin/events/loading.tsx` is for. **A new section with pages
+    nested under its index needs its own `loading.tsx` rendering
+    `AdminRouteLoading`**; a flat one (every superadmin screen today) does
+    not. A page that fetches its own data on the client after arriving (the
+    edit form) renders `AdminRouteLoading` while it waits too, so the route's
+    wait and the fetch's wait are one screen, never a bare "Loading…" line.
   - `components/ui/LinkPending` marks *which* link was clicked, because the
     sidebar's active state comes from `usePathname()` and does not move until
     the navigation commits. It reads `useLinkStatus()` (Next 15.3+, and it only
@@ -618,9 +630,14 @@ These are the user's own standing preferences. Follow them without being asked.
   navigation builds them fresh — which is what makes the animation replay. The
   `.admin-header` bar is deliberately left out: it is identical chrome on both
   sides of the swap, and fading it would flicker the frame the reveal exists to
-  hold still. The fallback's own reveal is dropped to `--duration-quick`,
-  because 400ms of fade before the dots appear is 400ms still looking like
-  nothing happened.
+  hold still. It fills **`backwards` only** — a finished `blur(0)` is still a
+  filter, and a filter re-anchors every `position: fixed` modal inside the page
+  to `.admin-content`. With `both` it did: the edit form's success dialog was
+  centred halfway down a long form, off screen, so saving an event showed a
+  dimmed page and a stuck "Saving..." button. Never give an element that holds
+  page content a lasting `filter` or `transform`. The fallback's own reveal is
+  dropped to `--duration-quick`, because 400ms of fade before the dots appear
+  is 400ms still looking like nothing happened.
 - **The dashboard's loader is three pulsing dots in solid brand orange**
   (`components/ui/LoadingDots`, `.t-dots` in `globals.css`). Solid, not the
   orange→blue gradient: at 12px a ramp averages into a grey-lavender that reads

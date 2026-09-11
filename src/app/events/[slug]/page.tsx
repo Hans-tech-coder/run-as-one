@@ -34,6 +34,7 @@ import CategoryPrice from '@/components/CategoryPrice';
 import LinkPendingIcon from '@/components/ui/LinkPendingIcon';
 import { automaticPromosFor, promoTerms } from '@/lib/promo-store';
 import { categorySalePrices } from '@/lib/discount';
+import { CATEGORY_ORDER } from '@/lib/category-order';
 
 export default async function EventDetailsPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -42,7 +43,7 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ s
   // are still out there on posters and in group chats.
   const event = await db.event.findFirst({
     where: eventByParam(slug),
-    include: { categories: true }
+    include: { categories: { orderBy: CATEGORY_ORDER } }
   });
 
   if (!event) {

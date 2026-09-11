@@ -12,6 +12,7 @@ import { uniqueEventSlug } from '@/lib/event-slug';
 import { isCalendarDay } from '@/lib/event-schedule';
 import { asSlotLimit, takenSlotsByCategory } from '@/lib/registration-gate';
 import { eventPromotions } from '@/lib/promo-store';
+import { CATEGORY_ORDER } from '@/lib/category-order';
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -29,7 +30,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     const event = await db.event.findFirst({
       where: { id, organizerId: auth.id },
       include: {
-        categories: true,
+        categories: { orderBy: CATEGORY_ORDER },
         bankAccounts: { orderBy: { sortOrder: 'asc' } },
         // Only the count: the edit form locks the distances-or-packages choice
         // once anyone has registered, because switching it changes what those
@@ -201,6 +202,15 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         });
       }
 
+      // An option's place is fixed at creation, so the ones already here keep
+      // theirs — `sortOrder` is deliberately absent from the update below — and
+      // one added in this edit goes after the last, in the order the form sent.
+      const { _max } = await prisma.category.aggregate({
+        where: { eventId: id },
+        _max: { sortOrder: true },
+      });
+      let nextSortOrder = (_max.sortOrder ?? -1) + 1;
+
       for (const cat of categories) {
         if (cat.id) {
           await prisma.category.update({
@@ -233,6 +243,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
               imageUrl: cat.imageUrl || null,
               inclusions: asInclusions(cat.inclusions),
               slotLimit: asSlotLimit(cat.slotLimit),
+              sortOrder: nextSortOrder++,
               eventId: id,
             }
           });
@@ -241,7 +252,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
       return await prisma.event.findUnique({
         where: { id },
-        include: { categories: true, bankAccounts: { orderBy: { sortOrder: 'asc' } } }
+        include: {
+          categories: { orderBy: CATEGORY_ORDER },
+          bankAccounts: { orderBy: { sortOrder: 'asc' } },
+        }
       });
     });
 

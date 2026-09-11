@@ -11,6 +11,7 @@ import { asBankAccounts } from '@/lib/bank-accounts';
 import { uniqueEventSlug } from '@/lib/event-slug';
 import { isCalendarDay } from '@/lib/event-schedule';
 import { asSlotLimit } from '@/lib/registration-gate';
+import { CATEGORY_ORDER } from '@/lib/category-order';
 
 export async function POST(request: Request) {
   try {
@@ -79,7 +80,10 @@ export async function POST(request: Request) {
           })),
         },
         categories: {
-          create: categories.map((cat: any) => ({
+          create: categories.map((cat: any, index: number) => ({
+            // The position the organizer entered it in, fixed from here on —
+            // an edit never renumbers it. See lib/category-order.ts.
+            sortOrder: index,
             // Uppercased like the runner's own fields: this name is printed
             // beside them in the registrants table, the export and the emails.
             name: upperCaseForStorage(cat.name),
@@ -97,7 +101,7 @@ export async function POST(request: Request) {
         },
       },
       include: {
-        categories: true,
+        categories: { orderBy: CATEGORY_ORDER },
       },
     });
 

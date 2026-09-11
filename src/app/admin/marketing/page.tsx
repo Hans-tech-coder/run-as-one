@@ -8,6 +8,7 @@ import { promoStatus } from '@/lib/discount';
 import { soonestFirst } from '@/lib/event-schedule';
 import { formatPesos } from '@/lib/money';
 import { NO_SPEND, spendByCode } from '@/lib/promo-redemptions';
+import { CATEGORY_ORDER } from '@/lib/category-order';
 
 export default async function MarketingPage() {
   const auth = await getAuthCookie();
@@ -46,6 +47,7 @@ export default async function MarketingPage() {
         // and it keeps the modal instant.
         categories: {
           select: { id: true, name: true, distance: true, price: true },
+          orderBy: CATEGORY_ORDER,
         },
       },
     }),

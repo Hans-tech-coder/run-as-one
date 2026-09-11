@@ -10,6 +10,7 @@ import {
   takenSlotsByCategory,
   withSlotCounts,
 } from '@/lib/registration-gate';
+import { CATEGORY_ORDER } from '@/lib/category-order';
 import EventsTableClient from './EventsTableClient';
 
 export default async function AdminEventsPage() {
@@ -19,7 +20,7 @@ export default async function AdminEventsPage() {
   const events = await db.event.findMany({
     where: { organizerId: auth.id },
     include: {
-      categories: true,
+      categories: { orderBy: CATEGORY_ORDER },
       // The delete confirmation names how many registrations go with the
       // event, because removing one now removes those rows too.
       _count: { select: { registrations: true } },

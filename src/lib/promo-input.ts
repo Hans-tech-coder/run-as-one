@@ -1,5 +1,6 @@
 import prisma from '@/lib/db';
 import { formatPesos, toCentavos } from '@/lib/money';
+import { CATEGORY_ORDER } from '@/lib/category-order';
 import {
   DISCOUNT_TYPES,
   PromoCategoryPrice,
@@ -197,9 +198,12 @@ async function categoryPricesFromInput(
     );
   }
 
+  // In the event's own order, so when two boxes are wrong the one refused is
+  // the one higher up the form.
   const categories = await prisma.category.findMany({
     where: { eventId },
     select: { id: true, name: true, price: true },
+    orderBy: CATEGORY_ORDER,
   });
 
   const entries = asMap(input.categoryPrices);

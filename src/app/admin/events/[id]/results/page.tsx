@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import ResultsUploaderClient from './ResultsUploaderClient';
 import ResultsTableClient from './ResultsTableClient';
+import { CATEGORY_ORDER } from '@/lib/category-order';
 
 export default async function AdminResultsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -22,7 +23,7 @@ export default async function AdminResultsPage({ params }: { params: Promise<{ i
   const event = await prisma.event.findFirst({
     where: { id, organizerId: auth.id },
     include: {
-      categories: true
+      categories: { orderBy: CATEGORY_ORDER }
     }
   });
 

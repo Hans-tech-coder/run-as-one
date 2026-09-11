@@ -25,6 +25,7 @@ import {
   withSlotCounts,
 } from '@/lib/registration-gate';
 import { automaticPromosFor, promoTerms } from '@/lib/promo-store';
+import { CATEGORY_ORDER } from '@/lib/category-order';
 
 export default async function RegisterPage(props: { 
   params: Promise<{ slug: string }>;
@@ -43,7 +44,7 @@ export default async function RegisterPage(props: {
     db.event.findFirst({
       where: eventByParam(slug),
       include: {
-        categories: true,
+        categories: { orderBy: CATEGORY_ORDER },
         bankAccounts: { orderBy: { sortOrder: 'asc' } },
       }
     }),

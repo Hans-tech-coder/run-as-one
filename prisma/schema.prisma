@@ -134,6 +134,13 @@ model Category {
   /// rather than per event, because a 10K and a 5K rarely include the same
   /// things. Empty means the event page shows no inclusions block.
   inclusions  String[]     @default([])
+  /// Where this option sits in the event's list, fixed when it is created:
+  /// the first option the organizer entered stays first however often the
+  /// event is edited, and one added later joins the end. Without it the list
+  /// came back in Postgres's physical row order, which an UPDATE rewrites —
+  /// saving the event moved every edited option to the bottom. Read through
+  /// CATEGORY_ORDER in src/lib/category-order.ts, never ordered by hand.
+  sortOrder   Int          @default(0)
   eventId     String
   event       Event        @relation(fields: [eventId], references: [id])
   raceResults RaceResult[]

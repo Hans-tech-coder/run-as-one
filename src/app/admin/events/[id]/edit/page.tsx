@@ -18,6 +18,7 @@ import EventPromotionsPanel from '@/app/admin/events/EventPromotionsPanel';
 import type { EventPromotion } from '@/lib/promo-store';
 import { cleanBankAccounts, type BankAccountDraft } from '@/app/admin/events/bank-account-draft';
 import { offersBankTransfer } from '@/lib/registration-form';
+import AdminRouteLoading from '@/app/admin/AdminRouteLoading';
 
 // The premade templates that used to sit under /public/certificates are gone —
 // the only way to get a certificate background now is to upload one. An event
@@ -256,12 +257,11 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
     }, 150);
   };
 
+  // The event is fetched on the client after the route arrives, so this is the
+  // second half of the same wait `events/loading.tsx` starts — the same frame
+  // and dots, not a bare line of text with no header above it.
   if (isFetching) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="text-secondary">Loading event...</div>
-      </div>
-    );
+    return <AdminRouteLoading />;
   }
 
   return (

@@ -108,10 +108,20 @@
    what makes a CSS animation replay. The `.admin-header` bar itself is left
    alone deliberately: it is 80px of identical chrome on both sides of the
    swap, and fading it would flicker the frame the reveal is supposed to hold
-   still. */
+   still.
+
+   It fills `backwards` only, never `both`/`forwards`. A finished `blur(0)` is
+   still a filter, and a filter makes the element the containing block for
+   every `position: fixed` inside it — so each modal rendered in a page (the
+   edit form's success dialog, the registrants table's, the delete confirm)
+   stopped covering the viewport and was centred in `.admin-content` instead,
+   which on a long form is a screen or two below where the organizer is
+   looking. Saving an event showed a dimmed page and a "Saving..." button with
+   no dialog anywhere in view. The public side's `.public-main` has the same
+   rule for the same reason. */
 .admin-content,
 .admin-header-title {
-  animation: admin-page-reveal var(--skel-reveal-dur) var(--skel-reveal-ease) both;
+  animation: admin-page-reveal var(--skel-reveal-dur) var(--skel-reveal-ease) backwards;
 }
 
 @keyframes admin-page-reveal {
