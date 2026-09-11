@@ -84,8 +84,18 @@ const BRAND_BLUE = '#007AFF';
  * that drops that background renders white on white. That is a deliberate
  * trade — every brand asset in this app is exported transparent — not an
  * oversight, so do not quietly bake a background plate back in.
+ *
+ * **The `?v=` is part of the asset, and must change whenever the PNG does.**
+ * Gmail never fetches an email's images from us directly: its image proxy
+ * fetches each URL once, caches it on Google's side, and serves that copy to
+ * every later email that names the same URL. So re-cutting the file and
+ * redeploying is not enough on its own — the old picture keeps arriving until
+ * the URL itself is new. And because `SITE_URL` is the production domain, an
+ * email sent from localhost or a preview deployment still shows whatever
+ * production is serving: a new logo reaches inboxes only once it is on `main`.
  */
-const LOGO_URL = `${SITE_URL}/email/run-as-one-logo.png`;
+const LOGO_VERSION = '2';
+const LOGO_URL = `${SITE_URL}/email/run-as-one-logo.png?v=${LOGO_VERSION}`;
 
 let client: Resend | null = null;
 

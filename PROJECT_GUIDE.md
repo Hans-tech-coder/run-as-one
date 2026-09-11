@@ -806,6 +806,15 @@ These are the user's own standing preferences. Follow them without being asked.
   on transparent ground and its box is simply cleared. Patching the one line
   leaves every other pixel of both assets byte-identical, which is worth more
   than a clean re-render that would drift.
+
+  **A re-cut email logo also needs its URL bumped and a deploy to `main`.**
+  `LOGO_URL` in `lib/email.ts` carries a `?v=` (`LOGO_VERSION`) that must change
+  with the PNG: Gmail's image proxy caches each image URL on Google's side and
+  keeps serving that copy, so a new file behind an old URL still shows the old
+  picture. And the URL is built on `SITE_URL`, the production domain, so an email
+  sent from localhost or a preview shows whatever production serves — the "by:
+  CRC" logo sat fixed on `dev` while every test email kept showing "by CRC",
+  because `main` had not been deployed.
 - Commit style: `feat:` / `fix:` / `refactor:` plus a sentence saying what changed
   for the user.
 
