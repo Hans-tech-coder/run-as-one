@@ -151,6 +151,20 @@ export function everyOptionIsFull(categories: CategorySlots[]): boolean {
 }
 
 /**
+ * The option a runner has no choice about: the only one on this event still
+ * taking sign-ups, or undefined while there are two or more (or none) to pick
+ * from. A race that sells a single distance, or whose other options have all
+ * filled, should not ask the runner to tick the one row they could possibly
+ * tick — the wizard opens with it already chosen.
+ */
+export function soleOpenCategory<T extends CategorySlots>(
+  categories: T[],
+): T | undefined {
+  const open = categories.filter(category => !category.isFull);
+  return open.length === 1 ? open[0] : undefined;
+}
+
+/**
  * The one answer every screen asks for. `finished` comes from
  * `hasFinished(event)` in event-schedule.ts — passed in rather than computed
  * here, so this module stays about slots and holds.

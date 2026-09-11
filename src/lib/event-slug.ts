@@ -129,6 +129,68 @@ export function canonicalResultsPath(
   return param === event.slug ? null : `/results/${event.slug}${suffix}`;
 }
 
+/**
+ * The query parameter that carries a preselected option into the wizard.
+ * Named once so the event page that writes it and the register page that reads
+ * it cannot drift apart.
+ */
+export const CATEGORY_QUERY = 'category';
+
+type NamedCategory = { id: string; name: string };
+
+/**
+ * How one option is spelled in a register link: its name, slugged —
+ * `?category=10k`, `?category=1k-pawmaker` — because a runner copies this link
+ * into a group chat to say "sign up for the 10K with me", and a name reads where
+ * a cuid does not. The id is used only when another option on the same race
+ * slugs to the same thing, since then the name alone would open the wizard on
+ * the wrong one.
+ */
+function categoryParam(category: NamedCategory, siblings: NamedCategory[]): string {
+  const slug = slugifyEventTitle(category.name);
+  const ambiguous = siblings.some(
+    (other) => other.id !== category.id && slugifyEventTitle(other.name) === slug,
+  );
+  return ambiguous ? category.id : slug;
+}
+
+/**
+ * The registration wizard for a race — optionally opened with one option
+ * already chosen, which is what a click on a category row of the event page
+ * does. A runner who has just pressed "10K" should not be asked to pick the 10K
+ * again on the next screen.
+ */
+export function registerPath(
+  event: { slug: string; categories?: NamedCategory[] },
+  category?: NamedCategory,
+): string {
+  const base = `/events/${event.slug}/register`;
+  if (!category) return base;
+  const param = categoryParam(category, event.categories ?? []);
+  return `${base}?${CATEGORY_QUERY}=${encodeURIComponent(param)}`;
+}
+
+/**
+ * The option a register link named, or undefined. Reads what `registerPath`
+ * writes: an id first, then a name slug that exactly one option on this race
+ * answers to. Anything else — a stale link to an option since renamed or
+ * removed — finds nothing, and the wizard simply opens with no choice made
+ * rather than guessing.
+ */
+export function categoryFromParam<T extends NamedCategory>(
+  categories: T[],
+  param: unknown,
+): T | undefined {
+  if (typeof param !== 'string' || !param) return undefined;
+  const byId = categories.find((category) => category.id === param);
+  if (byId) return byId;
+  const wanted = param.toLowerCase();
+  const matches = categories.filter(
+    (category) => slugifyEventTitle(category.name) === wanted,
+  );
+  return matches.length === 1 ? matches[0] : undefined;
+}
+
 /** Where a race's published times live. The one place this path is spelled. */
 export function resultsPath(event: { slug: string }, suffix = ''): string {
   return `/results/${event.slug}${suffix}`;

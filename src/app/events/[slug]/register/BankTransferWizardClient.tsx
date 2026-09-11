@@ -127,6 +127,7 @@ export default function BankTransferWizardClient({
   communities,
   defaultCountry,
   automaticPromos,
+  initialCategoryId = "",
 }: {
   event: any;
   /**
@@ -145,6 +146,14 @@ export default function BankTransferWizardClient({
    * read as the price changing.
    */
   automaticPromos: PromoTerms[];
+  /**
+   * The option runner 1 starts with, already checked against this event and its
+   * slot counts by the register page: the one they clicked on the event page,
+   * or else the only option still open. Empty when there is a real choice left
+   * to make — they came in through Register Now and two or more options are
+   * open, or the option they clicked has since filled up.
+   */
+  initialCategoryId?: string;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -157,7 +166,7 @@ export default function BankTransferWizardClient({
   const [participants, setParticipants] = useState<Participant[]>([
     {
       id: Date.now(),
-      categoryId: "",
+      categoryId: initialCategoryId,
       firstName: "",
       lastName: "",
       email: "",

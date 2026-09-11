@@ -9,12 +9,18 @@ import RegistrationWizardClient from './RegistrationWizardClient';
 import BankTransferWizardClient from './BankTransferWizardClient';
 import { approvedCommunityNames } from '@/lib/running-community-store';
 import { requestCountry } from '@/lib/request-country';
-import { canonicalEventPath, eventByParam } from '@/lib/event-slug';
+import {
+  CATEGORY_QUERY,
+  canonicalEventPath,
+  categoryFromParam,
+  eventByParam,
+} from '@/lib/event-slug';
 import { hasFinished } from '@/lib/event-schedule';
 import {
   EVENT_FULL_MESSAGE,
   pauseNote,
   registrationState,
+  soleOpenCategory,
   takenSlotsByCategory,
   withSlotCounts,
 } from '@/lib/registration-gate';
@@ -113,6 +119,21 @@ export default async function RegisterPage(props: {
   // the terms cross into the client — never the row's id or who owns it.
   const automaticPromos = (await automaticPromosFor(event)).map(promoTerms);
 
+  // The option the runner clicked on the event page, if they came from one of
+  // its category rows. Resolved here, against the counts just taken, so a link
+  // to an option that has since filled up is not preselected — the picker then
+  // shows it FULL beside the ones still open — rather than preselecting
+  // something the checkout would refuse.
+  //
+  // With no usable click, an event with only one option still open starts with
+  // that one chosen: there is nothing to decide, so the runner is not made to
+  // tick it. Two or more open options wait for the runner, as before.
+  const preselected = categoryFromParam(categories, search[CATEGORY_QUERY]);
+  const initialCategoryId =
+    preselected && !preselected.isFull
+      ? preselected.id
+      : (soleOpenCategory(categories)?.id ?? '');
+
   let registration = null;
   if (orderRef) {
     registration = await db.registration.findUnique({
@@ -134,6 +155,7 @@ export default async function RegisterPage(props: {
         communities={communities}
         defaultCountry={defaultCountry}
         automaticPromos={automaticPromos}
+        initialCategoryId={initialCategoryId}
       />;
   }
 
@@ -144,6 +166,7 @@ export default async function RegisterPage(props: {
         communities={communities}
         defaultCountry={defaultCountry}
         automaticPromos={automaticPromos}
+        initialCategoryId={initialCategoryId}
       />;
 }
 

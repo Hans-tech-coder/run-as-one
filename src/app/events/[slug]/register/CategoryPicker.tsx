@@ -39,6 +39,12 @@ import FieldError from '@/components/ui/FieldError';
  * learn that three remain before they fill in four forms rather than after.
  * The counts come from lib/registration-gate.ts, and the checkout routes count
  * again inside their write: this picker is a courtesy, not the gate.
+ *
+ * When only one option is still open the runner has nothing to decide, so the
+ * wizard arrives with it already ticked and the heading reads "Your Category"
+ * with a line saying why, rather than "Select Category" over a choice of one.
+ * The row stays visible — the runner still needs to see what they are paying
+ * for and how much.
  */
 export default function CategoryPicker({
   event,
@@ -71,7 +77,16 @@ export default function CategoryPicker({
   // would clear the first one's.
   const groupName = useId();
 
-  const groupLabel = packages ? 'Select Package' : 'Select Category';
+  // One option still open means nothing to choose: the register page has
+  // already picked it (soleOpenCategory in lib/registration-gate.ts), so the
+  // heading stops asking the runner to select and says why it is ticked.
+  const openOptions = event.categories.filter((cat: any) => !cat.isFull);
+  const noChoice =
+    openOptions.length === 1 && openOptions[0].id === selectedId;
+
+  const groupLabel = noChoice
+    ? packages ? 'Your Package' : 'Your Category'
+    : packages ? 'Select Package' : 'Select Category';
   const errorId = id ? `${id}-error` : `${groupName}-error`;
 
   return (
@@ -88,6 +103,12 @@ export default function CategoryPicker({
         <h4 className="mb-3 text-secondary text-sm font-bold uppercase tracking-wider">
           {groupLabel}
         </h4>
+
+        {noChoice && (
+          <p className="-mt-1 mb-3 text-sm text-secondary">
+            {`It's the only ${packages ? 'package' : 'category'} open for this race, so we've selected it for you.`}
+          </p>
+        )}
 
         {error && (
           <div className="mb-3">

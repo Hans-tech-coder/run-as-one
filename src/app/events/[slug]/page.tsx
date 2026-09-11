@@ -13,7 +13,12 @@ import { formatPesos } from '@/lib/money';
 import { sellsPackages } from '@/lib/event-type';
 import { inclusionIcon } from '@/lib/inclusion-icon';
 import { formatEventDay, hasFinished } from '@/lib/event-schedule';
-import { canonicalEventPath, eventByParam, resultsPath } from '@/lib/event-slug';
+import {
+  canonicalEventPath,
+  eventByParam,
+  registerPath,
+  resultsPath,
+} from '@/lib/event-slug';
 import {
   EVENT_FULL_MESSAGE,
   pauseNote,
@@ -184,8 +189,15 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ s
               <div className="glass-panel p-5 sm:p-6 rounded-3xl border border-white/10 bg-gradient-to-b from-white/5 to-transparent">
                 <h2 className="text-xl sm:text-2xl font-bold mb-5 sm:mb-6 text-white">{sellsPackages(event) ? 'Packages' : 'Categories'}</h2>
                 <div className="flex flex-col gap-4">
-                  {categories.map((cat: any) => (
-                    <div key={cat.id} className={CATEGORY_ROW(cat.isFull)}>
+                  {categories.map((cat: any) => {
+                    // A row is a way in whenever Register Now would be: the
+                    // race is open and this option still has room. A full row,
+                    // or any row while the race is paused, full or over, stays
+                    // plain text — a link the wizard would only turn away is a
+                    // dead end dressed up as a button.
+                    const bookable = state === 'OPEN' && !cat.isFull;
+                    const body = (
+                      <>
                       <div className="absolute top-0 right-0 w-32 h-32 bg-accent-orange/10 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-accent-orange/20 transition-all"></div>
                       <div className="relative z-10 flex flex-col items-start gap-1">
                         <div className={cat.isFull ? 'font-bold text-lg text-white/60' : 'font-bold text-lg text-white'}>{cat.name}</div>
@@ -208,7 +220,7 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ s
                           )}
                         </div>
                       </div>
-                      <div className="relative z-10 shrink-0">
+                      <div className="relative z-10 shrink-0 flex items-center gap-2">
                         <CategoryPrice
                           price={cat.price}
                           sale={salePrices.get(cat.id)}
@@ -219,9 +231,36 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ s
                               : 'text-lg sm:text-xl font-bold shrink-0 text-accent-orange'
                           }
                         />
+                        {/* The same chevron Register Now carries, so the row
+                            reads as the same kind of thing: a way into the
+                            wizard. It turns into the runner while the wizard
+                            loads, like every other call to action here. */}
+                        {bookable && (
+                          <LinkPendingIcon className="text-white/40 group-hover:text-accent-orange transition-colors">
+                            <ChevronRight size={18} className="group-hover:translate-x-0.5 transition-transform" />
+                          </LinkPendingIcon>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                      </>
+                    );
+
+                    return bookable ? (
+                      // Opens the wizard with this option already chosen for
+                      // the first runner — see registerPath.
+                      <Link
+                        key={cat.id}
+                        href={registerPath(event, cat)}
+                        className={CATEGORY_ROW(false, true)}
+                      >
+                        <span className="sr-only">Register for </span>
+                        {body}
+                      </Link>
+                    ) : (
+                      <div key={cat.id} className={CATEGORY_ROW(cat.isFull, false)}>
+                        {body}
+                      </div>
+                    );
+                  })}
                 </div>
                 
                 <div className="mt-6 pt-6 border-t border-white/10 text-sm text-secondary flex flex-col gap-2">
@@ -249,7 +288,7 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ s
                   />
                 ) : (
                   <>
-                    <Link href={`/events/${event.slug}/register`} className="btn-gradient w-full text-center justify-center py-4 text-lg font-bold flex items-center gap-2 group shadow-xl shadow-accent-orange/20">
+                    <Link href={registerPath(event)} className="btn-gradient w-full text-center justify-center py-4 text-lg font-bold flex items-center gap-2 group shadow-xl shadow-accent-orange/20">
                       Register Now{' '}
                       <LinkPendingIcon className="ml-1">
                         <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform inline-block" />
@@ -313,13 +352,20 @@ function RaceIsOver({ event }: { event: { slug: string; date: string } }) {
 /**
  * One row of the categories list, dimmed once that option has sold out.
  *
- * A function rather than an inline template literal only because this file's
- * class strings are long enough already; nothing else about it is special.
+ * Only a `bookable` row — one that is a link into the wizard — lights its
+ * border on hover and wears a focus ring; a row that cannot be pressed must not
+ * look as though it can. A function rather than an inline template literal only
+ * because this file's class strings are long enough already.
  */
-function CATEGORY_ROW(isFull: boolean) {
+function CATEGORY_ROW(isFull: boolean, bookable: boolean) {
   const base =
     'group relative overflow-hidden bg-black/40 border border-white/5 rounded-2xl p-4 sm:p-5 transition-colors flex items-center justify-between gap-3';
-  return isFull ? base + ' opacity-60' : base + ' hover:border-accent-orange/50';
+  if (isFull) return base + ' opacity-60';
+  if (!bookable) return base;
+  return (
+    base +
+    ' no-underline cursor-pointer hover:border-accent-orange/50 focus-visible:outline-none focus-visible:border-accent-orange focus-visible:ring-2 focus-visible:ring-accent-orange/40'
+  );
 }
 
 /**
