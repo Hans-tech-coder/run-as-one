@@ -1,7 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
 import { ChevronRight, Mail } from 'lucide-react';
-import { PageOrbs } from './StatusPanel';
 import { CONTACT_EMAIL, LEGAL_LAST_UPDATED, SUPPORT_MAILTO } from '@/lib/site-contact';
 
 export type LegalSection = {
@@ -39,8 +38,6 @@ export default function LegalPage({
 }) {
   return (
     <div className="relative flex w-full flex-col items-center overflow-hidden">
-      <PageOrbs />
-
       <div className="relative z-10 flex w-full flex-col items-center gap-8 sm:gap-12">
         <header className="t-stagger is-shown mb-0 w-full max-w-3xl text-center sm:mb-4">
           <div className="t-stagger-line t-stagger-line--1 mx-auto mb-4 flex w-fit flex-row items-center justify-center gap-2">

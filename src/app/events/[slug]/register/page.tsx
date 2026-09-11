@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { CalendarClock, ChevronRight, Users } from 'lucide-react';
 import db from '@/lib/db';
-import { IconBadge, PageOrbs, StatusPanel } from '@/components/StatusPanel';
+import { IconBadge, StatusPanel } from '@/components/StatusPanel';
 import { REGISTRATION_FORMS, asRegistrationForm } from '@/lib/registration-form';
 import RegistrationWizardClient from './RegistrationWizardClient';
 import BankTransferWizardClient from './BankTransferWizardClient';
@@ -171,8 +171,6 @@ function RegistrationClosed({
 }) {
   return (
     <div className="relative flex w-full flex-col items-center overflow-hidden">
-      <PageOrbs />
-
       <div className="relative z-10 flex w-full max-w-2xl flex-col items-center">
         <StatusPanel>
           <div className="flex flex-col items-center text-center">

@@ -34,16 +34,10 @@ export default async function Home() {
   const events = await forListing(openForRegistration);
 
   return (
+    // No overflow-hidden here: the hero's dot arch is full-bleed and runs up
+    // under the navbar, and a clipping wrapper would cut it off at the
+    // content column.
     <div className="relative w-full flex flex-col items-center">
-      {/* Background Orbs matching the mockup. They carry their own clipping
-          layer rather than the page wrapper clipping everything: the hero's
-          dot arch is full-bleed and runs up under the navbar, and a wrapper
-          with overflow-hidden would cut it off at the content column. */}
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        <div className="absolute -top-[10%] -left-[10%] w-[800px] h-[800px] bg-accent-blue opacity-15 blur-[200px] rounded-full" />
-        <div className="absolute top-[20%] -right-[10%] w-[600px] h-[600px] bg-accent-orange opacity-15 blur-[200px] rounded-full" />
-      </div>
-
       <div className="w-full relative z-10 flex flex-col items-center gap-10 sm:gap-20">
         <HeroSection />
         <HomeEventBrowser events={events} totalEvents={totalEvents} />

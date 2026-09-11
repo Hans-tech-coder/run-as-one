@@ -2,7 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { ChevronRight, Mail, Radar } from 'lucide-react';
-import { IconBadge, PageOrbs, StatusPanel } from '@/components/StatusPanel';
+import { IconBadge, StatusPanel } from '@/components/StatusPanel';
 import { CONTACT_EMAIL, SITE_NAME, SOCIAL_CHANNELS, SUPPORT_MAILTO } from '@/lib/site-contact';
 
 export const metadata: Metadata = {
@@ -29,8 +29,6 @@ export default async function ComingSoonPage({
 
   return (
     <div className="relative flex w-full flex-col items-center overflow-hidden">
-      <PageOrbs />
-
       <div className="relative z-10 flex w-full max-w-2xl flex-col items-center">
         <StatusPanel>
           <div className="flex flex-col items-center text-center">

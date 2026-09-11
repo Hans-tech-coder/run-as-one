@@ -2,7 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { Calendar, ChevronRight, Compass, Mail, Trophy } from 'lucide-react';
-import { IconBadge, PageOrbs, StatusPanel } from '@/components/StatusPanel';
+import { IconBadge, StatusPanel } from '@/components/StatusPanel';
 import { SITE_NAME, SUPPORT_MAILTO } from '@/lib/site-contact';
 
 export const metadata: Metadata = {
@@ -27,8 +27,6 @@ export const metadata: Metadata = {
 export default function NotFound() {
   return (
     <div className="relative flex w-full flex-col items-center overflow-hidden">
-      <PageOrbs />
-
       <div className="relative z-10 flex w-full max-w-3xl flex-col items-center">
         <StatusPanel>
           <div className="flex flex-col items-center text-center">

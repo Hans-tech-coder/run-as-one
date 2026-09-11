@@ -25,10 +25,6 @@ export default async function GlobalResultsPage() {
 
   return (
     <div className="relative overflow-hidden w-full flex flex-col items-center">
-      {/* Background Orbs */}
-      <div className="absolute -top-[10%] -left-[10%] w-[800px] h-[800px] bg-accent-blue opacity-15 blur-[200px] -z-10 rounded-full" />
-      <div className="absolute top-[20%] -right-[10%] w-[600px] h-[600px] bg-accent-orange opacity-15 blur-[200px] -z-10 rounded-full" />
-      
       <div className="w-full relative z-10 flex flex-col items-center gap-8 sm:gap-12">
         
         <div className="text-center w-full max-w-3xl mb-0 sm:mb-4 t-stagger is-shown">

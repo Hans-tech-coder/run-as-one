@@ -43,24 +43,3 @@ export function IconBadge({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
-
-/**
- * The two blurred accent orbs every top-level page floats behind its content.
- *
- * Copied out of /events and /results rather than re-typed, so a page that is
- * reached by accident is lit exactly like one reached on purpose.
- */
-export function PageOrbs() {
-  return (
-    <>
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -left-[10%] -top-[10%] -z-10 h-[800px] w-[800px] rounded-full bg-accent-blue opacity-15 blur-[200px]"
-      />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -right-[10%] top-[20%] -z-10 h-[600px] w-[600px] rounded-full bg-accent-orange opacity-15 blur-[200px]"
-      />
-    </>
-  );
-}

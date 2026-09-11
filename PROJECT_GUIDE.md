@@ -742,8 +742,18 @@ These are the user's own standing preferences. Follow them without being asked.
     under reduced motion**.
   - It fades in on the skeleton-reveal tokens once the first frame is drawn.
   - It runs full-bleed and up under the navbar like the event page's poster.
-    That is why the home page wrapper no longer clips its overflow: the
-    background orbs carry their own clipping layer.
+    That is why the home page wrapper does not clip its overflow.
+- **No decoration behind a page at a negative `z-index`.** The public pages
+  used to float two blurred accent orbs (`-z-10`) behind their content. At rest
+  those sit under `<body>`'s own background and cannot be seen at all, but the
+  page-arrival reveal (`.public-main > *` in `globals.css`) animates opacity and
+  a filter, which briefly makes the page its own stacking context — and for
+  that split second the orbs painted on top of the ground as a hard-edged
+  blue-to-orange box behind the dimmed page. They were removed from every page
+  (home, `/events`, `/results`, and the `PageOrbs` helper the 404, coming-soon,
+  legal and registration-closed pages shared). A glow that should be seen goes
+  inside the surface it lights, at a non-negative z-index, as the orbs inside
+  `StatusPanel` and the winners-board panel do.
 - Fonts: Outfit (`--font-sans`, headings), Inter (`--font-body`).
 - **The logo is a component, not an image** (`components/RunAsOneLogo.tsx`,
   `.rao-logo` in `globals.css`, geometry in `lib/brand-mark.ts` — the one copy
