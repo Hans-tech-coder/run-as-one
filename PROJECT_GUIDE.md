@@ -122,7 +122,7 @@ src/
     superadmin/             # platform-owner portal (SuperAdminShell)
     api/                    # all route handlers — see §6
   components/               # public-site components (Navbar, Footer, EventGrid,
-                            #   StatusPanel, RunAsOneLogo…)
+                            #   StatusPanel, RunAsOneLogo, HeroArcBackground…)
   components/ui/            # cross-app primitives: AlertProvider, AlertModal, Toast,
                             #   Skeleton, LoadingDots, LinkPending, FieldError, table
   lib/                      # domain logic — see §5. Read these before re-deriving a rule.
@@ -297,7 +297,7 @@ logic again.
 ### Public
 | Path | What it is |
 | --- | --- |
-| `/` | Home. Hero + up to 6 **upcoming** events, soonest first. Events are the point of this page. |
+| `/` | Home. Hero + up to 6 **upcoming** events, soonest first. Events are the point of this page. The hero stands under an animated brand-coloured dot arch — see `HeroArcBackground` in §9 |
 | `/events` | Full upcoming listing |
 | `/events/[slug]` | Event detail and registration entry point. **Redirects to `/results/[slug]` once the race is over and its times are uploaded** — see the section rule below. A finished race with no times yet stays here and says so. Carries `PromoHighlights`: the automatic promotions running on this race, named before the runner starts. Codes are never listed there — those are the organizer's to hand out |
 | `/events/[slug]/register` | The wizard — `RegistrationWizardClient` (ONLINE: 3 steps, plus step 4 for proof when the runner picks bank transfer) or `BankTransferWizardClient` (3 steps). Steps: **1** runners & categories, **2** logistics, **3** checkout/payment, **4** proof upload. |
@@ -661,6 +661,27 @@ These are the user's own standing preferences. Follow them without being asked.
   an animation, and add the CSS at the bottom of `globals.css` next to its
   siblings. (`.claude/` is gitignored, so the skill is per-checkout: reinstall
   it from `github.com/Jakubantalik/transitions.dev` under `skills/`.)
+- **The home hero stands under a dot arch** (`components/HeroArcBackground`,
+  `.hero-arc` in `globals.css`). It is a Canvas 2D port of the "Predictive Arc"
+  background, and only its core renderer — the package's iframe and Three.js
+  variants were left behind, so no dependency came with it. It is recoloured to
+  be the logo's track bend, and reads as a finish gantry over "Find Your Next
+  Finish Line": **outer rim brand orange, inside brand blue, a warm white
+  core**, with the two accents read from `--accent-orange` / `--accent-blue` at
+  mount rather than typed. Blue goes on the inside because the copy sits under
+  the arch and blue is the darker accent. The rules it keeps are the ones any
+  later decorative loop should copy:
+  - The apex is **anchored to the hero copy** (`--nav-offset` plus the section's
+    top padding), not to a fraction of the layer. A fraction put the white core
+    through the headline at some widths.
+  - A scrim of `--bg-primary` pools behind the text.
+  - It redraws at **30fps**, one path per colour, with DPR capped at 1.5.
+  - It **pauses** off screen and in a hidden tab, and draws **one still frame
+    under reduced motion**.
+  - It fades in on the skeleton-reveal tokens once the first frame is drawn.
+  - It runs full-bleed and up under the navbar like the event page's poster.
+    That is why the home page wrapper no longer clips its overflow: the
+    background orbs carry their own clipping layer.
 - Fonts: Outfit (`--font-sans`, headings), Inter (`--font-body`).
 - **The logo is a component, not an image** (`components/RunAsOneLogo.tsx`,
   `.rao-logo` in `globals.css`, geometry in `lib/brand-mark.ts` — the one copy

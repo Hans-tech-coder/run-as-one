@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { CheckCircle2, Flag } from 'lucide-react';
+import HeroArcBackground from '@/components/HeroArcBackground';
 
 /**
  * The front door.
@@ -16,6 +17,10 @@ import { CheckCircle2, Flag } from 'lucide-react';
  *
  * The eyebrow, gradient headline and check-row are the same three parts the
  * /events and /results headers already use, at a larger size.
+ *
+ * Behind it runs `HeroArcBackground`, the brand-coloured dot arch. The section
+ * is `isolate` so the arch's `z-index: -1` stays inside it — behind the copy,
+ * but in front of the page's own background orbs.
  */
 export default function HeroSection() {
   const assurances = [
@@ -25,7 +30,8 @@ export default function HeroSection() {
   ];
 
   return (
-    <section className="w-full flex justify-center sm:pt-6">
+    <section className="relative isolate w-full flex justify-center sm:pt-6">
+      <HeroArcBackground />
       <motion.div
         className="w-full max-w-3xl text-center"
         initial={{ opacity: 0, y: 20 }}

@@ -725,3 +725,64 @@ html, body { overflow-x: hidden; }
   --logo-accent: #d95f00;
   --logo-muted: #52525b;
 }
+
+/* ── Home hero arc — components/HeroArcBackground ─────────────
+   Full-bleed, and running up under the floating navbar the way the event page's
+   poster does: it reads the same --nav-offset <main> pads with, so the two
+   cannot drift apart. It bleeds 2.5rem below the hero — the hero-to-listing gap
+   at its narrowest — and no further, because the hero section is a positioned
+   stacking context and anything it paints past that gap would sit over the
+   "Open For Registration" heading rather than behind it. The mask fades that
+   bottom edge out, so the arc dissolves into the page instead of stopping.
+
+   The scrim is what keeps the copy readable over a moving field: a soft pool of
+   the page's own ground centred on the text block, strongest behind the
+   headline and gone before it reaches the arms of the arch.
+
+   It arrives the way a loaded panel does — the skeleton reveal's fade and
+   un-blur, on its tokens — once the first frame is on the canvas, so the hero
+   never shows an empty rectangle popping into a glow. */
+.hero-arc {
+  position: absolute;
+  z-index: -1;
+  top: calc(-1 * var(--nav-offset));
+  bottom: -2.5rem;
+  left: 50%;
+  width: 100vw;
+  transform: translateX(-50%);
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%);
+  opacity: 0;
+  filter: blur(var(--skel-reveal-blur));
+  transition:
+    opacity var(--skel-reveal-dur) var(--skel-reveal-ease),
+    filter  var(--skel-reveal-dur) var(--skel-reveal-ease);
+}
+
+.hero-arc[data-ready] {
+  opacity: 1;
+  filter: blur(0);
+}
+
+.hero-arc__canvas,
+.hero-arc__scrim {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.hero-arc__scrim {
+  background: radial-gradient(
+    ellipse 40% 34% at 50% 60%,
+    color-mix(in srgb, var(--bg-primary) 78%, transparent) 0%,
+    color-mix(in srgb, var(--bg-primary) 45%, transparent) 55%,
+    transparent 100%
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-arc { transition: none !important; }
+}
