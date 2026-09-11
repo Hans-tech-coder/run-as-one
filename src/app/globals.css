@@ -90,6 +90,32 @@ input[type="checkbox"],
   --dots-dur: 1200ms;
   --dots-stagger: 200ms;
 
+  /* Running-figure loader — the public site's (components/ui/RunnerLoader).
+     One stride is one --runner-cycle, and the two sides of the body run the
+     same keyframes half a cycle apart, so arms and legs cannot drift out of
+     step. The far-side limbs are the body blue pushed toward the page ground,
+     which is the only depth cue a flat pictogram needs. */
+  --runner-cycle: 700ms;
+  --runner-streak-dur: 900ms;
+  --runner-body: var(--accent-blue);
+  --runner-far: color-mix(in srgb, var(--accent-blue) 55%, #050505);
+  --runner-streak: var(--accent-orange);
+
+  /* Icon swap — LinkPendingIcon's chevron → running figure */
+  --icon-swap-dur: 250ms;
+  --icon-swap-blur: 2px;
+  --icon-swap-start-scale: 0.25;
+  --icon-swap-ease: ease-in-out;
+
+  /* Shimmer text — the running figure's caption. The snippet ships
+     light-theme colours; this app is dark, so the base is the secondary text
+     colour and the band sweeps it toward white. */
+  --shimmer-dur: 2000ms;
+  --shimmer-base: #a1a1aa;
+  --shimmer-highlight: #ffffff;
+  --shimmer-band: 400%;
+  --shimmer-ease: linear;
+
   /* Skeleton loader and reveal */
   --skel-pulse-dur: 1000ms;
   --skel-pulse-min: 0.5;
@@ -627,6 +653,303 @@ input[type="datetime-local"]:focus::-webkit-calendar-picker-indicator {
 @keyframes t-dots-fade {
   from { opacity: 1; }
   to   { opacity: 0.35; }
+}
+
+/* Running-figure loader ─────────────────────────────────────────────────
+   components/ui/RunnerLoader — the public site's loader: route fallbacks, the
+   link that was clicked, the checkout overlay, a button that is working. The
+   dashboard keeps the dots above.
+
+   Every moving part turns about a joint, and the whole block leans on
+   `transform-box: view-box`: it makes each transform-origin below a point in
+   the SVG's own 100×100 drawing, whatever size the figure renders at. A
+   shin's origin is the knee *in its thigh's rotated space*, which is why the
+   shin groups sit inside the thigh groups rather than beside them. */
+.t-runner {
+  --runner-size: 64px;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+.t-runner--sm { --runner-size: 1.3em; gap: 0; }
+.t-runner--lg { --runner-size: 104px; gap: 18px; }
+
+.t-runner--current {
+  --runner-body: currentColor;
+  --runner-far: color-mix(in srgb, currentColor 55%, transparent);
+  --runner-streak: color-mix(in srgb, currentColor 70%, transparent);
+}
+
+.t-runner__svg {
+  display: block;
+  width: var(--runner-size);
+  height: var(--runner-size);
+  overflow: visible;
+}
+.t-runner__svg line {
+  fill: none;
+  stroke-linecap: round;
+}
+.t-runner__torso { stroke: var(--runner-body); stroke-width: 12; }
+.t-runner__head  { fill: var(--runner-body); }
+.t-runner__limb line { stroke-width: 9; }
+.t-runner__limb--near line { stroke: var(--runner-body); }
+.t-runner__limb--far line  { stroke: var(--runner-far); }
+.t-runner__streak { stroke: var(--runner-streak); stroke-width: 4.5; }
+.t-runner__shadow { fill: var(--runner-body); opacity: 0.18; }
+
+.t-runner__body,
+.t-runner__limb,
+.t-runner__shin,
+.t-runner__fore,
+.t-runner__shadow,
+.t-runner__streak {
+  transform-box: view-box;
+  will-change: transform;
+}
+.t-runner__thigh  { transform-origin: 47px 55px; }
+.t-runner__shin   { transform-origin: 47px 74px; }
+.t-runner__upper  { transform-origin: 58px 31px; }
+.t-runner__fore   { transform-origin: 58px 45px; }
+.t-runner__shadow { transform-origin: 48px 96px; }
+
+/* Half a stride behind, inherited by the shin or forearm inside. */
+.t-runner__limb--far { --runner-phase: calc(var(--runner-cycle) / -2); }
+
+/* Thigh and upper arm swing like pendulums, so they ease; the shin and
+   forearm fold and unfold through several poses, so they run linear between
+   them rather than stalling at each one. */
+.t-runner__thigh { animation: t-runner-thigh var(--runner-cycle) var(--ease-in-out) var(--runner-phase, 0ms) infinite; }
+.t-runner__shin  { animation: t-runner-shin  var(--runner-cycle) var(--ease-linear) var(--runner-phase, 0ms) infinite; }
+.t-runner__upper { animation: t-runner-upper var(--runner-cycle) var(--ease-in-out) var(--runner-phase, 0ms) infinite; }
+.t-runner__fore  { animation: t-runner-fore  var(--runner-cycle) var(--ease-in-out) var(--runner-phase, 0ms) infinite; }
+
+/* Two footfalls per stride, so the bob and its shadow run at half the cycle. */
+.t-runner__body   { animation: t-runner-bob    calc(var(--runner-cycle) / 2) var(--ease-in-out) infinite; }
+.t-runner__shadow { animation: t-runner-shadow calc(var(--runner-cycle) / 2) var(--ease-in-out) infinite; }
+
+/* Negative delays, as with the dots: the lines are already streaming on the
+   first frame instead of waiting their turn. */
+.t-runner__streak { animation: t-runner-streak var(--runner-streak-dur) var(--ease-linear) infinite; }
+.t-runner__streak:nth-child(1) { animation-delay: calc(var(--runner-streak-dur) * -0.15); }
+.t-runner__streak:nth-child(2) { animation-delay: calc(var(--runner-streak-dur) * -0.5); }
+.t-runner__streak:nth-child(3) { animation-delay: calc(var(--runner-streak-dur) * -0.8); }
+
+/* Negative is forward: the figure faces right, and a limb drawn hanging
+   straight down turns counter-clockwise to reach ahead of the body. */
+@keyframes t-runner-thigh {
+  0%, 100% { transform: rotate(-42deg); }
+  50%      { transform: rotate(38deg); }
+}
+/* Contact, stance, toe-off, heel kicked up behind, knee driving through. */
+@keyframes t-runner-shin {
+  0%, 100% { transform: rotate(14deg); }
+  30%      { transform: rotate(10deg); }
+  50%      { transform: rotate(28deg); }
+  66%      { transform: rotate(108deg); }
+  82%      { transform: rotate(92deg); }
+}
+/* Back while the same side's leg reaches forward — the arms oppose the legs. */
+@keyframes t-runner-upper {
+  0%, 100% { transform: rotate(40deg); }
+  50%      { transform: rotate(-52deg); }
+}
+@keyframes t-runner-fore {
+  0%, 100% { transform: rotate(-72deg); }
+  50%      { transform: rotate(-98deg); }
+}
+@keyframes t-runner-bob {
+  0%, 100% { transform: translateY(1.5px); }
+  50%      { transform: translateY(-2.5px); }
+}
+@keyframes t-runner-shadow {
+  0%, 100% { transform: scaleX(1);    opacity: 0.18; }
+  50%      { transform: scaleX(0.82); opacity: 0.1; }
+}
+@keyframes t-runner-streak {
+  0%   { transform: translateX(14px);  opacity: 0; }
+  30%  { opacity: 1; }
+  100% { transform: translateX(-12px); opacity: 0; }
+}
+
+/* Same caption type wherever the figure speaks. */
+.t-runner__caption {
+  font-family: var(--font-sans), 'Outfit', ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1.4;
+  text-transform: uppercase;
+  text-align: center;
+  text-wrap: balance;
+}
+
+/* Reduced motion still has to say "working", like the dots. The body is
+   paused rather than stopped: a paused animation holds the frame its delay
+   points at, so the near side stays at its reach and the far side — half a
+   stride behind — at its push-off, a runner frozen mid-stride instead of a
+   figure standing to attention. The speed lines pulse in place. */
+@media (prefers-reduced-motion: reduce) {
+  .t-runner__body,
+  .t-runner__thigh,
+  .t-runner__shin,
+  .t-runner__upper,
+  .t-runner__fore,
+  .t-runner__shadow {
+    animation-play-state: paused;
+  }
+  .t-runner__streak { animation-name: t-runner-streak-fade; }
+}
+@keyframes t-runner-streak-fade {
+  0%, 100% { opacity: 0.3; }
+  50%      { opacity: 1; }
+}
+
+/* Transitions.dev Shimmer text — the running figure's caption */
+.t-shimmer {
+  position: relative;
+  display: inline-block;
+  color: var(--shimmer-base);
+}
+.t-shimmer::before {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: linear-gradient(
+    90deg,
+    transparent          0%,
+    transparent         40%,
+    var(--shimmer-highlight) 50%,
+    transparent         60%,
+    transparent        100%
+  );
+  background-size: var(--shimmer-band) 100%;
+  background-repeat: no-repeat;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: t-shimmer var(--shimmer-dur) var(--shimmer-ease) infinite;
+}
+@keyframes t-shimmer {
+  0%   { background-position: 100% 0; }
+  100% { background-position: 0% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-shimmer::before { animation: none !important; }
+}
+
+/* Transitions.dev Icon swap — components/ui/LinkPendingIcon */
+.t-icon-swap {
+  position: relative;
+  display: inline-grid;
+}
+.t-icon-swap .t-icon {
+  grid-area: 1 / 1;
+  transition:
+    opacity   var(--icon-swap-dur) var(--icon-swap-ease),
+    filter    var(--icon-swap-dur) var(--icon-swap-ease),
+    transform var(--icon-swap-dur) var(--icon-swap-ease);
+  will-change: opacity, filter, transform;
+}
+.t-icon-swap[data-state="a"] .t-icon[data-icon="a"],
+.t-icon-swap[data-state="b"] .t-icon[data-icon="b"] {
+  opacity: 1;
+  filter: blur(0);
+  transform: scale(1);
+}
+.t-icon-swap[data-state="a"] .t-icon[data-icon="b"],
+.t-icon-swap[data-state="b"] .t-icon[data-icon="a"] {
+  opacity: 0;
+  filter: blur(var(--icon-swap-blur));
+  transform: scale(var(--icon-swap-start-scale));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-icon-swap .t-icon { transition: none !important; }
+}
+
+/* The slots are grids so the icon inside is a block, not a glyph on a line
+   box — as a bare flex child of the button it never had a baseline to sit
+   on, and wrapping it must not give it one. The figure's slot is lifted out
+   of the sizing (absolute, over the icon's own cell) so a 1.3em runner
+   arriving beside a 20px chevron never widens the button. The swap waits
+   120ms, like LinkPending, so a prefetched page never flashes it; going back
+   is immediate. */
+.link-pending-icon .t-icon {
+  display: grid;
+  place-items: center;
+}
+.link-pending-icon .t-icon[data-icon="b"] {
+  position: absolute;
+  inset: 0;
+}
+.link-pending-icon[data-state="b"] .t-icon { transition-delay: 120ms; }
+
+/* components/ui/RunnerOverlay — a submission leaving the page. The ground is
+   the page's own near-black, dimmed rather than blacked out, so the form the
+   runner just filled in is still visibly there behind the panel. The panel
+   is the dark surface the wizard's dropdowns use (Combobox, PhoneField). */
+.runner-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: var(--gutter);
+  background: rgba(5, 5, 5, 0.72);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  opacity: 0;
+  transition: opacity var(--modal-open-dur) var(--modal-ease);
+}
+.runner-overlay.is-open { opacity: 1; }
+
+.runner-overlay__panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 24rem;
+  padding: 2rem 1.75rem;
+  text-align: center;
+  border-radius: 24px;
+  background: #0d0d0f;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+}
+.runner-overlay__hint {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .runner-overlay { transition: none !important; }
+}
+
+/* components/PublicRouteLoading — the public route fallback. A real height
+   so the footer stays down, and a 120ms hold before the fade so a page that
+   lands at once never flashes it. Fades in on the skeleton reveal's blur and
+   ease, like the dashboard's fallback, quick rather than 400ms — the figure
+   is the part that says the click was heard. */
+.public-route-loading {
+  display: grid;
+  place-items: center;
+  min-height: 60vh;
+  animation: public-route-in var(--duration-quick) var(--skel-reveal-ease) 120ms both;
+}
+@keyframes public-route-in {
+  from { opacity: 0; filter: blur(var(--skel-reveal-blur)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .public-route-loading { animation: none; }
 }
 
 html, body { overflow-x: hidden; }

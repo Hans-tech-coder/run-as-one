@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Calendar, MapPin, ChevronRight } from 'lucide-react';
 import EventImage from './EventImage';
+import LinkPendingIcon from './ui/LinkPendingIcon';
 import { formatEventDayShort } from '@/lib/event-schedule';
 
 // Using a type that matches the Prisma Event model payload
@@ -83,11 +84,17 @@ function EventCard({ event, action }: { event: DBEvent; action: EventCardAction 
         </div>
         {closure ? (
           <Link href={path(event.slug)} className="w-full flex items-center justify-center gap-2 py-4 text-base sm:text-lg rounded-[16px] border border-white/15 bg-white/[0.06] font-bold uppercase tracking-wider text-white no-underline transition-colors hover:border-white/30 hover:bg-white/10 group">
-            {closure.label} <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform inline-block" />
+            {closure.label}{' '}
+            <LinkPendingIcon>
+              <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform inline-block" />
+            </LinkPendingIcon>
           </Link>
         ) : (
           <Link href={path(event.slug)} className="btn-gradient w-full py-4 text-base sm:text-lg rounded-[16px] group shadow-xl shadow-accent-orange/20 no-underline">
-            {label} <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform inline-block ml-1" />
+            {label}{' '}
+            <LinkPendingIcon className="ml-1">
+              <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform inline-block" />
+            </LinkPendingIcon>
           </Link>
         )}
       </div>

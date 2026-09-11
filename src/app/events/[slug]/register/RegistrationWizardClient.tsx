@@ -72,6 +72,7 @@ import { sellsPackages } from "@/lib/event-type";
 import EventImage from "@/components/EventImage";
 import { useAlert } from "@/components/ui/AlertProvider";
 import FieldError from "@/components/ui/FieldError";
+import RunnerOverlay from "@/components/ui/RunnerOverlay";
 import {
   focusField,
   hasErrors,
@@ -1946,6 +1947,23 @@ export default function RegistrationWizardClient({
           onClose={() => setShowSizeGuideModal(false)}
         />
       )}
+
+      {/* isProcessing covers two different waits in this wizard: creating the
+          PayMongo checkout (and then loading PayMongo), or — once a runner
+          switched to bank transfer — uploading their deposit slip. */}
+      <RunnerOverlay
+        open={isProcessing}
+        title={
+          paymentMethod === "BANK_TRANSFER"
+            ? "Submitting your registration"
+            : "Preparing your secure payment"
+        }
+        hint={
+          paymentMethod === "BANK_TRANSFER"
+            ? "Uploading your proof of payment. This can take a few seconds on mobile data, so please keep this page open."
+            : "You'll be taken to PayMongo to pay. Please keep this page open."
+        }
+      />
     </div>
   );
 }

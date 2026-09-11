@@ -26,6 +26,7 @@ import './EventDetails.css';
 import EventHeroBanner from '@/components/EventHeroBanner';
 import PromoHighlights from '@/components/PromoHighlights';
 import CategoryPrice from '@/components/CategoryPrice';
+import LinkPendingIcon from '@/components/ui/LinkPendingIcon';
 import { automaticPromosFor, promoTerms } from '@/lib/promo-store';
 import { categorySalePrices } from '@/lib/discount';
 
@@ -249,7 +250,10 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ s
                 ) : (
                   <>
                     <Link href={`/events/${event.slug}/register`} className="btn-gradient w-full text-center justify-center py-4 text-lg font-bold flex items-center gap-2 group shadow-xl shadow-accent-orange/20">
-                      Register Now <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform inline-block ml-1" />
+                      Register Now{' '}
+                      <LinkPendingIcon className="ml-1">
+                        <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform inline-block" />
+                      </LinkPendingIcon>
                     </Link>
 
                     {resultsCount > 0 && (

@@ -72,6 +72,7 @@ import { sellsPackages } from "@/lib/event-type";
 import EventImage from "@/components/EventImage";
 import { useAlert } from "@/components/ui/AlertProvider";
 import FieldError from "@/components/ui/FieldError";
+import RunnerOverlay from "@/components/ui/RunnerOverlay";
 import {
   focusField,
   hasErrors,
@@ -1687,6 +1688,12 @@ export default function BankTransferWizardClient({
           onClose={() => setShowSizeGuideModal(false)}
         />
       )}
+
+      <RunnerOverlay
+        open={isProcessing}
+        title="Submitting your registration"
+        hint="Uploading your proof of payment. This can take a few seconds on mobile data, so please keep this page open."
+      />
     </div>
   );
 }

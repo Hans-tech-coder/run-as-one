@@ -122,9 +122,11 @@ src/
     superadmin/             # platform-owner portal (SuperAdminShell)
     api/                    # all route handlers — see §6
   components/               # public-site components (Navbar, Footer, EventGrid,
-                            #   StatusPanel, RunAsOneLogo, HeroArcBackground…)
+                            #   StatusPanel, RunAsOneLogo, HeroArcBackground,
+                            #   PublicRouteLoading…)
   components/ui/            # cross-app primitives: AlertProvider, AlertModal, Toast,
-                            #   Skeleton, LoadingDots, LinkPending, FieldError, table
+                            #   Skeleton, LoadingDots, LinkPending, FieldError, table,
+                            #   RunnerLoader, LinkPendingIcon, RunnerOverlay
   lib/                      # domain logic — see §5. Read these before re-deriving a rule.
   data/mockEvents.ts        # legacy mock data
 prisma/schema.prisma        # the data model, heavily commented
@@ -619,7 +621,7 @@ These are the user's own standing preferences. Follow them without being asked.
   hold still. The fallback's own reveal is dropped to `--duration-quick`,
   because 400ms of fade before the dots appear is 400ms still looking like
   nothing happened.
-- **The loader is three pulsing dots in solid brand orange**
+- **The dashboard's loader is three pulsing dots in solid brand orange**
   (`components/ui/LoadingDots`, `.t-dots` in `globals.css`). Solid, not the
   orange→blue gradient: at 12px a ramp averages into a grey-lavender that reads
   as neither colour, and the one element on screen saying "your click was
@@ -629,6 +631,48 @@ These are the user's own standing preferences. Follow them without being asked.
   one of them across the client boundary for an animation a keyframe already
   does. Reduced motion swaps the swell for a fade rather than for nothing — the
   element exists to say something is happening.
+- **The runner side waits with a sprinter, not with dots.** Everything a runner
+  touches answers a click with `components/ui/RunnerLoader` (`.t-runner` in
+  `globals.css`): an original running figure in brand blue whose arms and legs
+  run a real stride (each limb is a thigh or upper-arm group turning at the
+  joint with the shin or forearm nested inside it, `transform-box: view-box`,
+  the two sides half a `--runner-cycle` apart), with brand-orange speed lines
+  streaming off behind. The owner asked for it because a runner who presses
+  Register and sees nothing move assumes the button is broken; the dashboard
+  keeps its dots. Hook-free and pure CSS, like `LoadingDots`, so it can render
+  in a `loading.tsx`. A new wait on the public side should be one of these four:
+  - **A page on its way** — four `loading.tsx` files render
+    `components/PublicRouteLoading`: the `lg` figure with a shimmering caption
+    (transitions.dev's shimmer-text, `.t-shimmer`), between the navbar and
+    footer that stay put, at a real 60vh so the footer never jumps. **Two per
+    section, and both are needed**: `events/` and `results/` catch arriving at
+    a race, `events/[slug]/` and `results/[slug]/` catch moving within one
+    (event page → wizard, winners → leaderboard → a runner's result). A
+    fallback shows only when the segment *directly* under it changes, so with
+    the section-level pair alone those in-race moves left the old page sitting
+    there. It fades in after 120ms, so a prefetched page never flashes it. `/`
+    and the legal pages are prerendered and need none.
+  - **The link that was pressed** — `components/ui/LinkPendingIcon` wraps the
+    icon a call to action already carries (the chevron on Register Now, View
+    Results, View Full Leaderboard, View all) and cross-fades it into the `sm`
+    figure through the icon swap (`.t-icon-swap`) while `useLinkStatus()` says
+    the link is pending, after the same 120ms. The figure sits absolutely over
+    the icon's cell, so the button never changes width. Only inside a `<Link>`.
+  - **A submission that leaves the page** — `components/ui/RunnerOverlay`, a
+    blocking panel on `t-modal` tokens, open while either wizard creates the
+    PayMongo checkout or uploads a deposit slip. It says what is happening and
+    asks the runner to keep the page open. **Portalled to `<body>`**, because
+    the wizard's stagger reveal leaves transforms on its panels and a
+    transformed ancestor traps `position: fixed`.
+  - **Inside a button** — `size="sm" tone="current"` draws it in the button's
+    own text colour, since brand blue vanishes into the gradient's blue end
+    (the e-certificate generator).
+  The leaderboard's rows used to open a result with `window.location.href`, a
+  full reload with nothing on screen meanwhile; they now `router.push` in a
+  transition, prefetch on hover, and the row's number becomes the figure while
+  it opens. Reduced motion *pauses* the figure rather than removing it — a
+  paused animation holds the frame its delay points at, so it freezes
+  mid-stride — and the speed lines pulse in place.
 - **No gradient buttons inside the admin.** Every action in the dashboard —
   toolbar, panel header, form footer, modal submit — wears `.btn-light`
   (`Admin.css`): a **light pill** — `#e4e4e7` fill, `#09090b` label, white on

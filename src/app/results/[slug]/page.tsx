@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { User, Medal, Hash, ChevronRight } from 'lucide-react';
 import { redirect } from 'next/navigation';
 import EventHeroBanner from '@/components/EventHeroBanner';
+import LinkPendingIcon from '@/components/ui/LinkPendingIcon';
 import { canonicalResultsPath, eventByParam, runnerResultPath } from '@/lib/event-slug';
 import { toWholeSeconds } from '@/lib/race-time';
 
@@ -65,7 +66,9 @@ export default async function WinnersOverviewPage({
             <div className="flex justify-center mb-16">
               <Link href={`/results/${event.slug}/full`} className="btn-gradient w-full max-w-sm py-4 text-base sm:text-lg rounded-[16px] group shadow-xl shadow-accent-orange/20 no-underline">
                 View Full Leaderboard
-                <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform inline-block ml-1" />
+                <LinkPendingIcon className="ml-1">
+                  <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform inline-block" />
+                </LinkPendingIcon>
               </Link>
             </div>
           </div>
@@ -86,7 +89,9 @@ export default async function WinnersOverviewPage({
                     </div>
                     <Link href={`/results/${event.slug}/full?category=${cat.id}`} className="group bg-white/5 border border-white/10 text-white hover:bg-white/10 hover:border-white/30 transition-all py-2 px-4 rounded-[16px] font-bold text-sm tracking-wide flex items-center gap-1 shrink-0">
                       View {cat.distance || cat.name} Results
-                      <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform inline-block" />
+                      <LinkPendingIcon>
+                        <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform inline-block" />
+                      </LinkPendingIcon>
                     </Link>
                   </div>
                 

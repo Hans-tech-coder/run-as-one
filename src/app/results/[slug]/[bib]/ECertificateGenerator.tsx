@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Download, Loader2, Share2, FileText } from 'lucide-react';
+import { Download, Share2, FileText } from 'lucide-react';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { useSearchParams } from 'next/navigation';
 import { useAlert } from '@/components/ui/AlertProvider';
 import { toWholeSeconds } from '@/lib/race-time';
+import RunnerLoader from '@/components/ui/RunnerLoader';
 
 interface Props {
   result: any;
@@ -219,7 +220,7 @@ export default function ECertificateGenerator({ result, event }: Props) {
       >
         {isGenerating ? (
           <>
-            <Loader2 className="animate-spin" size={24} />
+            <RunnerLoader size="sm" tone="current" label="" />
             Generating E-Certificate...
           </>
         ) : (

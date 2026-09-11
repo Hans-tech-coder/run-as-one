@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback, useTransition } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Search, Trophy, User, Hash, ChevronDown, Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toWholeSeconds } from '@/lib/race-time';
 import { runnerResultPath } from '@/lib/event-slug';
+import RunnerLoader from '@/components/ui/RunnerLoader';
 import {
   useReactTable,
   getCoreRowModel,
@@ -270,6 +271,21 @@ export default function FullResultsClient({ results, event }: Props) {
     setMounted(true);
   }, []);
 
+  // A row opens its runner's result. It used to do that with
+  // `window.location.href` — a full page reload, with nothing on screen to
+  // say the tap was taken until the new document painted. A router push in a
+  // transition keeps the page alive meanwhile, so the row's number can turn
+  // into the running figure until results/[slug]/loading.tsx takes over;
+  // desktop rows prefetch on hover so there is usually nothing to wait for.
+  const router = useRouter();
+  const [isOpening, startOpening] = useTransition();
+  const [openingPath, setOpeningPath] = useState<string | null>(null);
+  const openResult = (path: string) => {
+    setOpeningPath(path);
+    startOpening(() => router.push(path));
+  };
+  const opening = (path: string) => isOpening && openingPath === path;
+
   const columns = useMemo<ColumnDef<Result>[]>(() => [
     {
       id: "index",
@@ -454,17 +470,23 @@ export default function FullResultsClient({ results, event }: Props) {
                   </tr>
                 ) : (
                   table.getRowModel().rows.map((row, i) => {
+                    const path = runnerResultPath(event, row.original);
+                    const isThisOpening = opening(path);
                     return (
-                      <tr 
-                        key={row.id} 
+                      <tr
+                        key={row.id}
                         className="group/row border-b border-white/[0.03] hover:bg-white/[0.04] transition-colors duration-300 cursor-pointer"
-                        onClick={() => window.location.href = runnerResultPath(event, row.original)}
+                        onClick={() => openResult(path)}
+                        onMouseEnter={() => router.prefetch(path)}
+                        aria-busy={isThisOpening || undefined}
                       >
                         {row.getVisibleCells().map((cell) => {
                           if (cell.column.id === 'gender') return null;
                           return (
                             <td key={cell.id} className="p-5 align-middle">
-                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                              {isThisOpening && cell.column.id === 'index'
+                                ? <RunnerLoader size="sm" label="Opening this result" />
+                                : flexRender(cell.column.columnDef.cell, cell.getContext())}
                             </td>
                           );
                         })}
@@ -485,7 +507,7 @@ export default function FullResultsClient({ results, event }: Props) {
           table.getRowModel().rows.map((row, i) => (
             <div 
               key={row.id} 
-              onClick={() => window.location.href = runnerResultPath(event, row.original)}
+              onClick={() => openResult(runnerResultPath(event, row.original))}
               className={`block no-underline t-stagger-line t-stagger-line--${(i % 4) + 1}`}
             >
               <div className="relative rounded-[20px] bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.08] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)] p-5 hover:border-accent-blue/30 hover:bg-white/[0.06] transition-all duration-300 group/row cursor-pointer overflow-hidden">
@@ -494,7 +516,9 @@ export default function FullResultsClient({ results, event }: Props) {
                 <div className="flex justify-between items-start mb-4 relative z-10">
                   <div className="flex items-start gap-4">
                     <div className="w-10 h-10 shrink-0 bg-white/5 rounded-full flex items-center justify-center border border-white/10 text-white font-bold text-sm shadow-[0_4px_10px_rgba(0,0,0,0.3)]">
-                      {row.index + (table.getState().pagination.pageIndex * table.getState().pagination.pageSize) + 1}
+                      {opening(runnerResultPath(event, row.original))
+                        ? <RunnerLoader size="sm" label="Opening this result" />
+                        : row.index + (table.getState().pagination.pageIndex * table.getState().pagination.pageSize) + 1}
                     </div>
                     <div>
                       <h3 className="font-bold text-white text-lg group-hover/row:text-accent-blue transition-colors leading-tight">{row.original.name}</h3>

@@ -4,6 +4,7 @@ import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Calendar, ChevronRight, Search, SearchX, X } from 'lucide-react';
 import EventGrid from './EventGrid';
+import LinkPendingIcon from './ui/LinkPendingIcon';
 
 type DBEvent = {
   id: string;
@@ -99,10 +100,12 @@ export default function HomeEventBrowser({
               className="group bg-white/5 border border-white/10 text-white hover:bg-white/10 hover:border-white/30 transition-all py-2.5 px-4 rounded-[16px] font-bold text-sm tracking-wide flex items-center gap-1 shrink-0 no-underline"
             >
               View all {totalEvents}
-              <ChevronRight
-                size={16}
-                className="group-hover:translate-x-1 transition-transform inline-block"
-              />
+              <LinkPendingIcon>
+                <ChevronRight
+                  size={16}
+                  className="group-hover:translate-x-1 transition-transform inline-block"
+                />
+              </LinkPendingIcon>
             </Link>
           )}
         </div>
