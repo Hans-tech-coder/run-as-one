@@ -31,6 +31,7 @@ export default function RunnerLoader({
   tone = "brand",
   label = "Loading",
   caption,
+  slowCaption,
   className = "",
 }: {
   size?: "sm" | "md" | "lg";
@@ -42,6 +43,11 @@ export default function RunnerLoader({
   label?: string;
   /** Shown under the figure, shimmering, and read out in place of `label`. */
   caption?: string;
+  /**
+   * Replaces `caption` once the wait passes `--runner-slow-after` (5s), so a
+   * long wait is explained rather than left looking stuck. Needs `caption`.
+   */
+  slowCaption?: string;
   className?: string;
 }) {
   const classes = [
@@ -82,7 +88,24 @@ export default function RunnerLoader({
         </g>
       </svg>
 
-      {caption ? (
+      {caption && slowCaption ? (
+        // Both lines are in the DOM from the start and CSS times the swap
+        // (`.t-runner__captions`), so this stays hook-free. The slow line is
+        // hidden from screen readers: the status has already been announced,
+        // and a live region re-reading at five seconds would only interrupt.
+        <span className="t-runner__captions">
+          <span className="t-runner__caption t-shimmer" data-text={caption}>
+            {caption}
+          </span>
+          <span
+            className="t-runner__caption t-runner__caption--slow t-shimmer"
+            data-text={slowCaption}
+            aria-hidden="true"
+          >
+            {slowCaption}
+          </span>
+        </span>
+      ) : caption ? (
         <span className="t-runner__caption t-shimmer" data-text={caption}>
           {caption}
         </span>

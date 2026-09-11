@@ -1958,6 +1958,11 @@ export default function RegistrationWizardClient({
             ? "Submitting your registration"
             : "Preparing your secure payment"
         }
+        slowTitle={
+          paymentMethod === "BANK_TRANSFER"
+            ? "Still uploading, almost there"
+            : "Still connecting to PayMongo"
+        }
         hint={
           paymentMethod === "BANK_TRANSFER"
             ? "Uploading your proof of payment. This can take a few seconds on mobile data, so please keep this page open."

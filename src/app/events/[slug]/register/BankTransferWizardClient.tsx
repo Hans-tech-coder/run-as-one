@@ -1692,6 +1692,7 @@ export default function BankTransferWizardClient({
       <RunnerOverlay
         open={isProcessing}
         title="Submitting your registration"
+        slowTitle="Still uploading, almost there"
         hint="Uploading your proof of payment. This can take a few seconds on mobile data, so please keep this page open."
       />
     </div>

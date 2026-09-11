@@ -29,7 +29,9 @@ export default function ClientLayoutWrapper({ children }: { children: React.Reac
         {/* The gutter comes from .container and the clearance under the
             floating navbar from --nav-offset, so this file never states either
             number: a phone gets 16px and a desktop 32px. */}
-        <main className="container grow" style={{ paddingTop: 'var(--nav-offset)' }}>
+        {/* `public-main` carries the page-arrival reveal — see the note on it
+            in globals.css. */}
+        <main className="public-main container grow" style={{ paddingTop: 'var(--nav-offset)' }}>
           {children}
         </main>
         <Footer />

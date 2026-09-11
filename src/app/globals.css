@@ -101,6 +101,18 @@ input[type="checkbox"],
   --runner-far: color-mix(in srgb, var(--accent-blue) 55%, #050505);
   --runner-streak: var(--accent-orange);
 
+  /* How long a wait may run before the figure's caption admits it is a long
+     one ("Loading" → "Still loading, hang tight"). Long enough that a normal
+     page never reaches it, short enough that a runner on slow data is told
+     before they start wondering whether to press again. */
+  --runner-slow-after: 5s;
+
+  /* Text states swap — the caption's swap to its slow-wait line */
+  --text-swap-dur: 150ms;
+  --text-swap-translate-y: 4px;
+  --text-swap-blur: 2px;
+  --text-swap-ease: ease-in-out;
+
   /* Icon swap — LinkPendingIcon's chevron → running figure */
   --icon-swap-dur: 250ms;
   --icon-swap-blur: 2px;
@@ -785,6 +797,40 @@ input[type="datetime-local"]:focus::-webkit-calendar-picker-indicator {
   text-wrap: balance;
 }
 
+/* The slow-wait swap. Transitions.dev's text states swap, on its own tokens,
+   but driven by time rather than by JS: both lines sit in one grid cell, the
+   first leaves up-and-blurred at --runner-slow-after and the second arrives
+   from below one --text-swap-dur later. Keyframes rather than the snippet's
+   class toggles because this renders in `loading.tsx` fallbacks, which must
+   stay free of client code. A wait that ends sooner unmounts before either
+   animation starts, so a normal page never sees the second line. */
+.t-runner__captions {
+  display: grid;
+  justify-items: center;
+}
+.t-runner__captions > .t-runner__caption { grid-area: 1 / 1; }
+.t-runner__captions > .t-runner__caption:first-child {
+  animation: t-runner-caption-out var(--text-swap-dur) var(--text-swap-ease) var(--runner-slow-after) both;
+}
+.t-runner__caption--slow {
+  animation: t-runner-caption-in var(--text-swap-dur) var(--text-swap-ease)
+    calc(var(--runner-slow-after) + var(--text-swap-dur)) both;
+}
+@keyframes t-runner-caption-out {
+  to {
+    transform: translateY(calc(var(--text-swap-translate-y) * -1));
+    filter: blur(var(--text-swap-blur));
+    opacity: 0;
+  }
+}
+@keyframes t-runner-caption-in {
+  from {
+    transform: translateY(var(--text-swap-translate-y));
+    filter: blur(var(--text-swap-blur));
+    opacity: 0;
+  }
+}
+
 /* Reduced motion still has to say "working", like the dots. The body is
    paused rather than stopped: a paused animation holds the frame its delay
    points at, so the near side stays at its reach and the far side — half a
@@ -800,6 +846,9 @@ input[type="datetime-local"]:focus::-webkit-calendar-picker-indicator {
     animation-play-state: paused;
   }
   .t-runner__streak { animation-name: t-runner-streak-fade; }
+  /* The slow-wait line still replaces the first — it carries information —
+     but in one frame instead of with motion. */
+  .t-runner__captions > .t-runner__caption { animation-duration: 1ms !important; }
 }
 @keyframes t-runner-streak-fade {
   0%, 100% { opacity: 0.3; }
@@ -933,23 +982,71 @@ input[type="datetime-local"]:focus::-webkit-calendar-picker-indicator {
   .runner-overlay { transition: none !important; }
 }
 
-/* components/PublicRouteLoading — the public route fallback. A real height
-   so the footer stays down, and a 120ms hold before the fade so a page that
-   lands at once never flashes it. Fades in on the skeleton reveal's blur and
-   ease, like the dashboard's fallback, quick rather than 400ms — the figure
-   is the part that says the click was heard. */
+/* components/PublicRouteLoading — the public route fallback, as a screen.
+
+   It used to be a centred block in the page flow, and that broke the moment
+   a runner pressed Register Now from low on a long event page: the fallback
+   replaced a 3,000px page with a short one, the browser clamped the scroll to
+   the new bottom, and the figure ended up above the top of the screen — half
+   under the navbar, with the footer filling the view. So the two jobs are
+   split. `.public-route-loading` is only an in-flow spacer, a viewport tall,
+   so the footer stays below the fold. `__stage` is fixed to the viewport and
+   centres the figure in the space under the navbar whatever the scroll, on
+   the page's own ground (which also hides the footer behind it), with one
+   soft pool of the figure's blue behind it. The navbar stays above it.
+
+   The fade lives on the stage, not the spacer: a filter on an ancestor turns
+   `position: fixed` into "fixed to that ancestor", and the spacer is the box
+   that can be scrolled off screen. 120ms hold first, so a page that lands at
+   once never flashes it; then the skeleton reveal's blur and ease, on the
+   quick step — the figure is the part that says the click was heard. */
 .public-route-loading {
+  min-height: calc(100dvh - var(--nav-offset));
+}
+.public-route-loading__stage {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
   display: grid;
   place-items: center;
-  min-height: 60vh;
+  padding: var(--nav-offset) var(--gutter) 0;
+  background:
+    radial-gradient(28rem 22rem at 50% calc(50% + var(--nav-offset) / 2),
+      rgb(0 122 255 / 0.09), transparent 70%),
+    var(--bg-primary);
   animation: public-route-in var(--duration-quick) var(--skel-reveal-ease) 120ms both;
 }
 @keyframes public-route-in {
   from { opacity: 0; filter: blur(var(--skel-reveal-blur)); }
 }
 
+/* The arriving page — the dashboard's route reveal (Admin.css), on the same
+   skeleton-reveal tokens, so the runner leaving and the page arriving read as
+   one movement instead of two cuts. On `<main>`'s direct children because
+   every public page renders straight into it and a client navigation builds
+   them fresh, which is what replays a CSS animation; the fallback itself is
+   excluded, it has its own entrance.
+
+   `backwards`, not `both`, and only a `from` keyframe: once the reveal ends
+   no filter is left on the page. A finished `filter: blur(0)` would still be
+   a filter, and every fixed thing inside the page — the poster lightbox, the
+   size guide, the bank details — would start positioning itself against the
+   page instead of the screen.
+
+   The scroll margin is for Next's own scroll on arrival, which brings the new
+   page's first element into view: without it that element's top lands under
+   the floating navbar. */
+.public-main > :not(.public-route-loading) {
+  scroll-margin-top: var(--nav-offset);
+  animation: public-page-reveal var(--skel-reveal-dur) var(--skel-reveal-ease) backwards;
+}
+@keyframes public-page-reveal {
+  from { opacity: 0; filter: blur(var(--skel-reveal-blur)); }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .public-route-loading { animation: none; }
+  .public-route-loading__stage,
+  .public-main > * { animation: none !important; }
 }
 
 html, body { overflow-x: hidden; }

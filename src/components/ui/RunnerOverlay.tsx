@@ -26,16 +26,22 @@ import RunnerLoader from "./RunnerLoader";
 export default function RunnerOverlay({
   open,
   title,
+  slowTitle,
   hint,
 }: {
   open: boolean;
   /** What is happening, shown shimmering under the figure. */
   title: string;
+  /** Replaces `title` after five seconds, so a slow wait is explained. */
+  slowTitle?: string;
   /** What the runner should (not) do meanwhile. */
   hint?: string;
 }) {
   if (!open) return null;
-  return createPortal(<OverlayPanel title={title} hint={hint} />, document.body);
+  return createPortal(
+    <OverlayPanel title={title} slowTitle={slowTitle} hint={hint} />,
+    document.body,
+  );
 }
 
 /**
@@ -43,7 +49,15 @@ export default function RunnerOverlay({
  * pre-open state. Opens on transitions.dev's modal tokens (`.t-modal`), with
  * the two-frame wait that snippet needs so the scale has somewhere to start.
  */
-function OverlayPanel({ title, hint }: { title: string; hint?: string }) {
+function OverlayPanel({
+  title,
+  slowTitle,
+  hint,
+}: {
+  title: string;
+  slowTitle?: string;
+  hint?: string;
+}) {
   const [shown, setShown] = useState(false);
 
   useEffect(() => {
@@ -60,7 +74,7 @@ function OverlayPanel({ title, hint }: { title: string; hint?: string }) {
   return (
     <div className={`runner-overlay ${shown ? "is-open" : ""}`} aria-busy="true">
       <div className={`runner-overlay__panel t-modal ${shown ? "is-open" : ""}`}>
-        <RunnerLoader size="lg" caption={title} />
+        <RunnerLoader size="lg" caption={title} slowCaption={slowTitle} />
         {hint && <p className="runner-overlay__hint">{hint}</p>}
       </div>
     </div>

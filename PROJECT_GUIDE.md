@@ -642,16 +642,34 @@ These are the user's own standing preferences. Follow them without being asked.
   keeps its dots. Hook-free and pure CSS, like `LoadingDots`, so it can render
   in a `loading.tsx`. A new wait on the public side should be one of these four:
   - **A page on its way** — four `loading.tsx` files render
-    `components/PublicRouteLoading`: the `lg` figure with a shimmering caption
-    (transitions.dev's shimmer-text, `.t-shimmer`), between the navbar and
-    footer that stay put, at a real 60vh so the footer never jumps. **Two per
-    section, and both are needed**: `events/` and `results/` catch arriving at
-    a race, `events/[slug]/` and `results/[slug]/` catch moving within one
-    (event page → wizard, winners → leaderboard → a runner's result). A
-    fallback shows only when the segment *directly* under it changes, so with
-    the section-level pair alone those in-race moves left the old page sitting
-    there. It fades in after 120ms, so a prefetched page never flashes it. `/`
-    and the legal pages are prerendered and need none.
+    `components/PublicRouteLoading`, a **loading screen**: the `lg` figure with
+    a shimmering caption (transitions.dev's shimmer-text, `.t-shimmer`) on a
+    **viewport-fixed stage** under the navbar, on the page's own ground with a
+    soft pool of blue. It is fixed, not in the page flow, because in-flow it
+    broke on exactly the tap that matters most: Register Now pressed from low
+    on a long event page swapped a 3,000px page for a short one, the browser
+    clamped the scroll, and the figure landed above the top of the screen with
+    the footer filling the view. The outer `.public-route-loading` is only a
+    viewport-tall spacer; the fade sits on the stage because a filter on an
+    ancestor would re-anchor the fixed stage to it. **Two files per section,
+    and both are needed**: `events/` and `results/` catch arriving at a race,
+    `events/[slug]/` and `results/[slug]/` catch moving within one (event page
+    → wizard, winners → leaderboard → a runner's result) — a fallback shows
+    only when the segment *directly* under it changes. It fades in after
+    120ms, so a prefetched page never flashes it, and after
+    `--runner-slow-after` (5s) its caption swaps to "Still loading, hang
+    tight" through the text-swap motion (`slowCaption` on `RunnerLoader`,
+    timed in CSS so the fallback stays hook-free) — a long wait is explained,
+    never left looking stuck. `/` and the legal pages are prerendered and need
+    none.
+  - **The page arriving** — `<main>` carries `.public-main`, and each page
+    rendered into it fades and un-blurs on mount over `--skel-reveal-dur`, the
+    dashboard's route reveal, so the runner leaving and the page arriving read
+    as one movement. It fills **`backwards` only**: a finished `blur(0)` is
+    still a filter, and it would re-anchor every fixed modal inside the page
+    (poster lightbox, size guide, bank details). The same rule gives the page a
+    `scroll-margin-top` of `--nav-offset`, so Next's scroll on arrival never
+    parks the page's top under the navbar.
   - **The link that was pressed** — `components/ui/LinkPendingIcon` wraps the
     icon a call to action already carries (the chevron on Register Now, View
     Results, View Full Leaderboard, View all) and cross-fades it into the `sm`
