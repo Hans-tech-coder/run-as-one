@@ -82,6 +82,7 @@ import {
   type RunnerField,
 } from "./validation";
 import { formatEventDayShort } from "@/lib/event-schedule";
+import { useStepReveal } from "./useStepReveal";
 import "./RegistrationWizard.css";
 
 /**
@@ -151,6 +152,7 @@ export default function BankTransferWizardClient({
   const isSuccessParam = searchParams.get("success") === "true";
 
   const [step, setStep] = useState(1);
+  const { panelRef, headingRef } = useStepReveal(step);
   const [participants, setParticipants] = useState<Participant[]>([
     {
       id: Date.now(),
@@ -951,8 +953,16 @@ export default function BankTransferWizardClient({
         </aside>
 
         {/* Main Wizard Form */}
-        <section className="wizard-content t-stagger-line t-stagger-line--2">
-          <div className="glass-panel p-8 form-panel border border-white/10 bg-gradient-to-b from-white/5 to-transparent rounded-3xl relative overflow-hidden">
+        <section
+          ref={panelRef}
+          className="wizard-content t-stagger-line t-stagger-line--2"
+        >
+          {/* overflow-clip, not overflow-hidden: the glow below overhangs the
+              right edge, and a "hidden" box is still a scroll container, so
+              focusing a field (focusField's scrollIntoView) slid the whole
+              form sideways under the clip and left it there for every later
+              step. A "clip" box cannot be scrolled at all. */}
+          <div className="glass-panel p-8 form-panel border border-white/10 bg-gradient-to-b from-white/5 to-transparent rounded-3xl relative overflow-clip">
             <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-accent-orange/5 rounded-full blur-[100px] -mr-40 -mt-40 pointer-events-none"></div>
 
             {/* Header / Back button */}
@@ -966,7 +976,11 @@ export default function BankTransferWizardClient({
                   <span className="font-bold">Back</span>
                 </button>
               )}
-              <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight m-0">
+              <h2
+                ref={headingRef}
+                tabIndex={-1}
+                className="text-2xl sm:text-3xl font-bold text-white tracking-tight m-0 focus:outline-none"
+              >
                 {step === 1 &&
                   (sellsPackages(event)
                     ? "Runner Details & Packages"

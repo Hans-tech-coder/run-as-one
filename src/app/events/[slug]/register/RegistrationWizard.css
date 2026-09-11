@@ -2,6 +2,10 @@
   position: relative;
   min-height: 100vh;
   padding-bottom: 6rem;
+  /* Where the top of each column rests under the floating navbar: the sticky
+     summary pins here, and a change of step scrolls the form back to here
+     (useStepReveal). One number, so on desktop the two columns line up. */
+  --wizard-top: 120px;
 }
 
 .mt-navbar {
@@ -22,9 +26,13 @@
   min-width: 0;
 }
 
+.wizard-content {
+  scroll-margin-top: var(--wizard-top);
+}
+
 .sticky-sidebar {
   position: sticky;
-  top: 120px;
+  top: var(--wizard-top);
 }
 
 /* Sidebar */
