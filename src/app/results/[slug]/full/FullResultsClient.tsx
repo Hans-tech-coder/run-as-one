@@ -8,6 +8,7 @@ import { Search, User, Hash, ChevronDown, Check, ChevronLeft, ChevronRight, Chev
 import { toWholeSeconds } from '@/lib/race-time';
 import { runnerResultPath } from '@/lib/event-slug';
 import RunnerLoader from '@/components/ui/RunnerLoader';
+import { ECertificateModal, useECertificate } from '@/components/ECertificate';
 import {
   useReactTable,
   getCoreRowModel,
@@ -136,7 +137,11 @@ function FilterDropdown({ title, options, selected, onToggle, align = 'left' }: 
 // rect, because the results card and its horizontal scroller both clip their
 // overflow — a menu laid out inside the row was cut off on the last rows. It
 // also flips above the trigger when the space below it cannot hold the menu.
-function ActionMenu({ path }: { path: string }) {
+// View E-Cert opens the certificate here, over the leaderboard: it used to be
+// a link to the runner's page with ?cert=1, so the reader lost their place in
+// the list for a dialog they could have had where they were. The menu stays
+// open, its item saying the certificate is being drawn, until it is ready.
+function ActionMenu({ path, onViewCert, isGenerating }: { path: string, onViewCert: () => Promise<void>, isGenerating: boolean }) {
   const MENU_WIDTH = 160;   // matches w-40
   const MENU_HEIGHT = 104;  // the two items plus padding, used before the first measure
   const GAP = 8;            // the old mt-2
@@ -251,13 +256,26 @@ function ActionMenu({ path }: { path: string }) {
         >
           View Details
         </Link>
-        <Link
-          href={`${path}?cert=1`}
-          onClick={(e) => e.stopPropagation()}
-          className="w-full text-left block px-3 py-2.5 text-sm text-accent-blue font-medium rounded-lg hover:bg-white/5 transition-colors"
+        <button
+          type="button"
+          onClick={async (e) => {
+            e.stopPropagation();
+            await onViewCert();
+            close();
+          }}
+          disabled={isGenerating}
+          aria-busy={isGenerating || undefined}
+          className="w-full text-left flex items-center gap-2 px-3 py-2.5 text-sm text-accent-blue font-medium rounded-lg hover:bg-white/5 disabled:hover:bg-transparent disabled:cursor-wait transition-colors"
         >
-          View E-Cert
-        </Link>
+          {isGenerating ? (
+            <>
+              <RunnerLoader size="sm" tone="current" label="" />
+              Generating…
+            </>
+          ) : (
+            'View E-Cert'
+          )}
+        </button>
       </div>
     </div>
   );
@@ -315,6 +333,17 @@ export default function FullResultsClient({ results, event }: Props) {
     startOpening(() => router.push(path));
   };
   const opening = (path: string) => isOpening && openingPath === path;
+
+  // A certificate opens over the list, and Share Result on it points at the
+  // runner's own page rather than at this leaderboard.
+  const cert = useECertificate<Result>(event);
+  const actionsFor = (r: Result, path: string) => (
+    <ActionMenu
+      path={path}
+      onViewCert={() => cert.show(r, path)}
+      isGenerating={cert.generating?.id === r.id}
+    />
+  );
 
   const columns = useMemo<ColumnDef<Result>[]>(() => [
     {
@@ -382,11 +411,12 @@ export default function FullResultsClient({ results, event }: Props) {
       cell: ({ row }) => <span className="font-mono text-secondary tabular-nums whitespace-nowrap">{toWholeSeconds(row.original.gunTime) || '-'}</span>,
     },
     {
+      // Rendered by the row loop too — see `actionsFor` below — because it
+      // reads the certificate state, and these columns are memoised on the
+      // event alone.
       id: "actions",
       header: "Actions",
-      cell: ({ row }) => {
-        return <ActionMenu path={runnerResultPath(event, row.original)} />;
-      },
+      cell: () => null,
     }
   ], [event.id]);
 
@@ -570,7 +600,9 @@ export default function FullResultsClient({ results, event }: Props) {
                                 ? (isThisOpening
                                     ? <RunnerLoader size="sm" label="Opening this result" />
                                     : <div className="text-secondary font-mono tabular-nums">{positionOf(i)}</div>)
-                                : flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                : cell.column.id === 'actions'
+                                  ? actionsFor(row.original, path)
+                                  : flexRender(cell.column.columnDef.cell, cell.getContext())}
                             </td>
                           );
                         })}
@@ -627,7 +659,7 @@ export default function FullResultsClient({ results, event }: Props) {
                       </div>
                     </div>
                     <div className="-mt-1 -mr-1.5 shrink-0">
-                      <ActionMenu path={path} />
+                      {actionsFor(r, path)}
                     </div>
                   </div>
 
@@ -709,6 +741,16 @@ export default function FullResultsClient({ results, event }: Props) {
           </button>
         </nav>
       </div>
+
+      {cert.open && (
+        <ECertificateModal
+          result={cert.open.result}
+          event={event}
+          pdfUrl={cert.open.pdfUrl}
+          sharePath={cert.open.sharePath}
+          onClose={cert.close}
+        />
+      )}
     </div>
   );
 }
