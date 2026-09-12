@@ -1,5 +1,6 @@
 import "dotenv/config";
 import prisma from '../src/lib/db';
+import { assertNotProduction } from './guard-environment';
 import {
   asDeliveryZone,
   asLogisticsMethod,
@@ -41,6 +42,8 @@ function upper(value: string | null): string | null {
 type Change = { table: string; id: string; field: string; from: string; to: string };
 
 async function main() {
+  assertNotProduction('uppercase:existing');
+
   const changes: Change[] = [];
   const note = (table: string, id: string, field: string, from: string | null, to: string | null) => {
     if (to !== null && from !== null) changes.push({ table, id, field, from, to });

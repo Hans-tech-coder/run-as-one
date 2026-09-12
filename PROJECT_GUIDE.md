@@ -93,6 +93,65 @@ is not there and fails.
 | `RESEND_API_KEY` | Resend — sends registration confirmation emails from `info@cresendorunningcommunity.com`. Unset in dev just skips the send (see `lib/email.ts`) |
 | `CRON_SECRET` | Guards `/api/cron/expire-pending`, the daily abandoned-checkout sweep. Vercel Cron sends it as `Authorization: Bearer …`; **unset, the route refuses to run rather than running unguarded** |
 
+### Databases: production and development are separate Neon branches
+
+**Local development must never dial the live database.** Until this was split,
+`.env` and the deployed site pointed at the same Neon branch, so a `prisma
+migrate reset`, a seed script, or a stray `deleteMany` on a laptop would have
+destroyed real customer orders — including bank-transfer registrations sitting
+`PENDING` while a runner waits for their slot to be confirmed.
+
+Neon project **`run-as-one`** (`wispy-rain-76789112`, free tier, 10 branches,
+0.5 GB):
+
+| Branch | Endpoint | Used by |
+| --- | --- | --- |
+| `dev` — **this is production**, `br-calm-darkness-b3tqh63k` | `ep-still-pine-b3n210bs` | The live site (Vercel Production). Holds every real registration and all 2,149 race results. |
+| `local-dev`, `br-dry-grass-b3ubrfhy` | `ep-shiny-sunset-b3gzfro9` | The local checkout's `.env`. A copy-on-write branch of production. |
+| `legacy-empty-root`/`production`, `br-spring-pine-b35lahiy` | `ep-silent-pond-b38yfoxa` | Nothing. The original root branch, **it has no tables at all** and never held data. Kept only because Neon cannot delete a root branch. |
+
+**The branch named `dev` is the production database.** The names are backwards
+because the project was built on the branch Neon created second, and the
+rename is a console-only step that has not been taken. Go by the endpoint, not
+by the name: `ep-still-pine-b3n210bs` is live.
+
+**Syncing production data down is a Neon branch reset, not a feature.** To
+refresh `local-dev` with what production holds now, reset it from its parent in
+the Neon console (Branches → `local-dev` → Reset from parent). It is instant and
+nearly free, because a branch stores only its diff. There is deliberately **no
+"sync from production" button inside the app**: such a button would ship a
+code path that exports every customer's personal data into the production
+bundle, hidden behind a flag that is one environment-variable mistake away from
+being on, and it would require production credentials to be reachable from a
+developer's machine — the exact coupling the split removes.
+
+**`git push` never touches a database.** Promoting `dev` to `main` ships code
+only. The only things that can write to production are the running app and
+whatever a connection string is pointed at, which is why the protection lives
+in `.env` and in the guard below rather than in the branching workflow.
+
+**Every maintenance script calls `assertNotProduction()` first**
+(`scripts/guard-environment.ts`). It refuses to run when `DATABASE_URL` or
+`DIRECT_URL` names the production endpoint, and refuses equally when neither is
+set. It checks the **host**, not `NODE_ENV`: `NODE_ENV` is a property of the
+process and reads "development" on a laptop no matter which database that
+laptop is dialling. Any new script in `scripts/` that writes must call it too.
+
+**Migrations no longer reach production by themselves.** They used to, because
+the two shared a branch. `npm run build` still runs `prisma generate` only —
+deliberately, since a build that silently mutates the production schema is a
+build that can break the live site without anyone asking it to. A schema change
+now reaches production as its own step at deploy time, with `DIRECT_URL`
+pointed at `ep-still-pine-b3n210bs`:
+
+```bash
+npx prisma migrate deploy
+```
+
+**Still shared, and still a hazard:** both Vercel Blob stores are common to
+local and production. Deleting an event banner or a payment proof locally
+deletes it from the live site too.
+
 Two blob stores, not one: a store's access level is fixed at creation, so a
 single store cannot hold both public and private blobs.
 
@@ -339,7 +398,12 @@ those — and such a row falls back to its cuid, because the bare event path is
 the winners board and would otherwise swallow it.
 
 ### Organizer (`/admin`, gated by `src/proxy.ts`)
-`/admin` dashboard · `/admin/login` · `/admin/register` · `/admin/events` (plus
+`/admin` dashboard (an Overview of three tiles — **Total Revenue (Net)**,
+**Total Registrants**, **Active Events** — over the five most recent
+registrations. There is no *Page Views* tile: it was a placeholder that only
+ever read `N/A`, and a metric card that never carries a number teaches an
+organizer to stop reading the row. Do not re-add a tile until something real
+counts behind it) · `/admin/login` · `/admin/register` · `/admin/events` (plus
 `/new` and `/[id]/edit` — the edit screen ends with a **read-only Promotions
 panel**: what a runner registering for this race can be given, its status and
 its conditions, with a link through to the marketing screen. Read-only on

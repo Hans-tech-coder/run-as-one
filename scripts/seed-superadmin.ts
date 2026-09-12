@@ -1,8 +1,11 @@
 import "dotenv/config";
 import { hash } from 'bcryptjs';
 import prisma from '../src/lib/db';
+import { assertNotProduction } from './guard-environment';
 
 async function main() {
+  assertNotProduction('seed-superadmin');
+
   const superAdminEmail = 'superadmin@runasone.com';
 
   const existing = await prisma.organizer.findUnique({

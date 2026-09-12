@@ -1,5 +1,5 @@
 import React from 'react';
-import { DollarSign, Users, CalendarDays, Activity } from 'lucide-react';
+import { DollarSign, Users, CalendarDays } from 'lucide-react';
 import prisma from '@/lib/db';
 import { getAuthCookie } from '@/lib/auth';
 import { formatPesos } from '@/lib/money';
@@ -93,14 +93,6 @@ export default async function AdminDashboard() {
               <div className="metric-icon"><CalendarDays size={20} /></div>
             </div>
             <div className="metric-value">{activeEventsCount}</div>
-          </div>
-
-          <div className="metric-card">
-            <div className="metric-header">
-              <span className="metric-title">Page Views</span>
-              <div className="metric-icon"><Activity size={20} /></div>
-            </div>
-            <div className="metric-value">N/A</div>
           </div>
         </div>
 

@@ -1,6 +1,7 @@
 import "dotenv/config";
 import bcrypt from 'bcryptjs';
 import prisma from '../src/lib/db';
+import { assertNotProduction } from './guard-environment';
 import { toCentavos } from '../src/lib/money';
 import { REGISTRATION_FORMS } from '../src/lib/registration-form';
 import { EVENT_TYPES, type EventType } from '../src/lib/event-type';
@@ -261,6 +262,8 @@ const events: SeedEvent[] = [
 ];
 
 async function main() {
+  assertNotProduction('seed:dev');
+
   const password = await bcrypt.hash(PASSWORD, 10);
 
   // The shared club list. The migration seeds these too, so this only matters

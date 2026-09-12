@@ -1,8 +1,11 @@
 import "dotenv/config";
 import bcrypt from 'bcryptjs';
 import prisma from '../src/lib/db';
+import { assertNotProduction } from './guard-environment';
 
 async function main() {
+  assertNotProduction('seed');
+
   console.log('Seeding database...');
 
   const hashedPassword = await bcrypt.hash('admin123', 10);
