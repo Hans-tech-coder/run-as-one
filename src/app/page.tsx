@@ -7,6 +7,28 @@ import { forListing } from '@/lib/registration-gate';
 
 const HOME_EVENT_LIMIT = 6;
 
+/**
+ * Rendered on every request rather than once at build time.
+ *
+ * Every word this listing says about a race is a live answer: whether the
+ * organizer has a hold on sign-ups, whether an opening date has arrived,
+ * whether the last slot has gone, and whether the race has already been run.
+ * A prerender freezes all four at the moment of the last deploy, and the
+ * clock is the worse half of that — `upcomingEvents()` here and `opensLater()`
+ * inside `forListing` both compare against `new Date()`, so a build-time
+ * render would keep a finished race in the grid and go on promising
+ * "Opens Sep 15" for weeks after sign-ups opened.
+ *
+ * It cost us a live one: this page badged a race Paused that its organizer had
+ * already scheduled minutes earlier, while `/events/[slug]` one click away —
+ * a dynamic route, so never prerendered — had the date right.
+ *
+ * The cost is two small indexed reads per view, against a Neon compute that is
+ * already awake serving the event pages.
+ */
+export const dynamic = 'force-dynamic';
+
+
 export default async function Home() {
   // Two rows of cards on a desktop grid rather than one, so the section that
   // the page exists for looks like a listing instead of a leftover. The count

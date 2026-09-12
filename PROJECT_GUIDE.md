@@ -593,6 +593,19 @@ These are the user's own standing preferences. Follow them without being asked.
 
 - **Server Components by default**; `'use client'` only where interaction needs
   it. Pages fetch with Prisma directly and client islands take props.
+- **A public page that reads the database renders per request.** Next.js
+  prerenders a page with no dynamic segment at build time and then never
+  rebuilds it, which freezes both the data *and* the clock: `/` and `/events`
+  went on badging a race **Paused** after its organizer had scheduled it, and a
+  build-time `new Date()` would also keep a finished race in the grid and count
+  down to an opening that had already come. So `/`, `/events` and `/results`
+  each export `dynamic = 'force-dynamic'`, with the reasoning written out in
+  `src/app/page.tsx`. The `[slug]` pages under `/events` and `/results` are
+  already server-rendered on demand because they take a dynamic segment and
+  have no `generateStaticParams` — that is why the event page was right while
+  the listing in front of it was wrong — but **any new public page that queries
+  Prisma and has no dynamic segment must opt in explicitly**; check the build's
+  route table for a `○` on a page that should be live.
 - Imports use the `@/` alias for `src/`.
 - Registrant text is stored **UPPERCASE**, email excepted (§5, `text-case.ts`).
   A field whose value is stored uppercase shows an uppercase *sample*

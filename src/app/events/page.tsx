@@ -6,6 +6,15 @@ import { soonestFirst, upcomingEvents } from '@/lib/event-schedule';
 import { forListing } from '@/lib/registration-gate';
 import { Calendar, CalendarCheck2, ChevronRight, Trophy } from 'lucide-react';
 
+/**
+ * Rendered on every request — the same reason as the home page, which carries
+ * the full note (src/app/page.tsx). In short: a prerendered listing freezes
+ * both the data and the clock, so it keeps badging a race Paused after the
+ * hold was lifted, keeps a finished race in the grid, and keeps counting down
+ * to an opening that has already come.
+ */
+export const dynamic = 'force-dynamic';
+
 export default async function EventsPage() {
   // Races that have not been run yet, soonest first — the page is headed
   // "Upcoming Events", and once a race is over it belongs on /results instead.

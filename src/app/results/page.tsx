@@ -6,6 +6,16 @@ import ResultsClientOrchestrator from '@/components/ResultsClientOrchestrator';
 import EventGrid from '@/components/EventGrid';
 import { mostRecentFirst } from '@/lib/event-schedule';
 
+/**
+ * Rendered on every request, for the same reason as the two event listings
+ * (the full note is in src/app/page.tsx). This one turns on the organizer
+ * rather than the clock: a race appears here the moment its times are
+ * uploaded, and a prerender would hold the landing page at whatever was true
+ * on the day of the last deploy — a race whose runners are refreshing for
+ * their times would simply not be listed.
+ */
+export const dynamic = 'force-dynamic';
+
 export default async function GlobalResultsPage() {
   // Only races whose organizer has actually uploaded times. A race that is over
   // but has no results yet appears nowhere on the site — it has left /events,
