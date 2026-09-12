@@ -433,9 +433,36 @@ Plus `/new` and `/[id]/edit` — the edit screen ends with a **read-only
 Promotions panel**: what a runner registering for this race can be given, its status and
 its conditions, with a link through to the marketing screen. Read-only on
 purpose — one screen owns promotions, and a second place to edit them is a
-second place for them to drift) · `/admin/events/[id]/registrants` (rows whose email
+second place for them to drift) · `/admin/events/[id]/registrants` (**the list is
+in registration order, oldest first, and nothing an organizer does to a row ever
+moves it.** Both levels of the fetch say so — `orderBy: { createdAt: 'asc' }` on
+the registrations and `orderBy: { runnerNo: 'asc' }` on the runners inside each
+one. Neither had an ordering before, and without one Postgres returns rows in
+whatever order it finds them on disk: every `UPDATE` rewrites its row at the end
+of the heap, so validating a payment or saving a remark silently reshuffled the
+table, and a group's `-2` could print above its `-1`. The **No.** column is the
+registrant's own number, assigned on the server off that order (`regNo`) rather
+than being the row's position on screen — filter down to the unpaid orders and
+the numbers still read 3, 7, 12, which says who those people are, where a row
+index renumbered everyone 1, 2, 3 and said nothing; how many rows are in view is
+what the footer's "1-25 of 143" is for. It is a reading of the list as it stands
+and **not a bib number** — cancel an early order and everyone behind it shifts up
+— so anything that must survive that needs a column of its own.
+A validator's queue is therefore a **filter, never a sort**: the *Needs
+Validation* toolbar chip collects the rows that are `PENDING` **and** bank
+transfer (`needsValidation`, the same pair that decides whether the detail modal
+and the lightbox offer a Validate button — an online PENDING is an abandoned
+checkout `pending-expiry.ts` sweeps on its own, with nothing for a person to do),
+and it wears the amber of the PENDING badge it collects. Sorting those to the top
+instead would pull a row out from under the cursor the moment it was validated,
+costing the admin their place in the list and the sight of the badge turning
+green where they clicked — the same reason the super admin's feedback screen
+*finds* unread messages rather than sorting them up. The Status column stays
+sortable for anyone who wants to group by it deliberately.
+Rows whose email
 never went out carry an **Email Unsent** badge, an *Unsent Email* toolbar toggle
-lists exactly those, and a mail icon opens the manual-send modal; **`?search=`
+lists exactly those, and a mail icon opens the manual-send modal; the two chips
+narrow the same list together. **`?search=`
 prefills the search box**, which is how the marketing screen's redemptions panel
 links straight to one order. The **detail modal has two doors** — the eye beside
 the Reference and *View Details* at the top of the row's actions menu — because
@@ -671,9 +698,23 @@ These are the user's own standing preferences. Follow them without being asked.
   pager beneath. Copy that arrangement rather than hand-rolling a `<table>`, so
   an organizer reads a promotion the way they read a registrant. A row that
   opens (the marketing screen's voucher batches) is a second `TableRow` under
-  the first, not a column of its own. The `No.` cell counts by row **id**, not
-  by object identity: sorting rebuilds the rows, so an `indexOf` on them finds
-  nothing and every line numbers itself 0 the moment a header is clicked.
+  the first, not a column of its own. Where the `No.` cell is a **position**, it
+  counts by row **id**, not by object identity: sorting rebuilds the rows, so an
+  `indexOf` on them finds nothing and every line numbers itself 0 the moment a
+  header is clicked.
+- **A list's order is a fact about the rows, not about the view — and a number
+  in it should name the thing, not its seat.** Every listing gets an explicit
+  `orderBy`; without one Postgres is free to return rows in heap order, which
+  every `UPDATE` reshuffles, so a screen quietly reorders itself as somebody
+  works it. Sort by what the rows *are* (registration order, newest message
+  first) and hold it: a row must never move because of an action just taken on
+  it, or the person loses their place and the sight of the change landing where
+  they clicked. Work queues are therefore **filters**, not sorts — the
+  registrants screen's *Needs Validation* and *Unsent Email* chips, the feedback
+  screen's triage chips. And when the number in the `No.` column is worth
+  quoting outside the screen, assign it on the server from that order and carry
+  it on the row (registrants' `regNo`) instead of using the row's position,
+  which renumbers the moment anything is filtered.
   A cell that has something to add to a badge uses **`.status-note`** (Admin.css)
   — a small line under it in the badge tones' own colours, as the marketing
   table's *Ends in 3 days* does — never a second `.status-badge`, because two

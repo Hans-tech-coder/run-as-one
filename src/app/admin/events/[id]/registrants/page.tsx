@@ -49,8 +49,22 @@ export default async function RegistrantsPage({
     where: { id, organizerId: auth.id },
     include: {
       registrations: {
+        // Registration order, oldest first — fixed here rather than left to
+        // the database. Without an ordering Postgres is free to hand back rows
+        // in whatever order it finds them on disk, and every UPDATE (a status
+        // change, a remark, an email stamp) rewrites the row at the end of the
+        // heap. The list therefore reshuffled itself as an organizer worked
+        // it: validating one payment moved that order, and the person sitting
+        // at "No. 1" was not the first person who registered.
+        orderBy: { createdAt: 'asc' },
         include: {
           runners: {
+            // The same reason one level down. A group's members were coming
+            // back in an arbitrary order, so runner -2 could sit above runner
+            // -1 and the references on screen read out of sequence. The
+            // confirmation email has always sorted this way (byRunnerNo in
+            // lib/email.ts); this screen was the one place that did not.
+            orderBy: { runnerNo: 'asc' },
             include: { category: true }
           }
         }
@@ -78,6 +92,19 @@ export default async function RegistrantsPage({
       runners.push({
         id: runner.id,
         registrationId: reg.id,
+        // This runner's permanent place in the registration order — 1 is the
+        // first person who ever registered for this event. It is a property of
+        // the registrant rather than of the view, so it is assigned here off
+        // the ordered fetch and travels with the row: filter the table down to
+        // the unpaid orders and the numbers still read 3, 7, 12, which says
+        // who those people are. A row index would have renumbered them 1, 2, 3
+        // and said nothing at all.
+        //
+        // Derived from the order rather than stored, so it is a reading of the
+        // list as it stands and not a bib number: cancel an early order and
+        // everyone behind it shifts up by one. A number that has to survive
+        // that would need a column of its own.
+        regNo: runners.length + 1,
         orderRef: reg.orderRef,
         runnerNo: runner.runnerNo,
         // One orderRef covers the whole order, so on a screen with one row per

@@ -4,7 +4,8 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   Search, Filter, Download, Eye, X, Trash2,
   ChevronLeft, ChevronRight, ChevronFirst, ChevronLast, Columns, ChevronUp, ChevronDown, CheckCircle, Check,
-  MessageSquare, MessageSquareText, Mail, MailWarning, Copy, ExternalLink, Maximize2, FileText
+  MessageSquare, MessageSquareText, Mail, MailWarning, Copy, ExternalLink, Maximize2, FileText,
+  Hourglass
 } from 'lucide-react';
 import RegistrantActionsMenu from './RegistrantActionsMenu';
 import ProofLightbox from './ProofLightbox';
@@ -70,6 +71,22 @@ function statusPillClass(status: string): string {
   return 'bg-orange-500/20 text-orange-400 border border-orange-500/20';
 }
 
+/**
+ * Whether this row is waiting on a person to check a payment.
+ *
+ * PENDING alone is not the question. An online checkout sitting at PENDING is
+ * one nobody came back to finish, and lib/pending-expiry.ts sweeps it away on
+ * its own — there is nothing for a validator to do with it. A bank transfer at
+ * PENDING is the opposite: somebody uploaded a deposit slip and is waiting for
+ * a human to look at it. That pair is the same rule the detail modal and the
+ * receipt lightbox already use to decide whether to offer the Validate button,
+ * kept in one place so the queue and the button can never disagree about what
+ * is in it.
+ */
+function needsValidation(runner: { status: string; isBankTransfer: boolean }): boolean {
+  return runner.status === 'PENDING' && runner.isBankTransfer;
+}
+
 export default function RegistrantsTable({
   eventId,
   runners: initialRunners,
@@ -123,6 +140,16 @@ export default function RegistrantsTable({
   // of runners nobody has emailed has to be reachable in one click rather than
   // hunted for row by row.
   const [showOnlyUnsentEmail, setShowOnlyUnsentEmail] = useState(false);
+
+  // The payment queue, the same idea in the same shape: the rows a validator
+  // still owes a decision on, in one click.
+  //
+  // It is a filter and not a sort on purpose. Sorting the unpaid orders to the
+  // top would mean a row jumps out from under the cursor the moment it is
+  // validated, which costs the admin their place in the list and the sight of
+  // the green badge appearing where they clicked. The registration order below
+  // stays exactly as it is; this only narrows what is shown.
+  const [showOnlyNeedsValidation, setShowOnlyNeedsValidation] = useState(false);
 
   // Bulk Delete Modal State
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
@@ -606,12 +633,20 @@ export default function RegistrantsTable({
       enableHiding: false,
     },
     {
+      // The registrant's own number, assigned on the server from the
+      // registration order (see regNo in page.tsx) — not this row's position
+      // on screen.
+      //
+      // It used to be the position, and that made it a number about the table
+      // rather than about the person: filtering to the unpaid orders renumbered
+      // everyone 1, 2, 3, so the figure could not be quoted on a phone call or
+      // written on a list. How many rows are in view is a question the footer
+      // already answers ("1-25 of 143").
       id: "index",
       header: "No.",
-      cell: ({ row, table }) => {
-        const index = table.getSortedRowModel().flatRows.indexOf(row);
-        return <span className="text-gray-400 font-mono">{index + 1}</span>;
-      },
+      cell: ({ row }) => (
+        <span className="text-gray-400 font-mono">{row.original.regNo}</span>
+      ),
       enableSorting: false,
       enableHiding: false,
     },
@@ -769,11 +804,21 @@ export default function RegistrantsTable({
    * narrows the same list the export and the pagination read.
    */
   const visibleRunners = useMemo(
-    () => (showOnlyUnsentEmail ? runners.filter(r => r.emailPending) : runners),
-    [runners, showOnlyUnsentEmail]
+    () =>
+      runners.filter(
+        r =>
+          (!showOnlyUnsentEmail || r.emailPending) &&
+          (!showOnlyNeedsValidation || needsValidation(r))
+      ),
+    [runners, showOnlyUnsentEmail, showOnlyNeedsValidation]
   );
 
   const unsentEmailCount = useMemo(() => runners.filter(r => r.emailPending).length, [runners]);
+
+  const needsValidationCount = useMemo(
+    () => runners.filter(needsValidation).length,
+    [runners]
+  );
 
   const table = useReactTable({
     data: visibleRunners,
@@ -1044,7 +1089,29 @@ export default function RegistrantsTable({
           </div>
           
           {/*
-            The backlog, in one click.
+            The payment queue, in one click.
+
+            Validating deposit slips is the job this screen is opened for most
+            days, and before this the only way to gather them was to search
+            "PENDING" and hope nothing else on the row said the same word. It
+            sits first among the chips because it is the first thing asked for,
+            and it wears the amber of the PENDING badge it collects so the
+            colour means the same thing in both places.
+          */}
+          <button
+            onClick={() => setShowOnlyNeedsValidation(!showOnlyNeedsValidation)}
+            disabled={needsValidationCount === 0 && !showOnlyNeedsValidation}
+            className={`btn-filter ${showOnlyNeedsValidation ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' : ''} disabled:opacity-50 disabled:cursor-not-allowed`}
+            title={needsValidationCount === 0
+              ? 'No bank transfer here is waiting on a payment check'
+              : 'Show only the bank transfers waiting for their payment to be checked'}
+          >
+            <Hourglass size={16} /> Needs Validation
+            {needsValidationCount > 0 && <span className="ml-1 px-1 bg-white/10 rounded">{needsValidationCount}</span>}
+          </button>
+
+          {/*
+            The email backlog, in one click.
 
             On a day the daily send quota runs out this is the difference
             between a staff member working a list and hunting a table for the
