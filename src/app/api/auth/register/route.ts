@@ -1,12 +1,20 @@
 import { NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { hashPassword } from '@/lib/auth';
+import { normalizeAccountEmail } from '@/lib/text-case';
 
 export async function POST(request: Request) {
   try {
     const { email, password, name } = await request.json();
 
-    if (!email || !password || !name) {
+    // Stored lowercased, and the duplicate check runs against the same value.
+    // Without it two accounts could exist for one address differing only in
+    // case, and the unique index would not have stopped either of them --
+    // whichever one the organizer then failed to type exactly would look, to
+    // them, like a password that had stopped working.
+    const accountEmail = normalizeAccountEmail(email);
+
+    if (!accountEmail || !password || !name) {
       return NextResponse.json(
         { error: 'Email, password, and name are required' },
         { status: 400 }
@@ -14,7 +22,7 @@ export async function POST(request: Request) {
     }
 
     const existingUser = await db.organizer.findUnique({
-      where: { email },
+      where: { email: accountEmail },
     });
 
     if (existingUser) {
@@ -28,7 +36,7 @@ export async function POST(request: Request) {
 
     const newOrganizer = await db.organizer.create({
       data: {
-        email,
+        email: accountEmail,
         name,
         password: hashedPassword,
         status: 'PENDING', // Super Admin must approve this

@@ -43,6 +43,10 @@ const COLUMNS: { heading: string; links: FooterLink[] }[] = [
   {
     heading: 'Legal & Support',
     links: [
+      // Above Contact Us on purpose: a form somebody can fill in here is a
+      // lower bar than composing an email, and most of what people want to
+      // tell us about the app fits in it.
+      { label: 'Send Feedback', href: '/feedback' },
       { label: 'Terms of Service', href: '/terms' },
       { label: 'Privacy Policy', href: '/privacy' },
       { label: 'Contact Us', href: SUPPORT_MAILTO, external: true },

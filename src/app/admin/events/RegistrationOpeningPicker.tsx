@@ -91,10 +91,12 @@ export default function RegistrationOpeningPicker({
                     option.scheduled
                       ? // Switching to a schedule with nothing in it yet starts
                         // at a time of day worth announcing rather than at
-                        // midnight — see DEFAULT_OPENING_TIME. An organizer
-                        // coming back to a draft they already filled in keeps
-                        // what they typed.
-                        { day: value.day, time: value.time || DEFAULT_OPENING_TIME }
+                        // midnight — see DEFAULT_OPENING_TIME. The date stays
+                        // empty on purpose: it is the organizer's to pick, and
+                        // the fields this reveals are where they pick it. An
+                        // organizer coming back to a draft they already filled
+                        // in keeps what they typed.
+                        { scheduled: true, day: value.day, time: value.time || DEFAULT_OPENING_TIME }
                       : OPENS_IMMEDIATELY,
                   )
                 }

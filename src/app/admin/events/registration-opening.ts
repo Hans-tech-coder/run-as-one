@@ -10,18 +10,26 @@ import { eventInstant, eventInstantParts, formatEventInstant } from '@/lib/event
  * converted between, so the create form, the edit form and the events table's
  * scheduling modal cannot drift into three slightly different answers.
  *
- * An empty day means "open immediately", which is what most races are: the
- * event is registrable the moment it is published, and the column stays null.
+ * `scheduled` is carried rather than worked out from whether `day` has
+ * anything in it. That shortcut is what broke the picker the first time: the
+ * date field only appears once the organizer has chosen to schedule, so
+ * inferring the choice from the date meant choosing "Schedule The Opening"
+ * changed nothing, the fields never appeared, and the card could never be
+ * selected. The choice and the date it needs are two different facts, and an
+ * organizer who has decided to schedule but has not typed the date yet is a
+ * real, nameable state — it is the one `openingProblem` exists to report.
  */
 export type OpeningDraft = {
-  /** YYYY-MM-DD in Manila, or '' for a race that opens as soon as it is published. */
+  /** Whether sign-ups are being held until a date, rather than opening at once. */
+  scheduled: boolean;
+  /** YYYY-MM-DD in Manila. Only meaningful while `scheduled`. */
   day: string;
-  /** HH:MM in Manila. Only meaningful alongside a day. */
+  /** HH:MM in Manila. Only meaningful while `scheduled`. */
   time: string;
 };
 
 /** A race that takes sign-ups from the moment it is published. */
-export const OPENS_IMMEDIATELY: OpeningDraft = { day: '', time: '' };
+export const OPENS_IMMEDIATELY: OpeningDraft = { scheduled: false, day: '', time: '' };
 
 /**
  * The time of day a newly scheduled opening starts at unless the organizer
@@ -33,14 +41,14 @@ export const DEFAULT_OPENING_TIME = '08:00';
 
 /** Whether this draft is holding sign-ups back rather than opening at once. */
 export function isScheduledOpening(draft: OpeningDraft): boolean {
-  return draft.day.trim() !== '';
+  return draft.scheduled;
 }
 
-/** The stored instant taken apart into the two fields that produced it. */
+/** The stored instant taken apart into the fields that produced it. */
 export function openingDraft(value: Date | string | null | undefined): OpeningDraft {
   if (!value) return OPENS_IMMEDIATELY;
   const { day, time } = eventInstantParts(value);
-  return day ? { day, time } : OPENS_IMMEDIATELY;
+  return day ? { scheduled: true, day, time } : OPENS_IMMEDIATELY;
 }
 
 /**
@@ -59,9 +67,9 @@ export function openingInstantISO(draft: OpeningDraft): string | null {
  * Why this draft cannot be saved, or null when it can.
  *
  * Only one thing can be wrong — the organizer chose to schedule the opening
- * and then did not give a usable date — and the sentence says exactly that
- * rather than reporting a form-wide failure. The time is allowed to be blank;
- * that is a real answer, and it means midnight.
+ * and then left the date empty or unreadable — and the sentence says exactly
+ * that rather than reporting a form-wide failure. The time is allowed to be
+ * blank; that is a real answer, and it means midnight.
  */
 export function openingProblem(draft: OpeningDraft): string | null {
   if (!isScheduledOpening(draft)) return null;

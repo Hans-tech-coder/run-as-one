@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { createToken, getAuthCookie, setAuthCookie } from '@/lib/auth';
+import { normalizeAccountEmail } from '@/lib/text-case';
 
 /**
  * The signed-in organizer editing their own name and email.
@@ -18,10 +19,14 @@ export async function PATCH(request: Request) {
 
     const body = await request.json();
     const name = typeof body.name === 'string' ? body.name.trim() : '';
-    // Trimmed but not lower-cased: login matches the stored address exactly,
-    // so folding the case here would lock out anyone who registered with a
-    // capital in their address and still types it that way.
-    const email = typeof body.email === 'string' ? body.email.trim() : '';
+    // Lower-cased, and it has to be. This used to be trimmed only, reasoning
+    // that login matched the stored address exactly and folding the case would
+    // lock out anyone who had registered with a capital. That was true right up
+    // until login started lowercasing its lookup -- which inverts it: a capital
+    // saved here would now produce a row login can never find, and the organizer
+    // would be locked out by the screen they used to update their own profile.
+    // One helper on all three routes is what keeps them from disagreeing again.
+    const email = normalizeAccountEmail(body.email);
 
     // Keyed by field so the form can put each message under the input it is
     // about, rather than showing one catch-all line above the whole form.

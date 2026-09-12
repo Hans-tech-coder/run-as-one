@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Users, Flag, LogOut, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Users, Flag, MessageSquare, LogOut, Menu, X } from 'lucide-react';
 import { RunAsOneLogo } from '@/components/RunAsOneLogo';
 import LinkPending from '@/components/ui/LinkPending';
 import type { SignedInUser } from '@/lib/signed-in-user';
@@ -29,6 +29,7 @@ export default function SuperAdminShell({
     { name: 'Dashboard', path: '/superadmin', icon: <LayoutDashboard size={20} /> },
     { name: 'Organizers', path: '/superadmin/organizers', icon: <Users size={20} /> },
     { name: 'Communities', path: '/superadmin/communities', icon: <Flag size={20} /> },
+    { name: 'Feedback', path: '/superadmin/feedback', icon: <MessageSquare size={20} /> },
   ];
 
   return (

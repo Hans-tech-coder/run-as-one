@@ -523,3 +523,59 @@ model RaceResult {
 
   @@unique([eventId, bibNumber])
 }
+
+/// One thing a person told us about the app itself.
+///
+/// Everything else in this schema is about a race. This is the one table that
+/// is about the software: a runner who could not get a page to work, an
+/// organizer who wants a column the table does not have, anybody with an idea.
+/// Nothing in the product reads it — it exists so the platform owner can find
+/// out what is wrong without waiting for somebody to send an email, which is
+/// the channel it replaced and the reason most of this never reached us.
+///
+/// It deliberately has no relation to Organizer or Registration. Most feedback
+/// arrives from a signed-out runner on a public page, so a foreign key would be
+/// null on the majority of rows and would tempt a later reader into thinking a
+/// null meant something. Who sent it is the optional `name`/`email` below, kept
+/// as the free text they typed.
+///
+/// Storage: the message is capped at MAX_FEEDBACK_MESSAGE characters and the
+/// user agent is truncated on the way in, so a row is under 3 KB in the worst
+/// case. Even a thousand of them is a rounding error against the 0.5 GB tier.
+model Feedback {
+  id        String   @id @default(cuid())
+  /// "ISSUE" | "SUGGESTION" | "FEATURE" -- uppercase like every other coded
+  /// column, and guarded by asFeedbackKind at the API door. It is what the
+  /// sender chose the form's purpose to be, not a category we inferred.
+  kind      String
+  /// What they actually wrote, exactly as they wrote it. Prose is the one kind
+  /// of text this app does not uppercase: the registrant rule in text-case.ts
+  /// exists so a name sorts and de-dupes predictably, and a shouted paragraph
+  /// is simply harder to read.
+  message   String
+  /// Who sent it, both optional on purpose. Demanding a name and an address
+  /// before someone can report a broken page is how a feedback form ends up
+  /// collecting nothing; an anonymous report about a checkout that failed is
+  /// still worth more than the silence.
+  name      String?
+  email     String?
+  /// The page they were on when they opened the form, when the entry point
+  /// could say. An issue report that does not say where it happened usually
+  /// costs a round trip to find out, and by then the person has moved on.
+  /// Validated as a same-site path before it is stored -- it arrives in a
+  /// query string, so it is somebody else's text until it is checked.
+  pagePath  String?
+  /// The browser, truncated. "It does not work on my phone" is unactionable;
+  /// the same sentence with a Safari build number is a bug we can chase.
+  userAgent String?
+  /// "NEW" | "REVIEWED" -- the platform owner's own triage mark, so the inbox
+  /// can show what has not been read yet. Nothing the sender ever sees, and
+  /// deliberately not a workflow: two states are enough to keep a queue.
+  status    String   @default("NEW")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// The inbox reads newest-first and filters by triage state, which is the
+  /// only query this table has.
+  @@index([status, createdAt])
+}

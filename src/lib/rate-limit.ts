@@ -36,6 +36,22 @@ export interface RateLimitRule {
 export const PROMO_LOOKUP_RULE: RateLimitRule = { limit: 20, windowMs: 60_000 };
 
 /**
+ * The public feedback form: 5 messages every 10 minutes from one address.
+ *
+ * This one writes a row rather than reading one, so the thing being limited is
+ * a table filling with junk rather than a code being guessed. A person sends
+ * one message and leaves; five is room for somebody who thought of a second
+ * thing, and for a household or a race-day tent sharing one address.
+ *
+ * A refusal here is allowed to say what it is — see the route's own note. The
+ * promo lookup has to disguise its refusals because a distinct answer would
+ * teach a guesser something; nothing about "you have sent five messages" is
+ * worth hiding, and a real person who hits it needs to know their sixth
+ * message did not simply vanish.
+ */
+export const FEEDBACK_RULE: RateLimitRule = { limit: 5, windowMs: 10 * 60_000 };
+
+/**
  * How many callers we will remember at once.
  *
  * A map keyed by address grows with every new address, and a serverless

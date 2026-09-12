@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   ChevronRight,
@@ -14,7 +15,9 @@ import {
   Calendar,
   MapPin,
   Clock,
+  MessageSquareHeart,
 } from "lucide-react";
+import LinkPendingIcon from "@/components/ui/LinkPendingIcon";
 import { formatPesos } from "@/lib/money";
 import { PICKUP_FALLBACK, pickupDetails } from "@/lib/pickup";
 import {
@@ -882,12 +885,39 @@ export default function RegistrationWizardClient({
                   </div>
                 )}
 
-              <button
-                className="btn-gradient w-full py-4 text-lg font-bold shadow-xl shadow-accent-orange/20"
-                onClick={() => router.push("/")}
-              >
-                Return to Homepage
-              </button>
+              {/* Two ways out, as one set.
+
+                  Home is what most people want; the second is the one moment
+                  we know for certain that somebody has just used this app end
+                  to end, which makes it the best place on the site to ask how
+                  it went. It carries `?from=` so a report about the checkout
+                  arrives saying which checkout.
+
+                  The pair is sized by .btn-gradient and .btn-secondary
+                  themselves — only layout utilities here (§9). The primary
+                  used to carry py-4 and text-lg of its own, which is exactly
+                  the drift .btn-secondary was written to stop: a quiet button
+                  matching the class beside a loud one that does not would read
+                  as two controls from two different sites. */}
+              <div className="flex w-full flex-col gap-3 sm:flex-row">
+                <button
+                  className="btn-gradient w-full shadow-xl shadow-accent-orange/20 sm:flex-1"
+                  onClick={() => router.push("/")}
+                >
+                  Return to Homepage
+                </button>
+                <Link
+                  href={`/feedback?from=${encodeURIComponent(
+                    `/events/${event.slug}/register`,
+                  )}`}
+                  className="btn-secondary w-full no-underline sm:flex-1"
+                >
+                  <LinkPendingIcon>
+                    <MessageSquareHeart size={18} aria-hidden="true" className="shrink-0" />
+                  </LinkPendingIcon>
+                  <span>Share Feedback</span>
+                </Link>
+              </div>
             </div>
           </div>
         </div>

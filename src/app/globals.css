@@ -403,6 +403,105 @@ input[type="datetime-local"]:focus::-webkit-calendar-picker-indicator {
   }
 }
 
+
+/* One form field on the public side.
+
+   .input-group is a label, a control and whatever small print goes under it,
+   stacked. It was written for the registration wizard and lived in that
+   folder's stylesheet until the feedback form needed the same controls — at
+   which point the choice was a second copy of these declarations or one
+   definition both surfaces read, and a runner should not meet two different
+   text boxes on one site. The wizard's own layout (.form-grid,
+   .logistics-options, the step furniture) stays in RegistrationWizard.css;
+   only the field itself is here.
+
+   No font-size is set on purpose: the control inherits the body's 16px, which
+   is exactly what the iOS zoom rule wants (§9 — Safari zooms the page into any
+   field under 16px and leaves it zoomed). A caller that shrinks one of these
+   on a phone is reintroducing that bug.
+
+   The invalid state is driven off aria-invalid rather than a class so the
+   colour a person sees and the state a screen reader announces cannot drift
+   apart — one attribute sets both. */
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  /* As a grid item this defaults to min-width:auto, which floors the track at
+     the input's intrinsic ~20-character width. On a phone that held every
+     field at 334px inside a 199px panel, and .form-panel's overflow:hidden
+     quietly sliced the right-hand side off every label, hint and control. */
+  min-width: 0;
+}
+
+.input-group.full-width {
+  grid-column: 1 / -1;
+}
+
+.input-group label {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.input-group input,
+.input-group select,
+.input-group textarea {
+  /* Same reason as .input-group's min-width: a bare input never shrinks below
+     its default size unless told to. */
+  width: 100%;
+  min-width: 0;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 12px 16px; /* 8dp rhythm */
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  transition: all 0.2s ease;
+  min-height: 48px; /* Minimum touch target 44px */
+}
+
+.input-group input:focus,
+.input-group select:focus,
+.input-group textarea:focus {
+  outline: none;
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px rgba(43, 192, 255, 0.2);
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.input-group input[type="date"] {
+  color-scheme: dark;
+}
+
+/* Invalid state.
+   Driven off aria-invalid rather than a class so the visual and the thing a
+   screen reader announces can never drift apart — one attribute sets both. */
+.input-group input[aria-invalid="true"],
+.input-group select[aria-invalid="true"],
+.input-group textarea[aria-invalid="true"],
+.input-group .control-shell[aria-invalid="true"] {
+  border-color: rgba(239, 68, 68, 0.7);
+  background: rgba(239, 68, 68, 0.06);
+}
+
+.input-group input[aria-invalid="true"]:focus,
+.input-group select[aria-invalid="true"]:focus,
+.input-group textarea[aria-invalid="true"]:focus,
+.input-group .control-shell[aria-invalid="true"]:focus-within {
+  border-color: rgba(239, 68, 68, 0.9);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+}
+
+.input-group select {
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 1em;
+  padding-right: 2.5rem;
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;
@@ -453,6 +552,9 @@ input[type="datetime-local"]:focus::-webkit-calendar-picker-indicator {
 .t-stagger-line--2 { transition-delay: calc(var(--stagger-stagger) * 1); }
 .t-stagger-line--3 { transition-delay: calc(var(--stagger-stagger) * 2); }
 .t-stagger-line--4 { transition-delay: calc(var(--stagger-stagger) * 3); }
+/* The feedback form is the first surface with five rows to reveal. The ladder
+   is arithmetic, so it extends by adding a step rather than by re-tuning. */
+.t-stagger-line--5 { transition-delay: calc(var(--stagger-stagger) * 4); }
 
 .t-stagger.is-shown .t-stagger-line {
   opacity: 1;

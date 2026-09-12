@@ -97,3 +97,40 @@ export function upperCaseForStorage(value: unknown): string {
 export function optionalUpperCaseForStorage(value: unknown): string | null {
   return upperCaseForStorage(value) || null;
 }
+
+/**
+ * An **account** email, normalised for storage and for lookup.
+ *
+ * This is the one email in the app that is lowercased, and the distinction is
+ * worth stating because the module's own rule above says never to touch an
+ * email at all.
+ *
+ * That rule is about a **runner's** email. It is contact data on an order: the
+ * local part of an address is case-sensitive on some mail servers, we send
+ * receipts to it, and it is never used to find anything, so the safe thing is to
+ * store exactly what was typed.
+ *
+ * An organizer's email is not contact data, it is the **identifier they sign in
+ * with** — the unique key `auth/login` looks the account up by. Postgres
+ * compares text exactly, so without this an address typed `Cresendo@gmail.com`
+ * finds no row and the login answers "Invalid credentials" for a password that
+ * is perfectly correct. A browser autofill or a phone keyboard capitalising the
+ * first letter was enough to lock somebody out of their own account, and the
+ * message gave them no way to work out why. The same gap on `auth/register`
+ * meant two accounts could exist for one address, differing only in case, and
+ * the unique index would not have stopped it.
+ *
+ * Lowercasing is the standard resolution and it is applied on the way **in**, so
+ * the stored value and every lookup agree by construction rather than by every
+ * call site remembering. Domain names are case-insensitive by specification; the
+ * local part being treated the same way is a convention every mail provider we
+ * are likely to meet already follows, and the alternative — an account nobody
+ * can sign in to — is worse than the theoretical address it inconveniences.
+ *
+ * Anything that is not a string becomes `''`, like the helpers above: this runs
+ * at the API door on a body we did not build, and rejecting bad input is the
+ * caller's job.
+ */
+export function normalizeAccountEmail(value: unknown): string {
+  return typeof value === 'string' ? value.trim().toLowerCase() : '';
+}

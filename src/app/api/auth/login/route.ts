@@ -1,12 +1,20 @@
 import { NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { verifyPassword, createToken, setAuthCookie } from '@/lib/auth';
+import { normalizeAccountEmail } from '@/lib/text-case';
 
 export async function POST(request: Request) {
   try {
     const { email, password } = await request.json();
 
-    if (!email || !password) {
+    // Lowercased before the lookup, never as typed: Postgres compares text
+    // exactly, so one capital from a browser autofill used to find no row and
+    // answer "Invalid credentials" for a password that was perfectly correct.
+    // See normalizeAccountEmail in lib/text-case.ts for why this address is the
+    // one email in the app that gets cased.
+    const signInEmail = normalizeAccountEmail(email);
+
+    if (!signInEmail || !password) {
       return NextResponse.json(
         { error: 'Email and password are required' },
         { status: 400 }
@@ -14,7 +22,7 @@ export async function POST(request: Request) {
     }
 
     const organizer = await db.organizer.findUnique({
-      where: { email },
+      where: { email: signInEmail },
     });
 
     if (!organizer) {

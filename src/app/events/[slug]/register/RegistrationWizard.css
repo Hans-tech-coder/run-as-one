@@ -234,89 +234,19 @@
   gap: 1.5rem;
 }
 
-.input-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  /* As a grid item this defaults to min-width:auto, which floors the track at
-     the input's intrinsic ~20-character width. On a phone that held every
-     field at 334px inside a 199px panel, and .form-panel's overflow:hidden
-     quietly sliced the right-hand side off every label, hint and control. */
-  min-width: 0;
-}
-
+/* The wizard's own two-column tracks, for the same reason .input-group carries
+   min-width: 0 — a grid item floors at its content's intrinsic width unless it
+   is told otherwise, and an input's is about twenty characters. */
 .form-grid > *,
 .logistics-options > * {
   min-width: 0;
 }
 
-.input-group.full-width {
-  grid-column: 1 / -1;
-}
-
-.input-group label {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-
-.input-group input,
-.input-group select,
-.input-group textarea {
-  /* Same reason as .input-group's min-width: a bare input never shrinks below
-     its default size unless told to. */
-  width: 100%;
-  min-width: 0;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  padding: 12px 16px; /* 8dp rhythm */
-  color: var(--text-primary);
-  font-family: var(--font-body);
-  transition: all 0.2s ease;
-  min-height: 48px; /* Minimum touch target 44px */
-}
-
-.input-group input:focus,
-.input-group select:focus,
-.input-group textarea:focus {
-  outline: none;
-  border-color: var(--accent-blue);
-  box-shadow: 0 0 0 3px rgba(43, 192, 255, 0.2);
-  background: rgba(0, 0, 0, 0.4);
-}
-
-.input-group input[type="date"] {
-  color-scheme: dark;
-}
-
-/* Invalid state.
-   Driven off aria-invalid rather than a class so the visual and the thing a
-   screen reader announces can never drift apart — one attribute sets both. */
-.input-group input[aria-invalid="true"],
-.input-group select[aria-invalid="true"],
-.input-group textarea[aria-invalid="true"],
-.input-group .control-shell[aria-invalid="true"] {
-  border-color: rgba(239, 68, 68, 0.7);
-  background: rgba(239, 68, 68, 0.06);
-}
-
-.input-group input[aria-invalid="true"]:focus,
-.input-group select[aria-invalid="true"]:focus,
-.input-group textarea[aria-invalid="true"]:focus,
-.input-group .control-shell[aria-invalid="true"]:focus-within {
-  border-color: rgba(239, 68, 68, 0.9);
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
-}
-
-.input-group select {
-  appearance: none;
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-  background-repeat: no-repeat;
-  background-position: right 1rem center;
-  background-size: 1em;
-  padding-right: 2.5rem;
-}
+/* The fields themselves — .input-group and everything it dresses — moved to
+   globals.css when the feedback form needed the same controls. They are the
+   public side's one form-field style now, so the wizard and /feedback cannot
+   drift into two looks for the same gesture. Everything below is layout and
+   surfaces that belong to this wizard alone. */
 
 /* Logistics */
 .logistics-options {
