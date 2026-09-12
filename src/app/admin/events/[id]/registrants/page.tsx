@@ -6,6 +6,7 @@ import { getAuthCookie } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import RegistrantsTable from './RegistrantsTable';
 import { runnerRef } from '@/lib/order-ref';
+import { isPdfProof } from '@/lib/uploads';
 import { EMAIL_KIND_LABELS, outstandingEmail } from '@/lib/email-delivery';
 import {
   LOGISTICS_METHODS,
@@ -128,6 +129,10 @@ export default async function RegistrantsPage({
           asLogisticsMethod(reg.logisticsMethod) === LOGISTICS_METHODS.DELIVERY,
         isBankTransfer: isBankTransfer(reg.paymentMethod),
         proofOfPayment: reg.proofOfPayment,
+        // Whether that proof is a PDF rather than a photo. Decided here, off
+        // the stored pathname, because the module that knows the rule imports
+        // the Blob SDK and the table is a client island.
+        proofIsPdf: isPdfProof(reg.proofOfPayment),
         transactionNumber: reg.transactionNumber,
         consentGiven: reg.consentGiven,
         consentGivenAt: reg.consentGivenAt,

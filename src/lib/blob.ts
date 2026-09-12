@@ -1,35 +1,24 @@
 import { put, issueSignedToken, presignUrl } from '@vercel/blob';
+import {
+  MAX_UPLOAD_BYTES,
+  allowedTypes,
+  extensionForType,
+  listUploadTypes,
+  type UploadKind,
+} from './uploads';
 
 /**
  * All file uploads go through this module. Nothing in the app writes to the
  * local filesystem: Vercel runs on a read-only disk, so a `writeFile` that
  * works in `next dev` would 500 in production.
- */
-
-/**
- * 4 MB. Files are uploaded through our own route, and a Vercel function's
- * request body is capped at 4.5 MB — anything above that is rejected by the
- * platform before our code runs, with a much less helpful error. A phone photo
- * of a GCash receipt and an event banner both fit comfortably under this.
  *
- * If large certificate templates ever need to go through, the fix is a client
- * upload (browser straight to blob storage), not a bigger number here.
+ * *What* may be uploaded lives in `uploads.ts` instead of here, because the
+ * file inputs have to advertise the same list and a client component cannot
+ * import this file — it pulls in the Blob SDK.
  */
-export const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
 
-const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-
-/**
- * What each kind of upload accepts. Certificate templates also allow PDF —
- * ECertificateGenerator loads the template with PDFDocument.load() first and
- * only falls back to embedding it as an image.
- */
-const ALLOWED_TYPES = {
-  image: new Set(IMAGE_TYPES),
-  template: new Set([...IMAGE_TYPES, 'application/pdf']),
-} as const;
-
-export type UploadKind = keyof typeof ALLOWED_TYPES;
+export { MAX_UPLOAD_BYTES };
+export type { UploadKind };
 
 /** Bad input from the caller. Routes turn this into a 400, not a 500. */
 export class UploadError extends Error {}
@@ -74,15 +63,14 @@ export function storeToken(store: keyof typeof TOKEN_ENV): string {
  * auth checks in the routes.
  */
 export function assertUploadable(file: unknown, kind: UploadKind = 'image'): asserts file is File {
-  const allowed = ALLOWED_TYPES[kind];
+  const allowed = allowedTypes(kind);
 
   if (!(file instanceof File) || file.size === 0) {
     throw new UploadError('No file was uploaded.');
   }
-  if (!allowed.has(file.type)) {
-    const readable = [...allowed].map(t => t.split('/')[1].toUpperCase()).join(', ');
+  if (!allowed.includes(file.type)) {
     throw new UploadError(
-      `Unsupported file type "${file.type || 'unknown'}". Allowed: ${readable}.`
+      `Unsupported file type "${file.type || 'unknown'}". Allowed: ${listUploadTypes(kind)}.`
     );
   }
   if (file.size > MAX_UPLOAD_BYTES) {
@@ -116,15 +104,33 @@ export async function uploadPublicFile(
 }
 
 /**
- * Proof of payment. These are screenshots of bank and e-wallet receipts —
- * names, amounts, reference numbers — so they are private blobs, readable only
- * through a short-lived signed URL. Returns the pathname, not a URL, because a
- * private blob has no permanently valid address; see signedProofUrl().
+ * Turns whatever the phone called the file into a name we can trust.
+ *
+ * Two things matter. The extension is taken from the content type, not from
+ * the name — the admin viewer reads the stored pathname to decide between an
+ * `<img>` and a PDF frame, and a receipt saved as `slip` or `slip.jpg` by a
+ * banking app that then hands over a PDF would otherwise be drawn as a broken
+ * image. And any directory part is dropped, so a crafted name cannot scatter
+ * files around the private store.
+ */
+function proofFileName(file: File): string {
+  const base =
+    file.name.split(/[\\/]/).pop()?.replace(/\.[^.]*$/, '').trim() || 'proof';
+
+  return `${base}.${extensionForType(file.type)}`;
+}
+
+/**
+ * Proof of payment. These are screenshots of bank and e-wallet receipts, or
+ * the PDF confirmation a bank emails — names, amounts, reference numbers — so
+ * they are private blobs, readable only through a short-lived signed URL.
+ * Returns the pathname, not a URL, because a private blob has no permanently
+ * valid address; see signedProofUrl().
  */
 export async function uploadPrivateProof(file: unknown): Promise<string> {
-  assertUploadable(file, 'image');
+  assertUploadable(file, 'proof');
 
-  const blob = await put(`proofs/${file.name}`, file, {
+  const blob = await put(`proofs/${proofFileName(file)}`, file, {
     access: 'private',
     addRandomSuffix: true,
     contentType: file.type,

@@ -4,9 +4,10 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   Search, Filter, Download, Eye, X, Trash2,
   ChevronLeft, ChevronRight, ChevronFirst, ChevronLast, Columns, ChevronUp, ChevronDown, CheckCircle, Check,
-  MessageSquare, MessageSquareText, Mail, MailWarning, Copy, ExternalLink
+  MessageSquare, MessageSquareText, Mail, MailWarning, Copy, ExternalLink, Maximize2, FileText
 } from 'lucide-react';
 import RegistrantActionsMenu from './RegistrantActionsMenu';
+import ProofLightbox from './ProofLightbox';
 import { useAlert } from '@/components/ui/AlertProvider';
 import {
   Table,
@@ -79,6 +80,12 @@ export default function RegistrantsTable({
   const [runners, setRunners] = useState(initialRunners);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [viewingRunner, setViewingRunner] = useState<any | null>(null);
+
+  // The proof of payment, full-screen. It is the runner whose receipt is
+  // open rather than a boolean, because the lightbox prints the order's own
+  // numbers under the image and can validate it from there — the detail
+  // modal behind it stays exactly where it was.
+  const [proofRunner, setProofRunner] = useState<any | null>(null);
 
   // Edit Modal State
   const [editingRunner, setEditingRunner] = useState<any | null>(null);
@@ -170,6 +177,22 @@ export default function RegistrantsTable({
     } finally {
       setUpdatingId(null);
     }
+  };
+
+  /**
+   * Marks a bank transfer paid from either door — the detail modal's footer
+   * or the receipt lightbox — and moves whichever panel is open with it, so
+   * a validated order is never left sitting in front of somebody still
+   * saying PENDING.
+   */
+  const validatePayment = (runner: any) => {
+    handleStatusChange(runner.registrationId, 'PAID');
+    const paid = (current: any) =>
+      current && current.registrationId === runner.registrationId
+        ? { ...current, status: 'PAID' }
+        : current;
+    setViewingRunner(paid);
+    setProofRunner(paid);
   };
 
   const runnersOnOrder = (runner: any) =>
@@ -1408,24 +1431,60 @@ export default function RegistrantsTable({
 
                 {viewingRunner.isBankTransfer && (
                   <div className="mt-6">
-                    <p className="text-gray-500 text-sm mb-2">Proof of Payment</p>
+                    <div className="flex items-center justify-between gap-4 mb-2">
+                      <p className="text-gray-500 text-sm m-0">Proof of Payment</p>
+                      {viewingRunner.proofOfPayment && (
+                        <button
+                          onClick={() => setProofRunner(viewingRunner)}
+                          className="text-xs font-medium text-accent-blue hover:underline bg-transparent border-none cursor-pointer p-0"
+                        >
+                          View fullscreen
+                        </button>
+                      )}
+                    </div>
                     {viewingRunner.proofOfPayment ? (
-                      <div className="rounded-lg overflow-hidden border border-white/10 max-h-[300px] flex items-center justify-center bg-black/50">
+                      // The thumbnail is the second door to the same viewer.
+                      // A receipt this size says a slip was uploaded; nobody
+                      // reads a reference number off it, so clicking it is
+                      // the first thing an organizer tries.
+                      <button
+                        type="button"
+                        onClick={() => setProofRunner(viewingRunner)}
+                        aria-label="Open the proof of payment full screen"
+                        className="group relative w-full rounded-lg overflow-hidden border border-white/10 max-h-[300px] flex items-center justify-center bg-black/50 cursor-zoom-in p-0 hover:border-white/30 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                      >
                         {/*
                           Receipts are private blobs — there is no permanently valid
                           URL for one. This route checks that the logged-in admin owns
                           the event, then redirects to a short-lived signed URL.
+
+                          A bank-emailed receipt arrives as a PDF, and the first page
+                          of one is not something an <img> can draw — it would render
+                          as a broken picture and read as a lost upload. That one gets
+                          a card saying what it is instead; the viewer behind it
+                          renders the document itself.
                         */}
-                        <img
-                          src={`/api/admin/proof/${viewingRunner.registrationId}`}
-                          alt="Proof of Payment"
-                          className="max-w-full max-h-[300px] object-contain"
-                        />
-                      </div>
+                        {viewingRunner.proofIsPdf ? (
+                          <span className="flex flex-col items-center gap-2 py-10 text-gray-400">
+                            <FileText size={32} className="text-accent-blue" aria-hidden="true" />
+                            <span className="text-sm font-medium text-white">PDF receipt</span>
+                            <span className="text-xs">Click to read it full screen</span>
+                          </span>
+                        ) : (
+                          <img
+                            src={`/api/admin/proof/${viewingRunner.registrationId}`}
+                            alt="Proof of Payment"
+                            className="max-w-full max-h-[300px] object-contain"
+                          />
+                        )}
+                        <span className="absolute inset-0 flex items-center justify-center gap-2 bg-black/60 text-sm font-medium text-white opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity">
+                          <Maximize2 size={16} aria-hidden="true" /> Click to enlarge
+                        </span>
+                      </button>
                     ) : (
                       <div className="border border-dashed border-white/20 rounded-lg p-8 flex flex-col items-center justify-center text-gray-500">
                         <Eye size={24} className="mb-2 opacity-50" />
-                        <p className="text-sm">No image attached yet</p>
+                        <p className="text-sm">No proof attached yet</p>
                       </div>
                     )}
                   </div>
@@ -1435,14 +1494,14 @@ export default function RegistrantsTable({
             
             <div className="p-6 border-t border-white/10 flex justify-between items-center bg-black/20">
               <div>
+                {/* The dashboard's own action button, not the public site's
+                    gradient — and the one in the receipt lightbox is now its
+                    peer, so the two have to read alike. */}
                 {viewingRunner.status === 'PENDING' && viewingRunner.isBankTransfer && (
-                  <button 
-                    onClick={() => {
-                      handleStatusChange(viewingRunner.registrationId, 'PAID');
-                      setViewingRunner({ ...viewingRunner, status: 'PAID' });
-                    }}
+                  <button
+                    onClick={() => validatePayment(viewingRunner)}
                     disabled={updatingId === viewingRunner.registrationId}
-                    className="flex items-center gap-2 bg-gradient-to-r from-[#FF6B00] to-[#007AFF] text-white px-4 py-2 rounded-md font-medium text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
+                    className="btn-light"
                   >
                     <CheckCircle className="w-4 h-4" />
                     {updatingId === viewingRunner.registrationId ? 'Validating...' : 'Validate Payment'}
@@ -1458,6 +1517,24 @@ export default function RegistrantsTable({
             </div>
           </div>
         </div>
+      )}
+
+      {/* The receipt, full screen. Sits above the detail modal rather than
+          replacing it: the organizer came from that panel and goes straight
+          back to it. */}
+      {proofRunner && (
+        <ProofLightbox
+          registrationId={proofRunner.registrationId}
+          orderRef={proofRunner.orderRef}
+          transactionNumber={proofRunner.transactionNumber}
+          totalAmount={proofRunner.totalAmount}
+          status={proofRunner.status}
+          isPdf={proofRunner.proofIsPdf}
+          canValidate={proofRunner.status === 'PENDING' && proofRunner.isBankTransfer}
+          isValidating={updatingId === proofRunner.registrationId}
+          onValidate={() => validatePayment(proofRunner)}
+          onClose={() => setProofRunner(null)}
+        />
       )}
 
       {/* Edit Modal */}

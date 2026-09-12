@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   UploadCloud,
   FileImage,
+  FileText,
   X,
   Calendar,
   MapPin,
@@ -19,6 +20,12 @@ import {
 } from "lucide-react";
 import LinkPendingIcon from "@/components/ui/LinkPendingIcon";
 import { formatPesos } from "@/lib/money";
+import {
+  MAX_UPLOAD_MB,
+  PDF_TYPE,
+  acceptAttribute,
+  describeUploadTypes,
+} from "@/lib/uploads";
 import { PICKUP_FALLBACK, pickupDetails } from "@/lib/pickup";
 import {
   deliveryTiers,
@@ -1882,7 +1889,7 @@ export default function RegistrationWizardClient({
                 >
                   <input
                     type="file"
-                    accept="image/png, image/jpeg, image/jpg, application/pdf"
+                    accept={acceptAttribute("proof")}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
                     onChange={handleFileChange}
                     id="proof-upload"
@@ -1898,7 +1905,7 @@ export default function RegistrationWizardClient({
                       or click to browse from your device
                     </div>
                     <div className="text-xs text-secondary/50 mt-2 bg-black/40 px-4 py-2 rounded-full border border-white/5">
-                      Supports JPG, PNG, PDF (Max 5MB)
+                      Supports {describeUploadTypes("proof")} (Max {MAX_UPLOAD_MB}MB)
                     </div>
                   </div>
                 </div>
@@ -1906,10 +1913,13 @@ export default function RegistrationWizardClient({
                 {proofFile && (
                   <div className="file-preview animate-fade-in p-4 bg-white/5 border border-white/10 rounded-[16px] mt-4 flex items-center justify-between">
                     <div className="file-preview-meta flex items-center gap-3 min-w-0">
-                      <FileImage
-                        size={24}
-                        className="text-accent-blue shrink-0"
-                      />
+                      {/* A PDF is not a picture, and a picture icon beside one
+                          reads as a thumbnail that failed to draw. */}
+                      {proofFile.type === PDF_TYPE ? (
+                        <FileText size={24} className="text-accent-blue shrink-0" />
+                      ) : (
+                        <FileImage size={24} className="text-accent-blue shrink-0" />
+                      )}
                       <div className="file-preview-meta min-w-0">
                         <div
                           className="file-preview-name font-bold text-white text-sm"

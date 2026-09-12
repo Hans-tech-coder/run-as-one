@@ -5,6 +5,7 @@ import { ArrowLeft, Save, X, AlertCircle, CheckCircle, UploadCloud, Trash } from
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toPesos } from '@/lib/money';
+import { acceptAttribute } from '@/lib/uploads';
 import { formatInclusions } from '@/lib/inclusions';
 import RegistrationFormPicker from '../../RegistrationFormPicker';
 import RegistrationOpeningPicker from '../../RegistrationOpeningPicker';
@@ -737,7 +738,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
                 <div className="file-upload-wrapper" style={{ opacity: uploadingField ? 0.6 : 1 }}>
                   <input
                     type="file"
-                    accept="image/png, image/jpeg, application/pdf"
+                    accept={acceptAttribute("template")}
                     onChange={e => handleImageUpload(e, 'certificateTemplate', 'template')}
                     className="file-upload-input"
                     disabled={uploadingField !== null}
