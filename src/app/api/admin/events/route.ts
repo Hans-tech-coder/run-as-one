@@ -10,7 +10,11 @@ import { upperCaseForStorage } from '@/lib/text-case';
 import { asBankAccounts } from '@/lib/bank-accounts';
 import { uniqueEventSlug } from '@/lib/event-slug';
 import { isCalendarDay } from '@/lib/event-schedule';
-import { asSlotLimit } from '@/lib/registration-gate';
+import {
+  OPENING_INSTANT_ERROR,
+  asOpeningInstant,
+  asSlotLimit,
+} from '@/lib/registration-gate';
 import { CATEGORY_ORDER } from '@/lib/category-order';
 
 export async function POST(request: Request) {
@@ -21,7 +25,7 @@ export async function POST(request: Request) {
     }
 
     const data = await request.json();
-    const { title, date, startTime, endTime, location, imageUrl, raceKitImageUrl, description, logisticsPickup, pickupLocation, pickupSchedule, logisticsDeliveryFeeInside, logisticsDeliveryFeeOutside, adminFee, shirtSizeUpcharge, consentWaiver, registrationForm, eventType, categories, bankAccounts } = data;
+    const { title, date, startTime, endTime, location, imageUrl, raceKitImageUrl, description, logisticsPickup, pickupLocation, pickupSchedule, logisticsDeliveryFeeInside, logisticsDeliveryFeeOutside, adminFee, shirtSizeUpcharge, consentWaiver, registrationForm, eventType, registrationOpensAt, categories, bankAccounts } = data;
 
     if (!title || !date || !location) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -36,6 +40,15 @@ export async function POST(request: Request) {
         { error: 'Event date must be a calendar date in YYYY-MM-DD form.' },
         { status: 400 }
       );
+    }
+
+    // When sign-ups start, for a race published ahead of taking entries. The
+    // form sends an instant it built from a Manila date and time, or nothing
+    // at all for a race that is open straight away; a value that will not read
+    // as an instant is refused rather than quietly stored as “open now”.
+    const registrationOpens = asOpeningInstant(registrationOpensAt);
+    if (registrationOpens === undefined) {
+      return NextResponse.json({ error: OPENING_INSTANT_ERROR }, { status: 400 });
     }
 
     // The public URL is made from the title, so it is settled here, once, with
@@ -72,6 +85,9 @@ export async function POST(request: Request) {
         consentWaiver: asWaiverParagraphs(consentWaiver),
         registrationForm: asRegistrationForm(registrationForm),
         eventType: asEventType(eventType),
+        // Null is the usual answer: most races are registrable the moment
+        // they are published, and only one listed early holds its button back.
+        registrationOpensAt: registrationOpens,
         organizerId: auth.id,
         bankAccounts: {
           create: asBankAccounts(bankAccounts).map((account, index) => ({

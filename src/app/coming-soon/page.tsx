@@ -67,10 +67,10 @@ export default async function ComingSoonPage({
             </Link>
             <a
               href={SUPPORT_MAILTO}
-              className="flex min-h-[56px] w-full shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-[16px] border border-white/10 bg-white/[0.04] px-5 py-4 text-center text-sm text-white no-underline transition-colors duration-200 hover:border-accent-orange/40 hover:bg-white/[0.08] sm:w-auto"
+              className="btn-secondary w-full shrink-0 whitespace-nowrap text-center sm:w-auto"
             >
               <Mail size={18} aria-hidden="true" className="shrink-0 text-accent-orange" />
-              <span>{CONTACT_EMAIL}</span>
+              <span className="font-medium normal-case tracking-normal">{CONTACT_EMAIL}</span>
             </a>
           </div>
         </StatusPanel>

@@ -14,7 +14,8 @@ type DBEvent = {
   location: string;
   imageUrl: string;
   /** Passed straight through to the card — see EventGrid. */
-  registrationClosed?: 'PAUSED' | 'FULL' | null;
+  registrationClosed?: 'PAUSED' | 'SCHEDULED' | 'FULL' | null;
+  registrationOpensAt?: string | Date | null;
 };
 
 /**

@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { Calendar, MapPin, ChevronRight } from 'lucide-react';
 import EventImage from './EventImage';
 import LinkPendingIcon from './ui/LinkPendingIcon';
-import { formatEventDayShort } from '@/lib/event-schedule';
+import { formatEventDayShort, formatEventInstantShort } from '@/lib/event-schedule';
 
 // Using a type that matches the Prisma Event model payload
 type DBEvent = {
@@ -19,10 +19,17 @@ type DBEvent = {
   imageUrl: string;
   /**
    * Set by `forListing` in lib/registration-gate.ts when this race cannot be
-   * signed up for: every option sold out, or the organizer paused it. Absent on
-   * /results, where every event is finished and the card offers times instead.
+   * signed up for: every option sold out, the organizer paused it, or sign-ups
+   * have not opened yet. Absent on /results, where every event is finished and
+   * the card offers times instead.
    */
-  registrationClosed?: 'PAUSED' | 'FULL' | null;
+  registrationClosed?: 'PAUSED' | 'SCHEDULED' | 'FULL' | null;
+  /**
+   * When sign-ups start, for a SCHEDULED card. It is the one closure a runner
+   * can act on — the other two leave them nothing to do but check back — so
+   * the chip spends its width on the date rather than on the word "scheduled".
+   */
+  registrationOpensAt?: string | Date | null;
 }
 
 /**
@@ -43,6 +50,10 @@ const ACTIONS: Record<EventCardAction, { label: string; path: (slug: string) => 
 const CLOSURES = {
   FULL: { badge: 'Full', label: 'View Event' },
   PAUSED: { badge: 'Paused', label: 'View Event' },
+  // Overwritten with the date below when the card has one. The bare word is
+  // the fallback for a row whose instant will not parse, which should not
+  // happen and must still say something true if it does.
+  SCHEDULED: { badge: 'Opens Soon', label: 'View Event' },
 } as const;
 
 function EventCard({ event, action }: { event: DBEvent; action: EventCardAction }) {
@@ -57,6 +68,15 @@ function EventCard({ event, action }: { event: DBEvent; action: EventCardAction 
       ? CLOSURES[event.registrationClosed]
       : null;
 
+  // "Opens Sep 20" rather than "Opens Soon": a runner scanning the grid can
+  // decide from the chip alone whether this race is worth a click today, and
+  // a date is the one thing that tells them.
+  const opensOn =
+    event.registrationClosed === 'SCHEDULED' && event.registrationOpensAt
+      ? formatEventInstantShort(event.registrationOpensAt)
+      : '';
+  const badge = opensOn ? `Opens ${opensOn}` : closure?.badge;
+
   return (
     <div className="relative flex flex-col overflow-hidden rounded-[20px] border border-white/5 aspect-[4/5] transition-all duration-300 cursor-pointer hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(0,0,0,0.5)] group">
       <div className="absolute inset-0 z-10">
@@ -66,8 +86,8 @@ function EventCard({ event, action }: { event: DBEvent; action: EventCardAction 
       {/* Over the image rather than down beside the title, so a runner
           scanning a grid of six reads it without reading anything else. */}
       {closure && (
-        <span className="absolute right-4 top-4 z-30 rounded-full border border-white/20 bg-black/70 px-3 py-1 text-xs font-bold uppercase tracking-widest text-white backdrop-blur-sm">
-          {closure.badge}
+        <span className="absolute right-4 top-4 z-30 whitespace-nowrap rounded-full border border-white/20 bg-black/70 px-3 py-1 text-xs font-bold uppercase tracking-widest text-white backdrop-blur-sm">
+          {badge}
         </span>
       )}
       <div className="relative z-30 flex flex-col justify-end h-full p-5 sm:p-8">

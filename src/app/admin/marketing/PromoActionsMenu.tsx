@@ -53,7 +53,7 @@ export default function PromoActionsMenu({
       const rect = buttonRef.current.getBoundingClientRect();
       setPosition({
         top: rect.bottom + 8,
-        left: rect.right - 180, // 180px is the width of action-dropdown-menu
+        left: rect.right - 210, // 210px is the width of action-dropdown-menu
       });
     }
   }, []);
@@ -145,10 +145,9 @@ export default function PromoActionsMenu({
           role="menuitem"
         >
           <Receipt size={16} />
-          {/* One word, not "View Redemptions": the dropdown is a fixed 180px
-              shared with the events table's menu, and the longer label wraps
-              onto a second line while every other item sits on one. Widening
-              this menu alone would make the two stop matching. */}
+          {/* One word, not "View Redemptions": the other items here are all
+              single verbs, and the noun on its own already says what the panel
+              it opens holds. */}
           Redemptions
         </button>
         <button

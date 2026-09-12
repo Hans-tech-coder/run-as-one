@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { MoreVertical, CheckCircle, Trash2, Edit } from 'lucide-react';
+import { MoreVertical, CheckCircle, Trash2, Edit, Eye } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface RegistrantActionsMenuProps {
@@ -12,6 +12,7 @@ interface RegistrantActionsMenuProps {
   isBankTransfer: boolean;
   updatingId: string | null;
   handleStatusChange: (registrationId: string, status: string) => void;
+  onView: (runnerId: string) => void;
   onEdit: (runnerId: string) => void;
   onDelete: (runnerId: string) => void;
 }
@@ -23,6 +24,7 @@ export default function RegistrantActionsMenu({
   isBankTransfer,
   updatingId,
   handleStatusChange,
+  onView,
   onEdit,
   onDelete
 }: RegistrantActionsMenuProps) {
@@ -42,7 +44,7 @@ export default function RegistrantActionsMenu({
       const rect = buttonRef.current.getBoundingClientRect();
       setPosition({
         top: rect.bottom + 8,
-        left: rect.right - 180, // 180px is width of action-dropdown-menu
+        left: rect.right - 210, // 210px is width of action-dropdown-menu
       });
     }
   }, []);
@@ -135,6 +137,23 @@ export default function RegistrantActionsMenu({
       }}
     >
       <div className="py-1 flex flex-col" role="menu" aria-orientation="vertical">
+        {/* Reading comes before changing, so the whole order — the runner, the
+            payment, the consent, the proof of payment — is one click away from
+            the same menu that can edit or delete it. The eye on the Reference
+            cell opens the very same modal; this is the second door to it, for
+            an organizer already in the menu. */}
+        <button
+          className="action-dropdown-item flex items-center gap-3 px-4 py-2 text-sm text-left"
+          role="menuitem"
+          onClick={() => {
+            onView(runnerId);
+            closeMenu();
+          }}
+        >
+          <Eye size={16} />
+          View Details
+        </button>
+
         <button 
           className="action-dropdown-item flex items-center gap-3 px-4 py-2 text-sm text-left"
           role="menuitem"

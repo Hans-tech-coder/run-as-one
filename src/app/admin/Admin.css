@@ -408,6 +408,15 @@
   color: #faad14;
 }
 
+/* For a note that is a plain fact rather than a warning — the date an event's
+   registration opens, under its Scheduled badge. It borrows .status-badge
+   .neutral's grey for the same reason that one exists: the date is simply what
+   is true, and repeating the badge's amber underneath it would read as a
+   second, louder copy of the badge. */
+.status-note.neutral {
+  color: rgba(255, 255, 255, 0.55);
+}
+
 /* Empty State */
 .empty-state {
   padding: 64px 24px;
@@ -1216,7 +1225,14 @@ textarea.form-input {
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-md);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-  width: 180px;
+  /* Sized to the longest label the admin's menus carry — "Manage Results" —
+     with room for the icon, the padding and the pending dots that ride on the
+     right of a destination item, so no item has to wrap onto a second line or
+     be shortened to fit. Every menu that uses this class positions itself from
+     its trigger's right edge, so this number is repeated as `rect.right - 210`
+     in EventActionsMenu, RegistrantActionsMenu and PromoActionsMenu: change it
+     here and change it there. */
+  width: 210px;
   z-index: 50;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
@@ -1236,6 +1252,10 @@ textarea.form-input {
   font-size: 0.875rem;
   text-align: left;
   cursor: pointer;
+  /* One line per item. The menu is wide enough for every label it carries, and
+     a label that ever outgrows it should be caught here rather than quietly
+     wrapping into a two-line row beside one-line neighbours. */
+  white-space: nowrap;
   /* Named properties on the shared motion scale rather than `all 0.2s`: the
      dim below rides `opacity`, and `all` would have let it inherit whatever
      else happened to change at the same moment. */

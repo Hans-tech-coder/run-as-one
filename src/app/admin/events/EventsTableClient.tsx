@@ -8,6 +8,9 @@ import {
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import EventActionsMenu from './EventActionsMenu';
+import RegistrationScheduleModal from './RegistrationScheduleModal';
+import { openingInstantISO, type OpeningDraft } from './registration-opening';
+import { formatEventInstant } from '@/lib/event-schedule';
 import { useAlert } from '@/components/ui/AlertProvider';
 import {
   Table,
@@ -34,6 +37,14 @@ interface EventsTableClientProps {
 }
 
 /**
+ * One row as /admin/events hands it over: the Prisma event plus the counts and
+ * the registration state worked out on the server. Named rather than spelled
+ * `any` at each use so the pieces this table reads off a row — its id, its
+ * title, its opening — have somewhere to be looked up.
+ */
+type EventRow = EventsTableClientProps['events'][number];
+
+/**
  * What the Registration column says, and in what tone.
  *
  * Green for open and amber for paused, matching the badges on the registrants
@@ -44,6 +55,12 @@ interface EventsTableClientProps {
 const REGISTRATION_STATES = {
   OPEN: { label: 'Open', tone: 'success' },
   PAUSED: { label: 'Paused', tone: 'pending' },
+  // Amber like Paused, and for the same reason the badge tones give amber to
+  // PENDING: this is a race waiting on a date, not one that needs anybody.
+  // What separates the two in the cell is the line underneath, which names
+  // the date — a badge reading only "Scheduled" would leave the organizer
+  // opening the modal to find out when.
+  SCHEDULED: { label: 'Scheduled', tone: 'pending' },
   FULL: { label: 'Full', tone: 'neutral' },
   FINISHED: { label: 'Race Over', tone: 'neutral' },
 } as const;
@@ -66,6 +83,14 @@ export default function EventsTableClient({ events }: EventsTableClientProps) {
   // refuse a second press. One id rather than a boolean: the menu is per row.
   const [pausingId, setPausingId] = useState<string | null>(null);
 
+  // Which event's opening is being set, and the modal's own open/closing
+  // animation flags — the same three-piece shape the delete modal below uses,
+  // so both fade in and out the same way.
+  const [schedulingEvent, setSchedulingEvent] = useState<EventRow | null>(null);
+  const [isScheduleOpen, setIsScheduleOpen] = useState(false);
+  const [isScheduleClosing, setIsScheduleClosing] = useState(false);
+  const [isScheduling, setIsScheduling] = useState(false);
+
   // Delete Modal State
   const [deletingEvent, setDeletingEvent] = useState<any | null>(null);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -87,6 +112,82 @@ export default function EventsTableClient({ events }: EventsTableClientProps) {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const closeScheduleModal = () => {
+    setIsScheduleOpen(false);
+    setIsScheduleClosing(true);
+    setTimeout(() => {
+      setIsScheduleClosing(false);
+      setSchedulingEvent(null);
+    }, 150);
+  };
+
+  /**
+   * Saves when this event starts taking sign-ups.
+   *
+   * A PATCH carrying only the opening, for the same reason the pause toggle
+   * sends only the hold: this table never rendered the rest of the event, and
+   * posting fields it does not hold is how they get silently overwritten.
+   *
+   * The route also lifts a manual hold when it is sent an opening on its own,
+   * so the row has to drop its PAUSED badge here too — a table still saying
+   * "Paused" about an event whose sign-ups just opened is worse than no badge.
+   */
+  const handleScheduleSave = async (draft: OpeningDraft) => {
+    if (!schedulingEvent) return;
+    const registrationOpensAt = openingInstantISO(draft);
+    const scheduled = registrationOpensAt !== null;
+    setIsScheduling(true);
+    try {
+      const res = await fetch(`/api/admin/events/${schedulingEvent.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ registrationOpensAt }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error || `The server rejected the request (HTTP ${res.status}).`);
+      }
+
+      const saved = await res.json();
+
+      setTableEvents(prev =>
+        prev.map(row =>
+          row.id === schedulingEvent.id
+            ? {
+                ...row,
+                registrationOpensAt: saved.registrationOpensAt ?? null,
+                registrationPaused: false,
+                // An opening still ahead is what the row now says. Clearing one
+                // hands the row back to whatever was true underneath, and the
+                // only thing this table can rule out is the two states it just
+                // replaced — a row that was FULL stays FULL.
+                registrationState: scheduled
+                  ? 'SCHEDULED'
+                  : row.registrationState === 'SCHEDULED' || row.registrationState === 'PAUSED'
+                    ? 'OPEN'
+                    : row.registrationState,
+              }
+            : row,
+        ),
+      );
+
+      closeScheduleModal();
+      // The public pages read this on the server, so the change only reaches
+      // them on the next request — which is what this refresh causes.
+      router.refresh();
+    } catch (error) {
+      await alert({
+        title: 'Registration opening not saved',
+        message: `${schedulingEvent.title} is unchanged. ${
+          error instanceof Error ? error.message : 'The request did not reach the server.'
+        }`,
+      });
+    } finally {
+      setIsScheduling(false);
+    }
+  };
 
   const closeDeleteModal = () => {
     setIsDeleteOpen(false);
@@ -256,10 +357,21 @@ export default function EventsTableClient({ events }: EventsTableClientProps) {
       header: "Registration",
       accessorFn: (row) => row.registrationState ?? 'OPEN',
       cell: ({ row }) => {
-        const state = REGISTRATION_STATES[
-          (row.original.registrationState ?? 'OPEN') as keyof typeof REGISTRATION_STATES
-        ];
-        return <span className={`status-badge ${state.tone} whitespace-nowrap`}>{state.label}</span>;
+        const key = (row.original.registrationState ?? 'OPEN') as keyof typeof REGISTRATION_STATES;
+        const state = REGISTRATION_STATES[key];
+        return (
+          <div>
+            <span className={`status-badge ${state.tone} whitespace-nowrap`}>{state.label}</span>
+            {/* The date the badge is standing in for. A quiet line rather than
+                a second pill: two pills in one cell read as two states, and
+                this event has only one. */}
+            {key === 'SCHEDULED' && row.original.registrationOpensAt && (
+              <span className="status-note neutral whitespace-nowrap">
+                Opens {formatEventInstant(row.original.registrationOpensAt)}
+              </span>
+            )}
+          </div>
+        );
       },
     },
     {
@@ -272,6 +384,10 @@ export default function EventsTableClient({ events }: EventsTableClientProps) {
             registrationState={row.original.registrationState ?? 'OPEN'}
             isPausing={pausingId === row.original.id}
             onTogglePause={() => handleTogglePause(row.original)}
+            onSchedule={() => {
+              setSchedulingEvent(row.original);
+              requestAnimationFrame(() => setIsScheduleOpen(true));
+            }}
             onDelete={() => {
               setDeletingEvent(row.original);
               requestAnimationFrame(() => setIsDeleteOpen(true));
@@ -485,6 +601,19 @@ export default function EventsTableClient({ events }: EventsTableClientProps) {
         </div>
       </div>
 
+
+      {/* Keyed by the row and by the value it is editing, so the modal starts
+          from what this event actually holds — including the second time it is
+          opened on a row whose opening was just changed. */}
+      <RegistrationScheduleModal
+        key={`${schedulingEvent?.id ?? 'none'}-${schedulingEvent?.registrationOpensAt ?? ''}`}
+        event={schedulingEvent}
+        isOpen={isScheduleOpen}
+        isClosing={isScheduleClosing}
+        isSaving={isScheduling}
+        onClose={closeScheduleModal}
+        onSave={handleScheduleSave}
+      />
 
       {/* Delete Confirmation Modal */}
       <div 

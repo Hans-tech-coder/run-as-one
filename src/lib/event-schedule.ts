@@ -28,6 +28,17 @@ import type { Prisma } from '@prisma/client';
  */
 const EVENT_TIME_ZONE = 'Asia/Manila';
 
+/**
+ * Manila's offset from UTC, written out.
+ *
+ * The Philippines has kept a single, fixed +08:00 since 1978 and observes no
+ * daylight saving, which is what makes this constant safe: a wall-clock date
+ * and time typed into the admin form is one instant and always the same one,
+ * so the conversion is a string concatenation rather than a zone lookup. Any
+ * country where the offset moves twice a year would need a real one.
+ */
+const EVENT_UTC_OFFSET = '+08:00';
+
 /** The only shape `Event.date` is ever allowed to hold. */
 const CALENDAR_DAY = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -155,4 +166,84 @@ export function formatEventTime(time: string): string {
   // the same numeral, on opposite halves of the day.
   const hour12 = hours % 12 === 0 ? 12 : hours % 12;
   return `${hour12}:${String(minutes).padStart(2, '0')} ${suffix}`;
+}
+
+/**
+ * The instant a Manila wall-clock date and time names.
+ *
+ * The admin form collects these as two `<input>`s — a date and a time, the same
+ * pair the event's own day and gun start use — because that is what an
+ * organizer is actually deciding: "the 20th, 8 in the morning". What the
+ * database holds is an instant, and the two are only the same thing once a zone
+ * is named. Naming it here, in the one module that already owns what "today"
+ * means for this site, is what stops a Vercel server running in UTC from
+ * opening sign-ups eight hours early.
+ *
+ * A blank day means the caller has nothing to convert, which is not an error:
+ * it is how the form says "no schedule". A malformed one returns null too, and
+ * the routes turn that into a refusal rather than writing a guess.
+ */
+export function eventInstant(day: string, time: string): Date | null {
+  if (!isCalendarDay(day)) return null;
+  // A day with no time given opens at midnight, which is what an organizer who
+  // filled in only the date means: that day, from the start of it.
+  const clock = /^\d{2}:\d{2}$/.test(time) ? time : '00:00';
+  const instant = new Date(`${day}T${clock}:00${EVENT_UTC_OFFSET}`);
+  return Number.isNaN(instant.getTime()) ? null : instant;
+}
+
+/**
+ * An instant taken apart into the two form fields that produced it, in Manila.
+ *
+ * The inverse of `eventInstant`, for the admin forms: an event that already has
+ * a scheduled opening has to reopen with the organizer's own date and time in
+ * the boxes, not with the UTC ones the column stores.
+ */
+export function eventInstantParts(value: Date | string): { day: string; time: string } {
+  const instant = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(instant.getTime())) return { day: '', time: '' };
+
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: EVENT_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(instant);
+
+  const part = (type: string) => parts.find((p) => p.type === type)?.value ?? '';
+  return {
+    day: `${part('year')}-${part('month')}-${part('day')}`,
+    time: `${part('hour')}:${part('minute')}`,
+  };
+}
+
+/**
+ * "September 20, 2026 at 8:00 AM" — an instant as a runner reads it, in Manila.
+ *
+ * Spelled out for the same reason `formatEventDay` is: this sentence is the
+ * whole answer a runner gets when they arrive at a race that is not open yet,
+ * and a bare ISO timestamp is not an answer. The zone is not printed, because
+ * the site's races are all run in it and every other time on the page is
+ * already local.
+ */
+export function formatEventInstant(value: Date | string): string {
+  const { day, time } = eventInstantParts(value);
+  if (!day) return '';
+  return `${formatEventDay(day)} at ${formatEventTime(time)}`;
+}
+
+/**
+ * "Sep 20" — the same instant with everything a listing chip has no room for
+ * taken out. The year is kept only when the opening falls in a different one
+ * from today's, where dropping it would be genuinely ambiguous.
+ */
+export function formatEventInstantShort(value: Date | string, now: Date = new Date()): string {
+  const { day } = eventInstantParts(value);
+  if (!day) return '';
+  const sameYear = day.slice(0, 4) === today(now).slice(0, 4);
+  const readable = formatEventDayShort(day);
+  return sameYear ? readable.replace(/,\s*\d{4}$/, '') : readable;
 }

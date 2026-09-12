@@ -73,6 +73,18 @@ model Event {
   /// the standard sentence — see src/lib/registration-gate.ts. Never left
   /// unexplained: a runner turned away deserves a reason.
   registrationPauseNote       String?
+  /// The instant sign-ups open, for an event listed before it is ready to take
+  /// them. Null is the normal case and means "already open": an event is
+  /// registrable the moment it is published. A time in the future lists the
+  /// race publicly — so runners can see it is coming and plan for it — while
+  /// the register button is held back until this passes, at which point it
+  /// opens on its own with nobody having to press anything.
+  ///
+  /// A DateTime rather than the calendar-day string `date` uses, because this
+  /// one is an instant: "8 AM on the 20th" is a moment sign-ups start, not a
+  /// day they happen on. Written and read in Asia/Manila — see
+  /// src/lib/event-schedule.ts.
+  registrationOpensAt         DateTime?
   organizerId                 String
   createdAt                   DateTime       @default(now())
   updatedAt                   DateTime       @updatedAt

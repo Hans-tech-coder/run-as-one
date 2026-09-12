@@ -5,6 +5,13 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, UploadCloud, Trash, AlertCircle, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 import RegistrationFormPicker from '../RegistrationFormPicker';
+import RegistrationOpeningPicker from '../RegistrationOpeningPicker';
+import {
+  OPENS_IMMEDIATELY,
+  openingInstantISO,
+  openingProblem,
+  type OpeningDraft,
+} from '../registration-opening';
 import EventOptionsPanel from '../EventOptionsPanel';
 import { blankCategory, type CategoryDraft } from '../category-draft';
 import { DEFAULT_REGISTRATION_FORM, type RegistrationForm } from '@/lib/registration-form';
@@ -87,6 +94,16 @@ export default function NewEventPage() {
 
   const [categories, setCategories] = useState<CategoryDraft[]>([blankCategory()]);
 
+  // When this race starts taking sign-ups. Kept beside the form rather than in
+  // it because it is two fields standing for one nullable column — see
+  // registration-opening.ts. Most races open immediately, so that is where it
+  // starts.
+  const [opening, setOpening] = useState<OpeningDraft>(OPENS_IMMEDIATELY);
+  // Why the opening date cannot be saved, shown under the date field itself
+  // rather than in the error modal: a validation message belongs beside the
+  // box it is about.
+  const [openingError, setOpeningError] = useState<string | null>(null);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -99,11 +116,27 @@ export default function NewEventPage() {
       return;
     }
 
+    // An organizer who chose to schedule the opening and left the date empty
+    // gets told which field is missing, beside that field. Saving anyway would
+    // publish the race open, which is the one thing they said not to do.
+    const openingFault = openingProblem(opening);
+    setOpeningError(openingFault);
+    if (openingFault) {
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const res = await fetch('/api/admin/events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, eventType, categories, bankAccounts: cleanBankAccounts(bankAccounts) }),
+        body: JSON.stringify({
+          ...formData,
+          eventType,
+          registrationOpensAt: openingInstantISO(opening),
+          categories,
+          bankAccounts: cleanBankAccounts(bankAccounts),
+        }),
       });
 
       if (!res.ok) {
@@ -472,6 +505,21 @@ export default function NewEventPage() {
             </div>
             <div className="admin-panel-content">
               <div className="flex flex-col gap-6">
+                <div className="form-group">
+                  <label className="form-label">Registration Opening</label>
+                  <RegistrationOpeningPicker
+                    value={opening}
+                    onChange={next => {
+                      setOpening(next);
+                      // The message goes the moment the organizer starts
+                      // fixing it; leaving it up while they type reads as a
+                      // field that is still wrong.
+                      if (openingError) setOpeningError(null);
+                    }}
+                    idPrefix="newEventOpening"
+                    error={openingError}
+                  />
+                </div>
                 <div className="form-group">
                   <label className="form-label">Admin Fee (₱) <span className="text-xs opacity-70">- charged per runner</span></label>
                   <input

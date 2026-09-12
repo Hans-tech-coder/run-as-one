@@ -1,11 +1,12 @@
 import { Prisma } from '@prisma/client';
 import db from '@/lib/db';
+import { formatEventInstant } from '@/lib/event-schedule';
 
 /**
  * Whether an event is taking registrations right now, and why not when it
  * isn't.
  *
- * Three separate things close sign-ups, and a runner turned away by one of
+ * Four separate things close sign-ups, and a runner turned away by one of
  * them needs to be told which:
  *
  * - **The race has already been run.** That line lives in event-schedule.ts,
@@ -16,6 +17,10 @@ import db from '@/lib/db';
  *   only once every option it sells has filled.
  * - **The organizer paused it.** A decision rather than a fact — slots remain
  *   and race day is still ahead — so it carries the organizer's own words.
+ * - **Sign-ups have not opened yet.** The organizer published the race ahead
+ *   of taking entries for it, so runners can find it and plan around it, and
+ *   named the instant it starts. This one closes itself: nobody has to press
+ *   anything when the date arrives.
  *
  * The rule lives here because six screens ask it: the event page, both
  * wizards' option pickers, the register page, the public listings, and both
@@ -48,6 +53,46 @@ export const LAST_CALL_SLOTS = 20;
 export const DEFAULT_PAUSE_NOTE =
   'The organizer has paused sign-ups for this event. Slots may open again — check back soon, or contact the organizer if you have already paid.';
 
+/**
+ * Whether this event's sign-ups have not started yet.
+ *
+ * Null — the normal case — means the race was open the moment it was
+ * published, so there is nothing to wait for. A time already past is not a
+ * schedule any more, it is simply an open event: the column is left alone once
+ * it passes rather than cleared, so the organizer can still read the date they
+ * set, and every reader compares instead of trusting the column's presence.
+ *
+ * `now` is a parameter so a page and the listing beside it can be answered
+ * against the same moment rather than each reading the clock for itself.
+ */
+export function opensLater(
+  event: { registrationOpensAt?: Date | string | null },
+  now: Date = new Date(),
+): boolean {
+  const opensAt = event.registrationOpensAt;
+  if (!opensAt) return false;
+  const instant = opensAt instanceof Date ? opensAt : new Date(opensAt);
+  return !Number.isNaN(instant.getTime()) && instant.getTime() > now.getTime();
+}
+
+/**
+ * What a runner is told when they arrive before sign-ups open.
+ *
+ * It names the instant rather than saying "soon", because the one thing this
+ * runner came for is a date they can put in their calendar — and because a
+ * race whose opening has no date attached reads as a race that has been
+ * forgotten about. The fallback sentence exists only for the impossible row
+ * whose column will not parse; nothing that reaches here should need it.
+ */
+export function openingNote(event: {
+  registrationOpensAt?: Date | string | null;
+}): string {
+  const when = event.registrationOpensAt ? formatEventInstant(event.registrationOpensAt) : '';
+  return when
+    ? `Sign-ups for this race open on ${when}. Nothing to do until then — the page stays here, so come back when it opens or set yourself a reminder.`
+    : 'Sign-ups for this race have not opened yet. The organizer has listed it early so you can plan for it; check back for the opening date.';
+}
+
 /** The minimum shape of a category this module can reason about. */
 export type SlotLimited = {
   id: string;
@@ -66,7 +111,7 @@ export type CategorySlots = {
 };
 
 /** Why registration is closed, or OPEN when it isn't. */
-export type RegistrationState = 'OPEN' | 'FINISHED' | 'PAUSED' | 'FULL';
+export type RegistrationState = 'OPEN' | 'FINISHED' | 'PAUSED' | 'SCHEDULED' | 'FULL';
 
 /**
  * How many runners each of these categories has already taken.
@@ -115,6 +160,28 @@ export function asSlotLimit(value: unknown): number | null {
   if (!Number.isFinite(limit) || limit <= 0) return null;
   return limit;
 }
+
+/**
+ * The opening instant as the database should hold it, from whatever the admin
+ * form posted.
+ *
+ * Blank, null and a missing key all mean "open as soon as it is published",
+ * which is null. Anything that will not read as an instant returns `undefined`
+ * instead, and every route turns that into a refusal rather than storing the
+ * null it resembles: an opening date that silently failed to save would put a
+ * race on sale the moment it was published, which is the exact opposite of
+ * what the organizer asked for, and they would only find out from a runner.
+ */
+export function asOpeningInstant(value: unknown): Date | null | undefined {
+  if (value === null || value === undefined || value === '') return null;
+  if (!(value instanceof Date) && typeof value !== 'string') return undefined;
+  const instant = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(instant.getTime()) ? undefined : instant;
+}
+
+/** What a route says when the opening instant it was sent will not parse. */
+export const OPENING_INSTANT_ERROR =
+  'Registration opening must be a date and time. Pick both, or choose to open registration immediately.';
 
 /** Attaches the slot arithmetic to each category, leaving the rest untouched. */
 export function withSlotCounts<T extends SlotLimited>(
@@ -169,16 +236,23 @@ export function soleOpenCategory<T extends CategorySlots>(
  * `hasFinished(event)` in event-schedule.ts — passed in rather than computed
  * here, so this module stays about slots and holds.
  *
- * Order matters: a race that has been run is over whether or not its organizer
- * also paused it, and a deliberate hold outranks a count.
+ * Order matters, and it runs from the most deliberate answer to the most
+ * arithmetical. A race that has been run is over whether or not its organizer
+ * also paused it. A hold outranks a schedule, because pausing is something the
+ * organizer did after setting the date and it is the more recent word — and
+ * because nothing is lost by that: lifting the hold hands the event back to
+ * its schedule rather than discarding it. A schedule in turn outranks a count,
+ * since an event that has not opened yet cannot meaningfully be full.
  */
 export function registrationState(
-  event: { registrationPaused?: boolean | null },
+  event: { registrationPaused?: boolean | null; registrationOpensAt?: Date | string | null },
   categories: CategorySlots[],
   finished: boolean,
+  now: Date = new Date(),
 ): RegistrationState {
   if (finished) return 'FINISHED';
   if (event.registrationPaused) return 'PAUSED';
+  if (opensLater(event, now)) return 'SCHEDULED';
   if (everyOptionIsFull(categories)) return 'FULL';
   return 'OPEN';
 }
@@ -337,7 +411,7 @@ export async function fullEventIds(
 }
 
 /** Why a listing card cannot be registered on, or null when it can. */
-export type ListingClosure = 'PAUSED' | 'FULL' | null;
+export type ListingClosure = 'PAUSED' | 'SCHEDULED' | 'FULL' | null;
 
 /**
  * Tags each event for a public listing card and drops the categories it needed
@@ -352,20 +426,29 @@ export async function forListing<
   T extends {
     id: string;
     registrationPaused?: boolean | null;
+    registrationOpensAt?: Date | string | null;
     categories: SlotLimited[];
   },
 >(events: T[]): Promise<(Omit<T, 'categories'> & { registrationClosed: ListingClosure })[]> {
   const full = await fullEventIds(events);
 
+  // One clock for the whole listing, so two cards on the same page can never
+  // disagree about whether an opening falling between them has arrived.
+  const now = new Date();
+
   return events.map(event => {
     const { categories: _categories, ...card } = event;
     return {
       ...card,
+      // The same order registrationState uses, for the same reasons — a card
+      // and the page it links to must never label the event differently.
       registrationClosed: event.registrationPaused
         ? 'PAUSED'
-        : full.has(event.id)
-          ? 'FULL'
-          : null,
+        : opensLater(event, now)
+          ? 'SCHEDULED'
+          : full.has(event.id)
+            ? 'FULL'
+            : null,
     };
   });
 }

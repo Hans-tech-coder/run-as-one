@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
-import { CalendarClock, ChevronRight, Users } from 'lucide-react';
+import { CalendarClock, ChevronRight, PauseCircle, Users } from 'lucide-react';
 import db from '@/lib/db';
 import { IconBadge, StatusPanel } from '@/components/StatusPanel';
 import { REGISTRATION_FORMS, asRegistrationForm } from '@/lib/registration-form';
@@ -18,6 +18,7 @@ import {
 import { hasFinished } from '@/lib/event-schedule';
 import {
   EVENT_FULL_MESSAGE,
+  openingNote,
   pauseNote,
   registrationState,
   soleOpenCategory,
@@ -95,21 +96,44 @@ export default async function RegisterPage(props: {
   );
   const state = registrationState(event, categories, hasFinished(event));
 
-  // An organizer's hold, or every option sold out. Both stop the wizard here
-  // rather than letting a runner fill in three steps and be refused by the
-  // checkout route — which would still refuse them, because that route counts
-  // again inside its own write.
+  // An organizer's hold, a race that has not opened yet, or every option sold
+  // out. All three stop the wizard here rather than letting a runner fill in
+  // three steps and be refused by the checkout route — which would still
+  // refuse them, because that route checks again inside its own write.
   //
   // As with the finished check above, a runner coming back from the payment
   // gateway with an orderRef is let through: they are looking at something they
   // already paid for, and a hold placed since then must not hide their receipt.
-  if (!orderRef && (state === 'PAUSED' || state === 'FULL')) {
+  //
+  // One table rather than three nested ternaries, because each stop needs its
+  // own three things said about it and the heading, sentence and icon must not
+  // be able to come from different rows.
+  const CLOSED = {
+    PAUSED: {
+      heading: 'Registration Is Paused',
+      message: pauseNote(event),
+      icon: <PauseCircle size={30} />,
+    },
+    SCHEDULED: {
+      heading: 'Registration Has Not Opened',
+      message: openingNote(event),
+      icon: <CalendarClock size={30} />,
+    },
+    FULL: {
+      heading: 'This Race Is Full',
+      message: EVENT_FULL_MESSAGE,
+      icon: <Users size={30} />,
+    },
+  } as const;
+
+  if (!orderRef && (state === 'PAUSED' || state === 'SCHEDULED' || state === 'FULL')) {
+    const closed = CLOSED[state];
     return (
       <RegistrationClosed
         event={event}
-        heading={state === 'PAUSED' ? 'Registration Is Paused' : 'This Race Is Full'}
-        message={state === 'PAUSED' ? pauseNote(event) : EVENT_FULL_MESSAGE}
-        icon={state === 'PAUSED' ? <CalendarClock size={30} /> : <Users size={30} />}
+        heading={closed.heading}
+        message={closed.message}
+        icon={closed.icon}
       />
     );
   }
@@ -173,7 +197,8 @@ export default async function RegisterPage(props: {
 
 /**
  * What stands here when the race is still ahead but sign-ups are not open —
- * the organizer has paused them, or every option has sold out.
+ * the organizer has paused them, they have not started yet, or every option
+ * has sold out.
  *
  * A full page rather than a redirect back to the event: the runner typed or
  * followed a link to *register*, and bouncing them somewhere else without a
@@ -225,7 +250,7 @@ function RegistrationClosed({
             </Link>
             <Link
               href="/events"
-              className="flex min-h-[56px] w-full shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-[16px] border border-white/10 bg-white/[0.04] px-5 py-4 text-center text-sm text-white no-underline transition-colors duration-200 hover:border-accent-orange/40 hover:bg-white/[0.08] sm:w-auto"
+              className="btn-secondary w-full shrink-0 whitespace-nowrap text-center sm:w-auto"
             >
               <span>Browse Other Races</span>
             </Link>

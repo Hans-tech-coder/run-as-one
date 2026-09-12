@@ -5,6 +5,7 @@ import {
   CalendarClock,
   CheckCircle2,
   ChevronRight,
+  PauseCircle,
   Users,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -21,6 +22,7 @@ import {
 } from '@/lib/event-slug';
 import {
   EVENT_FULL_MESSAGE,
+  openingNote,
   pauseNote,
   registrationState,
   takenSlotsByCategory,
@@ -277,9 +279,20 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ s
                   <RaceIsOver event={event} />
                 ) : state === 'PAUSED' ? (
                   <RegistrationOnHold
-                    icon={<CalendarClock size={20} />}
+                    icon={<PauseCircle size={20} />}
                     heading="Registration Paused"
                     message={pauseNote(event)}
+                  />
+                ) : state === 'SCHEDULED' ? (
+                  /* The race is real and listed; it just has not opened yet.
+                     The panel carries the date instead of a button, because
+                     the date is the whole of what this visitor came to find
+                     out — see openingNote. The calendar-and-clock icon is
+                     this state's now, and Paused has taken the pause glyph. */
+                  <RegistrationOnHold
+                    icon={<CalendarClock size={20} />}
+                    heading="Registration Opens Soon"
+                    message={openingNote(event)}
                   />
                 ) : state === 'FULL' ? (
                   <RegistrationOnHold
@@ -342,7 +355,7 @@ function RaceIsOver({ event }: { event: { slug: string; date: string } }) {
 
       <Link
         href="/events"
-        className="mt-5 w-full bg-white/5 border border-white/10 text-white hover:bg-white/10 hover:border-white/30 transition-all py-4 px-6 rounded-[16px] font-bold text-center uppercase tracking-wider flex items-center justify-center gap-2 no-underline"
+        className="btn-secondary mt-5 w-full"
       >
         Find Another Race
       </Link>
@@ -371,7 +384,8 @@ function CATEGORY_ROW(isFull: boolean, bookable: boolean) {
 
 /**
  * The sidebar of a race that is still ahead but is not taking entries — the
- * organizer paused sign-ups, or every option has sold out.
+ * organizer paused sign-ups, sign-ups have not opened yet, or every option has
+ * sold out.
  *
  * Same panel as RaceIsOver, standing in the same place, for the same reason:
  * the answer belongs where the eye already goes, and a disabled Register button

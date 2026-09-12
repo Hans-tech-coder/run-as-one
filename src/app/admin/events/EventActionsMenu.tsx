@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
-import { MoreVertical, Users, Trophy, Edit, Trash2, PauseCircle, PlayCircle } from 'lucide-react';
+import { MoreVertical, Users, Trophy, Edit, Trash2, CalendarClock, PauseCircle, PlayCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import LinkPending from '@/components/ui/LinkPending';
 
@@ -12,14 +12,17 @@ export default function EventActionsMenu({
   registrationState = 'OPEN',
   isPausing = false,
   onTogglePause,
+  onSchedule,
   onDelete
 }: {
   eventId: string;
   /** Why sign-ups are closed, or OPEN — see src/lib/registration-gate.ts. */
-  registrationState?: 'OPEN' | 'FINISHED' | 'PAUSED' | 'FULL';
+  registrationState?: 'OPEN' | 'FINISHED' | 'PAUSED' | 'SCHEDULED' | 'FULL';
   /** True while this row's pause request is in flight. */
   isPausing?: boolean;
   onTogglePause?: () => void;
+  /** Opens the modal that decides when sign-ups start. */
+  onSchedule?: () => void;
   onDelete?: () => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -46,7 +49,7 @@ export default function EventActionsMenu({
       const rect = buttonRef.current.getBoundingClientRect();
       setPosition({
         top: rect.bottom + 8, // Fixed position relative to viewport
-        left: rect.right - 180, // 180px is width of action-dropdown-menu
+        left: rect.right - 210, // 210px is width of action-dropdown-menu
       });
     }
   }, []);
@@ -128,10 +131,20 @@ export default function EventActionsMenu({
   // offering a hold on it would suggest sign-ups could come back.
   const canPause = registrationState !== 'FINISHED' && Boolean(onTogglePause);
 
+  // A race that has been run has no opening left to schedule either — the same
+  // line the pause item is drawn on, for the same reason.
+  const canSchedule = registrationState !== 'FINISHED' && Boolean(onSchedule);
+
   const handleTogglePause = (e: React.MouseEvent) => {
     e.preventDefault();
     closeMenu();
     onTogglePause?.();
+  };
+
+  const handleSchedule = (e: React.MouseEvent) => {
+    e.preventDefault();
+    closeMenu();
+    onSchedule?.();
   };
 
   const handleDelete = (e: React.MouseEvent) => {
@@ -182,6 +195,19 @@ export default function EventActionsMenu({
             <LinkPending />
           </Link>
         ))}
+        {canSchedule && (
+          <button
+            onClick={handleSchedule}
+            className="action-dropdown-item w-full flex items-center gap-3 px-4 py-2 text-sm text-left"
+            role="menuitem"
+          >
+            <CalendarClock size={16} />
+            {/* One label for both answers the modal offers. Naming only one of
+                them — "Open Sign-Ups" — would hide the other behind an item
+                nobody with an already-open race would think to press. */}
+            Schedule Sign-Ups
+          </button>
+        )}
         {canPause && (
           <button
             onClick={handleTogglePause}
@@ -190,9 +216,9 @@ export default function EventActionsMenu({
             role="menuitem"
           >
             {isPaused ? <PlayCircle size={16} /> : <PauseCircle size={16} />}
-            {/* "Sign-Ups" rather than "Registration": the menu is 175px
-                wide, and the longer word wrapped every one of these onto two
-                lines while every other item sat on one. */}
+            {/* "Sign-Ups" rather than "Registration": the shorter word is
+                what the rest of the dashboard calls this, and it keeps the
+                three states of this one item the same length. */}
             {isPausing
               ? 'Saving'
               : isPaused

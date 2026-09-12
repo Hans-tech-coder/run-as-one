@@ -10,7 +10,12 @@ import { upperCaseForStorage } from '@/lib/text-case';
 import { asBankAccounts } from '@/lib/bank-accounts';
 import { uniqueEventSlug } from '@/lib/event-slug';
 import { isCalendarDay } from '@/lib/event-schedule';
-import { asSlotLimit, takenSlotsByCategory } from '@/lib/registration-gate';
+import {
+  OPENING_INSTANT_ERROR,
+  asOpeningInstant,
+  asSlotLimit,
+  takenSlotsByCategory,
+} from '@/lib/registration-gate';
 import { eventPromotions } from '@/lib/promo-store';
 import { CATEGORY_ORDER } from '@/lib/category-order';
 
@@ -80,7 +85,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
     const { id } = await params;
     const data = await request.json();
-    const { title, date, startTime, endTime, location, imageUrl, raceKitImageUrl, description, logisticsPickup, pickupLocation, pickupSchedule, logisticsDeliveryFeeInside, logisticsDeliveryFeeOutside, adminFee, shirtSizeUpcharge, consentWaiver, registrationForm, eventType, registrationPaused, registrationPauseNote, certificateTemplate, certificateCoordinates, categories, bankAccounts } = data;
+    const { title, date, startTime, endTime, location, imageUrl, raceKitImageUrl, description, logisticsPickup, pickupLocation, pickupSchedule, logisticsDeliveryFeeInside, logisticsDeliveryFeeOutside, adminFee, shirtSizeUpcharge, consentWaiver, registrationForm, eventType, registrationPaused, registrationPauseNote, registrationOpensAt, certificateTemplate, certificateCoordinates, categories, bankAccounts } = data;
 
     if (!title || !date || !location) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -95,6 +100,15 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         { error: 'Event date must be a calendar date in YYYY-MM-DD form.' },
         { status: 400 }
       );
+    }
+
+    // When sign-ups start — see the same guard on POST. The edit form always
+    // sends this field, so an event whose opening has been cleared there is
+    // cleared here too, and a value that will not parse stops the whole save
+    // rather than silently opening the race.
+    const registrationOpens = asOpeningInstant(registrationOpensAt);
+    if (registrationOpens === undefined) {
+      return NextResponse.json({ error: OPENING_INSTANT_ERROR }, { status: 400 });
     }
 
     // The public URL follows the title, so renaming an event renames its link.
@@ -183,6 +197,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
           // lib/registration-gate.ts rather than leaving a runner unexplained.
           registrationPaused: Boolean(registrationPaused),
           registrationPauseNote: registrationPauseNote?.trim() || null,
+          // Null means the race is open as soon as it is published; an instant
+          // in the future holds the button back until it passes.
+          registrationOpensAt: registrationOpens,
           certificateTemplate: certificateTemplate || null,
           certificateCoordinates: certificateCoordinates || null,
         }
@@ -267,12 +284,24 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 }
 
 /**
- * The registration hold, on its own.
+ * When sign-ups are open — the manual hold and the scheduled opening — on
+ * their own.
  *
- * Separate from PUT because the events table toggles it in place: sending the
- * whole event back to flip one boolean would mean the table holding — and
+ * Separate from PUT because the events table changes these in place: sending
+ * the whole event back to flip one boolean would mean the table holding — and
  * re-posting — every field of a form it does not show, and any of those it got
  * subtly wrong would be silently written.
+ *
+ * Two fields, either or both: `{ registrationPaused }` from the menu's pause
+ * item, `{ registrationOpensAt }` from its scheduling modal. A body carrying
+ * neither is rejected rather than treated as a no-op save, because a request
+ * that changed nothing is a bug somewhere upstream, not an instruction.
+ *
+ * Setting an opening on its own also lifts a manual hold. Both answers the
+ * modal offers — open now, or open on this date — are the organizer saying
+ * when sign-ups happen, and leaving a hold standing underneath either of them
+ * would mean the date arrives and nothing opens. A caller that sends both
+ * fields is taken at its word instead, and neither is inferred from the other.
  *
  * Like PUT, this scopes the update to the signed-in organizer's own events:
  * "who owns this id" is a question every handler here has to ask, since the id
@@ -286,13 +315,27 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     }
 
     const { id } = await params;
-    const { registrationPaused, registrationPauseNote } = await request.json();
+    const body = await request.json();
+    const pausing = Object.prototype.hasOwnProperty.call(body, 'registrationPaused');
+    const scheduling = Object.prototype.hasOwnProperty.call(body, 'registrationOpensAt');
 
-    if (typeof registrationPaused !== 'boolean') {
+    if (!pausing && !scheduling) {
+      return NextResponse.json(
+        { error: 'Send registrationPaused, registrationOpensAt, or both.' },
+        { status: 400 }
+      );
+    }
+
+    if (pausing && typeof body.registrationPaused !== 'boolean') {
       return NextResponse.json(
         { error: 'registrationPaused must be true or false.' },
         { status: 400 }
       );
+    }
+
+    const registrationOpens = scheduling ? asOpeningInstant(body.registrationOpensAt) : null;
+    if (registrationOpens === undefined) {
+      return NextResponse.json({ error: OPENING_INSTANT_ERROR }, { status: 400 });
     }
 
     const event = await db.event.findUnique({
@@ -311,19 +354,37 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     const updated = await db.event.update({
       where: { id },
       data: {
-        registrationPaused,
-        // Only written when the caller sent one, so toggling from the events
-        // table never wipes a note the organizer wrote in the edit form.
-        ...(registrationPauseNote === undefined
-          ? {}
-          : { registrationPauseNote: registrationPauseNote?.trim() || null }),
+        ...(pausing
+          ? {
+              registrationPaused: body.registrationPaused,
+              // Only written when the caller sent one, so toggling from the
+              // events table never wipes a note the organizer wrote in the
+              // edit form.
+              ...(body.registrationPauseNote === undefined
+                ? {}
+                : { registrationPauseNote: body.registrationPauseNote?.trim() || null }),
+            }
+          : {}),
+        ...(scheduling
+          ? {
+              registrationOpensAt: registrationOpens,
+              // See the note above: an opening date set on its own is also the
+              // answer to a hold, or the date would arrive to a paused event.
+              ...(pausing ? {} : { registrationPaused: false }),
+            }
+          : {}),
       },
-      select: { id: true, registrationPaused: true, registrationPauseNote: true },
+      select: {
+        id: true,
+        registrationPaused: true,
+        registrationPauseNote: true,
+        registrationOpensAt: true,
+      },
     });
 
     return NextResponse.json(updated);
   } catch (error: any) {
-    console.error('Pause registration error:', error);
+    console.error('Registration availability error:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to update registration status' },
       { status: 500 }

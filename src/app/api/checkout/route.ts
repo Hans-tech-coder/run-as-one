@@ -19,6 +19,8 @@ import {
 import { hasFinished } from '@/lib/event-schedule';
 import {
   SlotsUnavailableError,
+  openingNote,
+  opensLater,
   pauseNote,
   reserveSlots,
 } from '@/lib/registration-gate';
@@ -128,6 +130,14 @@ export async function POST(request: Request) {
     // wording, not a bare refusal.
     if (event.registrationPaused) {
       return NextResponse.json({ error: pauseNote(event) }, { status: 409 });
+    }
+
+    // A race listed before it opens. Same reasoning again, with one addition
+    // of its own: this hold lifts on a clock rather than on a decision, so the
+    // gap between "the page said closed" and "the post arrived" is a gap a
+    // runner sitting on the page waiting for the opening will actually be in.
+    if (opensLater(event)) {
+      return NextResponse.json({ error: openingNote(event) }, { status: 409 });
     }
 
     // The client sends both the zone and the fee. They are two ways of saying

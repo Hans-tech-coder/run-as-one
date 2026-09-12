@@ -337,6 +337,72 @@ input[type="datetime-local"]:focus::-webkit-calendar-picker-indicator {
   }
 }
 
+/* The quiet half of a two-button pair.
+
+   `.btn-gradient` carries the thing a runner most likely wants; this carries
+   the honest alternative standing beside it — browse other races, go home,
+   email a person. The two have to read as one set, so everything structural is
+   copied from the primary (same radius, same padding, same 700-weight uppercase
+   label, same lift on hover) and only the surface tells them apart: a quiet
+   glass panel instead of the brand gradient.
+
+   It exists because the alternative kept being written inline, and each one
+   drifted — a 14px sentence-case pill next to a 16px uppercase gradient reads
+   like a control from a different site wandered in. Use this class rather than
+   re-deriving the look; where a label is a literal string rather than a command
+   (an email address), reset it on the inner span with
+   `font-medium normal-case tracking-normal` — an address shouted in bold caps
+   stops looking like an address, and out-shouts the primary beside it. */
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.04);
+  color: #fff;
+  border: 1px solid var(--glass-border);
+  border-radius: 1rem; /* 16px — matches .btn-gradient */
+  padding: 1rem 1.25rem; /* 16px 20px */
+  min-height: 48px;
+  font-size: 1rem;
+  font-weight: 700;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-decoration: none;
+  transition: background-color 0.2s ease, border-color 0.2s ease,
+    transform 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.08);
+  /* The warm edge is the only brand colour a quiet button is allowed, and it
+     only appears on hover — enough to say "this is also a way forward" without
+     competing with the gradient beside it. */
+  border-color: color-mix(in srgb, var(--accent-orange) 45%, transparent);
+  transform: translateY(-2px);
+}
+
+.btn-secondary:disabled,
+.btn-secondary:disabled:hover {
+  opacity: 0.45;
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--glass-border);
+  transform: none;
+  cursor: not-allowed;
+}
+
+@media (min-width: 640px) {
+  .btn-secondary { padding: 1rem 1.5rem; }
+}
+
+@media (max-width: 639px) {
+  .btn-secondary {
+    letter-spacing: 0.02em;
+    text-wrap: balance;
+  }
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;

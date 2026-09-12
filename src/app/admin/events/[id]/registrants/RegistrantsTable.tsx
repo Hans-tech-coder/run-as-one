@@ -397,6 +397,22 @@ export default function RegistrantsTable({
     }
   };
 
+  /**
+   * Open the detail modal from a runner's id rather than from the row object.
+   *
+   * The eye on the Reference cell already has the row in hand and can set it
+   * directly; the actions menu only carries the id, like every other action on
+   * it does, so it looks the runner up here. Reading from `runners` rather
+   * than from a captured row also means the modal shows the list's current
+   * state — remarks just saved, a payment just validated — not a stale copy.
+   */
+  const openViewModal = (runnerId: string) => {
+    const runner = runners.find(r => r.id === runnerId);
+    if (runner) {
+      setViewingRunner(runner);
+    }
+  };
+
   const openEditModal = (runnerId: string) => {
     const runner = runners.find(r => r.id === runnerId);
     if (runner) {
@@ -713,6 +729,7 @@ export default function RegistrantsTable({
             isBankTransfer={row.original.isBankTransfer}
             updatingId={updatingId}
             handleStatusChange={handleStatusChange}
+            onView={openViewModal}
             onEdit={openEditModal}
             onDelete={openDeleteModal}
           />

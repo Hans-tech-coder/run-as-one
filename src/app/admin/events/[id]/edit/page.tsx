@@ -7,6 +7,14 @@ import { useRouter } from 'next/navigation';
 import { toPesos } from '@/lib/money';
 import { formatInclusions } from '@/lib/inclusions';
 import RegistrationFormPicker from '../../RegistrationFormPicker';
+import RegistrationOpeningPicker from '../../RegistrationOpeningPicker';
+import {
+  OPENS_IMMEDIATELY,
+  openingDraft,
+  openingInstantISO,
+  openingProblem,
+  type OpeningDraft,
+} from '../../registration-opening';
 import EventOptionsPanel from '../../EventOptionsPanel';
 import { blankCategory, type CategoryDraft } from '../../category-draft';
 import { DEFAULT_REGISTRATION_FORM, asRegistrationForm, type RegistrationForm } from '@/lib/registration-form';
@@ -42,6 +50,11 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
   const [isSuccessClosing, setIsSuccessClosing] = useState(false);
   
+  // When this race starts taking sign-ups. Outside formData because it is two
+  // fields standing for one nullable column — see registration-opening.ts.
+  const [opening, setOpening] = useState<OpeningDraft>(OPENS_IMMEDIATELY);
+  const [openingError, setOpeningError] = useState<string | null>(null);
+
   const [formData, setFormData] = useState({
     title: '',
     date: '',
@@ -124,6 +137,10 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
           certificateCoordinates: data.certificateCoordinates || JSON.stringify({ nameY: 50, timeY: 60, catY: 70 }),
         });
 
+        // Null on the row means the race was open from the moment it was
+        // published, which is the picker's first card.
+        setOpening(openingDraft(data.registrationOpensAt));
+
         setBankAccounts(
           (data.bankAccounts ?? []).map((b: any) => ({
             id: b.id,
@@ -205,11 +222,27 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
       return;
     }
 
+    // Scheduled to open, with no usable date: the message goes under the date
+    // field rather than into the failure modal, because that is the box that
+    // has to change.
+    const openingFault = openingProblem(opening);
+    setOpeningError(openingFault);
+    if (openingFault) {
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const res = await fetch(`/api/admin/events/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, eventType, categories, bankAccounts: cleanBankAccounts(bankAccounts) }),
+        body: JSON.stringify({
+          ...formData,
+          eventType,
+          registrationOpensAt: openingInstantISO(opening),
+          categories,
+          bankAccounts: cleanBankAccounts(bankAccounts),
+        }),
       });
 
       if (!res.ok) {
@@ -592,6 +625,21 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
             </div>
             <div className="admin-panel-content">
               <div className="flex flex-col gap-6">
+                {/* When sign-ups start. Above the hold because it is the
+                    earlier question: whether this race has opened at all
+                    comes before whether the organizer has stopped it. */}
+                <div className="form-group">
+                  <label className="form-label">Registration Opening</label>
+                  <RegistrationOpeningPicker
+                    value={opening}
+                    onChange={next => {
+                      setOpening(next);
+                      if (openingError) setOpeningError(null);
+                    }}
+                    idPrefix="editEventOpening"
+                    error={openingError}
+                  />
+                </div>
                 {/* A manual hold, distinct from an event whose options have all
                     sold out: the slots and the days both remain, and the
                     organizer has stopped anyway. It is enforced in both
