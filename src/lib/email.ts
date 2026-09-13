@@ -59,11 +59,10 @@ import {
 /**
  * The sender line every email goes out under.
  *
- * The display name is **quoted**, which it has to be now that the brand is
- * "Run As One by: CRC": a colon is one of RFC 5322's specials, and a bare
- * phrase containing one is not a legal display-name — the parser stops at the
- * colon and the rest of the name lands wherever the receiving client decides.
- * Quoting it makes the whole name one atom and the address parses as intended.
+ * The display name is **quoted**. The name comes from `SITE_NAME`, and it once
+ * held a colon — one of RFC 5322's specials, at which a parser stops and drops
+ * the rest of a bare display-name wherever the receiving client decides.
+ * Quoting keeps the whole name one atom whatever the constant holds.
  */
 const FROM_ADDRESS = `"${SITE_NAME}" <${CONTACT_EMAIL}>`;
 const BRAND_ORANGE = '#FF6B00';
@@ -94,7 +93,7 @@ const BRAND_BLUE = '#007AFF';
  * email sent from localhost or a preview deployment still shows whatever
  * production is serving: a new logo reaches inboxes only once it is on `main`.
  */
-const LOGO_VERSION = '2';
+const LOGO_VERSION = '3';
 const LOGO_URL = `${SITE_URL}/email/run-as-one-logo.png?v=${LOGO_VERSION}`;
 
 let client: Resend | null = null;

@@ -1,4 +1,4 @@
-# Run As One by: CRC — Project Guide
+# Run As One — Project Guide
 
 **Read this file before touching the codebase.** It is the single briefing on what
 this app is, how it is built, and the rules it holds itself to, so a fresh session
@@ -14,7 +14,7 @@ updated](#keeping-this-file-updated) at the bottom.
 
 ## 1. What the product is
 
-Run As One by: CRC is a **running-event registration and results platform for the
+Run As One is a **running-event registration and results platform for the
 Philippines**. Three groups use it:
 
 | Who | What they do | Where |
@@ -1000,7 +1000,8 @@ These are the user's own standing preferences. Follow them without being asked.
   `.rao-logo` in `globals.css`, geometry in `lib/brand-mark.ts` — the one copy
   of the path data, which the component, the themed favicon and the icon
   raster scripts all draw from; `app/icon.svg` is the sole exception, a static
-  file that can import nothing, so change it in the same edit). It replaced `public/run-as-one-logo.png`
+  file that can import nothing, so change it in the same edit). It replaced `public/run-as-one-logo.png` (the old
+  artwork, since deleted)
   everywhere a person sees the app: the public navbar and footer, both
   dashboards' sidebars, and the two auth cards. Two halves made of deliberately
   different material — **the mark is SVG geometry** (three concentric arcs, ink
@@ -1015,39 +1016,31 @@ These are the user's own standing preferences. Follow them without being asked.
   Three variants — `full`, `stacked`, `mark`. **Flat colour, never the
   orange→blue gradient**: this logo has to survive a bib, a shirt and a
   tarpaulin, and a ramp is the first thing a printer loses.
-- **The brand is "Run As One by: CRC", and `SITE_NAME` is the only place it is
-  spelled.** It used to be written "RunAsOne" and the parent brand only rode
-  along on the logo; both halves are now one name, and every surface that names
-  the platform in prose — the root `<title>` and every page title, the Open
-  Graph `siteName`, the two legal pages, the footer copyright, the sender name
-  and footer on every email — builds its string from `SITE_NAME` in
-  `lib/site-contact.ts` rather than typing it. **Never retype the name**: the
-  first version of this rename left half the page titles behind because they
-  were string literals, which is why they are template literals off the
-  constant now. Two consequences worth knowing: the email sender's display name
-  is **quoted** (`"${SITE_NAME}" <…>`), because a colon is one of RFC 5322's
-  specials and a bare phrase containing one is not a legal display-name; and the
-  lockup's own two lines are the *only* copies of the name that are not read
-  from the constant, because they are separately styled DOM text — the wordmark
-  says "Run As One" and the byline "by: CRC", and the two must be edited
-  together with it. The `RunAsOneLogo` component, its file and the `.rao-logo`
-  class keep their old identifiers; they are code names, not text a person sees.
-- **"by: CRC" is part of the lockup, not an option.** Run As One by: CRC is Cresendo
-  Running Community's platform, and a parent brand that appears on some
-  surfaces and not others stops reading as a parent brand — so the endorsement
-  line renders on every variant that has a wordmark, and there is no prop to
-  turn it off. It sits **flush with the left edge of the wordmark** in the
-  horizontal lockup and centred in the stacked one, sharing the wordmark's own
-  alignment axis so the two lines have one edge between them rather than two;
-  right-aligning it would hang it off an edge that letter-spacing keeps moving.
-  Mixed case against the wordmark's caps is what marks it as the quieter line.
-  Its size is `max(9.5px, 0.24em)` rather than pure `em`: small text does not
-  scale down linearly and stay readable, so the floor holds it legible at the
-  32px the navbar uses while it still grows on the surfaces that can carry it.
-  It replaced a "Race registration" tagline that never shipped — one sub-line
-  is all the slot holds, and the parent brand earns it.
+- **The brand is "Run As One", and `SITE_NAME` is the only place it is
+  spelled.** It was once written "RunAsOne", and for a while it carried a
+  parent-brand byline; the owner had that byline removed from every surface —
+  the name, the logo lockup, the favicon's label, the Open Graph card and the
+  email logo. Every surface that names the platform in prose — the root
+  `<title>` and every page title, the Open Graph `siteName`, the two legal
+  pages, the footer copyright, the sender name and footer on every email —
+  builds its string from `SITE_NAME` in `lib/site-contact.ts` rather than
+  typing it. **Never retype the name**: an earlier rename left half the page
+  titles behind because they were string literals, which is why they are
+  template literals off the constant now. The email sender's display name stays
+  **quoted** (`"${SITE_NAME}" <…>`) so a special character in some future name
+  — the old byline's colon was one — cannot break RFC 5322 parsing. The
+  lockup's wordmark is the *only* copy of the name not read from the constant,
+  because it is separately styled DOM text, so edit the two together. The
+  `RunAsOneLogo` component, its file and the `.rao-logo` class keep their old
+  identifiers; they are code names, not text a person sees.
+- **The lockup is the mark and the wordmark, nothing else.** There is no byline
+  or tagline slot: the endorsement line that used to sit under the wordmark was
+  removed along with its `.rao-logo__byline` and `.rao-logo__words` styles, so
+  the wordmark alone is centred on the mark in the horizontal lockup and centred
+  under it in the stacked one. Do not bring a sub-line back unless the owner
+  asks for one.
 - **Sizing the logo is one number.** `--rao-logo-size` is the height of the
-  mark and everything else — wordmark, tagline, every gap — is `em` off it, so
+  mark and everything else — the wordmark and the gap — is `em` off it, so
   a call site sets one value and the proportions hold:
   `className="[--rao-logo-size:32px] sm:[--rao-logo-size:38px]"`. Do not size
   the wordmark or the gaps per surface; that is what left the old raster logo a
@@ -1124,30 +1117,32 @@ These are the user's own standing preferences. Follow them without being asked.
   its own inset dark panel rather than borrowing the platform's background.
   **Regenerating the two with a wordmark means rendering them in a browser**,
   where the real Outfit face is loaded — rasterising SVG `<text>` outside one
-  picks up whatever font the rasteriser happens to find. `public/run-as-one-logo.png`
-  is the previous CRC artwork; nothing references it any more.
+  picks up whatever font the rasteriser happens to find.
 
-  **Renaming the brand means re-rendering both wordmark rasters**, and neither
+  **Changing the lockup means patching both wordmark rasters**, and neither
   can be regenerated from source, because there is no source — they were
-  rasterised from a browser once and committed. The way they were re-cut for
-  the "by: CRC" rename is the way to do it again: measure the existing byline's
-  glyph runs, baseline and colour out of the PNG itself, reproduce them in a
-  canvas on a page where the real Inter face is loaded (Inter 500, `0.06em`
-  tracking, `#A1A1AA` — the byline is Inter, not the wordmark's Outfit), and
-  composite only that line back. The OG card's byline sits on the panel's
-  gradient, so its box is rebuilt by interpolating each column between the clean
-  rows above and below rather than filled flat; the email lockup's byline sits
-  on transparent ground and its box is simply cleared. Patching the one line
-  leaves every other pixel of both assets byte-identical, which is worth more
-  than a clean re-render that would drift.
+  rasterised from a browser once and committed. They are patched in place with
+  `sharp` on the raw pixels. When the byline was removed, its rows were cleared
+  and the wordmark was moved down by 0.13 of the mark's em — half the byline's
+  line box plus the gap it sat behind, which is exactly where the live component
+  now centres the wordmark (16px in the 3x email PNG, 18px on the OG card). The
+  OG card's text sits on the panel's gradient, so its box is rebuilt by
+  interpolating each column between clean rows above and below, the white
+  wordmark's coverage is recovered against that rebuilt ground, and it is
+  composited back at its new height; the email lockup sits on transparent
+  ground, so its rows are simply moved. A line that has to be *added* is drawn
+  in a canvas on a page where the real face is loaded, measured against the
+  PNG, and composited the same way. Patching leaves every other pixel of both
+  assets byte-identical, which is worth more than a clean re-render that would
+  drift.
 
   **A re-cut email logo also needs its URL bumped and a deploy to `main`.**
   `LOGO_URL` in `lib/email.ts` carries a `?v=` (`LOGO_VERSION`) that must change
   with the PNG: Gmail's image proxy caches each image URL on Google's side and
   keeps serving that copy, so a new file behind an old URL still shows the old
   picture. And the URL is built on `SITE_URL`, the production domain, so an email
-  sent from localhost or a preview shows whatever production serves — the "by:
-  CRC" logo sat fixed on `dev` while every test email kept showing "by CRC",
+  sent from localhost or a preview shows whatever production serves — a re-cut
+  logo once sat fixed on `dev` while every test email kept showing the old one,
   because `main` had not been deployed.
 - Commit style: `feat:` / `fix:` / `refactor:` plus a sentence saying what changed
   for the user.

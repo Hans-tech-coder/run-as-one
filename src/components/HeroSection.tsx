@@ -10,7 +10,7 @@ import HeroArcBackground from '@/components/HeroArcBackground';
  * The front door.
  *
  * This used to be a search box and nothing else — no headline, no sentence
- * saying what Run As One by: CRC is — so a first-time visitor landed on a control with
+ * saying what Run As One is — so a first-time visitor landed on a control with
  * no idea what they were searching. The copy states the product; the events
  * below are still the thing the page is for, so this stays short enough that
  * the first race card is reachable without much scrolling.

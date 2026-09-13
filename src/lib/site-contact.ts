@@ -1,5 +1,5 @@
 /**
- * Who Run As One by: CRC is, and how a runner reaches it.
+ * Who Run As One is, and how a runner reaches it.
  *
  * The footer, the 404 page and the two legal pages all quote the same address
  * and the same channel list, so they read it from here instead of each
@@ -14,11 +14,10 @@
  * Every surface that names the platform in prose — the footer's copyright, the
  * two legal pages, the Open Graph `siteName`, the sender name and footer on
  * every email — reads it from here, so the name cannot be half-changed. The
- * parent brand is part of it: "Run As One" alone is not the product's name on
- * any surface, the same rule the logo lockup follows by rendering "by: CRC" on
- * every variant that has a wordmark.
+ * logo lockup's wordmark is the one other copy, because it is separately styled
+ * DOM text; change the two together.
  */
-export const SITE_NAME = 'Run As One by: CRC';
+export const SITE_NAME = 'Run As One';
 
 /**
  * Where the site lives on the open internet.
@@ -36,7 +35,7 @@ export const SITE_NAME = 'Run As One by: CRC';
  * on the page still rendered, so the mistake was invisible in a browser, but
  * `metadataBase` made `og:image` absolute against that dead host: Facebook's
  * crawler could not fetch the card, fell back to the largest image on the page,
- * and showed the featured event's poster instead of the Run As One by: CRC card, over a
+ * and showed the featured event's poster instead of the Run As One card, over a
  * `run-as-one.vercel.app` byline nobody could open.
  */
 export const SITE_URL =

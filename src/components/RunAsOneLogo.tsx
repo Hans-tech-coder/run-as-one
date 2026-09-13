@@ -3,7 +3,7 @@ import { SITE_NAME } from '@/lib/site-contact';
 import { MARK_ARCS, MARK_DOT, MARK_VIEWBOX, type MarkInk } from '@/lib/brand-mark';
 
 /**
- * The Run As One by: CRC brand lockup.
+ * The Run As One brand lockup.
  *
  * Two halves that are deliberately made of different material:
  *
@@ -28,7 +28,7 @@ import { MARK_ARCS, MARK_DOT, MARK_VIEWBOX, type MarkInk } from '@/lib/brand-mar
  * surface can be re-tinted by setting `--logo-ink` on its container.
  *
  * **Size is one number.** `--rao-logo-size` is the height of the mark; the
- * wordmark, the tagline and every gap are `em` off it, so the lockup keeps its
+ * wordmark and the gap are `em` off it, so the lockup keeps its
  * proportions at any size. Set it per call site, responsively if needed:
  * `className="[--rao-logo-size:34px] sm:[--rao-logo-size:40px]"`.
  */
@@ -105,12 +105,9 @@ export function RunAsOneLogo({
       aria-hidden={decorative || undefined}
     >
       {mark}
-      <span className="rao-logo__words">
-        {/* Written in mixed case and uppercased in CSS: a screen reader reading
-            the DOM text says the brand rather than spelling out four capitals. */}
-        <span className="rao-logo__word">Run As One</span>
-        <span className="rao-logo__byline">by: CRC</span>
-      </span>
+      {/* Written in mixed case and uppercased in CSS: a screen reader reading
+          the DOM text says the brand rather than spelling out three capitals. */}
+      <span className="rao-logo__word">Run As One</span>
     </span>
   );
 }
