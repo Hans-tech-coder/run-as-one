@@ -2,7 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Plus } from 'lucide-react';
 import db from '@/lib/db';
-import { reachableEvents, requireActor } from '@/lib/actor';
+import { can, reachableEvents, requireActor } from '@/lib/actor';
 import { hasFinished } from '@/lib/event-schedule';
 import {
   registrationState,
@@ -41,6 +41,14 @@ export default async function AdminEventsPage() {
       withSlotCounts(event.categories, taken),
       hasFinished(event),
     ),
+    // What this person may do from the row's menu, asked with the same can()
+    // the route behind each item asks — so a validator is never offered
+    // Delete Event only to be refused by it. Registrants and Manage Results
+    // stay for everyone: every role may read both.
+    access: {
+      edit: can(actor, 'event:edit', { organizerId: actor.orgId, eventId: event.id }),
+      delete: can(actor, 'event:delete', { organizerId: actor.orgId, eventId: event.id }),
+    },
   }));
 
   return (
@@ -50,7 +58,10 @@ export default async function AdminEventsPage() {
       </header>
 
       <div className="admin-content">
-        <EventsTableClient events={rows} />
+        <EventsTableClient
+          events={rows}
+          canCreate={can(actor, 'event:create', { organizerId: actor.orgId })}
+        />
       </div>
     </>
   );

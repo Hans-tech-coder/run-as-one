@@ -12,16 +12,34 @@
  * it and keeps the token's name only as a fallback.
  *
  * It names the **person**, not the organizer: a staff member's sidebar says
- * their own name, which getActor() has already read from their StaffAccount.
+ * their own name, which getActor() has already read from their StaffAccount,
+ * with the organizer they are working inside underneath it.
+ *
+ * It also decides which sidebar items this person has any reason to open, so
+ * a validator is never offered a Marketing screen that would only 404 on them.
+ * The pages still check for themselves; hiding a link is manners, not access.
  */
 
 import prisma from './db';
-import { getActor } from './actor';
+import { activeMembershipWhere, can, canSomewhere, getActor } from './actor';
+import { ROLE_LABELS } from './permissions';
 
 export type SignedInUser = {
   name: string;
   /** First letter of the name, for the round avatar. */
   initial: string;
+  /** "Owner", "Admin", "Staff" — what the line under the name says. */
+  roleLabel: string;
+  /** The organizer this session acts inside. For an owner it is their own name. */
+  organizerName: string;
+  /** The sidebar items this person has a reason to open. */
+  nav: { marketing: boolean; team: boolean };
+  /**
+   * The organizers a staff member can switch between. Empty for an owner, and
+   * for a staff member who works for only one — a switcher with one choice is
+   * a control that does nothing.
+   */
+  organizers: { id: string; name: string; current: boolean }[];
 };
 
 export async function getSignedInUser(): Promise<SignedInUser | null> {
@@ -29,16 +47,45 @@ export async function getSignedInUser(): Promise<SignedInUser | null> {
   if (!actor) return null;
 
   let name = actor.name;
+  let organizerName = actor.name;
+  let organizers: SignedInUser['organizers'] = [];
+
   if (actor.kind !== 'STAFF') {
     const organizer = await prisma.organizer.findUnique({
       where: { id: actor.id },
       select: { name: true },
     });
     name = organizer?.name ?? actor.name;
+    organizerName = name;
+  } else {
+    const memberships = await prisma.staffMembership.findMany({
+      where: activeMembershipWhere(actor.id),
+      orderBy: { acceptedAt: 'asc' },
+      select: { organizerId: true, organizer: { select: { name: true } } },
+    });
+    organizerName =
+      memberships.find(membership => membership.organizerId === actor.orgId)?.organizer.name ?? '';
+    if (memberships.length > 1) {
+      organizers = memberships.map(membership => ({
+        id: membership.organizerId,
+        name: membership.organizer.name,
+        current: membership.organizerId === actor.orgId,
+      }));
+    }
   }
 
   name = name.trim();
   if (!name) return null;
 
-  return { name, initial: name.charAt(0).toUpperCase() };
+  return {
+    name,
+    initial: name.charAt(0).toUpperCase(),
+    roleLabel: actor.role === 'SUPER_ADMIN' ? 'Super Admin' : ROLE_LABELS[actor.role],
+    organizerName,
+    nav: {
+      marketing: canSomewhere(actor, 'promo:view'),
+      team: can(actor, 'team:manage', { organizerId: actor.orgId }),
+    },
+    organizers,
+  };
 }

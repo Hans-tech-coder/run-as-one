@@ -19,7 +19,7 @@ each batch landing whole. Update the Status table as they land.
 | Batch | Laman | Migration | Status |
 | --- | --- | --- | --- |
 | 1 | Schema, `actor.ts` / `permissions.ts` / `audit.ts`, JWT `orgId`, rewire every admin surface, audit the existing actions | yes (`20260913120000_staff_access_and_audit_log`) | Landed — see notes below |
-| 2 | `/admin/team` — invite, roles, event assignments, suspend | small | Not started |
+| 2 | `/admin/team` — invite, roles, event assignments, suspend | yes (`20260913180000_staff_membership_suspension`) | Landed — see notes below |
 | 3 | `/admin/activity` — the trail, plus inline provenance on the rows | none | Not started |
 | 4 | TOTP two-factor, required for anyone who can validate or delete | small | Not started |
 | 5 | Optional: Google sign-in, session list, retention sweep | small | Not started |
@@ -65,6 +65,62 @@ session to build on rather than re-derive:
   `npx prisma migrate resolve --applied 20260912055118_feedback_inbox`,
   `npx prisma migrate deploy`. `local-dev` had the same gap and was reconciled
   this way.
+
+### Batch 2 — what landed, and the calls made along the way
+
+`/admin/team`, the invitation link at `/admin/invite/[token]`, the organizer
+switcher, and permission-aware navigation. Decisions for the next session to
+build on:
+
+- **Suspension is per membership, not per account.** The plan's model put
+  `status` on `StaffAccount`, but one person serves several organizers (§1.2),
+  so an owner suspending a freelancer there would lock them out of every other
+  organizer too. The migration adds `StaffMembership.suspendedAt` /
+  `suspendedById`; `getActor()`, sign-in and the switcher all refuse a
+  suspended membership through `activeMembershipWhere`. `StaffAccount.status`
+  stays the platform-wide switch, and nothing on the team screen writes it.
+- **An admin cannot touch an admin.** `GRANTABLE_ROLES` in `permissions.ts`:
+  OWNER may grant ADMIN or STAFF, ADMIN may grant only STAFF, and a change of
+  role is checked against both the old and the new role
+  (`canManageMember`). Nobody changes, suspends or removes their own
+  membership. All of it lives in one guard, `api/admin/team/[id]/member.ts`.
+- **A STAFF membership needs at least one event.** An invitation with none
+  would land a person on an empty dashboard; taking all access away from
+  somebody who still has an account is what Suspend is for.
+- **Invitation link:** 32 random bytes (base64url), stored as sha256, valid
+  `INVITE_TTL_DAYS` = 7. A resend issues a new token and kills the old one.
+  A new person picks their name and password on the page; **someone who
+  already has an account must enter their existing password**, because the
+  link only proves someone can read that inbox. Accepting claims the
+  membership with a conditional update (a link pressed twice cannot accept
+  twice) and signs the person straight in. In production the link is built
+  from `SITE_URL`; anywhere else, from the request origin. Outside production
+  the link is also printed to the server console, so the flow can be tried on
+  a laptop without email.
+- **Email failure never fails the invitation.** The rows commit first; if
+  Resend refuses, the route says so, the row shows as Invited, and Resend
+  Invitation is on its menu.
+- **Removing a member** deletes the membership and its assignments. The
+  StaffAccount is deleted too only if it never set a password and belongs to
+  no other organizer — otherwise it is somebody's login. Audit rows stay.
+- **Switching organizers** (`POST /api/auth/switch-organizer`) reissues the
+  session with another `orgId`. The trail entry goes to the organizer being
+  entered and does not name the one being left.
+- **Navigation follows the matrix.** The sidebar shows Marketing only with
+  `promo:view` somewhere, and Team only with `team:manage`; the events table
+  hides Create Event without `event:create`, and each row's Edit, Pause,
+  Schedule and Delete follow `event:edit` / `event:delete`. The owner's role
+  line in the sidebar now reads **Owner** (was "Organizer Admin"), because
+  the team screen needs Owner, Admin and Staff to be distinguishable.
+- **Not done here, still open:** the registrants screen (`RegistrantsTable`,
+  2,000+ lines) still shows every button to every role. Its routes refuse
+  what a role lacks, so nothing leaks, but a validator can press Edit and be
+  told no. Hiding those controls is the obvious companion to Batch 3's
+  provenance work on the same screen.
+- **Releasing Batch 2 to production** needs its migration run by hand after
+  Batch 1's history fix: `npx prisma migrate deploy` with `DIRECT_URL` on the
+  production endpoint picks up both `20260913120000_staff_access_and_audit_log`
+  and `20260913180000_staff_membership_suspension`.
 
 ---
 

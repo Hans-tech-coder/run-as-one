@@ -11,6 +11,7 @@ export default function EventActionsMenu({
   eventId,
   registrationState = 'OPEN',
   isPausing = false,
+  canEdit = true,
   onTogglePause,
   onSchedule,
   onDelete
@@ -20,6 +21,13 @@ export default function EventActionsMenu({
   registrationState?: 'OPEN' | 'FINISHED' | 'PAUSED' | 'SCHEDULED' | 'FULL';
   /** True while this row's pause request is in flight. */
   isPausing?: boolean;
+  /**
+   * Whether this person's role on the event includes `event:edit`. Without it
+   * Edit Event is not offered. Pause, Schedule and Delete are withheld the
+   * other way — by not passing their handler — so the table decides each from
+   * the same `can()` its route asks.
+   */
+  canEdit?: boolean;
   onTogglePause?: () => void;
   /** Opens the modal that decides when sign-ups start. */
   onSchedule?: () => void;
@@ -35,7 +43,7 @@ export default function EventActionsMenu({
   // there unchanged, which reads as a button that did nothing. The menu now
   // stays open on the answer it is waiting for.
   const [navigatingTo, setNavigatingTo] = useState<string | null>(null);
-  
+
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -61,7 +69,7 @@ export default function EventActionsMenu({
       // click was heard.
       if (navigatingTo) return;
       if (
-        dropdownRef.current && 
+        dropdownRef.current &&
         !dropdownRef.current.contains(event.target as Node) &&
         buttonRef.current &&
         !buttonRef.current.contains(event.target as Node)
@@ -69,7 +77,7 @@ export default function EventActionsMenu({
         closeMenu();
       }
     }
-    
+
     function handleScrollOrResize() {
       if (isOpen) {
         updatePosition();
@@ -113,14 +121,14 @@ export default function EventActionsMenu({
       return;
     }
     const el = dropdownRef.current;
-    
+
     const closeMs = parseFloat(
       getComputedStyle(document.documentElement).getPropertyValue("--dropdown-close-dur")
     ) || 150;
-    
+
     el.classList.remove("is-open");
     el.classList.add("is-closing");
-    
+
     setTimeout(() => {
       setIsOpen(false);
     }, closeMs);
@@ -160,11 +168,13 @@ export default function EventActionsMenu({
   const destinations = [
     { href: `/admin/events/${eventId}/registrants`, icon: <Users size={16} />, label: 'Registrants' },
     { href: `/admin/events/${eventId}/results`, icon: <Trophy size={16} />, label: 'Manage Results' },
-    { href: `/admin/events/${eventId}/edit`, icon: <Edit size={16} />, label: 'Edit Event' },
+    ...(canEdit
+      ? [{ href: `/admin/events/${eventId}/edit`, icon: <Edit size={16} />, label: 'Edit Event' }]
+      : []),
   ];
 
   const dropdownContent = (
-    <div 
+    <div
       ref={dropdownRef}
       className={`action-dropdown-menu t-dropdown ${navigatingTo ? 'is-navigating' : ''}`}
       data-origin="top-right"
@@ -226,22 +236,26 @@ export default function EventActionsMenu({
                 : 'Pause Sign-Ups'}
           </button>
         )}
-        <div className="action-dropdown-divider"></div>
-        <button
-          onClick={handleDelete}
-          className={`action-dropdown-item danger w-full flex items-center gap-3 px-4 py-2 text-sm text-left`}
-          role="menuitem"
-        >
-          <Trash2 size={16} />
-          Delete Event
-        </button>
+        {onDelete && (
+          <>
+            <div className="action-dropdown-divider"></div>
+            <button
+              onClick={handleDelete}
+              className={`action-dropdown-item danger w-full flex items-center gap-3 px-4 py-2 text-sm text-left`}
+              role="menuitem"
+            >
+              <Trash2 size={16} />
+              Delete Event
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
 
   return (
     <>
-      <button 
+      <button
         ref={buttonRef}
         onClick={toggleMenu}
         className="action-dropdown-btn focus:outline-none"

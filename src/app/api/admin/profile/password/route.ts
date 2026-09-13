@@ -5,7 +5,7 @@ import { getActor, staffSessionClaims } from '@/lib/actor';
 import { recordAudit } from '@/lib/audit';
 
 /** What the form enforces too, quoted in the helper text under the field. */
-const MIN_PASSWORD_LENGTH = 8;
+import { MIN_PASSWORD_LENGTH } from '@/lib/team';
 
 /**
  * The signed-in person changing their own password.

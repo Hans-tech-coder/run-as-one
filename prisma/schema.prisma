@@ -666,6 +666,14 @@ model StaffMembership {
   /// sha256 of the invite token. The token itself is only ever in the email.
   inviteTokenHash String?
   inviteExpiresAt DateTime?
+  /// When this organizer took the person's access away, and who did (a
+  /// StaffAccount or Organizer id). Null means not suspended. Per membership
+  /// rather than StaffAccount.status because the person may also work another
+  /// organizer's races: one owner suspending a freelance timer must not lock
+  /// them out of somebody else's event. StaffAccount.status stays the
+  /// platform-wide switch, which nothing on the team screen touches.
+  suspendedAt     DateTime?
+  suspendedById   String?
   staff           StaffAccount      @relation(fields: [staffId], references: [id], onDelete: Cascade)
   organizer       Organizer         @relation(fields: [organizerId], references: [id])
   assignments     EventAssignment[]

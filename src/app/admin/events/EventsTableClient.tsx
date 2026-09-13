@@ -34,6 +34,8 @@ import {
 
 interface EventsTableClientProps {
   events: any[];
+  /** Whether this person's role includes `event:create` — Create Event is not offered otherwise. */
+  canCreate?: boolean;
 }
 
 /**
@@ -65,7 +67,7 @@ const REGISTRATION_STATES = {
   FINISHED: { label: 'Race Over', tone: 'neutral' },
 } as const;
 
-export default function EventsTableClient({ events }: EventsTableClientProps) {
+export default function EventsTableClient({ events, canCreate = true }: EventsTableClientProps) {
   // Table state
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
@@ -383,15 +385,30 @@ export default function EventsTableClient({ events }: EventsTableClientProps) {
             eventId={row.original.id}
             registrationState={row.original.registrationState ?? 'OPEN'}
             isPausing={pausingId === row.original.id}
-            onTogglePause={() => handleTogglePause(row.original)}
-            onSchedule={() => {
-              setSchedulingEvent(row.original);
-              requestAnimationFrame(() => setIsScheduleOpen(true));
-            }}
-            onDelete={() => {
-              setDeletingEvent(row.original);
-              requestAnimationFrame(() => setIsDeleteOpen(true));
-            }}
+            // Decided on the server with the same can() each route asks
+            // (events/page.tsx). A row without `access` is an owner's.
+            canEdit={row.original.access?.edit ?? true}
+            onTogglePause={
+              (row.original.access?.edit ?? true)
+                ? () => handleTogglePause(row.original)
+                : undefined
+            }
+            onSchedule={
+              (row.original.access?.edit ?? true)
+                ? () => {
+                    setSchedulingEvent(row.original);
+                    requestAnimationFrame(() => setIsScheduleOpen(true));
+                  }
+                : undefined
+            }
+            onDelete={
+              (row.original.access?.delete ?? true)
+                ? () => {
+                    setDeletingEvent(row.original);
+                    requestAnimationFrame(() => setIsDeleteOpen(true));
+                  }
+                : undefined
+            }
           />
         </div>
       ),
@@ -471,14 +488,18 @@ export default function EventsTableClient({ events }: EventsTableClientProps) {
           </div>
         </div>
 
-        <div className="toolbar-actions">
-          <Link
-            href="/admin/events/new"
-            className="btn-light"
-          >
-            <Plus size={16} /> Create Event
-          </Link>
-        </div>
+        {/* Only for a role that holds event:create — a staff member works on
+            the races they were given and never starts one. */}
+        {canCreate && (
+          <div className="toolbar-actions">
+            <Link
+              href="/admin/events/new"
+              className="btn-light"
+            >
+              <Plus size={16} /> Create Event
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* Table Area */}

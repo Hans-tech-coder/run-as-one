@@ -3,8 +3,8 @@ import db from '@/lib/db';
 import { verifyPassword, createToken, setAuthCookie } from '@/lib/auth';
 import { normalizeAccountEmail } from '@/lib/text-case';
 import {
+  activeMembershipWhere,
   findAccountByEmail,
-  isBlockedOrganizerStatus,
   organizerSessionClaims,
   staffSessionClaims,
 } from '@/lib/actor';
@@ -119,20 +119,36 @@ export async function POST(request: Request) {
     // ── A member of an organizer's staff ─────────────────────────────────
     const staff = account.staff;
 
-    // The organizer this sign-in lands in. A person may work for several; until
-    // the team screen gives them a way to switch, it is the first organizer
-    // that accepted them and is still active.
+    // The organizer this sign-in lands in: the earliest membership that is
+    // accepted, not suspended, and inside an active organizer. A person who
+    // works for several switches from the sidebar once signed in
+    // (api/auth/switch-organizer). One organizer suspending them does not
+    // stop them signing in to another.
     const membership = await db.staffMembership.findFirst({
-      where: { staffId: staff.id, acceptedAt: { not: null } },
+      where: activeMembershipWhere(staff.id),
       orderBy: { acceptedAt: 'asc' },
-      select: { organizerId: true, role: true, organizer: { select: { status: true } } },
+      select: { organizerId: true, role: true },
     });
 
-    const who: AuditActor | null = membership
+    // A refused attempt still needs an organizer's trail to be written into,
+    // even when none of this person's memberships is usable any more — a run
+    // of wrong passwords against a suspended validator is exactly what an
+    // owner reviewing an incident wants to see.
+    const trailOrganizerId =
+      membership?.organizerId ??
+      (
+        await db.staffMembership.findFirst({
+          where: { staffId: staff.id, acceptedAt: { not: null } },
+          orderBy: { acceptedAt: 'asc' },
+          select: { organizerId: true },
+        })
+      )?.organizerId;
+
+    const who: AuditActor | null = trailOrganizerId
       ? {
           kind: 'STAFF',
           id: staff.id,
-          orgId: membership.organizerId,
+          orgId: trailOrganizerId,
           name: staff.name,
           email: staff.email,
         }
@@ -153,7 +169,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!membership || !who || isBlockedOrganizerStatus(membership.organizer.status)) {
+    if (!membership || !who) {
       if (who) await logAttempt(who, 'StaffAccount', 'NO_ACTIVE_ORGANIZER');
       return NextResponse.json(
         { error: 'Your account is not part of an active organizer. Please contact the organizer you work with.' },

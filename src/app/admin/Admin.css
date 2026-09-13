@@ -209,6 +209,71 @@
   background: rgba(255, 77, 79, 0.1);
 }
 
+/* "Staff · PINK RUN EVENTS" can outrun the sidebar; it ends in an ellipsis and
+   the full line is in the element's title. */
+.admin-user-role {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The organizer switcher — only for a staff member who works for more than one
+   organizer (OrganizerSwitcher.tsx). It sits in the same band as the person it
+   belongs to, directly above them, so "who" and "where" read as one block. */
+.admin-org-switcher {
+  padding: var(--space-md) var(--space-lg) 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.admin-org-switcher + .admin-user {
+  border-top: none;
+}
+
+.org-switcher-trigger {
+  width: 100%;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-quick) ease,
+    border-color var(--duration-quick) ease;
+}
+
+.org-switcher-trigger:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.org-switcher-trigger:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
+}
+
+.org-switcher-label {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.org-switcher-name {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* Main Content */
 .admin-main {
   flex: 1;

@@ -2,6 +2,14 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { verifyToken } from '@/lib/jwt';
 
+/**
+ * The admin pages somebody without a session has to reach. The invitation link
+ * is one of them: the person opening it has no account yet — or has one but is
+ * not signed in on this browser — and the page itself proves who they are with
+ * the token in the link.
+ */
+const PUBLIC_ADMIN_PATHS = ['/admin/login', '/admin/register', '/admin/invite'];
+
 export default async function proxy(request: NextRequest) {
   // Check if trying to access superadmin routes
   if (request.nextUrl.pathname.startsWith('/superadmin')) {
@@ -23,7 +31,8 @@ export default async function proxy(request: NextRequest) {
   }
 
   // Check if trying to access regular admin routes (but not login)
-  if (request.nextUrl.pathname.startsWith('/admin') && !request.nextUrl.pathname.startsWith('/admin/login') && !request.nextUrl.pathname.startsWith('/admin/register')) {
+  const pathname = request.nextUrl.pathname;
+  if (pathname.startsWith('/admin') && !PUBLIC_ADMIN_PATHS.some(path => pathname.startsWith(path))) {
     const token = request.cookies.get('admin_token')?.value;
     
     if (!token) {

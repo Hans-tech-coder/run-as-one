@@ -334,8 +334,15 @@ shape:
   reaches every event, `STAFF` only what is assigned), so one email serves a
   freelancer who works several organizers' races. An `EventAssignment` gives a
   STAFF membership one event and a role on it (`EVENT_MANAGER`, `VALIDATOR`,
-  `ENCODER`, `VIEWER`). Nothing creates these rows yet — the team screen is
-  Batch 2 — so today every session is an owner's or the super admin's.
+  `ENCODER`, `VIEWER`). **`/admin/team` creates these rows** (§6). A membership
+  also carries `suspendedAt`/`suspendedById`: **suspension is per membership,
+  not on the account**, because one owner suspending a freelance timer must not
+  lock them out of another organizer's race — `StaffAccount.status` stays the
+  platform-wide switch and nothing on the team screen touches it. A member's
+  state (Active / Invited / Invite Expired / Suspended) is **derived** from
+  `acceptedAt`, `suspendedAt` and `inviteExpiresAt` by `memberState` (§5),
+  never stored. The invite token is kept only as its sha256
+  (`inviteTokenHash`); the token itself exists only in the email.
 - **AuditLog** — the append-only trail: who (`actorKind`, `actorId`, and a
   **snapshotted** `actorName`/`actorEmail`), in which organizer and event, did
   what (`action`, a dotted verb from `AUDIT_ACTIONS`), to what (`entityType`,
@@ -401,7 +408,10 @@ logic again.
 | `actor.ts` | **Who is acting, and what they may reach — the one rule: authorisation scopes by `orgId`, attribution records the actor's `id`.** For an owner the two are the same id, which is why rewiring every admin surface onto this changed nothing until staff exist. `getActor()` is for route handlers (they answer null with their own 401); `requireActor()` is for server pages (it redirects to `/admin/login`). An owner's actor is read from the token alone, as the routes always did; a **staff** actor is checked against the record on every request — membership accepted, account `ACTIVE`, organizer not pending or suspended, and the token issued after `sessionsValidFrom` — because a suspension that waits a day for a JWT to expire is not one. **`can(actor, permission, { organizerId, eventId })`** is the check before acting: organizer-wide roles read the matrix directly, a STAFF membership needs an assignment on that event, and a super admin reaches another organizer only for `SUPER_ADMIN_REACH`. `canSomewhere` is for screens about no single race (marketing, the image uploader). **`reachableEvents(actor, permission)`** is the `where` every list page reads events through — `{ organizerId }` for an owner, only the assigned ids for STAFF. A single-event page reads `{ id, organizerId: actor.orgId }` and then asks `can()`, answering a refusal with the **same "Event not found."** as a missing id. `findAccountByEmail` is the one lookup `auth/login`, `auth/register` and `admin/profile` make across **both** account tables (Organizer wins a tie), since the database cannot keep an address unique across two tables. |
 | `permissions.ts` | **The permission matrix, as data** (`STAFF_ACCESS_PLAN.md` §3). Permissions are verbs (`registration:validate`, `promo:manage`, `event:delete`…); **no route compares a role string**. `OWNER`/`ADMIN` are organizer-wide; `EVENT_MANAGER`/`VALIDATOR`/`ENCODER`/`VIEWER` are held per event. `VALIDATOR` can settle an order and deliberately cannot edit or delete one. `SUPER_ADMIN_REACH` is the super admin's reach into another organizer — view, validate, remark, email, proof — exactly what the status, email and proof routes allowed before. `asMembershipRole`/`asEventRole` guard the two role columns. Prisma-free, so the team screen can render the matrix it enforces. |
 | `audit.ts` | **The trail — "sino ang gumawa nito".** `recordAudit(tx, actor, entry \| entries)` takes the **transaction client**, so the log row and the change commit or fail together; every admin write passes its own transaction, and the three things with no write to ride along (a proof opened, a registrant export, a sign-in attempt) pass the plain client. The actor's name and email are **snapshotted**; the IP and user agent come from the request. `changedFields(before, after, fields, redact)` records only what moved, and records `'changed'` instead of a value for a redacted field, a non-scalar and any string over 120 characters. **`SENSITIVE_RUNNER_FIELDS`** (birthdate, emergency contact name and phone, medical conditions) never have their values logged. `AUDIT_ACTIONS` is the closed vocabulary — add a verb there before using it. Recorded today: sign-ins and failed sign-ins (not for an address with no account, which has no organizer to belong to), profile and password changes, event create / edit / pause / resume / schedule / delete, results uploads, registration status and remarks changes, a manual email marked sent, runner edits and removals (one row per runner, bulk included), proof views, registrant exports, and promotion create / edit / pause / resume / delete. Nothing reads the table yet; the screen is Batch 3. |
-| `signed-in-user.ts` | The name and initial the admin sidebars show — read from the record, not the token, so a rename is never stale. It names the **person**: an owner's Organizer name, or a staff member's own StaffAccount name. |
+| `signed-in-user.ts` | The name and initial the admin sidebars show — read from the record, not the token, so a rename is never stale. It names the **person**: an owner's Organizer name, or a staff member's own StaffAccount name. It also carries the role line (`Owner`, or `Admin · ORGANIZER`), **which sidebar items this person has any reason to open** (`nav.marketing` from `canSomewhere(promo:view)`, `nav.team` from `team:manage`) and, for a staff member with more than one active membership, the organizers the sidebar's switcher offers. Hiding a link is manners; the pages still check. |
+| `team.ts` | **The rules of an organizer's team**, free of Prisma and crypto so the team form and the routes run the same checks and word refusals identically. `memberState` derives Active / Invited / Invite Expired / Suspended from the membership's timestamps (with `MEMBER_STATE_LABELS`/`TONES` for the badge); `readInvitee` (name, lowercased email) and `readAccess` (role plus event assignments, checked against the organizer's own event ids — **a STAFF membership needs at least one event**, and a duplicate or foreign event is refused per row under `assignmentField(i, part)`); `newPasswordErrors`; `describeAccess` for trail summaries; `MIN_PASSWORD_LENGTH` (shared with the settings form and the password route) and `INVITE_TTL_DAYS` = 7. |
+| `team-invite.ts` | **Invitation links.** `newInvitation()` makes 32 random bytes and keeps only their sha256 (`inviteTokenHash`) — the token itself is only ever in the email; `findOpenInvitation(token)` returns the membership only if the token is well-formed, matches, is unaccepted and unexpired, and every failure reads the same; `inviteOrigin(request)` names `SITE_URL` in production and the request's own origin elsewhere, so a localhost invitation links back to the database it was written into; `sendInvitation` renders `staffInvitationEmail` (`email.ts`) and, outside production only, prints the link to the server console so the flow can be tried without email. |
+| `actor.ts` (team additions) | `canManageMember(actor, role)` — `team:manage` **and** `GRANTABLE_ROLES` (`permissions.ts`: an OWNER grants ADMIN or STAFF, an ADMIN only STAFF, so an admin can neither make nor touch another admin); `grantableRoles(actor)` for the picker; `activeMembershipWhere(staffId)` — accepted, not suspended, organizer active — **the one definition sign-in, the organizer switcher and the sidebar all read**, so none can offer an organizer another would refuse. `getActor()` now also refuses a suspended membership. `permissions.ts` gained `ROLE_LABELS`, `ROLE_HINTS`, `PERMISSION_LABELS` and `MATRIX_ROLES`, which is what the team screen's role table is drawn from. |
 | `site-contact.ts` | Site name, contact email, legal "last updated", social channels. **Site-wide details belong here**, destined to become superadmin-editable settings — never inline them in a component. |
 | `email.ts` | Transactional email via Resend, sent from `CONTACT_EMAIL`. Two emails per registration, never one, and they differ in purpose, not just timing: `sendRegistrationReceivedEmail` fires the moment the row is created (`checkout` for online, `checkout/manual` for bank transfer) — before any payment is confirmed — and shows every field submitted (per-runner emergency contact, gender, birthdate, community, etc.) so a typo is caught before payment. `sendRegistrationConfirmationEmail` (the receipt) fires only once status reaches `PAID` — from the PayMongo webhook, or the admin status route once a bank transfer is verified — and stays focused on the money (compact runner list, full cost breakdown), since the received email already covered the data. No artificial delay sits between the two; the PayMongo webhook is itself asynchronous, so "received" always lands first. The HTML template mirrors the app's own look (the real site logo on a dark header, orange→blue gradient accent bar, a color-coded status pill — blue "pending" for received, green "success" for the receipt — instead of plain caption text). **The whole body is one table, and that is the layout strategy — do not split it back into separate tables per section.** Gmail's Android app renders every nested table shrink-to-fit: it sizes each to its own content and ignores the declared width, whether that width is a percentage, a pixel value, an HTML `width` attribute or `table-layout: fixed` (all four were tried; all four failed, as did wrapping each section in a bordered card). Separate tables therefore end up at *different* widths, so a block of short money values stops well short of the right edge while a block holding a long venue name reaches it. Rows of a single table cannot disagree that way — one set of columns means every value right-aligns to the same edge by construction — and the long paragraphs, sitting in that same table as full-width rows, are what push the shared width out to the container. `cardHtml()` is the one sanctioned exception: it nests a bordered block inside a full-width row, and **only blocks whose values are long** (event title, venue, email, phone) may go in one, because those fill the width on their own content — which is why they always rendered correctly. Blocks of short values (the money summary, the compact runner list) must stay plain rows of the body table. **One recipient per send, and no bcc.** Resend meters its free tier by *recipient*, counting a bcc as one of them, so the archive copy this used to carry doubled the quota cost of every email and put a registration at four units against a ceiling of a hundred a day. Resend's own dashboard keeps the log that mailbox existed for. Subjects include the order reference so Gmail can't thread two emails together and hide one behind "Show trimmed content". Each runner block carries that runner's own reference (`order-ref.ts`) and the pick-up email now names the venue and hours rather than saying "Pickup at Venue", since this email is what the runner still has on race week. Any layout change here is a mobile-first bug: verify in the Gmail app, since desktop looks fine either way. **Each email is one document rendered twice**: the block list (`paragraph`, `heading`, `card`, `rows`, `note`, and typed rows inside them) is what the email *is*, `renderHtml` produces what Resend sends and `renderText` the plain-text rendering a person pastes into a `mailto:` — two renderings of one source, never two templates that can drift. Values are held plain in the blocks and escaped by the HTML renderer, so an event or club name containing `&` can no longer arrive as broken markup. A discount, when there is one, is a negative amount row directly under the goods it came off and before the fees — the same order the wizard's summary showed it in, since this email is what the runner checks the charge against; the sign sits outside the peso symbol, because "₱-150.00" reads as a broken number. A send failure is still logged and swallowed, never thrown, so a bounced email can't undo a payment — but `sendEmail` now *reports* it as an `EmailOutcome`, which is what `email-delivery.ts` writes down. |
 | `email-delivery.ts` | **Whether the runner actually got their email, and what happens when they did not.** Every send in the app goes through here rather than calling `email.ts` directly — `deliverReceivedEmail` / `deliverConfirmationEmail` send and then write the outcome onto the registration — because a send whose outcome nobody recorded is exactly the silence this exists to end: the free tier stops at 100 recipients a day, and a swallowed failure left a registration unconfirmed with nothing on the row to say so. The recording is itself wrapped in a try/catch and never throws: bookkeeping about an email must not fail a checkout, and a lost record only shows the row in the backlog, which is the safe direction to be wrong in. **`outstandingEmail` is the rule everything reads**: every registration owes the received email (it is sent at submission, so a row without it never got one), and the receipt is owed only once status is `PAID` — a bank transfer sits `PENDING` for days with no receipt to be missing yet. **A hand-sent email stamps the same column an automatic one would**, because what the column records is that the runner *has* the email, not which system delivered it; the row therefore leaves the backlog, and rejoins on its own if a later email fails. `recordManualSend` stamps that column plus `manualEmailSentBy`/`At` — a name, not an account id, for the same reason as `remarksBy`. `asEmailKind` guards the kind at the API door. |
@@ -534,7 +544,45 @@ its Active badge — a batch collapses into one row that opens to be copied, on
 the same searchable, sortable, paginated table the events and registrants
 screens use. Three metric cards: Running Now, Times Redeemed and **Given
 Away**, the last being the Given column added up) ·
-`/admin/settings` (profile + password) · `/admin/[...missing]` → the admin's own 404.
+`/admin/settings` (profile + password) · `/admin/team` (**who can sign in to
+this organizer, and to what** — `team:manage` only, anyone else gets the
+admin's 404. Three metric cards (Active Members, Invitations Waiting — expired
+ones included, since each needs a resend — and Suspended) over the admin's one
+table: the **owner is always the first row and has no menu**, because the
+owner is the Organizer row and not a membership, then everyone else in
+invitation order, which never changes under an action. Columns: Member (with a
+*You* chip), Role, Events (a STAFF member's races with their role on each),
+Status (with *Link expires Sep 20* under a waiting invitation), Last Sign-In.
+The row menu (`TeamActionsMenu`) offers Edit Access, then **Resend
+Invitation** for someone who has not accepted or **Suspend / Reinstate** for
+someone who has, then Remove from Team / Revoke Invitation. A row the viewer
+may not manage — the owner, themselves, or an admin when they are only an
+admin — shows a dash with a tooltip saying why. **Invite and Edit Access are
+one form** on the t-modal frame: name and email (invite only), a Role picker
+offering only what `grantableRoles` allows, and for Staff a list of event +
+role rows whose pickers never offer an event already chosen in another row.
+Every refusal lands under its field. A failed invitation email is an `alert`,
+not a toast, because it needs acting on. Under the table, `RolesPanel` draws
+the permission matrix straight from `permissions.ts`) ·
+`/admin/invite/[token]` (**public**, `noindex`, `referrer: no-referrer` — where
+the invitation email lands. It says which organizer and exactly which races and
+roles before asking for anything; a new person confirms their name and chooses
+a password, **someone who already has an account enters the one they have**.
+An unknown, used, expired or malformed link all get the same designed "This
+link has expired" page with the way back to sign-in) · `/admin/[...missing]` →
+the admin's own 404.
+
+**The sidebar and the events table follow the permission matrix.** Marketing
+Tools shows only with `promo:view` somewhere, Team only with `team:manage`, and
+the user block's role line reads **Owner**, or `Admin · ORGANIZER` /
+`Staff · ORGANIZER`. A staff member with more than one active membership gets
+an **organizer switcher** above it (`OrganizerSwitcher`, the row-menu machinery
+opening upward). On `/admin/events`, Create Event needs `event:create`, and each
+row's Edit Event, Schedule / Pause Sign-Ups and Delete Event follow
+`event:edit` / `event:delete`, decided on the server per row. **The registrants
+screen does not hide its buttons by role yet** — its routes refuse, so nothing
+leaks, but a validator still sees Edit (an open item in
+`STAFF_ACCESS_PLAN.md`).
 
 ### Super admin (`/superadmin`)
 `/superadmin` dashboard (platform revenue, fees) · `/superadmin/organizers`
@@ -573,6 +621,11 @@ sorted to the top) · `/superadmin/[...missing]`.
 | `admin/promos/[id]` | PATCH, DELETE | Edits, pauses or removes a promotion. A body carrying **only** `{ paused }` is the hold on its own and touches nothing else — the row menu has no form open, so it has no terms to re-post, exactly as `admin/events/[id]` PATCHes its registration hold. Any fuller body is a real edit and is validated in full. **A batch is one promotion, not two hundred**, so an operation on any of its vouchers is an operation on all of them, and the response says how many rows it touched. An edit runs in a **transaction**, because the terms and the price list have to move together: a promotion whose columns saved and whose prices did not is one advertising numbers the checkout no longer holds. The price list is replaced wholesale rather than merged, so a category the organizer cleared loses its row. What a promotion *is* cannot be edited — a code cannot become codeless, a batch's shared label and its random codes stay put, and a voucher stays single-use — because those changes would take the promotion away from people already holding it. Deleting is safe for history: `Registration.promoCode` and `discountAmount` are snapshots, so it removes the ability to redeem, not the record of a redemption. Auth-checked and scoped to the organizer's own rows |
 | `cron/expire-pending` | GET, POST | The daily abandoned-checkout sweep (`lib/pending-expiry.ts`). **Not an admin route** — a scheduled job has no cookie — so it is guarded by the `CRON_SECRET` shared secret in `Authorization: Bearer …` (what Vercel Cron sends) or `x-cron-secret` (a person with curl). With the secret **unset it returns 503 rather than running unguarded**, since the deployment that forgot the variable is exactly the one nobody would check. GET and POST do the same thing because Vercel Cron only issues GET; nothing reaches the sweep without the secret. Returns what it did — how many expired, how many redemptions went back, and whether `MAX_SWEEP` cut it short — and logs the order references, since the caller reads nothing |
 | `admin/profile`, `admin/profile/password` | PATCH | Self-service only; the id comes from the cookie, never the body |
+| `admin/team` | POST | **Invites a person.** `team:manage`, and the role must be one `canManageMember` allows. Validated by `readInvitee` + `readAccess` (§5), refusing per field (`errors`). An address that signs in as an **Organizer** is refused; an address that already has a **StaffAccount** gets a second membership on that same account (keeping the name they gave themselves) unless it already has one here. The account (if new), the membership with its hashed token, the assignments and the `staff.invited` trail row are one transaction; the email goes after and **never fails the invite** — the answer carries `emailSent` / `emailError`. Answers 201 |
+| `admin/team/[id]` | PATCH, DELETE | One membership of this organizer. Every call first runs **`loadManagedMember`** (`team/[id]/member.ts`): a session with `team:manage`, a membership of *this* organizer ("Team member not found." otherwise), **not the actor's own**, and a role the actor may manage. `PATCH { suspended }` on its own suspends or reinstates (accepted memberships only — an invitation is revoked, not suspended); `PATCH { role, assignments }` changes access, re-checking the new role, updating assignments in place, and writing nothing when nothing changed. `DELETE` removes the membership and its assignments, and the StaffAccount too only if it never set a password and has no other membership. Each change writes one trail row. Takes effect on the person's next request, since `getActor()` reads the membership every time |
+| `admin/team/[id]/invite` | POST | **Resends** an unaccepted invitation with a **new** token and a new week — the old link dies. Same guard; reports `emailSent` like the invite |
+| `auth/invite/[token]` | POST | **Public.** Accepts an invitation. Unknown, used, expired or malformed tokens all answer 410 with one sentence. A new account must send `name`, `password`, `confirmPassword`; an existing account must send its **current password** (a wrong one is written to the trail as a failed sign-in). The membership is claimed with a conditional `updateMany`, so a double press cannot accept twice; then the account becomes `ACTIVE`, the trail gets `staff.invitation.accepted` + `auth.signed_in`, and the session cookie is set for that organizer |
+| `auth/switch-organizer` | POST | A STAFF session moving to another organizer it belongs to, checked with `activeMembershipWhere`; reissues the session with the new `orgId`. The trail row is written to the organizer entered and does not name the one left |
 | `superadmin/organizers`, `superadmin/organizers/[id]` | GET, PATCH | Status and commission |
 | `superadmin/communities`, `superadmin/communities/[id]` | GET/POST, PATCH/DELETE | Club curation |
 | `superadmin/feedback`, `superadmin/feedback/[id]` | GET, PATCH/DELETE | The feedback inbox. `SUPER_ADMIN` only — an organizer reading it would be reading other organizers' complaints about the software, and strangers' email addresses. `GET` returns everything newest-first rather than paged: the whole table is the messages people took the trouble to write, and if it ever outgrows one call that will be a good problem. **`PATCH` moves the triage mark and nothing else** — the message, the name and the address are what somebody else wrote, and an inbox that can edit its own mail is one whose contents cannot be trusted later. `DELETE` is a genuine delete, unlike anything on a registration: there is no person waiting on the row, nothing in the product reads it, and a kept-"in case" spam row is one more thing between the owner and the messages that matter. The screen confirms first |
@@ -581,7 +634,8 @@ sorted to the top) · `/superadmin/[...missing]`.
 
 ## 7. Security model
 
-- `src/proxy.ts` guards `/admin/**` (except `/login` and `/register`) and
+- `src/proxy.ts` guards `/admin/**` (except `/login`, `/register` and
+  `/invite`, which a person with no session must reach — `PUBLIC_ADMIN_PATHS`) and
   `/superadmin/**`: no token → `/admin/login`; a `SUPER_ADMIN` on `/admin` →
   `/superadmin`; a non-super-admin on `/superadmin` → `/admin`.
 - **Route handlers re-check auth themselves.** The proxy does not cover
@@ -615,6 +669,25 @@ sorted to the top) · `/superadmin/[...missing]`.
   email, phone, birthdate, emergency contact and medical notes, and an id is not
   proof of ownership. These pages need no `SUPER_ADMIN` branch, because the
   proxy redirects a super admin off `/admin/**` before they render.
+- **Team management is guarded in one place.** Every route about an existing
+  member runs `loadManagedMember` (`api/admin/team/[id]/member.ts`): session,
+  `team:manage`, a membership of the actor's own organizer, **never the actor's
+  own membership**, and a role the actor may manage — **an ADMIN can neither
+  grant ADMIN nor touch an existing admin** (`GRANTABLE_ROLES`), so the owner's
+  choice of who reaches every event cannot be widened or undone by an admin. A
+  change of role is checked against the new role as well as the old.
+- **One person, one credential.** Nobody sets a password for someone else: an
+  invitation carries a 256-bit token, **stored only as its sha256**, valid 7
+  days, replaced (and the old one killed) on every resend. Accepting on an
+  account that already has a password **requires that password** — the link
+  proves inbox access, not identity — and a wrong one is logged as a failed
+  sign-in. Acceptance claims the row with a conditional update, so a link
+  cannot be used twice. The invite page is `noindex` with
+  `referrer: no-referrer`, since the token is in its URL. Outside production
+  only, the link is printed to the server console for local testing.
+- **Suspension and removal bite on the next request**, not at token expiry:
+  `getActor()` refuses a suspended or deleted membership, and sign-in and the
+  organizer switcher both go through `activeMembershipWhere`.
 - **Never trust client amounts.** `checkout` and `checkout/manual` refetch the
   event and recompute the delivery fee, platform fee, subtotal (including the
   shirt upcharge) and **the promo discount** before writing or billing.
@@ -1218,10 +1291,16 @@ organizer's one login. **Batch 1 is in:** the `StaffAccount` /
 columns (§4), `actor.ts` / `permissions.ts` / `audit.ts` (§5), typed session
 claims with `orgId`, every admin page and `/api/admin/**` route rewired onto
 `getActor()` / `requireActor()` and `can()`, and every existing admin action
-written to the trail. Nothing creates a staff account yet, so the app behaves
-for an owner exactly as before; **Batch 2 (`/admin/team` — invite, roles,
-assignments, suspend) is next**, then the activity screen, TOTP, and the
-optional extras. **Read the plan before touching admin auth, the `Organizer`
+written to the trail. **Batch 2 is in too:** `/admin/team` (invite by email,
+Admin or Staff with per-event roles, edit access, suspend / reinstate, resend
+or revoke an invitation, remove), the public `/admin/invite/[token]` accept
+page, per-membership suspension (migration
+`20260913180000_staff_membership_suspension`), the organizer switcher for staff
+who work for several organizers, and a sidebar and events table that only offer
+what the role allows. **Batch 3 (`/admin/activity` and inline provenance) is
+next**, then TOTP and the optional extras. The registrants screen still shows
+every button to every role (its routes refuse), which the plan's Batch 2 notes
+record as open. **Read the plan before touching admin auth, the `Organizer`
 model, or any `/api/admin/**` route's ownership check** — its "Batch 1" notes
 record the calls made in the batch, and the file records which decisions are
 closed (no unified account table, no SSO).

@@ -3,7 +3,7 @@ import { Resend } from 'resend';
 import { CONTACT_EMAIL, SITE_NAME, SITE_URL } from './site-contact';
 import { formatPesos } from './money';
 import { isPricedIn } from './discount';
-import { formatEventDay } from './event-schedule';
+import { formatEventDay, formatEventInstant } from './event-schedule';
 import { runnerRef } from './order-ref';
 import { PICKUP_FALLBACK, pickupDetails } from './pickup';
 import {
@@ -216,7 +216,13 @@ type Block =
   /** Plain rows of the one body table. */
   | { kind: 'rows'; rows: Row[] }
   /** The small grey closing paragraph. */
-  | { kind: 'note'; segments: Segment[] };
+  | { kind: 'note'; segments: Segment[] }
+  /**
+   * The one thing to press. Only an email that asks the reader to *do*
+   * something carries one — a receipt has nothing to press, and a button on it
+   * would read as a request.
+   */
+  | { kind: 'button'; label: string; href: string };
 
 type StatusTone = 'pending' | 'success';
 
@@ -225,6 +231,8 @@ interface EmailDocument {
   subject: string;
   status: { label: string; tone: StatusTone };
   blocks: Block[];
+  /** What the footer invites questions about — "order" unless the email is about something else. */
+  footerTopic?: string;
 }
 
 /* ────────────────────────────────────────────────────────────────────────
@@ -389,6 +397,14 @@ function blockHtml(block: Block, index: number): string {
         `<p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 13px; line-height: 1.6; color: #8b8b96;">${segmentsHtml(block.segments)}</p>`,
         `padding: ${index === 0 ? 0 : 30}px 0 0;`
       );
+    case 'button':
+      // A solid orange fill under the gradient, because Outlook desktop drops
+      // background-image and would otherwise leave white text on nothing. The
+      // link is the whole padded box, so a thumb anywhere on it lands.
+      return fullWidthRow(
+        `<a href="${escapeHtml(block.href)}" style="display: inline-block; background-color: ${BRAND_ORANGE}; background-image: linear-gradient(90deg, ${BRAND_ORANGE} 0%, ${BRAND_BLUE} 100%); color: #ffffff; font-family: Arial, Helvetica, sans-serif; font-size: 15px; font-weight: 700; letter-spacing: 0.5px; text-decoration: none; padding: 14px 30px; border-radius: 12px;">${escapeHtml(block.label)}</a>`,
+        'padding: 10px 0 8px; text-align: center;'
+      );
   }
 }
 
@@ -459,7 +475,7 @@ function renderHtml(doc: EmailDocument): string {
             <tr>
               <td style="padding: 20px 32px; border-top: 1px solid rgba(255,255,255,0.08);">
                 <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 12px; line-height: 1.6; color: #6b6b76; text-align: center;">
-                  Questions about this order? Reply to this email or reach us at
+                  Questions about this ${escapeHtml(doc.footerTopic ?? 'order')}? Reply to this email or reach us at
                   <a href="mailto:${CONTACT_EMAIL}" style="color: ${BRAND_BLUE}; text-decoration: none;">${CONTACT_EMAIL}</a>.<br/>
                   &copy; ${new Date().getFullYear()} ${SITE_NAME}. All rights reserved.
                 </p>
@@ -536,6 +552,9 @@ function blockText(block: Block): string {
     case 'card':
     case 'rows':
       return block.rows.flatMap(rowText).join('\n');
+    case 'button':
+      // A text client cannot draw a button, so the address is spelled out.
+      return `${block.label}:\n${block.href}`;
   }
 }
 
@@ -553,7 +572,7 @@ function renderText(doc: EmailDocument): string {
     body,
     '',
     '—',
-    `Questions about this order? Reply to this email or reach us at ${CONTACT_EMAIL}.`,
+    `Questions about this ${doc.footerTopic ?? 'order'}? Reply to this email or reach us at ${CONTACT_EMAIL}.`,
     `(c) ${new Date().getFullYear()} ${SITE_NAME}. All rights reserved.`,
   ].join('\n');
 }
@@ -873,4 +892,90 @@ export function sendRegistrationConfirmationEmail(
   registration: RegistrationWithDetails
 ): Promise<EmailOutcome> {
   return sendEmail(registrationConfirmationEmail(registration));
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+ * The team invitation — the one email in the app that is not about an order.
+ * ──────────────────────────────────────────────────────────────────────── */
+
+export interface StaffInvitationInput {
+  to: string;
+  inviteeName: string;
+  organizerName: string;
+  /** Who pressed Invite. For an owner this is the organizer's own name. */
+  inviterName: string;
+  role: 'ADMIN' | 'STAFF';
+  /** The races a STAFF invitation reaches, and the role on each. Empty for ADMIN. */
+  events: { title: string; roleLabel: string }[];
+  acceptUrl: string;
+  expiresAt: Date;
+  /** Whether the address already signs in to another organizer's team. */
+  hasAccount: boolean;
+}
+
+/**
+ * Sent when an owner or admin invites somebody onto their team, and again on
+ * a resend (lib/team-invite.ts).
+ *
+ * It says exactly what is being offered — which races, as what — because the
+ * reader is deciding whether to create an account, and "join the team" alone
+ * would not tell a freelance timer whether this is the race they agreed to
+ * work. It never carries a password, and says plainly that nobody but the
+ * invitee will know the one they choose.
+ */
+export function staffInvitationEmail(input: StaffInvitationInput): EmailMessage {
+  const firstName = input.inviteeName.split(' ')[0] || input.inviteeName;
+  // An owner's name is the organizer's name, and "CRC EVENTS invited you to
+  // join CRC EVENTS" reads as a mistake.
+  const fromOrganizer = input.inviterName.trim() === input.organizerName.trim();
+
+  const accessRows: Row[] =
+    input.role === 'ADMIN'
+      ? [
+          { kind: 'info', label: 'Role', value: 'Admin' },
+          { kind: 'info', label: 'Events', value: 'Every event they run' },
+        ]
+      : input.events.map(event => ({ kind: 'info' as const, label: event.title, value: event.roleLabel }));
+
+  return renderMessage({
+    to: input.to,
+    subject: `You're invited to join ${input.organizerName} on ${SITE_NAME}`,
+    status: { label: 'Team Invitation', tone: 'pending' },
+    footerTopic: 'invitation',
+    blocks: [
+      {
+        kind: 'paragraph',
+        segments: fromOrganizer
+          ? [`Hi ${firstName}, `, { strong: input.organizerName }, ` has invited you to join their team on ${SITE_NAME}.`]
+          : [
+              `Hi ${firstName}, `,
+              { strong: input.inviterName },
+              ' has invited you to join ',
+              { strong: input.organizerName },
+              ` on ${SITE_NAME}.`,
+            ],
+      },
+      { kind: 'heading', text: 'Your Access' },
+      { kind: 'card', rows: accessRows },
+      {
+        kind: 'paragraph',
+        segments: [
+          input.hasAccount
+            ? `You already have a ${SITE_NAME} account with this address, so you will accept with the password you use now. Your other organizers are not affected.`
+            : 'Accepting lets you choose your own password. Nobody else — including the person who invited you — will know it.',
+        ],
+      },
+      { kind: 'button', label: 'Accept Invitation', href: input.acceptUrl },
+      {
+        kind: 'note',
+        segments: [
+          `This link works once and expires on ${formatEventInstant(input.expiresAt)}, Manila time. If it has expired, ask for a new one. Not expecting this? You can ignore it — nothing happens unless the link is used.`,
+        ],
+      },
+    ],
+  });
+}
+
+export function sendStaffInvitationEmail(input: StaffInvitationInput): Promise<EmailOutcome> {
+  return sendEmail(staffInvitationEmail(input));
 }

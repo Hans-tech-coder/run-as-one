@@ -64,7 +64,73 @@ export type Role = OrgRole | EventRole;
 export const MEMBERSHIP_ROLES = ['ADMIN', 'STAFF'] as const;
 export type MembershipRole = (typeof MEMBERSHIP_ROLES)[number];
 
+/**
+ * Which membership roles each organizer-wide role may hand out, change or take
+ * away. An ADMIN runs the team but can neither make another ADMIN nor touch
+ * one: otherwise the owner's decision about who reaches every event is one an
+ * admin could quietly widen — or undo, by suspending the admin the owner chose.
+ * Organizer-wide reach is the owner's alone to grant.
+ */
+export const GRANTABLE_ROLES: Record<OrgRole, readonly MembershipRole[]> = {
+  OWNER: ['ADMIN', 'STAFF'],
+  ADMIN: ['STAFF'],
+};
+
+export function roleCanGrant(granter: OrgRole, role: MembershipRole): boolean {
+  return GRANTABLE_ROLES[granter].includes(role);
+}
+
 const ALL: readonly Role[] = ['OWNER', 'ADMIN', 'EVENT_MANAGER', 'VALIDATOR', 'ENCODER', 'VIEWER'];
+
+/** The matrix's columns, in the order the team screen draws them. */
+export const MATRIX_ROLES = ALL;
+
+/** What the team screen calls each role. */
+export const ROLE_LABELS: Record<Role | MembershipRole, string> = {
+  OWNER: 'Owner',
+  ADMIN: 'Admin',
+  STAFF: 'Staff',
+  EVENT_MANAGER: 'Event Manager',
+  VALIDATOR: 'Validator',
+  ENCODER: 'Encoder',
+  VIEWER: 'Viewer',
+};
+
+/**
+ * The sentence under each role in the pickers. Written from the matrix below
+ * and kept beside it, so a change to what a role may do is one screen away
+ * from the words that describe it.
+ */
+export const ROLE_HINTS: Record<Role | MembershipRole, string> = {
+  OWNER: 'The organizer account itself. Every event and every setting.',
+  ADMIN: 'Every event this organizer runs, and the team. Cannot delete an event or change organizer settings.',
+  STAFF: 'Only the events you assign, with a role on each.',
+  EVENT_MANAGER: 'Runs the event: edits it, settles payments, edits runners and loads results. Cannot remove a runner.',
+  VALIDATOR: 'Checks payment proofs and settles orders. Cannot edit or remove a runner.',
+  ENCODER: 'Loads the results sheet and reads registrants. Cannot settle an order.',
+  VIEWER: 'Sees the event, its registrants and its promotions. Changes nothing.',
+};
+
+/** Each permission as the team screen's role table words it. */
+export const PERMISSION_LABELS: Record<Permission, string> = {
+  'event:view': 'See the event',
+  'event:create': 'Create events',
+  'event:edit': 'Edit the event',
+  'event:delete': 'Delete an event',
+  'registration:view': 'See registrants',
+  'registration:validate': 'Validate payments',
+  'registration:remark': 'Write payment remarks',
+  'registration:email': 'Send a missing email by hand',
+  'registration:edit': 'Edit a runner',
+  'registration:delete': 'Remove a runner',
+  'proof:view': 'Open payment proofs',
+  'results:manage': 'Upload results',
+  'promo:view': 'See promotions',
+  'promo:manage': 'Create and change promotions',
+  'team:manage': 'Manage the team',
+  'org:settings': 'Organizer settings',
+  'activity:view': 'Read the activity trail',
+};
 
 /** STAFF_ACCESS_PLAN.md §3, as data. */
 const MATRIX: Record<Permission, readonly Role[]> = {

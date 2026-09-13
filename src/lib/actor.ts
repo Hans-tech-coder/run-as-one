@@ -37,10 +37,12 @@ import { getAuthCookie } from './auth';
 import type { SessionClaims, SessionKind } from './jwt';
 import { normalizeAccountEmail } from './text-case';
 import {
+  MEMBERSHIP_ROLES,
   SUPER_ADMIN_REACH,
   asEventRole,
   asMembershipRole,
   roleCan,
+  roleCanGrant,
   type EventRole,
   type MembershipRole,
   type OrgRole,
@@ -98,6 +100,7 @@ export async function getActor(): Promise<Actor | null> {
     select: {
       role: true,
       acceptedAt: true,
+      suspendedAt: true,
       staff: { select: { name: true, email: true, status: true, sessionsValidFrom: true } },
       organizer: { select: { status: true } },
       assignments: { select: { eventId: true, role: true } },
@@ -107,6 +110,7 @@ export async function getActor(): Promise<Actor | null> {
   // Removed from the team, never accepted, suspended, or the organizer itself
   // suspended: each of those ends the session now rather than at expiry.
   if (!membership?.acceptedAt) return null;
+  if (membership.suspendedAt) return null;
   if (membership.staff.status !== 'ACTIVE') return null;
   if (isBlockedOrganizerStatus(membership.organizer.status)) return null;
 
@@ -157,6 +161,37 @@ function orgRole(actor: Actor): OrgRole | null {
   if (actor.role === 'OWNER' || actor.role === 'SUPER_ADMIN') return 'OWNER';
   if (actor.role === 'ADMIN') return 'ADMIN';
   return null;
+}
+
+/**
+ * Whether this actor may invite, change, suspend or remove a membership that
+ * holds `role`. A change of role asks twice — about the membership as it is
+ * and as it would be — so an admin can neither touch an admin nor make one.
+ * `team:manage` says they run the team; `GRANTABLE_ROLES` says how far.
+ */
+export function canManageMember(actor: Actor, role: MembershipRole): boolean {
+  const wide = orgRole(actor);
+  return wide !== null && roleCan(wide, 'team:manage') && roleCanGrant(wide, role);
+}
+
+/** The roles this actor may hand out, in the order the team screen offers them. */
+export function grantableRoles(actor: Actor): MembershipRole[] {
+  return MEMBERSHIP_ROLES.filter(role => canManageMember(actor, role));
+}
+
+/**
+ * The memberships a staff member can be signed in to right now: accepted, not
+ * suspended by that organizer, and inside an organizer that is itself active.
+ * Sign-in, the organizer switcher and the sidebar all read through this, so
+ * none of them can offer an organizer another would refuse.
+ */
+export function activeMembershipWhere(staffId: string): Prisma.StaffMembershipWhereInput {
+  return {
+    staffId,
+    acceptedAt: { not: null },
+    suspendedAt: null,
+    organizer: { status: { notIn: BLOCKED_ORGANIZER_STATUSES } },
+  };
 }
 
 /** Where an action lands: whose organizer, and which race when it is about one. */

@@ -7,8 +7,8 @@ import FieldError from '@/components/ui/FieldError';
 import { useAlert } from '@/components/ui/AlertProvider';
 import PasswordField from './PasswordField';
 
-/** Kept in step with MIN_PASSWORD_LENGTH in the password route. */
-const MIN_PASSWORD_LENGTH = 8;
+// One constant for this form, the password route and the invitation page.
+import { MIN_PASSWORD_LENGTH } from '@/lib/team';
 
 type FieldErrors = Record<string, string>;
 

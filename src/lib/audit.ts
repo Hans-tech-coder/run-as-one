@@ -39,6 +39,14 @@ import type { Prisma } from '@prisma/client';
 export const AUDIT_ACTIONS = [
   'auth.signed_in',
   'auth.sign_in_failed',
+  'auth.organizer.switched',
+  'staff.invited',
+  'staff.invitation.resent',
+  'staff.invitation.accepted',
+  'staff.access.changed',
+  'staff.suspended',
+  'staff.reinstated',
+  'staff.removed',
   'profile.updated',
   'profile.password.changed',
   'event.created',
@@ -71,7 +79,8 @@ export type AuditEntityType =
   | 'PromoCode'
   | 'RaceResult'
   | 'Organizer'
-  | 'StaffAccount';
+  | 'StaffAccount'
+  | 'StaffMembership';
 
 /** Who did it. An `Actor` from lib/actor.ts is one; SYSTEM is the cron or a webhook. */
 export type AuditActor = {
