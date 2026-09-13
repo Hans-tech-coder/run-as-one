@@ -10,10 +10,13 @@
  * superadmin from the organizers screen — would leave the sidebar showing a
  * stale name until the next sign-in. The record is the truth, so this reads
  * it and keeps the token's name only as a fallback.
+ *
+ * It names the **person**, not the organizer: a staff member's sidebar says
+ * their own name, which getActor() has already read from their StaffAccount.
  */
 
 import prisma from './db';
-import { getAuthCookie } from './auth';
+import { getActor } from './actor';
 
 export type SignedInUser = {
   name: string;
@@ -22,16 +25,19 @@ export type SignedInUser = {
 };
 
 export async function getSignedInUser(): Promise<SignedInUser | null> {
-  const auth = await getAuthCookie();
-  if (!auth?.id) return null;
+  const actor = await getActor();
+  if (!actor) return null;
 
-  const organizer = await prisma.organizer.findUnique({
-    where: { id: String(auth.id) },
-    select: { name: true },
-  });
+  let name = actor.name;
+  if (actor.kind !== 'STAFF') {
+    const organizer = await prisma.organizer.findUnique({
+      where: { id: actor.id },
+      select: { name: true },
+    });
+    name = organizer?.name ?? actor.name;
+  }
 
-  const tokenName = typeof auth.name === 'string' ? auth.name : '';
-  const name = (organizer?.name ?? tokenName).trim();
+  name = name.trim();
   if (!name) return null;
 
   return { name, initial: name.charAt(0).toUpperCase() };

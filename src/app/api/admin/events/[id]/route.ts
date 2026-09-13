@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import db from '@/lib/db';
-import { getAuthCookie } from '@/lib/auth';
+import { can, getActor } from '@/lib/actor';
+import { CHANGED, changedFields, listFields, recordAudit, type AuditEntry } from '@/lib/audit';
 import { toCentavos } from '@/lib/money';
 import { asWaiverParagraphs } from '@/lib/consent-waiver';
 import { asRegistrationForm } from '@/lib/registration-form';
@@ -9,7 +10,7 @@ import { asInclusions } from '@/lib/inclusions';
 import { upperCaseForStorage } from '@/lib/text-case';
 import { asBankAccounts } from '@/lib/bank-accounts';
 import { uniqueEventSlug } from '@/lib/event-slug';
-import { isCalendarDay } from '@/lib/event-schedule';
+import { formatEventInstant, isCalendarDay } from '@/lib/event-schedule';
 import {
   OPENING_INSTANT_ERROR,
   asOpeningInstant,
@@ -19,21 +20,62 @@ import {
 import { eventPromotions } from '@/lib/promo-store';
 import { CATEGORY_ORDER } from '@/lib/category-order';
 
+/**
+ * The event columns the edit form writes, in the order the trail lists them.
+ * Long text (the description, the waiver) is compared but recorded only as
+ * "changed" — see changedFields in lib/audit.ts.
+ */
+const EVENT_FIELDS = [
+  'title',
+  'slug',
+  'date',
+  'startTime',
+  'endTime',
+  'location',
+  'imageUrl',
+  'raceKitImageUrl',
+  'description',
+  'logisticsPickup',
+  'pickupLocation',
+  'pickupSchedule',
+  'logisticsDeliveryFeeInside',
+  'logisticsDeliveryFeeOutside',
+  'adminFee',
+  'shirtSizeUpcharge',
+  'consentWaiver',
+  'registrationForm',
+  'eventType',
+  'registrationPaused',
+  'registrationPauseNote',
+  'registrationOpensAt',
+  'certificateTemplate',
+  'certificateCoordinates',
+] as const;
+
+/** Thrown inside the edit transaction when a category it removes is still in use. */
+class CategoryInUseError extends Error {}
+
+/** A set of rows as one comparable string, so an edit can say whether it moved. */
+function listKey(rows: Record<string, unknown>[], fields: string[]) {
+  return rows.map(row => JSON.stringify(fields.map(field => row[field] ?? null))).join('|');
+}
+
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const auth = await getAuthCookie();
-    if (!auth) {
+    const actor = await getActor();
+    if (!actor) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { id } = await params;
 
-    // Scoped to the signed-in organizer's own events. This is what the edit
+    // Scoped to the actor's own organizer's events. This is what the edit
     // form reads, and it carries the event's bank accounts — an id from the
     // browser is not proof it belongs to the browser's owner, so the scope has
     // to be in the query rather than assumed from the link that was followed.
+    // A STAFF member unassigned to this race is told the same "not found".
     const event = await db.event.findFirst({
-      where: { id, organizerId: auth.id },
+      where: { id, organizerId: actor.orgId },
       include: {
         categories: { orderBy: CATEGORY_ORDER },
         bankAccounts: { orderBy: { sortOrder: 'asc' } },
@@ -44,7 +86,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       }
     });
 
-    if (!event) {
+    if (!event || !can(actor, 'event:view', { organizerId: actor.orgId, eventId: id })) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     }
 
@@ -78,8 +120,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const auth = await getAuthCookie();
-    if (!auth) {
+    const actor = await getActor();
+    if (!actor) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -120,16 +162,20 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     // though the /events/<cuid> form still redirects here, so a mid-campaign
     // title fix costs whoever shared the slug URL.
     //
-    // Scoped to the signed-in organizer, like the GET above and the PATCH
+    // Scoped to the actor's organizer, like the GET above and the PATCH
     // below: this is the write the edit form makes, and an unscoped one would
     // let any approved organizer rewrite another's event — its prices, its
-    // bank accounts, its categories — from an id alone.
+    // bank accounts, its categories — from an id alone. The whole row is read
+    // because the trail records what the save changed.
     const current = await db.event.findFirst({
-      where: { id, organizerId: auth.id },
-      select: { title: true, slug: true },
+      where: { id, organizerId: actor.orgId },
+      include: {
+        categories: { orderBy: CATEGORY_ORDER },
+        bankAccounts: { orderBy: { sortOrder: 'asc' } },
+      },
     });
 
-    if (!current) {
+    if (!current || !can(actor, 'event:edit', { organizerId: actor.orgId, eventId: id })) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     }
 
@@ -145,25 +191,25 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
           return clash !== null && clash.id !== id;
         });
 
-    // Handle category deletion carefully to avoid FK constraints
+    // Update event and upsert categories — and remove the ones the form no
+    // longer sends — in one transaction, so a save either lands whole, trail
+    // row included, or not at all.
     const incomingIds = categories.filter((c: any) => c.id).map((c: any) => c.id);
-    
-    try {
-      await db.category.deleteMany({
-        where: { 
-          eventId: id,
-          id: { notIn: incomingIds }
-        }
-      });
-    } catch (e: any) {
-      if (e.code === 'P2003') {
-        return NextResponse.json({ error: 'Cannot remove a category that already has registered runners or results.' }, { status: 400 });
-      }
-      throw e;
-    }
 
-    // Update event and upsert categories
     const updatedEvent = await db.$transaction(async (prisma) => {
+      // Handle category deletion carefully to avoid FK constraints
+      try {
+        await prisma.category.deleteMany({
+          where: {
+            eventId: id,
+            id: { notIn: incomingIds }
+          }
+        });
+      } catch (e: any) {
+        if (e.code === 'P2003') throw new CategoryInUseError();
+        throw e;
+      }
+
       const ev = await prisma.event.update({
         where: { id },
         data: {
@@ -267,17 +313,45 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         }
       }
 
-      return await prisma.event.findUnique({
+      const saved = await prisma.event.findUnique({
         where: { id },
         include: {
           categories: { orderBy: CATEGORY_ORDER },
           bankAccounts: { orderBy: { sortOrder: 'asc' } },
         }
       });
+
+      // What this save changed. The option and bank-account lists are compared
+      // as wholes and recorded as "changed" — the summary says which, and the
+      // edit screen itself is where their contents are read.
+      const changes = changedFields(current, ev, EVENT_FIELDS);
+      const categoryFields = ['id', 'name', 'distance', 'price', 'imageUrl', 'inclusions', 'slotLimit'];
+      if (saved && listKey(current.categories, categoryFields) !== listKey(saved.categories, categoryFields)) {
+        changes.categories = CHANGED;
+      }
+      const accountFields = ['bankName', 'accountName', 'accountNumber', 'qrImageUrl'];
+      if (saved && listKey(current.bankAccounts, accountFields) !== listKey(saved.bankAccounts, accountFields)) {
+        changes.bankAccounts = CHANGED;
+      }
+      if (Object.keys(changes).length > 0) {
+        await recordAudit(prisma, actor, {
+          action: 'event.updated',
+          entityType: 'Event',
+          entityId: id,
+          eventId: id,
+          summary: `Edited event ${ev.title}: ${listFields(Object.keys(changes))}.`,
+          changes,
+        });
+      }
+
+      return saved;
     });
 
     return NextResponse.json(updatedEvent, { status: 200 });
   } catch (error: any) {
+    if (error instanceof CategoryInUseError) {
+      return NextResponse.json({ error: 'Cannot remove a category that already has registered runners or results.' }, { status: 400 });
+    }
     console.error('Update event error:', error);
     return NextResponse.json({ error: error.message || 'Failed to update event' }, { status: 500 });
   }
@@ -303,14 +377,14 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
  * would mean the date arrives and nothing opens. A caller that sends both
  * fields is taken at its word instead, and neither is inferred from the other.
  *
- * Like PUT, this scopes the update to the signed-in organizer's own events:
+ * Like PUT, this scopes the update to the actor's own organizer's events:
  * "who owns this id" is a question every handler here has to ask, since the id
  * arrives from the browser.
  */
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const auth = await getAuthCookie();
-    if (!auth) {
+    const actor = await getActor();
+    if (!actor) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -340,46 +414,83 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
     const event = await db.event.findUnique({
       where: { id },
-      select: { id: true, organizerId: true },
+      select: {
+        id: true,
+        organizerId: true,
+        title: true,
+        registrationPaused: true,
+        registrationPauseNote: true,
+        registrationOpensAt: true,
+      },
     });
 
     if (!event) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     }
 
-    if (event.organizerId !== auth.id) {
+    if (!can(actor, 'event:edit', { organizerId: event.organizerId, eventId: id })) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const updated = await db.event.update({
-      where: { id },
-      data: {
-        ...(pausing
+    const updated = await db.$transaction(async (tx) => {
+      const row = await tx.event.update({
+        where: { id },
+        data: {
+          ...(pausing
+            ? {
+                registrationPaused: body.registrationPaused,
+                // Only written when the caller sent one, so toggling from the
+                // events table never wipes a note the organizer wrote in the
+                // edit form.
+                ...(body.registrationPauseNote === undefined
+                  ? {}
+                  : { registrationPauseNote: body.registrationPauseNote?.trim() || null }),
+              }
+            : {}),
+          ...(scheduling
+            ? {
+                registrationOpensAt: registrationOpens,
+                // See the note above: an opening date set on its own is also the
+                // answer to a hold, or the date would arrive to a paused event.
+                ...(pausing ? {} : { registrationPaused: false }),
+              }
+            : {}),
+        },
+        select: {
+          id: true,
+          registrationPaused: true,
+          registrationPauseNote: true,
+          registrationOpensAt: true,
+        },
+      });
+
+      const changes = changedFields(event, row, [
+        'registrationPaused',
+        'registrationPauseNote',
+        'registrationOpensAt',
+      ]);
+      if (Object.keys(changes).length > 0) {
+        const entry: AuditEntry = scheduling
           ? {
-              registrationPaused: body.registrationPaused,
-              // Only written when the caller sent one, so toggling from the
-              // events table never wipes a note the organizer wrote in the
-              // edit form.
-              ...(body.registrationPauseNote === undefined
-                ? {}
-                : { registrationPauseNote: body.registrationPauseNote?.trim() || null }),
+              action: 'event.registration.scheduled',
+              entityType: 'Event',
+              summary: row.registrationOpensAt
+                ? `Scheduled sign-ups on ${event.title} to open ${formatEventInstant(row.registrationOpensAt)}.`
+                : `Opened sign-ups on ${event.title} now.`,
             }
-          : {}),
-        ...(scheduling
-          ? {
-              registrationOpensAt: registrationOpens,
-              // See the note above: an opening date set on its own is also the
-              // answer to a hold, or the date would arrive to a paused event.
-              ...(pausing ? {} : { registrationPaused: false }),
-            }
-          : {}),
-      },
-      select: {
-        id: true,
-        registrationPaused: true,
-        registrationPauseNote: true,
-        registrationOpensAt: true,
-      },
+          : row.registrationPaused
+            ? { action: 'event.registration.paused', entityType: 'Event', summary: `Paused sign-ups on ${event.title}.` }
+            : { action: 'event.registration.resumed', entityType: 'Event', summary: `Resumed sign-ups on ${event.title}.` };
+        await recordAudit(tx, actor, {
+          ...entry,
+          entityId: id,
+          eventId: id,
+          organizerId: event.organizerId,
+          changes,
+        });
+      }
+
+      return row;
     });
 
     return NextResponse.json(updated);
@@ -394,8 +505,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const auth = await getAuthCookie();
-    if (!auth) {
+    const actor = await getActor();
+    if (!actor) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -404,14 +515,15 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     // Verify ownership
     const existingEvent = await db.event.findUnique({
       where: { id },
-      select: { id: true, organizerId: true },
+      select: { id: true, organizerId: true, title: true, date: true },
     });
 
     if (!existingEvent) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     }
 
-    if (existingEvent.organizerId !== auth.id && auth.role !== 'SUPERADMIN') {
+    // Deleting a race is the owner's alone (lib/permissions.ts).
+    if (!can(actor, 'event:delete', { organizerId: existingEvent.organizerId, eventId: id })) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -420,13 +532,31 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     // Postgres rejects the delete outright. Order matters — a runner points at
     // both a registration and a category, and a race result at both an event
     // and a category, so those go before the categories they reference.
+    // (Staff assignments are the one exception and cascade with the event.)
+    //
+    // The trail row survives the event — AuditLog has no foreign keys — and
+    // says how much went with it, since after this nothing else can.
     await db.$transaction(async (prisma) => {
-      await prisma.runner.deleteMany({ where: { registration: { eventId: id } } });
-      await prisma.registration.deleteMany({ where: { eventId: id } });
-      await prisma.raceResult.deleteMany({ where: { eventId: id } });
+      const runners = await prisma.runner.deleteMany({ where: { registration: { eventId: id } } });
+      const registrations = await prisma.registration.deleteMany({ where: { eventId: id } });
+      const results = await prisma.raceResult.deleteMany({ where: { eventId: id } });
       await prisma.category.deleteMany({ where: { eventId: id } });
       await prisma.bankAccount.deleteMany({ where: { eventId: id } });
       await prisma.event.delete({ where: { id } });
+
+      await recordAudit(prisma, actor, {
+        action: 'event.deleted',
+        entityType: 'Event',
+        entityId: id,
+        eventId: id,
+        organizerId: existingEvent.organizerId,
+        summary: `Deleted event ${existingEvent.title} (${existingEvent.date}) with ${registrations.count} registrations, ${runners.count} runners and ${results.count} results.`,
+        changes: {
+          registrations: registrations.count,
+          runners: runners.count,
+          results: results.count,
+        },
+      });
     });
 
     return NextResponse.json({ message: 'Event deleted successfully' }, { status: 200 });

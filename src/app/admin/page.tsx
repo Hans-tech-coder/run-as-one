@@ -1,25 +1,24 @@
 import React from 'react';
 import { DollarSign, Users, CalendarDays } from 'lucide-react';
 import prisma from '@/lib/db';
-import { getAuthCookie } from '@/lib/auth';
+import { reachableEvents, requireActor } from '@/lib/actor';
 import { formatPesos } from '@/lib/money';
-import { redirect } from 'next/navigation';
 import { hasFinished, today } from '@/lib/event-schedule';
 
 export default async function AdminDashboard() {
-  const auth = await getAuthCookie();
-  if (!auth) {
-    redirect('/admin/login');
-  }
-  
+  const actor = await requireActor();
+
   const activeAsOf = today();
 
+  // The races this person may read registrations on — every event of the
+  // organizer for its owner, only the assigned ones for a STAFF member.
   const events = await prisma.event.findMany({
-    where: { organizerId: auth.id },
+    where: reachableEvents(actor, 'registration:view'),
     include: {
       registrations: {
         where: { status: 'PAID' },
-        include: { runners: true }
+        // A removed runner is kept for the audit trail, not for the head count.
+        include: { runners: { where: { deletedAt: null } } }
       }
     }
   });
@@ -32,7 +31,7 @@ export default async function AdminDashboard() {
   const activeEventsCount = events.filter(
     event => !hasFinished(event, activeAsOf)
   ).length;
-  
+
   let totalRevenue = 0;
   let totalRegistrants = 0;
 
@@ -51,7 +50,7 @@ export default async function AdminDashboard() {
       // revenue the organizer never actually received.
       totalRevenue += (reg.subtotal + reg.deliveryFee - reg.discountAmount);
       totalRegistrants += reg.runners.length;
-      
+
       recentRegistrations.push({
         ...reg,
         eventTitle: event.title
@@ -78,7 +77,7 @@ export default async function AdminDashboard() {
             </div>
             <div className="metric-value">₱{formatPesos(totalRevenue)}</div>
           </div>
-          
+
           <div className="metric-card">
             <div className="metric-header">
               <span className="metric-title">Total Registrants</span>
@@ -100,7 +99,7 @@ export default async function AdminDashboard() {
           <div className="admin-panel-header">
             <h2 className="admin-panel-title">Recent Registrations</h2>
           </div>
-          
+
           {latestFive.length === 0 ? (
             <div className="empty-state">
               <Users size={48} className="empty-icon" />

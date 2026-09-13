@@ -323,6 +323,34 @@ shape:
   think of "EARLYBIRD". See `discount.ts`.
 - **RaceResult** — one finisher: bib (unique per event), name, gender, chip/gun
   time, `chipTimeSecs`, and the three ranks (overall, gender, category).
+- **StaffAccount / StaffMembership / EventAssignment** — the people who work
+  inside an organizer besides its owner (`STAFF_ACCESS_PLAN.md`). **`Organizer`
+  stays the tenant and its own email and password stay the owner's login**; no
+  foreign key was rewritten to add these. A `StaffAccount` is the person (email,
+  password — null until an invitation is accepted — `status`
+  `INVITED`/`ACTIVE`/`SUSPENDED`, TOTP columns for Batch 4, and
+  `sessionsValidFrom`, the instant before which every session of theirs is dead).
+  A `StaffMembership` joins that person to one organizer with a role (`ADMIN`
+  reaches every event, `STAFF` only what is assigned), so one email serves a
+  freelancer who works several organizers' races. An `EventAssignment` gives a
+  STAFF membership one event and a role on it (`EVENT_MANAGER`, `VALIDATOR`,
+  `ENCODER`, `VIEWER`). Nothing creates these rows yet — the team screen is
+  Batch 2 — so today every session is an owner's or the super admin's.
+- **AuditLog** — the append-only trail: who (`actorKind`, `actorId`, and a
+  **snapshotted** `actorName`/`actorEmail`), in which organizer and event, did
+  what (`action`, a dotted verb from `AUDIT_ACTIONS`), to what (`entityType`,
+  `entityId`), in one pre-rendered `summary` sentence, with `changes` holding
+  only the fields that moved. **No relations on purpose**, so a row outlives the
+  event, runner and account it names. Nothing in the app updates or deletes one.
+  Roughly 300–500 bytes a row. See `audit.ts` (§5).
+- **Soft removal** — `Runner.deletedAt`/`deletedById` (and the same pair on
+  `Registration`, which nothing sets yet). Removing a runner from the
+  registrants screen no longer deletes the row; it stamps these, and **every
+  read a person sees filters `deletedAt: null`** — the registrants screen, the
+  slot count in `registration-gate.ts`, the dashboard head count, the
+  abandoned-checkout sweep, promotion runner counts, the club tally, both
+  emails and the register page's resume. A new read of runners must filter too.
+  Deleting a whole **event** is still a hard delete (owner only, and recorded).
 
 ---
 
@@ -369,8 +397,11 @@ logic again.
 | `phone.ts` + `request-country.ts` | Phone numbers stored in **E.164**. Country list from dial codes; names via `Intl.DisplayNames`. The country is *guessed* from `x-vercel-ip-country` and always overridable. `NATIONAL_DIGITS` carries the exact national length for the countries we are sure of (**PH = 10**) and is deliberately short: `maxNationalDigits` caps the field at it, `isPlausiblePhone` requires it, and everything unlisted stays loose under E.164's 15-digit ceiling. The trunk zero is stripped **before** the cap applies, or a pasted `09171234567` loses its last digit. |
 | `blob.ts` | Every upload. `uploadPublicFile` (returns a URL) vs `uploadPrivateProof` (returns a **pathname**) + `signedProofUrl`. 4 MB cap, because a Vercel function body caps at 4.5 MB. It enforces the policy in `uploads.ts` but does not own it. **A stored proof's extension is set from its content type, not from the name the phone gave it** (`proofFileName`): the admin viewer decides between an `<img>` and a PDF frame by reading that pathname, so a bank app that hands over a PDF called `slip` — or `slip.jpg` — must not be able to lie about it. Any directory part of the name is dropped on the way in. Note that `src/lib` modules import **each other by relative path** (`./uploads`, not `@/lib/uploads`) — the `jiti` scripts under `scripts/` do not resolve the `@/` alias, so an aliased import here breaks `npm run test:blob` and `npm run seed:dev`. |
 | `uploads.ts` | **What may be uploaded — the one list both sides of the wire read.** It used to live inside `blob.ts`, which imports the Blob SDK and therefore cannot be imported by a client component, so every `accept="…"` on a file input was a hand-copy of it and the copies drifted: both registration wizards offered `application/pdf` for a deposit slip while the server took images only, and a runner who picked the PDF receipt their bank emailed was refused by `/api/checkout/manual` at the very end of checkout with the whole form already filled in — while `image/webp` and `image/gif` were accepted by the server and offered by nobody. Nothing here imports the SDK, so an input can now advertise exactly what `assertUploadable` will take: `acceptAttribute(kind)` builds the attribute, `describeUploadTypes(kind)` the hint a runner reads ("JPG, PNG, WEBP, GIF or PDF"), `listUploadTypes(kind)` the server's rejection message, and `MAX_UPLOAD_MB` the number in the hint — which said 5 MB against a 4 MB cap for as long as it was typed by hand. Three kinds: `image` (event imagery), `template` and `proof`, the last two also allowing PDF. `isPdfProof(pathname)` is how the admin screens tell a PDF receipt from a photo of one. |
-| `auth.ts` / `jwt.ts` | bcrypt hashing, the `admin_token` httpOnly cookie (1 day), `getAuthCookie()` in server code. |
-| `signed-in-user.ts` | The name and initial the admin sidebars show — read from the record, not the token, so a rename is never stale. |
+| `auth.ts` / `jwt.ts` | bcrypt hashing and the `admin_token` httpOnly cookie (1 day). **The session carries typed claims** — `sub` (the person), `kind` (`OWNER` \| `STAFF` \| `SUPER_ADMIN`), `orgId` (the tenant), `role`, `name`, `email` — built by `organizerSessionClaims` / `staffSessionClaims` in `actor.ts`. A token issued before these claims existed (`{ id, email, name, role }`) still verifies and reads as that Organizer's owner, so the deploy that introduced them signed nobody out. `getAuthCookie()` returns the raw claims and **only the super admin's own routes call it**; every admin surface goes through `actor.ts`. |
+| `actor.ts` | **Who is acting, and what they may reach — the one rule: authorisation scopes by `orgId`, attribution records the actor's `id`.** For an owner the two are the same id, which is why rewiring every admin surface onto this changed nothing until staff exist. `getActor()` is for route handlers (they answer null with their own 401); `requireActor()` is for server pages (it redirects to `/admin/login`). An owner's actor is read from the token alone, as the routes always did; a **staff** actor is checked against the record on every request — membership accepted, account `ACTIVE`, organizer not pending or suspended, and the token issued after `sessionsValidFrom` — because a suspension that waits a day for a JWT to expire is not one. **`can(actor, permission, { organizerId, eventId })`** is the check before acting: organizer-wide roles read the matrix directly, a STAFF membership needs an assignment on that event, and a super admin reaches another organizer only for `SUPER_ADMIN_REACH`. `canSomewhere` is for screens about no single race (marketing, the image uploader). **`reachableEvents(actor, permission)`** is the `where` every list page reads events through — `{ organizerId }` for an owner, only the assigned ids for STAFF. A single-event page reads `{ id, organizerId: actor.orgId }` and then asks `can()`, answering a refusal with the **same "Event not found."** as a missing id. `findAccountByEmail` is the one lookup `auth/login`, `auth/register` and `admin/profile` make across **both** account tables (Organizer wins a tie), since the database cannot keep an address unique across two tables. |
+| `permissions.ts` | **The permission matrix, as data** (`STAFF_ACCESS_PLAN.md` §3). Permissions are verbs (`registration:validate`, `promo:manage`, `event:delete`…); **no route compares a role string**. `OWNER`/`ADMIN` are organizer-wide; `EVENT_MANAGER`/`VALIDATOR`/`ENCODER`/`VIEWER` are held per event. `VALIDATOR` can settle an order and deliberately cannot edit or delete one. `SUPER_ADMIN_REACH` is the super admin's reach into another organizer — view, validate, remark, email, proof — exactly what the status, email and proof routes allowed before. `asMembershipRole`/`asEventRole` guard the two role columns. Prisma-free, so the team screen can render the matrix it enforces. |
+| `audit.ts` | **The trail — "sino ang gumawa nito".** `recordAudit(tx, actor, entry \| entries)` takes the **transaction client**, so the log row and the change commit or fail together; every admin write passes its own transaction, and the three things with no write to ride along (a proof opened, a registrant export, a sign-in attempt) pass the plain client. The actor's name and email are **snapshotted**; the IP and user agent come from the request. `changedFields(before, after, fields, redact)` records only what moved, and records `'changed'` instead of a value for a redacted field, a non-scalar and any string over 120 characters. **`SENSITIVE_RUNNER_FIELDS`** (birthdate, emergency contact name and phone, medical conditions) never have their values logged. `AUDIT_ACTIONS` is the closed vocabulary — add a verb there before using it. Recorded today: sign-ins and failed sign-ins (not for an address with no account, which has no organizer to belong to), profile and password changes, event create / edit / pause / resume / schedule / delete, results uploads, registration status and remarks changes, a manual email marked sent, runner edits and removals (one row per runner, bulk included), proof views, registrant exports, and promotion create / edit / pause / resume / delete. Nothing reads the table yet; the screen is Batch 3. |
+| `signed-in-user.ts` | The name and initial the admin sidebars show — read from the record, not the token, so a rename is never stale. It names the **person**: an owner's Organizer name, or a staff member's own StaffAccount name. |
 | `site-contact.ts` | Site name, contact email, legal "last updated", social channels. **Site-wide details belong here**, destined to become superadmin-editable settings — never inline them in a component. |
 | `email.ts` | Transactional email via Resend, sent from `CONTACT_EMAIL`. Two emails per registration, never one, and they differ in purpose, not just timing: `sendRegistrationReceivedEmail` fires the moment the row is created (`checkout` for online, `checkout/manual` for bank transfer) — before any payment is confirmed — and shows every field submitted (per-runner emergency contact, gender, birthdate, community, etc.) so a typo is caught before payment. `sendRegistrationConfirmationEmail` (the receipt) fires only once status reaches `PAID` — from the PayMongo webhook, or the admin status route once a bank transfer is verified — and stays focused on the money (compact runner list, full cost breakdown), since the received email already covered the data. No artificial delay sits between the two; the PayMongo webhook is itself asynchronous, so "received" always lands first. The HTML template mirrors the app's own look (the real site logo on a dark header, orange→blue gradient accent bar, a color-coded status pill — blue "pending" for received, green "success" for the receipt — instead of plain caption text). **The whole body is one table, and that is the layout strategy — do not split it back into separate tables per section.** Gmail's Android app renders every nested table shrink-to-fit: it sizes each to its own content and ignores the declared width, whether that width is a percentage, a pixel value, an HTML `width` attribute or `table-layout: fixed` (all four were tried; all four failed, as did wrapping each section in a bordered card). Separate tables therefore end up at *different* widths, so a block of short money values stops well short of the right edge while a block holding a long venue name reaches it. Rows of a single table cannot disagree that way — one set of columns means every value right-aligns to the same edge by construction — and the long paragraphs, sitting in that same table as full-width rows, are what push the shared width out to the container. `cardHtml()` is the one sanctioned exception: it nests a bordered block inside a full-width row, and **only blocks whose values are long** (event title, venue, email, phone) may go in one, because those fill the width on their own content — which is why they always rendered correctly. Blocks of short values (the money summary, the compact runner list) must stay plain rows of the body table. **One recipient per send, and no bcc.** Resend meters its free tier by *recipient*, counting a bcc as one of them, so the archive copy this used to carry doubled the quota cost of every email and put a registration at four units against a ceiling of a hundred a day. Resend's own dashboard keeps the log that mailbox existed for. Subjects include the order reference so Gmail can't thread two emails together and hide one behind "Show trimmed content". Each runner block carries that runner's own reference (`order-ref.ts`) and the pick-up email now names the venue and hours rather than saying "Pickup at Venue", since this email is what the runner still has on race week. Any layout change here is a mobile-first bug: verify in the Gmail app, since desktop looks fine either way. **Each email is one document rendered twice**: the block list (`paragraph`, `heading`, `card`, `rows`, `note`, and typed rows inside them) is what the email *is*, `renderHtml` produces what Resend sends and `renderText` the plain-text rendering a person pastes into a `mailto:` — two renderings of one source, never two templates that can drift. Values are held plain in the blocks and escaped by the HTML renderer, so an event or club name containing `&` can no longer arrive as broken markup. A discount, when there is one, is a negative amount row directly under the goods it came off and before the fees — the same order the wizard's summary showed it in, since this email is what the runner checks the charge against; the sign sits outside the peso symbol, because "₱-150.00" reads as a broken number. A send failure is still logged and swallowed, never thrown, so a bounced email can't undo a payment — but `sendEmail` now *reports* it as an `EmailOutcome`, which is what `email-delivery.ts` writes down. |
 | `email-delivery.ts` | **Whether the runner actually got their email, and what happens when they did not.** Every send in the app goes through here rather than calling `email.ts` directly — `deliverReceivedEmail` / `deliverConfirmationEmail` send and then write the outcome onto the registration — because a send whose outcome nobody recorded is exactly the silence this exists to end: the free tier stops at 100 recipients a day, and a swallowed failure left a registration unconfirmed with nothing on the row to say so. The recording is itself wrapped in a try/catch and never throws: bookkeeping about an email must not fail a checkout, and a lost record only shows the row in the backlog, which is the safe direction to be wrong in. **`outstandingEmail` is the rule everything reads**: every registration owes the received email (it is sent at submission, so a row without it never got one), and the receipt is owed only once status is `PAID` — a bank transfer sits `PENDING` for days with no receipt to be missing yet. **A hand-sent email stamps the same column an automatic one would**, because what the column records is that the runner *has* the email, not which system delivered it; the row therefore leaves the backlog, and rejoins on its own if a later email fails. `recordManualSend` stamps that column plus `manualEmailSentBy`/`At` — a name, not an account id, for the same reason as `remarksBy`. `asEmailKind` guards the kind at the API door. |
@@ -523,7 +554,8 @@ sorted to the top) · `/superadmin/[...missing]`.
 ### API (`src/app/api/**/route.ts`)
 | Route | Methods | Notes |
 | --- | --- | --- |
-| `auth/login`, `auth/logout`, `auth/register` | POST | Sets / clears `admin_token`. **The account email is lowercased at the door** on both `login` and `register` (`normalizeAccountEmail`, §5) — and on `admin/profile` PATCH, which is the third place one can be written. Postgres compares text exactly, so until this landed a single capital from a browser autofill found no row and the login answered "Invalid credentials" for a password that was perfectly correct; `register` had the matching gap, where two accounts could exist for one address differing only in case and the unique index would not have stopped them. All three normalise through one helper, because this is precisely a rule two screens must never disagree about |
+| `auth/login`, `auth/logout`, `auth/register` | POST | Sets / clears `admin_token`. **The account email is lowercased at the door** on both `login` and `register` (`normalizeAccountEmail`, §5) — and on `admin/profile` PATCH, which is the third place one can be written. Postgres compares text exactly, so until this landed a single capital from a browser autofill found no row and the login answered "Invalid credentials" for a password that was perfectly correct; `register` had the matching gap, where two accounts could exist for one address differing only in case and the unique index would not have stopped them. All three normalise through one helper, because this is precisely a rule two screens must never disagree about. **`login` looks the address up in both account tables** through `findAccountByEmail` (§5): an Organizer row signs in as its owner (or as the super admin), a `StaffAccount` signs in to its earliest-accepted membership of an active organizer (an invitation not yet accepted has no password and is answered like a wrong one). Every sign-in and every failed or refused one is written to the audit trail, except an address that matches no account; `register` and `admin/profile` refuse an address either table already holds |
+| `admin/events/[id]/registrants/export` | POST | **The audit entry for a CSV export**, which is built in the browser from rows already on screen. The registrants table calls it fire-and-forget (with `keepalive`) before building the file, so a failed log never costs the organizer their download. Records the row count and whether it was a selection — never who was in it. Answers 204 |
 | `checkout` | POST | PayMongo checkout session. Re-derives every amount from the database. |
 | `checkout/manual` | POST | Bank transfer: multipart, proof file → private blob. The file is validated by `uploadPrivateProof` under the `proof` kind — JPG, PNG, WEBP, GIF or PDF, 4 MB — which is the same list the wizard's picker offers |
 | `webhooks/paymongo` | POST | HMAC-verified; marks the registration `PAID` |
@@ -532,7 +564,7 @@ sorted to the top) · `/superadmin/[...missing]`.
 | `admin/events/[id]/results/upload` | POST | CSV/XLSX results import; dedupes by bib, computes seconds and the three ranks |
 | `admin/registrations/[id]/status` | PATCH | Confirm or reject a manual payment, and write the validator's internal `remarks`. Takes either or both; the status is guarded against a fixed list and the receipt email fires only on the *transition* into `PAID`, so a later remarks-only PATCH cannot send a second receipt. Auth-checked and scoped to the signed-in organizer's own events — **this route had none at all until Batch E**, which made it the one way for anyone on the internet to mark a registration `PAID` |
 | `admin/registrations/[id]/email` | GET, POST | The email a registration is owed, rendered for a person to send by hand — `GET` returns the recipient, subject and **both** renderings (HTML for the clipboard, plain text for a `mailto:`), `POST` records that a staff member sent it. Auth-checked and scoped like the status route, which matters more here than most: the rendered email carries every runner's contact details, birthdate and emergency contact |
-| `admin/runners/[id]`, `admin/runners/bulk-delete` | PUT/DELETE, POST | Registrant editing |
+| `admin/runners/[id]`, `admin/runners/bulk-delete` | PUT/DELETE, POST | Registrant editing. **Removal is soft** — `deletedAt`/`deletedById` are stamped and the row stays (§4), so a runner already removed answers "Runner not found". An edit needs `registration:edit`, a removal `registration:delete`. Each edit writes one audit row naming the fields that changed (sensitive columns as "changed", never their values), and each removed runner — bulk included — gets its own row carrying their name and runner reference |
 | `admin/proof/[id]` | GET | Auth-checked redirect to a short-lived signed proof URL |
 | `feedback` | POST | **Public**, and the only route on this site that writes a row on a stranger's say-so — the people most worth hearing from here are signed out, so an auth check would silence exactly them. Three things hold it: the `FEEDBACK_RULE` throttle (§5) applied **before the body is read**, every length and vocabulary rule from `lib/feedback.ts` enforced here and not only in the form, and the fact that nothing a sender writes is rendered anywhere but the superadmin inbox, as text. A refusal names the field it is refusing and hands back that field's key, so the form puts the caret in the right box (§8, rule 4) rather than showing a catch-all over a form the sender has to re-read themselves. The browser is read from the request headers rather than from the body — a client that can be asked to describe itself can be asked to lie — and the created row's id is deliberately **not** in the answer |
 | `promos/lookup` | POST | **Public.** The terms of a code a runner just typed, scoped to the event they are registering for. Returns the *terms*, not a computed discount — the order keeps changing under the runner, so the wizard recomputes with `applyPromo` and nothing here is trusted at checkout. A code we do not have comes back as `{ promo: null }` with a 200, since "we don't have that" is an answer rather than a failure; the response carries no id, organizer or batch. **Throttled** by `lib/rate-limit.ts` (20 a minute per address) before the body is read, and a throttled caller gets that same `{ promo: null }` — a distinct "slow down" would make this endpoint a *better* oracle when throttled than when open |
@@ -553,14 +585,29 @@ sorted to the top) · `/superadmin/[...missing]`.
   `/superadmin/**`: no token → `/admin/login`; a `SUPER_ADMIN` on `/admin` →
   `/superadmin`; a non-super-admin on `/superadmin` → `/admin`.
 - **Route handlers re-check auth themselves.** The proxy does not cover
-  `/api/**`, so every admin route calls `getAuthCookie()` and scopes its queries
-  to the signed-in organizer.
+  `/api/**`, so every admin route calls `getActor()` (`actor.ts`, §5), scopes
+  its queries to `actor.orgId`, and asks `can(actor, permission, …)` before it
+  acts. **Never call `getAuthCookie()` from an admin surface, never scope by the
+  person's id, and never compare a role string** — the tenant is `orgId`, the
+  person is `actor.id`, and what a role may do is `permissions.ts`.
 - **Admin server pages scope too, not just the API.** The proxy proves a session
-  exists; it never asks whose event the `[id]` in the URL is. So every page under
-  `/admin/events/[id]/**` calls `getAuthCookie()` and reads the event with
-  `findFirst({ where: { id, organizerId: auth.id } })`, rendering its own
-  "Event not found." on a miss — the same wording as a genuinely missing event,
-  so the screen cannot be used to probe which ids exist. `registrants` and
+  exists; it never asks whose event the `[id]` in the URL is, nor whether a
+  staff member was assigned to it. So every page under `/admin/events/[id]/**`
+  calls `requireActor()`, reads the event with
+  `findFirst({ where: { id, organizerId: actor.orgId } })` and then checks
+  `can()`, rendering its own "Event not found." on either miss — the same
+  wording as a genuinely missing event, so the screen cannot be used to probe
+  which ids exist. List pages read through `reachableEvents(actor, …)`.
+- **Every admin write leaves an audit row in the same transaction**
+  (`audit.ts`, §5), and so do the two reads that let personal data leave —
+  opening a proof and exporting registrants. A new admin write passes its
+  transaction client to `recordAudit`; a new action is added to `AUDIT_ACTIONS`
+  first. The trail is append-only, and a sensitive runner column's value never
+  enters it.
+- **A staff session can be ended before its JWT expires**: `getActor()` checks
+  the StaffAccount's status, membership and `sessionsValidFrom` on every
+  request, and a staff password change moves `sessionsValidFrom` forward
+  (reissuing only the session that made the change). `registrants` and
   `results` both do this; the `edit` screen is a client component, so its scope
   lives in `GET`/`PUT /api/admin/events/[id]`, and the results uploader's in
   `POST /api/admin/events/[id]/results/upload`. **Never read an event by id
@@ -1164,16 +1211,26 @@ a queue.
 the decisions it records as not to be relitigated. It is no longer a queue, and
 the file itself says it may be deleted.
 
-**`STAFF_ACCESS_PLAN.md` is an open queue.** Five batches, agreed and not yet
-started, for giving an organizer's personnel their own accounts instead of
-sharing the organizer's one login: a `StaffAccount` / `StaffMembership` /
-`EventAssignment` / `AuditLog` model, a permission matrix in `lib/permissions.ts`,
-per-event assignment, an append-only activity trail, and TOTP two-factor. **Read
-it before touching admin auth, the `Organizer` model, or any `/api/admin/**`
-route's ownership check** — the rule it settles is that authorisation scopes by
-`orgId` while attribution records `actorId`, and Batch 1 rewires every existing
-admin surface to `requireActor()`. The file also records which decisions are
+**`STAFF_ACCESS_PLAN.md` is an open queue, with Batch 1 landed.** Five batches
+for giving an organizer's personnel their own accounts instead of sharing the
+organizer's one login. **Batch 1 is in:** the `StaffAccount` /
+`StaffMembership` / `EventAssignment` / `AuditLog` models and the soft-removal
+columns (§4), `actor.ts` / `permissions.ts` / `audit.ts` (§5), typed session
+claims with `orgId`, every admin page and `/api/admin/**` route rewired onto
+`getActor()` / `requireActor()` and `can()`, and every existing admin action
+written to the trail. Nothing creates a staff account yet, so the app behaves
+for an owner exactly as before; **Batch 2 (`/admin/team` — invite, roles,
+assignments, suspend) is next**, then the activity screen, TOTP, and the
+optional extras. **Read the plan before touching admin auth, the `Organizer`
+model, or any `/api/admin/**` route's ownership check** — its "Batch 1" notes
+record the calls made in the batch, and the file records which decisions are
 closed (no unified account table, no SSO).
+
+**Releasing Batch 1 needs a migration-history fix on production first.**
+Production's `_prisma_migrations` stops at `20260911120000_category_sort_order`
+although its schema already holds what `20260912044340_registration_opens_at`
+and `20260912055118_feedback_inbox` create, so a bare `migrate deploy` fails
+with P3018. The exact three commands are in the plan's Batch 1 notes.
 
 Known open threads:
 

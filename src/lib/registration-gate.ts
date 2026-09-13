@@ -135,6 +135,9 @@ export async function takenSlotsByCategory(
     by: ['categoryId'],
     where: {
       categoryId: { in: categoryIds },
+      // A runner an organizer removed holds no slot, exactly as it held none
+      // when removal was a hard delete — the row now stays for the trail.
+      deletedAt: null,
       registration: { status: { in: [...SLOT_HOLDING_STATUSES] } },
     },
     _count: { _all: true },

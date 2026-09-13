@@ -1,3 +1,4 @@
+import type { Prisma } from '@prisma/client';
 import prisma from './db';
 import {
   type EmailMessage,
@@ -158,10 +159,13 @@ export async function deliverConfirmationEmail(registration: RegistrationWithDet
 export async function recordManualSend(
   registrationId: string,
   kind: EmailKind,
-  staffName: string | null
+  staffName: string | null,
+  // The manual-send route passes its transaction, so the stamp and the audit
+  // row recording who made it commit together (lib/audit.ts).
+  client: Pick<Prisma.TransactionClient, 'registration'> = prisma
 ): Promise<void> {
   const now = new Date();
-  await prisma.registration.update({
+  await client.registration.update({
     where: { id: registrationId },
     data: {
       [sentAtColumn(kind)]: now,

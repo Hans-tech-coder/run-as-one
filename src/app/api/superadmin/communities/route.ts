@@ -33,6 +33,8 @@ export async function GET() {
       // someone corrected before paying.
       prisma.runner.groupBy({
         by: ['runningCommunity'],
+        // Removed runners stay in the table for the audit trail only.
+        where: { deletedAt: null },
         _count: { _all: true },
       }),
     ]);

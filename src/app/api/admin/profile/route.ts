@@ -1,19 +1,30 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
-import { createToken, getAuthCookie, setAuthCookie } from '@/lib/auth';
+import { createToken, setAuthCookie } from '@/lib/auth';
+import {
+  findAccountByEmail,
+  getActor,
+  organizerSessionClaims,
+  staffSessionClaims,
+} from '@/lib/actor';
+import { changedFields, listFields, recordAudit } from '@/lib/audit';
 import { normalizeAccountEmail } from '@/lib/text-case';
 
 /**
- * The signed-in organizer editing their own name and email.
+ * The signed-in person editing their own name and email.
  *
- * The id comes from the auth cookie and never from the body: an organizer may
- * only ever edit themselves, so there is no id to pass and no id to forge.
+ * The id comes from the session and never from the body: a person may only
+ * ever edit themselves, so there is no id to pass and no id to forge.
  * Changing an account someone else owns is the super admin's screen, not this.
+ *
+ * "Themselves" is the person, not the organizer: an owner edits the Organizer
+ * row they sign in with, a staff member edits their own StaffAccount. Neither
+ * can rename the other through this route.
  */
 export async function PATCH(request: Request) {
   try {
-    const auth = await getAuthCookie();
-    if (!auth) {
+    const actor = await getActor();
+    if (!actor) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -48,47 +59,71 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ errors }, { status: 400 });
     }
 
-    // Checked before the write so the organizer gets this message under the
-    // email field; the unique index below is the backstop for the race.
-    const taken = await prisma.organizer.findUnique({ where: { email } });
-    if (taken && taken.id !== auth.id) {
-      return NextResponse.json(
-        { errors: { email: 'Another organizer already signs in with that email' } },
-        { status: 409 }
-      );
+    const isStaff = actor.kind === 'STAFF';
+
+    // Checked before the write so the person gets this message under the
+    // email field; the unique index below is the backstop for the race. Both
+    // account tables are searched, so an address cannot end up signing in to
+    // two different accounts.
+    const taken = await findAccountByEmail(email);
+    const takenBySomeoneElse =
+      taken !== null &&
+      !(taken.kind === 'ORGANIZER' && !isStaff && taken.organizer.id === actor.id) &&
+      !(taken.kind === 'STAFF' && isStaff && taken.staff.id === actor.id);
+    const takenMessage =
+      taken?.kind === 'STAFF'
+        ? 'Another account already signs in with that email'
+        : 'Another organizer already signs in with that email';
+
+    if (takenBySomeoneElse) {
+      return NextResponse.json({ errors: { email: takenMessage } }, { status: 409 });
     }
 
-    let organizer;
+    let account: { id: string; name: string; email: string; role?: string };
     try {
-      organizer = await prisma.organizer.update({
-        where: { id: auth.id },
-        data: { name, email },
+      account = await prisma.$transaction(async tx => {
+        const before = isStaff
+          ? await tx.staffAccount.findUniqueOrThrow({ where: { id: actor.id } })
+          : await tx.organizer.findUniqueOrThrow({ where: { id: actor.id } });
+
+        const after = isStaff
+          ? await tx.staffAccount.update({ where: { id: actor.id }, data: { name, email } })
+          : await tx.organizer.update({ where: { id: actor.id }, data: { name, email } });
+
+        const changes = changedFields(before, after, ['name', 'email']);
+        if (Object.keys(changes).length > 0) {
+          await recordAudit(tx, actor, {
+            action: 'profile.updated',
+            entityType: isStaff ? 'StaffAccount' : 'Organizer',
+            entityId: actor.id,
+            summary: `Updated their profile: ${listFields(Object.keys(changes))}.`,
+            changes,
+          });
+        }
+
+        return after;
       });
     } catch (error: unknown) {
       // P2002 is Prisma's unique-constraint violation: someone claimed the
       // address between the check above and this write.
       if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2002') {
-        return NextResponse.json(
-          { errors: { email: 'Another organizer already signs in with that email' } },
-          { status: 409 }
-        );
+        return NextResponse.json({ errors: { email: takenMessage } }, { status: 409 });
       }
       throw error;
     }
 
     // The token carries the name and email, so a stale one would keep showing
     // the old details until it expired a day later. Reissue it here.
-    const token = await createToken({
-      id: organizer.id,
-      email: organizer.email,
-      name: organizer.name,
-      role: organizer.role,
-    });
+    const token = await createToken(
+      isStaff
+        ? staffSessionClaims(account, { organizerId: actor.orgId, role: actor.role })
+        : organizerSessionClaims({ ...account, role: account.role ?? 'ORGANIZER' }),
+    );
     await setAuthCookie(token);
 
     return NextResponse.json({
       success: true,
-      organizer: { id: organizer.id, name: organizer.name, email: organizer.email },
+      organizer: { id: account.id, name: account.name, email: account.email },
     });
   } catch (error) {
     console.error('Failed to update organizer profile:', error);

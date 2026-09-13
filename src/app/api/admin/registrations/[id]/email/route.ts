@@ -10,7 +10,7 @@
  * mailto: body is plain text only while the clipboard can carry the design —
  * and what marks the registration handled afterwards.
  *
- * Auth-checked and scoped to the signed-in organizer's own events, like every
+ * Auth-checked and scoped to the actor's own organizer's events, like every
  * admin route: the proxy does not cover /api/** (PROJECT_GUIDE §7). It matters
  * more here than most — the rendered email contains every runner's contact
  * details, birthdate and emergency contact, so an unscoped GET would be a data
@@ -20,7 +20,8 @@
 import { NextResponse } from 'next/server';
 import type { Prisma } from '@prisma/client';
 import prisma from '@/lib/db';
-import { getAuthCookie } from '@/lib/auth';
+import { can, getActor, type Actor } from '@/lib/actor';
+import { recordAudit } from '@/lib/audit';
 import { getSignedInUser } from '@/lib/signed-in-user';
 import {
   EMAIL_KIND_LABELS,
@@ -32,16 +33,24 @@ import {
 } from '@/lib/email-delivery';
 
 /** The registration plus everything either email renders from. */
-const WITH_DETAILS = { event: true, runners: { include: { category: true } } } as const;
+const WITH_DETAILS = {
+  event: true,
+  // A runner removed from the order is not in the email they are owed.
+  runners: { where: { deletedAt: null }, include: { category: true } },
+} as const;
 
 type Loaded =
-  | { ok: true; registration: Prisma.RegistrationGetPayload<{ include: typeof WITH_DETAILS }> }
+  | {
+      ok: true;
+      actor: Actor;
+      registration: Prisma.RegistrationGetPayload<{ include: typeof WITH_DETAILS }>;
+    }
   | { ok: false; response: NextResponse };
 
-/** Auth, existence and ownership in one place — both methods need all three. */
+/** Auth, existence and permission in one place — both methods need all three. */
 async function loadRegistration(id: string): Promise<Loaded> {
-  const auth = await getAuthCookie();
-  if (!auth) {
+  const actor = await getActor();
+  if (!actor) {
     return { ok: false, response: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
   }
 
@@ -58,12 +67,14 @@ async function loadRegistration(id: string): Promise<Loaded> {
   }
 
   // A super admin is the one account that legitimately reaches every
-  // organizer's registrations.
-  if (auth.role !== 'SUPER_ADMIN' && registration.event.organizerId !== auth.id) {
+  // organizer's registrations; a STAFF member needs a role on this race that
+  // sends emails.
+  const reach = { organizerId: registration.event.organizerId, eventId: registration.eventId };
+  if (!can(actor, 'registration:email', reach)) {
     return { ok: false, response: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
   }
 
-  return { ok: true, registration };
+  return { ok: true, actor, registration };
 }
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -109,13 +120,14 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
  * This only records it, which is what takes the registration out of the
  * backlog. The kind is guarded rather than trusted, like every coded value
  * crossing the API, so a stale tab cannot stamp a column that was never owed.
+ * The stamp and the trail row naming who made it commit together.
  */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const loaded = await loadRegistration(id);
     if (!loaded.ok) return loaded.response;
-    const { registration } = loaded;
+    const { actor, registration } = loaded;
 
     const body = await request.json().catch(() => ({}));
     const kind = asEmailKind(body?.kind);
@@ -127,7 +139,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     }
 
     const user = await getSignedInUser();
-    await recordManualSend(registration.id, kind, user?.name ?? null);
+    await prisma.$transaction(async tx => {
+      await recordManualSend(registration.id, kind, user?.name ?? null, tx);
+      await recordAudit(tx, actor, {
+        action: 'registration.email.sent_by_hand',
+        entityType: 'Registration',
+        entityId: registration.id,
+        eventId: registration.eventId,
+        organizerId: registration.event.organizerId,
+        summary: `Sent the ${EMAIL_KIND_LABELS[kind]} email for ${registration.orderRef} by hand.`,
+        changes: { kind },
+      });
+    });
 
     const updated = await prisma.registration.findUnique({
       where: { id: registration.id },

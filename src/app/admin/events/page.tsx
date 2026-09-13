@@ -2,8 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Plus } from 'lucide-react';
 import db from '@/lib/db';
-import { getAuthCookie } from '@/lib/auth';
-import { redirect } from 'next/navigation';
+import { reachableEvents, requireActor } from '@/lib/actor';
 import { hasFinished } from '@/lib/event-schedule';
 import {
   registrationState,
@@ -14,11 +13,12 @@ import { CATEGORY_ORDER } from '@/lib/category-order';
 import EventsTableClient from './EventsTableClient';
 
 export default async function AdminEventsPage() {
-  const auth = await getAuthCookie();
-  if (!auth) redirect('/admin/login');
+  const actor = await requireActor();
 
   const events = await db.event.findMany({
-    where: { organizerId: auth.id },
+    // Every event of the organizer for its owner; only the assigned races for
+    // a STAFF member (lib/actor.ts).
+    where: reachableEvents(actor),
     include: {
       categories: { orderBy: CATEGORY_ORDER },
       // The delete confirmation names how many registrations go with the

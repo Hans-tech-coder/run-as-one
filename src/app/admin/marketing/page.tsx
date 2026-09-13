@@ -1,9 +1,9 @@
 import React from 'react';
+import { notFound } from 'next/navigation';
 import prisma from '@/lib/db';
 import { HandCoins, Tag, Ticket } from 'lucide-react';
 import PromoCodesClient from './PromoCodesClient';
-import { getAuthCookie } from '@/lib/auth';
-import { redirect } from 'next/navigation';
+import { can, canSomewhere, reachableEvents, requireActor } from '@/lib/actor';
 import { promoStatus } from '@/lib/discount';
 import { soonestFirst } from '@/lib/event-schedule';
 import { formatPesos } from '@/lib/money';
@@ -11,14 +11,25 @@ import { NO_SPEND, spendByCode } from '@/lib/promo-redemptions';
 import { CATEGORY_ORDER } from '@/lib/category-order';
 
 export default async function MarketingPage() {
-  const auth = await getAuthCookie();
-  if (!auth) {
-    redirect('/admin/login');
+  const actor = await requireActor();
+
+  // Nobody whose role includes no promotions at all has a marketing screen.
+  if (!canSomewhere(actor, 'promo:view')) {
+    notFound();
   }
+
+  // An owner or admin reads every promotion the organizer runs. A STAFF
+  // member reads only those tied to a race where their role includes
+  // promotions — an organizer-wide promotion names no race, so it is theirs
+  // only through an organizer-wide role.
+  const orgWide = can(actor, 'promo:view', { organizerId: actor.orgId });
+  const promoWhere = orgWide
+    ? { organizerId: actor.orgId }
+    : { organizerId: actor.orgId, event: reachableEvents(actor, 'promo:view') };
 
   const [promoCodes, events, spend] = await Promise.all([
     prisma.promoCode.findMany({
-      where: { organizerId: auth.id },
+      where: promoWhere,
       orderBy: { createdAt: 'desc' },
       include: {
         event: { select: { id: true, title: true } },
@@ -35,7 +46,7 @@ export default async function MarketingPage() {
     // picker. Soonest first, because a code is almost always being written for
     // the race that is about to open.
     prisma.event.findMany({
-      where: { organizerId: auth.id },
+      where: reachableEvents(actor, 'promo:view'),
       orderBy: soonestFirst,
       select: {
         id: true,
@@ -55,7 +66,7 @@ export default async function MarketingPage() {
     // the whole screen rather than one per row. Attribution is by the code
     // text this organizer's registrations were stamped with — see
     // lib/promo-redemptions.ts for why there is no id to match on.
-    spendByCode(auth.id),
+    spendByCode(actor.orgId),
   ]);
 
   // A batch of single-use vouchers is one promotion, not two hundred of them.

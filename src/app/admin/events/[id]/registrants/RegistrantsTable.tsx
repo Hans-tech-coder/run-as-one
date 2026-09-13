@@ -920,6 +920,17 @@ export default function RegistrantsTable({
     const selectedRows = table.getSelectedRowModel().rows;
     const rowsToExport = selectedRows.length > 0 ? selectedRows : table.getFilteredRowModel().rows;
 
+    // The file is built here, in the browser, so the audit trail can only be
+    // told about it (api/admin/events/[id]/registrants/export). Fire and
+    // forget, with keepalive so the request outlives the download starting: a
+    // log that failed must not cost the organizer their file.
+    void fetch(`/api/admin/events/${eventId}/registrants/export`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ count: rowsToExport.length, selected: selectedRows.length > 0 }),
+      keepalive: true,
+    }).catch(() => {});
+
     const csvRows = rowsToExport.map(r => {
       const runner = r.original;
       return [

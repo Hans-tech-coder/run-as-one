@@ -2,8 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import prisma from '@/lib/db';
-import { getAuthCookie } from '@/lib/auth';
-import { redirect } from 'next/navigation';
+import { can, requireActor } from '@/lib/actor';
 import RegistrantsTable from './RegistrantsTable';
 import { runnerRef } from '@/lib/order-ref';
 import { isPdfProof } from '@/lib/uploads';
@@ -40,13 +39,13 @@ export default async function RegistrantsPage({
   // A no-match reads as "Event not found." rather than "not yours", so the
   // screen cannot be used to confirm that some id exists. There is no super
   // admin branch because there is no super admin here: `src/proxy.ts` sends a
-  // `SUPER_ADMIN` off `/admin/**` to `/superadmin` before this page runs.
-  const auth = await getAuthCookie();
-  if (!auth) redirect('/admin/login');
+  // `SUPER_ADMIN` off `/admin/**` to `/superadmin` before this page runs. A
+  // STAFF member unassigned to this race gets the same "Event not found."
+  const actor = await requireActor();
 
   // Fetch real runners for this event via the Registrations table
-  const event = await prisma.event.findFirst({
-    where: { id, organizerId: auth.id },
+  const found = await prisma.event.findFirst({
+    where: { id, organizerId: actor.orgId },
     include: {
       registrations: {
         // Registration order, oldest first — fixed here rather than left to
@@ -65,12 +64,19 @@ export default async function RegistrantsPage({
             // confirmation email has always sorted this way (byRunnerNo in
             // lib/email.ts); this screen was the one place that did not.
             orderBy: { runnerNo: 'asc' },
+            // A runner removed from an order stays in the table for the audit
+            // trail (Runner.deletedAt) and never on this screen.
+            where: { deletedAt: null },
             include: { category: true }
           }
         }
       }
     }
   });
+  const event =
+    found && can(actor, 'registration:view', { organizerId: actor.orgId, eventId: id })
+      ? found
+      : null;
 
   if (!event) {
     return (

@@ -1,6 +1,5 @@
 import prisma from '@/lib/db';
-import { getAuthCookie } from '@/lib/auth';
-import { redirect } from 'next/navigation';
+import { can, requireActor } from '@/lib/actor';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import ResultsUploaderClient from './ResultsUploaderClient';
@@ -9,25 +8,27 @@ import { CATEGORY_ORDER } from '@/lib/category-order';
 
 export default async function AdminResultsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const auth = await getAuthCookie();
-  if (!auth) redirect('/admin/login');
+  const actor = await requireActor();
 
-  // Scoped to the signed-in organizer's own events: the session check above
+  // Scoped to the actor's own organizer's events: the session check above
   // only proves *someone* is signed in, and an id in the URL is not proof the
   // event belongs to them. Unscoped, this screen would hand any approved
   // organizer another's category list and finishing times — and the uploader
-  // below writes results against whatever event it is given.
+  // below writes results against whatever event it is given. A STAFF member
+  // unassigned to this race gets the same "not found".
   //
   // No super admin branch: `src/proxy.ts` sends a `SUPER_ADMIN` off `/admin/**`
   // to `/superadmin` before this page runs.
   const event = await prisma.event.findFirst({
-    where: { id, organizerId: auth.id },
+    where: { id, organizerId: actor.orgId },
     include: {
       categories: { orderBy: CATEGORY_ORDER }
     }
   });
 
-  if (!event) return <div>Event not found</div>;
+  if (!event || !can(actor, 'event:view', { organizerId: actor.orgId, eventId: id })) {
+    return <div>Event not found</div>;
+  }
 
   const results = await prisma.raceResult.findMany({
     where: { eventId: id },

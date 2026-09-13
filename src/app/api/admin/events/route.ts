@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import db from '@/lib/db';
-import { getAuthCookie } from '@/lib/auth';
+import { can, getActor } from '@/lib/actor';
+import { recordAudit } from '@/lib/audit';
 import { toCentavos } from '@/lib/money';
 import { asWaiverParagraphs } from '@/lib/consent-waiver';
 import { asRegistrationForm } from '@/lib/registration-form';
@@ -19,9 +20,15 @@ import { CATEGORY_ORDER } from '@/lib/category-order';
 
 export async function POST(request: Request) {
   try {
-    const auth = await getAuthCookie();
-    if (!auth) {
+    const actor = await getActor();
+    if (!actor) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Creating a race is organizer-wide: a STAFF member works the races they
+    // are assigned and never adds one.
+    if (!can(actor, 'event:create', { organizerId: actor.orgId })) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const data = await request.json();
@@ -58,67 +65,82 @@ export async function POST(request: Request) {
       return clash !== null;
     });
 
-    const newEvent = await db.event.create({
-      data: {
-        title,
-        slug,
-        date,
-        startTime: startTime || null,
-        endTime: endTime || null,
-        location,
-        imageUrl: imageUrl || '',
-        raceKitImageUrl: raceKitImageUrl || null,
-        description: description || '',
-        logisticsPickup: Boolean(logisticsPickup),
-        // Where and when a kit is collected, in the organizer's own words.
-        // Blank stays null rather than becoming an empty string: the wizards
-        // fall back to standard wording on null (lib/pickup.ts), and an empty
-        // string would render as a blank line under the pickup option.
-        pickupLocation: pickupLocation?.trim() || null,
-        pickupSchedule: pickupSchedule?.trim() || null,
-        // The admin form collects pesos; storage is centavos.
-        logisticsDeliveryFeeInside: toCentavos(logisticsDeliveryFeeInside),
-        logisticsDeliveryFeeOutside: toCentavos(logisticsDeliveryFeeOutside),
-        adminFee: toCentavos(adminFee),
-        shirtSizeUpcharge: toCentavos(shirtSizeUpcharge),
-        // Empty means "use the standard wording" — see resolveConsentWaiver.
-        consentWaiver: asWaiverParagraphs(consentWaiver),
-        registrationForm: asRegistrationForm(registrationForm),
-        eventType: asEventType(eventType),
-        // Null is the usual answer: most races are registrable the moment
-        // they are published, and only one listed early holds its button back.
-        registrationOpensAt: registrationOpens,
-        organizerId: auth.id,
-        bankAccounts: {
-          create: asBankAccounts(bankAccounts).map((account, index) => ({
-            ...account,
-            sortOrder: index,
-          })),
+    const newEvent = await db.$transaction(async (tx) => {
+      const created = await tx.event.create({
+        data: {
+          title,
+          slug,
+          date,
+          startTime: startTime || null,
+          endTime: endTime || null,
+          location,
+          imageUrl: imageUrl || '',
+          raceKitImageUrl: raceKitImageUrl || null,
+          description: description || '',
+          logisticsPickup: Boolean(logisticsPickup),
+          // Where and when a kit is collected, in the organizer's own words.
+          // Blank stays null rather than becoming an empty string: the wizards
+          // fall back to standard wording on null (lib/pickup.ts), and an empty
+          // string would render as a blank line under the pickup option.
+          pickupLocation: pickupLocation?.trim() || null,
+          pickupSchedule: pickupSchedule?.trim() || null,
+          // The admin form collects pesos; storage is centavos.
+          logisticsDeliveryFeeInside: toCentavos(logisticsDeliveryFeeInside),
+          logisticsDeliveryFeeOutside: toCentavos(logisticsDeliveryFeeOutside),
+          adminFee: toCentavos(adminFee),
+          shirtSizeUpcharge: toCentavos(shirtSizeUpcharge),
+          // Empty means "use the standard wording" — see resolveConsentWaiver.
+          consentWaiver: asWaiverParagraphs(consentWaiver),
+          registrationForm: asRegistrationForm(registrationForm),
+          eventType: asEventType(eventType),
+          // Null is the usual answer: most races are registrable the moment
+          // they are published, and only one listed early holds its button back.
+          registrationOpensAt: registrationOpens,
+          // The tenant, never the person: an event belongs to the organizer
+          // whoever on its team created it, and the trail below names them.
+          organizerId: actor.orgId,
+          bankAccounts: {
+            create: asBankAccounts(bankAccounts).map((account, index) => ({
+              ...account,
+              sortOrder: index,
+            })),
+          },
+          categories: {
+            create: categories.map((cat: any, index: number) => ({
+              // The position the organizer entered it in, fixed from here on —
+              // an edit never renumbers it. See lib/category-order.ts.
+              sortOrder: index,
+              // Uppercased like the runner's own fields: this name is printed
+              // beside them in the registrants table, the export and the emails.
+              name: upperCaseForStorage(cat.name),
+              // A fun-run package has neither of these: no distance to run, and a
+              // poster only if the organizer uploaded one.
+              distance: cat.distance || '',
+              price: toCentavos(cat.price),
+              imageUrl: cat.imageUrl || null,
+              // The form posts the textarea as typed; the list is what gets
+              // stored, so blank lines and pasted bullets never reach the DB.
+              inclusions: asInclusions(cat.inclusions),
+              // Blank, 0 and anything unparseable all mean uncapped.
+              slotLimit: asSlotLimit(cat.slotLimit),
+            })),
+          },
         },
-        categories: {
-          create: categories.map((cat: any, index: number) => ({
-            // The position the organizer entered it in, fixed from here on —
-            // an edit never renumbers it. See lib/category-order.ts.
-            sortOrder: index,
-            // Uppercased like the runner's own fields: this name is printed
-            // beside them in the registrants table, the export and the emails.
-            name: upperCaseForStorage(cat.name),
-            // A fun-run package has neither of these: no distance to run, and a
-            // poster only if the organizer uploaded one.
-            distance: cat.distance || '',
-            price: toCentavos(cat.price),
-            imageUrl: cat.imageUrl || null,
-            // The form posts the textarea as typed; the list is what gets
-            // stored, so blank lines and pasted bullets never reach the DB.
-            inclusions: asInclusions(cat.inclusions),
-            // Blank, 0 and anything unparseable all mean uncapped.
-            slotLimit: asSlotLimit(cat.slotLimit),
-          })),
+        include: {
+          categories: { orderBy: CATEGORY_ORDER },
         },
-      },
-      include: {
-        categories: { orderBy: CATEGORY_ORDER },
-      },
+      });
+
+      await recordAudit(tx, actor, {
+        action: 'event.created',
+        entityType: 'Event',
+        entityId: created.id,
+        eventId: created.id,
+        summary: `Created event ${created.title} (${created.date}).`,
+        changes: { categories: created.categories.length },
+      });
+
+      return created;
     });
 
     return NextResponse.json(newEvent, { status: 201 });

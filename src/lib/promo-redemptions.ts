@@ -148,7 +148,8 @@ export async function redemptionsFor(
       discountAmount: true,
       createdAt: true,
       event: { select: { id: true, title: true } },
-      _count: { select: { runners: true } },
+      // Removed runners are kept for the audit trail, not for this count.
+      _count: { select: { runners: { where: { deletedAt: null } } } },
     },
   });
 

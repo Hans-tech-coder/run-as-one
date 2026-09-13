@@ -86,7 +86,11 @@ export async function POST(request: Request) {
 
         const full = await prisma.registration.findUnique({
           where: { id: registration.id },
-          include: { event: true, runners: { include: { category: true } } },
+          include: {
+            event: true,
+            // A runner removed from the order is not on the receipt.
+            runners: { where: { deletedAt: null }, include: { category: true } },
+          },
         });
         if (full) await deliverConfirmationEmail(full);
       } else {

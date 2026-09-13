@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
-import { getAuthCookie } from '@/lib/auth';
+import { can, getActor } from '@/lib/actor';
+import { recordAudit } from '@/lib/audit';
 
 // Helper to convert "HH:MM:SS" or "MM:SS" to seconds
 function parseTimeToSeconds(timeStr: string): number {
@@ -20,20 +21,22 @@ export async function POST(
 ) {
   try {
     const { id } = await params;
-    const auth = await getAuthCookie();
-    if (!auth) {
+    const actor = await getActor();
+    if (!actor) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // The session says someone is signed in; it does not say this event is
     // theirs. Without this check an approved organizer could overwrite another
     // organizer's published finishing times from an id alone — the write half
-    // of the same gap the results screen had on the read side.
+    // of the same gap the results screen had on the read side. A STAFF member
+    // additionally needs a role on this race that manages results, and is
+    // refused with the same "not found" so the id cannot be probed.
     const event = await prisma.event.findFirst({
-      where: { id, organizerId: auth.id },
-      select: { id: true },
+      where: { id, organizerId: actor.orgId },
+      select: { id: true, title: true },
     });
-    if (!event) {
+    if (!event || !can(actor, 'results:manage', { organizerId: actor.orgId, eventId: id })) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     }
 
@@ -118,8 +121,22 @@ export async function POST(
     // Perform DB Operations
     await prisma.$transaction(async (tx) => {
       // 1. Delete old results for this event (to replace them completely)
-      await tx.raceResult.deleteMany({
+      const replaced = await tx.raceResult.deleteMany({
         where: { eventId }
+      });
+
+      // A results sheet replaces the published times wholesale, so the trail
+      // says how many went and how many came — "somebody re-uploaded and the
+      // podium changed" is exactly the question it will be asked.
+      await recordAudit(tx, actor, {
+        action: 'results.uploaded',
+        entityType: 'Event',
+        entityId: eventId,
+        eventId,
+        summary: replaced.count > 0
+          ? `Uploaded ${processedResults.length} results for ${event.title}, replacing ${replaced.count}.`
+          : `Uploaded ${processedResults.length} results for ${event.title}.`,
+        changes: { results: [replaced.count, processedResults.length] },
       });
 
       // 2. Insert new results.

@@ -18,11 +18,53 @@ each batch landing whole. Update the Status table as they land.
 
 | Batch | Laman | Migration | Status |
 | --- | --- | --- | --- |
-| 1 | Schema, `actor.ts` / `permissions.ts` / `audit.ts`, JWT `orgId`, rewire every admin surface, audit the existing actions | yes | Not started |
+| 1 | Schema, `actor.ts` / `permissions.ts` / `audit.ts`, JWT `orgId`, rewire every admin surface, audit the existing actions | yes (`20260913120000_staff_access_and_audit_log`) | Landed — see notes below |
 | 2 | `/admin/team` — invite, roles, event assignments, suspend | small | Not started |
 | 3 | `/admin/activity` — the trail, plus inline provenance on the rows | none | Not started |
 | 4 | TOTP two-factor, required for anyone who can validate or delete | small | Not started |
 | 5 | Optional: Google sign-in, session list, retention sweep | small | Not started |
+
+### Batch 1 — what landed, and the calls made along the way
+
+Everything in §5 moved onto `lib/actor.ts`: no admin page or `/api/admin/**`
+route calls `getAuthCookie()` any more, and no `organizerId !== auth.id`
+survives (only the super admin's own routes still read the raw claims). The
+owner's behaviour is unchanged. Decisions taken in the batch, for the next
+session to build on rather than re-derive:
+
+- **Names.** `getActor()` for route handlers (they keep their own 401) and
+  `requireActor()` for server pages (redirect). The check is `can(actor,
+  permission, { organizerId, eventId })`, a boolean — each route keeps its own
+  refusal wording, which is what keeps the owner's responses byte-for-byte.
+  `canSomewhere()` and `reachableEvents()` cover screens that are not about one
+  race. Lists already filter by assignment, so Batch 2 only has to create rows.
+- **Old sessions survive the deploy.** A token with the pre-Batch-1 claims reads
+  as its Organizer's owner.
+- **Super admin reach** is `SUPER_ADMIN_REACH` in `permissions.ts`. The runner
+  routes and event DELETE spelled the role `SUPERADMIN`, so their super admin
+  branch never matched; the matrix keeps what they actually did (no reach).
+- **Soft removal** (§4.5) is live for runners. `Registration.deletedAt` exists
+  but nothing sets it, because nothing in the admin removes a whole order.
+- **Event delete is still a hard delete**, owner only, now recorded with how many
+  registrations, runners and results went with it. §4.5 says hard deletion should
+  be the super admin's alone — making an owner's event delete soft (or moving it
+  to the super admin) is an open decision for the owner, not taken here.
+- **Registrant exports** are logged through
+  `POST /api/admin/events/[id]/registrants/export`, which the table calls
+  fire-and-forget before building the CSV in the browser.
+- **A staff member with several memberships** signs in to the earliest-accepted
+  active one until Batch 2 adds a way to switch.
+- **Releasing this batch to production needs a history fix first.** Production's
+  `_prisma_migrations` stops at `20260911120000_category_sort_order`, although
+  its schema already has what `20260912044340_registration_opens_at` and
+  `20260912055118_feedback_inbox` create (checked read-only on 2026-09-13).
+  `migrate deploy` would therefore fail on the first of those (P3018, "column
+  already exists"). With `DIRECT_URL` on the production endpoint, mark both as
+  applied and then deploy:
+  `npx prisma migrate resolve --applied 20260912044340_registration_opens_at`,
+  `npx prisma migrate resolve --applied 20260912055118_feedback_inbox`,
+  `npx prisma migrate deploy`. `local-dev` had the same gap and was reconciled
+  this way.
 
 ---
 

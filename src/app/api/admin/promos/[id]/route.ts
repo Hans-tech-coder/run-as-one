@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
-import { getAuthCookie } from '@/lib/auth';
+import { can, getActor } from '@/lib/actor';
+import { CHANGED, changedFields, listFields, recordAudit } from '@/lib/audit';
 import { MAX_PROMO_CODE_LENGTH, normalizePromoCode } from '@/lib/discount';
 import { promoTermsFromInput } from '@/lib/promo-input';
 
@@ -25,36 +26,85 @@ import { promoTermsFromInput } from '@/lib/promo-input';
  * menu has no form open, so it has no terms to re-post, and making it send
  * some would be inventing values it never rendered.
  *
- * Auth-checked and scoped to the signed-in organizer's own promotions, like
+ * Auth-checked and scoped to the actor's own organizer's promotions, like
  * every other admin route: an id from the browser is not proof it belongs to
- * the browser's owner.
+ * the browser's owner. Every change is `promo:manage` (OWNER and ADMIN), and
+ * every one lands in the trail in the transaction that makes it.
  */
+
+/** The terms an edit can change, in the order the trail lists them. */
+const EDITABLE_TERMS = [
+  'code',
+  'discountType',
+  'eventId',
+  'buyQuantity',
+  'getQuantity',
+  'validFrom',
+  'validUntil',
+  'usageLimit',
+] as const;
+
+/** A price list as one comparable string, so an edit can say whether it moved. */
+function priceListKey(rows: { categoryId: string; price: number; usageLimit?: number | null }[]) {
+  return rows
+    .map(row => `${row.categoryId}:${row.price}:${row.usageLimit ?? ''}`)
+    .sort()
+    .join('|');
+}
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const auth = await getAuthCookie();
-    if (!auth) {
+    const actor = await getActor();
+    if (!actor) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { id } = await params;
     const existing = await prisma.promoCode.findFirst({
-      where: { id, organizerId: auth.id },
-      select: { id: true, code: true, batchLabel: true, automatic: true },
+      where: { id, organizerId: actor.orgId },
+      select: {
+        id: true,
+        code: true,
+        batchLabel: true,
+        automatic: true,
+        paused: true,
+        discountType: true,
+        eventId: true,
+        buyQuantity: true,
+        getQuantity: true,
+        validFrom: true,
+        validUntil: true,
+        usageLimit: true,
+        categoryPrices: { select: { categoryId: true, price: true, usageLimit: true } },
+      },
     });
-    if (!existing) {
+    if (!existing || !can(actor, 'promo:manage', { organizerId: actor.orgId })) {
       return NextResponse.json({ error: 'Promotion not found.' }, { status: 404 });
     }
 
+    const name = existing.batchLabel ?? existing.code;
     const body = await request.json();
 
     // The hold on its own. Checked before the terms are read, because a body
     // that carries only this has no terms in it to validate and must not be
     // refused for the discount type it never claimed to be setting.
     if (typeof body?.paused === 'boolean' && Object.keys(body).length === 1) {
-      const held = await prisma.promoCode.updateMany({
-        where: batchWhere(existing, auth.id),
-        data: { paused: body.paused },
+      const held = await prisma.$transaction(async tx => {
+        const rows = await tx.promoCode.updateMany({
+          where: batchWhere(existing, actor.orgId),
+          data: { paused: body.paused },
+        });
+        if (existing.paused !== body.paused) {
+          await recordAudit(tx, actor, {
+            action: body.paused ? 'promo.paused' : 'promo.resumed',
+            entityType: 'PromoCode',
+            entityId: existing.id,
+            eventId: existing.eventId,
+            summary: body.paused ? `Paused promotion ${name}.` : `Resumed promotion ${name}.`,
+            changes: { paused: [existing.paused, body.paused] },
+          });
+        }
+        return rows;
       });
       return NextResponse.json({ updated: held.count, paused: body.paused });
     }
@@ -64,7 +114,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       // code would find it gone, or a promotion nobody was told about would
       // suddenly need telling. Creating the other one is the honest way.
       { ...body, automatic: existing.automatic },
-      auth.id,
+      actor.orgId,
     );
     if ('problem' in terms) {
       return NextResponse.json(terms.problem, { status: 400 });
@@ -94,7 +144,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       }
       if (cleaned !== existing.code) {
         const clash = await prisma.promoCode.findFirst({
-          where: { organizerId: auth.id, code: cleaned },
+          where: { organizerId: actor.orgId, code: cleaned },
           select: { id: true },
         });
         if (clash) {
@@ -117,16 +167,18 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     // advertise at numbers the checkout no longer holds, which is the exact
     // disagreement this feature exists to prevent.
     const updated = await prisma.$transaction(async tx => {
+      const data = {
+        ...terms.data,
+        ...(code ? { code } : {}),
+        // A voucher is single-use by definition, so a batch's limit is not
+        // the organizer's to raise — doing so would turn the promotion into
+        // something other than the vouchers they handed out.
+        ...(existing.batchLabel ? { usageLimit: 1 } : {}),
+      };
+
       const rows = await tx.promoCode.updateMany({
-        where: batchWhere(existing, auth.id),
-        data: {
-          ...terms.data,
-          ...(code ? { code } : {}),
-          // A voucher is single-use by definition, so a batch's limit is not
-          // the organizer's to raise — doing so would turn the promotion into
-          // something other than the vouchers they handed out.
-          ...(existing.batchLabel ? { usageLimit: 1 } : {}),
-        },
+        where: batchWhere(existing, actor.orgId),
+        data,
       });
 
       // The price rows are **updated in place, never replaced**. Each carries
@@ -158,6 +210,21 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         });
       }
 
+      const changes = changedFields(existing, { ...existing, ...data }, EDITABLE_TERMS);
+      if (priceListKey(existing.categoryPrices) !== priceListKey(terms.categoryPrices)) {
+        changes.categoryPrices = CHANGED;
+      }
+      if (Object.keys(changes).length > 0) {
+        await recordAudit(tx, actor, {
+          action: 'promo.updated',
+          entityType: 'PromoCode',
+          entityId: existing.id,
+          eventId: terms.data.eventId,
+          summary: `Edited promotion ${code ?? name}: ${listFields(Object.keys(changes))}.`,
+          changes,
+        });
+      }
+
       return rows.count;
     });
 
@@ -170,22 +237,35 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const auth = await getAuthCookie();
-    if (!auth) {
+    const actor = await getActor();
+    if (!actor) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { id } = await params;
     const existing = await prisma.promoCode.findFirst({
-      where: { id, organizerId: auth.id },
-      select: { id: true, batchLabel: true },
+      where: { id, organizerId: actor.orgId },
+      select: { id: true, code: true, batchLabel: true, eventId: true, automatic: true },
     });
-    if (!existing) {
+    if (!existing || !can(actor, 'promo:manage', { organizerId: actor.orgId })) {
       return NextResponse.json({ error: 'Promotion not found.' }, { status: 404 });
     }
 
-    const deleted = await prisma.promoCode.deleteMany({
-      where: batchWhere(existing, auth.id),
+    const deleted = await prisma.$transaction(async tx => {
+      const rows = await tx.promoCode.deleteMany({
+        where: batchWhere(existing, actor.orgId),
+      });
+      await recordAudit(tx, actor, {
+        action: 'promo.deleted',
+        entityType: 'PromoCode',
+        entityId: existing.id,
+        eventId: existing.eventId,
+        summary: existing.batchLabel
+          ? `Deleted voucher batch ${existing.batchLabel} (${rows.count} vouchers).`
+          : `Deleted ${existing.automatic ? 'automatic promotion' : 'promo code'} ${existing.code}.`,
+        changes: { rows: rows.count },
+      });
+      return rows;
     });
 
     return NextResponse.json({ deleted: deleted.count });

@@ -3,7 +3,7 @@
  * validator's own notes about it.
  *
  * **This route had no auth check at all.** It was the only one of the admin
- * API routes that never called getAuthCookie, and it never scoped to the
+ * API routes that never checked the session, and it never scoped to the
  * signed-in organizer — so anyone who guessed a registration id could mark it
  * PAID and trigger a receipt email for a payment nobody made. The proxy does
  * not cover /api/**, so the check has to live here (PROJECT_GUIDE §7). It is
@@ -14,11 +14,17 @@
  * assigned staff member reads the note and reaches out by hand, which is what
  * the organizer asked for. The only email this route sends is the receipt,
  * and only on the transition into PAID.
+ *
+ * **Both halves go in the trail**, in the transaction that writes them: a
+ * status change names the order and what it moved from, and a remark records
+ * what it said. This is the route an argument about a payment is traced back
+ * through, so it is the one that most needs to say who.
  */
 
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
-import { getAuthCookie } from '@/lib/auth';
+import { can, getActor } from '@/lib/actor';
+import { changedFields, recordAudit, type AuditEntry } from '@/lib/audit';
 import { getSignedInUser } from '@/lib/signed-in-user';
 import { deliverConfirmationEmail } from '@/lib/email-delivery';
 
@@ -43,8 +49,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const auth = await getAuthCookie();
-    if (!auth) {
+    const actor = await getActor();
+    if (!actor) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -80,9 +86,16 @@ export async function PATCH(
       return NextResponse.json({ error: 'Registration not found' }, { status: 404 });
     }
 
-    // Scoped to the signed-in organizer's own events. A super admin is the one
-    // account that legitimately reaches every organizer's registrations.
-    if (auth.role !== 'SUPER_ADMIN' && existing.event.organizerId !== auth.id) {
+    // Scoped to the actor's own organizer, and for a STAFF member to a race
+    // where their role covers what was sent: settling an order and writing a
+    // note about it are separate permissions (lib/permissions.ts). A super
+    // admin is the one account that legitimately reaches every organizer's
+    // registrations.
+    const reach = { organizerId: existing.event.organizerId, eventId: existing.eventId };
+    if (
+      (wantsStatus && !can(actor, 'registration:validate', reach)) ||
+      (wantsRemarks && !can(actor, 'registration:remark', reach))
+    ) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -113,9 +126,47 @@ export async function PATCH(
       }
     }
 
-    const updatedRegistration = await prisma.registration.update({
-      where: { id },
-      data,
+    const updatedRegistration = await prisma.$transaction(async tx => {
+      const updated = await tx.registration.update({
+        where: { id },
+        data,
+      });
+
+      const entries: AuditEntry[] = [];
+      const trail = {
+        entityType: 'Registration' as const,
+        entityId: id,
+        eventId: existing.eventId,
+        organizerId: existing.event.organizerId,
+      };
+
+      if (wantsStatus && existing.status !== updated.status) {
+        entries.push({
+          ...trail,
+          action: 'registration.status.changed',
+          summary: `Marked ${existing.orderRef} as ${updated.status} (was ${existing.status}).`,
+          changes: { status: [existing.status, updated.status] },
+        });
+      }
+
+      if (wantsRemarks) {
+        const changes = changedFields(existing, updated, ['remarks']);
+        if (Object.keys(changes).length > 0) {
+          entries.push({
+            ...trail,
+            action: 'registration.remarks.changed',
+            summary: !updated.remarks
+              ? `Cleared the remarks on ${existing.orderRef}.`
+              : existing.remarks
+                ? `Rewrote the remarks on ${existing.orderRef}.`
+                : `Added remarks to ${existing.orderRef}.`,
+            changes,
+          });
+        }
+      }
+
+      await recordAudit(tx, actor, entries);
+      return updated;
     });
 
     // Manual (bank transfer) registrations only reach PAID here, once an admin
@@ -126,7 +177,11 @@ export async function PATCH(
     if (wantsStatus && status === 'PAID' && existing.status !== 'PAID') {
       const full = await prisma.registration.findUnique({
         where: { id },
-        include: { event: true, runners: { include: { category: true } } },
+        include: {
+          event: true,
+          // A runner removed from the order is not on the receipt.
+          runners: { where: { deletedAt: null }, include: { category: true } },
+        },
       });
       if (full) await deliverConfirmationEmail(full);
     }

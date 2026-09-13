@@ -162,7 +162,10 @@ export async function expirePendingRegistrations(
       // Only what a released seat needs. A repricing promotion is capped in
       // runners, so the sweep has to know how many of this order's runners
       // were actually sold at its price — see releaseRedemption.
-      runners: { select: { categoryId: true, promoPrice: true } },
+      // A removed runner already gave its seat up when it was removed, as it
+      // did when removal was a hard delete; counting it here would hand back a
+      // seat twice.
+      runners: { where: { deletedAt: null }, select: { categoryId: true, promoPrice: true } },
     },
   });
 

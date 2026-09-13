@@ -170,7 +170,7 @@ export default async function RegisterPage(props: {
   if (orderRef) {
     registration = await db.registration.findUnique({
       where: { orderRef },
-      include: { runners: true }
+      include: { runners: { where: { deletedAt: null } } }
     });
   }
 

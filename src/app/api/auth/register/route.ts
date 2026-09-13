@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { hashPassword } from '@/lib/auth';
 import { normalizeAccountEmail } from '@/lib/text-case';
+import { findAccountByEmail } from '@/lib/actor';
 
 export async function POST(request: Request) {
   try {
@@ -21,9 +22,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const existingUser = await db.organizer.findUnique({
-      where: { email: accountEmail },
-    });
+    // Either account table: an address a staff member already signs in with
+    // cannot become an organizer too, or sign-in would have to guess which of
+    // the two the person meant.
+    const existingUser = await findAccountByEmail(accountEmail);
 
     if (existingUser) {
       return NextResponse.json(

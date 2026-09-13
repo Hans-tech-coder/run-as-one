@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
-import { getAuthCookie } from '@/lib/auth';
+import { can, getActor } from '@/lib/actor';
 import { MAX_REDEMPTIONS_LISTED, redemptionsFor } from '@/lib/promo-redemptions';
 
 /**
@@ -16,7 +16,7 @@ import { MAX_REDEMPTIONS_LISTED, redemptionsFor } from '@/lib/promo-redemptions'
  * Inside a batch that is the only thing telling one redemption from another,
  * and it is what turns "somebody used these" into "this voucher went here".
  *
- * Auth-checked and scoped to the signed-in organizer's own events, like every
+ * Auth-checked and scoped to the actor's own organizer's events, like every
  * other admin route. It matters twice here: an id from the browser is not
  * proof the promotion belongs to the browser's owner, and the code *text* is
  * not proof either — two organizers may each run an `EARLYBIRD`, and matching
@@ -24,17 +24,19 @@ import { MAX_REDEMPTIONS_LISTED, redemptionsFor } from '@/lib/promo-redemptions'
  */
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const auth = await getAuthCookie();
-    if (!auth) {
+    const actor = await getActor();
+    if (!actor) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { id } = await params;
     const promo = await prisma.promoCode.findFirst({
-      where: { id, organizerId: auth.id },
-      select: { id: true, code: true, batchLabel: true, automatic: true },
+      where: { id, organizerId: actor.orgId },
+      select: { id: true, code: true, batchLabel: true, automatic: true, eventId: true },
     });
-    if (!promo) {
+    // A STAFF member reads the promotions on their own races only, and is told
+    // the same "not found" otherwise so an id cannot be probed.
+    if (!promo || !can(actor, 'promo:view', { organizerId: actor.orgId, eventId: promo.eventId })) {
       return NextResponse.json({ error: 'Promotion not found.' }, { status: 404 });
     }
 
@@ -43,13 +45,13 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     const codes = promo.batchLabel
       ? (
           await prisma.promoCode.findMany({
-            where: { organizerId: auth.id, batchLabel: promo.batchLabel },
+            where: { organizerId: actor.orgId, batchLabel: promo.batchLabel },
             select: { code: true },
           })
         ).map(row => row.code)
       : [promo.code];
 
-    const { redemptions, truncated } = await redemptionsFor(codes, auth.id);
+    const { redemptions, truncated } = await redemptionsFor(codes, actor.orgId);
 
     return NextResponse.json({
       name: promo.batchLabel ?? promo.code,

@@ -19,6 +19,10 @@ model Organizer {
   updatedAt  DateTime    @updatedAt
   events     Event[]
   promoCodes PromoCode[]
+  /// The people who work inside this organizer besides its owner. The owner is
+  /// this row's own email and password and is never a membership — see
+  /// StaffAccount for why the tenant and the person are separate.
+  staff      StaffMembership[]
 }
 
 model Event {
@@ -99,6 +103,9 @@ model Event {
   promoCodes                  PromoCode[]
   raceResults                 RaceResult[]
   registrations               Registration[]
+  /// The staff who may touch this race, and as what. OWNER and ADMIN reach
+  /// every event without one; a STAFF membership reaches only these.
+  assignments                 EventAssignment[]
 }
 
 /// One account a runner can transfer to for this event.
@@ -282,6 +289,17 @@ model Registration {
   /// has to keep reading correctly after an account is removed.
   manualEmailSentAt       DateTime?
   manualEmailSentBy       String?
+  /// When this order was removed from the admin, and by whom (an Organizer or
+  /// StaffAccount id — an id rather than a name because the AuditLog row
+  /// written beside it already snapshots the name). Null on every live order.
+  ///
+  /// Removal is soft so the trail has something to point at: an audit row
+  /// saying "somebody deleted this order" with nothing left to inspect is half a
+  /// trail, and this table holds real customers' registrations. Nothing in the
+  /// admin removes a whole order yet — only runners — so the column is here for
+  /// the migration to carry once; see STAFF_ACCESS_PLAN.md §4.5.
+  deletedAt               DateTime?
+  deletedById             String?
   event             Event     @relation(fields: [eventId], references: [id])
   runners           Runner[]
 }
@@ -332,6 +350,15 @@ model Runner {
   runningCommunity      String       @default("INDEPENDENT RUNNER")
   createdAt             DateTime     @default(now())
   updatedAt             DateTime     @updatedAt
+  /// When an organizer or staff member removed this runner, and whose id did
+  /// it. Removal used to be a hard DELETE, which left an audit trail pointing
+  /// at nothing; now the row stays and every read a person sees filters it out
+  /// — the registrants screen, the slot count (a removed runner holds no slot,
+  /// exactly as a deleted one did not), the club tally, the emails and the
+  /// promotion counts. The AuditLog row beside it carries the name and the
+  /// order reference. See STAFF_ACCESS_PLAN.md §4.5.
+  deletedAt             DateTime?
+  deletedById           String?
   category              Category     @relation(fields: [categoryId], references: [id])
   registration          Registration @relation(fields: [registrationId], references: [id])
 
@@ -578,4 +605,134 @@ model Feedback {
   /// The inbox reads newest-first and filters by triage state, which is the
   /// only query this table has.
   @@index([status, createdAt])
+}
+
+// ── Staff accounts, per-event access and the audit trail ──────────────────
+//
+// An Organizer is a company; these are the people. The Organizer row stays the
+// tenant and its own email and password stay the owner's login, so no foreign
+// key anywhere above was rewritten to add them. The rule every admin route
+// follows: authorisation scopes by the organizer, attribution records the
+// person. See STAFF_ACCESS_PLAN.md and src/lib/actor.ts.
+
+/// A person who can sign in to an organizer's admin. Separate from Organizer
+/// because an Organizer is a company and a person is not a company: the same
+/// human works for more than one of them, and a payment validated on a Sunday
+/// has to name the human.
+model StaffAccount {
+  id                String   @id @default(cuid())
+  /// Lowercased on write and on every lookup, like every other account email
+  /// in this app — see normalizeAccountEmail in lib/text-case.ts. Checked
+  /// against Organizer.email too (findAccountByEmail in lib/actor.ts), since
+  /// the database cannot enforce uniqueness across two tables.
+  email             String   @unique
+  /// Null until the invitation is accepted: an invited person has no password
+  /// yet, and the owner never sets one for them.
+  password          String?
+  name              String
+  phone             String?
+  /// "INVITED" | "ACTIVE" | "SUSPENDED"
+  status            String   @default("INVITED")
+  /// Base32 TOTP secret, encrypted at rest. Null means 2FA is not set up.
+  totpSecret        String?
+  totpConfirmedAt   DateTime?
+  /// bcrypt hashes, spent one at a time. Never the codes themselves.
+  recoveryCodes     String[] @default([])
+  lastLoginAt       DateTime?
+  /// Every session issued before this instant is dead. Bumped on password
+  /// change, on suspension, and by "sign out everywhere" — the reason it is
+  /// needed is that the JWT lives a day and nothing else can end one early.
+  sessionsValidFrom DateTime @default(now())
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  memberships       StaffMembership[]
+}
+
+/// One person's place inside one organizer. A join rather than an
+/// `organizerId` on StaffAccount because freelance timers, marshals and finance
+/// assistants work several organizers' races in a season, and one email should
+/// be enough for all of them.
+model StaffMembership {
+  id              String   @id @default(cuid())
+  staffId         String
+  organizerId     String
+  /// "ADMIN" (every event of this organizer) | "STAFF" (only what is assigned).
+  /// Never "OWNER" — the owner is the Organizer row itself.
+  role            String   @default("STAFF")
+  /// Who invited them, as a StaffAccount or Organizer id, and when.
+  invitedById     String?
+  invitedAt       DateTime @default(now())
+  acceptedAt      DateTime?
+  /// sha256 of the invite token. The token itself is only ever in the email.
+  inviteTokenHash String?
+  inviteExpiresAt DateTime?
+  staff           StaffAccount      @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  organizer       Organizer         @relation(fields: [organizerId], references: [id])
+  assignments     EventAssignment[]
+
+  @@unique([staffId, organizerId])
+  @@index([organizerId])
+}
+
+/// Which events a STAFF membership may touch, and as what — the same person can
+/// be a validator on one race and only a viewer on another.
+model EventAssignment {
+  id           String   @id @default(cuid())
+  membershipId String
+  eventId      String
+  /// "EVENT_MANAGER" | "VALIDATOR" | "ENCODER" | "VIEWER" — see lib/permissions.ts.
+  role         String
+  assignedById String?
+  createdAt    DateTime @default(now())
+  membership   StaffMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  event        Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([membershipId, eventId])
+  @@index([eventId])
+}
+
+/// What somebody did. Append-only: nothing in this app updates or deletes one —
+/// not the owner, not the super admin. See src/lib/audit.ts.
+///
+/// No relations on purpose. A log row has to outlive the event, the runner and
+/// the account it names, and a foreign key would either block those deletions
+/// or cascade the evidence away with them.
+///
+/// Storage: roughly 300–500 bytes a row, so a busy year at 20,000 actions is
+/// about 10 MB against the 0.5 GB tier. Retention is 24 months, swept by the
+/// cron (Batch 5).
+model AuditLog {
+  id          String   @id @default(cuid())
+  organizerId String
+  /// Null for actions that belong to no single race (profile, promotions).
+  eventId     String?
+  /// "OWNER" | "STAFF" | "SUPER_ADMIN" | "SYSTEM"
+  actorKind   String
+  /// The Organizer or StaffAccount id. Null only for SYSTEM (cron, webhook).
+  actorId     String?
+  /// Snapshotted rather than joined, for the same reason Registration.remarksBy
+  /// is a name and not a relation: this is a line in a log and it has to keep
+  /// reading correctly after the account behind it is gone.
+  actorName   String
+  actorEmail  String?
+  /// Dotted verb: "registration.status.changed", "runner.deleted",
+  /// "proof.viewed". Never free text — the activity screen filters on it, and
+  /// the vocabulary is AUDIT_ACTIONS in lib/audit.ts.
+  action      String
+  entityType  String
+  entityId    String?
+  /// One sentence, rendered at write time so the screen never has to
+  /// reconstruct it: "Marked RM-D918005C as PAID (was PENDING)."
+  summary     String
+  /// Only the fields that changed: { "status": ["PENDING", "PAID"] }. Never a
+  /// whole row, and never a sensitive runner column's value.
+  changes     Json?
+  ip          String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@index([organizerId, createdAt])
+  @@index([eventId, createdAt])
+  @@index([actorId, createdAt])
+  @@index([organizerId, action, createdAt])
 }

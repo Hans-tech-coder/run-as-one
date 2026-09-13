@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
-import { getAuthCookie } from '@/lib/auth';
+import { can, getActor } from '@/lib/actor';
+import { recordAudit } from '@/lib/audit';
 import { MAX_PROMO_CODE_LENGTH, normalizePromoCode } from '@/lib/discount';
 import { MAX_VOUCHER_BATCH, newVoucherCodes } from '@/lib/voucher-codes';
 import { promoTermsFromInput, wholeNumber } from '@/lib/promo-input';
@@ -12,13 +13,20 @@ import { promoTermsFromInput, wholeNumber } from '@/lib/promo-input';
  * The terms themselves are validated by `lib/promo-input.ts`, which the edit
  * route shares — a check that lived here alone would be a check an edit could
  * walk straight past.
+ *
+ * Promotions are organizer-wide marketing, so creating one is `promo:manage`,
+ * which only OWNER and ADMIN hold. The promotion belongs to the organizer and
+ * the trail names who on its team created it.
  */
 
 export async function POST(request: Request) {
   try {
-    const auth = await getAuthCookie();
-    if (!auth) {
+    const actor = await getActor();
+    if (!actor) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    if (!can(actor, 'promo:manage', { organizerId: actor.orgId })) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const body = await request.json();
@@ -29,11 +37,11 @@ export async function POST(request: Request) {
     // and the runner-facing code lookup skips it entirely.
     const isAutomatic = body.automatic === true;
 
-    const terms = await promoTermsFromInput(body, auth.id);
+    const terms = await promoTermsFromInput(body, actor.orgId);
     if ('problem' in terms) {
       return NextResponse.json(terms.problem, { status: 400 });
     }
-    const shared = { ...terms.data, organizerId: auth.id };
+    const shared = { ...terms.data, organizerId: actor.orgId };
 
     // ── A batch of single-use vouchers ────────────────────────────────────
     //
@@ -66,17 +74,31 @@ export async function POST(request: Request) {
       // createMany with skipDuplicates rather than a uniqueness check first:
       // the codes are random, a collision is vanishingly unlikely, and asking
       // the database to enforce it is both correct and one round trip.
-      const created = await prisma.promoCode.createMany({
-        data: codes.map(voucher => ({
-          ...shared,
-          code: voucher,
-          // Single use by construction, whichever limit the form chose: what
-          // makes a voucher a voucher is that it is spent once. A date window
-          // set beside it still applies, since `shared` carries it.
-          usageLimit: 1,
-          batchLabel: label,
-        })),
-        skipDuplicates: true,
+      const created = await prisma.$transaction(async tx => {
+        const rows = await tx.promoCode.createMany({
+          data: codes.map(voucher => ({
+            ...shared,
+            code: voucher,
+            // Single use by construction, whichever limit the form chose: what
+            // makes a voucher a voucher is that it is spent once. A date window
+            // set beside it still applies, since `shared` carries it.
+            usageLimit: 1,
+            batchLabel: label,
+          })),
+          skipDuplicates: true,
+        });
+
+        // One row for the batch, not one per voucher: the organizer made one
+        // decision, and the codes themselves are not worth copying into a log.
+        await recordAudit(tx, actor, {
+          action: 'promo.created',
+          entityType: 'PromoCode',
+          eventId: shared.eventId,
+          summary: `Generated ${rows.count} single-use vouchers in batch ${label}.`,
+          changes: { batchLabel: label, vouchers: rows.count, discountType: shared.discountType },
+        });
+
+        return rows;
       });
 
       return NextResponse.json({ batchLabel: label, created: created.count });
@@ -106,7 +128,7 @@ export async function POST(request: Request) {
     }
 
     const clash = await prisma.promoCode.findFirst({
-      where: { organizerId: auth.id, code: cleaned },
+      where: { organizerId: actor.orgId, code: cleaned },
       select: { id: true },
     });
     if (clash) {
@@ -121,18 +143,36 @@ export async function POST(request: Request) {
       );
     }
 
-    const promo = await prisma.promoCode.create({
-      data: {
-        ...shared,
-        code: cleaned,
-        // Written in the same statement as the promotion rather than after it:
-        // a CATEGORY_PRICE promotion with no prices is one the event page
-        // would advertise and the checkout would ignore, and two statements
-        // are two chances to end up in exactly that state.
-        ...(terms.categoryPrices.length > 0
-          ? { categoryPrices: { create: terms.categoryPrices } }
-          : {}),
-      },
+    const promo = await prisma.$transaction(async tx => {
+      const row = await tx.promoCode.create({
+        data: {
+          ...shared,
+          code: cleaned,
+          // Written in the same statement as the promotion rather than after it:
+          // a CATEGORY_PRICE promotion with no prices is one the event page
+          // would advertise and the checkout would ignore, and two statements
+          // are two chances to end up in exactly that state.
+          ...(terms.categoryPrices.length > 0
+            ? { categoryPrices: { create: terms.categoryPrices } }
+            : {}),
+        },
+      });
+
+      await recordAudit(tx, actor, {
+        action: 'promo.created',
+        entityType: 'PromoCode',
+        entityId: row.id,
+        eventId: row.eventId,
+        summary: row.automatic
+          ? `Created automatic promotion ${row.code}.`
+          : `Created promo code ${row.code}.`,
+        changes: {
+          discountType: row.discountType,
+          ...(terms.categoryPrices.length > 0 ? { categoryPrices: terms.categoryPrices.length } : {}),
+        },
+      });
+
+      return row;
     });
 
     return NextResponse.json(promo);

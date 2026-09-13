@@ -1,6 +1,6 @@
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { getAuthCookie } from '@/lib/auth';
+import { requireActor } from '@/lib/actor';
 import { SITE_NAME } from '@/lib/site-contact';
 
 // Set here rather than on ../not-found.tsx: a not-found file renders as a
@@ -25,10 +25,7 @@ export const metadata: Metadata = {
 export default async function AdminCatchAll() {
   // A signed-out visitor guessing at URLs has no business seeing the shape of
   // the admin, 404 or not; they get the sign-in screen like anywhere else here.
-  const auth = await getAuthCookie();
-  if (!auth) {
-    redirect('/admin/login');
-  }
+  await requireActor();
 
   notFound();
 }

@@ -1,0 +1,275 @@
+/**
+ * Who is acting in the admin, and what they may reach.
+ *
+ * An organizer is a company, not a person. Until staff accounts existed the
+ * `Organizer` row was both — it owned the events and held the one login
+ * everybody on the team shared — so every admin route asked
+ * `event.organizerId !== auth.id` and every change was recorded as "the
+ * organizer did it". The one sentence this module exists to hold:
+ *
+ * > **Authorisation scopes by `orgId`. Attribution records the actor's `id`.**
+ *
+ * For an owner `id === orgId`, which is why moving every admin surface onto
+ * this module is invisible until a staff member signs in.
+ *
+ * - `getActor()` is for route handlers, which answer a missing session with
+ *   their own 401. `requireActor()` is for server pages, which redirect to the
+ *   sign-in screen instead.
+ * - `can(actor, permission, { organizerId, eventId })` is the check a route
+ *   makes before it acts. **No route compares a role string** — the matrix is
+ *   lib/permissions.ts.
+ * - `reachableEvents(actor, permission)` is the `where` a list page reads
+ *   events through, so a STAFF member's lists hold only the races assigned to
+ *   them.
+ *
+ * An owner's session is read from the token alone, exactly as the routes did
+ * before: nothing about an owner's reach can change mid-session that the
+ * routes did not already ignore. A **staff** session is checked against the
+ * record on every request — status, membership, assignments and
+ * `sessionsValidFrom` — because a suspension that waits a day for the JWT to
+ * expire is not a suspension.
+ */
+
+import { redirect } from 'next/navigation';
+import type { Organizer, Prisma, StaffAccount } from '@prisma/client';
+import prisma from './db';
+import { getAuthCookie } from './auth';
+import type { SessionClaims, SessionKind } from './jwt';
+import { normalizeAccountEmail } from './text-case';
+import {
+  SUPER_ADMIN_REACH,
+  asEventRole,
+  asMembershipRole,
+  roleCan,
+  type EventRole,
+  type MembershipRole,
+  type OrgRole,
+  type Permission,
+} from './permissions';
+
+export type ActorRole = 'OWNER' | 'SUPER_ADMIN' | MembershipRole;
+
+export type Actor = {
+  /** The person: an Organizer id for OWNER and SUPER_ADMIN, a StaffAccount id for STAFF. */
+  id: string;
+  kind: SessionKind;
+  /** The tenant — the Organizer whose events and promotions this session reaches. */
+  orgId: string;
+  role: ActorRole;
+  name: string;
+  email: string;
+  /**
+   * The role held on each assigned event. Only a STAFF membership has any;
+   * OWNER and ADMIN reach every event of their organizer without one.
+   */
+  assignments: ReadonlyMap<string, EventRole>;
+};
+
+const NO_ASSIGNMENTS: ReadonlyMap<string, EventRole> = new Map();
+
+/** The organizer statuses that cannot sign in — the same two auth/login refuses. */
+const BLOCKED_ORGANIZER_STATUSES = ['PENDING', 'SUSPENDED'];
+
+export function isBlockedOrganizerStatus(status: string): boolean {
+  return BLOCKED_ORGANIZER_STATUSES.includes(status);
+}
+
+export async function getActor(): Promise<Actor | null> {
+  const session = await getAuthCookie();
+  if (!session) return null;
+
+  if (session.kind !== 'STAFF') {
+    // An owner is their own tenant; a token saying otherwise was not issued
+    // by this app.
+    if (session.sub !== session.orgId) return null;
+    return {
+      id: session.sub,
+      kind: session.kind,
+      orgId: session.orgId,
+      role: session.kind,
+      name: session.name,
+      email: session.email,
+      assignments: NO_ASSIGNMENTS,
+    };
+  }
+
+  const membership = await prisma.staffMembership.findUnique({
+    where: { staffId_organizerId: { staffId: session.sub, organizerId: session.orgId } },
+    select: {
+      role: true,
+      acceptedAt: true,
+      staff: { select: { name: true, email: true, status: true, sessionsValidFrom: true } },
+      organizer: { select: { status: true } },
+      assignments: { select: { eventId: true, role: true } },
+    },
+  });
+
+  // Removed from the team, never accepted, suspended, or the organizer itself
+  // suspended: each of those ends the session now rather than at expiry.
+  if (!membership?.acceptedAt) return null;
+  if (membership.staff.status !== 'ACTIVE') return null;
+  if (isBlockedOrganizerStatus(membership.organizer.status)) return null;
+
+  // "Sign out everywhere", a password change and a suspension all move this
+  // instant forward; every token issued before it is dead.
+  if (
+    session.iat === null ||
+    session.iat * 1000 < membership.staff.sessionsValidFrom.getTime()
+  ) {
+    return null;
+  }
+
+  const role = asMembershipRole(membership.role);
+  if (!role) return null;
+
+  const assignments = new Map<string, EventRole>();
+  if (role === 'STAFF') {
+    for (const assignment of membership.assignments) {
+      const eventRole = asEventRole(assignment.role);
+      if (eventRole) assignments.set(assignment.eventId, eventRole);
+    }
+  }
+
+  return {
+    id: session.sub,
+    kind: 'STAFF',
+    orgId: session.orgId,
+    role,
+    name: membership.staff.name,
+    email: membership.staff.email,
+    assignments,
+  };
+}
+
+/** For server pages: the actor, or off to the sign-in screen. */
+export async function requireActor(): Promise<Actor> {
+  const actor = await getActor();
+  if (!actor) redirect('/admin/login');
+  return actor;
+}
+
+/**
+ * The organizer-wide role an actor holds, or null for a STAFF membership that
+ * reaches only its assigned events. A super admin inside their own tenant row
+ * is its owner.
+ */
+function orgRole(actor: Actor): OrgRole | null {
+  if (actor.role === 'OWNER' || actor.role === 'SUPER_ADMIN') return 'OWNER';
+  if (actor.role === 'ADMIN') return 'ADMIN';
+  return null;
+}
+
+/** Where an action lands: whose organizer, and which race when it is about one. */
+export type Reach = { organizerId: string; eventId?: string | null };
+
+/**
+ * Whether this actor may do this, here.
+ *
+ * Organizer-wide permissions (creating an event, managing promotions) take no
+ * `eventId`, and a STAFF membership never holds them. Event permissions need
+ * the event, because a STAFF member's role is per race.
+ */
+export function can(actor: Actor, permission: Permission, reach: Reach): boolean {
+  if (reach.organizerId !== actor.orgId) {
+    return actor.kind === 'SUPER_ADMIN' && SUPER_ADMIN_REACH.includes(permission);
+  }
+
+  const wide = orgRole(actor);
+  if (wide) return roleCan(wide, permission);
+
+  if (!reach.eventId) return false;
+  const eventRole = actor.assignments.get(reach.eventId);
+  return eventRole !== undefined && roleCan(eventRole, permission);
+}
+
+/**
+ * Whether this actor holds a permission on at least one race — for a screen
+ * that is not about any single event, like the marketing page or the image
+ * uploader both event forms share.
+ */
+export function canSomewhere(actor: Actor, permission: Permission): boolean {
+  const wide = orgRole(actor);
+  if (wide) return roleCan(wide, permission);
+  for (const eventRole of actor.assignments.values()) {
+    if (roleCan(eventRole, permission)) return true;
+  }
+  return false;
+}
+
+/**
+ * The events a list page may show this actor. For an owner it is exactly the
+ * `{ organizerId }` every list read before.
+ */
+export function reachableEvents(
+  actor: Actor,
+  permission: Permission = 'event:view',
+): Prisma.EventWhereInput {
+  const wide = orgRole(actor);
+  if (wide) {
+    return roleCan(wide, permission) ? { organizerId: actor.orgId } : { id: { in: [] } };
+  }
+  const ids = [...actor.assignments]
+    .filter(([, eventRole]) => roleCan(eventRole, permission))
+    .map(([eventId]) => eventId);
+  return { organizerId: actor.orgId, id: { in: ids } };
+}
+
+// ── Accounts ───────────────────────────────────────────────────────────────
+
+export type AccountByEmail =
+  | { kind: 'ORGANIZER'; organizer: Organizer }
+  | { kind: 'STAFF'; staff: StaffAccount };
+
+/**
+ * Which account an address belongs to — the one lookup sign-in, organizer
+ * registration and the profile screen all make, so the two account tables can
+ * never disagree about who owns an address.
+ *
+ * Nothing in the database stops the same address sitting in both tables, so
+ * this is where that is decided: the Organizer row wins, because it is the
+ * older login and the one an owner already uses. Every write of an account
+ * email checks here first, so the tie only arises from a row written by hand.
+ *
+ * The address is normalised here as well as at the door — see
+ * normalizeAccountEmail in lib/text-case.ts.
+ */
+export async function findAccountByEmail(email: unknown): Promise<AccountByEmail | null> {
+  const address = normalizeAccountEmail(email);
+  if (!address) return null;
+
+  const organizer = await prisma.organizer.findUnique({ where: { email: address } });
+  if (organizer) return { kind: 'ORGANIZER', organizer };
+
+  const staff = await prisma.staffAccount.findUnique({ where: { email: address } });
+  return staff ? { kind: 'STAFF', staff } : null;
+}
+
+/** The session an Organizer row signs in to — as its owner, or as the super admin. */
+export function organizerSessionClaims(
+  organizer: Pick<Organizer, 'id' | 'email' | 'name' | 'role'>,
+): SessionClaims {
+  const superAdmin = organizer.role === 'SUPER_ADMIN';
+  return {
+    sub: organizer.id,
+    kind: superAdmin ? 'SUPER_ADMIN' : 'OWNER',
+    orgId: organizer.id,
+    role: superAdmin ? 'SUPER_ADMIN' : 'OWNER',
+    name: organizer.name,
+    email: organizer.email,
+  };
+}
+
+/** The session a staff member signs in to, inside one of their memberships. */
+export function staffSessionClaims(
+  staff: Pick<StaffAccount, 'id' | 'email' | 'name'>,
+  membership: { organizerId: string; role: string },
+): SessionClaims {
+  return {
+    sub: staff.id,
+    kind: 'STAFF',
+    orgId: membership.organizerId,
+    role: asMembershipRole(membership.role) ?? 'STAFF',
+    name: staff.name,
+    email: staff.email,
+  };
+}
