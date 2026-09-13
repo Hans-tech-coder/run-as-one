@@ -986,7 +986,18 @@ export async function redeemPromoCode(
    * the seats spent are the ones the order was actually priced with.
    */
   seats: Map<string, number> = new Map(),
+  /**
+   * Whether the promotion applies on its own. It changes only what the runner
+   * is told to do next: a typed code can be removed and the order retried, but
+   * nobody can remove an automatic promotion — the page has to be reloaded so
+   * the summary is priced without it, and telling them to "remove it" would
+   * send them looking for a button that does not exist.
+   */
+  automatic = false,
 ): Promise<void> {
+  const retry = automatic
+    ? 'Reload the page to see your updated total — nothing has been charged.'
+    : 'Remove it and try again — nothing has been charged.';
   // Tagged template rather than Prisma.sql: this module is imported by both
   // wizards, which are client components, and pulling @prisma/client into the
   // browser bundle to interpolate one id would be the same poor trade
@@ -997,7 +1008,7 @@ export async function redeemPromoCode(
   const row = locked[0];
   if (!row) {
     throw new PromoUnavailableError(
-      `${code} is no longer available. Remove it and try again — nothing has been charged.`,
+      `${code} is no longer available. ${retry}`,
     );
   }
 
@@ -1006,8 +1017,8 @@ export async function redeemPromoCode(
   if (row.usageLimit !== null && row.usageCount >= row.usageLimit) {
     throw new PromoUnavailableError(
       row.usageLimit === 1
-        ? `${code} was claimed by someone else while you were checking out. Remove it and try again — nothing has been charged.`
-        : `${code} reached its usage limit while you were checking out. Remove it and try again — nothing has been charged.`,
+        ? `${code} was claimed by someone else while you were checking out. ${retry}`
+        : `${code} reached its usage limit while you were checking out. ${retry}`,
     );
   }
 
@@ -1031,7 +1042,7 @@ export async function redeemPromoCode(
     // and this order was priced against terms that no longer exist.
     if (!seat) {
       throw new PromoUnavailableError(
-        `${code} changed while you were checking out. Remove it and try again — nothing has been charged.`,
+        `${code} changed while you were checking out. ${retry}`,
       );
     }
 
@@ -1043,8 +1054,8 @@ export async function redeemPromoCode(
       // act on: they can still register, just not all at the promotion price.
       throw new PromoUnavailableError(
         left <= 0
-          ? `${code} ran out at that price while you were checking out. Remove it and try again — nothing has been charged.`
-          : `Only ${left} more runner${left === 1 ? '' : 's'} can still get the ${code} price, and you have ${wanted} on it. Remove it and try again — nothing has been charged.`,
+          ? `${code} ran out at that price while you were checking out. ${retry}`
+          : `Only ${left} more runner${left === 1 ? '' : 's'} can still get the ${code} price, and you have ${wanted} on it. ${retry}`,
       );
     }
 

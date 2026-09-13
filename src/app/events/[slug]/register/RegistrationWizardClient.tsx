@@ -68,6 +68,7 @@ import {
   outshoneByMessage,
   promoCodeError,
   promoGroupSize,
+  promoStatus,
   type PromoTerms,
 } from "@/lib/discount";
 import PromoCodeField from "./PromoCodeField";
@@ -119,6 +120,7 @@ export default function RegistrationWizardClient({
   communities,
   defaultCountry,
   automaticPromos,
+  promoCodesAccepted,
   initialCategoryId = "",
 }: {
   event: any;
@@ -140,6 +142,12 @@ export default function RegistrationWizardClient({
    * read as the price changing.
    */
   automaticPromos: PromoTerms[];
+  /**
+   * Whether this event has a code a runner could type right now. Without one
+   * the promo code box is left out, so nobody goes looking for a discount they
+   * were never meant to have — see acceptsPromoCodes in lib/promo-store.ts.
+   */
+  promoCodesAccepted: boolean;
   /**
    * The option runner 1 starts with, already checked against this event and its
    * slot counts by the register page: the one they clicked on the event page,
@@ -463,8 +471,14 @@ export default function RegistrationWizardClient({
   // The promotion that would give the free slot, whether or not it is
   // currently the winning discount: an order sitting one runner short of it
   // has no discount at all yet, so the offer cannot be read off the winner.
+  // Only one that is actually running: a paused, expired or used-up group deal
+  // must neither stop a group at its size nor promise a free runner the
+  // checkout will not give.
   const groupPromo = [...automaticPromos, promo].find(
-    (candidate) => candidate && candidate.discountType === "BUY_X_GET_Y",
+    (candidate) =>
+      candidate &&
+      candidate.discountType === "BUY_X_GET_Y" &&
+      promoStatus(candidate) === "ACTIVE",
   );
   const groupOffer = freeSlotOffer(groupPromo, participants.length);
 
@@ -1792,15 +1806,21 @@ export default function RegistrationWizardClient({
                   )}
                 </div>
 
-                <PromoCodeField
-                  eventId={eventId}
-                  promo={promo}
-                  applied={promoOutshone ? null : typedApplied}
-                  problem={promoProblem}
-                  note={promoOutshone}
-                  onApply={setPromo}
-                  onRemove={() => setPromo(null)}
-                />
+                {/* Only when a code could actually be typed. An event running
+                    automatic promotions alone, or none, shows no box — they
+                    are already on the order, and an empty box reads as a
+                    discount this runner was never given. */}
+                {promoCodesAccepted && (
+                  <PromoCodeField
+                    eventId={eventId}
+                    promo={promo}
+                    applied={promoOutshone ? null : typedApplied}
+                    problem={promoProblem}
+                    note={promoOutshone}
+                    onApply={setPromo}
+                    onRemove={() => setPromo(null)}
+                  />
+                )}
 
                 <div className="checkout-total-box bg-accent-orange/10 border border-accent-orange/20 rounded-3xl mb-8 text-center py-10 relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-64 h-64 bg-accent-orange/20 rounded-full blur-[80px] -mr-32 -mt-32"></div>

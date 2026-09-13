@@ -25,7 +25,7 @@ import {
   takenSlotsByCategory,
   withSlotCounts,
 } from '@/lib/registration-gate';
-import { automaticPromosFor, promoTerms } from '@/lib/promo-store';
+import { acceptsPromoCodes, automaticPromosFor, promoTerms } from '@/lib/promo-store';
 import { CATEGORY_ORDER } from '@/lib/category-order';
 
 export default async function RegisterPage(props: { 
@@ -142,7 +142,14 @@ export default async function RegisterPage(props: {
   // the wizard for the same reason the club list is: a discount that appeared a
   // moment after the summary first drew would look like a price change. Only
   // the terms cross into the client — never the row's id or who owns it.
-  const automaticPromos = (await automaticPromosFor(event)).map(promoTerms);
+  //
+  // Beside them, whether there is any code a runner could type. With none, the
+  // wizards leave the promo code box out entirely — see acceptsPromoCodes.
+  const [automaticRows, promoCodesAccepted] = await Promise.all([
+    automaticPromosFor(event),
+    acceptsPromoCodes(event),
+  ]);
+  const automaticPromos = automaticRows.map(promoTerms);
 
   // The option the runner clicked on the event page, if they came from one of
   // its category rows. Resolved here, against the counts just taken, so a link
@@ -180,6 +187,7 @@ export default async function RegisterPage(props: {
         communities={communities}
         defaultCountry={defaultCountry}
         automaticPromos={automaticPromos}
+        promoCodesAccepted={promoCodesAccepted}
         initialCategoryId={initialCategoryId}
       />;
   }
@@ -191,6 +199,7 @@ export default async function RegisterPage(props: {
         communities={communities}
         defaultCountry={defaultCountry}
         automaticPromos={automaticPromos}
+        promoCodesAccepted={promoCodesAccepted}
         initialCategoryId={initialCategoryId}
       />;
 }

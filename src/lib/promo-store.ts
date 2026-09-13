@@ -7,6 +7,7 @@ import {
   normalizePromoCode,
   outshoneByMessage,
   promoCodeError,
+  promoStatus,
 } from '@/lib/discount';
 
 /**
@@ -97,6 +98,54 @@ export async function automaticPromosFor(event: {
     select: PROMO_TERMS_SELECT,
     orderBy: { createdAt: 'asc' },
   });
+}
+
+/**
+ * Whether this event has a code a runner could type right now — and so whether
+ * the wizards show the promo code box at all.
+ *
+ * A box nobody can use is not harmless: a registrant who sees one assumes there
+ * is a discount they were not given, and goes looking for it or gives up.
+ * Automatic promotions do not count, since they need no box — they are on the
+ * order already.
+ *
+ * The same scope `findPromoCode` searches, so the box shows exactly when that
+ * lookup could return something. The `where` only narrows the rows, dropping
+ * the cheap cases — automatic, paused, outside its window, order cap spent,
+ * which is every claimed voucher in a batch — and `promoStatus` has the last
+ * word, because whether a repricing promotion's per-category seats have all
+ * gone is a rule this module should not write twice.
+ *
+ * Decided when the page renders. A code created or resumed while a runner sits
+ * on the wizard shows on their next load; one that runs out after the box was
+ * drawn is refused with its own sentence, as it always was.
+ */
+export async function acceptsPromoCodes(event: {
+  id: string;
+  organizerId: string;
+}): Promise<boolean> {
+  const now = new Date();
+  const candidates = await prisma.promoCode.findMany({
+    where: {
+      organizerId: event.organizerId,
+      automatic: false,
+      paused: false,
+      OR: [{ eventId: null }, { eventId: event.id }],
+      AND: [
+        { OR: [{ validFrom: null }, { validFrom: { lte: now } }] },
+        { OR: [{ validUntil: null }, { validUntil: { gte: now } }] },
+        {
+          OR: [
+            { usageLimit: null },
+            { usageCount: { lt: prisma.promoCode.fields.usageLimit } },
+          ],
+        },
+      ],
+    },
+    select: PROMO_TERMS_SELECT,
+  });
+
+  return candidates.some(promo => promoStatus(promo) === 'ACTIVE');
 }
 
 /**
