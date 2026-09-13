@@ -206,12 +206,20 @@ export async function resolveDiscount(
   code: unknown,
   order: OrderBasis,
 ): Promise<ResolvedDiscount> {
-  const cleaned = normalizePromoCode(code);
+  const requested = normalizePromoCode(code);
 
   const [automatic, typed] = await Promise.all([
     automaticPromosFor(event),
-    cleaned ? findPromoCode(event, cleaned) : Promise.resolve(null),
+    requested ? findPromoCode(event, requested) : Promise.resolve(null),
   ]);
+
+  // The name of an automatic promotion is not a code anybody typed. The
+  // wizards used to post the *winning* discount's name, which is an automatic
+  // promotion's whenever one wins — and `findPromoCode` rightly never matches
+  // those, so every such order was refused with "we don't have a code called
+  // 5+1FREE". A tab opened before that was fixed still posts it, and the
+  // promotion it names is already weighed below, so the name is simply dropped.
+  const cleaned = automatic.some(promo => promo.code === requested) ? '' : requested;
 
   // A code that was actually typed and cannot be used is an error, even when
   // an automatic promotion would have covered the order anyway: the runner

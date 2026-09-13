@@ -686,9 +686,12 @@ export default function RegistrationWizardClient({
           paymentMethod: paymentMethod,
           consentGiven: consentGiven,
           consentSignature: consentSignature,
-          // The code only. The amount it is worth is the server's to work out
-          // again, exactly like the subtotal above it.
-          promoCode: discount?.code ?? "",
+          // The code the runner typed, and only that. The amount it is worth is
+          // the server's to work out again, exactly like the subtotal above it.
+          // Not `discount.code`: when an automatic promotion wins, that is its
+          // name, and the server applies those on its own — see
+          // resolveDiscount in lib/promo-store.ts.
+          promoCode: promo && !promoProblem ? promo.code : "",
         }),
       });
 
@@ -775,9 +778,12 @@ export default function RegistrationWizardClient({
       formData.append("transactionNumber", transactionNumber);
       formData.append("consentGiven", String(consentGiven));
       formData.append("consentSignature", consentSignature);
-      // The code only. The amount it is worth is the server's to work out
-      // again, exactly like the subtotal above it.
-      formData.append("promoCode", discount?.code ?? "");
+      // The code the runner typed, and only that. The amount it is worth is
+      // the server's to work out again, exactly like the subtotal above it.
+      // Not `discount.code`: when an automatic promotion wins, that is its
+      // name, and the server applies those on its own — see resolveDiscount
+      // in lib/promo-store.ts.
+      formData.append("promoCode", promo && !promoProblem ? promo.code : "");
 
       // Append complex data as JSON string
       formData.append("participants", JSON.stringify(participants));

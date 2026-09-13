@@ -572,7 +572,12 @@ sorted to the top) · `/superadmin/[...missing]`.
   event and recompute the delivery fee, platform fee, subtotal (including the
   shirt upcharge) and **the promo discount** before writing or billing.
   Mismatches are rejected. The request carries the promo *code*, never what it
-  is worth. Both routes now also pin the **total** — with a discount in play, an
+  is worth — and only the code the runner **typed**, never the name of the
+  discount that won: an automatic promotion's `code` column is its name, which
+  `findPromoCode` deliberately never matches, so posting it refused every order
+  an automatic promotion covered. `resolveDiscount` also drops a posted name that
+  matches one of the event's automatic promotions, for tabs opened before that
+  fix. Both routes now also pin the **total** — with a discount in play, an
   order that under-reports it would be billed more than the summary promised and
   one that over-reports it would be billed less.
 - **Server-side gates, not just UI ones.** Consent (`consentGiven !== true`),
@@ -1163,6 +1168,17 @@ a queue.
 `IMPROVEMENTS_PLAN.md` it is now kept only for the reasoning behind each and for
 the decisions it records as not to be relitigated. It is no longer a queue, and
 the file itself says it may be deleted.
+
+**`STAFF_ACCESS_PLAN.md` is an open queue.** Five batches, agreed and not yet
+started, for giving an organizer's personnel their own accounts instead of
+sharing the organizer's one login: a `StaffAccount` / `StaffMembership` /
+`EventAssignment` / `AuditLog` model, a permission matrix in `lib/permissions.ts`,
+per-event assignment, an append-only activity trail, and TOTP two-factor. **Read
+it before touching admin auth, the `Organizer` model, or any `/api/admin/**`
+route's ownership check** — the rule it settles is that authorisation scopes by
+`orgId` while attribution records `actorId`, and Batch 1 rewires every existing
+admin surface to `requireActor()`. The file also records which decisions are
+closed (no unified account table, no SSO).
 
 Known open threads:
 
