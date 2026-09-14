@@ -193,6 +193,7 @@ prisma/schema.prisma        # the data model, heavily commented
 vercel.json                 # scheduled work (crons) — see §2
 scripts/                    # seed + one-off maintenance scripts
 .claude/skills/             # project-scoped skills (ui-ux-pro-max, 21st-*, prisma-*)
+MOBILE_RESPONSIVE_PLAN/     # one md file per batch for the mobile admin/superadmin work (§10)
 ```
 
 ---
@@ -757,6 +758,25 @@ These are the user's own standing preferences. Follow them without being asked.
 10. **Weigh storage cost** (Neon's free 0.5 GB tier) before growing the schema.
 11. **Comment the *why*.** This codebase's header comments explain the reasoning
     behind a decision, not what the code does. Match that voice.
+12. **Every screen ships mobile responsive, and a fix never breaks another
+    screen.** Organizers run race day from their phones, so the admin and
+    superadmin dashboards must be fully manageable at 360px. This applies to
+    every new or changed feature, in the same change, never "mobile later".
+    - **Breakpoints follow the public site**: Tailwind's default `sm` 640 /
+      `md` 768 / `lg` 1024. The drawer switches at `md` like `Navbar`. Never
+      a one-off number.
+    - **No horizontal scroll on a phone, ever.** Below `lg` a data table
+      becomes cards through the shared card component, not an `overflow-x`
+      scroller.
+    - Touch targets are 44px. Typed-into fields are 16px. Modals fit the
+      viewport and scroll inside. Menus stay on screen.
+    - Responsive fixes go into the shared furniture (shell, toolbar, pager,
+      card, modal frame), not page-local hacks. Every other screen using that
+      furniture is re-checked at phone *and* desktop widths before the work is
+      called done.
+    - The full checklist and the overflow-check script are in
+      `MOBILE_RESPONSIVE_PLAN/README.md` → "Definition of done". Once that
+      plan finishes, §9 carries the convention on its own.
 
 ---
 
@@ -1304,6 +1324,23 @@ record as open. **Read the plan before touching admin auth, the `Organizer`
 model, or any `/api/admin/**` route's ownership check** — its "Batch 1" notes
 record the calls made in the batch, and the file records which decisions are
 closed (no unified account table, no SSO).
+
+**`MOBILE_RESPONSIVE_PLAN/` is an open queue, nothing landed yet.** Six batches,
+one file each, to make `/admin/**` and `/superadmin/**` fully manageable on a
+phone with no horizontal scroll:
+1. the shared shell, drawer and card component;
+2. Events and Team;
+3. Registrants;
+4. Marketing and Results;
+5. Superadmin;
+6. forms, sign-in pages and a full sweep.
+
+A session runs one batch: read the folder's `README.md`, then that batch's
+file. The README records the closed decisions — breakpoints that follow the
+public site's Tailwind scale (drawer below `md` like `Navbar`, cards below
+`lg`), cards reading the same TanStack rows
+as the table, a CSS switch rather than a `matchMedia` hook, and a drawer rather
+than bottom navigation. Don't relitigate them.
 
 **Releasing Batch 1 needs a migration-history fix on production first.**
 Production's `_prisma_migrations` stops at `20260911120000_category_sort_order`
