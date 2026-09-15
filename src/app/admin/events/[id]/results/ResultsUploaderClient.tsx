@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { UploadCloud, CheckCircle2, AlertCircle, FileSpreadsheet, Play, X, Plus } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useRouter } from 'next/navigation';
+import AdminSelect from '../../../AdminSelect';
 
 type Column = { label: string; index: number };
 
@@ -316,31 +317,42 @@ export default function ResultsUploaderClient({ event }: { event: any }) {
 
       {mounted && isOpen && createPortal(
         <div className="modal-overlay">
-          <div className="modal-container" style={{ maxWidth: '1000px' }}>
+          {/* The older modal frame, capped at the viewport by .admin-modal-panel
+              so its body scrolls inside it on a phone rather than the whole
+              sheet running off the bottom of the screen. */}
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="upload-results-title"
+            className="modal-container admin-modal-panel"
+            style={{ maxWidth: '1000px' }}
+          >
             <div className="modal-header">
-              <h2 className="modal-title">Upload Race Results</h2>
-              <button 
+              <h2 id="upload-results-title" className="modal-title">Upload Race Results</h2>
+              <button
                 onClick={() => setIsOpen(false)}
                 className="modal-close"
+                aria-label="Close"
               >
                 <X size={20} />
               </button>
             </div>
-            
-            <div className="modal-body flex-col gap-6">
+
+            <div className="modal-body admin-modal-body flex-col gap-6">
               {/* Upload Zone */}
       <div className="file-upload-wrapper">
-        <input 
-          type="file" 
-          accept=".xlsx, .xls, .csv" 
+        <input
+          type="file"
+          accept=".xlsx, .xls, .csv"
           onChange={handleFileUpload}
           className="file-upload-input"
         />
-        <div className="file-upload-content">
+        <div className="file-upload-content max-w-full">
           <div className="file-upload-icon">
             <UploadCloud size={32} />
           </div>
-          <div className="file-upload-title">
+          {/* A timing export's file name is as long as its software made it. */}
+          <div className="file-upload-title max-w-full [overflow-wrap:anywhere]">
             {file ? file.name : "Upload Excel Results"}
           </div>
           <div className="file-upload-desc">
@@ -351,15 +363,15 @@ export default function ResultsUploaderClient({ event }: { event: any }) {
 
       {error && (
         <div className="bg-red-500/10 border border-red-500/50 p-4 rounded-lg flex items-center gap-3 text-red-500">
-          <AlertCircle size={20} />
-          <p className="text-sm">{error}</p>
+          <AlertCircle size={20} className="shrink-0" />
+          <p className="text-sm min-w-0 [overflow-wrap:anywhere]">{error}</p>
         </div>
       )}
 
       {success && (
         <div className="bg-green-500/10 border border-green-500/50 p-4 rounded-lg flex items-center gap-3 text-green-400">
-          <CheckCircle2 size={20} />
-          <p className="text-sm">{success}</p>
+          <CheckCircle2 size={20} className="shrink-0" />
+          <p className="text-sm min-w-0 [overflow-wrap:anywhere]">{success}</p>
         </div>
       )}
 
@@ -387,31 +399,53 @@ export default function ResultsUploaderClient({ event }: { event: any }) {
                 .map((row, index) => ({ index, preview: nonEmptyCells(row).slice(0, 5).join(', ') }))
                 .filter(opt => opt.preview !== '' || opt.index === map.headerRow);
 
+              // A column's real sheet index is its value, so a repeated label
+              // ("TIME" twice) still points the import at one cell.
+              const columnOptions = columns.map(col => ({ value: String(col.index), label: col.label }));
+
+              const columnError = (field: string) =>
+                missing.includes(field)
+                  ? `Choose the column that holds the ${REQUIRED_FIELDS[field].toLowerCase()}.`
+                  : undefined;
+
+              const required = (text: string) => (
+                <>{text} <span style={{ color: '#ff4d4f' }}>*</span></>
+              );
+
               return (
-                <div key={sheetName} className="admin-panel mb-8 border border-white/10 hover:border-accent-blue/30 transition-colors">
-                  <div className="admin-panel-header border-b border-gray-700/50 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/[0.02] p-5">
-                    <div className="flex flex-col">
-                      <h4 className="font-bold text-lg text-white flex items-center gap-2">
-                        <FileSpreadsheet size={18} className="text-accent-blue" /> {sheetName}
+                // Visible overflow, not the panel's usual hidden: the column
+                // pickers open their lists downward, and the last row of them
+                // would otherwise be cut off at the panel's edge.
+                <div
+                  key={sheetName}
+                  className="admin-panel mb-8 border border-white/10 hover:border-accent-blue/30 transition-colors"
+                  style={{ overflow: 'visible' }}
+                >
+                  <div className="admin-panel-header border-b border-gray-700/50 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/[0.02] p-5 rounded-t-[var(--radius-xl)]">
+                    <div className="flex flex-col min-w-0 max-md:self-stretch">
+                      <h4 className="font-bold text-lg text-white flex items-center gap-2 min-w-0 [overflow-wrap:anywhere]">
+                        <FileSpreadsheet size={18} className="text-accent-blue shrink-0" /> {sheetName}
                       </h4>
                       <p className="text-xs text-secondary mt-1">
                         Found {rowCount} {rowCount === 1 ? 'row' : 'rows'} below the header on row {map.headerRow + 1}
                       </p>
                     </div>
-                    
-                    <div className="flex items-center gap-3">
-                      <label className="text-sm font-medium text-secondary whitespace-nowrap">Target Category:</label>
-                      <select 
-                        className="form-input"
+
+                    <div className="w-full md:w-72 md:shrink-0 max-md:self-stretch">
+                      <AdminSelect
+                        label="Target Category"
+                        listboxLabel={`Category the ${sheetName} sheet imports into`}
                         value={map.categoryId}
-                        onChange={(e) => handleMappingChange(sheetName, 'categoryId', e.target.value)}
-                      >
-                        <option value="">-- Do not import this sheet --</option>
-                        {/* A fun-run package has no distance to append. */}
-                        {event.categories.map((cat: any) => (
-                          <option key={cat.id} value={cat.id}>{cat.name}{cat.distance ? ` (${cat.distance})` : ''}</option>
-                        ))}
-                      </select>
+                        onChange={value => handleMappingChange(sheetName, 'categoryId', value)}
+                        options={[
+                          { value: '', label: 'Do not import this sheet' },
+                          // A fun-run package has no distance to append.
+                          ...event.categories.map((cat: any) => ({
+                            value: cat.id,
+                            label: `${cat.name}${cat.distance ? ` (${cat.distance})` : ''}`,
+                          })),
+                        ]}
+                      />
                     </div>
                   </div>
 
@@ -419,56 +453,82 @@ export default function ResultsUploaderClient({ event }: { event: any }) {
                     <div className="admin-panel-content">
                       <div className="mb-4 flex flex-col md:flex-row md:items-end justify-between gap-4">
                         <p className="text-sm text-secondary">Match your Excel columns to the required database fields below:</p>
-                        <div className="form-group mb-0" style={{ flex: '0 1 320px' }}>
-                          <label className="form-label mb-1">Header Row</label>
-                          <select
-                            className="form-input"
+                        {/* The row's preview is each option's small print, and
+                            the chosen row's labels are spelled out under the
+                            field, where they wrap instead of stretching a
+                            native select past the edge of a phone. */}
+                        <div className="min-w-0 md:flex-[0_1_320px]">
+                          <AdminSelect
+                            label="Header Row"
+                            listboxLabel={`Row of ${sheetName} that holds the column labels`}
                             value={String(map.headerRow)}
-                            onChange={(e) => handleHeaderRowChange(sheetName, Number(e.target.value))}
-                          >
-                            {headerRowOptions.map(opt => (
-                              <option key={opt.index} value={String(opt.index)}>
-                                Row {opt.index + 1}{opt.preview ? ` — ${opt.preview}` : ''}
-                              </option>
-                            ))}
-                          </select>
+                            onChange={value => handleHeaderRowChange(sheetName, Number(value))}
+                            options={headerRowOptions.map(opt => ({
+                              value: String(opt.index),
+                              label: `Row ${opt.index + 1}`,
+                              hint: opt.preview || undefined,
+                            }))}
+                            hint={
+                              columns.length > 0
+                                ? `Columns on this row: ${columns.map(col => col.label).join(', ')}`
+                                : undefined
+                            }
+                          />
                         </div>
                       </div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
-                        <div className="form-group" style={{ flex: '1 1 160px' }}>
-                          <label className="form-label mb-1 flex items-center gap-1">Bib Number <span style={{ color: '#ff4d4f' }}>*</span></label>
-                          <select className="form-input" aria-invalid={missing.includes('bibCol')} value={map.bibCol} onChange={(e) => handleMappingChange(sheetName, 'bibCol', e.target.value)}>
-                            <option value="" disabled>Select Column</option>
-                            {columns.map(col => <option key={col.index} value={String(col.index)}>{col.label}</option>)}
-                          </select>
+                        <div style={{ flex: '1 1 160px', minWidth: 0 }}>
+                          <AdminSelect
+                            label={required('Bib Number')}
+                            listboxLabel="Column holding the bib number"
+                            placeholder="Select column"
+                            value={map.bibCol}
+                            onChange={value => handleMappingChange(sheetName, 'bibCol', value)}
+                            options={columnOptions}
+                            error={columnError('bibCol')}
+                          />
                         </div>
-                        <div className="form-group" style={{ flex: '1 1 160px' }}>
-                          <label className="form-label mb-1 flex items-center gap-1">Runner Name <span style={{ color: '#ff4d4f' }}>*</span></label>
-                          <select className="form-input" aria-invalid={missing.includes('nameCol')} value={map.nameCol} onChange={(e) => handleMappingChange(sheetName, 'nameCol', e.target.value)}>
-                            <option value="" disabled>Select Column</option>
-                            {columns.map(col => <option key={col.index} value={String(col.index)}>{col.label}</option>)}
-                          </select>
+                        <div style={{ flex: '1 1 160px', minWidth: 0 }}>
+                          <AdminSelect
+                            label={required('Runner Name')}
+                            listboxLabel="Column holding the runner's name"
+                            placeholder="Select column"
+                            value={map.nameCol}
+                            onChange={value => handleMappingChange(sheetName, 'nameCol', value)}
+                            options={columnOptions}
+                            error={columnError('nameCol')}
+                          />
                         </div>
-                        <div className="form-group" style={{ flex: '1 1 160px' }}>
-                          <label className="form-label mb-1 flex items-center gap-1">Gender <span style={{ color: '#ff4d4f' }}>*</span></label>
-                          <select className="form-input" aria-invalid={missing.includes('genderCol')} value={map.genderCol} onChange={(e) => handleMappingChange(sheetName, 'genderCol', e.target.value)}>
-                            <option value="" disabled>Select Column</option>
-                            {columns.map(col => <option key={col.index} value={String(col.index)}>{col.label}</option>)}
-                          </select>
+                        <div style={{ flex: '1 1 160px', minWidth: 0 }}>
+                          <AdminSelect
+                            label={required('Gender')}
+                            listboxLabel="Column holding the gender"
+                            placeholder="Select column"
+                            value={map.genderCol}
+                            onChange={value => handleMappingChange(sheetName, 'genderCol', value)}
+                            options={columnOptions}
+                            error={columnError('genderCol')}
+                          />
                         </div>
-                        <div className="form-group" style={{ flex: '1 1 160px' }}>
-                          <label className="form-label mb-1 flex items-center gap-1">Chip Time <span style={{ color: '#ff4d4f' }}>*</span></label>
-                          <select className="form-input" aria-invalid={missing.includes('chipCol')} value={map.chipCol} onChange={(e) => handleMappingChange(sheetName, 'chipCol', e.target.value)}>
-                            <option value="" disabled>Select Column</option>
-                            {columns.map(col => <option key={col.index} value={String(col.index)}>{col.label}</option>)}
-                          </select>
+                        <div style={{ flex: '1 1 160px', minWidth: 0 }}>
+                          <AdminSelect
+                            label={required('Chip Time')}
+                            listboxLabel="Column holding the chip time"
+                            placeholder="Select column"
+                            value={map.chipCol}
+                            onChange={value => handleMappingChange(sheetName, 'chipCol', value)}
+                            options={columnOptions}
+                            error={columnError('chipCol')}
+                          />
                         </div>
-                        <div className="form-group" style={{ flex: '1 1 160px' }}>
-                          <label className="form-label mb-1 flex items-center gap-1">Gun Time <span className="text-secondary">(Optional)</span></label>
-                          <select className="form-input" value={map.gunCol} onChange={(e) => handleMappingChange(sheetName, 'gunCol', e.target.value)}>
-                            <option value="">None / Not Available</option>
-                            {columns.map(col => <option key={col.index} value={String(col.index)}>{col.label}</option>)}
-                          </select>
+                        <div style={{ flex: '1 1 160px', minWidth: 0 }}>
+                          <AdminSelect
+                            label={<>Gun Time <span className="text-secondary">(Optional)</span></>}
+                            listboxLabel="Column holding the gun time"
+                            value={map.gunCol}
+                            onChange={value => handleMappingChange(sheetName, 'gunCol', value)}
+                            options={[{ value: '', label: 'None / Not Available' }, ...columnOptions]}
+                          />
                         </div>
                       </div>
                     </div>
@@ -482,7 +542,10 @@ export default function ResultsUploaderClient({ event }: { event: any }) {
             })}
           </div>
           
-          <div className="form-actions" style={{ marginTop: '24px' }}>
+          {/* Sticky at the foot of the scrolling body on a phone
+              (.admin-modal-footer), so a mapping several sheets long never
+              buries the button that finishes it. */}
+          <div className="form-actions admin-modal-footer" style={{ marginTop: '24px' }}>
             <button 
               className="btn-light"
               onClick={processAndUpload}

@@ -41,7 +41,8 @@ export default function AdminSelect({
   error,
   hint,
 }: {
-  label: string;
+  /** A node rather than a string, so a required field can carry its asterisk. */
+  label: React.ReactNode;
   value: string;
   options: readonly AdminSelectOption[];
   placeholder?: string;

@@ -1,11 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { createPortal } from 'react-dom';
-import { 
-  ChevronLeft, ChevronRight, ChevronFirst, ChevronLast, 
-  Search, X, Filter, Columns, Plus, ChevronUp, ChevronDown, Check
-} from 'lucide-react';
+import { Search, Filter, Columns, ChevronUp, ChevronDown, Check } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -22,11 +18,15 @@ import {
   getFilteredRowModel,
   getPaginationRowModel,
   useReactTable,
+  Row,
   SortingState,
   FilterFn,
   VisibilityState,
 } from '@tanstack/react-table';
 import ResultsUploaderClient from './ResultsUploaderClient';
+import AdminCardList from '../../../AdminCardList';
+import AdminTablePager from '../../../AdminTablePager';
+import MobileSortMenu from '../../../MobileSortMenu';
 import { toWholeSeconds } from '@/lib/race-time';
 
 interface Result {
@@ -53,26 +53,72 @@ const globalSearchFilterFn: FilterFn<Result> = (row, columnId, filterValue) => {
   return searchableRowContent.includes(searchTerm);
 };
 
+/**
+ * A row's place in the sorted list, for the No. column and the card beside it.
+ * Counted by id rather than object identity (PROJECT_GUIDE §9): sorting rebuilds
+ * the rows, so an `indexOf` on them finds nothing.
+ */
+function rowPosition<T>(sortedRows: Row<T>[], row: Row<T>) {
+  return sortedRows.findIndex(sorted => sorted.id === row.id) + 1;
+}
+
+/**
+ * One chip's options — a Category or Gender filter — as checkable menu rows.
+ * Buttons rather than clickable divs, so a keyboard reaches them and the
+ * popover's phone sheet can give each a 44px row.
+ */
+function FilterOptions({
+  options,
+  selected,
+  onToggle,
+}: {
+  options: string[];
+  selected: string[];
+  onToggle: (value: string) => void;
+}) {
+  return (
+    <>
+      {options.map(option => {
+        const isSelected = selected.includes(option);
+        return (
+          <button
+            key={option}
+            type="button"
+            role="menuitemcheckbox"
+            aria-checked={isSelected}
+            className={`w-full flex items-center gap-2 px-2 py-1.5 hover:bg-white/5 cursor-pointer rounded-md text-sm text-left text-white border-0 ${isSelected ? 'bg-white/5' : 'bg-transparent'}`}
+            onClick={() => onToggle(option)}
+          >
+            <span className={`w-4 h-4 shrink-0 border border-white/10 rounded-sm flex items-center justify-center ${isSelected ? 'bg-white/10' : ''}`}>
+              {isSelected && <span className="w-2 h-2 bg-white rounded-sm" />}
+            </span>
+            <span className="min-w-0 [overflow-wrap:anywhere]">{option}</span>
+          </button>
+        );
+      })}
+    </>
+  );
+}
+
+/**
+ * The organizer's race results — the admin's one table (PROJECT_GUIDE §9) from
+ * `lg` up, and below it the card list reading the same TanStack rows, so the
+ * search, the Category and Gender chips, sort, selection and the page stay one
+ * state across a resize.
+ */
 export default function ResultsTableClient({ results, event }: ResultsTableClientProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
-  
+
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [isGenderOpen, setIsGenderOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
-  const [isPageSizeOpen, setIsPageSizeOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-  
   const categoryRef = useRef<HTMLDivElement>(null);
   const genderRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<HTMLDivElement>(null);
-  const pageSizeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -85,12 +131,21 @@ export default function ResultsTableClient({ results, event }: ResultsTableClien
       if (viewRef.current && !viewRef.current.contains(event.target as Node)) {
         setIsViewOpen(false);
       }
-      if (pageSizeRef.current && !pageSizeRef.current.contains(event.target as Node)) {
-        setIsPageSizeOpen(false);
-      }
+    }
+    // On a phone the menus are sheets along the bottom edge, well away from
+    // the chip that opened them, so Escape has to close them as well.
+    function handleKey(event: KeyboardEvent) {
+      if (event.key !== 'Escape') return;
+      setIsCategoryOpen(false);
+      setIsGenderOpen(false);
+      setIsViewOpen(false);
     }
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKey);
+    };
   }, []);
 
   const columns = useMemo<ColumnDef<Result>[]>(() => [
@@ -134,10 +189,9 @@ export default function ResultsTableClient({ results, event }: ResultsTableClien
     {
       id: "index",
       header: "No.",
-      cell: ({ row, table }) => {
-        const index = table.getSortedRowModel().flatRows.indexOf(row);
-        return <span className="text-gray-400 font-mono">{index + 1}</span>;
-      },
+      cell: ({ row, table }) => (
+        <span className="text-gray-400 font-mono">{rowPosition(table.getSortedRowModel().flatRows, row)}</span>
+      ),
       enableSorting: false,
       enableHiding: false,
     },
@@ -245,12 +299,14 @@ export default function ResultsTableClient({ results, event }: ResultsTableClien
     table.getColumn('gender')?.setFilterValue(newSelected.length ? newSelected : undefined);
   };
 
+  const sortedRows = table.getSortedRowModel().flatRows;
+
   return (
     <div className="flex flex-col gap-4 w-full text-white">
       {/* Top Toolbar */}
       <div className="admin-toolbar" style={{ padding: '0 0 16px 0', borderBottom: 'none' }}>
         <div className="toolbar-actions" style={{ flex: 1 }}>
-          
+
           {/* Search Input */}
           <div className="search-wrapper">
             <Search className="search-icon" size={16} />
@@ -264,9 +320,11 @@ export default function ResultsTableClient({ results, event }: ResultsTableClien
 
           {/* Category Filter Dropdown */}
           <div ref={categoryRef} className="relative view-dropdown-container">
-            <button 
+            <button
               onClick={() => setIsCategoryOpen(!isCategoryOpen)}
               className="btn-filter"
+              aria-haspopup="true"
+              aria-expanded={isCategoryOpen}
             >
               <Filter size={16} />
               Category
@@ -277,31 +335,23 @@ export default function ResultsTableClient({ results, event }: ResultsTableClien
               )}
             </button>
             {isCategoryOpen && (
-              <div className="absolute left-0 mt-2 bg-[#050505] border border-white/10 rounded-md p-2 min-w-[150px] z-50 shadow-2xl">
-                {uniqueCategories.map(cat => {
-                  const isSelected = selectedCategories.includes(cat);
-                  return (
-                    <div 
-                      key={cat}
-                      className={`flex items-center gap-2 px-2 py-1.5 hover:bg-white/5 cursor-pointer rounded-md text-sm text-white ${isSelected ? 'bg-white/5' : ''}`}
-                      onClick={() => toggleCategory(cat)}
-                    >
-                      <div className={`w-4 h-4 border border-white/10 rounded-sm flex items-center justify-center ${isSelected ? 'bg-white/10' : ''}`}>
-                        {isSelected && <div className="w-2 h-2 bg-white rounded-sm" />}
-                      </div>
-                      {cat}
-                    </div>
-                  );
-                })}
+              <div
+                role="menu"
+                aria-label="Filter by category"
+                className="toolbar-popover absolute left-0 mt-2 bg-[#050505] border border-white/10 rounded-md p-2 min-w-[150px] z-50 shadow-2xl"
+              >
+                <FilterOptions options={uniqueCategories} selected={selectedCategories} onToggle={toggleCategory} />
               </div>
             )}
           </div>
 
           {/* Gender Filter Dropdown */}
           <div ref={genderRef} className="relative view-dropdown-container">
-            <button 
+            <button
               onClick={() => setIsGenderOpen(!isGenderOpen)}
               className="btn-filter"
+              aria-haspopup="true"
+              aria-expanded={isGenderOpen}
             >
               <Filter size={16} />
               Gender
@@ -312,36 +362,27 @@ export default function ResultsTableClient({ results, event }: ResultsTableClien
               )}
             </button>
             {isGenderOpen && (
-              <div className="absolute left-0 mt-2 bg-[#050505] border border-white/10 rounded-md p-2 min-w-[150px] z-50 shadow-2xl">
-                {uniqueGenders.map(gen => {
-                  const isSelected = selectedGenders.includes(gen);
-                  return (
-                    <div 
-                      key={gen}
-                      className={`flex items-center gap-2 px-2 py-1.5 hover:bg-white/5 cursor-pointer rounded-md text-sm text-white ${isSelected ? 'bg-white/5' : ''}`}
-                      onClick={() => toggleGender(gen)}
-                    >
-                      <div className={`w-4 h-4 border border-white/10 rounded-sm flex items-center justify-center ${isSelected ? 'bg-white/10' : ''}`}>
-                        {isSelected && <div className="w-2 h-2 bg-white rounded-sm" />}
-                      </div>
-                      {gen}
-                    </div>
-                  );
-                })}
+              <div
+                role="menu"
+                aria-label="Filter by gender"
+                className="toolbar-popover absolute left-0 mt-2 bg-[#050505] border border-white/10 rounded-md p-2 min-w-[150px] z-50 shadow-2xl"
+              >
+                <FilterOptions options={uniqueGenders} selected={selectedGenders} onToggle={toggleGender} />
               </div>
             )}
           </div>
 
-          {/* Column Visibility Dropdown */}
-          <div ref={viewRef} className="relative view-dropdown-container">
-            <button 
+          {/* Which columns the table shows. Cards have no columns to hide, so
+              below `lg` the chip goes and Sort (which the headers did) comes. */}
+          <div ref={viewRef} className="relative view-dropdown-container dash-desktop-only">
+            <button
               onClick={() => setIsViewOpen(!isViewOpen)}
               className="btn-filter"
             >
               <Columns size={16} /> View
             </button>
             {isViewOpen && (
-              <div className="absolute left-0 mt-2 bg-[#050505] border border-white/10 rounded-md p-2 min-w-[150px] z-50 shadow-2xl">
+              <div className="toolbar-popover absolute left-0 mt-2 bg-[#050505] border border-white/10 rounded-md p-2 min-w-[150px] z-50 shadow-2xl">
                 {table.getAllLeafColumns().filter(col => col.getCanHide()).map(column => {
                   return (
                     <label key={column.id} className="flex items-center gap-2 px-2 py-1.5 hover:bg-white/5 cursor-pointer rounded-md text-sm text-white">
@@ -361,6 +402,8 @@ export default function ResultsTableClient({ results, event }: ResultsTableClien
               </div>
             )}
           </div>
+
+          <MobileSortMenu table={table} />
         </div>
 
         <div className="toolbar-actions">
@@ -368,15 +411,15 @@ export default function ResultsTableClient({ results, event }: ResultsTableClien
         </div>
       </div>
 
-      {/* Table Area */}
-      <div className="border border-white/10 rounded-lg overflow-hidden bg-transparent">
+      {/* Table Area — from `lg` up; the cards below take its place under it. */}
+      <div className="dash-desktop-only border border-white/10 rounded-lg overflow-hidden bg-transparent">
         <Table>
           <TableHeader className="bg-transparent">
             {table.getHeaderGroups().map(headerGroup => (
               <TableRow key={headerGroup.id} className="border-b border-white/10 hover:bg-transparent">
                 {headerGroup.headers.map(header => (
-                  <TableHead 
-                    key={header.id} 
+                  <TableHead
+                    key={header.id}
                     onClick={header.column.getToggleSortingHandler()}
                     className={`py-4 px-4 text-gray-400 font-medium h-auto ${header.column.getCanSort() ? 'cursor-pointer select-none' : ''} ${header.column.id === 'index' ? 'pl-8' : ''}`}
                   >
@@ -414,77 +457,50 @@ export default function ResultsTableClient({ results, event }: ResultsTableClien
         </Table>
       </div>
 
-      {/* Pagination Controls */}
-      <div className="flex justify-between items-center flex-wrap gap-4 mt-1">
-        <div className="flex items-center gap-3 text-white text-sm font-medium">
-          <span className="text-secondary">Rows per page</span>
-          
-          <div ref={pageSizeRef} className="relative">
-            <button
-              onClick={() => setIsPageSizeOpen(!isPageSizeOpen)}
-              className="flex items-center gap-3 border border-white/10 rounded-md px-3 py-1.5 text-sm text-white bg-transparent hover:bg-white/5 transition-colors cursor-pointer"
-            >
-              {table.getState().pagination.pageSize}
-              <ChevronDown size={14} className="text-gray-400" />
-            </button>
-            
-            {isPageSizeOpen && (
-              <div className="absolute bottom-[calc(100%+4px)] left-0 bg-[#050505] border border-white/10 rounded-md p-1 min-w-[80px] z-50 shadow-2xl">
-                {[5, 10, 25, 50].map(pageSize => (
-                  <div
-                    key={pageSize}
-                    className={`flex items-center justify-between px-3 py-1.5 cursor-pointer rounded-md text-sm transition-colors ${table.getState().pagination.pageSize === pageSize ? 'bg-white/5 text-white' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
-                    onClick={() => {
-                      table.setPageSize(pageSize);
-                      setIsPageSizeOpen(false);
-                    }}
-                  >
-                    <span>{pageSize}</span>
-                    {table.getState().pagination.pageSize === pageSize && <Check size={14} />}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-        <div className="flex items-center gap-6">
-          <div className="text-white text-sm font-medium">
-            {table.getFilteredRowModel().rows.length === 0 ? '0-0 of 0' : 
-             `${table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1}-${Math.min((table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize, table.getFilteredRowModel().rows.length)} of ${table.getFilteredRowModel().rows.length}`}
-          </div>
-          <div className="flex gap-1">
-            <button
-              onClick={() => table.firstPage()}
-              disabled={!table.getCanPreviousPage()}
-              className="flex items-center justify-center w-8 h-8 border border-white/10 rounded-md bg-transparent text-gray-400 hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <ChevronFirst className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-              className="flex items-center justify-center w-8 h-8 border border-white/10 rounded-md bg-transparent text-gray-400 hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-              className="flex items-center justify-center w-8 h-8 border border-white/10 rounded-md bg-transparent text-gray-400 hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => table.lastPage()}
-              disabled={!table.getCanNextPage()}
-              className="flex items-center justify-center w-8 h-8 border border-white/10 rounded-md bg-transparent text-gray-400 hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <ChevronLast className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
+      {/* The same rows as the table above (AdminCardList). A finisher's name is
+          untrusted length, so it truncates on its line rather than holding the
+          card open; the bib is a chip beside nothing, and the times go through
+          toWholeSeconds exactly as the cells do. */}
+      <div className="dash-mobile-only">
+        <AdminCardList
+          items={table.getRowModel().rows}
+          getKey={row => row.id}
+          label="Race results"
+          className="is-flush"
+          selection={{
+            isSelected: row => row.getIsSelected(),
+            toggle: row => row.toggleSelected(),
+            label: row => `Select ${row.original.name}`,
+          }}
+          leading={row => <span className="font-mono">{rowPosition(sortedRows, row)}</span>}
+          title={row => <span className="block truncate">{row.original.name}</span>}
+          badges={row =>
+            row.original.bibNumber ? (
+              <span className="status-badge neutral">Bib {row.original.bibNumber}</span>
+            ) : null
+          }
+          fields={row => [
+            { label: 'Category', value: row.original.category.name },
+            { label: 'Gender', value: row.original.gender || '-' },
+            { label: 'Category Rank', value: `#${row.original.categoryRank}` },
+            { label: 'Gender Rank', value: `#${row.original.genderRank}` },
+            { label: 'Chip Time', value: <span className="tabular-nums">{toWholeSeconds(row.original.chipTime)}</span> },
+            {
+              label: 'Gun Time',
+              value: row.original.gunTime
+                ? <span className="tabular-nums">{toWholeSeconds(row.original.gunTime)}</span>
+                : '-',
+            },
+          ]}
+          empty={
+            <div className="border border-white/10 rounded-lg py-16 px-4 text-center text-gray-500">
+              No results.
+            </div>
+          }
+        />
       </div>
+
+      <AdminTablePager table={table} />
     </div>
   );
 }
-

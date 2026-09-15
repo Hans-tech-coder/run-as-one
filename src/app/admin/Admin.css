@@ -878,6 +878,12 @@
   flex-direction: column;
   min-height: 0;
   max-height: calc(100dvh - 32px);
+  /* Clip, not hidden: a footer with a background of its own (every
+     .admin-modal-footer on a phone) painted square corners past the panel's
+     rounded edge, as on the marketing Redemptions panel. `clip` rounds them
+     off without making the panel a scroll container, so the body stays the
+     only thing that scrolls and a focused field never slides the panel. */
+  overflow: clip;
 }
 
 .admin-modal-body {
@@ -2014,6 +2020,13 @@ textarea.form-input {
     padding: var(--space-md);
   }
 
+  /* A header's action (the edit screen's Marketing Tools link beside
+     "Promotions") drops under its title rather than past the panel's edge. */
+  .admin-panel-header {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
   .modal-overlay {
     padding: 12px;
   }
@@ -2410,6 +2423,37 @@ textarea.form-input {
   background: rgba(255, 255, 255, 0.15);
 }
 
+/* The older modal frame, where an admin screen still wears it (the results
+   uploader) and has adopted .admin-modal-panel beside it. Scoped to that class
+   because the public site's own dialogs share these names, and written after
+   the rules it adjusts because they are what it has to beat. */
+@media (width < 40rem) {
+  .admin-modal-panel .modal-header,
+  .admin-modal-panel .modal-body {
+    padding: var(--space-md);
+  }
+
+  /* 90vh counts the strip under a phone's browser bar; dvh does not, so the
+     panel's foot stays on screen. */
+  .modal-container.admin-modal-panel {
+    max-height: calc(100dvh - 24px);
+  }
+
+  /* A 44px target around the same 20px icon; the negative margin keeps the
+     header's height and the icon's place. */
+  .admin-modal-panel .modal-close {
+    width: 44px;
+    height: 44px;
+    margin: -12px;
+  }
+
+  /* 32px of inset on each side of a 304px modal body left the drop zone's
+     file name about 240px. */
+  .admin-modal-panel .file-upload-wrapper {
+    padding: 1.5rem 1rem;
+  }
+}
+
 /* Dropdown Action Menu Custom Classes */
 .action-dropdown-container {
   position: relative;
@@ -2445,10 +2489,10 @@ textarea.form-input {
   /* Sized to the longest label the admin's menus carry — "Manage Results" —
      with room for the icon, the padding and the pending dots that ride on the
      right of a destination item, so no item has to wrap onto a second line or
-     be shortened to fit. Every menu that uses this class positions itself from
-     its trigger's right edge, so this number is repeated as `rect.right - 210`
-     in EventActionsMenu, RegistrantActionsMenu and PromoActionsMenu: change it
-     here and change it there. */
+     be shortened to fit. Every menu that uses this class is placed from its
+     trigger's right edge by `placeRowMenu`, so this number is repeated as
+     ROW_MENU_WIDTH in admin/row-menu-position.ts: change it here and change it
+     there. */
   width: 210px;
   z-index: 50;
   backdrop-filter: blur(10px);

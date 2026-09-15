@@ -84,6 +84,19 @@ closes the plan: it fixes what is left and then proves every route in scope.
   on the public site too, so it is for the owner to approve and for the sweep
   to verify, not a quiet change.
 
+## Noticed during Batch 4
+
+- **The marketing card's "Show N codes" disclosure has not been tried on a
+  real batch.** The live data holds no voucher batch, and Batch 4 did not
+  create a promotion to get one. When one exists (or on a seeded local
+  branch), open and close it at 360, check reduced motion, and confirm that a
+  batch opened on a card is still open in the table after widening past
+  1024px.
+- **`/admin/events/[id]/results` answers a missing or unreachable event with
+  a bare `<div>Event not found</div>`**, outside the header and content frame.
+  The sweep should check it at 360 beside the admin 404, and decide whether it
+  should wear `AdminNotFound`.
+
 ## Acceptance
 
 - Every route in scope passes the overflow check at 360, 390, 767 and 820.

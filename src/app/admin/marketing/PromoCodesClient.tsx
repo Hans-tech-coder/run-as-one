@@ -5,15 +5,12 @@ import Link from 'next/link';
 import {
   Check,
   ChevronDown,
-  ChevronFirst,
-  ChevronLast,
-  ChevronLeft,
-  ChevronRight,
   ChevronUp,
   Columns,
   Copy,
   ExternalLink,
   Plus,
+  Receipt,
   Search,
   Tag,
   Ticket,
@@ -30,6 +27,7 @@ import {
 import {
   ColumnDef,
   FilterFn,
+  Row,
   SortingState,
   VisibilityState,
   flexRender,
@@ -40,6 +38,9 @@ import {
   useReactTable,
 } from '@tanstack/react-table';
 import PromoActionsMenu from './PromoActionsMenu';
+import AdminCardList from '../AdminCardList';
+import AdminTablePager from '../AdminTablePager';
+import MobileSortMenu from '../MobileSortMenu';
 import { useRouter } from 'next/navigation';
 import { useAlert } from '@/components/ui/AlertProvider';
 import FieldError from '@/components/ui/FieldError';
@@ -263,6 +264,117 @@ function RedemptionsPlaceholder() {
   );
 }
 
+/**
+ * A row's place in the sorted list, for the No. column and the card beside it.
+ * Counted by id rather than object identity: sorting rebuilds the rows, so an
+ * `indexOf` on them finds nothing and every line numbers itself 0 the moment a
+ * column header is clicked.
+ */
+function rowPosition<T>(sortedRows: Row<T>[], row: Row<T>) {
+  return sortedRows.findIndex(sorted => sorted.id === row.id) + 1;
+}
+
+/**
+ * The Status column: a badge and, in a promotion's last days, the line under it.
+ * Drawn once for the table cell and the card, so the two cannot disagree.
+ */
+function PromoStatusBadge({ group }: { group: Group }) {
+  const terms = groupTerms(group);
+  // Five states, not two. The column used to call an expired promotion and one
+  // that has not started yet "Active", which is the opposite of what an
+  // organizer needs from a status column — and now that Pause is one of the
+  // answers, the other four have to be honest beside it. promoStatus is the
+  // same rule the checkout gates on.
+  const status = promoStatus(terms);
+  // The one thing the five states cannot say: a promotion that is running now
+  // and stops this week. Without it the first an organizer hears of the end is
+  // the word EXPIRED, by which point extending it is a decision they can no
+  // longer make in time.
+  const endingSoon = promoEndingSoon(terms);
+  return (
+    <>
+      <span className={`status-badge ${PROMO_STATUS_TONES[status]}`}>
+        {PROMO_STATUS_LABELS[status]}
+      </span>
+      {endingSoon && <span className="status-note pending">{endingSoon}</span>}
+    </>
+  );
+}
+
+/** The Used column, for the table cell and the card alike. */
+function UsedCount({ group }: { group: Group }) {
+  return (
+    <>
+      <span className="block">
+        {group.used}
+        {group.left !== null && (
+          <span className="text-secondary"> / {group.used + group.left}</span>
+        )}
+      </span>
+      {/* A code is spent the moment the order is placed, the same instant a
+          slot is taken, but the money only moves when that order is paid. An
+          abandoned online checkout therefore leaves a redemption behind with
+          nothing in the Given column to match it, and saying so here is what
+          stops the gap looking like an arithmetic error. Silent when the two
+          agree, which is most rows. */}
+      {group.paid !== group.used && (
+        <span className="text-xs text-secondary">
+          {`${group.used} redeemed · ${group.paid} paid`}
+        </span>
+      )}
+    </>
+  );
+}
+
+/**
+ * A batch's vouchers and the button that copies them — the opened table row
+ * from `lg` up, the inside of the card's disclosure below it. One component,
+ * so the codes an organizer copies on a phone are the ones the table lists.
+ */
+function VoucherCodes({
+  group,
+  copied,
+  onCopy,
+}: {
+  group: Group;
+  copied: boolean;
+  onCopy: () => void;
+}) {
+  return (
+    <>
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <span className="min-w-0 text-xs uppercase tracking-wider text-secondary [overflow-wrap:anywhere]">
+          Vouchers in {group.batchLabel}
+        </span>
+        {/* 44px only where it is a card's (below `lg`); the table's row keeps
+            the quiet link it always had. */}
+        <button
+          type="button"
+          onClick={onCopy}
+          className="shrink-0 flex items-center gap-2 text-xs font-bold text-white hover:text-accent-orange transition-colors max-lg:min-h-11 max-lg:px-2 max-lg:-mr-2"
+        >
+          {copied ? <Check size={14} /> : <Copy size={14} />}
+          {copied ? 'Copied' : 'Copy all codes'}
+        </button>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {group.codes.map(voucher => (
+          <span
+            key={voucher.id}
+            className={`rounded-md border px-2.5 py-1 font-mono text-xs ${
+              voucher.usageCount > 0
+                ? 'border-white/5 bg-white/5 text-secondary line-through'
+                : 'border-white/10 bg-black/40 text-white'
+            }`}
+          >
+            {voucher.code}
+          </span>
+        ))}
+      </div>
+    </>
+  );
+}
+
 export default function PromoCodesClient({
   initialPromos,
   events,
@@ -321,18 +433,13 @@ export default function PromoCodesClient({
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
   const [isViewOpen, setIsViewOpen] = useState(false);
-  const [isPageSizeOpen, setIsPageSizeOpen] = useState(false);
 
   const viewRef = useRef<HTMLDivElement>(null);
-  const pageSizeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (viewRef.current && !viewRef.current.contains(event.target as Node)) {
         setIsViewOpen(false);
-      }
-      if (pageSizeRef.current && !pageSizeRef.current.contains(event.target as Node)) {
-        setIsPageSizeOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -642,13 +749,11 @@ export default function PromoCodesClient({
     {
       id: "index",
       header: "No.",
-      // Counted by row id rather than by object identity: sorting rebuilds
-      // the rows, so an `indexOf` on them finds nothing and every line numbers
-      // itself 0 the moment a column header is clicked.
-      cell: ({ row, table }) => {
-        const index = table.getSortedRowModel().flatRows.findIndex(sorted => sorted.id === row.id);
-        return <span className="text-gray-400 font-mono">{index + 1}</span>;
-      },
+      cell: ({ row, table }) => (
+        <span className="text-gray-400 font-mono">
+          {rowPosition(table.getSortedRowModel().flatRows, row)}
+        </span>
+      ),
       enableSorting: false,
       enableHiding: false,
     },
@@ -728,31 +833,7 @@ export default function PromoCodesClient({
       id: "used",
       header: "Used",
       accessorFn: row => row.used,
-      cell: ({ row }) => {
-        const group = row.original;
-        return (
-          <>
-            <span className="block">
-              {group.used}
-              {group.left !== null && (
-                <span className="text-secondary"> / {group.used + group.left}</span>
-              )}
-            </span>
-            {/* A code is spent the moment the order is placed, the same
-                instant a slot is taken, but the money only moves when that
-                order is paid. An abandoned online checkout therefore leaves a
-                redemption behind with nothing in the Given column to match it,
-                and saying so here is what stops the gap looking like an
-                arithmetic error. Silent when the two agree, which is most
-                rows. */}
-            {group.paid !== group.used && (
-              <span className="text-xs text-secondary">
-                {`${group.used} redeemed · ${group.paid} paid`}
-              </span>
-            )}
-          </>
-        );
-      },
+      cell: ({ row }) => <UsedCount group={row.original} />,
     },
     {
       // Beside Used rather than instead of it: "twelve times" and "₱4,500"
@@ -776,23 +857,7 @@ export default function PromoCodesClient({
       // one of the answers, the other four have to be honest beside it.
       // promoStatus is the same rule the checkout gates on.
       accessorFn: row => PROMO_STATUS_LABELS[promoStatus(groupTerms(row))],
-      cell: ({ row }) => {
-        const terms = groupTerms(row.original);
-        const status = promoStatus(terms);
-        // The one thing the five states cannot say: a promotion that is
-        // running now and stops this week. Without it the first an organizer
-        // hears of the end is the word EXPIRED, by which point extending it
-        // is a decision they can no longer make in time.
-        const endingSoon = promoEndingSoon(terms);
-        return (
-          <>
-            <span className={`status-badge ${PROMO_STATUS_TONES[status]}`}>
-              {PROMO_STATUS_LABELS[status]}
-            </span>
-            {endingSoon && <span className="status-note pending">{endingSoon}</span>}
-          </>
-        );
-      },
+      cell: ({ row }) => <PromoStatusBadge group={row.original} />,
     },
     {
       // The menu sits at the column's left edge, under its own header, rather
@@ -936,7 +1001,10 @@ export default function PromoCodesClient({
               )}
             </div>
 
-            <div ref={viewRef} className="relative view-dropdown-container">
+            {/* Which columns the table shows. Cards have no columns to hide,
+                so below `lg` the chip goes and Sort (which the headers did)
+                comes. */}
+            <div ref={viewRef} className="relative view-dropdown-container dash-desktop-only">
               <button
                 onClick={() => setIsViewOpen(!isViewOpen)}
                 className="btn-filter"
@@ -944,7 +1012,7 @@ export default function PromoCodesClient({
                 <Columns size={16} /> View
               </button>
               {isViewOpen && (
-                <div className="absolute right-0 mt-2 bg-[#050505] border border-white/10 rounded-md p-2 min-w-[150px] z-50 shadow-2xl">
+                <div className="toolbar-popover absolute right-0 mt-2 bg-[#050505] border border-white/10 rounded-md p-2 min-w-[150px] z-50 shadow-2xl">
                   {table.getAllLeafColumns().filter(col => col.getCanHide()).map(column => (
                     <label key={column.id} className="flex items-center gap-2 px-2 py-1.5 hover:bg-white/5 cursor-pointer rounded-md text-sm text-white">
                       <div className={`w-4 h-4 border border-white/10 rounded-sm flex items-center justify-center ${column.getIsVisible() ? 'bg-white/10' : ''}`}>
@@ -962,6 +1030,8 @@ export default function PromoCodesClient({
                 </div>
               )}
             </div>
+
+            <MobileSortMenu table={table} labels={COLUMN_LABELS} />
           </div>
 
           <div className="toolbar-actions">
@@ -971,8 +1041,8 @@ export default function PromoCodesClient({
           </div>
         </div>
 
-        {/* Table Area */}
-        <div className="border border-white/10 rounded-lg overflow-hidden bg-transparent">
+        {/* Table Area — from `lg` up; the cards below take its place under it. */}
+        <div className="dash-desktop-only border border-white/10 rounded-lg overflow-hidden bg-transparent">
           <Table>
             <TableHeader className="bg-transparent">
               {table.getHeaderGroups().map(headerGroup => (
@@ -1022,33 +1092,11 @@ export default function PromoCodesClient({
                       {isBatch && isOpen && (
                         <TableRow className="border-b border-white/5 hover:bg-transparent">
                           <TableCell colSpan={row.getVisibleCells().length} className="bg-black/30 px-8 py-4">
-                            <div className="flex items-center justify-between mb-3">
-                              <span className="text-xs uppercase tracking-wider text-secondary">
-                                Vouchers in {group.batchLabel}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => copyCodes(group)}
-                                className="flex items-center gap-2 text-xs font-bold text-white hover:text-accent-orange transition-colors"
-                              >
-                                {copied === group.key ? <Check size={14} /> : <Copy size={14} />}
-                                {copied === group.key ? 'Copied' : 'Copy all codes'}
-                              </button>
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                              {group.codes.map(voucher => (
-                                <span
-                                  key={voucher.id}
-                                  className={`rounded-md border px-2.5 py-1 font-mono text-xs ${
-                                    voucher.usageCount > 0
-                                      ? 'border-white/5 bg-white/5 text-secondary line-through'
-                                      : 'border-white/10 bg-black/40 text-white'
-                                  }`}
-                                >
-                                  {voucher.code}
-                                </span>
-                              ))}
-                            </div>
+                            <VoucherCodes
+                              group={group}
+                              copied={copied === group.key}
+                              onCopy={() => copyCodes(group)}
+                            />
                           </TableCell>
                         </TableRow>
                       )}
@@ -1068,76 +1116,149 @@ export default function PromoCodesClient({
           </Table>
         </div>
 
-        {/* Pagination Controls */}
-        <div className="flex justify-between items-center flex-wrap gap-4 mt-1">
-          <div className="flex items-center gap-3 text-white text-sm font-medium">
-            <span className="text-secondary">Rows per page</span>
-
-            <div ref={pageSizeRef} className="relative">
-              <button
-                onClick={() => setIsPageSizeOpen(!isPageSizeOpen)}
-                className="flex items-center gap-3 border border-white/10 rounded-md px-3 py-1.5 text-sm text-white bg-transparent hover:bg-white/5 transition-colors cursor-pointer"
-              >
-                {table.getState().pagination.pageSize}
-                <ChevronDown size={14} className="text-gray-400" />
-              </button>
-
-              {isPageSizeOpen && (
-                <div className="absolute bottom-[calc(100%+4px)] left-0 bg-[#050505] border border-white/10 rounded-md p-1 min-w-[80px] z-50 shadow-2xl">
-                  {[5, 10, 25, 50].map(pageSize => (
-                    <div
-                      key={pageSize}
-                      className={`flex items-center justify-between px-3 py-1.5 cursor-pointer rounded-md text-sm transition-colors ${table.getState().pagination.pageSize === pageSize ? 'bg-white/5 text-white' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
-                      onClick={() => {
-                        table.setPageSize(pageSize);
-                        setIsPageSizeOpen(false);
-                      }}
-                    >
-                      <span>{pageSize}</span>
-                      {table.getState().pagination.pageSize === pageSize && <Check size={14} />}
+        {/* The same rows as the table above — search, sort, selection and the
+            page all come from the one table instance (AdminCardList). A batch
+            opens inside its card rather than as a second row: "Show N codes"
+            reads `expanded`, the same state the table's row reads, so a batch
+            opened on a phone is still open when the screen widens. */}
+        <div className="dash-mobile-only">
+          <AdminCardList
+            items={table.getRowModel().rows}
+            getKey={row => row.id}
+            label="Promotions"
+            className="is-flush"
+            selection={{
+              isSelected: row => row.getIsSelected(),
+              toggle: row => row.toggleSelected(),
+              label: row => `Select ${row.original.batchLabel ?? row.original.terms.code}`,
+            }}
+            leading={row => (
+              <span className="font-mono">{rowPosition(table.getSortedRowModel().flatRows, row)}</span>
+            )}
+            title={row => (
+              <span className="font-bold text-accent-blue">
+                {row.original.batchLabel ?? row.original.terms.code}
+              </span>
+            )}
+            subtitle={row =>
+              row.original.codes.length > 1
+                ? `${row.original.codes.length} single-use vouchers`
+                : row.original.terms.automatic
+                  ? 'Automatic · no code to give out'
+                  : null
+            }
+            badges={row => (
+              <div>
+                <PromoStatusBadge group={row.original} />
+              </div>
+            )}
+            fields={row => [
+              { label: 'Discount', value: describePromo(row.original.terms) },
+              {
+                label: 'Applies To',
+                value: row.original.terms.event ? row.original.terms.event.title : 'All my events',
+              },
+              {
+                label: 'Conditions',
+                value: promoConditions(row.original.terms).join(' · ') || '—',
+                full: true,
+              },
+              { label: 'Used', value: <UsedCount group={row.original} /> },
+              {
+                label: 'Given',
+                value: (
+                  <span className={row.original.given > 0 ? '' : 'text-secondary'}>
+                    &#8369;{formatPesos(row.original.given)}
+                  </span>
+                ),
+              },
+            ]}
+            expanded={row => {
+              const group = row.original;
+              if (group.codes.length <= 1) return null;
+              const isOpen = expanded === group.key;
+              return (
+                // transitions.dev's accordion (21). The codes stay mounted so
+                // the height can animate; `inert` keeps a closed list out of
+                // the tab order and away from a screen reader. No `id` or
+                // aria-controls: the table renders beside these cards, and
+                // an id would exist twice.
+                <div className="t-acc" data-open={isOpen ? 'true' : 'false'}>
+                  <button
+                    type="button"
+                    onClick={() => setExpanded(isOpen ? null : group.key)}
+                    aria-expanded={isOpen}
+                    className="t-acc-head btn-filter w-full justify-between min-h-11"
+                  >
+                    <span>{isOpen ? 'Hide codes' : `Show ${group.codes.length} codes`}</span>
+                    <span className="t-acc-chevron" aria-hidden="true">
+                      <svg
+                        viewBox="0 0 16 16"
+                        width="16"
+                        height="16"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M4 6.5L8 10.5L12 6.5" />
+                      </svg>
+                    </span>
+                  </button>
+                  <div className="t-acc-panel" inert={!isOpen}>
+                    <div className="t-acc-panel-inner">
+                      <div className="pt-3">
+                        <VoucherCodes
+                          group={group}
+                          copied={copied === group.key}
+                          onCopy={() => copyCodes(group)}
+                        />
+                      </div>
                     </div>
-                  ))}
+                  </div>
                 </div>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-6">
-            <div className="text-white text-sm font-medium">
-              {table.getFilteredRowModel().rows.length === 0 ? '0-0 of 0' :
-               `${table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1}-${Math.min((table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize, table.getFilteredRowModel().rows.length)} of ${table.getFilteredRowModel().rows.length}`}
-            </div>
-            <div className="flex gap-1">
-              <button
-                onClick={() => table.firstPage()}
-                disabled={!table.getCanPreviousPage()}
-                className="flex items-center justify-center w-8 h-8 border border-white/10 rounded-md bg-transparent text-gray-400 hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronFirst className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-                className="flex items-center justify-center w-8 h-8 border border-white/10 rounded-md bg-transparent text-gray-400 hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-                className="flex items-center justify-center w-8 h-8 border border-white/10 rounded-md bg-transparent text-gray-400 hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => table.lastPage()}
-                disabled={!table.getCanNextPage()}
-                className="flex items-center justify-center w-8 h-8 border border-white/10 rounded-md bg-transparent text-gray-400 hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronLast className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
+              );
+            }}
+            // The shortcut is the item this menu is opened for most — who used
+            // the promotion — and it stays in the menu too, so the menu
+            // matches the table's (PROJECT_GUIDE §9, a card's footer).
+            actions={row => (
+              <>
+                <button
+                  type="button"
+                  onClick={() => openRedemptions(row.original)}
+                  className="btn-filter"
+                  aria-label={`Redemptions for ${row.original.batchLabel ?? row.original.terms.code}`}
+                >
+                  <Receipt size={16} aria-hidden="true" />
+                  Redemptions
+                </button>
+                <div className="action-dropdown-container flex ml-auto">
+                  <PromoActionsMenu
+                    label={row.original.batchLabel ?? row.original.terms.code}
+                    isPaused={row.original.terms.paused}
+                    isTogglingPause={pausingKey === row.original.key}
+                    onViewRedemptions={() => openRedemptions(row.original)}
+                    onEdit={() => openEdit(row.original)}
+                    onDuplicate={() => openDuplicate(row.original)}
+                    onTogglePause={() => handleTogglePause(row.original)}
+                    onDelete={() => handleDelete(row.original)}
+                  />
+                </div>
+              </>
+            )}
+            empty={
+              <div className="border border-white/10 rounded-lg py-16 px-4 text-center text-gray-500">
+                {groups.length === 0
+                  ? 'No promotions yet. A code you create here is redeemed by runners in the registration wizard, and an automatic promotion applies on its own.'
+                  : 'No promotion matches that search.'}
+              </div>
+            }
+          />
         </div>
+
+        <AdminTablePager table={table} />
       </div>
 
 
@@ -1163,20 +1284,25 @@ export default function PromoCodesClient({
         }`}
       >
         <div
-          className={`t-modal w-full max-w-2xl bg-[#111] border border-white/10 rounded-2xl shadow-2xl flex flex-col max-h-[90vh] ${isRedemptionsOpen ? 'is-open' : ''} ${isRedemptionsClosing ? 'is-closing' : ''}`}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="promo-redemptions-title"
+          className={`t-modal admin-modal-panel w-full max-w-2xl bg-[#111] border border-white/10 rounded-2xl shadow-2xl flex flex-col max-h-[90vh] ${isRedemptionsOpen ? 'is-open' : ''} ${isRedemptionsClosing ? 'is-closing' : ''}`}
         >
-          <div className="p-6 border-b border-white/10 flex justify-between items-start gap-4 shrink-0">
-            <div>
-              <h3 className="text-xl font-semibold text-white m-0">Redemptions</h3>
+          <div className="p-6 max-sm:px-4 max-sm:py-3 border-b border-white/10 flex justify-between items-start gap-4 shrink-0">
+            <div className="min-w-0">
+              <h3 id="promo-redemptions-title" className="text-xl font-semibold text-white m-0">Redemptions</h3>
               {redemptionsOf && (
-                <p className="text-sm text-gray-400 mt-1 m-0">
+                <p className="text-sm text-gray-400 mt-1 m-0 [overflow-wrap:anywhere]">
                   {`${redemptionsOf.batchLabel ?? redemptionsOf.terms.code} · ${redemptionsOf.used} redeemed · ₱${formatPesos(redemptionsOf.given)} given away`}
                 </p>
               )}
             </div>
+            {/* A 44px target around the same icon; the negative margin keeps
+                the header's height and the icon's place. */}
             <button
               onClick={closeRedemptions}
-              className="text-gray-400 hover:text-white transition-colors bg-transparent border-none cursor-pointer p-0"
+              className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-full text-gray-400 hover:text-white transition-colors bg-transparent border-none cursor-pointer"
               aria-label="Close"
             >
               <X size={20} />
@@ -1188,7 +1314,7 @@ export default function PromoCodesClient({
               the panel does not jump from one height to another as they land.
               Every branch below drops its !isLoadingRedemptions guard because
               the swap already hides the content layer while the fetch runs. */}
-          <div className="p-6 overflow-y-auto flex-1">
+          <div className="admin-modal-body p-6 max-sm:p-4 overflow-y-auto flex-1">
             <SkeletonSwap
               loading={isLoadingRedemptions}
               skeleton={<RedemptionsPlaceholder />}
@@ -1215,11 +1341,14 @@ export default function PromoCodesClient({
                     className="flex items-start justify-between gap-4 rounded-lg border border-white/10 bg-black/30 p-4 no-underline transition-colors hover:border-white/20 hover:bg-white/5"
                   >
                     <span className="flex flex-col gap-1 min-w-0">
-                      <span className="font-mono text-sm font-bold text-white flex items-center gap-2">
+                      <span className="font-mono text-sm font-bold text-white flex items-center gap-2 [overflow-wrap:anywhere]">
                         {order.orderRef}
                         <ExternalLink size={13} className="text-secondary shrink-0" aria-hidden="true" />
                       </span>
-                      <span className="text-xs text-secondary truncate">
+                      {/* One line on a desktop; on a phone the event, the
+                          runner count and the date wrap rather than being cut
+                          off, since this line is the only place they appear. */}
+                      <span className="text-xs text-secondary truncate max-sm:whitespace-normal">
                         {`${order.eventTitle} · ${order.runners} ${
                           order.runners === 1 ? 'runner' : 'runners'
                         } · ${new Date(order.createdAt).toLocaleDateString('en-PH', {
@@ -1264,7 +1393,7 @@ export default function PromoCodesClient({
             </SkeletonSwap>
           </div>
 
-          <div className="p-6 border-t border-white/10 flex justify-end bg-black/20 shrink-0">
+          <div className="admin-modal-footer p-6 max-sm:p-4 border-t border-white/10 flex justify-end bg-black/20 shrink-0">
             <button
               type="button"
               onClick={closeRedemptions}
@@ -1277,20 +1406,34 @@ export default function PromoCodesClient({
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-start justify-center p-4 overflow-y-auto">
-          <div className="bg-[#111] border border-white/10 rounded-xl w-full max-w-lg p-6 relative my-8">
-            <button
-              onClick={() => setShowModal(false)}
-              className="absolute top-4 right-4 text-secondary hover:text-white"
-              aria-label="Close"
-            >
-              <X size={20} />
-            </button>
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 max-sm:p-3">
+          {/* On the dashboard's modal frame (.admin-modal-panel): the panel
+              never grows past the viewport, the form scrolls inside it, and
+              the submit waits in the footer. It used to be a page-long panel
+              the overlay scrolled, which put Save a long thumb away on a
+              phone once a race's price list was open. */}
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="promo-form-title"
+            className="admin-modal-panel bg-[#111] border border-white/10 rounded-xl w-full max-w-lg overflow-clip"
+          >
+            <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-2 max-sm:px-4 max-sm:pt-3 shrink-0">
+              <h2 id="promo-form-title" className="text-xl font-bold m-0 flex items-center gap-2 min-w-0">
+                <Tag size={20} className="text-accent-orange shrink-0" />
+                {editing ? 'Edit Promotion' : duplicating ? 'Duplicate Promotion' : 'Create Discount'}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-full text-secondary hover:text-white"
+                aria-label="Close"
+              >
+                <X size={20} />
+              </button>
+            </div>
 
-            <h2 className="text-xl font-bold mb-2 flex items-center gap-2">
-              <Tag size={20} className="text-accent-orange" />
-              {editing ? 'Edit Promotion' : duplicating ? 'Duplicate Promotion' : 'Create Discount'}
-            </h2>
+            <div className="admin-modal-body px-6 pt-2 pb-6 max-sm:px-4">
 
             {/* What an edit cannot change, said once at the top rather than
                 as a surprise on a greyed-out field further down. */}
@@ -1317,7 +1460,7 @@ export default function PromoCodesClient({
               </p>
             )}
 
-            <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+            <form id="promo-form" onSubmit={handleSubmit} className="flex flex-col gap-5">
               {/* Scope first: what a code is worth reads differently once you
                   know whether it is for one race or all of them. */}
               <AdminSelect
@@ -1397,8 +1540,13 @@ export default function PromoCodesClient({
                             key={category.id}
                             className="rounded-[10px] border border-white/10 bg-black/30 p-3"
                           >
-                            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-                              <span className="min-w-[6rem] flex-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                            {/* One stacked block per category below `sm`: the
+                                name on its own line, then the list price, then
+                                the two boxes side by side, each with a visible
+                                caption, since a phone cannot show the row the
+                                way the table-wide desktop line reads. */}
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 max-sm:grid max-sm:grid-cols-2">
+                              <span className="min-w-[6rem] flex-1 flex flex-wrap items-center gap-x-2 gap-y-1 max-sm:col-span-2 max-sm:min-w-0">
                                 <span className="text-sm font-bold uppercase tracking-wide text-white">
                                   {category.name}
                                 </span>
@@ -1414,28 +1562,36 @@ export default function PromoCodesClient({
                                   modal. It strikes itself through once there is
                                   a price to replace it, which is the same thing
                                   the event page will do. */}
-                              <span
-                                className={`shrink-0 text-sm tabular-nums text-secondary ${
-                                  typed.trim() ? 'line-through' : ''
-                                }`}
-                              >
-                                &#8369;{formatPesos(category.price)}
+                              <span className="shrink-0 text-sm tabular-nums text-secondary max-sm:col-span-2">
+                                <span className="dash-phone-only">List price </span>
+                                <span className={typed.trim() ? 'line-through' : ''}>
+                                  &#8369;{formatPesos(category.price)}
+                                </span>
                               </span>
-                              <label className="sr-only" htmlFor={`promo-price-${category.id}`}>
-                                {`Promotion price for ${category.name}`}
-                              </label>
-                              <input
-                                id={`promo-price-${category.id}`}
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                inputMode="decimal"
-                                className="form-input w-32 shrink-0"
-                                placeholder="Keep price"
-                                aria-invalid={errorFor(field) ? true : undefined}
-                                value={typed}
-                                onChange={e => setCategoryPrice(category.id, e.target.value)}
-                              />
+                              {/* `contents` on a desktop, so the box stays a
+                                  flex item of the row; a captioned column on a
+                                  phone. The caption is for the eye — the label
+                                  is still what a screen reader hears. */}
+                              <span className="contents max-sm:flex max-sm:flex-col max-sm:gap-1 max-sm:min-w-0">
+                                <span className="dash-phone-only text-xs text-secondary" aria-hidden="true">
+                                  Promotion price
+                                </span>
+                                <label className="sr-only" htmlFor={`promo-price-${category.id}`}>
+                                  {`Promotion price for ${category.name}`}
+                                </label>
+                                <input
+                                  id={`promo-price-${category.id}`}
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  inputMode="decimal"
+                                  className="form-input w-32 shrink-0 max-sm:w-full"
+                                  placeholder="Keep price"
+                                  aria-invalid={errorFor(field) ? true : undefined}
+                                  value={typed}
+                                  onChange={e => setCategoryPrice(category.id, e.target.value)}
+                                />
+                              </span>
                               {/* How many runners may take it. Beside the
                                   price rather than in a section of its own,
                                   because "₱900, fifty of them" is one decision
@@ -1446,24 +1602,29 @@ export default function PromoCodesClient({
                                   count. */}
                               {perCategoryLimits && (
                                 <>
-                                  <label
-                                    className="sr-only"
-                                    htmlFor={`promo-seats-${category.id}`}
-                                  >
-                                    {`How many runners get the ${category.name} promotion price`}
-                                  </label>
-                                  <input
-                                    id={`promo-seats-${category.id}`}
-                                    type="number"
-                                    min="1"
-                                    step="1"
-                                    inputMode="numeric"
-                                    className="form-input w-28 shrink-0"
-                                    placeholder="No limit"
-                                    aria-invalid={errorFor(seatField) ? true : undefined}
-                                    value={form.categoryLimits[category.id] ?? ''}
-                                    onChange={e => setCategoryLimit(category.id, e.target.value)}
-                                  />
+                                  <span className="contents max-sm:flex max-sm:flex-col max-sm:gap-1 max-sm:min-w-0">
+                                    <span className="dash-phone-only text-xs text-secondary" aria-hidden="true">
+                                      Runners at it
+                                    </span>
+                                    <label
+                                      className="sr-only"
+                                      htmlFor={`promo-seats-${category.id}`}
+                                    >
+                                      {`How many runners get the ${category.name} promotion price`}
+                                    </label>
+                                    <input
+                                      id={`promo-seats-${category.id}`}
+                                      type="number"
+                                      min="1"
+                                      step="1"
+                                      inputMode="numeric"
+                                      className="form-input w-28 shrink-0 max-sm:w-full"
+                                      placeholder="No limit"
+                                      aria-invalid={errorFor(seatField) ? true : undefined}
+                                      value={form.categoryLimits[category.id] ?? ''}
+                                      onChange={e => setCategoryLimit(category.id, e.target.value)}
+                                    />
+                                  </span>
                                 </>
                               )}
                             </div>
@@ -1498,7 +1659,8 @@ export default function PromoCodesClient({
 
               {type === DISCOUNT_TYPES.BUY_X_GET_Y && (
                 <>
-                  <div className="flex gap-4">
+                  {/* Paired boxes stack below `sm`, as the date window does. */}
+                  <div className="flex max-sm:flex-col gap-4">
                     <div className="form-group flex-1">
                       <label className="form-label" htmlFor="promo-buy">Register</label>
                       <input
@@ -1548,7 +1710,10 @@ export default function PromoCodesClient({
                   way, and the route refuses the change too. */}
               <div className="form-group" hidden={Boolean(editing)}>
                 <span className="form-label">How runners get it</span>
-                <div className="flex rounded-[10px] border border-white/10 bg-black/30 p-1">
+                {/* A column below `sm`: three labels such as "Single-use
+                    vouchers" do not share a 300px row without breaking in
+                    half, and each option becomes a 44px row. */}
+                <div className="flex max-sm:flex-col rounded-[10px] border border-white/10 bg-black/30 p-1">
                   {CLAIMS.map(option => {
                     // A discounted category price is drawn onto the options a
                     // runner is choosing between, so it cannot be something
@@ -1565,7 +1730,7 @@ export default function PromoCodesClient({
                         disabled={unavailable}
                         onClick={() => { setClaim(option.value); setFieldError(null); }}
                         aria-pressed={claim === option.value}
-                        className={`flex-1 rounded-[8px] px-3 py-2 text-sm font-bold transition-colors ${
+                        className={`flex-1 rounded-[8px] px-3 py-2 max-sm:min-h-11 text-sm font-bold transition-colors ${
                           claim === option.value
                             ? 'bg-white/10 text-white'
                             : unavailable
@@ -1623,7 +1788,7 @@ export default function PromoCodesClient({
                     />
                     <FieldError id="promo-batch-error" message={errorFor('batchLabel')} />
                   </div>
-                  <div className="flex gap-4" hidden={Boolean(editing)}>
+                  <div className="flex max-sm:flex-col gap-4" hidden={Boolean(editing)}>
                     <div className="form-group flex-1">
                       <label className="form-label" htmlFor="promo-prefix">Code prefix (optional)</label>
                       <input
@@ -1703,7 +1868,9 @@ export default function PromoCodesClient({
                 )}
 
                 <div className="mt-2 flex flex-col gap-4">
-                  <div className="flex gap-4">
+                  {/* Stacked below `sm`: a date box half of a phone's modal is
+                      too narrow for the date and its calendar icon. */}
+                  <div className="flex max-sm:flex-col gap-4">
                     <div className="form-group flex-1">
                       <label className="form-label" htmlFor="promo-from">Starts</label>
                       <input
@@ -1736,9 +1903,16 @@ export default function PromoCodesClient({
                 </div>
               </div>
 
+            </form>
+            </div>
+
+            {/* Outside the scrolling body, so it is always in reach; `form`
+                ties it back to the form it submits. */}
+            <div className="admin-modal-footer px-6 pt-4 pb-6 max-sm:p-4 border-t border-white/10 shrink-0">
               <button
                 type="submit"
-                className="btn-light w-full mt-2"
+                form="promo-form"
+                className="btn-light w-full"
                 disabled={isSubmitting}
               >
                 {claim === 'VOUCHERS' ? <Ticket size={16} /> : <Tag size={16} />}
@@ -1752,7 +1926,7 @@ export default function PromoCodesClient({
                         ? 'Create Automatic Promotion'
                         : 'Create Promo Code'}
               </button>
-            </form>
+            </div>
           </div>
         </div>
       )}

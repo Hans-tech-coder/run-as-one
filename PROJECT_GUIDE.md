@@ -546,7 +546,12 @@ detail modal's frame is `overflow-hidden` and would clip it) ·
 `/admin/events/[id]/results` (the uploader detects the sheet's real header row —
 timing exports open with banner rows — and maps columns by sheet index, not by
 label; Chip and Gun Time print to whole seconds like everywhere else —
-§5, `race-time.ts`) · `/admin/marketing` (promotions: the kind, the event it is scoped to, what it
+§5, `race-time.ts`. **Below `lg` the finishers are cards** (Mobile Batch 4):
+the name truncating, a Bib chip, then category, gender, both ranks and both
+times. Every picker in the uploader is `AdminSelect`, one to a row with its
+label above it on a phone. The Header Row picker lists each row's first labels
+as small print and spells out the chosen row's columns under the field, and
+*Process & Upload Results* sits in a footer that stays on screen) · `/admin/marketing` (promotions: the kind, the event it is scoped to, what it
 requires, whether it is claimed by a code, a voucher batch or automatically,
 **how much it has given away**, and a row menu to view its redemptions, edit,
 duplicate, pause or delete — *Duplicate* is the create form with the row's own
@@ -557,7 +562,15 @@ a promotion in its last three days carries an amber *Ends in 3 days* line under
 its Active badge — a batch collapses into one row that opens to be copied, on
 the same searchable, sortable, paginated table the events and registrants
 screens use. Three metric cards: Running Now, Times Redeemed and **Given
-Away**, the last being the Given column added up) ·
+Away**, the last being the Given column added up. **Below `lg` the promotions
+are cards** (Mobile Batch 4), with *Redemptions* as the footer's shortcut beside
+⋯. A voucher batch opens inside its card through a **"Show N codes"
+disclosure** (transitions.dev's accordion, `.t-acc` in `globals.css`), which
+reads the same `expanded` state as the table's second row, with a 44px
+*Copy all codes*. The create / edit / duplicate form and the Redemptions panel
+are on `.admin-modal-panel`, with Save in a footer that stays in reach. Below
+`sm` the claim picker and every pair of boxes stack, and each category's price
+row becomes one block, with a visible caption on each box) ·
 `/admin/settings` (profile + password) · `/admin/team` (**who can sign in to
 this organizer, and to what** — `team:manage` only, anyone else gets the
 admin's 404. Three metric cards (Active Members, Invitations Waiting — expired
@@ -909,7 +922,9 @@ These are the user's own standing preferences. Follow them without being asked.
     bottom sheet with 44px options below it. A modal is
     **`.admin-modal-panel`** with `.admin-modal-body` and
     `.admin-modal-footer`: capped at the viewport in `dvh`, the body scrolls,
-    and the footer is sticky and full width on a phone. Both are defined in
+    and the footer is sticky and full width on a phone. The panel is
+    `overflow: clip`, so a footer's own background cannot paint square
+    corners past its rounded edge. Both are defined in
     `Admin.css` and adopted screen by screen by `MOBILE_RESPONSIVE_PLAN/`.
   - **Every TanStack table's pager is `admin/AdminTablePager`.** It holds the
     rows-per-page menu, the range and First / Previous / Next / Last. Below
@@ -1004,10 +1019,10 @@ These are the user's own standing preferences. Follow them without being asked.
 - **A closed list of answers is never a native `<select>`.** The wizard has
   `events/[slug]/register/SelectField`; the admin now has `admin/AdminSelect`,
   the same interaction wearing `.form-label` / `.form-input`. Two components
-  rather than one because they live in different design systems. The admin's
-  remaining native select (the results uploader) is the one to move onto it
-  when it is next touched. The registrants edit modal's Gender field moved in
-  Mobile Batch 3; its Shirt Size is still a free-text box with a `<datalist>`,
+  rather than one because they live in different design systems. The results
+  uploader's seven column-mapping selects moved onto it in Mobile Batch 4, so
+  the admin has no native select left. The registrants edit modal's Gender
+  field moved in Mobile Batch 3; its Shirt Size is still a free-text box with a `<datalist>`,
   which AdminSelect cannot replace because a size may be left blank or typed.
 - **A row's action menu is portalled to `<body>`.** Every card and table in the
   app clips its own overflow (rounded corners, horizontal scrollers), so a menu
@@ -1022,8 +1037,9 @@ These are the user's own standing preferences. Follow them without being asked.
   the longest label plus its icon and the pending dots — and
   `.action-dropdown-item` is `white-space: nowrap`, so an item never wraps onto
   a second line beside one-line neighbours and a label never has to be
-  shortened to fit. Each menu positions itself as `rect.right - 210`, so that
-  number moves in `Admin.css` and in all three components together.
+  shortened to fit. Every admin row menu is placed by `placeRowMenu`, whose
+  `ROW_MENU_WIDTH` repeats that number, so it moves in `Admin.css` and
+  `admin/row-menu-position.ts` together.
 - **One status badge, four tones** (`Admin.css`): `success` for done, `pending`
   (amber) for a state that is simply waiting and needs nobody, `danger` for
   something that failed and a person must act on — an email that never went out
@@ -1447,7 +1463,7 @@ model, or any `/api/admin/**` route's ownership check** — its "Batch 1" notes
 record the calls made in the batch, and the file records which decisions are
 closed (no unified account table, no SSO).
 
-**`MOBILE_RESPONSIVE_PLAN/` is an open queue, with Batches 1, 2 and 3 landed.** Batch 1
+**`MOBILE_RESPONSIVE_PLAN/` is an open queue, with Batches 1 to 4 landed.** Batch 1
 added `DashboardShell` (the frame both dashboards share: one collapsible
 sidebar menu at every width, a rail that opens over the page on a phone), `AdminCardList`, the `.dash-desktop-only` /
 `.dash-mobile-only` switch, and the toolbar, header, metrics, popover and
@@ -1462,8 +1478,14 @@ too.** `/admin/events/[id]/registrants` is cards below `lg`, with a Filters
 sheet below `sm`, a bulk bar at the foot of the screen, a full-height detail
 sheet, all five modals on `.admin-modal-panel`, the row menu on
 `placeRowMenu`, and the proof lightbox's tools in a bar under the image on a
-phone. The marketing, results and superadmin tables still clip on a phone
-until their batch lands. **Batch 4 (Marketing and Results) is next.** Six batches,
+phone. **Batch 4 is in too.** `/admin/marketing` and
+`/admin/events/[id]/results` are cards below `lg`, on the shared pager, Sort
+chip and `.toolbar-popover`s. A voucher batch opens inside its card through a
+"Show N codes" accordion (`.t-acc`). The promotion form, the Redemptions panel
+and the results uploader wear `.admin-modal-panel`, the uploader's column
+mapping is `AdminSelect`, `PromoActionsMenu` is on `placeRowMenu`, and the edit
+screen's Promotions panel stacks on a phone. Only the superadmin tables still
+clip on a phone. **Batch 5 (Superadmin) is next.** Six batches,
 one file each, to make `/admin/**` and `/superadmin/**` fully manageable on a
 phone with no horizontal scroll:
 1. the shared shell, menu and card component;

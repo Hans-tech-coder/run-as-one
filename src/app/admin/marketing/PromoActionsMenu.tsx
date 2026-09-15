@@ -1,11 +1,13 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { MoreVertical, CopyPlus, Edit, PauseCircle, PlayCircle, Receipt, Trash2 } from 'lucide-react';
+import { placeRowMenu, type RowMenuPlacement } from '../row-menu-position';
 
 /**
- * The row menu on the marketing table.
+ * The row menu on the marketing table, and on the card each row becomes below
+ * `lg`.
  *
  * A copy of `admin/events/EventActionsMenu` rather than a new idea: the
  * project's rule is that a new control copies an existing one, and an
@@ -14,6 +16,11 @@ import { MoreVertical, CopyPlus, Edit, PauseCircle, PlayCircle, Receipt, Trash2 
  * positioning and the closing animation are all that machinery, unchanged —
  * a dropdown rendered inside a table cell is clipped by the table's own
  * `overflow-x: auto`, which is the reason it lives on `document.body`.
+ *
+ * Where it opens is `placeRowMenu`'s answer, as it is for the events, team and
+ * registrants menus: kept inside the screen's sides and flipped above a trigger
+ * with no room below it. The fixed `rect.right - 210` this used to use threw
+ * the menu off a phone's left edge, and below the fold on the last card.
  */
 export default function PromoActionsMenu({
   label,
@@ -38,66 +45,26 @@ export default function PromoActionsMenu({
   onDelete: () => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [position, setPosition] = useState({ top: 0, left: 0 });
-  const [mounted, setMounted] = useState(false);
+  const [position, setPosition] = useState<RowMenuPlacement>({ top: 0, left: 0, origin: 'top-right' });
 
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
   const updatePosition = useCallback(() => {
     if (buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      setPosition({
-        top: rect.bottom + 8,
-        left: rect.right - 210, // 210px is the width of action-dropdown-menu
-      });
+      setPosition(
+        placeRowMenu(buttonRef.current.getBoundingClientRect(), dropdownRef.current?.offsetHeight ?? 0),
+      );
     }
   }, []);
 
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node) &&
-        buttonRef.current &&
-        !buttonRef.current.contains(event.target as Node)
-      ) {
-        closeMenu();
-      }
-    }
-
-    function handleScrollOrResize() {
-      if (isOpen) updatePosition();
-    }
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      window.addEventListener('scroll', handleScrollOrResize, true);
-      window.addEventListener('resize', handleScrollOrResize);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      window.removeEventListener('scroll', handleScrollOrResize, true);
-      window.removeEventListener('resize', handleScrollOrResize);
-    };
+  // The first placement runs before the menu exists and cannot know its
+  // height; this one runs once it does, before the frame is painted.
+  useLayoutEffect(() => {
+    if (isOpen) updatePosition();
   }, [isOpen, updatePosition]);
 
-  const openMenu = () => {
-    updatePosition();
-    setIsOpen(true);
-    requestAnimationFrame(() => {
-      if (dropdownRef.current) {
-        dropdownRef.current.classList.remove('is-closing');
-        dropdownRef.current.classList.add('is-open');
-      }
-    });
-  };
-
-  const closeMenu = () => {
+  const closeMenu = useCallback(() => {
     if (!dropdownRef.current) {
       setIsOpen(false);
       return;
@@ -113,6 +80,56 @@ export default function PromoActionsMenu({
     el.classList.add('is-closing');
 
     setTimeout(() => setIsOpen(false), closeMs);
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node) &&
+        buttonRef.current &&
+        !buttonRef.current.contains(event.target as Node)
+      ) {
+        closeMenu();
+      }
+    }
+
+    // Escape hands focus back to the trigger, so a keyboard user is left
+    // where they started rather than on the page's first element.
+    function handleKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        closeMenu();
+        buttonRef.current?.focus();
+      }
+    }
+
+    function handleScrollOrResize() {
+      updatePosition();
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKey);
+    window.addEventListener('scroll', handleScrollOrResize, true);
+    window.addEventListener('resize', handleScrollOrResize);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKey);
+      window.removeEventListener('scroll', handleScrollOrResize, true);
+      window.removeEventListener('resize', handleScrollOrResize);
+    };
+  }, [isOpen, updatePosition, closeMenu]);
+
+  const openMenu = () => {
+    updatePosition();
+    setIsOpen(true);
+    requestAnimationFrame(() => {
+      if (dropdownRef.current) {
+        dropdownRef.current.classList.remove('is-closing');
+        dropdownRef.current.classList.add('is-open');
+      }
+    });
   };
 
   const toggleMenu = () => (isOpen ? closeMenu() : openMenu());
@@ -121,7 +138,7 @@ export default function PromoActionsMenu({
     <div
       ref={dropdownRef}
       className="action-dropdown-menu t-dropdown"
-      data-origin="top-right"
+      data-origin={position.origin}
       style={{
         position: 'fixed',
         top: `${position.top}px`,
@@ -222,7 +239,10 @@ export default function PromoActionsMenu({
         <MoreVertical size={20} />
       </button>
 
-      {mounted && isOpen && createPortal(dropdownContent, document.body)}
+      {/* No "mounted" flag: the menu opens only on a click, which never
+          happens during server rendering, so isOpen alone guarantees
+          `document` is there for the portal (as in EventActionsMenu). */}
+      {isOpen && createPortal(dropdownContent, document.body)}
     </>
   );
 }

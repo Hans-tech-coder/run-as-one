@@ -31,6 +31,10 @@ import type { EventPromotion } from '@/lib/promo-store';
  * things `PromoHighlights` tells a runner and the marketing table tells its
  * owner, read from the same functions, so no screen can describe a promotion
  * differently from another.
+ *
+ * Below `sm` a promotion's badge drops under its description instead of
+ * holding a column on the right: beside a 360px screen's menu rail that column
+ * left the name and its conditions a sliver.
  */
 export default function EventPromotionsPanel({
   promotions,
@@ -41,7 +45,7 @@ export default function EventPromotionsPanel({
     <div className="admin-panel">
       <div className="admin-panel-header">
         <h2 className="admin-panel-title">Promotions</h2>
-        <Link href="/admin/marketing" className="btn-filter no-underline">
+        <Link href="/admin/marketing" className="btn-filter no-underline max-sm:min-h-11">
           Marketing Tools <ExternalLink size={14} />
         </Link>
       </div>
@@ -53,7 +57,7 @@ export default function EventPromotionsPanel({
         </p>
 
         {promotions.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-white/15 bg-white/[0.02] p-6 text-center">
+          <div className="rounded-xl border border-dashed border-white/15 bg-white/[0.02] p-6 max-sm:p-4 text-center">
             <Tag size={28} className="mx-auto mb-3 opacity-50" />
             <p className="text-sm m-0 mb-1">No promotions reach this event.</p>
             <p className="text-xs opacity-70 m-0">
@@ -71,10 +75,10 @@ export default function EventPromotionsPanel({
               return (
                 <div
                   key={promo.key}
-                  className="flex items-start justify-between gap-4 rounded-xl border border-white/10 bg-white/[0.02] p-4"
+                  className="flex items-start justify-between gap-4 max-sm:flex-col max-sm:gap-3 rounded-xl border border-white/10 bg-white/[0.02] p-4"
                 >
                   <div className="min-w-0">
-                    <span className="block font-bold text-accent-blue">{promo.name}</span>
+                    <span className="block font-bold text-accent-blue [overflow-wrap:anywhere]">{promo.name}</span>
                     <span className="block text-sm">{describePromo(promo.terms)}</span>
                     {/* How it is claimed and how far it reaches, in the one
                         line where both matter: a code scoped to every event
@@ -92,8 +96,8 @@ export default function EventPromotionsPanel({
                       ].join(' · ')}
                     </span>
                   </div>
-                  <div className="shrink-0 text-right">
-                    <span className={`status-badge ${PROMO_STATUS_TONES[status]}`}>
+                  <div className="shrink-0 text-right max-sm:text-left">
+                    <span className={`status-badge ${PROMO_STATUS_TONES[status]} whitespace-nowrap`}>
                       {PROMO_STATUS_LABELS[status]}
                     </span>
                     {endingSoon && <span className="status-note pending">{endingSoon}</span>}
