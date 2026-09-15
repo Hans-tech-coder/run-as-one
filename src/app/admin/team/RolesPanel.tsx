@@ -16,6 +16,7 @@ import {
   ROLE_LABELS,
   roleCan,
 } from '@/lib/permissions';
+import RolePicker from './RolePicker';
 
 /**
  * What each role can do, drawn from the very table the routes enforce.
@@ -25,6 +26,10 @@ import {
  * runner, and the honest way to show that is the matrix itself rather than a
  * paraphrase of it that could drift. Change a role there and this panel
  * changes with it.
+ *
+ * Below `lg` the matrix is a RolePicker instead: one role at a time, because
+ * seven columns do not fit a phone and scrolling them sideways hides the one
+ * being compared. Both are rendered and CSS picks, as with every table.
  */
 export default function RolesPanel() {
   return (
@@ -43,7 +48,11 @@ export default function RolesPanel() {
           one race and only view another.
         </p>
 
-        <div className="border border-white/10 rounded-lg overflow-x-auto">
+        <div className="dash-mobile-only">
+          <RolePicker />
+        </div>
+
+        <div className="dash-desktop-only border border-white/10 rounded-lg overflow-x-auto">
           <Table>
             <TableHeader className="bg-transparent">
               <TableRow className="border-b border-white/10 hover:bg-transparent">

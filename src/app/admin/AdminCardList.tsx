@@ -61,6 +61,12 @@ export type AdminCardListProps<T> = {
   empty?: React.ReactNode;
   /** Names the list for a screen reader, e.g. "Recent registrations". */
   label?: string;
+  /**
+   * Extra classes on the list. `is-flush` drops the list's own inset, for a
+   * list that stands on the page between a toolbar and a pager rather than
+   * inside a panel.
+   */
+  className?: string;
 };
 
 /** A render callback may hand back null or false to mean "nothing here". */
@@ -81,11 +87,12 @@ export default function AdminCardList<T>({
   expanded,
   empty,
   label,
+  className,
 }: AdminCardListProps<T>) {
   if (items.length === 0) return <>{empty ?? null}</>;
 
   return (
-    <ul className="admin-card-list" aria-label={label}>
+    <ul className={`admin-card-list ${className ?? ''}`} aria-label={label}>
       {items.map((item) => {
         const isSelected = selection?.isSelected(item) ?? false;
         const cardSubtitle = subtitle?.(item);
@@ -146,6 +153,40 @@ export default function AdminCardList<T>({
           </li>
         );
       })}
+    </ul>
+  );
+}
+
+/**
+ * The card list's shape while its rows are still on their way, for a route's
+ * `loading.tsx` below `lg`. It is built from the same `.admin-card` boxes, so
+ * the list that arrives lands in the frame already on screen instead of
+ * pushing it down. The pulse is `.t-skel` (transitions.dev 14), the same one
+ * the header's title bar wears in AdminRouteLoading.
+ */
+export function AdminCardListSkeleton({
+  cards = 3,
+  fields = 2,
+  className,
+}: {
+  cards?: number;
+  /** Rows of two-up fields per card. */
+  fields?: number;
+  className?: string;
+}) {
+  return (
+    <ul className={`admin-card-list ${className ?? ''}`} aria-hidden="true">
+      {Array.from({ length: cards }, (_, card) => (
+        <li key={card} className="admin-card">
+          <div className="t-skel-skeleton is-pulsing flex flex-col gap-3">
+            <div className="t-skel-bar" style={{ width: '70%', height: '18px' }} />
+            <div className="t-skel-bar" style={{ width: '5rem', height: '22px', borderRadius: '999px' }} />
+            {Array.from({ length: fields }, (_, row) => (
+              <div key={row} className="t-skel-bar" style={{ width: '100%', height: '36px' }} />
+            ))}
+          </div>
+        </li>
+      ))}
     </ul>
   );
 }

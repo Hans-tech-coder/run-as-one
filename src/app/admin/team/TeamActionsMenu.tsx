@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { MoreVertical, Send, Trash2, UserCheck, UserCog, UserX } from 'lucide-react';
+import { placeRowMenu, type RowMenuPlacement } from '../row-menu-position';
 
 /**
  * The row menu on the team table.
@@ -11,7 +12,8 @@ import { MoreVertical, Send, Trash2, UserCheck, UserCog, UserX } from 'lucide-re
  * `events/EventActionsMenu`: the portal, the fixed positioning and the closing
  * animation are that machinery unchanged, because a dropdown inside a table
  * cell is clipped by the table's own overflow. The menu is 210px wide like its
- * siblings, and positions itself as `rect.right - 210` for the same reason.
+ * siblings, and is placed by `row-menu-position`, which keeps it on a phone's
+ * screen and flips it above a trigger near the bottom.
  *
  * What it offers depends on where the person is: an invitation can be resent
  * or revoked but not suspended, a member can be suspended or removed but has
@@ -43,20 +45,23 @@ export default function TeamActionsMenu({
   // on a click, which never happens during server rendering, so `isOpen` alone
   // guarantees `document` is there for the portal.
   const [isOpen, setIsOpen] = useState(false);
-  const [position, setPosition] = useState({ top: 0, left: 0 });
+  const [position, setPosition] = useState<RowMenuPlacement>({ top: 0, left: 0, origin: 'top-right' });
 
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const updatePosition = useCallback(() => {
     if (buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      setPosition({
-        top: rect.bottom + 8,
-        left: rect.right - 210, // 210px is the width of action-dropdown-menu
-      });
+      setPosition(
+        placeRowMenu(buttonRef.current.getBoundingClientRect(), dropdownRef.current?.offsetHeight ?? 0),
+      );
     }
   }, []);
+
+  // Again once the menu exists and has a height, before it is painted.
+  useLayoutEffect(() => {
+    if (isOpen) updatePosition();
+  }, [isOpen, updatePosition]);
 
   const closeMenu = useCallback(() => {
     if (!dropdownRef.current) {
@@ -134,7 +139,7 @@ export default function TeamActionsMenu({
     <div
       ref={dropdownRef}
       className="action-dropdown-menu t-dropdown"
-      data-origin="top-right"
+      data-origin={position.origin}
       style={{
         position: 'fixed',
         top: `${position.top}px`,

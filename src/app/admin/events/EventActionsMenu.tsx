@@ -1,14 +1,15 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { MoreVertical, Users, Trophy, Edit, Trash2, CalendarClock, PauseCircle, PlayCircle } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import LinkPending from '@/components/ui/LinkPending';
+import { placeRowMenu, type RowMenuPlacement } from '../row-menu-position';
 
 export default function EventActionsMenu({
   eventId,
+  label,
   registrationState = 'OPEN',
   isPausing = false,
   canEdit = true,
@@ -17,6 +18,8 @@ export default function EventActionsMenu({
   onDelete
 }: {
   eventId: string;
+  /** The event's title, so a screen reader hears whose menu this is. */
+  label?: string;
   /** Why sign-ups are closed, or OPEN — see src/lib/registration-gate.ts. */
   registrationState?: 'OPEN' | 'FINISHED' | 'PAUSED' | 'SCHEDULED' | 'FULL';
   /** True while this row's pause request is in flight. */
@@ -34,8 +37,7 @@ export default function EventActionsMenu({
   onDelete?: () => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [position, setPosition] = useState({ top: 0, left: 0 });
-  const [mounted, setMounted] = useState(false);
+  const [position, setPosition] = useState<RowMenuPlacement>({ top: 0, left: 0, origin: 'top-right' });
   // Which destination the organizer has asked for, once they have asked for
   // one. Every item in this menu except Pause and Delete leads to a page that
   // is a database read behind an auth cookie, and the old menu closed the
@@ -46,20 +48,40 @@ export default function EventActionsMenu({
 
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const router = useRouter();
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
+  // Kept inside the screen and flipped above the trigger when there is no
+  // room below it — a card near the foot of a phone screen (row-menu-position).
   const updatePosition = useCallback(() => {
     if (buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      setPosition({
-        top: rect.bottom + 8, // Fixed position relative to viewport
-        left: rect.right - 210, // 210px is width of action-dropdown-menu
-      });
+      setPosition(
+        placeRowMenu(buttonRef.current.getBoundingClientRect(), dropdownRef.current?.offsetHeight ?? 0),
+      );
     }
+  }, []);
+
+  // The first placement runs before the menu exists and cannot know its
+  // height; this one runs once it does, before the frame is painted.
+  useLayoutEffect(() => {
+    if (isOpen) updatePosition();
+  }, [isOpen, updatePosition]);
+
+  const closeMenu = useCallback(() => {
+    if (!dropdownRef.current) {
+      setIsOpen(false);
+      return;
+    }
+    const el = dropdownRef.current;
+
+    const closeMs = parseFloat(
+      getComputedStyle(document.documentElement).getPropertyValue("--dropdown-close-dur")
+    ) || 150;
+
+    el.classList.remove("is-open");
+    el.classList.add("is-closing");
+
+    setTimeout(() => {
+      setIsOpen(false);
+    }, closeMs);
   }, []);
 
   useEffect(() => {
@@ -94,7 +116,7 @@ export default function EventActionsMenu({
       window.removeEventListener('scroll', handleScrollOrResize, true);
       window.removeEventListener('resize', handleScrollOrResize);
     };
-  }, [isOpen, updatePosition, navigatingTo]);
+  }, [isOpen, updatePosition, navigatingTo, closeMenu]);
 
   const toggleMenu = () => {
     if (isOpen) {
@@ -115,24 +137,6 @@ export default function EventActionsMenu({
     });
   };
 
-  const closeMenu = () => {
-    if (!dropdownRef.current) {
-      setIsOpen(false);
-      return;
-    }
-    const el = dropdownRef.current;
-
-    const closeMs = parseFloat(
-      getComputedStyle(document.documentElement).getPropertyValue("--dropdown-close-dur")
-    ) || 150;
-
-    el.classList.remove("is-open");
-    el.classList.add("is-closing");
-
-    setTimeout(() => {
-      setIsOpen(false);
-    }, closeMs);
-  };
 
   const isPaused = registrationState === 'PAUSED';
   // A race that has been run cannot be paused — it is already closed, and
@@ -177,7 +181,7 @@ export default function EventActionsMenu({
     <div
       ref={dropdownRef}
       className={`action-dropdown-menu t-dropdown ${navigatingTo ? 'is-navigating' : ''}`}
-      data-origin="top-right"
+      data-origin={position.origin}
       style={{
         position: 'fixed',
         top: `${position.top}px`,
@@ -261,11 +265,15 @@ export default function EventActionsMenu({
         className="action-dropdown-btn focus:outline-none"
         aria-haspopup="true"
         aria-expanded={isOpen}
+        aria-label={label ? `Actions for ${label}` : 'Event actions'}
       >
         <MoreVertical size={20} />
       </button>
 
-      {mounted && isOpen && createPortal(dropdownContent, document.body)}
+      {/* No "mounted" flag: the menu opens only on a click, which never
+          happens during server rendering, so isOpen alone guarantees
+          `document` is there for the portal (as in TeamActionsMenu). */}
+      {isOpen && createPortal(dropdownContent, document.body)}
     </>
   );
 }

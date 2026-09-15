@@ -115,4 +115,133 @@ mobile sort become shared components that Batches 3 and 4 adopt.
 
 ## What landed
 
-_Fill in when the batch is done._
+**Shared pieces, for Batches 3 and 4 to adopt:**
+- **`AdminTablePager`.** Takes the table instance, with optional `pageSizes`.
+  - From `sm` up it measures box for box like the old inline pager.
+  - Below `sm` it shows the range plus 44px Previous / Next. First and Last
+    step out, because four 44px buttons plus the range are wider than a
+    360px screen beside the rail.
+  - The page-size options are now real `menuitemradio` buttons, and every
+    control has an accessible name. The old events copy had none.
+- **`MobileSortMenu`.** Takes the table instance, plus optional `labels` for
+  JSX headers.
+  - `.dash-mobile-only` sits on its own wrapper.
+  - Each sortable column gets Asc / Desc, with a Clear sort button below.
+  - The chip names the active sort and its direction.
+  - It is a `.toolbar-popover`: anchored at 820, a bottom sheet at 360.
+- **`row-menu-position.ts`** (`placeRowMenu`) clamps a row menu inside the
+  viewport and flips it above a trigger with no room below. Each menu
+  re-measures in a `useLayoutEffect` once it has rendered, and sets
+  `data-origin` from the result, so the grow animation starts at the trigger.
+- **`AdminCardList` additions:**
+  - a `className` prop; `.is-flush` drops the list's own inset, for a list
+    standing between a toolbar and a pager;
+  - `AdminCardListSkeleton`;
+  - a 44px `.action-dropdown-btn` inside a card footer.
+
+**Events.**
+- View is desktop-only; its menu wears `.toolbar-popover`. Sort is added.
+- The cards match the task list. Categories show as chips, each keeping its
+  distance unless the name already contains it.
+- `RegistrationStatus` and the row menu are each drawn once, for both the
+  cell and the card.
+- The No. column now counts by row id, per the guide.
+- `EventRow` is a real type, so the file lints clean.
+- `EventActionsMenu` changes:
+  - it takes a `label`, used for its `aria-label`;
+  - it lost its `mounted` flag, as TeamActionsMenu had;
+  - `closeMenu` is declared before the effect that uses it, which clears two
+    lint errors that were already in the file.
+- Modals:
+  - The delete confirm and the schedule modal wear `.admin-modal-panel` /
+    `-body` / `-footer`.
+  - The delete confirm is an `alertdialog`.
+  - The close buttons are 44px with a -12px margin.
+  - The opening picker's date and time fields get `min-w-0`. `.form-input`
+    was already 16px.
+- `events/loading.tsx` is now a client component. On `/admin/events` itself,
+  below `lg`, it draws a search bar and three card skeletons; anywhere else
+  it is the old fallback. It reads `usePathname()`, because one boundary
+  covers the list and every page under it.
+
+**Team.**
+- Status, Events, Last Sign-In, the You chip and `manageReason` are each one
+  helper, shared by the cell and the card.
+- The cards follow the task list. A row the viewer cannot manage says why in
+  its footer.
+- The invite / edit form wears the modal frame. The remove button is 44px
+  below `sm`.
+- `RolesPanel` renders the table in `.dash-desktop-only` and `RolePicker` in
+  `.dash-mobile-only`. RolePicker is:
+  - a `t-tabs` grid (transitions.dev 16, on dark tokens), whose pill travels
+    in both axes and measures after resize;
+  - a keyboard tablist;
+  - the role's hint as text;
+  - "Allowed n of 17";
+  - allowed / not-allowed rows, said in words as well as icons.
+
+**Two shared fixes, found while verifying:**
+- **The phone rail sat above every page modal.** It rested at z-index 70
+  while page overlays are z-50, so the rail was drawn over each modal's left
+  edge. It now rests at 50, like the desktop sidebar, and only `.is-open`
+  rises to 70. On close, the drop waits for the width transition, so the
+  closing menu is never dimmed by its own backdrop.
+- **`.admin-panel-header` / `-content` are 16px below `sm`** (they were 32px).
+  At 32px the role picker had about 200px: one tab to a row.
+
+**Verified** (as owner):
+- **1440, before and after, box by box.** On `/admin/events` and
+  `/admin/team`, every box measures the same:
+  - toolbar, search (400×40), View and the primary button;
+  - every column header and row height;
+  - the pager and its 32px buttons.
+
+  The Sort chip is hidden. The Team role matrix is unchanged.
+- **Overflow check at 360, 390, 767 and 820**, all `ok: true` with no
+  offenders:
+  - on `/admin/events` and `/admin/team`;
+  - on a throwaway page rendering `TeamClient` with five fake members (a
+    long name, a 76-character email, four assignments, Invited / Suspended /
+    Invite Expired, and an unmanageable Admin). It was deleted afterwards.
+- **Open-state checks at 360**, with the overflow check passing each time:
+  - **Sort sheet:** 44px Asc / Desc.
+  - **Last card's menu:** it flips above the trigger and follows it on
+    scroll.
+  - **Schedule modal**, including the date and time reveal: 328×756, a
+    sticky footer, 16px fields.
+  - **Delete confirm.**
+  - **Invite form** with two assignment rows and an event picker open: the
+    list stayed inside the modal body.
+  - **Phone menu:** it opens over the page at z 70, and Esc folds it and
+    returns focus to the chevron.
+
+  Every modal was only opened and cancelled. The four events are unchanged.
+- **Sort matches.** "Event Name, descending" gave the same order in the cards
+  and in the (hidden) table.
+- **State holds across `lg`.** At 820 I set search "2026", Date descending,
+  5 rows and a selected Pink Run. At 1440 the table showed the same order,
+  the same checked row, the Date chevron and page size 5, and 820 again
+  matched.
+- **1024:** the tables return and the cards, Sort chip and picker hide.
+- `npx tsc --noEmit` passes. eslint shows 0 errors on every touched file; the
+  only warnings are TanStack's `incompatible-library` notice, which every
+  `useReactTable` screen gets.
+
+**After the batch: a shortcut in the card footer** (the owner's decision).
+- **The problem.** An event card's footer held only ⋯, so it read as empty
+  space.
+- **Rejected: an "Actions" label.** It would not be tappable, and on a phone
+  it looks like a button.
+- **What the footer holds now.** A quiet `.btn-filter` shortcut to the row's
+  most-used destination sits on the left, with ⋯ on the right:
+  - Events: **Registrants**, with `LinkPending` dots.
+  - Team: **Edit Access**, on manageable rows only.
+- **Unchanged.** Both stay in the menu. Batches 3 and 4 follow the same
+  footer (§9).
+
+**Not verified:**
+- The events card skeleton was never seen live, because a local navigation is
+  too fast to catch it. It type-checks, and it falls back to the old loader
+  on any other path.
+- `/admin/team` was only seen with its one real row. The multi-member cards
+  were checked on the fake-row page.

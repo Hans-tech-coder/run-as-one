@@ -5,10 +5,6 @@ import { useRouter } from 'next/navigation';
 import {
   Check,
   ChevronDown,
-  ChevronFirst,
-  ChevronLast,
-  ChevronLeft,
-  ChevronRight,
   ChevronUp,
   Columns,
   Plus,
@@ -42,6 +38,9 @@ import {
 import { useAlert } from '@/components/ui/AlertProvider';
 import FieldError from '@/components/ui/FieldError';
 import AdminSelect from '../AdminSelect';
+import AdminCardList from '../AdminCardList';
+import AdminTablePager from '../AdminTablePager';
+import MobileSortMenu from '../MobileSortMenu';
 import TeamActionsMenu from './TeamActionsMenu';
 import {
   EVENT_ROLES,
@@ -166,6 +165,75 @@ const searchMembers: FilterFn<TeamMemberRow> = (row, _columnId, filterValue) => 
     .includes(term);
 };
 
+// ── What a row shows, drawn once for the table cell and the card ────────────
+// Both layouts are on the page at once and CSS picks one, so anything the two
+// both say is said by one function: they cannot drift apart.
+
+function YouChip() {
+  return (
+    <span className="shrink-0 whitespace-nowrap rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-semibold text-secondary">
+      You
+    </span>
+  );
+}
+
+function MemberEvents({ member }: { member: TeamMemberRow }) {
+  if (member.role !== 'STAFF') {
+    return <span className="text-secondary">Every event</span>;
+  }
+  const shown = member.assignments.slice(0, EVENTS_SHOWN);
+  const more = member.assignments.length - shown.length;
+  return (
+    <ul className="m-0 p-0 list-none flex flex-col gap-1">
+      {shown.map(assignment => (
+        <li key={assignment.eventId} className="text-sm">
+          <span className="text-white">{assignment.eventTitle}</span>
+          <span className="text-secondary whitespace-nowrap"> &middot; {ROLE_LABELS[assignment.role]}</span>
+        </li>
+      ))}
+      {more > 0 && (
+        <li className="text-xs text-secondary">{`+${more} more — open Edit Access to see them all`}</li>
+      )}
+    </ul>
+  );
+}
+
+function MemberStatus({ member }: { member: TeamMemberRow }) {
+  return (
+    <div>
+      <span className={`status-badge ${MEMBER_STATE_TONES[member.state]}`}>
+        {MEMBER_STATE_LABELS[member.state]}
+      </span>
+      {/* When a waiting invitation stops working — the one date an owner
+          needs before it quietly becomes Invite Expired. */}
+      {member.state === 'INVITED' && member.inviteExpiresAt && (
+        <span className="status-note pending">{`Link expires ${shortDay(member.inviteExpiresAt)}`}</span>
+      )}
+    </div>
+  );
+}
+
+function LastSignIn({ member }: { member: TeamMemberRow }) {
+  // The owner signs in as the Organizer row, which has never recorded a
+  // sign-in time — a blank here is honest where "Never" would be false.
+  if (member.isOwner) return <span className="text-secondary">&mdash;</span>;
+  return member.lastLoginAt ? (
+    <span className="whitespace-nowrap">{shortInstant(member.lastLoginAt)}</span>
+  ) : (
+    <span className="text-secondary">Never</span>
+  );
+}
+
+/**
+ * Why a row has no menu. The table gives it as a hover title on the dash; a
+ * card says it in words, because a touch screen never hovers.
+ */
+function manageReason(member: TeamMemberRow): string {
+  if (member.isOwner) return 'The owner is the organizer account itself';
+  if (member.isSelf) return 'You cannot change your own access';
+  return "Only the organizer's owner can change an Admin";
+}
+
 export default function TeamClient({
   organizerName,
   rows,
@@ -187,9 +255,7 @@ export default function TeamClient({
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
   const [isViewOpen, setIsViewOpen] = useState(false);
-  const [isPageSizeOpen, setIsPageSizeOpen] = useState(false);
   const viewRef = useRef<HTMLDivElement>(null);
-  const pageSizeRef = useRef<HTMLDivElement>(null);
 
   // Which row's request is in flight, so its menu item can say so.
   const [busy, setBusy] = useState<{ id: string; kind: 'resend' | 'suspend' } | null>(null);
@@ -213,9 +279,6 @@ export default function TeamClient({
     function handleClickOutside(event: MouseEvent) {
       if (viewRef.current && !viewRef.current.contains(event.target as Node)) {
         setIsViewOpen(false);
-      }
-      if (pageSizeRef.current && !pageSizeRef.current.contains(event.target as Node)) {
-        setIsPageSizeOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -481,6 +544,22 @@ export default function TeamClient({
     }
   };
 
+  /** A manageable row's menu, for the table's Actions cell and the card's footer. */
+  const renderActions = (member: TeamMemberRow, className = '') => (
+    <div className={`action-dropdown-container flex ${className}`}>
+      <TeamActionsMenu
+        label={member.name}
+        accepted={member.accepted}
+        suspended={member.state === 'SUSPENDED'}
+        busy={busy?.id === member.id ? busy.kind : null}
+        onEdit={() => openEdit(member)}
+        onResend={() => handleResend(member)}
+        onToggleSuspend={() => handleToggleSuspend(member)}
+        onRemove={() => handleRemove(member)}
+      />
+    </div>
+  );
+
   // ── Columns ────────────────────────────────────────────────────────────────
 
   const columns = useMemo<ColumnDef<TeamMemberRow>[]>(() => [
@@ -543,11 +622,7 @@ export default function TeamClient({
         <span className="block min-w-0">
           <span className="flex items-center gap-2 font-bold text-white">
             <span className="truncate">{row.original.name}</span>
-            {row.original.isSelf && (
-              <span className="shrink-0 whitespace-nowrap rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-semibold text-secondary">
-                You
-              </span>
-            )}
+            {row.original.isSelf && <YouChip />}
           </span>
           <span className="block text-xs text-secondary truncate">{row.original.email}</span>
         </span>
@@ -563,63 +638,19 @@ export default function TeamClient({
       id: 'events',
       header: 'Events',
       accessorFn: row => (row.role === 'STAFF' ? row.assignments.length : Number.MAX_SAFE_INTEGER),
-      cell: ({ row }) => {
-        const member = row.original;
-        if (member.role !== 'STAFF') {
-          return <span className="text-secondary">Every event</span>;
-        }
-        const shown = member.assignments.slice(0, EVENTS_SHOWN);
-        const more = member.assignments.length - shown.length;
-        return (
-          <ul className="m-0 p-0 list-none flex flex-col gap-1">
-            {shown.map(assignment => (
-              <li key={assignment.eventId} className="text-sm">
-                <span className="text-white">{assignment.eventTitle}</span>
-                <span className="text-secondary whitespace-nowrap"> &middot; {ROLE_LABELS[assignment.role]}</span>
-              </li>
-            ))}
-            {more > 0 && (
-              <li className="text-xs text-secondary">{`+${more} more — open Edit Access to see them all`}</li>
-            )}
-          </ul>
-        );
-      },
+      cell: ({ row }) => <MemberEvents member={row.original} />,
     },
     {
       id: 'status',
       header: 'Status',
       accessorFn: row => MEMBER_STATE_LABELS[row.state],
-      cell: ({ row }) => {
-        const member = row.original;
-        return (
-          <>
-            <span className={`status-badge ${MEMBER_STATE_TONES[member.state]}`}>
-              {MEMBER_STATE_LABELS[member.state]}
-            </span>
-            {/* When a waiting invitation stops working — the one date an owner
-                needs before it quietly becomes Invite Expired. */}
-            {member.state === 'INVITED' && member.inviteExpiresAt && (
-              <span className="status-note pending">{`Link expires ${shortDay(member.inviteExpiresAt)}`}</span>
-            )}
-          </>
-        );
-      },
+      cell: ({ row }) => <MemberStatus member={row.original} />,
     },
     {
       id: 'lastLogin',
       header: 'Last Sign-In',
       accessorFn: row => row.lastLoginAt ?? '',
-      cell: ({ row }) => {
-        const member = row.original;
-        // The owner signs in as the Organizer row, which has never recorded a
-        // sign-in time — a blank here is honest where "Never" would be false.
-        if (member.isOwner) return <span className="text-secondary">&mdash;</span>;
-        return member.lastLoginAt ? (
-          <span className="whitespace-nowrap">{shortInstant(member.lastLoginAt)}</span>
-        ) : (
-          <span className="text-secondary">Never</span>
-        );
-      },
+      cell: ({ row }) => <LastSignIn member={row.original} />,
     },
     {
       // Under its own header, never pushed to the row's right edge (§8, rule 6).
@@ -629,34 +660,12 @@ export default function TeamClient({
         const member = row.original;
         if (!member.canManage) {
           return (
-            <span
-              className="text-white/30 pl-2"
-              title={
-                member.isOwner
-                  ? 'The owner is the organizer account itself'
-                  : member.isSelf
-                    ? 'You cannot change your own access'
-                    : "Only the organizer's owner can change an Admin"
-              }
-            >
+            <span className="text-white/30 pl-2" title={manageReason(member)}>
               &mdash;
             </span>
           );
         }
-        return (
-          <div className="action-dropdown-container flex">
-            <TeamActionsMenu
-              label={member.name}
-              accepted={member.accepted}
-              suspended={member.state === 'SUSPENDED'}
-              busy={busy?.id === member.id ? busy.kind : null}
-              onEdit={() => openEdit(member)}
-              onResend={() => handleResend(member)}
-              onToggleSuspend={() => handleToggleSuspend(member)}
-              onRemove={() => handleRemove(member)}
-            />
-          </div>
-        );
+        return renderActions(member);
       },
       enableSorting: false,
     },
@@ -721,12 +730,14 @@ export default function TeamClient({
               )}
             </div>
 
-            <div ref={viewRef} className="relative view-dropdown-container">
+            {/* Columns mean nothing to cards: below `lg` View goes and Sort,
+                which the headers did, comes in its place. */}
+            <div ref={viewRef} className="relative view-dropdown-container dash-desktop-only">
               <button onClick={() => setIsViewOpen(!isViewOpen)} className="btn-filter">
                 <Columns size={16} /> View
               </button>
               {isViewOpen && (
-                <div className="absolute right-0 mt-2 bg-[#050505] border border-white/10 rounded-md p-2 min-w-[150px] z-50 shadow-2xl">
+                <div className="toolbar-popover absolute right-0 mt-2 bg-[#050505] border border-white/10 rounded-md p-2 min-w-[150px] z-50 shadow-2xl">
                   {table.getAllLeafColumns().filter(col => col.getCanHide()).map(column => (
                     <label key={column.id} className="flex items-center gap-2 px-2 py-1.5 hover:bg-white/5 cursor-pointer rounded-md text-sm text-white">
                       <div className={`w-4 h-4 border border-white/10 rounded-sm flex items-center justify-center ${column.getIsVisible() ? 'bg-white/10' : ''}`}>
@@ -744,6 +755,8 @@ export default function TeamClient({
                 </div>
               )}
             </div>
+
+            <MobileSortMenu table={table} labels={COLUMN_LABELS} />
           </div>
 
           {grantableRoles.length > 0 && (
@@ -755,8 +768,8 @@ export default function TeamClient({
           )}
         </div>
 
-        {/* Table Area */}
-        <div className="border border-white/10 rounded-lg overflow-x-auto bg-transparent">
+        {/* Table Area — from `lg` up; the cards below take its place under it. */}
+        <div className="dash-desktop-only border border-white/10 rounded-lg overflow-x-auto bg-transparent">
           <Table>
             <TableHeader className="bg-transparent">
               {table.getHeaderGroups().map(headerGroup => (
@@ -804,6 +817,61 @@ export default function TeamClient({
           </Table>
         </div>
 
+        {/* The same rows as the table, off the same table instance. The owner
+            keeps the first card and, like the table, gets no menu — a row the
+            viewer may not manage says why in words, not in a hover title. */}
+        <div className="dash-mobile-only">
+          <AdminCardList
+            items={table.getRowModel().rows}
+            getKey={row => row.id}
+            label="Team members"
+            className="is-flush"
+            leading={row => (
+              <span className="font-mono">
+                {table.getSortedRowModel().flatRows.findIndex(sorted => sorted.id === row.id) + 1}
+              </span>
+            )}
+            title={row => (
+              <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span className="min-w-0">{row.original.name}</span>
+                {row.original.isSelf && <YouChip />}
+              </span>
+            )}
+            subtitle={row => row.original.email}
+            badges={row => <MemberStatus member={row.original} />}
+            fields={row => [
+              { label: 'Role', value: ROLE_LABELS[row.original.role] },
+              { label: 'Last Sign-In', value: <LastSignIn member={row.original} /> },
+              { label: 'Events', value: <MemberEvents member={row.original} />, full: true },
+            ]}
+            // The row's most-used action one tap away, and the rest behind ⋯ —
+            // the same footer an event card has.
+            actions={row =>
+              row.original.canManage ? (
+                <>
+                  <button
+                    type="button"
+                    className="btn-filter"
+                    onClick={() => openEdit(row.original)}
+                    aria-label={`Edit access for ${row.original.name}`}
+                  >
+                    <UserCog size={16} aria-hidden="true" />
+                    Edit Access
+                  </button>
+                  {renderActions(row.original, 'ml-auto')}
+                </>
+              ) : (
+                <p className="m-0 text-xs text-secondary">{manageReason(row.original)}</p>
+              )
+            }
+            empty={
+              <div className="border border-white/10 rounded-lg py-16 px-4 text-center text-gray-500">
+                Nobody on the team matches that search.
+              </div>
+            }
+          />
+        </div>
+
         {/* Said under the table rather than instead of it: the owner's own row
             is still worth seeing, and this is the moment somebody decides
             whether to stop sharing one password. */}
@@ -813,62 +881,7 @@ export default function TeamClient({
           </p>
         )}
 
-        {/* Pagination Controls */}
-        <div className="flex justify-between items-center flex-wrap gap-4 mt-1">
-          <div className="flex items-center gap-3 text-white text-sm font-medium">
-            <span className="text-secondary">Rows per page</span>
-            <div ref={pageSizeRef} className="relative">
-              <button
-                onClick={() => setIsPageSizeOpen(!isPageSizeOpen)}
-                className="flex items-center gap-3 border border-white/10 rounded-md px-3 py-1.5 text-sm text-white bg-transparent hover:bg-white/5 transition-colors cursor-pointer"
-              >
-                {table.getState().pagination.pageSize}
-                <ChevronDown size={14} className="text-gray-400" />
-              </button>
-              {isPageSizeOpen && (
-                <div className="absolute bottom-[calc(100%+4px)] left-0 bg-[#050505] border border-white/10 rounded-md p-1 min-w-[80px] z-50 shadow-2xl">
-                  {[5, 10, 25, 50].map(pageSize => (
-                    <div
-                      key={pageSize}
-                      className={`flex items-center justify-between px-3 py-1.5 cursor-pointer rounded-md text-sm transition-colors ${table.getState().pagination.pageSize === pageSize ? 'bg-white/5 text-white' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
-                      onClick={() => {
-                        table.setPageSize(pageSize);
-                        setIsPageSizeOpen(false);
-                      }}
-                    >
-                      <span>{pageSize}</span>
-                      {table.getState().pagination.pageSize === pageSize && <Check size={14} />}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-6">
-            <div className="text-white text-sm font-medium">
-              {table.getFilteredRowModel().rows.length === 0 ? '0-0 of 0' :
-               `${table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1}-${Math.min((table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize, table.getFilteredRowModel().rows.length)} of ${table.getFilteredRowModel().rows.length}`}
-            </div>
-            <div className="flex gap-1">
-              {[
-                { label: 'First page', icon: <ChevronFirst className="w-4 h-4" />, onClick: () => table.firstPage(), disabled: !table.getCanPreviousPage() },
-                { label: 'Previous page', icon: <ChevronLeft className="w-4 h-4" />, onClick: () => table.previousPage(), disabled: !table.getCanPreviousPage() },
-                { label: 'Next page', icon: <ChevronRight className="w-4 h-4" />, onClick: () => table.nextPage(), disabled: !table.getCanNextPage() },
-                { label: 'Last page', icon: <ChevronLast className="w-4 h-4" />, onClick: () => table.lastPage(), disabled: !table.getCanNextPage() },
-              ].map(control => (
-                <button
-                  key={control.label}
-                  onClick={control.onClick}
-                  disabled={control.disabled}
-                  aria-label={control.label}
-                  className="flex items-center justify-center w-8 h-8 border border-white/10 rounded-md bg-transparent text-gray-400 hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  {control.icon}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
+        <AdminTablePager table={table} />
       </div>
 
       {/* The invite / edit form. The redemptions panel's frame — the t-modal
@@ -889,7 +902,7 @@ export default function TeamClient({
             role="dialog"
             aria-modal="true"
             aria-labelledby="team-form-title"
-            className={`t-modal w-full max-w-xl bg-[#111] border border-white/10 rounded-2xl shadow-2xl flex flex-col max-h-[90vh] ${isModalOpen ? 'is-open' : ''} ${isModalClosing ? 'is-closing' : ''}`}
+            className={`t-modal admin-modal-panel w-full max-w-xl bg-[#111] border border-white/10 rounded-2xl shadow-2xl flex flex-col max-h-[90vh] ${isModalOpen ? 'is-open' : ''} ${isModalClosing ? 'is-closing' : ''}`}
           >
             <div className="p-6 border-b border-white/10 flex justify-between items-start gap-4 shrink-0">
               <div className="min-w-0">
@@ -907,17 +920,19 @@ export default function TeamClient({
                     : 'They choose their own password from the link we email them.'}
                 </p>
               </div>
+              {/* 44px to press; the negative margin leaves the 20px icon where
+                  it sat, as .admin-back-link does. */}
               <button
                 type="button"
                 onClick={closeModal}
-                className="text-gray-400 hover:text-white transition-colors bg-transparent border-none cursor-pointer p-0"
+                className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center text-gray-400 hover:text-white transition-colors bg-transparent border-none cursor-pointer p-0"
                 aria-label="Close"
               >
                 <X size={20} />
               </button>
             </div>
 
-            <div className="p-6 overflow-y-auto flex-1 flex flex-col gap-5">
+            <div className="admin-modal-body p-6 overflow-y-auto flex-1 flex flex-col gap-5">
               {!editing && (
                 <div className="form-grid">
                   <div className="form-group">
@@ -1030,7 +1045,7 @@ export default function TeamClient({
                           {draft.assignments.length > 1 && (
                             <button
                               type="button"
-                              className="btn-remove self-start"
+                              className="btn-remove self-start max-sm:min-w-11 max-sm:min-h-11"
                               onClick={() => removeAssignment(assignment.key)}
                               aria-label={`Remove event ${index + 1}`}
                             >
@@ -1053,7 +1068,7 @@ export default function TeamClient({
               )}
             </div>
 
-            <div className="p-6 border-t border-white/10 flex justify-end items-center gap-3 bg-black/20 shrink-0">
+            <div className="admin-modal-footer p-6 border-t border-white/10 flex justify-end items-center gap-3 bg-black/20 shrink-0">
               <button
                 type="button"
                 onClick={closeModal}

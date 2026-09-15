@@ -181,7 +181,10 @@ src/
     admin/                  # organizer portal (AdminShell, Admin.css, Auth.css,
                             #   DashboardShell — the frame both dashboards share,
                             #   dashboard-sidebar.ts — the collapsed-rail cookie,
-                            #   AdminCardList — what every table becomes below lg)
+                            #   AdminCardList — what every table becomes below lg,
+                            #   AdminTablePager / MobileSortMenu — every table's
+                            #   pager and its below-lg Sort chip,
+                            #   row-menu-position.ts — where a row's menu opens)
     superadmin/             # platform-owner portal (SuperAdminShell, a thin
                             #   wrapper over admin/DashboardShell)
     api/                    # all route handlers — see §6
@@ -880,7 +883,9 @@ These are the user's own standing preferences. Follow them without being asked.
     - the open state remembers its pathname, so any route change folds it;
     - the body does not scroll and `<main>` is `inert`;
     - Esc or a tap on the backdrop folds it and returns focus to the chevron;
-    - there are no tooltips.
+    - there are no tooltips;
+    - the resting rail keeps the desktop sidebar's z-index 50, so a page's
+      own z-50 modal covers it. Only the opened menu rises to 70.
   - **Below `lg`** the header grows to a 2-line clamped title, the content
     padding steps down, and the toolbar's search takes its own row. Every data
     table becomes **`admin/AdminCardList`**.
@@ -900,6 +905,36 @@ These are the user's own standing preferences. Follow them without being asked.
     `.admin-modal-footer`: capped at the viewport in `dvh`, the body scrolls,
     and the footer is sticky and full width on a phone. Both are defined in
     `Admin.css` and adopted screen by screen by `MOBILE_RESPONSIVE_PLAN/`.
+  - **Every TanStack table's pager is `admin/AdminTablePager`.** It holds the
+    rows-per-page menu, the range and First / Previous / Next / Last. Below
+    `sm` it shows only the range and 44px Previous / Next.
+  - **Below `lg` a table's toolbar gains `admin/MobileSortMenu`**, a Sort chip
+    listing every column that can sort, each ascending or descending, with
+    the active sort named on the chip. Cards have no headers to click.
+    - The View (column visibility) chip is `.dash-desktop-only`, because cards
+      have no columns.
+    - A card list standing on the page, rather than inside a panel, passes
+      `className="is-flush"`.
+    - A route's `loading.tsx` can draw the list's shape with
+      `AdminCardListSkeleton`.
+  - **A row's portalled menu is placed by `admin/row-menu-position.ts`**
+    (`placeRowMenu`). It is clamped inside the viewport's sides, and flips
+    above a trigger that has no room below, measured once the menu has
+    rendered. A card's menu trigger is 44px.
+  - **A card's footer is a shortcut on the left and ⋯ on the right.**
+    - The shortcut is the row's most-used action, as a quiet 44px
+      `.btn-filter`: Registrants on an event card, Edit Access on a team
+      member card.
+    - It stays inside the ⋯ menu too, so the menu matches the table's.
+    - This was the owner's choice. A footer holding only ⋯ read as empty
+      space, and a label such as "Actions" beside it would look like a button
+      without being one.
+  - **Hover-only information becomes visible text on touch.** Examples: a
+    team row's "why you cannot manage this", and a role's hint on the matrix
+    header. The card or picker says it in words. Nothing a label shows is
+    dropped.
+  - A panel's inset is 16px below `sm`. A modal's close button is 44px with a
+    -12px margin, so its icon does not move.
   - A header back arrow wears `.admin-back-link` for its 44px hit area.
 - **A list's order is a fact about the rows, not about the view — and a number
   in it should name the thing, not its seat.** Every listing gets an explicit
@@ -1386,14 +1421,19 @@ model, or any `/api/admin/**` route's ownership check** — its "Batch 1" notes
 record the calls made in the batch, and the file records which decisions are
 closed (no unified account table, no SSO).
 
-**`MOBILE_RESPONSIVE_PLAN/` is an open queue, with Batch 1 landed.** Batch 1
+**`MOBILE_RESPONSIVE_PLAN/` is an open queue, with Batches 1 and 2 landed.** Batch 1
 added `DashboardShell` (the frame both dashboards share: one collapsible
 sidebar menu at every width, a rail that opens over the page on a phone), `AdminCardList`, the `.dash-desktop-only` /
 `.dash-mobile-only` switch, and the toolbar, header, metrics, popover and
 modal-frame rules in `Admin.css`, all on the public site's breakpoints (§9,
 "One responsive dashboard"). The Dashboard's Recent Registrations is cards
-below `lg`. The other screens' tables still clip on a phone until their batch
-lands. **Batch 2 (Events and Team) is next.** Six batches,
+below `lg`. **Batch 2 is in too.** `/admin/events` and `/admin/team` are cards
+below `lg`, on the new shared `AdminTablePager`, `MobileSortMenu` and
+`placeRowMenu`. The event schedule and delete modals and the team invite form
+wear `.admin-modal-panel`. Below `lg`, the team's permission matrix is a
+`RolePicker`: one role at a time, on a sliding-tabs control. The registrants,
+marketing, results and superadmin tables still clip on a phone until their
+batch lands. **Batch 3 (Registrants) is next.** Six batches,
 one file each, to make `/admin/**` and `/superadmin/**` fully manageable on a
 phone with no horizontal scroll:
 1. the shared shell, menu and card component;

@@ -109,6 +109,19 @@ remark, send an email, edit or delete while checking layout.
   the Validate button **being visible**, all at 360×780. Do not press it.
 - At 1440 the registrants screen matches its before-screenshot.
 
+## Noticed during Batch 2
+
+- `RegistrantActionsMenu` still places itself at `rect.right - 210,
+  rect.bottom + 8`. That throws it off a phone screen's edge, and below the
+  fold for the last card. Move it onto `placeRowMenu` in
+  `admin/row-menu-position.ts`, as `EventActionsMenu` and `TeamActionsMenu`
+  now do: the `useLayoutEffect` re-measure after open, and `data-origin`
+  taken from the placement.
+- `AdminCardList` has a per-card checkbox but **no select-all**. Events and
+  Team had no bulk action to need one. The registrants bulk bar does, so the
+  card list needs a select-all control for the page's rows, reading
+  `table.getIsAllPageRowsSelected()` like the table header does.
+
 ## What landed
 
 _Fill in when the batch is done._

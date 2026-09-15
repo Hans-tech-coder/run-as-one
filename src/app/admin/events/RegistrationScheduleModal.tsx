@@ -70,35 +70,37 @@ export default function RegistrationScheduleModal({
       }`}
     >
       <div
-        className={`t-modal w-full max-w-2xl bg-[#111] border border-white/10 rounded-2xl shadow-2xl flex flex-col max-h-[90vh] ${isOpen ? 'is-open' : ''} ${isClosing ? 'is-closing' : ''}`}
+        className={`t-modal admin-modal-panel w-full max-w-2xl bg-[#111] border border-white/10 rounded-2xl shadow-2xl flex flex-col max-h-[90vh] ${isOpen ? 'is-open' : ''} ${isClosing ? 'is-closing' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="registration-schedule-title"
       >
         <div className="p-6 border-b border-white/10 flex justify-between items-start gap-4 shrink-0">
-          <div className="flex items-start gap-3">
+          <div className="flex items-start gap-3 min-w-0">
             <span className="p-2 rounded-lg bg-accent-blue/10 text-accent-blue shrink-0">
               <CalendarClock size={20} />
             </span>
-            <div>
+            <div className="min-w-0">
               <h3 id="registration-schedule-title" className="text-xl font-semibold text-white m-0">
                 Registration Opening
               </h3>
               {/* The row this is about. The menu it was opened from is gone by
                   now, and three events down a table look alike. */}
-              <p className="text-sm text-gray-400 m-0 mt-1">{event?.title}</p>
+              <p className="text-sm text-gray-400 m-0 mt-1 [overflow-wrap:anywhere]">{event?.title}</p>
             </div>
           </div>
+          {/* 44px to press; the negative margin keeps the 20px icon exactly
+              where it sat, as .admin-back-link does. */}
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors"
+            className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center text-gray-400 hover:text-white transition-colors"
             aria-label="Close"
           >
             <X size={20} />
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto flex flex-col gap-5">
+        <div className="admin-modal-body p-6 overflow-y-auto flex flex-col gap-5">
           {/* What is true right now, before anything is changed. Without it the
               modal opens on a picker whose selected card is the only clue, and
               "scheduled" with a date in the past reads the same as "open". */}
@@ -127,7 +129,7 @@ export default function RegistrationScheduleModal({
           )}
         </div>
 
-        <div className="p-6 border-t border-white/10 flex justify-end gap-3 shrink-0">
+        <div className="admin-modal-footer p-6 border-t border-white/10 flex justify-end gap-3 shrink-0">
           <button
             type="button"
             onClick={onClose}

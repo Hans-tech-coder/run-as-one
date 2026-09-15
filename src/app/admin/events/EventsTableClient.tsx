@@ -1,13 +1,16 @@
 "use client";
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { 
-  Search, Filter, Eye, X, Columns, Plus,
-  ChevronLeft, ChevronRight, ChevronFirst, ChevronLast, ChevronUp, ChevronDown, Check, Trash2, AlertCircle
+import {
+  Search, X, Columns, Plus, ChevronUp, ChevronDown, Check, AlertCircle, Users
 } from 'lucide-react';
+import LinkPending from '@/components/ui/LinkPending';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import EventActionsMenu from './EventActionsMenu';
+import AdminCardList from '../AdminCardList';
+import AdminTablePager from '../AdminTablePager';
+import MobileSortMenu from '../MobileSortMenu';
 import RegistrationScheduleModal from './RegistrationScheduleModal';
 import { openingInstantISO, type OpeningDraft } from './registration-opening';
 import { formatEventInstant } from '@/lib/event-schedule';
@@ -30,21 +33,35 @@ import {
   useReactTable,
   SortingState,
   VisibilityState,
+  Row,
 } from '@tanstack/react-table';
 
-interface EventsTableClientProps {
-  events: any[];
-  /** Whether this person's role includes `event:create` — Create Event is not offered otherwise. */
-  canCreate?: boolean;
-}
+type CategoryChip = { id: string; name: string; distance?: string | null };
 
 /**
  * One row as /admin/events hands it over: the Prisma event plus the counts and
- * the registration state worked out on the server. Named rather than spelled
- * `any` at each use so the pieces this table reads off a row — its id, its
- * title, its opening — have somewhere to be looked up.
+ * the registration state worked out on the server. Only the pieces this table
+ * reads are named; the page passes the whole event, and the rest rides along.
  */
-type EventRow = EventsTableClientProps['events'][number];
+type EventRow = {
+  id: string;
+  title: string;
+  date: string;
+  location: string;
+  categories?: CategoryChip[];
+  registrationState?: 'OPEN' | 'FINISHED' | 'PAUSED' | 'SCHEDULED' | 'FULL';
+  registrationOpensAt?: string | Date | null;
+  registrationPaused?: boolean | null;
+  /** What this person may do from the row's menu (events/page.tsx). Absent means an owner. */
+  access?: { edit: boolean; delete: boolean };
+  _count?: { registrations: number };
+};
+
+interface EventsTableClientProps {
+  events: EventRow[];
+  /** Whether this person's role includes `event:create` — Create Event is not offered otherwise. */
+  canCreate?: boolean;
+}
 
 /**
  * What the Registration column says, and in what tone.
@@ -67,6 +84,64 @@ const REGISTRATION_STATES = {
   FINISHED: { label: 'Race Over', tone: 'neutral' },
 } as const;
 
+/**
+ * A row's place in the sorted list, for the No. column and the card beside it.
+ * Counted by id rather than object identity, for the reason PROJECT_GUIDE §9
+ * gives: sorting rebuilds the rows, and an `indexOf` on them finds nothing.
+ */
+function rowPosition<T>(sortedRows: Row<T>[], row: Row<T>) {
+  return sortedRows.findIndex(sorted => sorted.id === row.id) + 1;
+}
+
+/**
+ * The Registration column's badge and the line under it. Drawn once for the
+ * table cell and the card's badge row, so the two cannot say different things.
+ */
+function RegistrationStatus({ event }: { event: EventRow }) {
+  const key = (event.registrationState ?? 'OPEN') as keyof typeof REGISTRATION_STATES;
+  const state = REGISTRATION_STATES[key];
+  return (
+    <div>
+      <span className={`status-badge ${state.tone} whitespace-nowrap`}>{state.label}</span>
+      {/* The date the badge is standing in for. A quiet line rather than
+          a second pill: two pills in one cell read as two states, and
+          this event has only one. */}
+      {key === 'SCHEDULED' && event.registrationOpensAt && (
+        <span className="status-note neutral whitespace-nowrap">
+          Opens {formatEventInstant(event.registrationOpensAt)}
+        </span>
+      )}
+    </div>
+  );
+}
+
+/**
+ * An event's options on its card. The table has room only for a count; a card
+ * has room to name them, which is what an organizer scanning their races on a
+ * phone is looking for. A race option keeps its distance beside its name,
+ * unless the name already says it ("10K" beside "10K" is noise, not detail).
+ */
+function CategoryChips({ categories }: { categories?: CategoryChip[] }) {
+  if (!categories?.length) return <span className="text-secondary">No categories</span>;
+  return (
+    <ul className="m-0 p-0 list-none flex flex-wrap gap-1.5">
+      {categories.map(category => {
+        const distance = category.distance?.trim();
+        const showDistance = Boolean(distance) && !category.name.toUpperCase().includes(distance!.toUpperCase());
+        return (
+          <li
+            key={category.id}
+            className="max-w-full truncate whitespace-nowrap rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-xs text-white"
+          >
+            {category.name}
+            {showDistance && <span className="text-secondary">{` · ${distance}`}</span>}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 export default function EventsTableClient({ events, canCreate = true }: EventsTableClientProps) {
   // Table state
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -74,7 +149,6 @@ export default function EventsTableClient({ events, canCreate = true }: EventsTa
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
   const [isViewOpen, setIsViewOpen] = useState(false);
-  const [isPageSizeOpen, setIsPageSizeOpen] = useState(false);
   const [tableEvents, setTableEvents] = useState(events);
   
   const router = useRouter();
@@ -94,21 +168,17 @@ export default function EventsTableClient({ events, canCreate = true }: EventsTa
   const [isScheduling, setIsScheduling] = useState(false);
 
   // Delete Modal State
-  const [deletingEvent, setDeletingEvent] = useState<any | null>(null);
+  const [deletingEvent, setDeletingEvent] = useState<EventRow | null>(null);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isDeleteClosing, setIsDeleteClosing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const viewRef = useRef<HTMLDivElement>(null);
-  const pageSizeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (viewRef.current && !viewRef.current.contains(event.target as Node)) {
         setIsViewOpen(false);
-      }
-      if (pageSizeRef.current && !pageSizeRef.current.contains(event.target as Node)) {
-        setIsPageSizeOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -155,7 +225,7 @@ export default function EventsTableClient({ events, canCreate = true }: EventsTa
       const saved = await res.json();
 
       setTableEvents(prev =>
-        prev.map(row =>
+        prev.map((row): EventRow =>
           row.id === schedulingEvent.id
             ? {
                 ...row,
@@ -209,7 +279,7 @@ export default function EventsTableClient({ events, canCreate = true }: EventsTa
    * than optimistically — a hold that looks on but is not would be the worst of
    * the three possible outcomes.
    */
-  const handleTogglePause = async (event: any) => {
+  const handleTogglePause = async (event: EventRow) => {
     const nextPaused = event.registrationState !== 'PAUSED';
     setPausingId(event.id);
     try {
@@ -225,7 +295,7 @@ export default function EventsTableClient({ events, canCreate = true }: EventsTa
       }
 
       setTableEvents(prev =>
-        prev.map((row: any) =>
+        prev.map((row): EventRow =>
           row.id === event.id
             ? {
                 ...row,
@@ -245,10 +315,12 @@ export default function EventsTableClient({ events, canCreate = true }: EventsTa
       // The public pages read this on the server, so the change only reaches
       // them on the next request — which is what this refresh causes.
       router.refresh();
-    } catch (error: any) {
+    } catch (error) {
       await alert({
         title: nextPaused ? 'Registration not paused' : 'Registration not resumed',
-        message: `${event.title} is unchanged. ${error?.message ?? 'The request did not reach the server.'}`,
+        message: `${event.title} is unchanged. ${
+          error instanceof Error ? error.message : 'The request did not reach the server.'
+        }`,
       });
     } finally {
       setPausingId(null);
@@ -270,22 +342,63 @@ export default function EventsTableClient({ events, canCreate = true }: EventsTa
         throw new Error(body?.error || `The server rejected the request (HTTP ${res.status}).`);
       }
 
-      setTableEvents(tableEvents.filter((e: any) => e.id !== deletingEvent.id));
+      setTableEvents(tableEvents.filter(e => e.id !== deletingEvent.id));
       closeDeleteModal();
-    } catch (error: any) {
+    } catch (error) {
       console.error(error);
       // The confirmation modal stays open underneath: the event is still
       // there, and the organizer can read the reason and try again.
       await alert({
         title: 'Event not deleted',
-        message: `${deletingEvent.title} is still here. ${error?.message ?? 'The request did not reach the server.'}`,
+        message: `${deletingEvent.title} is still here. ${
+          error instanceof Error ? error.message : 'The request did not reach the server.'
+        }`,
       });
     } finally {
       setIsDeleting(false);
     }
   };
 
-  const columns = useMemo<ColumnDef<any>[]>(() => [
+  /**
+   * A row's menu, for the table's Actions cell and the card's footer alike, so
+   * what each row offers stays permission-driven in one place.
+   */
+  const renderActions = (event: EventRow, className = '') => (
+    <div className={`action-dropdown-container flex ${className}`}>
+      <EventActionsMenu
+        eventId={event.id}
+        label={event.title}
+        registrationState={event.registrationState ?? 'OPEN'}
+        isPausing={pausingId === event.id}
+        // Decided on the server with the same can() each route asks
+        // (events/page.tsx). A row without `access` is an owner's.
+        canEdit={event.access?.edit ?? true}
+        onTogglePause={
+          (event.access?.edit ?? true)
+            ? () => handleTogglePause(event)
+            : undefined
+        }
+        onSchedule={
+          (event.access?.edit ?? true)
+            ? () => {
+                setSchedulingEvent(event);
+                requestAnimationFrame(() => setIsScheduleOpen(true));
+              }
+            : undefined
+        }
+        onDelete={
+          (event.access?.delete ?? true)
+            ? () => {
+                setDeletingEvent(event);
+                requestAnimationFrame(() => setIsDeleteOpen(true));
+              }
+            : undefined
+        }
+      />
+    </div>
+  );
+
+  const columns = useMemo<ColumnDef<EventRow>[]>(() => [
     {
       id: "select",
       header: ({ table }) => {
@@ -326,10 +439,9 @@ export default function EventsTableClient({ events, canCreate = true }: EventsTa
     {
       id: "index",
       header: "No.",
-      cell: ({ row, table }) => {
-        const index = table.getSortedRowModel().flatRows.indexOf(row);
-        return <span className="text-gray-400 font-mono">{index + 1}</span>;
-      },
+      cell: ({ row, table }) => (
+        <span className="text-gray-400 font-mono">{rowPosition(table.getSortedRowModel().flatRows, row)}</span>
+      ),
       enableSorting: false,
       enableHiding: false,
     },
@@ -358,61 +470,16 @@ export default function EventsTableClient({ events, canCreate = true }: EventsTa
       id: "registration",
       header: "Registration",
       accessorFn: (row) => row.registrationState ?? 'OPEN',
-      cell: ({ row }) => {
-        const key = (row.original.registrationState ?? 'OPEN') as keyof typeof REGISTRATION_STATES;
-        const state = REGISTRATION_STATES[key];
-        return (
-          <div>
-            <span className={`status-badge ${state.tone} whitespace-nowrap`}>{state.label}</span>
-            {/* The date the badge is standing in for. A quiet line rather than
-                a second pill: two pills in one cell read as two states, and
-                this event has only one. */}
-            {key === 'SCHEDULED' && row.original.registrationOpensAt && (
-              <span className="status-note neutral whitespace-nowrap">
-                Opens {formatEventInstant(row.original.registrationOpensAt)}
-              </span>
-            )}
-          </div>
-        );
-      },
+      cell: ({ row }) => <RegistrationStatus event={row.original} />,
     },
     {
       id: "actions",
       header: "Actions",
-      cell: ({ row }) => (
-        <div className="action-dropdown-container flex">
-          <EventActionsMenu
-            eventId={row.original.id}
-            registrationState={row.original.registrationState ?? 'OPEN'}
-            isPausing={pausingId === row.original.id}
-            // Decided on the server with the same can() each route asks
-            // (events/page.tsx). A row without `access` is an owner's.
-            canEdit={row.original.access?.edit ?? true}
-            onTogglePause={
-              (row.original.access?.edit ?? true)
-                ? () => handleTogglePause(row.original)
-                : undefined
-            }
-            onSchedule={
-              (row.original.access?.edit ?? true)
-                ? () => {
-                    setSchedulingEvent(row.original);
-                    requestAnimationFrame(() => setIsScheduleOpen(true));
-                  }
-                : undefined
-            }
-            onDelete={
-              (row.original.access?.delete ?? true)
-                ? () => {
-                    setDeletingEvent(row.original);
-                    requestAnimationFrame(() => setIsDeleteOpen(true));
-                  }
-                : undefined
-            }
-          />
-        </div>
-      ),
+      cell: ({ row }) => renderActions(row.original),
     },
+    // renderActions is rebuilt every render; pausingId is the one thing it
+    // reads that changes what a cell shows, as before it was pulled out.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   ], [pausingId]);
 
   const table = useReactTable({
@@ -434,6 +501,9 @@ export default function EventsTableClient({ events, canCreate = true }: EventsTa
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
   });
+
+  // How many orders go with the event being deleted, which the confirm names.
+  const deletingRegistrations = deletingEvent?._count?.registrations ?? 0;
 
   return (
     <div className="flex flex-col gap-4 w-full text-white">
@@ -458,15 +528,17 @@ export default function EventsTableClient({ events, canCreate = true }: EventsTa
             )}
           </div>
           
-          <div ref={viewRef} className="relative view-dropdown-container">
-            <button 
+          {/* Which columns the table shows. Cards have no columns to hide, so
+              below `lg` the chip goes and Sort (which the headers did) comes. */}
+          <div ref={viewRef} className="relative view-dropdown-container dash-desktop-only">
+            <button
               onClick={() => setIsViewOpen(!isViewOpen)}
               className="btn-filter"
             >
               <Columns size={16} /> View
             </button>
             {isViewOpen && (
-              <div className="absolute right-0 mt-2 bg-[#050505] border border-white/10 rounded-md p-2 min-w-[150px] z-50 shadow-2xl">
+              <div className="toolbar-popover absolute right-0 mt-2 bg-[#050505] border border-white/10 rounded-md p-2 min-w-[150px] z-50 shadow-2xl">
                 {table.getAllLeafColumns().filter(col => col.getCanHide()).map(column => {
                   return (
                     <label key={column.id} className="flex items-center gap-2 px-2 py-1.5 hover:bg-white/5 cursor-pointer rounded-md text-sm text-white">
@@ -486,6 +558,8 @@ export default function EventsTableClient({ events, canCreate = true }: EventsTa
               </div>
             )}
           </div>
+
+          <MobileSortMenu table={table} />
         </div>
 
         {/* Only for a role that holds event:create — a staff member works on
@@ -502,8 +576,8 @@ export default function EventsTableClient({ events, canCreate = true }: EventsTa
         )}
       </div>
 
-      {/* Table Area */}
-      <div className="border border-white/10 rounded-lg overflow-hidden bg-transparent">
+      {/* Table Area — from `lg` up; the cards below take its place under it. */}
+      <div className="dash-desktop-only border border-white/10 rounded-lg overflow-hidden bg-transparent">
         <Table>
           <TableHeader className="bg-transparent">
             {table.getHeaderGroups().map(headerGroup => (
@@ -551,76 +625,56 @@ export default function EventsTableClient({ events, canCreate = true }: EventsTa
         </Table>
       </div>
 
-      {/* Pagination Controls */}
-      <div className="flex justify-between items-center flex-wrap gap-4 mt-1">
-        <div className="flex items-center gap-3 text-white text-sm font-medium">
-          <span className="text-secondary">Rows per page</span>
-          
-          <div ref={pageSizeRef} className="relative">
-            <button
-              onClick={() => setIsPageSizeOpen(!isPageSizeOpen)}
-              className="flex items-center gap-3 border border-white/10 rounded-md px-3 py-1.5 text-sm text-white bg-transparent hover:bg-white/5 transition-colors cursor-pointer"
-            >
-              {table.getState().pagination.pageSize}
-              <ChevronDown size={14} className="text-gray-400" />
-            </button>
-            
-            {isPageSizeOpen && (
-              <div className="absolute bottom-[calc(100%+4px)] left-0 bg-[#050505] border border-white/10 rounded-md p-1 min-w-[80px] z-50 shadow-2xl">
-                {[5, 10, 25, 50].map(pageSize => (
-                  <div
-                    key={pageSize}
-                    className={`flex items-center justify-between px-3 py-1.5 cursor-pointer rounded-md text-sm transition-colors ${table.getState().pagination.pageSize === pageSize ? 'bg-white/5 text-white' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
-                    onClick={() => {
-                      table.setPageSize(pageSize);
-                      setIsPageSizeOpen(false);
-                    }}
-                  >
-                    <span>{pageSize}</span>
-                    {table.getState().pagination.pageSize === pageSize && <Check size={14} />}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-        <div className="flex items-center gap-6">
-          <div className="text-white text-sm font-medium">
-            {table.getFilteredRowModel().rows.length === 0 ? '0-0 of 0' : 
-             `${table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1}-${Math.min((table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize, table.getFilteredRowModel().rows.length)} of ${table.getFilteredRowModel().rows.length}`}
-          </div>
-          <div className="flex gap-1">
-            <button
-              onClick={() => table.firstPage()}
-              disabled={!table.getCanPreviousPage()}
-              className="flex items-center justify-center w-8 h-8 border border-white/10 rounded-md bg-transparent text-gray-400 hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <ChevronFirst className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-              className="flex items-center justify-center w-8 h-8 border border-white/10 rounded-md bg-transparent text-gray-400 hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-              className="flex items-center justify-center w-8 h-8 border border-white/10 rounded-md bg-transparent text-gray-400 hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => table.lastPage()}
-              disabled={!table.getCanNextPage()}
-              className="flex items-center justify-center w-8 h-8 border border-white/10 rounded-md bg-transparent text-gray-400 hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <ChevronLast className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
+      {/* The same rows as the table above — search, sort, selection and the
+          page all come from the one table instance (AdminCardList). */}
+      <div className="dash-mobile-only">
+        <AdminCardList
+          items={table.getRowModel().rows}
+          getKey={row => row.id}
+          label="Events"
+          className="is-flush"
+          selection={{
+            isSelected: row => row.getIsSelected(),
+            toggle: row => row.toggleSelected(),
+            label: row => `Select ${row.original.title}`,
+          }}
+          leading={row => (
+            <span className="font-mono">{rowPosition(table.getSortedRowModel().flatRows, row)}</span>
+          )}
+          title={row => <span className="line-clamp-2">{row.original.title}</span>}
+          badges={row => <RegistrationStatus event={row.original} />}
+          fields={row => [
+            { label: 'Date', value: row.original.date },
+            { label: 'Location', value: row.original.location, full: true },
+            { label: 'Categories', value: <CategoryChips categories={row.original.categories} />, full: true },
+          ]}
+          // Registrants one tap away, because on race day it is where an
+          // organizer goes from this list again and again. It stays in the
+          // menu too, so the menu matches the table's. A quiet chip, not
+          // .btn-light: one light pill per card would shout down the list.
+          actions={row => (
+            <>
+              <Link
+                href={`/admin/events/${row.original.id}/registrants`}
+                className="btn-filter no-underline"
+                aria-label={`Registrants for ${row.original.title}`}
+              >
+                <Users size={16} aria-hidden="true" />
+                Registrants
+                <LinkPending />
+              </Link>
+              {renderActions(row.original, 'ml-auto')}
+            </>
+          )}
+          empty={
+            <div className="border border-white/10 rounded-lg py-16 px-4 text-center text-gray-500">
+              No events found. Create one to get started.
+            </div>
+          }
+        />
       </div>
+
+      <AdminTablePager table={table} />
 
 
       {/* Keyed by the row and by the value it is editing, so the modal starts
@@ -642,31 +696,36 @@ export default function EventsTableClient({ events, canCreate = true }: EventsTa
           isDeleteOpen && !isDeleteClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
       >
-        <div 
-          className={`t-modal w-full max-w-md bg-[#111] border border-red-500/20 rounded-2xl shadow-2xl p-6 flex flex-col gap-6 ${isDeleteOpen ? 'is-open' : ''} ${isDeleteClosing ? 'is-closing' : ''}`}
+        <div
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="delete-event-title"
+          className={`t-modal admin-modal-panel w-full max-w-md bg-[#111] border border-red-500/20 rounded-2xl shadow-2xl p-6 flex flex-col gap-6 ${isDeleteOpen ? 'is-open' : ''} ${isDeleteClosing ? 'is-closing' : ''}`}
         >
-          <div className="flex items-start gap-4">
-            <div className="p-3 bg-red-500/10 rounded-full text-red-500 shrink-0 mt-1">
-              <AlertCircle size={24} strokeWidth={2} />
+          <div className="admin-modal-body flex flex-col gap-6">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-red-500/10 rounded-full text-red-500 shrink-0 mt-1">
+                <AlertCircle size={24} strokeWidth={2} />
+              </div>
+              <div className="flex flex-col gap-2 min-w-0">
+                <h3 id="delete-event-title" className="text-xl font-semibold text-white">Delete Event</h3>
+                <p className="text-gray-400 text-sm leading-relaxed [overflow-wrap:anywhere]">
+                  Are you sure you want to delete <span className="font-semibold text-white">{deletingEvent?.title}</span>? This action cannot be undone and will permanently remove the event from the database.
+                </p>
+              </div>
             </div>
-            <div className="flex flex-col gap-2">
-              <h3 className="text-xl font-semibold text-white">Delete Event</h3>
-              <p className="text-gray-400 text-sm leading-relaxed">
-                Are you sure you want to delete <span className="font-semibold text-white">{deletingEvent?.title}</span>? This action cannot be undone and will permanently remove the event from the database.
-              </p>
-            </div>
+
+            {deletingRegistrations > 0 && (
+              <div className="bg-red-500/10 border border-red-500/50 p-4 rounded-lg flex items-center gap-3 text-red-500">
+                <AlertCircle size={20} className="shrink-0" />
+                <p className="text-sm">
+                  This event has {deletingRegistrations} registration{deletingRegistrations === 1 ? '' : 's'}. Deleting it also erases those registrations, their runners, and any uploaded race results.
+                </p>
+              </div>
+            )}
           </div>
 
-          {deletingEvent?._count?.registrations > 0 && (
-            <div className="bg-red-500/10 border border-red-500/50 p-4 rounded-lg flex items-center gap-3 text-red-500">
-              <AlertCircle size={20} className="shrink-0" />
-              <p className="text-sm">
-                This event has {deletingEvent._count.registrations} registration{deletingEvent._count.registrations === 1 ? '' : 's'}. Deleting it also erases those registrations, their runners, and any uploaded race results.
-              </p>
-            </div>
-          )}
-          
-          <div className="flex justify-end gap-3 pt-2 border-t border-white/5">
+          <div className="admin-modal-footer flex justify-end gap-3 pt-2 border-t border-white/5">
             <button 
               type="button" 
               onClick={closeDeleteModal} 

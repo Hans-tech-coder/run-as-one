@@ -895,6 +895,123 @@
   max-width: calc(100vw - 32px);
 }
 
+/* A card list standing on the page itself (the Events and Team lists) rather
+   than inside a panel: the panel's inset is what the list's own padding stood
+   in for, so without a panel it would only push the cards off the toolbar's
+   and pager's edge. */
+.admin-card-list.is-flush {
+  padding: 0;
+}
+
+/* A row menu's trigger, moved from a table cell into a card's footer. The
+   table's 28px button is fine under a mouse and too small under a thumb. */
+.admin-card-actions .action-dropdown-btn {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* ── Sliding tabs (team/RolePicker.tsx) ──────────────────────────────────
+   transitions.dev's tabs sliding (16), on the dark tokens. The pill is the
+   quiet white-on-glass of the admin's selected states, not the light fill of
+   .btn-light: this marks which role is being read, it is not an action. */
+.t-tabs {
+  --tabs-dur: var(--duration-fast);
+  --tabs-ease: var(--ease-smooth-out);
+  --tabs-text-muted: rgba(255, 255, 255, 0.6);
+  --tabs-text-active: #ffffff;
+  --tabs-bar-bg: rgba(0, 0, 0, 0.3);
+  --tabs-pill-bg: rgba(255, 255, 255, 0.1);
+}
+
+.t-tabs {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px;
+  border-radius: 48px;
+  background: var(--tabs-bar-bg);
+}
+.t-tab {
+  position: relative;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  height: 30px;
+  padding: 4px 12px;
+  color: var(--tabs-text-muted);
+  cursor: pointer;
+  border-radius: 48px;
+  z-index: 1;
+  transition: color var(--tabs-dur) var(--tabs-ease);
+}
+.t-tab:not([aria-selected="true"]):hover,
+.t-tab[aria-selected="true"] {
+  color: var(--tabs-text-active);
+}
+
+.t-tabs-pill {
+  position: absolute;
+  top: 3px;
+  left: 0;
+  height: 30px;
+  width: 0;
+  background: var(--tabs-pill-bg);
+  border-radius: 48px;
+  transform: translateX(0);
+  transition:
+    transform var(--tabs-dur) var(--tabs-ease),
+    width     var(--tabs-dur) var(--tabs-ease);
+  will-change: transform, width;
+  z-index: 0;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-tabs-pill, .t-tab { transition: none !important; }
+}
+
+/* The role picker's six roles wrap onto more than one line on a phone, so the
+   bar is a grid and the pill travels in both axes: RolePicker writes its
+   translate from the tab's offsetLeft and offsetTop (which already include the
+   bar's padding, hence top: 0) and takes its height as well as its width. */
+.role-tabs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr));
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-lg);
+}
+
+.role-tabs .t-tab {
+  height: auto;
+  min-height: 44px;
+  padding: 8px 10px;
+  border-radius: calc(var(--radius-lg) - 4px);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.role-tabs .t-tab:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 1px;
+}
+
+.role-tabs .t-tabs-pill {
+  top: 0;
+  height: 0;
+  border-radius: calc(var(--radius-lg) - 4px);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  transition:
+    transform var(--tabs-dur) var(--tabs-ease),
+    width     var(--tabs-dur) var(--tabs-ease),
+    height    var(--tabs-dur) var(--tabs-ease);
+  will-change: transform, width, height;
+}
+
 /* Form Styles */
 .form-group {
   display: flex;
@@ -1334,15 +1451,27 @@ textarea.form-input {
    content aside would leave it a sliver. The desktop's collapsed cookie means
    nothing here: `.is-collapsed` is ignored, and `.is-open` alone decides. */
 @media (width < 48rem) {
+  /* At rest the rail keeps the desktop's z-index 50, so a page's own modal
+     (a fixed z-50 overlay later in the DOM) covers it, as it covers the
+     desktop sidebar. It rose to 70 at rest once, and every modal on a phone
+     opened with the rail drawn over its left edge. Only the opened menu
+     climbs above its backdrop. On the way down, the drop waits for the width
+     to finish, so the closing menu is never dimmed by its own fading backdrop. */
   .admin-sidebar {
-    z-index: 70;
+    z-index: 50;
     width: 56px;
     padding-top: env(safe-area-inset-top);
-    transition: width var(--resize-dur) var(--resize-ease);
+    transition:
+      width   var(--resize-dur) var(--resize-ease),
+      z-index 0s linear var(--resize-dur);
   }
 
   /* Over a dimmed page the sidebar's usual 60% glass reads as mud. */
   .admin-sidebar.is-open {
+    z-index: 70;
+    transition:
+      width   var(--resize-dur) var(--resize-ease),
+      z-index 0s;
     width: min(256px, 85vw);
     background: rgba(10, 10, 12, 0.97);
     box-shadow: 24px 0 48px rgba(0, 0, 0, 0.5);
@@ -1723,6 +1852,14 @@ textarea.form-input {
 
   .toolbar-popover :is(button, a, label, [role="option"], [role^="menuitem"]) {
     min-height: 44px;
+  }
+
+  /* A panel's 32px inset is a desktop margin. Beside a 56px menu rail on a
+     360px screen it left the Team screen's role picker about 200px, one tab
+     to a row; 16px matches .admin-content's own inset at this width. */
+  .admin-panel-header,
+  .admin-panel-content {
+    padding: var(--space-md);
   }
 
   .modal-overlay {

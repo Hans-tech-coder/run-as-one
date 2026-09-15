@@ -98,6 +98,14 @@ Read `README.md` in this folder first. Batches 1–3 must have landed.
 - At 1440, Marketing, Results and the edit screen's Promotions panel match
   their before-screenshots.
 
+## Noticed during Batch 2
+
+- `PromoActionsMenu` still places itself at `rect.right - 210,
+  rect.bottom + 8`. That throws it off a phone screen's edge, and below the
+  fold for the last card. Move it onto `placeRowMenu` in
+  `admin/row-menu-position.ts`, as `EventActionsMenu` and `TeamActionsMenu`
+  now do.
+
 ## What landed
 
 _Fill in when the batch is done._
