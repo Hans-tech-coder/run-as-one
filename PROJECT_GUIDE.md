@@ -182,6 +182,7 @@ src/
                             #   DashboardShell — the frame both dashboards share,
                             #   dashboard-sidebar.ts — the collapsed-rail cookie,
                             #   AdminCardList — what every table becomes below lg,
+                            #   AdminCardEdit — an inline edit, as a card holds it,
                             #   AdminTablePager / MobileSortMenu — every table's
                             #   pager and its below-lg Sort chip,
                             #   row-menu-position.ts — where a row's menu opens)
@@ -624,7 +625,10 @@ pattern the marketing screen's voucher batches use — carrying the page and the
 browser it came from and a *Reply by email* that opens a `mailto:`. The chips
 filter by triage state and by kind; the order never changes under somebody
 working down the list, which is why the unread ones are **found** rather than
-sorted to the top) · `/superadmin/[...missing]`.
+sorted to the top) · `/superadmin/[...missing]`. **Below `lg` the three lists
+are cards** (`AdminCardList`): the admin fee and the club rename become a
+full-width edit block on the card (`AdminCardEdit`, §9), and a feedback card
+opens its message from a *Read message* button rather than a tap anywhere.
 
 ### API (`src/app/api/**/route.ts`)
 | Route | Methods | Notes |
@@ -918,6 +922,16 @@ These are the user's own standing preferences. Follow them without being asked.
     with `full`, `actions`, `selection`, `leading`, `expanded`, `empty`),
     a server page can render it directly, and it is an auto-fill grid of
     `minmax(min(100%, 20rem), 1fr)`.
+  - **An edit a table does in its cell is `admin/AdminCardEdit` on a card**
+    (the superadmin's admin fee and club rename). It sits in the `expanded`
+    slot under the value it changes, as a labelled full-width 16px box, with
+    Save and Cancel at 44px underneath; Enter saves and Escape cancels. It
+    holds no state: the page's `editingId` and draft feed the cell and the
+    card alike. A form sitting in a toolbar (Add a club) is `.toolbar-form`,
+    which stacks the box and its button at full width below `sm`. An approve
+    chip is `.btn-filter.is-success`, green on hover only, beside
+    `.is-danger` / `.is-pending` / `.is-primary`. Those classes exist because
+    Tailwind colour utilities lose to the unlayered `.btn-filter`.
   - A filter chip's menu is **`.toolbar-popover`**: anchored from `sm` up, a
     bottom sheet with 44px options below it. A modal is
     **`.admin-modal-panel`** with `.admin-modal-body` and
@@ -1463,7 +1477,7 @@ model, or any `/api/admin/**` route's ownership check** — its "Batch 1" notes
 record the calls made in the batch, and the file records which decisions are
 closed (no unified account table, no SSO).
 
-**`MOBILE_RESPONSIVE_PLAN/` is an open queue, with Batches 1 to 4 landed.** Batch 1
+**`MOBILE_RESPONSIVE_PLAN/` is an open queue, with Batches 1 to 5 landed.** Batch 1
 added `DashboardShell` (the frame both dashboards share: one collapsible
 sidebar menu at every width, a rail that opens over the page on a phone), `AdminCardList`, the `.dash-desktop-only` /
 `.dash-mobile-only` switch, and the toolbar, header, metrics, popover and
@@ -1484,8 +1498,13 @@ chip and `.toolbar-popover`s. A voucher batch opens inside its card through a
 "Show N codes" accordion (`.t-acc`). The promotion form, the Redemptions panel
 and the results uploader wear `.admin-modal-panel`, the uploader's column
 mapping is `AdminSelect`, `PromoActionsMenu` is on `placeRowMenu`, and the edit
-screen's Promotions panel stacks on a phone. Only the superadmin tables still
-clip on a phone. **Batch 5 (Superadmin) is next.** Six batches,
+screen's Promotions panel stacks on a phone. **Batch 5 is in too.**
+`/superadmin/organizers`, `/communities` and `/feedback` are cards below `lg`.
+The admin fee and the club rename open as a full-width `AdminCardEdit` block on
+the card, a feedback card opens its message through a "Read message" accordion
+(`.t-acc`), the dashboard's tile icons sit in their `.metric-icon` box, and
+Approve / Suspend / Remove wear the `.is-success` / `.is-danger` chip tones.
+**Batch 6 (forms, sign-in pages and the full sweep) is next.** Six batches,
 one file each, to make `/admin/**` and `/superadmin/**` fully manageable on a
 phone with no horizontal scroll:
 1. the shared shell, menu and card component;

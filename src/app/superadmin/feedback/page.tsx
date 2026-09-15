@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useAlert } from '@/components/ui/AlertProvider';
 import SkeletonSwap, { SkeletonBar } from '@/components/ui/Skeleton';
+import AdminCardList, { AdminCardListSkeleton } from '@/app/admin/AdminCardList';
 import {
   ANONYMOUS_SENDER,
   FEEDBACK_KINDS,
@@ -40,6 +41,12 @@ import {
  * And the only state a message has is read or not read: the chips filter, the
  * order never changes under somebody working down the list, and "Mark
  * Reviewed" is one press away in the row that is already open.
+ *
+ * Below `lg` the same filtered list is cards (AdminCardList). A card shows
+ * three lines of the message and opens through its own "Read message" button
+ * rather than on a tap anywhere, so its Mark Reviewed and Delete can never be
+ * pressed by a thumb that meant to read. Open is `openId`, the one the table's
+ * row reads, so a message stays open across a resize.
  */
 
 interface FeedbackRow {
@@ -176,6 +183,11 @@ export default function FeedbackInboxPage() {
     });
   }, [rows, search, statusFilter, kindFilter]);
 
+  const emptyMessage =
+    rows.length === 0
+      ? 'Nothing yet. The form at /feedback is live — this fills up on its own.'
+      : 'No message matches those filters.';
+
   return (
     <>
       <header className="admin-header">
@@ -225,9 +237,11 @@ export default function FeedbackInboxPage() {
                 className="search-input"
               />
               {search && (
+                // 44px under a thumb, below `sm`; the desktop's small cross
+                // otherwise.
                 <button
                   onClick={() => setSearch('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 border-none bg-transparent text-gray-500 hover:text-gray-300"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center border-none bg-transparent text-gray-500 hover:text-gray-300 max-sm:right-0 max-sm:h-11 max-sm:w-11"
                   aria-label="Clear search"
                 >
                   <X size={14} />
@@ -262,23 +276,29 @@ export default function FeedbackInboxPage() {
 
           {/* The wait is the shape of the answer (§9): placeholder rows at the
               widths the real ones have, cross-faded into the content, rather
-              than a "Loading..." line that jumps height when it is replaced. */}
+              than a "Loading..." line that jumps height when it is replaced.
+              Below `lg` the shape is cards, as the answer will be. */}
           <SkeletonSwap
             loading={isLoading}
             skeleton={
-              <div className="flex flex-col gap-4 p-4">
-                {[0, 1, 2, 3].map(i => (
-                  <div key={i} className="flex items-center gap-4">
-                    <SkeletonBar className="h-4 w-28" />
-                    <SkeletonBar className="h-4 w-32" />
-                    <SkeletonBar className="h-4 flex-1" />
-                    <SkeletonBar className="h-4 w-24" />
-                  </div>
-                ))}
-              </div>
+              <>
+                <div className="dash-desktop-only flex flex-col gap-4 p-4">
+                  {[0, 1, 2, 3].map(i => (
+                    <div key={i} className="flex items-center gap-4">
+                      <SkeletonBar className="h-4 w-28" />
+                      <SkeletonBar className="h-4 w-32" />
+                      <SkeletonBar className="h-4 flex-1" />
+                      <SkeletonBar className="h-4 w-24" />
+                    </div>
+                  ))}
+                </div>
+                <div className="dash-mobile-only">
+                  <AdminCardListSkeleton cards={3} fields={2} />
+                </div>
+              </>
             }
           >
-            <div className="data-table-wrapper">
+            <div className="data-table-wrapper dash-desktop-only">
               <table className="data-table">
                 <thead>
                   <tr>
@@ -294,15 +314,11 @@ export default function FeedbackInboxPage() {
                   {filtered.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="py-12 text-center text-secondary">
-                        {rows.length === 0
-                          ? 'Nothing yet. The form at /feedback is live — this fills up on its own.'
-                          : 'No message matches those filters.'}
+                        {emptyMessage}
                       </td>
                     </tr>
                   ) : (
                     filtered.map(row => {
-                      const kind = asFeedbackKind(row.kind);
-                      const meta = kind ? KIND_META[kind] : null;
                       const isOpen = openId === row.id;
                       const isNew = row.status === 'NEW';
 
@@ -316,14 +332,7 @@ export default function FeedbackInboxPage() {
                               {receivedOn(row.createdAt)}
                             </td>
                             <td className="whitespace-nowrap">
-                              <span
-                                className={`inline-flex items-center gap-1.5 text-sm ${
-                                  meta ? meta.tone : 'text-secondary'
-                                }`}
-                              >
-                                {meta?.icon}
-                                {feedbackKindLabel(row.kind)}
-                              </span>
+                              <FeedbackKindLabel kind={row.kind} />
                             </td>
                             <td className="min-w-[260px] max-w-[420px]">
                               <div className="flex items-start gap-2">
@@ -344,19 +353,10 @@ export default function FeedbackInboxPage() {
                               </div>
                             </td>
                             <td className="whitespace-nowrap">
-                              <span className={row.name ? 'text-primary' : 'text-secondary'}>
-                                {row.name || ANONYMOUS_SENDER}
-                              </span>
-                              {row.email && (
-                                <div className="status-note neutral">{row.email}</div>
-                              )}
+                              <FeedbackSender row={row} />
                             </td>
                             <td>
-                              <span
-                                className={`status-badge ${isNew ? 'pending' : 'success'}`}
-                              >
-                                {isNew ? 'NEW' : 'REVIEWED'}
-                              </span>
+                              <FeedbackStatus isNew={isNew} />
                             </td>
                             {/* Left-aligned, under its own header label — never
                                 pushed to the row's right edge. */}
@@ -388,54 +388,11 @@ export default function FeedbackInboxPage() {
                             <tr>
                               <td colSpan={6} style={{ paddingTop: 0 }}>
                                 <div className="rounded-[12px] border border-white/10 bg-black/30 p-4">
-                                  <p className="m-0 whitespace-pre-wrap text-sm leading-relaxed text-primary">
-                                    {row.message}
-                                  </p>
-
-                                  <dl className="mt-4 grid grid-cols-1 gap-3 border-t border-white/5 pt-4 text-xs sm:grid-cols-2">
-                                    <div>
-                                      <dt className="mb-1 font-bold uppercase tracking-wider text-secondary">
-                                        Page they were on
-                                      </dt>
-                                      <dd className="m-0 break-all font-mono text-white/80">
-                                        {row.pagePath || 'Not recorded'}
-                                      </dd>
-                                    </div>
-                                    <div>
-                                      <dt className="mb-1 font-bold uppercase tracking-wider text-secondary">
-                                        Browser
-                                      </dt>
-                                      <dd className="m-0 break-all text-white/80">
-                                        {row.userAgent || 'Not recorded'}
-                                      </dd>
-                                    </div>
-                                  </dl>
-
-                                  <div className="mt-4 flex flex-wrap gap-2">
-                                    {row.email ? (
-                                      <a
-                                        href={`mailto:${row.email}?subject=${encodeURIComponent(
-                                          'Re: your feedback on Run As One',
-                                        )}`}
-                                        className="btn-filter no-underline"
-                                      >
-                                        <Mail size={16} /> Reply by email
-                                      </a>
-                                    ) : (
-                                      <span className="text-xs text-secondary">
-                                        No address left, so there is nobody to reply to.
-                                      </span>
-                                    )}
-                                    {isNew && (
-                                      <button
-                                        onClick={() => setStatus(row, 'REVIEWED')}
-                                        disabled={isSaving}
-                                        className="btn-filter"
-                                      >
-                                        <CheckCircle size={16} /> Mark reviewed
-                                      </button>
-                                    )}
-                                  </div>
+                                  <MessageDetail
+                                    row={row}
+                                    saving={isSaving}
+                                    onReview={() => setStatus(row, 'REVIEWED')}
+                                  />
                                 </div>
                               </td>
                             </tr>
@@ -447,8 +404,215 @@ export default function FeedbackInboxPage() {
                 </tbody>
               </table>
             </div>
+
+            <div className="dash-mobile-only">
+              <AdminCardList
+                items={filtered}
+                getKey={row => row.id}
+                label="Feedback messages"
+                // Three lines of the words themselves: what a message is about
+                // is the title, and the whole of it opens below.
+                title={row => (
+                  <span
+                    className={`line-clamp-3 ${
+                      row.status === 'NEW' ? '' : 'font-normal text-secondary'
+                    }`}
+                  >
+                    {row.message}
+                  </span>
+                )}
+                badges={row => (
+                  <>
+                    <FeedbackKindLabel kind={row.kind} />
+                    <FeedbackStatus isNew={row.status === 'NEW'} />
+                  </>
+                )}
+                fields={row => [
+                  { label: 'Received', value: receivedOn(row.createdAt) },
+                  { label: 'From', value: <FeedbackSender row={row} />, full: true },
+                ]}
+                expanded={row => {
+                  const isOpen = openId === row.id;
+                  return (
+                    // transitions.dev's accordion (21), as the marketing
+                    // card's voucher list. The message stays mounted so the
+                    // height can animate; `inert` keeps a closed one out of
+                    // the tab order. No `id` or aria-controls: the table
+                    // renders beside these cards.
+                    <div className="t-acc" data-open={isOpen ? 'true' : 'false'}>
+                      <button
+                        type="button"
+                        onClick={() => setOpenId(isOpen ? null : row.id)}
+                        aria-expanded={isOpen}
+                        className="t-acc-head btn-filter w-full justify-between min-h-11"
+                      >
+                        <span>{isOpen ? 'Hide message' : 'Read message'}</span>
+                        <span className="t-acc-chevron" aria-hidden="true">
+                          <svg
+                            viewBox="0 0 16 16"
+                            width="16"
+                            height="16"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M4 6.5L8 10.5L12 6.5" />
+                          </svg>
+                        </span>
+                      </button>
+                      <div className="t-acc-panel" inert={!isOpen}>
+                        <div className="t-acc-panel-inner">
+                          <div className="pt-3">
+                            <MessageDetail
+                              row={row}
+                              saving={isSaving}
+                              onReview={() => setStatus(row, 'REVIEWED')}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }}
+                actions={row => {
+                  const isNew = row.status === 'NEW';
+                  return (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setStatus(row, isNew ? 'REVIEWED' : 'NEW')}
+                        disabled={isSaving}
+                        className="btn-filter"
+                      >
+                        {isNew ? (
+                          <CheckCircle size={16} aria-hidden="true" />
+                        ) : (
+                          <RotateCcw size={16} aria-hidden="true" />
+                        )}
+                        {isNew ? 'Mark Reviewed' : 'Move to New'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => remove(row)}
+                        disabled={isSaving}
+                        className="btn-filter is-danger"
+                      >
+                        <Trash2 size={16} aria-hidden="true" /> Delete
+                      </button>
+                    </>
+                  );
+                }}
+                empty={<div className="py-12 px-4 text-center text-secondary">{emptyMessage}</div>}
+              />
+            </div>
           </SkeletonSwap>
         </div>
+      </div>
+    </>
+  );
+}
+
+/** A kind, in its icon and tone. The table's Type cell and a card's badge. */
+function FeedbackKindLabel({ kind }: { kind: string }) {
+  const known = asFeedbackKind(kind);
+  const meta = known ? KIND_META[known] : null;
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 text-sm ${meta ? meta.tone : 'text-secondary'}`}
+    >
+      {meta?.icon}
+      {feedbackKindLabel(kind)}
+    </span>
+  );
+}
+
+function FeedbackStatus({ isNew }: { isNew: boolean }) {
+  return (
+    <span className={`status-badge ${isNew ? 'pending' : 'success'}`}>
+      {isNew ? 'NEW' : 'REVIEWED'}
+    </span>
+  );
+}
+
+/** The name, or that there was none, and the address under it. A card lets the
+ *  address wrap; the table's cell keeps it on one line. */
+function FeedbackSender({ row }: { row: FeedbackRow }) {
+  return (
+    <>
+      <span className={row.name ? 'text-primary' : 'text-secondary'}>
+        {row.name || ANONYMOUS_SENDER}
+      </span>
+      {row.email && <div className="status-note neutral">{row.email}</div>}
+    </>
+  );
+}
+
+/**
+ * The opened message: every word of it, where the sender was and on what, and
+ * the two things worth doing next. One component for the table's second row
+ * and the card's accordion, so what an open message shows cannot differ by
+ * screen width.
+ */
+function MessageDetail({
+  row,
+  saving,
+  onReview,
+}: {
+  row: FeedbackRow;
+  saving: boolean;
+  onReview: () => void;
+}) {
+  return (
+    <>
+      <p className="m-0 whitespace-pre-wrap text-sm leading-relaxed text-primary [overflow-wrap:anywhere]">
+        {row.message}
+      </p>
+
+      <dl className="mt-4 grid grid-cols-1 gap-3 border-t border-white/5 pt-4 text-xs sm:grid-cols-2">
+        <div className="min-w-0">
+          <dt className="mb-1 font-bold uppercase tracking-wider text-secondary">
+            Page they were on
+          </dt>
+          <dd className="m-0 break-all font-mono text-white/80">
+            {row.pagePath || 'Not recorded'}
+          </dd>
+        </div>
+        <div className="min-w-0">
+          <dt className="mb-1 font-bold uppercase tracking-wider text-secondary">
+            Browser
+          </dt>
+          <dd className="m-0 break-all text-white/80">
+            {row.userAgent || 'Not recorded'}
+          </dd>
+        </div>
+      </dl>
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        {row.email ? (
+          <a
+            href={`mailto:${row.email}?subject=${encodeURIComponent(
+              'Re: your feedback on Run As One',
+            )}`}
+            className="btn-filter no-underline max-lg:min-h-11"
+          >
+            <Mail size={16} /> Reply by email
+          </a>
+        ) : (
+          <span className="text-xs text-secondary">
+            No address left, so there is nobody to reply to.
+          </span>
+        )}
+        {row.status === 'NEW' && (
+          <button
+            onClick={onReview}
+            disabled={saving}
+            className="btn-filter max-lg:min-h-11"
+          >
+            <CheckCircle size={16} /> Mark reviewed
+          </button>
+        )}
       </div>
     </>
   );

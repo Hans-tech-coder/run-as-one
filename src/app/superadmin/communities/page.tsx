@@ -3,6 +3,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Search, Edit, CheckCircle, Trash2, Plus, Clock } from 'lucide-react';
 import { useAlert } from '@/components/ui/AlertProvider';
+import AdminCardList from '@/app/admin/AdminCardList';
+import AdminCardEdit from '@/app/admin/AdminCardEdit';
 
 /**
  * The shared list of running clubs every event's registration form suggests.
@@ -29,6 +31,7 @@ export default function CommunitiesManagementPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
+  // One rename draft for both layouts, so it survives a resize across `lg`.
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [newName, setNewName] = useState('');
@@ -92,6 +95,11 @@ export default function CommunitiesManagementPage() {
     });
     if (!confirmed) return;
     await send(`/api/superadmin/communities/${c.id}`, { method: 'DELETE' });
+  };
+
+  const startRename = (c: Community) => {
+    setEditingId(c.id);
+    setEditName(c.name);
   };
 
   const saveName = async (c: Community) => {
@@ -164,7 +172,8 @@ export default function CommunitiesManagementPage() {
                 className="search-input"
               />
             </div>
-            <form onSubmit={addCommunity} className="toolbar-actions flex gap-2">
+            {/* .toolbar-form: below `sm` the box and Add stack at full width. */}
+            <form onSubmit={addCommunity} className="toolbar-actions toolbar-form flex gap-2">
               <input
                 type="text"
                 placeholder="Add a club..."
@@ -179,7 +188,7 @@ export default function CommunitiesManagementPage() {
             </form>
           </div>
 
-          <div className="data-table-wrapper">
+          <div className="data-table-wrapper dash-desktop-only">
             <table className="data-table">
               <thead>
                 <tr>
@@ -235,45 +244,17 @@ export default function CommunitiesManagementPage() {
                       </td>
                       <td>{c.runnerCount}</td>
                       <td>
-                        <span
-                          className={`status-badge ${c.status === 'APPROVED' ? 'success' : 'pending'}`}
-                        >
-                          {c.status}
-                        </span>
+                        <ClubStatus status={c.status} />
                       </td>
                       <td className="text-right">
                         <div className="flex justify-end gap-2">
-                          {c.status !== 'APPROVED' && (
-                            <button
-                              onClick={() => approve(c)}
-                              disabled={isSaving}
-                              className="btn-filter hover:text-green-500"
-                              title="Approve club"
-                              style={{ padding: '0 10px' }}
-                            >
-                              <CheckCircle size={16} />
-                            </button>
-                          )}
-                          <button
-                            onClick={() => {
-                              setEditingId(c.id);
-                              setEditName(c.name);
-                            }}
-                            className="btn-filter"
-                            title="Rename club"
-                            style={{ padding: '0 10px' }}
-                          >
-                            <Edit size={16} />
-                          </button>
-                          <button
-                            onClick={() => reject(c)}
-                            disabled={isSaving}
-                            className="btn-filter hover:text-red-500"
-                            title="Remove from list"
-                            style={{ padding: '0 10px', color: '#ff4d4f' }}
-                          >
-                            <Trash2 size={16} />
-                          </button>
+                          <ClubActions
+                            club={c}
+                            saving={isSaving}
+                            onApprove={approve}
+                            onRename={startRename}
+                            onRemove={reject}
+                          />
                         </div>
                       </td>
                     </tr>
@@ -282,8 +263,128 @@ export default function CommunitiesManagementPage() {
               </tbody>
             </table>
           </div>
+
+          {/* The same filtered list as the table, below `lg` (AdminCardList).
+              A rename opens under the runner count as a full-width edit block,
+              the club's current name still in the title above it. */}
+          <div className="dash-mobile-only">
+            <AdminCardList
+              items={isLoading ? [] : filtered}
+              getKey={c => c.id}
+              label="Running clubs"
+              title={c => c.name}
+              badges={c => <ClubStatus status={c.status} />}
+              fields={c => [{ label: 'Runners', value: c.runnerCount }]}
+              expanded={c =>
+                editingId === c.id && (
+                  <AdminCardEdit
+                    label="New name"
+                    // A sample, so uppercase — the way a club reads on a
+                    // runner's registration.
+                    placeholder="TEAM ARMY"
+                    value={editName}
+                    onChange={setEditName}
+                    onSave={() => saveName(c)}
+                    onCancel={() => setEditingId(null)}
+                    saving={isSaving}
+                  />
+                )
+              }
+              actions={c => (
+                <ClubActions
+                  club={c}
+                  saving={isSaving}
+                  renaming={editingId === c.id}
+                  onApprove={approve}
+                  onRename={startRename}
+                  onRemove={reject}
+                  labelled
+                />
+              )}
+              empty={
+                <div className="py-12 px-4 text-center text-secondary">
+                  {isLoading ? 'Loading clubs...' : 'No clubs found.'}
+                </div>
+              }
+            />
+          </div>
         </div>
       </div>
+    </>
+  );
+}
+
+/** One badge for the table's cell and the card. */
+function ClubStatus({ status }: { status: string }) {
+  return (
+    <span className={`status-badge ${status === 'APPROVED' ? 'success' : 'pending'}`}>
+      {status}
+    </span>
+  );
+}
+
+/**
+ * Approve, Rename and Remove. The table keeps its icon-only chips, named by
+ * their titles; a card spells them out, since a phone has no hover. Remove
+ * still asks first — `reject` holds the AlertProvider confirm for both.
+ */
+function ClubActions({
+  club,
+  saving,
+  renaming = false,
+  onApprove,
+  onRename,
+  onRemove,
+  labelled = false,
+}: {
+  club: Community;
+  saving: boolean;
+  /** A card hides Rename while its own edit block is open. */
+  renaming?: boolean;
+  onApprove: (c: Community) => void;
+  onRename: (c: Community) => void;
+  onRemove: (c: Community) => void;
+  labelled?: boolean;
+}) {
+  const iconOnly = labelled ? undefined : { padding: '0 10px' };
+  return (
+    <>
+      {club.status !== 'APPROVED' && (
+        <button
+          type="button"
+          onClick={() => onApprove(club)}
+          disabled={saving}
+          className="btn-filter is-success"
+          title={labelled ? undefined : 'Approve club'}
+          style={iconOnly}
+        >
+          <CheckCircle size={16} aria-hidden={labelled || undefined} />
+          {labelled && 'Approve'}
+        </button>
+      )}
+      {!renaming && (
+        <button
+          type="button"
+          onClick={() => onRename(club)}
+          className="btn-filter"
+          title={labelled ? undefined : 'Rename club'}
+          style={iconOnly}
+        >
+          <Edit size={16} aria-hidden={labelled || undefined} />
+          {labelled && 'Rename'}
+        </button>
+      )}
+      <button
+        type="button"
+        onClick={() => onRemove(club)}
+        disabled={saving}
+        className="btn-filter is-danger"
+        title={labelled ? undefined : 'Remove from list'}
+        style={iconOnly}
+      >
+        <Trash2 size={16} aria-hidden={labelled || undefined} />
+        {labelled && 'Remove'}
+      </button>
     </>
   );
 }

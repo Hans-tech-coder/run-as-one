@@ -31,11 +31,14 @@ export default async function SuperAdminDashboard() {
       </header>
 
       <div className="admin-content">
+        {/* The icon sits in a .metric-icon box, as on /admin. The class used to
+            be on the <svg> itself, where the box's 8px padding shrank the
+            drawing inside its own 20px. */}
         <div className="metrics-grid">
           <div className="metric-card">
             <div className="metric-header">
               <span className="metric-title">Total Organizers</span>
-              <Users size={20} className="metric-icon" />
+              <div className="metric-icon"><Users size={20} /></div>
             </div>
             <div className="metric-value">{totalOrganizers}</div>
           </div>
@@ -43,7 +46,9 @@ export default async function SuperAdminDashboard() {
           <div className="metric-card">
             <div className="metric-header">
               <span className="metric-title">Platform Revenue (Admin Fees)</span>
-              <DollarSign size={20} className="metric-icon" style={{ color: 'var(--accent-orange)' }} />
+              <div className="metric-icon" style={{ color: 'var(--accent-orange)' }}>
+                <DollarSign size={20} />
+              </div>
             </div>
             <div className="metric-value" style={{ color: 'var(--accent-orange)' }}>
               ₱{formatPesos(totalPlatformFees)}
@@ -53,7 +58,7 @@ export default async function SuperAdminDashboard() {
           <div className="metric-card">
             <div className="metric-header">
               <span className="metric-title">Total Transaction Volume</span>
-              <Activity size={20} className="metric-icon" />
+              <div className="metric-icon"><Activity size={20} /></div>
             </div>
             <div className="metric-value">₱{formatPesos(totalRevenue)}</div>
           </div>
@@ -61,7 +66,7 @@ export default async function SuperAdminDashboard() {
           <div className="metric-card">
             <div className="metric-header">
               <span className="metric-title">Total Registrations</span>
-              <FileSpreadsheet size={20} className="metric-icon" />
+              <div className="metric-icon"><FileSpreadsheet size={20} /></div>
             </div>
             <div className="metric-value">{totalRegistrations}</div>
           </div>

@@ -869,6 +869,72 @@
   min-height: 44px;
 }
 
+/* An inline edit on a card (AdminCardEdit.tsx): the super admin's admin fee
+   and club rename. The label reads like a field's <dt>; the box is 16px so iOS
+   does not zoom; Save and Cancel split the width at 44px. The field resets
+   the label's uppercase, because what is typed is stored as typed. */
+.admin-card-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.admin-card-edit-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.admin-card-edit-box {
+  position: relative;
+  display: block;
+  min-width: 0;
+}
+
+.admin-card-edit-prefix {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1rem;
+  font-weight: 400;
+  pointer-events: none;
+}
+
+/* Scoped under .admin-card-edit so it outranks .form-input, which comes later
+   in this file and would otherwise put its 16px padding back (a 58px box). */
+.admin-card-edit .admin-card-edit-input {
+  min-height: 44px;
+  padding: 8px 12px;
+  font-size: 16px;
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.admin-card-edit .admin-card-edit-input.has-prefix {
+  padding-left: 28px;
+}
+
+.admin-card-edit-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.admin-card-edit-actions > .btn-filter {
+  height: auto;
+  min-height: 44px;
+  justify-content: center;
+}
+
 /* ── Modal frame (.admin-modal-panel) ────────────────────────────────────
    Adopted screen by screen from Batch 3 on. A panel never grows past the
    viewport: its body scrolls and its footer stays in reach. dvh rather than vh
@@ -960,6 +1026,15 @@
 
 .btn-filter.is-primary {
   color: color-mix(in srgb, var(--accent-blue) 70%, #fff);
+}
+
+/* Approve (the superadmin's organizers and clubs). Green only under the
+   pointer, the badge's own #52c41a: at rest an approve is a question, not a
+   status, and it sits beside a red that already is one. This is the hover
+   the old `hover:text-green-500` utility asked for and never drew. */
+.btn-filter.is-success:hover {
+  color: #52c41a;
+  background: rgba(82, 196, 26, 0.1);
 }
 
 /* ── The registrants bulk bar (RegistrantsTable.tsx) ─────────────────────
@@ -1988,6 +2063,24 @@ textarea.form-input {
 
   .admin-toolbar .btn-light {
     flex: 1 1 100%;
+  }
+
+  /* A form in a toolbar (the club list's "Add a club"): the box and its button
+     each take the full width, one above the other, instead of a squeezed box
+     beside a chip. */
+  .admin-toolbar > .toolbar-form {
+    flex: 1 1 100%;
+    flex-direction: column;
+  }
+
+  .admin-toolbar > .toolbar-form > * {
+    width: 100%;
+  }
+
+  .admin-toolbar > .toolbar-form > .btn-filter {
+    height: auto;
+    min-height: 44px;
+    justify-content: center;
   }
 
   /* A chip's menu becomes a sheet along the bottom edge, where the thumb

@@ -97,6 +97,19 @@ closes the plan: it fixes what is left and then proves every route in scope.
   The sweep should check it at 360 beside the admin 404, and decide whether it
   should wear `AdminNotFound`.
 
+## Noticed during Batch 5
+
+- **Communities toolbar at 1440.** The Add-a-club `<form>` is
+  `.toolbar-actions`, which wraps, and its `.form-input` is `width: 100%`.
+  The box fills the form's row, so **Add drops under it** on the desktop too.
+  This predates Batch 5, which only styles the form below `sm`
+  (`.toolbar-form`). Check it in the sweep. Keeping the box and Add on one row
+  from `sm` up is a desktop change, so it is the owner's call.
+- **Organizers' Filter chip does nothing.** `superadmin/organizers/page.tsx`
+  renders a Filter button with no handler and no menu, at every width. A dead
+  control goes against §8's no-dead-links rule. Either give it a status filter
+  (the chips the feedback inbox uses) or remove it; ask the owner which.
+
 ## Acceptance
 
 - Every route in scope passes the overflow check at 360, 390, 767 and 820.
