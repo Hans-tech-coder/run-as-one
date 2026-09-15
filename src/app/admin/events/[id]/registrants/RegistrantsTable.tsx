@@ -1,14 +1,18 @@
 "use client";
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { 
+import {
   Search, Filter, Download, Eye, X, Trash2,
-  ChevronLeft, ChevronRight, ChevronFirst, ChevronLast, Columns, ChevronUp, ChevronDown, CheckCircle, Check,
+  Columns, ChevronUp, ChevronDown, CheckCircle, Check,
   MessageSquare, MessageSquareText, Mail, MailWarning, Copy, ExternalLink, Maximize2, FileText,
   Hourglass
 } from 'lucide-react';
 import RegistrantActionsMenu from './RegistrantActionsMenu';
 import ProofLightbox from './ProofLightbox';
+import AdminCardList from '../../../AdminCardList';
+import AdminTablePager from '../../../AdminTablePager';
+import MobileSortMenu from '../../../MobileSortMenu';
+import AdminSelect from '../../../AdminSelect';
 import { useAlert } from '@/components/ui/AlertProvider';
 import {
   Table,
@@ -48,6 +52,9 @@ interface RegistrantsTableProps {
   initialSearch?: string;
 }
 
+/** One row as page.tsx builds it; named so the render helpers below can say so. */
+type RegistrantRow = RegistrantsTableProps['runners'][number];
+
 /**
  * The badge tone a payment status wears.
  *
@@ -85,6 +92,68 @@ function statusPillClass(status: string): string {
  */
 function needsValidation(runner: { status: string; isBankTransfer: boolean }): boolean {
   return runner.status === 'PENDING' && runner.isBankTransfer;
+}
+
+const GENDER_OPTIONS = [
+  { value: 'MALE', label: 'MALE' },
+  { value: 'FEMALE', label: 'FEMALE' },
+] as const;
+
+/**
+ * The email preview's own small stylesheet, added to the copy shown in the
+ * iframe and never to what is copied or sent. A long link in the email is one
+ * unbroken word, and inside a phone-width preview it pushed the document wider
+ * than its frame.
+ */
+const EMAIL_PREVIEW_STYLE =
+  '<style>body{overflow-wrap:anywhere;word-break:break-word}a{word-break:break-all}img{max-width:100%;height:auto}</style>';
+
+/** Into the head, so the email's doctype still leads and standards mode holds. */
+function previewEmailHtml(html: string): string {
+  return html.includes('</head>')
+    ? html.replace('</head>', `${EMAIL_PREVIEW_STYLE}</head>`)
+    : `${html}${EMAIL_PREVIEW_STYLE}`;
+}
+
+/**
+ * One filter's options, as a list of checkboxes. Drawn once and used twice:
+ * in each chip's own menu from `sm` up, and in the Filters sheet below it, so
+ * the two read and write the same column filter.
+ */
+function FilterOptions({
+  options,
+  selected,
+  onToggle,
+  capitalize = true,
+}: {
+  options: string[];
+  selected: string[];
+  onToggle: (value: string) => void;
+  /** Category names are shown as the organizer typed them; the coded lists are capitalized. */
+  capitalize?: boolean;
+}) {
+  return (
+    <>
+      {options.map(option => {
+        const isSelected = selected.includes(option);
+        return (
+          <button
+            key={option}
+            type="button"
+            role="menuitemcheckbox"
+            aria-checked={isSelected}
+            className={`w-full flex items-center gap-2 px-2 py-1.5 hover:bg-white/5 cursor-pointer rounded-md text-sm text-left text-white bg-transparent border-0 ${capitalize ? 'capitalize' : ''} ${isSelected ? 'bg-white/5' : ''}`}
+            onClick={() => onToggle(option)}
+          >
+            <span className={`w-4 h-4 shrink-0 border border-white/10 rounded-sm flex items-center justify-center ${isSelected ? 'bg-white/10' : ''}`}>
+              {isSelected && <span className="w-2 h-2 bg-white rounded-sm" />}
+            </span>
+            <span className="min-w-0 [overflow-wrap:anywhere]">{option}</span>
+          </button>
+        );
+      })}
+    </>
+  );
 }
 
 export default function RegistrantsTable({
@@ -155,32 +224,33 @@ export default function RegistrantsTable({
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
   const [isBulkDeleteClosing, setIsBulkDeleteClosing] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
-  
+
   // Table state
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState(initialSearch);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
   const [isViewOpen, setIsViewOpen] = useState(false);
-  const [isPageSizeOpen, setIsPageSizeOpen] = useState(false);
-  
+
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [isLogisticsOpen, setIsLogisticsOpen] = useState(false);
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
+  // Below `sm` the three filter chips fold into one Filters chip and its sheet.
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
   const viewRef = useRef<HTMLDivElement>(null);
-  const pageSizeRef = useRef<HTMLDivElement>(null);
   const categoryRef = useRef<HTMLDivElement>(null);
   const logisticsRef = useRef<HTMLDivElement>(null);
   const paymentRef = useRef<HTMLDivElement>(null);
+  const filtersRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (viewRef.current && !viewRef.current.contains(event.target as Node)) setIsViewOpen(false);
-      if (pageSizeRef.current && !pageSizeRef.current.contains(event.target as Node)) setIsPageSizeOpen(false);
       if (categoryRef.current && !categoryRef.current.contains(event.target as Node)) setIsCategoryOpen(false);
       if (logisticsRef.current && !logisticsRef.current.contains(event.target as Node)) setIsLogisticsOpen(false);
       if (paymentRef.current && !paymentRef.current.contains(event.target as Node)) setIsPaymentOpen(false);
+      if (filtersRef.current && !filtersRef.current.contains(event.target as Node)) setIsFiltersOpen(false);
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -483,7 +553,7 @@ export default function RegistrantsTable({
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingRunner) return;
-    
+
     setIsSaving(true);
     try {
       const res = await fetch(`/api/admin/runners/${editingRunner.id}`, {
@@ -491,12 +561,12 @@ export default function RegistrantsTable({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editingRunner),
       });
-      
+
       if (res.ok) {
         const updatedRunnerData = await res.json();
         // The API returns the updated runner. We need to merge it carefully
-        setRunners(runners.map(r => r.id === editingRunner.id ? { 
-          ...r, 
+        setRunners(runners.map(r => r.id === editingRunner.id ? {
+          ...r,
           name: `${updatedRunnerData.firstName} ${updatedRunnerData.lastName}`,
           email: updatedRunnerData.email,
           size: updatedRunnerData.singletSize,
@@ -534,13 +604,13 @@ export default function RegistrantsTable({
 
   const handleDeleteConfirm = async () => {
     if (!deletingRunner) return;
-    
+
     setIsDeleting(true);
     try {
       const res = await fetch(`/api/admin/runners/${deletingRunner.id}`, {
         method: 'DELETE',
       });
-      
+
       if (res.ok) {
         setRunners(runners.filter(r => r.id !== deletingRunner.id));
         closeDeleteModal();
@@ -566,9 +636,9 @@ export default function RegistrantsTable({
   const handleBulkDeleteConfirm = async () => {
     const selectedRows = table.getSelectedRowModel().rows;
     if (selectedRows.length === 0) return;
-    
+
     const runnerIds = selectedRows.map(row => row.original.id);
-    
+
     setIsBulkDeleting(true);
     try {
       const res = await fetch('/api/admin/runners/bulk-delete', {
@@ -576,7 +646,7 @@ export default function RegistrantsTable({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ runnerIds })
       });
-      
+
       if (res.ok) {
         setRunners(runners.filter(r => !runnerIds.includes(r.id)));
         setRowSelection({});
@@ -592,7 +662,125 @@ export default function RegistrantsTable({
     }
   };
 
+  /**
+   * The Status cell's badges: the payment status, and under it the one thing
+   * that can be wrong about this row without the payment being wrong — the
+   * email never went out. It sits in the Status cell rather than a column of
+   * its own because it is an exception, and a column that is empty for
+   * ninety-nine rows in a hundred costs width every organizer pays. Drawn once
+   * for the table cell and the card's badge row, so the two cannot disagree.
+   */
+  const renderStatusBadges = (runner: RegistrantRow) => (
+    <>
+      <span
+        className={`status-badge ${statusTone(runner.status)}`}
+        title={runner.status === 'EXPIRED'
+          ? 'This online checkout was never paid, so its slot and any promo code it used were released.'
+          : undefined}
+      >
+        {runner.status}
+      </span>
+      {runner.emailPending && (
+        /* The project's own badge rather than a new one (standing rule
+           §8.2), in the danger tone: an unsent email is a failure, not a
+           waiting state, and amber would put it in the same voice as the
+           PENDING badge directly above it. */
+        <span
+          className="status-badge danger gap-1"
+          title={`The ${runner.emailPendingLabel} email has not gone out.`}
+        >
+          <MailWarning size={12} /> Email Unsent
+        </span>
+      )}
+    </>
+  );
 
+  /**
+   * A row's Remarks and Email buttons and its menu, for the table's Actions
+   * cell and the card's footer. Same conditions and the same accessible names
+   * in both. The table shows icons under the column label (PROJECT_GUIDE §8.6);
+   * a card has no column label to explain an icon, so it adds a visible word,
+   * one the accessible name contains.
+   */
+  const renderRowActions = (runner: RegistrantRow, layout: 'table' | 'card') => {
+    // A different icon, not just a different colour: colour alone is the one
+    // signal a colour-blind organizer cannot read.
+    const remarksIcon = runner.remarks
+      ? <MessageSquareText size={16} aria-hidden="true" />
+      : <MessageSquare size={16} aria-hidden="true" />;
+    const emailIcon = runner.emailPending
+      ? <MailWarning size={16} aria-hidden="true" />
+      : <Mail size={16} aria-hidden="true" />;
+    const remarksLabel = runner.remarks ? 'Edit remarks' : 'Add remarks';
+    const emailLabel = runner.emailPending ? 'Send email by hand' : 'View sent email';
+
+    const menu = (
+      <RegistrantActionsMenu
+        runnerId={runner.id}
+        registrationId={runner.registrationId}
+        label={runner.name}
+        status={runner.status}
+        isBankTransfer={runner.isBankTransfer}
+        updatingId={updatingId}
+        handleStatusChange={handleStatusChange}
+        onView={openViewModal}
+        onEdit={openEditModal}
+        onDelete={openDeleteModal}
+      />
+    );
+
+    if (layout === 'card') {
+      return (
+        <>
+          {/* One word each, so both and the menu share one line beside a
+              360px screen's menu rail. Which email it is rides the icon, the
+              red tone and the card's own Email Unsent badge, as it does in
+              the table; the accessible name says it in full. */}
+          <button
+            type="button"
+            onClick={() => openRemarksModal(runner.id)}
+            className={`btn-filter is-compact ${runner.remarks ? 'is-primary' : ''}`}
+            aria-label={remarksLabel}
+          >
+            {remarksIcon} Remarks
+          </button>
+          <button
+            type="button"
+            onClick={() => openEmailModal(runner.id)}
+            className={`btn-filter is-compact ${runner.emailPending ? 'is-danger' : ''}`}
+            aria-label={emailLabel}
+          >
+            {emailIcon} Email
+          </button>
+          <div className="action-dropdown-container flex ml-auto">{menu}</div>
+        </>
+      );
+    }
+
+    return (
+      <div className="action-dropdown-container flex items-center gap-1">
+        <button
+          onClick={() => openRemarksModal(runner.id)}
+          className={`icon-btn ${runner.remarks ? 'primary' : ''}`}
+          title={runner.remarks ? 'Remarks on file' : 'Add remarks'}
+          aria-label={remarksLabel}
+        >
+          {remarksIcon}
+        </button>
+        <button
+          onClick={() => openEmailModal(runner.id)}
+          className={`icon-btn ${runner.emailPending ? 'danger' : ''}`}
+          title={runner.emailPending
+            ? `Send the ${runner.emailPendingLabel} email by hand`
+            : 'View the email this runner was sent'}
+          aria-label={emailLabel}
+        >
+          {emailIcon}
+        </button>
+        {menu}
+      </div>
+    );
+  };
 
   const columns = useMemo<ColumnDef<any>[]>(() => [
     {
@@ -661,7 +849,7 @@ export default function RegistrantsTable({
       cell: ({ row }) => (
         <div className="flex items-center gap-2 text-secondary">
           {row.original.runnerRef}
-          <button 
+          <button
             onClick={() => setViewingRunner(row.original)}
             className="icon-btn"
             title="View Details"
@@ -721,33 +909,9 @@ export default function RegistrantsTable({
     {
       accessorKey: "status",
       header: "Status",
-      // The payment status, and under it the one thing that can be wrong about
-      // this row without the payment being wrong: the email never went out.
-      // It sits here rather than in a column of its own because it is an
-      // exception — most rows have nothing to say — and a column that is empty
-      // for ninety-nine rows in a hundred costs width every organizer pays.
       cell: ({ row }) => (
         <div className="flex flex-col items-start gap-1.5">
-          <span
-            className={`status-badge ${statusTone(row.original.status)}`}
-            title={row.original.status === 'EXPIRED'
-              ? 'This online checkout was never paid, so its slot and any promo code it used were released.'
-              : undefined}
-          >
-            {row.original.status}
-          </span>
-          {row.original.emailPending && (
-            /* The project's own badge rather than a new one (standing rule
-               §8.2), in the danger tone: an unsent email is a failure, not a
-               waiting state, and amber would put it in the same voice as the
-               PENDING badge directly above it. */
-            <span
-              className="status-badge danger gap-1"
-              title={`The ${row.original.emailPendingLabel} email has not gone out.`}
-            >
-              <MailWarning size={12} /> Email Unsent
-            </span>
-          )}
+          {renderStatusBadges(row.original)}
         </div>
       ),
     },
@@ -756,46 +920,13 @@ export default function RegistrantsTable({
       header: "Actions",
       // Both controls sit at the start of the cell, under the column label,
       // rather than pushed to the row's right edge (PROJECT_GUIDE §8.6).
-      cell: ({ row }) => (
-        <div className="action-dropdown-container flex items-center gap-1">
-          <button
-            onClick={() => openRemarksModal(row.original.id)}
-            className={`icon-btn ${row.original.remarks ? 'primary' : ''}`}
-            title={row.original.remarks ? 'Remarks on file' : 'Add remarks'}
-            aria-label={row.original.remarks ? 'Edit remarks' : 'Add remarks'}
-          >
-            {/* A different icon, not just a different colour: colour alone is
-                the one signal a colour-blind organizer cannot read. */}
-            {row.original.remarks ? <MessageSquareText size={16} /> : <MessageSquare size={16} />}
-          </button>
-          <button
-            onClick={() => openEmailModal(row.original.id)}
-            className={`icon-btn ${row.original.emailPending ? 'danger' : ''}`}
-            title={row.original.emailPending
-              ? `Send the ${row.original.emailPendingLabel} email by hand`
-              : 'View the email this runner was sent'}
-            aria-label={row.original.emailPending ? 'Send email by hand' : 'View sent email'}
-          >
-            {/* A different icon, not just a different colour — colour alone is
-                the one signal a colour-blind organizer cannot read. */}
-            {row.original.emailPending ? <MailWarning size={16} /> : <Mail size={16} />}
-          </button>
-          <RegistrantActionsMenu 
-            runnerId={row.original.id}
-            registrationId={row.original.registrationId}
-            status={row.original.status}
-            isBankTransfer={row.original.isBankTransfer}
-            updatingId={updatingId}
-            handleStatusChange={handleStatusChange}
-            onView={openViewModal}
-            onEdit={openEditModal}
-            onDelete={openDeleteModal}
-          />
-        </div>
-      ),
+      cell: ({ row }) => renderRowActions(row.original, 'table'),
       enableSorting: false,
       enableHiding: false,
     },
+    // The render helpers above are rebuilt every render; updatingId and
+    // runners are what they read that changes what a cell shows.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   ], [updatingId, runners]);
 
   /**
@@ -840,6 +971,16 @@ export default function RegistrantsTable({
     getPaginationRowModel: getPaginationRowModel(),
   });
 
+  const selectedCount = table.getSelectedRowModel().rows.length;
+
+  // What the bulk bar last counted, so a bar on its way out still reads
+  // "3 selected" while it fades rather than dropping to 0. Adjusted during
+  // render, which is React's own pattern for state that follows a value.
+  const [bulkBarCount, setBulkBarCount] = useState(0);
+  if (selectedCount > 0 && selectedCount !== bulkBarCount) {
+    setBulkBarCount(selectedCount);
+  }
+
   const uniqueCategories = useMemo(() => {
     const cats = new Set(runners.map(r => r.category).filter(Boolean));
     return Array.from(cats).sort();
@@ -880,6 +1021,20 @@ export default function RegistrantsTable({
     table.getColumn('paymentMethod')?.setFilterValue(newSelected.length ? newSelected : undefined);
   };
 
+  // The Filters chip below `sm`: the three lists in one sheet, and a count of
+  // every value chosen across them, as each chip counts its own.
+  const activeFilterCount = selectedCategories.length + selectedLogistics.length + selectedPayment.length;
+  const filterGroups = [
+    { label: 'Category', options: uniqueCategories, selected: selectedCategories, toggle: toggleCategory, capitalize: false },
+    { label: 'Logistics', options: uniqueLogistics, selected: selectedLogistics, toggle: toggleLogistics, capitalize: true },
+    { label: 'Payment', options: uniquePayment, selected: selectedPayment, toggle: togglePayment, capitalize: true },
+  ];
+  const clearFilters = () => {
+    for (const id of ['category', 'logisticsMethod', 'paymentMethod']) {
+      table.getColumn(id)?.setFilterValue(undefined);
+    }
+  };
+
   /**
    * The registrants export, written to survive Excel.
    *
@@ -911,11 +1066,11 @@ export default function RegistrantsTable({
 
   const handleExportCSV = () => {
     const headers = [
-      'Runner Ref', 'Order Ref', 'First Name', 'Last Name', 'Email', 'Phone', 'Gender', 'Birthdate', 
-      'Category', 'Distance', 'Shirt Size', 'Emergency Contact', 'Emergency Phone', 
+      'Runner Ref', 'Order Ref', 'First Name', 'Last Name', 'Email', 'Phone', 'Gender', 'Birthdate',
+      'Category', 'Distance', 'Shirt Size', 'Emergency Contact', 'Emergency Phone',
       'Running Community', 'Medical Conditions', 'Logistics Method', 'Delivery Area', 'Delivery Address', 'Payment Method', 'Promo Code', 'Order Discount', 'Order Total', 'Status'
     ];
-    
+
     // Use selected rows if any, otherwise fallback to all filtered rows
     const selectedRows = table.getSelectedRowModel().rows;
     const rowsToExport = selectedRows.length > 0 ? selectedRows : table.getFilteredRowModel().rows;
@@ -963,7 +1118,7 @@ export default function RegistrantsTable({
         csvField(runner.status),
       ].join(',');
     });
-    
+
     const csvContent = [headers.map(csvField).join(','), ...csvRows].join('\r\n');
     // U+FEFF, the byte order mark, spelled out rather than pasted in as the
     // invisible character it is. It has to be the very first thing in the file
@@ -971,7 +1126,7 @@ export default function RegistrantsTable({
     const BOM = String.fromCharCode(0xfeff);
     const blob = new Blob([BOM, csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
-    
+
     const link = document.createElement('a');
     link.href = url;
     link.setAttribute('download', `registrants_event_${eventId}.csv`);
@@ -1000,105 +1155,122 @@ export default function RegistrantsTable({
               placeholder="Search runners..."
             />
             {globalFilter && (
-              <button 
+              <button
+                type="button"
                 onClick={() => setGlobalFilter('')}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-300 bg-transparent border-none cursor-pointer"
+                aria-label="Clear search"
+                className="absolute right-1 max-sm:right-0 top-1/2 -translate-y-1/2 flex items-center justify-center w-8 h-8 max-sm:w-11 max-sm:h-11 text-gray-500 hover:text-gray-300 bg-transparent border-none cursor-pointer"
               >
                 <X size={14} />
               </button>
             )}
           </div>
 
-          {/* Category Filter */}
-          <div ref={categoryRef} className="relative view-dropdown-container">
-            <button 
+          {/*
+            The Filters chip, below `sm` only. The three filter chips beside it
+            do not fit a phone's toolbar beside the work-queue chips, so they
+            fold into this one and its sheet holds all three lists. Grouping,
+            not new behaviour: each list reads and writes the very column
+            filter its own chip does, so a filter chosen here is still on when
+            the screen widens.
+          */}
+          <div ref={filtersRef} className="relative view-dropdown-container sm:hidden">
+            <button
+              type="button"
+              onClick={() => setIsFiltersOpen(!isFiltersOpen)}
+              className="btn-filter"
+              aria-haspopup="true"
+              aria-expanded={isFiltersOpen}
+            >
+              <Filter size={16} aria-hidden="true" /> Filters
+              {activeFilterCount > 0 && <span className="ml-1 px-1 bg-white/10 rounded">{activeFilterCount}</span>}
+            </button>
+            {isFiltersOpen && (
+              <div
+                role="group"
+                aria-label="Filter the list"
+                className="toolbar-popover absolute left-0 mt-2 w-72 bg-[#050505] border border-white/10 rounded-md p-2 z-50 shadow-2xl"
+              >
+                {filterGroups.map(group => group.options.length > 0 && (
+                  <div key={group.label} role="menu" aria-label={group.label} className="pb-1">
+                    <p className="m-0 px-2 pt-1 pb-1 text-xs font-semibold uppercase tracking-wider text-secondary">
+                      {group.label}
+                    </p>
+                    <FilterOptions
+                      options={group.options}
+                      selected={group.selected}
+                      onToggle={group.toggle}
+                      capitalize={group.capitalize}
+                    />
+                  </div>
+                ))}
+                {activeFilterCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="mt-1 w-full flex items-center px-2 py-1.5 rounded-md text-sm text-gray-400 bg-transparent border-0 border-t border-white/5 hover:bg-white/5 hover:text-white transition-colors cursor-pointer"
+                  >
+                    Clear filters
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Category Filter — from `sm` up; the Filters sheet holds it below. */}
+          <div ref={categoryRef} className="relative view-dropdown-container max-sm:hidden">
+            <button
               onClick={() => setIsCategoryOpen(!isCategoryOpen)}
               className="btn-filter"
+              aria-haspopup="true"
+              aria-expanded={isCategoryOpen}
             >
               <Filter size={16} /> Category
               {selectedCategories.length > 0 && <span className="ml-1 px-1 bg-white/10 rounded">{selectedCategories.length}</span>}
             </button>
             {isCategoryOpen && (
-              <div className="absolute left-0 mt-2 bg-[#050505] border border-white/10 rounded-md p-2 min-w-[150px] z-50 shadow-2xl">
-                {uniqueCategories.map(cat => {
-                  const isSelected = selectedCategories.includes(cat);
-                  return (
-                    <div 
-                      key={cat}
-                      className={`flex items-center gap-2 px-2 py-1.5 hover:bg-white/5 cursor-pointer rounded-md text-sm text-white ${isSelected ? 'bg-white/5' : ''}`}
-                      onClick={() => toggleCategory(cat)}
-                    >
-                      <div className={`w-4 h-4 border border-white/10 rounded-sm flex items-center justify-center ${isSelected ? 'bg-white/10' : ''}`}>
-                        {isSelected && <div className="w-2 h-2 bg-white rounded-sm" />}
-                      </div>
-                      {cat}
-                    </div>
-                  );
-                })}
+              <div role="menu" aria-label="Category" className="toolbar-popover absolute left-0 mt-2 bg-[#050505] border border-white/10 rounded-md p-2 min-w-[150px] z-50 shadow-2xl">
+                <FilterOptions options={uniqueCategories} selected={selectedCategories} onToggle={toggleCategory} capitalize={false} />
               </div>
             )}
           </div>
 
           {/* Logistics Filter */}
-          <div ref={logisticsRef} className="relative view-dropdown-container">
-            <button 
+          <div ref={logisticsRef} className="relative view-dropdown-container max-sm:hidden">
+            <button
               onClick={() => setIsLogisticsOpen(!isLogisticsOpen)}
               className="btn-filter"
+              aria-haspopup="true"
+              aria-expanded={isLogisticsOpen}
             >
               <Filter size={16} /> Logistics
               {selectedLogistics.length > 0 && <span className="ml-1 px-1 bg-white/10 rounded">{selectedLogistics.length}</span>}
             </button>
             {isLogisticsOpen && (
-              <div className="absolute left-0 mt-2 bg-[#050505] border border-white/10 rounded-md p-2 min-w-[150px] z-50 shadow-2xl">
-                {uniqueLogistics.map(log => {
-                  const isSelected = selectedLogistics.includes(log);
-                  return (
-                    <div 
-                      key={log}
-                      className={`flex items-center gap-2 px-2 py-1.5 hover:bg-white/5 cursor-pointer rounded-md text-sm text-white capitalize ${isSelected ? 'bg-white/5' : ''}`}
-                      onClick={() => toggleLogistics(log)}
-                    >
-                      <div className={`w-4 h-4 border border-white/10 rounded-sm flex items-center justify-center ${isSelected ? 'bg-white/10' : ''}`}>
-                        {isSelected && <div className="w-2 h-2 bg-white rounded-sm" />}
-                      </div>
-                      {log}
-                    </div>
-                  );
-                })}
+              <div role="menu" aria-label="Logistics" className="toolbar-popover absolute left-0 mt-2 bg-[#050505] border border-white/10 rounded-md p-2 min-w-[150px] z-50 shadow-2xl">
+                <FilterOptions options={uniqueLogistics} selected={selectedLogistics} onToggle={toggleLogistics} />
               </div>
             )}
           </div>
 
           {/* Payment Filter */}
-          <div ref={paymentRef} className="relative view-dropdown-container">
-            <button 
+          <div ref={paymentRef} className="relative view-dropdown-container max-sm:hidden">
+            <button
               onClick={() => setIsPaymentOpen(!isPaymentOpen)}
               className="btn-filter"
+              aria-haspopup="true"
+              aria-expanded={isPaymentOpen}
             >
               <Filter size={16} /> Payment
               {selectedPayment.length > 0 && <span className="ml-1 px-1 bg-white/10 rounded">{selectedPayment.length}</span>}
             </button>
             {isPaymentOpen && (
-              <div className="absolute left-0 mt-2 bg-[#050505] border border-white/10 rounded-md p-2 min-w-[150px] z-50 shadow-2xl">
-                {uniquePayment.map(pay => {
-                  const isSelected = selectedPayment.includes(pay);
-                  return (
-                    <div 
-                      key={pay}
-                      className={`flex items-center gap-2 px-2 py-1.5 hover:bg-white/5 cursor-pointer rounded-md text-sm text-white capitalize ${isSelected ? 'bg-white/5' : ''}`}
-                      onClick={() => togglePayment(pay)}
-                    >
-                      <div className={`w-4 h-4 border border-white/10 rounded-sm flex items-center justify-center ${isSelected ? 'bg-white/10' : ''}`}>
-                        {isSelected && <div className="w-2 h-2 bg-white rounded-sm" />}
-                      </div>
-                      {pay}
-                    </div>
-                  );
-                })}
+              <div role="menu" aria-label="Payment" className="toolbar-popover absolute left-0 mt-2 bg-[#050505] border border-white/10 rounded-md p-2 min-w-[150px] z-50 shadow-2xl">
+                <FilterOptions options={uniquePayment} selected={selectedPayment} onToggle={togglePayment} />
               </div>
             )}
           </div>
-          
+
           {/*
             The payment queue, in one click.
 
@@ -1112,7 +1284,8 @@ export default function RegistrantsTable({
           <button
             onClick={() => setShowOnlyNeedsValidation(!showOnlyNeedsValidation)}
             disabled={needsValidationCount === 0 && !showOnlyNeedsValidation}
-            className={`btn-filter ${showOnlyNeedsValidation ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' : ''} disabled:opacity-50 disabled:cursor-not-allowed`}
+            aria-pressed={showOnlyNeedsValidation}
+            className={`btn-filter ${showOnlyNeedsValidation ? 'is-pending' : ''} disabled:opacity-50 disabled:cursor-not-allowed`}
             title={needsValidationCount === 0
               ? 'No bank transfer here is waiting on a payment check'
               : 'Show only the bank transfers waiting for their payment to be checked'}
@@ -1132,7 +1305,8 @@ export default function RegistrantsTable({
           <button
             onClick={() => setShowOnlyUnsentEmail(!showOnlyUnsentEmail)}
             disabled={unsentEmailCount === 0 && !showOnlyUnsentEmail}
-            className={`btn-filter ${showOnlyUnsentEmail ? 'bg-red-500/10 text-red-400 border-red-500/20' : ''} disabled:opacity-50 disabled:cursor-not-allowed`}
+            aria-pressed={showOnlyUnsentEmail}
+            className={`btn-filter ${showOnlyUnsentEmail ? 'is-danger is-active' : ''} disabled:opacity-50 disabled:cursor-not-allowed`}
             title={unsentEmailCount === 0
               ? 'Every registrant here has had their email'
               : 'Show only the registrants whose email never went out'}
@@ -1141,15 +1315,17 @@ export default function RegistrantsTable({
             {unsentEmailCount > 0 && <span className="ml-1 px-1 bg-white/10 rounded">{unsentEmailCount}</span>}
           </button>
 
-          <div ref={viewRef} className="relative view-dropdown-container">
-            <button 
+          {/* Which columns the table shows. Cards have no columns to hide, so
+              below `lg` the chip goes and Sort (which the headers did) comes. */}
+          <div ref={viewRef} className="relative view-dropdown-container dash-desktop-only">
+            <button
               onClick={() => setIsViewOpen(!isViewOpen)}
               className="btn-filter"
             >
               <Columns size={16} /> View
             </button>
             {isViewOpen && (
-              <div className="absolute right-0 mt-2 bg-[#050505] border border-white/10 rounded-md p-2 min-w-[150px] z-50 shadow-2xl">
+              <div className="toolbar-popover absolute right-0 mt-2 bg-[#050505] border border-white/10 rounded-md p-2 min-w-[150px] z-50 shadow-2xl">
                 {table.getAllLeafColumns().filter(col => col.getCanHide()).map(column => {
                   return (
                     <label key={column.id} className="flex items-center gap-2 px-2 py-1.5 hover:bg-white/5 cursor-pointer rounded-md text-sm text-white">
@@ -1169,15 +1345,19 @@ export default function RegistrantsTable({
               </div>
             )}
           </div>
+
+          <MobileSortMenu table={table} />
         </div>
 
         <div className="toolbar-actions flex items-center gap-2">
-          {table.getSelectedRowModel().rows.length > 0 && (
-            <button 
-              onClick={() => setIsBulkDeleteOpen(true)} 
-              className="btn-filter bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20 hover:text-red-400"
+          {/* From `lg` up. Below it the bulk bar at the foot of the screen
+              offers Delete beside Export and Clear. */}
+          {selectedCount > 0 && (
+            <button
+              onClick={() => setIsBulkDeleteOpen(true)}
+              className="btn-filter is-danger is-active dash-desktop-only"
             >
-              <Trash2 size={16} /> Delete Selected ({table.getSelectedRowModel().rows.length})
+              <Trash2 size={16} /> Delete Selected ({selectedCount})
             </button>
           )}
           <button onClick={handleExportCSV} className="btn-light">
@@ -1186,14 +1366,14 @@ export default function RegistrantsTable({
         </div>
       </div>
 
-      {/* Table Area */}
-      <div className="border border-white/10 rounded-lg overflow-hidden bg-transparent">
+      {/* Table Area — from `lg` up; the cards below take its place under it. */}
+      <div className="dash-desktop-only border border-white/10 rounded-lg overflow-hidden bg-transparent">
         <Table>
           <TableHeader className="bg-transparent">
             {table.getHeaderGroups().map(headerGroup => (
               <TableRow key={headerGroup.id} className="border-b border-white/10 hover:bg-transparent">
                 {headerGroup.headers.map(header => (
-                  <TableHead 
+                  <TableHead
                     key={header.id}
                     onClick={header.column.getToggleSortingHandler()}
                     className={`py-4 px-4 text-gray-400 font-medium h-auto ${header.column.getCanSort() ? 'cursor-pointer select-none' : ''} ${header.column.id === 'runnerRef' ? 'pl-8' : ''}`}
@@ -1235,88 +1415,125 @@ export default function RegistrantsTable({
         </Table>
       </div>
 
-      {/* Pagination Controls */}
-      <div className="flex justify-between items-center flex-wrap gap-4 mt-1">
-        <div className="flex items-center gap-3 text-white text-sm font-medium">
-          <span className="text-secondary">Rows per page</span>
-          
-          <div ref={pageSizeRef} className="relative">
-            <button
-              onClick={() => setIsPageSizeOpen(!isPageSizeOpen)}
-              className="flex items-center gap-3 border border-white/10 rounded-md px-3 py-1.5 text-sm text-white bg-transparent hover:bg-white/5 transition-colors cursor-pointer"
-            >
-              {table.getState().pagination.pageSize}
-              <ChevronDown size={14} className="text-gray-400" />
-            </button>
-            
-            {isPageSizeOpen && (
-              <div className="absolute bottom-[calc(100%+4px)] left-0 bg-[#050505] border border-white/10 rounded-md p-1 min-w-[80px] z-50 shadow-2xl">
-                {[5, 10, 25, 50].map(pageSize => (
-                  <div
-                    key={pageSize}
-                    className={`flex items-center justify-between px-3 py-1.5 cursor-pointer rounded-md text-sm transition-colors ${table.getState().pagination.pageSize === pageSize ? 'bg-white/5 text-white' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
-                    onClick={() => {
-                      table.setPageSize(pageSize);
-                      setIsPageSizeOpen(false);
-                    }}
-                  >
-                    <span>{pageSize}</span>
-                    {table.getState().pagination.pageSize === pageSize && <Check size={14} />}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-        <div className="flex items-center gap-6">
-          <div className="text-white text-sm font-medium">
-            {table.getFilteredRowModel().rows.length === 0 ? '0-0 of 0' : 
-             `${table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1}-${Math.min((table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize, table.getFilteredRowModel().rows.length)} of ${table.getFilteredRowModel().rows.length}`}
-          </div>
-          <div className="flex gap-1">
-            <button
-              onClick={() => table.firstPage()}
-              disabled={!table.getCanPreviousPage()}
-              className="flex items-center justify-center w-8 h-8 border border-white/10 rounded-md bg-transparent text-gray-400 hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <ChevronFirst className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-              className="flex items-center justify-center w-8 h-8 border border-white/10 rounded-md bg-transparent text-gray-400 hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-              className="flex items-center justify-center w-8 h-8 border border-white/10 rounded-md bg-transparent text-gray-400 hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => table.lastPage()}
-              disabled={!table.getCanNextPage()}
-              className="flex items-center justify-center w-8 h-8 border border-white/10 rounded-md bg-transparent text-gray-400 hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <ChevronLast className="w-4 h-4" />
-            </button>
-          </div>
+      {/*
+        The same rows as the table above, below `lg` (AdminCardList): search,
+        the queue chips, filters, sort, selection and the page all come from
+        the one table instance. A group's members keep their order (-1 above
+        -2) because the rows arrive in registration order and nothing here
+        re-sorts them.
+      */}
+      <div className="dash-mobile-only">
+        <AdminCardList
+          items={table.getRowModel().rows}
+          getKey={row => row.id}
+          label="Registrants"
+          className="is-flush"
+          selection={{
+            isSelected: row => row.getIsSelected(),
+            toggle: row => row.toggleSelected(),
+            label: row => `Select ${row.original.name}`,
+          }}
+          selectAll={{
+            checked: table.getIsAllPageRowsSelected(),
+            toggle: () => table.toggleAllPageRowsSelected(!table.getIsAllPageRowsSelected()),
+            label: `Select all ${table.getRowModel().rows.length} on this page`,
+          }}
+          // The registrant's own number from the server, never the position.
+          leading={row => <span className="font-mono">{row.original.regNo}</span>}
+          // A name is untrusted length: it truncates rather than holding the
+          // card open, and so does the email under it, as in the table cell.
+          title={row => (
+            <>
+              <span className="block truncate">{row.original.name}</span>
+              <span className="block truncate text-xs font-normal text-secondary">{row.original.email}</span>
+            </>
+          )}
+          // The reference alone. The table's eye beside it was left off the
+          // card at the owner's request; View Details in the card's ⋯ menu
+          // opens the same modal.
+          subtitle={row => row.original.runnerRef}
+          badges={row => (
+            <>
+              {renderStatusBadges(row.original)}
+              {/* What the table's badges say only on hover, said in words:
+                  a phone has no hover. Allowed to wrap, unlike the chips. */}
+              {row.original.status === 'EXPIRED' && (
+                <span className="status-note neutral" style={{ flexBasis: '100%', marginTop: 0, whiteSpace: 'normal' }}>
+                  Never paid, so its slot and any promo code it used were released.
+                </span>
+              )}
+              {row.original.emailPending && (
+                <span className="status-note neutral" style={{ flexBasis: '100%', marginTop: 0, whiteSpace: 'normal' }}>
+                  The {row.original.emailPendingLabel} email has not gone out.
+                </span>
+              )}
+            </>
+          )}
+          fields={row => [
+            { label: 'Category', value: row.original.category },
+            { label: 'Size', value: row.original.size || '—' },
+            { label: 'Logistics', value: row.original.logisticsMethod },
+            { label: 'Payment', value: row.original.paymentMethod },
+          ]}
+          actions={row => renderRowActions(row.original, 'card')}
+          empty={
+            <div className="border border-white/10 rounded-lg py-16 px-4 text-center text-gray-500">
+              No registrants found.
+            </div>
+          }
+        />
+      </div>
+
+      <AdminTablePager table={table} />
+
+      {/*
+        The bulk bar, below `lg`, while rows are selected. From `lg` up the red
+        chip in the toolbar does this. Export here is the toolbar's own export
+        (selected rows, audit call first); Clear empties the selection. See
+        `.bulk-bar` in Admin.css for why it is fixed rather than sticky.
+      */}
+      <div className="bulk-bar-spacer dash-mobile-only" hidden={selectedCount === 0} aria-hidden="true" />
+      <div className="dash-mobile-only">
+        <div
+          role="region"
+          aria-label="Selected registrants"
+          className={`bulk-bar t-toast ${selectedCount > 0 ? 'is-open' : ''}`}
+        >
+          <span className="bulk-bar-count" aria-live="polite">{bulkBarCount} selected</span>
+          <button type="button" onClick={handleExportCSV} className="btn-filter bulk-bar-export">
+            <Download size={16} aria-hidden="true" /> Export
+          </button>
+          <button type="button" onClick={() => setIsBulkDeleteOpen(true)} className="btn-filter is-danger bulk-bar-delete">
+            <Trash2 size={16} aria-hidden="true" /> Delete
+          </button>
+          <button type="button" onClick={() => setRowSelection({})} className="btn-filter bulk-bar-clear">
+            <X size={16} aria-hidden="true" /> Clear
+          </button>
         </div>
       </div>
 
       {viewingRunner && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#111] border border-white/10 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
-            <div className="flex justify-between items-center p-6 border-b border-white/10">
-              <h3 className="text-xl font-semibold text-white">Registrant Details</h3>
-              <button onClick={() => setViewingRunner(null)} className="text-gray-400 hover:text-white transition-colors">
+        // Below `sm` a full-height sheet (.admin-modal-sheet): the sections
+        // stack, and the footer at the bottom edge carries every way onward.
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 max-sm:p-0">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="registrant-details-title"
+            className="admin-modal-panel admin-modal-sheet bg-[#111] border border-white/10 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-clip shadow-2xl"
+          >
+            <div className="flex justify-between items-center gap-4 p-6 max-sm:px-4 max-sm:py-3 border-b border-white/10 shrink-0">
+              <h3 id="registrant-details-title" className="text-xl font-semibold text-white">Registrant Details</h3>
+              <button
+                onClick={() => setViewingRunner(null)}
+                aria-label="Close"
+                className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-full text-gray-400 hover:text-white transition-colors"
+              >
                 <X size={20} />
               </button>
             </div>
-            
-            <div className="p-6 overflow-y-auto flex-1">
+
+            <div className="admin-modal-body p-6 max-sm:p-4 overflow-y-auto flex-1">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-4">
                   <h4 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Runner Info</h4>
@@ -1328,7 +1545,7 @@ export default function RegistrantsTable({
                     <p className="flex flex-col"><span className="text-gray-500">Birthdate</span> <span className="text-white font-medium">{viewingRunner.birthdate}</span></p>
                   </div>
                 </div>
-                
+
                 <div className="space-y-4">
                   <h4 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Race Details</h4>
                   <div className="space-y-2 text-sm">
@@ -1340,7 +1557,7 @@ export default function RegistrantsTable({
                   </div>
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8 pt-8 border-t border-white/10">
                 <div className="space-y-4">
                   <h4 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Emergency Contact</h4>
@@ -1349,7 +1566,7 @@ export default function RegistrantsTable({
                     <p className="flex flex-col"><span className="text-gray-500">Phone</span> <span className="text-white font-medium">{viewingRunner.emergencyContactPhone}</span></p>
                   </div>
                 </div>
-                
+
                 <div className="space-y-4">
                   <h4 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Medical Info</h4>
                   <div className="text-sm text-white font-medium whitespace-pre-wrap">{viewingRunner.medicalConditions || 'None provided'}</div>
@@ -1373,7 +1590,7 @@ export default function RegistrantsTable({
                       identifies the person, the order ref is what the whole
                       group paid under and what a bank line will match. */}
                   <p className="flex flex-col"><span className="text-gray-500">Order Ref</span> <span className="text-white font-medium">{viewingRunner.orderRef}</span></p>
-                  <p className="flex flex-col"><span className="text-gray-500">Status</span> 
+                  <p className="flex flex-col"><span className="text-gray-500">Status</span>
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium w-fit mt-1 ${statusPillClass(viewingRunner.status)}`}>
                       {viewingRunner.status}
                     </span>
@@ -1529,7 +1746,7 @@ export default function RegistrantsTable({
                         type="button"
                         onClick={() => setProofRunner(viewingRunner)}
                         aria-label="Open the proof of payment full screen"
-                        className="group relative w-full rounded-lg overflow-hidden border border-white/10 max-h-[300px] flex items-center justify-center bg-black/50 cursor-zoom-in p-0 hover:border-white/30 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                        className="group relative w-full rounded-lg overflow-hidden border border-white/10 max-h-[300px] max-sm:max-h-none flex items-center justify-center bg-black/50 cursor-zoom-in p-0 hover:border-white/30 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
                       >
                         {/*
                           Receipts are private blobs — there is no permanently valid
@@ -1552,7 +1769,7 @@ export default function RegistrantsTable({
                           <img
                             src={`/api/admin/proof/${viewingRunner.registrationId}`}
                             alt="Proof of Payment"
-                            className="max-w-full max-h-[300px] object-contain"
+                            className="max-w-full max-h-[300px] object-contain max-sm:w-full max-sm:max-h-[70dvh]"
                           />
                         )}
                         <span className="absolute inset-0 flex items-center justify-center gap-2 bg-black/60 text-sm font-medium text-white opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity">
@@ -1569,9 +1786,9 @@ export default function RegistrantsTable({
                 )}
               </div>
             </div>
-            
-            <div className="p-6 border-t border-white/10 flex justify-between items-center bg-black/20">
-              <div>
+
+            <div className="admin-modal-footer p-6 max-sm:p-4 border-t border-white/10 flex justify-between items-center bg-black/20 shrink-0">
+              <div className="max-sm:contents">
                 {/* The dashboard's own action button, not the public site's
                     gradient — and the one in the receipt lightbox is now its
                     peer, so the two have to read alike. */}
@@ -1579,16 +1796,51 @@ export default function RegistrantsTable({
                   <button
                     onClick={() => validatePayment(viewingRunner)}
                     disabled={updatingId === viewingRunner.registrationId}
-                    className="btn-light"
+                    className="btn-light max-sm:basis-full"
                   >
                     <CheckCircle className="w-4 h-4" />
                     {updatingId === viewingRunner.registrationId ? 'Validating...' : 'Validate Payment'}
                   </button>
                 )}
               </div>
-              <button 
+              {/*
+                Below `sm` only. On a phone the body's own links to the proof,
+                the remarks and the email are a long scroll away, so the footer
+                carries them beside Validate and nothing onward leaves reach.
+                The header's close stands in for Close there.
+              */}
+              {viewingRunner.isBankTransfer && viewingRunner.proofOfPayment && (
+                <button
+                  type="button"
+                  onClick={() => setProofRunner(viewingRunner)}
+                  className="btn-filter justify-center dash-phone-only"
+                >
+                  <Maximize2 size={16} aria-hidden="true" /> Proof
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => openRemarksModal(viewingRunner.id)}
+                className={`btn-filter justify-center dash-phone-only ${viewingRunner.remarks ? 'is-primary' : ''}`}
+              >
+                {viewingRunner.remarks
+                  ? <MessageSquareText size={16} aria-hidden="true" />
+                  : <MessageSquare size={16} aria-hidden="true" />}
+                Remarks
+              </button>
+              <button
+                type="button"
+                onClick={() => openEmailModal(viewingRunner.id)}
+                className={`btn-filter justify-center dash-phone-only ${viewingRunner.emailPending ? 'is-danger' : ''}`}
+              >
+                {viewingRunner.emailPending
+                  ? <MailWarning size={16} aria-hidden="true" />
+                  : <Mail size={16} aria-hidden="true" />}
+                Email
+              </button>
+              <button
                 onClick={() => setViewingRunner(null)}
-                className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white transition-colors"
+                className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white transition-colors max-sm:hidden"
               >
                 Close
               </button>
@@ -1616,143 +1868,163 @@ export default function RegistrantsTable({
       )}
 
       {/* Edit Modal */}
-      <div 
+      <div
         className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
           isEditOpen && !isEditClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
       >
-        <div 
-          className={`t-modal w-full max-w-2xl bg-[#111] border border-white/10 rounded-2xl shadow-2xl flex flex-col max-h-[90vh] ${isEditOpen ? 'is-open' : ''} ${isEditClosing ? 'is-closing' : ''}`}
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="edit-registrant-title"
+          className={`t-modal admin-modal-panel w-full max-w-2xl bg-[#111] border border-white/10 rounded-2xl shadow-2xl flex flex-col max-h-[90vh] ${isEditOpen ? 'is-open' : ''} ${isEditClosing ? 'is-closing' : ''}`}
         >
-          <div className="p-6 border-b border-white/10 flex justify-between items-center shrink-0">
-            <h3 className="text-xl font-semibold text-white">Edit Registrant</h3>
-            <button onClick={closeEditModal} className="text-gray-400 hover:text-white transition-colors">
+          <div className="p-6 max-sm:px-4 max-sm:py-3 border-b border-white/10 flex justify-between items-center gap-4 shrink-0">
+            <h3 id="edit-registrant-title" className="text-xl font-semibold text-white">Edit Registrant</h3>
+            <button
+              onClick={closeEditModal}
+              aria-label="Close"
+              className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-full text-gray-400 hover:text-white transition-colors"
+            >
               <X size={20} />
             </button>
           </div>
-          
-          <div className="p-6 overflow-y-auto">
+
+          <div className="admin-modal-body p-6 max-sm:p-4 overflow-y-auto">
             {editingRunner && (
-              <form id="edit-runner-form" onSubmit={handleEditSubmit} className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-sm text-gray-400">First Name</label>
-                    <input 
-                      type="text" 
-                      required 
-                      value={editingRunner.firstName || ''} 
-                      onChange={e => setEditingRunner({...editingRunner, firstName: upperCaseAsTyped(e.target.value)})}
-                      className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-white/30" 
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm text-gray-400">Last Name</label>
-                    <input 
-                      type="text" 
-                      required 
-                      value={editingRunner.lastName || ''} 
-                      onChange={e => setEditingRunner({...editingRunner, lastName: upperCaseAsTyped(e.target.value)})}
-                      className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-white/30" 
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-sm text-gray-400">Email</label>
-                    <input 
-                      type="email" 
-                      required 
-                      value={editingRunner.email || ''} 
-                      onChange={e => setEditingRunner({...editingRunner, email: e.target.value})}
-                      className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-white/30" 
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm text-gray-400">Phone</label>
-                    <input 
-                      type="text" 
-                      required 
-                      value={editingRunner.phone || ''} 
-                      onChange={e => setEditingRunner({...editingRunner, phone: e.target.value})}
-                      className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-white/30" 
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-sm text-gray-400">Gender</label>
-                    {/* Uppercased on read as well as on write: rows created
-                        before gender was stored uppercase still hold "Male",
-                        and a value matching no option would silently show the
-                        wrong one. */}
-                    <select
-                      value={(editingRunner.gender || '').toUpperCase()}
-                      onChange={e => setEditingRunner({...editingRunner, gender: e.target.value})}
-                      className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-white/30"
-                    >
-                      <option value="MALE">MALE</option>
-                      <option value="FEMALE">FEMALE</option>
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm text-gray-400">Birthdate</label>
-                    <input 
-                      type="date" 
-                      required 
-                      value={editingRunner.birthdate || ''} 
-                      onChange={e => setEditingRunner({...editingRunner, birthdate: e.target.value})}
-                      className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-white/30" 
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm text-gray-400">Shirt Size</label>
+              <form id="edit-runner-form" onSubmit={handleEditSubmit} className="flex flex-col gap-6">
+                {/* One column below `sm`. The fields wear the admin's own
+                    .form-label / .form-input, the pair AdminSelect wears, so
+                    Gender sits among them as one of them — and .form-input is
+                    16px, so a phone never zooms into a field. */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="edit-runner-first-name">First Name</label>
                     <input
+                      id="edit-runner-first-name"
+                      type="text"
+                      required
+                      value={editingRunner.firstName || ''}
+                      onChange={e => setEditingRunner({...editingRunner, firstName: upperCaseAsTyped(e.target.value)})}
+                      className="form-input"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="edit-runner-last-name">Last Name</label>
+                    <input
+                      id="edit-runner-last-name"
+                      type="text"
+                      required
+                      value={editingRunner.lastName || ''}
+                      onChange={e => setEditingRunner({...editingRunner, lastName: upperCaseAsTyped(e.target.value)})}
+                      className="form-input"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="edit-runner-email">Email</label>
+                    <input
+                      id="edit-runner-email"
+                      type="email"
+                      required
+                      value={editingRunner.email || ''}
+                      onChange={e => setEditingRunner({...editingRunner, email: e.target.value})}
+                      className="form-input"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="edit-runner-phone">Phone</label>
+                    <input
+                      id="edit-runner-phone"
+                      type="text"
+                      inputMode="tel"
+                      required
+                      value={editingRunner.phone || ''}
+                      onChange={e => setEditingRunner({...editingRunner, phone: e.target.value})}
+                      className="form-input"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  {/* Uppercased on read as well as on write: rows created
+                      before gender was stored uppercase still hold "Male",
+                      and a value matching no option would silently show the
+                      wrong one. */}
+                  <AdminSelect
+                    label="Gender"
+                    value={(editingRunner.gender || '').toUpperCase()}
+                    options={GENDER_OPTIONS}
+                    listboxLabel="Gender"
+                    onChange={gender => setEditingRunner({...editingRunner, gender})}
+                  />
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="edit-runner-birthdate">Birthdate</label>
+                    <input
+                      id="edit-runner-birthdate"
+                      type="date"
+                      required
+                      value={editingRunner.birthdate || ''}
+                      onChange={e => setEditingRunner({...editingRunner, birthdate: e.target.value})}
+                      className="form-input"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="edit-runner-size">Shirt Size</label>
+                    {/* Free text with suggestions rather than AdminSelect: a
+                        package with no shirt leaves it blank. */}
+                    <input
+                      id="edit-runner-size"
                       type="text"
                       list="shirt-size-options"
                       value={editingRunner.singletSize || ''}
                       onChange={e => setEditingRunner({...editingRunner, singletSize: e.target.value})}
                       placeholder="Blank if no shirt in this package"
-                      className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-white/30"
+                      className="form-input"
                     />
                     <datalist id="shirt-size-options">
                       {SHIRT_SIZES.map(size => <option key={size} value={size} />)}
                     </datalist>
                   </div>
-                  <div className="space-y-2 col-span-2">
-                    <label className="text-sm text-gray-400">Running Community</label>
+                  <div className="form-group sm:col-span-2">
+                    <label className="form-label" htmlFor="edit-runner-community">Running Community</label>
                     <input
+                      id="edit-runner-community"
                       type="text"
                       value={editingRunner.runningCommunity || ''}
                       onChange={e => setEditingRunner({...editingRunner, runningCommunity: upperCaseAsTyped(e.target.value)})}
-                      placeholder="Independent Runner"
-                      className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-white/30"
+                      placeholder="INDEPENDENT RUNNER"
+                      className="form-input"
                     />
                   </div>
                 </div>
 
                 <div className="pt-4 border-t border-white/10">
                   <h4 className="text-white font-medium mb-4">Emergency Contact</h4>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-sm text-gray-400">Contact Name</label>
-                      <input 
-                        type="text" 
-                        required 
-                        value={editingRunner.emergencyContactName || ''} 
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="form-group">
+                      <label className="form-label" htmlFor="edit-runner-emergency-name">Contact Name</label>
+                      <input
+                        id="edit-runner-emergency-name"
+                        type="text"
+                        required
+                        value={editingRunner.emergencyContactName || ''}
                         onChange={e => setEditingRunner({...editingRunner, emergencyContactName: upperCaseAsTyped(e.target.value)})}
-                        className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-white/30" 
+                        className="form-input"
                       />
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-sm text-gray-400">Contact Phone</label>
-                      <input 
-                        type="text" 
-                        required 
-                        value={editingRunner.emergencyContactPhone || ''} 
+                    <div className="form-group">
+                      <label className="form-label" htmlFor="edit-runner-emergency-phone">Contact Phone</label>
+                      <input
+                        id="edit-runner-emergency-phone"
+                        type="text"
+                        inputMode="tel"
+                        required
+                        value={editingRunner.emergencyContactPhone || ''}
                         onChange={e => setEditingRunner({...editingRunner, emergencyContactPhone: e.target.value})}
-                        className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-white/30" 
+                        className="form-input"
                       />
                     </div>
                   </div>
@@ -1761,16 +2033,16 @@ export default function RegistrantsTable({
             )}
           </div>
 
-          <div className="p-6 border-t border-white/10 flex justify-end gap-3 shrink-0 bg-black/20">
-            <button 
-              type="button" 
-              onClick={closeEditModal} 
+          <div className="admin-modal-footer p-6 max-sm:p-4 border-t border-white/10 flex justify-end gap-3 shrink-0 bg-black/20">
+            <button
+              type="button"
+              onClick={closeEditModal}
               className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white transition-colors"
             >
               Cancel
             </button>
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               form="edit-runner-form"
               disabled={isSaving}
               className="px-6 py-2 bg-white text-black rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors disabled:opacity-50"
@@ -1782,31 +2054,34 @@ export default function RegistrantsTable({
       </div>
 
       {/* Delete Confirmation Modal */}
-      <div 
+      <div
         className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
           isDeleteOpen && !isDeleteClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
       >
-        <div 
-          className={`t-modal w-full max-w-md bg-[#111] border border-red-500/20 rounded-2xl shadow-2xl p-6 flex flex-col gap-6 ${isDeleteOpen ? 'is-open' : ''} ${isDeleteClosing ? 'is-closing' : ''}`}
+        <div
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="delete-registrant-title"
+          className={`t-modal admin-modal-panel w-full max-w-md bg-[#111] border border-red-500/20 rounded-2xl shadow-2xl p-6 max-sm:p-4 flex flex-col gap-6 ${isDeleteOpen ? 'is-open' : ''} ${isDeleteClosing ? 'is-closing' : ''}`}
         >
-          <div className="flex flex-col gap-2">
-            <h3 className="text-xl font-semibold text-white">Delete Registrant</h3>
-            <p className="text-gray-400 text-sm leading-relaxed">
+          <div className="admin-modal-body flex flex-col gap-2">
+            <h3 id="delete-registrant-title" className="text-xl font-semibold text-white">Delete Registrant</h3>
+            <p className="text-gray-400 text-sm leading-relaxed [overflow-wrap:anywhere]">
               Are you sure you want to delete {deletingRunner?.name}? This action cannot be undone and will permanently remove them from the database.
             </p>
           </div>
-          
-          <div className="flex justify-end gap-3 pt-2 border-t border-white/5">
-            <button 
-              type="button" 
-              onClick={closeDeleteModal} 
+
+          <div className="admin-modal-footer flex justify-end gap-3 pt-2 border-t border-white/5">
+            <button
+              type="button"
+              onClick={closeDeleteModal}
               className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white transition-colors"
             >
               Cancel
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               onClick={handleDeleteConfirm}
               disabled={isDeleting}
               className="px-5 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
@@ -1818,31 +2093,34 @@ export default function RegistrantsTable({
       </div>
 
       {/* Bulk Delete Confirmation Modal */}
-      <div 
+      <div
         className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
           isBulkDeleteOpen && !isBulkDeleteClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
       >
-        <div 
-          className={`t-modal w-full max-w-md bg-[#111] border border-red-500/20 rounded-2xl shadow-2xl p-6 flex flex-col gap-6 ${isBulkDeleteOpen ? 'is-open' : ''} ${isBulkDeleteClosing ? 'is-closing' : ''}`}
+        <div
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="bulk-delete-registrants-title"
+          className={`t-modal admin-modal-panel w-full max-w-md bg-[#111] border border-red-500/20 rounded-2xl shadow-2xl p-6 max-sm:p-4 flex flex-col gap-6 ${isBulkDeleteOpen ? 'is-open' : ''} ${isBulkDeleteClosing ? 'is-closing' : ''}`}
         >
-          <div className="flex flex-col gap-2">
-            <h3 className="text-xl font-semibold text-white">Delete Selected Registrants</h3>
+          <div className="admin-modal-body flex flex-col gap-2">
+            <h3 id="bulk-delete-registrants-title" className="text-xl font-semibold text-white">Delete Selected Registrants</h3>
             <p className="text-gray-400 text-sm leading-relaxed">
               Are you sure you want to delete the {table.getSelectedRowModel().rows.length} selected registrants? This action cannot be undone and will permanently remove them from the database.
             </p>
           </div>
-          
-          <div className="flex justify-end gap-3 pt-2 border-t border-white/5">
-            <button 
-              type="button" 
-              onClick={closeBulkDeleteModal} 
+
+          <div className="admin-modal-footer flex justify-end gap-3 pt-2 border-t border-white/5">
+            <button
+              type="button"
+              onClick={closeBulkDeleteModal}
               className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white transition-colors"
             >
               Cancel
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               onClick={handleBulkDeleteConfirm}
               disabled={isBulkDeleting}
               className="px-5 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
@@ -1867,18 +2145,24 @@ export default function RegistrantsTable({
         assigned staff member follows up by hand.
       */}
       <div
-        className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
+        className={`fixed inset-0 z-50 flex items-center justify-center p-4 max-sm:p-3 max-sm:items-start bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
           isRemarksOpen && !isRemarksClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
       >
         <div
-          className={`t-modal w-full max-w-lg bg-[#111] border border-white/10 rounded-2xl shadow-2xl flex flex-col ${isRemarksOpen ? 'is-open' : ''} ${isRemarksClosing ? 'is-closing' : ''}`}
+          // Top-aligned on a phone rather than centred: the on-screen keyboard
+          // rises over the lower half of the screen, and a panel standing at
+          // the top keeps Save above it while the note is being typed.
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="remarks-modal-title"
+          className={`t-modal admin-modal-panel w-full max-w-lg bg-[#111] border border-white/10 rounded-2xl shadow-2xl flex flex-col ${isRemarksOpen ? 'is-open' : ''} ${isRemarksClosing ? 'is-closing' : ''}`}
         >
-          <div className="p-6 border-b border-white/10 flex justify-between items-start gap-4">
-            <div>
-              <h3 className="text-xl font-semibold text-white m-0">Payment Remarks</h3>
+          <div className="p-6 max-sm:px-4 max-sm:py-3 border-b border-white/10 flex justify-between items-start gap-4 shrink-0">
+            <div className="min-w-0">
+              <h3 id="remarks-modal-title" className="text-xl font-semibold text-white m-0">Payment Remarks</h3>
               {remarkingRunner && (
-                <p className="text-sm text-gray-400 mt-1 m-0">
+                <p className="text-sm text-gray-400 mt-1 m-0 [overflow-wrap:anywhere]">
                   Order {remarkingRunner.orderRef} &middot;{' '}
                   {runnersOnOrder(remarkingRunner) > 1
                     ? `${runnersOnOrder(remarkingRunner)} runners`
@@ -1886,12 +2170,16 @@ export default function RegistrantsTable({
                 </p>
               )}
             </div>
-            <button onClick={closeRemarksModal} className="text-gray-400 hover:text-white transition-colors bg-transparent border-none cursor-pointer p-0">
+            <button
+              onClick={closeRemarksModal}
+              aria-label="Close"
+              className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-full text-gray-400 hover:text-white transition-colors bg-transparent border-none cursor-pointer p-0"
+            >
               <X size={20} />
             </button>
           </div>
 
-          <div className="p-6 space-y-3">
+          <div className="admin-modal-body p-6 max-sm:p-4 space-y-3">
             <label htmlFor="registration-remarks" className="block text-sm text-gray-400">
               What did you find when you checked this payment?
             </label>
@@ -1901,7 +2189,7 @@ export default function RegistrantsTable({
               onChange={e => setRemarksDraft(e.target.value)}
               rows={5}
               placeholder="e.g. Deposit slip is for ₱1,200 but the order total is ₱1,500. Called the runner on 09/06."
-              className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-white/30 resize-y"
+              className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-base text-white placeholder-gray-500 focus:outline-none focus:border-white/30 resize-y"
             />
             <p className="text-xs text-gray-500 m-0">
               Internal only. The runner is never shown this and no email is sent
@@ -1917,7 +2205,7 @@ export default function RegistrantsTable({
             )}
           </div>
 
-          <div className="p-6 border-t border-white/10 flex justify-end gap-3 bg-black/20">
+          <div className="admin-modal-footer p-6 max-sm:p-4 border-t border-white/10 flex justify-end gap-3 bg-black/20 shrink-0">
             <button
               type="button"
               onClick={closeRemarksModal}
@@ -1964,20 +2252,23 @@ export default function RegistrantsTable({
         would leak its styles into the admin and inherit the admin's own.
       */}
       <div
-        className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
+        className={`fixed inset-0 z-50 flex items-center justify-center p-4 max-sm:p-3 bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
           isEmailOpen && !isEmailClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
       >
         <div
-          className={`t-modal w-full max-w-2xl bg-[#111] border border-white/10 rounded-2xl shadow-2xl flex flex-col max-h-[90vh] ${isEmailOpen ? 'is-open' : ''} ${isEmailClosing ? 'is-closing' : ''}`}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="email-modal-title"
+          className={`t-modal admin-modal-panel w-full max-w-2xl bg-[#111] border border-white/10 rounded-2xl shadow-2xl flex flex-col max-h-[90vh] ${isEmailOpen ? 'is-open' : ''} ${isEmailClosing ? 'is-closing' : ''}`}
         >
-          <div className="p-6 border-b border-white/10 flex justify-between items-start gap-4 shrink-0">
-            <div>
-              <h3 className="text-xl font-semibold text-white m-0">
+          <div className="p-6 max-sm:px-4 max-sm:py-3 border-b border-white/10 flex justify-between items-start gap-4 shrink-0">
+            <div className="min-w-0">
+              <h3 id="email-modal-title" className="text-xl font-semibold text-white m-0">
                 {emailMessage && !emailMessage.outstanding ? 'Email Already Sent' : 'Send This Email By Hand'}
               </h3>
               {emailRunner && (
-                <p className="text-sm text-gray-400 mt-1 m-0">
+                <p className="text-sm text-gray-400 mt-1 m-0 [overflow-wrap:anywhere]">
                   Order {emailRunner.orderRef} &middot;{' '}
                   {runnersOnOrder(emailRunner) > 1
                     ? `${runnersOnOrder(emailRunner)} runners`
@@ -1986,12 +2277,16 @@ export default function RegistrantsTable({
                 </p>
               )}
             </div>
-            <button onClick={closeEmailModal} className="text-gray-400 hover:text-white transition-colors bg-transparent border-none cursor-pointer p-0">
+            <button
+              onClick={closeEmailModal}
+              aria-label="Close"
+              className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-full text-gray-400 hover:text-white transition-colors bg-transparent border-none cursor-pointer p-0"
+            >
               <X size={20} />
             </button>
           </div>
 
-          <div className="p-6 overflow-y-auto flex-1 space-y-4">
+          <div className="admin-modal-body p-6 max-sm:p-4 overflow-y-auto flex-1 space-y-4">
             {isLoadingEmail && <p className="text-sm text-gray-400 m-0">Preparing the email&hellip;</p>}
 
             {!isLoadingEmail && emailLoadError && (
@@ -2007,14 +2302,14 @@ export default function RegistrantsTable({
                   </span>
                   <span className="flex flex-col">
                     <span className="text-gray-500">Subject</span>
-                    <span className="text-white font-medium select-all">{emailMessage.subject}</span>
+                    <span className="text-white font-medium select-all [overflow-wrap:anywhere]">{emailMessage.subject}</span>
                   </span>
                 </div>
 
                 {/* Resend's own words, so a quota stop is not mistaken for a
                     bad address — the two need opposite responses. */}
                 {emailMessage.lastEmailError && (
-                  <p className="text-xs text-red-400 m-0">
+                  <p className="text-xs text-red-400 m-0 [overflow-wrap:anywhere]">
                     Last delivery attempt failed: {emailMessage.lastEmailError}
                   </p>
                 )}
@@ -2031,7 +2326,7 @@ export default function RegistrantsTable({
 
                 <div className="rounded-lg overflow-hidden border border-white/10 bg-black/50">
                   <iframe
-                    srcDoc={emailMessage.html}
+                    srcDoc={previewEmailHtml(emailMessage.html)}
                     sandbox=""
                     title="Email preview"
                     className="w-full h-[320px] border-none bg-transparent"
@@ -2042,7 +2337,7 @@ export default function RegistrantsTable({
                   <button
                     type="button"
                     onClick={handleCopyFormattedEmail}
-                    className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors border-none cursor-pointer"
+                    className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors border-none cursor-pointer max-sm:flex-1 max-sm:basis-full max-sm:justify-center max-sm:min-h-11"
                   >
                     <Copy size={16} />
                     {copyState === 'copied'
@@ -2054,7 +2349,7 @@ export default function RegistrantsTable({
                   <button
                     type="button"
                     onClick={handleOpenInMailApp}
-                    className="flex items-center gap-2 px-4 py-2 border border-white/10 text-white rounded-lg text-sm font-medium hover:bg-white/5 transition-colors bg-transparent cursor-pointer"
+                    className="flex items-center gap-2 px-4 py-2 border border-white/10 text-white rounded-lg text-sm font-medium hover:bg-white/5 transition-colors bg-transparent cursor-pointer max-sm:flex-1 max-sm:basis-full max-sm:justify-center max-sm:min-h-11"
                   >
                     <ExternalLink size={16} /> Open In My Email App
                   </button>
@@ -2069,7 +2364,7 @@ export default function RegistrantsTable({
             )}
           </div>
 
-          <div className="p-6 border-t border-white/10 flex justify-end gap-3 bg-black/20 shrink-0">
+          <div className="admin-modal-footer p-6 max-sm:p-4 border-t border-white/10 flex justify-end items-center gap-3 bg-black/20 shrink-0">
             <button
               type="button"
               onClick={closeEmailModal}
@@ -2082,7 +2377,9 @@ export default function RegistrantsTable({
                 type="button"
                 onClick={handleMarkEmailSent}
                 disabled={isMarkingSent}
-                className="px-6 py-2 bg-gradient-to-r from-[#FF6B00] to-[#007AFF] text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50 border-none cursor-pointer"
+                // .btn-light, not the orange gradient: no gradient buttons
+                // inside the admin (PROJECT_GUIDE §9).
+                className="btn-light"
               >
                 {isMarkingSent ? 'Marking...' : 'Mark As Sent'}
               </button>

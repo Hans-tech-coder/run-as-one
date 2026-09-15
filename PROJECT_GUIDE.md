@@ -518,7 +518,13 @@ the Reference and *View Details* at the top of the row's actions menu — becaus
 an organizer who has already opened the menu to edit or validate should not have
 to close it to read the order first; both open the same modal, and the menu's
 entry looks the runner up in the live list rather than carrying a captured row,
-so it never shows a stale copy. The **proof of payment opens full screen**
+so it never shows a stale copy. **Below `lg` the list is cards** (Mobile
+Batch 3): below `sm` the Category, Logistics and Payment chips fold into one
+*Filters* chip whose sheet holds all three (the queue chips stay), selecting
+rows raises a bulk bar at the foot of the screen in place of the toolbar's red
+chip, and the detail modal is a full-height sheet whose footer carries Proof,
+Remarks and Email beside Validate. A card has no eye beside its reference (the
+owner's call); its ⋯ menu's *View Details* is the door there. The **proof of payment opens full screen**
 (`ProofLightbox.tsx`) — from the thumbnail itself or the *View fullscreen* link
 beside the heading — with zoom (buttons, wheel, pinch, double-click, anchored on
 the point being read), pan (drag or arrow keys, so the drag is never the only
@@ -936,6 +942,24 @@ These are the user's own standing preferences. Follow them without being asked.
   - A panel's inset is 16px below `sm`. A modal's close button is 44px with a
     -12px margin, so its icon does not move.
   - A header back arrow wears `.admin-back-link` for its 44px hit area.
+  - **A bulk action below `lg` is a bottom bar, not a toolbar chip.** The
+    registrants list's `.bulk-bar` ("N selected · Export · Delete · Clear")
+    is fixed to the viewport and lined up with the content column, with a
+    `.bulk-bar-spacer` at the end of the list so the pager scrolls clear of
+    it, and rises on `.t-toast`. **Nothing in the dashboard can be
+    `position: sticky` to the viewport**: `<body>` clips `overflow-x`, which
+    makes it a scroll container that never scrolls itself. From `lg` up the red chip in the toolbar does the
+    job. A card list with a bulk action passes `selectAll` to
+    `AdminCardList`, reading the table's page selection.
+  - **A `.btn-filter` chip's tone is a class, never a Tailwind colour.**
+    `Admin.css` is unlayered, so `.btn-filter` beats `text-orange-400` and
+    friends: the registrants queue chips and Delete Selected drew grey for as
+    long as they carried those utilities. Use `.is-pending` (amber),
+    `.is-danger` (red) or `.is-primary` (blue).
+  - A modal a person reads rather than answers (the registrant's details)
+    adds `.admin-modal-sheet` to `.admin-modal-panel`: below `sm` it is the
+    whole screen with its footer at the bottom edge, and its overlay drops
+    its padding with `max-sm:p-0`.
 - **A list's order is a fact about the rows, not about the view — and a number
   in it should name the thing, not its seat.** Every listing gets an explicit
   `orderBy`; without one Postgres is free to return rows in heap order, which
@@ -981,8 +1005,10 @@ These are the user's own standing preferences. Follow them without being asked.
   `events/[slug]/register/SelectField`; the admin now has `admin/AdminSelect`,
   the same interaction wearing `.form-label` / `.form-input`. Two components
   rather than one because they live in different design systems. The admin's
-  remaining native selects (the results uploader, the registrants table's size
-  field) are the ones to move onto it as they are next touched.
+  remaining native select (the results uploader) is the one to move onto it
+  when it is next touched. The registrants edit modal's Gender field moved in
+  Mobile Batch 3; its Shirt Size is still a free-text box with a `<datalist>`,
+  which AdminSelect cannot replace because a size may be left blank or typed.
 - **A row's action menu is portalled to `<body>`.** Every card and table in the
   app clips its own overflow (rounded corners, horizontal scrollers), so a menu
   laid out inside the row is cut off on the last rows. The admin menus
@@ -1421,7 +1447,7 @@ model, or any `/api/admin/**` route's ownership check** — its "Batch 1" notes
 record the calls made in the batch, and the file records which decisions are
 closed (no unified account table, no SSO).
 
-**`MOBILE_RESPONSIVE_PLAN/` is an open queue, with Batches 1 and 2 landed.** Batch 1
+**`MOBILE_RESPONSIVE_PLAN/` is an open queue, with Batches 1, 2 and 3 landed.** Batch 1
 added `DashboardShell` (the frame both dashboards share: one collapsible
 sidebar menu at every width, a rail that opens over the page on a phone), `AdminCardList`, the `.dash-desktop-only` /
 `.dash-mobile-only` switch, and the toolbar, header, metrics, popover and
@@ -1431,9 +1457,13 @@ below `lg`. **Batch 2 is in too.** `/admin/events` and `/admin/team` are cards
 below `lg`, on the new shared `AdminTablePager`, `MobileSortMenu` and
 `placeRowMenu`. The event schedule and delete modals and the team invite form
 wear `.admin-modal-panel`. Below `lg`, the team's permission matrix is a
-`RolePicker`: one role at a time, on a sliding-tabs control. The registrants,
-marketing, results and superadmin tables still clip on a phone until their
-batch lands. **Batch 3 (Registrants) is next.** Six batches,
+`RolePicker`: one role at a time, on a sliding-tabs control. **Batch 3 is in
+too.** `/admin/events/[id]/registrants` is cards below `lg`, with a Filters
+sheet below `sm`, a bulk bar at the foot of the screen, a full-height detail
+sheet, all five modals on `.admin-modal-panel`, the row menu on
+`placeRowMenu`, and the proof lightbox's tools in a bar under the image on a
+phone. The marketing, results and superadmin tables still clip on a phone
+until their batch lands. **Batch 4 (Marketing and Results) is next.** Six batches,
 one file each, to make `/admin/**` and `/superadmin/**` fully manageable on a
 phone with no horizontal scroll:
 1. the shared shell, menu and card component;

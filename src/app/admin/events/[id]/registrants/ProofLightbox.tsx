@@ -263,24 +263,33 @@ export default function ProofLightbox({
 
   const zoomed = scale > 1;
   const frameState = `${open ? 'is-open' : ''} ${closing ? 'is-closing' : ''}`;
+  // 44px on a phone, where the tools are a bar under the image and a thumb
+  // rather than a pointer presses them.
   const toolBtn =
-    'flex items-center justify-center w-10 h-10 rounded-lg border border-white/10 bg-white/5 text-gray-300 ' +
+    'flex items-center justify-center w-10 h-10 max-sm:w-11 max-sm:h-11 rounded-lg border border-white/10 bg-white/5 text-gray-300 ' +
     'hover:bg-white/10 hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed ' +
     'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white';
 
   return createPortal(
+    /*
+      On a phone the viewer is the whole screen, edge to edge, and its tools
+      leave the header for a bar under the image. The header becomes
+      `display: contents` there so its two halves can be ordered around the
+      image with `order`, rather than rendering every tool twice: title, image,
+      tools, then the order it has to agree with and Validate at the bottom.
+    */
     <div
-      className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6"
+      className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-sm flex items-center justify-center p-0 sm:p-6"
       onMouseDown={e => { if (e.target === e.currentTarget) requestClose(); }}
     >
       <div
-        className={`t-modal w-full h-full max-w-6xl flex flex-col rounded-2xl border border-white/10 bg-[#0b0b0b] shadow-2xl overflow-hidden ${frameState}`}
+        className={`t-modal w-full h-full max-w-6xl flex flex-col rounded-2xl max-sm:rounded-none border border-white/10 max-sm:border-0 bg-[#0b0b0b] shadow-2xl overflow-hidden ${frameState}`}
         role="dialog"
         aria-modal="true"
         aria-label={`Proof of payment for order ${orderRef}`}
       >
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-white/10 shrink-0">
-          <div className="min-w-0">
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-white/10 shrink-0 max-sm:contents">
+          <div className="min-w-0 max-sm:order-1 max-sm:shrink-0 max-sm:px-4 max-sm:py-3 max-sm:border-b max-sm:border-white/10">
             <p className="text-sm font-semibold text-white m-0 truncate">Proof of Payment</p>
             <p className="text-xs text-gray-500 m-0 truncate">
               {orderRef}
@@ -288,7 +297,7 @@ export default function ProofLightbox({
             </p>
           </div>
 
-          <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
+          <div className="ml-auto flex items-center gap-1.5 sm:gap-2 max-sm:order-3 max-sm:shrink-0 max-sm:ml-0 max-sm:justify-between max-sm:px-4 max-sm:py-2 max-sm:border-t max-sm:border-white/10">
             {!isPdf && (
               <>
                 <button
@@ -347,7 +356,7 @@ export default function ProofLightbox({
 
         <div
           ref={viewportRef}
-          className={`relative flex-1 min-h-0 overflow-hidden flex items-center justify-center bg-black/60 ${isPdf ? '' : 'touch-none'}`}
+          className={`relative flex-1 min-h-0 overflow-hidden flex items-center justify-center bg-black/60 max-sm:order-2 ${isPdf ? '' : 'touch-none'}`}
           onPointerDown={isPdf ? undefined : pointerDown}
           onPointerMove={isPdf ? undefined : pointerMove}
           onPointerUp={isPdf ? undefined : pointerUp}
@@ -410,30 +419,33 @@ export default function ProofLightbox({
         {/* What the receipt has to agree with. Reading a number off the image
             and checking it against the order is the whole job, and it was
             being done across two screens. */}
-        <div className="shrink-0 border-t border-white/10 bg-black/40 px-4 py-3 flex flex-wrap items-center gap-x-6 gap-y-3">
+        <div className="shrink-0 border-t border-white/10 bg-black/40 px-4 py-3 flex flex-wrap items-center gap-x-6 gap-y-3 max-sm:order-4 max-sm:pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
           <p className="flex flex-col m-0 text-sm">
             <span className="text-xs text-gray-500">Order Total</span>
             <span className="text-white font-medium">&#8369;{formatPesos(totalAmount)}</span>
           </p>
-          <p className="flex flex-col m-0 text-sm">
+          <p className="flex flex-col m-0 text-sm min-w-0">
             <span className="text-xs text-gray-500">Transaction No.</span>
-            <span className={`font-medium ${transactionNumber ? 'text-white' : 'text-gray-500 italic'}`}>
+            <span className={`font-medium [overflow-wrap:anywhere] ${transactionNumber ? 'text-white' : 'text-gray-500 italic'}`}>
               {transactionNumber || 'Not given'}
             </span>
           </p>
-          <p className="hidden sm:flex flex-col m-0 text-sm">
+          <p className="flex flex-col m-0 text-sm">
             <span className="text-xs text-gray-500">Status</span>
             <span className="text-white font-medium">{status}</span>
           </p>
 
-          <div className="ml-auto flex items-center gap-4">
+          <div className="ml-auto flex items-center gap-4 max-sm:ml-0 max-sm:w-full max-sm:flex-col max-sm:items-stretch max-sm:gap-3">
             {isPdf ? (
-              <p className="hidden lg:block text-xs text-gray-600 m-0">
+              // Hidden only between `sm` and `lg`, where the toolbar's icon is
+              // in plain sight. A phone is where a browser is likeliest to
+              // refuse a PDF inline, so the words stay there.
+              <p className="hidden max-sm:block lg:block text-xs text-gray-600 m-0">
                 Will not display?{' '}
                 <a href={src} target="_blank" rel="noopener noreferrer" className="text-accent-blue hover:underline">
                   Open it in a new tab
-                </a>{' '}
-                &middot; Esc closes
+                </a>
+                <span className="max-sm:hidden"> &middot; Esc closes</span>
               </p>
             ) : (
               <p className="hidden xl:block text-xs text-gray-600 m-0">
@@ -441,7 +453,7 @@ export default function ProofLightbox({
               </p>
             )}
             {canValidate && onValidate && (
-              <button type="button" onClick={onValidate} disabled={isValidating} className="btn-light">
+              <button type="button" onClick={onValidate} disabled={isValidating} className="btn-light max-sm:w-full">
                 <CheckCircle className="w-4 h-4" />
                 {isValidating ? 'Validating...' : 'Validate Payment'}
               </button>

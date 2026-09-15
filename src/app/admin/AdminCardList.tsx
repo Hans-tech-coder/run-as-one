@@ -43,6 +43,18 @@ export type AdminCardSelection<T> = {
   label: (item: T) => string;
 };
 
+/**
+ * "Select all on this page", above the cards. A TanStack screen passes
+ * `table.getIsAllPageRowsSelected()` and `table.toggleAllPageRowsSelected()`,
+ * the same pair the table's header checkbox reads, so the two agree.
+ */
+export type AdminCardSelectAll = {
+  checked: boolean;
+  toggle: () => void;
+  /** Visible text beside the box, e.g. "Select all 10 on this page". */
+  label: string;
+};
+
 export type AdminCardListProps<T> = {
   items: T[];
   getKey: (item: T) => string;
@@ -53,6 +65,8 @@ export type AdminCardListProps<T> = {
   /** Footer controls. A row menu stays portalled, as it is in the table. */
   actions?: (item: T) => React.ReactNode;
   selection?: AdminCardSelection<T>;
+  /** Only for a list with a bulk action; Events and Team have none. */
+  selectAll?: AdminCardSelectAll;
   /** Before the title — a table's `No.` column. */
   leading?: (item: T) => React.ReactNode;
   /** What opens under a row that opens (voucher batches, a feedback message). */
@@ -83,6 +97,7 @@ export default function AdminCardList<T>({
   fields,
   actions,
   selection,
+  selectAll,
   leading,
   expanded,
   empty,
@@ -92,6 +107,27 @@ export default function AdminCardList<T>({
   if (items.length === 0) return <>{empty ?? null}</>;
 
   return (
+    <>
+    {selectAll && (
+      <div className={`admin-card-list-head ${className ?? ''}`}>
+        <label className="admin-card-select-all">
+          <span className="admin-card-select">
+            <span className="relative flex items-center justify-center">
+              <input
+                type="checkbox"
+                checked={selectAll.checked}
+                onChange={selectAll.toggle}
+                className="appearance-none w-4 h-4 rounded border border-white/20 bg-transparent checked:bg-white checked:border-white cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-white/20"
+              />
+              {selectAll.checked && (
+                <Check className="absolute text-black pointer-events-none" size={12} strokeWidth={3} />
+              )}
+            </span>
+          </span>
+          {selectAll.label}
+        </label>
+      </div>
+    )}
     <ul className={`admin-card-list ${className ?? ''}`} aria-label={label}>
       {items.map((item) => {
         const isSelected = selection?.isSelected(item) ?? false;
@@ -154,6 +190,7 @@ export default function AdminCardList<T>({
         );
       })}
     </ul>
+    </>
   );
 }
 

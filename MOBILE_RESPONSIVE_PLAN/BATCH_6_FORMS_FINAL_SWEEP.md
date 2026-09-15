@@ -71,6 +71,19 @@ closes the plan: it fixes what is left and then proves every route in scope.
    - §9: the responsive convention is complete and self-sufficient, so future
      screens can follow it without reading the plan.
 
+## Noticed during Batch 3
+
+- **Nothing sticks to the viewport inside the dashboard.** `<body>` computes
+  `overflow-x: hidden` (so `overflow-y: auto`), which makes it a scroll
+  container that never scrolls itself: the page scrolls on `<html>`. A
+  `position: sticky` box inside the page therefore stays where the page put
+  it. The desktop `.admin-header` is `sticky; top: 0` and scrolls away with
+  the page (measured at 1440 on the registrants screen). Batch 3's bulk bar
+  worked around it with `position: fixed`. The fix is one declaration,
+  `overflow-x: clip` on `body` instead of `hidden`, but it touches every page
+  on the public site too, so it is for the owner to approve and for the sweep
+  to verify, not a quiet change.
+
 ## Acceptance
 
 - Every route in scope passes the overflow check at 360, 390, 767 and 820.

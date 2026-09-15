@@ -1,13 +1,15 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { MoreVertical, CheckCircle, Trash2, Edit, Eye } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { placeRowMenu, type RowMenuPlacement } from '../../../row-menu-position';
 
 interface RegistrantActionsMenuProps {
   runnerId: string;
   registrationId: string;
+  /** Who this row is, for a screen reader: "Actions for JUAN DELA CRUZ". */
+  label: string;
   status: string;
   isBankTransfer: boolean;
   updatingId: string | null;
@@ -17,9 +19,20 @@ interface RegistrantActionsMenuProps {
   onDelete: (runnerId: string) => void;
 }
 
-export default function RegistrantActionsMenu({ 
+/**
+ * The row menu on the registrants table and its cards.
+ *
+ * Portalled to `<body>` and fixed to its trigger like its siblings, because a
+ * menu inside a table cell is clipped by the table. It is placed by
+ * `row-menu-position` rather than at `rect.right - 210`: a card's trigger near
+ * the left of a phone screen threw the menu off that edge, and the last card's
+ * menu opened below the fold. Measured again once it has rendered, since its
+ * height depends on the row (only a pending bank transfer offers Validate).
+ */
+export default function RegistrantActionsMenu({
   runnerId,
   registrationId,
+  label,
   status,
   isBankTransfer,
   updatingId,
@@ -28,31 +41,47 @@ export default function RegistrantActionsMenu({
   onEdit,
   onDelete
 }: RegistrantActionsMenuProps) {
+  // No "mounted" flag: the menu opens only on a click, which never happens
+  // during server rendering, so `isOpen` alone guarantees `document` is there.
   const [isOpen, setIsOpen] = useState(false);
-  const [position, setPosition] = useState({ top: 0, left: 0 });
-  const [mounted, setMounted] = useState(false);
-  
+  const [position, setPosition] = useState<RowMenuPlacement>({ top: 0, left: 0, origin: 'top-right' });
+
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
   const updatePosition = useCallback(() => {
     if (buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      setPosition({
-        top: rect.bottom + 8,
-        left: rect.right - 210, // 210px is width of action-dropdown-menu
-      });
+      setPosition(
+        placeRowMenu(buttonRef.current.getBoundingClientRect(), dropdownRef.current?.offsetHeight ?? 0),
+      );
     }
+  }, []);
+
+  // Again once the menu exists and has a height, before it is painted.
+  useLayoutEffect(() => {
+    if (isOpen) updatePosition();
+  }, [isOpen, updatePosition]);
+
+  const closeMenu = useCallback(() => {
+    if (!dropdownRef.current) {
+      setIsOpen(false);
+      return;
+    }
+    const el = dropdownRef.current;
+    const closeMs =
+      parseFloat(
+        getComputedStyle(document.documentElement).getPropertyValue('--dropdown-close-dur')
+      ) || 150;
+
+    el.classList.remove('is-open');
+    el.classList.add('is-closing');
+    setTimeout(() => setIsOpen(false), closeMs);
   }, []);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
-        dropdownRef.current && 
+        dropdownRef.current &&
         !dropdownRef.current.contains(event.target as Node) &&
         buttonRef.current &&
         !buttonRef.current.contains(event.target as Node)
@@ -60,61 +89,39 @@ export default function RegistrantActionsMenu({
         closeMenu();
       }
     }
-    
-    function handleScrollOrResize() {
-      if (isOpen) {
-        updatePosition();
+    function handleKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        closeMenu();
+        buttonRef.current?.focus();
       }
+    }
+    function handleScrollOrResize() {
+      if (isOpen) updatePosition();
     }
 
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleKey);
       window.addEventListener('scroll', handleScrollOrResize, true);
       window.addEventListener('resize', handleScrollOrResize);
     }
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKey);
       window.removeEventListener('scroll', handleScrollOrResize, true);
       window.removeEventListener('resize', handleScrollOrResize);
     };
-  }, [isOpen, updatePosition]);
-
-  const toggleMenu = () => {
-    if (isOpen) {
-      closeMenu();
-    } else {
-      openMenu();
-    }
-  };
+  }, [isOpen, updatePosition, closeMenu]);
 
   const openMenu = () => {
     updatePosition();
     setIsOpen(true);
     requestAnimationFrame(() => {
       if (dropdownRef.current) {
-        dropdownRef.current.classList.remove("is-closing");
-        dropdownRef.current.classList.add("is-open");
+        dropdownRef.current.classList.remove('is-closing');
+        dropdownRef.current.classList.add('is-open');
       }
     });
-  };
-
-  const closeMenu = () => {
-    if (!dropdownRef.current) {
-      setIsOpen(false);
-      return;
-    }
-    const el = dropdownRef.current;
-    
-    const closeMs = parseFloat(
-      getComputedStyle(document.documentElement).getPropertyValue("--dropdown-close-dur")
-    ) || 150;
-    
-    el.classList.remove("is-open");
-    el.classList.add("is-closing");
-    
-    setTimeout(() => {
-      setIsOpen(false);
-    }, closeMs);
   };
 
   const onStatusChange = (newStatus: string) => {
@@ -123,10 +130,10 @@ export default function RegistrantActionsMenu({
   };
 
   const dropdownContent = (
-    <div 
+    <div
       ref={dropdownRef}
-      className={`action-dropdown-menu t-dropdown`} 
-      data-origin="top-right"
+      className="action-dropdown-menu t-dropdown"
+      data-origin={position.origin}
       style={{
         position: 'fixed',
         top: `${position.top}px`,
@@ -154,7 +161,7 @@ export default function RegistrantActionsMenu({
           View Details
         </button>
 
-        <button 
+        <button
           className="action-dropdown-item flex items-center gap-3 px-4 py-2 text-sm text-left"
           role="menuitem"
           onClick={() => {
@@ -167,7 +174,7 @@ export default function RegistrantActionsMenu({
         </button>
 
         {status === 'PENDING' && isBankTransfer && (
-          <button 
+          <button
             onClick={() => onStatusChange('PAID')}
             disabled={updatingId === registrationId}
             className={`action-dropdown-item success w-full flex items-center gap-3 px-4 py-2 text-sm text-left ${updatingId === registrationId ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -179,7 +186,7 @@ export default function RegistrantActionsMenu({
         )}
 
         <div className="action-dropdown-divider"></div>
-        <button 
+        <button
           className="action-dropdown-item danger flex items-center gap-3 px-4 py-2 text-sm text-left"
           role="menuitem"
           onClick={() => {
@@ -195,17 +202,18 @@ export default function RegistrantActionsMenu({
 
   return (
     <>
-      <button 
+      <button
         ref={buttonRef}
-        onClick={toggleMenu}
+        onClick={() => (isOpen ? closeMenu() : openMenu())}
         className="action-dropdown-btn focus:outline-none"
         aria-haspopup="true"
         aria-expanded={isOpen}
+        aria-label={`Actions for ${label}`}
       >
         <MoreVertical size={20} />
       </button>
 
-      {mounted && isOpen && createPortal(dropdownContent, document.body)}
+      {isOpen && createPortal(dropdownContent, document.body)}
     </>
   );
 }

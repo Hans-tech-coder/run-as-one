@@ -37,7 +37,7 @@ Then, in this order:
 | --- | --- | --- | --- |
 | 1 | [BATCH_1_SHELL.md](BATCH_1_SHELL.md) | Shared shell (admin + superadmin), menu, header, toolbar, modal frame, **card component**, Dashboard recent registrations | Landed (uncommitted) |
 | 2 | [BATCH_2_EVENTS_TEAM.md](BATCH_2_EVENTS_TEAM.md) | Shared pager and mobile sort, Events list, Team + roles matrix | Landed (uncommitted) |
-| 3 | [BATCH_3_REGISTRANTS.md](BATCH_3_REGISTRANTS.md) | Registrants table, its five modals, bulk actions, proof lightbox | Not started |
+| 3 | [BATCH_3_REGISTRANTS.md](BATCH_3_REGISTRANTS.md) | Registrants table, its five modals, bulk actions, proof lightbox | Landed (uncommitted) |
 | 4 | [BATCH_4_MARKETING_RESULTS.md](BATCH_4_MARKETING_RESULTS.md) | Marketing promotions + modals, race results table + uploader | Not started |
 | 5 | [BATCH_5_SUPERADMIN.md](BATCH_5_SUPERADMIN.md) | Superadmin dashboard, organizers, communities, feedback | Not started |
 | 6 | [BATCH_6_FORMS_FINAL_SWEEP.md](BATCH_6_FORMS_FINAL_SWEEP.md) | Create and edit event forms, settings, sign-in pages, loading skeletons, full sweep of every route | Not started |

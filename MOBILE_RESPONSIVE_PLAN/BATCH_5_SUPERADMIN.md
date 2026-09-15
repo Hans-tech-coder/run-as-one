@@ -83,6 +83,17 @@ Left for this batch, measured once the shell had landed:
 - **System Overview panel:** `.admin-panel-content` keeps its 32px padding on a
   phone, which leaves a narrow column of text at 360px.
 
+## Noticed during Batch 3
+
+- **Chip colour utilities never apply.** `Admin.css` is unlayered, so its
+  `.btn-filter` rule beats Tailwind's layered utilities. `organizers/page.tsx`
+  (around lines 217 and 228) and `communities/page.tsx` (around lines 250 and
+  271) put `hover:text-green-500` / `hover:text-red-500` on `.btn-filter`, and
+  those hovers draw grey. Batch 3 added tone classes for this: `.is-danger`
+  (red) and `.is-pending` (amber). An approve button wants a green tone, which
+  does not exist yet; add `.btn-filter.is-success` beside the others in
+  `Admin.css` rather than a utility.
+
 ## Acceptance
 
 - All four `/superadmin` routes pass the overflow check at 360, 390, 767 and 820,
