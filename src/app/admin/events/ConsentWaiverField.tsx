@@ -61,13 +61,13 @@ export default function ConsentWaiverField({
             : `${paragraphs.length} paragraph${paragraphs.length === 1 ? '' : 's'} — this replaces the standard waiver.`}
         </p>
         <div className="flex items-center gap-3">
-          <button type="button" className="btn-filter" onClick={loadStandard}>
+          <button type="button" className="btn-filter max-lg:min-h-11" onClick={loadStandard}>
             Load the standard wording
           </button>
           {!isUsingDefault && (
             <button
               type="button"
-              className="text-xs opacity-70 hover:opacity-100 underline"
+              className="text-xs opacity-70 hover:opacity-100 underline max-lg:min-h-11 max-lg:px-2"
               onClick={() => onChange('')}
             >
               Reset to standard

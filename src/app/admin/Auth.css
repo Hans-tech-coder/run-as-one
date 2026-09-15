@@ -1,13 +1,19 @@
 /* Auth Pages Styles */
 .auth-container {
   min-height: 100vh;
+  /* dvh where it exists: 100vh on a phone counts the strip under the browser
+     bar, and the card was centred against a screen taller than the one shown. */
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
   background-color: var(--bg-primary);
   padding: var(--space-xl);
   position: relative;
-  overflow: hidden;
+  /* Clip, not hidden: the blobs overhang the edge, and a hidden box is still a
+     scroll container that focusing a field can slide sideways (PROJECT_GUIDE
+     §8, the clipping-panel rule). */
+  overflow: clip;
 }
 
 /* Dynamic animated background blobs */
@@ -58,11 +64,21 @@
   box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1);
   transform: translateY(0);
   transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  /* Centred by auto margins rather than by the container alone. They centre
+     it identically while there is room, and when there is not (a phone with
+     the keyboard open, the invitation's list of races) they fall to zero and
+     the card starts at the top, where align-items: center would push its head
+     above the top of the page, out of reach of the scroll. */
+  margin-block: auto;
 }
 
-.auth-card:hover {
-  transform: translateY(-5px);
-  border-color: rgba(255, 255, 255, 0.15);
+/* Only where there is a real pointer: a tap on a phone leaves :hover stuck on,
+   and the card sat lifted 5px for as long as the form was being filled in. */
+@media (hover: hover) {
+  .auth-card:hover {
+    transform: translateY(-5px);
+    border-color: rgba(255, 255, 255, 0.15);
+  }
 }
 
 .auth-header {
@@ -80,6 +96,8 @@
   color: var(--text-primary);
   margin-bottom: var(--space-sm);
   letter-spacing: -0.02em;
+  /* "Join {organizer}" is as long as the organizer's name. */
+  overflow-wrap: anywhere;
 }
 
 .auth-subtitle {
@@ -209,4 +227,53 @@
   background: rgba(82, 196, 26, 0.1);
   border: 1px solid rgba(82, 196, 26, 0.2);
   color: #52c41a;
+}
+
+/* A phone (Mobile Batch 6). A 32px page inset and a 48px card inset left a
+   360px screen about 200px of form; the card keeps a 16px margin from the
+   edge instead, fills the rest, and its own inset steps down to 24px. The
+   fields are already 16px, so iOS does not zoom into them. */
+@media (width < 40rem) {
+  .auth-container {
+    padding: var(--space-lg) var(--space-md) calc(var(--space-lg) + env(safe-area-inset-bottom));
+  }
+
+  .auth-card {
+    width: 100%;
+    padding: var(--space-lg);
+    border-radius: var(--radius-xl);
+  }
+
+  .auth-title {
+    font-size: 1.5rem;
+  }
+}
+
+/* The glows are clipped by the container either way, but at 500–600px their
+   boxes still reached past a phone's or a portrait tablet's right edge. Sized
+   to the screen below `lg`, they stay inside it and read the same once
+   blurred; from `lg` up they are as they were. */
+@media (width < 64rem) {
+  .auth-bg-shape.orange {
+    left: -20vw;
+    width: 70vw;
+    height: 70vw;
+  }
+
+  .auth-bg-shape.blue {
+    right: 0;
+    width: 80vw;
+    height: 80vw;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-bg-shape,
+  .auth-message {
+    animation: none;
+  }
+
+  .auth-card {
+    transition: none;
+  }
 }

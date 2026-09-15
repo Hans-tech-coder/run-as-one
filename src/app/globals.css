@@ -1274,7 +1274,14 @@ input[type="datetime-local"]:focus::-webkit-calendar-picker-indicator {
   .public-main > * { animation: none !important; }
 }
 
-html, body { overflow-x: hidden; }
+/* Clip, not hidden. `overflow-x: hidden` computes `overflow-y` to `auto`, and
+   that made <body> a scroll container that never scrolls (the page scrolls on
+   the viewport), so no `position: sticky` box anywhere in the app could stick
+   to the screen: the dashboard header, the event forms' phone save bar, the
+   event page's and the wizard's summary sidebars. `clip` cuts the sideways
+   overflow exactly as before without creating a scroll container. On <html>
+   the viewport reads it as hidden, which is still the answer we want there. */
+html, body { overflow-x: clip; }
 
 
 /* ── Brand lockup — components/RunAsOneLogo ────────────────────

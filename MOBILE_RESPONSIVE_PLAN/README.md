@@ -40,7 +40,12 @@ Then, in this order:
 | 3 | [BATCH_3_REGISTRANTS.md](BATCH_3_REGISTRANTS.md) | Registrants table, its five modals, bulk actions, proof lightbox | Landed (uncommitted) |
 | 4 | [BATCH_4_MARKETING_RESULTS.md](BATCH_4_MARKETING_RESULTS.md) | Marketing promotions + modals, race results table + uploader | Landed (uncommitted) |
 | 5 | [BATCH_5_SUPERADMIN.md](BATCH_5_SUPERADMIN.md) | Superadmin dashboard, organizers, communities, feedback | Landed (uncommitted) |
-| 6 | [BATCH_6_FORMS_FINAL_SWEEP.md](BATCH_6_FORMS_FINAL_SWEEP.md) | Create and edit event forms, settings, sign-in pages, loading skeletons, full sweep of every route | Not started |
+| 6 | [BATCH_6_FORMS_FINAL_SWEEP.md](BATCH_6_FORMS_FINAL_SWEEP.md) | Create and edit event forms, settings, sign-in pages, loading skeletons, full sweep of every route | Landed (uncommitted) |
+
+**The plan is finished.** All six batches have landed. This folder is kept for
+the reasoning behind each batch and the decisions below; the convention itself
+now lives in `PROJECT_GUIDE.md` §9 ("One responsive dashboard", including
+"Checking a screen"), and a new screen follows that without reading this plan.
 
 **Git: everything stays local.** Work happens in the current checkout, on
 whatever branch it is on. No branch switch, no commit, no push. The owner will

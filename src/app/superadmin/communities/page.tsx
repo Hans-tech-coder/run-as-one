@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Search, Edit, CheckCircle, Trash2, Plus, Clock } from 'lucide-react';
 import { useAlert } from '@/components/ui/AlertProvider';
-import AdminCardList from '@/app/admin/AdminCardList';
+import AdminCardList, { AdminCardListSkeleton } from '@/app/admin/AdminCardList';
 import AdminCardEdit from '@/app/admin/AdminCardEdit';
 
 /**
@@ -302,9 +302,13 @@ export default function CommunitiesManagementPage() {
                 />
               )}
               empty={
-                <div className="py-12 px-4 text-center text-secondary">
-                  {isLoading ? 'Loading clubs...' : 'No clubs found.'}
-                </div>
+                // While it loads, the list's own shape rather than a line of
+                // text the cards then push down (PROJECT_GUIDE §9).
+                isLoading ? (
+                  <AdminCardListSkeleton cards={4} fields={1} />
+                ) : (
+                  <div className="py-12 px-4 text-center text-secondary">No clubs found.</div>
+                )
               }
             />
           </div>

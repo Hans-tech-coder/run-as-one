@@ -76,7 +76,7 @@ export default function RegistrationOpeningPicker({
           return (
             <label
               key={option.title}
-              className={`relative flex cursor-pointer flex-col gap-3 rounded-xl border p-5 transition-colors focus-within:border-accent-blue focus-within:ring-2 focus-within:ring-accent-blue/40 ${
+              className={`relative flex cursor-pointer flex-col gap-3 rounded-xl border p-4 sm:p-5 transition-colors focus-within:border-accent-blue focus-within:ring-2 focus-within:ring-accent-blue/40 ${
                 isSelected
                   ? 'border-accent-blue bg-accent-blue/10'
                   : 'border-white/10 bg-white/[0.02] hover:border-white/20'
@@ -119,7 +119,7 @@ export default function RegistrationOpeningPicker({
       </div>
 
       {scheduled && (
-        <div className="flex flex-col gap-4 rounded-xl border border-white/10 bg-black/20 p-5">
+        <div className="flex flex-col gap-4 rounded-xl border border-white/10 bg-black/20 p-4 sm:p-5">
           {/* min-w-0 on each field: a native date or time input carries an
               intrinsic width of its own, and without it a grid track holds
               that width open past a 360px screen's edge. */}

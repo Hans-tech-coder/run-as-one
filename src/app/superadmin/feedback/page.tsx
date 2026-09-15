@@ -18,6 +18,7 @@ import {
 import { useAlert } from '@/components/ui/AlertProvider';
 import SkeletonSwap, { SkeletonBar } from '@/components/ui/Skeleton';
 import AdminCardList, { AdminCardListSkeleton } from '@/app/admin/AdminCardList';
+import FilterChip from '@/app/admin/FilterChip';
 import {
   ANONYMOUS_SENDER,
   FEEDBACK_KINDS,
@@ -615,43 +616,5 @@ function MessageDetail({
         )}
       </div>
     </>
-  );
-}
-
-/**
- * A toolbar chip that can be on.
- *
- * `.btn-filter` has no active state of its own — every other screen's chips
- * open a menu rather than toggling — so the "on" look is added here: the
- * dashboard's light fill, the same inversion `.btn-light` uses to mark the one
- * thing worth pressing. Pressing an active chip clears it, which is why each
- * one carries aria-pressed rather than pretending to be a link.
- */
-function FilterChip({
-  label,
-  icon,
-  active,
-  onClick,
-}: {
-  label: string;
-  icon?: React.ReactNode;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className="btn-filter"
-      style={
-        active
-          ? { background: '#e4e4e7', borderColor: '#e4e4e7', color: '#09090b' }
-          : undefined
-      }
-    >
-      {icon}
-      {label}
-    </button>
   );
 }

@@ -185,7 +185,9 @@ src/
                             #   AdminCardEdit — an inline edit, as a card holds it,
                             #   AdminTablePager / MobileSortMenu — every table's
                             #   pager and its below-lg Sort chip,
-                            #   row-menu-position.ts — where a row's menu opens)
+                            #   row-menu-position.ts — where a row's menu opens,
+                            #   route-loading-shape.ts — what each page's wait
+                            #   draws below lg, FilterChip — a chip that finds)
     superadmin/             # platform-owner portal (SuperAdminShell, a thin
                             #   wrapper over admin/DashboardShell)
     api/                    # all route handlers — see §6
@@ -201,7 +203,7 @@ prisma/schema.prisma        # the data model, heavily commented
 vercel.json                 # scheduled work (crons) — see §2
 scripts/                    # seed + one-off maintenance scripts
 .claude/skills/             # project-scoped skills (ui-ux-pro-max, 21st-*, prisma-*)
-MOBILE_RESPONSIVE_PLAN/     # one md file per batch for the mobile admin/superadmin work (§10)
+MOBILE_RESPONSIVE_PLAN/     # the finished mobile dashboards plan, kept for its reasoning (§10)
 ```
 
 ---
@@ -479,7 +481,10 @@ counts behind it) · `/admin/login` · `/admin/register` · `/admin/events` (the
 now, or name the date and time it opens itself. Saving either answer also lifts
 a manual hold, since both are the organizer saying when sign-ups happen. A
 scheduled row shows a *Scheduled* badge with the opening date quietly under it.
-Plus `/new` and `/[id]/edit` — the edit screen ends with a **read-only
+Plus `/new` and `/[id]/edit` — below `sm` both keep Cancel and Save in a bar
+stuck to the foot of the screen, below `lg` an uploaded image's Remove is a bar
+under it rather than a hover overlay, and the certificate preview comes above
+its sliders; the edit screen ends with a **read-only
 Promotions panel**: what a runner registering for this race can be given, its status and
 its conditions, with a link through to the marketing screen. Read-only on
 purpose — one screen owns promotions, and a second place to edit them is a
@@ -614,8 +619,10 @@ leaks, but a validator still sees Edit (an open item in
 
 ### Super admin (`/superadmin`)
 `/superadmin` dashboard (platform revenue, fees) · `/superadmin/organizers`
-(approve, suspend, set commission) · `/superadmin/communities` (approve, rename,
-reject clubs) · `/superadmin/feedback` (**the reading end of the public form** —
+(approve, suspend, set commission; **Pending / Approved / Suspended chips** find
+accounts by status, Pending with its count — they replaced a Filter button that
+had no handler) · `/superadmin/communities` (approve, rename, reject clubs; the
+Add a club box and its button share one row from `sm` up) · `/superadmin/feedback` (**the reading end of the public form** —
 three metric cards over the messages, newest first. It is the super admin's
 screen and not the organizer's for the same reason the club list is: feedback is
 about the platform rather than about any one race, and it carries strangers'
@@ -680,9 +687,10 @@ opens its message from a *Read message* button rather than a tap anywhere.
   staff member was assigned to it. So every page under `/admin/events/[id]/**`
   calls `requireActor()`, reads the event with
   `findFirst({ where: { id, organizerId: actor.orgId } })` and then checks
-  `can()`, rendering its own "Event not found." on either miss — the same
-  wording as a genuinely missing event, so the screen cannot be used to probe
-  which ids exist. List pages read through `reachableEvents(actor, …)`.
+  `can()`, answering either miss with `AdminNotFound` worded from
+  `admin/events/event-not-found.ts` — the same page for a genuinely missing
+  event and one this person may not open, so the screen cannot be used to
+  probe which ids exist. List pages read through `reachableEvents(actor, …)`.
 - **Every admin write leaves an audit row in the same transaction**
   (`audit.ts`, §5), and so do the two reads that let personal data leave —
   opening a proof and exporting registrants. A new admin write passes its
@@ -806,9 +814,8 @@ These are the user's own standing preferences. Follow them without being asked.
       card, modal frame), not page-local hacks. Every other screen using that
       furniture is re-checked at phone *and* desktop widths before the work is
       called done.
-    - The full checklist and the overflow-check script are in
-      `MOBILE_RESPONSIVE_PLAN/README.md` → "Definition of done". Once that
-      plan finishes, §9 carries the convention on its own.
+    - The full checklist and the overflow-check script are in §9, under
+      "One responsive dashboard" → "Checking a screen".
 
 ---
 
@@ -938,8 +945,9 @@ These are the user's own standing preferences. Follow them without being asked.
     `.admin-modal-footer`: capped at the viewport in `dvh`, the body scrolls,
     and the footer is sticky and full width on a phone. The panel is
     `overflow: clip`, so a footer's own background cannot paint square
-    corners past its rounded edge. Both are defined in
-    `Admin.css` and adopted screen by screen by `MOBILE_RESPONSIVE_PLAN/`.
+    corners past its rounded edge. Both are defined in `Admin.css`, and every
+    dashboard dialog wears them, the event forms' success and failure dialogs
+    included.
   - **Every TanStack table's pager is `admin/AdminTablePager`.** It holds the
     rows-per-page menu, the range and First / Previous / Next / Last. Below
     `sm` it shows only the range and 44px Previous / Next.
@@ -950,8 +958,8 @@ These are the user's own standing preferences. Follow them without being asked.
       have no columns.
     - A card list standing on the page, rather than inside a panel, passes
       `className="is-flush"`.
-    - A route's `loading.tsx` can draw the list's shape with
-      `AdminCardListSkeleton`.
+    - A route's wait draws the list's shape through
+      `route-loading-shape.ts` (below).
   - **A row's portalled menu is placed by `admin/row-menu-position.ts`**
     (`placeRowMenu`). It is clamped inside the viewport's sides, and flips
     above a trigger that has no room below, measured once the menu has
@@ -975,9 +983,9 @@ These are the user's own standing preferences. Follow them without being asked.
     registrants list's `.bulk-bar` ("N selected · Export · Delete · Clear")
     is fixed to the viewport and lined up with the content column, with a
     `.bulk-bar-spacer` at the end of the list so the pager scrolls clear of
-    it, and rises on `.t-toast`. **Nothing in the dashboard can be
-    `position: sticky` to the viewport**: `<body>` clips `overflow-x`, which
-    makes it a scroll container that never scrolls itself. From `lg` up the red chip in the toolbar does the
+    it, and rises on `.t-toast`. It is fixed rather than sticky because it
+    floats over whichever card is at the foot of the screen, wherever the
+    list is scrolled to. From `lg` up the red chip in the toolbar does the
     job. A card list with a bulk action passes `selectAll` to
     `AdminCardList`, reading the table's page selection.
   - **A `.btn-filter` chip's tone is a class, never a Tailwind colour.**
@@ -989,6 +997,77 @@ These are the user's own standing preferences. Follow them without being asked.
     adds `.admin-modal-sheet` to `.admin-modal-panel`: below `sm` it is the
     whole screen with its footer at the bottom edge, and its overlay drops
     its padding with `max-sm:p-0`.
+  - **A long form keeps Save in reach below `sm`.** `.admin-form >
+    .form-actions` (the create and edit event forms) sticks to the foot of
+    the screen, edge to edge on a blurred ground; Cancel keeps its own width
+    and Save takes the rest. It can stick because `<body>` **clips** its
+    `overflow-x` (`globals.css`). It used to hide it, which made `<body>` a
+    scroll container that never scrolls, so no sticky box anywhere in the app
+    stuck — the desktop `.admin-header` and the event page's and wizard's
+    summary sidebars stick now too. Never put `overflow-x: hidden` back on
+    `html` or `body`.
+  - **Forms on a touch screen.** A `.form-grid` cell may shrink
+    (`min-width: 0`), so a native date or time input cannot hold a column
+    open. Below `lg` a row's remove button, the add link and a checkbox's
+    label row are 44px, and an uploaded image's Remove is a bar under the
+    image instead of a hover overlay. Below `sm` the drop zone tightens and a
+    settings button spans the width. A money box carries
+    `inputMode="decimal"`, a count `inputMode="numeric"`; radio cards stack
+    below `md` and step their inset down below `sm`.
+  - **A picker's list stays on screen.** `AdminSelect` measures when it
+    opens: below its trigger when the list fits, above it when there is more
+    room there, and never taller than the room it opens into.
+    `OrganizerSwitcher`'s menu is clamped inside the screen's sides and
+    scrolls rather than running off the top.
+  - **A wait is the page's shape below `lg`.** `admin/loading.tsx`,
+    `admin/events/loading.tsx` and `superadmin/loading.tsx` read the URL and
+    hand `AdminRouteLoading` a shape from `admin/route-loading-shape.ts`:
+    metric tiles, the toolbar's rows and a card list in its frame, or form
+    panels field by field, at heights measured on the real pages. From `lg`
+    up it is the dots. **A page that gains a toolbar row, a metric or a field
+    updates its entry in the same edit.** A client page that fetches its own
+    list (the superadmin screens) puts `AdminCardListSkeleton` in the card
+    list's `empty` slot while it waits.
+  - **A chip that toggles a filter is `admin/FilterChip`** (feedback's status
+    and kind chips, the organizers' status chips). It finds rows and never
+    sorts them, pressing the active chip clears it, and it is 44px below `lg`.
+  - **A single-event screen's miss is `AdminNotFound`**, worded from
+    `admin/events/event-not-found.ts`, identical for a missing event and one
+    the person may not open (§7).
+  - **The sign-in pages** (`Auth.css`: login, register, the invitation). Below
+    `sm` the card keeps a 16px margin and a 24px inset, its title steps down
+    and the glows fit the screen. The card is centred by auto margins, so with
+    a phone's keyboard open it starts at the top instead of pushing its head
+    out of reach. The container clips rather than hides and is `dvh` tall, the
+    card lifts on hover only where there is a real pointer, and the glows stop
+    under reduced motion.
+  - **Checking a screen.** A dashboard change is not done until:
+    - nothing scrolls sideways at 360, 390, 767 and 820, measured with the
+      script below at rest *and* with the screen's menus and dialogs open;
+    - 1280 and 1440 look as they did, on every screen using what changed;
+    - a data table is cards below `lg`, from `AdminCardList`;
+    - targets are 44×44 with 8px between them, and a typed-into field is
+      16px below `sm`;
+    - a dialog fits in `dvh` with its primary button reachable, and a menu
+      stays inside a 360px screen;
+    - untrusted text wraps (`min-w-0`, `overflow-wrap: anywhere`) and only
+      chips are `nowrap`;
+    - motion keeps its reduced-motion guard, and lint and `npx tsc --noEmit`
+      are clean for the touched files.
+
+    It must return `ok: true` with an empty list. A resting rail stays inside
+    the screen; an opened menu, popover or dialog is checked while open.
+
+    ```js
+    (() => {
+      const w = document.documentElement.clientWidth;
+      const offenders = [...document.querySelectorAll('body *')]
+        .filter(el => { const r = el.getBoundingClientRect(); return r.width && r.right > w + 1; })
+        .slice(0, 10)
+        .map(el => `${el.tagName.toLowerCase()}.${String(el.className).slice(0, 80)}`);
+      return { ok: document.documentElement.scrollWidth <= w, offenders };
+    })()
+    ```
 - **A list's order is a fact about the rows, not about the view — and a number
   in it should name the thing, not its seat.** Every listing gets an explicit
   `orderBy`; without one Postgres is free to return rows in heap order, which
@@ -1477,7 +1556,10 @@ model, or any `/api/admin/**` route's ownership check** — its "Batch 1" notes
 record the calls made in the batch, and the file records which decisions are
 closed (no unified account table, no SSO).
 
-**`MOBILE_RESPONSIVE_PLAN/` is an open queue, with Batches 1 to 5 landed.** Batch 1
+**`MOBILE_RESPONSIVE_PLAN/` is finished.** All six batches have landed. The
+folder is kept only for the reasoning behind each and for the decisions it
+closed; the convention itself lives in §9 and needs nothing from the plan.
+Batch 1
 added `DashboardShell` (the frame both dashboards share: one collapsible
 sidebar menu at every width, a rail that opens over the page on a phone), `AdminCardList`, the `.dash-desktop-only` /
 `.dash-mobile-only` switch, and the toolbar, header, metrics, popover and
@@ -1504,9 +1586,17 @@ The admin fee and the club rename open as a full-width `AdminCardEdit` block on
 the card, a feedback card opens its message through a "Read message" accordion
 (`.t-acc`), the dashboard's tile icons sit in their `.metric-icon` box, and
 Approve / Suspend / Remove wear the `.is-success` / `.is-danger` chip tones.
-**Batch 6 (forms, sign-in pages and the full sweep) is next.** Six batches,
-one file each, to make `/admin/**` and `/superadmin/**` fully manageable on a
-phone with no horizontal scroll:
+**Batch 6 is in too.** The create and edit forms keep Save in a bar at the
+foot of a phone's screen and their dialogs wear `.admin-modal-panel`; uploads,
+settings and the three sign-in pages fit 360px. `<body>` clips its overflow-x
+instead of hiding it, so sticky boxes stick. `AdminSelect` flips above its
+trigger when it must, every route's wait draws its page's phone shape
+(`route-loading-shape.ts`), the organizers list has status chips in place of a
+dead Filter button, Add a club sits on one row from `sm` up, and the results
+and registrants screens answer a missing event with `AdminNotFound`. The batch
+file carries the route × width sweep. The six batches, one file each, made
+`/admin/**` and `/superadmin/**` fully manageable on a phone with no
+horizontal scroll:
 1. the shared shell, menu and card component;
 2. Events and Team;
 3. Registrants;
@@ -1514,8 +1604,7 @@ phone with no horizontal scroll:
 5. Superadmin;
 6. forms, sign-in pages and a full sweep.
 
-A session runs one batch: read the folder's `README.md`, then that batch's
-file. The README records the closed decisions — breakpoints that follow the
+The README records the closed decisions — breakpoints that follow the
 public site's Tailwind scale (the menu opens over the page below `md`, cards
 below `lg`), cards reading the same TanStack rows as the table, a CSS switch
 rather than a `matchMedia` hook, and one collapsible sidebar at every width

@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { Search, Filter, Edit, CheckCircle, Ban } from 'lucide-react';
+import { Search, Edit, CheckCircle, Ban } from 'lucide-react';
 import { formatPesos, toPesos } from '@/lib/money';
 import { useAlert } from '@/components/ui/AlertProvider';
-import AdminCardList from '@/app/admin/AdminCardList';
+import AdminCardList, { AdminCardListSkeleton } from '@/app/admin/AdminCardList';
 import AdminCardEdit from '@/app/admin/AdminCardEdit';
+import FilterChip from '@/app/admin/FilterChip';
 
 interface Organizer {
   id: string;
@@ -20,12 +21,25 @@ interface Organizer {
   };
 }
 
+/** The states an account can be in, as the toolbar's chips name them. */
+const STATUS_CHIPS = [
+  { status: 'PENDING', label: 'Pending' },
+  { status: 'APPROVED', label: 'Approved' },
+  { status: 'SUSPENDED', label: 'Suspended' },
+] as const;
+
+type StatusFilter = 'ALL' | (typeof STATUS_CHIPS)[number]['status'];
+
 export default function OrganizersManagementPage() {
   // Shadows window.alert / window.confirm on purpose — see AlertProvider.
   const { alert, confirm } = useAlert();
   const [organizers, setOrganizers] = useState<Organizer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  // Which accounts are listed. The chips find rows and never sort them, so an
+  // application approved from the Pending view leaves it rather than jumping
+  // to another place in a list the owner is working down.
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
 
   // Edit state. One draft for both layouts: the table's cell and the card's
   // edit block read the same pair, so an edit survives a resize across `lg`.
@@ -108,9 +122,14 @@ export default function OrganizersManagementPage() {
   };
 
   const filteredOrganizers = organizers.filter(o =>
-    o.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    o.email.toLowerCase().includes(searchTerm.toLowerCase())
+    (statusFilter === 'ALL' || o.status === statusFilter) &&
+    (o.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      o.email.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+  const pendingCount = organizers.filter(o => o.status === 'PENDING').length;
+  // "None at all" and "none that match" are different news.
+  const emptyMessage =
+    organizers.length === 0 ? 'No organizers found.' : 'No organizers match this search and filter.';
 
   return (
     <>
@@ -131,10 +150,18 @@ export default function OrganizersManagementPage() {
                 className="search-input"
               />
             </div>
-            <div className="toolbar-actions">
-              <button className="btn-filter">
-                <Filter size={16} /> Filter
-              </button>
+            {/* The feedback inbox's chips, one per status, with the waiting
+                applications counted. The Filter button that stood here had no
+                handler and no menu. Pressing the active chip shows everyone. */}
+            <div className="toolbar-actions flex-wrap">
+              {STATUS_CHIPS.map(({ status, label }) => (
+                <FilterChip
+                  key={status}
+                  label={status === 'PENDING' && pendingCount ? `${label} (${pendingCount})` : label}
+                  active={statusFilter === status}
+                  onClick={() => setStatusFilter(statusFilter === status ? 'ALL' : status)}
+                />
+              ))}
             </div>
           </div>
 
@@ -159,7 +186,7 @@ export default function OrganizersManagementPage() {
                 ) : filteredOrganizers.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="text-center py-12 text-secondary">
-                      No organizers found.
+                      {emptyMessage}
                     </td>
                   </tr>
                 ) : (
@@ -261,9 +288,13 @@ export default function OrganizersManagementPage() {
                 </>
               )}
               empty={
-                <div className="py-12 px-4 text-center text-secondary">
-                  {isLoading ? 'Loading organizers...' : 'No organizers found.'}
-                </div>
+                // While it loads, the list's own shape rather than a line of
+                // text the cards then push down (PROJECT_GUIDE §9).
+                isLoading ? (
+                  <AdminCardListSkeleton cards={3} fields={1} />
+                ) : (
+                  <div className="py-12 px-4 text-center text-secondary">{emptyMessage}</div>
+                )
               }
             />
           </div>

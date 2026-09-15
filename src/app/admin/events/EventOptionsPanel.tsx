@@ -125,7 +125,7 @@ export default function EventOptionsPanel({
               return (
                 <label
                   key={option.value}
-                  className={`relative flex flex-col gap-3 rounded-xl border p-5 transition-colors ${
+                  className={`relative flex flex-col gap-3 rounded-xl border p-4 sm:p-5 transition-colors ${
                     locked ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
                   } ${
                     isSelected
@@ -167,7 +167,7 @@ export default function EventOptionsPanel({
 
         <div className="flex flex-col gap-6">
           {options.map((row, idx) => (
-            <div key={idx} className="rounded-xl border border-white/10 bg-white/[0.02] p-5">
+            <div key={idx} className="rounded-xl border border-white/10 bg-white/[0.02] p-4 sm:p-5">
               <div className="flex items-center justify-between mb-4">
                 <span className="text-sm font-medium text-secondary uppercase tracking-wider">
                   {words.rowLabel} {idx + 1}
@@ -178,6 +178,8 @@ export default function EventOptionsPanel({
                     onClick={() => remove(idx)}
                     className="btn-remove"
                     title={`Remove ${words.rowLabel}`}
+                    // A phone has no hover to read the title from.
+                    aria-label={`Remove ${words.rowLabel} ${idx + 1}`}
                   >
                     <Trash2 size={18} />
                   </button>
@@ -225,6 +227,7 @@ export default function EventOptionsPanel({
                   <label className="form-label">Price (₱)</label>
                   <input
                     type="number"
+                    inputMode="decimal"
                     value={row.price}
                     onChange={e => update(idx, 'price', Number(e.target.value))}
                     className="form-input"
@@ -244,6 +247,7 @@ export default function EventOptionsPanel({
                   </label>
                   <input
                     type="number"
+                    inputMode="numeric"
                     value={row.slotLimit ?? ''}
                     onChange={e =>
                       update(

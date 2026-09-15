@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useId, useRef, useState } from "react";
+import React, { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { Check, ChevronDown } from "lucide-react";
 import FieldError from "@/components/ui/FieldError";
 
@@ -22,6 +22,13 @@ import FieldError from "@/components/ui/FieldError";
  * highlighted row is announced through aria-activedescendant, which is what
  * makes the arrow keys, Enter and Escape behave the way a real select does.
  */
+
+/** The list's tallest, the old `max-h-64`. */
+const LIST_MAX_HEIGHT = 256;
+/** Room kept between the list and the edge of the screen. */
+const VIEWPORT_EDGE = 12;
+/** Shortest the list is allowed to become before it would rather flip. */
+const LIST_MIN_HEIGHT = 120;
 
 export interface AdminSelectOption {
   value: string;
@@ -54,6 +61,11 @@ export default function AdminSelect({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
+  // Where the list opens. Measured each time it opens rather than assumed:
+  // on a phone a picker near the foot of the screen (the results uploader's
+  // last column, a modal's last field) used to open its list off the bottom
+  // edge, where nobody could reach the options.
+  const [placement, setPlacement] = useState({ up: false, maxHeight: LIST_MAX_HEIGHT });
   const wrapperRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   const baseId = useId();
@@ -91,6 +103,36 @@ export default function AdminSelect({
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, [isOpen]);
+
+  // Below the trigger when the list fits there, above it when it does not and
+  // there is more room above, and never taller than the room it opens into.
+  // A layout effect, so the first painted frame is already in the right place.
+  useLayoutEffect(() => {
+    if (!isOpen) return;
+    const place = () => {
+      const rect = wrapperRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const gap = 8;
+      const below = window.innerHeight - rect.bottom - gap - VIEWPORT_EDGE;
+      const above = rect.top - gap - VIEWPORT_EDGE;
+      // Rows are about 44px, more with a hint; this only has to be close
+      // enough to tell a short list that fits from one that does not.
+      const wanted = Math.min(LIST_MAX_HEIGHT, options.length * 48 + 8);
+      const up = below < Math.min(wanted, LIST_MIN_HEIGHT * 2) && above > below;
+      const room = up ? above : below;
+      setPlacement({
+        up,
+        maxHeight: Math.max(LIST_MIN_HEIGHT, Math.min(LIST_MAX_HEIGHT, room)),
+      });
+    };
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [isOpen, options.length]);
 
   // Keep the highlighted row inside the scroll box — an organizer's event list
   // is the case this exists for, and it grows every season.
@@ -194,7 +236,10 @@ export default function AdminSelect({
             id={listboxId}
             role="listbox"
             aria-label={listboxLabel}
-            className="absolute z-50 left-0 right-0 mt-2 max-h-64 overflow-y-auto rounded-[12px] border border-white/15 bg-[#0d0d0f] shadow-[0_16px_40px_rgba(0,0,0,0.6)] py-1"
+            className={`absolute z-50 left-0 right-0 ${
+              placement.up ? "bottom-full mb-2" : "top-full mt-2"
+            } overflow-y-auto overscroll-contain rounded-[12px] border border-white/15 bg-[#0d0d0f] shadow-[0_16px_40px_rgba(0,0,0,0.6)] py-1`}
+            style={{ maxHeight: `${placement.maxHeight}px` }}
           >
             {options.map((option, index) => {
               const isSelected = index === selectedIndex;

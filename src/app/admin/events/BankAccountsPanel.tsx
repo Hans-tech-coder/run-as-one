@@ -73,7 +73,7 @@ export default function BankAccountsPanel({
         ) : (
           <div className="flex flex-col gap-6">
             {accounts.map((account, idx) => (
-              <div key={idx} className="rounded-xl border border-white/10 bg-white/[0.02] p-5">
+              <div key={idx} className="rounded-xl border border-white/10 bg-white/[0.02] p-4 sm:p-5">
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-sm font-medium text-secondary uppercase tracking-wider">
                     Account {idx + 1}
@@ -83,6 +83,7 @@ export default function BankAccountsPanel({
                     onClick={() => remove(idx)}
                     className="btn-remove"
                     title="Remove Account"
+                    aria-label={`Remove account ${idx + 1}`}
                   >
                     <Trash2 size={18} />
                   </button>

@@ -4,6 +4,8 @@ import { ArrowLeft } from 'lucide-react';
 import prisma from '@/lib/db';
 import { can, requireActor } from '@/lib/actor';
 import RegistrantsTable from './RegistrantsTable';
+import AdminNotFound from '../../../AdminNotFound';
+import { EVENT_NOT_FOUND } from '../../event-not-found';
 import { runnerRef } from '@/lib/order-ref';
 import { isPdfProof } from '@/lib/uploads';
 import { EMAIL_KIND_LABELS, outstandingEmail } from '@/lib/email-delivery';
@@ -79,11 +81,10 @@ export default async function RegistrantsPage({
       : null;
 
   if (!event) {
-    return (
-      <div className="p-8 text-center text-secondary">
-        Event not found.
-      </div>
-    );
+    // In the dashboard's frame, with the way back to the events list. The
+    // wording is shared with the results screen and says the same for a
+    // missing event and one this person may not open.
+    return <AdminNotFound {...EVENT_NOT_FOUND} />;
   }
 
   // Flatten the runners from all registrations

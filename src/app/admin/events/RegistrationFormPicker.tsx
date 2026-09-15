@@ -51,7 +51,7 @@ export default function RegistrationFormPicker({
         return (
           <label
             key={option.value}
-            className={`relative flex cursor-pointer flex-col gap-3 rounded-xl border p-5 transition-colors ${
+            className={`relative flex cursor-pointer flex-col gap-3 rounded-xl border p-4 sm:p-5 transition-colors ${
               isSelected
                 ? 'border-accent-blue bg-accent-blue/10'
                 : 'border-white/10 bg-white/[0.02] hover:border-white/20'

@@ -197,25 +197,25 @@ export default function NewEventPage() {
 
       <div className="admin-content max-w-4xl mx-auto">
         <div 
-          className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
+          className={`fixed inset-0 z-50 flex items-center justify-center p-4 max-sm:p-3 bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
             error && !isClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
           }`}
           style={{ zIndex: 100 }}
         >
           <div 
-            className={`t-modal w-full max-w-md bg-[#111] border border-red-500/20 rounded-2xl shadow-2xl p-6 flex flex-col gap-6 ${isOpen ? 'is-open' : ''} ${isClosing ? 'is-closing' : ''}`}
+            className={`t-modal admin-modal-panel w-full max-w-md bg-[#111] border border-red-500/20 rounded-2xl shadow-2xl p-6 flex flex-col gap-6 ${isOpen ? 'is-open' : ''} ${isClosing ? 'is-closing' : ''}`}
             role="dialog"
           >
-            <div className="flex items-start gap-4">
+            <div className="admin-modal-body flex items-start gap-4">
               <div className="p-3 bg-red-500/10 rounded-full text-red-500 shrink-0 mt-1">
                 <AlertCircle size={24} strokeWidth={2} />
               </div>
-              <div className="flex flex-col gap-2">
+              <div className="flex min-w-0 flex-col gap-2">
                 <h3 className="text-xl font-semibold text-white">Action Failed</h3>
-                <p className="text-gray-400 text-sm leading-relaxed">{error}</p>
+                <p className="text-gray-400 text-sm leading-relaxed [overflow-wrap:anywhere]">{error}</p>
               </div>
             </div>
-            <div className="flex justify-end pt-2 border-t border-white/5">
+            <div className="admin-modal-footer flex justify-end pt-2 border-t border-white/5">
               <button 
                 type="button"
                 onClick={closeErrorModal} 
@@ -229,25 +229,25 @@ export default function NewEventPage() {
 
         {/* Success Modal */}
         <div 
-          className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
+          className={`fixed inset-0 z-50 flex items-center justify-center p-4 max-sm:p-3 bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
             successMsg && !isSuccessClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
           }`}
           style={{ zIndex: 100 }}
         >
           <div 
-            className={`t-modal w-full max-w-md bg-[#111] border border-green-500/20 rounded-2xl shadow-2xl p-6 flex flex-col gap-6 ${isSuccessOpen ? 'is-open' : ''} ${isSuccessClosing ? 'is-closing' : ''}`}
+            className={`t-modal admin-modal-panel w-full max-w-md bg-[#111] border border-green-500/20 rounded-2xl shadow-2xl p-6 flex flex-col gap-6 ${isSuccessOpen ? 'is-open' : ''} ${isSuccessClosing ? 'is-closing' : ''}`}
             role="dialog"
           >
-            <div className="flex items-start gap-4">
+            <div className="admin-modal-body flex items-start gap-4">
               <div className="p-3 bg-green-500/10 rounded-full text-green-500 shrink-0 mt-1">
                 <CheckCircle size={24} strokeWidth={2} />
               </div>
-              <div className="flex flex-col gap-2">
+              <div className="flex min-w-0 flex-col gap-2">
                 <h3 className="text-xl font-semibold text-white">Success</h3>
-                <p className="text-gray-400 text-sm leading-relaxed">{successMsg}</p>
+                <p className="text-gray-400 text-sm leading-relaxed [overflow-wrap:anywhere]">{successMsg}</p>
               </div>
             </div>
-            <div className="flex justify-end pt-2 border-t border-white/5">
+            <div className="admin-modal-footer flex justify-end pt-2 border-t border-white/5">
               <button 
                 type="button"
                 onClick={closeSuccessModal} 
@@ -474,7 +474,7 @@ export default function NewEventPage() {
                 <div className="form-group">
                   <label className="form-label">Delivery — Inside Province (₱) <span className="text-xs opacity-70">- 0 to hide this option</span></label>
                   <input
-                    type="number"
+                    type="number" inputMode="decimal"
                     value={formData.logisticsDeliveryFeeInside}
                     onChange={e => setFormData({...formData, logisticsDeliveryFeeInside: Number(e.target.value)})}
                     className="form-input"
@@ -484,7 +484,7 @@ export default function NewEventPage() {
                 <div className="form-group">
                   <label className="form-label">Delivery — Outside Province (₱) <span className="text-xs opacity-70">- 0 to hide this option</span></label>
                   <input
-                    type="number"
+                    type="number" inputMode="decimal"
                     value={formData.logisticsDeliveryFeeOutside}
                     onChange={e => setFormData({...formData, logisticsDeliveryFeeOutside: Number(e.target.value)})}
                     className="form-input"
@@ -523,7 +523,7 @@ export default function NewEventPage() {
                 <div className="form-group">
                   <label className="form-label">Admin Fee (₱) <span className="text-xs opacity-70">- charged per runner</span></label>
                   <input
-                    type="number"
+                    type="number" inputMode="decimal"
                     value={formData.adminFee}
                     onChange={e => setFormData({...formData, adminFee: Number(e.target.value)})}
                     className="form-input"
@@ -533,7 +533,7 @@ export default function NewEventPage() {
                 <div className="form-group">
                   <label className="form-label">Large Size Surcharge (₱) <span className="text-xs opacity-70">- added once per runner in 4XL or above</span></label>
                   <input
-                    type="number"
+                    type="number" inputMode="decimal"
                     value={formData.shirtSizeUpcharge}
                     onChange={e => setFormData({...formData, shirtSizeUpcharge: Number(e.target.value)})}
                     className="form-input"

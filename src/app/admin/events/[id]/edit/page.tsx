@@ -28,6 +28,7 @@ import type { EventPromotion } from '@/lib/promo-store';
 import { cleanBankAccounts, type BankAccountDraft } from '@/app/admin/events/bank-account-draft';
 import { offersBankTransfer } from '@/lib/registration-form';
 import AdminRouteLoading from '@/app/admin/AdminRouteLoading';
+import { EVENT_FORM_SHAPE } from '@/app/admin/route-loading-shape';
 
 // The premade templates that used to sit under /public/certificates are gone —
 // the only way to get a certificate background now is to upload one. An event
@@ -295,7 +296,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
   // second half of the same wait `events/loading.tsx` starts — the same frame
   // and dots, not a bare line of text with no header above it.
   if (isFetching) {
-    return <AdminRouteLoading />;
+    return <AdminRouteLoading shape={EVENT_FORM_SHAPE} />;
   }
 
   return (
@@ -311,25 +312,25 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
 
       <div className="admin-content max-w-4xl mx-auto">
         <div 
-          className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
+          className={`fixed inset-0 z-50 flex items-center justify-center p-4 max-sm:p-3 bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
             error && !isClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
           }`}
           style={{ zIndex: 100 }}
         >
           <div 
-            className={`t-modal w-full max-w-md bg-[#111] border border-red-500/20 rounded-2xl shadow-2xl p-6 flex flex-col gap-6 ${isOpen ? 'is-open' : ''} ${isClosing ? 'is-closing' : ''}`}
+            className={`t-modal admin-modal-panel w-full max-w-md bg-[#111] border border-red-500/20 rounded-2xl shadow-2xl p-6 flex flex-col gap-6 ${isOpen ? 'is-open' : ''} ${isClosing ? 'is-closing' : ''}`}
             role="dialog"
           >
-            <div className="flex items-start gap-4">
+            <div className="admin-modal-body flex items-start gap-4">
               <div className="p-3 bg-red-500/10 rounded-full text-red-500 shrink-0 mt-1">
                 <AlertCircle size={24} strokeWidth={2} />
               </div>
-              <div className="flex flex-col gap-2">
+              <div className="flex min-w-0 flex-col gap-2">
                 <h3 className="text-xl font-semibold text-white">Action Failed</h3>
-                <p className="text-gray-400 text-sm leading-relaxed">{error}</p>
+                <p className="text-gray-400 text-sm leading-relaxed [overflow-wrap:anywhere]">{error}</p>
               </div>
             </div>
-            <div className="flex justify-end pt-2 border-t border-white/5">
+            <div className="admin-modal-footer flex justify-end pt-2 border-t border-white/5">
               <button 
                 type="button"
                 onClick={closeErrorModal} 
@@ -343,25 +344,25 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
 
         {/* Success Modal */}
         <div 
-          className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
+          className={`fixed inset-0 z-50 flex items-center justify-center p-4 max-sm:p-3 bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
             successMsg && !isSuccessClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
           }`}
           style={{ zIndex: 100 }}
         >
           <div 
-            className={`t-modal w-full max-w-md bg-[#111] border border-green-500/20 rounded-2xl shadow-2xl p-6 flex flex-col gap-6 ${isSuccessOpen ? 'is-open' : ''} ${isSuccessClosing ? 'is-closing' : ''}`}
+            className={`t-modal admin-modal-panel w-full max-w-md bg-[#111] border border-green-500/20 rounded-2xl shadow-2xl p-6 flex flex-col gap-6 ${isSuccessOpen ? 'is-open' : ''} ${isSuccessClosing ? 'is-closing' : ''}`}
             role="dialog"
           >
-            <div className="flex items-start gap-4">
+            <div className="admin-modal-body flex items-start gap-4">
               <div className="p-3 bg-green-500/10 rounded-full text-green-500 shrink-0 mt-1">
                 <CheckCircle size={24} strokeWidth={2} />
               </div>
-              <div className="flex flex-col gap-2">
+              <div className="flex min-w-0 flex-col gap-2">
                 <h3 className="text-xl font-semibold text-white">Success</h3>
-                <p className="text-gray-400 text-sm leading-relaxed">{successMsg}</p>
+                <p className="text-gray-400 text-sm leading-relaxed [overflow-wrap:anywhere]">{successMsg}</p>
               </div>
             </div>
-            <div className="flex justify-end pt-2 border-t border-white/5">
+            <div className="admin-modal-footer flex justify-end pt-2 border-t border-white/5">
               <button 
                 type="button"
                 onClick={closeSuccessModal} 
@@ -595,7 +596,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
                 <div className="form-group">
                   <label className="form-label">Delivery — Inside Province (₱) <span className="text-xs opacity-70">- 0 to hide this option</span></label>
                   <input
-                    type="number"
+                    type="number" inputMode="decimal"
                     value={formData.logisticsDeliveryFeeInside}
                     onChange={e => setFormData({...formData, logisticsDeliveryFeeInside: Number(e.target.value)})}
                     className="form-input"
@@ -605,7 +606,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
                 <div className="form-group">
                   <label className="form-label">Delivery — Outside Province (₱) <span className="text-xs opacity-70">- 0 to hide this option</span></label>
                   <input
-                    type="number"
+                    type="number" inputMode="decimal"
                     value={formData.logisticsDeliveryFeeOutside}
                     onChange={e => setFormData({...formData, logisticsDeliveryFeeOutside: Number(e.target.value)})}
                     className="form-input"
@@ -689,7 +690,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
                 <div className="form-group">
                   <label className="form-label">Admin Fee (₱) <span className="text-xs opacity-70">- charged per runner</span></label>
                   <input
-                    type="number"
+                    type="number" inputMode="decimal"
                     value={formData.adminFee}
                     onChange={e => setFormData({...formData, adminFee: Number(e.target.value)})}
                     className="form-input"
@@ -699,7 +700,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
                 <div className="form-group">
                   <label className="form-label">Large Size Surcharge (₱) <span className="text-xs opacity-70">- added once per runner in 4XL or above</span></label>
                   <input
-                    type="number"
+                    type="number" inputMode="decimal"
                     value={formData.shirtSizeUpcharge}
                     onChange={e => setFormData({...formData, shirtSizeUpcharge: Number(e.target.value)})}
                     className="form-input"
@@ -757,13 +758,16 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
 
               {/* Coordinates Preview */}
               {formData.certificateTemplate && (
-                <div className="mt-8 border border-gray-700/50 rounded-lg p-6 bg-dark-card/50">
+                <div className="mt-8 border border-gray-700/50 rounded-lg p-4 sm:p-6 bg-dark-card/50">
                   <h3 className="text-lg font-bold text-primary mb-4">Visual Layout Preview</h3>
                   <p className="text-secondary text-sm mb-6">Adjust the sliders to position the text exactly where you want it on your certificate.</p>
                   
                   <div className="flex flex-col lg:flex-row gap-8">
-                    {/* Sliders */}
-                    <div className="w-full lg:w-1/3 flex flex-col gap-6">
+                    {/* Sliders. Beside the preview from `lg` up; below it
+                        they come after it, so the certificate is read at the
+                        full width first and the positions are set under it,
+                        with the preview still in view above the thumb. */}
+                    <div className="w-full lg:w-1/3 flex flex-col gap-6 order-2 lg:order-none">
                       {(() => {
                         let coords = { nameY: 50, timeY: 60, catY: 70 };
                         try {
@@ -786,7 +790,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
                                 type="range" min="0" max="100" 
                                 value={coords.nameY || 50} 
                                 onChange={(e) => updateCoord('nameY', Number(e.target.value))}
-                                className="w-full accent-accent-blue"
+                                className="w-full accent-accent-blue max-lg:h-11"
                               />
                             </div>
                             <div>
@@ -798,7 +802,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
                                 type="range" min="0" max="100" 
                                 value={coords.timeY || 60} 
                                 onChange={(e) => updateCoord('timeY', Number(e.target.value))}
-                                className="w-full accent-accent-blue"
+                                className="w-full accent-accent-blue max-lg:h-11"
                               />
                             </div>
                             <div>
@@ -810,7 +814,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
                                 type="range" min="0" max="100" 
                                 value={coords.catY || 70} 
                                 onChange={(e) => updateCoord('catY', Number(e.target.value))}
-                                className="w-full accent-accent-blue"
+                                className="w-full accent-accent-blue max-lg:h-11"
                               />
                             </div>
                           </>

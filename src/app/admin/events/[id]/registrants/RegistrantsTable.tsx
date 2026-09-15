@@ -1191,6 +1191,15 @@ export default function RegistrantsTable({
                 aria-label="Filter the list"
                 className="toolbar-popover absolute left-0 mt-2 w-72 bg-[#050505] border border-white/10 rounded-md p-2 z-50 shadow-2xl"
               >
+                {/* The lists are built from the rows, so a race nobody has
+                    registered for yet has none. The sheet says so rather than
+                    opening as an empty strip at the foot of the screen. */}
+                {filterGroups.every(group => group.options.length === 0) && (
+                  <p className="m-0 px-2 py-3 text-sm text-secondary">
+                    Nothing to filter yet. The categories, logistics and payment
+                    methods appear here as runners register.
+                  </p>
+                )}
                 {filterGroups.map(group => group.options.length > 0 && (
                   <div key={group.label} role="menu" aria-label={group.label} className="pb-1">
                     <p className="m-0 px-2 pt-1 pb-1 text-xs font-semibold uppercase tracking-wider text-secondary">

@@ -327,6 +327,12 @@
   animation-duration: var(--duration-quick);
 }
 
+/* A fallback that also draws its page's shape below `lg` puts the dots in a
+   child of .admin-content rather than on it; the reveal keeps the quick step. */
+.admin-content:has(> .admin-route-loading) {
+  animation-duration: var(--duration-quick);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .admin-content,
   .admin-header-title { animation: none !important; }
@@ -1044,9 +1050,10 @@
 
    Fixed to the viewport and lined up with the content column by hand: its
    left edge is the menu's width plus the content's inset at each step. It
-   cannot be `position: sticky`. <body> clips its overflow-x, which makes
-   <body> a scroll container that never scrolls itself, so a sticky box stays
-   where the page put it. The spacer at the end of the list is what lets the
+   was made fixed while nothing in the page could stick (<body> hid its
+   overflow-x; it clips it now, see globals.css), and fixed still suits it: it
+   floats over whichever card is at the foot of the screen, wherever the list
+   is scrolled to, not only at the end. The spacer at the end of the list is what lets the
    last card and the pager scroll clear of the bar. It rises in on
    transitions.dev's toast (22); `visibility` waits for the close clock so a
    bar on its way out cannot be tapped or tabbed to. Its z-index sits under a
@@ -1414,10 +1421,17 @@ textarea.form-input {
   gap: var(--space-lg);
 }
 
-@media (min-width: 768px) {
+@media (width >= 48rem) {
   .form-grid {
     grid-template-columns: 1fr 1fr;
   }
+}
+
+/* A native date or time input carries an intrinsic width of its own, and a
+   grid track holds that width open unless its cell may shrink: beside the
+   sidebar on a portrait tablet, two columns of them ran past the panel. */
+.form-grid > * {
+  min-width: 0;
 }
 
 .form-group-full {
@@ -1488,6 +1502,69 @@ textarea.form-input {
   color: var(--text-primary);
 }
 
+/* The event forms and settings on a touch screen (Mobile Batch 6). */
+@media (width < 64rem) {
+  /* 44px targets for what an organizer taps between fields: a row's remove
+     button (38px), the add link (a line of text), and the label beside a
+     checkbox, which is that checkbox's real target. */
+  .btn-add {
+    min-height: 44px;
+  }
+
+  .btn-remove {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .checkbox-group {
+    min-height: 44px;
+  }
+}
+
+@media (width < 40rem) {
+  /* Save is never a long scroll away. The create and edit forms run to six
+     panels on a phone, so their action row sticks to the foot of the screen
+     for as long as the form is on it, reaching the content column's edges and
+     clearing the home indicator. Only the event forms: the selector wants a
+     direct child of .admin-form, which settings' panels are not, and their
+     buttons sit right under three fields anyway. It can stick because <body>
+     clips its overflow-x rather than hiding it (globals.css). */
+  .admin-form > .form-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 30;
+    margin-inline: calc(-1 * var(--space-md));
+    padding: 12px var(--space-md) calc(12px + env(safe-area-inset-bottom));
+    background: rgba(10, 10, 12, 0.92);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+
+  .admin-form > .form-actions > :is(a, button) {
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+  }
+
+  /* Cancel is a quiet word and keeps its own width; the save button takes the
+     rest. Two equal halves wrapped "Update Event" onto two lines at 360px. */
+  .admin-form > .form-actions > .btn-cancel {
+    flex: 0 0 auto;
+  }
+
+  .admin-form > .form-actions > button {
+    flex: 1 1 auto;
+  }
+
+  /* A full-width button below `sm`, as everywhere in the dashboard; the
+     "saved" line takes the row above it. */
+  .settings-actions > .btn-light {
+    flex: 1 1 100%;
+  }
+}
+
 /* Toolbar & Search */
 .admin-toolbar {
   padding: var(--space-md) var(--space-lg);
@@ -1541,6 +1618,32 @@ textarea.form-input {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-sm);
+}
+
+/* A form in a toolbar (the club list's Add a club) keeps its box and its
+   button on one row from `sm` up. The box used to take the form's full width,
+   which pushed Add under it on the desktop too. Below `sm` the two stack at
+   full width instead (Responsive, further down). */
+@media (width >= 40rem) {
+  .admin-toolbar > .toolbar-form {
+    flex-wrap: nowrap;
+  }
+
+  /* 40px, the chip's height beside it, so the pair reads as one control. */
+  .admin-toolbar > .toolbar-form > .form-input {
+    flex: 1 1 16rem;
+    width: 16rem;
+    height: 40px;
+    padding-block: 0;
+  }
+}
+
+/* Between `sm` and `lg` the search has a row of its own, and the form takes
+   the next one whole. */
+@media (40rem <= width < 64rem) {
+  .admin-toolbar > .toolbar-form {
+    flex: 1 1 100%;
+  }
 }
 
 .btn-filter {
@@ -2314,6 +2417,48 @@ textarea.form-input {
   transform: translateY(-2px);
   background: #ff4d4f;
   box-shadow: 0 6px 16px rgba(255, 77, 79, 0.4);
+}
+
+/* On a touch screen the preview's Remove button lived on :hover alone, which
+   a finger cannot count on reaching. Below `lg` the overlay is a bar under the
+   image instead, always shown, and the image keeps the full width. */
+@media (width < 64rem) {
+  .file-preview-overlay {
+    position: static;
+    opacity: 1;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.35);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .btn-remove-preview {
+    min-height: 44px;
+  }
+}
+
+@media (width < 40rem) {
+  /* A 2rem inset on each side of a 240px panel left the drop zone's words
+     about 170px to wrap in. */
+  .file-upload-wrapper {
+    padding: 1.5rem 1rem;
+  }
+
+  .file-upload-icon {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 0;
+  }
+
+  .file-upload-title {
+    font-size: 1rem;
+  }
+
+  .btn-remove-preview {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 /* Icon Buttons Custom Classes */

@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import ResultsUploaderClient from './ResultsUploaderClient';
 import ResultsTableClient from './ResultsTableClient';
+import AdminNotFound from '../../../AdminNotFound';
+import { EVENT_NOT_FOUND } from '../../event-not-found';
 import { CATEGORY_ORDER } from '@/lib/category-order';
 
 export default async function AdminResultsPage({ params }: { params: Promise<{ id: string }> }) {
@@ -27,7 +29,10 @@ export default async function AdminResultsPage({ params }: { params: Promise<{ i
   });
 
   if (!event || !can(actor, 'event:view', { organizerId: actor.orgId, eventId: id })) {
-    return <div>Event not found</div>;
+    // In the dashboard's frame, with the way back, rather than a bare line of
+    // text outside the header and content. Worded exactly as the registrants
+    // screen words it, whichever of the two misses this is.
+    return <AdminNotFound {...EVENT_NOT_FOUND} />;
   }
 
   const results = await prisma.raceResult.findMany({

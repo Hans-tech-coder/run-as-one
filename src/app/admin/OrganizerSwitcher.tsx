@@ -33,7 +33,7 @@ export default function OrganizerSwitcher({
   // `document` exists when the portal is drawn.
   const [isOpen, setIsOpen] = useState(false);
   const [switchingTo, setSwitchingTo] = useState<string | null>(null);
-  const [position, setPosition] = useState({ left: 0, bottom: 0, width: 0 });
+  const [position, setPosition] = useState({ left: 0, bottom: 0, width: 0, maxHeight: 0 });
 
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -43,9 +43,18 @@ export default function OrganizerSwitcher({
   const updatePosition = useCallback(() => {
     const rect = buttonRef.current?.getBoundingClientRect();
     if (!rect) return;
-    // On the collapsed rail the trigger is a 48px icon; the menu keeps a width
-    // an organizer's name can be read in rather than inheriting that.
-    setPosition({ left: rect.left, bottom: window.innerHeight - rect.top + 8, width: Math.max(rect.width, 240) });
+    // On the collapsed rail the trigger is a 44–48px icon; the menu keeps a
+    // width an organizer's name can be read in rather than inheriting that —
+    // but never wider than the screen, and its right edge is kept on it too,
+    // which is what a 56px phone rail with a 240px menu beside it needs.
+    const edge = 8;
+    const width = Math.min(Math.max(rect.width, 240), window.innerWidth - edge * 2);
+    const left = Math.min(Math.max(rect.left, edge), window.innerWidth - width - edge);
+    // It opens upward from the foot of the sidebar, so the room it has is
+    // everything above the trigger. A staff member with many organizers gets
+    // a list that scrolls rather than one whose top is off the screen.
+    const maxHeight = Math.max(rect.top - 8 - edge, 120);
+    setPosition({ left, bottom: window.innerHeight - rect.top + 8, width, maxHeight });
   }, []);
 
   const close = useCallback(() => {
@@ -77,10 +86,13 @@ export default function OrganizerSwitcher({
     document.addEventListener('mousedown', onPointerDown);
     document.addEventListener('keydown', onKey);
     window.addEventListener('resize', updatePosition);
+    // The sidebar's menu scrolls on a short screen, carrying the trigger with it.
+    window.addEventListener('scroll', updatePosition, true);
     return () => {
       document.removeEventListener('mousedown', onPointerDown);
       document.removeEventListener('keydown', onKey);
       window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
     };
   }, [isOpen, switchingTo, close, updatePosition]);
 
@@ -135,6 +147,8 @@ export default function OrganizerSwitcher({
         bottom: `${position.bottom}px`,
         top: 'auto',
         width: `${position.width}px`,
+        maxHeight: `${position.maxHeight}px`,
+        overflowY: 'auto',
         marginTop: 0,
         zIndex: 9999,
       }}
@@ -148,7 +162,7 @@ export default function OrganizerSwitcher({
             aria-checked={organizer.current}
             disabled={Boolean(switchingTo)}
             onClick={() => choose(organizer.id)}
-            className={`action-dropdown-item w-full flex items-center gap-3 px-4 py-2 text-sm text-left ${
+            className={`action-dropdown-item w-full flex items-center gap-3 px-4 py-2 max-lg:min-h-11 text-sm text-left ${
               switchingTo === organizer.id ? 'is-navigating' : ''
             }`}
           >
