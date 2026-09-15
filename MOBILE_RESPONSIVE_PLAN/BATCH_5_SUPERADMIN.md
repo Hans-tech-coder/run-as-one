@@ -1,7 +1,7 @@
 # Batch 5 — Superadmin
 
 Read `README.md` in this folder first. Batch 1 must have landed. The shell and
-drawer already came with `DashboardShell`, so this batch is the four pages.
+menu already came with `DashboardShell`, so this batch is the four pages.
 
 **Sign-in:** needs a super admin session in the Browser pane. Ask the owner.
 The organizers and communities are live records, so open and cancel only.
@@ -68,6 +68,20 @@ precisely so plain arrays fit.
    - §6 Super admin: one line saying the three lists are cards below 1024px,
      with inline edits becoming full-width edit modes.
    - §10: Batch 5 landed.
+
+## Noticed during Batch 1
+
+Left for this batch, measured once the shell had landed:
+- **Organizers at 360px:** the page itself does not scroll, but the table
+  runs past the right edge inside `.admin-panel` (`overflow: hidden`), so
+  Events, Status, Admin Fee and Actions are cut off. The overflow script lists
+  `table.data-table` and its cells as offenders. The cards fix this.
+- **Dashboard tiles:** `page.tsx` puts `className="metric-icon"` on the lucide
+  `<svg>` itself, not on a wrapping `<div>` as `/admin` does. The 8px padding
+  then squeezes the icon, which is visible at every width and worst on a phone.
+  Wrap it the way `/admin/page.tsx` does.
+- **System Overview panel:** `.admin-panel-content` keeps its 32px padding on a
+  phone, which leaves a narrow column of text at 360px.
 
 ## Acceptance
 

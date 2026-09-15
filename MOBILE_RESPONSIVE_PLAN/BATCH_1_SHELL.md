@@ -183,4 +183,122 @@ is pixel-identical to before.
 
 ## What landed
 
-_Fill in when the batch is done: the decisions made and anything deferred._
+**The shell.** `DashboardShell.tsx` is the frame both dashboards share.
+`AdminShell` keeps `BARE_PATHS`, the permission-driven links, the role line and
+the organizer switcher (passed as `beforeUser`). `SuperAdminShell` keeps its four
+links and the blue avatar. `.mobile-menu-toggle` is gone. The superadmin's
+logout also gained the `aria-label` that only the admin copy had.
+
+Decisions made while building it:
+- **The drawer remembers the pathname it was opened on**, not a boolean, so
+  any route change closes it with no effect racing the navigation. A tap on a
+  link to *another* page leaves the drawer open until the route changes, so the
+  link's pending marker stays visible on a slow connection. A tap on the page
+  already showing closes it on the spot.
+- **A close button sits inside the drawer**, in the brand row, below `md` only.
+  The hamburger lies under the backdrop while the drawer is open, so it cannot
+  be the way out; focus goes to the close button on open and back to the
+  hamburger on close. The top bar and `<main>` are both `inert`, which makes
+  the drawer the only reachable thing without a hand-written focus trap.
+- **A `matchMedia` listener closes the drawer when the window crosses `md`.**
+  It is an event listener, not a render switch, so the "CSS picks the layout"
+  decision stands. Without it, a drawer left open while rotating a tablet
+  would keep the page locked and inert.
+- **Motion** uses the modal open/close tokens: enter at `--duration-fast`,
+  leave at `--duration-quick`, both `--ease-smooth-out`. Visibility follows the
+  same timing, so a closed drawer's links leave the tab order only once it has
+  slid away. No motion under `prefers-reduced-motion`.
+- **Header padding below `lg`:** 12px top and bottom. Left and right follow
+  `.admin-content` (24px, then 16px below `sm`) rather than a flat 16px, so the
+  title and the page under it share one left edge.
+- **The back link's 44px target** uses a -12px margin and applies at every
+  width, which changes no pixel of the layout. It also gained
+  `aria-label="Back to Events"`.
+- **Logout is 44×44 below `lg` only.** On the desktop it stays 34px, so the
+  sidebar measures as before.
+- **`.toolbar-popover` and `.admin-modal-panel`** (with `.admin-modal-body` and
+  `.admin-modal-footer`) are defined but not yet used anywhere; Batches 3–4
+  adopt them. The phone-width popover and modal rules use `!important` on
+  position and width, with the reason written beside them.
+- **`AdminCardList` has no `"use client"`.** It holds no state, so the server
+  Dashboard renders it directly.
+- The Dashboard's `any[]` for recent registrations is now a real type, so its
+  file lints clean.
+
+**Verified** (as super admin):
+- At 1440, `/superadmin` and `/superadmin/organizers` measure identically to
+  their before-baseline, box by box: sidebar, brand, nav items, user block,
+  header, title, panel, toolbar, search and table.
+- `/superadmin` passes the overflow check at 360, 390, 767 and 820. At 767 the
+  top bar and drawer are in use; at 820 the sidebar stands in place and the
+  header is sticky; at 1024 the desktop padding is back.
+- At 360×780 the drawer:
+  - opens with focus on its close button, the body locked, and the top bar
+    and main content inert;
+  - closes by Esc, by the backdrop and by a route change, returning focus to
+    the hamburger;
+  - keeps logout on screen, at 44×44.
+- `npx tsc --noEmit` passes, and eslint is clean on every touched `.tsx`.
+
+**Verified** (as owner):
+- At 1440, `/admin` has the same frame boxes as the superadmin baseline: brand
+  89px, nav items 56px, user block 89px, logout 34px, header 80px, and content
+  inset 32px. `/admin/events` keeps its toolbar: search 400×40 at 14px, the
+  View chip, and Create Event on the right.
+- `/admin` passes the overflow check at 360, 390, 767 and 820. The owner's
+  drawer lists Dashboard, Events, Marketing Tools, Team and Settings, reads
+  "Owner", and keeps logout on screen at 44×44.
+- At 360 on `/admin/events`, the search takes its own row at 16px, View wraps
+  beneath it, and Create Event spans the width. The table under it still
+  clips inside its panel; that is Batch 2.
+- **Cards with data.** This organizer has no PAID orders, so the Dashboard
+  only shows its empty state. The cards were checked on a throwaway page
+  rendering the Dashboard's exact `AdminCardList` config with fake rows,
+  including a very long name, reference and event title; the page was deleted
+  afterwards. Results:
+  - 360: one column, everything wraps, no overflow, and the header clamps to
+    2 lines.
+  - 767: two columns.
+  - 820: one column beside the sidebar.
+  - 1024 and 1280: the table is back and the cards are hidden.
+- **Not yet checked:** a staff account (role-limited links, and the
+  organizer switcher inside the drawer). It needs a staff session.
+
+**After the batch: the menu redesign** (the owner's request, from a
+reference design). Later batches use this API, not the one described above:
+- `DashboardShell` now takes `secondaryNavItems` (drawn below a divider,
+  before Log Out) and `initialCollapsed`.
+- Log Out is a menu row; the user block has no logout button and no
+  `.admin-logout`.
+- `AdminShell` passes Settings as a secondary item. `SuperAdminShell` has
+  none.
+- From `md` up the sidebar collapses to an 80px icon rail. The choice is kept
+  in the `dash_sidebar` cookie (`dashboard-sidebar.ts`), read by both
+  layouts.
+- `OrganizerSwitcher` becomes an icon on the rail, and its menu keeps a
+  240px minimum width.
+- The Dark Mode switch in the reference was left out, because the dashboards
+  have no light theme.
+
+**Then: one menu on phones too** (the owner's decision). The phone's top bar,
+hamburger, drawer and drawer close button were removed. The owner did not want
+a phone menu that looks different from the desktop's, so the task list above
+(tasks 2 and 3, and the drawer lines of the acceptance and verification notes)
+is history:
+- **Below `md` the sidebar is the same menu, smaller.** It rests as a 56px
+  rail: 44px rows, a 26px mark, a 32px avatar. The same chevron opens it over
+  the page at `min(256px, 85vw)`, with a backdrop. The page keeps a 56px left
+  margin and is never pushed.
+- **On a phone, open is temporary.** `.is-collapsed` and the cookie are
+  ignored there, and `.is-open` alone decides. The open state remembers its
+  pathname, so a route change folds it. Esc and the backdrop fold it and
+  return focus to the chevron, and while open the body is locked and `<main>`
+  is inert.
+- **The chevron's meaning depends on the width.** A `useSyncExternalStore` on
+  `(width >= 48rem)` tells it whether a press toggles the remembered collapse
+  or the phone's temporary open, and words its label. The layout itself is
+  still decided in CSS, so there is no flash.
+- **Tooltips stay desktop-only.**
+
+**Deferred:** see "Noticed during Batch 1" in `BATCH_5_SUPERADMIN.md` (the
+Organizers table clipped at 360px, and two older dashboard-tile defects).

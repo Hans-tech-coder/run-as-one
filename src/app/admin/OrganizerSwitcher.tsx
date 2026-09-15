@@ -43,7 +43,9 @@ export default function OrganizerSwitcher({
   const updatePosition = useCallback(() => {
     const rect = buttonRef.current?.getBoundingClientRect();
     if (!rect) return;
-    setPosition({ left: rect.left, bottom: window.innerHeight - rect.top + 8, width: rect.width });
+    // On the collapsed rail the trigger is a 48px icon; the menu keeps a width
+    // an organizer's name can be read in rather than inheriting that.
+    setPosition({ left: rect.left, bottom: window.innerHeight - rect.top + 8, width: Math.max(rect.width, 240) });
   }, []);
 
   const close = useCallback(() => {
@@ -171,11 +173,11 @@ export default function OrganizerSwitcher({
         onClick={() => (isOpen ? close() : open())}
       >
         <Building2 size={18} className="shrink-0 text-secondary" aria-hidden="true" />
-        <span className="min-w-0 flex-1">
+        <span className="org-switcher-text min-w-0 flex-1">
           <span className="org-switcher-label">Organizer</span>
           <span className="org-switcher-name">{current?.name}</span>
         </span>
-        <ChevronsUpDown size={16} className="shrink-0 text-secondary" aria-hidden="true" />
+        <ChevronsUpDown size={16} className="org-switcher-chevron shrink-0 text-secondary" aria-hidden="true" />
       </button>
 
       {isOpen && createPortal(menu, document.body)}

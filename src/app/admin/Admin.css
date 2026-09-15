@@ -13,55 +13,233 @@
   flex-direction: column;
   position: fixed;
   height: 100vh;
+  /* The phone's own browser bars eat into 100vh, which put the user block and
+     logout under them. dvh is the height actually visible. */
+  height: 100dvh;
   z-index: 50;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
 }
 
+/* 21px on the left centres the 38px mark in the 80px collapsed rail, so the
+   mark stays put when the sidebar collapses and only the wordmark leaves. */
 .admin-brand {
-  padding: var(--space-lg);
+  padding: var(--space-lg) var(--space-lg) var(--space-md) 21px;
   font-family: var(--font-sans);
   font-size: 1.5rem;
   font-weight: 700;
   color: var(--text-primary);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
+/* The mark is sized here rather than with a utility on the component, so the
+   rail's smaller phone size below can sit beside it in the same file. 40px is
+   the size the desktop sidebar has always drawn. */
+.admin-brand .rao-logo {
+  --rao-logo-size: 40px;
+}
+
 .admin-nav {
-  padding: var(--space-lg) var(--space-md);
+  padding: 4px 0 var(--space-md);
   flex: 1;
+  /* A short phone held sideways cannot fit every row, the switcher and the
+     user block; the menu scrolls so the person at the foot stays on screen. */
+  min-height: 0;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+}
+
+/* ── The menu (DashboardShell.tsx) ────────────────────────────────────────
+   Full-width rows rather than rounded pills: the page on screen is a tinted
+   band across the whole sidebar with a bar on its right edge, the one shape
+   that still reads when the sidebar is collapsed to its rail. Every icon sits
+   30px in at every width — centred in the 80px rail — so collapsing moves only
+   the edge, and a label is clipped by its own box while it fades. */
+.admin-menu-head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 36px;
+  padding-left: 30px;
+  flex-shrink: 0;
+}
+
+.admin-menu-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+/* The round chevron on the sidebar's edge. The knob is 24px; the button
+   around it is the 44px target, half of it out over the page. */
+.admin-collapse-toggle {
+  display: flex;
+  position: absolute;
+  top: 50%;
+  right: -22px;
+  z-index: 1;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  transform: translateY(-50%);
+  cursor: pointer;
+}
+
+.admin-collapse-knob {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--accent-blue);
+  /* The ring in the page's own colour cuts the knob out of the sidebar's
+     border line, so it reads as sitting on the edge rather than behind it. */
+  box-shadow: 0 0 0 3px var(--bg-dark), 0 4px 12px rgba(0, 0, 0, 0.45);
+  transition:
+    transform        var(--resize-dur) var(--resize-ease),
+    background-color var(--duration-quick) ease;
+}
+
+.admin-collapse-toggle:hover .admin-collapse-knob {
+  background: color-mix(in srgb, var(--accent-blue) 80%, #fff);
+}
+
+.admin-collapse-toggle:focus-visible {
+  outline: none;
+}
+
+.admin-collapse-toggle:focus-visible .admin-collapse-knob {
+  outline: 2px solid var(--text-primary);
+  outline-offset: 3px;
+}
+
+.admin-nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.admin-nav-divider {
+  flex-shrink: 0;
+  height: 1px;
+  margin: var(--space-md) 24px;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .admin-nav-item {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--space-md);
-  padding: var(--space-md);
-  /* Holds the pending marker (see .nav-pending) out on the right edge. */
-  justify-content: flex-start;
-  border-radius: var(--radius-md);
+  width: 100%;
+  min-height: 48px;
+  padding: 0 var(--space-md) 0 30px;
+  border: 0;
+  background: transparent;
   color: var(--text-secondary);
-  text-decoration: none;
   font-family: var(--font-body);
+  font-size: 0.9375rem;
   font-weight: 500;
-  transition: all 0.2s ease;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-quick) ease,
+    color            var(--duration-quick) ease;
+}
+
+.admin-nav-icon {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.admin-nav-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  transition: opacity var(--duration-quick) ease;
 }
 
 .admin-nav-item:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.04);
   color: var(--text-primary);
 }
 
+.admin-nav-item:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: -2px;
+}
+
+/* The label is the blue lightened toward white: --accent-blue itself on its
+   own tint falls short of 4.5:1. The bar keeps the true brand blue. */
 .admin-nav-item.active {
-  background: rgba(43, 192, 255, 0.1);
-  color: var(--accent-blue);
-  border-right: 3px solid var(--accent-blue);
+  background: color-mix(in srgb, var(--accent-blue) 14%, transparent);
+  color: color-mix(in srgb, var(--accent-blue) 70%, #fff);
+  font-weight: 600;
+  box-shadow: inset -4px 0 0 var(--accent-blue);
+}
+
+/* Leaving is the one row that ends the session; it warns on hover the way
+   the old logout icon did. */
+.admin-nav-logout:hover {
+  color: #ff4d4f;
+  background: rgba(255, 77, 79, 0.08);
+}
+
+/* The collapsed rail's tooltip: transitions.dev's tooltip (17-tooltip),
+   opened to the right of the row instead of above it. It fades in after a
+   short delay and leaves at once. Only the collapsed rail shows it (see the
+   desktop block under Responsive); the rows' own labels are the accessible
+   names, so it is aria-hidden. */
+.admin-nav-tip {
+  display: none;
+  position: absolute;
+  top: 50%;
+  left: calc(100% + 12px);
+  z-index: 60;
+  transform: translate(0, -50%) scale(var(--tt-scale));
+  transform-origin: 0% 50%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--tt-bg);
+  color: var(--tt-fg);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.3;
+  white-space: nowrap;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.06),
+    0 2px 6px 0 rgba(0, 0, 0, 0.05),
+    0 8px 28px 0 rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity   var(--tt-out-dur) var(--tt-out-ease),
+    transform var(--tt-out-dur) var(--tt-out-ease);
+}
+
+.admin-nav-tip-title {
+  display: block;
+  font-weight: 600;
+}
+
+.admin-nav-tip-sub {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.75rem;
+  color: #52525b;
 }
 
 /* The clicked-and-waiting marker inside a link — the sidebar's nav items and
@@ -154,18 +332,31 @@
   .admin-header-title { animation: none !important; }
 }
 
+/* 20px on the left centres the 40px avatar in the collapsed rail. The rule
+   above it is inset like the menu's divider rather than edge to edge. */
 .admin-user {
-  padding: var(--space-lg);
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  position: relative;
+  padding: var(--space-md) var(--space-md) var(--space-lg) 20px;
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
+.admin-user::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 24px;
+  right: 24px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
 .admin-user-avatar {
   width: 40px;
   height: 40px;
-  border-radius: 50%;
+  flex-shrink: 0;
+  border-radius: 12px;
   background: var(--accent-orange);
   display: flex;
   align-items: center;
@@ -176,7 +367,9 @@
 
 .admin-user-info {
   flex: 1;
+  min-width: 0;
   overflow: hidden;
+  transition: opacity var(--duration-quick) ease;
 }
 
 .admin-user-name {
@@ -194,21 +387,6 @@
   text-transform: capitalize;
 }
 
-.admin-logout {
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  padding: 8px;
-  border-radius: 8px;
-  transition: all 0.2s ease;
-}
-
-.admin-logout:hover {
-  color: #ff4d4f;
-  background: rgba(255, 77, 79, 0.1);
-}
-
 /* "Staff · PINK RUN EVENTS" can outrun the sidebar; it ends in an ellipsis and
    the full line is in the element's title. */
 .admin-user-role {
@@ -221,12 +399,22 @@
    organizer (OrganizerSwitcher.tsx). It sits in the same band as the person it
    belongs to, directly above them, so "who" and "where" read as one block. */
 .admin-org-switcher {
-  padding: var(--space-md) var(--space-lg) 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  position: relative;
+  padding: var(--space-md) var(--space-md) 0;
 }
 
-.admin-org-switcher + .admin-user {
-  border-top: none;
+.admin-org-switcher::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 24px;
+  right: 24px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.admin-org-switcher + .admin-user::before {
+  display: none;
 }
 
 .org-switcher-trigger {
@@ -277,6 +465,9 @@
 /* Main Content */
 .admin-main {
   flex: 1;
+  /* Without it a flex child refuses to shrink below its widest descendant, so
+     one long event title or unbroken email held the whole page open. */
+  min-width: 0;
   margin-left: 280px;
   display: flex;
   flex-direction: column;
@@ -313,12 +504,15 @@
 /* Metrics Cards */
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  /* min(100%, …) lets a tile be narrower than 240px when the screen itself is:
+     a bare 240px minimum is wider than a 360px phone's content box. */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
   gap: 24px;
   margin-bottom: 32px;
 }
 
 .metric-card {
+  min-width: 0;
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: var(--radius-xl);
@@ -352,6 +546,7 @@
   font-weight: 700;
   font-family: var(--font-sans);
   color: var(--text-primary);
+  overflow-wrap: anywhere;
 }
 
 /* Data Tables */
@@ -498,22 +693,206 @@
   color: rgba(255, 255, 255, 0.1);
 }
 
-/* Mobile Menu Toggle */
-.mobile-menu-toggle {
+/* ── The phone's backdrop ─────────────────────────────────────────────────
+   Behind the menu when a phone opens it out over the page (see Responsive
+   below). From `md` up the menu pushes the page instead, and this never shows. */
+.dash-backdrop {
   display: none;
 }
 
-.mobile-menu-btn {
-  background: rgba(0, 0, 0, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: var(--text-primary);
-  border-radius: 8px;
-  padding: 8px;
-  cursor: pointer;
+/* The back arrow on the edit, registrants, results and new-event headers. The
+   icon is 20px and was the whole target; the negative margin gives it a 44px
+   hit area without moving the arrow or the title beside it a pixel. */
+.admin-back-link {
+  width: 44px;
+  height: 44px;
+  margin: -12px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+}
+
+.admin-back-link:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: -6px;
+}
+
+/* ── The card list (AdminCardList.tsx) ───────────────────────────────────
+   What every data table becomes below `lg`. auto-fill with a 20rem floor steps
+   up to two columns on a portrait tablet only when there is room, the way the
+   public EventGrid steps up, rather than at a breakpoint of its own. Each card
+   wears the .admin-panel tokens. */
+.admin-card-list {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-md);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+  gap: 12px;
+}
+
+.admin-card {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: var(--space-md);
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-xl);
+  transition:
+    border-color var(--duration-quick) ease,
+    background-color var(--duration-quick) ease;
+}
+
+.admin-card.is-selected {
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.admin-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* 44px around the table's own 16px box; the negative margin keeps the box
+   aligned with the card's padding instead of pushing the title inward. */
+.admin-card-select {
+  width: 44px;
+  height: 44px;
+  margin: -12px 0 -12px -12px;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  backdrop-filter: blur(10px);
+  cursor: pointer;
+}
+
+.admin-card-leading {
+  flex-shrink: 0;
+  min-width: 1.5rem;
+  padding-top: 2px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-card-heading {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Names, references and event titles are untrusted length: they wrap
+   anywhere rather than hold the card open. */
+.admin-card-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.admin-card-subtitle {
+  margin-top: 2px;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.admin-card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* A chip is the one thing allowed not to wrap: a badge broken over two lines
+   reads as two badges. */
+.admin-card-badges > * {
+  white-space: nowrap;
+}
+
+.admin-card-fields {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+}
+
+.admin-card-field {
+  min-width: 0;
+}
+
+.admin-card-field.is-full {
+  grid-column: 1 / -1;
+}
+
+/* The same small uppercase label a table header wears, so a field reads as
+   the column it came from. */
+.admin-card-field dt {
+  margin-bottom: 2px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.admin-card-field dd {
+  margin: 0;
+  min-width: 0;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.admin-card-expanded {
+  min-width: 0;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.admin-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.admin-card-actions > :is(button, a) {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* ── Modal frame (.admin-modal-panel) ────────────────────────────────────
+   Adopted screen by screen from Batch 3 on. A panel never grows past the
+   viewport: its body scrolls and its footer stays in reach. dvh rather than vh
+   for the same reason as the sidebar. */
+.admin-modal-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: calc(100dvh - 32px);
+}
+
+.admin-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* ── Toolbar popover (.toolbar-popover) ──────────────────────────────────
+   A filter chip's menu. Anchored to its chip, but never wider than the screen.
+   It must not be placed inside an element with a filter, transform or
+   backdrop-filter, which would trap its phone-width `position: fixed`. */
+.toolbar-popover {
+  max-width: calc(100vw - 32px);
 }
 
 /* Form Styles */
@@ -820,6 +1199,7 @@ textarea.form-input {
 
 .toolbar-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-sm);
 }
 
@@ -903,27 +1283,471 @@ textarea.form-input {
 }
 
 
-/* Responsive */
-@media (max-width: 1024px) {
-  .mobile-menu-toggle {
+/* ── Responsive ───────────────────────────────────────────────────────────
+   The public site's scale and nothing else (MOBILE_RESPONSIVE_PLAN/README.md):
+   `sm` 40rem, `md` 48rem, `lg` 64rem, written as range queries so they never
+   overlap Tailwind's `sm:` / `md:` / `lg:` on a fractional width.
+     below md — top bar and drawer, as the public Navbar has its hamburger;
+     below lg — the tighter header, content and toolbar, and cards for tables;
+     below sm — 16px fields, full-width buttons, bottom-sheet popovers.
+   From lg up nothing here applies, and the desktop is as it was. */
+
+/* The one place the table/card switch is decided. Both layouts are rendered;
+   CSS picks, so the server's first paint is already right. */
+@media (width < 64rem) {
+  .dash-desktop-only {
+    display: none !important;
+  }
+}
+
+@media (width >= 64rem) {
+  .dash-mobile-only {
+    display: none !important;
+  }
+}
+
+/* The phone's backdrop fades on the modal steps: in at the open step, out at
+   the faster close step, so a menu being dismissed gets out of the way sooner
+   than it arrived. */
+.admin-layout {
+  --drawer-open-dur: var(--duration-fast);
+  --drawer-close-dur: var(--duration-quick);
+  --drawer-ease: var(--ease-smooth-out);
+  /* The rail's collapse is transitions.dev's card resize (01-card-resize). */
+  --resize-dur: 300ms;
+  --resize-ease: var(--ease-smooth-out);
+  /* Its tooltip (17-tooltip), in .btn-light's zinc so the one light surface
+     in the dashboard is the same light everywhere. */
+  --tt-in-dur: var(--duration-quick);
+  --tt-out-dur: 50ms;
+  --tt-scale: 0.98;
+  --tt-delay: var(--duration-micro);
+  --tt-in-ease: var(--ease-out);
+  --tt-out-ease: var(--ease-out);
+  --tt-bg: #e4e4e7;
+  --tt-fg: #09090b;
+}
+
+/* The phone's menu is the desktop's, smaller (the owner's decision: one menu,
+   not a top bar and drawer of its own). It rests as a 56px rail and opens out
+   *over* the page from the same chevron, because pushing a 360px screen's
+   content aside would leave it a sliver. The desktop's collapsed cookie means
+   nothing here: `.is-collapsed` is ignored, and `.is-open` alone decides. */
+@media (width < 48rem) {
+  .admin-sidebar {
+    z-index: 70;
+    width: 56px;
+    padding-top: env(safe-area-inset-top);
+    transition: width var(--resize-dur) var(--resize-ease);
+  }
+
+  /* Over a dimmed page the sidebar's usual 60% glass reads as mud. */
+  .admin-sidebar.is-open {
+    width: min(256px, 85vw);
+    background: rgba(10, 10, 12, 0.97);
+    box-shadow: 24px 0 48px rgba(0, 0, 0, 0.5);
+  }
+
+  .admin-main {
+    margin-left: 56px;
+  }
+
+  .admin-brand {
+    overflow: hidden;
+    padding: var(--space-md) var(--space-md) var(--space-sm) 12px;
+  }
+
+  /* A smaller mark for the 56px rail. It is 1.26 times as wide as it is tall,
+     so 26px tall is about 33px wide, and 12px on the left centres it. */
+  .admin-brand .rao-logo {
+    --rao-logo-size: 26px;
+  }
+
+  .admin-menu-head {
+    height: 32px;
+    padding-left: 18px;
+  }
+
+  .admin-menu-label {
+    font-size: 0.625rem;
+    transition: margin-left var(--resize-dur) var(--resize-ease);
+  }
+
+  .admin-nav-group {
+    gap: 2px;
+  }
+
+  .admin-nav-divider {
+    margin: var(--space-sm) 16px;
+  }
+
+  /* 44px rows with the icon at 18px, centred in the 56px rail. */
+  .admin-nav-item {
+    min-height: 44px;
+    gap: 14px;
+    padding-left: 18px;
+    font-size: 0.875rem;
+  }
+
+  .admin-org-switcher {
+    padding: var(--space-sm) 12px 0;
+  }
+
+  /* 12px on the left centres the 32px avatar in the rail. */
+  .admin-user {
+    padding: var(--space-sm) var(--space-sm) calc(var(--space-md) + env(safe-area-inset-bottom)) 12px;
+  }
+
+  .admin-user::before,
+  .admin-org-switcher::before {
+    left: 16px;
+    right: 16px;
+  }
+
+  .admin-user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    font-size: 0.875rem;
+  }
+
+  .rao-logo__word {
+    transition: opacity var(--duration-quick) ease;
+  }
+
+  /* At rest: the rail. */
+  .admin-sidebar:not(.is-open) .rao-logo__word,
+  .admin-sidebar:not(.is-open) .admin-nav-label,
+  .admin-sidebar:not(.is-open) .admin-user-info {
+    opacity: 0;
+  }
+
+  /* MENU slides left so it clears the chevron on the rail's edge. */
+  .admin-sidebar:not(.is-open) .admin-menu-label {
+    margin-left: -12px;
+  }
+
+  .admin-sidebar:not(.is-open) .admin-collapse-knob {
+    transform: rotate(180deg);
+  }
+
+  .admin-sidebar:not(.is-open) .nav-pending {
+    position: absolute;
+    right: 2px;
+  }
+
+  .admin-sidebar:not(.is-open) .admin-org-switcher {
+    padding-inline: 6px;
+  }
+
+  .admin-sidebar:not(.is-open) .org-switcher-trigger {
+    justify-content: center;
+    padding-inline: 0;
+    min-height: 44px;
+  }
+
+  /* Out of sight but still the button's name. */
+  .admin-sidebar:not(.is-open) .org-switcher-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .admin-sidebar:not(.is-open) .org-switcher-chevron {
+    display: none;
+  }
+
+  .dash-backdrop {
     display: block;
     position: fixed;
-    top: 16px;
-    right: 16px;
-    z-index: 100;
+    inset: 0;
+    z-index: 60;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+      opacity    var(--drawer-close-dur) var(--drawer-ease),
+      visibility 0s linear var(--drawer-close-dur);
+  }
+
+  .dash-backdrop.is-open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition:
+      opacity    var(--drawer-open-dur) var(--drawer-ease),
+      visibility 0s;
+  }
+
+  /* Page headers stay in the flow on a phone, leaving the screen to the page. */
+  .admin-header {
+    position: static;
+  }
+}
+
+/* The collapsible rail, from `md` up. Width and the page's margin move
+   together on one clock; the labels fade on the quick step so they are gone
+   before the edge has travelled far. The phone's drawer is never collapsed:
+   none of this applies below `md`, whatever the cookie says. */
+@media (width >= 48rem) {
+  .admin-sidebar.is-collapsed .admin-collapse-knob {
+    transform: rotate(180deg);
   }
 
   .admin-sidebar {
-    transform: translateX(-100%);
-    transition: transform 0.3s ease;
+    transition: width var(--resize-dur) var(--resize-ease);
+    will-change: width;
   }
-  
-  .admin-sidebar.open {
-    transform: translateX(0);
-  }
-  
+
   .admin-main {
-    margin-left: 0;
+    transition: margin-left var(--resize-dur) var(--resize-ease);
+  }
+
+  .admin-brand {
+    overflow: hidden;
+  }
+
+  .rao-logo__word {
+    transition: opacity var(--duration-quick) ease;
+  }
+
+  .admin-menu-label {
+    transition: margin-left var(--resize-dur) var(--resize-ease);
+  }
+
+  .admin-sidebar.is-collapsed {
+    width: 80px;
+  }
+
+  .admin-sidebar.is-collapsed + .admin-main {
+    margin-left: 80px;
+  }
+
+  .admin-sidebar.is-collapsed .rao-logo__word,
+  .admin-sidebar.is-collapsed .admin-nav-label,
+  .admin-sidebar.is-collapsed .admin-user-info {
+    opacity: 0;
+  }
+
+  /* MENU slides left so it clears the chevron on the rail's edge. */
+  .admin-sidebar.is-collapsed .admin-menu-label {
+    margin-left: -9px;
+  }
+
+  /* The tooltips reach out past the rail, which a scrolling menu would clip. */
+  .admin-sidebar.is-collapsed .admin-nav {
+    overflow: visible;
+  }
+
+  .admin-sidebar.is-collapsed .nav-pending {
+    position: absolute;
+    right: 4px;
+  }
+
+  .admin-sidebar.is-collapsed .admin-nav-divider {
+    margin-inline: 16px;
+  }
+
+  .admin-sidebar.is-collapsed .admin-user::before,
+  .admin-sidebar.is-collapsed .admin-org-switcher::before {
+    left: 16px;
+    right: 16px;
+  }
+
+  .admin-sidebar.is-collapsed .admin-org-switcher {
+    padding-inline: 16px;
+  }
+
+  .admin-sidebar.is-collapsed .org-switcher-trigger {
+    justify-content: center;
+    padding-inline: 0;
+  }
+
+  /* Out of sight but still the button's name. */
+  .admin-sidebar.is-collapsed .org-switcher-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .admin-sidebar.is-collapsed .org-switcher-chevron {
+    display: none;
+  }
+
+  .admin-sidebar.is-collapsed .admin-nav-tip {
+    display: block;
+  }
+
+  /* The delay belongs only to the showing rule, so leaving plays at once. */
+  .admin-sidebar.is-collapsed .admin-nav-item:hover .admin-nav-tip,
+  .admin-sidebar.is-collapsed .admin-nav-item:focus-visible .admin-nav-tip,
+  .admin-sidebar.is-collapsed .admin-user:hover .admin-nav-tip {
+    opacity: 1;
+    transform: translate(0, -50%) scale(1);
+    transition-duration: var(--tt-in-dur);
+    transition-timing-function: var(--tt-in-ease);
+    transition-delay: var(--tt-delay);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dash-backdrop,
+  .admin-sidebar,
+  .admin-main,
+  .admin-collapse-knob,
+  .admin-menu-label,
+  .admin-nav-label,
+  .admin-nav-tip,
+  .admin-user-info,
+  .rao-logo__word {
+    transition: none !important;
+  }
+}
+
+@media (width < 64rem) {
+  /* A title such as "Registrants: {event.title}" is as long as the organizer
+     made it: the header grows to two lines rather than spilling out. Its
+     inline padding follows .admin-content's so the title and the page beneath
+     it share one left edge. */
+  .admin-header {
+    height: auto;
+    min-height: 60px;
+    padding: 12px var(--space-lg);
+    flex-wrap: wrap;
+    row-gap: 8px;
+    column-gap: var(--space-md);
+  }
+
+  .admin-header > * {
+    min-width: 0;
+  }
+
+  /* Header actions take the next line once the title needs the room. */
+  .admin-header > :first-child {
+    flex: 1 1 16rem;
+  }
+
+  .admin-header-title {
+    min-width: 0;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+  }
+
+  .admin-content {
+    padding: var(--space-lg);
+  }
+
+  /* The search box takes a row of its own and the chips wrap beneath it. The
+     `!important` is for the screens that set `style={{ flex: 1 }}` on the
+     toolbar group holding the search: an inline style otherwise wins, and its
+     zero basis would keep the search squeezed beside the chips. */
+  .admin-toolbar > .toolbar-actions:has(> .search-wrapper) {
+    flex: 1 1 100% !important;
+  }
+
+  .search-wrapper {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+}
+
+@media (width < 40rem) {
+  .admin-header {
+    padding-inline: var(--space-md);
+  }
+
+  .admin-content {
+    padding: var(--space-md);
+  }
+
+  .metrics-grid {
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .metric-card {
+    padding: var(--space-md);
+    gap: var(--space-sm);
+  }
+
+  .metric-value {
+    font-size: 1.5rem;
+  }
+
+  /* iOS zooms the page into any field under 16px and leaves it zoomed. */
+  .search-input {
+    font-size: 16px;
+  }
+
+  .admin-toolbar > .toolbar-actions:has(.btn-light) {
+    flex: 1 1 100%;
+  }
+
+  .admin-toolbar .btn-light {
+    flex: 1 1 100%;
+  }
+
+  /* A chip's menu becomes a sheet along the bottom edge, where the thumb
+     already is. The `!important`s are deliberate: popovers are positioned by
+     utilities and inline styles from their trigger, and on a phone none of
+     that should survive. */
+  .toolbar-popover {
+    position: fixed !important;
+    inset: auto 12px calc(12px + env(safe-area-inset-bottom)) 12px !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none;
+    max-height: 60dvh;
+    margin: 0 !important;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    z-index: 1100;
+    transform-origin: bottom center;
+  }
+
+  .toolbar-popover :is(button, a, label, [role="option"], [role^="menuitem"]) {
+    min-height: 44px;
+  }
+
+  .modal-overlay {
+    padding: 12px;
+  }
+
+  .admin-modal-panel {
+    width: 100%;
+    max-width: none !important;
+    max-height: calc(100dvh - 24px);
+  }
+
+  /* The action buttons stay in reach however long the body is. */
+  .admin-modal-footer {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    background: rgba(15, 15, 20, 0.98);
+  }
+
+  .admin-modal-footer > :is(button, a) {
+    flex: 1 1 auto;
+    min-height: 44px;
   }
 }
 

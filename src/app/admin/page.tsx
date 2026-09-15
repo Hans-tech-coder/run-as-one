@@ -4,6 +4,7 @@ import prisma from '@/lib/db';
 import { reachableEvents, requireActor } from '@/lib/actor';
 import { formatPesos } from '@/lib/money';
 import { hasFinished, today } from '@/lib/event-schedule';
+import AdminCardList from './AdminCardList';
 
 export default async function AdminDashboard() {
   const actor = await requireActor();
@@ -35,7 +36,7 @@ export default async function AdminDashboard() {
   let totalRevenue = 0;
   let totalRegistrants = 0;
 
-  const recentRegistrations: any[] = [];
+  const recentRegistrations: ((typeof events)[number]['registrations'][number] & { eventTitle: string })[] = [];
 
   events.forEach(event => {
     event.registrations.forEach(reg => {
@@ -106,7 +107,10 @@ export default async function AdminDashboard() {
               <p>No registrations yet. Publish an event to get started.</p>
             </div>
           ) : (
-            <div className="data-table-wrapper">
+            <>
+            {/* The table from lg up, the same five as cards below it — Admin.css
+                decides which is seen, so the first paint is already right. */}
+            <div className="data-table-wrapper dash-desktop-only">
               <table className="data-table">
                 <thead>
                   <tr>
@@ -132,6 +136,23 @@ export default async function AdminDashboard() {
                 </tbody>
               </table>
             </div>
+
+            <div className="dash-mobile-only">
+              <AdminCardList
+                label="Recent registrations"
+                items={latestFive}
+                getKey={reg => reg.id}
+                title={reg => reg.customerName}
+                subtitle={reg => reg.orderRef}
+                fields={reg => [
+                  { label: 'Event', value: reg.eventTitle, full: true },
+                  { label: 'Amount', value: `₱${formatPesos(reg.totalAmount)}` },
+                  { label: 'Runners', value: reg.runners.length },
+                  { label: 'Date', value: new Date(reg.createdAt).toLocaleDateString() },
+                ]}
+              />
+            </div>
+            </>
           )}
         </div>
       </div>

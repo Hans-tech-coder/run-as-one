@@ -178,8 +178,12 @@ src/
                             #   landing, winners board, leaderboard, one runner
     feedback/               # the public feedback form (page + FeedbackForm)
     coming-soon/ privacy/ terms/ not-found.tsx
-    admin/                  # organizer portal (AdminShell, Admin.css, Auth.css)
-    superadmin/             # platform-owner portal (SuperAdminShell)
+    admin/                  # organizer portal (AdminShell, Admin.css, Auth.css,
+                            #   DashboardShell — the frame both dashboards share,
+                            #   dashboard-sidebar.ts — the collapsed-rail cookie,
+                            #   AdminCardList — what every table becomes below lg)
+    superadmin/             # platform-owner portal (SuperAdminShell, a thin
+                            #   wrapper over admin/DashboardShell)
     api/                    # all route handlers — see §6
   components/               # public-site components (Navbar, Footer, EventGrid,
                             #   StatusPanel, RunAsOneLogo, HeroArcBackground,
@@ -763,8 +767,10 @@ These are the user's own standing preferences. Follow them without being asked.
     superadmin dashboards must be fully manageable at 360px. This applies to
     every new or changed feature, in the same change, never "mobile later".
     - **Breakpoints follow the public site**: Tailwind's default `sm` 640 /
-      `md` 768 / `lg` 1024. The drawer switches at `md` like `Navbar`. Never
-      a one-off number.
+      `md` 768 / `lg` 1024. Never a one-off number.
+    - **The menu is the same at every width.** It is the collapsible sidebar,
+      a narrower rail on a phone. The dashboards never get a separate phone
+      top bar, drawer or bottom bar.
     - **No horizontal scroll on a phone, ever.** Below `lg` a data table
       becomes cards through the shared card component, not an `overflow-x`
       scroller.
@@ -847,6 +853,54 @@ These are the user's own standing preferences. Follow them without being asked.
   counts by row **id**, not by object identity: sorting rebuilds the rows, so an
   `indexOf` on them finds nothing and every line numbers itself 0 the moment a
   header is clicked.
+- **One responsive dashboard.** Both dashboards stand in
+  `admin/DashboardShell.tsx`; `AdminShell` and `SuperAdminShell` hand it only
+  their links, their role line, and (for `/admin`) the organizer switcher. The
+  breakpoints are the **public site's Tailwind scale and nothing else**. In
+  CSS they are written as range queries, `(width < 40rem)` / `48rem` / `64rem`;
+  in TSX they are `sm:` / `md:` / `lg:` and their `max-` forms. Never a
+  one-off number.
+  - **The menu** is full-width rows under a MENU label. The pages come
+    first, then a divider, then the account rows (`secondaryNavItems`,
+    which is Settings on `/admin`) and **Log Out as a row**. The person, with
+    their name and role line, sits at the foot. The page on screen is a
+    tinted band with a 4px bar on its right edge.
+  - **From `md` up the menu collapses to an 80px icon rail** from the round
+    chevron on its edge. Icons never move. Labels fade but stay each row's
+    accessible name, and a tooltip (transitions.dev's 17) names the row on
+    hover and focus. The choice is kept in the `dash_sidebar` cookie
+    (`admin/dashboard-sidebar.ts`), which both layouts read, so the first
+    paint is already the right width.
+  - **Below `md` it is the same menu, smaller.** This is the owner's decision:
+    a phone gets no top bar or drawer of its own. The menu rests as a 56px
+    rail, and the same chevron opens it *over* the page at 256px, because
+    pushing a phone's content aside would leave a sliver. On a phone, open is
+    a moment rather than a preference:
+    - the cookie is not read;
+    - the open state remembers its pathname, so any route change folds it;
+    - the body does not scroll and `<main>` is `inert`;
+    - Esc or a tap on the backdrop folds it and returns focus to the chevron;
+    - there are no tooltips.
+  - **Below `lg`** the header grows to a 2-line clamped title, the content
+    padding steps down, and the toolbar's search takes its own row. Every data
+    table becomes **`admin/AdminCardList`**.
+  - **Both layouts render and CSS picks one**, through `.dash-desktop-only` /
+    `.dash-mobile-only` in `Admin.css`. That is the only place the switch is
+    decided; a `matchMedia` hook would render the wrong layout on the server.
+    A TanStack screen passes `table.getRowModel().rows` to the cards, so
+    search, filters, sort, selection and pager are shared. Nothing in a card
+    carries an `id`, and per-row open state lives in the parent.
+  - The card list is data-agnostic (`title`, `subtitle`, `badges`, `fields`
+    with `full`, `actions`, `selection`, `leading`, `expanded`, `empty`),
+    a server page can render it directly, and it is an auto-fill grid of
+    `minmax(min(100%, 20rem), 1fr)`.
+  - A filter chip's menu is **`.toolbar-popover`**: anchored from `sm` up, a
+    bottom sheet with 44px options below it. A modal is
+    **`.admin-modal-panel`** with `.admin-modal-body` and
+    `.admin-modal-footer`: capped at the viewport in `dvh`, the body scrolls,
+    and the footer is sticky and full width on a phone. Both are defined in
+    `Admin.css` and adopted screen by screen by `MOBILE_RESPONSIVE_PLAN/`.
+  - A header back arrow wears `.admin-back-link` for its 44px hit area.
 - **A list's order is a fact about the rows, not about the view — and a number
   in it should name the thing, not its seat.** Every listing gets an explicit
   `orderBy`; without one Postgres is free to return rows in heap order, which
@@ -1184,7 +1238,14 @@ These are the user's own standing preferences. Follow them without being asked.
   a call site sets one value and the proportions hold:
   `className="[--rao-logo-size:32px] sm:[--rao-logo-size:38px]"`. Do not size
   the wordmark or the gaps per surface; that is what left the old raster logo a
-  different size in every corner of the app.
+  different size in every corner of the app. **The 40px default is only a
+  `var(--rao-logo-size, 40px)` fallback — never declare `--rao-logo-size` on
+  `.rao-logo` in `globals.css`.** That file is unlayered and Tailwind v4 puts
+  the arbitrary-property utilities in `@layer utilities`; unlayered CSS beats
+  layered CSS regardless of specificity, so a declared default once pinned every
+  logo (navbar, footer, auth cards) at 40px and silently ignored the size each
+  call site asked for. The admin sidebar sets its size from `Admin.css`
+  (`.admin-brand .rao-logo`: 40px, 26px below 48rem) instead of a utility.
 - **The logo draws in four variables, not hexes** — `--logo-ink`, `--logo-mid`,
   `--logo-accent`, `--logo-muted`, defined in `globals.css` and pointing at the
   site tokens so the logo cannot drift from the accents beside it. A
@@ -1325,10 +1386,17 @@ model, or any `/api/admin/**` route's ownership check** — its "Batch 1" notes
 record the calls made in the batch, and the file records which decisions are
 closed (no unified account table, no SSO).
 
-**`MOBILE_RESPONSIVE_PLAN/` is an open queue, nothing landed yet.** Six batches,
+**`MOBILE_RESPONSIVE_PLAN/` is an open queue, with Batch 1 landed.** Batch 1
+added `DashboardShell` (the frame both dashboards share: one collapsible
+sidebar menu at every width, a rail that opens over the page on a phone), `AdminCardList`, the `.dash-desktop-only` /
+`.dash-mobile-only` switch, and the toolbar, header, metrics, popover and
+modal-frame rules in `Admin.css`, all on the public site's breakpoints (§9,
+"One responsive dashboard"). The Dashboard's Recent Registrations is cards
+below `lg`. The other screens' tables still clip on a phone until their batch
+lands. **Batch 2 (Events and Team) is next.** Six batches,
 one file each, to make `/admin/**` and `/superadmin/**` fully manageable on a
 phone with no horizontal scroll:
-1. the shared shell, drawer and card component;
+1. the shared shell, menu and card component;
 2. Events and Team;
 3. Registrants;
 4. Marketing and Results;
@@ -1337,10 +1405,10 @@ phone with no horizontal scroll:
 
 A session runs one batch: read the folder's `README.md`, then that batch's
 file. The README records the closed decisions — breakpoints that follow the
-public site's Tailwind scale (drawer below `md` like `Navbar`, cards below
-`lg`), cards reading the same TanStack rows
-as the table, a CSS switch rather than a `matchMedia` hook, and a drawer rather
-than bottom navigation. Don't relitigate them.
+public site's Tailwind scale (the menu opens over the page below `md`, cards
+below `lg`), cards reading the same TanStack rows as the table, a CSS switch
+rather than a `matchMedia` hook, and one collapsible sidebar at every width
+rather than a phone-only drawer or bottom bar. Don't relitigate them.
 
 **Releasing Batch 1 needs a migration-history fix on production first.**
 Production's `_prisma_migrations` stops at `20260911120000_category_sort_order`

@@ -1,28 +1,34 @@
 "use client";
 
-import React, { useState } from 'react';
-import Link from 'next/link';
+import React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Calendar, Settings, LogOut, Menu, X, Megaphone, UsersRound } from 'lucide-react';
-import { RunAsOneLogo } from '@/components/RunAsOneLogo';
-import LinkPending from '@/components/ui/LinkPending';
+import { LayoutDashboard, Calendar, Settings, Megaphone, UsersRound } from 'lucide-react';
 import type { SignedInUser } from '@/lib/signed-in-user';
+import DashboardShell from './DashboardShell';
 import OrganizerSwitcher from './OrganizerSwitcher';
 import './Admin.css';
+
+/**
+ * The organizer dashboard's frame. What is only true of `/admin` lives here:
+ * which links this person's role opens, how their role reads, and the
+ * organizer switcher. The sidebar, the phone's drawer and the user block are
+ * `DashboardShell`, shared with the superadmin.
+ */
 
 /** The pages somebody reaches before they have a session, drawn without the sidebar. */
 const BARE_PATHS = ['/admin/login', '/admin/register', '/admin/invite'];
 
 export default function AdminShell({
   user,
+  initialCollapsed,
   children,
 }: {
   user: SignedInUser | null;
+  initialCollapsed: boolean;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   if (BARE_PATHS.some(path => pathname.startsWith(path))) {
     return <>{children}</>;
@@ -46,6 +52,11 @@ export default function AdminShell({
     ...(user?.nav.team
       ? [{ name: 'Team', path: '/admin/team', icon: <UsersRound size={20} /> }]
       : []),
+  ];
+
+  // Below the divider with Log Out: the account's own screen, not a page of
+  // the organizer's work.
+  const accountItems = [
     { name: 'Settings', path: '/admin/settings', icon: <Settings size={20} /> },
   ];
 
@@ -59,61 +70,23 @@ export default function AdminShell({
       : `${user.roleLabel} · ${user.organizerName}`;
 
   return (
-    <div className="admin-layout">
-      {/* Mobile Menu Toggle */}
-      <div className="mobile-menu-toggle">
-        <button
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="mobile-menu-btn"
-          aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
-        >
-          {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
-      </div>
-
-      {/* Sidebar */}
-      <aside className={`admin-sidebar ${isMobileMenuOpen ? 'open' : ''}`}>
-        <div className="admin-brand flex items-center gap-3 font-bold text-xl px-6 py-4">
-          <RunAsOneLogo className="[--rao-logo-size:38px]" />
-        </div>
-
-        <nav className="admin-nav">
-          {navItems.map((item) => (
-            <Link
-              key={item.path}
-              href={item.path}
-              className={`admin-nav-item ${pathname === item.path ? 'active' : ''}`}
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              {item.icon}
-              {item.name}
-              <LinkPending />
-            </Link>
-          ))}
-        </nav>
-
-        {user && user.organizers.length > 1 && (
-          <OrganizerSwitcher organizers={user.organizers} />
-        )}
-
-        <div className="admin-user">
-          <div className="admin-user-avatar">
-            {user?.initial ?? 'O'}
-          </div>
-          <div className="admin-user-info">
-            <div className="admin-user-name">{user?.name ?? 'Organizer'}</div>
-            <div className="admin-user-role" title={roleLine}>{roleLine}</div>
-          </div>
-          <button onClick={handleLogout} className="admin-logout" title="Logout" aria-label="Log out">
-            <LogOut size={18} />
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="admin-main">
-        {children}
-      </main>
-    </div>
+    <DashboardShell
+      navItems={navItems}
+      secondaryNavItems={accountItems}
+      initialCollapsed={initialCollapsed}
+      userBlock={{
+        name: user?.name ?? 'Organizer',
+        initial: user?.initial ?? 'O',
+        roleLine,
+      }}
+      beforeUser={
+        user && user.organizers.length > 1
+          ? <OrganizerSwitcher organizers={user.organizers} />
+          : null
+      }
+      onLogout={handleLogout}
+    >
+      {children}
+    </DashboardShell>
   );
 }

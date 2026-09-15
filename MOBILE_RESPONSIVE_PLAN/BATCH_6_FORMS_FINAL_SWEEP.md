@@ -44,7 +44,8 @@ closes the plan: it fixes what is left and then proves every route in scope.
 
 4. **Shared controls.**
    - `AdminSelect` menus stay inside the viewport and flip up near the bottom.
-   - `OrganizerSwitcher` opens upward inside the drawer without being clipped.
+   - `OrganizerSwitcher` opens upward from the phone's opened menu, and from
+     the collapsed rail, without being clipped.
 
 5. **Skeletons.** Every route's loading state mirrors its mobile layout below
    1024px (cards, not table rows), so there is no layout shift when the page

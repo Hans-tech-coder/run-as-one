@@ -35,7 +35,7 @@ Then, in this order:
 
 | Batch | File | Scope | Status |
 | --- | --- | --- | --- |
-| 1 | [BATCH_1_SHELL.md](BATCH_1_SHELL.md) | Shared shell (admin + superadmin), drawer, header, toolbar, modal frame, **card component**, Dashboard recent registrations | Not started |
+| 1 | [BATCH_1_SHELL.md](BATCH_1_SHELL.md) | Shared shell (admin + superadmin), menu, header, toolbar, modal frame, **card component**, Dashboard recent registrations | Landed (uncommitted) |
 | 2 | [BATCH_2_EVENTS_TEAM.md](BATCH_2_EVENTS_TEAM.md) | Shared pager and mobile sort, Events list, Team + roles matrix | Not started |
 | 3 | [BATCH_3_REGISTRANTS.md](BATCH_3_REGISTRANTS.md) | Registrants table, its five modals, bulk actions, proof lightbox | Not started |
 | 4 | [BATCH_4_MARKETING_RESULTS.md](BATCH_4_MARKETING_RESULTS.md) | Marketing promotions + modals, race results table + uploader | Not started |
@@ -55,7 +55,7 @@ say when the work goes to the `dev` branch.
   | Breakpoint | On the public site | In the dashboards |
   | --- | --- | --- |
   | `sm` 640px | The phone line (55 uses across the home surfaces) | Below it: 16px inputs, full-width buttons, bottom-sheet popovers, full-width modals, single-column forms |
-  | `md` 768px | `Navbar` swaps its hamburger for the full nav | Below it: top bar + drawer. From it up: the sidebar, as on desktop |
+  | `md` 768px | `Navbar` swaps its hamburger for the full nav | Below it: the menu rests as a 56px rail and opens over the page. From it up: it pushes the page and can collapse to an 80px rail |
   | `lg` 1024px | `EventGrid` reaches its 3-column desktop layout | Below it: every data table is a card list. From it up: the table |
 
   **Between `md` and `lg`** (a portrait tablet) the sidebar is visible and the
@@ -93,13 +93,19 @@ say when the work goes to the `dev` branch.
   - No `ref` that assumes one element per row.
   - Per-row UI state (an expanded batch row, an open disclosure) lives in the
     parent, so resizing across 1024px keeps it.
-- **Drawer, not bottom navigation.** The admin nav is 3–5 items depending on
-  role, and the organizer switcher, the user block and logout need a home. A
-  bottom bar would hold the links but not those.
+- **One menu at every width, not a phone drawer or bottom navigation.**
+  *(Revised by the owner after Batch 1.)*
+  - Batch 1 first built a top bar and slide-in drawer, and the owner rejected
+    a phone menu that looks different from the desktop's.
+  - The sidebar is now the same collapsible menu everywhere. Below `md` it
+    rests as a 56px icon rail and opens out over the page; from `md` up it
+    pushes the page and collapses to an 80px rail.
+  - A bottom bar was never an option: the organizer switcher, the user block
+    and logout need a home.
 - **One shell for both dashboards.** `AdminShell` and `SuperAdminShell` are
   near-copies today, so Batch 1 extracts the shared frame and both become thin
   wrappers holding only their nav items and role line. The superadmin gets the
-  drawer fixes for free.
+  menu for free.
 - **On mobile, sort moves into a Sort chip**, because cards have no column
   headers to click.
 - **Hover-only information is shown in text on touch.** For example, the team
@@ -139,7 +145,7 @@ role-dependent nav in Batch 1.
 **Widths:** use `resize_window` at these sizes, and reset it to `desktop` when
 done:
 - 360×780 and 390×844: phones.
-- 767×1024: just under `md`, where the drawer is in use.
+- 767×1024: just under `md`, where the menu is a rail that opens over the page.
 - 820×1180: a portrait tablet, with the sidebar and the cards.
 - 1024×768: `lg`, where the tables return.
 - 1440×900: desktop.
@@ -158,8 +164,8 @@ return `ok: true` with an empty list.
 })()
 ```
 
-The closed drawer sits off-canvas to the left, so it does not trip the check.
-Open menus and modals must be checked separately, while open.
+The resting rail stays inside the viewport, so it does not trip the check. An
+opened menu, open popovers and modals must be checked separately, while open.
 
 **Regression pass:** before editing shared CSS (`Admin.css`, `globals.css`) or a
 shared component, take 1440px screenshots of the screens that use it. Compare

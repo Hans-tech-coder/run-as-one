@@ -30,7 +30,10 @@ import { MARK_ARCS, MARK_DOT, MARK_VIEWBOX, type MarkInk } from '@/lib/brand-mar
  * **Size is one number.** `--rao-logo-size` is the height of the mark; the
  * wordmark and the gap are `em` off it, so the lockup keeps its
  * proportions at any size. Set it per call site, responsively if needed:
- * `className="[--rao-logo-size:34px] sm:[--rao-logo-size:40px]"`.
+ * `className="[--rao-logo-size:32px] sm:[--rao-logo-size:38px]"`. Unset, it
+ * falls back to 40px. That default is a `var()` fallback in `globals.css`, not
+ * a declaration on `.rao-logo`: an unlayered declaration there would beat these
+ * layered Tailwind utilities and pin every logo at 40px.
  */
 
 type LogoVariant = 'full' | 'stacked' | 'mark';

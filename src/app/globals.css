@@ -1226,13 +1226,18 @@ html, body { overflow-x: hidden; }
    it, so a call site sets one value (responsively, if it wants) and the lockup
    keeps its proportions rather than each surface re-tuning a font size beside a
    pixel height, which is what left the old raster logo a different size in
-   every corner of the app. */
+   every corner of the app.
+
+   The 40px default lives in the `var()` fallback, never as a declaration of
+   `--rao-logo-size` on this rule. This file is unlayered and Tailwind's
+   `[--rao-logo-size:…]` utilities sit in `@layer utilities`, and unlayered CSS
+   beats layered CSS whatever the specificity — so a default declared here
+   silently pinned every logo in the app at 40px. */
 .rao-logo {
-  --rao-logo-size: 40px;
   display: inline-flex;
   align-items: center;
   gap: 0.34em;
-  font-size: var(--rao-logo-size);
+  font-size: var(--rao-logo-size, 40px);
   line-height: 1;
   color: var(--logo-ink);
 }

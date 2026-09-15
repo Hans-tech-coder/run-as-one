@@ -302,7 +302,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
     <>
       <header className="admin-header">
         <div className="flex items-center gap-4">
-          <Link href="/admin/events" className="text-secondary hover:text-primary transition-colors">
+          <Link href="/admin/events" className="admin-back-link text-secondary hover:text-primary transition-colors" aria-label="Back to Events">
             <ArrowLeft size={20} />
           </Link>
           <h1 className="admin-header-title">Edit Event</h1>

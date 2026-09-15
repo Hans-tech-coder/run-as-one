@@ -1,88 +1,54 @@
 "use client";
 
-import React, { useState } from 'react';
-import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Users, Flag, MessageSquare, LogOut, Menu, X } from 'lucide-react';
-import { RunAsOneLogo } from '@/components/RunAsOneLogo';
-import LinkPending from '@/components/ui/LinkPending';
+import React from 'react';
+import { useRouter } from 'next/navigation';
+import { LayoutDashboard, Users, Flag, MessageSquare } from 'lucide-react';
 import type { SignedInUser } from '@/lib/signed-in-user';
+import DashboardShell from '../admin/DashboardShell';
 import '../admin/Admin.css';
+
+/**
+ * The platform owner's frame: its four links and the blue avatar that tells
+ * the two dashboards apart at a glance. Everything else, the phone's drawer
+ * included, is `DashboardShell`, shared with `/admin`.
+ */
+
+const NAV_ITEMS = [
+  { name: 'Dashboard', path: '/superadmin', icon: <LayoutDashboard size={20} /> },
+  { name: 'Organizers', path: '/superadmin/organizers', icon: <Users size={20} /> },
+  { name: 'Communities', path: '/superadmin/communities', icon: <Flag size={20} /> },
+  { name: 'Feedback', path: '/superadmin/feedback', icon: <MessageSquare size={20} /> },
+];
 
 export default function SuperAdminShell({
   user,
+  initialCollapsed,
   children,
 }: {
   user: SignedInUser | null;
+  initialCollapsed: boolean;
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
   const router = useRouter();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
     router.push('/admin/login');
   };
 
-  const navItems = [
-    { name: 'Dashboard', path: '/superadmin', icon: <LayoutDashboard size={20} /> },
-    { name: 'Organizers', path: '/superadmin/organizers', icon: <Users size={20} /> },
-    { name: 'Communities', path: '/superadmin/communities', icon: <Flag size={20} /> },
-    { name: 'Feedback', path: '/superadmin/feedback', icon: <MessageSquare size={20} /> },
-  ];
-
   return (
-    <div className="admin-layout">
-      {/* Mobile Menu Toggle */}
-      <div className="mobile-menu-toggle">
-        <button 
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="mobile-menu-btn"
-        >
-          {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
-      </div>
-
-      {/* Sidebar */}
-      <aside className={`admin-sidebar ${isMobileMenuOpen ? 'open' : ''}`}>
-        <div className="admin-brand flex items-center gap-3 font-bold text-xl px-6 py-4">
-          <RunAsOneLogo className="[--rao-logo-size:38px]" />
-        </div>
-
-        <nav className="admin-nav">
-          {navItems.map((item) => (
-            <Link 
-              key={item.path} 
-              href={item.path}
-              className={`admin-nav-item ${pathname === item.path ? 'active' : ''}`}
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              {item.icon}
-              {item.name}
-              <LinkPending />
-            </Link>
-          ))}
-        </nav>
-
-        <div className="admin-user">
-          <div className="admin-user-avatar" style={{ background: 'var(--accent-blue)' }}>
-            {user?.initial ?? 'S'}
-          </div>
-          <div className="admin-user-info">
-            <div className="admin-user-name">{user?.name ?? 'Super Admin'}</div>
-            <div className="admin-user-role">Super Admin</div>
-          </div>
-          <button onClick={handleLogout} className="admin-logout" title="Logout">
-            <LogOut size={18} />
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="admin-main">
-        {children}
-      </main>
-    </div>
+    <DashboardShell
+      navItems={NAV_ITEMS}
+      initialCollapsed={initialCollapsed}
+      userBlock={{
+        name: user?.name ?? 'Super Admin',
+        initial: user?.initial ?? 'S',
+        roleLine: 'Super Admin',
+        avatarStyle: { background: 'var(--accent-blue)' },
+      }}
+      onLogout={handleLogout}
+    >
+      {children}
+    </DashboardShell>
   );
 }
