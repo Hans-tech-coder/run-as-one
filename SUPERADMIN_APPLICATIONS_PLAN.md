@@ -1,6 +1,6 @@
 # Super Admin — Organizer Applications Plan
 
-**Status:** not started · **Owner decisions captured:** 2026-09-16
+**Status:** Batch 1 landed (uncommitted), Batches 2–6 not started · **Owner decisions captured:** 2026-09-16
 
 `/admin/register` now collects a full organizer application — the contact
 person and their role, a mobile number, city and province, a website, how many

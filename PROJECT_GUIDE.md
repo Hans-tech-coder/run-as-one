@@ -21,10 +21,11 @@ Philippines**. Three groups use it:
 | --- | --- | --- |
 | **Runners** (public, no account) | Browse upcoming races, register solo or as a group, pay, and later look up their times and download an e-certificate | `/`, `/events`, `/events/[slug]`, `/results`, `/results/[slug]` |
 | **Organizers** (the paying clients) | Create and manage their own events, see registrants, upload race results, run promo codes | `/admin/**` |
-| **Super admin** (the platform owner) | Approve organizer accounts, set per-organizer commission, curate the shared running-club list, watch platform revenue | `/superadmin/**` |
+| **Super admin** (the platform owner) | Read and approve organizer applications, curate the shared running-club list, watch platform revenue | `/superadmin/**` |
 
 Money flows to the organizer through PayMongo or a direct bank transfer; the
-platform takes a per-runner admin fee.
+platform takes a per-runner admin fee, which **the organizer sets on each event**
+(`Event.adminFee`).
 
 ---
 
@@ -217,8 +218,11 @@ The schema's own doc comments explain *why* each column exists — read them. Th
 shape:
 
 - **Organizer** — the client account. `role` is `ORGANIZER` or `SUPER_ADMIN`;
-  `status` is `PENDING`/approved; `adminFee` is the per-runner commission in
-  centavos. Owns `Event[]` and `PromoCode[]`. It also carries **the application
+  `status` is `PENDING`/approved. `adminFee` (centavos) is **a dead column**:
+  nothing that charges a runner reads it — every order's fee comes from
+  `Event.adminFee`, set by the organizer per event — and the superadmin editor
+  that wrote it was removed. It is left in place (4 bytes a row); dropping it is
+  a destructive migration that should travel on its own. Owns `Event[]` and `PromoCode[]`. It also carries **the application
   the account was created from** — `orgType`, `contactFirstName` /
   `contactLastName` / `contactRole` (the human, as distinct from `name`, which
   is the organization), `phone` (E.164), `city` + `province`, `website`,
@@ -712,16 +716,23 @@ reference.
 
 ### Super admin (`/superadmin`)
 `/superadmin` dashboard (platform revenue, fees) · `/superadmin/organizers`
-(approve, suspend, set commission; **Pending / Approved / Suspended chips** find
+(approve, suspend, and **read the application**; **Pending / Approved / Suspended chips** find
 accounts by status, Pending with its count — they replaced a Filter button that
-had no handler. **This screen does not yet show the application** the account
-was created from: `/admin/register` now collects the contact person, the phone
-number, the location, the website, the experience, the services wanted and the
-first event, and both this page and its `GET` still read only name, email,
-status, fee, created-at and event count. So the owner is still approving from
-six fields while fifteen more sit in the row — closing that is the next piece
-of work here, and until it lands the details are reachable only in the
-database) · `/superadmin/communities` (approve, rename, reject clubs; the
+had no handler. **A row opens the application** the account was created from
+in a panel over the list (`organizers/ApplicationPanel.tsx`): the organization,
+the person, and what they are planning, grouped as the form asked, every coded
+value through the label helpers in `organizer-application.ts`, and a blank
+optional answer reading *Not given*. The phone is a `tel:` link, the email a
+`mailto:`, the website opens in a new tab with `rel="noopener noreferrer"`. An
+account created before the form existed (`hasApplicationDetails()` false) says
+so in one sentence and shows only its sign-in address. The panel closes on
+Escape, on the backdrop and on Close, keeps Tab inside itself (yielding the
+keyboard to a confirm raised above it), returns focus to its opener, is a
+full-height `.admin-modal-sheet` below `sm`, and carries Approve / Suspend in its
+footer. The table's whole row opens it (except the Actions cell, which also has
+a *Read application* icon); **a card opens it only from its *Read application*
+button**, as a feedback card does. **There is no fee editor** — the per-organizer
+commission control was removed because `Organizer.adminFee` moved no money) · `/superadmin/communities` (approve, rename, reject clubs; the
 Add a club box and its button share one row from `sm` up) · `/superadmin/feedback` (**the reading end of the public form** —
 three metric cards over the messages, newest first. It is the super admin's
 screen and not the organizer's for the same reason the club list is: feedback is
@@ -733,7 +744,7 @@ browser it came from and a *Reply by email* that opens a `mailto:`. The chips
 filter by triage state and by kind; the order never changes under somebody
 working down the list, which is why the unread ones are **found** rather than
 sorted to the top) · `/superadmin/[...missing]`. **Below `lg` the three lists
-are cards** (`AdminCardList`): the admin fee and the club rename become a
+are cards** (`AdminCardList`): the club rename becomes a
 full-width edit block on the card (`AdminCardEdit`, §9), and a feedback card
 opens its message from a *Read message* button rather than a tap anywhere.
 
@@ -764,7 +775,7 @@ opens its message from a *Read message* button rather than a tap anywhere.
 | `admin/team/[id]/invite` | POST | **Resends** an unaccepted invitation with a **new** token and a new week — the old link dies. Same guard; reports `emailSent` like the invite |
 | `auth/invite/[token]` | POST | **Public.** Accepts an invitation. Unknown, used, expired or malformed tokens all answer 410 with one sentence. A new account must send `name`, `password`, `confirmPassword`; an existing account must send its **current password** (a wrong one is written to the trail as a failed sign-in). The membership is claimed with a conditional `updateMany`, so a double press cannot accept twice; then the account becomes `ACTIVE`, the trail gets `staff.invitation.accepted` + `auth.signed_in`, and the session cookie is set for that organizer |
 | `auth/switch-organizer` | POST | A STAFF session moving to another organizer it belongs to, checked with `activeMembershipWhere`; reissues the session with the new `orgId`. The trail row is written to the organizer entered and does not name the one left |
-| `superadmin/organizers`, `superadmin/organizers/[id]` | GET, PATCH | Status and commission |
+| `superadmin/organizers`, `superadmin/organizers/[id]` | GET, PATCH | `GET` returns every organizer with its fifteen application columns (not `adminFee`). `PATCH` moves `status` only, answers with just `id` and `status` (it used to echo the whole row, password hash included), and **refuses a body carrying `adminFee`** by name rather than ignoring it. Both `SUPER_ADMIN` only |
 | `superadmin/communities`, `superadmin/communities/[id]` | GET/POST, PATCH/DELETE | Club curation |
 | `superadmin/feedback`, `superadmin/feedback/[id]` | GET, PATCH/DELETE | The feedback inbox. `SUPER_ADMIN` only — an organizer reading it would be reading other organizers' complaints about the software, and strangers' email addresses. `GET` returns everything newest-first rather than paged: the whole table is the messages people took the trouble to write, and if it ever outgrows one call that will be a good problem. **`PATCH` moves the triage mark and nothing else** — the message, the name and the address are what somebody else wrote, and an inbox that can edit its own mail is one whose contents cannot be trusted later. `DELETE` is a genuine delete, unlike anything on a registration: there is no person waiting on the row, nothing in the product reads it, and a kept-"in case" spam row is one more thing between the owner and the messages that matter. The screen confirms first |
 
@@ -1053,7 +1064,7 @@ These are the user's own standing preferences. Follow them without being asked.
     a server page can render it directly, and it is an auto-fill grid of
     `minmax(min(100%, 20rem), 1fr)`.
   - **An edit a table does in its cell is `admin/AdminCardEdit` on a card**
-    (the superadmin's admin fee and club rename). It sits in the `expanded`
+    (the superadmin's club rename). It sits in the `expanded`
     slot under the value it changes, as a labelled full-width 16px box, with
     Save and Cancel at 44px underneath; Enter saves and Escape cancels. It
     holds no state: the page's `editingId` and draft feed the cell and the
@@ -1763,8 +1774,8 @@ and the results uploader wear `.admin-modal-panel`, the uploader's column
 mapping is `AdminSelect`, `PromoActionsMenu` is on `placeRowMenu`, and the edit
 screen's Promotions panel stacks on a phone. **Batch 5 is in too.**
 `/superadmin/organizers`, `/communities` and `/feedback` are cards below `lg`.
-The admin fee and the club rename open as a full-width `AdminCardEdit` block on
-the card, a feedback card opens its message through a "Read message" accordion
+The club rename opens as a full-width `AdminCardEdit` block on
+the card (the admin fee's went with the fee editor), a feedback card opens its message through a "Read message" accordion
 (`.t-acc`), the dashboard's tile icons sit in their `.metric-icon` box, and
 Approve / Suspend / Remove wear the `.is-success` / `.is-danger` chip tones.
 **Batch 6 is in too.** The create and edit forms keep Save in a bar at the

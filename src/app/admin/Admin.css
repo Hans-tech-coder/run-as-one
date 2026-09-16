@@ -875,8 +875,8 @@
   min-height: 44px;
 }
 
-/* An inline edit on a card (AdminCardEdit.tsx): the super admin's admin fee
-   and club rename. The label reads like a field's <dt>; the box is 16px so iOS
+/* An inline edit on a card (AdminCardEdit.tsx): the super admin's club
+   rename. The label reads like a field's <dt>; the box is 16px so iOS
    does not zoom; Save and Cancel split the width at 44px. The field resets
    the label's uppercase, because what is typed is stored as typed. */
 .admin-card-edit {

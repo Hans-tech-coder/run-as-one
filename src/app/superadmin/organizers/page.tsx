@@ -1,21 +1,30 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { Search, Edit, CheckCircle, Ban } from 'lucide-react';
-import { formatPesos, toPesos } from '@/lib/money';
+import { Search, CheckCircle, Ban, FileText } from 'lucide-react';
 import { useAlert } from '@/components/ui/AlertProvider';
 import AdminCardList, { AdminCardListSkeleton } from '@/app/admin/AdminCardList';
-import AdminCardEdit from '@/app/admin/AdminCardEdit';
 import FilterChip from '@/app/admin/FilterChip';
+import ApplicationPanel, { appliedOn, type OrganizerApplicationRow } from './ApplicationPanel';
 
-interface Organizer {
-  id: string;
-  name: string;
-  email: string;
-  status: string;
-  /** Centavos, as stored. The edit input below works in pesos. */
-  adminFee: number;
-  createdAt: string;
+/**
+ * The organizer accounts, and the applications they were created from.
+ *
+ * A row opens its application in a panel over the list (ApplicationPanel), so
+ * the super admin decides from everything the applicant wrote rather than from
+ * a name and an address. On the table the whole row opens it, except its own
+ * action controls; below `lg` a card opens it from a *Read application* button
+ * instead — the choice `/superadmin/feedback` made, because a card carries its
+ * own Approve and Suspend and a tap target covering all of them is a mis-tap
+ * waiting to happen. Open is `openId`, read by both layouts.
+ *
+ * There is no fee editor here any more. `Organizer.adminFee` was edited on
+ * this screen and read by nothing that charges a runner — the fee on an order
+ * is `Event.adminFee`, which the organizer sets per event — so the control was
+ * removed rather than left looking like it moved money.
+ */
+
+interface Organizer extends OrganizerApplicationRow {
   _count: {
     events: number;
   };
@@ -40,12 +49,9 @@ export default function OrganizersManagementPage() {
   // application approved from the Pending view leaves it rather than jumping
   // to another place in a list the owner is working down.
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
-
-  // Edit state. One draft for both layouts: the table's cell and the card's
-  // edit block read the same pair, so an edit survives a resize across `lg`.
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editAdminFee, setEditAdminFee] = useState<number>(0);
-  const [isSaving, setIsSaving] = useState(false);
+  // Whose application is open. An id rather than the row, so the panel reads
+  // the refreshed row after a status change instead of a stale copy.
+  const [openId, setOpenId] = useState<string | null>(null);
 
   const fetchOrganizers = async () => {
     try {
@@ -92,35 +98,6 @@ export default function OrganizersManagementPage() {
     }
   };
 
-  const startEditing = (org: Organizer) => {
-    setEditingId(org.id);
-    // The input shows pesos; the PATCH route converts back to centavos.
-    setEditAdminFee(toPesos(org.adminFee));
-  };
-
-  const saveAdminFee = async (id: string) => {
-    setIsSaving(true);
-    try {
-      const res = await fetch(`/api/superadmin/organizers/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adminFee: editAdminFee }),
-      });
-
-      if (res.ok) {
-        setEditingId(null);
-        fetchOrganizers(); // Refresh list
-      } else {
-        alert('Failed to update admin fee');
-      }
-    } catch (error) {
-      console.error(error);
-      alert('An error occurred');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   const filteredOrganizers = organizers.filter(o =>
     (statusFilter === 'ALL' || o.status === statusFilter) &&
     (o.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -130,6 +107,9 @@ export default function OrganizersManagementPage() {
   // "None at all" and "none that match" are different news.
   const emptyMessage =
     organizers.length === 0 ? 'No organizers found.' : 'No organizers match this search and filter.';
+  // Looked up in the whole list, not the filtered one: approving from the
+  // Pending view must not snatch the panel away mid-read.
+  const openOrganizer = openId ? organizers.find(o => o.id === openId) ?? null : null;
 
   return (
     <>
@@ -170,10 +150,10 @@ export default function OrganizersManagementPage() {
               <thead>
                 <tr>
                   <th>Organizer Details</th>
+                  <th>Applied</th>
                   <th>Events</th>
                   <th>Status</th>
-                  <th>Admin Fee</th>
-                  <th className="text-right">Actions</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -191,51 +171,43 @@ export default function OrganizersManagementPage() {
                   </tr>
                 ) : (
                   filteredOrganizers.map((org) => (
-                    <tr key={org.id}>
+                    <tr
+                      key={org.id}
+                      onClick={() => setOpenId(org.id)}
+                      onKeyDown={(e) => {
+                        if (e.target !== e.currentTarget) return;
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setOpenId(org.id);
+                        }
+                      }}
+                      tabIndex={0}
+                      aria-label={`Read ${org.name}'s application`}
+                      className="cursor-pointer"
+                    >
                       <td className="font-medium text-primary">
                         <div>{org.name}</div>
                         <div className="text-xs text-secondary font-normal">{org.email}</div>
                       </td>
+                      <td className="whitespace-nowrap text-secondary">{appliedOn(org.createdAt)}</td>
                       <td>{org._count.events}</td>
                       <td>
                         <OrganizerStatus status={org.status} />
                       </td>
-                      <td>
-                        {editingId === org.id ? (
-                          <div className="flex items-center gap-2">
-                            <span className="text-secondary">₱</span>
-                            <input
-                              type="number"
-                              value={editAdminFee}
-                              onChange={(e) => setEditAdminFee(Number(e.target.value))}
-                              className="form-input py-1 px-2"
-                              style={{ width: '80px', minHeight: '32px' }}
-                            />
-                            <button
-                              onClick={() => saveAdminFee(org.id)}
-                              disabled={isSaving}
-                              className="text-accent-blue text-sm"
-                            >
-                              Save
-                            </button>
-                            <button
-                              onClick={() => setEditingId(null)}
-                              className="text-secondary text-sm"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-3">
-                            <span>₱{formatPesos(org.adminFee)}</span>
-                            <button onClick={() => startEditing(org)} className="text-secondary hover:text-accent-blue" title="Edit Admin Fee">
-                              <Edit size={14} />
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                      <td className="text-right">
-                        <div className="flex justify-end gap-2">
+                      {/* Left-aligned, under its own header label. The cell
+                          swallows the click, so deciding never opens the panel. */}
+                      <td onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setOpenId(org.id)}
+                            className="btn-filter"
+                            title="Read application"
+                            aria-label={`Read ${org.name}'s application`}
+                            style={{ padding: '0 10px' }}
+                          >
+                            <FileText size={16} />
+                          </button>
                           <StatusActions org={org} onChange={handleStatusChange} />
                         </div>
                       </td>
@@ -247,9 +219,8 @@ export default function OrganizersManagementPage() {
           </div>
 
           {/* The same filtered list as the table, below `lg` (AdminCardList).
-              The fee's edit opens under the fields as its own full-width
-              block, so the current fee is still on screen while the new one is
-              typed; it is the same draft the table's cell edits. */}
+              A card opens its application from its own button, never from a
+              tap anywhere — see the note at the top of this file. */}
           <div className="dash-mobile-only">
             <AdminCardList
               items={isLoading ? [] : filteredOrganizers}
@@ -259,31 +230,14 @@ export default function OrganizersManagementPage() {
               subtitle={org => org.email}
               badges={org => <OrganizerStatus status={org.status} />}
               fields={org => [
+                { label: 'Applied', value: appliedOn(org.createdAt) },
                 { label: 'Events', value: org._count.events },
-                { label: 'Admin Fee', value: `₱${formatPesos(org.adminFee)}` },
               ]}
-              expanded={org =>
-                editingId === org.id && (
-                  <AdminCardEdit
-                    label="Admin fee per runner"
-                    prefix="₱"
-                    type="number"
-                    inputMode="decimal"
-                    value={editAdminFee}
-                    onChange={value => setEditAdminFee(Number(value))}
-                    onSave={() => saveAdminFee(org.id)}
-                    onCancel={() => setEditingId(null)}
-                    saving={isSaving}
-                  />
-                )
-              }
               actions={org => (
                 <>
-                  {editingId !== org.id && (
-                    <button type="button" className="btn-filter" onClick={() => startEditing(org)}>
-                      <Edit size={16} aria-hidden="true" /> Edit Fee
-                    </button>
-                  )}
+                  <button type="button" className="btn-filter" onClick={() => setOpenId(org.id)}>
+                    <FileText size={16} aria-hidden="true" /> Read application
+                  </button>
                   <StatusActions org={org} onChange={handleStatusChange} labelled />
                 </>
               )}
@@ -291,7 +245,7 @@ export default function OrganizersManagementPage() {
                 // While it loads, the list's own shape rather than a line of
                 // text the cards then push down (PROJECT_GUIDE §9).
                 isLoading ? (
-                  <AdminCardListSkeleton cards={3} fields={1} />
+                  <AdminCardListSkeleton cards={3} fields={2} />
                 ) : (
                   <div className="py-12 px-4 text-center text-secondary">{emptyMessage}</div>
                 )
@@ -300,11 +254,21 @@ export default function OrganizersManagementPage() {
           </div>
         </div>
       </div>
+
+      {openOrganizer && (
+        <ApplicationPanel
+          key={openOrganizer.id}
+          organizer={openOrganizer}
+          statusBadge={<OrganizerStatus status={openOrganizer.status} />}
+          actions={<StatusActions org={openOrganizer} onChange={handleStatusChange} labelled />}
+          onClose={() => setOpenId(null)}
+        />
+      )}
     </>
   );
 }
 
-/** One badge for the table's cell and the card, so the two cannot drift. */
+/** One badge for the table's cell, the card and the panel, so they cannot drift. */
 function OrganizerStatus({ status }: { status: string }) {
   return (
     <span className={`status-badge ${
@@ -318,9 +282,9 @@ function OrganizerStatus({ status }: { status: string }) {
 
 /**
  * Approve and Suspend. The table keeps its icon-only chips under the Actions
- * header, named by their titles; a card spells them out, because a phone has
- * no hover to read a title from. The tones are the chip classes in Admin.css —
- * a Tailwind colour utility loses to the unlayered .btn-filter.
+ * header, named by their titles; a card and the panel spell them out, because
+ * a phone has no hover to read a title from. The tones are the chip classes in
+ * Admin.css — a Tailwind colour utility loses to the unlayered .btn-filter.
  */
 function StatusActions({
   org,
@@ -340,6 +304,7 @@ function StatusActions({
           onClick={() => onChange(org.id, 'APPROVED')}
           className="btn-filter is-success"
           title={labelled ? undefined : 'Approve Organizer'}
+          aria-label={labelled ? undefined : 'Approve Organizer'}
           style={iconOnly}
         >
           <CheckCircle size={16} aria-hidden={labelled || undefined} />
@@ -353,6 +318,7 @@ function StatusActions({
           onClick={() => onChange(org.id, 'SUSPENDED')}
           className="btn-filter is-danger"
           title={labelled ? undefined : 'Suspend Organizer'}
+          aria-label={labelled ? undefined : 'Suspend Organizer'}
           style={iconOnly}
         >
           <Ban size={16} aria-hidden={labelled || undefined} />

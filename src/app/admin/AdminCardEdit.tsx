@@ -6,7 +6,7 @@ import BusyLabel from '@/components/ui/BusyLabel';
  * An inline edit, as a card holds it.
  *
  * A table edits a value where it stands: a narrow box and two text links
- * squeezed into the cell (the super admin's admin fee and club rename). That
+ * squeezed into the cell (the super admin's club rename). That
  * does not survive a thumb. On a card the same edit opens as its own block —
  * a labelled full-width field at 16px, so iOS does not zoom, with Save and
  * Cancel under it at 44px — in `AdminCardList`'s `expanded` slot, under the
@@ -21,7 +21,7 @@ import BusyLabel from '@/components/ui/BusyLabel';
  */
 
 export type AdminCardEditProps = {
-  /** The field's visible label, e.g. "New admin fee". */
+  /** The field's visible label, e.g. "New club name". */
   label: string;
   value: string | number;
   onChange: (value: string) => void;
