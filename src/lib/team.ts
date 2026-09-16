@@ -11,6 +11,7 @@
  * permissions.ts, read through `canManageMember` in actor.ts.
  */
 
+import { invalidEmailMessage, looksLikeEmailAddress } from './email-address';
 import { normalizeAccountEmail } from './text-case';
 import {
   ROLE_LABELS,
@@ -34,8 +35,6 @@ export const INVITE_TTL_DAYS = 7;
 
 /** More races than any organizer runs in a season; bounds what one request writes. */
 export const MAX_ASSIGNMENTS = 100;
-
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export type FieldErrors = Record<string, string>;
 
@@ -190,8 +189,9 @@ export function readInvitee(
 
   if (!email) {
     errors.email = 'Enter the email address the invitation should go to';
-  } else if (!EMAIL_PATTERN.test(email)) {
-    errors.email = 'Enter a valid email address, like ana@example.com';
+  } else if (!looksLikeEmailAddress(email)) {
+    // One rule for every address in the app — see lib/email-address.ts.
+    errors.email = invalidEmailMessage('ana@example.com');
   }
 
   return { name, email, errors };

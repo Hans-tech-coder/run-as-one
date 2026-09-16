@@ -1,3 +1,4 @@
+import { emailAddressError } from "@/lib/email-address";
 import { sellsPackages } from "@/lib/event-type";
 import {
   expectedNationalDigits,
@@ -96,6 +97,25 @@ const MESSAGES: Record<RunnerField, string> = {
  */
 const PHONE_FIELDS: readonly RunnerField[] = ["phone", "emergencyContactPhone"];
 
+/**
+ * The address the receipt has to arrive at, and why a filled box is not
+ * enough.
+ *
+ * `type="email"` on the input looks like it covers this, and it does not: the
+ * browser only runs that check when a form is *submitted*, and step 1 advances
+ * through a click handler. So an address with no `@` in it passed every check
+ * here, was written to the order, and was only discovered when Resend refused
+ * the send days later — by which point the runner had paid and had nothing
+ * telling them their confirmation was never going to arrive.
+ *
+ * The rule itself lives in lib/email-address.ts, shared with both checkout
+ * routes, so what the wizard accepts and what the server stores cannot drift.
+ */
+function emailFormatMessage(value: unknown): string | undefined {
+  if (typeof value !== "string" || value.trim() === "") return undefined;
+  return emailAddressError(value);
+}
+
 function phoneLengthMessage(
   field: RunnerField,
   value: unknown,
@@ -177,6 +197,11 @@ export function validateRunner(
     if (errors[field]) continue;
     const message = phoneLengthMessage(field, participant[field]);
     if (message) errors[field] = message;
+  }
+
+  if (!errors.email) {
+    const message = emailFormatMessage(participant.email);
+    if (message) errors.email = message;
   }
 
   return errors;

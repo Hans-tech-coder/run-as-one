@@ -617,11 +617,23 @@ export default function RegistrantsTable({
         } : r));
         closeEditModal();
       } else {
-        alert('Failed to update runner');
+        // The route's own words, not a generic refusal: the one edit it turns
+        // down is an email address that would never deliver, and "Failed to
+        // update runner" would leave an organizer guessing which field.
+        const { error } = await res.json().catch(() => ({ error: '' }));
+        alert({
+          variant: 'error',
+          title: 'Runner Not Saved',
+          message: error || 'The runner could not be updated. Please try again.',
+        });
       }
     } catch (e) {
       console.error(e);
-      alert('An error occurred while updating runner');
+      alert({
+        variant: 'error',
+        title: 'Runner Not Saved',
+        message: 'Something went wrong while updating this runner. Please try again.',
+      });
     } finally {
       setIsSaving(false);
     }

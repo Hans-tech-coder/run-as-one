@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Check, KeyRound, UserCog } from 'lucide-react';
 import FieldError from '@/components/ui/FieldError';
 import { useAlert } from '@/components/ui/AlertProvider';
+import { invalidEmailMessage, looksLikeEmailAddress } from '@/lib/email-address';
 import PasswordField from './PasswordField';
 
 // One constant for this form, the password route and the invitation page.
@@ -81,8 +82,8 @@ function ProfilePanel({
     }
     if (!email.trim()) {
       next.email = 'Enter the email address you sign in with';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      next.email = 'Enter a valid email address, like you@example.com';
+    } else if (!looksLikeEmailAddress(email)) {
+      next.email = invalidEmailMessage('you@example.com');
     }
     return next;
   };

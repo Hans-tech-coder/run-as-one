@@ -31,6 +31,11 @@ import {
 } from '@/lib/text-case';
 import { consentSignatureError } from '@/lib/consent-signature';
 import {
+  emailAddressError,
+  normalizeEmailAddress,
+  participantEmailError,
+} from '@/lib/email-address';
+import {
   PromoUnavailableError,
   categorySeatsClaimed,
   redeemPromoCode,
@@ -82,6 +87,26 @@ export async function POST(request: Request) {
     if (signatureProblem) {
       return NextResponse.json({ error: signatureProblem }, { status: 400 });
     }
+
+    // Every email this order will ever produce goes to the address below: the
+    // "registration received" mail sent a few lines down, the receipt when the
+    // payment clears, and anything an organizer sends by hand later. An
+    // address Resend refuses ("Invalid `to` field") makes all of that silent —
+    // and by then the runner has paid, so there is no screen left to tell them
+    // on. The wizards check the same rule as the runner types (see
+    // lib/email-address.ts), and this is the door that does not depend on the
+    // wizard having been the thing that posted.
+    const emailProblem =
+      participantEmailError(participants) ??
+      emailAddressError(customerEmail, { blank: 'Enter an email address for this order' });
+    if (emailProblem) {
+      return NextResponse.json({ error: emailProblem }, { status: 400 });
+    }
+
+    // Trimmed, never cased: a space pasted in from a contact card is enough to
+    // stop the send on its own, while the local part of an address is
+    // case-sensitive on some mail servers.
+    const storedCustomerEmail = normalizeEmailAddress(customerEmail);
 
     const secretKey = process.env.PAYMONGO_SECRET_KEY;
     if (!secretKey || secretKey === 'sk_test_PLACEHOLDER_KEY') {
@@ -250,7 +275,7 @@ export async function POST(request: Request) {
         data: {
           eventId,
           orderRef,
-          customerEmail,
+          customerEmail: storedCustomerEmail,
           customerName: storedCustomerName,
           logisticsMethod: storedLogisticsMethod,
           // Only meaningful for delivery; pickup leaves it null.
@@ -290,9 +315,10 @@ export async function POST(request: Request) {
               categoryId: p.categoryId,
               firstName: upperCaseForStorage(p.firstName),
               lastName: upperCaseForStorage(p.lastName),
-              // Not uppercased: the local part of an address is case-sensitive
-              // on some mail servers, so touching it can stop delivery.
-              email: p.email,
+              // Trimmed but never cased: the local part of an address is
+              // case-sensitive on some mail servers, so touching it can stop
+              // delivery, while a stray space stops it outright.
+              email: normalizeEmailAddress(p.email),
               phone: p.phone,
               gender: upperCaseForStorage(p.gender),
               birthdate: p.birthdate,
@@ -456,7 +482,7 @@ export async function POST(request: Request) {
               type: paymongoPaymentType(storedPaymentMethod),
               billing: {
                 name: storedCustomerName,
-                email: customerEmail
+                email: storedCustomerEmail
               }
             }
           }
@@ -527,10 +553,10 @@ export async function POST(request: Request) {
             ],
             success_url: finalSuccessUrl,
             cancel_url: finalCancelUrl,
-            customer_email: customerEmail,
+            customer_email: storedCustomerEmail,
             billing: {
               name: storedCustomerName,
-              email: customerEmail
+              email: storedCustomerEmail
             }
           }
         }

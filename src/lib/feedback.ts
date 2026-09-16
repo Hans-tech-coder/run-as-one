@@ -13,6 +13,8 @@
  * more accurate than guessing from the prose.
  */
 
+import { looksLikeEmailAddress } from './email-address';
+
 /** The three things a person opens this form to say. */
 export const FEEDBACK_KINDS = ['ISSUE', 'SUGGESTION', 'FEATURE'] as const;
 
@@ -117,7 +119,7 @@ export function asSitePath(value: unknown): string | null {
  * receive. It checks the shape and nothing else.
  */
 export function looksLikeEmail(value: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+  return looksLikeEmailAddress(value);
 }
 
 /** What the reader sees where a sender left their name blank. */

@@ -9,6 +9,7 @@ import {
 } from '@/lib/actor';
 import { changedFields, listFields, recordAudit } from '@/lib/audit';
 import { normalizeAccountEmail } from '@/lib/text-case';
+import { invalidEmailMessage, looksLikeEmailAddress } from '@/lib/email-address';
 
 /**
  * The signed-in person editing their own name and email.
@@ -51,8 +52,8 @@ export async function PATCH(request: Request) {
 
     if (!email) {
       errors.email = 'Enter the email address you sign in with';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      errors.email = 'Enter a valid email address, like you@example.com';
+    } else if (!looksLikeEmailAddress(email)) {
+      errors.email = invalidEmailMessage('you@example.com');
     }
 
     if (Object.keys(errors).length > 0) {

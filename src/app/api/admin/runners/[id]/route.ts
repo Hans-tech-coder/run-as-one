@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { asRunnerCommunity } from '@/lib/running-community';
+import { emailAddressError, normalizeEmailAddress } from '@/lib/email-address';
 import {
   optionalUpperCaseForStorage,
   upperCaseForStorage,
@@ -45,6 +46,7 @@ async function findLiveRunner(id: string) {
     include: {
       registration: {
         select: {
+          id: true,
           orderRef: true,
           eventId: true,
           event: { select: { organizerId: true } },
@@ -94,14 +96,25 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       runningCommunity
     } = body;
 
+    // The address every email about this order goes to. An organizer fixing a
+    // typo is the one person who can *repair* a registration Resend refused to
+    // deliver to, so this is the last door that must not let a broken one
+    // through — the modal's own `type="email"` only speaks for a browser that
+    // submitted the form. See lib/email-address.ts.
+    const emailProblem = emailAddressError(email);
+    if (emailProblem) {
+      return NextResponse.json({ error: emailProblem }, { status: 400 });
+    }
+
     const data = {
       // Registrant text is stored uppercase, exactly as the wizards store it
       // (lib/text-case.ts) — an organizer fixing a typo must not be the one
-      // row in the export that reads differently. Email is left alone: its
-      // local part is case-sensitive on some mail servers.
+      // row in the export that reads differently. Email is only trimmed: its
+      // local part is case-sensitive on some mail servers, while a stray space
+      // is enough on its own to stop a send.
       firstName: upperCaseForStorage(firstName),
       lastName: upperCaseForStorage(lastName),
-      email,
+      email: normalizeEmailAddress(email),
       phone,
       gender: upperCaseForStorage(gender),
       birthdate,
@@ -141,6 +154,26 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
           organizerId: runner.registration.event.organizerId,
           summary: `Edited runner ${updated.firstName} ${updated.lastName} (${ref}): ${listFields(Object.keys(changes))}.`,
           changes,
+        });
+      }
+
+      // **The order's contact address follows runner 1's.**
+      //
+      // Every email about a registration is addressed to
+      // `Registration.customerEmail`, and that column is written once, at
+      // checkout, from the first runner's email. Editing the runner alone
+      // therefore fixed the list and not the mail: an order whose address
+      // Resend had already refused stayed unreachable no matter how many times
+      // an organizer corrected the typo, because nothing in the app has ever
+      // been able to write that column a second time.
+      //
+      // Synced unconditionally rather than only when the email changed, so
+      // re-saving a runner is enough to repair an order whose contact address
+      // drifted out of step before this existed.
+      if (updated.runnerNo === 1) {
+        await tx.registration.update({
+          where: { id: runner.registration.id },
+          data: { customerEmail: updated.email },
         });
       }
 
