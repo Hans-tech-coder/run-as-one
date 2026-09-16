@@ -187,7 +187,8 @@ src/
                             #   pager and its below-lg Sort chip,
                             #   row-menu-position.ts — where a row's menu opens,
                             #   route-loading-shape.ts — what each page's wait
-                            #   draws below lg, FilterChip — a chip that finds)
+                            #   draws, phone and desktop, FilterChip — a chip
+                            #   that finds)
     superadmin/             # platform-owner portal (SuperAdminShell, a thin
                             #   wrapper over admin/DashboardShell)
     api/                    # all route handlers — see §6
@@ -195,7 +196,7 @@ src/
                             #   StatusPanel, RunAsOneLogo, HeroArcBackground,
                             #   PublicRouteLoading…)
   components/ui/            # cross-app primitives: AlertProvider, AlertModal, Toast,
-                            #   Skeleton, LoadingDots, LinkPending, FieldError, table,
+                            #   Skeleton, LinkPending, FieldError, table,
                             #   RunnerLoader, LinkPendingIcon, RunnerOverlay
   lib/                      # domain logic — see §5. Read these before re-deriving a rule.
   data/mockEvents.ts        # legacy mock data
@@ -1066,15 +1067,23 @@ These are the user's own standing preferences. Follow them without being asked.
     room there, and never taller than the room it opens into.
     `OrganizerSwitcher`'s menu is clamped inside the screen's sides and
     scrolls rather than running off the top.
-  - **A wait is the page's shape below `lg`.** `admin/loading.tsx`,
+  - **A wait is the page's shape, at both widths.** `admin/loading.tsx`,
     `admin/events/loading.tsx` and `superadmin/loading.tsx` read the URL and
-    hand `AdminRouteLoading` a shape from `admin/route-loading-shape.ts`:
-    metric tiles, the toolbar's rows and a card list in its frame, or form
-    panels field by field, at heights measured on the real pages. From `lg`
-    up it is the dots. **A page that gains a toolbar row, a metric or a field
-    updates its entry in the same edit.** A client page that fetches its own
-    list (the superadmin screens) puts `AdminCardListSkeleton` in the card
-    list's `empty` slot while it waits.
+    hand `AdminRouteLoading` a shape from `admin/route-loading-shape.ts`.
+    Below `lg` that is metric tiles, the toolbar's wrapped rows and a card
+    list in its frame, or form panels field by field. The same entry's `lg`
+    block is the desktop: the toolbar in the one row it unwraps into, and the
+    **table** the cards stand in for — its header band and its rows at that
+    screen's own row height — or a panel's rows in a real `.form-grid`, where
+    a `split` row is the pair of fields the form puts side by side. Both are
+    rendered and `.dash-mobile-only` / `.dash-desktop-only` pick, the same
+    switch the real pages use. Every number is measured on the real page (the
+    phone at 390px, `lg` at 1680px). **A page that gains a toolbar row, a
+    metric, a field or a column updates its entry in the same edit.** A route
+    with no entry at all — a 404, anything unlisted — is still the centred
+    dots, which promise nothing about what is coming. A client page that
+    fetches its own list (the superadmin screens) puts `AdminCardListSkeleton`
+    in the card list's `empty` slot while it waits.
   - **A chip that toggles a filter is `admin/FilterChip`** (feedback's status
     and kind chips, the organizers' status chips). It finds rows and never
     sorts them, pressing the active chip clears it, and it is 44px below `lg`.
@@ -1211,7 +1220,8 @@ These are the user's own standing preferences. Follow them without being asked.
   - `admin/loading.tsx` and `superadmin/loading.tsx` render
     `admin/AdminRouteLoading` — the page frame every screen in the dashboard
     shares (an 80px `.admin-header` with a pulsing skeleton bar where the title
-    goes, then `.admin-content`) with the brand loader centred in it. Next.js
+    goes, then `.admin-content`) holding that route's shape, or the brand
+    loader centred in it when the route has no shape. Next.js
     makes that the Suspense fallback for the segment and everything nested
     under it — **but a fallback shows only when the segment directly under it
     changes**. `admin/loading.tsx` answers a sidebar click (`events` →
@@ -1257,28 +1267,28 @@ These are the user's own standing preferences. Follow them without being asked.
   centred halfway down a long form, off screen, so saving an event showed a
   dimmed page and a stuck "Saving..." button. Never give an element that holds
   page content a lasting `filter` or `transform`. The fallback's own reveal is
-  dropped to `--duration-quick`, because 400ms of fade before the dots appear
+  dropped to `--duration-quick`, because 400ms of fade before the shape appears
   is 400ms still looking like nothing happened.
-- **The dashboard's loader is three pulsing dots in solid brand orange**
-  (`components/ui/LoadingDots`, `.t-dots` in `globals.css`). Solid, not the
-  orange→blue gradient: at 12px a ramp averages into a grey-lavender that reads
-  as neither colour, and the one element on screen saying "your click was
-  heard" has to be unmistakable. Three sizes — `sm` beside a word, `md`, `lg`
-  filling a page. All the motion is CSS, deliberately: the component renders
-  inside `loading.tsx` fallbacks, and a framer-motion version would drag every
-  one of them across the client boundary for an animation a keyframe already
-  does. Reduced motion swaps the swell for a fade rather than for nothing — the
-  element exists to say something is happening.
-- **The runner side waits with a sprinter, not with dots.** Everything a runner
-  touches answers a click with `components/ui/RunnerLoader` (`.t-runner` in
+- **The app waits with a sprinter, and there is only the one loader.** The
+  dashboard used to answer with three pulsing dots
+  (`components/ui/LoadingDots`, `.t-dots`); the owner asked for them to go, so
+  the component, its CSS and its `--dots-*` tokens are gone from the app. A
+  wait in the dashboard is now either the page's own shape
+  (`AdminRouteLoading`, above) or the same running figure the public site uses.
+  **Do not reintroduce a spinner or a dot loader** — a wait whose layout is
+  known draws that layout, and one whose layout is not known draws the figure.
+- **The figure** is `components/ui/RunnerLoader` (`.t-runner` in
   `globals.css`): an original running figure in brand blue whose arms and legs
   run a real stride (each limb is a thigh or upper-arm group turning at the
   joint with the shin or forearm nested inside it, `transform-box: view-box`,
   the two sides half a `--runner-cycle` apart), with brand-orange speed lines
   streaming off behind. The owner asked for it because a runner who presses
-  Register and sees nothing move assumes the button is broken; the dashboard
-  keeps its dots. Hook-free and pure CSS, like `LoadingDots`, so it can render
-  in a `loading.tsx`. A new wait on the public side should be one of these four:
+  Register and sees nothing move assumes the button is broken. Three sizes —
+  `sm` (1.3em, beside a word or in a cell), `md`, `lg` filling a page — and
+  `tone="current"` to draw it in the surrounding text colour, which is what the
+  dashboard's `LinkPending` uses. Hook-free and pure CSS, so it can render in a
+  `loading.tsx` without dragging it across the client boundary. A new wait on
+  the public side should be one of these four:
   - **A page on its way** — four `loading.tsx` files render
     `components/PublicRouteLoading`, a **loading screen**: the `lg` figure with
     a shimmering caption (transitions.dev's shimmer-text, `.t-shimmer`) on a

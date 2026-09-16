@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useLinkStatus } from "next/link";
-import LoadingDots from "./LoadingDots";
+import RunnerLoader from "./RunnerLoader";
 
 /**
  * The pending marker inside a navigation link.
@@ -13,11 +13,16 @@ import LoadingDots from "./LoadingDots";
  * the length of the wait the highlight is still sitting on the page being left.
  * This puts the answer on the item that was pressed.
  *
- * Two details keep it from being noise. The slot is always in the layout and
+ * The mark is the running figure, in the colour of the label beside it — the
+ * one loader the app has, on the dashboard as on the runner's side.
+ *
+ * Three details keep it from being noise. The slot is always in the layout and
  * only its opacity changes, so an appearing indicator never nudges the label;
- * and the fade in is delayed, so a navigation that resolves in under that delay
- * never flashes anything at all. Must be rendered as a descendant of a
- * `<Link>` — `useLinkStatus` reads the status of the link above it.
+ * the fade in is delayed, so a navigation that resolves in under that delay
+ * never flashes anything at all; and the figure itself is mounted only while
+ * the link is pending, so a sidebar of seven items is not running seven hidden
+ * strides. Must be rendered as a descendant of a `<Link>` — `useLinkStatus`
+ * reads the status of the link above it.
  */
 export default function LinkPending() {
   const { pending } = useLinkStatus();
@@ -27,7 +32,7 @@ export default function LinkPending() {
       className={`nav-pending ${pending ? "is-pending" : ""}`}
       aria-hidden="true"
     >
-      <LoadingDots size="sm" label="" />
+      {pending && <RunnerLoader size="sm" tone="current" label="" />}
     </span>
   );
 }

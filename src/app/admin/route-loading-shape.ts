@@ -1,25 +1,32 @@
 /**
- * What each dashboard page looks like below `lg`, for the route fallback that
- * stands in for it while it loads.
+ * What each dashboard page looks like, for the route fallback that stands in
+ * for it while it loads.
  *
  * A `loading.tsx` cannot import the page it is waiting for, and one boundary
  * covers every page nested under it, so the fallback asks the URL (which a
  * navigation with a loading boundary commits straight away) and draws the
- * shape written down here: metric tiles, a toolbar and card list and what they
- * stand in, or form panels and the fields in them. Only the phone and tablet
- * layout is described. From `lg` up every fallback is the centred dots, as it
- * always was.
+ * shape written down here: metric tiles, a toolbar and list, or panels and the
+ * rows in them.
  *
- * The numbers were measured on the real pages at 390px, so the list and the
- * fields that arrive land where their skeletons stood. Keep an entry in step
- * with its page: a page that gains a toolbar row, a metric or a field changes
- * its line here in the same edit, or the wait jumps when the page arrives,
- * which is the one thing this file exists to stop.
+ * **Both layouts are described.** `list` and `panels` are the page below `lg`
+ * — the card list and the single column of fields a phone gets. `lg` is the
+ * same page from `lg` up — the same toolbar in one row, and the data table the
+ * cards stand in for. `AdminRouteLoading` renders both and lets
+ * `.dash-mobile-only` / `.dash-desktop-only` pick, exactly as every real page
+ * in the dashboard does.
+ *
+ * The phone numbers were measured at 390px and the `lg` numbers at 1680px, on
+ * the real pages, so the page that arrives lands where its skeleton stood.
+ * Keep an entry in step with its page: a page that gains a toolbar row, a
+ * metric, a field or a column changes its line here in the same edit, or the
+ * wait jumps when the page arrives, which is the one thing this file exists to
+ * stop. A route with no `lg` block falls back to the defaults in
+ * `AdminRouteLoading`, which suit a plain table.
  */
 export type RouteShape = {
-  /** Metric tiles across the top. */
+  /** Metric tiles across the top. Both layouts; `.metrics-grid` does the rest. */
   metrics?: number;
-  /** A toolbar and card list. */
+  /** A toolbar and card list, below `lg`. */
   list?: {
     /**
      * - `page`: on the page under its toolbar (the TanStack screens);
@@ -35,14 +42,49 @@ export type RouteShape = {
     /** A "Select all on this page" row above the cards. */
     selectAll?: boolean;
   };
-  /** Form or text panels, top to bottom. */
+  /** Form or text panels, top to bottom, below `lg`. */
   panels?: FormPanelShape[];
+  /** The same page from `lg` up. */
+  lg?: DesktopShape;
 };
 
 export type FormPanelShape = {
   /** Each field's height in px, from the measures below. */
   fields: number[];
   /** A settings-style action row under the fields. */
+  actions?: boolean;
+};
+
+/**
+ * A page from `lg` up. The desktop is not a wider phone: the toolbar's rows
+ * unwrap into one, the cards become a table, and a form's fields pair up two
+ * to a row, so each of those is measured again here rather than derived.
+ */
+export type DesktopShape = {
+  /**
+   * The toolbar's content height in the one row it unwraps into, and with it
+   * anything that stands between the toolbar and the list (Activity's filter
+   * grid and its sort line, with their gaps). As on a phone this is the height
+   * inside the toolbar's own padding, so the skeleton adds that padding back.
+   */
+  toolbar?: number;
+  /** The table the cards stand in for: its header row, one body row, and how many to draw. */
+  table?: { head: number; row: number; rows: number };
+  /** Panels, top to bottom. */
+  panels?: DesktopPanelShape[];
+};
+
+/**
+ * A row of a panel's content, 24px from the next. A plain number is a row that
+ * spans the panel; `split` is a row `.form-grid` gives to two fields side by
+ * side, at the taller of the two.
+ */
+export type DesktopRow = number | { h: number; split: true };
+
+export type DesktopPanelShape = {
+  /** Each row of the panel's content, top to bottom. */
+  rows: DesktopRow[];
+  /** A settings-style action row under the rows. */
   actions?: boolean;
 };
 
@@ -62,6 +104,12 @@ const UPLOAD = 219;
  * picker, then the first option's fields) and the bank accounts panel. The edit
  * form reuses it for its own fetch, so the route's wait and the fetch's wait
  * are one screen.
+ *
+ * From `lg` up the same three panels are rows instead of fields, because
+ * `.form-grid` pairs the halves: Basic Information is its title, its
+ * description, two rows of two and the two upload boxes side by side;
+ * Distance Categories is its type picker over the first category's card; Bank
+ * Transfer Accounts is its line of small print, its empty box and its button.
  */
 export const EVENT_FORM_SHAPE: RouteShape = {
   panels: [
@@ -69,43 +117,114 @@ export const EVENT_FORM_SHAPE: RouteShape = {
     { fields: [368, FIELD, FIELD, FIELD, 163, 159, 261] },
     { fields: [326] },
   ],
+  lg: {
+    panels: [
+      { rows: [87, 183, { h: 87, split: true }, { h: 87, split: true }, { h: 241, split: true }] },
+      { rows: [187, 845] },
+      // The button under the empty box brings its own 24px of space, which is
+      // the gap the skeleton already draws, so only its 29px is counted here.
+      { rows: [40, 130, 29] },
+    ],
+  },
 };
 
 /** Search, the filter chips, then the primary button: three 40px rows. */
 const THREE_ROW_TOOLBAR = 144;
 
+/** Every dashboard toolbar is one 40px row inside its padding from `lg` up. */
+const LG_TOOLBAR = 40;
+
+/** A `.data-table`'s header and body rows (the Dashboard and superadmin). */
+const LG_PLAIN_TABLE = { head: 51, row: 54 };
+
+/** The TanStack screens' table, which carries its own header styling. */
+const LG_TANSTACK_HEAD = 53;
+
 const EXACT: Record<string, RouteShape> = {
-  '/admin': { metrics: 3, list: { frame: 'titled-panel' } },
-  '/admin/events': { list: { frame: 'page', toolbar: THREE_ROW_TOOLBAR } },
+  '/admin': {
+    metrics: 3,
+    list: { frame: 'titled-panel' },
+    // The panel holds the five latest registrations, and only ever five.
+    lg: { table: { ...LG_PLAIN_TABLE, rows: 5 } },
+  },
+  '/admin/events': {
+    list: { frame: 'page', toolbar: THREE_ROW_TOOLBAR },
+    lg: { toolbar: LG_TOOLBAR, table: { head: LG_TANSTACK_HEAD, row: 61, rows: 8 } },
+  },
   '/admin/events/new': EVENT_FORM_SHAPE,
-  '/admin/marketing': { metrics: 3, list: { frame: 'page', toolbar: THREE_ROW_TOOLBAR } },
-  '/admin/team': { metrics: 3, list: { frame: 'page', toolbar: THREE_ROW_TOOLBAR } },
+  '/admin/marketing': {
+    metrics: 3,
+    list: { frame: 'page', toolbar: THREE_ROW_TOOLBAR },
+    // A promo row carries its code, its meter and its dates: 93px.
+    lg: { toolbar: LG_TOOLBAR, table: { head: LG_TANSTACK_HEAD, row: 93, rows: 5 } },
+  },
+  '/admin/team': {
+    metrics: 3,
+    list: { frame: 'page', toolbar: THREE_ROW_TOOLBAR },
+    lg: { toolbar: LG_TOOLBAR, table: { head: LG_TANSTACK_HEAD, row: 45, rows: 10 } },
+  },
   // Search, the four filter pickers one to a row, the "Newest first" line and
   // the first day heading, all above the first card.
-  '/admin/activity': { list: { frame: 'page', toolbar: 456 } },
+  '/admin/activity': {
+    list: { frame: 'page', toolbar: 456 },
+    // The 44px toolbar, the filter grid's 87 and the sort line's 20, with the
+    // 16px gaps between them: one block above the day's table.
+    lg: { toolbar: 167, table: { head: LG_TANSTACK_HEAD, row: 77, rows: 6 } },
+  },
   '/admin/settings': {
     panels: [
       { fields: [FIELD, HINTED], actions: true },
       { fields: [FIELD, HINTED, FIELD], actions: true },
     ],
+    // `.form-grid` pairs them: one row in the first panel, a full-width field
+    // over a pair in the second.
+    lg: {
+      panels: [
+        { rows: [{ h: 111, split: true }], actions: true },
+        { rows: [87, { h: 111, split: true }], actions: true },
+      ],
+    },
   },
   // The System Overview panel's two paragraphs.
-  '/superadmin': { metrics: 4, panels: [{ fields: [256] }] },
+  '/superadmin': { metrics: 4, panels: [{ fields: [256] }], lg: { panels: [{ rows: [256] }] } },
   // Search, then the status chips over two rows of 44px.
-  '/superadmin/organizers': { list: { frame: 'panel', toolbar: 152 } },
+  '/superadmin/organizers': {
+    list: { frame: 'panel', toolbar: 152 },
+    lg: { toolbar: LG_TOOLBAR, table: { ...LG_PLAIN_TABLE, rows: 8 } },
+  },
   // Search, then Add a club's box and button stacked.
-  '/superadmin/communities': { list: { frame: 'panel', toolbar: 166 } },
-  '/superadmin/feedback': { metrics: 3, list: { frame: 'panel', toolbar: THREE_ROW_TOOLBAR } },
+  '/superadmin/communities': {
+    list: { frame: 'panel', toolbar: 166 },
+    lg: { toolbar: LG_TOOLBAR, table: { ...LG_PLAIN_TABLE, rows: 8 } },
+  },
+  '/superadmin/feedback': {
+    metrics: 3,
+    list: { frame: 'panel', toolbar: THREE_ROW_TOOLBAR },
+    lg: { toolbar: LG_TOOLBAR, table: { ...LG_PLAIN_TABLE, rows: 8 } },
+  },
 };
 
 const PATTERNS: [RegExp, RouteShape][] = [
   [/^\/admin\/events\/[^/]+\/edit$/, EVENT_FORM_SHAPE],
   // Search, Filters, the two queue chips and Sort, then Export; Select All above the cards.
-  [/^\/admin\/events\/[^/]+\/registrants$/, { list: { frame: 'page', toolbar: 240, selectAll: true } }],
-  [/^\/admin\/events\/[^/]+\/results$/, { list: { frame: 'page', toolbar: 192 } }],
+  [
+    /^\/admin\/events\/[^/]+\/registrants$/,
+    {
+      list: { frame: 'page', toolbar: 240, selectAll: true },
+      // A registrant's row carries the runner under the order ref: 69px.
+      lg: { toolbar: LG_TOOLBAR, table: { head: LG_TANSTACK_HEAD, row: 69, rows: 7 } },
+    },
+  ],
+  [
+    /^\/admin\/events\/[^/]+\/results$/,
+    {
+      list: { frame: 'page', toolbar: 192 },
+      lg: { toolbar: LG_TOOLBAR, table: { head: LG_TANSTACK_HEAD, row: 61, rows: 8 } },
+    },
+  ],
 ];
 
-/** The shape to draw for a path, or null for the plain dots (a 404, anything unlisted). */
+/** The shape to draw for a path, or null for the plain figure (a 404, anything unlisted). */
 export function routeShape(pathname: string | null): RouteShape | null {
   if (!pathname) return null;
   const path = pathname.length > 1 ? pathname.replace(/\/$/, '') : pathname;

@@ -4,11 +4,12 @@ import React from "react";
  * The runner side's "working on it" mark: a sprinter mid-stride, arms and legs
  * cycling, with brand-orange speed lines streaming off behind.
  *
- * It exists for the same reason `LoadingDots` does — a click that is answered
- * by nothing moving reads as a button that is broken, and a runner who thinks
- * Register did nothing presses it again — but the public site is a race
- * registration product, and its loader should look like it belongs to one. The
- * organizer dashboard keeps the dots.
+ * It exists because a click that is answered by nothing moving reads as a
+ * button that is broken, and a runner who thinks Register did nothing presses
+ * it again. The app is a race registration product, so its loader looks like
+ * it belongs to one. **This is the app's only loader**: the dashboard used to
+ * answer with three pulsing dots, and that component is gone — a wait there is
+ * either the page's own shape (`admin/AdminRouteLoading`) or this figure.
  *
  * The figure is drawn here, not imported: every limb is two segments on nested
  * groups — the thigh turns at the hip and the shin, inside it, at the knee (the
@@ -17,9 +18,10 @@ import React from "react";
  * shade deeper, which is all the depth a flat pictogram needs.
  *
  * All the motion is CSS (`.t-runner` in globals.css) and this file takes no
- * hooks, for the reason `LoadingDots` gives: it renders inside `loading.tsx`
- * fallbacks, which stay server components only as long as nothing in them
- * needs the client.
+ * hooks, deliberately: it renders inside `loading.tsx` fallbacks, which stay
+ * server components only as long as nothing in them needs the client. A
+ * framer-motion version would drag every fallback in the app across the client
+ * boundary for an animation a keyframe already does.
  *
  * Sizes: `sm` is 1.3em, so it sits in a button or a table cell at the size of
  * the text beside it; `md` 64px; `lg` 104px, filling a page on its way.

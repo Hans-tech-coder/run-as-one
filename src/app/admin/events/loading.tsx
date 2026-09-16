@@ -11,8 +11,8 @@ import { routeShape } from '../route-loading-shape';
  * `admin/loading.tsx` cannot: a fallback shows only when the segment directly
  * under it changes, and every one of those clicks keeps `events` as the
  * segment under `admin`. Without this file the events table sat on screen
- * unchanged while the next page loaded, with the action menu's small dots as
- * the only sign the click was heard. See AdminRouteLoading.
+ * unchanged while the next page loaded, with the action menu's small running
+ * figure as the only sign the click was heard. See AdminRouteLoading.
  *
  * **Below `lg` it draws the shape of the page it is headed for** — the card
  * list for the table, registrants and results, form panels for New and Edit.

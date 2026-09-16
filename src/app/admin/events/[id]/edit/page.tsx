@@ -294,7 +294,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
 
   // The event is fetched on the client after the route arrives, so this is the
   // second half of the same wait `events/loading.tsx` starts — the same frame
-  // and dots, not a bare line of text with no header above it.
+  // and the same shape, not a bare line of text with no header above it.
   if (isFetching) {
     return <AdminRouteLoading shape={EVENT_FORM_SHAPE} />;
   }

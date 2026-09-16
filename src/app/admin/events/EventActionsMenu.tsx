@@ -205,7 +205,7 @@ export default function EventActionsMenu({
             {destination.icon}
             {destination.label}
             {/* Reads the pending state of the Link above it, so only the item
-                actually clicked shows the dots. */}
+                actually clicked shows the running figure. */}
             <LinkPending />
           </Link>
         ))}

@@ -11,7 +11,7 @@ import {
   type Updater,
 } from '@tanstack/react-table';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import LoadingDots from '@/components/ui/LoadingDots';
+import RunnerLoader from '@/components/ui/RunnerLoader';
 import FieldError from '@/components/ui/FieldError';
 import AdminSelect from '../AdminSelect';
 import AdminCardList from '../AdminCardList';
@@ -415,7 +415,7 @@ export default function ActivityClient({
               <RotateCcw size={16} aria-hidden="true" /> Clear filters
             </button>
           )}
-          {isPending && <LoadingDots size="sm" label="Loading activity" />}
+          {isPending && <RunnerLoader size="sm" tone="current" label="Loading activity" />}
         </div>
       </div>
 

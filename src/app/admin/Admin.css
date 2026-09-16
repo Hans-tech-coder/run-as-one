@@ -318,7 +318,7 @@
    the wait was already holding rather than pushing the screen down.
 
    It reveals on the quick step of the scale instead of the slow one: this is
-   the half that answers the click, and 400ms of fade before the dots appear
+   the half that answers the click, and 400ms of fade before the shape appears
    is 400ms of the screen still looking like nothing happened. */
 .admin-route-loading {
   display: grid;
@@ -327,9 +327,9 @@
   animation-duration: var(--duration-quick);
 }
 
-/* A fallback that also draws its page's shape below `lg` puts the dots in a
-   child of .admin-content rather than on it; the reveal keeps the quick step. */
-.admin-content:has(> .admin-route-loading) {
+/* A fallback that draws its page's shape has nothing to centre, so the class
+   goes on .admin-content itself; the reveal keeps the same quick step. */
+.admin-content.is-route-loading {
   animation-duration: var(--duration-quick);
 }
 
@@ -2725,7 +2725,7 @@ textarea.form-input {
   border-radius: var(--radius-md);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
   /* Sized to the longest label the admin's menus carry — "Manage Results" —
-     with room for the icon, the padding and the pending dots that ride on the
+     with room for the icon, the padding and the pending mark that rides on the
      right of a destination item, so no item has to wrap onto a second line or
      be shortened to fit. Every menu that uses this class is placed from its
      trigger's right edge by `placeRowMenu`, so this number is repeated as
@@ -2766,7 +2766,7 @@ textarea.form-input {
 
 /* Once a destination has been asked for, the menu stops being a menu and
    becomes the receipt for that one choice: the other items step back and stop
-   taking clicks, and the chosen one keeps full contrast with the dots running
+   taking clicks, and the chosen one keeps full contrast with the figure running
    beside it. It stays on screen until the page it opened replaces it. */
 .action-dropdown-menu.is-navigating .action-dropdown-item {
   pointer-events: none;
