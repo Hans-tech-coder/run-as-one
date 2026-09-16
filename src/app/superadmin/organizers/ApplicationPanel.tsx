@@ -11,6 +11,7 @@ import {
 } from '@/lib/organizer-application';
 import { countryFor, parseE164 } from '@/lib/phone';
 import { formatEventDay } from '@/lib/event-schedule';
+import { organizerStatusLabel } from '@/lib/organizer-status';
 
 /**
  * Everything an applicant wrote, read in one place before an account is
@@ -31,6 +32,12 @@ import { formatEventDay } from '@/lib/event-schedule';
  * usually to get hold of the human behind it: the phone dials, the address
  * opens a mail, the website opens in a new tab.
  *
+ * **A decided account explains itself.** Once a super admin has approved,
+ * rejected or suspended it, the panel opens on *The decision* — the status, when
+ * it moved (`statusChangedAt`), and for a rejection the reason it was given
+ * (`statusNote`). A row decided before those columns existed has neither, and
+ * shows only its badge rather than an empty section.
+ *
  * A panel over the list rather than a route of its own: the decision needs the
  * list behind it, and a second page is a second thing to keep responsive.
  * Below `sm` it is a full-height sheet (`.admin-modal-sheet`), the registrant
@@ -44,6 +51,10 @@ export interface OrganizerApplicationRow {
   name: string;
   email: string;
   status: string;
+  /** The reason a rejection was given. Cleared by any later decision. */
+  statusNote: string | null;
+  /** When a super admin last moved `status`; null before anyone has. */
+  statusChangedAt: string | null;
   createdAt: string;
   orgType: string | null;
   contactFirstName: string | null;
@@ -76,6 +87,19 @@ export function appliedOn(iso: string): string {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
+  });
+}
+
+/** "Sep 16, 2026, 3:04 PM", in Manila — a decision is worth the time of day,
+ *  because two made the same afternoon are otherwise indistinguishable. */
+function decidedOn(iso: string): string {
+  return new Date(iso).toLocaleString('en-PH', {
+    timeZone: 'Asia/Manila',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
   });
 }
 
@@ -168,6 +192,9 @@ export default function ApplicationPanel({
     .join(' ');
   const basedIn = [organizer.city, organizer.province].filter(Boolean).join(', ');
   const website = organizer.website ? safeWebsite(organizer.website) : null;
+  const decided =
+    organizer.status !== 'PENDING' &&
+    (organizer.statusChangedAt !== null || organizer.statusNote !== null);
 
   return (
     <div
@@ -219,6 +246,27 @@ export default function ApplicationPanel({
         </div>
 
         <div className="admin-modal-body p-6 max-sm:p-4 overflow-y-auto flex flex-col gap-6">
+          {decided && (
+            <Section title="The decision">
+              <Detail label="Status" value={organizerStatusLabel(organizer.status)} />
+              <Detail
+                label="Decided"
+                value={organizer.statusChangedAt && decidedOn(organizer.statusChangedAt)}
+              />
+              {organizer.statusNote && (
+                <Detail
+                  label="Reason"
+                  full
+                  value={
+                    <span className="whitespace-pre-wrap [overflow-wrap:anywhere]">
+                      {organizer.statusNote}
+                    </span>
+                  }
+                />
+              )}
+            </Section>
+          )}
+
           {!hasDetails && (
             // One honest sentence instead of fifteen blanks: these accounts
             // were never asked any of it.

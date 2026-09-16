@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { createToken, hashPassword, setAuthCookie, verifyPassword } from '@/lib/auth';
-import { isBlockedOrganizerStatus, staffSessionClaims } from '@/lib/actor';
+import { staffSessionClaims } from '@/lib/actor';
+import { organizerCanSignIn } from '@/lib/organizer-status';
 import { recordAudit, type AuditActor } from '@/lib/audit';
 import { MAX_NAME_LENGTH, newPasswordErrors, type FieldErrors } from '@/lib/team';
 import { findOpenInvitation, hashInviteToken } from '@/lib/team-invite';
@@ -37,7 +38,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
     if (!invitation) {
       return NextResponse.json({ error: GONE }, { status: 410 });
     }
-    if (isBlockedOrganizerStatus(invitation.organizer.status)) {
+    if (!organizerCanSignIn(invitation.organizer.status)) {
       return NextResponse.json(
         {
           error: `${invitation.organizer.name} is not active right now, so its invitations cannot be accepted. Please contact them.`,

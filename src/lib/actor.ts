@@ -25,7 +25,8 @@
  * An owner's session is read from the token alone, exactly as the routes did
  * before: nothing about an owner's reach can change mid-session that the
  * routes did not already ignore. A **staff** session is checked against the
- * record on every request — status, membership, assignments and
+ * record on every request — status, membership, assignments, the organizer's
+ * own status (`organizerCanSignIn`, an allowlist) and
  * `sessionsValidFrom` — because a suspension that waits a day for the JWT to
  * expire is not a suspension.
  */
@@ -36,6 +37,7 @@ import prisma from './db';
 import { getAuthCookie } from './auth';
 import type { SessionClaims, SessionKind } from './jwt';
 import { normalizeAccountEmail } from './text-case';
+import { SIGN_IN_STATUSES, organizerCanSignIn } from './organizer-status';
 import {
   MEMBERSHIP_ROLES,
   SUPER_ADMIN_REACH,
@@ -69,13 +71,6 @@ export type Actor = {
 
 const NO_ASSIGNMENTS: ReadonlyMap<string, EventRole> = new Map();
 
-/** The organizer statuses that cannot sign in — the same two auth/login refuses. */
-const BLOCKED_ORGANIZER_STATUSES = ['PENDING', 'SUSPENDED'];
-
-export function isBlockedOrganizerStatus(status: string): boolean {
-  return BLOCKED_ORGANIZER_STATUSES.includes(status);
-}
-
 export async function getActor(): Promise<Actor | null> {
   const session = await getAuthCookie();
   if (!session) return null;
@@ -108,11 +103,13 @@ export async function getActor(): Promise<Actor | null> {
   });
 
   // Removed from the team, never accepted, suspended, or the organizer itself
-  // suspended: each of those ends the session now rather than at expiry.
+  // no longer approved: each of those ends the session now rather than at
+  // expiry. The organizer check is an allowlist (organizer-status.ts), so a
+  // status added later is refused until somebody decides otherwise.
   if (!membership?.acceptedAt) return null;
   if (membership.suspendedAt) return null;
   if (membership.staff.status !== 'ACTIVE') return null;
-  if (isBlockedOrganizerStatus(membership.organizer.status)) return null;
+  if (!organizerCanSignIn(membership.organizer.status)) return null;
 
   // "Sign out everywhere", a password change and a suspension all move this
   // instant forward; every token issued before it is dead.
@@ -181,7 +178,7 @@ export function grantableRoles(actor: Actor): MembershipRole[] {
 
 /**
  * The memberships a staff member can be signed in to right now: accepted, not
- * suspended by that organizer, and inside an organizer that is itself active.
+ * suspended by that organizer, and inside an organizer that is itself approved.
  * Sign-in, the organizer switcher and the sidebar all read through this, so
  * none of them can offer an organizer another would refuse.
  */
@@ -190,7 +187,7 @@ export function activeMembershipWhere(staffId: string): Prisma.StaffMembershipWh
     staffId,
     acceptedAt: { not: null },
     suspendedAt: null,
-    organizer: { status: { notIn: BLOCKED_ORGANIZER_STATUSES } },
+    organizer: { status: { in: [...SIGN_IN_STATUSES] } },
   };
 }
 

@@ -80,6 +80,7 @@ export default function AlertModal({
   confirmLabel,
   cancelLabel = "Cancel",
   showCancel = false,
+  busy = false,
   onConfirm,
   onCancel,
 }: {
@@ -89,9 +90,13 @@ export default function AlertModal({
   variant?: AlertVariant;
   title?: string;
   message: React.ReactNode;
-  confirmLabel?: string;
+  /** A node so a busy caller can pass `<BusyLabel>Rejecting</BusyLabel>`. */
+  confirmLabel?: React.ReactNode;
   cancelLabel?: string;
   showCancel?: boolean;
+  /** The confirm is working: both buttons stand still and the backdrop does
+   *  not dismiss, so an answer cannot be abandoned half-sent. */
+  busy?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
@@ -107,7 +112,7 @@ export default function AlertModal({
       /* Above .modal-overlay (9999/10000) so an alert raised from inside the
          size guide or a bank-details modal is not painted underneath it. */
       style={{ zIndex: 10050 }}
-      onClick={onCancel}
+      onClick={busy ? undefined : onCancel}
     >
       <div
         className={`t-modal w-full max-w-md bg-[#111] border ${v.panel} rounded-2xl shadow-2xl p-6 flex flex-col gap-6 ${
@@ -141,6 +146,7 @@ export default function AlertModal({
             <button
               type="button"
               onClick={onCancel}
+              disabled={busy}
               className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white transition-colors"
             >
               {cancelLabel}
@@ -150,7 +156,9 @@ export default function AlertModal({
             type="button"
             autoFocus
             onClick={onConfirm}
-            className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors ${v.confirmBtn}`}
+            disabled={busy}
+            aria-busy={busy || undefined}
+            className={`inline-flex items-center px-5 py-2 rounded-lg disabled:cursor-wait text-sm font-medium transition-colors ${v.confirmBtn}`}
           >
             {confirmLabel ?? v.confirmLabel}
           </button>

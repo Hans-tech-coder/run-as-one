@@ -1,11 +1,20 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { Search, CheckCircle, Ban, FileText } from 'lucide-react';
+import { Search, CheckCircle, Ban, FileText, XCircle } from 'lucide-react';
 import { useAlert } from '@/components/ui/AlertProvider';
 import AdminCardList, { AdminCardListSkeleton } from '@/app/admin/AdminCardList';
 import FilterChip from '@/app/admin/FilterChip';
 import ApplicationPanel, { appliedOn, type OrganizerApplicationRow } from './ApplicationPanel';
+import RejectDialog, { type RejectResult } from './RejectDialog';
+import {
+  ORGANIZER_STATUSES,
+  ORGANIZER_STATUS_COPY,
+  decisionsFrom,
+  organizerStatusBadge,
+  organizerStatusLabel,
+  type OrganizerStatus as OrganizerStatusCode,
+} from '@/lib/organizer-status';
 
 /**
  * The organizer accounts, and the applications they were created from.
@@ -17,6 +26,13 @@ import ApplicationPanel, { appliedOn, type OrganizerApplicationRow } from './App
  * instead — the choice `/superadmin/feedback` made, because a card carries its
  * own Approve and Suspend and a tap target covering all of them is a mis-tap
  * waiting to happen. Open is `openId`, read by both layouts.
+ *
+ * The decisions on offer come from `decisionsFrom` (lib/organizer-status.ts),
+ * so a row, a card and the panel offer the same ones the PATCH route accepts: a
+ * pending application is approved or **rejected**, an approved account
+ * suspended, a suspended or rejected one approved. Approve and suspend ask the
+ * shared `confirm`; reject opens RejectDialog, because a rejection cannot be
+ * saved without its reason.
  *
  * There is no fee editor here any more. `Organizer.adminFee` was edited on
  * this screen and read by nothing that charges a runner — the fee on an order
@@ -30,18 +46,11 @@ interface Organizer extends OrganizerApplicationRow {
   };
 }
 
-/** The states an account can be in, as the toolbar's chips name them. */
-const STATUS_CHIPS = [
-  { status: 'PENDING', label: 'Pending' },
-  { status: 'APPROVED', label: 'Approved' },
-  { status: 'SUSPENDED', label: 'Suspended' },
-] as const;
-
-type StatusFilter = 'ALL' | (typeof STATUS_CHIPS)[number]['status'];
+type StatusFilter = 'ALL' | OrganizerStatusCode;
 
 export default function OrganizersManagementPage() {
   // Shadows window.alert / window.confirm on purpose — see AlertProvider.
-  const { alert, confirm } = useAlert();
+  const { alert, confirm, toast } = useAlert();
   const [organizers, setOrganizers] = useState<Organizer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -52,6 +61,8 @@ export default function OrganizersManagementPage() {
   // Whose application is open. An id rather than the row, so the panel reads
   // the refreshed row after a status change instead of a stale copy.
   const [openId, setOpenId] = useState<string | null>(null);
+  // The application being rejected, while its reason is being written.
+  const [rejecting, setRejecting] = useState<Organizer | null>(null);
 
   const fetchOrganizers = async () => {
     try {
@@ -71,31 +82,68 @@ export default function OrganizersManagementPage() {
     fetchOrganizers();
   }, []);
 
-  const handleStatusChange = async (id: string, newStatus: string) => {
-    const confirmed = await confirm({
-      variant: 'info',
-      title: 'Change Organizer Status',
-      message: `Are you sure you want to change this organizer's status to ${newStatus}?`,
-      confirmLabel: `Set to ${newStatus}`,
-    });
-    if (!confirmed) return;
-
+  /** Sends one decision. Answers with the route's refusal; never throws. */
+  const sendDecision = async (
+    id: string,
+    status: OrganizerStatusCode,
+    note?: string,
+  ): Promise<RejectResult> => {
     try {
       const res = await fetch(`/api/superadmin/organizers/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ status, note }),
       });
-
-      if (res.ok) {
-        fetchOrganizers(); // Refresh list
-      } else {
-        alert('Failed to update status');
-      }
+      const data = await res.json().catch(() => ({}));
+      // Refreshed whatever the answer: a 409 means the row moved under us,
+      // and the list should show where it went.
+      fetchOrganizers();
+      if (res.ok) return { ok: true };
+      return {
+        ok: false,
+        fieldError: data?.errors?.note,
+        error: data?.error ?? 'The status could not be changed. Please try again.',
+      };
     } catch (error) {
       console.error(error);
-      alert('An error occurred');
+      return { ok: false, error: 'Could not reach the server. Check your connection and try again.' };
     }
+  };
+
+  // A success is announced, never made to be dismissed (PROJECT_GUIDE §9).
+  const announce = (org: Organizer, status: OrganizerStatusCode) => {
+    toast({
+      variant: 'success',
+      message: `${org.name} ${organizerStatusLabel(status).toLowerCase()}.`,
+    });
+  };
+
+  const handleDecision = async (org: Organizer, status: OrganizerStatusCode) => {
+    if (status === 'REJECTED') {
+      setRejecting(org);
+      return;
+    }
+
+    const confirmed = await confirm(
+      status === 'SUSPENDED'
+        ? {
+            variant: 'danger',
+            title: 'Suspend This Organizer',
+            message: `${org.name} and its staff will no longer be able to sign in. Its events and registrations are kept, and you can approve the account again later.`,
+            confirmLabel: 'Suspend',
+          }
+        : {
+            variant: 'info',
+            title: org.status === 'PENDING' ? 'Approve This Application' : 'Approve This Organizer',
+            message: `${org.name} will be able to sign in, publish events and take registrations.`,
+            confirmLabel: 'Approve',
+          },
+    );
+    if (!confirmed) return;
+
+    const result = await sendDecision(org.id, status);
+    if (result.ok) announce(org, status);
+    else if (result.error) alert(result.error);
   };
 
   const filteredOrganizers = organizers.filter(o =>
@@ -134,14 +182,17 @@ export default function OrganizersManagementPage() {
                 applications counted. The Filter button that stood here had no
                 handler and no menu. Pressing the active chip shows everyone. */}
             <div className="toolbar-actions flex-wrap">
-              {STATUS_CHIPS.map(({ status, label }) => (
-                <FilterChip
-                  key={status}
-                  label={status === 'PENDING' && pendingCount ? `${label} (${pendingCount})` : label}
-                  active={statusFilter === status}
-                  onClick={() => setStatusFilter(statusFilter === status ? 'ALL' : status)}
-                />
-              ))}
+              {ORGANIZER_STATUSES.map(status => {
+                const { label } = ORGANIZER_STATUS_COPY[status];
+                return (
+                  <FilterChip
+                    key={status}
+                    label={status === 'PENDING' && pendingCount ? `${label} (${pendingCount})` : label}
+                    active={statusFilter === status}
+                    onClick={() => setStatusFilter(statusFilter === status ? 'ALL' : status)}
+                  />
+                );
+              })}
             </div>
           </div>
 
@@ -208,7 +259,7 @@ export default function OrganizersManagementPage() {
                           >
                             <FileText size={16} />
                           </button>
-                          <StatusActions org={org} onChange={handleStatusChange} />
+                          <StatusActions org={org} onDecide={handleDecision} />
                         </div>
                       </td>
                     </tr>
@@ -238,7 +289,7 @@ export default function OrganizersManagementPage() {
                   <button type="button" className="btn-filter" onClick={() => setOpenId(org.id)}>
                     <FileText size={16} aria-hidden="true" /> Read application
                   </button>
-                  <StatusActions org={org} onChange={handleStatusChange} labelled />
+                  <StatusActions org={org} onDecide={handleDecision} labelled />
                 </>
               )}
               empty={
@@ -260,71 +311,89 @@ export default function OrganizersManagementPage() {
           key={openOrganizer.id}
           organizer={openOrganizer}
           statusBadge={<OrganizerStatus status={openOrganizer.status} />}
-          actions={<StatusActions org={openOrganizer} onChange={handleStatusChange} labelled />}
+          actions={<StatusActions org={openOrganizer} onDecide={handleDecision} labelled />}
           onClose={() => setOpenId(null)}
+        />
+      )}
+
+      {rejecting && (
+        <RejectDialog
+          key={rejecting.id}
+          organizerName={rejecting.name}
+          onSubmit={async note => {
+            const result = await sendDecision(rejecting.id, 'REJECTED', note);
+            if (result.ok) announce(rejecting, 'REJECTED');
+            return result;
+          }}
+          onDone={error => {
+            setRejecting(null);
+            if (error) alert(error);
+          }}
         />
       )}
     </>
   );
 }
 
-/** One badge for the table's cell, the card and the panel, so they cannot drift. */
+/** One badge for the table's cell, the card and the panel, so they cannot drift.
+ *  Label and tone come from lib/organizer-status.ts, never the stored code. */
 function OrganizerStatus({ status }: { status: string }) {
   return (
-    <span className={`status-badge ${
-      status === 'APPROVED' ? 'success' :
-      status === 'SUSPENDED' ? 'pending' : ''
-    }`} style={status === 'PENDING' ? { background: 'rgba(255, 255, 255, 0.1)', color: 'white' } : {}}>
-      {status}
+    <span className={`status-badge ${organizerStatusBadge(status)}`}>
+      {organizerStatusLabel(status)}
     </span>
   );
 }
 
+/** How each decision is drawn. Reject and Suspend share the danger tone: both
+ *  stop somebody signing in. */
+const DECISION_BUTTONS: Record<
+  OrganizerStatusCode,
+  { label: string; title: string; Icon: typeof CheckCircle; tone: string }
+> = {
+  APPROVED: { label: 'Approve', title: 'Approve Organizer', Icon: CheckCircle, tone: 'is-success' },
+  REJECTED: { label: 'Reject', title: 'Reject Application', Icon: XCircle, tone: 'is-danger' },
+  SUSPENDED: { label: 'Suspend', title: 'Suspend Organizer', Icon: Ban, tone: 'is-danger' },
+  // Never offered — decisionsFrom does not return it. Here to keep the record total.
+  PENDING: { label: 'Move to Pending', title: 'Move to Pending', Icon: FileText, tone: '' },
+};
+
 /**
- * Approve and Suspend. The table keeps its icon-only chips under the Actions
- * header, named by their titles; a card and the panel spell them out, because
- * a phone has no hover to read a title from. The tones are the chip classes in
- * Admin.css — a Tailwind colour utility loses to the unlayered .btn-filter.
+ * The decisions this account's status allows (`decisionsFrom`). The table
+ * keeps its icon-only chips under the Actions header, named by their titles; a
+ * card and the panel spell them out, because a phone has no hover to read a
+ * title from. The tones are the chip classes in Admin.css — a Tailwind colour
+ * utility loses to the unlayered .btn-filter.
  */
 function StatusActions({
   org,
-  onChange,
+  onDecide,
   labelled = false,
 }: {
   org: Organizer;
-  onChange: (id: string, status: string) => void;
+  onDecide: (org: Organizer, status: OrganizerStatusCode) => void;
   labelled?: boolean;
 }) {
   const iconOnly = labelled ? undefined : { padding: '0 10px' };
   return (
     <>
-      {org.status !== 'APPROVED' && (
-        <button
-          type="button"
-          onClick={() => onChange(org.id, 'APPROVED')}
-          className="btn-filter is-success"
-          title={labelled ? undefined : 'Approve Organizer'}
-          aria-label={labelled ? undefined : 'Approve Organizer'}
-          style={iconOnly}
-        >
-          <CheckCircle size={16} aria-hidden={labelled || undefined} />
-          {labelled && 'Approve'}
-        </button>
-      )}
-
-      {org.status !== 'SUSPENDED' && (
-        <button
-          type="button"
-          onClick={() => onChange(org.id, 'SUSPENDED')}
-          className="btn-filter is-danger"
-          title={labelled ? undefined : 'Suspend Organizer'}
-          aria-label={labelled ? undefined : 'Suspend Organizer'}
-          style={iconOnly}
-        >
-          <Ban size={16} aria-hidden={labelled || undefined} />
-          {labelled && 'Suspend'}
-        </button>
-      )}
+      {decisionsFrom(org.status).map(status => {
+        const { label, title, Icon, tone } = DECISION_BUTTONS[status];
+        return (
+          <button
+            key={status}
+            type="button"
+            onClick={() => onDecide(org, status)}
+            className={`btn-filter ${tone}`}
+            title={labelled ? undefined : title}
+            aria-label={labelled ? undefined : title}
+            style={iconOnly}
+          >
+            <Icon size={16} aria-hidden={labelled || undefined} />
+            {labelled && label}
+          </button>
+        );
+      })}
     </>
   );
 }

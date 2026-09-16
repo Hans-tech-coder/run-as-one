@@ -9,6 +9,7 @@ import {
   staffSessionClaims,
 } from '@/lib/actor';
 import { recordAudit, type AuditActor, type AuditEntityType } from '@/lib/audit';
+import { organizerCanSignIn } from '@/lib/organizer-status';
 
 /**
  * Signing in to the admin — as an organizer's owner, as the super admin, or as
@@ -30,13 +31,22 @@ const INVALID = () => NextResponse.json({ error: 'Invalid credentials' }, { stat
 async function logAttempt(
   who: AuditActor,
   entityType: AuditEntityType,
-  outcome: 'SIGNED_IN' | 'WRONG_PASSWORD' | 'PENDING_APPROVAL' | 'SUSPENDED' | 'NO_ACTIVE_ORGANIZER',
+  outcome:
+    | 'SIGNED_IN'
+    | 'WRONG_PASSWORD'
+    | 'PENDING_APPROVAL'
+    | 'REJECTED'
+    | 'SUSPENDED'
+    | 'NOT_APPROVED'
+    | 'NO_ACTIVE_ORGANIZER',
 ) {
   const summaries = {
     SIGNED_IN: 'Signed in.',
     WRONG_PASSWORD: 'Failed sign-in: wrong password.',
     PENDING_APPROVAL: 'Sign-in refused: the account is still pending approval.',
+    REJECTED: 'Sign-in refused: the application was rejected.',
     SUSPENDED: 'Sign-in refused: the account is suspended.',
+    NOT_APPROVED: 'Sign-in refused: the account is not approved.',
     NO_ACTIVE_ORGANIZER: 'Sign-in refused: no active organizer to sign in to.',
   } as const;
 
@@ -89,11 +99,28 @@ export async function POST(request: Request) {
         return INVALID();
       }
 
-      if (organizer.role !== 'SUPER_ADMIN') {
+      // An allowlist: an organizer signs in when it is APPROVED and is refused
+      // otherwise (lib/organizer-status.ts). This used to test PENDING and
+      // SUSPENDED by name and let everything else through, which would have
+      // signed a REJECTED applicant straight in. The known refusals get their
+      // own wording; anything else falls to the last branch and is still
+      // refused.
+      if (organizer.role !== 'SUPER_ADMIN' && !organizerCanSignIn(organizer.status)) {
         if (organizer.status === 'PENDING') {
           await logAttempt(who, 'Organizer', 'PENDING_APPROVAL');
           return NextResponse.json(
             { error: 'Your account is pending approval by the Super Admin.' },
+            { status: 403 }
+          );
+        }
+
+        if (organizer.status === 'REJECTED') {
+          await logAttempt(who, 'Organizer', 'REJECTED');
+          return NextResponse.json(
+            {
+              error:
+                'Your organizer application was not approved, so this account cannot sign in. Please contact support if you have questions.',
+            },
             { status: 403 }
           );
         }
@@ -105,6 +132,12 @@ export async function POST(request: Request) {
             { status: 403 }
           );
         }
+
+        await logAttempt(who, 'Organizer', 'NOT_APPROVED');
+        return NextResponse.json(
+          { error: 'Your account is not active. Please contact support.' },
+          { status: 403 }
+        );
       }
 
       await logAttempt(who, 'Organizer', 'SIGNED_IN');

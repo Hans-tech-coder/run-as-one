@@ -1,6 +1,6 @@
 # Super Admin — Organizer Applications Plan
 
-**Status:** Batch 1 landed (uncommitted), Batches 2–6 not started · **Owner decisions captured:** 2026-09-16
+**Status:** Batch 1 landed, Batch 2 landed (uncommitted; its migration still to be applied), Batches 3–6 not started · **Owner decisions captured:** 2026-09-16
 
 `/admin/register` now collects a full organizer application — the contact
 person and their role, a mobile number, city and province, a website, how many
@@ -199,6 +199,18 @@ right default instead of the dangerous one.
 `src/app/api/auth/login/route.ts` · `src/app/api/superadmin/organizers/[id]/route.ts` ·
 `src/app/superadmin/organizers/page.tsx` · `prisma/schema.prisma` + migration ·
 `PROJECT_GUIDE.md`
+
+### As built
+
+- **`statusChangedAt` came with `statusNote`.** "When it moved" in step 7 needs
+  a timestamp, and `updatedAt` cannot be it — a profile edit moves that too. So
+  the migration (`20260916120000_organizer_status_decision`) carries two
+  nullable columns, not one. Still negligible.
+- **Which decisions a status allows is a rule** (`decisionsFrom`), enforced by
+  the route as well as the buttons: Pending → approve or reject, Approved →
+  suspend, Suspended or Rejected → approve. Nothing moves back to Pending.
+- **The dialog's hint does not yet promise the applicant reads the reason** —
+  that waits for the open decision above.
 
 ### Done when
 

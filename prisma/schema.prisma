@@ -12,7 +12,18 @@ model Organizer {
   password   String
   name       String
   role       String      @default("ORGANIZER")
+  /// PENDING, APPROVED, REJECTED or SUSPENDED — src/lib/organizer-status.ts,
+  /// which also holds the rule that only APPROVED may sign in. Plain text so a
+  /// status can be added without a migration.
   status     String      @default("PENDING")
+  /// Why the last decision was made. Written for a rejection, which cannot be
+  /// saved without one, and cleared by any later decision so a reinstated
+  /// account does not carry the reason it was once refused.
+  statusNote String?
+  /// When `status` last moved by a super admin's decision. Null on rows decided
+  /// before this column existed, and on applications nobody has decided yet.
+  /// `updatedAt` cannot stand in: a profile edit moves it too.
+  statusChangedAt DateTime?
   /// Centavos. 6000 = ₱60.00
   adminFee   Int         @default(6000)
   createdAt  DateTime    @default(now())

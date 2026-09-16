@@ -2,7 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { RunAsOneLogo } from '@/components/RunAsOneLogo';
-import { isBlockedOrganizerStatus } from '@/lib/actor';
+import { organizerCanSignIn } from '@/lib/organizer-status';
 import { ROLE_LABELS, asEventRole, asMembershipRole } from '@/lib/permissions';
 import { SITE_NAME } from '@/lib/site-contact';
 import { findOpenInvitation } from '@/lib/team-invite';
@@ -35,7 +35,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
 
   const usable =
     invitation &&
-    !isBlockedOrganizerStatus(invitation.organizer.status) &&
+    organizerCanSignIn(invitation.organizer.status) &&
     invitation.staff.status !== 'SUSPENDED';
 
   if (!usable) {

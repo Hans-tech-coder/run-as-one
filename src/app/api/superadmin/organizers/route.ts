@@ -28,6 +28,8 @@ export async function GET() {
         name: true,
         email: true,
         status: true,
+        statusNote: true,
+        statusChangedAt: true,
         createdAt: true,
         orgType: true,
         contactFirstName: true,
