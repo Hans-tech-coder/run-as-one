@@ -187,8 +187,10 @@ src/
                             #   pager and its below-lg Sort chip,
                             #   row-menu-position.ts — where a row's menu opens,
                             #   route-loading-shape.ts — what each page's wait
-                            #   draws, phone and desktop, FilterChip — a chip
-                            #   that finds)
+                            #   draws, phone and desktop, bare-paths.ts — the
+                            #   pages under /admin with no sidebar,
+                            #   AuthRouteLoading — their wait, FilterChip — a
+                            #   chip that finds)
     superadmin/             # platform-owner portal (SuperAdminShell, a thin
                             #   wrapper over admin/DashboardShell)
     api/                    # all route handlers — see §6
@@ -204,7 +206,6 @@ prisma/schema.prisma        # the data model, heavily commented
 vercel.json                 # scheduled work (crons) — see §2
 scripts/                    # seed + one-off maintenance scripts
 .claude/skills/             # project-scoped skills (ui-ux-pro-max, 21st-*, prisma-*)
-MOBILE_RESPONSIVE_PLAN/     # the finished mobile dashboards plan, kept for its reasoning (§10)
 ```
 
 ---
@@ -1096,7 +1097,14 @@ These are the user's own standing preferences. Follow them without being asked.
     a phone's keyboard open it starts at the top instead of pushing its head
     out of reach. The container clips rather than hides and is `dvh` tall, the
     card lifts on hover only where there is a real pointer, and the glows stop
-    under reduced motion.
+    under reduced motion. **They are not dashboard screens**, and two places
+    have to agree on that: `admin/bare-paths.ts` lists them, `AdminShell` draws
+    them without the sidebar, and `admin/loading.tsx` answers them with
+    `AuthRouteLoading` — the running figure centred in the page's own
+    `.auth-container` — instead of the dashboard frame, whose header skeleton
+    bar over a sign-in page was a placeholder for furniture that never
+    arrived. A new page that lives under `/admin` without the sidebar goes in
+    that list.
   - **Checking a screen.** A dashboard change is not done until:
     - nothing scrolls sideways at 360, 390, 767 and 820, measured with the
       script below at rest *and* with the screen's menus and dialogs open;
@@ -1579,13 +1587,13 @@ These are the user's own standing preferences. Follow them without being asked.
 
 ## 10. Current state
 
-`FEATURES_CHECKLIST.md` tracks the roadmap; every major section is ticked through
-the results and e-certificate module.
-
-**`IMPROVEMENTS_PLAN.md` is finished.** All fourteen improvements across its
-seven batches have landed; the file is kept only for the reasoning behind each
-one, and it records the decisions that must not be relitigated. It is no longer
-a queue.
+**`FEATURES_CHECKLIST.md` and `IMPROVEMENTS_PLAN.md` are deleted.** Both were
+finished — every major section of the roadmap ticked through the results and
+e-certificate module, and all fourteen improvements across `IMPROVEMENTS_PLAN`'s
+seven batches landed — and the decisions each recorded are settled, not open
+questions a future session needs to re-derive from the file. This guide is
+where that reasoning now lives (§9 and this section); the plan files themselves
+added nothing once their queue was empty.
 
 **`PROMOTIONS_PLAN.md` is finished.** All three batches have landed; like
 `IMPROVEMENTS_PLAN.md` it is now kept only for the reasoning behind each and for
@@ -1615,10 +1623,9 @@ model, or any `/api/admin/**` route's ownership check** — its "Batch 1" notes
 record the calls made in the batch, and the file records which decisions are
 closed (no unified account table, no SSO).
 
-**`MOBILE_RESPONSIVE_PLAN/` is finished.** All six batches have landed. The
-folder is kept only for the reasoning behind each and for the decisions it
-closed; the convention itself lives in §9 and needs nothing from the plan.
-Batch 1
+**`MOBILE_RESPONSIVE_PLAN/` is finished, and the folder is deleted.** All six
+batches landed and the convention itself lives in §9, which needs nothing from
+the plan; what follows is the summary kept here instead. Batch 1
 added `DashboardShell` (the frame both dashboards share: one collapsible
 sidebar menu at every width, a rail that opens over the page on a phone), `AdminCardList`, the `.dash-desktop-only` /
 `.dash-mobile-only` switch, and the toolbar, header, metrics, popover and

@@ -6,6 +6,7 @@ import { LayoutDashboard, Calendar, Settings, Megaphone, UsersRound, History } f
 import type { SignedInUser } from '@/lib/signed-in-user';
 import DashboardShell from './DashboardShell';
 import OrganizerSwitcher from './OrganizerSwitcher';
+import { isBarePath } from './bare-paths';
 import './Admin.css';
 
 /**
@@ -14,9 +15,6 @@ import './Admin.css';
  * organizer switcher. The sidebar, the phone's drawer and the user block are
  * `DashboardShell`, shared with the superadmin.
  */
-
-/** The pages somebody reaches before they have a session, drawn without the sidebar. */
-const BARE_PATHS = ['/admin/login', '/admin/register', '/admin/invite'];
 
 export default function AdminShell({
   user,
@@ -30,7 +28,9 @@ export default function AdminShell({
   const pathname = usePathname();
   const router = useRouter();
 
-  if (BARE_PATHS.some(path => pathname.startsWith(path))) {
+  // The sign-in pages, drawn without the sidebar (bare-paths.ts, which
+  // `admin/loading.tsx` reads too so the wait matches the page).
+  if (isBarePath(pathname)) {
     return <>{children}</>;
   }
 
