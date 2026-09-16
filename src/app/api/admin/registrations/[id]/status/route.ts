@@ -186,7 +186,15 @@ export async function PATCH(
       if (full) await deliverConfirmationEmail(full);
     }
 
-    return NextResponse.json({ success: true, registration: updatedRegistration });
+    // Who just moved the status, for the registrant modal's "Validated by"
+    // line — the same name the trail entry above snapshotted, so the screen
+    // and the trail cannot disagree about who did it.
+    const statusChange =
+      wantsStatus && existing.status !== updatedRegistration.status
+        ? { by: actor.name, at: new Date().toISOString(), to: updatedRegistration.status }
+        : null;
+
+    return NextResponse.json({ success: true, registration: updatedRegistration, statusChange });
   } catch (error: any) {
     console.error('Error updating registration:', error);
     return NextResponse.json(

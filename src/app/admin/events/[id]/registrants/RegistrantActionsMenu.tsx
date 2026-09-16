@@ -17,6 +17,15 @@ interface RegistrantActionsMenuProps {
   onView: (runnerId: string) => void;
   onEdit: (runnerId: string) => void;
   onDelete: (runnerId: string) => void;
+  /**
+   * What this person's role allows on this event, decided on the server. An
+   * item the route would refuse is not offered: a validator who can settle an
+   * order but not rewrite it sees no Edit, and only an owner or admin sees
+   * Delete.
+   */
+  canEdit: boolean;
+  canDelete: boolean;
+  canValidate: boolean;
 }
 
 /**
@@ -39,7 +48,10 @@ export default function RegistrantActionsMenu({
   handleStatusChange,
   onView,
   onEdit,
-  onDelete
+  onDelete,
+  canEdit,
+  canDelete,
+  canValidate,
 }: RegistrantActionsMenuProps) {
   // No "mounted" flag: the menu opens only on a click, which never happens
   // during server rendering, so `isOpen` alone guarantees `document` is there.
@@ -161,19 +173,21 @@ export default function RegistrantActionsMenu({
           View Details
         </button>
 
-        <button
-          className="action-dropdown-item flex items-center gap-3 px-4 py-2 text-sm text-left"
-          role="menuitem"
-          onClick={() => {
-            onEdit(runnerId);
-            closeMenu();
-          }}
-        >
-          <Edit size={16} />
-          Edit Registrant
-        </button>
+        {canEdit && (
+          <button
+            className="action-dropdown-item flex items-center gap-3 px-4 py-2 text-sm text-left"
+            role="menuitem"
+            onClick={() => {
+              onEdit(runnerId);
+              closeMenu();
+            }}
+          >
+            <Edit size={16} />
+            Edit Registrant
+          </button>
+        )}
 
-        {status === 'PENDING' && isBankTransfer && (
+        {canValidate && status === 'PENDING' && isBankTransfer && (
           <button
             onClick={() => onStatusChange('PAID')}
             disabled={updatingId === registrationId}
@@ -185,17 +199,21 @@ export default function RegistrantActionsMenu({
           </button>
         )}
 
-        <div className="action-dropdown-divider"></div>
-        <button
-          className="action-dropdown-item danger flex items-center gap-3 px-4 py-2 text-sm text-left"
-          role="menuitem"
-          onClick={() => {
-            onDelete(runnerId);
-            closeMenu();
-          }}
-        >
-          <Trash2 size={16} /> Delete
-        </button>
+        {canDelete && (
+          <>
+            <div className="action-dropdown-divider"></div>
+            <button
+              className="action-dropdown-item danger flex items-center gap-3 px-4 py-2 text-sm text-left"
+              role="menuitem"
+              onClick={() => {
+                onDelete(runnerId);
+                closeMenu();
+              }}
+            >
+              <Trash2 size={16} /> Delete
+            </button>
+          </>
+        )}
       </div>
     </div>
   );

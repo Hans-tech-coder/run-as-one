@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import {
   Search, Filter, Download, Eye, X, Trash2,
   Columns, ChevronUp, ChevronDown, CheckCircle, Check,
@@ -36,10 +37,29 @@ import {
 import { SHIRT_SIZES } from '@/lib/shirt-size';
 import { upperCaseAsTyped } from '@/lib/text-case';
 import { formatPesos } from '@/lib/money';
+import { orderActivityPath, statusProvenance } from '@/lib/activity';
+
+/**
+ * What the signed-in person may do on this event, decided by page.tsx with the
+ * same `can()` the registrants routes enforce (STAFF_ACCESS_PLAN.md §3). Each
+ * control below is offered only where its route would agree; the routes still
+ * refuse on their own, so this is what a person sees, not what they can reach.
+ */
+export type RegistrantPermissions = {
+  validate: boolean;
+  remark: boolean;
+  email: boolean;
+  edit: boolean;
+  remove: boolean;
+  proof: boolean;
+  /** The organizer's activity trail, for the order's "full activity" link. */
+  activity: boolean;
+};
 
 interface RegistrantsTableProps {
   eventId: string;
   runners: any[];
+  permissions: RegistrantPermissions;
   /**
    * What the search box starts with, from `?search=` on the URL.
    *
@@ -92,6 +112,17 @@ function statusPillClass(status: string): string {
  */
 function needsValidation(runner: { status: string; isBankTransfer: boolean }): boolean {
   return runner.status === 'PENDING' && runner.isBankTransfer;
+}
+
+/**
+ * Who settled this order, under its status in the detail modal — "Validated
+ * by Ana Cruz · Sep 13, 2026, 4:02 PM" — beside the remarks line that already
+ * names its author. The wording, and when it declines to name anyone, is
+ * statusProvenance in lib/activity.ts.
+ */
+function StatusProvenanceNote({ runner }: { runner: RegistrantRow }) {
+  const line = statusProvenance(runner.status, runner.isBankTransfer, runner.statusRecord ?? null);
+  return line ? <span className="text-xs text-gray-500 mt-1.5">{line}</span> : null;
 }
 
 const GENDER_OPTIONS = [
@@ -160,6 +191,7 @@ export default function RegistrantsTable({
   eventId,
   runners: initialRunners,
   initialSearch = '',
+  permissions,
 }: RegistrantsTableProps) {
   // Shadows window.alert on purpose — see AlertProvider.
   const { alert } = useAlert();
@@ -265,7 +297,17 @@ export default function RegistrantsTable({
         body: JSON.stringify({ status: newStatus }),
       });
       if (res.ok) {
-        setRunners(runners.map(r => r.registrationId === registrationId ? { ...r, status: newStatus } : r));
+        const { statusChange } = await res.json().catch(() => ({ statusChange: null }));
+        // The route answers with who made the change, so the detail modal's
+        // "Validated by" line names them now rather than after a reload — and
+        // the open modal and lightbox hold copies of the row, so they move too.
+        const settle = (row: RegistrantRow | null) =>
+          row && row.registrationId === registrationId
+            ? { ...row, status: newStatus, statusRecord: statusChange ?? row.statusRecord }
+            : row;
+        setRunners(current => current.map(settle));
+        setViewingRunner(settle);
+        setProofRunner(settle);
       } else {
         console.error('Failed to update status');
       }
@@ -726,9 +768,15 @@ export default function RegistrantsTable({
         onView={openViewModal}
         onEdit={openEditModal}
         onDelete={openDeleteModal}
+        canEdit={permissions.edit}
+        canDelete={permissions.remove}
+        canValidate={permissions.validate}
       />
     );
 
+    // Remarks and Email open modals whose routes need `registration:remark` and
+    // `registration:email`; a role without one is not shown its button. The
+    // remarks themselves stay readable in the detail modal for everyone.
     if (layout === 'card') {
       return (
         <>
@@ -736,22 +784,26 @@ export default function RegistrantsTable({
               360px screen's menu rail. Which email it is rides the icon, the
               red tone and the card's own Email Unsent badge, as it does in
               the table; the accessible name says it in full. */}
-          <button
-            type="button"
-            onClick={() => openRemarksModal(runner.id)}
-            className={`btn-filter is-compact ${runner.remarks ? 'is-primary' : ''}`}
-            aria-label={remarksLabel}
-          >
-            {remarksIcon} Remarks
-          </button>
-          <button
-            type="button"
-            onClick={() => openEmailModal(runner.id)}
-            className={`btn-filter is-compact ${runner.emailPending ? 'is-danger' : ''}`}
-            aria-label={emailLabel}
-          >
-            {emailIcon} Email
-          </button>
+          {permissions.remark && (
+            <button
+              type="button"
+              onClick={() => openRemarksModal(runner.id)}
+              className={`btn-filter is-compact ${runner.remarks ? 'is-primary' : ''}`}
+              aria-label={remarksLabel}
+            >
+              {remarksIcon} Remarks
+            </button>
+          )}
+          {permissions.email && (
+            <button
+              type="button"
+              onClick={() => openEmailModal(runner.id)}
+              className={`btn-filter is-compact ${runner.emailPending ? 'is-danger' : ''}`}
+              aria-label={emailLabel}
+            >
+              {emailIcon} Email
+            </button>
+          )}
           <div className="action-dropdown-container flex ml-auto">{menu}</div>
         </>
       );
@@ -759,24 +811,28 @@ export default function RegistrantsTable({
 
     return (
       <div className="action-dropdown-container flex items-center gap-1">
-        <button
-          onClick={() => openRemarksModal(runner.id)}
-          className={`icon-btn ${runner.remarks ? 'primary' : ''}`}
-          title={runner.remarks ? 'Remarks on file' : 'Add remarks'}
-          aria-label={remarksLabel}
-        >
-          {remarksIcon}
-        </button>
-        <button
-          onClick={() => openEmailModal(runner.id)}
-          className={`icon-btn ${runner.emailPending ? 'danger' : ''}`}
-          title={runner.emailPending
-            ? `Send the ${runner.emailPendingLabel} email by hand`
-            : 'View the email this runner was sent'}
-          aria-label={emailLabel}
-        >
-          {emailIcon}
-        </button>
+        {permissions.remark && (
+          <button
+            onClick={() => openRemarksModal(runner.id)}
+            className={`icon-btn ${runner.remarks ? 'primary' : ''}`}
+            title={runner.remarks ? 'Remarks on file' : 'Add remarks'}
+            aria-label={remarksLabel}
+          >
+            {remarksIcon}
+          </button>
+        )}
+        {permissions.email && (
+          <button
+            onClick={() => openEmailModal(runner.id)}
+            className={`icon-btn ${runner.emailPending ? 'danger' : ''}`}
+            title={runner.emailPending
+              ? `Send the ${runner.emailPendingLabel} email by hand`
+              : 'View the email this runner was sent'}
+            aria-label={emailLabel}
+          >
+            {emailIcon}
+          </button>
+        )}
         {menu}
       </div>
     );
@@ -1361,7 +1417,7 @@ export default function RegistrantsTable({
         <div className="toolbar-actions flex items-center gap-2">
           {/* From `lg` up. Below it the bulk bar at the foot of the screen
               offers Delete beside Export and Clear. */}
-          {selectedCount > 0 && (
+          {permissions.remove && selectedCount > 0 && (
             <button
               onClick={() => setIsBulkDeleteOpen(true)}
               className="btn-filter is-danger is-active dash-desktop-only"
@@ -1512,9 +1568,11 @@ export default function RegistrantsTable({
           <button type="button" onClick={handleExportCSV} className="btn-filter bulk-bar-export">
             <Download size={16} aria-hidden="true" /> Export
           </button>
-          <button type="button" onClick={() => setIsBulkDeleteOpen(true)} className="btn-filter is-danger bulk-bar-delete">
-            <Trash2 size={16} aria-hidden="true" /> Delete
-          </button>
+          {permissions.remove && (
+            <button type="button" onClick={() => setIsBulkDeleteOpen(true)} className="btn-filter is-danger bulk-bar-delete">
+              <Trash2 size={16} aria-hidden="true" /> Delete
+            </button>
+          )}
           <button type="button" onClick={() => setRowSelection({})} className="btn-filter bulk-bar-clear">
             <X size={16} aria-hidden="true" /> Clear
           </button>
@@ -1616,6 +1674,18 @@ export default function RegistrantsTable({
                         . The slot{viewingRunner.promoCode ? ' and the promo code' : ''} went back.
                       </span>
                     )}
+                    <StatusProvenanceNote runner={viewingRunner} />
+                    {/* Everything that happened to this order — the proof
+                        opened, the remarks rewritten, the runner edited — for
+                        the people who can read the trail. */}
+                    {permissions.activity && (
+                      <Link
+                        href={orderActivityPath(viewingRunner.orderRef, eventId)}
+                        className="text-xs font-medium text-accent-blue hover:underline mt-1.5 w-fit"
+                      >
+                        See this order&rsquo;s activity
+                      </Link>
+                    )}
                   </p>
                   <p className="flex flex-col"><span className="text-gray-500">Payment Method</span> <span className="text-white font-medium">{viewingRunner.paymentMethod}</span></p>
                   <p className="flex flex-col"><span className="text-gray-500">Logistics</span> <span className="text-white font-medium">{viewingRunner.logisticsMethod}</span></p>
@@ -1678,12 +1748,14 @@ export default function RegistrantsTable({
                 <div className="mt-6">
                   <div className="flex items-center justify-between gap-4 mb-2">
                     <p className="text-gray-500 text-sm m-0">Remarks (internal)</p>
-                    <button
-                      onClick={() => openRemarksModal(viewingRunner.id)}
-                      className="text-xs font-medium text-accent-blue hover:underline bg-transparent border-none cursor-pointer p-0"
-                    >
-                      {viewingRunner.remarks ? 'Edit remarks' : 'Add remarks'}
-                    </button>
+                    {permissions.remark && (
+                      <button
+                        onClick={() => openRemarksModal(viewingRunner.id)}
+                        className="text-xs font-medium text-accent-blue hover:underline bg-transparent border-none cursor-pointer p-0"
+                      >
+                        {viewingRunner.remarks ? 'Edit remarks' : 'Add remarks'}
+                      </button>
+                    )}
                   </div>
                   {viewingRunner.remarks ? (
                     <div className="rounded-lg border border-white/10 bg-black/30 p-4">
@@ -1707,12 +1779,14 @@ export default function RegistrantsTable({
                 <div className="mt-6">
                   <div className="flex items-center justify-between gap-4 mb-2">
                     <p className="text-gray-500 text-sm m-0">Email Delivery</p>
-                    <button
-                      onClick={() => openEmailModal(viewingRunner.id)}
-                      className="text-xs font-medium text-accent-blue hover:underline bg-transparent border-none cursor-pointer p-0"
-                    >
-                      {viewingRunner.emailPending ? 'Send by hand' : 'View email'}
-                    </button>
+                    {permissions.email && (
+                      <button
+                        onClick={() => openEmailModal(viewingRunner.id)}
+                        className="text-xs font-medium text-accent-blue hover:underline bg-transparent border-none cursor-pointer p-0"
+                      >
+                        {viewingRunner.emailPending ? 'Send by hand' : 'View email'}
+                      </button>
+                    )}
                   </div>
                   {viewingRunner.emailPending ? (
                     <div className="space-y-1">
@@ -1733,7 +1807,10 @@ export default function RegistrantsTable({
                   )}
                 </div>
 
-                {viewingRunner.isBankTransfer && (
+                {/* The proof route needs `proof:view` — an encoder or a viewer
+                    reads the order without the deposit slip, and is not shown
+                    a thumbnail that could only fail to load. */}
+                {permissions.proof && viewingRunner.isBankTransfer && (
                   <div className="mt-6">
                     <div className="flex items-center justify-between gap-4 mb-2">
                       <p className="text-gray-500 text-sm m-0">Proof of Payment</p>
@@ -1796,12 +1873,23 @@ export default function RegistrantsTable({
               </div>
             </div>
 
-            <div className="admin-modal-footer p-6 max-sm:p-4 border-t border-white/10 flex justify-between items-center bg-black/20 shrink-0">
+            {/* On a phone the footer holds only the actions below, so a role
+                with none of them (an encoder, a viewer) gets no empty bar. */}
+            <div
+              className={`admin-modal-footer p-6 max-sm:p-4 border-t border-white/10 flex justify-between items-center bg-black/20 shrink-0 ${
+                (permissions.validate && needsValidation(viewingRunner)) ||
+                (permissions.proof && viewingRunner.isBankTransfer && viewingRunner.proofOfPayment) ||
+                permissions.remark ||
+                permissions.email
+                  ? ''
+                  : 'max-sm:hidden'
+              }`}
+            >
               <div className="max-sm:contents">
                 {/* The dashboard's own action button, not the public site's
                     gradient — and the one in the receipt lightbox is now its
                     peer, so the two have to read alike. */}
-                {viewingRunner.status === 'PENDING' && viewingRunner.isBankTransfer && (
+                {permissions.validate && viewingRunner.status === 'PENDING' && viewingRunner.isBankTransfer && (
                   <button
                     onClick={() => validatePayment(viewingRunner)}
                     disabled={updatingId === viewingRunner.registrationId}
@@ -1818,7 +1906,7 @@ export default function RegistrantsTable({
                 carries them beside Validate and nothing onward leaves reach.
                 The header's close stands in for Close there.
               */}
-              {viewingRunner.isBankTransfer && viewingRunner.proofOfPayment && (
+              {permissions.proof && viewingRunner.isBankTransfer && viewingRunner.proofOfPayment && (
                 <button
                   type="button"
                   onClick={() => setProofRunner(viewingRunner)}
@@ -1827,26 +1915,30 @@ export default function RegistrantsTable({
                   <Maximize2 size={16} aria-hidden="true" /> Proof
                 </button>
               )}
-              <button
-                type="button"
-                onClick={() => openRemarksModal(viewingRunner.id)}
-                className={`btn-filter justify-center dash-phone-only ${viewingRunner.remarks ? 'is-primary' : ''}`}
-              >
-                {viewingRunner.remarks
-                  ? <MessageSquareText size={16} aria-hidden="true" />
-                  : <MessageSquare size={16} aria-hidden="true" />}
-                Remarks
-              </button>
-              <button
-                type="button"
-                onClick={() => openEmailModal(viewingRunner.id)}
-                className={`btn-filter justify-center dash-phone-only ${viewingRunner.emailPending ? 'is-danger' : ''}`}
-              >
-                {viewingRunner.emailPending
-                  ? <MailWarning size={16} aria-hidden="true" />
-                  : <Mail size={16} aria-hidden="true" />}
-                Email
-              </button>
+              {permissions.remark && (
+                <button
+                  type="button"
+                  onClick={() => openRemarksModal(viewingRunner.id)}
+                  className={`btn-filter justify-center dash-phone-only ${viewingRunner.remarks ? 'is-primary' : ''}`}
+                >
+                  {viewingRunner.remarks
+                    ? <MessageSquareText size={16} aria-hidden="true" />
+                    : <MessageSquare size={16} aria-hidden="true" />}
+                  Remarks
+                </button>
+              )}
+              {permissions.email && (
+                <button
+                  type="button"
+                  onClick={() => openEmailModal(viewingRunner.id)}
+                  className={`btn-filter justify-center dash-phone-only ${viewingRunner.emailPending ? 'is-danger' : ''}`}
+                >
+                  {viewingRunner.emailPending
+                    ? <MailWarning size={16} aria-hidden="true" />
+                    : <Mail size={16} aria-hidden="true" />}
+                  Email
+                </button>
+              )}
               <button
                 onClick={() => setViewingRunner(null)}
                 className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white transition-colors max-sm:hidden"
@@ -1869,7 +1961,7 @@ export default function RegistrantsTable({
           totalAmount={proofRunner.totalAmount}
           status={proofRunner.status}
           isPdf={proofRunner.proofIsPdf}
-          canValidate={proofRunner.status === 'PENDING' && proofRunner.isBankTransfer}
+          canValidate={permissions.validate && proofRunner.status === 'PENDING' && proofRunner.isBankTransfer}
           isValidating={updatingId === proofRunner.registrationId}
           onValidate={() => validatePayment(proofRunner)}
           onClose={() => setProofRunner(null)}

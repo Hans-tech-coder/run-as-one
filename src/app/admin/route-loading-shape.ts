@@ -80,6 +80,9 @@ const EXACT: Record<string, RouteShape> = {
   '/admin/events/new': EVENT_FORM_SHAPE,
   '/admin/marketing': { metrics: 3, list: { frame: 'page', toolbar: THREE_ROW_TOOLBAR } },
   '/admin/team': { metrics: 3, list: { frame: 'page', toolbar: THREE_ROW_TOOLBAR } },
+  // Search, the four filter pickers one to a row, the "Newest first" line and
+  // the first day heading, all above the first card.
+  '/admin/activity': { list: { frame: 'page', toolbar: 456 } },
   '/admin/settings': {
     panels: [
       { fields: [FIELD, HINTED], actions: true },

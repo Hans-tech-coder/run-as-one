@@ -20,7 +20,7 @@ each batch landing whole. Update the Status table as they land.
 | --- | --- | --- | --- |
 | 1 | Schema, `actor.ts` / `permissions.ts` / `audit.ts`, JWT `orgId`, rewire every admin surface, audit the existing actions | yes (`20260913120000_staff_access_and_audit_log`) | Landed — see notes below |
 | 2 | `/admin/team` — invite, roles, event assignments, suspend | yes (`20260913180000_staff_membership_suspension`) | Landed — see notes below |
-| 3 | `/admin/activity` — the trail, plus inline provenance on the rows | none | Not started |
+| 3 | `/admin/activity` — the trail, plus inline provenance on the rows | none | Landed — see notes below |
 | 4 | TOTP two-factor, required for anyone who can validate or delete | small | Not started |
 | 5 | Optional: Google sign-in, session list, retention sweep | small | Not started |
 
@@ -112,15 +112,65 @@ build on:
   Schedule and Delete follow `event:edit` / `event:delete`. The owner's role
   line in the sidebar now reads **Owner** (was "Organizer Admin"), because
   the team screen needs Owner, Admin and Staff to be distinguishable.
-- **Not done here, still open:** the registrants screen (`RegistrantsTable`,
-  2,000+ lines) still shows every button to every role. Its routes refuse
-  what a role lacks, so nothing leaks, but a validator can press Edit and be
-  told no. Hiding those controls is the obvious companion to Batch 3's
-  provenance work on the same screen.
+- **Left open here, closed in Batch 3:** the registrants screen showed every
+  button to every role. It now offers only what the role holds (see Batch 3).
 - **Releasing Batch 2 to production** needs its migration run by hand after
   Batch 1's history fix: `npx prisma migrate deploy` with `DIRECT_URL` on the
   production endpoint picks up both `20260913120000_staff_access_and_audit_log`
   and `20260913180000_staff_membership_suspension`.
+
+### Batch 3 — what landed, and the calls made along the way
+
+`/admin/activity`, a *Validated by* line in the registrant detail modal, and a
+registrants screen whose buttons follow the role. No migration and no new
+index. Decisions for the next session to build on:
+
+- **Two modules, split by who imports them.** `lib/activity.ts` (labels,
+  groups, URL filters, formatting, provenance wording) is Prisma-free and
+  headers-free so client components use it; `lib/activity-store.ts` holds the
+  queries. `ACTION_LABELS` and `ACTION_GROUP` are `Record<AuditAction, …>`, so
+  Batch 4's new verbs (2FA enrolled, recovery code used…) will not compile
+  until they are labelled and shelved.
+- **Server-paged, filters in the URL.** The trail only grows, so unlike every
+  other admin table it is not loaded whole: the page counts and fetches one
+  page with `skip`/`take`. `AdminTablePager` now counts with
+  `table.getRowCount()` (identical for the client-paged tables) so it drives
+  this one through `manualPagination`.
+- **"Never re-sorting under someone reading it"** is three things: no sortable
+  headers; a fixed `createdAt desc, id desc`; and `asOf`, set on every page
+  link, so an entry recorded mid-read is counted in a *N newer entries · Show*
+  chip instead of shifting rows. A filter change starts a fresh reading.
+  Because the trail is append-only, offset paging against a pinned instant is
+  exactly stable — this stops being true the day Batch 5's retention sweep
+  deletes rows from the bottom of a page someone is on, which is harmless (24
+  months back) but worth knowing.
+- **Filters are labelled pickers, not toolbar chips.** Person, Event, Activity
+  and Dates each hold a long list whose chosen value has to stay visible.
+  Activity offers the seven groups (*All personal data* = proof views and
+  exports) before the thirty-one verbs. Dates are Manila days.
+- **Person is read from the trail, not the team**, so a removed freelancer's
+  validations stay findable. One entry per actor id, under their latest name.
+  SYSTEM rows get a "System" person, though nothing writes one yet.
+- **Search is `summary ILIKE`.** Summaries already name order references (and
+  runner references, which start with them), runners, events and promotions,
+  so the modal's link is simply `?event=…&q=<orderRef>`. Fine at the trail's
+  planned size behind the organizer index; revisit only if an organizer ever
+  holds hundreds of thousands of rows.
+- **Provenance names someone only when the trail agrees with the order.** The
+  latest `registration.status.changed` for an order must end in the status the
+  order holds now. Otherwise: an online PAID says "Paid online through
+  PayMongo" (the webhook writes no trail row — a SYSTEM entry for it would be a
+  natural Batch 5 addition), and a bank-transfer PAID, CANCELLED or REFUNDED
+  says who did it is not on record. The status route now answers with
+  `statusChange`, so the line updates the moment someone validates.
+- **The trail shows IP addresses and devices** in each entry's details, which
+  is part of why it stays `activity:view` (owner and admin) rather than
+  opening a per-event view to event managers.
+- **Registrants gating** is one `RegistrantPermissions` object built in
+  `page.tsx` with `can()` for this event: edit, remove, validate, remark,
+  email, proof, activity. Remarks stay readable to every role; the proof block
+  is hidden without `proof:view` (its image would only 403); a phone's modal
+  footer is hidden when a role has nothing to put in it.
 
 ---
 

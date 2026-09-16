@@ -3,7 +3,8 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import prisma from '@/lib/db';
 import { can, requireActor } from '@/lib/actor';
-import RegistrantsTable from './RegistrantsTable';
+import RegistrantsTable, { type RegistrantPermissions } from './RegistrantsTable';
+import { latestStatusChanges } from '@/lib/activity-store';
 import AdminNotFound from '../../../AdminNotFound';
 import { EVENT_NOT_FOUND } from '../../event-not-found';
 import { runnerRef } from '@/lib/order-ref';
@@ -87,6 +88,25 @@ export default async function RegistrantsPage({
     return <AdminNotFound {...EVENT_NOT_FOUND} />;
   }
 
+  // What this person may do here, decided once on the server with the same
+  // can() every registrants route enforces, so the screen offers only the
+  // buttons that would work. A validator is not shown Edit only to be told no
+  // — and a hidden button is manners, not access: the routes still refuse.
+  const reach = { organizerId: actor.orgId, eventId: id };
+  const permissions: RegistrantPermissions = {
+    validate: can(actor, 'registration:validate', reach),
+    remark: can(actor, 'registration:remark', reach),
+    email: can(actor, 'registration:email', reach),
+    edit: can(actor, 'registration:edit', reach),
+    remove: can(actor, 'registration:delete', reach),
+    proof: can(actor, 'proof:view', reach),
+    activity: can(actor, 'activity:view', { organizerId: actor.orgId }),
+  };
+
+  // Who last moved each order's status, from the trail — the detail modal's
+  // "Validated by Ana Cruz" line. One query for the whole screen.
+  const statusRecords = await latestStatusChanges(actor.orgId, id);
+
   // Flatten the runners from all registrations
   const runners: any[] = [];
   event.registrations.forEach(reg => {
@@ -133,6 +153,10 @@ export default async function RegistrantsPage({
         size: runner.singletSize,
         runningCommunity: runner.runningCommunity,
         status: reg.status,
+        // The latest recorded change to that status — who, when, and to what.
+        // statusProvenance (lib/activity.ts) only names the person when it
+        // still agrees with the status above.
+        statusRecord: statusRecords.get(reg.id) ?? null,
         // When the abandoned-checkout sweep expired this order, or null on the
         // overwhelming majority of rows that were never swept. Carried so the
         // detail modal can say *when* rather than leaving EXPIRED unexplained
@@ -222,7 +246,12 @@ export default async function RegistrantsPage({
       </header>
 
       <div className="admin-content">
-        <RegistrantsTable runners={runners} eventId={id} initialSearch={search ?? ''} />
+        <RegistrantsTable
+          runners={runners}
+          eventId={id}
+          initialSearch={search ?? ''}
+          permissions={permissions}
+        />
       </div>
     </>
   );

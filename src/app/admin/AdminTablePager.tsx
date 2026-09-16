@@ -54,7 +54,9 @@ export default function AdminTablePager<T>({
   }, [isPageSizeOpen]);
 
   const { pageIndex, pageSize } = table.getState().pagination;
-  const total = table.getFilteredRowModel().rows.length;
+  // The row count before paging: the filtered rows of a table paged in the
+  // browser, or the `rowCount` a server-paged one (the activity trail) passes.
+  const total = table.getRowCount();
   const range =
     total === 0
       ? '0-0 of 0'

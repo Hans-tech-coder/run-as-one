@@ -33,7 +33,7 @@ export type SignedInUser = {
   /** The organizer this session acts inside. For an owner it is their own name. */
   organizerName: string;
   /** The sidebar items this person has a reason to open. */
-  nav: { marketing: boolean; team: boolean };
+  nav: { marketing: boolean; team: boolean; activity: boolean };
   /**
    * The organizers a staff member can switch between. Empty for an owner, and
    * for a staff member who works for only one — a switcher with one choice is
@@ -85,6 +85,7 @@ export async function getSignedInUser(): Promise<SignedInUser | null> {
     nav: {
       marketing: canSomewhere(actor, 'promo:view'),
       team: can(actor, 'team:manage', { organizerId: actor.orgId }),
+      activity: can(actor, 'activity:view', { organizerId: actor.orgId }),
     },
     organizers,
   };

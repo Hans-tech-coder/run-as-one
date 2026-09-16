@@ -360,7 +360,9 @@ shape:
   `entityId`), in one pre-rendered `summary` sentence, with `changes` holding
   only the fields that moved. **No relations on purpose**, so a row outlives the
   event, runner and account it names. Nothing in the app updates or deletes one.
-  Roughly 300–500 bytes a row. See `audit.ts` (§5).
+  Roughly 300–500 bytes a row. See `audit.ts` (§5). **Read back** by
+  `/admin/activity` and by the registrant modal's *Validated by* line, both
+  through `activity-store.ts` (§5) — no index was added for either.
 - **Soft removal** — `Runner.deletedAt`/`deletedById` (and the same pair on
   `Registration`, which nothing sets yet). Removing a runner from the
   registrants screen no longer deletes the row; it stamps these, and **every
@@ -418,8 +420,10 @@ logic again.
 | `auth.ts` / `jwt.ts` | bcrypt hashing and the `admin_token` httpOnly cookie (1 day). **The session carries typed claims** — `sub` (the person), `kind` (`OWNER` \| `STAFF` \| `SUPER_ADMIN`), `orgId` (the tenant), `role`, `name`, `email` — built by `organizerSessionClaims` / `staffSessionClaims` in `actor.ts`. A token issued before these claims existed (`{ id, email, name, role }`) still verifies and reads as that Organizer's owner, so the deploy that introduced them signed nobody out. `getAuthCookie()` returns the raw claims and **only the super admin's own routes call it**; every admin surface goes through `actor.ts`. |
 | `actor.ts` | **Who is acting, and what they may reach — the one rule: authorisation scopes by `orgId`, attribution records the actor's `id`.** For an owner the two are the same id, which is why rewiring every admin surface onto this changed nothing until staff exist. `getActor()` is for route handlers (they answer null with their own 401); `requireActor()` is for server pages (it redirects to `/admin/login`). An owner's actor is read from the token alone, as the routes always did; a **staff** actor is checked against the record on every request — membership accepted, account `ACTIVE`, organizer not pending or suspended, and the token issued after `sessionsValidFrom` — because a suspension that waits a day for a JWT to expire is not one. **`can(actor, permission, { organizerId, eventId })`** is the check before acting: organizer-wide roles read the matrix directly, a STAFF membership needs an assignment on that event, and a super admin reaches another organizer only for `SUPER_ADMIN_REACH`. `canSomewhere` is for screens about no single race (marketing, the image uploader). **`reachableEvents(actor, permission)`** is the `where` every list page reads events through — `{ organizerId }` for an owner, only the assigned ids for STAFF. A single-event page reads `{ id, organizerId: actor.orgId }` and then asks `can()`, answering a refusal with the **same "Event not found."** as a missing id. `findAccountByEmail` is the one lookup `auth/login`, `auth/register` and `admin/profile` make across **both** account tables (Organizer wins a tie), since the database cannot keep an address unique across two tables. |
 | `permissions.ts` | **The permission matrix, as data** (`STAFF_ACCESS_PLAN.md` §3). Permissions are verbs (`registration:validate`, `promo:manage`, `event:delete`…); **no route compares a role string**. `OWNER`/`ADMIN` are organizer-wide; `EVENT_MANAGER`/`VALIDATOR`/`ENCODER`/`VIEWER` are held per event. `VALIDATOR` can settle an order and deliberately cannot edit or delete one. `SUPER_ADMIN_REACH` is the super admin's reach into another organizer — view, validate, remark, email, proof — exactly what the status, email and proof routes allowed before. `asMembershipRole`/`asEventRole` guard the two role columns. Prisma-free, so the team screen can render the matrix it enforces. |
-| `audit.ts` | **The trail — "sino ang gumawa nito".** `recordAudit(tx, actor, entry \| entries)` takes the **transaction client**, so the log row and the change commit or fail together; every admin write passes its own transaction, and the three things with no write to ride along (a proof opened, a registrant export, a sign-in attempt) pass the plain client. The actor's name and email are **snapshotted**; the IP and user agent come from the request. `changedFields(before, after, fields, redact)` records only what moved, and records `'changed'` instead of a value for a redacted field, a non-scalar and any string over 120 characters. **`SENSITIVE_RUNNER_FIELDS`** (birthdate, emergency contact name and phone, medical conditions) never have their values logged. `AUDIT_ACTIONS` is the closed vocabulary — add a verb there before using it. Recorded today: sign-ins and failed sign-ins (not for an address with no account, which has no organizer to belong to), profile and password changes, event create / edit / pause / resume / schedule / delete, results uploads, registration status and remarks changes, a manual email marked sent, runner edits and removals (one row per runner, bulk included), proof views, registrant exports, and promotion create / edit / pause / resume / delete. Nothing reads the table yet; the screen is Batch 3. |
-| `signed-in-user.ts` | The name and initial the admin sidebars show — read from the record, not the token, so a rename is never stale. It names the **person**: an owner's Organizer name, or a staff member's own StaffAccount name. It also carries the role line (`Owner`, or `Admin · ORGANIZER`), **which sidebar items this person has any reason to open** (`nav.marketing` from `canSomewhere(promo:view)`, `nav.team` from `team:manage`) and, for a staff member with more than one active membership, the organizers the sidebar's switcher offers. Hiding a link is manners; the pages still check. |
+| `audit.ts` | **The trail — "sino ang gumawa nito".** `recordAudit(tx, actor, entry \| entries)` takes the **transaction client**, so the log row and the change commit or fail together; every admin write passes its own transaction, and the three things with no write to ride along (a proof opened, a registrant export, a sign-in attempt) pass the plain client. The actor's name and email are **snapshotted**; the IP and user agent come from the request. `changedFields(before, after, fields, redact)` records only what moved, and records `'changed'` instead of a value for a redacted field, a non-scalar and any string over 120 characters. **`SENSITIVE_RUNNER_FIELDS`** (birthdate, emergency contact name and phone, medical conditions) never have their values logged. `AUDIT_ACTIONS` is the closed vocabulary — add a verb there before using it. Recorded today: sign-ins and failed sign-ins (not for an address with no account, which has no organizer to belong to), profile and password changes, event create / edit / pause / resume / schedule / delete, results uploads, registration status and remarks changes, a manual email marked sent, runner edits and removals (one row per runner, bulk included), proof views, registrant exports, and promotion create / edit / pause / resume / delete. It is read back through `activity.ts` / `activity-store.ts`, never here. |
+| `activity.ts` | **Reading the trail back** — Prisma-free and headers-free, so client components import it. `ACTION_LABELS` and `ACTION_GROUP` are both `Record<AuditAction, …>`, so **a verb added to `AUDIT_ACTIONS` without a label and a group fails the build**. `ACTIVITY_GROUPS` are the Activity filter's shelves (Payments, Runners, **Personal data** — proofs opened and exports, the Data Privacy Act question — Events, Promotions, Team, Sign-ins). **The screen's filters are the URL**: `readActivityFilters` guards every param (ids, a verb or `group:<key>`, a range of `all`/`today`/`7d`/`30d`/`custom` with Manila `from`/`to`, a search, page, size) and refuses an end date before its start under the To box; `activityQuery` writes them back leaving out defaults; `activityWindow` turns a range into Manila-midnight instants ("last 7 days" is today and the six before). **`asOf` pins a reading** so entries recorded while someone pages wait in a "newer entries" count. Display: `formatTrailTime` / `formatTrailInstant` / `formatTrailDayHeading` (Today · Sep 15), `describeChanges` (a redacted value says the trail does not keep it), `describeDevice` (Chrome on Android). **`statusProvenance`** is the registrant modal's "Validated by Ana Cruz · Sep 13, 2026, 4:02 PM" — it names a person only when the latest recorded change *to* a status matches the status the order holds now; otherwise an online PAID reads "Paid online through PayMongo" and anything else "not on record, before the trail began". `orderActivityPath` is the modal's link to one order's history. |
+| `activity-store.ts` | The trail's queries, server-only. **Every read is scoped to one `organizerId`** — a super admin's settlement is written into that organizer's trail, so an owner reads everything done to their data and nothing else. `activityWhere` builds the filters' `where` (search is a case-insensitive `contains` on `summary`, which names order references, runners, events and promotions); `activityPeople` is the Person filter, **read from the trail rather than the team** so a removed member's actions stay findable, one entry per actor id under their latest name; `latestStatusChanges(orgId, eventId)` is one query for the registrants screen's provenance. |
+| `signed-in-user.ts` | The name and initial the admin sidebars show — read from the record, not the token, so a rename is never stale. It names the **person**: an owner's Organizer name, or a staff member's own StaffAccount name. It also carries the role line (`Owner`, or `Admin · ORGANIZER`), **which sidebar items this person has any reason to open** (`nav.marketing` from `canSomewhere(promo:view)`, `nav.team` from `team:manage`, `nav.activity` from `activity:view`) and, for a staff member with more than one active membership, the organizers the sidebar's switcher offers. Hiding a link is manners; the pages still check. |
 | `team.ts` | **The rules of an organizer's team**, free of Prisma and crypto so the team form and the routes run the same checks and word refusals identically. `memberState` derives Active / Invited / Invite Expired / Suspended from the membership's timestamps (with `MEMBER_STATE_LABELS`/`TONES` for the badge); `readInvitee` (name, lowercased email) and `readAccess` (role plus event assignments, checked against the organizer's own event ids — **a STAFF membership needs at least one event**, and a duplicate or foreign event is refused per row under `assignmentField(i, part)`); `newPasswordErrors`; `describeAccess` for trail summaries; `MIN_PASSWORD_LENGTH` (shared with the settings form and the password route) and `INVITE_TTL_DAYS` = 7. |
 | `team-invite.ts` | **Invitation links.** `newInvitation()` makes 32 random bytes and keeps only their sha256 (`inviteTokenHash`) — the token itself is only ever in the email; `findOpenInvitation(token)` returns the membership only if the token is well-formed, matches, is unaccepted and unexpired, and every failure reads the same; `inviteOrigin(request)` names `SITE_URL` in production and the request's own origin elsewhere, so a localhost invitation links back to the database it was written into; `sendInvitation` renders `staffInvitationEmail` (`email.ts`) and, outside production only, prints the link to the server console so the flow can be tried without email. |
 | `actor.ts` (team additions) | `canManageMember(actor, role)` — `team:manage` **and** `GRANTABLE_ROLES` (`permissions.ts`: an OWNER grants ADMIN or STAFF, an ADMIN only STAFF, so an admin can neither make nor touch another admin); `grantableRoles(actor)` for the picker; `activeMembershipWhere(staffId)` — accepted, not suspended, organizer active — **the one definition sign-in, the organizer switcher and the sidebar all read**, so none can offer an organizer another would refuse. `getActor()` now also refuses a suspended membership. `permissions.ts` gained `ROLE_LABELS`, `ROLE_HINTS`, `PERMISSION_LABELS` and `MATRIX_ROLES`, which is what the team screen's role table is drawn from. |
@@ -596,7 +600,25 @@ offering only what `grantableRoles` allows, and for Staff a list of event +
 role rows whose pickers never offer an event already chosen in another row.
 Every refusal lands under its field. A failed invitation email is an `alert`,
 not a toast, because it needs acting on. Under the table, `RolesPanel` draws
-the permission matrix straight from `permissions.ts`) ·
+the permission matrix straight from `permissions.ts`) · `/admin/activity` (**the
+trail read back — "sino ang gumawa nito"**. `activity:view` only (owner and
+admin); anyone else gets the admin's 404. **Paged on the server**, unlike every
+other admin table: the filters are the URL (`activity.ts`, §5) and one page of
+rows crosses the wire. Search (order reference, name, event), then four
+labelled `AdminSelect` filters — Person (everyone who appears in the trail,
+removed members included), Event, Activity (a group such as *All personal
+data*, or one verb) and Dates (Any time, Today, Last 7 days, Last 30 days, or
+From / To boxes). **Newest first and never re-sorted**: no sortable headers, no
+select or `No.` column, and once a reader pages past the first screen the
+reading is pinned (`asOf`), so new entries wait in a blue *N newer entries ·
+Show* chip rather than shifting the rows being read. Entries sit under Manila
+day headings (*Today · Sep 15*). Columns: Time, Person (name, then *Staff ·
+email*), What happened (the verb's label, a failed sign-in as a red badge, and
+the entry's sentence), Event (*Deleted event* when the race is gone), and a
+Details chevron opening a second row with what changed field by field, the
+exact instant, IP address and device. **Below `lg`** the same page is
+`AdminCardList` cards per day, the details behind a *Show details* accordion
+(`.t-acc`). The pager is `AdminTablePager` at 25 / 50 / 100 a page) ·
 `/admin/invite/[token]` (**public**, `noindex`, `referrer: no-referrer` — where
 the invitation email lands. It says which organizer and exactly which races and
 roles before asking for anything; a new person confirms their name and chooses
@@ -606,16 +628,27 @@ link has expired" page with the way back to sign-in) · `/admin/[...missing]` �
 the admin's own 404.
 
 **The sidebar and the events table follow the permission matrix.** Marketing
-Tools shows only with `promo:view` somewhere, Team only with `team:manage`, and
+Tools shows only with `promo:view` somewhere, Team only with `team:manage`,
+Activity only with `activity:view`, and
 the user block's role line reads **Owner**, or `Admin · ORGANIZER` /
 `Staff · ORGANIZER`. A staff member with more than one active membership gets
 an **organizer switcher** above it (`OrganizerSwitcher`, the row-menu machinery
 opening upward). On `/admin/events`, Create Event needs `event:create`, and each
 row's Edit Event, Schedule / Pause Sign-Ups and Delete Event follow
 `event:edit` / `event:delete`, decided on the server per row. **The registrants
-screen does not hide its buttons by role yet** — its routes refuse, so nothing
-leaks, but a validator still sees Edit (an open item in
-`STAFF_ACCESS_PLAN.md`).
+screen follows it too**: `registrants/page.tsx` builds a `RegistrantPermissions`
+object with `can()` and the table offers only what the role holds — Edit
+(`registration:edit`), Delete, Delete Selected and the bulk bar's Delete
+(`registration:delete`), Validate Payment in the menu, the modal and the
+lightbox (`registration:validate`), the Remarks and Email buttons and links
+(`registration:remark` / `registration:email`), and the proof block
+(`proof:view`). Remarks stay readable to everyone; a phone's modal footer is
+hidden when it would hold nothing. The routes still refuse on their own.
+**The detail modal says who settled the order**, under its status: "Validated
+by Ana Cruz · Sep 13, 2026, 4:02 PM" (`statusProvenance`, §5), updated in place
+when somebody validates, and for an owner or admin a *See this order's
+activity* link into `/admin/activity` filtered to that event and order
+reference.
 
 ### Super admin (`/superadmin`)
 `/superadmin` dashboard (platform revenue, fees) · `/superadmin/organizers`
@@ -648,7 +681,7 @@ opens its message from a *Read message* button rather than a tap anywhere.
 | `upload` | POST | Organizer-only image upload (public store) |
 | `admin/events`, `admin/events/[id]` | POST / GET, PUT, PATCH, DELETE | Event CRUD including categories and bank accounts. Categories keep the position they were created in across every `PUT` — see `category-order.ts`. `PATCH` is **when sign-ups are open, on its own** — `{ registrationPaused }` from the menu's pause item, `{ registrationOpensAt }` from its scheduling modal, either or both, so the events table changes one thing without re-posting a form it never rendered; a body carrying neither is refused rather than treated as a no-op. An opening sent on its own also clears `registrationPaused`, or the date would arrive to a paused event. Scoped to the signed-in organizer's own events. `GET` also carries `promotions` — what `eventPromotions` says is running on this race — for the read-only panel at the foot of the edit screen |
 | `admin/events/[id]/results/upload` | POST | CSV/XLSX results import; dedupes by bib, computes seconds and the three ranks |
-| `admin/registrations/[id]/status` | PATCH | Confirm or reject a manual payment, and write the validator's internal `remarks`. Takes either or both; the status is guarded against a fixed list and the receipt email fires only on the *transition* into `PAID`, so a later remarks-only PATCH cannot send a second receipt. Auth-checked and scoped to the signed-in organizer's own events — **this route had none at all until Batch E**, which made it the one way for anyone on the internet to mark a registration `PAID` |
+| `admin/registrations/[id]/status` | PATCH | Confirm or reject a manual payment, and write the validator's internal `remarks`. Takes either or both; the status is guarded against a fixed list and the receipt email fires only on the *transition* into `PAID`, so a later remarks-only PATCH cannot send a second receipt. Auth-checked and scoped to the signed-in organizer's own events — **this route had none at all until Batch E**, which made it the one way for anyone on the internet to mark a registration `PAID`. When the status moved, the answer carries `statusChange` (`by`, `at`, `to` — the same name the trail entry snapshotted), which the registrant modal's *Validated by* line reads |
 | `admin/registrations/[id]/email` | GET, POST | The email a registration is owed, rendered for a person to send by hand — `GET` returns the recipient, subject and **both** renderings (HTML for the clipboard, plain text for a `mailto:`), `POST` records that a staff member sent it. Auth-checked and scoped like the status route, which matters more here than most: the rendered email carries every runner's contact details, birthdate and emergency contact |
 | `admin/runners/[id]`, `admin/runners/bulk-delete` | PUT/DELETE, POST | Registrant editing. **Removal is soft** — `deletedAt`/`deletedById` are stamped and the row stays (§4), so a runner already removed answers "Runner not found". An edit needs `registration:edit`, a removal `registration:delete`. Each edit writes one audit row naming the fields that changed (sensitive columns as "changed", never their values), and each removed runner — bulk included — gets its own row carrying their name and runner reference |
 | `admin/proof/[id]` | GET | Auth-checked redirect to a short-lived signed proof URL |
@@ -697,6 +730,11 @@ opens its message from a *Read message* button rather than a tap anywhere.
   transaction client to `recordAudit`; a new action is added to `AUDIT_ACTIONS`
   first. The trail is append-only, and a sensitive runner column's value never
   enters it.
+- **The trail is read by owners and admins only** (`activity:view`), on
+  `/admin/activity`, and every read is scoped to `actor.orgId`
+  (`activity-store.ts`). It shows IP addresses and devices, which is why no
+  per-event role reaches it. The one place a staff member meets it is the
+  registrant modal's *Validated by* name, which is the order's own provenance.
 - **A staff session can be ended before its JWT expires**: `getActor()` checks
   the StaffAccount's status, membership and `sessionsValidFrom` on every
   request, and a staff password change moves `sessionsValidFrom` forward
@@ -950,7 +988,10 @@ These are the user's own standing preferences. Follow them without being asked.
     included.
   - **Every TanStack table's pager is `admin/AdminTablePager`.** It holds the
     rows-per-page menu, the range and First / Previous / Next / Last. Below
-    `sm` it shows only the range and 44px Previous / Next.
+    `sm` it shows only the range and 44px Previous / Next. It counts with
+    `table.getRowCount()`, so a **server-paged** table (the activity trail:
+    `manualPagination`, `rowCount`, and `onPaginationChange` pushing the URL)
+    wears the same pager, and pass `pageSizes` to change the menu.
   - **Below `lg` a table's toolbar gains `admin/MobileSortMenu`**, a Sort chip
     listing every column that can sort, each ascending or descending, with
     the active sort named on the chip. Cards have no headers to click.
@@ -1535,7 +1576,7 @@ a queue.
 the decisions it records as not to be relitigated. It is no longer a queue, and
 the file itself says it may be deleted.
 
-**`STAFF_ACCESS_PLAN.md` is an open queue, with Batch 1 landed.** Five batches
+**`STAFF_ACCESS_PLAN.md` is an open queue, with Batches 1–3 landed.** Five batches
 for giving an organizer's personnel their own accounts instead of sharing the
 organizer's one login. **Batch 1 is in:** the `StaffAccount` /
 `StaffMembership` / `EventAssignment` / `AuditLog` models and the soft-removal
@@ -1548,10 +1589,12 @@ or revoke an invitation, remove), the public `/admin/invite/[token]` accept
 page, per-membership suspension (migration
 `20260913180000_staff_membership_suspension`), the organizer switcher for staff
 who work for several organizers, and a sidebar and events table that only offer
-what the role allows. **Batch 3 (`/admin/activity` and inline provenance) is
-next**, then TOTP and the optional extras. The registrants screen still shows
-every button to every role (its routes refuse), which the plan's Batch 2 notes
-record as open. **Read the plan before touching admin auth, the `Organizer`
+what the role allows. **Batch 3 is in too:** `/admin/activity` (the trail with
+Person, Event, Activity and Dates filters, server-paged and pinned so it never
+shifts under a reader), a *Validated by* line and an activity link in the
+registrant detail modal, and a registrants screen that offers each role only
+the buttons its routes allow. No migration. **Batch 4 (TOTP) is next**, then the
+optional extras. **Read the plan before touching admin auth, the `Organizer`
 model, or any `/api/admin/**` route's ownership check** — its "Batch 1" notes
 record the calls made in the batch, and the file records which decisions are
 closed (no unified account table, no SSO).

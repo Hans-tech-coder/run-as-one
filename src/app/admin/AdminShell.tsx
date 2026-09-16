@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Calendar, Settings, Megaphone, UsersRound } from 'lucide-react';
+import { LayoutDashboard, Calendar, Settings, Megaphone, UsersRound, History } from 'lucide-react';
 import type { SignedInUser } from '@/lib/signed-in-user';
 import DashboardShell from './DashboardShell';
 import OrganizerSwitcher from './OrganizerSwitcher';
@@ -51,6 +51,9 @@ export default function AdminShell({
       : []),
     ...(user?.nav.team
       ? [{ name: 'Team', path: '/admin/team', icon: <UsersRound size={20} /> }]
+      : []),
+    ...(user?.nav.activity
+      ? [{ name: 'Activity', path: '/admin/activity', icon: <History size={20} /> }]
       : []),
   ];
 
