@@ -1,0 +1,16 @@
+-- AlterTable
+ALTER TABLE "Organizer" ADD COLUMN     "applicationNote" TEXT,
+ADD COLUMN     "city" TEXT,
+ADD COLUMN     "contactFirstName" TEXT,
+ADD COLUMN     "contactLastName" TEXT,
+ADD COLUMN     "contactRole" TEXT,
+ADD COLUMN     "expectedRunners" TEXT,
+ADD COLUMN     "experience" TEXT,
+ADD COLUMN     "firstEventDate" TEXT,
+ADD COLUMN     "firstEventLocation" TEXT,
+ADD COLUMN     "firstEventName" TEXT,
+ADD COLUMN     "orgType" TEXT,
+ADD COLUMN     "phone" TEXT,
+ADD COLUMN     "province" TEXT,
+ADD COLUMN     "services" TEXT[] DEFAULT ARRAY[]::TEXT[],
+ADD COLUMN     "website" TEXT;

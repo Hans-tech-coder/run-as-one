@@ -382,3 +382,482 @@
     transition: none;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   The organizer application (/admin/register)
+   ══════════════════════════════════════════════════════════════════════════
+
+   Everything above this dresses a sign-in box: one column, three fields, 440px
+   wide. The application is a different object — three steps of grouped
+   questions that an organizer fills in once, and that the super admin then
+   reads to decide whether this is a real event company. It reuses the same
+   card, background and field styling on purpose (it is the same door), and
+   only adds what a form of this size needs: a wider column, a step rail, field
+   rows that pair up, and choice cards.
+
+   Every rule here is written mobile-first and the pairs collapse to one column
+   below `sm` (640px, the project's breakpoint), because an organizer who finds
+   this page from the footer is as likely to be on a phone as at a desk. */
+
+/* The column, when it is carrying an application rather than a sign-in. The
+   card inside it still centres, still keeps its 16px margin on a phone, and
+   still falls to the top of a short screen — all of that is inherited. */
+.auth-shell--wide {
+  max-width: 46rem; /* 736px — two comfortable field columns and no more. */
+}
+
+/* ── The step rail ──────────────────────────────────────────────────────
+   A progress indicator rather than a set of tabs: the steps are not
+   independent, and nobody can skip into step 3 without answering step 1, so
+   the dots are not buttons. Going back is what the Back button is for. */
+.apply-steps {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: var(--space-lg);
+}
+
+.apply-step {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  position: relative;
+  min-width: 0;
+}
+
+/* The connector, drawn from each step back towards the one before it, so the
+   first step has none and nothing overhangs the rail's ends. */
+.apply-step + .apply-step::before {
+  content: '';
+  position: absolute;
+  top: 0.9375rem; /* Half the 30px dot. */
+  right: 50%;
+  left: -50%;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.12);
+  transition: background-color 0.3s var(--ease-smooth-out);
+}
+
+/* A step's connector reaches back towards the step before it, so it fills in
+   as the rail is walked rather than running ahead of it: the line left of the
+   current dot is orange, the line right of it is not. */
+.apply-step + .apply-step[data-state='done']::before,
+.apply-step + .apply-step[data-state='current']::before {
+  background: var(--accent-orange);
+}
+
+.apply-step__dot {
+  position: relative;
+  z-index: 1;
+  width: 1.875rem; /* 30px */
+  height: 1.875rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.45);
+  background: var(--bg-primary);
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  transition: background-color var(--duration-fast) var(--ease-smooth-out),
+    border-color var(--duration-fast) var(--ease-smooth-out),
+    color var(--duration-fast) var(--ease-smooth-out),
+    box-shadow var(--duration-fast) var(--ease-smooth-out);
+}
+
+.apply-step[data-state='current'] .apply-step__dot {
+  color: #fff;
+  background: var(--accent-orange);
+  border-color: var(--accent-orange);
+  box-shadow: 0 0 0 4px rgba(255, 107, 43, 0.18);
+}
+
+.apply-step[data-state='done'] .apply-step__dot {
+  color: #fff;
+  background: var(--accent-orange);
+  border-color: var(--accent-orange);
+}
+
+.apply-step__label {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.3;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.45);
+  /* The three labels are the only thing on this page that cannot shrink to fit
+     360px without wrapping into a mess, so below `sm` they are not drawn at
+     all — the step's own heading, right below the rail, says the same thing in
+     full. */
+  display: none;
+}
+
+.apply-step[data-state='current'] .apply-step__label {
+  color: var(--text-primary);
+}
+
+@media (width >= 40rem) {
+  .apply-step__label {
+    display: block;
+  }
+}
+
+/* ── One step's heading ─────────────────────────────────────────────────
+   No margin of its own: it is a flex child of `.auth-form`, whose gap already
+   separates it from the first field. A margin here was added on top of that
+   gap and left a hole between the blurb and the form. */
+.apply-step-head {
+  margin-bottom: 0;
+}
+
+.apply-eyebrow {
+  display: block;
+  font-family: var(--font-body);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-orange);
+  margin-bottom: 0.375rem;
+}
+
+.apply-step-head h2 {
+  font-family: var(--font-sans);
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.apply-step-head p {
+  margin: 0.375rem 0 0;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+/* ── Field rows ─────────────────────────────────────────────────────────
+   Two fields share a row from `sm` up where they are two halves of one answer
+   — a first and last name, a city and a province. Below that they stack, like
+   everything else on this page. */
+.apply-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-lg);
+}
+
+@media (width >= 40rem) {
+  .apply-row--two {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* Small print under a field: what the answer is for, or what shape it takes.
+   A hint, never a rule — a rule that only appears once the field is wrong is
+   what FieldError is for. */
+.form-hint {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+/* The optional marker, so a required field is the unmarked default and an
+   applicant can see at a glance how little of this is compulsory. */
+.form-optional {
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.form-textarea {
+  min-height: 7rem;
+  resize: vertical;
+  line-height: 1.55;
+}
+
+/* ── The phone box ──────────────────────────────────────────────────────
+   This page does not draw one. It renders the runner wizard's `PhoneField`,
+   so an organizer picks their country from the same flag menu a runner does
+   instead of meeting a second phone control invented for this card — there is
+   one right way to type a number on this site, and it already existed.
+
+   That component brings its own `.input-group` wrapper (globals.css), which
+   supplies the label, the control's padding and the invalid state. The two
+   rules below are the only things reconciled: the wizard's field is an 8px
+   box on a slightly lighter ground, and every field on this card is a 12px
+   box on a darker one. Nothing else about the control is touched. */
+.auth-card .input-group .control-shell {
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+/* The country button is flush with the shell's left edge, so its corners have
+   to follow the shell's. */
+.auth-card .input-group .control-shell > button:first-child {
+  border-radius: 12px 0 0 12px;
+}
+
+/* ── Choice cards ───────────────────────────────────────────────────────
+   The services question is the one place this form asks for several answers at
+   once, and a column of bare checkboxes gave no room for the sentence each
+   option needs. A card carries the label and that sentence, and the whole card
+   is the target — which is also how it clears 44px without a padding hack. */
+.apply-choices {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.625rem;
+}
+
+@media (width >= 40rem) {
+  .apply-choices {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.apply-choice {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  min-height: 44px;
+  padding: 0.875rem 1rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  background: rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  transition: border-color var(--duration-fast) var(--ease-smooth-out),
+    background-color var(--duration-fast) var(--ease-smooth-out);
+}
+
+@media (hover: hover) {
+  .apply-choice:hover {
+    border-color: rgba(255, 255, 255, 0.24);
+    background: rgba(255, 255, 255, 0.04);
+  }
+}
+
+.apply-choice[data-checked='true'] {
+  border-color: var(--accent-orange);
+  background: rgba(255, 107, 43, 0.08);
+}
+
+/* The real control is here and is only visually hidden, so the box is a real
+   checkbox to a keyboard and a screen reader; the square beside it carries the
+   look, and :focus-visible on the input draws the ring on the card. */
+.apply-choice input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.apply-choice:has(input:focus-visible) {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
+}
+
+.apply-choice__box {
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-top: 0.125rem;
+  /* 6px, not the theme's rounded-md: at 20px square that reads as a circle,
+     and a circle here would promise that only one may be picked. */
+  border-radius: 6px;
+  border: 2px solid rgba(255, 255, 255, 0.28);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  transition: background-color var(--duration-fast) var(--ease-smooth-out),
+    border-color var(--duration-fast) var(--ease-smooth-out);
+}
+
+.apply-choice[data-checked='true'] .apply-choice__box {
+  border-color: var(--accent-orange);
+  background: var(--accent-orange);
+}
+
+.apply-choice__label {
+  display: block;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--text-primary);
+}
+
+.apply-choice__hint {
+  display: block;
+  margin-top: 0.1875rem;
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+
+/* An answer that is not one option among several — "Not sure yet", which
+   cannot share the question with a service line — takes the whole row rather
+   than sitting in a column beside them, so it reads as the alternative to the
+   pair above it rather than as a third member of the set. The consent line
+   below the form is the same shape for the same reason: it is a statement,
+   not a choice. */
+.apply-choice--wide,
+.apply-consent {
+  grid-column: 1 / -1;
+}
+
+/* ── The summary a failed step shows ────────────────────────────────────
+   Inline errors stay exactly where they are; this only says how many there are
+   and takes focus, so somebody who pressed Continue and saw nothing change is
+   told why rather than left hunting for the red box. */
+.apply-problem {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  padding: 0.875rem 1rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 77, 79, 0.28);
+  background: rgba(255, 77, 79, 0.1);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: #ff8b8d;
+}
+
+.apply-problem:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
+}
+
+/* ── The step's buttons ─────────────────────────────────────────────────
+   Back is the shared `.btn-secondary` rather than an ad-hoc bordered button —
+   it is the quiet half of a pair whose loud half is the gradient. Below `sm`
+   they stack with the way forward on top, because the thumb rests at the
+   bottom of a phone and the way back should not be what it lands on. */
+.apply-nav {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 0.75rem;
+  margin-top: var(--space-xl);
+  padding-top: var(--space-lg);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.apply-nav .btn-gradient,
+.apply-nav .btn-secondary {
+  width: 100%;
+}
+
+@media (width >= 40rem) {
+  .apply-nav {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .apply-nav .btn-gradient,
+  .apply-nav .btn-secondary {
+    width: auto;
+    min-width: 11rem;
+  }
+
+  /* With no Back button, the way forward still sits at the right-hand end
+     where it does on every other step. */
+  .apply-nav--end {
+    justify-content: flex-end;
+  }
+}
+
+/* ── What an applicant sees once it is in ───────────────────────────────
+   A panel rather than the green ribbon a sign-in success uses: "we have it" is
+   not the whole answer, and the three things that happen next are what stops
+   somebody applying again an hour later because nothing appeared to happen. */
+.apply-done {
+  text-align: center;
+}
+
+.apply-done__mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  margin-bottom: var(--space-md);
+  border-radius: 50%;
+  color: #52c41a;
+  background: rgba(82, 196, 26, 0.12);
+  border: 1px solid rgba(82, 196, 26, 0.28);
+}
+
+.apply-next {
+  margin: var(--space-lg) 0 0;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.apply-next li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.apply-next__num {
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--accent-orange);
+  background: rgba(255, 107, 43, 0.12);
+  border: 1px solid rgba(255, 107, 43, 0.3);
+}
+
+.apply-next strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* A phone. The card's own inset already steps down to 24px above; the rail's
+   dots come in a little so three of them plus their connectors sit
+   comfortably inside a 360px screen. */
+@media (width < 40rem) {
+  .apply-steps {
+    padding: 0 0.5rem;
+  }
+
+  .apply-step-head h2 {
+    font-size: 1.125rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .apply-step__dot,
+  .apply-step + .apply-step::before,
+  .apply-choice,
+  .apply-choice__box {
+    transition: none;
+  }
+}

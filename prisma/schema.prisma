@@ -23,6 +23,58 @@ model Organizer {
   /// this row's own email and password and is never a membership — see
   /// StaffAccount for why the tenant and the person are separate.
   staff      StaffMembership[]
+
+  // ── What the applicant told us when they asked for an account ──────────
+  //
+  // Every column below is nullable and every one of them is answered on the
+  // application form at /admin/register. They are nullable anyway because the
+  // accounts that existed before the form asked for any of this cannot be made
+  // to answer retroactively, and a required column would have meant inventing
+  // values for real organizers. A screen reading them must therefore be
+  // written for a row that says nothing — see organizerApplication() in
+  // src/lib/organizer-application.ts, which is the one place that decides what
+  // an unanswered field looks like.
+  //
+  // They are short text rather than enums so a vocabulary can grow without a
+  // migration, and every one of them is validated against the lists in that
+  // module before it is written. Fifteen short strings on a table that holds
+  // tens of rows is a few kilobytes in total, which is why this was worth
+  // spending against the 0.5 GB tier when a whole application table was not.
+
+  /// What kind of outfit this is — one of ORGANIZER_TYPES.
+  orgType            String?
+  /// The person who filled the form in, who is not necessarily the account's
+  /// eventual owner: `name` is the organization, these two are the human.
+  contactFirstName   String?
+  contactLastName    String?
+  /// Their position — "Race Director", "Marketing Head". What tells the super
+  /// admin whether they are talking to somebody who can sign anything.
+  contactRole        String?
+  /// E.164, like every other number in this app (src/lib/phone.ts).
+  phone              String?
+  /// Where they operate. Two columns rather than one address because the
+  /// province is the part that decides which races this account is near.
+  city               String?
+  province           String?
+  /// A website or a Facebook page — the single strongest signal that an
+  /// applicant is a real organization, which is why the form asks for either
+  /// rather than insisting on a domain nobody in this market buys.
+  website            String?
+  /// How many races they have run before — one of ORGANIZER_EXPERIENCE.
+  experience         String?
+  /// Which parts of the platform they came for — ORGANIZER_SERVICES values.
+  services           String[]           @default([])
+  /// The race they have in mind. A date string in YYYY-MM-DD against a Manila
+  /// today, like Event.date, so the two compare without parsing.
+  firstEventName     String?
+  firstEventDate     String?
+  firstEventLocation String?
+  /// The size they expect — one of EXPECTED_PARTICIPANTS. A band rather than a
+  /// number because nobody knows the number yet, and a field that demands one
+  /// gets a guess typed as though it were a fact.
+  expectedRunners    String?
+  /// Anything else they wanted to say, in their own words.
+  applicationNote    String?
 }
 
 model Event {

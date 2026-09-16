@@ -70,6 +70,7 @@ export default function PhoneField({
   placeholder = "9171234567",
   id,
   error,
+  hint,
 }: {
   label: string;
   /** E.164, or a legacy local number from before this field existed. */
@@ -82,6 +83,14 @@ export default function PhoneField({
   id?: string;
   /** What is wrong with this number, or nothing when it is fine. */
   error?: string;
+  /**
+   * Small print under the field — what the number is for, or what shape it
+   * takes. It is rendered here rather than beside the component so it lands
+   * *above* the error: a hint that appears under a red line reads as part of
+   * the complaint. Optional, and the wizards pass none; the organizer
+   * application does, because there the number is a promise to ring somebody.
+   */
+  hint?: React.ReactNode;
 }) {
   const parsed = useMemo(() => parseE164(value), [value]);
   // The country is local: an empty number carries no country of its own, and
@@ -98,6 +107,7 @@ export default function PhoneField({
   const inputId = id ?? `${baseId}-national`;
   const listboxId = `${baseId}-countries`;
   const errorId = `${inputId}-error`;
+  const hintId = `${inputId}-hint`;
 
   // A number pasted or restored with its own country wins over the local pick.
   useEffect(() => {
@@ -227,7 +237,11 @@ export default function PhoneField({
             onChange={e => handleNationalChange(e.target.value)}
             placeholder={placeholder}
             aria-invalid={error ? true : undefined}
-            aria-describedby={error ? errorId : undefined}
+            aria-describedby={
+              [hint ? hintId : null, error ? errorId : null]
+                .filter(Boolean)
+                .join(" ") || undefined
+            }
             className="flex-1 min-w-0 text-white placeholder-gray-500 focus:outline-none"
             // Inline rather than utility classes on purpose. RegistrationWizard
             // .css styles `.input-group input` at specificity (0,1,1), which
@@ -309,6 +323,12 @@ export default function PhoneField({
           </div>
         )}
       </div>
+
+      {hint && (
+        <p id={hintId} className="text-secondary text-xs leading-snug m-0">
+          {hint}
+        </p>
+      )}
 
       <FieldError id={errorId} message={error} />
     </div>

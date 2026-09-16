@@ -218,7 +218,21 @@ shape:
 
 - **Organizer** — the client account. `role` is `ORGANIZER` or `SUPER_ADMIN`;
   `status` is `PENDING`/approved; `adminFee` is the per-runner commission in
-  centavos. Owns `Event[]` and `PromoCode[]`.
+  centavos. Owns `Event[]` and `PromoCode[]`. It also carries **the application
+  the account was created from** — `orgType`, `contactFirstName` /
+  `contactLastName` / `contactRole` (the human, as distinct from `name`, which
+  is the organization), `phone` (E.164), `city` + `province`, `website`,
+  `experience`, `services` (string[]), `firstEventName` / `firstEventDate`
+  (`YYYY-MM-DD`) / `firstEventLocation`, `expectedRunners`, `applicationNote`.
+  **Every one of them is nullable**, because the accounts that pre-date the
+  application form answer none of it; a screen reading them must be written for
+  a row that says nothing, and `hasApplicationDetails()` is what asks. The
+  closed values (`orgType`, `experience`, `services`, `expectedRunners`) are
+  short text rather than enums so a vocabulary can grow without a migration,
+  and they are validated against the lists in `lib/organizer-application.ts`
+  before they are written. Fifteen short strings on a table holding tens of
+  rows is a few kilobytes, which is why this was worth spending against the
+  0.5 GB tier when a separate application table was not.
 - **Event** — title, unique **`slug`**, `date` (**string `YYYY-MM-DD`**, not
   DateTime), location, imagery, logistics fees, `adminFee`, `shirtSizeUpcharge`,
   `consentWaiver` (string[] of paragraphs), `registrationForm`
@@ -399,6 +413,7 @@ logic again.
 | `event-slug.ts` | Public event URLs. `slugifyEventTitle` → `uniqueEventSlug` on write; `eventByParam` matches slug **or** legacy cuid on read, and `canonicalEventPath` redirects old cuid links to the slug. **`registerPath(event, category?)`** spells the wizard's address, and with a category adds `?category=` — the option's **name, slugged** (`?category=10k`), because that link gets pasted into group chats, falling back to its id only when two options on the race slug alike. `categoryFromParam` reads it back (id first, then a slug exactly one option answers to) and finds nothing for a stale link rather than guessing. |
 | `category-order.ts` | **The order an event's categories are listed in, everywhere.** `CATEGORY_ORDER` (`sortOrder`, then `id`) goes on every read of an event's categories that a person sees — the edit form's GET and PUT response, the create response, the events table, the event page, the wizard, the admin results screen, the winners board, the marketing form's price list and `promo-input.ts`. Nothing used to order them, so they came back in Postgres's physical row order, and an UPDATE writes the new row version at the end of the table: every save of the edit form moved the options it touched to the bottom, and a race's first category came back fourth. The create route numbers them by their position in the form; the edit route leaves `sortOrder` out of its update and gives an option added in that edit the next number after the event's highest. Rows that existed before the column were backfilled from their cuids, which sort in creation order. |
 | `feedback.ts` | **What a piece of feedback is, and what the app will accept as one.** The three kinds (`ISSUE` | `SUGGESTION` | `FEATURE`) with `asFeedbackKind` guarding them at the API door, the two triage states with `asFeedbackStatus`, and `FEEDBACK_KIND_COPY` — the label, the blurb and **the per-kind placeholder**, which is the point of asking the kind first: the same empty box under "tell us anything" gets "the site is slow", and under "what were you doing, and what happened instead?" gets a page, a step and a device. The limits live here too (`MIN_FEEDBACK_MESSAGE` is 20 characters, so the inbox does not fill with rows nobody can act on; `MAX_FEEDBACK_MESSAGE` is what bounds a row's storage) and are enforced **twice** — in the form so the common case costs no round trip, and in the route, which is the last word. `asSitePath` is the guard on the `?from=` that names where a sender came from: it arrives in a query string, so a protocol-relative `//evil.example` is refused and only a single leading slash passes. `looksLikeEmail` is deliberately shallow — the address is optional and only ever used by a person clicking Reply, so a clever regex rejecting a valid address costs more than a bounced message does — and it now defers to `email-address.ts`, which holds that same shape for the whole app. |
+| `organizer-application.ts` | **What an organizer application is, and what the app will accept as one.** The four closed vocabularies with their copy — `ORGANIZER_TYPES` (running club, production company, corporate, school, LGU, non-profit, individual), `ORGANIZER_EXPERIENCE`, `ORGANIZER_SERVICES` and `EXPECTED_PARTICIPANTS` (a band rather than a number, because a field demanding a number gets a guess typed as though it were a fact). **`ORGANIZER_SERVICES` is three answers, not a feature list**: `REGISTRATION` (whose hint names the payments, race kits and promo codes that arrive with it — they are not separately declinable, so offering them as separate ticks only made an organizer work out which boxes were really one box), `RESULTS`, and `NOT_SURE`, which `EXCLUSIVE_SERVICE` marks as unable to share the answer with either — `servicesOf` collapses a body carrying both rather than leaving the super admin to interpret it. No timing option: this platform imports finishing times rather than producing them, and an option on that form is a promise the approval email has to keep — plus the limits and `readOrganizerApplication`, the single rule set both the form and `auth/register` run. The form runs it per step so the common case costs no round trip; the route runs it on everything, because a tab left open can post straight at it, and a refusal hands back the field key so the caret lands on the right box. Only what an account cannot exist without is refused, plus the few shapes it can check: `looksLikeLink` accepts `facebook.com/yourpage` without a scheme (this market types it that way) and `normalizeLink` stores the `https://`, `phoneOf` passes through the E.164 `PhoneField` hands over (and reads bare digits against **PH**, the default the field opens on) while the length rule checks against **the country the number itself names**, so an organizer who picks another one is not refused a number that dials, and `looksLikeDate` guards the `YYYY-MM-DD` the column shares with `Event.date`. `MIN_ORGANIZER_PASSWORD` is **8**, raised from six and only for accounts created from here on — the account it protects can publish a race and read every registrant's birthdate and emergency contact, but locking an existing client out of their own event to enforce a rule they were never told about is the worse failure. The label helpers (`organizerTypeLabel` and friends) fall back to the stored text rather than to nothing, so a row written before an option was renamed still reads as itself. |
 | `event-type.ts` | `RACE` vs `FUN_RUN`. `asEventType` guards untrusted input (defaults to `RACE`); `sellsPackages(event)` is the branch the forms and wizards use. |
 | `registration-form.ts` | `ONLINE` vs `BANK_TRANSFER` checkout. `asRegistrationForm` defaults to `ONLINE`; `offersBankTransfer`. |
 | `shirt-size.ts` | The size chart, whether a category needs a size at all, and the 4XL-and-up upcharge. `subtotalWithUpcharge` is the priced truth. `shouldAskShirtSize(categories, categoryId)` decides whether the wizards show the field and whether validation requires it: the chosen category decides once one is picked, and before then the field is already visible when **every** option the event sells includes something to wear. It hides up front only for an event that also sells an option with nothing to wear (the Tarlac band-only package), where the answer is genuinely undecided. |
@@ -483,8 +498,47 @@ the winners board and would otherwise swallow it.
 registrations. There is no *Page Views* tile: it was a placeholder that only
 ever read `N/A`, and a metric card that never carries a number teaches an
 organizer to stop reading the row. Do not re-add a tile until something real
-counts behind it) · `/admin/login` · `/admin/register` (both drawn without the
-sidebar, and both carrying `AuthHomeLink` back to the public site — §8) ·
+counts behind it) · `/admin/login` · **`/admin/register` — the organizer
+application** (both drawn without the sidebar, and both carrying
+`AuthHomeLink` back to the public site — §8). It is a **three-step form**, not
+a sign-up box: *Your organization* (name, kind, city + province, website or
+Facebook page, how many events they have run), *You and your account* (the
+contact person and their role, email, a `+63` mobile number, password twice)
+and *What you are planning* (what they came for, the first event's name, date
+and place, the size they expect, a free-text note, and a consent line). The
+mobile number is the **runner wizard's own `PhoneField`** — flag, dial code and
+country menu — rather than a second phone control built for this page; there is
+one right way to type a number on this site and it already existed. It brings
+its own `.input-group`, so only its radius and ground are reconciled to this
+card, and it gained an optional **`hint`** prop in the same change so small
+print lands *above* the error rather than under it (a hint below a red line
+reads as part of the complaint). The wizards pass none and are unchanged. "What
+do you need Run As One for?" offers **two service lines and an escape**, not a
+feature matrix: *Registration System* (which carries the payments, the race kit
+pickup and delivery and the promo codes inside it, listed in its hint rather
+than offered as separate ticks), *Results and E-Certificates*, and *Not Sure
+Yet* — which takes the full row and cannot share the answer with either, a rule
+`servicesOf` enforces on the route too. It was six technical options and that
+made an organizer stop to work out which boxes were really one box; an
+application form is not where somebody learns our architecture. There is
+deliberately no timing option — this platform imports finishing times, it does
+not time a race. It asks all of it because approving an organizer is not a
+formality — an approved account can publish a public race, take a runner's
+money and email everyone who signs up — and a name, an address and a password
+are everything a stranger needs to *look* like an organizer. Required is the
+default and the rest is marked *Optional*, because a form that demands an event
+date from somebody who has not booked a venue gets a made-up one. The rail's
+dots are not buttons (nothing is saved until the last step, and Back is what
+goes back); the step's labels are hidden below `sm`, where its own heading says
+the same thing. Every rule comes from `lib/organizer-application.ts`, run per
+step here and again in the route, with a count at the top of a failed step and
+the caret sent to the first control that caused it. Both presses go through
+**one submit button** whose label changes: a `type="button"` Continue beside a
+`type="submit"` Submit shares its DOM node with React, so the press that
+reached step 3 re-typed that node and the form posted itself on arrival. A
+sent application replaces the form with what happens next, rather than a green
+ribbon — three numbered steps and the address the reply will go to, which is
+what stops somebody applying twice an hour later ·
 `/admin/events` (the row menu carries
 **Schedule Sign-Ups**, which opens a modal holding the same
 `RegistrationOpeningPicker` the create and edit forms use: open registration
@@ -660,7 +714,14 @@ reference.
 `/superadmin` dashboard (platform revenue, fees) · `/superadmin/organizers`
 (approve, suspend, set commission; **Pending / Approved / Suspended chips** find
 accounts by status, Pending with its count — they replaced a Filter button that
-had no handler) · `/superadmin/communities` (approve, rename, reject clubs; the
+had no handler. **This screen does not yet show the application** the account
+was created from: `/admin/register` now collects the contact person, the phone
+number, the location, the website, the experience, the services wanted and the
+first event, and both this page and its `GET` still read only name, email,
+status, fee, created-at and event count. So the owner is still approving from
+six fields while fifteen more sit in the row — closing that is the next piece
+of work here, and until it lands the details are reachable only in the
+database) · `/superadmin/communities` (approve, rename, reject clubs; the
 Add a club box and its button share one row from `sm` up) · `/superadmin/feedback` (**the reading end of the public form** —
 three metric cards over the messages, newest first. It is the super admin's
 screen and not the organizer's for the same reason the club list is: feedback is
@@ -679,7 +740,7 @@ opens its message from a *Read message* button rather than a tap anywhere.
 ### API (`src/app/api/**/route.ts`)
 | Route | Methods | Notes |
 | --- | --- | --- |
-| `auth/login`, `auth/logout`, `auth/register` | POST | Sets / clears `admin_token`. **The account email is lowercased at the door** on both `login` and `register` (`normalizeAccountEmail`, §5) — and on `admin/profile` PATCH, which is the third place one can be written. Postgres compares text exactly, so until this landed a single capital from a browser autofill found no row and the login answered "Invalid credentials" for a password that was perfectly correct; `register` had the matching gap, where two accounts could exist for one address differing only in case and the unique index would not have stopped them. All three normalise through one helper, because this is precisely a rule two screens must never disagree about. **`login` looks the address up in both account tables** through `findAccountByEmail` (§5): an Organizer row signs in as its owner (or as the super admin), a `StaffAccount` signs in to its earliest-accepted membership of an active organizer (an invitation not yet accepted has no password and is answered like a wrong one). Every sign-in and every failed or refused one is written to the audit trail, except an address that matches no account; `register` and `admin/profile` refuse an address either table already holds |
+| `auth/login`, `auth/logout`, `auth/register` | POST | Sets / clears `admin_token`. **The account email is lowercased at the door** on both `login` and `register` (`normalizeAccountEmail`, §5) — and on `admin/profile` PATCH, which is the third place one can be written. Postgres compares text exactly, so until this landed a single capital from a browser autofill found no row and the login answered "Invalid credentials" for a password that was perfectly correct; `register` had the matching gap, where two accounts could exist for one address differing only in case and the unique index would not have stopped them. All three normalise through one helper, because this is precisely a rule two screens must never disagree about. **`login` looks the address up in both account tables** through `findAccountByEmail` (§5): an Organizer row signs in as its owner (or as the super admin), a `StaffAccount` signs in to its earliest-accepted membership of an active organizer (an invitation not yet accepted has no password and is answered like a wrong one). Every sign-in and every failed or refused one is written to the audit trail, except an address that matches no account; `register` and `admin/profile` refuse an address either table already holds. **`register` is now the organizer application**: it validates the whole body through `readOrganizerApplication` (§5) — the same module the form runs, so a tab left open cannot post past a rule the form enforces — and writes the fifteen application columns alongside the account, empty strings stored as null so a screen reading them back has one absent value to test for. A refusal carries `errors` keyed by field beside the catch-all `error` string, which is how the form lands "an account already uses that address" beside the address rather than in a banner. The row is created `PENDING` and nothing else happens — no email, no session, no access — because the approval is the gate, not the form |
 | `admin/events/[id]/registrants/export` | POST | **The audit entry for a CSV export**, which is built in the browser from rows already on screen. The registrants table calls it fire-and-forget (with `keepalive`) before building the file, so a failed log never costs the organizer their download. Records the row count and whether it was a selection — never who was in it. Answers 204 |
 | `checkout` | POST | PayMongo checkout session. Re-derives every amount from the database. |
 | `checkout/manual` | POST | Bank transfer: multipart, proof file → private blob. The file is validated by `uploadPrivateProof` under the `proof` kind — JPG, PNG, WEBP, GIF or PDF, 4 MB — which is the same list the wizard's picker offers |
