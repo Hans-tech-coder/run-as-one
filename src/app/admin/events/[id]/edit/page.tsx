@@ -29,6 +29,7 @@ import { cleanBankAccounts, type BankAccountDraft } from '@/app/admin/events/ban
 import { offersBankTransfer } from '@/lib/registration-form';
 import AdminRouteLoading from '@/app/admin/AdminRouteLoading';
 import { EVENT_FORM_SHAPE } from '@/app/admin/route-loading-shape';
+import BusyLabel from '@/components/ui/BusyLabel';
 
 // The premade templates that used to sit under /public/certificates are gone —
 // the only way to get a certificate background now is to upload one. An event
@@ -460,7 +461,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
                         <UploadCloud size={32} />
                       </div>
                       <div className="file-upload-title">
-                        {uploadingField === 'imageUrl' ? 'Uploading…' : 'Click to upload cover image'}
+                        {uploadingField === 'imageUrl' ? <BusyLabel>Uploading</BusyLabel> : 'Click to upload cover image'}
                       </div>
                       <div className="file-upload-desc">SVG, PNG, JPG or GIF (max. 800x400px)</div>
                     </div>
@@ -497,7 +498,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
                         <UploadCloud size={32} />
                       </div>
                       <div className="file-upload-title">
-                        {uploadingField === 'raceKitImageUrl' ? 'Uploading…' : 'Click to upload race kit poster'}
+                        {uploadingField === 'raceKitImageUrl' ? <BusyLabel>Uploading</BusyLabel> : 'Click to upload race kit poster'}
                       </div>
                       <div className="file-upload-desc">Optional • PNG, JPG (ideal for social sharing)</div>
                     </div>
@@ -749,7 +750,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
                       <UploadCloud size={32} />
                     </div>
                     <div className="file-upload-title">
-                      {uploadingField === 'certificateTemplate' ? 'Uploading…' : 'Upload Certificate Template'}
+                      {uploadingField === 'certificateTemplate' ? <BusyLabel>Uploading</BusyLabel> : 'Upload Certificate Template'}
                     </div>
                     <div className="file-upload-desc">PNG, JPG, or PDF (Landscape A4 recommended)</div>
                   </div>
@@ -900,7 +901,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
               disabled={isLoading || uploadingField !== null || uploadingPosters > 0}
               className="btn-light"
             >
-              {isLoading ? 'Saving...' : 'Update Event'}
+              {isLoading ? <BusyLabel>Saving</BusyLabel> : 'Update Event'}
             </button>
           </div>
         </form>

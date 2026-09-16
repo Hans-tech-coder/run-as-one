@@ -9,6 +9,7 @@ import { toWholeSeconds } from '@/lib/race-time';
 import { runnerResultPath } from '@/lib/event-slug';
 import RunnerLoader from '@/components/ui/RunnerLoader';
 import { ECertificateModal, useECertificate } from '@/components/ECertificate';
+import BusyLabel from '@/components/ui/BusyLabel';
 import {
   useReactTable,
   getCoreRowModel,
@@ -267,14 +268,7 @@ function ActionMenu({ path, onViewCert, isGenerating }: { path: string, onViewCe
           aria-busy={isGenerating || undefined}
           className="w-full text-left flex items-center gap-2 px-3 py-2.5 text-sm text-accent-blue font-medium rounded-lg hover:bg-white/5 disabled:hover:bg-transparent disabled:cursor-wait transition-colors"
         >
-          {isGenerating ? (
-            <>
-              <RunnerLoader size="sm" tone="current" label="" />
-              Generating…
-            </>
-          ) : (
-            'View E-Cert'
-          )}
+          {isGenerating ? <BusyLabel>Generating</BusyLabel> : 'View E-Cert'}
         </button>
       </div>
     </div>

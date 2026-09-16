@@ -51,6 +51,103 @@
   100% { transform: translate(-5%, -5%) scale(0.9); }
 }
 
+/* ── The column the card stands in (AuthHomeLink.tsx) ─────────────────────
+   The sign-in pages are drawn without the navbar and without the sidebar, so
+   until this existed they had no way out but the browser's Back button — which
+   a page opened from a link does not have. The card is wrapped in this column
+   so the way home can sit *above* it, in the flow: pinned to the corner of the
+   viewport instead, it would slide under the card on a short screen (a phone
+   with the keyboard open, where `margin-block: auto` already collapses and the
+   card starts at the very top).
+
+   The column carries the auto margins and the width the card used to, so the
+   pair is centred as one; the card fills it. `.auth-card` keeps its own rules
+   for the invitation page, which still stands in `.auth-container` alone. */
+.auth-shell {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  margin-block: auto;
+}
+
+.auth-shell .auth-card {
+  width: 100%;
+  max-width: none;
+  margin-block: 0;
+}
+
+/* The way back, above the card. Bare text and an arrow — no fill and no edge:
+   a pill here read as a third button on a page whose whole job is to get one
+   button pressed, and it drew the eye before Sign In did. It still keeps a
+   44px target, because a 14px line of text is a 20px one; the box is padding
+   rather than a background, and the negative left margin pulls the arrow back
+   flush with the card's edge so the two line up. */
+.auth-home-link {
+  align-self: flex-start;
+  max-width: 100%;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0 0.5rem;
+  margin-left: -0.5rem;
+  border-radius: var(--radius-lg);
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  transition: color var(--duration-fast) var(--ease-smooth-out);
+}
+
+.auth-home-link__icon {
+  flex-shrink: 0;
+  transition: transform var(--duration-fast) var(--ease-smooth-out);
+}
+
+/* Pointer only, for the same reason the card lifts only on a pointer: a tap on
+   a phone leaves :hover stuck on the thing last touched. */
+@media (hover: hover) {
+  .auth-home-link:hover {
+    color: var(--text-primary);
+  }
+
+  .auth-home-link:hover .auth-home-link__icon {
+    transform: translateX(-3px);
+  }
+}
+
+.auth-home-link:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: -2px;
+}
+
+/* The lockup at the head of the card, wrapped in a link to the same place —
+   the public navbar's behaviour, for the people who click a logo instead of
+   reading the page. The offset keeps the ring clear of the stacked wordmark. */
+.auth-logo-link {
+  display: inline-flex;
+  border-radius: var(--radius-lg);
+  text-decoration: none;
+  transition: opacity var(--duration-fast) var(--ease-smooth-out);
+}
+
+@media (hover: hover) {
+  .auth-logo-link:hover {
+    opacity: 0.75;
+  }
+}
+
+.auth-logo-link:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 6px;
+}
+
 .auth-card {
   max-width: 440px;
   position: relative;
@@ -244,6 +341,11 @@
     border-radius: var(--radius-xl);
   }
 
+  /* Closer to the card it belongs to, where the page is short of height. */
+  .auth-shell {
+    gap: 0.75rem;
+  }
+
   .auth-title {
     font-size: 1.5rem;
   }
@@ -273,7 +375,10 @@
     animation: none;
   }
 
-  .auth-card {
+  .auth-card,
+  .auth-home-link,
+  .auth-home-link__icon,
+  .auth-logo-link {
     transition: none;
   }
 }

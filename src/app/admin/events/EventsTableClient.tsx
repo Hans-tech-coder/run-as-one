@@ -15,6 +15,7 @@ import RegistrationScheduleModal from './RegistrationScheduleModal';
 import { openingInstantISO, type OpeningDraft } from './registration-opening';
 import { formatEventInstant } from '@/lib/event-schedule';
 import { useAlert } from '@/components/ui/AlertProvider';
+import BusyLabel from '@/components/ui/BusyLabel';
 import {
   Table,
   TableBody,
@@ -737,9 +738,9 @@ export default function EventsTableClient({ events, canCreate = true }: EventsTa
               type="button" 
               onClick={handleEventDeleteConfirm}
               disabled={isDeleting}
-              className="px-5 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+              className="px-5 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
             >
-              {isDeleting ? 'Deleting...' : 'Delete Event'}
+              {isDeleting ? <BusyLabel>Deleting</BusyLabel> : 'Delete Event'}
             </button>
           </div>
         </div>

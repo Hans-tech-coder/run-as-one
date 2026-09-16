@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { CalendarClock, X } from 'lucide-react';
 import RegistrationOpeningPicker from './RegistrationOpeningPicker';
+import BusyLabel from '@/components/ui/BusyLabel';
 import {
   describeOpening,
   openingDraft,
@@ -138,7 +139,7 @@ export default function RegistrationScheduleModal({
             Cancel
           </button>
           <button type="button" onClick={handleSave} disabled={isSaving} className="btn-light">
-            {isSaving ? 'Saving...' : 'Save Opening'}
+            {isSaving ? <BusyLabel>Saving</BusyLabel> : 'Save Opening'}
           </button>
         </div>
       </div>

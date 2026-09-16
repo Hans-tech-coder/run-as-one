@@ -34,6 +34,9 @@ export default function SuperAdminShell({
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
     router.push('/admin/login');
+    // And drop the cached layout that still names the person who just left,
+    // so the next sign-in in this browser cannot inherit their sidebar.
+    router.refresh();
   };
 
   return (

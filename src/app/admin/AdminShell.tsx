@@ -38,6 +38,9 @@ export default function AdminShell({
     // The session cookie is httpOnly, so only a route can clear it.
     await fetch('/api/auth/logout', { method: 'POST' });
     router.push('/admin/login');
+    // And drop the cached layout that still names the person who just left,
+    // so the next sign-in in this browser cannot inherit their sidebar.
+    router.refresh();
   };
 
   // Only the screens this person's role opens (lib/signed-in-user.ts). The

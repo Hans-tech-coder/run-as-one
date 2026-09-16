@@ -3,8 +3,8 @@
 import React, { useEffect } from 'react';
 import { FileText } from 'lucide-react';
 import { usePathname, useSearchParams } from 'next/navigation';
-import RunnerLoader from '@/components/ui/RunnerLoader';
 import { ECertificateModal, useECertificate } from '@/components/ECertificate';
+import BusyLabel from '@/components/ui/BusyLabel';
 
 interface Props {
   result: any;
@@ -35,10 +35,7 @@ export default function ECertificateGenerator({ result, event }: Props) {
         className="btn-gradient w-full sm:w-fit sm:min-w-[20rem] sm:px-10 mx-auto py-4 text-base sm:text-lg flex items-center justify-center gap-3 mt-6 sm:mt-8 shadow-lg shadow-accent-blue/20 rounded-[16px] group"
       >
         {isGenerating ? (
-          <>
-            <RunnerLoader size="sm" tone="current" label="" />
-            Generating E-Certificate...
-          </>
+          <BusyLabel>Generating E-Certificate</BusyLabel>
         ) : (
           <>
             <FileText size={22} className="group-hover:scale-110 transition-transform" />

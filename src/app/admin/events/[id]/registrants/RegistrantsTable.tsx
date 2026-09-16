@@ -38,6 +38,7 @@ import { SHIRT_SIZES } from '@/lib/shirt-size';
 import { upperCaseAsTyped } from '@/lib/text-case';
 import { formatPesos } from '@/lib/money';
 import { orderActivityPath, statusProvenance } from '@/lib/activity';
+import BusyLabel from '@/components/ui/BusyLabel';
 
 /**
  * What the signed-in person may do on this event, decided by page.tsx with the
@@ -1908,7 +1909,7 @@ export default function RegistrantsTable({
                     className="btn-light max-sm:basis-full"
                   >
                     <CheckCircle className="w-4 h-4" />
-                    {updatingId === viewingRunner.registrationId ? 'Validating...' : 'Validate Payment'}
+                    {updatingId === viewingRunner.registrationId ? <BusyLabel>Validating</BusyLabel> : 'Validate Payment'}
                   </button>
                 )}
               </div>
@@ -2158,9 +2159,9 @@ export default function RegistrantsTable({
               type="submit"
               form="edit-runner-form"
               disabled={isSaving}
-              className="px-6 py-2 bg-white text-black rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors disabled:opacity-50"
+              className="px-6 py-2 bg-white text-black rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
             >
-              {isSaving ? 'Saving...' : 'Save Changes'}
+              {isSaving ? <BusyLabel>Saving</BusyLabel> : 'Save Changes'}
             </button>
           </div>
         </div>
@@ -2197,9 +2198,9 @@ export default function RegistrantsTable({
               type="button"
               onClick={handleDeleteConfirm}
               disabled={isDeleting}
-              className="px-5 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+              className="px-5 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
             >
-              {isDeleting ? 'Deleting...' : 'Delete'}
+              {isDeleting ? <BusyLabel>Deleting</BusyLabel> : 'Delete'}
             </button>
           </div>
         </div>
@@ -2236,9 +2237,9 @@ export default function RegistrantsTable({
               type="button"
               onClick={handleBulkDeleteConfirm}
               disabled={isBulkDeleting}
-              className="px-5 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+              className="px-5 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
             >
-              {isBulkDeleting ? 'Deleting...' : 'Delete Selected'}
+              {isBulkDeleting ? <BusyLabel>Deleting</BusyLabel> : 'Delete Selected'}
             </button>
           </div>
         </div>
@@ -2330,10 +2331,10 @@ export default function RegistrantsTable({
               type="button"
               onClick={handleRemarksSave}
               disabled={isSavingRemarks || (!remarksDraft.trim() && !remarkingRunner?.remarks)}
-              className="px-6 py-2 bg-white text-black rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors disabled:opacity-50"
+              className="px-6 py-2 bg-white text-black rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
             >
               {isSavingRemarks
-                ? 'Saving...'
+                ? <BusyLabel>Saving</BusyLabel>
                 : !remarksDraft.trim() && remarkingRunner?.remarks
                   ? 'Clear Remarks'
                   : 'Save Remarks'}
@@ -2494,7 +2495,7 @@ export default function RegistrantsTable({
                 // inside the admin (PROJECT_GUIDE §9).
                 className="btn-light"
               >
-                {isMarkingSent ? 'Marking...' : 'Mark As Sent'}
+                {isMarkingSent ? <BusyLabel>Marking</BusyLabel> : 'Mark As Sent'}
               </button>
             )}
           </div>

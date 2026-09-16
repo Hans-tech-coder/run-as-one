@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect, useCallback, useLayoutEffect } from
 import { createPortal } from 'react-dom';
 import { MoreVertical, CheckCircle, Trash2, Edit, Eye } from 'lucide-react';
 import { placeRowMenu, type RowMenuPlacement } from '../../../row-menu-position';
+import BusyLabel from '@/components/ui/BusyLabel';
 
 interface RegistrantActionsMenuProps {
   runnerId: string;
@@ -195,7 +196,7 @@ export default function RegistrantActionsMenu({
             role="menuitem"
           >
             <CheckCircle size={16} />
-            {updatingId === registrationId ? 'Updating...' : 'Validate Payment'}
+            {updatingId === registrationId ? <BusyLabel>Updating</BusyLabel> : 'Validate Payment'}
           </button>
         )}
 

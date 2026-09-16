@@ -6,6 +6,7 @@ import { UploadCloud, CheckCircle2, AlertCircle, FileSpreadsheet, Play, X, Plus 
 import * as XLSX from 'xlsx';
 import { useRouter } from 'next/navigation';
 import AdminSelect from '../../../AdminSelect';
+import BusyLabel from '@/components/ui/BusyLabel';
 
 type Column = { label: string; index: number };
 
@@ -551,11 +552,11 @@ export default function ResultsUploaderClient({ event }: { event: any }) {
               onClick={processAndUpload}
               disabled={isProcessing}
             >
-              {isProcessing ? 'Processing...' : (
-                <>
-                  <Play size={18} />
-                  Process & Upload Results
-                </>
+              <Play size={18} />
+              {isProcessing ? (
+                <BusyLabel>Processing</BusyLabel>
+              ) : (
+                'Process & Upload Results'
               )}
             </button>
           </div>

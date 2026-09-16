@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Trash, UploadCloud } from 'lucide-react';
+import BusyLabel from '@/components/ui/BusyLabel';
 
 /**
  * The optional inclusions poster on one category or package row.
@@ -76,7 +77,7 @@ export default function PosterField({
               <UploadCloud size={32} />
             </div>
             <div className="file-upload-title">
-              {uploading ? 'Uploading…' : 'Click to upload poster'}
+              {uploading ? <BusyLabel>Uploading</BusyLabel> : 'Click to upload poster'}
             </div>
             <div className="file-upload-desc">
               PNG or JPG • the shirt, medal and race kit this option includes

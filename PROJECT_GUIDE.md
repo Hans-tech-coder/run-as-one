@@ -199,7 +199,8 @@ src/
                             #   PublicRouteLoading…)
   components/ui/            # cross-app primitives: AlertProvider, AlertModal, Toast,
                             #   Skeleton, LinkPending, FieldError, table,
-                            #   RunnerLoader, LinkPendingIcon, RunnerOverlay
+                            #   RunnerLoader, BusyLabel, LinkPendingIcon,
+                            #   RunnerOverlay
   lib/                      # domain logic — see §5. Read these before re-deriving a rule.
   data/mockEvents.ts        # legacy mock data
 prisma/schema.prisma        # the data model, heavily commented
@@ -482,7 +483,9 @@ the winners board and would otherwise swallow it.
 registrations. There is no *Page Views* tile: it was a placeholder that only
 ever read `N/A`, and a metric card that never carries a number teaches an
 organizer to stop reading the row. Do not re-add a tile until something real
-counts behind it) · `/admin/login` · `/admin/register` · `/admin/events` (the row menu carries
+counts behind it) · `/admin/login` · `/admin/register` (both drawn without the
+sidebar, and both carrying `AuthHomeLink` back to the public site — §8) ·
+`/admin/events` (the row menu carries
 **Schedule Sign-Ups**, which opens a modal holding the same
 `RegistrationOpeningPicker` the create and edit forms use: open registration
 now, or name the date and time it opens itself. Saving either answer also lifts
@@ -932,6 +935,19 @@ These are the user's own standing preferences. Follow them without being asked.
   counts by row **id**, not by object identity: sorting rebuilds the rows, so an
   `indexOf` on them finds nothing and every line numbers itself 0 the moment a
   header is clicked.
+- **Changing who is signed in ends with `router.refresh()`.** The sidebar is
+  rendered by the **layout** (`admin/layout.tsx` reads `getSignedInUser()`), and
+  the sign-in pages live *under* `/admin`, so they share that layout — rendered
+  with no session, giving the fallback "Organizer / Organizer Admin" block and a
+  menu without Team or Activity. Next keeps a rendered layout in its client
+  router cache and reuses it across a `router.push`, refetching only the page
+  inside it, so a sign-in that only pushes lands on correct dashboard numbers
+  under a signed-out sidebar until the person reloads by hand. Every client call
+  that changes the session therefore pushes **and then refreshes**:
+  `admin/login` on both destinations, `handleLogout` in `AdminShell` and
+  `SuperAdminShell` (so the next sign-in cannot inherit the departing person's
+  name), and the two that already did it — `InviteAcceptClient` and
+  `OrganizerSwitcher`.
 - **One responsive dashboard.** Both dashboards stand in
   `admin/DashboardShell.tsx`; `AdminShell` and `SuperAdminShell` hand it only
   their links, their role line, and (for `/admin`) the organizer switcher. The
@@ -1104,7 +1120,25 @@ These are the user's own standing preferences. Follow them without being asked.
     `.auth-container` — instead of the dashboard frame, whose header skeleton
     bar over a sign-in page was a placeholder for furniture that never
     arrived. A new page that lives under `/admin` without the sidebar goes in
-    that list.
+    that list. **Both sign-in pages carry a way back to the public site**
+    (`admin/AuthHomeLink.tsx`): a *Back to Run As One* link above the card,
+    and the lockup at the head of the card wrapped in a link to `/` the way
+    the public navbar wraps it. They have no navbar and no sidebar by design,
+    which left them dead ends for anyone who arrived from a stale bookmark or
+    only wanted to look at an event — and a page opened from a link has no
+    Back button to press. The pill sits **in the flow**, inside a new
+    `.auth-shell` column that now carries the width and the auto margins the
+    card used to: pinned to the corner of the viewport it would slide under
+    the card on a short screen, which is exactly the case the auto margins
+    exist for. It is **bare text and an arrow — no fill, no border**: drawn as
+    a glass pill it read as a third button on a page whose whole job is to get
+    one button pressed, and it pulled the eye before Sign In did. It is still
+    a 44px target (padding, not a background, and a negative left margin pulls
+    the arrow flush with the card's edge — the same trick `.admin-back-link`
+    uses), and it names the site rather than saying "Home", which on a page
+    headed *Admin Portal* would be ambiguous. The invitation page keeps `.auth-card` on its own and is
+    unchanged — it is a one-time destination from an email and already offers
+    *Go to Sign In*.
   - **Checking a screen.** A dashboard change is not done until:
     - nothing scrolls sideways at 360, 390, 767 and 820, measured with the
       script below at rest *and* with the screen's menus and dialogs open;
@@ -1338,9 +1372,29 @@ These are the user's own standing preferences. Follow them without being asked.
     asks the runner to keep the page open. **Portalled to `<body>`**, because
     the wizard's stagger reveal leaves transforms on its panels and a
     transformed ancestor traps `position: fixed`.
-  - **Inside a button** — `size="sm" tone="current"` draws it in the button's
-    own text colour, since brand blue vanishes into the gradient's blue end
-    (the e-certificate generator, and the leaderboard's *View E-Cert* item).
+  - **Inside a button — always through `components/ui/BusyLabel`.** A button
+    that is working renders `{busy ? <BusyLabel>Saving</BusyLabel> : 'Save'}`:
+    a plain gerund with **no trailing ellipsis**, and the `sm` figure running
+    **after** the words. `tone="current"` draws it in the button's own text
+    colour, since brand blue vanishes into the gradient's blue end, and
+    `label=""` keeps it silent — the word beside it already says what is
+    happening. The owner asked for both halves of this: the dots out ("Saving…"
+    is a loader drawn in punctuation — three marks that never move cannot say
+    the work is still going, which is the same objection that removed the dot
+    loader), and the figure behind the words rather than in front, so the label
+    starts where it started when the button was idle and only the trailing mark
+    changes. It is a component, not a snippet, so the ordering is decided once:
+    **do not hand-roll a busy button.** Its `.busy-label` (globals.css) is an
+    8px inline-flex, so the word-to-figure gap is the same in a `.btn-light`
+    whose icon gap is 8px and in an action-menu row whose gap is 12px; a button
+    with a leading icon keeps it while busy, so it never changes width
+    mid-press. Every busy control in the app is on it — both sign-ins and the
+    staff invite, Save/Update Event, the schedule modal, account settings and
+    the inline card edit, Validate Payment in all three places it appears, the
+    registrants table's Save/Delete/Delete Selected/Remarks/Mark As Sent, the
+    results uploader, every "Uploading" dropzone, the wizard's checkout, the
+    feedback form's Send, the e-certificate button and the leaderboard's *View
+    E-Cert*.
   The leaderboard's rows used to open a result with `window.location.href`, a
   full reload with nothing on screen meanwhile; they now `router.push` in a
   transition, prefetch on hover, and the row's number becomes the figure while

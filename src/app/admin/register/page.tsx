@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { RunAsOneLogo } from '@/components/RunAsOneLogo';
+import BusyLabel from '@/components/ui/BusyLabel';
+import AuthHomeLink from '../AuthHomeLink';
 
 import './../Auth.css';
 
@@ -55,78 +57,84 @@ export default function AdminRegister() {
     <div className="auth-container">
       <div className="auth-bg-shape orange"></div>
       <div className="auth-bg-shape blue"></div>
-      
-      <div className="auth-card">
-        <div className="auth-header">
-          <RunAsOneLogo variant="stacked" className="[--rao-logo-size:64px] mb-5" />
-          <h1 className="auth-title">Apply as Organizer</h1>
-          <p className="auth-subtitle">Register to manage your running events.</p>
-        </div>
 
-        {error && (
-          <div className="auth-message auth-error">
-            {error}
-          </div>
-        )}
+      <div className="auth-shell">
+        <AuthHomeLink />
 
-        {success && (
-          <div className="auth-message auth-success">
-            {success}
-          </div>
-        )}
-
-        <form onSubmit={handleRegister} className="auth-form">
-          <div className="form-group">
-            <label className="form-label">Organization / Full Name</label>
-            <input 
-              type="text" 
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="form-input"
-              placeholder="Sunrise Running Club"
-              required
-            />
+        <div className="auth-card">
+          <div className="auth-header">
+            <Link href="/" className="auth-logo-link mb-5" aria-label="Run As One home page">
+              <RunAsOneLogo variant="stacked" className="[--rao-logo-size:64px]" decorative />
+            </Link>
+            <h1 className="auth-title">Apply as Organizer</h1>
+            <p className="auth-subtitle">Register to manage your running events.</p>
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Email Address</label>
-            <input 
-              type="email" 
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="form-input"
-              placeholder="organizer@example.com"
-              required
-            />
-          </div>
-          
-          <div className="form-group">
-            <label className="form-label">Password</label>
-            <input 
-              type="password" 
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="form-input"
-              placeholder="••••••••"
-              required
-              minLength={6}
-            />
-          </div>
+          {error && (
+            <div className="auth-message auth-error">
+              {error}
+            </div>
+          )}
 
-          <button 
-            type="submit" 
-            disabled={isLoading || !!success}
-            className="btn-gradient auth-submit text-white font-medium"
-          >
-            {isLoading ? 'Submitting...' : 'Submit Application'}
-          </button>
-        </form>
+          {success && (
+            <div className="auth-message auth-success">
+              {success}
+            </div>
+          )}
 
-        <div className="auth-footer">
-          Already have an account?{' '}
-          <Link href="/admin/login" className="auth-link">
-            Sign In
-          </Link>
+          <form onSubmit={handleRegister} className="auth-form">
+            <div className="form-group">
+              <label className="form-label">Organization / Full Name</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="form-input"
+                placeholder="Sunrise Running Club"
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Email Address</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="form-input"
+                placeholder="organizer@example.com"
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="form-input"
+                placeholder="••••••••"
+                required
+                minLength={6}
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoading || !!success}
+              className="btn-gradient auth-submit text-white font-medium"
+            >
+              {isLoading ? <BusyLabel>Submitting</BusyLabel> : 'Submit Application'}
+            </button>
+          </form>
+
+          <div className="auth-footer">
+            Already have an account?{' '}
+            <Link href="/admin/login" className="auth-link">
+              Sign In
+            </Link>
+          </div>
         </div>
       </div>
     </div>

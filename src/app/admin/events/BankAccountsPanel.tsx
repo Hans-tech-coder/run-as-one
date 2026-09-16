@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Landmark, Plus, Trash, Trash2, UploadCloud } from 'lucide-react';
 import { blankBankAccount, type BankAccountDraft } from './bank-account-draft';
+import BusyLabel from '@/components/ui/BusyLabel';
 
 /**
  * The accounts runners transfer to for this event.
@@ -220,7 +221,7 @@ function QrField({
               <UploadCloud size={32} />
             </div>
             <div className="file-upload-title">
-              {uploading ? 'Uploading…' : 'Click to upload QR'}
+              {uploading ? <BusyLabel>Uploading</BusyLabel> : 'Click to upload QR'}
             </div>
             <div className="file-upload-desc">
               PNG or JPG • the QR runners scan to pay this account

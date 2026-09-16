@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, ZoomIn, ZoomOut, RotateCw, Undo2, ExternalLink, CheckCircle } from 'lucide-react';
 import { formatPesos } from '@/lib/money';
+import BusyLabel from '@/components/ui/BusyLabel';
 
 /**
  * A deposit slip at the size a human can actually read it.
@@ -455,7 +456,7 @@ export default function ProofLightbox({
             {canValidate && onValidate && (
               <button type="button" onClick={onValidate} disabled={isValidating} className="btn-light max-sm:w-full">
                 <CheckCircle className="w-4 h-4" />
-                {isValidating ? 'Validating...' : 'Validate Payment'}
+                {isValidating ? <BusyLabel>Validating</BusyLabel> : 'Validate Payment'}
               </button>
             )}
           </div>

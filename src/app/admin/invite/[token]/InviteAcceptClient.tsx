@@ -8,6 +8,7 @@ import FieldError from '@/components/ui/FieldError';
 import PasswordField from '../../settings/PasswordField';
 import { ROLE_HINTS, type MembershipRole } from '@/lib/permissions';
 import { MAX_NAME_LENGTH, MIN_PASSWORD_LENGTH, newPasswordErrors, type FieldErrors } from '@/lib/team';
+import BusyLabel from '@/components/ui/BusyLabel';
 
 /**
  * Accepting an invitation: the form half of `/admin/invite/[token]`.
@@ -225,7 +226,7 @@ export default function InviteAcceptClient({
             disabled={isSubmitting}
             className="btn-gradient auth-submit text-white font-medium"
           >
-            {isSubmitting ? 'Joining…' : 'Accept and Sign In'}
+            {isSubmitting ? <BusyLabel>Joining</BusyLabel> : 'Accept and Sign In'}
           </button>
         </form>
       </div>

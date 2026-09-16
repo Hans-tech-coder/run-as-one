@@ -95,6 +95,7 @@ import {
 } from "./validation";
 import { formatEventDayShort } from "@/lib/event-schedule";
 import { useStepReveal } from "./useStepReveal";
+import BusyLabel from "@/components/ui/BusyLabel";
 import "./RegistrationWizard.css";
 
 interface Participant {
@@ -1848,13 +1849,17 @@ export default function RegistrationWizardClient({
                     onClick={handleCheckout}
                     disabled={isProcessing || !consentGiven}
                   >
-                    {isProcessing
-                      ? paymentMethod !== "BANK_TRANSFER"
-                        ? "Connecting to PayMongo..."
-                        : "Processing"
-                      : paymentMethod !== "BANK_TRANSFER"
-                        ? `Pay ₱${formatPesos(totalAmount)}`
-                        : "Upload Deposit Slip"}
+                    {isProcessing ? (
+                      <BusyLabel>
+                        {paymentMethod !== "BANK_TRANSFER"
+                          ? "Connecting to PayMongo"
+                          : "Processing"}
+                      </BusyLabel>
+                    ) : paymentMethod !== "BANK_TRANSFER" ? (
+                      `Pay ₱${formatPesos(totalAmount)}`
+                    ) : (
+                      "Upload Deposit Slip"
+                    )}
                   </button>
                 </div>
               </div>

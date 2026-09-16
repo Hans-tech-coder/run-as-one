@@ -822,6 +822,16 @@ input[type="datetime-local"]:focus::-webkit-calendar-picker-indicator {
   gap: 14px;
 }
 .t-runner--sm { --runner-size: 1.3em; gap: 0; }
+
+/* The label of a working button: the word, then the figure running after it
+   (`components/ui/BusyLabel`). Its own 8px gap, so the distance from the word
+   to the figure is the same whether the button sets 8px between its leading
+   icon and its label (.btn-light) or 12px (an action-menu row). */
+.busy-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
 .t-runner--lg { --runner-size: 104px; gap: 18px; }
 
 .t-runner--current {

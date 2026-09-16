@@ -10,6 +10,7 @@ import PasswordField from './PasswordField';
 
 // One constant for this form, the password route and the invitation page.
 import { MIN_PASSWORD_LENGTH } from '@/lib/team';
+import BusyLabel from '@/components/ui/BusyLabel';
 
 type FieldErrors = Record<string, string>;
 
@@ -208,7 +209,7 @@ function ProfilePanel({
             className="btn-light"
             disabled={isSaving || !isDirty}
           >
-            {isSaving ? 'Saving…' : 'Save Changes'}
+            {isSaving ? <BusyLabel>Saving</BusyLabel> : 'Save Changes'}
           </button>
         </div>
       </div>
@@ -358,7 +359,7 @@ function PasswordPanel({ alert }: { alert: AlertFn }) {
             className="btn-light"
             disabled={isSaving || !hasInput}
           >
-            {isSaving ? 'Changing…' : 'Change Password'}
+            {isSaving ? <BusyLabel>Changing</BusyLabel> : 'Change Password'}
           </button>
         </div>
       </div>

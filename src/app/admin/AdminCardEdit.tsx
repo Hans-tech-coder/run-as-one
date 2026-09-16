@@ -1,5 +1,6 @@
 import React from 'react';
 import { Check, X } from 'lucide-react';
+import BusyLabel from '@/components/ui/BusyLabel';
 
 /**
  * An inline edit, as a card holds it.
@@ -86,7 +87,7 @@ export default function AdminCardEdit({
       <div className="admin-card-edit-actions">
         <button type="submit" className="btn-filter is-primary" disabled={saving}>
           <Check size={16} aria-hidden="true" />
-          {saving ? 'Saving…' : 'Save'}
+          {saving ? <BusyLabel>Saving</BusyLabel> : 'Save'}
         </button>
         <button type="button" className="btn-filter" onClick={onCancel}>
           <X size={16} aria-hidden="true" />

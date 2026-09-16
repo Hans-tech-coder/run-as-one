@@ -5,8 +5,8 @@ import Link from "next/link";
 import { AlertTriangle, CheckCircle2, ChevronRight, Lightbulb, Send, Sparkles } from "lucide-react";
 import FieldError from "@/components/ui/FieldError";
 import LinkPendingIcon from "@/components/ui/LinkPendingIcon";
-import RunnerLoader from "@/components/ui/RunnerLoader";
 import { useAlert } from "@/components/ui/AlertProvider";
+import BusyLabel from "@/components/ui/BusyLabel";
 import {
   FEEDBACK_KINDS,
   FEEDBACK_KIND_COPY,
@@ -488,10 +488,7 @@ export default function FeedbackForm({ pagePath }: { pagePath: string | null }) 
           className="btn-gradient t-stagger-line t-stagger-line--5 w-full shadow-xl shadow-accent-orange/20"
         >
           {isSending ? (
-            <>
-              <RunnerLoader size="sm" tone="current" label="" />
-              <span>Sending</span>
-            </>
+            <BusyLabel>Sending</BusyLabel>
           ) : (
             <>
               <Send size={18} aria-hidden="true" className="shrink-0" />
