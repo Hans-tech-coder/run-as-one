@@ -10,6 +10,10 @@
  * order is written into *that* organizer's trail — so an owner or admin reads
  * everything that happened to their own data, and nothing that happened to
  * anyone else's.
+ *
+ * `/superadmin/activity` reads the same way, scoped to the super admin's own
+ * `orgId` — their sign-ins and their decisions on organizer accounts, which
+ * are written there rather than into the organizer's trail.
  */
 
 import type { Prisma } from '@prisma/client';
@@ -18,10 +22,106 @@ import {
   SYSTEM_PERSON,
   actionsForFilter,
   activityWindow,
+  readActivityFilters,
   type ActivityFilterErrors,
   type ActivityFilters,
   type StatusRecord,
 } from './activity';
+
+/** One line of the trail as both activity screens hand it to `ActivityClient`. */
+export type ActivityEntry = {
+  id: string;
+  at: string;
+  actorKind: string;
+  actorName: string;
+  actorEmail: string | null;
+  action: string;
+  eventId: string | null;
+  summary: string;
+  changes: unknown;
+  ip: string | null;
+  userAgent: string | null;
+};
+
+/**
+ * One page of one organizer's trail, for a set of URL filters — everything an
+ * activity screen needs except the names of its events, which only the
+ * organizer screen has. Shared by `/admin/activity` and `/superadmin/activity`
+ * so the two cannot page, pin or filter differently.
+ *
+ * **The reading is pinned** with `asOf` once somebody pages past the first
+ * screen, so an entry recorded mid-read is counted in `newer` instead of
+ * shifting every row. The trail is append-only, so an offset against a pinned
+ * instant is exactly stable. A page past the end lands on the last page there is.
+ */
+export async function loadActivityPage(
+  organizerId: string,
+  searchParams: Record<string, string | string[] | undefined>,
+) {
+  const now = new Date();
+  const { filters, errors } = readActivityFilters(searchParams, now);
+  const asOf = filters.asOf ? new Date(filters.asOf) : now;
+  const base = activityWhere(organizerId, filters, errors, now);
+  const pinned = { AND: [base, { createdAt: { lte: asOf } }] };
+
+  const [total, newer, people] = await Promise.all([
+    prisma.auditLog.count({ where: pinned }),
+    filters.asOf
+      ? prisma.auditLog.count({ where: { AND: [base, { createdAt: { gt: asOf } }] } })
+      : Promise.resolve(0),
+    activityPeople(organizerId),
+  ]);
+
+  const lastPage = Math.max(1, Math.ceil(total / filters.size));
+  const page = Math.min(filters.page, lastPage);
+
+  const found = await prisma.auditLog.findMany({
+    where: pinned,
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    skip: (page - 1) * filters.size,
+    take: filters.size,
+    select: {
+      id: true,
+      createdAt: true,
+      actorKind: true,
+      actorName: true,
+      actorEmail: true,
+      action: true,
+      eventId: true,
+      summary: true,
+      changes: true,
+      ip: true,
+      userAgent: true,
+    },
+  });
+
+  const entries: ActivityEntry[] = found.map(entry => ({
+    id: entry.id,
+    at: entry.createdAt.toISOString(),
+    actorKind: entry.actorKind,
+    actorName: entry.actorName,
+    actorEmail: entry.actorEmail,
+    action: entry.action,
+    eventId: entry.eventId,
+    summary: entry.summary,
+    changes: entry.changes ?? null,
+    ip: entry.ip,
+    userAgent: entry.userAgent,
+  }));
+
+  return {
+    entries,
+    total,
+    newer,
+    people,
+    errors,
+    /** As applied, with `asOf` always set to the reading's instant. */
+    filters: { ...filters, page, asOf: asOf.toISOString() },
+    /** Whether the URL already pinned the reading. */
+    pinned: Boolean(filters.asOf),
+    now: now.toISOString(),
+  };
+}
 
 /**
  * The `where` for a set of filters, before the reading is pinned. The page

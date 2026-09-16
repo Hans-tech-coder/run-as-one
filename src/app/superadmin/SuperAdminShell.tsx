@@ -2,13 +2,13 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { LayoutDashboard, Users, Flag, MessageSquare } from 'lucide-react';
+import { LayoutDashboard, Users, Flag, MessageSquare, History } from 'lucide-react';
 import type { SignedInUser } from '@/lib/signed-in-user';
 import DashboardShell from '../admin/DashboardShell';
 import '../admin/Admin.css';
 
 /**
- * The platform owner's frame: its four links and the blue avatar that tells
+ * The platform owner's frame: its five links and the blue avatar that tells
  * the two dashboards apart at a glance. Everything else, the phone's drawer
  * included, is `DashboardShell`, shared with `/admin`.
  */
@@ -18,6 +18,7 @@ const NAV_ITEMS = [
   { name: 'Organizers', path: '/superadmin/organizers', icon: <Users size={20} /> },
   { name: 'Communities', path: '/superadmin/communities', icon: <Flag size={20} /> },
   { name: 'Feedback', path: '/superadmin/feedback', icon: <MessageSquare size={20} /> },
+  { name: 'Activity', path: '/superadmin/activity', icon: <History size={20} /> },
 ];
 
 export default function SuperAdminShell({

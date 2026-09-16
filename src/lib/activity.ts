@@ -39,6 +39,10 @@ export const ACTION_LABELS: Record<AuditAction, string> = {
   'staff.removed': 'Removed a member',
   'profile.updated': 'Updated profile',
   'profile.password.changed': 'Changed password',
+  'organizer.approved': 'Approved the account',
+  'organizer.rejected': 'Rejected the application',
+  'organizer.suspended': 'Suspended the account',
+  'organizer.reinstated': 'Reinstated the account',
   'event.created': 'Created an event',
   'event.updated': 'Edited an event',
   'event.registration.paused': 'Paused sign-ups',
@@ -82,6 +86,7 @@ export const ACTIVITY_GROUPS = [
   { key: 'promotions', label: 'Promotions', hint: 'Promotions created, edited, paused or deleted' },
   { key: 'team', label: 'Team', hint: 'Invitations, access changes, suspensions and removals' },
   { key: 'access', label: 'Sign-ins', hint: 'Sign-ins, failed sign-ins, and profile or password changes' },
+  { key: 'organizers', label: 'Organizer decisions', hint: 'Applications approved or rejected, accounts suspended or reinstated' },
 ] as const;
 
 export type ActivityGroupKey = (typeof ACTIVITY_GROUPS)[number]['key'];
@@ -92,6 +97,10 @@ export const ACTION_GROUP: Record<AuditAction, ActivityGroupKey> = {
   'auth.organizer.switched': 'access',
   'profile.updated': 'access',
   'profile.password.changed': 'access',
+  'organizer.approved': 'organizers',
+  'organizer.rejected': 'organizers',
+  'organizer.suspended': 'organizers',
+  'organizer.reinstated': 'organizers',
   'staff.invited': 'team',
   'staff.invitation.resent': 'team',
   'staff.invitation.accepted': 'team',
@@ -121,6 +130,27 @@ export const ACTION_GROUP: Record<AuditAction, ActivityGroupKey> = {
 };
 
 const KNOWN_ACTIONS = Object.keys(ACTION_LABELS) as AuditAction[];
+
+/**
+ * Which trail a screen reads. **`organizer`** is `/admin/activity`: what
+ * happened inside one organizer's dashboard. **`platform`** is
+ * `/superadmin/activity`: the super admin's own trail — their sign-ins and
+ * their decisions on organizer accounts. A super admin's decision is never
+ * written into the organizer's trail (that screen shows each actor's IP and
+ * device), and an organizer's dashboard work never into the platform's.
+ */
+export type ActivityScope = 'organizer' | 'platform';
+
+/** The shelves each trail can hold, in the order the Activity filter offers them. */
+export const SCOPE_GROUPS: Record<ActivityScope, readonly ActivityGroupKey[]> = {
+  organizer: ['payments', 'runners', 'data', 'events', 'promotions', 'team', 'access'],
+  platform: ['organizers', 'access'],
+};
+
+export const ACTIVITY_PATHS: Record<ActivityScope, string> = {
+  organizer: '/admin/activity',
+  platform: '/superadmin/activity',
+};
 
 export function asAuditAction(value: unknown): AuditAction | null {
   return typeof value === 'string' && (KNOWN_ACTIONS as string[]).includes(value)

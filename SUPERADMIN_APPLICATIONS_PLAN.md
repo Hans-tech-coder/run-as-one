@@ -1,6 +1,6 @@
 # Super Admin — Organizer Applications Plan
 
-**Status:** Batches 1–2 landed (Batch 2's migration still to be applied to production), Batch 3 landed (uncommitted), Batches 4–6 not started · **Owner decisions captured:** 2026-09-16
+**Status:** Batches 1–2 landed (Batch 2's migration still to be applied to production), Batches 3–4 landed (uncommitted), Batches 5–6 not started · **Owner decisions captured:** 2026-09-16
 
 `/admin/register` now collects a full organizer application — the contact
 person and their role, a mobile number, city and province, a website, how many
@@ -321,6 +321,32 @@ nowhere.
 
 `src/app/api/superadmin/organizers/[id]/route.ts` · `src/lib/audit.ts`
 *(vocabulary only)* · `PROJECT_GUIDE.md`
+
+### As built
+
+- **Four verbs**: `organizer.approved`, `organizer.rejected`,
+  `organizer.suspended`, `organizer.reinstated`. Approving from Suspended is a
+  reinstatement; approving a new application or a reconsidered rejection is an
+  approval, and the summary says *"which had been rejected"* for the second.
+- **Same transaction as the status**, like every other admin write, so a
+  decision cannot land without its row. The route now reads the super admin
+  through `getActor()` so the actor's name and email are snapshotted.
+- **Step 2 was reversed: the row goes to the super admin's own trail**
+  (`actor.orgId`), not the organizer's. An organizer's `/admin/activity` is what
+  happened inside their dashboard, and it shows every actor's IP address and
+  device — the applicant would have seen the super admin's. The organizer is
+  `entityType: 'Organizer'` + `entityId`. `lib/activity.ts` still needed labels
+  and a group (the compiler insists), but no organizer's screen reads them.
+- **The reason is kept whole in `changes.reason`**, not truncated to "changed"
+  like other long text: it is not sensitive (the applicant was emailed it) and
+  `statusNote` is cleared by the next decision, so the trail is where it
+  survives. The summary never quotes it.
+- **No migration.**
+- **The optional superadmin-facing view was built** as `/superadmin/activity`,
+  the way this batch asked: the existing Activity screen (`ActivityClient`) in
+  `scope="platform"`, not a second trail with its own look. It drops the Event
+  filter and column, offers only the *Organizer decisions* and *Sign-ins*
+  shelves, and shares `loadActivityPage` with `/admin/activity`.
 
 ### Done when
 

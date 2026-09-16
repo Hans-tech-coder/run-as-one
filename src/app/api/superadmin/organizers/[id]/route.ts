@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
-import { getAuthCookie } from '@/lib/auth';
+import { getActor } from '@/lib/actor';
+import { recordAudit, type AuditAction, type AuditChanges } from '@/lib/audit';
 import {
   asOrganizerStatus,
   canDecide,
   organizerStatusLabel,
   readStatusNote,
+  type OrganizerStatus,
 } from '@/lib/organizer-status';
 import {
   sendOrganizerApprovedEmail,
@@ -39,6 +41,19 @@ import { inviteOrigin } from '@/lib/team-invite';
  * never leaves a decision half-made — the screen says the email did not go out
  * so the super admin can reach the applicant another way.
  *
+ * **Every decision writes one audit row, in the same transaction as the
+ * status** (`lib/audit.ts`): approved, rejected, suspended or reinstated. The
+ * row belongs to **the super admin's own trail** (`actor.orgId`), not to the
+ * organizer decided about: an organizer's `/admin/activity` is what happened
+ * inside their dashboard, and it shows each actor's IP address and device,
+ * which a platform decision has no business handing to the applicant. The
+ * organizer is named by `entityType: 'Organizer'` and `entityId`, which is how
+ * "who approved this account?" is asked. `changes` carries the status it moved from and to and, for a
+ * rejection, the reason. The reason is kept whole on purpose: it was written
+ * to be read by this very applicant, and the organizer row's `statusNote` is
+ * cleared by the next decision, so the trail is the one place it survives.
+ * The summary names the organization and never quotes the reason.
+ *
  * This route used to take `adminFee` as well. That column is read by nothing
  * that charges a runner — every peso comes from `Event.adminFee`, which the
  * organizer sets per event — so a body carrying it is refused by name rather
@@ -47,8 +62,8 @@ import { inviteOrigin } from '@/lib/team-invite';
  */
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const auth = await getAuthCookie();
-    if (!auth || auth.role !== 'SUPER_ADMIN') {
+    const actor = await getActor();
+    if (!actor || actor.kind !== 'SUPER_ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -107,9 +122,21 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     }
 
     const statusChangedAt = new Date();
-    const { count } = await prisma.organizer.updateMany({
-      where: { id, role: 'ORGANIZER', status: current.status },
-      data: { status, statusNote, statusChangedAt },
+    const record = decisionRecord(current.status, status, current.name, statusNote);
+    const count = await prisma.$transaction(async tx => {
+      const moved = await tx.organizer.updateMany({
+        where: { id, role: 'ORGANIZER', status: current.status },
+        data: { status, statusNote, statusChangedAt },
+      });
+      if (moved.count === 0) return 0;
+      await recordAudit(tx, actor, {
+        action: record.action,
+        entityType: 'Organizer',
+        entityId: id,
+        summary: record.summary,
+        changes: record.changes,
+      });
+      return moved.count;
     });
     if (count === 0) {
       return NextResponse.json(
@@ -144,4 +171,41 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     console.error('Failed to update organizer:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
+}
+
+/**
+ * The trail's name for a decision. Approving from Suspended is a
+ * reinstatement; approving from anywhere else — a new application, or a
+ * rejection reconsidered — is an approval, and the `status` change says which.
+ */
+function decisionRecord(
+  from: string,
+  to: OrganizerStatus,
+  organizerName: string,
+  reason: string | null,
+): { action: AuditAction; summary: string; changes: AuditChanges } {
+  const name = organizerName.trim() || 'this organizer';
+  const changes: AuditChanges = { status: [from, to] };
+  if (to === 'REJECTED') {
+    changes.reason = reason;
+    return {
+      action: 'organizer.rejected',
+      summary: `Rejected the organizer application for ${name}`,
+      changes,
+    };
+  }
+  if (to === 'SUSPENDED') {
+    return { action: 'organizer.suspended', summary: `Suspended the organizer account ${name}`, changes };
+  }
+  if (from === 'SUSPENDED') {
+    return { action: 'organizer.reinstated', summary: `Reinstated the organizer account ${name}`, changes };
+  }
+  return {
+    action: 'organizer.approved',
+    summary:
+      from === 'REJECTED'
+        ? `Approved the organizer application for ${name}, which had been rejected`
+        : `Approved the organizer application for ${name}`,
+    changes,
+  };
 }

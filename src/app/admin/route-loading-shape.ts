@@ -197,6 +197,12 @@ const EXACT: Record<string, RouteShape> = {
     list: { frame: 'panel', toolbar: 166 },
     lg: { toolbar: LG_TOOLBAR, table: { ...LG_PLAIN_TABLE, rows: 8 } },
   },
+  // The organizer Activity screen less its Event picker (one 87px row on a
+  // phone); from `lg` the three pickers still share one row.
+  '/superadmin/activity': {
+    list: { frame: 'page', toolbar: 369 },
+    lg: { toolbar: 167, table: { head: LG_TANSTACK_HEAD, row: 77, rows: 6 } },
+  },
   '/superadmin/feedback': {
     metrics: 3,
     list: { frame: 'panel', toolbar: THREE_ROW_TOOLBAR },
