@@ -1,6 +1,6 @@
 # Super Admin — Organizer Applications Plan
 
-**Status:** Batch 1 landed, Batch 2 landed (uncommitted; its migration still to be applied), Batches 3–6 not started · **Owner decisions captured:** 2026-09-16
+**Status:** Batches 1–2 landed (Batch 2's migration still to be applied to production), Batch 3 landed (uncommitted), Batches 4–6 not started · **Owner decisions captured:** 2026-09-16
 
 `/admin/register` now collects a full organizer application — the contact
 person and their role, a mobile number, city and province, a website, how many
@@ -28,7 +28,7 @@ Delete this file once the required batches have landed, the way
 | Where is an application read? | **The row opens a panel** over the list, the pattern `/superadmin/feedback` already uses. No new route. |
 | Who sets the per-runner fee? | **The organizer does, per event.** The super admin's commission editor comes out entirely — see Batch 1. |
 
-## One decision still open — needed before Batch 3, not before Batch 1
+## The rejection reason — decided: it is sent
 
 **Is the rejection reason private, or is it sent to the applicant?** The two
 answers given point slightly different ways: the reason was described as
@@ -41,9 +41,8 @@ a screen that will be used a handful of times a month. If a decision genuinely
 needs a private note, it belongs in the audit trail entry from Batch 4, not
 beside the status.
 
-If you would rather it stayed private, it is a one-line change in Batch 3 — the
-column is written either way and the email simply stops quoting it. **Say which
-before Batch 3 starts.**
+**Answered (2026-09-16): one box, and it is sent.** The dialog's label reads
+*"Why — the applicant will read this"* and the rejection email quotes it.
 
 ---
 
@@ -262,6 +261,23 @@ a week assumes the form was broken and applies again, or goes elsewhere.
 
 `src/lib/email.ts` · `src/app/api/superadmin/organizers/[id]/route.ts` ·
 `src/app/superadmin/organizers/page.tsx` · `PROJECT_GUIDE.md`
+
+### As built
+
+- **The rejection email asks for a reply, not a new application.** `auth/register`
+  refuses an address that already has an account, and a rejected application is
+  one — "apply again" would have sent the applicant into that refusal. A reply
+  with more detail is what leads to the rejection being reconsidered
+  (REJECTED → APPROVED).
+- **The welcome varies by where it came from**: a new application, a rejection
+  reconsidered, or a suspended account reinstated each get their own opening
+  line (and a reinstatement its own subject). A suspension sends nothing, and
+  the route answers `emailSent: null` for it.
+- **No reset page exists**, so the welcome says a forgotten password is a reply
+  to the email.
+- **A failed send is an error alert** naming the applicant's email and phone; a
+  sent one is the toast. The optional resend action and `decisionEmailSentAt`
+  were not built.
 
 ### Done when
 

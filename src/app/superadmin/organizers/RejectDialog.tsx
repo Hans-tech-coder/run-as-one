@@ -9,6 +9,11 @@ import { MAX_STATUS_NOTE, readStatusNote } from '@/lib/organizer-status';
 /**
  * Rejecting an application, with the reason written down.
  *
+ * **The applicant reads the reason.** It is quoted in the rejection email the
+ * PATCH route sends, which is the owner's decision (one box, and it is sent),
+ * so the label says so before a word is typed. A note meant only for the team
+ * does not belong here.
+ *
  * `AlertModal`'s frame with a real textarea in its body, because a rejection is
  * the one decision on this screen that has to say why: approve and suspend
  * keep the plain `confirm`. The reason is checked by `readStatusNote` — the
@@ -123,11 +128,12 @@ export default function RejectDialog({
         <div className="flex flex-col gap-4">
           <p className="m-0">
             <span className="text-white [overflow-wrap:anywhere]">{organizerName}</span> will not
-            be able to sign in. You can still approve it later.
+            be able to sign in, and the applicant is emailed the reason below. You can still
+            approve it later.
           </p>
           <div className="flex flex-col gap-2">
             <label htmlFor={fieldId} className="text-sm font-medium text-white">
-              Reason for rejecting
+              Why — the applicant will read this
             </label>
             <textarea
               ref={fieldRef}
@@ -140,14 +146,14 @@ export default function RejectDialog({
               rows={4}
               maxLength={MAX_STATUS_NOTE}
               disabled={busy}
-              placeholder="e.g. We could not verify the organization. The website and page given do not exist."
+              placeholder="e.g. We could not verify your organization — the website and page you gave do not load."
               aria-invalid={error ? true : undefined}
               aria-describedby={`${hintId}${error ? ` ${errorId}` : ''}`}
               className="form-input text-sm"
             />
             <FieldError id={errorId} message={error} />
             <p id={hintId} className="m-0 text-xs text-gray-500">
-              Kept with the decision and shown when this application is opened.{' '}
+              Quoted in the email to the applicant, and kept with the decision.{' '}
               <span className="whitespace-nowrap">
                 {note.trim().length}/{MAX_STATUS_NOTE.toLocaleString('en-PH')}
               </span>

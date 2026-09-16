@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Search, CheckCircle, Ban, FileText, XCircle } from 'lucide-react';
 import { useAlert } from '@/components/ui/AlertProvider';
 import AdminCardList, { AdminCardListSkeleton } from '@/app/admin/AdminCardList';
@@ -34,6 +34,11 @@ import {
  * shared `confirm`; reject opens RejectDialog, because a rejection cannot be
  * saved without its reason.
  *
+ * Approving and rejecting email the applicant (the PATCH route sends after the
+ * status is saved). A sent email is announced in the toast; one that did not go
+ * out is an alert naming the address and phone, because the decision stands and
+ * the applicant still has to hear about it somehow.
+ *
  * There is no fee editor here any more. `Organizer.adminFee` was edited on
  * this screen and read by nothing that charges a runner — the fee on an order
  * is `Event.adminFee`, which the organizer sets per event — so the control was
@@ -47,6 +52,9 @@ interface Organizer extends OrganizerApplicationRow {
 }
 
 type StatusFilter = 'ALL' | OrganizerStatusCode;
+
+/** Whether the applicant was told: null when the decision emails nobody. */
+type EmailReport = { emailSent: boolean | null; emailError: string | null };
 
 export default function OrganizersManagementPage() {
   // Shadows window.alert / window.confirm on purpose — see AlertProvider.
@@ -63,6 +71,9 @@ export default function OrganizersManagementPage() {
   const [openId, setOpenId] = useState<string | null>(null);
   // The application being rejected, while its reason is being written.
   const [rejecting, setRejecting] = useState<Organizer | null>(null);
+  // What the rejection's email did, held until the dialog has closed: the
+  // report may be an alert, and it must not open over a dialog still leaving.
+  const rejectEmail = useRef<EmailReport | null>(null);
 
   const fetchOrganizers = async () => {
     try {
@@ -87,7 +98,7 @@ export default function OrganizersManagementPage() {
     id: string,
     status: OrganizerStatusCode,
     note?: string,
-  ): Promise<RejectResult> => {
+  ): Promise<RejectResult & { email?: EmailReport }> => {
     try {
       const res = await fetch(`/api/superadmin/organizers/${id}`, {
         method: 'PATCH',
@@ -98,7 +109,12 @@ export default function OrganizersManagementPage() {
       // Refreshed whatever the answer: a 409 means the row moved under us,
       // and the list should show where it went.
       fetchOrganizers();
-      if (res.ok) return { ok: true };
+      if (res.ok) {
+        return {
+          ok: true,
+          email: { emailSent: data?.emailSent ?? null, emailError: data?.emailError ?? null },
+        };
+      }
       return {
         ok: false,
         fieldError: data?.errors?.note,
@@ -110,12 +126,25 @@ export default function OrganizersManagementPage() {
     }
   };
 
-  // A success is announced, never made to be dismissed (PROJECT_GUIDE §9).
-  const announce = (org: Organizer, status: OrganizerStatusCode) => {
-    toast({
-      variant: 'success',
-      message: `${org.name} ${organizerStatusLabel(status).toLowerCase()}.`,
-    });
+  /**
+   * A success is announced, never made to be dismissed (PROJECT_GUIDE §9) —
+   * unless its email did not go out. That is something to act on, so it is an
+   * alert, the same call `/admin/team` makes for an invitation that never left.
+   */
+  const announce = async (org: Organizer, status: OrganizerStatusCode, email?: EmailReport | null) => {
+    const decided = `${org.name} ${organizerStatusLabel(status).toLowerCase()}`;
+    if (!email || email.emailSent === null) {
+      toast({ variant: 'success', message: `${decided}.` });
+    } else if (email.emailSent) {
+      toast({ variant: 'success', message: `${decided}. The applicant has been emailed at ${org.email}.` });
+    } else {
+      const reach = org.phone ? `${org.email} or ${org.phone}` : org.email;
+      await alert({
+        variant: 'error',
+        title: `${organizerStatusLabel(status)}, but the email did not go out`,
+        message: `${email.emailError ?? 'The email could not be sent.'} The decision is saved. Let the applicant know directly at ${reach}.`,
+      });
+    }
   };
 
   const handleDecision = async (org: Organizer, status: OrganizerStatusCode) => {
@@ -142,7 +171,7 @@ export default function OrganizersManagementPage() {
     if (!confirmed) return;
 
     const result = await sendDecision(org.id, status);
-    if (result.ok) announce(org, status);
+    if (result.ok) await announce(org, status, result.email);
     else if (result.error) alert(result.error);
   };
 
@@ -322,12 +351,16 @@ export default function OrganizersManagementPage() {
           organizerName={rejecting.name}
           onSubmit={async note => {
             const result = await sendDecision(rejecting.id, 'REJECTED', note);
-            if (result.ok) announce(rejecting, 'REJECTED');
+            rejectEmail.current = result.ok ? (result.email ?? null) : null;
             return result;
           }}
           onDone={error => {
+            const org = rejecting;
+            const email = rejectEmail.current;
+            rejectEmail.current = null;
             setRejecting(null);
             if (error) alert(error);
+            else if (email) announce(org, 'REJECTED', email);
           }}
         />
       )}

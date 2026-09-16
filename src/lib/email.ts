@@ -222,9 +222,15 @@ type Block =
    * something carries one — a receipt has nothing to press, and a button on it
    * would read as a request.
    */
-  | { kind: 'button'; label: string; href: string };
+  | { kind: 'button'; label: string; href: string }
+  /**
+   * Somebody else's words, set apart and quoted as written — a super admin's
+   * reason for a decision. Its line breaks are kept, because a reason written
+   * as two points should not arrive as one run-on sentence.
+   */
+  | { kind: 'quote'; text: string };
 
-type StatusTone = 'pending' | 'success';
+type StatusTone = 'pending' | 'success' | 'declined';
 
 interface EmailDocument {
   to: string;
@@ -397,6 +403,11 @@ function blockHtml(block: Block, index: number): string {
         `<p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 13px; line-height: 1.6; color: #8b8b96;">${segmentsHtml(block.segments)}</p>`,
         `padding: ${index === 0 ? 0 : 30}px 0 0;`
       );
+    case 'quote':
+      return fullWidthRow(
+        `<div style="margin: 0; padding: 14px 16px; border-left: 3px solid rgba(255,255,255,0.18); background-color: rgba(255,255,255,0.04); border-radius: 0 10px 10px 0; font-family: Arial, Helvetica, sans-serif; font-size: 15px; line-height: 1.6; color: #e4e4ea;">${escapeHtml(block.text).replace(/\r?\n/g, '<br/>')}</div>`,
+        'padding: 0 0 14px;'
+      );
     case 'button':
       // A solid orange fill under the gradient, because Outlook desktop drops
       // background-image and would otherwise leave white text on nothing. The
@@ -420,6 +431,9 @@ function blockHtml(block: Block, index: number): string {
 const STATUS_STYLES: Record<StatusTone, { bg: string; border: string; color: string; icon: string }> = {
   pending: { bg: 'rgba(0,122,255,0.14)', border: 'rgba(0,122,255,0.4)', color: '#6cb2ff', icon: '&#9679;' },
   success: { bg: 'rgba(34,197,94,0.14)', border: 'rgba(34,197,94,0.4)', color: '#4ade80', icon: '&#10003;' },
+  // A refusal in grey rather than red: the reader asked for something and is
+  // being told no, and alarm-red would read as an accusation.
+  declined: { bg: 'rgba(255,255,255,0.06)', border: 'rgba(255,255,255,0.22)', color: '#c8c8d0', icon: '&#9679;' },
 };
 
 /**
@@ -552,6 +566,11 @@ function blockText(block: Block): string {
     case 'card':
     case 'rows':
       return block.rows.flatMap(rowText).join('\n');
+    case 'quote':
+      return block.text
+        .split(/\r?\n/)
+        .map(line => `  ${line}`)
+        .join('\n');
     case 'button':
       // A text client cannot draw a button, so the address is spelled out.
       return `${block.label}:\n${block.href}`;
@@ -978,4 +997,125 @@ export function staffInvitationEmail(input: StaffInvitationInput): EmailMessage 
 
 export function sendStaffInvitationEmail(input: StaffInvitationInput): Promise<EmailOutcome> {
   return sendEmail(staffInvitationEmail(input));
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+ * The decision on an organizer application — the email the success panel on
+ * /admin/register promises ("We will write to …").
+ * ──────────────────────────────────────────────────────────────────────── */
+
+export interface OrganizerDecisionInput {
+  to: string;
+  /** The organization, `Organizer.name`. */
+  organizerName: string;
+  /** The person who applied, when the application named one. */
+  contactFirstName: string | null;
+  /** The status the decision was made from, which changes what an approval says. */
+  from: string;
+  /** Where the site the decision was made on lives (`inviteOrigin`). */
+  origin: string;
+}
+
+function greetingName(input: OrganizerDecisionInput): string {
+  return input.contactFirstName?.trim() || input.organizerName;
+}
+
+/**
+ * Sent when a super admin approves an organizer — a new application, a
+ * rejected one reconsidered, or a suspended account reinstated. The opening
+ * line and the subject are what differ between the three.
+ *
+ * **It never carries a password.** The applicant chose theirs on the form and
+ * nobody at Run As One knows it; the email says so, because "where is my
+ * password?" is the first question a welcome email otherwise raises. There is
+ * no reset page, so a forgotten password is a reply to this email.
+ */
+export function organizerApprovedEmail(input: OrganizerDecisionInput): EmailMessage {
+  const name = greetingName(input);
+  const reinstated = input.from === 'SUSPENDED';
+  const opening: Segment[] = reinstated
+    ? [`Hi ${name}, the organizer account for `, { strong: input.organizerName }, ` on ${SITE_NAME} is active again. You can sign in as before.`]
+    : input.from === 'REJECTED'
+      ? [`Hi ${name}, we took another look at the application for `, { strong: input.organizerName }, ` and have approved it. Welcome to ${SITE_NAME}.`]
+      : [`Hi ${name}, your application for `, { strong: input.organizerName }, ` has been approved. Welcome to ${SITE_NAME}.`];
+
+  return renderMessage({
+    to: input.to,
+    subject: reinstated
+      ? `Your ${SITE_NAME} organizer account is active again`
+      : `You're approved — welcome to ${SITE_NAME}`,
+    status: { label: reinstated ? 'Account Reinstated' : 'Application Approved', tone: 'success' },
+    footerTopic: 'account',
+    blocks: [
+      { kind: 'paragraph', segments: opening },
+      { kind: 'heading', text: 'What You Can Do Now' },
+      {
+        kind: 'paragraph',
+        segments: [
+          'Create your event, set its categories, prices and payment details, and publish it when it is ready. Runners register and pay on the event page, and your dashboard is where you follow every registration, verify bank transfers and post results.',
+        ],
+      },
+      { kind: 'heading', text: 'Your Sign-In' },
+      {
+        kind: 'paragraph',
+        segments: [
+          'Sign in with this address and the password you chose when you applied. We never send passwords by email, and nobody on our team knows yours.',
+        ],
+      },
+      { kind: 'card', rows: [{ kind: 'info', label: 'Email', value: input.to }] },
+      { kind: 'button', label: 'Sign In to Your Dashboard', href: `${input.origin}/admin/login` },
+      {
+        kind: 'note',
+        segments: ['Forgotten your password, or want a hand setting up your first event? Reply to this email and we will help.'],
+      },
+    ],
+  });
+}
+
+/**
+ * Sent when a super admin rejects an application, quoting the reason they
+ * wrote. The owner decided the reason is for the applicant — a refusal with no
+ * reason is what makes somebody apply three more times — which is why the
+ * reject dialog says so above its box.
+ *
+ * **It asks for a reply, not a new application.** The sign-up form refuses an
+ * address that already has an account, and a rejected application is one, so
+ * "apply again" would send them into a wall. A rejection can be reconsidered
+ * (REJECTED → APPROVED), and a reply with more detail is what starts that.
+ */
+export function organizerRejectedEmail(input: OrganizerDecisionInput & { reason: string }): EmailMessage {
+  return renderMessage({
+    to: input.to,
+    subject: `Your ${SITE_NAME} organizer application — ${input.organizerName}`,
+    status: { label: 'Application Not Approved', tone: 'declined' },
+    footerTopic: 'application',
+    blocks: [
+      {
+        kind: 'paragraph',
+        segments: [
+          `Hi ${greetingName(input)}, thank you for applying to organize races on ${SITE_NAME}. We have reviewed the application for `,
+          { strong: input.organizerName },
+          ' and are not able to approve it as it stands.',
+        ],
+      },
+      { kind: 'heading', text: 'Why' },
+      { kind: 'quote', text: input.reason },
+      {
+        kind: 'paragraph',
+        segments: [
+          'This does not have to be the end of it. If you can tell us more — about your organization, the races you have run, or the event you are planning — reply to this email with the details and we will look at your application again.',
+        ],
+      },
+    ],
+  });
+}
+
+export function sendOrganizerApprovedEmail(input: OrganizerDecisionInput): Promise<EmailOutcome> {
+  return sendEmail(organizerApprovedEmail(input));
+}
+
+export function sendOrganizerRejectedEmail(
+  input: OrganizerDecisionInput & { reason: string }
+): Promise<EmailOutcome> {
+  return sendEmail(organizerRejectedEmail(input));
 }
