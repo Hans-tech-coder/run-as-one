@@ -20,10 +20,10 @@ import {
  * The organizer accounts, and the applications they were created from.
  *
  * A row opens its application in a panel over the list (ApplicationPanel), so
- * the super admin decides from everything the applicant wrote rather than from
+ * staff decide from everything the applicant wrote rather than from
  * a name and an address. On the table the whole row opens it, except its own
  * action controls; below `lg` a card opens it from a *Read application* button
- * instead — the choice `/superadmin/feedback` made, because a card carries its
+ * instead — the choice `/admin/feedback` made, because a card carries its
  * own Approve and Suspend and a tap target covering all of them is a mis-tap
  * waiting to happen. Open is `openId`, read by both layouts.
  *
@@ -56,7 +56,7 @@ type StatusFilter = 'ALL' | OrganizerStatusCode;
 /** Whether the applicant was told: null when the decision emails nobody. */
 type EmailReport = { emailSent: boolean | null; emailError: string | null };
 
-export default function OrganizersManagementPage() {
+export default function OrganizersClient() {
   // Shadows window.alert / window.confirm on purpose — see AlertProvider.
   const { alert, confirm, toast } = useAlert();
   const [organizers, setOrganizers] = useState<Organizer[]>([]);
@@ -77,7 +77,7 @@ export default function OrganizersManagementPage() {
 
   const fetchOrganizers = async () => {
     try {
-      const res = await fetch('/api/superadmin/organizers');
+      const res = await fetch('/api/admin/organizers');
       if (res.ok) {
         const data = await res.json();
         setOrganizers(data.organizers);
@@ -100,7 +100,7 @@ export default function OrganizersManagementPage() {
     note?: string,
   ): Promise<RejectResult & { email?: EmailReport }> => {
     try {
-      const res = await fetch(`/api/superadmin/organizers/${id}`, {
+      const res = await fetch(`/api/admin/organizers/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status, note }),

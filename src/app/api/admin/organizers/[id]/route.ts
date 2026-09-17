@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
-import { getActor } from '@/lib/actor';
+import { platformActor } from '../../platform-actor';
 import { recordAudit, type AuditAction, type AuditChanges } from '@/lib/audit';
 import {
   asOrganizerStatus,
@@ -17,7 +17,7 @@ import {
 import { inviteOrigin } from '@/lib/team-invite';
 
 /**
- * A super admin's decision on one organizer: approve, reject or suspend.
+ * A staff decision on one organizer application: approve, reject or suspend.
  *
  * The status is guarded by `asOrganizerStatus` and the move by `canDecide`
  * (lib/organizer-status.ts), so this door accepts exactly the buttons the
@@ -30,8 +30,8 @@ import { inviteOrigin } from '@/lib/team-invite';
  * decision clears the stored reason, so a reinstated account does not keep the
  * sentence it was once refused with.
  *
- * The write is conditional on the status the decision was made from. Two super
- * admins deciding the same application at once cannot both win: the second
+ * The write is conditional on the status the decision was made from. Two staff
+ * members deciding the same application at once cannot both win: the second
  * finds the row already moved and is told so rather than overwriting it.
  *
  * **The applicant is emailed on approve and on reject** (`lib/email.ts`), the
@@ -39,11 +39,11 @@ import { inviteOrigin } from '@/lib/team-invite';
  * moves first, the send happens after, and the answer carries `emailSent` /
  * `emailError` (`null` for a suspension, which emails nobody). A mail outage
  * never leaves a decision half-made — the screen says the email did not go out
- * so the super admin can reach the applicant another way.
+ * so staff can reach the applicant another way.
  *
  * **Every decision writes one audit row, in the same transaction as the
  * status** (`lib/audit.ts`): approved, rejected, suspended or reinstated. The
- * row belongs to **the super admin's own trail** (`actor.orgId`), not to the
+ * row belongs to **the deciding staff member's own trail** (`actor.orgId` — Run As One's, read on `/admin/activity`), not to the
  * organizer decided about: an organizer's `/admin/activity` is what happened
  * inside their dashboard, and it shows each actor's IP address and device,
  * which a platform decision has no business handing to the applicant. The
@@ -62,10 +62,8 @@ import { inviteOrigin } from '@/lib/team-invite';
  */
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const actor = await getActor();
-    if (!actor || actor.kind !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { actor, refusal } = await platformActor();
+    if (refusal) return refusal;
 
     const { id } = await params;
     const body = await request.json().catch(() => null);

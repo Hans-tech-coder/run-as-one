@@ -10,10 +10,6 @@
  * order is written into *that* organizer's trail — so an owner or admin reads
  * everything that happened to their own data, and nothing that happened to
  * anyone else's.
- *
- * `/superadmin/activity` reads the same way, scoped to the super admin's own
- * `orgId` — their sign-ins and their decisions on organizer accounts, which
- * are written there rather than into the organizer's trail.
  */
 
 import type { Prisma } from '@prisma/client';
@@ -46,8 +42,8 @@ export type ActivityEntry = {
 /**
  * One page of one organizer's trail, for a set of URL filters — everything an
  * activity screen needs except the names of its events, which only the
- * organizer screen has. Shared by `/admin/activity` and `/superadmin/activity`
- * so the two cannot page, pin or filter differently.
+ * organizer screen has. It served `/superadmin/activity` too until the
+ * dashboards merged, and stays the one reading of the trail.
  *
  * **The reading is pinned** with `asOf` once somebody pages past the first
  * screen, so an entry recorded mid-read is counted in `newer` instead of

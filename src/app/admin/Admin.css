@@ -44,8 +44,8 @@
 .admin-nav {
   padding: 4px 0 var(--space-md);
   flex: 1;
-  /* A short phone held sideways cannot fit every row, the switcher and the
-     user block; the menu scrolls so the person at the foot stays on screen. */
+  /* A short phone held sideways cannot fit every row and the user
+     block; the menu scrolls so the person at the foot stays on screen. */
   min-height: 0;
   overflow-y: auto;
   display: flex;
@@ -396,73 +396,6 @@
 /* "Staff · PINK RUN EVENTS" can outrun the sidebar; it ends in an ellipsis and
    the full line is in the element's title. */
 .admin-user-role {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* The organizer switcher — only for a staff member who works for more than one
-   organizer (OrganizerSwitcher.tsx). It sits in the same band as the person it
-   belongs to, directly above them, so "who" and "where" read as one block. */
-.admin-org-switcher {
-  position: relative;
-  padding: var(--space-md) var(--space-md) 0;
-}
-
-.admin-org-switcher::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 24px;
-  right: 24px;
-  height: 1px;
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.admin-org-switcher + .admin-user::before {
-  display: none;
-}
-
-.org-switcher-trigger {
-  width: 100%;
-  min-height: 48px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--text-primary);
-  text-align: left;
-  cursor: pointer;
-  transition:
-    background-color var(--duration-quick) ease,
-    border-color var(--duration-quick) ease;
-}
-
-.org-switcher-trigger:hover {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.18);
-}
-
-.org-switcher-trigger:focus-visible {
-  outline: 2px solid var(--accent-blue);
-  outline-offset: 2px;
-}
-
-.org-switcher-label {
-  display: block;
-  font-size: 0.7rem;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.org-switcher-name {
-  display: block;
-  font-size: 0.875rem;
-  font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1034,7 +967,7 @@
   color: color-mix(in srgb, var(--accent-blue) 70%, #fff);
 }
 
-/* Approve (the superadmin's organizers and clubs). Green only under the
+/* Approve (the organizers and communities screens). Green only under the
    pointer, the badge's own #52c41a: at rest an approve is a question, not a
    status, and it sits beside a red that already is one. This is the hover
    the old `hover:text-green-500` utility asked for and never drew. */
@@ -1854,17 +1787,12 @@ textarea.form-input {
     font-size: 0.875rem;
   }
 
-  .admin-org-switcher {
-    padding: var(--space-sm) 12px 0;
-  }
-
   /* 12px on the left centres the 32px avatar in the rail. */
   .admin-user {
     padding: var(--space-sm) var(--space-sm) calc(var(--space-md) + env(safe-area-inset-bottom)) 12px;
   }
 
-  .admin-user::before,
-  .admin-org-switcher::before {
+  .admin-user::before {
     left: 16px;
     right: 16px;
   }
@@ -1899,30 +1827,6 @@ textarea.form-input {
   .admin-sidebar:not(.is-open) .nav-pending {
     position: absolute;
     right: 2px;
-  }
-
-  .admin-sidebar:not(.is-open) .admin-org-switcher {
-    padding-inline: 6px;
-  }
-
-  .admin-sidebar:not(.is-open) .org-switcher-trigger {
-    justify-content: center;
-    padding-inline: 0;
-    min-height: 44px;
-  }
-
-  /* Out of sight but still the button's name. */
-  .admin-sidebar:not(.is-open) .org-switcher-text {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-
-  .admin-sidebar:not(.is-open) .org-switcher-chevron {
-    display: none;
   }
 
   .dash-backdrop {
@@ -2022,33 +1926,9 @@ textarea.form-input {
     margin-inline: 16px;
   }
 
-  .admin-sidebar.is-collapsed .admin-user::before,
-  .admin-sidebar.is-collapsed .admin-org-switcher::before {
+  .admin-sidebar.is-collapsed .admin-user::before {
     left: 16px;
     right: 16px;
-  }
-
-  .admin-sidebar.is-collapsed .admin-org-switcher {
-    padding-inline: 16px;
-  }
-
-  .admin-sidebar.is-collapsed .org-switcher-trigger {
-    justify-content: center;
-    padding-inline: 0;
-  }
-
-  /* Out of sight but still the button's name. */
-  .admin-sidebar.is-collapsed .org-switcher-text {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-
-  .admin-sidebar.is-collapsed .org-switcher-chevron {
-    display: none;
   }
 
   .admin-sidebar.is-collapsed .admin-nav-tip {

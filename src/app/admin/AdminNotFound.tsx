@@ -3,11 +3,11 @@ import Link from 'next/link';
 import { Compass } from 'lucide-react';
 
 /**
- * The 404 an organizer or a super admin sees, wearing the admin chrome.
+ * The 404 anyone signed in to the dashboard sees, wearing the admin chrome.
  *
  * The public 404 at src/app/not-found.tsx cannot do this job. It is built for
  * the root layout's navbar and footer, and ClientLayoutWrapper strips both of
- * those on any /admin or /superadmin path — so rendering it here produced a
+ * those on any /admin path — so rendering it here produced a
  * page with no frame at all, flush against the viewport edges and looking
  * broken rather than merely missing.
  *

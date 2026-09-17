@@ -30,10 +30,10 @@ import {
 /**
  * What people have told us about the app itself.
  *
- * This is the reading end of the public form at /feedback. It is the super
- * admin's screen and not the organizer's, for the same reason the running-club
- * list is: feedback is about the platform rather than about any one race, and
- * it carries strangers' email addresses.
+ * This is the reading end of the public form at /feedback. It is Run As
+ * One's own screen (`platform:manage`) and not a per-event one, for the same
+ * reason the running-club list is: feedback is about the platform rather than
+ * about any one race, and it carries strangers' email addresses.
  *
  * Two things shape the layout. A message is a paragraph, not a field, so the
  * table shows one line of it and the row **opens** into the whole thing — the
@@ -83,7 +83,7 @@ function receivedOn(iso: string): string {
   });
 }
 
-export default function FeedbackInboxPage() {
+export default function FeedbackClient() {
   // Shadows window.alert / window.confirm on purpose — see AlertProvider.
   const { alert, confirm, toast } = useAlert();
 
@@ -97,7 +97,7 @@ export default function FeedbackInboxPage() {
 
   const fetchFeedback = async () => {
     try {
-      const res = await fetch('/api/superadmin/feedback');
+      const res = await fetch('/api/admin/feedback');
       if (res.ok) {
         const data = await res.json();
         setRows(data.feedback);
@@ -134,7 +134,7 @@ export default function FeedbackInboxPage() {
   };
 
   const setStatus = async (row: FeedbackRow, status: 'NEW' | 'REVIEWED') => {
-    const ok = await send(`/api/superadmin/feedback/${row.id}`, {
+    const ok = await send(`/api/admin/feedback/${row.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status }),
@@ -157,7 +157,7 @@ export default function FeedbackInboxPage() {
       confirmLabel: 'Delete',
     });
     if (!confirmed) return;
-    const ok = await send(`/api/superadmin/feedback/${row.id}`, { method: 'DELETE' });
+    const ok = await send(`/api/admin/feedback/${row.id}`, { method: 'DELETE' });
     if (ok) {
       setOpenId(current => (current === row.id ? null : current));
       toast({ variant: 'success', message: 'Message deleted.' });

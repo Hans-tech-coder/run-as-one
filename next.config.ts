@@ -37,6 +37,26 @@ const nextConfig: NextConfig = {
         destination: "/results/:param",
         permanent: true,
       },
+      /**
+       * There is one dashboard now (ADMIN_MERGE_PLAN.md, Batch 2). The super
+       * admin's screens moved under /admin with the same names — organizers,
+       * communities, feedback and activity — and its home is the Overview, so
+       * one rule carries every old address, query string included (a filtered
+       * activity link keeps its filters). An address that never existed under
+       * /superadmin lands on /admin's own 404 inside the sidebar, never a dead
+       * page. Redirects run before src/proxy.ts, so the proxy only ever sees
+       * the /admin address.
+       */
+      {
+        source: "/superadmin",
+        destination: "/admin",
+        permanent: true,
+      },
+      {
+        source: "/superadmin/:path*",
+        destination: "/admin/:path*",
+        permanent: true,
+      },
     ];
   },
 };

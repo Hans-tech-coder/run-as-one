@@ -1,13 +1,21 @@
 import React from 'react';
-import { DollarSign, Users, CalendarDays } from 'lucide-react';
+import { DollarSign, Users, CalendarDays, Landmark } from 'lucide-react';
 import prisma from '@/lib/db';
-import { reachableEvents, requireActor } from '@/lib/actor';
+import { can, reachableEvents, requireActor } from '@/lib/actor';
 import { formatPesos } from '@/lib/money';
 import { hasFinished, today } from '@/lib/event-schedule';
 import AdminCardList from './AdminCardList';
 
 export default async function AdminDashboard() {
   const actor = await requireActor();
+
+  // Run As One's own number, beside the organizer-facing three: the per-runner
+  // admin fees it has collected. It was the super admin dashboard's
+  // "Platform Revenue" tile; with one dashboard (ADMIN_MERGE_PLAN.md, Batch 2)
+  // it is shown to whoever runs the platform (owner and admin) and to nobody
+  // working a single race. The loading skeleton counts the same tiles
+  // (route-loading-shape.ts, OVERVIEW_PLATFORM_METRICS).
+  const showPlatformFees = can(actor, 'platform:manage', { organizerId: actor.orgId });
 
   const activeAsOf = today();
 
@@ -35,6 +43,7 @@ export default async function AdminDashboard() {
 
   let totalRevenue = 0;
   let totalRegistrants = 0;
+  let platformFees = 0;
 
   const recentRegistrations: ((typeof events)[number]['registrations'][number] & { eventTitle: string })[] = [];
 
@@ -51,6 +60,7 @@ export default async function AdminDashboard() {
       // revenue the organizer never actually received.
       totalRevenue += (reg.subtotal + reg.deliveryFee - reg.discountAmount);
       totalRegistrants += reg.runners.length;
+      platformFees += reg.platformFee;
 
       recentRegistrations.push({
         ...reg,
@@ -94,6 +104,16 @@ export default async function AdminDashboard() {
             </div>
             <div className="metric-value">{activeEventsCount}</div>
           </div>
+
+          {showPlatformFees && (
+            <div className="metric-card">
+              <div className="metric-header">
+                <span className="metric-title">Platform Fees Collected</span>
+                <div className="metric-icon"><Landmark size={20} /></div>
+              </div>
+              <div className="metric-value">₱{formatPesos(platformFees)}</div>
+            </div>
+          )}
         </div>
 
         <div className="admin-panel">

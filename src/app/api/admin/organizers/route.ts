@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
-import { getAuthCookie } from '@/lib/auth';
+import { platformActor } from '../platform-actor';
 
 /**
  * Every organizer account, with the application it was created from.
@@ -16,10 +16,8 @@ import { getAuthCookie } from '@/lib/auth';
  */
 export async function GET() {
   try {
-    const auth = await getAuthCookie();
-    if (!auth || auth.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { refusal } = await platformActor();
+    if (refusal) return refusal;
 
     const organizers = await prisma.organizer.findMany({
       where: { role: 'ORGANIZER' },

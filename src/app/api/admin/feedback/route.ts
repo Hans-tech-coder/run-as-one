@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
-import { getAuthCookie } from '@/lib/auth';
+import { platformActor } from '../platform-actor';
 
 /**
- * The feedback inbox, as the super admin sees it.
+ * The feedback inbox, as Run As One staff read it.
  *
- * Only the super admin. Feedback is about the platform rather than about any
- * one race, and an organizer reading it would be reading other organizers'
+ * Only `platform:manage` (platform-actor.ts). Feedback is about the platform rather than about any
+ * one race, and a client or per-event staff member reading it would be reading others'
  * complaints about the software — and, where a sender left one, a stranger's
  * email address.
  *
@@ -17,10 +17,8 @@ import { getAuthCookie } from '@/lib/auth';
  */
 export async function GET() {
   try {
-    const auth = await getAuthCookie();
-    if (!auth || auth.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { refusal } = await platformActor();
+    if (refusal) return refusal;
 
     const feedback = await prisma.feedback.findMany({
       // Newest first, because the useful question of an inbox is what has come

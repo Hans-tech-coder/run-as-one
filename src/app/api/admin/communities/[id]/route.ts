@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
-import { getAuthCookie } from '@/lib/auth';
+import { platformActor } from '../../platform-actor';
 import {
   COMMUNITY_STATUS,
   communitySlug,
@@ -14,7 +14,7 @@ import {
  * Rejecting deletes the row rather than parking it in a REJECTED state. The
  * runner who wrote it in keeps their answer either way — that is stored on the
  * runner as text — so a rejected row holds nothing worth keeping, and leaving
- * them around would grow a queue the super admin has to re-read every visit.
+ * them around would grow a queue staff have to re-read every visit.
  */
 
 export async function PATCH(
@@ -22,10 +22,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const auth = await getAuthCookie();
-    if (!auth || auth.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { refusal } = await platformActor();
+    if (refusal) return refusal;
 
     const { id } = await params;
     const body = await request.json();
@@ -86,10 +84,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const auth = await getAuthCookie();
-    if (!auth || auth.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { refusal } = await platformActor();
+    if (refusal) return refusal;
 
     const { id } = await params;
     await prisma.runningCommunity.delete({ where: { id } });

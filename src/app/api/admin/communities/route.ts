@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
-import { getAuthCookie } from '@/lib/auth';
+import { platformActor } from '../platform-actor';
 import {
   COMMUNITY_STATUS,
   communitySlug,
@@ -9,18 +9,16 @@ import {
 } from '@/lib/running-community';
 
 /**
- * The shared list of running clubs, as the super admin sees it.
+ * The shared list of running clubs, as Run As One staff curate it.
  *
- * Only the super admin: an organizer approving clubs would be approving them
+ * Only `platform:manage` (platform-actor.ts): somebody approving clubs would be approving them
  * for every other organizer's events too, since the list is one master set.
  */
 
 export async function GET() {
   try {
-    const auth = await getAuthCookie();
-    if (!auth || auth.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { refusal } = await platformActor();
+    if (refusal) return refusal;
 
     const [communities, usage] = await Promise.all([
       prisma.runningCommunity.findMany({
@@ -57,10 +55,8 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const auth = await getAuthCookie();
-    if (!auth || auth.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { refusal } = await platformActor();
+    if (refusal) return refusal;
 
     const body = await request.json();
     const name = normalizeCommunityName(body?.name);

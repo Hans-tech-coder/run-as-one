@@ -23,7 +23,7 @@ import { organizerStatusLabel } from '@/lib/organizer-status';
  * `/admin/register` collects were in the row and nowhere on screen.
  *
  * It is grouped the way the form asked — the organization, the person, what
- * they are planning — so the super admin reads it in the order the applicant
+ * they are planning — so staff read it in the order the applicant
  * wrote it. Every label comes from `lib/organizer-application.ts`, never the
  * stored code: a person reads "Running Club or Community", not `RUNNING_CLUB`,
  * and a value written before an option was renamed still reads as itself.
@@ -32,7 +32,7 @@ import { organizerStatusLabel } from '@/lib/organizer-status';
  * usually to get hold of the human behind it: the phone dials, the address
  * opens a mail, the website opens in a new tab.
  *
- * **A decided account explains itself.** Once a super admin has approved,
+ * **A decided account explains itself.** Once staff have approved,
  * rejected or suspended it, the panel opens on *The decision* — the status, when
  * it moved (`statusChangedAt`), and for a rejection the reason it was given
  * (`statusNote`). A row decided before those columns existed has neither, and
@@ -53,7 +53,7 @@ export interface OrganizerApplicationRow {
   status: string;
   /** The reason a rejection was given. Cleared by any later decision. */
   statusNote: string | null;
-  /** When a super admin last moved `status`; null before anyone has. */
+  /** When staff last moved `status`; null before anyone has. */
   statusChangedAt: string | null;
   createdAt: string;
   orgType: string | null;

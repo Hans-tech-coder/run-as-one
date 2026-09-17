@@ -2,18 +2,34 @@
 
 import React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Calendar, Settings, Megaphone, UsersRound, History } from 'lucide-react';
+import {
+  Building2,
+  Calendar,
+  Flag,
+  History,
+  LayoutDashboard,
+  Megaphone,
+  MessageSquare,
+  Settings,
+  UsersRound,
+} from 'lucide-react';
 import type { SignedInUser } from '@/lib/signed-in-user';
 import DashboardShell from './DashboardShell';
-import OrganizerSwitcher from './OrganizerSwitcher';
+import { DashboardNavProvider } from './dashboard-nav';
 import { isBarePath } from './bare-paths';
 import './Admin.css';
 
 /**
- * The organizer dashboard's frame. What is only true of `/admin` lives here:
- * which links this person's role opens, how their role reads, and the
- * organizer switcher. The sidebar, the phone's drawer and the user block are
- * `DashboardShell`, shared with the superadmin.
+ * The dashboard's frame. What is only true of `/admin` lives here: which links
+ * this person's role opens and how their role reads. The sidebar, the phone's
+ * rail and the user block are `DashboardShell`.
+ *
+ * **There is one dashboard.** The super admin had a shell of its own at
+ * `/superadmin` until ADMIN_MERGE_PLAN.md's Batch 2; its screens — organizer
+ * applications, communities and feedback — are now links here for whoever
+ * holds `platform:manage`, and its old addresses redirect (next.config.ts).
+ * The organizer switcher went with it: Run As One is the one tenant, so a
+ * staff member has nothing to switch between.
  */
 
 export default function AdminShell({
@@ -46,11 +62,19 @@ export default function AdminShell({
   // Only the screens this person's role opens (lib/signed-in-user.ts). The
   // pages check again for themselves; this is what keeps a validator from
   // being offered a Marketing link that would only answer with a 404.
+  // Run As One's own screens sit between the race work and the people work.
   const navItems = [
     { name: 'Dashboard', path: '/admin', icon: <LayoutDashboard size={20} /> },
     { name: 'Events', path: '/admin/events', icon: <Calendar size={20} /> },
     ...((user?.nav.marketing ?? true)
       ? [{ name: 'Marketing Tools', path: '/admin/marketing', icon: <Megaphone size={20} /> }]
+      : []),
+    ...(user?.nav.platform
+      ? [
+          { name: 'Organizers', path: '/admin/organizers', icon: <Building2 size={20} /> },
+          { name: 'Communities', path: '/admin/communities', icon: <Flag size={20} /> },
+          { name: 'Feedback', path: '/admin/feedback', icon: <MessageSquare size={20} /> },
+        ]
       : []),
     ...(user?.nav.team
       ? [{ name: 'Team', path: '/admin/team', icon: <UsersRound size={20} /> }]
@@ -67,8 +91,7 @@ export default function AdminShell({
   ];
 
   // An owner is simply the Owner. Anyone else is named with the organizer
-  // they are working inside, since the same person may hold a different role
-  // at another one.
+  // they are working inside.
   const roleLine = !user
     ? 'Organizer Admin'
     : user.roleLabel === 'Owner'
@@ -76,23 +99,20 @@ export default function AdminShell({
       : `${user.roleLabel} · ${user.organizerName}`;
 
   return (
-    <DashboardShell
-      navItems={navItems}
-      secondaryNavItems={accountItems}
-      initialCollapsed={initialCollapsed}
-      userBlock={{
-        name: user?.name ?? 'Organizer',
-        initial: user?.initial ?? 'O',
-        roleLine,
-      }}
-      beforeUser={
-        user && user.organizers.length > 1
-          ? <OrganizerSwitcher organizers={user.organizers} />
-          : null
-      }
-      onLogout={handleLogout}
-    >
-      {children}
-    </DashboardShell>
+    <DashboardNavProvider value={user?.nav ?? null}>
+      <DashboardShell
+        navItems={navItems}
+        secondaryNavItems={accountItems}
+        initialCollapsed={initialCollapsed}
+        userBlock={{
+          name: user?.name ?? 'Organizer',
+          initial: user?.initial ?? 'O',
+          roleLine,
+        }}
+        onLogout={handleLogout}
+      >
+        {children}
+      </DashboardShell>
+    </DashboardNavProvider>
   );
 }

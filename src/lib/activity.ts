@@ -132,25 +132,15 @@ export const ACTION_GROUP: Record<AuditAction, ActivityGroupKey> = {
 const KNOWN_ACTIONS = Object.keys(ACTION_LABELS) as AuditAction[];
 
 /**
- * Which trail a screen reads. **`organizer`** is `/admin/activity`: what
- * happened inside one organizer's dashboard. **`platform`** is
- * `/superadmin/activity`: the super admin's own trail — their sign-ins and
- * their decisions on organizer accounts. A super admin's decision is never
- * written into the organizer's trail (that screen shows each actor's IP and
- * device), and an organizer's dashboard work never into the platform's.
+ * Where the trail is read. There used to be two screens — this one and the
+ * super admin's `/superadmin/activity` — and a scope telling them apart. With
+ * one dashboard (ADMIN_MERGE_PLAN.md, Batch 2) Run As One's staff decide
+ * organizer applications inside Run As One's own tenant, so those decisions
+ * land in the same trail as everything else and the Activity filter offers
+ * every shelf in `ACTIVITY_GROUPS`. A decision is still never written into the
+ * applicant's trail: the applicant is a different Organizer row.
  */
-export type ActivityScope = 'organizer' | 'platform';
-
-/** The shelves each trail can hold, in the order the Activity filter offers them. */
-export const SCOPE_GROUPS: Record<ActivityScope, readonly ActivityGroupKey[]> = {
-  organizer: ['payments', 'runners', 'data', 'events', 'promotions', 'team', 'access'],
-  platform: ['organizers', 'access'],
-};
-
-export const ACTIVITY_PATHS: Record<ActivityScope, string> = {
-  organizer: '/admin/activity',
-  platform: '/superadmin/activity',
-};
+export const ACTIVITY_PATH = '/admin/activity';
 
 export function asAuditAction(value: unknown): AuditAction | null {
   return typeof value === 'string' && (KNOWN_ACTIONS as string[]).includes(value)

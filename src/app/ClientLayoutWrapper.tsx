@@ -6,7 +6,7 @@ import Footer from "@/components/Footer";
 
 export default function ClientLayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isAdmin = pathname?.startsWith('/admin') || pathname?.startsWith('/superadmin');
+  const isAdmin = pathname?.startsWith('/admin');
 
   if (isAdmin) {
     return <>{children}</>;

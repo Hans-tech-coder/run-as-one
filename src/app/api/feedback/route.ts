@@ -21,7 +21,7 @@ import { FEEDBACK_RULE, allowRequest, callerKey } from '@/lib/rate-limit';
  * and the only one that writes a row on a stranger's say-so. Three things hold
  * it: the throttle below, the length caps from lib/feedback.ts enforced here
  * rather than only in the form, and the fact that nothing the sender writes is
- * ever rendered anywhere but the superadmin inbox, as text.
+ * ever rendered anywhere but the dashboard's feedback inbox, as text.
  *
  * Refusals name the field they are refusing and hand the field's own key back,
  * so the form can put the caret in the right box (§8, rule 4) instead of

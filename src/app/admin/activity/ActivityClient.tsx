@@ -19,13 +19,12 @@ import AdminTablePager from '../AdminTablePager';
 import {
   ACTIVITY_GROUPS,
   ACTIVITY_PAGE_SIZES,
-  ACTIVITY_PATHS,
+  ACTIVITY_PATH,
   ACTIVITY_RANGES,
   ACTIVITY_RANGE_LABELS,
   ACTION_GROUP,
   ACTION_LABELS,
   ACTOR_KIND_LABELS,
-  SCOPE_GROUPS,
   actionGroupLabel,
   actionLabel,
   activityQuery,
@@ -41,7 +40,6 @@ import {
   type ActivityFilterErrors,
   type ActivityFilters,
   type ActivityRange,
-  type ActivityScope,
 } from '@/lib/activity';
 import type { ActivityPerson } from '@/lib/activity-store';
 import type { AuditAction } from '@/lib/audit';
@@ -62,11 +60,10 @@ import type { AuditAction } from '@/lib/audit';
  * `No.` column, because nothing is done to entries in bulk and a position in
  * a newest-first log names nothing.
  *
- * **Two trails wear it.** `scope="organizer"` is `/admin/activity`;
- * `scope="platform"` is `/superadmin/activity`, the super admin's own trail.
- * The platform's entries belong to no race, so it drops the Event filter and
- * column, and its Activity filter offers only the shelves that trail can hold
- * (`SCOPE_GROUPS`) — neither screen lists a verb that never appears on it.
+ * **One trail wears it.** It also served the super admin's own trail, with the
+ * Event filter and column dropped, until the two dashboards merged
+ * (ADMIN_MERGE_PLAN.md, Batch 2); organizer decisions are now one more shelf
+ * of Run As One's trail.
  */
 
 export type ActivityRow = {
@@ -195,7 +192,6 @@ function EntryDetails({ row }: { row: ActivityRow }) {
 }
 
 export default function ActivityClient({
-  scope = 'organizer',
   rows,
   total,
   newer,
@@ -206,7 +202,6 @@ export default function ActivityClient({
   events,
   now,
 }: {
-  scope?: ActivityScope;
   rows: ActivityRow[];
   total: number;
   newer: number;
@@ -222,10 +217,8 @@ export default function ActivityClient({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [openId, setOpenId] = useState<string | null>(null);
-  const basePath = ACTIVITY_PATHS[scope];
-  const showEvents = scope === 'organizer';
-  // Time, person, what happened, details — and the event, where there are any.
-  const columnCount = showEvents ? 5 : 4;
+  // Time, person, what happened, the event, details.
+  const columnCount = 5;
 
   // ── Navigation ─────────────────────────────────────────────────────────────
 
@@ -242,7 +235,7 @@ export default function ActivityClient({
     const query = activityQuery(next);
     setOpenId(null);
     startTransition(() => {
-      router.push(query ? `${basePath}?${query}` : basePath, { scroll: false });
+      router.push(query ? `${ACTIVITY_PATH}?${query}` : ACTIVITY_PATH, { scroll: false });
     });
   };
 
@@ -317,18 +310,14 @@ export default function ActivityClient({
     [events],
   );
 
-  // The shelves first, then each verb with its shelf as small print — only
-  // those this trail can hold.
+  // The shelves first, then each verb with its shelf as small print, in shelf
+  // order.
   const actionOptions = useMemo(() => {
-    const shelves = SCOPE_GROUPS[scope];
-    const groups = ACTIVITY_GROUPS.filter(group => shelves.includes(group.key)).sort(
-      (a, b) => shelves.indexOf(a.key) - shelves.indexOf(b.key),
-    );
+    const shelves = ACTIVITY_GROUPS.map(group => group.key);
     return [
       { value: '', label: 'Everything' },
-      ...groups.map(group => ({ value: groupFilterValue(group.key), label: `All ${group.label.toLowerCase()}`, hint: group.hint })),
+      ...ACTIVITY_GROUPS.map(group => ({ value: groupFilterValue(group.key), label: `All ${group.label.toLowerCase()}`, hint: group.hint })),
       ...(Object.keys(ACTION_LABELS) as AuditAction[])
-        .filter(action => shelves.includes(ACTION_GROUP[action]))
         .sort((a, b) => shelves.indexOf(ACTION_GROUP[a]) - shelves.indexOf(ACTION_GROUP[b]))
         .map(action => ({
           value: action,
@@ -336,7 +325,7 @@ export default function ActivityClient({
           hint: ACTIVITY_GROUPS.find(group => group.key === ACTION_GROUP[action])?.label,
         })),
     ];
-  }, [scope]);
+  }, []);
 
   const rangeOptions = ACTIVITY_RANGES.map(range => ({ value: range, label: ACTIVITY_RANGE_LABELS[range] }));
 
@@ -398,9 +387,7 @@ export default function ActivityClient({
     <>
       <p className="m-0 text-white font-medium">Nothing has been recorded yet.</p>
       <p className="m-0 mt-1">
-        {scope === 'platform'
-          ? 'Every organizer application approved or rejected, every account suspended or reinstated, and every super admin sign-in will appear here under the name of the person who did it.'
-          : 'Every validated payment, edited runner, opened proof and sign-in will appear here under the name of the person who did it.'}
+        Every validated payment, edited runner, opened proof, organizer decision and sign-in will appear here under the name of the person who did it.
       </p>
     </>
   );
@@ -418,7 +405,7 @@ export default function ActivityClient({
               value={search}
               onChange={e => setSearch(e.target.value)}
               className="search-input"
-              placeholder={scope === 'platform' ? 'Search by organizer name...' : 'Search by order reference, name or event...'}
+              placeholder="Search by order reference, name or event..."
               aria-label="Search the activity trail"
             />
             {search && (
@@ -445,7 +432,7 @@ export default function ActivityClient({
           chip's label would have to hide the choice it made. One to a row
           on a phone: two across truncated even "Every event", and a picker
           that hides its own answer is the problem this layout exists to avoid. */}
-      <div className={`grid gap-x-4 sm:grid-cols-2 ${showEvents ? 'xl:grid-cols-4' : 'xl:grid-cols-3'}`}>
+      <div className="grid gap-x-4 sm:grid-cols-2 xl:grid-cols-4">
         <AdminSelect
           label="Person"
           listboxLabel="Person"
@@ -453,15 +440,13 @@ export default function ActivityClient({
           options={personOptions}
           onChange={value => go({ person: value })}
         />
-        {showEvents && (
-          <AdminSelect
-            label="Event"
-            listboxLabel="Event"
-            value={filters.event}
-            options={eventOptions}
-            onChange={value => go({ event: value })}
-          />
-        )}
+        <AdminSelect
+          label="Event"
+          listboxLabel="Event"
+          value={filters.event}
+          options={eventOptions}
+          onChange={value => go({ event: value })}
+        />
         <AdminSelect
           label="Activity"
           listboxLabel="Kind of activity"
@@ -485,7 +470,7 @@ export default function ActivityClient({
       </div>
 
       {filters.range === 'custom' && (
-        <div className={`grid gap-x-4 sm:grid-cols-2 ${showEvents ? 'xl:grid-cols-4' : 'xl:grid-cols-3'} -mt-2`}>
+        <div className="grid gap-x-4 sm:grid-cols-2 xl:grid-cols-4 -mt-2">
           <div className="form-group min-w-0">
             <label className="form-label" htmlFor="activity-from">From</label>
             <input
@@ -550,7 +535,7 @@ export default function ActivityClient({
                 <TableHead className="py-4 px-4 pl-8 text-gray-400 font-medium h-auto w-28">Time</TableHead>
                 <TableHead className="py-4 px-4 text-gray-400 font-medium h-auto w-[16rem]">Person</TableHead>
                 <TableHead className="py-4 px-4 text-gray-400 font-medium h-auto">What happened</TableHead>
-                {showEvents && <TableHead className="py-4 px-4 text-gray-400 font-medium h-auto w-[14rem]">Event</TableHead>}
+                <TableHead className="py-4 px-4 text-gray-400 font-medium h-auto w-[14rem]">Event</TableHead>
                 <TableHead className="py-4 px-4 text-gray-400 font-medium h-auto w-28">Details</TableHead>
               </TableRow>
             </TableHeader>
@@ -591,11 +576,9 @@ export default function ActivityClient({
                                 )}
                               </span>
                             </TableCell>
-                            {showEvents && (
-                              <TableCell className="py-4 px-4 align-top max-w-[14rem] text-white">
-                                <EventLine row={row} />
-                              </TableCell>
-                            )}
+                            <TableCell className="py-4 px-4 align-top max-w-[14rem] text-white">
+                              <EventLine row={row} />
+                            </TableCell>
                             {/* Under its own header, never pushed to the row's right edge (§8, rule 6). */}
                             <TableCell className="py-4 px-4 align-top">
                               <button
@@ -657,7 +640,7 @@ export default function ActivityClient({
                       { label: 'Time', value: formatTrailTime(row.at) },
                       { label: 'Kind', value: actionGroupLabel(row.action) ?? 'Other' },
                       { label: 'Person', value: <ActorLine row={row} layout="card" />, full: true },
-                      ...(showEvents && row.eventId ? [{ label: 'Event', value: <EventLine row={row} />, full: true }] : []),
+                      ...(row.eventId ? [{ label: 'Event', value: <EventLine row={row} />, full: true }] : []),
                     ]}
                     expanded={row => {
                       const isOpen = openId === row.id;

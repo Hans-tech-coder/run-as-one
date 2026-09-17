@@ -17,7 +17,7 @@ import { MAX_STATUS_NOTE, readStatusNote } from '@/lib/organizer-status';
  * `AlertModal`'s frame with a real textarea in its body, because a rejection is
  * the one decision on this screen that has to say why: approve and suspend
  * keep the plain `confirm`. The reason is checked by `readStatusNote` — the
- * rule the PATCH route runs — as the super admin presses Reject, and the
+ * rule the PATCH route runs — as Reject is pressed, and the
  * route's own refusal lands in the same `FieldError`, so the box and the
  * server can never disagree about what counts as a reason.
  *

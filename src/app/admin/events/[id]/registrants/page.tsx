@@ -41,8 +41,9 @@ export default async function RegistrantsPage({
   //
   // A no-match reads as "Event not found." rather than "not yours", so the
   // screen cannot be used to confirm that some id exists. There is no super
-  // admin branch because there is no super admin here: `src/proxy.ts` sends a
-  // `SUPER_ADMIN` off `/admin/**` to `/superadmin` before this page runs. A
+  // admin branch: since the dashboards merged a `SUPER_ADMIN` session can open
+  // this page, but its `orgId` is its own Organizer row, which owns no event,
+  // so the read above finds nothing for it either. A
   // STAFF member unassigned to this race gets the same "Event not found."
   const actor = await requireActor();
 

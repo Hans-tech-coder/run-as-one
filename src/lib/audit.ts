@@ -39,6 +39,8 @@ import type { Prisma } from '@prisma/client';
 export const AUDIT_ACTIONS = [
   'auth.signed_in',
   'auth.sign_in_failed',
+  // Retired with the organizer switcher (ADMIN_MERGE_PLAN.md, Batch 2); kept so
+  // rows written before it still carry a label.
   'auth.organizer.switched',
   'staff.invited',
   'staff.invitation.resent',

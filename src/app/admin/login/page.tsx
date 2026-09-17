@@ -43,7 +43,8 @@ export default function AdminLogin() {
       // it: the dashboard's numbers would arrive correct under a sidebar that
       // still says nobody is signed in, until a manual reload. `refresh()`
       // drops that cache so the layout is re-rendered with the new cookie.
-      router.push(data.role === 'SUPER_ADMIN' ? '/superadmin' : '/admin');
+      // Every session lands on the one dashboard (ADMIN_MERGE_PLAN.md, Batch 2).
+      router.push('/admin');
       router.refresh();
     } catch (err) {
       setError('An unexpected error occurred');

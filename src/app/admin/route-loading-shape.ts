@@ -30,7 +30,8 @@ export type RouteShape = {
   list?: {
     /**
      * - `page`: on the page under its toolbar (the TanStack screens);
-     * - `panel`: inside a panel whose first row is its toolbar (superadmin);
+     * - `panel`: inside a panel whose first row is its toolbar (organizers,
+     *   communities, feedback);
      * - `titled-panel`: inside a panel under a title (the Dashboard).
      */
     frame: 'page' | 'panel' | 'titled-panel';
@@ -134,13 +135,14 @@ const THREE_ROW_TOOLBAR = 144;
 /** Every dashboard toolbar is one 40px row inside its padding from `lg` up. */
 const LG_TOOLBAR = 40;
 
-/** A `.data-table`'s header and body rows (the Dashboard and superadmin). */
+/** A `.data-table`'s header and body rows (the Dashboard, organizers, communities, feedback). */
 const LG_PLAIN_TABLE = { head: 51, row: 54 };
 
 /** The TanStack screens' table, which carries its own header styling. */
 const LG_TANSTACK_HEAD = 53;
 
 const EXACT: Record<string, RouteShape> = {
+  // Three tiles, or four for `platform:manage` — see OVERVIEW_PLATFORM_METRICS.
   '/admin': {
     metrics: 3,
     list: { frame: 'titled-panel' },
@@ -185,25 +187,17 @@ const EXACT: Record<string, RouteShape> = {
       ],
     },
   },
-  // The System Overview panel's two paragraphs.
-  '/superadmin': { metrics: 4, panels: [{ fields: [256] }], lg: { panels: [{ rows: [256] }] } },
   // Search, then the status chips over two rows of 44px.
-  '/superadmin/organizers': {
+  '/admin/organizers': {
     list: { frame: 'panel', toolbar: 152 },
     lg: { toolbar: LG_TOOLBAR, table: { ...LG_PLAIN_TABLE, rows: 8 } },
   },
   // Search, then Add a club's box and button stacked.
-  '/superadmin/communities': {
+  '/admin/communities': {
     list: { frame: 'panel', toolbar: 166 },
     lg: { toolbar: LG_TOOLBAR, table: { ...LG_PLAIN_TABLE, rows: 8 } },
   },
-  // The organizer Activity screen less its Event picker (one 87px row on a
-  // phone); from `lg` the three pickers still share one row.
-  '/superadmin/activity': {
-    list: { frame: 'page', toolbar: 369 },
-    lg: { toolbar: 167, table: { head: LG_TANSTACK_HEAD, row: 77, rows: 6 } },
-  },
-  '/superadmin/feedback': {
+  '/admin/feedback': {
     metrics: 3,
     list: { frame: 'panel', toolbar: THREE_ROW_TOOLBAR },
     lg: { toolbar: LG_TOOLBAR, table: { ...LG_PLAIN_TABLE, rows: 8 } },
@@ -230,9 +224,22 @@ const PATTERNS: [RegExp, RouteShape][] = [
   ],
 ];
 
+/**
+ * The Overview's tiles for somebody holding `platform:manage`: the three every
+ * role sees, plus *Platform Fees Collected*. It was the super admin's tile
+ * until the dashboards merged; Run As One now keeps that money itself.
+ */
+const OVERVIEW_PLATFORM_METRICS = 4;
+
+/** What the person waiting can open, where that changes a page's shape. */
+export type ShapeViewer = { platform: boolean };
+
 /** The shape to draw for a path, or null for the plain figure (a 404, anything unlisted). */
-export function routeShape(pathname: string | null): RouteShape | null {
+export function routeShape(pathname: string | null, viewer?: ShapeViewer): RouteShape | null {
   if (!pathname) return null;
   const path = pathname.length > 1 ? pathname.replace(/\/$/, '') : pathname;
+  if (path === '/admin' && viewer?.platform) {
+    return { ...EXACT[path], metrics: OVERVIEW_PLATFORM_METRICS };
+  }
   return EXACT[path] ?? PATTERNS.find(([pattern]) => pattern.test(path))?.[1] ?? null;
 }

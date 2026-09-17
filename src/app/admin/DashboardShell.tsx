@@ -10,11 +10,11 @@ import { rememberSidebar } from './dashboard-sidebar';
 import './Admin.css';
 
 /**
- * The frame both dashboards stand in: the sidebar menu and the user block.
- * `AdminShell` and `SuperAdminShell` were near-copies of this, and every fix to
- * one had to be remembered in the other — the superadmin's menu button had
- * lost its label that way. They are now thin wrappers that hand over only what
- * differs: which links a person is offered and how their role reads.
+ * The dashboard's frame: the sidebar menu and the user block. It was pulled out
+ * of two near-copies, `AdminShell` and the super admin's `SuperAdminShell`,
+ * whose fixes kept having to be remembered twice. The super admin's shell is
+ * gone since the dashboards merged (ADMIN_MERGE_PLAN.md, Batch 2); `AdminShell`
+ * hands over only which links a person is offered and how their role reads.
  *
  * **The menu** is one column of full-width rows under a MENU label: the pages,
  * a divider, then the account rows (Settings, Log Out), with the person at the
@@ -74,7 +74,6 @@ export default function DashboardShell({
   navItems,
   secondaryNavItems = [],
   userBlock,
-  beforeUser,
   onLogout,
   initialCollapsed = false,
   children,
@@ -84,8 +83,6 @@ export default function DashboardShell({
   /** Below the divider, before Log Out — the account's own screens. */
   secondaryNavItems?: DashboardNavItem[];
   userBlock: DashboardUserBlock;
-  /** Drawn between the menu and the user block — the organizer switcher's slot. */
-  beforeUser?: React.ReactNode;
   onLogout: () => void;
   /** Read from the sidebar cookie by the layout, so the desktop's first paint is already right. */
   initialCollapsed?: boolean;
@@ -233,8 +230,6 @@ export default function DashboardShell({
             </button>
           </div>
         </nav>
-
-        {beforeUser}
 
         <div className="admin-user">
           <div className="admin-user-avatar" style={userBlock.avatarStyle} aria-hidden="true">

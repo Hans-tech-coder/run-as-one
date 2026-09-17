@@ -12,7 +12,7 @@ import type {
 /**
  * What the dashboard shows while a page is being fetched.
  *
- * Every admin and superadmin page is built the same way — an `.admin-header`
+ * Every dashboard page is built the same way — an `.admin-header`
  * with a title in it, then `.admin-content` — so the fallback is that same
  * frame with the answers still missing. Holding the header at its real 80px
  * and the content at a real height means the page that arrives fills the shape
@@ -33,8 +33,7 @@ import type {
  * unlisted — is the centred running figure, which promises nothing about what
  * is coming.
  *
- * Used by `admin/loading.tsx`, `admin/events/loading.tsx` and
- * `superadmin/loading.tsx`, and by the edit form while it fetches its event.
+ * Used by `admin/loading.tsx`, and `admin/events/loading.tsx`, and by the edit form while it fetches its event.
  * No hooks, so a fallback that is a Server Component can still render it.
  */
 export default function AdminRouteLoading({ shape }: { shape?: RouteShape | null }) {
@@ -132,8 +131,8 @@ function ShapeSkeleton({ shape }: { shape: RouteShape }) {
       )}
 
       {shape.panels ? (
-        // Under metric tiles a panel keeps the page's own 32px above it (the
-        // superadmin dashboard's `mt-8`), collapsing with the grid's margin.
+        // Under metric tiles a panel keeps the page's own 32px above it (a
+        // page's own `mt-8` under its tiles), collapsing with the grid's margin.
         <div className={`flex flex-col gap-8 ${shape.metrics ? "mt-8" : ""}`}>
           {shape.panels.map((panel, index) => (
             <FormPanel key={index} panel={panel} />

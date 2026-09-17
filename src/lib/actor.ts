@@ -204,8 +204,10 @@ export function grantableRoles(actor: Actor): TeamRole[] {
  * The memberships a staff member can be signed in to right now: accepted, not
  * suspended by that organizer, inside an organizer that is itself approved, and
  * — for a client viewer — on a client whose viewers may sign in.
- * Sign-in, the organizer switcher and the sidebar all read through this, so
- * none of them can offer an organizer another would refuse.
+ * Sign-in reads through this, so it can never open a membership `getActor()`
+ * would refuse on the next request. (The organizer switcher and the sidebar
+ * read it too, until the single tenant of ADMIN_MERGE_PLAN.md retired the
+ * switcher.)
  */
 export function activeMembershipWhere(staffId: string): Prisma.StaffMembershipWhereInput {
   return {

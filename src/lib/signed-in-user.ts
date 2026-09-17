@@ -1,13 +1,12 @@
 /**
- * Who is signed into the admin, as the sidebars need to show them.
+ * Who is signed into the admin, as the sidebar needs to show them.
  *
- * Both the organizer sidebar and the superadmin sidebar put a name and an
- * avatar initial above the logout button, so they read the signed-in account
- * from here instead of each hardcoding a placeholder.
+ * The dashboard's sidebar puts a name and an avatar initial above the logout
+ * button, so it reads the signed-in account from here instead of hardcoding a
+ * placeholder.
  *
  * The auth cookie already carries a name, but it only carries the one the
- * token was issued with: a rename — by the organizer themselves, or by the
- * superadmin from the organizers screen — would leave the sidebar showing a
+ * token was issued with: a rename from the settings screen would leave the sidebar showing a
  * stale name until the next sign-in. The record is the truth, so this reads
  * it and keeps the token's name only as a fallback.
  *
@@ -21,7 +20,7 @@
  */
 
 import prisma from './db';
-import { activeMembershipWhere, can, canSomewhere, getActor } from './actor';
+import { can, canSomewhere, getActor } from './actor';
 import { CLIENT_VIEWER_LABEL, ROLE_LABELS } from './permissions';
 
 export type SignedInUser = {
@@ -32,14 +31,12 @@ export type SignedInUser = {
   roleLabel: string;
   /** The organizer this session acts inside. For an owner it is their own name. */
   organizerName: string;
-  /** The sidebar items this person has a reason to open. */
-  nav: { marketing: boolean; team: boolean; activity: boolean };
   /**
-   * The organizers a staff member can switch between. Empty for an owner, and
-   * for a staff member who works for only one — a switcher with one choice is
-   * a control that does nothing.
+   * The sidebar items this person has a reason to open. `platform` is Run As
+   * One's own screens — organizer applications, clubs and feedback — which were
+   * the super admin's sidebar until the dashboards merged.
    */
-  organizers: { id: string; name: string; current: boolean }[];
+  nav: { marketing: boolean; team: boolean; activity: boolean; platform: boolean };
 };
 
 export async function getSignedInUser(): Promise<SignedInUser | null> {
@@ -48,7 +45,6 @@ export async function getSignedInUser(): Promise<SignedInUser | null> {
 
   let name = actor.name;
   let organizerName = actor.name;
-  let organizers: SignedInUser['organizers'] = [];
 
   if (actor.kind !== 'STAFF') {
     const organizer = await prisma.organizer.findUnique({
@@ -58,20 +54,14 @@ export async function getSignedInUser(): Promise<SignedInUser | null> {
     name = organizer?.name ?? actor.name;
     organizerName = name;
   } else {
-    const memberships = await prisma.staffMembership.findMany({
-      where: activeMembershipWhere(actor.id),
-      orderBy: { acceptedAt: 'asc' },
-      select: { organizerId: true, organizer: { select: { name: true } } },
+    // There is one tenant — Run As One's own organizer row — so there is no
+    // longer a switcher listing the others (ADMIN_MERGE_PLAN.md, Batch 2); the
+    // session's organizer is only named under the person.
+    const organizer = await prisma.organizer.findUnique({
+      where: { id: actor.orgId },
+      select: { name: true },
     });
-    organizerName =
-      memberships.find(membership => membership.organizerId === actor.orgId)?.organizer.name ?? '';
-    if (memberships.length > 1) {
-      organizers = memberships.map(membership => ({
-        id: membership.organizerId,
-        name: membership.organizer.name,
-        current: membership.organizerId === actor.orgId,
-      }));
-    }
+    organizerName = organizer?.name ?? '';
   }
 
   name = name.trim();
@@ -91,7 +81,7 @@ export async function getSignedInUser(): Promise<SignedInUser | null> {
       marketing: canSomewhere(actor, 'promo:view'),
       team: can(actor, 'team:manage', { organizerId: actor.orgId }),
       activity: can(actor, 'activity:view', { organizerId: actor.orgId }),
+      platform: can(actor, 'platform:manage', { organizerId: actor.orgId }),
     },
-    organizers,
   };
 }

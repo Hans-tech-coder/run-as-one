@@ -51,7 +51,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${inter.variable} ${outfit.variable} antialiased bg-[var(--bg-primary)] text-white`} suppressHydrationWarning>
         {/* Outside ClientLayoutWrapper: that component returns early for
-            /admin and /superadmin, so a provider mounted inside it would
+            /admin, so a provider mounted inside it would
             cover only half the app. */}
         <ThemedFavicon />
         <AlertProvider>

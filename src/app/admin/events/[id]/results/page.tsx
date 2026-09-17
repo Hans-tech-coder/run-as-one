@@ -19,8 +19,8 @@ export default async function AdminResultsPage({ params }: { params: Promise<{ i
   // below writes results against whatever event it is given. A STAFF member
   // unassigned to this race gets the same "not found".
   //
-  // No super admin branch: `src/proxy.ts` sends a `SUPER_ADMIN` off `/admin/**`
-  // to `/superadmin` before this page runs.
+  // No super admin branch: a `SUPER_ADMIN` session's `orgId` is its own
+  // Organizer row, which owns no event, so this read finds nothing for it.
   const event = await prisma.event.findFirst({
     where: { id, organizerId: actor.orgId },
     include: {

@@ -24,7 +24,7 @@ interface Community {
   runnerCount: number;
 }
 
-export default function CommunitiesManagementPage() {
+export default function CommunitiesClient() {
   // Shadows window.alert / window.confirm on purpose — see AlertProvider.
   const { alert, confirm } = useAlert();
   const [communities, setCommunities] = useState<Community[]>([]);
@@ -39,7 +39,7 @@ export default function CommunitiesManagementPage() {
 
   const fetchCommunities = async () => {
     try {
-      const res = await fetch('/api/superadmin/communities');
+      const res = await fetch('/api/admin/communities');
       if (res.ok) {
         const data = await res.json();
         setCommunities(data.communities);
@@ -76,7 +76,7 @@ export default function CommunitiesManagementPage() {
   };
 
   const approve = (c: Community) =>
-    send(`/api/superadmin/communities/${c.id}`, {
+    send(`/api/admin/communities/${c.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'APPROVED' }),
@@ -94,7 +94,7 @@ export default function CommunitiesManagementPage() {
       confirmLabel: 'Remove',
     });
     if (!confirmed) return;
-    await send(`/api/superadmin/communities/${c.id}`, { method: 'DELETE' });
+    await send(`/api/admin/communities/${c.id}`, { method: 'DELETE' });
   };
 
   const startRename = (c: Community) => {
@@ -103,7 +103,7 @@ export default function CommunitiesManagementPage() {
   };
 
   const saveName = async (c: Community) => {
-    const ok = await send(`/api/superadmin/communities/${c.id}`, {
+    const ok = await send(`/api/admin/communities/${c.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: editName }),
@@ -114,7 +114,7 @@ export default function CommunitiesManagementPage() {
   const addCommunity = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName.trim()) return;
-    const ok = await send('/api/superadmin/communities', {
+    const ok = await send('/api/admin/communities', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: newName }),

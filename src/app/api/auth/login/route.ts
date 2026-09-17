@@ -153,10 +153,10 @@ export async function POST(request: Request) {
     const staff = account.staff;
 
     // The organizer this sign-in lands in: the earliest membership that is
-    // accepted, not suspended, and inside an active organizer. A person who
-    // works for several switches from the sidebar once signed in
-    // (api/auth/switch-organizer). One organizer suspending them does not
-    // stop them signing in to another.
+    // accepted, not suspended, and inside an active organizer. Run As One is
+    // the one tenant (ADMIN_MERGE_PLAN.md), so there is no switching once
+    // signed in; a membership elsewhere being suspended still does not stop
+    // this one.
     const membership = await db.staffMembership.findFirst({
       where: activeMembershipWhere(staff.id),
       orderBy: { acceptedAt: 'asc' },

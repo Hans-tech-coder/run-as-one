@@ -5,8 +5,8 @@ import { Check } from 'lucide-react';
  * The one card list of the dashboards — what a data table becomes below `lg`.
  *
  * A table does not fit a phone. Scrolling it sideways hides the columns that
- * matter behind the ones that do not, so every table in `/admin` and
- * `/superadmin` has a card list beside it instead. Both are rendered, and
+ * matter behind the ones that do not, so every table in `/admin` has a
+ * card list beside it instead. Both are rendered, and
  * `.dash-desktop-only` / `.dash-mobile-only` in `Admin.css` decide which one is
  * seen. That is CSS rather than a `matchMedia` hook on purpose: a hook
  * renders the wrong layout on the server and then swaps it after hydration,
@@ -17,7 +17,7 @@ import { Check } from 'lucide-react';
  * `row.getIsSelected()` / `row.toggleSelected()`, so search, filter chips,
  * sort, selection and the pager stay shared and the two layouts cannot drift.
  * Only the body is swapped; the toolbar and pager above and below stay. The
- * superadmin's plain arrays fit the same props, which is why nothing here
+ * organizers, communities and feedback screens' plain arrays fit the same props, which is why nothing here
  * knows about TanStack.
  *
  * Because both layouts are in the page at once, nothing in a card may carry an

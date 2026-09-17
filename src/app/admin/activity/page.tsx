@@ -33,8 +33,12 @@ export const metadata: Metadata = {
  * entry recorded mid-read waits in a "newer entries" count instead of shifting
  * every row they are looking at. Because nothing in the trail is ever edited
  * or deleted, an offset against a pinned instant is exactly stable. The
- * reading itself is `loadActivityPage` (lib/activity-store.ts), shared with
- * `/superadmin/activity`.
+ * reading itself is `loadActivityPage` (lib/activity-store.ts).
+ *
+ * **Organizer decisions are here too.** Run As One staff decide applications
+ * inside Run As One's own tenant, so those rows are this trail's since the
+ * dashboards merged (ADMIN_MERGE_PLAN.md, Batch 2); `/superadmin/activity`
+ * redirects here.
  */
 export default async function ActivityPage({
   searchParams,

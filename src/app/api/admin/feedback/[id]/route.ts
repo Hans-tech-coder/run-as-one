@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
-import { getAuthCookie } from '@/lib/auth';
+import { platformActor } from '../../platform-actor';
 import { asFeedbackStatus } from '@/lib/feedback';
 
 /**
@@ -25,10 +25,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const auth = await getAuthCookie();
-    if (!auth || auth.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { refusal } = await platformActor();
+    if (refusal) return refusal;
 
     const { id } = await params;
     const body = await request.json().catch(() => null);
@@ -56,10 +54,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const auth = await getAuthCookie();
-    if (!auth || auth.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { refusal } = await platformActor();
+    if (refusal) return refusal;
 
     const { id } = await params;
     await prisma.feedback.delete({ where: { id } });

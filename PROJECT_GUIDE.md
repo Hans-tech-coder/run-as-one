@@ -21,7 +21,7 @@ Philippines**. Three groups use it:
 | --- | --- | --- |
 | **Runners** (public, no account) | Browse upcoming races, register solo or as a group, pay, and later look up their times and download an e-certificate | `/`, `/events`, `/events/[slug]`, `/results`, `/results/[slug]` |
 | **Organizers** (the paying clients) | Create and manage their own events, see registrants, upload race results, run promo codes | `/admin/**` |
-| **Super admin** (the platform owner) | Read and approve organizer applications, curate the shared running-club list, watch platform revenue | `/superadmin/**` |
+| **Run As One staff** (owner and admins, `platform:manage`) | Everything organizers do, plus read and decide organizer applications, curate the shared running-club list, read feedback and watch the platform fees collected — in the same dashboard. There is no separate super admin portal since `ADMIN_MERGE_PLAN.md` Batch 2; old `/superadmin/**` addresses redirect | `/admin/**` |
 
 Money flows to the organizer through PayMongo or a direct bank transfer; the
 platform takes a per-runner admin fee, which **the organizer sets on each event**
@@ -179,8 +179,13 @@ src/
                             #   landing, winners board, leaderboard, one runner
     feedback/               # the public feedback form (page + FeedbackForm)
     coming-soon/ privacy/ terms/ not-found.tsx
-    admin/                  # organizer portal (AdminShell, Admin.css, Auth.css,
-                            #   DashboardShell — the frame both dashboards share,
+    admin/                  # the one dashboard (AdminShell, Admin.css, Auth.css,
+                            #   DashboardShell — its frame,
+                            #   dashboard-nav.tsx — the sidebar's flags for
+                            #   client code such as loading.tsx,
+                            #   organizers/ communities/ feedback/ — Run As
+                            #   One's own screens (platform:manage), moved
+                            #   from /superadmin,
                             #   dashboard-sidebar.ts — the collapsed-rail cookie,
                             #   AdminCardList — what every table becomes below lg,
                             #   AdminCardEdit — an inline edit, as a card holds it,
@@ -192,8 +197,8 @@ src/
                             #   pages under /admin with no sidebar,
                             #   AuthRouteLoading — their wait, FilterChip — a
                             #   chip that finds)
-    superadmin/             # platform-owner portal (SuperAdminShell, a thin
-                            #   wrapper over admin/DashboardShell)
+                            # (no superadmin/ folder: /superadmin/** is a
+                            #   permanent redirect in next.config.ts)
     api/                    # all route handlers — see §6
   components/               # public-site components (Navbar, Footer, EventGrid,
                             #   StatusPanel, RunAsOneLogo, HeroArcBackground,
@@ -470,11 +475,11 @@ logic again.
 | `uploads.ts` | **What may be uploaded — the one list both sides of the wire read.** It used to live inside `blob.ts`, which imports the Blob SDK and therefore cannot be imported by a client component, so every `accept="…"` on a file input was a hand-copy of it and the copies drifted: both registration wizards offered `application/pdf` for a deposit slip while the server took images only, and a runner who picked the PDF receipt their bank emailed was refused by `/api/checkout/manual` at the very end of checkout with the whole form already filled in — while `image/webp` and `image/gif` were accepted by the server and offered by nobody. Nothing here imports the SDK, so an input can now advertise exactly what `assertUploadable` will take: `acceptAttribute(kind)` builds the attribute, `describeUploadTypes(kind)` the hint a runner reads ("JPG, PNG, WEBP, GIF or PDF"), `listUploadTypes(kind)` the server's rejection message, and `MAX_UPLOAD_MB` the number in the hint — which said 5 MB against a 4 MB cap for as long as it was typed by hand. Three kinds: `image` (event imagery), `template` and `proof`, the last two also allowing PDF. `isPdfProof(pathname)` is how the admin screens tell a PDF receipt from a photo of one. |
 | `auth.ts` / `jwt.ts` | bcrypt hashing and the `admin_token` httpOnly cookie (1 day). **The session carries typed claims** — `sub` (the person), `kind` (`OWNER` \| `STAFF` \| `SUPER_ADMIN`), `orgId` (the tenant), `role`, `name`, `email` — built by `organizerSessionClaims` / `staffSessionClaims` in `actor.ts`. A token issued before these claims existed (`{ id, email, name, role }`) still verifies and reads as that Organizer's owner, so the deploy that introduced them signed nobody out. `getAuthCookie()` returns the raw claims and **only the super admin's own routes call it**; every admin surface goes through `actor.ts`. |
 | `actor.ts` | **Who is acting, and what they may reach — the one rule: authorisation scopes by `orgId`, attribution records the actor's `id`.** For an owner the two are the same id, which is why rewiring every admin surface onto this changed nothing until staff exist. `getActor()` is for route handlers (they answer null with their own 401); `requireActor()` is for server pages (it redirects to `/admin/login`). An owner's actor is read from the token alone, as the routes always did; a **staff** actor is checked against the record on every request — membership accepted, account `ACTIVE`, organizer `APPROVED` (`organizerCanSignIn`, an allowlist — §5 `organizer-status.ts`), and the token issued after `sessionsValidFrom` — because a suspension that waits a day for a JWT to expire is not one. **`can(actor, permission, { organizerId, eventId })`** is the check before acting: organizer-wide roles read the matrix directly, a STAFF membership needs an assignment on that event, and a super admin reaches another organizer only for `SUPER_ADMIN_REACH`. `canSomewhere` is for screens about no single race (marketing, the image uploader). **`reachableEvents(actor, permission)`** is the `where` every list page reads events through — `{ organizerId }` for an owner, only the assigned ids for STAFF. A single-event page reads `{ id, organizerId: actor.orgId }` and then asks `can()`, answering a refusal with the **same "Event not found."** as a missing id. `findAccountByEmail` is the one lookup `auth/login`, `auth/register` and `admin/profile` make across **both** account tables (Organizer wins a tie), since the database cannot keep an address unique across two tables. **A client viewer** (a `VIEWER` membership) carries `actor.clientId`, and its session is refused without a client or on a client `clientViewersCanSignIn` refuses. It holds `VIEWER_PERMISSIONS` and nothing else: `can()` also needs **`reach.clientId`** — the event's own `clientId`, which the caller must pass — to match, so a page that forgets to pass it refuses; `canSomewhere` answers from that one list; `reachableEvents` is `{ organizerId, clientId }` for a permission it holds and empty for every other, which is what every existing list page (reading `event:view`) shows it. `orgRole` is null for a viewer, so no organizer-wide branch can reach it. |
-| `permissions.ts` | **The permission matrix, as data** (`STAFF_ACCESS_PLAN.md` §3). Permissions are verbs (`registration:validate`, `promo:manage`, `event:delete`…); **no route compares a role string**. `OWNER`/`ADMIN` are organizer-wide; `EVENT_MANAGER`/`VALIDATOR`/`ENCODER`/`VIEWER` are held per event. `VALIDATOR` can settle an order and deliberately cannot edit or delete one. `SUPER_ADMIN_REACH` is the super admin's reach into another organizer — view, validate, remark, email, proof — exactly what the status, email and proof routes allowed before. `asMembershipRole`/`asEventRole` guard the two role columns. **`MEMBERSHIP_ROLES` is `ADMIN`, `STAFF` and `VIEWER`** (a client viewer, `ADMIN_MERGE_PLAN.md`), while **`TEAM_ROLES` / `TeamRole` / `asTeamRole` are `ADMIN` and `STAFF` only** — what `team.ts`, `team-invite.ts`, the team page, its routes, the invite page and `GRANTABLE_ROLES` read, so no team surface can list, offer or manage a viewer. `VIEWER_PERMISSIONS` is the viewer's whole reach: `event:view-summary` (registrant counts — total, per category, paid vs pending; no money, no names), which every matrix role also holds and **`MATRIX_PERMISSIONS`** leaves off the team screen's role table. `CLIENT_VIEWER_LABEL` / `_HINT` describe the membership viewer, since the `VIEWER` key in `ROLE_LABELS` means the per-event role. Prisma-free, so the team screen can render the matrix it enforces. |
-| `audit.ts` | **The trail — "sino ang gumawa nito".** `recordAudit(tx, actor, entry \| entries)` takes the **transaction client**, so the log row and the change commit or fail together; every admin write passes its own transaction, and the three things with no write to ride along (a proof opened, a registrant export, a sign-in attempt) pass the plain client. The actor's name and email are **snapshotted**; the IP and user agent come from the request. `changedFields(before, after, fields, redact)` records only what moved, and records `'changed'` instead of a value for a redacted field, a non-scalar and any string over 120 characters. **`SENSITIVE_RUNNER_FIELDS`** (birthdate, emergency contact name and phone, medical conditions) never have their values logged. `AUDIT_ACTIONS` is the closed vocabulary — add a verb there before using it. Recorded today: sign-ins and failed sign-ins (not for an address with no account, which has no organizer to belong to), profile and password changes, event create / edit / pause / resume / schedule / delete, results uploads, registration status and remarks changes, a manual email marked sent, runner edits and removals (one row per runner, bulk included), proof views, registrant exports, promotion create / edit / pause / resume / delete, and **a super admin's decision on an organizer** (`organizer.approved` / `.rejected` / `.suspended` / `.reinstated`, written into **the super admin's own trail**, never the decided organizer's — whose Activity screen would show the super admin's IP and device — with the organizer as `entityId`, `changes` holding the status moved from and to and, for a rejection, the whole reason). It is read back through `activity.ts` / `activity-store.ts`, never here. |
-| `activity.ts` | **Reading the trail back** — Prisma-free and headers-free, so client components import it. `ACTION_LABELS` and `ACTION_GROUP` are both `Record<AuditAction, …>`, so **a verb added to `AUDIT_ACTIONS` without a label and a group fails the build**. `ACTIVITY_GROUPS` are the Activity filter's shelves (Payments, Runners, **Personal data** — proofs opened and exports, the Data Privacy Act question — Events, Promotions, Team, Sign-ins, and **Organizer decisions**). **Two trails read through it** — `ActivityScope` is `organizer` (`/admin/activity`) or `platform` (`/superadmin/activity`), `SCOPE_GROUPS` names the shelves each can hold (the platform: Organizer decisions and Sign-ins) so neither screen's Activity filter offers a verb that never appears on it, and `ACTIVITY_PATHS` is where each screen's filters push. **The screen's filters are the URL**: `readActivityFilters` guards every param (ids, a verb or `group:<key>`, a range of `all`/`today`/`7d`/`30d`/`custom` with Manila `from`/`to`, a search, page, size) and refuses an end date before its start under the To box; `activityQuery` writes them back leaving out defaults; `activityWindow` turns a range into Manila-midnight instants ("last 7 days" is today and the six before). **`asOf` pins a reading** so entries recorded while someone pages wait in a "newer entries" count. Display: `formatTrailTime` / `formatTrailInstant` / `formatTrailDayHeading` (Today · Sep 15), `describeChanges` (a redacted value says the trail does not keep it), `describeDevice` (Chrome on Android). **`statusProvenance`** is the registrant modal's "Validated by Ana Cruz · Sep 13, 2026, 4:02 PM" — it names a person only when the latest recorded change *to* a status matches the status the order holds now; otherwise an online PAID reads "Paid online through PayMongo" and anything else "not on record, before the trail began". `orderActivityPath` is the modal's link to one order's history. |
-| `activity-store.ts` | The trail's queries, server-only. **Every read is scoped to one `organizerId`** — a super admin's settlement is written into that organizer's trail, so an owner reads everything done to their data and nothing else. `activityWhere` builds the filters' `where` (search is a case-insensitive `contains` on `summary`, which names order references, runners, events and promotions); `activityPeople` is the Person filter, **read from the trail rather than the team** so a removed member's actions stay findable, one entry per actor id under their latest name; `latestStatusChanges(orgId, eventId)` is one query for the registrants screen's provenance. **`loadActivityPage(orgId, searchParams)`** is one page of a trail — filters read, reading pinned with `asOf`, a page past the end clamped, the count of newer entries, the Person list — shared by `/admin/activity` and `/superadmin/activity` so the two cannot page or filter differently; the organizer page adds its event titles on top. |
-| `signed-in-user.ts` | The name and initial the admin sidebars show — read from the record, not the token, so a rename is never stale. It names the **person**: an owner's Organizer name, or a staff member's own StaffAccount name. It also carries the role line (`Owner`, or `Admin · ORGANIZER`), **which sidebar items this person has any reason to open** (`nav.marketing` from `canSomewhere(promo:view)`, `nav.team` from `team:manage`, `nav.activity` from `activity:view`) and, for a staff member with more than one active membership, the organizers the sidebar's switcher offers. Hiding a link is manners; the pages still check. |
+| `permissions.ts` | **The permission matrix, as data** (`STAFF_ACCESS_PLAN.md` §3). Permissions are verbs (`registration:validate`, `promo:manage`, `event:delete`…); **no route compares a role string**. `OWNER`/`ADMIN` are organizer-wide; `EVENT_MANAGER`/`VALIDATOR`/`ENCODER`/`VIEWER` are held per event. `VALIDATOR` can settle an order and deliberately cannot edit or delete one. **`platform:manage`** (`OWNER`, `ADMIN`) is Run As One's own work that belongs to no race — organizer applications, the club list, the feedback inbox and the Overview's *Platform Fees Collected* tile — which was the super admin's portal until the dashboards merged; its API routes ask it through `api/admin/platform-actor.ts`. `SUPER_ADMIN_REACH` is the super admin's reach into another organizer — view, validate, remark, email, proof — exactly what the status, email and proof routes allowed before. `asMembershipRole`/`asEventRole` guard the two role columns. **`MEMBERSHIP_ROLES` is `ADMIN`, `STAFF` and `VIEWER`** (a client viewer, `ADMIN_MERGE_PLAN.md`), while **`TEAM_ROLES` / `TeamRole` / `asTeamRole` are `ADMIN` and `STAFF` only** — what `team.ts`, `team-invite.ts`, the team page, its routes, the invite page and `GRANTABLE_ROLES` read, so no team surface can list, offer or manage a viewer. `VIEWER_PERMISSIONS` is the viewer's whole reach: `event:view-summary` (registrant counts — total, per category, paid vs pending; no money, no names), which every matrix role also holds and **`MATRIX_PERMISSIONS`** leaves off the team screen's role table. `CLIENT_VIEWER_LABEL` / `_HINT` describe the membership viewer, since the `VIEWER` key in `ROLE_LABELS` means the per-event role. Prisma-free, so the team screen can render the matrix it enforces. |
+| `audit.ts` | **The trail — "sino ang gumawa nito".** `recordAudit(tx, actor, entry \| entries)` takes the **transaction client**, so the log row and the change commit or fail together; every admin write passes its own transaction, and the three things with no write to ride along (a proof opened, a registrant export, a sign-in attempt) pass the plain client. The actor's name and email are **snapshotted**; the IP and user agent come from the request. `changedFields(before, after, fields, redact)` records only what moved, and records `'changed'` instead of a value for a redacted field, a non-scalar and any string over 120 characters. **`SENSITIVE_RUNNER_FIELDS`** (birthdate, emergency contact name and phone, medical conditions) never have their values logged. `AUDIT_ACTIONS` is the closed vocabulary — add a verb there before using it. Recorded today: sign-ins and failed sign-ins (not for an address with no account, which has no organizer to belong to), profile and password changes, event create / edit / pause / resume / schedule / delete, results uploads, registration status and remarks changes, a manual email marked sent, runner edits and removals (one row per runner, bulk included), proof views, registrant exports, promotion create / edit / pause / resume / delete, and **a staff decision on an organizer application** (`organizer.approved` / `.rejected` / `.suspended` / `.reinstated`, written into **the deciding actor's own trail** — Run As One's, read on `/admin/activity` — never the decided organizer's, whose Activity screen would show the decider's IP and device; with the organizer as `entityId`, `changes` holding the status moved from and to and, for a rejection, the whole reason). It is read back through `activity.ts` / `activity-store.ts`, never here. |
+| `activity.ts` | **Reading the trail back** — Prisma-free and headers-free, so client components import it. `ACTION_LABELS` and `ACTION_GROUP` are both `Record<AuditAction, …>`, so **a verb added to `AUDIT_ACTIONS` without a label and a group fails the build**. `ACTIVITY_GROUPS` are the Activity filter's shelves (Payments, Runners, **Personal data** — proofs opened and exports, the Data Privacy Act question — Events, Promotions, Team, Sign-ins, and **Organizer decisions**). **One trail reads through it** since the dashboards merged (`ADMIN_MERGE_PLAN.md` Batch 2): the `ActivityScope` / `SCOPE_GROUPS` split that gave `/superadmin/activity` its own shelves is gone, the Activity filter offers every shelf in `ACTIVITY_GROUPS` order, and `ACTIVITY_PATH` is where the filters push. **The screen's filters are the URL**: `readActivityFilters` guards every param (ids, a verb or `group:<key>`, a range of `all`/`today`/`7d`/`30d`/`custom` with Manila `from`/`to`, a search, page, size) and refuses an end date before its start under the To box; `activityQuery` writes them back leaving out defaults; `activityWindow` turns a range into Manila-midnight instants ("last 7 days" is today and the six before). **`asOf` pins a reading** so entries recorded while someone pages wait in a "newer entries" count. Display: `formatTrailTime` / `formatTrailInstant` / `formatTrailDayHeading` (Today · Sep 15), `describeChanges` (a redacted value says the trail does not keep it), `describeDevice` (Chrome on Android). **`statusProvenance`** is the registrant modal's "Validated by Ana Cruz · Sep 13, 2026, 4:02 PM" — it names a person only when the latest recorded change *to* a status matches the status the order holds now; otherwise an online PAID reads "Paid online through PayMongo" and anything else "not on record, before the trail began". `orderActivityPath` is the modal's link to one order's history. |
+| `activity-store.ts` | The trail's queries, server-only. **Every read is scoped to one `organizerId`** — a super admin's settlement is written into that organizer's trail, so an owner reads everything done to their data and nothing else. `activityWhere` builds the filters' `where` (search is a case-insensitive `contains` on `summary`, which names order references, runners, events and promotions); `activityPeople` is the Person filter, **read from the trail rather than the team** so a removed member's actions stay findable, one entry per actor id under their latest name; `latestStatusChanges(orgId, eventId)` is one query for the registrants screen's provenance. **`loadActivityPage(orgId, searchParams)`** is one page of a trail — filters read, reading pinned with `asOf`, a page past the end clamped, the count of newer entries, the Person list — the one reading behind `/admin/activity` (it served `/superadmin/activity` too until that screen merged in), which adds its event titles on top. |
+| `signed-in-user.ts` | The name and initial the dashboard sidebar shows — read from the record, not the token, so a rename is never stale. It names the **person**: an owner's Organizer name, or a staff member's own StaffAccount name. It also carries the role line (`Owner`, or `Admin · ORGANIZER`), **which sidebar items this person has any reason to open** (`nav.marketing` from `canSomewhere(promo:view)`, `nav.team` from `team:manage`, `nav.activity` from `activity:view`, `nav.platform` from `platform:manage` — Organizers, Communities and Feedback). There is **no organizer list or switcher** any more: Run As One is the one tenant (`ADMIN_MERGE_PLAN.md` Batch 2), so a staff member's organizer is only named in the role line. Hiding a link is manners; the pages still check. |
 | `team.ts` | **The rules of an organizer's team**, free of Prisma and crypto so the team form and the routes run the same checks and word refusals identically. `memberState` derives Active / Invited / Invite Expired / Suspended from the membership's timestamps (with `MEMBER_STATE_LABELS`/`TONES` for the badge); `readInvitee` (name, lowercased email) and `readAccess` (role plus event assignments, checked against the organizer's own event ids — **a STAFF membership needs at least one event**, and a duplicate or foreign event is refused per row under `assignmentField(i, part)`); `newPasswordErrors`; `describeAccess` for trail summaries; `MIN_PASSWORD_LENGTH` (shared with the settings form and the password route) and `INVITE_TTL_DAYS` = 7. |
 | `team-invite.ts` | **Invitation links.** `newInvitation()` makes 32 random bytes and keeps only their sha256 (`inviteTokenHash`) — the token itself is only ever in the email; `findOpenInvitation(token)` returns the membership only if the token is well-formed, matches, is unaccepted and unexpired, and every failure reads the same; `inviteOrigin(request)` names `SITE_URL` in production and the request's own origin elsewhere, so a localhost invitation links back to the database it was written into; `sendInvitation` renders `staffInvitationEmail` (`email.ts`) and, outside production only, prints the link to the server console so the flow can be tried without email. |
 | `actor.ts` (team additions) | `canManageMember(actor, role)` — `team:manage` **and** `GRANTABLE_ROLES` (`permissions.ts`: an OWNER grants ADMIN or STAFF, an ADMIN only STAFF, so an admin can neither make nor touch another admin); `grantableRoles(actor)` for the picker; `activeMembershipWhere(staffId)` — accepted, not suspended, organizer active — **the one definition sign-in, the organizer switcher and the sidebar all read**, so none can offer an organizer another would refuse. `getActor()` now also refuses a suspended membership. `permissions.ts` gained `ROLE_LABELS`, `ROLE_HINTS`, `PERMISSION_LABELS` and `MATRIX_ROLES`, which is what the team screen's role table is drawn from. |
@@ -524,9 +529,15 @@ results sheet imported with a blank bib column — the importer does not reject
 those — and such a row falls back to its cuid, because the bare event path is
 the winners board and would otherwise swallow it.
 
-### Organizer (`/admin`, gated by `src/proxy.ts`)
+### The dashboard (`/admin`, gated by `src/proxy.ts`)
 `/admin` dashboard (an Overview of three tiles — **Total Revenue (Net)**,
-**Total Registrants**, **Active Events** — over the five most recent
+**Total Registrants**, **Active Events** — plus a fourth, **Platform Fees
+Collected** (the `platformFee` of PAID orders), for `platform:manage` only: it
+was the super admin dashboard's *Platform Revenue* tile, and Run As One now
+keeps that money itself. The super admin dashboard's *Total Organizers* and
+*Transaction Volume* tiles were not carried over — clients replace organizers in
+Batch 3, and volume is the net revenue beside it plus fees. `loading.tsx` draws
+four tiles for the same people through `dashboard-nav.tsx`. Then the five most recent
 registrations. There is no *Page Views* tile: it was a placeholder that only
 ever read `N/A`, and a metric card that never carries a number teaches an
 organizer to stop reading the row. Do not re-add a tile until something real
@@ -607,7 +618,7 @@ checkout `pending-expiry.ts` sweeps on its own, with nothing for a person to do)
 and it wears the amber of the PENDING badge it collects. Sorting those to the top
 instead would pull a row out from under the cursor the moment it was validated,
 costing the admin their place in the list and the sight of the badge turning
-green where they clicked — the same reason the super admin's feedback screen
+green where they clicked — the same reason the feedback screen
 *finds* unread messages rather than sorting them up. The Status column stays
 sortable for anyone who wants to group by it deliberately.
 Rows whose email
@@ -720,12 +731,13 @@ link has expired" page with the way back to sign-in) · `/admin/[...missing]` �
 the admin's own 404.
 
 **The sidebar and the events table follow the permission matrix.** Marketing
-Tools shows only with `promo:view` somewhere, Team only with `team:manage`,
-Activity only with `activity:view`, and
+Tools shows only with `promo:view` somewhere, **Organizers, Communities and
+Feedback only with `platform:manage`** (between Marketing Tools and Team),
+Team only with `team:manage`, Activity only with `activity:view`, and
 the user block's role line reads **Owner**, or `Admin · ORGANIZER` /
-`Staff · ORGANIZER`. A staff member with more than one active membership gets
-an **organizer switcher** above it (`OrganizerSwitcher`, the row-menu machinery
-opening upward). On `/admin/events`, Create Event needs `event:create`, and each
+`Staff · ORGANIZER`. There is no organizer switcher: it was removed with
+`api/auth/switch-organizer` in `ADMIN_MERGE_PLAN.md` Batch 2, because Run As
+One is the one tenant and nobody has a second organizer to move to. On `/admin/events`, Create Event needs `event:create`, and each
 row's Edit Event, Schedule / Pause Sign-Ups and Delete Event follow
 `event:edit` / `event:delete`, decided on the server per row. **The registrants
 screen follows it too**: `registrants/page.tsx` builds a `RegistrantPermissions`
@@ -742,8 +754,20 @@ when somebody validates, and for an owner or admin a *See this order's
 activity* link into `/admin/activity` filtered to that event and order
 reference.
 
-### Super admin (`/superadmin`)
-`/superadmin` dashboard (platform revenue, fees) · `/superadmin/organizers`
+### Run As One's own screens (`/admin`, `platform:manage`)
+**These were the super admin's portal at `/superadmin` until
+`ADMIN_MERGE_PLAN.md` Batch 2.** They now sit in the one dashboard's sidebar for
+owners and admins, each behind a server `page.tsx` that asks `can(actor,
+'platform:manage')` and answers anyone else with the admin's own 404, wrapping
+the client screen it always was (`OrganizersClient`, `CommunitiesClient`,
+`FeedbackClient`). **`/superadmin` and `/superadmin/:path*` are permanent
+redirects** in `next.config.ts` to `/admin` and `/admin/:path*` — same names,
+so query strings survive, and an address that never existed lands on
+`/admin`'s own 404 in the sidebar. The super admin's dashboard became the
+Overview's fee tile, and its Activity screen merged into `/admin/activity`
+(below). `/admin/organizers` is replaced by `/admin/clients` in Batch 3.
+
+`/admin/organizers`
 (approve, reject, suspend, and **read the application**; **Pending / Approved / Rejected / Suspended chips** find
 accounts by status, Pending with its count — they replaced a Filter button that
 had no handler. **A row opens the application** the account was created from
@@ -777,10 +801,10 @@ rejection's reason; a row decided before those columns existed shows only its
 badge. Badges read *Pending* / *Rejected*, never the stored code. The table's whole row opens it (except the Actions cell, which also has
 a *Read application* icon); **a card opens it only from its *Read application*
 button**, as a feedback card does. **There is no fee editor** — the per-organizer
-commission control was removed because `Organizer.adminFee` moved no money) · `/superadmin/communities` (approve, rename, reject clubs; the
-Add a club box and its button share one row from `sm` up) · `/superadmin/feedback` (**the reading end of the public form** —
-three metric cards over the messages, newest first. It is the super admin's
-screen and not the organizer's for the same reason the club list is: feedback is
+commission control was removed because `Organizer.adminFee` moved no money) · `/admin/communities` (approve, rename, reject clubs; the
+Add a club box and its button share one row from `sm` up) · `/admin/feedback` (**the reading end of the public form** —
+three metric cards over the messages, newest first. It is Run As
+One's screen and not a per-event one for the same reason the club list is: feedback is
 about the platform rather than about any one race, and it carries strangers'
 email addresses. A message is a paragraph rather than a field, so the table shows
 one line of it and **the row opens** into the whole thing — the second-`TableRow`
@@ -788,16 +812,11 @@ pattern the marketing screen's voucher batches use — carrying the page and the
 browser it came from and a *Reply by email* that opens a `mailto:`. The chips
 filter by triage state and by kind; the order never changes under somebody
 working down the list, which is why the unread ones are **found** rather than
-sorted to the top) · `/superadmin/activity` (**the super admin's own trail** —
-who approved, rejected, suspended or reinstated which organizer account, and
-their sign-ins. It is `/admin/activity`'s `ActivityClient` with
-`scope="platform"`, not a second design: the same URL filters, pinned paging,
-day headings and cards below `lg`, less the Event filter and column, because
-nothing on it belongs to a race. It reads rows under the super admin's own
-`orgId` through `loadActivityPage`; a decision about an organizer is never
-written into that organizer's trail, whose screen shows each actor's IP and
-device. `proxy.ts` guards it and the page checks `actor.kind` again) ·
-`/superadmin/[...missing]`. **Below `lg` the three lists
+sorted to the top). **The platform trail is `/admin/activity`.** Organizer
+decisions are made inside Run As One's tenant now, so they are rows of the one
+trail under an *Organizer decisions* shelf; the older decisions and sign-ins of
+the "System Owner" test account stay under that account's own `orgId`.
+**Below `lg` the three lists
 are cards** (`AdminCardList`): the club rename becomes a
 full-width edit block on the card (`AdminCardEdit`, §9), and a feedback card
 opens its message from a *Read message* button rather than a tap anywhere.
@@ -817,7 +836,7 @@ opens its message from a *Read message* button rather than a tap anywhere.
 | `admin/registrations/[id]/email` | GET, POST | The email a registration is owed, rendered for a person to send by hand — `GET` returns the recipient, subject and **both** renderings (HTML for the clipboard, plain text for a `mailto:`), `POST` records that a staff member sent it. Auth-checked and scoped like the status route, which matters more here than most: the rendered email carries every runner's contact details, birthdate and emergency contact |
 | `admin/runners/[id]`, `admin/runners/bulk-delete` | PUT/DELETE, POST | Registrant editing. **Removal is soft** — `deletedAt`/`deletedById` are stamped and the row stays (§4), so a runner already removed answers "Runner not found". An edit needs `registration:edit`, a removal `registration:delete`. Each edit writes one audit row naming the fields that changed (sensitive columns as "changed", never their values), and each removed runner — bulk included — gets its own row carrying their name and runner reference. The PUT refuses an email that is not an address (`email-address.ts`), and when the edited runner is **runner 1 it also writes `Registration.customerEmail`**: every email about an order is addressed to that column, it was previously written once at checkout and never again, so correcting the typo on the runner fixed the list and left the mail just as undeliverable. The sync is unconditional, which makes re-saving runner 1 the repair for an order whose contact address drifted out of step before this existed |
 | `admin/proof/[id]` | GET | Auth-checked redirect to a short-lived signed proof URL |
-| `feedback` | POST | **Public**, and the only route on this site that writes a row on a stranger's say-so — the people most worth hearing from here are signed out, so an auth check would silence exactly them. Three things hold it: the `FEEDBACK_RULE` throttle (§5) applied **before the body is read**, every length and vocabulary rule from `lib/feedback.ts` enforced here and not only in the form, and the fact that nothing a sender writes is rendered anywhere but the superadmin inbox, as text. A refusal names the field it is refusing and hands back that field's key, so the form puts the caret in the right box (§8, rule 4) rather than showing a catch-all over a form the sender has to re-read themselves. The browser is read from the request headers rather than from the body — a client that can be asked to describe itself can be asked to lie — and the created row's id is deliberately **not** in the answer |
+| `feedback` | POST | **Public**, and the only route on this site that writes a row on a stranger's say-so — the people most worth hearing from here are signed out, so an auth check would silence exactly them. Three things hold it: the `FEEDBACK_RULE` throttle (§5) applied **before the body is read**, every length and vocabulary rule from `lib/feedback.ts` enforced here and not only in the form, and the fact that nothing a sender writes is rendered anywhere but the dashboard's feedback inbox, as text. A refusal names the field it is refusing and hands back that field's key, so the form puts the caret in the right box (§8, rule 4) rather than showing a catch-all over a form the sender has to re-read themselves. The browser is read from the request headers rather than from the body — a client that can be asked to describe itself can be asked to lie — and the created row's id is deliberately **not** in the answer |
 | `promos/lookup` | POST | **Public.** The terms of a code a runner just typed, scoped to the event they are registering for. Returns the *terms*, not a computed discount — the order keeps changing under the runner, so the wizard recomputes with `applyPromo` and nothing here is trusted at checkout. A code we do not have comes back as `{ promo: null }` with a 200, since "we don't have that" is an answer rather than a failure; the response carries no id, organizer or batch. **Throttled** by `lib/rate-limit.ts` (20 a minute per address) before the body is read, and a throttled caller gets that same `{ promo: null }` — a distinct "slow down" would make this endpoint a *better* oracle when throttled than when open |
 | `admin/promos` | POST | Creates one code, a whole batch of single-use vouchers in one call, or an automatic promotion. Refuses rather than repairs, naming the field it refused, and scopes `eventId` to the signed-in organizer's own events. A `CATEGORY_PRICE` promotion's price rows are written **in the same statement** as the promotion, since one with no prices is one the event page would advertise and the checkout would ignore |
 | `admin/promos/[id]/redemptions` | GET | Which orders used this promotion — order reference, event, runner count, status, `discountAmount`, `createdAt`, and for a voucher batch the specific code that was used. Covers **all** of the promotion's codes, since a batch is one promotion, and is capped at 500 with a flag saying when it was cut short. Auth-checked and scoped to the organizer's own events, which matters twice here: an id from the browser is not proof of ownership and neither is the code text |
@@ -828,19 +847,26 @@ opens its message from a *Read message* button rather than a tap anywhere.
 | `admin/team/[id]` | PATCH, DELETE | One membership of this organizer. Every call first runs **`loadManagedMember`** (`team/[id]/member.ts`): a session with `team:manage`, a membership of *this* organizer ("Team member not found." otherwise), **not the actor's own**, and a role the actor may manage. `PATCH { suspended }` on its own suspends or reinstates (accepted memberships only — an invitation is revoked, not suspended); `PATCH { role, assignments }` changes access, re-checking the new role, updating assignments in place, and writing nothing when nothing changed. `DELETE` removes the membership and its assignments, and the StaffAccount too only if it never set a password and has no other membership. Each change writes one trail row. Takes effect on the person's next request, since `getActor()` reads the membership every time |
 | `admin/team/[id]/invite` | POST | **Resends** an unaccepted invitation with a **new** token and a new week — the old link dies. Same guard; reports `emailSent` like the invite |
 | `auth/invite/[token]` | POST | **Public.** Accepts an invitation. Unknown, used, expired or malformed tokens all answer 410 with one sentence. A new account must send `name`, `password`, `confirmPassword`; an existing account must send its **current password** (a wrong one is written to the trail as a failed sign-in). The membership is claimed with a conditional `updateMany`, so a double press cannot accept twice; then the account becomes `ACTIVE`, the trail gets `staff.invitation.accepted` + `auth.signed_in`, and the session cookie is set for that organizer |
-| `auth/switch-organizer` | POST | A STAFF session moving to another organizer it belongs to, checked with `activeMembershipWhere`; reissues the session with the new `orgId`. The trail row is written to the organizer entered and does not name the one left |
-| `superadmin/organizers`, `superadmin/organizers/[id]` | GET, PATCH | `GET` returns every organizer with its fifteen application columns (not `adminFee`). `GET` also returns `statusNote` and `statusChangedAt`. `PATCH` is a **decision**: `{ status, note? }`, the status guarded by `asOrganizerStatus` and the move by `canDecide` (a move the status does not allow answers 409, naming both). **`REJECTED` must carry `note`**, refused under `errors.note` by `readStatusNote`; every other decision clears the stored note. The write stamps `statusChangedAt` and is conditional on the status it was decided from, so two super admins deciding at once cannot both win — the loser gets a 409. It answers with `id`, `status`, `statusNote`, `statusChangedAt` only (it used to echo the whole row, password hash included), **then emails the applicant on `APPROVED` and `REJECTED`** (`sendOrganizerApprovedEmail` / `sendOrganizerRejectedEmail`, links built on `inviteOrigin`) the way `admin/team` sends an invite: the status is saved first, the send never fails the decision, and the answer carries `emailSent` / `emailError` (both `null` for a suspension). **Every decision writes one audit row in the same transaction as the status** (`audit.ts`, §5): `organizer.approved` (from Pending, or a rejection reconsidered — the summary says which), `organizer.rejected`, `organizer.suspended`, or `organizer.reinstated` (from Suspended). The row belongs to **the super admin's own trail** (`actor.orgId`, read through `getActor()`), **not** the organizer's: `/admin/activity` is what happened inside an organizer's dashboard, and it shows each actor's IP and device. The organizer is `entityType: 'Organizer'` / `entityId`. They are read back on **`/superadmin/activity`** (§6). `changes` is `{ status: [from, to] }`, plus `reason` on a rejection — kept whole deliberately, because the applicant was sent that sentence and the next decision clears `statusNote`, so the trail is the one place it survives; the summary names the organization and never quotes it. It refuses a body carrying `adminFee` by name rather than ignoring it. Both `SUPER_ADMIN` only |
-| `superadmin/communities`, `superadmin/communities/[id]` | GET/POST, PATCH/DELETE | Club curation |
-| `superadmin/feedback`, `superadmin/feedback/[id]` | GET, PATCH/DELETE | The feedback inbox. `SUPER_ADMIN` only — an organizer reading it would be reading other organizers' complaints about the software, and strangers' email addresses. `GET` returns everything newest-first rather than paged: the whole table is the messages people took the trouble to write, and if it ever outgrows one call that will be a good problem. **`PATCH` moves the triage mark and nothing else** — the message, the name and the address are what somebody else wrote, and an inbox that can edit its own mail is one whose contents cannot be trusted later. `DELETE` is a genuine delete, unlike anything on a registration: there is no person waiting on the row, nothing in the product reads it, and a kept-"in case" spam row is one more thing between the owner and the messages that matter. The screen confirms first |
+| `admin/organizers`, `admin/organizers/[id]` | GET, PATCH | **`platform:manage`**, through `platformActor()` (`api/admin/platform-actor.ts`) — 401 with no session, 403 without the permission; these were `superadmin/*` routes gated on the `SUPER_ADMIN` role string until `ADMIN_MERGE_PLAN.md` Batch 2. `GET` returns every organizer with its fifteen application columns (not `adminFee`). `GET` also returns `statusNote` and `statusChangedAt`. `PATCH` is a **decision**: `{ status, note? }`, the status guarded by `asOrganizerStatus` and the move by `canDecide` (a move the status does not allow answers 409, naming both). **`REJECTED` must carry `note`**, refused under `errors.note` by `readStatusNote`; every other decision clears the stored note. The write stamps `statusChangedAt` and is conditional on the status it was decided from, so two staff members deciding at once cannot both win — the loser gets a 409. It answers with `id`, `status`, `statusNote`, `statusChangedAt` only (it used to echo the whole row, password hash included), **then emails the applicant on `APPROVED` and `REJECTED`** (`sendOrganizerApprovedEmail` / `sendOrganizerRejectedEmail`, links built on `inviteOrigin`) the way `admin/team` sends an invite: the status is saved first, the send never fails the decision, and the answer carries `emailSent` / `emailError` (both `null` for a suspension). **Every decision writes one audit row in the same transaction as the status** (`audit.ts`, §5): `organizer.approved` (from Pending, or a rejection reconsidered — the summary says which), `organizer.rejected`, `organizer.suspended`, or `organizer.reinstated` (from Suspended). The row belongs to **the deciding actor's own trail** (`actor.orgId` — Run As One's), **not** the organizer's: `/admin/activity` is what happened inside an organizer's dashboard, and it shows each actor's IP and device. The organizer is `entityType: 'Organizer'` / `entityId`. They are read back on **`/admin/activity`** under *Organizer decisions* (§6). `changes` is `{ status: [from, to] }`, plus `reason` on a rejection — kept whole deliberately, because the applicant was sent that sentence and the next decision clears `statusNote`, so the trail is the one place it survives; the summary names the organization and never quotes it. It refuses a body carrying `adminFee` by name rather than ignoring it. Both `platform:manage` only |
+| `admin/communities`, `admin/communities/[id]` | GET/POST, PATCH/DELETE | Club curation. `platform:manage` (`platformActor()`) |
+| `admin/feedback`, `admin/feedback/[id]` | GET, PATCH/DELETE | The feedback inbox. `platform:manage` only (`platformActor()`) — a client or a per-event staff member reading it would be reading others' complaints about the software, and strangers' email addresses. `GET` returns everything newest-first rather than paged: the whole table is the messages people took the trouble to write, and if it ever outgrows one call that will be a good problem. **`PATCH` moves the triage mark and nothing else** — the message, the name and the address are what somebody else wrote, and an inbox that can edit its own mail is one whose contents cannot be trusted later. `DELETE` is a genuine delete, unlike anything on a registration: there is no person waiting on the row, nothing in the product reads it, and a kept-"in case" spam row is one more thing between the owner and the messages that matter. The screen confirms first |
 
 ---
 
 ## 7. Security model
 
 - `src/proxy.ts` guards `/admin/**` (except `/login`, `/register` and
-  `/invite`, which a person with no session must reach — `PUBLIC_ADMIN_PATHS`) and
-  `/superadmin/**`: no token → `/admin/login`; a `SUPER_ADMIN` on `/admin` →
-  `/superadmin`; a non-super-admin on `/superadmin` → `/admin`.
+  `/invite`, which a person with no session must reach — `PUBLIC_ADMIN_PATHS`):
+  no token, or one that does not verify → `/admin/login`. **It no longer sorts
+  sessions between two dashboards** (`ADMIN_MERGE_PLAN.md` Batch 2): every
+  session, a `SUPER_ADMIN` one included, lands on `/admin`, and what it may open
+  there is each page's `can()`. `/superadmin/**` never reaches the proxy — it is
+  a permanent redirect in `next.config.ts`, which runs first.
+- **Run As One's own screens are a permission, not a role.** Organizers,
+  Communities, Feedback and the Overview's fee tile ask `platform:manage`
+  (`OWNER`, `ADMIN`); their pages answer anyone else with the admin's 404 and
+  their routes go through `api/admin/platform-actor.ts` (401 / 403). A STAFF
+  member, whatever their event roles, and a client viewer are refused.
 - **Route handlers re-check auth themselves.** The proxy does not cover
   `/api/**`, so every admin route calls `getActor()` (`actor.ts`, §5), scopes
   its queries to `actor.orgId`, and asks `can(actor, permission, …)` before it
@@ -876,8 +902,9 @@ opens its message from a *Read message* button rather than a tap anywhere.
   `POST /api/admin/events/[id]/results/upload`. **Never read an event by id
   alone on an admin surface** — the registrants screen carries every runner's
   email, phone, birthdate, emergency contact and medical notes, and an id is not
-  proof of ownership. These pages need no `SUPER_ADMIN` branch, because the
-  proxy redirects a super admin off `/admin/**` before they render.
+  proof of ownership. These pages need no `SUPER_ADMIN` branch: a super
+  admin session can open them now, but its `orgId` is its own Organizer row,
+  which owns no event, so the scoped read finds nothing.
 - **Team management is guarded in one place.** Every route about an existing
   member runs `loadManagedMember` (`api/admin/team/[id]/member.ts`): session,
   `team:manage`, a membership of the actor's own organizer, **never the actor's
@@ -902,8 +929,8 @@ opens its message from a *Read message* button rather than a tap anywhere.
   the event's `clientId` to `can()`. Archiving the client ends the session on
   the next request.
 - **Suspension and removal bite on the next request**, not at token expiry:
-  `getActor()` refuses a suspended or deleted membership, and sign-in and the
-  organizer switcher both go through `activeMembershipWhere`.
+  `getActor()` refuses a suspended or deleted membership, and sign-in goes
+  through `activeMembershipWhere`.
 - **Never trust client amounts.** `checkout` and `checkout/manual` refetch the
   event and recompute the delivery fee, platform fee, subtotal (including the
   shirt upcharge) and **the promo discount** before writing or billing.
@@ -974,8 +1001,8 @@ These are the user's own standing preferences. Follow them without being asked.
 11. **Comment the *why*.** This codebase's header comments explain the reasoning
     behind a decision, not what the code does. Match that voice.
 12. **Every screen ships mobile responsive, and a fix never breaks another
-    screen.** Organizers run race day from their phones, so the admin and
-    superadmin dashboards must be fully manageable at 360px. This applies to
+    screen.** Organizers run race day from their phones, so the dashboard
+    must be fully manageable at 360px. This applies to
     every new or changed feature, in the same change, never "mobile later".
     - **Breakpoints follow the public site**: Tailwind's default `sm` 640 /
       `md` 768 / `lg` 1024. Never a one-off number.
@@ -1077,13 +1104,13 @@ These are the user's own standing preferences. Follow them without being asked.
   inside it, so a sign-in that only pushes lands on correct dashboard numbers
   under a signed-out sidebar until the person reloads by hand. Every client call
   that changes the session therefore pushes **and then refreshes**:
-  `admin/login` on both destinations, `handleLogout` in `AdminShell` and
-  `SuperAdminShell` (so the next sign-in cannot inherit the departing person's
-  name), and the two that already did it — `InviteAcceptClient` and
-  `OrganizerSwitcher`.
-- **One responsive dashboard.** Both dashboards stand in
-  `admin/DashboardShell.tsx`; `AdminShell` and `SuperAdminShell` hand it only
-  their links, their role line, and (for `/admin`) the organizer switcher. The
+  `admin/login`, `handleLogout` in `AdminShell` (so the next sign-in
+  cannot inherit the departing person's name), and `InviteAcceptClient`, which
+  already did it.
+- **One responsive dashboard.** The dashboard stands in
+  `admin/DashboardShell.tsx`; `AdminShell` hands it only its links and its role
+  line (the super admin's `SuperAdminShell` and the organizer switcher were
+  removed in `ADMIN_MERGE_PLAN.md` Batch 2). The
   breakpoints are the **public site's Tailwind scale and nothing else**. In
   CSS they are written as range queries, `(width < 40rem)` / `48rem` / `64rem`;
   in TSX they are `sm:` / `md:` / `lg:` and their `max-` forms. Never a
@@ -1125,7 +1152,7 @@ These are the user's own standing preferences. Follow them without being asked.
     a server page can render it directly, and it is an auto-fill grid of
     `minmax(min(100%, 20rem), 1fr)`.
   - **An edit a table does in its cell is `admin/AdminCardEdit` on a card**
-    (the superadmin's club rename). It sits in the `expanded`
+    (the communities screen's club rename). It sits in the `expanded`
     slot under the value it changes, as a labelled full-width 16px box, with
     Save and Cancel at 44px underneath; Enter saves and Escape cancels. It
     holds no state: the page's `editingId` and draft feed the cell and the
@@ -1215,11 +1242,10 @@ These are the user's own standing preferences. Follow them without being asked.
   - **A picker's list stays on screen.** `AdminSelect` measures when it
     opens: below its trigger when the list fits, above it when there is more
     room there, and never taller than the room it opens into.
-    `OrganizerSwitcher`'s menu is clamped inside the screen's sides and
-    scrolls rather than running off the top.
-  - **A wait is the page's shape, at both widths.** `admin/loading.tsx`,
-    `admin/events/loading.tsx` and `superadmin/loading.tsx` read the URL and
-    hand `AdminRouteLoading` a shape from `admin/route-loading-shape.ts`.
+  - **A wait is the page's shape, at both widths.** `admin/loading.tsx` and
+    `admin/events/loading.tsx` read the URL and hand `AdminRouteLoading` a
+    shape (the Overview's tile count also reads `dashboard-nav.tsx`, since
+    `platform:manage` adds a fourth) from `admin/route-loading-shape.ts`.
     Below `lg` that is metric tiles, the toolbar's wrapped rows and a card
     list in its frame, or form panels field by field. The same entry's `lg`
     block is the desktop: the toolbar in the one row it unwraps into, and the
@@ -1232,7 +1258,7 @@ These are the user's own standing preferences. Follow them without being asked.
     metric, a field or a column updates its entry in the same edit.** A route
     with no entry at all — a 404, anything unlisted — is still the centred
     dots, which promise nothing about what is coming. A client page that
-    fetches its own list (the superadmin screens) puts `AdminCardListSkeleton`
+    fetches its own list (organizers, communities, feedback) puts `AdminCardListSkeleton`
     in the card list's `empty` slot while it waits.
   - **A chip that toggles a filter is `admin/FilterChip`** (feedback's status
     and kind chips, the organizers' status chips). It finds rows and never
@@ -1387,12 +1413,12 @@ These are the user's own standing preferences. Follow them without being asked.
   a list and jumping height. The redemptions panel on `/admin/marketing` is the
   worked example. Bars must be direct children of the skeleton layer or they
   will not pulse.
-- **A whole screen waits differently from a panel.** Every admin and superadmin
+- **A whole screen waits differently from a panel.** Every dashboard
   page is a database read behind an auth cookie, so a click on the sidebar can
   sit for a second with the page being left still on screen — and an organizer
   who cannot tell a slow page from an ignored click will click again. Two things
   answer that, and both are already wired:
-  - `admin/loading.tsx` and `superadmin/loading.tsx` render
+  - `admin/loading.tsx` renders
     `admin/AdminRouteLoading` — the page frame every screen in the dashboard
     shares (an 80px `.admin-header` with a pulsing skeleton bar where the title
     goes, then `.admin-content`) holding that route's shape, or the brand
@@ -1405,8 +1431,8 @@ These are the user's own standing preferences. Follow them without being asked.
     segment under `admin`, so it sat on screen unchanged until the page came.
     That is what `admin/events/loading.tsx` is for. **A new section with pages
     nested under its index needs its own `loading.tsx` rendering
-    `AdminRouteLoading`**; a flat one (every superadmin screen today) does
-    not. A page that fetches its own data on the client after arriving (the
+    `AdminRouteLoading`**; a flat one (organizers, communities, feedback today)
+    does not. A page that fetches its own data on the client after arriving (the
     edit form) renders `AdminRouteLoading` while it waits too, so the route's
     wait and the fetch's wait are one screen, never a bare "Loading…" line.
   - `components/ui/LinkPending` marks *which* link was clicked, because the
@@ -1787,7 +1813,7 @@ added nothing once their queue was empty.
 the decisions it records as not to be relitigated. It is no longer a queue, and
 the file itself says it may be deleted.
 
-**`ADMIN_MERGE_PLAN.md` is the active queue — Batch 1 has landed (2026-09-17).**
+**`ADMIN_MERGE_PLAN.md` is the active queue — Batches 1 and 2 have landed (2026-09-17).**
 The owner decided there is no super admin any more: one dashboard at `/admin`,
 run by Run As One staff, who create every event and validate every payment;
 runners' money goes to Run As One, which remits to the organizer. An organizer
@@ -1797,9 +1823,9 @@ application form stays (password removed) and feeds a submissions list with a
 signs in today **is Run As One's own account**, so its row stays the one tenant
 and a new `Client` record is added. Six batches, the last being remittance
 tracking. **Read the plan's Status table before touching `/admin`,
-`/superadmin`, `actor.ts`, `permissions.ts` or the `Organizer` model**, and
-tick it as work lands. Parts of §1, §6 and §7 below still describe the super
-admin and will be rewritten as the batches land. **Batch 1:** the production
+`actor.ts`, `permissions.ts` or the `Organizer` model**, and
+tick it as work lands. The `SUPER_ADMIN` role, `SUPER_ADMIN_REACH` and the
+organizer approval flow still exist in code and are retired in Batches 3 and 5. **Batch 1:** the production
 audit confirmed Run As One's row is `seed-crc-organizer` ("Cresendo Running
 Community", `cresendorunningcommunity@gmail.com`, owner of all four events,
 every promotion and both staff memberships), and the owner confirmed that
@@ -1811,7 +1837,19 @@ the `VIEWER` membership role, `lib/client.ts` and the viewer scoping in
 migrate deploy` against production when this is released** — until then a
 production build of this code fails every staff sign-in, because `getActor()`
 selects the new column. Nothing a
-viewer sees exists yet; Batch 2 (one shell) is next.
+viewer sees exists yet. **Batch 2 (one shell):** `/superadmin` is gone — its
+Organizers, Communities and Feedback screens are `/admin/organizers`,
+`/admin/communities` and `/admin/feedback` behind the new `platform:manage`
+permission (owner and admin), their routes moved to `/api/admin/*` behind
+`platformActor()`, its Activity merged into `/admin/activity` (an *Organizer
+decisions* shelf; the scope split is gone), and its dashboard became the
+Overview's *Platform Fees Collected* tile — the owner's two calls. Every old
+`/superadmin` URL is a permanent redirect (`next.config.ts`), `proxy.ts` sends
+nobody to a second dashboard, and `SuperAdminShell`, `OrganizerSwitcher` and
+`api/auth/switch-organizer` are deleted (the audit showed one tenant). No
+migration. Verified on localhost at 360 / 767 / 820 / 1280 with throwaway
+`local-dev` accounts (plan's Batch 2 notes). **Batch 3 (submissions and Send
+invite) is next.**
 
 **`STAFF_ACCESS_PLAN.md` is an open queue, with Batches 1–3 landed.** Five batches
 for giving an organizer's personnel their own accounts instead of sharing the

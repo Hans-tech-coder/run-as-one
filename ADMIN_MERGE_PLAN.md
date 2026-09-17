@@ -1,6 +1,6 @@
 # One dashboard: merging Admin and Super Admin — work plan
 
-**Status:** Batch 1 landed · Batch 2 next · **Owner decisions captured:** 2026-09-17
+**Status:** Batches 1–2 landed · Batch 3 next · **Owner decisions captured:** 2026-09-17
 
 Run As One is no longer a self-serve platform for organizers. **Run As One staff
 create every event and validate every payment**, and runners' money goes to Run
@@ -21,7 +21,7 @@ to know where to pick up.
 | Batch | Laman | Migration | Status |
 | --- | --- | --- | --- |
 | 1 | Production audit (read-only), `Client` model, Viewer role, permissions | yes | Landed (dev) — prod migration at release |
-| 2 | One shell: `/superadmin` screens move into `/admin`, redirects, role-aware sidebar | none | Not started |
+| 2 | One shell: `/superadmin` screens move into `/admin`, redirects, role-aware sidebar | none | Landed (dev) |
 | 3 | Applications become client submissions — no password, **Send invite** | maybe small | Not started |
 | 4 | The Viewer dashboard — events and registrant counts | none | Not started |
 | 5 | Link existing events to clients, retire the super admin, remove dead code, release | yes (cleanup) | Not started |
@@ -48,6 +48,8 @@ the reasoning that outlives the plan goes into `PROJECT_GUIDE.md`.
 | The team members invited today through `/admin/team`? | **They are Run As One staff.** They keep their access. |
 | The organizer owner account that signs in today? | **It is Run As One's own admin account** — the real owner of Run As One, not a client. |
 | Remittance tracking? | **Yes, as the last batch (6)**, after the merge is done. |
+| Does the platform trail merge into `/admin/activity`? (Batch 2) | **Yes — one Activity screen**, with an *Organizer decisions* shelf. |
+| What happens to the `/superadmin` dashboard? (Batch 2) | **It redirects to `/admin`**, and owners and admins get a *Platform Fees Collected* tile. Total Organizers is not carried over (clients replace it in Batch 3). |
 | Which account is Run As One's? (Batch 1) | **`cresendorunningcommunity@gmail.com`** — the `seed-crc-organizer` row, "Cresendo Running Community". |
 | Who is "System Owner" (`SUPER_ADMIN`)? (Batch 1) | **A test super admin account, not a real person's.** Nobody depends on it; retire it in Batch 5. |
 | "Super Admin Test" and "Test"? (Batch 1) | **Test accounts.** Their copied `Client` rows (both `ARCHIVED`) are test data too. |
@@ -168,18 +170,18 @@ dev, and a hand-made Viewer membership reaches only its client's events.
 
 ## Batch 2 — One shell
 
-- [ ] Move `/superadmin/communities`, `/superadmin/feedback` and the platform
+- [x] Move `/superadmin/communities`, `/superadmin/feedback` and the platform
   activity into `/admin` (staff with `ADMIN`/`OWNER` only). Keep one Activity
   screen; decide with the owner whether the platform trail merges into it.
-- [ ] `/superadmin/organizers` is replaced in Batch 3; until then it stays
+- [x] `/superadmin/organizers` is replaced in Batch 3; until then it stays
   reachable from the new sidebar.
-- [ ] `/superadmin/**` → permanent redirect to the matching `/admin` URL (no
+- [x] `/superadmin/**` → permanent redirect to the matching `/admin` URL (no
   dead links); `proxy.ts` stops sending anyone to `/superadmin`.
-- [ ] One sidebar (`dashboard-sidebar.ts`, `DashboardShell`) filtered by
+- [x] One sidebar (`dashboard-sidebar.ts`, `DashboardShell`) filtered by
   permission. Remove `SuperAdminShell`. Review `OrganizerSwitcher` — with one
   tenant it has nothing to switch; remove it if the audit confirms that.
-- [ ] Mobile check of every moved screen.
-- [ ] `PROJECT_GUIDE.md` §3, §6, §7, §10.
+- [x] Mobile check of every moved screen.
+- [x] `PROJECT_GUIDE.md` §3, §6, §7, §10.
 
 **Done when:** every former super admin screen works under `/admin`, old URLs
 redirect, and nothing links to `/superadmin`.
@@ -351,3 +353,69 @@ by the owner; copied "Super Admin Test" and "Test" as `ARCHIVED` clients.
   `/admin` sends it to `/admin/login`, and a fresh sign-in is refused.
 - The viewer currently sees the dashboard's zero tiles and the Events and
   Settings links — expected until Batches 2 and 4 give it its own page.
+
+### Batch 2 — what landed
+
+**Owner's calls (2026-09-17).** The platform trail **merges** into
+`/admin/activity`; the `/superadmin` dashboard **redirects to `/admin`**, which
+gains a *Platform Fees Collected* tile for owners and admins.
+
+**Calls made.**
+- A new permission, **`platform:manage`** (`OWNER`, `ADMIN`), rather than a role
+  check. It gates the Organizers, Communities and Feedback screens, their API
+  routes and the fee tile, and it appears as a row on the team screen's role
+  table ("Applications, clubs, feedback and fees"). The `ADMIN` hint says so.
+- Screens moved to `/admin/organizers`, `/admin/communities`, `/admin/feedback`.
+  Each is its old client component (`*Client.tsx`) under a new server
+  `page.tsx` that asks `can()` and answers anyone else with the admin 404.
+  `/admin/organizers` is a stopgap: Batch 3 replaces it with `/admin/clients`
+  and should redirect it there.
+- APIs moved to `/api/admin/{organizers,communities,feedback}` behind one guard,
+  `api/admin/platform-actor.ts` (401 / 403). The old `/api/superadmin/*` paths
+  are gone, not redirected — only these screens called them.
+- Redirects are two rules in `next.config.ts` (`/superadmin` → `/admin`,
+  `/superadmin/:path*` → `/admin/:path*`, 308). The query string is kept, so a
+  filtered activity link keeps its filter. An unknown old path lands on
+  `/admin`'s 404 inside the sidebar.
+- Activity: `ActivityScope`, `SCOPE_GROUPS` and `ACTIVITY_PATHS` are gone. The one
+  screen offers every shelf, *Organizer decisions* included. Decisions made from
+  now on land in Run As One's trail, because the deciding staff member's `orgId`
+  is Run As One's. The old decisions stay under the "System Owner" test
+  account's `orgId`.
+- `proxy.ts` only proves a session exists. A `SUPER_ADMIN` session now reaches
+  `/admin` as the owner of its own empty tenant — still `platform:manage`, so the
+  test account keeps working until Batch 5 retires it.
+- `OrganizerSwitcher`, its CSS, `DashboardShell`'s `beforeUser` slot,
+  `SignedInUser.organizers` and `api/auth/switch-organizer` are removed. The
+  `auth.organizer.switched` audit verb stays, so old rows keep their label.
+- The Overview's loading skeleton draws four tiles for `platform:manage`
+  through a small context (`admin/dashboard-nav.tsx`) that `AdminShell` provides.
+- Not carried over from the super admin dashboard: *Total Organizers*,
+  *Transaction Volume* and the *System Overview* text panel.
+- At 1280 with the sidebar expanded, the fourth tile wraps to its own row. It is
+  the same `auto-fit` grid the super admin dashboard's four tiles used.
+
+**Deferred.** `SUPER_ADMIN_REACH`, the `SUPER_ADMIN` branches in `actor.ts` /
+`jwt.ts` / `auth/login`, and the approval routes' approve/reject semantics stay
+for Batches 3 and 5. The moved client screens carry their existing lint errors
+(`set-state-in-effect`, one `no-explicit-any` in `communities/[id]`) unchanged.
+
+**Verified on localhost (2026-09-17)** with throwaway `verify-b2-*` accounts on
+`local-dev` (an ADMIN, and a STAFF validator on Pink Run 2026). They signed in
+through `/api/auth/login` and were removed afterwards with their 2 audit rows.
+- Every `/superadmin` URL answers 308 to its `/admin` twin, query string kept.
+  `/api/superadmin/feedback` is 404, and `/api/admin/feedback` is 401 with no
+  session.
+- ADMIN: the sidebar lists Dashboard, Events, Marketing Tools, Organizers,
+  Communities, Feedback, Team and Activity. The three screens load their data.
+  The Overview shows four tiles. `/admin/activity?action=group:organizers`
+  applies *All organizer decisions*. All three APIs answer 200.
+- STAFF validator: the sidebar is Dashboard and Events. `/admin/feedback` (and
+  its `/superadmin` link) is the admin 404 in the sidebar. All three APIs,
+  including a PATCH, answer 403. The Overview has three tiles.
+- Test super admin ("System Owner"): `/admin`, `/admin/feedback` and
+  `/admin/activity` load with no redirect loop, and its feedback API answers 200.
+- Overflow script `ok: true` with no offenders on Overview, Organizers,
+  Communities and Feedback at 360, on Feedback at 767 and Organizers at 820. The
+  rail holds the three extra rows at 360×780. No console errors.
+- `npx tsc --noEmit` is clean for `src` (only stale `.next` types failed).
