@@ -132,13 +132,22 @@ export function activityWhere(
 ): Prisma.AuditLogWhereInput {
   const and: Prisma.AuditLogWhereInput[] = [{ organizerId }];
 
-  if (filters.person === SYSTEM_PERSON) and.push({ actorId: null });
-  else if (filters.person) and.push({ actorId: filters.person });
+  // Values checked within one filter widen it (any of them); the filters
+  // narrow one another.
+  if (filters.person.length) {
+    const ids = filters.person.filter(person => person !== SYSTEM_PERSON);
+    const either: Prisma.AuditLogWhereInput[] = [];
+    if (ids.length) either.push({ actorId: { in: ids } });
+    if (filters.person.includes(SYSTEM_PERSON)) either.push({ actorId: null });
+    and.push({ OR: either });
+  }
 
-  if (filters.event) and.push({ eventId: filters.event });
+  if (filters.event.length) and.push({ eventId: { in: filters.event } });
 
-  const actions = actionsForFilter(filters.action);
-  if (actions) and.push({ action: { in: actions } });
+  if (filters.action.length) {
+    const actions = [...new Set(filters.action.flatMap(value => actionsForFilter(value) ?? []))];
+    and.push({ action: { in: actions } });
+  }
 
   const window = activityWindow(filters, errors, now);
   if (window.gte || window.lt) {

@@ -4,13 +4,12 @@ import React from 'react';
  * An option is a plain value, or a value with the words shown for it — the
  * events list filters by a client's id and shows the client's name.
  */
-export type FilterOption = string | { value: string; label: string };
+export type FilterOption = string | { value: string; label: string; /** Small print, for two people with one name. */ hint?: string };
 
 /**
- * One filter's options, as a list of checkboxes. The registrants screen draws
- * it in each chip's own menu from `sm` up and in its Filters sheet below, so
- * the two read and write the same column filter; the events list draws it in
- * its one Filters sheet. Shared so a filter looks the same on every screen.
+ * One filter's options, as a list of checkboxes, drawn inside `FiltersMenu` —
+ * the one Filters sheet every dashboard table uses. Shared so a filter looks
+ * the same on every screen.
  */
 export default function FilterOptions({
   options,
@@ -29,6 +28,7 @@ export default function FilterOptions({
       {options.map(option => {
         const value = typeof option === 'string' ? option : option.value;
         const label = typeof option === 'string' ? option : option.label;
+        const hint = typeof option === 'string' ? undefined : option.hint;
         const isSelected = selected.includes(value);
         return (
           <button
@@ -42,7 +42,10 @@ export default function FilterOptions({
             <span className={`w-4 h-4 shrink-0 border border-white/10 rounded-sm flex items-center justify-center ${isSelected ? 'bg-white/10' : ''}`}>
               {isSelected && <span className="w-2 h-2 bg-white rounded-sm" />}
             </span>
-            <span className="min-w-0 [overflow-wrap:anywhere]">{label}</span>
+            <span className="min-w-0 [overflow-wrap:anywhere]">
+              {label}
+              {hint && <span className="block text-xs text-secondary normal-case">{hint}</span>}
+            </span>
           </button>
         );
       })}

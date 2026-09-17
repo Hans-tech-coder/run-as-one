@@ -15,7 +15,7 @@ import { useAlert } from '@/components/ui/AlertProvider';
 import AdminCardList, { AdminCardListSkeleton } from '@/app/admin/AdminCardList';
 import AdminDataTable, { AdminColumnsMenu, rowPosition } from '@/app/admin/AdminDataTable';
 import AdminTablePager from '@/app/admin/AdminTablePager';
-import FilterChip from '@/app/admin/FilterChip';
+import FiltersMenu from '@/app/admin/FiltersMenu';
 import MobileSortMenu from '@/app/admin/MobileSortMenu';
 import ApplicationPanel, { appliedOn, type ClientApplicationRow } from './ApplicationPanel';
 import InviteDialog, { type InviteResult } from './InviteDialog';
@@ -25,7 +25,6 @@ import {
   canMoveClient,
   clientContactName,
   clientStatusLabel,
-  type ClientStatus,
 } from '@/lib/client';
 
 /**
@@ -68,8 +67,6 @@ interface ClientRow extends ClientApplicationRow {
   _count: { events: number };
 }
 
-type StatusFilter = 'LIVE' | ClientStatus;
-
 /** The invitation this client is waiting on, if one has not been accepted. */
 function waitingViewer(client: ClientRow) {
   return client.viewers.find(viewer => !viewer.acceptedAt) ?? null;
@@ -81,7 +78,9 @@ export default function ClientsClient() {
   const [clients, setClients] = useState<ClientRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('LIVE');
+  // The Filters sheet's statuses. None chosen is every live submission — all
+  // but the archived, which are there when asked for.
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   // An id rather than the row, so the panel reads the refreshed row after an
   // invite or an archive instead of a stale copy.
   const [openId, setOpenId] = useState<string | null>(null);
@@ -215,13 +214,13 @@ export default function ClientsClient() {
     () =>
       clients.filter(
         c =>
-          (statusFilter === 'LIVE' ? c.status !== 'ARCHIVED' : c.status === statusFilter) &&
+          (selectedStatuses.length === 0 ? c.status !== 'ARCHIVED' : selectedStatuses.includes(c.status)) &&
           (!term ||
             c.name.toLowerCase().includes(term) ||
             c.email.toLowerCase().includes(term) ||
             clientContactName(c).toLowerCase().includes(term)),
       ),
-    [clients, statusFilter, term],
+    [clients, selectedStatuses, term],
   );
   const newCount = clients.filter(c => c.status === 'NEW').length;
   const archivedCount = clients.filter(c => c.status === 'ARCHIVED').length;
@@ -231,9 +230,9 @@ export default function ClientsClient() {
       ? 'No submissions yet. Applications sent from the organizer form land here.'
       : term
         ? 'No clients match this search and filter.'
-        : statusFilter === 'LIVE' && archivedCount > 0
-          ? `No live submissions. ${archivedCount} archived ${archivedCount === 1 ? 'one is' : 'ones are'} under Archived.`
-          : `No ${statusFilter === 'LIVE' ? '' : `${clientStatusLabel(statusFilter).toLowerCase()} `}clients.`;
+        : selectedStatuses.length === 0 && archivedCount > 0
+          ? `No live submissions. ${archivedCount} archived ${archivedCount === 1 ? 'one is' : 'ones are'} under Filters → Archived.`
+          : `No ${selectedStatuses.map(status => clientStatusLabel(status).toLowerCase()).join(' or ')}${selectedStatuses.length ? ' ' : ''}clients.`;
   // Looked up in the whole list, not the filtered one: inviting from the New
   // view must not snatch the panel away mid-read.
   const openClient = openId ? clients.find(c => c.id === openId) ?? null : null;
@@ -360,19 +359,21 @@ export default function ClientsClient() {
                   </button>
                 )}
               </div>
-              {/* One chip per status, the waiting submissions counted. Pressing
-                  the active chip goes back to every live submission. */}
-              {CLIENT_STATUSES.map(status => {
-                const { label } = CLIENT_STATUS_COPY[status];
-                return (
-                  <FilterChip
-                    key={status}
-                    label={status === 'NEW' && newCount ? `${label} (${newCount})` : label}
-                    active={statusFilter === status}
-                    onClick={() => setStatusFilter(statusFilter === status ? 'LIVE' : status)}
-                  />
-                );
-              })}
+              {/* The Filters chip, the waiting submissions counted beside
+                  New. Nothing chosen is every live submission. */}
+              <FiltersMenu
+                groups={[{
+                  label: 'Status',
+                  options: CLIENT_STATUSES.map(status => {
+                    const { label } = CLIENT_STATUS_COPY[status];
+                    return { value: status, label: status === 'NEW' && newCount ? `${label} (${newCount})` : label };
+                  }),
+                  selected: selectedStatuses,
+                  onToggle: status => setSelectedStatuses(prev =>
+                    prev.includes(status) ? prev.filter(s => s !== status) : [...prev, status]),
+                }]}
+                onClear={() => setSelectedStatuses([])}
+              />
               <AdminColumnsMenu table={table} />
               <MobileSortMenu table={table} />
             </div>

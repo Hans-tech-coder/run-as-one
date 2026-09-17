@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Search, Filter, Columns, ChevronUp, ChevronDown, Check } from 'lucide-react';
+import { Search, Columns, ChevronUp, ChevronDown, Check } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -10,6 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import FiltersMenu from '../../../FiltersMenu';
 import {
   ColumnDef,
   flexRender,
@@ -63,47 +64,9 @@ function rowPosition<T>(sortedRows: Row<T>[], row: Row<T>) {
 }
 
 /**
- * One chip's options — a Category or Gender filter — as checkable menu rows.
- * Buttons rather than clickable divs, so a keyboard reaches them and the
- * popover's phone sheet can give each a 44px row.
- */
-function FilterOptions({
-  options,
-  selected,
-  onToggle,
-}: {
-  options: string[];
-  selected: string[];
-  onToggle: (value: string) => void;
-}) {
-  return (
-    <>
-      {options.map(option => {
-        const isSelected = selected.includes(option);
-        return (
-          <button
-            key={option}
-            type="button"
-            role="menuitemcheckbox"
-            aria-checked={isSelected}
-            className={`w-full flex items-center gap-2 px-2 py-1.5 hover:bg-white/5 cursor-pointer rounded-md text-sm text-left text-white border-0 ${isSelected ? 'bg-white/5' : 'bg-transparent'}`}
-            onClick={() => onToggle(option)}
-          >
-            <span className={`w-4 h-4 shrink-0 border border-white/10 rounded-sm flex items-center justify-center ${isSelected ? 'bg-white/10' : ''}`}>
-              {isSelected && <span className="w-2 h-2 bg-white rounded-sm" />}
-            </span>
-            <span className="min-w-0 [overflow-wrap:anywhere]">{option}</span>
-          </button>
-        );
-      })}
-    </>
-  );
-}
-
-/**
  * The organizer's race results — the admin's one table (PROJECT_GUIDE §9) from
  * `lg` up, and below it the card list reading the same TanStack rows, so the
- * search, the Category and Gender chips, sort, selection and the page stay one
+ * search, the Filters chip, sort, selection and the page stay one
  * state across a resize.
  */
 export default function ResultsTableClient({ results, event }: ResultsTableClientProps) {
@@ -112,32 +75,20 @@ export default function ResultsTableClient({ results, event }: ResultsTableClien
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
 
-  const [isCategoryOpen, setIsCategoryOpen] = useState(false);
-  const [isGenderOpen, setIsGenderOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
 
-  const categoryRef = useRef<HTMLDivElement>(null);
-  const genderRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (categoryRef.current && !categoryRef.current.contains(event.target as Node)) {
-        setIsCategoryOpen(false);
-      }
-      if (genderRef.current && !genderRef.current.contains(event.target as Node)) {
-        setIsGenderOpen(false);
-      }
       if (viewRef.current && !viewRef.current.contains(event.target as Node)) {
         setIsViewOpen(false);
       }
     }
-    // On a phone the menus are sheets along the bottom edge, well away from
-    // the chip that opened them, so Escape has to close them as well.
+    // On a phone the menu is a sheet along the bottom edge, well away from
+    // the chip that opened it, so Escape has to close it as well.
     function handleKey(event: KeyboardEvent) {
       if (event.key !== 'Escape') return;
-      setIsCategoryOpen(false);
-      setIsGenderOpen(false);
       setIsViewOpen(false);
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -318,59 +269,17 @@ export default function ResultsTableClient({ results, event }: ResultsTableClien
             />
           </div>
 
-          {/* Category Filter Dropdown */}
-          <div ref={categoryRef} className="relative view-dropdown-container">
-            <button
-              onClick={() => setIsCategoryOpen(!isCategoryOpen)}
-              className="btn-filter"
-              aria-haspopup="true"
-              aria-expanded={isCategoryOpen}
-            >
-              <Filter size={16} />
-              Category
-              {selectedCategories.length > 0 && (
-                <span className="ml-1 px-1 bg-white/10 rounded">
-                  {selectedCategories.length}
-                </span>
-              )}
-            </button>
-            {isCategoryOpen && (
-              <div
-                role="menu"
-                aria-label="Filter by category"
-                className="toolbar-popover absolute left-0 mt-2 bg-[#050505] border border-white/10 rounded-md p-2 min-w-[150px] z-50 shadow-2xl"
-              >
-                <FilterOptions options={uniqueCategories} selected={selectedCategories} onToggle={toggleCategory} />
-              </div>
-            )}
-          </div>
-
-          {/* Gender Filter Dropdown */}
-          <div ref={genderRef} className="relative view-dropdown-container">
-            <button
-              onClick={() => setIsGenderOpen(!isGenderOpen)}
-              className="btn-filter"
-              aria-haspopup="true"
-              aria-expanded={isGenderOpen}
-            >
-              <Filter size={16} />
-              Gender
-              {selectedGenders.length > 0 && (
-                <span className="ml-1 px-1 bg-white/10 rounded">
-                  {selectedGenders.length}
-                </span>
-              )}
-            </button>
-            {isGenderOpen && (
-              <div
-                role="menu"
-                aria-label="Filter by gender"
-                className="toolbar-popover absolute left-0 mt-2 bg-[#050505] border border-white/10 rounded-md p-2 min-w-[150px] z-50 shadow-2xl"
-              >
-                <FilterOptions options={uniqueGenders} selected={selectedGenders} onToggle={toggleGender} />
-              </div>
-            )}
-          </div>
+          <FiltersMenu
+            groups={[
+              { label: 'Category', options: uniqueCategories, selected: selectedCategories, onToggle: toggleCategory },
+              { label: 'Gender', options: uniqueGenders, selected: selectedGenders, onToggle: toggleGender },
+            ]}
+            onClear={() => {
+              table.getColumn('category')?.setFilterValue(undefined);
+              table.getColumn('gender')?.setFilterValue(undefined);
+            }}
+            empty="Nothing to filter yet. The categories and genders appear here once results are uploaded."
+          />
 
           {/* Which columns the table shows. Cards have no columns to hide, so
               below `lg` the chip goes and Sort (which the headers did) comes. */}

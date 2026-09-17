@@ -2,9 +2,9 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
-  Search, X, Columns, Plus, ChevronUp, ChevronDown, Check, AlertCircle, Users, Filter
+  Search, X, Columns, Plus, ChevronUp, ChevronDown, Check, AlertCircle, Users
 } from 'lucide-react';
-import FilterOptions from '../FilterOptions';
+import FiltersMenu, { type FilterGroup } from '../FiltersMenu';
 import LinkPending from '@/components/ui/LinkPending';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -193,10 +193,8 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
   // The one Filters chip and its sheet: by client and by registration state.
   // Applied to the data before the table, like the registrants screen's
   // backlog view, so search, sort and the pager all work inside the result.
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [selectedClients, setSelectedClients] = useState<string[]>([]);
   const [selectedStates, setSelectedStates] = useState<string[]>([]);
-  const filtersRef = useRef<HTMLDivElement>(null);
 
   const router = useRouter();
   // Shadows window.alert on purpose — see AlertProvider.
@@ -226,9 +224,6 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
     function handleClickOutside(event: MouseEvent) {
       if (viewRef.current && !viewRef.current.contains(event.target as Node)) {
         setIsViewOpen(false);
-      }
-      if (filtersRef.current && !filtersRef.current.contains(event.target as Node)) {
-        setIsFiltersOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -589,12 +584,11 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
     setter(prev => (prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value]));
     table.setPageIndex(0);
   };
-  const activeFilterCount = (canFilterByClient ? selectedClients.length : 0) + selectedStates.length;
-  const filterGroups = [
+  const filterGroups: FilterGroup[] = [
     ...(canFilterByClient
-      ? [{ label: 'Client', options: clientOptions, selected: selectedClients, toggle: toggleIn(setSelectedClients) }]
+      ? [{ label: 'Client', options: clientOptions, selected: selectedClients, onToggle: toggleIn(setSelectedClients) }]
       : []),
-    { label: 'Registration Status', options: stateOptions, selected: selectedStates, toggle: toggleIn(setSelectedStates) },
+    { label: 'Registration Status', options: stateOptions, selected: selectedStates, onToggle: toggleIn(setSelectedStates) },
   ];
   const clearFilters = () => {
     setSelectedClients([]);
@@ -631,51 +625,9 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
             )}
           </div>
           
-          {/* The one Filters chip, at every width: its sheet holds Client (for
-              platform:manage) and Registration Status — the same popover the
-              registrants screen's Filters chip opens on a phone. */}
-          <div ref={filtersRef} className="relative view-dropdown-container">
-            <button
-              type="button"
-              onClick={() => setIsFiltersOpen(!isFiltersOpen)}
-              className="btn-filter"
-              aria-haspopup="true"
-              aria-expanded={isFiltersOpen}
-            >
-              <Filter size={16} aria-hidden="true" /> Filters
-              {activeFilterCount > 0 && <span className="ml-1 px-1 bg-white/10 rounded">{activeFilterCount}</span>}
-            </button>
-            {isFiltersOpen && (
-              <div
-                role="group"
-                aria-label="Filter the list"
-                className="toolbar-popover absolute left-0 mt-2 w-72 bg-[#050505] border border-white/10 rounded-md p-2 z-50 shadow-2xl"
-              >
-                {filterGroups.map(group => group.options.length > 0 && (
-                  <div key={group.label} role="menu" aria-label={group.label} className="pb-1">
-                    <p className="m-0 px-2 pt-1 pb-1 text-xs font-semibold uppercase tracking-wider text-secondary">
-                      {group.label}
-                    </p>
-                    <FilterOptions
-                      options={group.options}
-                      selected={group.selected}
-                      onToggle={group.toggle}
-                      capitalize={false}
-                    />
-                  </div>
-                ))}
-                {activeFilterCount > 0 && (
-                  <button
-                    type="button"
-                    onClick={clearFilters}
-                    className="mt-1 w-full flex items-center px-2 py-1.5 rounded-md text-sm text-gray-400 bg-transparent border-0 border-t border-white/5 hover:bg-white/5 hover:text-white transition-colors cursor-pointer"
-                  >
-                    Clear filters
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
+          {/* The one Filters chip, at every width: Client (for
+              platform:manage) and Registration Status. */}
+          <FiltersMenu groups={filterGroups} onClear={clearFilters} />
 
           {/* Which columns the table shows. Cards have no columns to hide, so
               below `lg` the chip goes and Sort (which the headers did) comes. */}

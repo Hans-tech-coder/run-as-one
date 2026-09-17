@@ -232,12 +232,12 @@ const DEFAULT_PAGE_SIZE = 25;
 const MAX_SEARCH = 100;
 
 export type ActivityFilters = {
-  /** A person's actor id, `SYSTEM_PERSON`, or blank for everyone. */
-  person: string;
-  /** An event id, or blank for every event and for what belongs to none. */
-  event: string;
-  /** A verb, `group:<key>`, or blank. */
-  action: string;
+  /** Actor ids and/or `SYSTEM_PERSON`; empty for everyone. Any of them matches. */
+  person: string[];
+  /** Event ids; empty for every event and for what belongs to none. */
+  event: string[];
+  /** Verbs and/or `group:<key>`; empty for everything. Any of them matches. */
+  action: string[];
   range: ActivityRange;
   /** Manila calendar days, used only when `range` is custom. */
   from: string;
@@ -259,6 +259,23 @@ function first(value: string | string[] | undefined): string {
   return (Array.isArray(value) ? value[0] : value)?.trim() ?? '';
 }
 
+/**
+ * A filter that may hold several values: the Filters sheet checks more than
+ * one, and the URL carries them comma-separated (`person=a,b`) — none of the
+ * values it can produce contains a comma. Repeated params are read too, blanks
+ * and repeats dropped, and the list capped so an address cannot grow a query.
+ */
+function list(value: string | string[] | undefined): string[] {
+  const parts = (Array.isArray(value) ? value : [value ?? ''])
+    .flatMap(part => part.split(','))
+    .map(part => part.trim())
+    .filter(Boolean);
+  return [...new Set(parts)].slice(0, MAX_LIST);
+}
+
+/** More than any sheet offers: every shelf and verb, or every race. */
+const MAX_LIST = 100;
+
 /** Ids are cuids; anything else in the URL is dropped rather than queried. */
 function asId(value: string): string {
   return /^[A-Za-z0-9_-]{1,64}$/.test(value) ? value : '';
@@ -276,8 +293,7 @@ export function readActivityFilters(
 ): { filters: ActivityFilters; errors: ActivityFilterErrors } {
   const errors: ActivityFilterErrors = {};
 
-  const rawAction = first(params.action);
-  const action = actionsForFilter(rawAction) ? rawAction : '';
+  const action = list(params.action).filter(value => actionsForFilter(value));
 
   const rawFrom = first(params.from);
   const rawTo = first(params.to);
@@ -311,8 +327,8 @@ export function readActivityFilters(
 
   return {
     filters: {
-      person: first(params.person) === SYSTEM_PERSON ? SYSTEM_PERSON : asId(first(params.person)),
-      event: asId(first(params.event)),
+      person: list(params.person).filter(value => value === SYSTEM_PERSON || asId(value)),
+      event: list(params.event).filter(value => asId(value)),
       action,
       range,
       from: range === 'custom' ? from : '',
@@ -328,15 +344,17 @@ export function readActivityFilters(
 
 /** Whether the list is narrowed by anything a person chose (paging aside). */
 export function hasActiveFilters(filters: ActivityFilters): boolean {
-  return Boolean(filters.person || filters.event || filters.action || filters.q || filters.range !== 'all');
+  return Boolean(
+    filters.person.length || filters.event.length || filters.action.length || filters.q || filters.range !== 'all',
+  );
 }
 
 /** The query string for a set of filters, leaving out every default. */
 export function activityQuery(filters: ActivityFilters): string {
   const params = new URLSearchParams();
-  if (filters.person) params.set('person', filters.person);
-  if (filters.event) params.set('event', filters.event);
-  if (filters.action) params.set('action', filters.action);
+  if (filters.person.length) params.set('person', filters.person.join(','));
+  if (filters.event.length) params.set('event', filters.event.join(','));
+  if (filters.action.length) params.set('action', filters.action.join(','));
   if (filters.range !== 'all') params.set('range', filters.range);
   if (filters.range === 'custom' && filters.from) params.set('from', filters.from);
   if (filters.range === 'custom' && filters.to) params.set('to', filters.to);

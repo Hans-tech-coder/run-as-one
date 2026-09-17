@@ -13,7 +13,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import RunnerLoader from '@/components/ui/RunnerLoader';
 import FieldError from '@/components/ui/FieldError';
-import AdminSelect from '../AdminSelect';
+import FiltersMenu, { type FilterGroup } from '../FiltersMenu';
 import AdminCardList from '../AdminCardList';
 import AdminTablePager from '../AdminTablePager';
 import {
@@ -289,24 +289,19 @@ export default function ActivityClient({
   // ── Filter options ─────────────────────────────────────────────────────────
 
   const personOptions = useMemo(
-    () => [
-      { value: '', label: 'Everyone' },
-      ...people.map(person => ({
+    () =>
+      people.map(person => ({
         value: person.value,
         label: person.name,
         hint: person.email
           ? `${ACTOR_KIND_LABELS[person.kind] ?? person.kind} · ${person.email}`
           : ACTOR_KIND_LABELS[person.kind] ?? person.kind,
       })),
-    ],
     [people],
   );
 
   const eventOptions = useMemo(
-    () => [
-      { value: '', label: 'Every event', hint: 'Including what belongs to no single race' },
-      ...events.map(event => ({ value: event.id, label: event.title, hint: eventDayHint(event.date) })),
-    ],
+    () => events.map(event => ({ value: event.id, label: event.title, hint: eventDayHint(event.date) })),
     [events],
   );
 
@@ -315,7 +310,6 @@ export default function ActivityClient({
   const actionOptions = useMemo(() => {
     const shelves = ACTIVITY_GROUPS.map(group => group.key);
     return [
-      { value: '', label: 'Everything' },
       ...ACTIVITY_GROUPS.map(group => ({ value: groupFilterValue(group.key), label: `All ${group.label.toLowerCase()}`, hint: group.hint })),
       ...(Object.keys(ACTION_LABELS) as AuditAction[])
         .sort((a, b) => shelves.indexOf(ACTION_GROUP[a]) - shelves.indexOf(ACTION_GROUP[b]))
@@ -327,7 +321,34 @@ export default function ActivityClient({
     ];
   }, []);
 
-  const rangeOptions = ACTIVITY_RANGES.map(range => ({ value: range, label: ACTIVITY_RANGE_LABELS[range] }));
+  // "Any time" is what nothing checked means, so it is not offered as a box.
+  const rangeOptions = ACTIVITY_RANGES
+    .filter(range => range !== 'all')
+    .map(range => ({ value: range, label: ACTIVITY_RANGE_LABELS[range] }));
+
+  /** Checks or unchecks one value of a many-valued filter. */
+  const toggleIn = (key: 'person' | 'event' | 'action') => (value: string) => {
+    const current = filters[key];
+    go({ [key]: current.includes(value) ? current.filter(v => v !== value) : [...current, value] });
+  };
+
+  // One range at a time: a reading has one window. Checking another moves it;
+  // unchecking the one that is on goes back to any time. Choosing dates opens
+  // the From / To boxes without filtering yet — the range applies once a day
+  // is picked.
+  const toggleRange = (value: string) => {
+    const range = value as ActivityRange;
+    if (range === filters.range) go({ range: 'all', from: '', to: '' });
+    else if (range === 'custom') go({ range, from, to });
+    else go({ range, from: '', to: '' });
+  };
+
+  const filterGroups: FilterGroup[] = [
+    { label: 'Dates', options: rangeOptions, selected: filters.range === 'all' ? [] : [filters.range], onToggle: toggleRange },
+    { label: 'Person', options: personOptions, selected: filters.person, onToggle: toggleIn('person') },
+    { label: 'Event', options: eventOptions, selected: filters.event, onToggle: toggleIn('event') },
+    { label: 'Activity', options: actionOptions, selected: filters.action, onToggle: toggleIn('action') },
+  ];
 
   // ── The table instance, paged by the server ────────────────────────────────
 
@@ -372,7 +393,7 @@ export default function ActivityClient({
   const clearFilters = () => {
     setSearch('');
     lastSent.current = '';
-    go({ person: '', event: '', action: '', range: 'all', from: '', to: '', q: '' });
+    go({ person: [], event: [], action: [], range: 'all', from: '', to: '', q: '' });
   };
 
   const emptyMessage = filtered ? (
@@ -396,7 +417,8 @@ export default function ActivityClient({
 
   return (
     <div className="flex flex-col gap-4 w-full text-white">
-      {/* Search and what the list is reading. */}
+      {/* Search and the Filters chip — Dates, Person, Event and Activity, each
+          but Dates taking several at once. */}
       <div className="admin-toolbar" style={{ padding: '0 0 4px 0', borderBottom: 'none' }}>
         <div className="toolbar-actions" style={{ flex: 1 }}>
           <div className="search-wrapper">
@@ -418,57 +440,17 @@ export default function ActivityClient({
               </button>
             )}
           </div>
-          {filtered && (
-            <button type="button" onClick={clearFilters} className="btn-filter max-lg:min-h-11">
-              <RotateCcw size={16} aria-hidden="true" /> Clear filters
-            </button>
-          )}
+          <FiltersMenu
+            groups={filterGroups}
+            onClear={() => go({ person: [], event: [], action: [], range: 'all', from: '', to: '' })}
+          />
           {isPending && <RunnerLoader size="sm" tone="current" label="Loading activity" />}
         </div>
       </div>
 
-      {/* The four filters. Labelled pickers rather than toolbar chips: each
-          holds a long list (every person who ever acted, every race), and a
-          chip's label would have to hide the choice it made. One to a row
-          on a phone: two across truncated even "Every event", and a picker
-          that hides its own answer is the problem this layout exists to avoid. */}
-      <div className="grid gap-x-4 sm:grid-cols-2 xl:grid-cols-4">
-        <AdminSelect
-          label="Person"
-          listboxLabel="Person"
-          value={filters.person}
-          options={personOptions}
-          onChange={value => go({ person: value })}
-        />
-        <AdminSelect
-          label="Event"
-          listboxLabel="Event"
-          value={filters.event}
-          options={eventOptions}
-          onChange={value => go({ event: value })}
-        />
-        <AdminSelect
-          label="Activity"
-          listboxLabel="Kind of activity"
-          value={filters.action}
-          options={actionOptions}
-          onChange={value => go({ action: value })}
-        />
-        <AdminSelect
-          label="Dates"
-          listboxLabel="Dates"
-          value={filters.range}
-          options={rangeOptions}
-          onChange={value => {
-            const range = value as ActivityRange;
-            // Choosing dates opens the two boxes without filtering yet; the
-            // range applies once a day is picked.
-            if (range === 'custom') go({ range, from, to });
-            else go({ range, from: '', to: '' });
-          }}
-        />
-      </div>
-
+      {/* Choosing dates in the Filters sheet opens the two boxes here, on the
+          page: a date is typed or picked, which a sheet of checkboxes cannot
+          hold, and the boxes stay in view while the reading changes. */}
       {filters.range === 'custom' && (
         <div className="grid gap-x-4 sm:grid-cols-2 xl:grid-cols-4 -mt-2">
           <div className="form-group min-w-0">

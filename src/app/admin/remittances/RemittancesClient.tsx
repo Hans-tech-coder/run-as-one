@@ -16,7 +16,7 @@ import {
 import AdminCardList from '@/app/admin/AdminCardList';
 import AdminDataTable, { AdminColumnsMenu, rowPosition } from '@/app/admin/AdminDataTable';
 import AdminTablePager from '@/app/admin/AdminTablePager';
-import FilterChip from '@/app/admin/FilterChip';
+import FiltersMenu from '@/app/admin/FiltersMenu';
 import MobileSortMenu from '@/app/admin/MobileSortMenu';
 import { formatEventDayShort } from '@/lib/event-schedule';
 import {
@@ -141,7 +141,8 @@ const COLUMNS: ColumnDef<EventSettlementRow>[] = [
 export default function RemittancesClient({ rows }: { rows: EventSettlementRow[] }) {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
-  const [filter, setFilter] = useState<SettlementState | null>(null);
+  // The Filters sheet's settlement states; none chosen is every race.
+  const [selectedStates, setSelectedStates] = useState<string[]>([]);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
 
@@ -151,12 +152,12 @@ export default function RemittancesClient({ rows }: { rows: EventSettlementRow[]
     () =>
       rows.filter(
         row =>
-          (!filter || row.settlement.state === filter) &&
+          (selectedStates.length === 0 || selectedStates.includes(row.settlement.state)) &&
           (!term ||
             row.title.toLowerCase().includes(term) ||
             (row.clientName ?? '').toLowerCase().includes(term)),
       ),
-    [rows, filter, term],
+    [rows, selectedStates, term],
   );
   const countOf = (state: SettlementState) => rows.filter(row => row.settlement.state === state).length;
 
@@ -165,7 +166,9 @@ export default function RemittancesClient({ rows }: { rows: EventSettlementRow[]
       ? 'No events yet. A race appears here once it is created.'
       : term
         ? 'No events match this search and filter.'
-        : `No events are ${SETTLEMENT_STATE_COPY[filter ?? 'NOTHING'].label.toLowerCase()}.`;
+        : `No events are ${selectedStates
+            .map(state => SETTLEMENT_STATE_COPY[state as SettlementState].label.toLowerCase())
+            .join(' or ')}.`;
 
   const table = useReactTable({
     data: filtered,
@@ -201,18 +204,20 @@ export default function RemittancesClient({ rows }: { rows: EventSettlementRow[]
               </button>
             )}
           </div>
-          {FILTERS.map(state => {
-            const { label } = SETTLEMENT_STATE_COPY[state];
-            const count = state === 'DUE' ? countOf(state) : 0;
-            return (
-              <FilterChip
-                key={state}
-                label={count ? `${label} (${count})` : label}
-                active={filter === state}
-                onClick={() => setFilter(filter === state ? null : state)}
-              />
-            );
-          })}
+          <FiltersMenu
+            groups={[{
+              label: 'Settlement',
+              options: FILTERS.map(state => {
+                const { label } = SETTLEMENT_STATE_COPY[state];
+                const count = state === 'DUE' ? countOf(state) : 0;
+                return { value: state, label: count ? `${label} (${count})` : label };
+              }),
+              selected: selectedStates,
+              onToggle: state => setSelectedStates(prev =>
+                prev.includes(state) ? prev.filter(s => s !== state) : [...prev, state]),
+            }]}
+            onClear={() => setSelectedStates([])}
+          />
           <AdminColumnsMenu table={table} />
           <MobileSortMenu table={table} />
         </div>

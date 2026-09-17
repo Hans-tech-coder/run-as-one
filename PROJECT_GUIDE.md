@@ -204,10 +204,10 @@ src/
                             #   route-loading-shape.ts — what each page's wait
                             #   draws, phone and desktop, bare-paths.ts — the
                             #   pages under /admin with no sidebar,
-                            #   AuthRouteLoading — their wait, FilterChip — a
-                            #   chip that finds, FilterOptions — one filter's
-                            #   checkbox list, shared by the registrants and
-                            #   events Filters sheets)
+                            #   AuthRouteLoading — their wait, FiltersMenu —
+                            #   every table's one Filters chip and sheet,
+                            #   FilterOptions — one group's checkbox list
+                            #   inside it)
                             # (no superadmin/ folder: /superadmin/** is a
                             #   permanent redirect in next.config.ts)
     api/                    # all route handlers — see §6
@@ -498,8 +498,8 @@ logic again.
 | `actor.ts` | **Who is acting, and what they may reach — the one rule: authorisation scopes by `orgId`, attribution records the actor's `id`.** For an owner the two are the same id, which is why rewiring every admin surface onto this changed nothing until staff exist. `getActor()` is for route handlers (they answer null with their own 401); `requireActor()` is for server pages (it redirects to `/admin/login`); **`requireTeamActor()`** is for every page that is Run As One's team's work (Batch 4) — it also answers a client viewer with `forbidden()` (the designed not-allowed page, `admin/forbidden.tsx`), before the page reads anything. `isClientViewer(actor)` is exported for the pages that branch on it. An owner's actor is read from the token alone, as the routes always did, and only for Run As One's row; a **staff** actor is checked against the record on every request — membership accepted, account `ACTIVE`, organizer `APPROVED` (`organizerCanSignIn`, an allowlist — §5 `organizer-status.ts`), and the token issued after `sessionsValidFrom` — because a suspension that waits a day for a JWT to expire is not one. **`can(actor, permission, { organizerId, eventId })`** is the check before acting: organizer-wide roles read the matrix directly, a STAFF membership needs an assignment on that event, and **nobody reaches another organizer's data** (the super admin's `SUPER_ADMIN_REACH` was removed in Batch 5). `canSomewhere` is for screens about no single race (marketing, the image uploader). **`reachableEvents(actor, permission)`** is the `where` every list page reads events through — `{ organizerId }` for an owner, only the assigned ids for STAFF. A single-event page reads `{ id, organizerId: actor.orgId }` and then asks `can()`, answering a refusal with the **same "Event not found."** as a missing id. `findAccountByEmail` is the one lookup `auth/login`, `auth/register` and `admin/profile` make across **both** account tables (Organizer wins a tie), since the database cannot keep an address unique across two tables. **A client viewer** (a `VIEWER` membership) carries `actor.clientId`, and its session is refused without a client or on a client `clientViewersCanSignIn` refuses. It holds `VIEWER_PERMISSIONS` and nothing else: `can()` also needs **`reach.clientId`** — the event's own `clientId`, which the caller must pass — to match, so a page that forgets to pass it refuses; `canSomewhere` answers from that one list; `reachableEvents` is `{ organizerId, clientId }` for a permission it holds and empty for every other, which is what every existing list page (reading `event:view`) shows it. `orgRole` is null for a viewer, so no organizer-wide branch can reach it. |
 | `permissions.ts` | **The permission matrix, as data** (`STAFF_ACCESS_PLAN.md` §3). Permissions are verbs (`registration:validate`, `promo:manage`, `event:delete`…); **no route compares a role string**. `OWNER`/`ADMIN` are organizer-wide — **`OWNER` is displayed as "Super Admin"** (`ROLE_LABELS.OWNER`, `ACTOR_KIND_LABELS`), the owner's call once Run As One's own account became `runasoneph@gmail.com`, so no screen or refusal says "owner" to a person; `EVENT_MANAGER`/`VALIDATOR`/`ENCODER`/`VIEWER` are held per event. `VALIDATOR` can settle an order and deliberately cannot edit or delete one. **`platform:manage`** (`OWNER`, `ADMIN`) is Run As One's own work that belongs to no race — client submissions, the club list, the feedback inbox and the Overview's *Platform Fees Collected* tile — which was the super admin's portal until the dashboards merged; its API routes ask it through `api/admin/platform-actor.ts`. **`remittance:manage`** (`OWNER`, `ADMIN`) is the settlement screen and recording or voiding a remittance — its own verb rather than part of `platform:manage` because it is money leaving the company, which the owner may want narrower later. `asMembershipRole`/`asEventRole` guard the two role columns. **`MEMBERSHIP_ROLES` is `ADMIN`, `STAFF` and `VIEWER`** (a client viewer, `ADMIN_MERGE_PLAN.md`), while **`TEAM_ROLES` / `TeamRole` / `asTeamRole` are `ADMIN` and `STAFF` only** — what `team.ts`, `team-invite.ts`, the team page, its routes, the invite page and `GRANTABLE_ROLES` read, so no team surface can list, offer or manage a viewer. `VIEWER_PERMISSIONS` is the viewer's whole reach: `event:view-summary` (registrant counts — total, per category, paid vs pending; no money, no names), which every matrix role also holds and **`MATRIX_PERMISSIONS`** leaves off the team screen's role table. `CLIENT_VIEWER_LABEL` / `_HINT` describe the membership viewer, since the `VIEWER` key in `ROLE_LABELS` means the per-event role. Prisma-free, so the team screen can render the matrix it enforces. |
 | `audit.ts` | **The trail — "sino ang gumawa nito".** `recordAudit(tx, actor, entry \| entries)` takes the **transaction client**, so the log row and the change commit or fail together; every admin write passes its own transaction, and the three things with no write to ride along (a proof opened, a registrant export, a sign-in attempt) pass the plain client. The actor's name and email are **snapshotted**; the IP and user agent come from the request. `changedFields(before, after, fields, redact)` records only what moved, and records `'changed'` instead of a value for a redacted field, a non-scalar and any string over 120 characters. **`SENSITIVE_RUNNER_FIELDS`** (birthdate, emergency contact name and phone, medical conditions) never have their values logged. `AUDIT_ACTIONS` is the closed vocabulary — add a verb there before using it. Recorded today: sign-ins and failed sign-ins (not for an address with no account, which has no organizer to belong to), profile and password changes, event create / edit / pause / resume / schedule / delete, results uploads, registration status and remarks changes, a manual email marked sent, runner edits and removals (one row per runner, bulk included), proof views, registrant exports, promotion create / edit / pause / resume / delete, and **a client submission's moves** (`client.invited` — also the one written when a restored client's old sign-in is reactivated — `client.invitation.resent`, `client.invitation.accepted` written by the viewer who accepted, `client.archived`, `client.restored`; `entityType: 'Client'`, in Run As One's trail, since Batch 3), **remittances** (`remittance.recorded`, `remittance.voided` with the reason, and `remittance.proof.viewed` — a payout receipt carries the organizer's bank details, so opening one is recorded like a runner's proof; `entityType: 'Remittance'`, on the *Remittances* Activity shelf, Batch 6), and **a staff decision on an organizer application** (no longer made since Batch 3, its route removed in Batch 5; the verbs stay so rows already written keep their labels) (`organizer.approved` / `.rejected` / `.suspended` / `.reinstated`, written into **the deciding actor's own trail** — Run As One's, read on `/admin/activity` — never the decided organizer's, whose Activity screen would show the decider's IP and device; with the organizer as `entityId`, `changes` holding the status moved from and to and, for a rejection, the whole reason). It is read back through `activity.ts` / `activity-store.ts`, never here. |
-| `activity.ts` | **Reading the trail back** — Prisma-free and headers-free, so client components import it. `ACTION_LABELS` and `ACTION_GROUP` are both `Record<AuditAction, …>`, so **a verb added to `AUDIT_ACTIONS` without a label and a group fails the build**. `ACTIVITY_GROUPS` are the Activity filter's shelves (Payments, Runners, **Personal data** — proofs opened and exports, the Data Privacy Act question — Events, Promotions, Team, Sign-ins, **Remittances** — payouts and returns recorded or voided, receipts opened — **Clients** — invites, acceptances, archives — and **Organizer decisions**, the retired approval flow's old rows). **One trail reads through it** since the dashboards merged (`ADMIN_MERGE_PLAN.md` Batch 2): the `ActivityScope` / `SCOPE_GROUPS` split that gave `/superadmin/activity` its own shelves is gone, the Activity filter offers every shelf in `ACTIVITY_GROUPS` order, and `ACTIVITY_PATH` is where the filters push. **The screen's filters are the URL**: `readActivityFilters` guards every param (ids, a verb or `group:<key>`, a range of `all`/`today`/`7d`/`30d`/`custom` with Manila `from`/`to`, a search, page, size) and refuses an end date before its start under the To box; `activityQuery` writes them back leaving out defaults; `activityWindow` turns a range into Manila-midnight instants ("last 7 days" is today and the six before). **`asOf` pins a reading** so entries recorded while someone pages wait in a "newer entries" count. Display: `formatTrailTime` / `formatTrailInstant` / `formatTrailDayHeading` (Today · Sep 15), `describeChanges` (a redacted value says the trail does not keep it), `describeDevice` (Chrome on Android). **`statusProvenance`** is the registrant modal's "Validated by Ana Cruz · Sep 13, 2026, 4:02 PM" — it names a person only when the latest recorded change *to* a status matches the status the order holds now; otherwise an online PAID reads "Paid online through PayMongo" and anything else "not on record, before the trail began". `orderActivityPath` is the modal's link to one order's history. |
-| `activity-store.ts` | The trail's queries, server-only. **Every read is scoped to one `organizerId`** — Run As One's, the one tenant — so an owner or admin reads everything done to its data and nothing else. `activityWhere` builds the filters' `where` (search is a case-insensitive `contains` on `summary`, which names order references, runners, events and promotions); `activityPeople` is the Person filter, **read from the trail rather than the team** so a removed member's actions stay findable, one entry per actor id under their latest name; `latestStatusChanges(orgId, eventId)` is one query for the registrants screen's provenance. **`loadActivityPage(orgId, searchParams)`** is one page of a trail — filters read, reading pinned with `asOf`, a page past the end clamped, the count of newer entries, the Person list — the one reading behind `/admin/activity` (it served `/superadmin/activity` too until that screen merged in), which adds its event titles on top. |
+| `activity.ts` | **Reading the trail back** — Prisma-free and headers-free, so client components import it. `ACTION_LABELS` and `ACTION_GROUP` are both `Record<AuditAction, …>`, so **a verb added to `AUDIT_ACTIONS` without a label and a group fails the build**. `ACTIVITY_GROUPS` are the Activity filter's shelves (Payments, Runners, **Personal data** — proofs opened and exports, the Data Privacy Act question — Events, Promotions, Team, Sign-ins, **Remittances** — payouts and returns recorded or voided, receipts opened — **Clients** — invites, acceptances, archives — and **Organizer decisions**, the retired approval flow's old rows). **One trail reads through it** since the dashboards merged (`ADMIN_MERGE_PLAN.md` Batch 2): the `ActivityScope` / `SCOPE_GROUPS` split that gave `/superadmin/activity` its own shelves is gone, the Activity filter offers every shelf in `ACTIVITY_GROUPS` order, and `ACTIVITY_PATH` is where the filters push. **The screen's filters are the URL**: `readActivityFilters` guards every param (lists of ids and of verbs or `group:<key>`, comma-separated or repeated, capped at 100, a range of `all`/`today`/`7d`/`30d`/`custom` with Manila `from`/`to`, a search, page, size) and refuses an end date before its start under the To box; `activityQuery` writes them back leaving out defaults; `activityWindow` turns a range into Manila-midnight instants ("last 7 days" is today and the six before). **`asOf` pins a reading** so entries recorded while someone pages wait in a "newer entries" count. Display: `formatTrailTime` / `formatTrailInstant` / `formatTrailDayHeading` (Today · Sep 15), `describeChanges` (a redacted value says the trail does not keep it), `describeDevice` (Chrome on Android). **`statusProvenance`** is the registrant modal's "Validated by Ana Cruz · Sep 13, 2026, 4:02 PM" — it names a person only when the latest recorded change *to* a status matches the status the order holds now; otherwise an online PAID reads "Paid online through PayMongo" and anything else "not on record, before the trail began". `orderActivityPath` is the modal's link to one order's history. |
+| `activity-store.ts` | The trail's queries, server-only. **Every read is scoped to one `organizerId`** — Run As One's, the one tenant — so an owner or admin reads everything done to its data and nothing else. `activityWhere` builds the filters' `where` (several people, events or verbs are an `in` — the system person an `actorId: null` beside it — and search is a case-insensitive `contains` on `summary`, which names order references, runners, events and promotions); `activityPeople` is the Person filter, **read from the trail rather than the team** so a removed member's actions stay findable, one entry per actor id under their latest name; `latestStatusChanges(orgId, eventId)` is one query for the registrants screen's provenance. **`loadActivityPage(orgId, searchParams)`** is one page of a trail — filters read, reading pinned with `asOf`, a page past the end clamped, the count of newer entries, the Person list — the one reading behind `/admin/activity` (it served `/superadmin/activity` too until that screen merged in), which adds its event titles on top. |
 | `signed-in-user.ts` | The name and initial the dashboard sidebar shows — read from the record, not the token, so a rename is never stale. It names the **person**: an owner's Organizer name, or a staff member's own StaffAccount name; the line under it names the organizer — **or, for a client viewer, its client** (`Client Viewer · Cresendo Running Community`). It also carries the role line (`Super Admin`, or `Admin · RUN AS ONE`), **which sidebar items this person has any reason to open** (`nav.events` — false only for a client viewer, whose sidebar is Dashboard and Settings alone, and which is also how the route fallback knows to draw a viewer's Overview — `nav.marketing` from `canSomewhere(promo:view)`, `nav.team` from `team:manage`, `nav.activity` from `activity:view`, `nav.platform` from `platform:manage` — Clients, Communities and Feedback). There is **no organizer list or switcher** any more: Run As One is the one tenant (`ADMIN_MERGE_PLAN.md` Batch 2), so a staff member's organizer is only named in the role line. Hiding a link is manners; the pages still check. |
 | `team.ts` | **The rules of an organizer's team**, free of Prisma and crypto so the team form and the routes run the same checks and word refusals identically. `memberState` derives Active / Invited / Invite Expired / Suspended from the membership's timestamps (with `MEMBER_STATE_LABELS`/`TONES` for the badge); `readInvitee` (name, lowercased email) and `readAccess` (role plus event assignments, checked against the organizer's own event ids — **a STAFF membership needs at least one event**, and a duplicate or foreign event is refused per row under `assignmentField(i, part)`); `newPasswordErrors`; `describeAccess` for trail summaries; `MIN_PASSWORD_LENGTH` (shared with the settings form and the password route) and `INVITE_TTL_DAYS` = 7. |
 | `team-invite.ts` | **Invitation links.** `newInvitation()` makes 32 random bytes and keeps only their sha256 (`inviteTokenHash`) — the token itself is only ever in the email; `findOpenInvitation(token)` returns the membership only if the token is well-formed, matches, is unaccepted and unexpired, and every failure reads the same; `inviteOrigin(request)` names `SITE_URL` in production and the request's own origin elsewhere, so a localhost invitation links back to the database it was written into; `sendInvitation` renders `staffInvitationEmail` (`email.ts`) — or, for a `VIEWER` membership, `clientInvitationEmail` (Batch 3: the same token, link and accept page; `findOpenInvitation` also returns the membership's `client`) and, outside production only, prints the link to the server console so the flow can be tried without email. |
@@ -633,8 +633,8 @@ counts the runners holding a place — PAID plus PENDING, in people not orders,
 removed runners excluded, one query for the page — and hovering it, focusing it
 or tapping it on a phone opens a tooltip (`.reg-count-tip`, the rail tooltip's
 `--tt-*` tokens) splitting it into *Paid / Validated* and *Pending*. **One
-*Filters* chip at every width** opens the same popover the registrants screen's
-phone Filters chip does (a bottom sheet on a phone), holding **Client** (only
+*Filters* chip at every width** (`FiltersMenu`, §9 — the pattern every table
+filter copies) opens a popover (a bottom sheet on a phone) holding **Client** (only
 for `platform:manage`, built from the listed races' clients plus *No client
 yet*) and **Registration Status** (the `REGISTRATION_STATES` labels); the
 filters narrow the data before the table, so search, sort and the pager work
@@ -693,8 +693,8 @@ an organizer who has already opened the menu to edit or validate should not have
 to close it to read the order first; both open the same modal, and the menu's
 entry looks the runner up in the live list rather than carrying a captured row,
 so it never shows a stale copy. **Below `lg` the list is cards** (Mobile
-Batch 3): below `sm` the Category, Logistics and Payment chips fold into one
-*Filters* chip whose sheet holds all three (the queue chips stay), selecting
+Batch 3): the Category, Logistics and Payment lists sit in the one *Filters* chip at every
+width (`FiltersMenu`; the two queue chips stay chips beside it), below `sm` selecting
 rows raises a bulk bar at the foot of the screen in place of the toolbar's red
 chip, and the detail modal is a full-height sheet whose footer carries Proof,
 Remarks and Email beside Validate. A card has no eye beside its reference (the
@@ -768,11 +768,15 @@ the permission matrix straight from `permissions.ts`) · `/admin/activity` (**th
 trail read back — "sino ang gumawa nito"**. `activity:view` only (owner and
 admin); anyone else gets the admin's 404. **Paged on the server**, unlike every
 other admin table: the filters are the URL (`activity.ts`, §5) and one page of
-rows crosses the wire. Search (order reference, name, event), then four
-labelled `AdminSelect` filters — Person (everyone who appears in the trail,
-removed members included), Event, Activity (a group such as *All personal
-data*, or one verb) and Dates (Any time, Today, Last 7 days, Last 30 days, or
-From / To boxes). **Newest first and never re-sorted**: no sortable headers, no
+rows crosses the wire. Search (order reference, name, event) and the one
+*Filters* chip (`FiltersMenu`, like every table): **Dates** (Today, Last 7 days,
+Last 30 days, Choose dates — one at a time, nothing checked is any time; Choose
+dates opens From / To boxes on the page under the toolbar), **Person** (everyone
+who appears in the trail, removed members included, with *Staff · email* as
+small print), **Event**, and **Activity** (the shelves such as *All personal
+data*, then each verb). Person, Event and Activity **take several values**:
+checked values within one filter widen it, the filters narrow one another, and
+the URL carries them comma-separated (`person=a,b`). **Newest first and never re-sorted**: no sortable headers, no
 select or `No.` column, and once a reader pages past the first screen the
 reading is pinned (`asOf`), so new entries wait in a blue *N newer entries ·
 Show* chip rather than shifting the rows being read. Entries sit under Manila
@@ -835,9 +839,9 @@ Overview's fee tile, and its Activity screen merged into `/admin/activity`
 
 `/admin/clients` (**the client submissions, and Send invite** — Batch 3. Every
 application from `/admin/register` lands here as `NEW`; **nothing is approved
-or rejected**. Search (name, contact, email) and **New (with its count) /
-Invited / Active / Archived chips** that find rather than sort; with no chip
-pressed the list is every *live* submission, archived ones being out of the
+or rejected**. Search (name, contact, email) and the **Filters** chip's **Status**
+group — New (with its count) / Invited / Active / Archived, several at once —
+which finds rather than sorts; with nothing checked the list is every *live* submission, archived ones being out of the
 queue by definition, and the empty state says how many sit under Archived.
 Columns: Client (name, email), Contact, Applied, Events, Status, Actions. **A
 row opens the application** in `clients/ApplicationPanel.tsx` — the old
@@ -868,8 +872,8 @@ about the platform rather than about any one race, and it carries strangers'
 email addresses. A message is a paragraph rather than a field, so the table shows
 one line of it and **the row opens** into the whole thing — the second-`TableRow`
 pattern the marketing screen's voucher batches use — carrying the page and the
-browser it came from and a *Reply by email* that opens a `mailto:`. The chips
-filter by triage state and by kind; the order changes only when somebody clicks
+browser it came from and a *Reply by email* that opens a `mailto:`. The Filters
+chip's Status (Unread with its count, Reviewed) and Kind groups filter; the order changes only when somebody clicks
 a header, which is why the unread ones are **found** rather than sorted to the
 top). All three are TanStack tables on `AdminDataTable` (§9) — sortable
 headers, View, the pager and a Sort chip below `lg`; the club rename opens in
@@ -890,8 +894,9 @@ four tiles — *Collected (Paid Orders)*, *Run As One's Share*, *Balance Due to
 Organizers* (the sum of **positive** balances only, so one race's overpayment
 never hides another organizer still waiting) and *Remitted* — over every race,
 latest first, with Collected, Run As One, Owed, Remitted, Balance and a state
-badge (`SettlementBadge`). Search by event or client; **Balance Due (count) /
-Overpaid / Settled / No Orders chips find, never sort**. A row (or its
+badge (`SettlementBadge`). Search by event or client; the **Filters** chip's
+**Settlement** group — Balance Due (count) / Overpaid / Settled / No Orders —
+**finds, never sorts**. A row (or its
 labelled **View Details** under Actions — the eye the registrants screen uses,
 a real link; a bare chevron there confused staff) opens **`/admin/remittances/[eventId]`**:
 the state, date and client under the title, tiles for *Owed to Organizer*,
@@ -1212,7 +1217,7 @@ These are the user's own standing preferences. Follow them without being asked.
   remittances and a race's settlement — is `components/ui/table` driven by
   TanStack, wearing the same furniture: an `.admin-toolbar` standing on the
   page (not in a panel) holding the search box, the dark `.btn-filter` chips
-  (View, and whatever else that screen filters by) and the one `.btn-light`
+  (Filters, View, and a work-queue chip where a screen has one) and the one `.btn-light`
   primary action; a bordered, rounded table with a `No.` column and sortable
   headers (events, registrants and marketing add a select column, because
   something acts on the selection); and the rows-per-page menu and pager
@@ -1403,9 +1408,21 @@ These are the user's own standing preferences. Follow them without being asked.
     fetches its own list (clients, communities, feedback) passes `loading` to
     `AdminDataTable` for placeholder rows and shows `AdminCardListSkeleton`
     (`is-flush`) in place of its cards while it waits.
-  - **A chip that toggles a filter is `admin/FilterChip`** (feedback's status
-    and kind chips, the organizers' status chips). It finds rows and never
-    sorts them, pressing the active chip clears it, and it is 44px below `lg`.
+  - **A table filters through one `admin/FiltersMenu` chip, at every width**
+    (events, registrants, results, clients, feedback, remittances, activity).
+    It takes `groups` — a heading, `FilterOptions` checkboxes (a `hint` for
+    small print), the selected values and a toggle — plus `onClear` and an
+    optional `empty` sentence for a sheet whose lists come from rows not yet
+    there. Several values in a group widen it; groups narrow each other; the
+    chip counts every checked value and the sheet ends in *Clear filters*. The
+    screen owns the selections and filters its data before the table (a
+    server-paged screen pushes them to the URL instead). **Never a row of
+    one-chip-per-value toggles or a menu per column** — the owner's call, so
+    every screen filters the same way; `FilterChip` was deleted with the last
+    of those. The one exception is a **work queue** (registrants' *Needs
+    Validation*, *Unsent Email*): a single question asked all day, coloured
+    like what it collects, stays its own chip beside Filters. The public
+    `/results/[slug]/full` keeps its own Category / Gender menus.
   - **A single-event screen's miss is `AdminNotFound`**, worded from
     `admin/events/event-not-found.ts`, identical for a missing event and one
     the person may not open (§7).
@@ -1477,7 +1494,7 @@ These are the user's own standing preferences. Follow them without being asked.
   it, or the person loses their place and the sight of the change landing where
   they clicked. Work queues are therefore **filters**, not sorts — the
   registrants screen's *Needs Validation* and *Unsent Email* chips, the feedback
-  screen's triage chips. And when the number in the `No.` column is worth
+  screen's triage filter. And when the number in the `No.` column is worth
   quoting outside the screen, assign it on the server from that order and carry
   it on the row (registrants' `regNo`) instead of using the row's position,
   which renumbers the moment anything is filtered.
@@ -1955,6 +1972,16 @@ added nothing once their queue was empty.
 `IMPROVEMENTS_PLAN.md` it is now kept only for the reasoning behind each and for
 the decisions it records as not to be relitigated. It is no longer a queue, and
 the file itself says it may be deleted.
+
+**Every admin table filters through one Filters chip** (2026-09-17, on `dev`,
+uncommitted): `FiltersMenu` was lifted out of the events list and now carries
+the filters of registrants (its `sm`-up per-column chips are gone), results (its
+private `FilterOptions` copy is gone), clients, feedback and remittances (their
+`FilterChip` rows, and the component, are gone) and activity (its four
+`AdminSelect` pickers became sheet groups, and Person / Event / Activity became
+many-valued in `lib/activity.ts` and `activity-store.ts`). Screens with no
+filter (marketing, team, communities, a race's settlement) were left as they
+are. No migration.
 
 **`ADMIN_MERGE_PLAN.md` is the active queue — Batches 1–5 have landed on `dev` (2026-09-17); nothing is released to production yet.**
 The owner decided there is no super admin any more: one dashboard at `/admin`,

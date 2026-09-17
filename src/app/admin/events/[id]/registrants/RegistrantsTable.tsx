@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import {
-  Search, Filter, Download, Eye, X, Trash2,
+  Search, Download, Eye, X, Trash2,
   Columns, ChevronUp, ChevronDown, CheckCircle, Check,
   MessageSquare, MessageSquareText, Mail, MailWarning, Copy, ExternalLink, Maximize2, FileText,
   Hourglass
@@ -39,7 +39,7 @@ import { upperCaseAsTyped } from '@/lib/text-case';
 import { formatPesos } from '@/lib/money';
 import { orderActivityPath, statusProvenance } from '@/lib/activity';
 import BusyLabel from '@/components/ui/BusyLabel';
-import FilterOptions from '../../../FilterOptions';
+import FiltersMenu, { type FilterGroup } from '../../../FiltersMenu';
 
 /**
  * What the signed-in person may do on this event, decided by page.tsx with the
@@ -225,25 +225,12 @@ export default function RegistrantsTable({
   const [rowSelection, setRowSelection] = useState({});
   const [isViewOpen, setIsViewOpen] = useState(false);
 
-  const [isCategoryOpen, setIsCategoryOpen] = useState(false);
-  const [isLogisticsOpen, setIsLogisticsOpen] = useState(false);
-  const [isPaymentOpen, setIsPaymentOpen] = useState(false);
-  // Below `sm` the three filter chips fold into one Filters chip and its sheet.
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
   const viewRef = useRef<HTMLDivElement>(null);
-  const categoryRef = useRef<HTMLDivElement>(null);
-  const logisticsRef = useRef<HTMLDivElement>(null);
-  const paymentRef = useRef<HTMLDivElement>(null);
-  const filtersRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (viewRef.current && !viewRef.current.contains(event.target as Node)) setIsViewOpen(false);
-      if (categoryRef.current && !categoryRef.current.contains(event.target as Node)) setIsCategoryOpen(false);
-      if (logisticsRef.current && !logisticsRef.current.contains(event.target as Node)) setIsLogisticsOpen(false);
-      if (paymentRef.current && !paymentRef.current.contains(event.target as Node)) setIsPaymentOpen(false);
-      if (filtersRef.current && !filtersRef.current.contains(event.target as Node)) setIsFiltersOpen(false);
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -1050,13 +1037,12 @@ export default function RegistrantsTable({
     table.getColumn('paymentMethod')?.setFilterValue(newSelected.length ? newSelected : undefined);
   };
 
-  // The Filters chip below `sm`: the three lists in one sheet, and a count of
-  // every value chosen across them, as each chip counts its own.
-  const activeFilterCount = selectedCategories.length + selectedLogistics.length + selectedPayment.length;
-  const filterGroups = [
-    { label: 'Category', options: uniqueCategories, selected: selectedCategories, toggle: toggleCategory, capitalize: false },
-    { label: 'Logistics', options: uniqueLogistics, selected: selectedLogistics, toggle: toggleLogistics, capitalize: true },
-    { label: 'Payment', options: uniquePayment, selected: selectedPayment, toggle: togglePayment, capitalize: true },
+  // The Filters chip's sheet: the three lists, each reading and writing its
+  // own column filter.
+  const filterGroups: FilterGroup[] = [
+    { label: 'Category', options: uniqueCategories, selected: selectedCategories, onToggle: toggleCategory, capitalize: false },
+    { label: 'Logistics', options: uniqueLogistics, selected: selectedLogistics, onToggle: toggleLogistics, capitalize: true },
+    { label: 'Payment', options: uniquePayment, selected: selectedPayment, onToggle: togglePayment, capitalize: true },
   ];
   const clearFilters = () => {
     for (const id of ['category', 'logisticsMethod', 'paymentMethod']) {
@@ -1196,118 +1182,16 @@ export default function RegistrantsTable({
           </div>
 
           {/*
-            The Filters chip, below `sm` only. The three filter chips beside it
-            do not fit a phone's toolbar beside the work-queue chips, so they
-            fold into this one and its sheet holds all three lists. Grouping,
-            not new behaviour: each list reads and writes the very column
-            filter its own chip does, so a filter chosen here is still on when
-            the screen widens.
+            The Filters chip, at every width — the events list's filter. Its
+            sheet holds Category, Logistics and Payment; the two work-queue
+            chips beside it stay chips, because each is one question a
+            validator asks all day and wears the colour of what it collects.
           */}
-          <div ref={filtersRef} className="relative view-dropdown-container sm:hidden">
-            <button
-              type="button"
-              onClick={() => setIsFiltersOpen(!isFiltersOpen)}
-              className="btn-filter"
-              aria-haspopup="true"
-              aria-expanded={isFiltersOpen}
-            >
-              <Filter size={16} aria-hidden="true" /> Filters
-              {activeFilterCount > 0 && <span className="ml-1 px-1 bg-white/10 rounded">{activeFilterCount}</span>}
-            </button>
-            {isFiltersOpen && (
-              <div
-                role="group"
-                aria-label="Filter the list"
-                className="toolbar-popover absolute left-0 mt-2 w-72 bg-[#050505] border border-white/10 rounded-md p-2 z-50 shadow-2xl"
-              >
-                {/* The lists are built from the rows, so a race nobody has
-                    registered for yet has none. The sheet says so rather than
-                    opening as an empty strip at the foot of the screen. */}
-                {filterGroups.every(group => group.options.length === 0) && (
-                  <p className="m-0 px-2 py-3 text-sm text-secondary">
-                    Nothing to filter yet. The categories, logistics and payment
-                    methods appear here as runners register.
-                  </p>
-                )}
-                {filterGroups.map(group => group.options.length > 0 && (
-                  <div key={group.label} role="menu" aria-label={group.label} className="pb-1">
-                    <p className="m-0 px-2 pt-1 pb-1 text-xs font-semibold uppercase tracking-wider text-secondary">
-                      {group.label}
-                    </p>
-                    <FilterOptions
-                      options={group.options}
-                      selected={group.selected}
-                      onToggle={group.toggle}
-                      capitalize={group.capitalize}
-                    />
-                  </div>
-                ))}
-                {activeFilterCount > 0 && (
-                  <button
-                    type="button"
-                    onClick={clearFilters}
-                    className="mt-1 w-full flex items-center px-2 py-1.5 rounded-md text-sm text-gray-400 bg-transparent border-0 border-t border-white/5 hover:bg-white/5 hover:text-white transition-colors cursor-pointer"
-                  >
-                    Clear filters
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Category Filter — from `sm` up; the Filters sheet holds it below. */}
-          <div ref={categoryRef} className="relative view-dropdown-container max-sm:hidden">
-            <button
-              onClick={() => setIsCategoryOpen(!isCategoryOpen)}
-              className="btn-filter"
-              aria-haspopup="true"
-              aria-expanded={isCategoryOpen}
-            >
-              <Filter size={16} /> Category
-              {selectedCategories.length > 0 && <span className="ml-1 px-1 bg-white/10 rounded">{selectedCategories.length}</span>}
-            </button>
-            {isCategoryOpen && (
-              <div role="menu" aria-label="Category" className="toolbar-popover absolute left-0 mt-2 bg-[#050505] border border-white/10 rounded-md p-2 min-w-[150px] z-50 shadow-2xl">
-                <FilterOptions options={uniqueCategories} selected={selectedCategories} onToggle={toggleCategory} capitalize={false} />
-              </div>
-            )}
-          </div>
-
-          {/* Logistics Filter */}
-          <div ref={logisticsRef} className="relative view-dropdown-container max-sm:hidden">
-            <button
-              onClick={() => setIsLogisticsOpen(!isLogisticsOpen)}
-              className="btn-filter"
-              aria-haspopup="true"
-              aria-expanded={isLogisticsOpen}
-            >
-              <Filter size={16} /> Logistics
-              {selectedLogistics.length > 0 && <span className="ml-1 px-1 bg-white/10 rounded">{selectedLogistics.length}</span>}
-            </button>
-            {isLogisticsOpen && (
-              <div role="menu" aria-label="Logistics" className="toolbar-popover absolute left-0 mt-2 bg-[#050505] border border-white/10 rounded-md p-2 min-w-[150px] z-50 shadow-2xl">
-                <FilterOptions options={uniqueLogistics} selected={selectedLogistics} onToggle={toggleLogistics} />
-              </div>
-            )}
-          </div>
-
-          {/* Payment Filter */}
-          <div ref={paymentRef} className="relative view-dropdown-container max-sm:hidden">
-            <button
-              onClick={() => setIsPaymentOpen(!isPaymentOpen)}
-              className="btn-filter"
-              aria-haspopup="true"
-              aria-expanded={isPaymentOpen}
-            >
-              <Filter size={16} /> Payment
-              {selectedPayment.length > 0 && <span className="ml-1 px-1 bg-white/10 rounded">{selectedPayment.length}</span>}
-            </button>
-            {isPaymentOpen && (
-              <div role="menu" aria-label="Payment" className="toolbar-popover absolute left-0 mt-2 bg-[#050505] border border-white/10 rounded-md p-2 min-w-[150px] z-50 shadow-2xl">
-                <FilterOptions options={uniquePayment} selected={selectedPayment} onToggle={togglePayment} />
-              </div>
-            )}
-          </div>
+          <FiltersMenu
+            groups={filterGroups}
+            onClear={clearFilters}
+            empty="Nothing to filter yet. The categories, logistics and payment methods appear here as runners register."
+          />
 
           {/*
             The payment queue, in one click.

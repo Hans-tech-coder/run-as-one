@@ -28,7 +28,7 @@ import { useAlert } from '@/components/ui/AlertProvider';
 import AdminCardList, { AdminCardListSkeleton } from '@/app/admin/AdminCardList';
 import AdminDataTable, { AdminColumnsMenu } from '@/app/admin/AdminDataTable';
 import AdminTablePager from '@/app/admin/AdminTablePager';
-import FilterChip from '@/app/admin/FilterChip';
+import FiltersMenu from '@/app/admin/FiltersMenu';
 import MobileSortMenu from '@/app/admin/MobileSortMenu';
 import {
   ANONYMOUS_SENDER,
@@ -107,8 +107,9 @@ export default function FeedbackClient() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'NEW' | 'REVIEWED'>('ALL');
-  const [kindFilter, setKindFilter] = useState<'ALL' | FeedbackKind>('ALL');
+  // The Filters sheet: triage state and kind. None chosen in a group is all of it.
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+  const [selectedKinds, setSelectedKinds] = useState<string[]>([]);
   const [openId, setOpenId] = useState<string | null>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
@@ -191,8 +192,8 @@ export default function FeedbackClient() {
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
     return rows.filter(row => {
-      if (statusFilter !== 'ALL' && row.status !== statusFilter) return false;
-      if (kindFilter !== 'ALL' && asFeedbackKind(row.kind) !== kindFilter) return false;
+      if (selectedStatuses.length && !selectedStatuses.includes(row.status)) return false;
+      if (selectedKinds.length && !selectedKinds.includes(asFeedbackKind(row.kind) ?? '')) return false;
       if (!needle) return true;
       // The sender's own words first, then who they are and where they were —
       // searching an inbox is nearly always searching for a phrase.
@@ -200,7 +201,10 @@ export default function FeedbackClient() {
         .filter(Boolean)
         .some(value => (value as string).toLowerCase().includes(needle));
     });
-  }, [rows, search, statusFilter, kindFilter]);
+  }, [rows, search, selectedStatuses, selectedKinds]);
+
+  const toggleIn = (setter: React.Dispatch<React.SetStateAction<string[]>>) => (value: string) =>
+    setter(prev => (prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value]));
 
   const emptyMessage =
     rows.length === 0
@@ -283,27 +287,29 @@ export default function FeedbackClient() {
                 )}
               </div>
 
-              <FilterChip
-                label={`Unread${newCount ? ` (${newCount})` : ''}`}
-                active={statusFilter === 'NEW'}
-                onClick={() => setStatusFilter(statusFilter === 'NEW' ? 'ALL' : 'NEW')}
+              <FiltersMenu
+                groups={[
+                  {
+                    label: 'Status',
+                    options: [
+                      { value: 'NEW', label: `Unread${newCount ? ` (${newCount})` : ''}` },
+                      { value: 'REVIEWED', label: 'Reviewed' },
+                    ],
+                    selected: selectedStatuses,
+                    onToggle: toggleIn(setSelectedStatuses),
+                  },
+                  {
+                    label: 'Kind',
+                    options: FEEDBACK_KINDS.map(kind => ({ value: kind, label: feedbackKindLabel(kind) })),
+                    selected: selectedKinds,
+                    onToggle: toggleIn(setSelectedKinds),
+                  },
+                ]}
+                onClear={() => {
+                  setSelectedStatuses([]);
+                  setSelectedKinds([]);
+                }}
               />
-              <FilterChip
-                label="Reviewed"
-                active={statusFilter === 'REVIEWED'}
-                onClick={() =>
-                  setStatusFilter(statusFilter === 'REVIEWED' ? 'ALL' : 'REVIEWED')
-                }
-              />
-              {FEEDBACK_KINDS.map(kind => (
-                <FilterChip
-                  key={kind}
-                  label={feedbackKindLabel(kind)}
-                  icon={KIND_META[kind].icon}
-                  active={kindFilter === kind}
-                  onClick={() => setKindFilter(kindFilter === kind ? 'ALL' : kind)}
-                />
-              ))}
               <AdminColumnsMenu table={table} />
               <MobileSortMenu table={table} />
             </div>
