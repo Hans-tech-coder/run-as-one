@@ -202,7 +202,9 @@ src/
                             #   draws, phone and desktop, bare-paths.ts — the
                             #   pages under /admin with no sidebar,
                             #   AuthRouteLoading — their wait, FilterChip — a
-                            #   chip that finds)
+                            #   chip that finds, FilterOptions — one filter's
+                            #   checkbox list, shared by the registrants and
+                            #   events Filters sheets)
                             # (no superadmin/ folder: /superadmin/** is a
                             #   permanent redirect in next.config.ts)
     api/                    # all route handlers — see §6
@@ -620,7 +622,20 @@ your sign-in** by email when we are ready to run your race) and the address the
 reply will go to, which is what stops somebody applying twice an hour later.
 Its button goes back to the public site, not to sign-in, since the applicant
 has no account yet ·
-`/admin/events` (the row menu carries
+`/admin/events` (**the list is in the order staff work it**: races still to
+come first, soonest at the top, then the races already run, most recent first —
+sorted in `events/page.tsx`, which also fixes each row's **No.** (`listNo`) so a
+search, filter or column sort never renumbers it. A **Registrants** column
+counts the runners holding a place — PAID plus PENDING, in people not orders,
+removed runners excluded, one query for the page — and hovering it, focusing it
+or tapping it on a phone opens a tooltip (`.reg-count-tip`, the rail tooltip's
+`--tt-*` tokens) splitting it into *Paid / Validated* and *Pending*. **One
+*Filters* chip at every width** opens the same popover the registrants screen's
+phone Filters chip does (a bottom sheet on a phone), holding **Client** (only
+for `platform:manage`, built from the listed races' clients plus *No client
+yet*) and **Registration Status** (the `REGISTRATION_STATES` labels); the
+filters narrow the data before the table, so search, sort and the pager work
+inside the result. The row menu carries
 **Schedule Sign-Ups**, which opens a modal holding the same
 `RegistrationOpeningPicker` the create and edit forms use: open registration
 now, or name the date and time it opens itself. Saving either answer also lifts

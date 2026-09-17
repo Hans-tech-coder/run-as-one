@@ -2,8 +2,9 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
-  Search, X, Columns, Plus, ChevronUp, ChevronDown, Check, AlertCircle, Users
+  Search, X, Columns, Plus, ChevronUp, ChevronDown, Check, AlertCircle, Users, Filter
 } from 'lucide-react';
+import FilterOptions from '../FilterOptions';
 import LinkPending from '@/components/ui/LinkPending';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -47,6 +48,11 @@ type CategoryChip = { id: string; name: string; distance?: string | null };
  */
 type EventRow = {
   id: string;
+  /** Its place in the list's order, fixed on the server (events/page.tsx), so filtering never renumbers. */
+  listNo?: number;
+  /** Runners holding a place: paid, and pending a payment or its validation. */
+  registered?: { paid: number; pending: number };
+  client?: { id: string; name: string } | null;
   title: string;
   date: string;
   location: string;
@@ -63,6 +69,58 @@ interface EventsTableClientProps {
   events: EventRow[];
   /** Whether this person's role includes `event:create` — Create Event is not offered otherwise. */
   canCreate?: boolean;
+  /** Whether this person holds `platform:manage` — clients are Run As One's records, so only they filter by one. */
+  canFilterByClient?: boolean;
+}
+
+/** The Filters sheet's value for a race not linked to any client yet. */
+const NO_CLIENT = '__none__';
+
+/**
+ * The Registrants cell: how many runners hold a place, and — on hover, focus,
+ * or a tap on a phone, which has no hover — how many of them have paid and how
+ * many are still pending. The split is behind a tooltip rather than in the
+ * cell because the total is what a row is scanned for; the split is the
+ * follow-up question.
+ */
+function RegisteredCount({ event, alignEnd = false }: { event: EventRow; /** Open the tip leftwards, for a count at the right of a card. */ alignEnd?: boolean }) {
+  const { paid, pending } = event.registered ?? { paid: 0, pending: 0 };
+  const total = paid + pending;
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const close = (e: PointerEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setIsOpen(false);
+    };
+    document.addEventListener('pointerdown', close);
+    return () => document.removeEventListener('pointerdown', close);
+  }, [isOpen]);
+
+  return (
+    <span ref={ref} className={`reg-count ${alignEnd ? 'is-end' : ''} ${isOpen ? 'is-open' : ''}`}>
+      <button
+        type="button"
+        className="reg-count-trigger"
+        onClick={() => setIsOpen(open => !open)}
+        onKeyDown={e => { if (e.key === 'Escape') setIsOpen(false); }}
+        aria-expanded={isOpen}
+        aria-label={`${total} registered for ${event.title}: ${paid} paid, ${pending} pending`}
+      >
+        <Users size={14} aria-hidden="true" />
+        <span className="tabular-nums">{total}</span>
+      </button>
+      <span className="reg-count-tip" aria-hidden="true">
+        <span className="reg-count-tip-row">
+          <span className="reg-count-dot is-paid" />Paid / Validated<b>{paid}</b>
+        </span>
+        <span className="reg-count-tip-row">
+          <span className="reg-count-dot is-pending" />Pending<b>{pending}</b>
+        </span>
+      </span>
+    </span>
+  );
 }
 
 /**
@@ -123,7 +181,7 @@ function CategoryChips({ categories }: { categories?: CategoryChip[] }) {
   );
 }
 
-export default function EventsTableClient({ events, canCreate = true }: EventsTableClientProps) {
+export default function EventsTableClient({ events, canCreate = true, canFilterByClient = false }: EventsTableClientProps) {
   // Table state
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
@@ -131,7 +189,15 @@ export default function EventsTableClient({ events, canCreate = true }: EventsTa
   const [rowSelection, setRowSelection] = useState({});
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [tableEvents, setTableEvents] = useState(events);
-  
+
+  // The one Filters chip and its sheet: by client and by registration state.
+  // Applied to the data before the table, like the registrants screen's
+  // backlog view, so search, sort and the pager all work inside the result.
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [selectedClients, setSelectedClients] = useState<string[]>([]);
+  const [selectedStates, setSelectedStates] = useState<string[]>([]);
+  const filtersRef = useRef<HTMLDivElement>(null);
+
   const router = useRouter();
   // Shadows window.alert on purpose — see AlertProvider.
   const { alert } = useAlert();
@@ -160,6 +226,9 @@ export default function EventsTableClient({ events, canCreate = true }: EventsTa
     function handleClickOutside(event: MouseEvent) {
       if (viewRef.current && !viewRef.current.contains(event.target as Node)) {
         setIsViewOpen(false);
+      }
+      if (filtersRef.current && !filtersRef.current.contains(event.target as Node)) {
+        setIsFiltersOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -421,7 +490,7 @@ export default function EventsTableClient({ events, canCreate = true }: EventsTa
       id: "index",
       header: "No.",
       cell: ({ row, table }) => (
-        <span className="text-gray-400 font-mono">{rowPosition(table.getSortedRowModel().flatRows, row)}</span>
+        <span className="text-gray-400 font-mono">{row.original.listNo ?? rowPosition(table.getSortedRowModel().flatRows, row)}</span>
       ),
       enableSorting: false,
       enableHiding: false,
@@ -434,7 +503,13 @@ export default function EventsTableClient({ events, canCreate = true }: EventsTa
     {
       accessorKey: "date",
       header: "Date",
-      cell: ({ row }) => row.original.date,
+      cell: ({ row }) => <span className="whitespace-nowrap">{row.original.date}</span>,
+    },
+    {
+      id: "registered",
+      header: "Registrants",
+      accessorFn: (row) => (row.registered?.paid ?? 0) + (row.registered?.pending ?? 0),
+      cell: ({ row }) => <RegisteredCount event={row.original} />,
     },
     {
       id: "categories",
@@ -463,8 +538,18 @@ export default function EventsTableClient({ events, canCreate = true }: EventsTa
     // eslint-disable-next-line react-hooks/exhaustive-deps
   ], [pausingId]);
 
+  const filteredEvents = useMemo(
+    () =>
+      tableEvents.filter(
+        event =>
+          (selectedClients.length === 0 || selectedClients.includes(event.client?.id ?? NO_CLIENT)) &&
+          (selectedStates.length === 0 || selectedStates.includes(event.registrationState ?? 'OPEN')),
+      ),
+    [tableEvents, selectedClients, selectedStates],
+  );
+
   const table = useReactTable({
-    data: tableEvents,
+    data: filteredEvents,
     columns,
     state: {
       sorting,
@@ -482,6 +567,43 @@ export default function EventsTableClient({ events, canCreate = true }: EventsTa
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
   });
+
+  // The sheet's lists. Clients come from the races on the list, so a client
+  // with no race is not offered as a filter that can only come back empty.
+  const clientOptions = useMemo(() => {
+    const byId = new Map<string, string>();
+    let unlinked = false;
+    for (const event of tableEvents) {
+      if (event.client) byId.set(event.client.id, event.client.name);
+      else unlinked = true;
+    }
+    const options = [...byId]
+      .map(([value, label]) => ({ value, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+    return unlinked ? [...options, { value: NO_CLIENT, label: 'No client yet' }] : options;
+  }, [tableEvents]);
+  const stateOptions = (Object.keys(REGISTRATION_STATES) as (keyof typeof REGISTRATION_STATES)[])
+    .map(key => ({ value: key, label: REGISTRATION_STATES[key].label }));
+
+  const toggleIn = (setter: React.Dispatch<React.SetStateAction<string[]>>) => (value: string) => {
+    setter(prev => (prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value]));
+    table.setPageIndex(0);
+  };
+  const activeFilterCount = (canFilterByClient ? selectedClients.length : 0) + selectedStates.length;
+  const filterGroups = [
+    ...(canFilterByClient
+      ? [{ label: 'Client', options: clientOptions, selected: selectedClients, toggle: toggleIn(setSelectedClients) }]
+      : []),
+    { label: 'Registration Status', options: stateOptions, selected: selectedStates, toggle: toggleIn(setSelectedStates) },
+  ];
+  const clearFilters = () => {
+    setSelectedClients([]);
+    setSelectedStates([]);
+    table.setPageIndex(0);
+  };
+  const emptyMessage = tableEvents.length > 0
+    ? 'No events match your search or filters.'
+    : 'No events found. Create one to get started.';
 
   // How many orders go with the event being deleted, which the confirm names.
   const deletingRegistrations = deletingEvent?._count?.registrations ?? 0;
@@ -509,6 +631,52 @@ export default function EventsTableClient({ events, canCreate = true }: EventsTa
             )}
           </div>
           
+          {/* The one Filters chip, at every width: its sheet holds Client (for
+              platform:manage) and Registration Status — the same popover the
+              registrants screen's Filters chip opens on a phone. */}
+          <div ref={filtersRef} className="relative view-dropdown-container">
+            <button
+              type="button"
+              onClick={() => setIsFiltersOpen(!isFiltersOpen)}
+              className="btn-filter"
+              aria-haspopup="true"
+              aria-expanded={isFiltersOpen}
+            >
+              <Filter size={16} aria-hidden="true" /> Filters
+              {activeFilterCount > 0 && <span className="ml-1 px-1 bg-white/10 rounded">{activeFilterCount}</span>}
+            </button>
+            {isFiltersOpen && (
+              <div
+                role="group"
+                aria-label="Filter the list"
+                className="toolbar-popover absolute left-0 mt-2 w-72 bg-[#050505] border border-white/10 rounded-md p-2 z-50 shadow-2xl"
+              >
+                {filterGroups.map(group => group.options.length > 0 && (
+                  <div key={group.label} role="menu" aria-label={group.label} className="pb-1">
+                    <p className="m-0 px-2 pt-1 pb-1 text-xs font-semibold uppercase tracking-wider text-secondary">
+                      {group.label}
+                    </p>
+                    <FilterOptions
+                      options={group.options}
+                      selected={group.selected}
+                      onToggle={group.toggle}
+                      capitalize={false}
+                    />
+                  </div>
+                ))}
+                {activeFilterCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="mt-1 w-full flex items-center px-2 py-1.5 rounded-md text-sm text-gray-400 bg-transparent border-0 border-t border-white/5 hover:bg-white/5 hover:text-white transition-colors cursor-pointer"
+                  >
+                    Clear filters
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Which columns the table shows. Cards have no columns to hide, so
               below `lg` the chip goes and Sort (which the headers did) comes. */}
           <div ref={viewRef} className="relative view-dropdown-container dash-desktop-only">
@@ -532,7 +700,7 @@ export default function EventsTableClient({ events, canCreate = true }: EventsTa
                         />
                         {column.getIsVisible() && <div className="w-2 h-2 bg-white rounded-sm" />}
                       </div>
-                      <span className="capitalize">{column.id === 'title' ? 'Event Name' : column.id}</span>
+                      <span className="capitalize">{column.id === 'title' ? 'Event Name' : column.id === 'registered' ? 'Registrants' : column.id}</span>
                     </label>
                   );
                 })}
@@ -598,7 +766,7 @@ export default function EventsTableClient({ events, canCreate = true }: EventsTa
             ) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="py-16 text-center text-gray-500">
-                  No events found. Create one to get started.
+                  {emptyMessage}
                 </TableCell>
               </TableRow>
             )}
@@ -620,12 +788,13 @@ export default function EventsTableClient({ events, canCreate = true }: EventsTa
             label: row => `Select ${row.original.title}`,
           }}
           leading={row => (
-            <span className="font-mono">{rowPosition(table.getSortedRowModel().flatRows, row)}</span>
+            <span className="font-mono">{row.original.listNo ?? rowPosition(table.getSortedRowModel().flatRows, row)}</span>
           )}
           title={row => <span className="line-clamp-2">{row.original.title}</span>}
           badges={row => <RegistrationStatus event={row.original} />}
           fields={row => [
             { label: 'Date', value: row.original.date },
+            { label: 'Registrants', value: <RegisteredCount event={row.original} alignEnd /> },
             { label: 'Location', value: row.original.location, full: true },
             { label: 'Categories', value: <CategoryChips categories={row.original.categories} />, full: true },
           ]}
@@ -649,7 +818,7 @@ export default function EventsTableClient({ events, canCreate = true }: EventsTa
           )}
           empty={
             <div className="border border-white/10 rounded-lg py-16 px-4 text-center text-gray-500">
-              No events found. Create one to get started.
+              {emptyMessage}
             </div>
           }
         />

@@ -1,0 +1,51 @@
+import React from 'react';
+
+/**
+ * An option is a plain value, or a value with the words shown for it — the
+ * events list filters by a client's id and shows the client's name.
+ */
+export type FilterOption = string | { value: string; label: string };
+
+/**
+ * One filter's options, as a list of checkboxes. The registrants screen draws
+ * it in each chip's own menu from `sm` up and in its Filters sheet below, so
+ * the two read and write the same column filter; the events list draws it in
+ * its one Filters sheet. Shared so a filter looks the same on every screen.
+ */
+export default function FilterOptions({
+  options,
+  selected,
+  onToggle,
+  capitalize = true,
+}: {
+  options: FilterOption[];
+  selected: string[];
+  onToggle: (value: string) => void;
+  /** Category names are shown as the organizer typed them; the coded lists are capitalized. */
+  capitalize?: boolean;
+}) {
+  return (
+    <>
+      {options.map(option => {
+        const value = typeof option === 'string' ? option : option.value;
+        const label = typeof option === 'string' ? option : option.label;
+        const isSelected = selected.includes(value);
+        return (
+          <button
+            key={value}
+            type="button"
+            role="menuitemcheckbox"
+            aria-checked={isSelected}
+            className={`w-full flex items-center gap-2 px-2 py-1.5 hover:bg-white/5 cursor-pointer rounded-md text-sm text-left text-white bg-transparent border-0 ${capitalize ? 'capitalize' : ''} ${isSelected ? 'bg-white/5' : ''}`}
+            onClick={() => onToggle(value)}
+          >
+            <span className={`w-4 h-4 shrink-0 border border-white/10 rounded-sm flex items-center justify-center ${isSelected ? 'bg-white/10' : ''}`}>
+              {isSelected && <span className="w-2 h-2 bg-white rounded-sm" />}
+            </span>
+            <span className="min-w-0 [overflow-wrap:anywhere]">{label}</span>
+          </button>
+        );
+      })}
+    </>
+  );
+}

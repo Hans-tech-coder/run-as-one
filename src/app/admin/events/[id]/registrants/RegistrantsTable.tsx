@@ -39,6 +39,7 @@ import { upperCaseAsTyped } from '@/lib/text-case';
 import { formatPesos } from '@/lib/money';
 import { orderActivityPath, statusProvenance } from '@/lib/activity';
 import BusyLabel from '@/components/ui/BusyLabel';
+import FilterOptions from '../../../FilterOptions';
 
 /**
  * What the signed-in person may do on this event, decided by page.tsx with the
@@ -145,47 +146,6 @@ function previewEmailHtml(html: string): string {
   return html.includes('</head>')
     ? html.replace('</head>', `${EMAIL_PREVIEW_STYLE}</head>`)
     : `${html}${EMAIL_PREVIEW_STYLE}`;
-}
-
-/**
- * One filter's options, as a list of checkboxes. Drawn once and used twice:
- * in each chip's own menu from `sm` up, and in the Filters sheet below it, so
- * the two read and write the same column filter.
- */
-function FilterOptions({
-  options,
-  selected,
-  onToggle,
-  capitalize = true,
-}: {
-  options: string[];
-  selected: string[];
-  onToggle: (value: string) => void;
-  /** Category names are shown as the organizer typed them; the coded lists are capitalized. */
-  capitalize?: boolean;
-}) {
-  return (
-    <>
-      {options.map(option => {
-        const isSelected = selected.includes(option);
-        return (
-          <button
-            key={option}
-            type="button"
-            role="menuitemcheckbox"
-            aria-checked={isSelected}
-            className={`w-full flex items-center gap-2 px-2 py-1.5 hover:bg-white/5 cursor-pointer rounded-md text-sm text-left text-white bg-transparent border-0 ${capitalize ? 'capitalize' : ''} ${isSelected ? 'bg-white/5' : ''}`}
-            onClick={() => onToggle(option)}
-          >
-            <span className={`w-4 h-4 shrink-0 border border-white/10 rounded-sm flex items-center justify-center ${isSelected ? 'bg-white/10' : ''}`}>
-              {isSelected && <span className="w-2 h-2 bg-white rounded-sm" />}
-            </span>
-            <span className="min-w-0 [overflow-wrap:anywhere]">{option}</span>
-          </button>
-        );
-      })}
-    </>
-  );
 }
 
 export default function RegistrantsTable({

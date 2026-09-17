@@ -637,6 +637,115 @@
   color: rgba(255, 255, 255, 0.55);
 }
 
+/* The events list's Registrants count and its split (EventsTableClient's
+   RegisteredCount). The tip is the collapsed rail's tooltip (17-tooltip, the
+   same --tt-* tokens and zinc surface), opened above the count. It shows on
+   hover only where a pointer can hover — a phone's tap would otherwise leave
+   it stuck open — and on focus or a tap (.is-open) everywhere. */
+.reg-count {
+  position: relative;
+  display: inline-flex;
+}
+
+.reg-count-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 2px 10px;
+  border-radius: 100px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.reg-count-trigger:hover,
+.reg-count.is-open .reg-count-trigger {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.reg-count-tip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  z-index: 40;
+  display: grid;
+  gap: 4px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--tt-bg);
+  color: var(--tt-fg);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  white-space: nowrap;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.06),
+    0 2px 6px 0 rgba(0, 0, 0, 0.05),
+    0 8px 28px 0 rgba(0, 0, 0, 0.5);
+  transform: scale(var(--tt-scale));
+  transform-origin: 0% 100%;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity   var(--tt-out-dur) var(--tt-out-ease),
+    transform var(--tt-out-dur) var(--tt-out-ease);
+}
+
+/* A count at the right of a card opens its tip leftwards, or it would run off
+   the phone's screen. */
+.reg-count.is-end .reg-count-tip {
+  left: auto;
+  right: 0;
+  transform-origin: 100% 100%;
+}
+
+.reg-count-tip-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.reg-count-tip-row b {
+  margin-left: auto;
+  padding-left: 16px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.reg-count-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.reg-count-dot.is-paid { background: #52c41a; }
+.reg-count-dot.is-pending { background: #faad14; }
+
+.reg-count.is-open .reg-count-tip,
+.reg-count-trigger:focus-visible + .reg-count-tip {
+  opacity: 1;
+  transform: scale(1);
+  transition-duration: var(--tt-in-dur);
+  transition-timing-function: var(--tt-in-ease);
+}
+
+@media (hover: hover) {
+  .reg-count:hover .reg-count-tip {
+    opacity: 1;
+    transform: scale(1);
+    transition-duration: var(--tt-in-dur);
+    transition-timing-function: var(--tt-in-ease);
+    transition-delay: var(--tt-delay);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reg-count-tip { transition: none; }
+}
+
 /* Empty State */
 .empty-state {
   padding: 64px 24px;
