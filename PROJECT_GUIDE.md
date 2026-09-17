@@ -1758,6 +1758,20 @@ added nothing once their queue was empty.
 the decisions it records as not to be relitigated. It is no longer a queue, and
 the file itself says it may be deleted.
 
+**`ADMIN_MERGE_PLAN.md` is the active queue — no batch started (2026-09-17).**
+The owner decided there is no super admin any more: one dashboard at `/admin`,
+run by Run As One staff, who create every event and validate every payment;
+runners' money goes to Run As One, which remits to the organizer. An organizer
+becomes a **Viewer** that sees only its events and registrant counts. The
+application form stays (password removed) and feeds a submissions list with a
+**Send invite** instead of approve/reject. The organizer owner account that
+signs in today **is Run As One's own account**, so its row stays the one tenant
+and a new `Client` record is added. Six batches, the last being remittance
+tracking. **Read the plan's Status table before touching `/admin`,
+`/superadmin`, `actor.ts`, `permissions.ts` or the `Organizer` model**, and
+tick it as work lands. Parts of §1, §6 and §7 below still describe the super
+admin and will be rewritten as the batches land.
+
 **`STAFF_ACCESS_PLAN.md` is an open queue, with Batches 1–3 landed.** Five batches
 for giving an organizer's personnel their own accounts instead of sharing the
 organizer's one login. **Batch 1 is in:** the `StaffAccount` /
