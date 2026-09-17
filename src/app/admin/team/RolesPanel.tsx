@@ -43,7 +43,7 @@ export default function RolesPanel() {
 
       <div className="admin-panel-content">
         <p className="text-sm text-secondary mb-5 max-w-3xl">
-          Owner and Admin reach every event. Staff reach only the events you assign them, and
+          Super Admin and Admin reach every event. Staff reach only the events you assign them, and
           hold one of the four event roles on each — the same person can validate payments on
           one race and only view another.
         </p>

@@ -95,7 +95,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
     const { access, errors } = readAccess(body.role, body.assignments, new Set(titles.keys()));
     if (access && !canManageMember(actor, access.role)) {
-      errors.role = "Only the organizer's owner can make someone an Admin";
+      errors.role = 'Only the Super Admin can make someone an Admin';
     }
     if (!access || Object.keys(errors).length > 0) {
       return NextResponse.json({ errors }, { status: 400 });

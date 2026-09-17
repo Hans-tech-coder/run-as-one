@@ -129,7 +129,9 @@ export const MATRIX_PERMISSIONS: readonly Permission[] = PERMISSIONS.filter(
 
 /** What the team screen calls each role. */
 export const ROLE_LABELS: Record<Role | MembershipRole, string> = {
-  OWNER: 'Owner',
+  // Run As One's own account. Shown as Super Admin at the owner's request:
+  // there is one tenant, and its owner is the platform's top account.
+  OWNER: 'Super Admin',
   ADMIN: 'Admin',
   STAFF: 'Staff',
   EVENT_MANAGER: 'Event Manager',
@@ -144,7 +146,7 @@ export const ROLE_LABELS: Record<Role | MembershipRole, string> = {
  * from the words that describe it.
  */
 export const ROLE_HINTS: Record<Role | MembershipRole, string> = {
-  OWNER: 'The organizer account itself. Every event and every setting.',
+  OWNER: "Run As One's own account. Every event and every setting.",
   ADMIN: 'Every event, the team, client submissions, clubs and feedback. Cannot delete an event or change organizer settings.',
   STAFF: 'Only the events you assign, with a role on each.',
   EVENT_MANAGER: 'Runs the event: edits it, settles payments, edits runners and loads results. Cannot remove a runner.',

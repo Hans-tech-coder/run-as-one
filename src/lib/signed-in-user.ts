@@ -27,7 +27,7 @@ export type SignedInUser = {
   name: string;
   /** First letter of the name, for the round avatar. */
   initial: string;
-  /** "Owner", "Admin", "Staff" — what the line under the name says. */
+  /** "Super Admin", "Admin", "Staff" — what the line under the name says. */
   roleLabel: string;
   /** The organizer this session acts inside. For an owner it is their own name. */
   organizerName: string;

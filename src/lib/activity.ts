@@ -194,7 +194,7 @@ export function actionsForFilter(value: string): AuditAction[] | null {
 }
 
 export const ACTOR_KIND_LABELS: Record<string, string> = {
-  OWNER: 'Owner',
+  OWNER: 'Super Admin',
   STAFF: 'Staff',
   SUPER_ADMIN: 'Super Admin',
   SYSTEM: 'System',

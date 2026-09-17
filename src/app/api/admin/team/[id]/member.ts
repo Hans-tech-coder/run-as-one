@@ -62,7 +62,7 @@ export async function loadManagedMember(id: string): Promise<
     return {
       ok: false,
       response: NextResponse.json(
-        { error: "You cannot change your own access. Ask the organizer's owner." },
+        { error: 'You cannot change your own access. Ask the Super Admin.' },
         { status: 403 },
       ),
     };
@@ -72,7 +72,7 @@ export async function loadManagedMember(id: string): Promise<
     return {
       ok: false,
       response: NextResponse.json(
-        { error: "Only the organizer's owner can change an Admin's access." },
+        { error: "Only the Super Admin can change an Admin's access." },
         { status: 403 },
       ),
     };

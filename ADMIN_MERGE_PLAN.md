@@ -50,7 +50,8 @@ the reasoning that outlives the plan goes into `PROJECT_GUIDE.md`.
 | Remittance tracking? | **Yes, as the last batch (6)**, after the merge is done. |
 | Does the platform trail merge into `/admin/activity`? (Batch 2) | **Yes — one Activity screen**, with an *Organizer decisions* shelf. |
 | What happens to the `/superadmin` dashboard? (Batch 2) | **It redirects to `/admin`**, and owners and admins get a *Platform Fees Collected* tile. Total Organizers is not carried over (clients replace it in Batch 3). |
-| Which account is Run As One's? (Batch 1) | **`cresendorunningcommunity@gmail.com`** — the `seed-crc-organizer` row, "Cresendo Running Community". |
+| Which account is Run As One's? (Batch 1) | **The `seed-crc-organizer` row.** It signed in as `cresendorunningcommunity@gmail.com` as "Cresendo Running Community" until the owner's call below. |
+| Run As One's login and name? (after Batch 3) | **`runasoneph@gmail.com`, named "Run As One"**, and its role reads **Super Admin**, not Owner (`ROLE_LABELS.OWNER`). **Cresendo Running Community (`cresendorunningcommunity@gmail.com`) is a client**, invited as a viewer, with all four live events linked to it. Done on `local-dev` 2026-09-17; **production needs the same at release.** |
 | Who is "System Owner" (`SUPER_ADMIN`)? (Batch 1) | **A test super admin account, not a real person's.** Nobody depends on it; retire it in Batch 5. |
 | "Super Admin Test" and "Test"? (Batch 1) | **Test accounts.** Their copied `Client` rows (both `ARCHIVED`) are test data too. |
 
@@ -481,4 +482,17 @@ Resend's test sink `delivered+verify-b3@resend.dev`, not a real inbox.
   sheet have no horizontal scroll.
 - `npx tsc --noEmit` is clean for `src`; eslint is clean on every new file
   (the event routes keep their existing `any` errors).
+
+**Owner's follow-up (2026-09-17, `local-dev` only).** Run As One's row
+(`seed-crc-organizer`) now signs in as `runasoneph@gmail.com` and is named "Run
+As One" (same password; one `profile.updated` trail row). A `Client` "Cresendo
+Running Community" (`cresendorunningcommunity@gmail.com`) was created, all four
+events were linked to it (one `event.updated` row each, no registration
+touched), and Send invite went to that inbox through the real route
+(`client.invited`) — the link points at `localhost:3000`, since invitations
+link back to the database they were written into. The OWNER role is labelled
+**Super Admin** everywhere it is shown (sidebar, team screen, role table,
+Activity's actor kind, the team routes' refusals). **At release, production
+needs the same data change** — owner email and name, the client, the four
+links, and an invite sent from the live site so its link points there.
 

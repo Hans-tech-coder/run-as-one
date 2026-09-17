@@ -229,9 +229,9 @@ function LastSignIn({ member }: { member: TeamMemberRow }) {
  * card says it in words, because a touch screen never hovers.
  */
 function manageReason(member: TeamMemberRow): string {
-  if (member.isOwner) return 'The owner is the organizer account itself';
+  if (member.isOwner) return "The Super Admin is Run As One's own account";
   if (member.isSelf) return 'You cannot change your own access';
-  return "Only the organizer's owner can change an Admin";
+  return 'Only the Super Admin can change an Admin';
 }
 
 export default function TeamClient({
@@ -988,7 +988,7 @@ export default function TeamClient({
                 hint={
                   grantableRoles.includes('ADMIN')
                     ? undefined
-                    : "Only the organizer's owner can make someone an Admin."
+                    : 'Only the Super Admin can make someone an Admin.'
                 }
               />
 

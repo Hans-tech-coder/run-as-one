@@ -61,7 +61,7 @@ export async function POST(request: Request) {
     const errors: FieldErrors = { ...invitee.errors, ...accessErrors };
 
     if (access && !canManageMember(actor, access.role)) {
-      errors.role = "Only the organizer's owner can make someone an Admin";
+      errors.role = 'Only the Super Admin can make someone an Admin';
     }
     if (!access || Object.keys(errors).length > 0) {
       return NextResponse.json({ errors }, { status: 400 });

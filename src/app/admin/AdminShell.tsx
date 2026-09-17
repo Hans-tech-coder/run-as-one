@@ -13,6 +13,7 @@ import {
   Settings,
   UsersRound,
 } from 'lucide-react';
+import { ROLE_LABELS } from '@/lib/permissions';
 import type { SignedInUser } from '@/lib/signed-in-user';
 import DashboardShell from './DashboardShell';
 import { DashboardNavProvider } from './dashboard-nav';
@@ -90,12 +91,12 @@ export default function AdminShell({
     { name: 'Settings', path: '/admin/settings', icon: <Settings size={20} /> },
   ];
 
-  // An owner is simply the Owner. Anyone else is named with the organizer
-  // they are working inside.
+  // Run As One's own account is simply the Super Admin (ROLE_LABELS.OWNER).
+  // Anyone else is named with the organizer they are working inside.
   const roleLine = !user
     ? 'Organizer Admin'
-    : user.roleLabel === 'Owner'
-      ? 'Owner'
+    : user.roleLabel === ROLE_LABELS.OWNER
+      ? ROLE_LABELS.OWNER
       : `${user.roleLabel} · ${user.organizerName}`;
 
   return (
