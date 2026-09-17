@@ -1,6 +1,6 @@
 # One dashboard: merging Admin and Super Admin — work plan
 
-**Status:** No batch started · **Owner decisions captured:** 2026-09-17
+**Status:** Batch 1 landed · Batch 2 next · **Owner decisions captured:** 2026-09-17
 
 Run As One is no longer a self-serve platform for organizers. **Run As One staff
 create every event and validate every payment**, and runners' money goes to Run
@@ -20,7 +20,7 @@ to know where to pick up.
 
 | Batch | Laman | Migration | Status |
 | --- | --- | --- | --- |
-| 1 | Production audit (read-only), `Client` model, Viewer role, permissions | yes | Not started |
+| 1 | Production audit (read-only), `Client` model, Viewer role, permissions | yes | Landed (dev) — prod migration at release |
 | 2 | One shell: `/superadmin` screens move into `/admin`, redirects, role-aware sidebar | none | Not started |
 | 3 | Applications become client submissions — no password, **Send invite** | maybe small | Not started |
 | 4 | The Viewer dashboard — events and registrant counts | none | Not started |
@@ -48,6 +48,9 @@ the reasoning that outlives the plan goes into `PROJECT_GUIDE.md`.
 | The team members invited today through `/admin/team`? | **They are Run As One staff.** They keep their access. |
 | The organizer owner account that signs in today? | **It is Run As One's own admin account** — the real owner of Run As One, not a client. |
 | Remittance tracking? | **Yes, as the last batch (6)**, after the merge is done. |
+| Which account is Run As One's? (Batch 1) | **`cresendorunningcommunity@gmail.com`** — the `seed-crc-organizer` row, "Cresendo Running Community". |
+| Who is "System Owner" (`SUPER_ADMIN`)? (Batch 1) | **A test super admin account, not a real person's.** Nobody depends on it; retire it in Batch 5. |
+| "Super Admin Test" and "Test"? (Batch 1) | **Test accounts.** Their copied `Client` rows (both `ARCHIVED`) are test data too. |
 
 ---
 
@@ -137,28 +140,28 @@ From `PROJECT_GUIDE.md`; not repeated inside each batch.
 
 ## Batch 1 — Audit, `Client` model, Viewer role
 
-- [ ] **Read-only production audit** (no writes). List for the owner:
+- [x] **Read-only production audit** (no writes). List for the owner:
   - every `Organizer` row: id, name, email, `role`, `status`, event count,
     promo count, membership count;
   - every `StaffAccount` with its memberships (organizer, role, accepted,
     suspended) and event assignments;
   - every `Event`: title, `organizerId`, date, registration counts by status.
-- [ ] Confirm with the owner: Run As One's row id, what the `SUPER_ADMIN`
+- [x] Confirm with the owner: Run As One's row id, what the `SUPER_ADMIN`
   account is (same person? retire?), and that no other organizer owns live
   events. **Stop and ask if the audit disagrees with the design above.**
-- [ ] Schema: `Client`, `Event.clientId`, `StaffMembership.clientId`
+- [x] Schema: `Client`, `Event.clientId`, `StaffMembership.clientId`
   (all additive, nullable). Migration copies each applicant `Organizer` row
   (not Run As One's, not the super admin's) into a `Client` row — a copy, the
   original rows stay until Batch 5.
-- [ ] `permissions.ts`: `VIEWER` membership role, its one permission, labels
+- [x] `permissions.ts`: `VIEWER` membership role, its one permission, labels
   and hints; `asMembershipRole` accepts it.
-- [ ] `actor.ts`: a Viewer's `clientId` on the actor; `reachableEvents` scopes a
+- [x] `actor.ts`: a Viewer's `clientId` on the actor; `reachableEvents` scopes a
   Viewer to its client; `can()` refuses a Viewer everything else.
-- [ ] `lib/client.ts` (or extend `organizer-application.ts`): the rule module for
+- [x] `lib/client.ts` (or extend `organizer-application.ts`): the rule module for
   client status and moves.
-- [ ] Run the migration on the **dev** branch only; verify existing staff and
+- [x] Run the migration on the **dev** branch only; verify existing staff and
   owner sign-ins are unchanged.
-- [ ] `PROJECT_GUIDE.md` §4, §5, §7, §10.
+- [x] `PROJECT_GUIDE.md` §4, §5, §7, §10.
 
 **Done when:** the owner and staff see no difference, the new tables exist on
 dev, and a hand-made Viewer membership reaches only its client's events.
@@ -225,8 +228,11 @@ not-allowed page everywhere else.
 
 - [ ] Staff link existing live events to their clients through the event form
   (one event at a time, the owner confirming each). No registration row changes.
-- [ ] Retire the `SUPER_ADMIN` account as decided in Batch 1 (sign-in refused,
-  row kept unless the owner says otherwise).
+- [ ] Retire the `SUPER_ADMIN` account as decided in Batch 1: "System Owner" is
+  a **test** account, so sign-in is refused; the row, and the test clients
+  "Super Admin Test" and "Test" with their Organizer originals, may be removed
+  only once the owner confirms the exact rows at that point (re-audit
+  production first — it may hold rows `local-dev` did not).
 - [ ] Remove `SUPER_ADMIN_REACH`, `role === 'SUPER_ADMIN'` branches,
   `superadmin/organizers` routes, decision emails, `organizer-status.ts` parts
   that only served approval, and the `/superadmin` folder (redirects stay).
@@ -283,4 +289,65 @@ record a payout, and see the balance reach zero.
 
 ## Batch notes
 
-_None yet. Add "Batch N — what landed" here as each batch finishes._
+### Batch 1 — what landed
+
+**Audit (2026-09-17).** Events, registrations and staff were read on production;
+the `Organizer` listing was read on `local-dev` (a production copy) because the
+production read of that table was refused by the session's permissions —
+**re-run it on production before release** to catch applications submitted
+since the branch was last reset.
+- Organizers: `seed-crc-organizer` "Cresendo Running Community" — ORGANIZER,
+  APPROVED, 4 events, 5 promos, 2 memberships (**Run As One's row**);
+  "System Owner" — SUPER_ADMIN, APPROVED, owns nothing; "Super Admin Test" —
+  ORGANIZER, SUSPENDED, owns nothing, no application; "Test" — ORGANIZER,
+  REJECTED, owns nothing, has an application.
+- Staff: Pik (ADMIN) and Kyla (STAFF, Validator on Pink Run 2026), both on
+  Run As One's row, accepted, not suspended.
+- Events, all on `seed-crc-organizer`: Cresendo In Motion 2026 (no orders),
+  BizRun V2.0 (none), **Pink Run 2026 (16 PAID, 3 PENDING)**, **Run and
+  Reachout 2026 (2 PENDING)**.
+- The audit agrees with the design: no other organizer owns an event.
+
+**Calls made.**
+- `MEMBERSHIP_ROLES` gained `VIEWER`, but the team code now reads a separate
+  `TEAM_ROLES` (`ADMIN`, `STAFF`) so a viewer is never listed, offered or
+  manageable on `/admin/team`; `loadManagedMember` answers a viewer's membership
+  id with "Team member not found."
+- The viewer's permission is `event:view-summary`. Every staff role holds it
+  too, and `MATRIX_PERMISSIONS` keeps it off the team screen's role table.
+- `can()` for a viewer needs the event's `clientId` in `reach` — fail closed.
+- Viewers sign in only while their client is `ACTIVE` (`clientViewersCanSignIn`),
+  checked in `getActor()` and in `activeMembershipWhere`.
+- The migration copies applicants **by what they hold** (ORGANIZER role, no
+  event/promo/membership) with the **same id**; REJECTED/SUSPENDED → `ARCHIVED`,
+  else `NEW`. On today's data that is "Super Admin Test" (ARCHIVED) and
+  "Test" (ARCHIVED).
+
+**Still open in this batch.**
+- ~~Dev migration and verification~~ — done, see below.
+- ~~The owner's questions~~ — answered 2026-09-17 and moved to *Decisions
+  already made*: Run As One is `cresendorunningcommunity@gmail.com`
+  (`seed-crc-organizer`); "System Owner", "Super Admin Test" and "Test" are all
+  test accounts.
+
+Migration: `20260917120000_clients_and_viewer_role` — applied to `local-dev`
+by the owner; copied "Super Admin Test" and "Test" as `ARCHIVED` clients.
+
+**Verified on localhost (2026-09-17)** with throwaway `verify-b1-*` rows on
+`local-dev`, signing in through `/api/auth/login`, all removed afterwards
+(accounts, memberships, client, the event link and their audit rows):
+- An owner signs in and sees only its own tenant.
+- An ADMIN on Run As One's row sees all four events; `/admin/team` lists the
+  team and **not** the viewer.
+- A STAFF validator on Pink Run sees Pink Run only (edit API 200 there, 404 on
+  BizRun) — unchanged.
+- A VIEWER linked to a client that owned BizRun V2.0 signs in (sidebar reads
+  "Client Viewer"), sees an empty dashboard and "No events found", gets Page
+  Not Found on `/admin/team`, "Event not found" on both events' registrants,
+  404 from the event API and 403 creating an event, inviting or making a promo.
+  It reaches nothing yet because no screen asks `event:view-summary` — that is
+  Batch 4.
+- Archiving the client: the viewer's API calls answer 401 on the next request,
+  `/admin` sends it to `/admin/login`, and a fresh sign-in is refused.
+- The viewer currently sees the dashboard's zero tiles and the Events and
+  Settings links — expected until Batches 2 and 4 give it its own page.

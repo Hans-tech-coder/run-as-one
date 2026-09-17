@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useId, useLayoutEffect, useRef, useState
 import { Check, Minus } from 'lucide-react';
 import {
   MATRIX_ROLES,
-  PERMISSIONS,
+  MATRIX_PERMISSIONS,
   PERMISSION_LABELS,
   ROLE_HINTS,
   ROLE_LABELS,
@@ -102,7 +102,7 @@ export default function RolePicker() {
     select(MATRIX_ROLES[next]);
   };
 
-  const allowed = PERMISSIONS.filter(permission => roleCan(role, permission)).length;
+  const allowed = MATRIX_PERMISSIONS.filter(permission => roleCan(role, permission)).length;
 
   return (
     <div className="flex flex-col gap-4">
@@ -141,11 +141,11 @@ export default function RolePicker() {
       <div role="tabpanel" id={`${baseId}-panel`} aria-labelledby={`${baseId}-tab-${role}`}>
         <p className="m-0 text-sm text-secondary">{ROLE_HINTS[role]}</p>
         <p className="m-0 mt-3 text-xs font-semibold uppercase tracking-wider text-secondary">
-          {`Allowed ${allowed} of ${PERMISSIONS.length}`}
+          {`Allowed ${allowed} of ${MATRIX_PERMISSIONS.length}`}
         </p>
 
         <ul className="m-0 mt-2 p-0 list-none border border-white/10 rounded-lg">
-          {PERMISSIONS.map(permission => {
+          {MATRIX_PERMISSIONS.map(permission => {
             const yes = roleCan(role, permission);
             return (
               <li

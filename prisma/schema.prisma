@@ -153,6 +153,12 @@ model Event {
   /// src/lib/event-schedule.ts.
   registrationOpensAt         DateTime?
   organizerId                 String
+  /// Which client this race is run for (ADMIN_MERGE_PLAN.md). Null means it
+  /// has not been linked yet — every event that existed before clients did,
+  /// until staff link it by hand. A client viewer reaches only the events that
+  /// name its client, so a null here is invisible to every viewer.
+  clientId                    String?
+  client                      Client?        @relation(fields: [clientId], references: [id])
   createdAt                   DateTime       @default(now())
   updatedAt                   DateTime       @updatedAt
   endTime                     String?
@@ -719,8 +725,10 @@ model StaffMembership {
   id              String   @id @default(cuid())
   staffId         String
   organizerId     String
-  /// "ADMIN" (every event of this organizer) | "STAFF" (only what is assigned).
-  /// Never "OWNER" — the owner is the Organizer row itself.
+  /// "ADMIN" (every event of this organizer) | "STAFF" (only what is assigned)
+  /// | "VIEWER" (a client's own sign-in: registrant counts of its client's
+  /// events, and nothing else). Never "OWNER" — the owner is the Organizer row
+  /// itself.
   role            String   @default("STAFF")
   /// Who invited them, as a StaffAccount or Organizer id, and when.
   invitedById     String?
@@ -737,6 +745,11 @@ model StaffMembership {
   /// platform-wide switch, which nothing on the team screen touches.
   suspendedAt     DateTime?
   suspendedById   String?
+  /// Set only on a "VIEWER" membership: the client whose events this person
+  /// may see the registrant counts of. A VIEWER without one reaches nothing
+  /// and its session is refused (lib/actor.ts).
+  clientId        String?
+  client          Client?           @relation(fields: [clientId], references: [id])
   staff           StaffAccount      @relation(fields: [staffId], references: [id], onDelete: Cascade)
   organizer       Organizer         @relation(fields: [organizerId], references: [id])
   assignments     EventAssignment[]
@@ -760,6 +773,58 @@ model EventAssignment {
 
   @@unique([membershipId, eventId])
   @@index([eventId])
+}
+
+/// An organization Run As One runs races for (ADMIN_MERGE_PLAN.md).
+///
+/// Run As One staff create every event and validate every payment, so an
+/// organizer is no longer a tenant with its own dashboard: it is a client, and
+/// the people it sends to sign in are VIEWER memberships on Run As One's own
+/// Organizer row, pointed here by `StaffMembership.clientId`. The tenant never
+/// moves — no Event, Registration or Runner row was rewritten to add this.
+///
+/// The application columns mirror the ones on Organizer, which is where the
+/// form wrote them until now; the migration that added this table copied every
+/// applicant Organizer row into a Client **with the same id**, so the two stay
+/// traceable until the originals are retired in Batch 5. Nullable for the same
+/// reason as there: a row written by staff by hand may answer none of it.
+///
+/// Storage: tens of rows of short text — a rounding error on the 0.5 GB tier.
+model Client {
+  id                 String   @id @default(cuid())
+  /// The organization, as it names itself.
+  name               String
+  /// Lowercased, like every account email (normalizeAccountEmail). Unique so
+  /// one organization cannot collect twice in the submissions list.
+  email              String   @unique
+  /// NEW | INVITED | ACTIVE | ARCHIVED — lib/client.ts owns the vocabulary and
+  /// the moves between them. Plain text so a status needs no migration.
+  status             String   @default("NEW")
+  /// One of ORGANIZER_TYPES (lib/organizer-application.ts), as on Organizer.
+  orgType            String?
+  contactFirstName   String?
+  contactLastName    String?
+  contactRole        String?
+  /// E.164 (lib/phone.ts).
+  phone              String?
+  city               String?
+  province           String?
+  website            String?
+  experience         String?
+  services           String[] @default([])
+  firstEventName     String?
+  /// YYYY-MM-DD, like Event.date.
+  firstEventDate     String?
+  firstEventLocation String?
+  expectedRunners    String?
+  applicationNote    String?
+  createdAt          DateTime @default(now())
+  /// When the latest invitation to sign in was sent. Null until staff press
+  /// Send invite (Batch 3).
+  invitedAt          DateTime?
+  updatedAt          DateTime @updatedAt
+  events             Event[]
+  viewers            StaffMembership[]
 }
 
 /// What somebody did. Append-only: nothing in this app updates or deletes one —

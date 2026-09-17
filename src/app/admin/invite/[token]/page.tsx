@@ -3,7 +3,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { RunAsOneLogo } from '@/components/RunAsOneLogo';
 import { organizerCanSignIn } from '@/lib/organizer-status';
-import { ROLE_LABELS, asEventRole, asMembershipRole } from '@/lib/permissions';
+import { ROLE_LABELS, asEventRole, asTeamRole } from '@/lib/permissions';
 import { SITE_NAME } from '@/lib/site-contact';
 import { findOpenInvitation } from '@/lib/team-invite';
 import InviteAcceptClient from './InviteAcceptClient';
@@ -62,7 +62,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
     );
   }
 
-  const role = asMembershipRole(invitation.role) ?? 'STAFF';
+  const role = asTeamRole(invitation.role) ?? 'STAFF';
 
   return (
     <InviteAcceptClient

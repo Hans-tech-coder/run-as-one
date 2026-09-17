@@ -47,7 +47,7 @@ import {
   ROLE_HINTS,
   ROLE_LABELS,
   type EventRole,
-  type MembershipRole,
+  type TeamRole,
 } from '@/lib/permissions';
 import {
   MEMBER_STATE_LABELS,
@@ -85,7 +85,7 @@ export type TeamMemberRow = {
   canManage: boolean;
   name: string;
   email: string;
-  role: 'OWNER' | MembershipRole;
+  role: 'OWNER' | TeamRole;
   assignments: { eventId: string; eventTitle: string; role: EventRole }[];
   accepted: boolean;
   state: MemberState;
@@ -100,7 +100,7 @@ type DraftAssignment = { key: number; eventId: string; role: EventRole | '' };
 type Draft = {
   name: string;
   email: string;
-  role: MembershipRole;
+  role: TeamRole;
   assignments: DraftAssignment[];
 };
 
@@ -243,7 +243,7 @@ export default function TeamClient({
   organizerName: string;
   rows: TeamMemberRow[];
   events: EventOption[];
-  grantableRoles: MembershipRole[];
+  grantableRoles: TeamRole[];
 }) {
   const router = useRouter();
   // Shadows window.alert on purpose — see AlertProvider.
@@ -978,7 +978,7 @@ export default function TeamClient({
                 label="Role"
                 listboxLabel="Team role"
                 value={draft.role}
-                onChange={next => update({ role: next as MembershipRole }, 'role', 'assignments')}
+                onChange={next => update({ role: next as TeamRole }, 'role', 'assignments')}
                 error={errors.role}
                 options={grantableRoles.map(role => ({
                   value: role,

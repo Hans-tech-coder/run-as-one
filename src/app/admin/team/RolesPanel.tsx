@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/table';
 import {
   MATRIX_ROLES,
-  PERMISSIONS,
+  MATRIX_PERMISSIONS,
   PERMISSION_LABELS,
   ROLE_HINTS,
   ROLE_LABELS,
@@ -72,7 +72,7 @@ export default function RolesPanel() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {PERMISSIONS.map(permission => (
+              {MATRIX_PERMISSIONS.map(permission => (
                 <TableRow key={permission} className="border-b border-white/5 hover:bg-white/5">
                   <TableCell className="py-3 px-4 pl-6 text-white whitespace-nowrap">
                     {PERMISSION_LABELS[permission]}

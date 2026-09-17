@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { can, canManageMember, getActor, type Actor } from '@/lib/actor';
-import { asEventRole, asMembershipRole } from '@/lib/permissions';
+import { asEventRole, asTeamRole } from '@/lib/permissions';
 import type { MemberAccess } from '@/lib/team';
 
 /**
@@ -12,7 +12,8 @@ import type { MemberAccess } from '@/lib/team';
  * 1. A session, holding `team:manage` in this organizer.
  * 2. A membership of **this** organizer — an id from the browser is not proof
  *    of ownership, and a miss reads "Team member not found." whether the id is
- *    somebody else's or nobody's.
+ *    somebody else's or nobody's. A client viewer's membership is not a team
+ *    member either, and reads the same.
  * 3. Not the actor's own membership. Nobody changes, suspends or removes
  *    themselves: an admin could otherwise widen their own events, and a
  *    self-suspension locks a person out with nobody noticing why.
@@ -50,7 +51,7 @@ export async function loadManagedMember(id: string): Promise<
     },
   });
 
-  if (!member) {
+  if (!member || !asTeamRole(member.role)) {
     return {
       ok: false,
       response: NextResponse.json({ error: 'Team member not found.' }, { status: 404 }),
@@ -67,7 +68,7 @@ export async function loadManagedMember(id: string): Promise<
     };
   }
 
-  if (!canManageMember(actor, asMembershipRole(member.role) ?? 'STAFF')) {
+  if (!canManageMember(actor, asTeamRole(member.role) ?? 'STAFF')) {
     return {
       ok: false,
       response: NextResponse.json(
@@ -92,7 +93,7 @@ export type ManagedMember = {
 
 /** The membership's access as it stands, in the shape `readAccess` produces. */
 export function currentAccess(member: ManagedMember): MemberAccess {
-  const role = asMembershipRole(member.role) ?? 'STAFF';
+  const role = asTeamRole(member.role) ?? 'STAFF';
   return {
     role,
     assignments:

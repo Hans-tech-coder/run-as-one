@@ -22,7 +22,7 @@
 
 import prisma from './db';
 import { activeMembershipWhere, can, canSomewhere, getActor } from './actor';
-import { ROLE_LABELS } from './permissions';
+import { CLIENT_VIEWER_LABEL, ROLE_LABELS } from './permissions';
 
 export type SignedInUser = {
   name: string;
@@ -80,7 +80,12 @@ export async function getSignedInUser(): Promise<SignedInUser | null> {
   return {
     name,
     initial: name.charAt(0).toUpperCase(),
-    roleLabel: actor.role === 'SUPER_ADMIN' ? 'Super Admin' : ROLE_LABELS[actor.role],
+    roleLabel:
+      actor.role === 'SUPER_ADMIN'
+        ? 'Super Admin'
+        : actor.role === 'VIEWER'
+          ? CLIENT_VIEWER_LABEL
+          : ROLE_LABELS[actor.role],
     organizerName,
     nav: {
       marketing: canSomewhere(actor, 'promo:view'),

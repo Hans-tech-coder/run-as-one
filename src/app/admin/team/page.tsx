@@ -4,7 +4,7 @@ import type { Metadata } from 'next';
 import { MailQuestion, UserX, Users } from 'lucide-react';
 import prisma from '@/lib/db';
 import { can, canManageMember, grantableRoles, requireActor } from '@/lib/actor';
-import { asEventRole, asMembershipRole } from '@/lib/permissions';
+import { TEAM_ROLES, asEventRole, asTeamRole } from '@/lib/permissions';
 import { memberState } from '@/lib/team';
 import { soonestFirst } from '@/lib/event-schedule';
 import { SITE_NAME } from '@/lib/site-contact';
@@ -47,7 +47,8 @@ export default async function TeamPage() {
       select: { name: true, email: true },
     }),
     prisma.staffMembership.findMany({
-      where: { organizerId: actor.orgId },
+      // A client viewer holds a membership too, but is not on the team.
+      where: { organizerId: actor.orgId, role: { in: [...TEAM_ROLES] } },
       orderBy: [{ invitedAt: 'asc' }, { id: 'asc' }],
       select: {
         id: true,
@@ -78,7 +79,7 @@ export default async function TeamPage() {
   }
 
   const members: TeamMemberRow[] = memberships.map(membership => {
-    const role = asMembershipRole(membership.role) ?? 'STAFF';
+    const role = asTeamRole(membership.role) ?? 'STAFF';
     const isSelf = actor.kind === 'STAFF' && membership.staffId === actor.id;
     return {
       id: membership.id,

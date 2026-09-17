@@ -16,9 +16,9 @@ import { normalizeAccountEmail } from './text-case';
 import {
   ROLE_LABELS,
   asEventRole,
-  asMembershipRole,
+  asTeamRole,
   type EventRole,
-  type MembershipRole,
+  type TeamRole,
 } from './permissions';
 
 /** Shared by the password route, the settings form and the invitation page. */
@@ -91,7 +91,7 @@ export function memberState(
 export type AssignmentInput = { eventId: string; role: EventRole };
 
 export type MemberAccess = {
-  role: MembershipRole;
+  role: TeamRole;
   /** Always empty for ADMIN, who reaches every event without one. */
   assignments: AssignmentInput[];
 };
@@ -117,7 +117,7 @@ export function readAccess(
   eventIds: ReadonlySet<string>,
 ): { access: MemberAccess | null; errors: FieldErrors } {
   const errors: FieldErrors = {};
-  const role = asMembershipRole(rawRole);
+  const role = asTeamRole(rawRole);
 
   if (!role) {
     errors.role = 'Choose whether this person is an Admin or Staff';

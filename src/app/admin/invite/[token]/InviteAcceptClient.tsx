@@ -6,7 +6,7 @@ import { CalendarCheck } from 'lucide-react';
 import { RunAsOneLogo } from '@/components/RunAsOneLogo';
 import FieldError from '@/components/ui/FieldError';
 import PasswordField from '../../settings/PasswordField';
-import { ROLE_HINTS, type MembershipRole } from '@/lib/permissions';
+import { ROLE_HINTS, type TeamRole } from '@/lib/permissions';
 import { MAX_NAME_LENGTH, MIN_PASSWORD_LENGTH, newPasswordErrors, type FieldErrors } from '@/lib/team';
 import BusyLabel from '@/components/ui/BusyLabel';
 
@@ -40,7 +40,7 @@ export default function InviteAcceptClient({
   email: string;
   invitedName: string;
   hasAccount: boolean;
-  role: MembershipRole;
+  role: TeamRole;
   events: { title: string; roleLabel: string }[];
 }) {
   const router = useRouter();

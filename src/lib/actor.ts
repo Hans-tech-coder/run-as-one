@@ -21,6 +21,11 @@
  * - `reachableEvents(actor, permission)` is the `where` a list page reads
  *   events through, so a STAFF member's lists hold only the races assigned to
  *   them.
+ * - A **client viewer** (a `VIEWER` membership, ADMIN_MERGE_PLAN.md) carries
+ *   its `clientId` on the actor. It holds `VIEWER_PERMISSIONS` and nothing
+ *   else, only on events whose `clientId` is its own: `reachableEvents` adds
+ *   the client to the `where`, and `can()` refuses unless the caller passes
+ *   the event's `clientId` and it matches. Forgetting to pass it fails closed.
  *
  * An owner's session is read from the token alone, exactly as the routes did
  * before: nothing about an owner's reach can change mid-session that the
@@ -38,9 +43,11 @@ import { getAuthCookie } from './auth';
 import type { SessionClaims, SessionKind } from './jwt';
 import { normalizeAccountEmail } from './text-case';
 import { SIGN_IN_STATUSES, organizerCanSignIn } from './organizer-status';
+import { VIEWER_SIGN_IN_STATUSES, clientViewersCanSignIn } from './client';
 import {
-  MEMBERSHIP_ROLES,
   SUPER_ADMIN_REACH,
+  TEAM_ROLES,
+  VIEWER_PERMISSIONS,
   asEventRole,
   asMembershipRole,
   roleCan,
@@ -49,6 +56,7 @@ import {
   type MembershipRole,
   type OrgRole,
   type Permission,
+  type TeamRole,
 } from './permissions';
 
 export type ActorRole = 'OWNER' | 'SUPER_ADMIN' | MembershipRole;
@@ -67,6 +75,8 @@ export type Actor = {
    * OWNER and ADMIN reach every event of their organizer without one.
    */
   assignments: ReadonlyMap<string, EventRole>;
+  /** The client a VIEWER membership sees, and null for every other actor. */
+  clientId: string | null;
 };
 
 const NO_ASSIGNMENTS: ReadonlyMap<string, EventRole> = new Map();
@@ -87,6 +97,7 @@ export async function getActor(): Promise<Actor | null> {
       name: session.name,
       email: session.email,
       assignments: NO_ASSIGNMENTS,
+      clientId: null,
     };
   }
 
@@ -96,6 +107,8 @@ export async function getActor(): Promise<Actor | null> {
       role: true,
       acceptedAt: true,
       suspendedAt: true,
+      clientId: true,
+      client: { select: { status: true } },
       staff: { select: { name: true, email: true, status: true, sessionsValidFrom: true } },
       organizer: { select: { status: true } },
       assignments: { select: { eventId: true, role: true } },
@@ -123,6 +136,16 @@ export async function getActor(): Promise<Actor | null> {
   const role = asMembershipRole(membership.role);
   if (!role) return null;
 
+  // A client viewer needs a client, and a client whose viewers may sign in
+  // (client.ts, an allowlist): archiving a client ends its viewers' sessions
+  // on their next request. A clientId on any other membership is ignored.
+  let clientId: string | null = null;
+  if (role === 'VIEWER') {
+    if (!membership.clientId || !membership.client) return null;
+    if (!clientViewersCanSignIn(membership.client.status)) return null;
+    clientId = membership.clientId;
+  }
+
   const assignments = new Map<string, EventRole>();
   if (role === 'STAFF') {
     for (const assignment of membership.assignments) {
@@ -139,6 +162,7 @@ export async function getActor(): Promise<Actor | null> {
     name: membership.staff.name,
     email: membership.staff.email,
     assignments,
+    clientId,
   };
 }
 
@@ -151,7 +175,7 @@ export async function requireActor(): Promise<Actor> {
 
 /**
  * The organizer-wide role an actor holds, or null for a STAFF membership that
- * reaches only its assigned events. A super admin inside their own tenant row
+ * reaches only its assigned events, and for a client viewer. A super admin inside their own tenant row
  * is its owner.
  */
 function orgRole(actor: Actor): OrgRole | null {
@@ -166,19 +190,20 @@ function orgRole(actor: Actor): OrgRole | null {
  * and as it would be — so an admin can neither touch an admin nor make one.
  * `team:manage` says they run the team; `GRANTABLE_ROLES` says how far.
  */
-export function canManageMember(actor: Actor, role: MembershipRole): boolean {
+export function canManageMember(actor: Actor, role: TeamRole): boolean {
   const wide = orgRole(actor);
   return wide !== null && roleCan(wide, 'team:manage') && roleCanGrant(wide, role);
 }
 
 /** The roles this actor may hand out, in the order the team screen offers them. */
-export function grantableRoles(actor: Actor): MembershipRole[] {
-  return MEMBERSHIP_ROLES.filter(role => canManageMember(actor, role));
+export function grantableRoles(actor: Actor): TeamRole[] {
+  return TEAM_ROLES.filter(role => canManageMember(actor, role));
 }
 
 /**
  * The memberships a staff member can be signed in to right now: accepted, not
- * suspended by that organizer, and inside an organizer that is itself approved.
+ * suspended by that organizer, inside an organizer that is itself approved, and
+ * — for a client viewer — on a client whose viewers may sign in.
  * Sign-in, the organizer switcher and the sidebar all read through this, so
  * none of them can offer an organizer another would refuse.
  */
@@ -188,11 +213,24 @@ export function activeMembershipWhere(staffId: string): Prisma.StaffMembershipWh
     acceptedAt: { not: null },
     suspendedAt: null,
     organizer: { status: { in: [...SIGN_IN_STATUSES] } },
+    // A client viewer also needs its client, in a status whose viewers may
+    // sign in — the same two checks getActor() makes.
+    OR: [
+      { role: { not: 'VIEWER' } },
+      { clientId: { not: null }, client: { status: { in: [...VIEWER_SIGN_IN_STATUSES] } } },
+    ],
   };
 }
 
-/** Where an action lands: whose organizer, and which race when it is about one. */
-export type Reach = { organizerId: string; eventId?: string | null };
+/**
+ * Where an action lands: whose organizer, which race when it is about one, and
+ * — for a check a client viewer may pass — that race's `clientId`.
+ */
+export type Reach = { organizerId: string; eventId?: string | null; clientId?: string | null };
+
+function isClientViewer(actor: Actor): boolean {
+  return actor.kind === 'STAFF' && actor.role === 'VIEWER';
+}
 
 /**
  * Whether this actor may do this, here.
@@ -204,6 +242,16 @@ export type Reach = { organizerId: string; eventId?: string | null };
 export function can(actor: Actor, permission: Permission, reach: Reach): boolean {
   if (reach.organizerId !== actor.orgId) {
     return actor.kind === 'SUPER_ADMIN' && SUPER_ADMIN_REACH.includes(permission);
+  }
+
+  // A client viewer: its one permission, on one event, of its own client.
+  if (isClientViewer(actor)) {
+    return (
+      VIEWER_PERMISSIONS.includes(permission) &&
+      Boolean(reach.eventId) &&
+      actor.clientId !== null &&
+      reach.clientId === actor.clientId
+    );
   }
 
   const wide = orgRole(actor);
@@ -220,6 +268,7 @@ export function can(actor: Actor, permission: Permission, reach: Reach): boolean
  * uploader both event forms share.
  */
 export function canSomewhere(actor: Actor, permission: Permission): boolean {
+  if (isClientViewer(actor)) return VIEWER_PERMISSIONS.includes(permission);
   const wide = orgRole(actor);
   if (wide) return roleCan(wide, permission);
   for (const eventRole of actor.assignments.values()) {
@@ -230,12 +279,19 @@ export function canSomewhere(actor: Actor, permission: Permission): boolean {
 
 /**
  * The events a list page may show this actor. For an owner it is exactly the
- * `{ organizerId }` every list read before.
+ * `{ organizerId }` every list read before; for a client viewer, its client's
+ * events — and none at all for any permission it does not hold, which is what
+ * every existing list page (reading `event:view`) now shows it.
  */
 export function reachableEvents(
   actor: Actor,
   permission: Permission = 'event:view',
 ): Prisma.EventWhereInput {
+  if (isClientViewer(actor)) {
+    return actor.clientId && VIEWER_PERMISSIONS.includes(permission)
+      ? { organizerId: actor.orgId, clientId: actor.clientId }
+      : { id: { in: [] } };
+  }
   const wide = orgRole(actor);
   if (wide) {
     return roleCan(wide, permission) ? { organizerId: actor.orgId } : { id: { in: [] } };

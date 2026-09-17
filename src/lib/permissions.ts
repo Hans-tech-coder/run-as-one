@@ -20,12 +20,22 @@
  * person who settles an order can also rewrite it, an argument about an order
  * becomes an argument about the data.
  *
+ * A third kind arrived with ADMIN_MERGE_PLAN.md: a **client viewer** — an
+ * organization Run As One runs races for, signed in to see that its races
+ * exist and how many runners have registered. It is a membership role
+ * (`VIEWER`), not a staff role, and it holds exactly `VIEWER_PERMISSIONS`,
+ * scoped to its own client's events by `can()` and `reachableEvents()` in
+ * `actor.ts`. It is never offered on the team screen: `TEAM_ROLES` is what
+ * the team form, its routes and the matrix read.
+ *
  * Deliberately free of Prisma, so the team screen can import it to render the
  * same matrix it enforces. See STAFF_ACCESS_PLAN.md §3.
  */
 
 export const PERMISSIONS = [
   'event:view',
+  /** Registrant counts only — total, per category, paid vs pending. No money, no names. */
+  'event:view-summary',
   'event:create',
   'event:edit',
   'event:delete',
@@ -57,12 +67,28 @@ export type EventRole = (typeof EVENT_ROLES)[number];
 export type Role = OrgRole | EventRole;
 
 /**
- * What `StaffMembership.role` may hold. OWNER is not in it: the owner is the
- * Organizer row itself and never a membership, so a membership claiming to be
- * one is a bug, not a promotion.
+ * The membership roles a person on Run As One's own team can hold — what the
+ * team screen offers, manages and draws. A client viewer is not one of them.
  */
-export const MEMBERSHIP_ROLES = ['ADMIN', 'STAFF'] as const;
+export const TEAM_ROLES = ['ADMIN', 'STAFF'] as const;
+export type TeamRole = (typeof TEAM_ROLES)[number];
+
+/**
+ * What `StaffMembership.role` may hold: the team roles, plus `VIEWER` for a
+ * client's own sign-in (a membership that also carries `clientId`). OWNER is
+ * not in it: the owner is the Organizer row itself and never a membership, so
+ * a membership claiming to be one is a bug, not a promotion.
+ */
+export const MEMBERSHIP_ROLES = [...TEAM_ROLES, 'VIEWER'] as const;
 export type MembershipRole = (typeof MEMBERSHIP_ROLES)[number];
+
+/**
+ * Everything a client viewer may do. One verb, on purpose: the owner's answer
+ * is that an organizer sees its races and their registrant counts, and nothing
+ * that costs a runner privacy or Run As One its books. Anything not listed is
+ * refused by `can()`, including a permission added to PERMISSIONS later.
+ */
+export const VIEWER_PERMISSIONS: readonly Permission[] = ['event:view-summary'];
 
 /**
  * Which membership roles each organizer-wide role may hand out, change or take
@@ -71,12 +97,12 @@ export type MembershipRole = (typeof MEMBERSHIP_ROLES)[number];
  * admin could quietly widen — or undo, by suspending the admin the owner chose.
  * Organizer-wide reach is the owner's alone to grant.
  */
-export const GRANTABLE_ROLES: Record<OrgRole, readonly MembershipRole[]> = {
+export const GRANTABLE_ROLES: Record<OrgRole, readonly TeamRole[]> = {
   OWNER: ['ADMIN', 'STAFF'],
   ADMIN: ['STAFF'],
 };
 
-export function roleCanGrant(granter: OrgRole, role: MembershipRole): boolean {
+export function roleCanGrant(granter: OrgRole, role: TeamRole): boolean {
   return GRANTABLE_ROLES[granter].includes(role);
 }
 
@@ -84,6 +110,15 @@ const ALL: readonly Role[] = ['OWNER', 'ADMIN', 'EVENT_MANAGER', 'VALIDATOR', 'E
 
 /** The matrix's columns, in the order the team screen draws them. */
 export const MATRIX_ROLES = ALL;
+
+/**
+ * The matrix's rows as the team screen draws them. `event:view-summary` is
+ * left out: every role that sees an event already sees more than its counts,
+ * so the row would be a column of ticks that says nothing about staff.
+ */
+export const MATRIX_PERMISSIONS: readonly Permission[] = PERMISSIONS.filter(
+  permission => permission !== 'event:view-summary',
+);
 
 /** What the team screen calls each role. */
 export const ROLE_LABELS: Record<Role | MembershipRole, string> = {
@@ -111,9 +146,19 @@ export const ROLE_HINTS: Record<Role | MembershipRole, string> = {
   VIEWER: 'Sees the event, its registrants and its promotions. Changes nothing.',
 };
 
+/**
+ * The membership VIEWER and the per-event VIEWER share a key in the two
+ * records above, and the team screen means the per-event one. A client
+ * viewer is described here instead.
+ */
+export const CLIENT_VIEWER_LABEL = 'Client Viewer';
+export const CLIENT_VIEWER_HINT =
+  "Sees its own organization's events and how many runners have registered. Changes nothing.";
+
 /** Each permission as the team screen's role table words it. */
 export const PERMISSION_LABELS: Record<Permission, string> = {
   'event:view': 'See the event',
+  'event:view-summary': 'See registrant counts',
   'event:create': 'Create events',
   'event:edit': 'Edit the event',
   'event:delete': 'Delete an event',
@@ -135,6 +180,7 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
 /** STAFF_ACCESS_PLAN.md §3, as data. */
 const MATRIX: Record<Permission, readonly Role[]> = {
   'event:view': ALL,
+  'event:view-summary': ALL,
   'event:create': ['OWNER', 'ADMIN'],
   'event:edit': ['OWNER', 'ADMIN', 'EVENT_MANAGER'],
   'event:delete': ['OWNER'],
@@ -178,6 +224,12 @@ export const SUPER_ADMIN_REACH: readonly Permission[] = [
 export function asMembershipRole(value: unknown): MembershipRole | null {
   const role = typeof value === 'string' ? value.trim().toUpperCase() : '';
   return (MEMBERSHIP_ROLES as readonly string[]).includes(role) ? (role as MembershipRole) : null;
+}
+
+/** A team role (ADMIN or STAFF) — never a client viewer. */
+export function asTeamRole(value: unknown): TeamRole | null {
+  const role = typeof value === 'string' ? value.trim().toUpperCase() : '';
+  return (TEAM_ROLES as readonly string[]).includes(role) ? (role as TeamRole) : null;
 }
 
 export function asEventRole(value: unknown): EventRole | null {

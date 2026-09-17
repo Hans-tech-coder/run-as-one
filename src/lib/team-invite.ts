@@ -21,7 +21,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import prisma from './db';
 import { sendStaffInvitationEmail, type EmailOutcome } from './email';
-import { ROLE_LABELS, asEventRole, asMembershipRole } from './permissions';
+import { ROLE_LABELS, asEventRole, asTeamRole } from './permissions';
 import { SITE_URL } from './site-contact';
 import { INVITE_TTL_DAYS } from './team';
 
@@ -136,7 +136,7 @@ export async function sendInvitation({
     inviteeName: membership.staff.name,
     organizerName: membership.organizer.name,
     inviterName,
-    role: asMembershipRole(membership.role) ?? 'STAFF',
+    role: asTeamRole(membership.role) ?? 'STAFF',
     events: membership.assignments.map(assignment => ({
       title: assignment.event.title,
       roleLabel: ROLE_LABELS[asEventRole(assignment.role) ?? 'VIEWER'],
