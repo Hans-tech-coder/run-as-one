@@ -554,27 +554,6 @@
   background: rgba(255, 255, 255, 0.02);
 }
 
-/* A table with many short money columns (remittances). 16px between columns
-   instead of 24px, so seven columns and a labelled row action still fit the
-   panel at a laptop's width rather than scrolling sideways. The first and last
-   cells keep the panel's 24px inset, so the table's edges line up with the
-   toolbar above it. */
-.data-table.is-dense th,
-.data-table.is-dense td {
-  padding-left: 12px;
-  padding-right: 12px;
-}
-
-.data-table.is-dense th:first-child,
-.data-table.is-dense td:first-child {
-  padding-left: 24px;
-}
-
-.data-table.is-dense th:last-child,
-.data-table.is-dense td:last-child {
-  padding-right: 24px;
-}
-
 /* Status Badges */
 .status-badge {
   display: inline-flex;

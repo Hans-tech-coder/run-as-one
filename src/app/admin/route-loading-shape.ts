@@ -29,12 +29,10 @@ export type RouteShape = {
   /** A toolbar and card list, below `lg`. */
   list?: {
     /**
-     * - `page`: on the page under its toolbar (the TanStack screens);
-     * - `panel`: inside a panel whose first row is its toolbar (clients,
-     *   communities, feedback);
+     * - `page`: on the page under its toolbar (every TanStack screen);
      * - `titled-panel`: inside a panel under a title (the Dashboard).
      */
-    frame: 'page' | 'panel' | 'titled-panel';
+    frame: 'page' | 'titled-panel';
     /**
      * The toolbar's content height on a phone, inside its padding: the search
      * row and every row of chips, forms and buttons that wraps under it.
@@ -141,7 +139,7 @@ const THREE_ROW_TOOLBAR = 144;
 /** Every dashboard toolbar is one 40px row inside its padding from `lg` up. */
 const LG_TOOLBAR = 40;
 
-/** A `.data-table`'s header and body rows (the Dashboard, clients, communities, feedback). */
+/** A `.data-table`'s header and body rows (the Dashboard's recent registrations, the last one left). */
 const LG_PLAIN_TABLE = { head: 51, row: 54 };
 
 /** The TanStack screens' table, which carries its own header styling. */
@@ -193,27 +191,29 @@ const EXACT: Record<string, RouteShape> = {
       ],
     },
   },
-  // Search, then the status chips over two rows of 44px.
+  // Search, then the status chips and Sort over two rows of 44px. A client's
+  // row carries its email under the name: 73px, as on the three below.
   '/admin/clients': {
-    list: { frame: 'panel', toolbar: 152 },
-    lg: { toolbar: LG_TOOLBAR, table: { ...LG_PLAIN_TABLE, rows: 8 } },
+    list: { frame: 'page', toolbar: 144 },
+    lg: { toolbar: LG_TOOLBAR, table: { head: LG_TANSTACK_HEAD, row: 73, rows: 8 } },
   },
-  // Four money tiles over the races; search, then the four state chips
-  // wrapping under it (ADMIN_MERGE_PLAN.md, Batch 6).
+  // Four money tiles over the races; search, then the four state chips and
+  // Sort wrapping under it (ADMIN_MERGE_PLAN.md, Batch 6).
   '/admin/remittances': {
     metrics: 4,
-    list: { frame: 'panel', toolbar: 152 },
-    lg: { toolbar: LG_TOOLBAR, table: { ...LG_PLAIN_TABLE, rows: 8 } },
+    list: { frame: 'page', toolbar: 144 },
+    lg: { toolbar: LG_TOOLBAR, table: { head: LG_TANSTACK_HEAD, row: 73, rows: 8 } },
   },
-  // Search, then Add a club's box and button stacked.
+  // Search, Sort, then Add a club's box and button stacked.
   '/admin/communities': {
-    list: { frame: 'panel', toolbar: 166 },
-    lg: { toolbar: LG_TOOLBAR, table: { ...LG_PLAIN_TABLE, rows: 8 } },
+    list: { frame: 'page', toolbar: 212 },
+    lg: { toolbar: LG_TOOLBAR, table: { head: LG_TANSTACK_HEAD, row: 73, rows: 8 } },
   },
+  // Search, then the five chips and Sort over four rows.
   '/admin/feedback': {
     metrics: 3,
-    list: { frame: 'panel', toolbar: THREE_ROW_TOOLBAR },
-    lg: { toolbar: LG_TOOLBAR, table: { ...LG_PLAIN_TABLE, rows: 8 } },
+    list: { frame: 'page', toolbar: 248 },
+    lg: { toolbar: LG_TOOLBAR, table: { head: LG_TANSTACK_HEAD, row: 73, rows: 8 } },
   },
 };
 

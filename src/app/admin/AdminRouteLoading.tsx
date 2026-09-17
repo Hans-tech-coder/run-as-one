@@ -112,15 +112,6 @@ function ShapeSkeleton({ shape }: { shape: RouteShape }) {
         </>
       )}
 
-      {list?.frame === "panel" && (
-        <div className="admin-panel">
-          <div className="admin-toolbar">
-            <ToolbarSkeleton height={list.toolbar ?? 40} />
-          </div>
-          <AdminCardListSkeleton />
-        </div>
-      )}
-
       {list?.frame === "titled-panel" && (
         <div className="admin-panel">
           <div className="admin-panel-header">
@@ -258,7 +249,7 @@ const LG_DEFAULTS = {
  * The same page from `lg` up: the metric tiles at their desktop height, the
  * toolbar in the one row it unwraps into, and the table the cards stand in for
  * — in the frame that screen really uses, a bordered box on the TanStack
- * screens and a `.data-table` inside a panel everywhere else.
+ * screens and a `.data-table` inside the Dashboard's titled panel.
  *
  * A screen whose shape carries no `lg` block still gets drawn, from the
  * defaults above; only a route with no shape at all falls back to the figure.
@@ -299,15 +290,6 @@ function DesktopSkeleton({ shape }: { shape: RouteShape }) {
             <TableSkeleton {...table} boxed />
           </div>
         </>
-      )}
-
-      {list?.frame === "panel" && (
-        <div className="admin-panel">
-          <div className="admin-toolbar">
-            <TopBarSkeleton height={toolbar} />
-          </div>
-          <TableSkeleton {...table} />
-        </div>
       )}
 
       {list?.frame === "titled-panel" && (

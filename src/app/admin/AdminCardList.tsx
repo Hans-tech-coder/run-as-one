@@ -17,7 +17,7 @@ import { Check } from 'lucide-react';
  * `row.getIsSelected()` / `row.toggleSelected()`, so search, filter chips,
  * sort, selection and the pager stay shared and the two layouts cannot drift.
  * Only the body is swapped; the toolbar and pager above and below stay. The
- * organizers, communities and feedback screens' plain arrays fit the same props, which is why nothing here
+ * Dashboard's plain array of recent registrations fits the same props, which is why nothing here
  * knows about TanStack.
  *
  * Because both layouts are in the page at once, nothing in a card may carry an

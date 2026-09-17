@@ -194,6 +194,9 @@ src/
                             #   (remittance:manage),
                             #   dashboard-sidebar.ts — the collapsed-rail cookie,
                             #   AdminCardList — what every table becomes below lg,
+                            #   AdminDataTable — the events table's lg-up frame,
+                            #   View chip and No. counter, shared by clients,
+                            #   communities, feedback and both remittance lists,
                             #   AdminCardEdit — an inline edit, as a card holds it,
                             #   AdminTablePager / MobileSortMenu — every table's
                             #   pager and its below-lg Sort chip,
@@ -866,9 +869,11 @@ email addresses. A message is a paragraph rather than a field, so the table show
 one line of it and **the row opens** into the whole thing — the second-`TableRow`
 pattern the marketing screen's voucher batches use — carrying the page and the
 browser it came from and a *Reply by email* that opens a `mailto:`. The chips
-filter by triage state and by kind; the order never changes under somebody
-working down the list, which is why the unread ones are **found** rather than
-sorted to the top). **The platform trail is `/admin/activity`.** Organizer
+filter by triage state and by kind; the order changes only when somebody clicks
+a header, which is why the unread ones are **found** rather than sorted to the
+top). All three are TanStack tables on `AdminDataTable` (§9) — sortable
+headers, View, the pager and a Sort chip below `lg`; the club rename opens in
+the Club cell with Save / Cancel chips. **The platform trail is `/admin/activity`.** Organizer
 decisions are made inside Run As One's tenant now, so they are rows of the one
 trail under an *Organizer decisions* shelf; the older decisions and sign-ins of
 the retired "System Owner" test account stay under that account's own `orgId`,
@@ -897,7 +902,9 @@ entries, discounts and delivery inset under it as explanation — less remitted,
 balance); and the **Remittances** list (sent day, kind, amount — a return shown
 negative — method, reference and note, recorded by and when, Recorded / Voided
 with who voided it, when and why, and Receipt / Void under Actions; cards below
-`lg`). **Record Remittance** opens `RecordRemittanceDialog` (the team modal's
+`lg`). Both lists are TanStack tables on `AdminDataTable` (§9) with sortable
+headers, View and the pager; the race's list stands under a *Remittances*
+heading row holding Record Remittance. **Record Remittance** opens `RecordRemittanceDialog` (the team modal's
 frame): Kind and Method (`AdminSelect`), Amount in pesos, Sent On (today by
 default, no future day), optional reference, note and receipt (JPG/PNG/WEBP/GIF/
 PDF, 4 MB, checked before upload); under the amount it says the balance the
@@ -1201,26 +1208,35 @@ These are the user's own standing preferences. Follow them without being asked.
   PayMongo is the one consumer that needs lowercase, and
   `paymongoPaymentType()` is the only place that converts.
 - **One admin table.** Every table in the dashboard — events, registrants,
-  results and marketing — is `components/ui/table` driven by TanStack, wearing
-  the same furniture: an `.admin-toolbar` above it holding the search box, the
-  dark `.btn-filter` chips (View, and whatever else that screen filters by) and
-  the one `.btn-light` primary action; a bordered, rounded table with a select
-  column, a `No.` column and sortable headers; and the rows-per-page menu and
-  pager beneath. Copy that arrangement rather than hand-rolling a `<table>`, so
-  an organizer reads a promotion the way they read a registrant. A row that
-  opens (the marketing screen's voucher batches) is a second `TableRow` under
-  the first, not a column of its own. Where the `No.` cell is a **position**, it
-  counts by row **id**, not by object identity: sorting rebuilds the rows, so an
-  `indexOf` on them finds nothing and every line numbers itself 0 the moment a
-  header is clicked.
+  results, marketing, team, activity, clients, communities, feedback,
+  remittances and a race's settlement — is `components/ui/table` driven by
+  TanStack, wearing the same furniture: an `.admin-toolbar` standing on the
+  page (not in a panel) holding the search box, the dark `.btn-filter` chips
+  (View, and whatever else that screen filters by) and the one `.btn-light`
+  primary action; a bordered, rounded table with a `No.` column and sortable
+  headers (events, registrants and marketing add a select column, because
+  something acts on the selection); and the rows-per-page menu and pager
+  beneath. **A new table uses `admin/AdminDataTable`** — the `lg`-up box, with
+  `loading` placeholder rows, a clickable `rowProps` and a `renderSubRow` —
+  plus its `AdminColumnsMenu` (View) and `rowPosition`; the first five screens
+  above still draw the same markup inline. Never hand-roll a `<table>`, so an
+  organizer reads a promotion the way they read a registrant; the Dashboard's
+  five recent registrations are the one `.data-table` left. A row that opens
+  (voucher batches, a feedback message) is a second `TableRow` under the first,
+  not a column of its own. A cell that reads screen state which changes while
+  it is typed in or toggled (the club rename box, the open message) gets it
+  from the table's **`meta`**, not from a column list rebuilt on that state: a
+  new cell function remounts the cell and takes the cursor out of the box. The
+  data a screen filters before the table is **memoized**, since TanStack goes
+  back to page one whenever the data changes identity. Where the `No.` cell is
+  a **position**, it counts by row **id**, not by object identity: sorting
+  rebuilds the rows, so an `indexOf` on them finds nothing and every line
+  numbers itself 0 the moment a header is clicked.
 - **A row action says what it does.** An icon staff already know from
   elsewhere in the dashboard *and* a short label — opening a record is the eye
   with *View Details* — never a bare chevron or a glyph whose meaning lives only
   in a hover `title`, which a phone does not have. The owner's call after a
   chevron-only Actions column on the Remittances list read as unclear.
-  **`.data-table.is-dense`** (`Admin.css`) is the plain `.data-table` with 12px
-  between columns (24px kept at the outer edges) for a table of many short
-  figures, so a labelled action still fits the panel; Remittances wears it.
 - **Changing who is signed in ends with `router.refresh()`.** The sidebar is
   rendered by the **layout** (`admin/layout.tsx` reads `getSignedInUser()`), and
   the sign-in pages live *under* `/admin`, so they share that layout — rendered
@@ -1384,8 +1400,9 @@ These are the user's own standing preferences. Follow them without being asked.
     metric, a field or a column updates its entry in the same edit.** A route
     with no entry at all — a 404, anything unlisted — is still the centred
     dots, which promise nothing about what is coming. A client page that
-    fetches its own list (organizers, communities, feedback) puts `AdminCardListSkeleton`
-    in the card list's `empty` slot while it waits.
+    fetches its own list (clients, communities, feedback) passes `loading` to
+    `AdminDataTable` for placeholder rows and shows `AdminCardListSkeleton`
+    (`is-flush`) in place of its cards while it waits.
   - **A chip that toggles a filter is `admin/FilterChip`** (feedback's status
     and kind chips, the organizers' status chips). It finds rows and never
     sorts them, pressing the active chip clears it, and it is 44px below `lg`.

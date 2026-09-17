@@ -1,11 +1,23 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Eye, Search } from 'lucide-react';
+import { Eye, Search, X } from 'lucide-react';
+import {
+  getCoreRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+  type ColumnDef,
+  type SortingState,
+  type VisibilityState,
+} from '@tanstack/react-table';
 import AdminCardList from '@/app/admin/AdminCardList';
+import AdminDataTable, { AdminColumnsMenu, rowPosition } from '@/app/admin/AdminDataTable';
+import AdminTablePager from '@/app/admin/AdminTablePager';
 import FilterChip from '@/app/admin/FilterChip';
+import MobileSortMenu from '@/app/admin/MobileSortMenu';
 import { formatEventDayShort } from '@/lib/event-schedule';
 import {
   SETTLEMENT_STATE_COPY,
@@ -19,10 +31,13 @@ import SettlementBadge from './SettlementBadge';
  * The races and where each stands with its organizer — the searchable half of
  * `/admin/remittances`. The figures arrive from the server page.
  *
+ * The events table's furniture (`AdminDataTable`, §9): sortable headers, the
+ * View chip, the pager, and cards below `lg` reading the same table instance.
+ *
  * **The chips find, they never sort**, as on every list in the dashboard: the
- * races stay latest first, and Balance Due is how staff find the ones still
- * waiting. The due count rides on its chip because it is the number a person
- * opening this screen came for.
+ * races stay latest first until somebody clicks a header, and Balance Due is
+ * how staff find the ones still waiting. The due count rides on its chip
+ * because it is the number a person opening this screen came for.
  *
  * A row opens the race's settlement. On the table the whole row does, and
  * every row and card also carries a labelled **View Details** — the eye the
@@ -32,18 +47,116 @@ import SettlementBadge from './SettlementBadge';
 
 const FILTERS: SettlementState[] = ['DUE', 'OVERPAID', 'SETTLED', 'NOTHING'];
 
+const hrefOf = (row: EventSettlementRow) => `/admin/remittances/${row.id}`;
+const clientLine = (row: EventSettlementRow) => row.clientName ?? 'No client linked';
+
+const COLUMNS: ColumnDef<EventSettlementRow>[] = [
+  {
+    id: 'index',
+    header: 'No.',
+    cell: ({ row, table }) => (
+      <span className="text-gray-400 font-mono">{rowPosition(table.getSortedRowModel().flatRows, row)}</span>
+    ),
+    enableSorting: false,
+    enableHiding: false,
+  },
+  {
+    id: 'title',
+    header: 'Event',
+    accessorFn: row => row.title,
+    cell: ({ row }) => (
+      <div className="min-w-48">
+        <div className="font-medium text-primary">{row.original.title}</div>
+        <div className="text-xs text-secondary">
+          {formatEventDayShort(row.original.date)} · {clientLine(row.original)}
+        </div>
+      </div>
+    ),
+    enableHiding: false,
+  },
+  {
+    // Run As One's share rides under what was collected rather than taking a
+    // column: the two are one fact (what came in, and the part of it that
+    // stays), and a column more overflowed the table at a laptop's width.
+    id: 'collected',
+    header: 'Collected',
+    accessorFn: row => row.settlement.collected,
+    cell: ({ row }) => (
+      <div className="whitespace-nowrap">
+        <div>{formatSignedPesos(row.original.settlement.collected)}</div>
+        <div className="text-xs text-secondary">{formatSignedPesos(row.original.settlement.share)} Run As One</div>
+      </div>
+    ),
+  },
+  {
+    id: 'owed',
+    header: 'Owed',
+    accessorFn: row => row.settlement.owed,
+    cell: ({ row }) => <span className="whitespace-nowrap">{formatSignedPesos(row.original.settlement.owed)}</span>,
+  },
+  {
+    id: 'remitted',
+    header: 'Remitted',
+    accessorFn: row => row.settlement.remitted,
+    cell: ({ row }) => <span className="whitespace-nowrap">{formatSignedPesos(row.original.settlement.remitted)}</span>,
+  },
+  {
+    id: 'balance',
+    header: 'Balance',
+    accessorFn: row => row.settlement.balance,
+    cell: ({ row }) => (
+      <span className="whitespace-nowrap font-semibold text-primary">
+        {formatSignedPesos(row.original.settlement.balance)}
+      </span>
+    ),
+  },
+  {
+    id: 'status',
+    header: 'Status',
+    accessorFn: row => SETTLEMENT_STATE_COPY[row.settlement.state].label,
+    cell: ({ row }) => <SettlementBadge state={row.original.settlement.state} />,
+  },
+  {
+    // Under its own header label; a real link, so it can be opened in a new tab
+    // and reached by keyboard. The wrapper swallows the click, so the row's own
+    // navigation does not fire as well.
+    id: 'actions',
+    header: 'Actions',
+    cell: ({ row }) => (
+      <div className="flex" onClick={e => e.stopPropagation()}>
+        <Link
+          href={hrefOf(row.original)}
+          className="btn-filter whitespace-nowrap"
+          aria-label={`View details for ${row.original.title}`}
+        >
+          <Eye size={16} aria-hidden="true" /> View Details
+        </Link>
+      </div>
+    ),
+    enableSorting: false,
+    enableHiding: false,
+  },
+];
+
 export default function RemittancesClient({ rows }: { rows: EventSettlementRow[] }) {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState<SettlementState | null>(null);
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
 
   const term = searchTerm.trim().toLowerCase();
-  const filtered = rows.filter(
-    row =>
-      (!filter || row.settlement.state === filter) &&
-      (!term ||
-        row.title.toLowerCase().includes(term) ||
-        (row.clientName ?? '').toLowerCase().includes(term)),
+  // Memoized: the table goes back to page one whenever its data changes identity.
+  const filtered = useMemo(
+    () =>
+      rows.filter(
+        row =>
+          (!filter || row.settlement.state === filter) &&
+          (!term ||
+            row.title.toLowerCase().includes(term) ||
+            (row.clientName ?? '').toLowerCase().includes(term)),
+      ),
+    [rows, filter, term],
   );
   const countOf = (state: SettlementState) => rows.filter(row => row.settlement.state === state).length;
 
@@ -54,23 +167,40 @@ export default function RemittancesClient({ rows }: { rows: EventSettlementRow[]
         ? 'No events match this search and filter.'
         : `No events are ${SETTLEMENT_STATE_COPY[filter ?? 'NOTHING'].label.toLowerCase()}.`;
 
-  const hrefOf = (row: EventSettlementRow) => `/admin/remittances/${row.id}`;
-  const clientLine = (row: EventSettlementRow) => row.clientName ?? 'No client linked';
+  const table = useReactTable({
+    data: filtered,
+    columns: COLUMNS,
+    state: { sorting, columnVisibility },
+    onSortingChange: setSorting,
+    onColumnVisibilityChange: setColumnVisibility,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+  });
 
   return (
-    <div className="admin-panel">
-      <div className="admin-toolbar">
-        <div className="search-wrapper">
-          <Search size={18} className="search-icon" />
-          <input
-            type="text"
-            placeholder="Search by event or client..."
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            className="search-input"
-          />
-        </div>
-        <div className="toolbar-actions flex-wrap">
+    <div className="flex flex-col gap-4 w-full text-white">
+      <div className="admin-toolbar" style={{ padding: '0 0 16px 0', borderBottom: 'none' }}>
+        <div className="toolbar-actions" style={{ flex: 1 }}>
+          <div className="search-wrapper">
+            <Search className="search-icon" size={16} />
+            <input
+              type="text"
+              placeholder="Search by event or client..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="search-input"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-300 bg-transparent border-none cursor-pointer"
+                aria-label="Clear search"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
           {FILTERS.map(state => {
             const { label } = SETTLEMENT_STATE_COPY[state];
             const count = state === 'DUE' ? countOf(state) : 0;
@@ -83,100 +213,50 @@ export default function RemittancesClient({ rows }: { rows: EventSettlementRow[]
               />
             );
           })}
+          <AdminColumnsMenu table={table} />
+          <MobileSortMenu table={table} />
         </div>
       </div>
 
-      <div className="data-table-wrapper dash-desktop-only">
-        <table className="data-table is-dense">
-          <thead>
-            <tr>
-              <th>Event</th>
-              <th>Collected</th>
-              <th>Owed</th>
-              <th>Remitted</th>
-              <th>Balance</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="text-center py-12 text-secondary">
-                  {emptyMessage}
-                </td>
-              </tr>
-            ) : (
-              filtered.map(row => (
-                <tr
-                  key={row.id}
-                  onClick={() => router.push(hrefOf(row))}
-                  className="cursor-pointer"
-                >
-                  <td className="font-medium text-primary min-w-48">
-                    <div>{row.title}</div>
-                    <div className="text-xs text-secondary font-normal">
-                      {formatEventDayShort(row.date)} · {clientLine(row)}
-                    </div>
-                  </td>
-                  {/* Run As One's share rides under what was collected rather
-                      than taking a column: the two are one fact (what came
-                      in, and the part of it that stays), and eight columns
-                      overflowed the panel at a laptop's width. */}
-                  <td className="whitespace-nowrap">
-                    <div>{formatSignedPesos(row.settlement.collected)}</div>
-                    <div className="text-xs text-secondary">
-                      {formatSignedPesos(row.settlement.share)} Run As One
-                    </div>
-                  </td>
-                  <td className="whitespace-nowrap">{formatSignedPesos(row.settlement.owed)}</td>
-                  <td className="whitespace-nowrap">{formatSignedPesos(row.settlement.remitted)}</td>
-                  <td className="whitespace-nowrap font-semibold text-primary">
-                    {formatSignedPesos(row.settlement.balance)}
-                  </td>
-                  <td>
-                    <SettlementBadge state={row.settlement.state} />
-                  </td>
-                  {/* Under its own header label; a real link, so it can be
-                      opened in a new tab and reached by keyboard. */}
-                  <td onClick={e => e.stopPropagation()}>
-                    <Link
-                      href={hrefOf(row)}
-                      className="btn-filter whitespace-nowrap"
-                      aria-label={`View details for ${row.title}`}
-                    >
-                      <Eye size={16} aria-hidden="true" /> View Details
-                    </Link>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      <AdminDataTable
+        table={table}
+        empty={emptyMessage}
+        leadColumn="index"
+        rowProps={row => ({
+          onClick: () => router.push(hrefOf(row.original)),
+          className: 'cursor-pointer',
+        })}
+      />
 
+      {/* The same rows as the table above — search, sort and the page all come
+          from the one table instance (AdminCardList). */}
       <div className="dash-mobile-only">
         <AdminCardList
-          items={filtered}
+          items={table.getRowModel().rows}
           getKey={row => row.id}
           label="Remittances by event"
-          title={row => row.title}
-          subtitle={row => `${formatEventDayShort(row.date)} · ${clientLine(row)}`}
-          badges={row => <SettlementBadge state={row.settlement.state} />}
-          fields={row => [
-            { label: 'Balance', value: <strong className="text-primary">{formatSignedPesos(row.settlement.balance)}</strong> },
-            { label: 'Collected', value: formatSignedPesos(row.settlement.collected) },
-            { label: 'Owed', value: formatSignedPesos(row.settlement.owed) },
-            { label: 'Remitted', value: formatSignedPesos(row.settlement.remitted) },
+          className="is-flush"
+          title={({ original }) => original.title}
+          subtitle={({ original }) => `${formatEventDayShort(original.date)} · ${clientLine(original)}`}
+          badges={({ original }) => <SettlementBadge state={original.settlement.state} />}
+          fields={({ original }) => [
+            { label: 'Balance', value: <strong className="text-primary">{formatSignedPesos(original.settlement.balance)}</strong> },
+            { label: 'Collected', value: formatSignedPesos(original.settlement.collected) },
+            { label: 'Owed', value: formatSignedPesos(original.settlement.owed) },
+            { label: 'Remitted', value: formatSignedPesos(original.settlement.remitted) },
           ]}
-          actions={row => (
-            <Link href={hrefOf(row)} className="btn-filter" aria-label={`View details for ${row.title}`}>
+          actions={({ original }) => (
+            <Link href={hrefOf(original)} className="btn-filter" aria-label={`View details for ${original.title}`}>
               <Eye size={16} aria-hidden="true" /> View Details
             </Link>
           )}
-          empty={<div className="py-12 px-4 text-center text-secondary">{emptyMessage}</div>}
+          empty={
+            <div className="border border-white/10 rounded-lg py-16 px-4 text-center text-gray-500">{emptyMessage}</div>
+          }
         />
       </div>
+
+      <AdminTablePager table={table} />
     </div>
   );
 }

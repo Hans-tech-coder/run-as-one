@@ -1,10 +1,22 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { Search, Edit, CheckCircle, Trash2, Plus, Clock } from 'lucide-react';
+import { Search, Edit, Check, CheckCircle, Trash2, Plus, Clock, X } from 'lucide-react';
+import {
+  getCoreRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+  type ColumnDef,
+  type SortingState,
+  type VisibilityState,
+} from '@tanstack/react-table';
 import { useAlert } from '@/components/ui/AlertProvider';
 import AdminCardList, { AdminCardListSkeleton } from '@/app/admin/AdminCardList';
 import AdminCardEdit from '@/app/admin/AdminCardEdit';
+import AdminDataTable, { AdminColumnsMenu, rowPosition } from '@/app/admin/AdminDataTable';
+import AdminTablePager from '@/app/admin/AdminTablePager';
+import MobileSortMenu from '@/app/admin/MobileSortMenu';
 
 /**
  * The shared list of running clubs every event's registration form suggests.
@@ -12,7 +24,26 @@ import AdminCardEdit from '@/app/admin/AdminCardEdit';
  * Runners write in clubs that are not on the list yet. Those arrive here as
  * PENDING and stay out of everyone else's suggestions until they are approved,
  * so one person's typo never becomes the name the next fifty people click.
+ *
+ * The list wears the events table's furniture (`AdminDataTable`, §9). A rename
+ * opens in the Club cell on the table and under the count on a card; the
+ * draft reaches the cell through the table's `meta` rather than the column
+ * list, because rebuilding the columns on every keystroke would remount the
+ * cell and take the cursor out of the box.
  */
+
+/** What the Club and Actions cells read that changes while the list is open. */
+type ClubTableMeta = {
+  editingId: string | null;
+  editName: string;
+  isSaving: boolean;
+  setEditName: (name: string) => void;
+  saveName: (c: Community) => void;
+  cancelRename: () => void;
+  approve: (c: Community) => void;
+  startRename: (c: Community) => void;
+  reject: (c: Community) => void;
+};
 
 interface Community {
   id: string;
@@ -36,6 +67,8 @@ export default function CommunitiesClient() {
   const [editName, setEditName] = useState('');
   const [newName, setNewName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
 
   const fetchCommunities = async () => {
     try {
@@ -133,6 +166,30 @@ export default function CommunitiesClient() {
     return communities.filter(c => c.name.toUpperCase().includes(needle));
   }, [communities, searchTerm]);
 
+  const meta: ClubTableMeta = {
+    editingId,
+    editName,
+    isSaving,
+    setEditName,
+    saveName,
+    cancelRename: () => setEditingId(null),
+    approve,
+    startRename,
+    reject,
+  };
+
+  const table = useReactTable({
+    data: filtered,
+    columns: COLUMNS,
+    state: { sorting, columnVisibility },
+    meta,
+    onSortingChange: setSorting,
+    onColumnVisibilityChange: setColumnVisibility,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+  });
+
   return (
     <>
       <header className="admin-header">
@@ -160,17 +217,30 @@ export default function CommunitiesClient() {
           </div>
         )}
 
-        <div className="admin-panel">
-          <div className="admin-toolbar">
-            <div className="search-wrapper">
-              <Search size={18} className="search-icon" />
-              <input
-                type="text"
-                placeholder="Search clubs..."
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                className="search-input"
-              />
+        <div className="flex flex-col gap-4 w-full text-white">
+          <div className="admin-toolbar" style={{ padding: '0 0 16px 0', borderBottom: 'none' }}>
+            <div className="toolbar-actions" style={{ flex: 1 }}>
+              <div className="search-wrapper">
+                <Search className="search-icon" size={16} />
+                <input
+                  type="text"
+                  placeholder="Search clubs..."
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                  className="search-input"
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-300 bg-transparent border-none cursor-pointer"
+                    aria-label="Clear search"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+              <AdminColumnsMenu table={table} />
+              <MobileSortMenu table={table} />
             </div>
             {/* .toolbar-form: below `sm` the box and Add stack at full width. */}
             <form onSubmit={addCommunity} className="toolbar-actions toolbar-form flex gap-2">
@@ -188,90 +258,17 @@ export default function CommunitiesClient() {
             </form>
           </div>
 
-          <div className="data-table-wrapper dash-desktop-only">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Club</th>
-                  <th>Runners</th>
-                  <th>Status</th>
-                  <th className="text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {isLoading ? (
-                  <tr>
-                    <td colSpan={4} className="text-center py-12 text-secondary">
-                      Loading clubs...
-                    </td>
-                  </tr>
-                ) : filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="text-center py-12 text-secondary">
-                      No clubs found.
-                    </td>
-                  </tr>
-                ) : (
-                  filtered.map(c => (
-                    <tr key={c.id}>
-                      <td className="font-medium text-primary">
-                        {editingId === c.id ? (
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="text"
-                              value={editName}
-                              onChange={e => setEditName(e.target.value)}
-                              className="form-input py-1 px-2"
-                              style={{ minHeight: '32px', minWidth: '240px' }}
-                            />
-                            <button
-                              onClick={() => saveName(c)}
-                              disabled={isSaving}
-                              className="text-accent-blue text-sm"
-                            >
-                              Save
-                            </button>
-                            <button
-                              onClick={() => setEditingId(null)}
-                              className="text-secondary text-sm"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        ) : (
-                          c.name
-                        )}
-                      </td>
-                      <td>{c.runnerCount}</td>
-                      <td>
-                        <ClubStatus status={c.status} />
-                      </td>
-                      <td className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <ClubActions
-                            club={c}
-                            saving={isSaving}
-                            onApprove={approve}
-                            onRename={startRename}
-                            onRemove={reject}
-                          />
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+          <AdminDataTable table={table} empty="No clubs found." loading={isLoading} leadColumn="index" />
 
-          {/* The same filtered list as the table, below `lg` (AdminCardList).
-              A rename opens under the runner count as a full-width edit block,
-              the club's current name still in the title above it. */}
+          {/* The same rows as the table, below `lg` (AdminCardList). A rename
+              opens under the runner count as a full-width edit block, the
+              club's current name still in the title above it. */}
           <div className="dash-mobile-only">
             <AdminCardList
-              items={isLoading ? [] : filtered}
+              items={isLoading ? [] : table.getRowModel().rows.map(row => row.original)}
               getKey={c => c.id}
               label="Running clubs"
+              className="is-flush"
               title={c => c.name}
               badges={c => <ClubStatus status={c.status} />}
               fields={c => [{ label: 'Runners', value: c.runnerCount }]}
@@ -305,18 +302,105 @@ export default function CommunitiesClient() {
                 // While it loads, the list's own shape rather than a line of
                 // text the cards then push down (PROJECT_GUIDE §9).
                 isLoading ? (
-                  <AdminCardListSkeleton cards={4} fields={1} />
+                  <AdminCardListSkeleton cards={4} fields={1} className="is-flush" />
                 ) : (
-                  <div className="py-12 px-4 text-center text-secondary">No clubs found.</div>
+                  <div className="border border-white/10 rounded-lg py-16 px-4 text-center text-gray-500">
+                    No clubs found.
+                  </div>
                 )
               }
             />
           </div>
+
+          <AdminTablePager table={table} />
         </div>
       </div>
     </>
   );
 }
+
+const COLUMNS: ColumnDef<Community>[] = [
+  {
+    id: 'index',
+    header: 'No.',
+    cell: ({ row, table }) => (
+      <span className="text-gray-400 font-mono">{rowPosition(table.getSortedRowModel().flatRows, row)}</span>
+    ),
+    enableSorting: false,
+    enableHiding: false,
+  },
+  {
+    accessorKey: 'name',
+    header: 'Club',
+    cell: ({ row, table }) => {
+      const meta = table.options.meta as ClubTableMeta;
+      const club = row.original;
+      if (meta.editingId !== club.id) return <span className="font-medium text-primary">{club.name}</span>;
+      return (
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={meta.editName}
+            onChange={e => meta.setEditName(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter') meta.saveName(club);
+              if (e.key === 'Escape') meta.cancelRename();
+            }}
+            aria-label={`New name for ${club.name}`}
+            placeholder="TEAM ARMY"
+            className="form-input"
+            style={{ height: '40px', minWidth: '240px' }}
+            autoFocus
+          />
+          <button
+            type="button"
+            onClick={() => meta.saveName(club)}
+            disabled={meta.isSaving}
+            className="btn-filter is-success"
+          >
+            <Check size={16} aria-hidden="true" /> Save
+          </button>
+          <button type="button" onClick={meta.cancelRename} className="btn-filter">
+            <X size={16} aria-hidden="true" /> Cancel
+          </button>
+        </div>
+      );
+    },
+    enableHiding: false,
+  },
+  {
+    accessorKey: 'runnerCount',
+    header: 'Runners',
+  },
+  {
+    accessorKey: 'status',
+    header: 'Status',
+    cell: ({ row }) => <ClubStatus status={row.original.status} />,
+  },
+  {
+    // Left-aligned, under its own header label — never pushed to the row's
+    // right edge.
+    id: 'actions',
+    header: 'Actions',
+    cell: ({ row, table }) => {
+      const meta = table.options.meta as ClubTableMeta;
+      return (
+        <div className="flex gap-2">
+          <ClubActions
+            club={row.original}
+            saving={meta.isSaving}
+            renaming={meta.editingId === row.original.id}
+            onApprove={meta.approve}
+            onRename={meta.startRename}
+            onRemove={meta.reject}
+          />
+        </div>
+      );
+    },
+    enableSorting: false,
+    enableHiding: false,
+  },
+];
 
 /** One badge for the table's cell and the card. */
 function ClubStatus({ status }: { status: string }) {

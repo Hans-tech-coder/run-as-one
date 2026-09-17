@@ -1,10 +1,22 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
-import { Archive, ArchiveRestore, FileText, Search, Send } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Archive, ArchiveRestore, FileText, Search, Send, X } from 'lucide-react';
+import {
+  getCoreRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+  type ColumnDef,
+  type SortingState,
+  type VisibilityState,
+} from '@tanstack/react-table';
 import { useAlert } from '@/components/ui/AlertProvider';
 import AdminCardList, { AdminCardListSkeleton } from '@/app/admin/AdminCardList';
+import AdminDataTable, { AdminColumnsMenu, rowPosition } from '@/app/admin/AdminDataTable';
+import AdminTablePager from '@/app/admin/AdminTablePager';
 import FilterChip from '@/app/admin/FilterChip';
+import MobileSortMenu from '@/app/admin/MobileSortMenu';
 import ApplicationPanel, { appliedOn, type ClientApplicationRow } from './ApplicationPanel';
 import InviteDialog, { type InviteResult } from './InviteDialog';
 import {
@@ -23,6 +35,10 @@ import {
  * whose approve / reject / suspend flow no longer exists: a submission is not
  * decided, it waits here until staff are ready to run a race for it and press
  * **Send invite**.
+ *
+ * The list wears the events table's furniture (`AdminDataTable`, §9): sortable
+ * headers, the View chip, the pager, and cards below `lg` reading the same
+ * table instance.
  *
  * A row opens the application in a panel over the list (ApplicationPanel). On
  * the table the whole row opens it, except its own action controls; below
@@ -71,6 +87,8 @@ export default function ClientsClient() {
   const [openId, setOpenId] = useState<string | null>(null);
   // The client an invitation is being written for.
   const [inviting, setInviting] = useState<ClientRow | null>(null);
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
 
   const loadClients = async (): Promise<ClientRow[] | null> => {
     try {
@@ -192,13 +210,18 @@ export default function ClientsClient() {
   };
 
   const term = searchTerm.trim().toLowerCase();
-  const filteredClients = clients.filter(
-    c =>
-      (statusFilter === 'LIVE' ? c.status !== 'ARCHIVED' : c.status === statusFilter) &&
-      (!term ||
-        c.name.toLowerCase().includes(term) ||
-        c.email.toLowerCase().includes(term) ||
-        clientContactName(c).toLowerCase().includes(term)),
+  // Memoized: the table goes back to page one whenever its data changes identity.
+  const filteredClients = useMemo(
+    () =>
+      clients.filter(
+        c =>
+          (statusFilter === 'LIVE' ? c.status !== 'ARCHIVED' : c.status === statusFilter) &&
+          (!term ||
+            c.name.toLowerCase().includes(term) ||
+            c.email.toLowerCase().includes(term) ||
+            clientContactName(c).toLowerCase().includes(term)),
+      ),
+    [clients, statusFilter, term],
   );
   const newCount = clients.filter(c => c.status === 'NEW').length;
   const archivedCount = clients.filter(c => c.status === 'ARCHIVED').length;
@@ -224,6 +247,90 @@ export default function ClientsClient() {
     />
   );
 
+  const columns = useMemo<ColumnDef<ClientRow>[]>(() => [
+    {
+      id: 'index',
+      header: 'No.',
+      cell: ({ row, table }) => (
+        <span className="text-gray-400 font-mono">{rowPosition(table.getSortedRowModel().flatRows, row)}</span>
+      ),
+      enableSorting: false,
+      enableHiding: false,
+    },
+    {
+      id: 'client',
+      header: 'Client',
+      accessorFn: client => client.name,
+      cell: ({ row }) => (
+        <div>
+          <div className="font-medium text-primary">{row.original.name}</div>
+          <div className="text-xs text-secondary">{row.original.email}</div>
+        </div>
+      ),
+      enableHiding: false,
+    },
+    {
+      id: 'contact',
+      header: 'Contact',
+      accessorFn: client => clientContactName(client),
+      cell: ({ getValue }) => <span className="text-secondary">{getValue<string>() || '—'}</span>,
+    },
+    {
+      id: 'applied',
+      header: 'Applied',
+      accessorFn: client => client.createdAt,
+      cell: ({ row }) => <span className="whitespace-nowrap text-secondary">{appliedOn(row.original.createdAt)}</span>,
+    },
+    {
+      id: 'events',
+      header: 'Events',
+      accessorFn: client => client._count.events,
+    },
+    {
+      id: 'status',
+      header: 'Status',
+      accessorFn: client => clientStatusLabel(client.status),
+      cell: ({ row }) => <ClientStatusBadge status={row.original.status} />,
+    },
+    {
+      // Left-aligned, under its own header label. The wrapper swallows the
+      // click and the keys, so acting never opens the panel.
+      id: 'actions',
+      header: 'Actions',
+      cell: ({ row }) => (
+        <div className="flex gap-2" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
+          <button
+            type="button"
+            onClick={() => setOpenId(row.original.id)}
+            className="btn-filter"
+            title="Read application"
+            aria-label={`Read ${row.original.name}'s application`}
+            style={{ padding: '0 10px' }}
+          >
+            <FileText size={16} />
+          </button>
+          {actionsFor(row.original, false)}
+        </div>
+      ),
+      enableSorting: false,
+      enableHiding: false,
+    },
+    // actionsFor only opens a dialog or calls moveClient, which read nothing
+    // that changes what a cell shows.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  ], []);
+
+  const table = useReactTable({
+    data: filteredClients,
+    columns,
+    state: { sorting, columnVisibility },
+    onSortingChange: setSorting,
+    onColumnVisibilityChange: setColumnVisibility,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+  });
+
   return (
     <>
       <header className="admin-header">
@@ -231,21 +338,30 @@ export default function ClientsClient() {
       </header>
 
       <div className="admin-content">
-        <div className="admin-panel">
-          <div className="admin-toolbar">
-            <div className="search-wrapper">
-              <Search size={18} className="search-icon" />
-              <input
-                type="text"
-                placeholder="Search by name, contact or email..."
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                className="search-input"
-              />
-            </div>
-            {/* One chip per status, the waiting submissions counted. Pressing
-                the active chip goes back to every live submission. */}
-            <div className="toolbar-actions flex-wrap">
+        <div className="flex flex-col gap-4 w-full text-white">
+          <div className="admin-toolbar" style={{ padding: '0 0 16px 0', borderBottom: 'none' }}>
+            <div className="toolbar-actions" style={{ flex: 1 }}>
+              <div className="search-wrapper">
+                <Search className="search-icon" size={16} />
+                <input
+                  type="text"
+                  placeholder="Search by name, contact or email..."
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                  className="search-input"
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-300 bg-transparent border-none cursor-pointer"
+                    aria-label="Clear search"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+              {/* One chip per status, the waiting submissions counted. Pressing
+                  the active chip goes back to every live submission. */}
               {CLIENT_STATUSES.map(status => {
                 const { label } = CLIENT_STATUS_COPY[status];
                 return (
@@ -257,119 +373,71 @@ export default function ClientsClient() {
                   />
                 );
               })}
+              <AdminColumnsMenu table={table} />
+              <MobileSortMenu table={table} />
             </div>
           </div>
 
-          <div className="data-table-wrapper dash-desktop-only">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Client</th>
-                  <th>Contact</th>
-                  <th>Applied</th>
-                  <th>Events</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {isLoading ? (
-                  <tr>
-                    <td colSpan={6} className="text-center py-12 text-secondary">
-                      Loading clients...
-                    </td>
-                  </tr>
-                ) : filteredClients.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="text-center py-12 text-secondary">
-                      {emptyMessage}
-                    </td>
-                  </tr>
-                ) : (
-                  filteredClients.map(client => (
-                    <tr
-                      key={client.id}
-                      onClick={() => setOpenId(client.id)}
-                      onKeyDown={e => {
-                        if (e.target !== e.currentTarget) return;
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          setOpenId(client.id);
-                        }
-                      }}
-                      tabIndex={0}
-                      aria-label={`Read ${client.name}'s application`}
-                      className="cursor-pointer"
-                    >
-                      <td className="font-medium text-primary">
-                        <div>{client.name}</div>
-                        <div className="text-xs text-secondary font-normal">{client.email}</div>
-                      </td>
-                      <td className="text-secondary">{clientContactName(client) || '—'}</td>
-                      <td className="whitespace-nowrap text-secondary">{appliedOn(client.createdAt)}</td>
-                      <td>{client._count.events}</td>
-                      <td>
-                        <ClientStatusBadge status={client.status} />
-                      </td>
-                      {/* Left-aligned, under its own header label. The cell
-                          swallows the click, so acting never opens the panel. */}
-                      <td onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setOpenId(client.id)}
-                            className="btn-filter"
-                            title="Read application"
-                            aria-label={`Read ${client.name}'s application`}
-                            style={{ padding: '0 10px' }}
-                          >
-                            <FileText size={16} />
-                          </button>
-                          {actionsFor(client, false)}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+          <AdminDataTable
+            table={table}
+            empty={emptyMessage}
+            loading={isLoading}
+            leadColumn="index"
+            rowProps={row => ({
+              onClick: () => setOpenId(row.original.id),
+              onKeyDown: e => {
+                if (e.target !== e.currentTarget) return;
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setOpenId(row.original.id);
+                }
+              },
+              tabIndex: 0,
+              'aria-label': `Read ${row.original.name}'s application`,
+              className: 'cursor-pointer',
+            })}
+          />
 
-          {/* The same filtered list as the table, below `lg` (AdminCardList).
-              A card opens its application from its own button, never from a
-              tap anywhere — see the note at the top of this file. */}
+          {/* The same rows as the table, below `lg` (AdminCardList). A card
+              opens its application from its own button, never from a tap
+              anywhere — see the note at the top of this file. */}
           <div className="dash-mobile-only">
             <AdminCardList
-              items={isLoading ? [] : filteredClients}
-              getKey={client => client.id}
+              items={isLoading ? [] : table.getRowModel().rows}
+              getKey={row => row.id}
               label="Clients"
-              title={client => client.name}
-              subtitle={client => client.email}
-              badges={client => <ClientStatusBadge status={client.status} />}
-              fields={client => [
-                { label: 'Contact', value: clientContactName(client) || '—' },
-                { label: 'Applied', value: appliedOn(client.createdAt) },
-                { label: 'Events', value: client._count.events },
+              className="is-flush"
+              title={({ original }) => original.name}
+              subtitle={({ original }) => original.email}
+              badges={({ original }) => <ClientStatusBadge status={original.status} />}
+              fields={({ original }) => [
+                { label: 'Contact', value: clientContactName(original) || '—' },
+                { label: 'Applied', value: appliedOn(original.createdAt) },
+                { label: 'Events', value: original._count.events },
               ]}
-              actions={client => (
+              actions={({ original }) => (
                 <>
-                  <button type="button" className="btn-filter" onClick={() => setOpenId(client.id)}>
+                  <button type="button" className="btn-filter" onClick={() => setOpenId(original.id)}>
                     <FileText size={16} aria-hidden="true" /> Read application
                   </button>
-                  {actionsFor(client, true)}
+                  {actionsFor(original, true)}
                 </>
               )}
               empty={
                 // While it loads, the list's own shape rather than a line of
                 // text the cards then push down (PROJECT_GUIDE §9).
                 isLoading ? (
-                  <AdminCardListSkeleton cards={3} fields={3} />
+                  <AdminCardListSkeleton cards={3} fields={3} className="is-flush" />
                 ) : (
-                  <div className="py-12 px-4 text-center text-secondary">{emptyMessage}</div>
+                  <div className="border border-white/10 rounded-lg py-16 px-4 text-center text-gray-500">
+                    {emptyMessage}
+                  </div>
                 )
               }
             />
           </div>
+
+          <AdminTablePager table={table} />
         </div>
       </div>
 
