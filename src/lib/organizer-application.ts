@@ -130,7 +130,7 @@ export const ORGANIZER_EXPERIENCE_LABEL: Record<OrganizerExperience, string> = {
  * them, and each hint lists what comes inside rather than offering it as a
  * separate tick. There is a third answer because "I do not know yet" is the
  * honest one for a first-time organizer, and a form that will not accept it
- * gets a guess instead — which tells the super admin less than the truth
+ * gets a guess instead — which tells Run As One's staff less than the truth
  * would have.
  *
  * Deliberately *not* here: a timing option. This platform imports finishing
@@ -165,7 +165,7 @@ export const ORGANIZER_SERVICE_COPY: Record<
  * "Not sure yet" beside a ticked service line says two opposite things, so
  * choosing one clears the other. It is named here rather than in the page
  * because the route enforces it too — a body arriving with both is one the
- * super admin would be left to interpret.
+ * reader on /admin/clients would be left to interpret.
  */
 export const EXCLUSIVE_SERVICE: OrganizerService = 'NOT_SURE';
 
@@ -277,7 +277,7 @@ function servicesOf(value: unknown): string[] {
     if (known) kept.add(known);
   }
   // "Not sure yet" wins alone. A body carrying it alongside a service line is
-  // contradicting itself, and the super admin should not have to guess which
+  // contradicting itself, and staff should not have to guess which
   // half the applicant meant.
   if (kept.has(EXCLUSIVE_SERVICE) && kept.size > 1) {
     return [EXCLUSIVE_SERVICE];

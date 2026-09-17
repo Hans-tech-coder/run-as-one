@@ -2,7 +2,7 @@
  * What a piece of feedback is, and what the app will accept as one.
  *
  * Four surfaces have to agree about this: the public form a runner fills in,
- * the API route that stores it, the superadmin inbox that reads it back, and
+ * the API route that stores it, the /admin/feedback inbox that reads it back, and
  * the filter chips above that inbox. Putting the vocabulary and the limits here
  * means a kind added later shows up in all four rather than in whichever one
  * somebody remembered.

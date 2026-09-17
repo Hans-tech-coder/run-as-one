@@ -18,9 +18,6 @@ export default async function AdminResultsPage({ params }: { params: Promise<{ i
   // organizer another's category list and finishing times — and the uploader
   // below writes results against whatever event it is given. A STAFF member
   // unassigned to this race gets the same "not found".
-  //
-  // No super admin branch: a `SUPER_ADMIN` session's `orgId` is its own
-  // Organizer row, which owns no event, so this read finds nothing for it.
   const event = await prisma.event.findFirst({
     where: { id, organizerId: actor.orgId },
     include: {

@@ -26,7 +26,7 @@ export async function approvedCommunityNames(): Promise<string[]> {
 }
 
 /**
- * File the clubs a batch of runners wrote in, for the super admin to review.
+ * File the clubs a batch of runners wrote in, for Run As One's staff to review.
  *
  * Called from checkout rather than from a public endpoint of its own. A club
  * only enters the queue when someone actually registers with it, which keeps

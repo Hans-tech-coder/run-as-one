@@ -83,12 +83,7 @@ export async function getSignedInUser(): Promise<SignedInUser | null> {
   return {
     name,
     initial: name.charAt(0).toUpperCase(),
-    roleLabel:
-      actor.role === 'SUPER_ADMIN'
-        ? 'Super Admin'
-        : actor.role === 'VIEWER'
-          ? CLIENT_VIEWER_LABEL
-          : ROLE_LABELS[actor.role],
+    roleLabel: actor.role === 'VIEWER' ? CLIENT_VIEWER_LABEL : ROLE_LABELS[actor.role],
     organizerName,
     nav: {
       events: !isClientViewer(actor),

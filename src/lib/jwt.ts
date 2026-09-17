@@ -1,4 +1,5 @@
 import { SignJWT, jwtVerify, type JWTPayload } from 'jose';
+import { RUN_AS_ONE_ORGANIZER_ID } from './organizer-status';
 
 const secret = process.env.JWT_SECRET;
 
@@ -16,9 +17,13 @@ const SECRET_KEY = new TextEncoder().encode(secret);
  *
  * - OWNER — an Organizer row signing in with its own email and password.
  * - STAFF — a StaffAccount, acting inside one organizer it holds a membership in.
- * - SUPER_ADMIN — the platform owner, also an Organizer row.
+ *
+ * There was a third, SUPER_ADMIN, until ADMIN_MERGE_PLAN.md Batch 5 retired
+ * the super admin account. A token still carrying it is refused outright, and
+ * so is an OWNER token for any Organizer row but Run As One's — the only owner
+ * (organizer-status.ts) — so `proxy.ts` turns one away before a page renders.
  */
-export type SessionKind = 'OWNER' | 'STAFF' | 'SUPER_ADMIN';
+export type SessionKind = 'OWNER' | 'STAFF';
 
 /**
  * What the admin session cookie carries. Typed, because "authorisation scopes
@@ -34,7 +39,7 @@ export type SessionClaims = {
   kind: SessionKind;
   /** The tenant this session acts inside — always an Organizer id. */
   orgId: string;
-  /** OWNER, SUPER_ADMIN, or the membership's ADMIN / STAFF. */
+  /** OWNER, or the membership's ADMIN / STAFF / VIEWER. */
   role: string;
   name: string;
   email: string;
@@ -78,13 +83,12 @@ function readClaims(payload: JWTPayload): VerifiedSession | null {
   // only ever have been an Organizer row, so it reads as that row's owner.
   if (payload.kind === undefined) {
     const id = text(payload.id);
-    if (!id) return null;
-    const superAdmin = payload.role === 'SUPER_ADMIN';
+    if (id !== RUN_AS_ONE_ORGANIZER_ID || payload.role === 'SUPER_ADMIN') return null;
     return {
       sub: id,
-      kind: superAdmin ? 'SUPER_ADMIN' : 'OWNER',
+      kind: 'OWNER',
       orgId: id,
-      role: superAdmin ? 'SUPER_ADMIN' : 'OWNER',
+      role: 'OWNER',
       name: text(payload.name),
       email: text(payload.email),
       iat,
@@ -92,11 +96,12 @@ function readClaims(payload: JWTPayload): VerifiedSession | null {
   }
 
   const kind = payload.kind;
-  if (kind !== 'OWNER' && kind !== 'STAFF' && kind !== 'SUPER_ADMIN') return null;
+  if (kind !== 'OWNER' && kind !== 'STAFF') return null;
 
   const sub = text(payload.sub);
   const orgId = text(payload.orgId);
   if (!sub || !orgId) return null;
+  if (kind === 'OWNER' && sub !== RUN_AS_ONE_ORGANIZER_ID) return null;
 
   return {
     sub,

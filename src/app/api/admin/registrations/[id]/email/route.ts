@@ -66,9 +66,8 @@ async function loadRegistration(id: string): Promise<Loaded> {
     };
   }
 
-  // A super admin is the one account that legitimately reaches every
-  // organizer's registrations; a STAFF member needs a role on this race that
-  // sends emails.
+  // Scoped by the registration's own organizer, so nobody outside it reaches
+  // it; a STAFF member also needs a role on this race that sends emails.
   const reach = { organizerId: registration.event.organizerId, eventId: registration.eventId };
   if (!can(actor, 'registration:email', reach)) {
     return { ok: false, response: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };

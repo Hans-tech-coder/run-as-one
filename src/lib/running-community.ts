@@ -8,8 +8,8 @@
  *
  * A runner may write in a club that is not on the list yet. That write-in is
  * stored on their registration immediately — it is their answer, and it is not
- * the super admin's to withhold — but it stays out of everyone else's
- * suggestions until the super admin approves it, so one person's typo does not
+ * Run As One's to withhold — but it stays out of everyone else's
+ * suggestions until Run As One's staff approve it, so one person's typo does not
  * become the name the next fifty people click.
  */
 
@@ -50,7 +50,7 @@ export function normalizeCommunityName(value: unknown): string {
  * Case folds away, so "Team Army" cannot join a list that already has
  * "TEAM ARMY". Punctuation is deliberately kept: "HASHEM ACADEMY INC." and a
  * hypothetical "HASHEM ACADEMY INC" are close enough that merging them
- * automatically would be a guess, and the super admin can merge by hand.
+ * automatically would be a guess, and staff can merge by hand.
  */
 export function communitySlug(name: string): string {
   return normalizeCommunityName(name).toUpperCase();

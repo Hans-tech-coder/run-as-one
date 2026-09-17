@@ -214,24 +214,6 @@ export function roleCan(role: Role, permission: Permission): boolean {
   return MATRIX[permission].includes(role);
 }
 
-/**
- * What a super admin may do inside another organizer's data from the admin
- * API: read and settle a registration, and open its proof. That is exactly the
- * reach the status, email and proof routes gave `SUPER_ADMIN` before this
- * module existed — the platform owner is who an organizer calls about a stuck
- * payment. Everything else (editing a runner, deleting an event, touching a
- * promotion) stays the organizer's own; the runner and event-delete routes
- * spelled the role `SUPERADMIN`, so their super admin branch never matched and
- * this keeps what they actually did rather than what they seemed to intend.
- */
-export const SUPER_ADMIN_REACH: readonly Permission[] = [
-  'registration:view',
-  'registration:validate',
-  'registration:remark',
-  'registration:email',
-  'proof:view',
-];
-
 export function asMembershipRole(value: unknown): MembershipRole | null {
   const role = typeof value === 'string' ? value.trim().toUpperCase() : '';
   return (MEMBERSHIP_ROLES as readonly string[]).includes(role) ? (role as MembershipRole) : null;

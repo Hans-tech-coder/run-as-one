@@ -16,7 +16,7 @@ import { invalidEmailMessage, looksLikeEmailAddress } from '@/lib/email-address'
  *
  * The id comes from the session and never from the body: a person may only
  * ever edit themselves, so there is no id to pass and no id to forge.
- * Changing an account someone else owns is the super admin's screen, not this.
+ * Changing an account someone else owns is the team screen's job, not this.
  *
  * "Themselves" is the person, not the organizer: an owner edits the Organizer
  * row they sign in with, a staff member edits their own StaffAccount. Neither
@@ -80,7 +80,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ errors: { email: takenMessage } }, { status: 409 });
     }
 
-    let account: { id: string; name: string; email: string; role?: string };
+    let account: { id: string; name: string; email: string };
     try {
       account = await prisma.$transaction(async tx => {
         const before = isStaff
@@ -118,7 +118,7 @@ export async function PATCH(request: Request) {
     const token = await createToken(
       isStaff
         ? staffSessionClaims(account, { organizerId: actor.orgId, role: actor.role })
-        : organizerSessionClaims({ ...account, role: account.role ?? 'ORGANIZER' }),
+        : organizerSessionClaims(account),
     );
     await setAuthCookie(token);
 

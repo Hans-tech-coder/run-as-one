@@ -14,7 +14,7 @@
  * ride along with, so they pass the plain client.
  *
  * **Append-only.** Nothing in this app updates or deletes an `AuditLog` row —
- * not the owner, not the super admin. A log its subject can rewrite is not
+ * not the owner, not an admin. A log its subject can rewrite is not
  * evidence. Retention is time-based and belongs to the cron (Batch 5).
  *
  * **The actor is snapshotted.** `actorName` and `actorEmail` are copied at write
@@ -51,6 +51,8 @@ export const AUDIT_ACTIONS = [
   'staff.removed',
   'profile.updated',
   'profile.password.changed',
+  // Retired with the approve / reject screens (ADMIN_MERGE_PLAN.md, Batch 5);
+  // kept so decisions recorded before then still carry a label.
   'organizer.approved',
   'organizer.rejected',
   'organizer.suspended',
@@ -98,7 +100,9 @@ export type AuditEntityType =
 
 /** Who did it. An `Actor` from lib/actor.ts is one; SYSTEM is the cron or a webhook. */
 export type AuditActor = {
-  kind: 'OWNER' | 'STAFF' | 'SUPER_ADMIN' | 'SYSTEM';
+  // Rows written before ADMIN_MERGE_PLAN.md Batch 5 may also say SUPER_ADMIN,
+  // the retired account; nothing writes it now (see ACTOR_KIND_LABELS).
+  kind: 'OWNER' | 'STAFF' | 'SYSTEM';
   /** Null only for SYSTEM. */
   id: string | null;
   orgId: string;
@@ -121,9 +125,9 @@ export type AuditEntry = {
   /** The race it belongs to. Null for what belongs to no single race (profile, promotions). */
   eventId?: string | null;
   /**
-   * The tenant the change belongs to, when that is not the actor's own — a
-   * super admin settling another organizer's order is recorded in that
-   * organizer's trail, since it is their data that moved.
+   * The tenant the change belongs to, when that is not the actor's own. With
+   * one tenant (ADMIN_MERGE_PLAN.md) it always is; the field stays so a write
+   * names its trail explicitly where the caller already knows it.
    */
   organizerId?: string;
   /** One sentence, rendered now so the activity screen never reconstructs it. */

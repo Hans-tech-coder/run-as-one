@@ -1,6 +1,6 @@
 # One dashboard: merging Admin and Super Admin — work plan
 
-**Status:** Batches 1–4 landed · Batch 5 next · **Owner decisions captured:** 2026-09-17
+**Status:** Batches 1–5 landed on `dev` · **release pending** (checklist in Batch 5 notes) · Batch 6 after release · **Owner decisions captured:** 2026-09-17
 
 Run As One is no longer a self-serve platform for organizers. **Run As One staff
 create every event and validate every payment**, and runners' money goes to Run
@@ -24,7 +24,7 @@ to know where to pick up.
 | 2 | One shell: `/superadmin` screens move into `/admin`, redirects, role-aware sidebar | none | Landed (dev) |
 | 3 | Applications become client submissions — no password, **Send invite** | none | Landed (dev) |
 | 4 | The Viewer dashboard — events and registrant counts | none | Landed (dev) |
-| 5 | Link existing events to clients, retire the super admin, remove dead code, release | yes (cleanup) | Not started |
+| 5 | Link existing events to clients, retire the super admin, remove dead code, release | yes (cleanup) | Landed (dev) — migration not yet on `local-dev`; release pending |
 | 6 | Remittance / settlement tracking (Run As One → organizer) | yes | Not started |
 
 When a batch lands, change its Status to *Landed* and add a short
@@ -231,19 +231,23 @@ not-allowed page everywhere else.
 
 - [ ] Staff link existing live events to their clients through the event form
   (one event at a time, the owner confirming each). No registration row changes.
-- [ ] Retire the `SUPER_ADMIN` account as decided in Batch 1: "System Owner" is
+  *Done on `local-dev` (Batch 3 follow-up). Production: release checklist step 4
+  — it cannot happen earlier, since production has no `Event.clientId` yet.*
+- [x] Retire the `SUPER_ADMIN` account as decided in Batch 1: "System Owner" is
   a **test** account, so sign-in is refused; the row, and the test clients
   "Super Admin Test" and "Test" with their Organizer originals, may be removed
   only once the owner confirms the exact rows at that point (re-audit
   production first — it may hold rows `local-dev` did not).
-- [ ] Remove `SUPER_ADMIN_REACH`, `role === 'SUPER_ADMIN'` branches,
+- [x] Remove `SUPER_ADMIN_REACH`, `role === 'SUPER_ADMIN'` branches,
   `superadmin/organizers` routes, decision emails, `organizer-status.ts` parts
   that only served approval, and the `/superadmin` folder (redirects stay).
-- [ ] Only after the owner confirms: migration dropping the copied application
-  columns and the applicant `Organizer` rows that became clients.
+- [x] Only after the owner confirms: migration dropping the copied application
+  columns and the applicant `Organizer` rows that became clients. *(Confirmed
+  2026-09-17; written, applied to neither branch yet.)*
 - [ ] Release checklist: fast-forward `main` onto `dev` on the owner's word, then
   `npx prisma migrate deploy` against production for Batches 1, 3 (if any) and 5.
-- [ ] `PROJECT_GUIDE.md` rewritten where it still describes a super admin (§1,
+  *Written below — the order is migrate first, `main` last. Not run.*
+- [x] `PROJECT_GUIDE.md` rewritten where it still describes a super admin (§1,
   §6, §7, §10).
 
 **Done when:** no code path mentions a super admin, production runs the merged
@@ -560,3 +564,101 @@ memberships, 4 audit rows, 1 client). No real row was written.
   360 or 820, cards one column on a phone and three at 1440, the loading
   skeleton drew three tiles over event cards.
 - `npx tsc --noEmit` is clean for `src`; eslint is clean on every changed file.
+
+### Batch 5 — what landed
+
+**Production re-audit (2026-09-17, read-only).** It disagreed with `local-dev`:
+- **Production is four migrations behind `dev`**: it has none of
+  `20260916063805_organizer_application_details`,
+  `20260916120000_organizer_status_decision`,
+  `20260917120000_clients_and_viewer_role` (no `Client` table, no
+  `Event.clientId`), nor this batch's.
+- Organizers: "System Owner" (`superadmin@stridesync.com`, SUPER_ADMIN,
+  APPROVED), **"Super Admin Test" (`admin@stridesync.com`, ORGANIZER,
+  APPROVED — SUSPENDED on `local-dev`)**, and `seed-crc-organizer` still named
+  Cresendo Running Community at `cresendorunningcommunity@gmail.com`. "Test"
+  does not exist on production. Neither test row owns an event, promotion,
+  membership or audit row there.
+- Events unchanged, all on `seed-crc-organizer`: Pink Run 2026 is now **20 PAID,
+  0 PENDING**; Run and Reachout 2026 still **2 PENDING**; Cresendo In Motion
+  and BizRun V2.0 none. Staff: Pik (ADMIN), Kyla (STAFF). Nothing was written.
+
+**Owner's calls (2026-09-17).**
+- **Delete** "System Owner" and "Super Admin Test" on both branches.
+- **Owner sign-in is pinned to Run As One's row**, not to `role`.
+- The migration drops the **15 application columns + `statusNote` +
+  `statusChangedAt`**; `Organizer.role` and `adminFee` stay.
+- At release, production gets **the same data change as `local-dev`**.
+
+**Calls made.**
+- Why the pin: on production "Super Admin Test" is APPROVED, so after release
+  it would sign in as the OWNER of an empty tenant and hold `platform:manage`,
+  which means every client submission and all feedback. `RUN_AS_ONE_ORGANIZER_ID`
+  (`organizer-status.ts`) is checked in three places: `auth/login` (any other
+  Organizer row gets *Invalid credentials* before the password check, with no
+  trail row, like an unknown address); `jwt.ts` (an OWNER token for another id,
+  or any `SUPER_ADMIN` token, does not verify, so `proxy.ts` sends it to
+  sign-in); and `getActor()`.
+- `SessionKind` is `OWNER | STAFF`, and `can()` answers **false** for any reach
+  outside the actor's `orgId`. `SUPER_ADMIN_REACH`, the `SUPER_ADMIN` branches
+  in `actor.ts` / `jwt.ts` / `signed-in-user.ts` / login, and the login's
+  PENDING / REJECTED / SUSPENDED wording are gone.
+- Deleted: `api/admin/organizers` (both routes, which nothing called), the
+  decision emails with the `quote` block and `declined` tone only they used,
+  the approval half of `organizer-status.ts`, and `scripts/seed.ts` /
+  `scripts/seed-superadmin.ts` (they created the test rows).
+- **Kept for history:** the `organizer.*` audit verbs and the `SUPER_ADMIN`
+  actor-kind label, so rows already written still read. `AuditLog` is
+  append-only, so the 4 rows under "System Owner" on `local-dev` stay.
+- Comments that described a live super admin now name Run As One's staff or
+  the screen that does the work.
+- Migration `20260917180000_retire_super_admin` deletes the two rows by id,
+  plus the `Client` copy with the same id. Each delete is guarded by *owns
+  nothing* and is a no-op where the row is absent. The migration also drops the
+  17 columns. **Safe on production in one deploy:** `main`'s schema never had
+  those columns (they arrive with Batch 1's migrations), so the live code never
+  reads them.
+
+**Not done in this session.**
+- **The migration is not applied to `local-dev`.** `npx prisma migrate deploy`
+  was blocked by the session's permission classifier. Run it yourself:
+  `.env` points at `local-dev`, and it deletes the two rows you named and drops
+  the columns. Until then the code works against `local-dev` as it is.
+- **"Test" (`test@gmail.com`) on `local-dev`**, and its ARCHIVED client, are
+  untouched. You did not name it, and it does not exist on production.
+- The `/superadmin/**` redirects in `next.config.ts` stay, as the plan says.
+
+**Verified on localhost (2026-09-17)** against `local-dev`, with session tokens
+minted from the local `JWT_SECRET` and thrown away (no rows written):
+- Run As One's OWNER token: `/admin`, Clients, Activity, Team, Events and
+  Settings answer 200; feedback and clients APIs answer 200.
+- A `SUPER_ADMIN` token, a legacy `{ role: 'SUPER_ADMIN' }` token, and an OWNER
+  token for "Super Admin Test": `/admin` answers 307 to `/admin/login`; the
+  feedback and clients APIs answer 401.
+- Sign-in as `superadmin@stridesync.com`, `admin@stridesync.com` and an unknown
+  address: the same `401 Invalid credentials`, with 0 audit rows written.
+- `/api/admin/organizers` answers 404; `/admin/organizers` and
+  `/superadmin/organizers` answer 308 to `/admin/clients`.
+- `npx tsc --noEmit` is clean for `src`; eslint is clean on the changed lib
+  and auth files; `prisma validate` passes.
+
+**Release checklist (production — only on the owner's word, in this order).**
+1. **Re-audit** production read-only: the Organizer rows, and PENDING
+   registrations. Stop if anything new owns data.
+2. **`npx prisma migrate deploy`** with `DIRECT_URL` pointed at
+   `ep-still-pine-b3n210bs`. It applies Batch 1's three migrations and Batch 5's.
+   The live (old) code keeps working: every addition is a new table or a
+   nullable column, and the dropped columns never existed for it.
+3. **Fast-forward `main` onto `dev` and push.** Vercel deploys. Owner sign-in
+   still works, because the live row is `seed-crc-organizer`.
+4. **On the live site, as the owner:**
+   - Settings: change the email to `runasoneph@gmail.com` and the name to
+     "Run As One".
+   - Create the Cresendo Running Community client
+     (`cresendorunningcommunity@gmail.com`) through `/admin/register`.
+   - Link the four events to it through each event's edit form, one at a time.
+   - Press **Send invite** on `/admin/clients`, so the link points at the live
+     site.
+   - No registration row is touched.
+5. Spot-check on production: the viewer's *Your Events* counts; staff Pik and
+   Kyla sign in unchanged; `admin@stridesync.com` is refused.

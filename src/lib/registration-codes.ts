@@ -5,7 +5,7 @@
  * `paymentMethod`, `logisticsMethod` and `deliveryZone` used to be stored in
  * PayMongo's own casing (`bank_transfer`, `delivery`, `inside`), which made
  * them the only lowercase string columns in the schema: `status` is `PAID`,
- * `role` is `SUPER_ADMIN`, `eventType` is `FUN_RUN`, `registrationForm` is
+ * `role` is `OWNER`, `eventType` is `FUN_RUN`, `registrationForm` is
  * `BANK_TRANSFER`. They are now uppercase too, so every coded column in the
  * database has one shape, and an export never mixes `DELA CRUZ` with
  * `bank_transfer` on the same row.

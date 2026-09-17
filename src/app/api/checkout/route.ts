@@ -340,7 +340,7 @@ export async function POST(request: Request) {
       });
     });
 
-    // Clubs nobody has approved yet go to the super admin's queue. This is
+    // Clubs nobody has approved yet go to the Communities review queue. This is
     // the only way a row enters that queue, so the list cannot be written to
     // by anyone who has not actually registered.
     await recordWriteInCommunities(participants);

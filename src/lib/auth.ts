@@ -27,9 +27,7 @@ export async function setAuthCookie(token: string) {
 /**
  * The raw session claims, or null. **Admin surfaces do not call this** — they
  * call `getActor()` / `requireActor()` in lib/actor.ts, which also checks a
- * staff session against the record and knows which events it may reach. Only
- * the super admin's own routes, which have no tenant to scope by, read the
- * claims directly.
+ * staff session against the record and knows which events it may reach.
  */
 export async function getAuthCookie() {
   const cookieStore = await cookies();

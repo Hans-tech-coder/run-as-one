@@ -29,7 +29,9 @@
  *
  * An owner's session is read from the token alone, exactly as the routes did
  * before: nothing about an owner's reach can change mid-session that the
- * routes did not already ignore. A **staff** session is checked against the
+ * routes did not already ignore. The one thing asked of it is that it is Run
+ * As One's own row (`RUN_AS_ONE_ORGANIZER_ID`, organizer-status.ts) — no other
+ * Organizer row signs in, so a token for one is dead on arrival. A **staff** session is checked against the
  * record on every request — status, membership, assignments, the organizer's
  * own status (`organizerCanSignIn`, an allowlist) and
  * `sessionsValidFrom` — because a suspension that waits a day for the JWT to
@@ -42,10 +44,13 @@ import prisma from './db';
 import { getAuthCookie } from './auth';
 import type { SessionClaims, SessionKind } from './jwt';
 import { normalizeAccountEmail } from './text-case';
-import { SIGN_IN_STATUSES, organizerCanSignIn } from './organizer-status';
+import {
+  RUN_AS_ONE_ORGANIZER_ID,
+  SIGN_IN_STATUSES,
+  organizerCanSignIn,
+} from './organizer-status';
 import { VIEWER_SIGN_IN_STATUSES, clientViewersCanSignIn } from './client';
 import {
-  SUPER_ADMIN_REACH,
   TEAM_ROLES,
   VIEWER_PERMISSIONS,
   asEventRole,
@@ -59,10 +64,10 @@ import {
   type TeamRole,
 } from './permissions';
 
-export type ActorRole = 'OWNER' | 'SUPER_ADMIN' | MembershipRole;
+export type ActorRole = 'OWNER' | MembershipRole;
 
 export type Actor = {
-  /** The person: an Organizer id for OWNER and SUPER_ADMIN, a StaffAccount id for STAFF. */
+  /** The person: an Organizer id for OWNER, a StaffAccount id for STAFF. */
   id: string;
   kind: SessionKind;
   /** The tenant — the Organizer whose events and promotions this session reaches. */
@@ -86,9 +91,10 @@ export async function getActor(): Promise<Actor | null> {
   if (!session) return null;
 
   if (session.kind !== 'STAFF') {
-    // An owner is their own tenant; a token saying otherwise was not issued
-    // by this app.
-    if (session.sub !== session.orgId) return null;
+    // An owner is their own tenant, and the only owner is Run As One; a token
+    // saying otherwise was not issued by this app, or was issued to an account
+    // that has since been retired.
+    if (session.sub !== session.orgId || session.sub !== RUN_AS_ONE_ORGANIZER_ID) return null;
     return {
       id: session.sub,
       kind: session.kind,
@@ -194,11 +200,10 @@ export async function requireTeamActor(): Promise<Actor> {
 
 /**
  * The organizer-wide role an actor holds, or null for a STAFF membership that
- * reaches only its assigned events, and for a client viewer. A super admin inside their own tenant row
- * is its owner.
+ * reaches only its assigned events, and for a client viewer.
  */
 function orgRole(actor: Actor): OrgRole | null {
-  if (actor.role === 'OWNER' || actor.role === 'SUPER_ADMIN') return 'OWNER';
+  if (actor.role === 'OWNER') return 'OWNER';
   if (actor.role === 'ADMIN') return 'ADMIN';
   return null;
 }
@@ -262,9 +267,10 @@ export function isClientViewer(actor: Actor): boolean {
  * the event, because a STAFF member's role is per race.
  */
 export function can(actor: Actor, permission: Permission, reach: Reach): boolean {
-  if (reach.organizerId !== actor.orgId) {
-    return actor.kind === 'SUPER_ADMIN' && SUPER_ADMIN_REACH.includes(permission);
-  }
+  // Nobody reaches into another organizer's data. The retired super admin
+  // could settle another organizer's order from here; with one tenant there is
+  // no other organizer's data to reach.
+  if (reach.organizerId !== actor.orgId) return false;
 
   // A client viewer: its one permission, on one event, of its own client.
   if (isClientViewer(actor)) {
@@ -354,16 +360,15 @@ export async function findAccountByEmail(email: unknown): Promise<AccountByEmail
   return staff ? { kind: 'STAFF', staff } : null;
 }
 
-/** The session an Organizer row signs in to — as its owner, or as the super admin. */
+/** The session Run As One's Organizer row signs in to, as its owner. */
 export function organizerSessionClaims(
-  organizer: Pick<Organizer, 'id' | 'email' | 'name' | 'role'>,
+  organizer: Pick<Organizer, 'id' | 'email' | 'name'>,
 ): SessionClaims {
-  const superAdmin = organizer.role === 'SUPER_ADMIN';
   return {
     sub: organizer.id,
-    kind: superAdmin ? 'SUPER_ADMIN' : 'OWNER',
+    kind: 'OWNER',
     orgId: organizer.id,
-    role: superAdmin ? 'SUPER_ADMIN' : 'OWNER',
+    role: 'OWNER',
     name: organizer.name,
     email: organizer.email,
   };

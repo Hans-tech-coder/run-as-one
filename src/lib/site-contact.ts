@@ -3,7 +3,7 @@
  *
  * The footer, the 404 page and the two legal pages all quote the same address
  * and the same channel list, so they read it from here instead of each
- * retyping it. These are constants today; the superadmin settings screen is
+ * retyping it. These are constants today; a platform settings screen is
  * meant to own them later, and when it does this module is the only file that
  * has to change.
  */

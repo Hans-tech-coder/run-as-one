@@ -196,6 +196,8 @@ export function actionsForFilter(value: string): AuditAction[] | null {
 export const ACTOR_KIND_LABELS: Record<string, string> = {
   OWNER: 'Super Admin',
   STAFF: 'Staff',
+  // The retired super admin account (ADMIN_MERGE_PLAN.md, Batch 5). Nothing
+  // writes it any more; older rows still read it.
   SUPER_ADMIN: 'Super Admin',
   SYSTEM: 'System',
 };

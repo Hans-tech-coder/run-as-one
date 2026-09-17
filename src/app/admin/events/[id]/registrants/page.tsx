@@ -40,11 +40,8 @@ export default async function RegistrantsPage({
   // could read their whole registrant list.
   //
   // A no-match reads as "Event not found." rather than "not yours", so the
-  // screen cannot be used to confirm that some id exists. There is no super
-  // admin branch: since the dashboards merged a `SUPER_ADMIN` session can open
-  // this page, but its `orgId` is its own Organizer row, which owns no event,
-  // so the read above finds nothing for it either. A
-  // STAFF member unassigned to this race gets the same "Event not found."
+  // screen cannot be used to confirm that some id exists. A STAFF member
+  // unassigned to this race gets the same "Event not found."
   const actor = await requireTeamActor();
 
   // Fetch real runners for this event via the Registrations table

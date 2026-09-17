@@ -19,7 +19,7 @@ import Combobox, { type ComboboxRow } from './Combobox';
  * Free text is deliberately allowed. The field is optional, the answer is the
  * runner's own, and holding up their registration over a club name nobody has
  * approved yet would be the wrong trade. What a write-in does not get is a
- * place in everyone else's suggestions: that waits for the super admin.
+ * place in everyone else's suggestions: that waits for Run As One's staff.
  *
  * Shared by both wizards, so a fun run and a race ask the question the same way.
  */

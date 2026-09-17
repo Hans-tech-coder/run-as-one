@@ -49,7 +49,7 @@ export type DashboardNavItem = {
 export type DashboardUserBlock = {
   name: string;
   initial: string;
-  /** The line under the name — "Owner", "Staff · PINK RUN EVENTS", "Super Admin". */
+  /** The line under the name — "Super Admin", "Staff · RUN AS ONE", "Client Viewer · …". */
   roleLine: string;
   avatarStyle?: React.CSSProperties;
 };

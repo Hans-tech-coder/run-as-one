@@ -6,8 +6,8 @@
  * and this file imports Prisma.
  *
  * **Every read is scoped to one organizer.** `AuditLog.organizerId` is the
- * tenant the entry belongs to — a super admin settling another organizer's
- * order is written into *that* organizer's trail — so an owner or admin reads
+ * tenant the entry belongs to — with one tenant (ADMIN_MERGE_PLAN.md) that is
+ * always Run As One's row — so an owner or admin reads
  * everything that happened to their own data, and nothing that happened to
  * anyone else's.
  */

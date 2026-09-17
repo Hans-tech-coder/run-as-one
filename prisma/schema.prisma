@@ -6,25 +6,24 @@ datasource db {
   provider = "postgresql"
 }
 
+/// Run As One itself — the one tenant. Since ADMIN_MERGE_PLAN.md every event,
+/// promotion, staff membership and audit row belongs to this row, and it is the
+/// only Organizer that signs in (`RUN_AS_ONE_ORGANIZER_ID`,
+/// src/lib/organizer-status.ts). The organizations races are run for are
+/// `Client` rows. The table kept its name and shape rather than being folded
+/// away, because every tenant check in the app scopes by `organizerId`.
 model Organizer {
   id         String      @id @default(cuid())
   email      String      @unique
   password   String
   name       String
+  /// "ORGANIZER" on every row since the super admin account was retired
+  /// (ADMIN_MERGE_PLAN.md, Batch 5). Nothing reads it; kept by the owner's call.
   role       String      @default("ORGANIZER")
-  /// PENDING, APPROVED, REJECTED or SUSPENDED — src/lib/organizer-status.ts,
-  /// which also holds the rule that only APPROVED may sign in. Plain text so a
-  /// status can be added without a migration.
+  /// Only APPROVED can be signed in to — src/lib/organizer-status.ts, an
+  /// allowlist. Plain text so a status can be added without a migration.
   status     String      @default("PENDING")
-  /// Why the last decision was made. Written for a rejection, which cannot be
-  /// saved without one, and cleared by any later decision so a reinstated
-  /// account does not carry the reason it was once refused.
-  statusNote String?
-  /// When `status` last moved by a super admin's decision. Null on rows decided
-  /// before this column existed, and on applications nobody has decided yet.
-  /// `updatedAt` cannot stand in: a profile edit moves it too.
-  statusChangedAt DateTime?
-  /// Centavos. 6000 = ₱60.00
+  /// Centavos. A dead column: every order's fee comes from `Event.adminFee`.
   adminFee   Int         @default(6000)
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
@@ -34,58 +33,6 @@ model Organizer {
   /// this row's own email and password and is never a membership — see
   /// StaffAccount for why the tenant and the person are separate.
   staff      StaffMembership[]
-
-  // ── What the applicant told us when they asked for an account ──────────
-  //
-  // Every column below is nullable and every one of them is answered on the
-  // application form at /admin/register. They are nullable anyway because the
-  // accounts that existed before the form asked for any of this cannot be made
-  // to answer retroactively, and a required column would have meant inventing
-  // values for real organizers. A screen reading them must therefore be
-  // written for a row that says nothing — see organizerApplication() in
-  // src/lib/organizer-application.ts, which is the one place that decides what
-  // an unanswered field looks like.
-  //
-  // They are short text rather than enums so a vocabulary can grow without a
-  // migration, and every one of them is validated against the lists in that
-  // module before it is written. Fifteen short strings on a table that holds
-  // tens of rows is a few kilobytes in total, which is why this was worth
-  // spending against the 0.5 GB tier when a whole application table was not.
-
-  /// What kind of outfit this is — one of ORGANIZER_TYPES.
-  orgType            String?
-  /// The person who filled the form in, who is not necessarily the account's
-  /// eventual owner: `name` is the organization, these two are the human.
-  contactFirstName   String?
-  contactLastName    String?
-  /// Their position — "Race Director", "Marketing Head". What tells the super
-  /// admin whether they are talking to somebody who can sign anything.
-  contactRole        String?
-  /// E.164, like every other number in this app (src/lib/phone.ts).
-  phone              String?
-  /// Where they operate. Two columns rather than one address because the
-  /// province is the part that decides which races this account is near.
-  city               String?
-  province           String?
-  /// A website or a Facebook page — the single strongest signal that an
-  /// applicant is a real organization, which is why the form asks for either
-  /// rather than insisting on a domain nobody in this market buys.
-  website            String?
-  /// How many races they have run before — one of ORGANIZER_EXPERIENCE.
-  experience         String?
-  /// Which parts of the platform they came for — ORGANIZER_SERVICES values.
-  services           String[]           @default([])
-  /// The race they have in mind. A date string in YYYY-MM-DD against a Manila
-  /// today, like Event.date, so the two compare without parsing.
-  firstEventName     String?
-  firstEventDate     String?
-  firstEventLocation String?
-  /// The size they expect — one of EXPECTED_PARTICIPANTS. A band rather than a
-  /// number because nobody knows the number yet, and a field that demands one
-  /// gets a guess typed as though it were a fact.
-  expectedRunners    String?
-  /// Anything else they wanted to say, in their own words.
-  applicationNote    String?
 }
 
 model Event {
@@ -414,7 +361,7 @@ model Runner {
   medicalConditions     String?
   /// The club this runner represents. Free text rather than a relation to
   /// RunningCommunity on purpose: it is what they answered on the day, and it
-  /// must not change if the super admin later renames or removes that club.
+  /// must not change if Run As One's staff later rename or remove that club.
   /// Blank answers are stored as "INDEPENDENT RUNNER", itself a listed option.
   runningCommunity      String       @default("INDEPENDENT RUNNER")
   createdAt             DateTime     @default(now())
@@ -453,7 +400,7 @@ model RunningCommunity {
   /// that already has "TEAM ARMY".
   slug      String   @unique
   /// "APPROVED" appears in the runner-facing pickers. "PENDING" is a runner's
-  /// write-in that only the super admin has seen. Rejecting one deletes it.
+  /// write-in only Run As One's staff have seen. Rejecting one deletes it.
   status    String   @default("PENDING")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -783,11 +730,11 @@ model EventAssignment {
 /// Organizer row, pointed here by `StaffMembership.clientId`. The tenant never
 /// moves — no Event, Registration or Runner row was rewritten to add this.
 ///
-/// The application columns mirror the ones on Organizer, which is where the
-/// form wrote them until now; the migration that added this table copied every
-/// applicant Organizer row into a Client **with the same id**, so the two stay
-/// traceable until the originals are retired in Batch 5. Nullable for the same
-/// reason as there: a row written by staff by hand may answer none of it.
+/// The application columns are what the form at /admin/register collects. They
+/// lived on Organizer until ADMIN_MERGE_PLAN.md Batch 3; the migration that
+/// added this table copied applicant Organizer rows here with the same id, and
+/// Batch 5 dropped the Organizer copies. Nullable because a row written by
+/// staff by hand may answer none of it.
 ///
 /// Storage: tens of rows of short text — a rounding error on the 0.5 GB tier.
 model Client {
@@ -828,7 +775,7 @@ model Client {
 }
 
 /// What somebody did. Append-only: nothing in this app updates or deletes one —
-/// not the owner, not the super admin. See src/lib/audit.ts.
+/// not the owner, not an admin. See src/lib/audit.ts.
 ///
 /// No relations on purpose. A log row has to outlive the event, the runner and
 /// the account it names, and a foreign key would either block those deletions
@@ -842,7 +789,8 @@ model AuditLog {
   organizerId String
   /// Null for actions that belong to no single race (profile, promotions).
   eventId     String?
-  /// "OWNER" | "STAFF" | "SUPER_ADMIN" | "SYSTEM"
+  /// "OWNER" | "STAFF" | "SYSTEM" — and "SUPER_ADMIN" on rows written before
+  /// the super admin account was retired (ADMIN_MERGE_PLAN.md, Batch 5).
   actorKind   String
   /// The Organizer or StaffAccount id. Null only for SYSTEM (cron, webhook).
   actorId     String?
