@@ -24,6 +24,7 @@ import {
   type SortingState,
   type VisibilityState,
 } from '@tanstack/react-table';
+import RowActionsMenu from '@/app/admin/RowActionsMenu';
 import { useAlert } from '@/components/ui/AlertProvider';
 import AdminCardList, { AdminCardListSkeleton } from '@/app/admin/AdminCardList';
 import AdminDataTable, { AdminColumnsMenu } from '@/app/admin/AdminDataTable';
@@ -429,14 +430,13 @@ export default function FeedbackClient() {
                         )}
                         {isNew ? 'Mark Reviewed' : 'Move to New'}
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => remove(row)}
-                        disabled={isSaving}
-                        className="btn-filter is-danger"
-                      >
-                        <Trash2 size={16} aria-hidden="true" /> Delete
-                      </button>
+                      <FeedbackMenu
+                        row={row}
+                        saving={isSaving}
+                        onSetStatus={setStatus}
+                        onRemove={remove}
+                        className="ml-auto"
+                      />
                     </>
                   );
                 }}
@@ -525,43 +525,58 @@ const COLUMNS: ColumnDef<FeedbackRow>[] = [
   },
   {
     // Left-aligned, under its own header label — never pushed to the row's
-    // right edge. The wrapper swallows the click, so acting never opens the row.
+    // right edge. RowActionsMenu swallows the click, so acting never opens the row.
     id: 'actions',
     header: 'Actions',
     cell: ({ row, table }) => {
       const { isSaving, setStatus, remove } = table.options.meta as FeedbackTableMeta;
-      const isNew = row.original.status === 'NEW';
-      return (
-        <div className="flex gap-2" onClick={e => e.stopPropagation()}>
-          <button
-            type="button"
-            onClick={() => setStatus(row.original, isNew ? 'REVIEWED' : 'NEW')}
-            disabled={isSaving}
-            className="btn-filter"
-            title={isNew ? 'Mark as reviewed' : 'Move back to new'}
-            aria-label={isNew ? 'Mark as reviewed' : 'Move back to new'}
-            style={{ padding: '0 10px' }}
-          >
-            {isNew ? <CheckCircle size={16} /> : <RotateCcw size={16} />}
-          </button>
-          <button
-            type="button"
-            onClick={() => remove(row.original)}
-            disabled={isSaving}
-            className="btn-filter is-danger"
-            title="Delete message"
-            aria-label="Delete message"
-            style={{ padding: '0 10px' }}
-          >
-            <Trash2 size={16} />
-          </button>
-        </div>
-      );
+      return <FeedbackMenu row={row.original} saving={isSaving} onSetStatus={setStatus} onRemove={remove} />;
     },
     enableSorting: false,
     enableHiding: false,
   },
 ];
+
+/** A message's ⋮ menu, for the table's Actions cell and the card's footer. */
+function FeedbackMenu({
+  row,
+  saving,
+  onSetStatus,
+  onRemove,
+  className,
+}: {
+  row: FeedbackRow;
+  saving: boolean;
+  onSetStatus: FeedbackTableMeta['setStatus'];
+  onRemove: FeedbackTableMeta['remove'];
+  className?: string;
+}) {
+  const isNew = row.status === 'NEW';
+  const sender = row.name ?? row.email ?? 'an anonymous sender';
+  return (
+    <RowActionsMenu
+      label={`feedback from ${sender}`}
+      className={className}
+      actions={[
+        {
+          key: 'status',
+          label: isNew ? 'Mark Reviewed' : 'Move to New',
+          icon: isNew ? <CheckCircle size={16} /> : <RotateCcw size={16} />,
+          onSelect: () => onSetStatus(row, isNew ? 'REVIEWED' : 'NEW'),
+          disabled: saving,
+        },
+        {
+          key: 'delete',
+          label: 'Delete Message',
+          icon: <Trash2 size={16} />,
+          onSelect: () => onRemove(row),
+          disabled: saving,
+          danger: true,
+        },
+      ]}
+    />
+  );
+}
 
 /** A kind, in its icon and tone. The table's Type cell and a card's badge. */
 function FeedbackKindLabel({ kind }: { kind: string }) {

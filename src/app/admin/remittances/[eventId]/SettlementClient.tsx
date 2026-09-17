@@ -17,6 +17,7 @@ import AdminCardList from '@/app/admin/AdminCardList';
 import AdminDataTable, { AdminColumnsMenu, rowPosition } from '@/app/admin/AdminDataTable';
 import AdminTablePager from '@/app/admin/AdminTablePager';
 import MobileSortMenu from '@/app/admin/MobileSortMenu';
+import RowActionsMenu from '@/app/admin/RowActionsMenu';
 import { formatEventDayShort } from '@/lib/event-schedule';
 import {
   describeRemittance,
@@ -93,40 +94,23 @@ export default function SettlementClient({
       </span>
     ) : null;
 
-  const actions = (row: RemittanceRow, labelled: boolean) => {
-    const iconOnly = labelled ? undefined : { padding: '0 10px' };
-    return (
-      <>
-        {row.hasProof && (
-          <a
-            href={`/api/admin/remittances/${row.id}/proof`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-filter"
-            title={labelled ? undefined : 'Open receipt'}
-            aria-label={labelled ? undefined : `Open the receipt for the ${describeRemittance(row)}`}
-            style={iconOnly}
-          >
-            <FileText size={16} aria-hidden={labelled || undefined} />
-            {labelled && 'Receipt'}
-          </a>
-        )}
-        {row.status === 'RECORDED' && (
-          <button
-            type="button"
-            onClick={() => setVoiding(row)}
-            className="btn-filter is-danger"
-            title={labelled ? undefined : 'Void'}
-            aria-label={labelled ? undefined : `Void the ${describeRemittance(row)}`}
-            style={iconOnly}
-          >
-            <Ban size={16} aria-hidden={labelled || undefined} />
-            {labelled && 'Void'}
-          </button>
-        )}
-      </>
-    );
-  };
+  const receiptHref = (row: RemittanceRow) => `/api/admin/remittances/${row.id}/proof`;
+
+  /** A remittance's ⋮ menu, for the table's Actions cell and the card's footer. */
+  const menu = (row: RemittanceRow, className = '') => (
+    <RowActionsMenu
+      label={describeRemittance(row)}
+      className={className}
+      actions={[
+        ...(row.hasProof
+          ? [{ key: 'receipt', label: 'Open Receipt', icon: <FileText size={16} />, href: receiptHref(row) }]
+          : []),
+        ...(row.status === 'RECORDED'
+          ? [{ key: 'void', label: 'Void', icon: <Ban size={16} />, onSelect: () => setVoiding(row), danger: true }]
+          : []),
+      ]}
+    />
+  );
 
   const amountCell = (row: RemittanceRow) => (
     <span className={row.status === 'VOIDED' ? 'remittance-voided' : undefined}>
@@ -206,11 +190,12 @@ export default function SettlementClient({
     {
       id: 'actions',
       header: 'Actions',
-      cell: ({ row }) => <div className="flex gap-2">{actions(row.original, false)}</div>,
+      cell: ({ row }) => menu(row.original),
       enableSorting: false,
       enableHiding: false,
     },
     // The helpers above only read the row and setVoiding, which is stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   ], []);
 
   const table = useReactTable({
@@ -266,7 +251,20 @@ export default function SettlementClient({
                   ]
                 : []),
             ]}
-            actions={({ original: row }) => (row.hasProof || row.status === 'RECORDED' ? actions(row, true) : null)}
+            // The receipt one tap away when there is one; Void stays behind ⋮,
+            // since a destructive press is never the card's shortcut.
+            actions={({ original: row }) =>
+              row.hasProof || row.status === 'RECORDED' ? (
+                <>
+                  {row.hasProof && (
+                    <a href={receiptHref(row)} target="_blank" rel="noopener noreferrer" className="btn-filter">
+                      <FileText size={16} aria-hidden="true" /> Receipt
+                    </a>
+                  )}
+                  {menu(row, 'ml-auto')}
+                </>
+              ) : null
+            }
             empty={
               <div className="border border-white/10 rounded-lg py-16 px-4 text-center text-gray-500">{EMPTY_MESSAGE}</div>
             }

@@ -17,6 +17,7 @@ import AdminDataTable, { AdminColumnsMenu, rowPosition } from '@/app/admin/Admin
 import AdminTablePager from '@/app/admin/AdminTablePager';
 import FiltersMenu from '@/app/admin/FiltersMenu';
 import MobileSortMenu from '@/app/admin/MobileSortMenu';
+import RowActionsMenu, { type RowAction } from '@/app/admin/RowActionsMenu';
 import ApplicationPanel, { appliedOn, type ClientApplicationRow } from './ApplicationPanel';
 import InviteDialog, { type InviteResult } from './InviteDialog';
 import {
@@ -40,7 +41,7 @@ import {
  * table instance.
  *
  * A row opens the application in a panel over the list (ApplicationPanel). On
- * the table the whole row opens it, except its own action controls; below
+ * the table the whole row opens it, except its ⋮ menu; below
  * `lg` a card opens it from a *Read application* button instead — the choice
  * `/admin/feedback` made, because a card carries its own Send invite and
  * Archive and a tap target covering all of them is a mis-tap waiting to
@@ -237,12 +238,25 @@ export default function ClientsClient() {
   // view must not snatch the panel away mid-read.
   const openClient = openId ? clients.find(c => c.id === openId) ?? null : null;
 
-  const actionsFor = (client: ClientRow, labelled: boolean) => (
-    <ClientActions
-      client={client}
-      labelled={labelled}
-      onInvite={() => setInviting(client)}
-      onMove={move => moveClient(client, move)}
+  const handlersFor = (client: ClientRow) => ({
+    onInvite: () => setInviting(client),
+    onMove: (move: 'archive' | 'restore') => moveClient(client, move),
+  });
+
+  /** A row's ⋮ menu, for the table's Actions cell and the card's footer. */
+  const menuFor = (client: ClientRow, className = '') => (
+    <RowActionsMenu
+      label={client.name}
+      className={className}
+      actions={[
+        {
+          key: 'read',
+          label: 'Read Application',
+          icon: <FileText size={16} />,
+          onSelect: () => setOpenId(client.id),
+        },
+        ...clientMoves(client, handlersFor(client)),
+      ]}
     />
   );
 
@@ -292,30 +306,16 @@ export default function ClientsClient() {
       cell: ({ row }) => <ClientStatusBadge status={row.original.status} />,
     },
     {
-      // Left-aligned, under its own header label. The wrapper swallows the
+      // Left-aligned, under its own header label. RowActionsMenu swallows the
       // click and the keys, so acting never opens the panel.
       id: 'actions',
       header: 'Actions',
-      cell: ({ row }) => (
-        <div className="flex gap-2" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
-          <button
-            type="button"
-            onClick={() => setOpenId(row.original.id)}
-            className="btn-filter"
-            title="Read application"
-            aria-label={`Read ${row.original.name}'s application`}
-            style={{ padding: '0 10px' }}
-          >
-            <FileText size={16} />
-          </button>
-          {actionsFor(row.original, false)}
-        </div>
-      ),
+      cell: ({ row }) => menuFor(row.original),
       enableSorting: false,
       enableHiding: false,
     },
-    // actionsFor only opens a dialog or calls moveClient, which read nothing
-    // that changes what a cell shows.
+    // menuFor only opens the panel or a dialog, or calls moveClient, which
+    // read nothing that changes what a cell shows.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   ], []);
 
@@ -421,7 +421,7 @@ export default function ClientsClient() {
                   <button type="button" className="btn-filter" onClick={() => setOpenId(original.id)}>
                     <FileText size={16} aria-hidden="true" /> Read application
                   </button>
-                  {actionsFor(original, true)}
+                  {menuFor(original, 'ml-auto')}
                 </>
               )}
               empty={
@@ -447,7 +447,7 @@ export default function ClientsClient() {
           key={openClient.id}
           client={openClient}
           statusBadge={<ClientStatusBadge status={openClient.status} />}
-          actions={actionsFor(openClient, true)}
+          actions={<ClientActions client={openClient} {...handlersFor(openClient)} />}
           onClose={() => setOpenId(null)}
         />
       )}
@@ -494,54 +494,46 @@ function ClientStatusBadge({ status }: { status: string }) {
   return <span className={`status-badge ${tone}`}>{clientStatusLabel(status)}</span>;
 }
 
+type ClientHandlers = { onInvite: () => void; onMove: (move: 'archive' | 'restore') => void };
+
 /**
- * The moves this client's status allows (`canMoveClient`). The table keeps
- * icon-only chips under the Actions header, named by their titles; a card and
- * the panel spell them out, because a phone has no hover to read a title
- * from. Tones are the chip classes in Admin.css.
+ * The moves this client's status allows (`canMoveClient`), as ⋮ menu items for
+ * the table and the card. Archive is the menu's red item, below its divider.
  */
-function ClientActions({
-  client,
-  labelled,
-  onInvite,
-  onMove,
-}: {
-  client: ClientRow;
-  labelled: boolean;
-  onInvite: () => void;
-  onMove: (move: 'archive' | 'restore') => void;
-}) {
-  const iconOnly = labelled ? undefined : { padding: '0 10px' };
-  const inviteLabel = waitingViewer(client) ? 'Resend invite' : 'Send invite';
+function clientMoves(client: ClientRow, { onInvite, onMove }: ClientHandlers): RowAction[] {
+  const inviteLabel = waitingViewer(client) ? 'Resend Invite' : 'Send Invite';
+  return [
+    ...(canMoveClient(client.status, 'invite')
+      ? [{ key: 'invite', label: inviteLabel, icon: <Send size={16} />, onSelect: onInvite }]
+      : []),
+    ...(canMoveClient(client.status, 'restore')
+      ? [{ key: 'restore', label: 'Restore', icon: <ArchiveRestore size={16} />, onSelect: () => onMove('restore') }]
+      : []),
+    ...(canMoveClient(client.status, 'archive')
+      ? [{ key: 'archive', label: 'Archive', icon: <Archive size={16} />, onSelect: () => onMove('archive'), danger: true }]
+      : []),
+  ];
+}
 
-  const chip = (
-    key: string,
-    label: string,
-    Icon: typeof Send,
-    onClick: () => void,
-    tone = '',
-  ) => (
-    <button
-      key={key}
-      type="button"
-      onClick={onClick}
-      className={`btn-filter ${tone}`}
-      title={labelled ? undefined : label}
-      aria-label={labelled ? undefined : `${label}: ${client.name}`}
-      style={iconOnly}
-    >
-      <Icon size={16} aria-hidden={labelled || undefined} />
-      {labelled && label}
-    </button>
-  );
-
+/**
+ * The same moves as labelled chips, for the application panel's footer, where
+ * there is room to spell them out. Tones are the chip classes in Admin.css.
+ */
+function ClientActions({ client, ...handlers }: { client: ClientRow } & ClientHandlers) {
+  const tones: Record<string, string> = { invite: 'is-primary', archive: 'is-danger' };
   return (
     <>
-      {canMoveClient(client.status, 'invite') && chip('invite', inviteLabel, Send, onInvite, 'is-primary')}
-      {canMoveClient(client.status, 'archive') &&
-        chip('archive', 'Archive', Archive, () => onMove('archive'), 'is-danger')}
-      {canMoveClient(client.status, 'restore') &&
-        chip('restore', 'Restore', ArchiveRestore, () => onMove('restore'))}
+      {clientMoves(client, handlers).map(action => (
+        <button
+          key={action.key}
+          type="button"
+          onClick={action.onSelect}
+          className={`btn-filter ${tones[action.key] ?? ''}`}
+        >
+          {action.icon}
+          {action.label}
+        </button>
+      ))}
     </>
   );
 }

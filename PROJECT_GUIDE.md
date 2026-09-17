@@ -201,6 +201,9 @@ src/
                             #   AdminTablePager / MobileSortMenu — every table's
                             #   pager and its below-lg Sort chip,
                             #   row-menu-position.ts — where a row's menu opens,
+                            #   RowActionsMenu — the ⋮ row menu built from an
+                            #   item list (clients, clubs, feedback, a race's
+                            #   remittances),
                             #   route-loading-shape.ts — what each page's wait
                             #   draws, phone and desktop, bare-paths.ts — the
                             #   pages under /admin with no sidebar,
@@ -851,7 +854,9 @@ labels from `organizer-application.ts`, a blank answer reading *Not given*, a
 pre-form row saying so in one sentence — whose *The decision* section is gone
 and whose **Sign-ins** section (shown once anybody was invited) lists each
 viewer with the team screen's own state badge (Active / Invited / Invite
-Expired / Suspended, `memberState`). The moves come from `canMoveClient`, the
+Expired / Suspended, `memberState`). The row's ⋮ menu offers **Read
+Application** and the moves; the panel's footer spells the moves out as
+labelled chips. The moves come from `canMoveClient`, the
 routes' rule: **Send invite** (worded *Resend invite* while an invitation is
 waiting) from New, Invited or Active, **Archive** from anything live (a
 `confirm` — it signs the client's viewers out; nothing is deleted), **Restore**
@@ -877,7 +882,11 @@ chip's Status (Unread with its count, Reviewed) and Kind groups filter; the orde
 a header, which is why the unread ones are **found** rather than sorted to the
 top). All three are TanStack tables on `AdminDataTable` (§9) — sortable
 headers, View, the pager and a Sort chip below `lg`; the club rename opens in
-the Club cell with Save / Cancel chips. **The platform trail is `/admin/activity`.** Organizer
+the Club cell with Save / Cancel chips. A club's Approve / Rename / Remove from
+List and a message's Mark Reviewed (or Move to New) / Delete Message sit in the
+row's ⋮ menu (`RowActionsMenu`), the red item below its divider; a club card's
+footer shortcut is Approve while it waits and Rename once approved, a feedback
+card's is its status move. **The platform trail is `/admin/activity`.** Organizer
 decisions are made inside Run As One's tenant now, so they are rows of the one
 trail under an *Organizer decisions* shelf; the older decisions and sign-ins of
 the retired "System Owner" test account stay under that account's own `orgId`,
@@ -906,8 +915,9 @@ sentence) and *Run As One's Share*; a **How the Balance Is Worked Out** ledger
 entries, discounts and delivery inset under it as explanation — less remitted,
 balance); and the **Remittances** list (sent day, kind, amount — a return shown
 negative — method, reference and note, recorded by and when, Recorded / Voided
-with who voided it, when and why, and Receipt / Void under Actions; cards below
-`lg`). Both lists are TanStack tables on `AdminDataTable` (§9) with sortable
+with who voided it, when and why, and a ⋮ menu under Actions — Open Receipt,
+then Void in red — which a voided row without a receipt leaves empty; a card's
+footer shortcut is Receipt, never Void). Both lists are TanStack tables on `AdminDataTable` (§9) with sortable
 headers, View and the pager; the race's list stands under a *Remittances*
 heading row holding Record Remittance. **Record Remittance** opens `RecordRemittanceDialog` (the team modal's
 frame): Kind and Method (`AdminSelect`), Amount in pesos, Sent On (today by
@@ -1534,6 +1544,17 @@ These are the user's own standing preferences. Follow them without being asked.
   the admin has no native select left. The registrants edit modal's Gender
   field moved in Mobile Batch 3; its Shirt Size is still a free-text box with a `<datalist>`,
   which AdminSelect cannot replace because a size may be left blank or typed.
+- **A row with more than one action has a ⋮ menu, never a row of chips.** The
+  Actions cell holds one `.action-dropdown-btn` whose menu lists each action
+  as icon + label, destructive ones red below a divider — the events table's
+  shape. Icon-only chips named by a hover `title` (the old clients, clubs,
+  feedback and remittance rows) are gone. A menu with bespoke states (the
+  events menu's pending navigation, the team menu's *Saving*) keeps its own
+  `*ActionsMenu`; a plain list of items passes them to
+  **`admin/RowActionsMenu`** (`RowAction`: label, icon, `onSelect` or `href`
+  for a new-tab file, `danger`, `disabled`), which swallows the row's click and
+  keys and renders nothing for an empty list. A single action stays a labelled
+  chip (*View Details* on the Remittances list).
 - **A row's action menu is portalled to `<body>`.** Every card and table in the
   app clips its own overflow (rounded corners, horizontal scrollers), so a menu
   laid out inside the row is cut off on the last rows. The admin menus

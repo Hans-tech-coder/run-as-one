@@ -17,6 +17,7 @@ import AdminCardEdit from '@/app/admin/AdminCardEdit';
 import AdminDataTable, { AdminColumnsMenu, rowPosition } from '@/app/admin/AdminDataTable';
 import AdminTablePager from '@/app/admin/AdminTablePager';
 import MobileSortMenu from '@/app/admin/MobileSortMenu';
+import RowActionsMenu from '@/app/admin/RowActionsMenu';
 
 /**
  * The shared list of running clubs every event's registration form suggests.
@@ -287,16 +288,37 @@ export default function CommunitiesClient() {
                   />
                 )
               }
+              // Approve one tap away while a club waits for it, since that is
+              // what this list is worked for, and Rename once it is approved
+              // (§9, a card's footer). Both stay in the menu too.
               actions={c => (
-                <ClubActions
-                  club={c}
-                  saving={isSaving}
-                  renaming={editingId === c.id}
-                  onApprove={approve}
-                  onRename={startRename}
-                  onRemove={reject}
-                  labelled
-                />
+                <>
+                  {c.status !== 'APPROVED' ? (
+                    <button
+                      type="button"
+                      onClick={() => approve(c)}
+                      disabled={isSaving}
+                      className="btn-filter is-success"
+                    >
+                      <CheckCircle size={16} aria-hidden="true" /> Approve
+                    </button>
+                  ) : (
+                    editingId !== c.id && (
+                      <button type="button" onClick={() => startRename(c)} className="btn-filter">
+                        <Edit size={16} aria-hidden="true" /> Rename
+                      </button>
+                    )
+                  )}
+                  <ClubMenu
+                    club={c}
+                    saving={isSaving}
+                    renaming={editingId === c.id}
+                    onApprove={approve}
+                    onRename={startRename}
+                    onRemove={reject}
+                    className="ml-auto"
+                  />
+                </>
               )}
               empty={
                 // While it loads, the list's own shape rather than a line of
@@ -385,16 +407,14 @@ const COLUMNS: ColumnDef<Community>[] = [
     cell: ({ row, table }) => {
       const meta = table.options.meta as ClubTableMeta;
       return (
-        <div className="flex gap-2">
-          <ClubActions
-            club={row.original}
-            saving={meta.isSaving}
-            renaming={meta.editingId === row.original.id}
-            onApprove={meta.approve}
-            onRename={meta.startRename}
-            onRemove={meta.reject}
-          />
-        </div>
+        <ClubMenu
+          club={row.original}
+          saving={meta.isSaving}
+          renaming={meta.editingId === row.original.id}
+          onApprove={meta.approve}
+          onRename={meta.startRename}
+          onRemove={meta.reject}
+        />
       );
     },
     enableSorting: false,
@@ -412,67 +432,41 @@ function ClubStatus({ status }: { status: string }) {
 }
 
 /**
- * Approve, Rename and Remove. The table keeps its icon-only chips, named by
- * their titles; a card spells them out, since a phone has no hover. Remove
- * still asks first — `reject` holds the AlertProvider confirm for both.
+ * Approve, Rename and Remove, behind the row's ⋮ menu on the table and the
+ * card alike. Remove still asks first — `reject` holds the AlertProvider
+ * confirm for both.
  */
-function ClubActions({
+function ClubMenu({
   club,
   saving,
   renaming = false,
   onApprove,
   onRename,
   onRemove,
-  labelled = false,
+  className,
 }: {
   club: Community;
   saving: boolean;
-  /** A card hides Rename while its own edit block is open. */
+  /** Rename is withheld while this club's own rename box is open. */
   renaming?: boolean;
   onApprove: (c: Community) => void;
   onRename: (c: Community) => void;
   onRemove: (c: Community) => void;
-  labelled?: boolean;
+  className?: string;
 }) {
-  const iconOnly = labelled ? undefined : { padding: '0 10px' };
   return (
-    <>
-      {club.status !== 'APPROVED' && (
-        <button
-          type="button"
-          onClick={() => onApprove(club)}
-          disabled={saving}
-          className="btn-filter is-success"
-          title={labelled ? undefined : 'Approve club'}
-          style={iconOnly}
-        >
-          <CheckCircle size={16} aria-hidden={labelled || undefined} />
-          {labelled && 'Approve'}
-        </button>
-      )}
-      {!renaming && (
-        <button
-          type="button"
-          onClick={() => onRename(club)}
-          className="btn-filter"
-          title={labelled ? undefined : 'Rename club'}
-          style={iconOnly}
-        >
-          <Edit size={16} aria-hidden={labelled || undefined} />
-          {labelled && 'Rename'}
-        </button>
-      )}
-      <button
-        type="button"
-        onClick={() => onRemove(club)}
-        disabled={saving}
-        className="btn-filter is-danger"
-        title={labelled ? undefined : 'Remove from list'}
-        style={iconOnly}
-      >
-        <Trash2 size={16} aria-hidden={labelled || undefined} />
-        {labelled && 'Remove'}
-      </button>
-    </>
+    <RowActionsMenu
+      label={club.name}
+      className={className}
+      actions={[
+        ...(club.status !== 'APPROVED'
+          ? [{ key: 'approve', label: 'Approve', icon: <CheckCircle size={16} />, onSelect: () => onApprove(club), disabled: saving }]
+          : []),
+        ...(!renaming
+          ? [{ key: 'rename', label: 'Rename', icon: <Edit size={16} />, onSelect: () => onRename(club) }]
+          : []),
+        { key: 'remove', label: 'Remove from List', icon: <Trash2 size={16} />, onSelect: () => onRemove(club), danger: true, disabled: saving },
+      ]}
+    />
   );
 }
