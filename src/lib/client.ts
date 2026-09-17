@@ -11,7 +11,7 @@
  * - `ACTIVE` — somebody accepted it; the client's viewers can sign in.
  * - `ARCHIVED` — kept on record, out of the queue. Never a delete.
  *
- * The screens (Batch 3), the routes that move a status and `getActor()` all
+ * `/admin/clients`, the routes that move a status and `getActor()` all
  * read this module, the same job `organizer-status.ts` did for the approval
  * flow it replaces. `Client.status` is plain text, so a status added later
  * needs an entry here and no migration.
@@ -102,4 +102,19 @@ export function clientStatusAfter(status: string, move: ClientMove): ClientStatu
     case 'restore':
       return 'NEW';
   }
+}
+
+/**
+ * The person an application named, as one line — "Ana Cruz" — or empty when
+ * it named nobody. Send invite opens on this name, since the contact who
+ * applied is almost always who should sign in.
+ */
+export function clientContactName(client: {
+  contactFirstName?: string | null;
+  contactLastName?: string | null;
+}): string {
+  return [client.contactFirstName, client.contactLastName]
+    .map(part => part?.trim())
+    .filter(Boolean)
+    .join(' ');
 }

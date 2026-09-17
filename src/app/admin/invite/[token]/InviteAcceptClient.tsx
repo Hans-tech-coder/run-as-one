@@ -7,6 +7,7 @@ import { RunAsOneLogo } from '@/components/RunAsOneLogo';
 import FieldError from '@/components/ui/FieldError';
 import PasswordField from '../../settings/PasswordField';
 import { ROLE_HINTS, type TeamRole } from '@/lib/permissions';
+import { SITE_NAME } from '@/lib/site-contact';
 import { MAX_NAME_LENGTH, MIN_PASSWORD_LENGTH, newPasswordErrors, type FieldErrors } from '@/lib/team';
 import BusyLabel from '@/components/ui/BusyLabel';
 
@@ -22,6 +23,11 @@ import BusyLabel from '@/components/ui/BusyLabel';
  * Someone who already signs in to another organizer enters the password they
  * already have; they are not asked to invent a second one.
  *
+ * A **client viewer** (`role="VIEWER"`, ADMIN_MERGE_PLAN.md Batch 3) is told
+ * what it is being given in its own terms: a sign-in for its organization,
+ * which shows its races and how many runners have registered and changes
+ * nothing. No team, no role, no event list.
+ *
  * Errors sit under the field they are about and are rebuilt from what is
  * actually wrong on every submit (PROJECT_GUIDE §8, rule 4). The server checks
  * the same rules from lib/team.ts and answers in the same shape.
@@ -29,6 +35,7 @@ import BusyLabel from '@/components/ui/BusyLabel';
 export default function InviteAcceptClient({
   token,
   organizerName,
+  clientName,
   email,
   invitedName,
   hasAccount,
@@ -37,14 +44,17 @@ export default function InviteAcceptClient({
 }: {
   token: string;
   organizerName: string;
+  /** The client a VIEWER invitation signs in for; absent on a team invitation. */
+  clientName?: string;
   email: string;
   invitedName: string;
   hasAccount: boolean;
-  role: TeamRole;
+  role: TeamRole | 'VIEWER';
   events: { title: string; roleLabel: string }[];
 }) {
   const router = useRouter();
   const nameId = useId();
+  const viewer = role === 'VIEWER';
 
   const [name, setName] = useState(invitedName);
   const [password, setPassword] = useState('');
@@ -61,7 +71,7 @@ export default function InviteAcceptClient({
       return password ? {} : { password: 'Enter the password you already sign in with' };
     }
     const found = newPasswordErrors(password, confirmPassword);
-    if (!name.trim()) found.name = 'Enter your name as your team should see it';
+    if (!name.trim()) found.name = viewer ? 'Enter your name' : 'Enter your name as your team should see it';
     else if (name.trim().length > MAX_NAME_LENGTH) {
       found.name = `Keep your name to ${MAX_NAME_LENGTH} characters or fewer`;
     }
@@ -116,11 +126,15 @@ export default function InviteAcceptClient({
       <div className="auth-card">
         <div className="auth-header">
           <RunAsOneLogo variant="stacked" className="[--rao-logo-size:64px] mb-5" />
-          <h1 className="auth-title">Join {organizerName}</h1>
+          <h1 className="auth-title">
+            {viewer ? `Your sign-in for ${clientName}` : `Join ${organizerName}`}
+          </h1>
           <p className="auth-subtitle">
-            {role === 'ADMIN'
-              ? `You have been invited as an Admin. ${ROLE_HINTS.ADMIN}`
-              : 'You have been invited to work on these events:'}
+            {viewer
+              ? `${SITE_NAME} runs your races. Once you are in, you can follow each of your events and how many runners have registered, paid and pending.`
+              : role === 'ADMIN'
+                ? `You have been invited as an Admin. ${ROLE_HINTS.ADMIN}`
+                : 'You have been invited to work on these events:'}
           </p>
         </div>
 
@@ -153,8 +167,8 @@ export default function InviteAcceptClient({
           {hasAccount ? (
             <p className="text-sm text-secondary m-0">
               You already sign in as <strong className="text-white">{email}</strong>. Enter that
-              password to add {organizerName} to your account — your other organizers stay as they
-              are.
+              password to add {viewer ? clientName : organizerName} to your account
+              {viewer ? '.' : ' — your other organizers stay as they are.'}
             </p>
           ) : (
             <>
@@ -179,7 +193,9 @@ export default function InviteAcceptClient({
                 <FieldError id={`${nameId}-error`} message={errors.name} />
                 {!errors.name && (
                   <p id={`${nameId}-hint`} className="text-xs text-secondary">
-                    Everything you do in the admin is recorded under this name.
+                    {viewer
+                      ? 'The Run As One team will see this name on your sign-ins.'
+                      : 'Everything you do in the admin is recorded under this name.'}
                   </p>
                 )}
               </div>

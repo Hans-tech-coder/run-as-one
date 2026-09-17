@@ -3,8 +3,8 @@
  *
  * Three surfaces have to agree about this: the form at `/admin/register` that
  * a prospective organizer fills in, the `auth/register` route that writes the
- * row, and the superadmin screen that reads it back to decide whether to
- * approve the account. Putting the vocabulary, the limits and the rules here
+ * `Client` submission, and `/admin/clients`, where Run As One staff read it
+ * back before sending an invite. Putting the vocabulary, the limits and the rules here
  * means a question added later shows up in all three rather than in whichever
  * one somebody remembered — the same reason `lib/feedback.ts` exists.
  *
@@ -22,7 +22,7 @@
  * whose shape it can check (an address, a number, a date). Everything else is
  * asked for and accepted as given: a form that rejects a real organizer over a
  * missing website has cost a paying client to catch a fraud it would not have
- * caught anyway. The gate is the super admin's approval, not the form.
+ * caught anyway. The gate is staff deciding to send an invite, not the form.
  */
 
 import { looksLikeEmailAddress } from './email-address';
@@ -200,19 +200,6 @@ export const MAX_EVENT_LOCATION = 160;
 export const MAX_APPLICATION_NOTE = 1_000;
 export const MAX_EMAIL = 120;
 
-/**
- * The shortest password a new organizer account may have.
- *
- * Eight rather than the six this form used to accept. The account it protects
- * can publish a race and read every registrant's birthdate, phone number and
- * emergency contact, which is a different thing from a runner's own order
- * lookup. It is raised only for accounts created from here on: an existing
- * organizer's password still signs them in, because locking a paying client
- * out of their own event to enforce a rule they were never told about is the
- * worse failure.
- */
-export const MIN_ORGANIZER_PASSWORD = 8;
-
 /** Where the phone field starts, and what a bare national number is read
  *  against. The organizer can pick another country in the field itself. */
 export const APPLICATION_PHONE_COUNTRY = 'PH';
@@ -232,8 +219,6 @@ export const APPLICATION_FIELDS = [
   'contactRole',
   'email',
   'phone',
-  'password',
-  'confirmPassword',
   'services',
   'firstEventName',
   'firstEventDate',
@@ -259,7 +244,6 @@ export interface OrganizerApplication {
   email: string;
   /** E.164, or empty when the applicant gave no number. */
   phone: string;
-  password: string;
   services: string[];
   firstEventName: string;
   firstEventDate: string;
@@ -360,16 +344,17 @@ export function looksLikeDate(value: string): boolean {
  * the common case never costs a round trip, and the route calls it again
  * because a tab left open can post straight at it. The route additionally
  * refuses an address either account table already holds, which is the one rule
- * this module cannot check because it needs the database.
+ * this module cannot check because it needs the database, and refuses an address
+a client submission already holds.
  *
- * `requireCredentials` is false when the caller is only checking the shape of
- * the answers — the superadmin screen, or a future edit — so the password
- * rules do not fire on a form that is not setting one.
+ * There is no password on it any more (ADMIN_MERGE_PLAN.md, Batch 3): an
+ * application becomes a `Client` submission, and the person behind it chooses
+ * a password only when Run As One staff send an invite.
  */
-export function readOrganizerApplication(
-  input: ApplicationInput,
-  { requireCredentials = true }: { requireCredentials?: boolean } = {},
-): { values: OrganizerApplication; errors: ApplicationErrors } {
+export function readOrganizerApplication(input: ApplicationInput): {
+  values: OrganizerApplication;
+  errors: ApplicationErrors;
+} {
   const errors: ApplicationErrors = {};
 
   const name = textOf(input.name);
@@ -383,9 +368,6 @@ export function readOrganizerApplication(
   const contactRole = textOf(input.contactRole);
   const email = textOf(input.email).toLowerCase();
   const phone = phoneOf(input.phone);
-  const password = typeof input.password === 'string' ? input.password : '';
-  const confirmPassword =
-    typeof input.confirmPassword === 'string' ? input.confirmPassword : '';
   const services = servicesOf(input.services);
   const firstEventName = textOf(input.firstEventName);
   const firstEventDate = textOf(input.firstEventDate);
@@ -477,21 +459,6 @@ export function readOrganizerApplication(
       : `That does not look like a complete ${phoneCountry.name} number.`;
   }
 
-  if (requireCredentials) {
-    if (!password) {
-      errors.password = 'Choose a password for this account.';
-    } else if (password.length < MIN_ORGANIZER_PASSWORD) {
-      const short = MIN_ORGANIZER_PASSWORD - password.length;
-      errors.password = `Passwords are at least ${MIN_ORGANIZER_PASSWORD} characters — ${short} more to go.`;
-    }
-
-    if (!confirmPassword) {
-      errors.confirmPassword = 'Type the password again to confirm it.';
-    } else if (confirmPassword !== password) {
-      errors.confirmPassword = 'The two passwords do not match.';
-    }
-  }
-
   /* Step 3 — what they want to run. */
 
   if (services.length === 0) {
@@ -535,7 +502,6 @@ export function readOrganizerApplication(
       contactRole,
       email,
       phone,
-      password,
       services,
       firstEventName,
       firstEventDate,

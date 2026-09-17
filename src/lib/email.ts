@@ -1000,6 +1000,81 @@ export function sendStaffInvitationEmail(input: StaffInvitationInput): Promise<E
 }
 
 /* ────────────────────────────────────────────────────────────────────────
+ * The client invitation — a submission let in as a viewer (ADMIN_MERGE_PLAN.md).
+ * ──────────────────────────────────────────────────────────────────────── */
+
+export interface ClientInvitationInput {
+  to: string;
+  inviteeName: string;
+  /** The organization the application was sent for, `Client.name`. */
+  clientName: string;
+  acceptUrl: string;
+  expiresAt: Date;
+  /** Whether the address already has a sign-in on this site. */
+  hasAccount: boolean;
+}
+
+/**
+ * Sent when Run As One staff press **Send invite** on a client submission, and
+ * again on a resend (lib/team-invite.ts).
+ *
+ * Not the team wording: the reader is not joining anybody's team or taking a
+ * role on a race. They applied as an organizer, and Run As One runs the race
+ * for them, so what this opens is a view of their own events and how many
+ * runners have registered — and it says that, including what it does not
+ * show, so nobody signs in expecting to edit a race or read a runner list. It
+ * never carries a password; the link lets them choose one.
+ */
+export function clientInvitationEmail(input: ClientInvitationInput): EmailMessage {
+  const firstName = input.inviteeName.split(' ')[0] || input.inviteeName;
+
+  return renderMessage({
+    to: input.to,
+    subject: `Your ${SITE_NAME} sign-in for ${input.clientName}`,
+    status: { label: 'Organizer Invitation', tone: 'pending' },
+    footerTopic: 'invitation',
+    blocks: [
+      {
+        kind: 'paragraph',
+        segments: [
+          `Hi ${firstName}, thank you for applying to run your events with ${SITE_NAME}. We have set up a sign-in for `,
+          { strong: input.clientName },
+          '.',
+        ],
+      },
+      { kind: 'heading', text: 'What You Can See' },
+      {
+        kind: 'card',
+        rows: [
+          { kind: 'info', label: 'Your events', value: 'Every race we run for you' },
+          { kind: 'info', label: 'Registrations', value: 'How many runners, paid and pending' },
+        ],
+      },
+      {
+        kind: 'paragraph',
+        segments: [
+          `${SITE_NAME} runs registration and payments for your races, so this view is for following along rather than editing. `,
+          input.hasAccount
+            ? `You already have a ${SITE_NAME} account with this address, so you will accept with the password you use now.`
+            : 'Accepting lets you choose your own password. Nobody at Run As One will know it.',
+        ],
+      },
+      { kind: 'button', label: 'Set Up Your Sign-In', href: input.acceptUrl },
+      {
+        kind: 'note',
+        segments: [
+          `This link works once and expires on ${formatEventInstant(input.expiresAt)}, Manila time. If it has expired, reply to this email and we will send a new one.`,
+        ],
+      },
+    ],
+  });
+}
+
+export function sendClientInvitationEmail(input: ClientInvitationInput): Promise<EmailOutcome> {
+  return sendEmail(clientInvitationEmail(input));
+}
+
+/* ────────────────────────────────────────────────────────────────────────
  * The decision on an organizer application — the email the success panel on
  * /admin/register promises ("We will write to …").
  * ──────────────────────────────────────────────────────────────────────── */

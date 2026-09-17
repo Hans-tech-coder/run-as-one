@@ -30,7 +30,7 @@ export type RouteShape = {
   list?: {
     /**
      * - `page`: on the page under its toolbar (the TanStack screens);
-     * - `panel`: inside a panel whose first row is its toolbar (organizers,
+     * - `panel`: inside a panel whose first row is its toolbar (clients,
      *   communities, feedback);
      * - `titled-panel`: inside a panel under a title (the Dashboard).
      */
@@ -135,7 +135,7 @@ const THREE_ROW_TOOLBAR = 144;
 /** Every dashboard toolbar is one 40px row inside its padding from `lg` up. */
 const LG_TOOLBAR = 40;
 
-/** A `.data-table`'s header and body rows (the Dashboard, organizers, communities, feedback). */
+/** A `.data-table`'s header and body rows (the Dashboard, clients, communities, feedback). */
 const LG_PLAIN_TABLE = { head: 51, row: 54 };
 
 /** The TanStack screens' table, which carries its own header styling. */
@@ -188,7 +188,7 @@ const EXACT: Record<string, RouteShape> = {
     },
   },
   // Search, then the status chips over two rows of 44px.
-  '/admin/organizers': {
+  '/admin/clients': {
     list: { frame: 'panel', toolbar: 152 },
     lg: { toolbar: LG_TOOLBAR, table: { ...LG_PLAIN_TABLE, rows: 8 } },
   },

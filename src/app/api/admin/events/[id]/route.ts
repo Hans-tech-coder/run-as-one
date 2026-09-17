@@ -19,6 +19,7 @@ import {
 } from '@/lib/registration-gate';
 import { eventPromotions } from '@/lib/promo-store';
 import { CATEGORY_ORDER } from '@/lib/category-order';
+import { readClientLink } from '@/lib/client-store';
 
 /**
  * The event columns the edit form writes, in the order the trail lists them.
@@ -50,6 +51,7 @@ const EVENT_FIELDS = [
   'registrationOpensAt',
   'certificateTemplate',
   'certificateCoordinates',
+  'clientId',
 ] as const;
 
 /** Thrown inside the edit transaction when a category it removes is still in use. */
@@ -179,6 +181,16 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     }
 
+    // Which client the race is for. Left alone unless the person may link one
+    // (platform:manage) and sent it — an event manager's save never moves it.
+    const clientLink = await readClientLink(actor, data.clientId, current.clientId);
+    if (!clientLink.ok) {
+      return NextResponse.json(
+        { error: clientLink.error, errors: { clientId: clientLink.error } },
+        { status: 400 },
+      );
+    }
+
     const slug = current.title === title
       ? current.slug
       : await uniqueEventSlug(title, async (candidate) => {
@@ -248,6 +260,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
           registrationOpensAt: registrationOpens,
           certificateTemplate: certificateTemplate || null,
           certificateCoordinates: certificateCoordinates || null,
+          ...(clientLink.change ? { clientId: clientLink.clientId } : {}),
         }
       });
 

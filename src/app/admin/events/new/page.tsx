@@ -21,6 +21,7 @@ import BankAccountsPanel from '@/app/admin/events/BankAccountsPanel';
 import { cleanBankAccounts, type BankAccountDraft } from '@/app/admin/events/bank-account-draft';
 import { offersBankTransfer } from '@/lib/registration-form';
 import BusyLabel from '@/components/ui/BusyLabel';
+import EventClientField from '@/app/admin/events/EventClientField';
 
 export default function NewEventPage() {
   const router = useRouter();
@@ -64,6 +65,11 @@ export default function NewEventPage() {
   // and a latched flag would clear on the first one to finish.
   const [uploadingPosters, setUploadingPosters] = useState(0);
   const [bankAccounts, setBankAccounts] = useState<BankAccountDraft[]>([]);
+  // Which client the race is for ('' for none), and whether this person may
+  // set it at all — only then is it sent (EventClientField).
+  const [clientId, setClientId] = useState('');
+  const [canLinkClient, setCanLinkClient] = useState(false);
+  const [clientError, setClientError] = useState<string | undefined>();
   // Distances or packages. Freely switchable here — nothing is sold yet.
   const [eventType, setEventType] = useState<EventType>(DEFAULT_EVENT_TYPE);
 
@@ -137,12 +143,15 @@ export default function NewEventPage() {
           registrationOpensAt: openingInstantISO(opening),
           categories,
           bankAccounts: cleanBankAccounts(bankAccounts),
+          ...(canLinkClient ? { clientId } : {}),
         }),
       });
 
       if (!res.ok) {
         const data = await res.json();
-        setError(data.error || 'Failed to create event');
+        // A refusal about the client lands under the picker, not in the modal.
+        if (data.errors?.clientId) setClientError(data.errors.clientId);
+        else setError(data.error || 'Failed to create event');
         setIsLoading(false);
         return;
       }
@@ -268,6 +277,15 @@ export default function NewEventPage() {
             </div>
             <div className="admin-panel-content">
               <div className="form-grid">
+              <EventClientField
+                value={clientId}
+                onChange={next => {
+                  setClientId(next);
+                  setClientError(undefined);
+                }}
+                onAvailable={setCanLinkClient}
+                error={clientError}
+              />
               <div className="form-group form-group-full">
                 <label className="form-label">Event Title</label>
                 <input 

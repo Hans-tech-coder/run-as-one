@@ -17,6 +17,7 @@ import {
   asSlotLimit,
 } from '@/lib/registration-gate';
 import { CATEGORY_ORDER } from '@/lib/category-order';
+import { readClientLink } from '@/lib/client-store';
 
 export async function POST(request: Request) {
   try {
@@ -56,6 +57,17 @@ export async function POST(request: Request) {
     const registrationOpens = asOpeningInstant(registrationOpensAt);
     if (registrationOpens === undefined) {
       return NextResponse.json({ error: OPENING_INSTANT_ERROR }, { status: 400 });
+    }
+
+    // Which client the race is for — only Run As One staff with
+    // platform:manage may say (lib/client-store.ts); from anyone else the
+    // field is ignored and the race starts with none.
+    const clientLink = await readClientLink(actor, data.clientId);
+    if (!clientLink.ok) {
+      return NextResponse.json(
+        { error: clientLink.error, errors: { clientId: clientLink.error } },
+        { status: 400 },
+      );
     }
 
     // The public URL is made from the title, so it is settled here, once, with
@@ -99,6 +111,7 @@ export async function POST(request: Request) {
           // The tenant, never the person: an event belongs to the organizer
           // whoever on its team created it, and the trail below names them.
           organizerId: actor.orgId,
+          clientId: clientLink.change ? clientLink.clientId : null,
           bankAccounts: {
             create: asBankAccounts(bankAccounts).map((account, index) => ({
               ...account,
@@ -137,7 +150,10 @@ export async function POST(request: Request) {
         entityId: created.id,
         eventId: created.id,
         summary: `Created event ${created.title} (${created.date}).`,
-        changes: { categories: created.categories.length },
+        changes: {
+          categories: created.categories.length,
+          ...(created.clientId ? { clientId: created.clientId } : {}),
+        },
       });
 
       return created;

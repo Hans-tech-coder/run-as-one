@@ -47,6 +47,22 @@ const nextConfig: NextConfig = {
        * page. Redirects run before src/proxy.ts, so the proxy only ever sees
        * the /admin address.
        */
+      /**
+       * The organizer accounts screen became the client submissions list
+       * (ADMIN_MERGE_PLAN.md, Batch 3). Both of its old addresses go straight
+       * to /admin/clients — the /superadmin one ahead of the catch-all below,
+       * so it is one hop rather than two.
+       */
+      {
+        source: "/superadmin/organizers",
+        destination: "/admin/clients",
+        permanent: true,
+      },
+      {
+        source: "/admin/organizers",
+        destination: "/admin/clients",
+        permanent: true,
+      },
       {
         source: "/superadmin",
         destination: "/admin",

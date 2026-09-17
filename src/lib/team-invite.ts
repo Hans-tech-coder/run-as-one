@@ -14,13 +14,18 @@
  * already use. A resend issues a new token and kills the old one, so a link
  * forwarded before the resend stops working.
  *
+ * **A client viewer is invited through the same machinery** (ADMIN_MERGE_PLAN.md,
+ * Batch 3): a `VIEWER` membership carrying `clientId`, the same hashed token,
+ * the same accept page. Only the email differs — `sendInvitation` reads the
+ * membership's role and sends the client wording rather than the team's.
+ *
  * Kept apart from lib/team.ts because node:crypto and Prisma cannot travel to
  * the browser, and that module's rules do.
  */
 
 import { createHash, randomBytes } from 'node:crypto';
 import prisma from './db';
-import { sendStaffInvitationEmail, type EmailOutcome } from './email';
+import { sendClientInvitationEmail, sendStaffInvitationEmail, type EmailOutcome } from './email';
 import { ROLE_LABELS, asEventRole, asTeamRole } from './permissions';
 import { SITE_URL } from './site-contact';
 import { INVITE_TTL_DAYS } from './team';
@@ -58,7 +63,9 @@ export async function findOpenInvitation(token: unknown) {
       role: true,
       staffId: true,
       organizerId: true,
+      clientId: true,
       inviteExpiresAt: true,
+      client: { select: { id: true, name: true, status: true } },
       staff: { select: { id: true, name: true, email: true, password: true, status: true } },
       organizer: { select: { name: true, status: true } },
       assignments: {
@@ -111,6 +118,7 @@ export async function sendInvitation({
       inviteExpiresAt: true,
       staff: { select: { name: true, email: true, password: true } },
       organizer: { select: { name: true } },
+      client: { select: { name: true } },
       assignments: {
         orderBy: { createdAt: 'asc' },
         select: { role: true, event: { select: { title: true } } },
@@ -129,6 +137,20 @@ export async function sendInvitation({
   // flow could not be tried end to end. Production never prints a token.
   if (process.env.NODE_ENV !== 'production') {
     console.info(`[team] Invitation link for ${membership.staff.email}: ${acceptUrl}`);
+  }
+
+  if (membership.role === 'VIEWER') {
+    if (!membership.client) {
+      return { sent: false, error: 'The client this invitation is for could not be found.' };
+    }
+    return sendClientInvitationEmail({
+      to: membership.staff.email,
+      inviteeName: membership.staff.name,
+      clientName: membership.client.name,
+      acceptUrl,
+      expiresAt: membership.inviteExpiresAt,
+      hasAccount: Boolean(membership.staff.password),
+    });
   }
 
   return sendStaffInvitationEmail({

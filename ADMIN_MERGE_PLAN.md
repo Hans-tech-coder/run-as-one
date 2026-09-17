@@ -1,6 +1,6 @@
 # One dashboard: merging Admin and Super Admin — work plan
 
-**Status:** Batches 1–2 landed · Batch 3 next · **Owner decisions captured:** 2026-09-17
+**Status:** Batches 1–3 landed · Batch 4 next · **Owner decisions captured:** 2026-09-17
 
 Run As One is no longer a self-serve platform for organizers. **Run As One staff
 create every event and validate every payment**, and runners' money goes to Run
@@ -22,7 +22,7 @@ to know where to pick up.
 | --- | --- | --- | --- |
 | 1 | Production audit (read-only), `Client` model, Viewer role, permissions | yes | Landed (dev) — prod migration at release |
 | 2 | One shell: `/superadmin` screens move into `/admin`, redirects, role-aware sidebar | none | Landed (dev) |
-| 3 | Applications become client submissions — no password, **Send invite** | maybe small | Not started |
+| 3 | Applications become client submissions — no password, **Send invite** | none | Landed (dev) |
 | 4 | The Viewer dashboard — events and registrant counts | none | Not started |
 | 5 | Link existing events to clients, retire the super admin, remove dead code, release | yes (cleanup) | Not started |
 | 6 | Remittance / settlement tracking (Run As One → organizer) | yes | Not started |
@@ -188,24 +188,24 @@ redirect, and nothing links to `/superadmin`.
 
 ## Batch 3 — Submissions and Send invite
 
-- [ ] `/admin/register`: remove **password and confirm password** only. Every
+- [x] `/admin/register`: remove **password and confirm password** only. Every
   other field and step stays. Update copy that promised an approval.
-- [ ] `api/auth/register` → creates a `Client` (`NEW`), no account, no session,
+- [x] `api/auth/register` → creates a `Client` (`NEW`), no account, no session,
   no email. Still refuses a duplicate email per field.
-- [ ] `/admin/clients` (staff): the submissions list — chips by status, row opens
+- [x] `/admin/clients` (staff): the submissions list — chips by status, row opens
   the application panel (reuse `ApplicationPanel`), cards below `lg`.
-- [ ] **Send invite** / **Resend invite** on a client: creates the Viewer
+- [x] **Send invite** / **Resend invite** on a client: creates the Viewer
   `StaffAccount` + membership with `clientId` through the team invite machinery
   (`readInvitee`, hashed token, `auth/invite/[token]`), writes the trail, reports
   `emailSent` like the team invite. Client → `INVITED`, then `ACTIVE` on accept.
-- [ ] Archive a submission (status only, never a delete).
-- [ ] Invite email copy for a client viewer (not the staff invite wording).
-- [ ] Event create/edit form: **Client** picker (`AdminSelect`), optional.
-- [ ] Remove approve / reject / suspend UI and `RejectDialog` from the screens.
+- [x] Archive a submission (status only, never a delete).
+- [x] Invite email copy for a client viewer (not the staff invite wording).
+- [x] Event create/edit form: **Client** picker (`AdminSelect`), optional.
+- [x] Remove approve / reject / suspend UI and `RejectDialog` from the screens.
   (Routes and columns are removed in Batch 5.)
-- [ ] Delete `SUPERADMIN_APPLICATIONS_PLAN.md` — its optional Batches 5–6
+- [x] Delete `SUPERADMIN_APPLICATIONS_PLAN.md` — its optional Batches 5–6
   extend a screen this batch replaces.
-- [ ] `PROJECT_GUIDE.md` §1, §6, §7, §10.
+- [x] `PROJECT_GUIDE.md` §1, §6, §7, §10.
 
 **Done when:** a new application appears in the list without a password, Send
 invite delivers a link, and accepting it signs the person in as a Viewer.
@@ -419,3 +419,66 @@ through `/api/auth/login` and were removed afterwards with their 2 audit rows.
   Communities and Feedback at 360, on Feedback at 767 and Organizers at 820. The
   rail holds the three extra rows at 360×780. No console errors.
 - `npx tsc --noEmit` is clean for `src` (only stale `.next` types failed).
+
+### Batch 3 — what landed
+
+**Calls made.**
+- **No migration.** `Client.invitedAt`, `StaffMembership.clientId` and the
+  `VIEWER` role from Batch 1 were enough; the trail rows use
+  `entityType: 'Client'`, which is text.
+- The application form keeps every field; only the two password boxes, their
+  rules and `MIN_ORGANIZER_PASSWORD` went. `auth/register` writes a `Client`
+  and refuses an address that already signs in **or** already applied.
+- `/admin/clients` replaces `/admin/organizers` (both old addresses redirect
+  there). With no chip pressed it lists **live** submissions; Archived is its
+  own chip. The panel is the old `ApplicationPanel`, moved to `clients/`, with
+  *The decision* replaced by **Sign-ins** (each viewer's `memberState` badge).
+- **Send invite opens a dialog** (Name, Email) prefilled with the application's
+  contact, rather than sending blind, so a second contact or a corrected
+  address needs no other screen. A press for a person whose invitation is
+  still waiting is the **resend** (new token). New audit verbs:
+  `client.invited`, `client.invitation.resent`, `client.invitation.accepted`,
+  `client.archived`, `client.restored`, on a new **Clients** Activity shelf.
+- **A restored client** lands on NEW while its old accepted sign-in still
+  exists. Inviting that same person makes the client ACTIVE again with no
+  email (`reactivated`) rather than a dead end.
+- Acceptance moves the client INVITED → ACTIVE **inside the claim's
+  transaction**, and rolls the claim back if the client moved meanwhile.
+- **Linking an event to a client needs `platform:manage`** (`client-store.ts`).
+  The picker hides itself for anyone else, and the routes ignore their
+  `clientId`.
+- Invite page title is now *Accept Your Invitation* for both kinds.
+
+**Deferred.** An archived viewer trying to sign in gets login's existing
+*"not part of an active organizer"* sentence; Batch 4 may want client wording.
+There is no way to revoke one viewer's sign-in short of archiving the client.
+The `admin/organizers` routes, the decision emails and the Organizer
+application columns stay for Batch 5.
+
+**Verified on localhost (2026-09-17)** against `local-dev` with throwaway
+`verify-b3-*` rows (an ADMIN staff account, one application, its viewer), all
+removed afterwards with their 17 audit rows. The invitation email went to
+Resend's test sink `delivered+verify-b3@resend.dev`, not a real inbox.
+- The form's step 2 has no password; submitting shows the new next steps and
+  creates a `NEW` client with no account. A second submission from the same
+  address in other casing is refused under the email field.
+- `/admin/organizers` and `/superadmin/organizers` answer 308 to
+  `/admin/clients`. The sidebar reads Clients.
+- Send invite: a bad address is refused under the box; a good one toasts,
+  the client goes INVITED and a VIEWER membership exists. The accept page reads
+  *Your sign-in for Verify B3 Runners*; accepting signs the viewer in and makes
+  the client ACTIVE; the same link then answers 410. The viewer gets 403 from
+  `/api/admin/clients` and event create, and the admin 404 on `/admin/clients`.
+- Refusals: already signing in for this client, a team member's address, the
+  owner organizer's address, blank name and bad email (both fields), a status
+  other than archive/restore, archiving twice, inviting an archived client.
+- Archive → the viewer's sign-in is refused → restore → inviting the same
+  person reactivates the client with no email, and the viewer signs in again.
+- The event edit form shows the Client picker (archived test clients hidden),
+  links BizRun V2.0 to the client and unlinks it again; both saves wrote
+  `event.updated` with `clientId`. BizRun has no client now, as before.
+- At 360×780 the Clients cards, the invite dialog (16px boxes) and the panel
+  sheet have no horizontal scroll.
+- `npx tsc --noEmit` is clean for `src`; eslint is clean on every new file
+  (the event routes keep their existing `any` errors).
+

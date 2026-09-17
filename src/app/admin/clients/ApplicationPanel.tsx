@@ -11,16 +11,19 @@ import {
 } from '@/lib/organizer-application';
 import { countryFor, parseE164 } from '@/lib/phone';
 import { formatEventDay } from '@/lib/event-schedule';
-import { organizerStatusLabel } from '@/lib/organizer-status';
+import { MEMBER_STATE_LABELS, MEMBER_STATE_TONES, memberState } from '@/lib/team';
 
 /**
- * Everything an applicant wrote, read in one place before an account is
- * approved.
+ * Everything a client submission said, read in one place before Run As One
+ * staff send an invite (ADMIN_MERGE_PLAN.md, Batch 3).
  *
- * Approving an organizer hands a stranger a public race page, runners' money
- * and every registrant's inbox, and until this panel existed that decision was
- * made from a name, an address and a date. The fifteen answers the form at
- * `/admin/register` collects were in the row and nowhere on screen.
+ * It was the organizer application panel, read before an approval. Nobody
+ * approves or rejects a submission any more, so *The decision* section went
+ * with the flow it described; what took its place is **Sign-ins** — who has
+ * been invited to sign in for this client and where each invitation stands
+ * (`memberState`, the team screen's own badge), because "did they ever set up
+ * their sign-in?" is the question staff open this panel to answer after an
+ * invite.
  *
  * It is grouped the way the form asked — the organization, the person, what
  * they are planning — so staff read it in the order the applicant
@@ -28,34 +31,36 @@ import { organizerStatusLabel } from '@/lib/organizer-status';
  * stored code: a person reads "Running Club or Community", not `RUNNING_CLUB`,
  * and a value written before an option was renamed still reads as itself.
  *
- * The contact details are links, because the reason to open an application is
+ * The contact details are links, because the reason to open a submission is
  * usually to get hold of the human behind it: the phone dials, the address
  * opens a mail, the website opens in a new tab.
  *
- * **A decided account explains itself.** Once staff have approved,
- * rejected or suspended it, the panel opens on *The decision* — the status, when
- * it moved (`statusChangedAt`), and for a rejection the reason it was given
- * (`statusNote`). A row decided before those columns existed has neither, and
- * shows only its badge rather than an empty section.
- *
- * A panel over the list rather than a route of its own: the decision needs the
+ * A panel over the list rather than a route of its own: the invite needs the
  * list behind it, and a second page is a second thing to keep responsive.
  * Below `sm` it is a full-height sheet (`.admin-modal-sheet`), the registrant
  * detail modal's frame, because it is a thing a person reads rather than
- * answers. Escape and the backdrop close it, Tab stays inside it, and focus
- * goes back to whatever opened it.
+ * answers. Escape and the backdrop close it, Tab stays inside it (yielding to
+ * a dialog raised above it), and focus goes back to whatever opened it.
  */
 
-export interface OrganizerApplicationRow {
+/** One person invited to sign in for a client — a VIEWER membership. */
+export interface ClientViewerRow {
+  id: string;
+  invitedAt: string;
+  acceptedAt: string | null;
+  suspendedAt: string | null;
+  inviteExpiresAt: string | null;
+  staff: { name: string; email: string; status: string };
+}
+
+export interface ClientApplicationRow {
   id: string;
   name: string;
   email: string;
   status: string;
-  /** The reason a rejection was given. Cleared by any later decision. */
-  statusNote: string | null;
-  /** When staff last moved `status`; null before anyone has. */
-  statusChangedAt: string | null;
   createdAt: string;
+  /** When the latest invitation went out; null until Send invite is pressed. */
+  invitedAt: string | null;
   orgType: string | null;
   contactFirstName: string | null;
   contactLastName: string | null;
@@ -71,6 +76,7 @@ export interface OrganizerApplicationRow {
   firstEventLocation: string | null;
   expectedRunners: string | null;
   applicationNote: string | null;
+  viewers: ClientViewerRow[];
 }
 
 /** The close animation's length — the t-modal exit the other admin modals use. */
@@ -90,9 +96,9 @@ export function appliedOn(iso: string): string {
   });
 }
 
-/** "Sep 16, 2026, 3:04 PM", in Manila — a decision is worth the time of day,
- *  because two made the same afternoon are otherwise indistinguishable. */
-function decidedOn(iso: string): string {
+/** "Sep 16, 2026, 3:04 PM", in Manila — an invitation is worth the time of
+ *  day, because a resend the same afternoon is otherwise indistinguishable. */
+function invitedOn(iso: string): string {
   return new Date(iso).toLocaleString('en-PH', {
     timeZone: 'Asia/Manila',
     month: 'short',
@@ -118,15 +124,15 @@ function safeWebsite(value: string): string | null {
 }
 
 export default function ApplicationPanel({
-  organizer,
+  client,
   statusBadge,
   actions,
   onClose,
 }: {
-  /** The account being read. The panel is mounted only while there is one. */
-  organizer: OrganizerApplicationRow;
+  /** The submission being read. The panel is mounted only while there is one. */
+  client: ClientApplicationRow;
   statusBadge: React.ReactNode;
-  /** The decision controls, so the panel and the row cannot offer different ones. */
+  /** Send invite and archive, so the panel and the row cannot offer different ones. */
   actions: React.ReactNode;
   onClose: () => void;
 }) {
@@ -186,15 +192,12 @@ export default function ApplicationPanel({
     return () => document.removeEventListener('keydown', onKey);
   });
 
-  const hasDetails = hasApplicationDetails(organizer);
-  const contactName = [organizer.contactFirstName, organizer.contactLastName]
+  const hasDetails = hasApplicationDetails(client);
+  const contactName = [client.contactFirstName, client.contactLastName]
     .filter(Boolean)
     .join(' ');
-  const basedIn = [organizer.city, organizer.province].filter(Boolean).join(', ');
-  const website = organizer.website ? safeWebsite(organizer.website) : null;
-  const decided =
-    organizer.status !== 'PENDING' &&
-    (organizer.statusChangedAt !== null || organizer.statusNote !== null);
+  const basedIn = [client.city, client.province].filter(Boolean).join(', ');
+  const website = client.website ? safeWebsite(client.website) : null;
 
   return (
     <div
@@ -209,7 +212,7 @@ export default function ApplicationPanel({
         ref={panelRef}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="organizer-application-title"
+        aria-labelledby="client-application-title"
         className={`t-modal admin-modal-panel admin-modal-sheet w-full max-w-2xl bg-[#111] border border-white/10 rounded-2xl shadow-2xl flex flex-col max-h-[90vh] ${
           open ? 'is-open' : ''
         } ${closing ? 'is-closing' : ''}`}
@@ -221,14 +224,17 @@ export default function ApplicationPanel({
             </span>
             <div className="min-w-0">
               <h3
-                id="organizer-application-title"
+                id="client-application-title"
                 className="text-xl font-semibold text-white m-0 [overflow-wrap:anywhere]"
               >
-                {organizer.name}
+                {client.name}
               </h3>
               <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-gray-400">
                 {statusBadge}
-                <span>Applied {appliedOn(organizer.createdAt)}</span>
+                <span>Applied {appliedOn(client.createdAt)}</span>
+                {client.invitedAt && (
+                  <span>Invited {appliedOn(client.invitedAt)}</span>
+                )}
               </div>
             </div>
           </div>
@@ -246,24 +252,34 @@ export default function ApplicationPanel({
         </div>
 
         <div className="admin-modal-body p-6 max-sm:p-4 overflow-y-auto flex flex-col gap-6">
-          {decided && (
-            <Section title="The decision">
-              <Detail label="Status" value={organizerStatusLabel(organizer.status)} />
-              <Detail
-                label="Decided"
-                value={organizer.statusChangedAt && decidedOn(organizer.statusChangedAt)}
-              />
-              {organizer.statusNote && (
-                <Detail
-                  label="Reason"
-                  full
-                  value={
-                    <span className="whitespace-pre-wrap [overflow-wrap:anywhere]">
-                      {organizer.statusNote}
+          {/* Only once somebody has been invited: before that the footer's
+              Send invite says everything an empty section would. */}
+          {client.viewers.length > 0 && (
+            <Section title="Sign-ins" list>
+              {client.viewers.map(viewer => {
+                const state = memberState({
+                  acceptedAt: viewer.acceptedAt,
+                  suspendedAt: viewer.suspendedAt,
+                  inviteExpiresAt: viewer.inviteExpiresAt,
+                  accountStatus: viewer.staff.status,
+                });
+                return (
+                  <li
+                    key={viewer.id}
+                    className="min-w-0 sm:col-span-2 flex flex-wrap items-start justify-between gap-x-4 gap-y-1"
+                  >
+                    <div className="min-w-0">
+                      <div className="text-sm text-white/90 [overflow-wrap:anywhere]">{viewer.staff.name}</div>
+                      <div className="text-xs text-secondary [overflow-wrap:anywhere]">
+                        {viewer.staff.email} · Invited {invitedOn(viewer.invitedAt)}
+                      </div>
+                    </div>
+                    <span className={`status-badge ${MEMBER_STATE_TONES[state]} shrink-0`}>
+                      {MEMBER_STATE_LABELS[state]}
                     </span>
-                  }
-                />
-              )}
+                  </li>
+                );
+              })}
             </Section>
           )}
 
@@ -271,14 +287,15 @@ export default function ApplicationPanel({
             // One honest sentence instead of fifteen blanks: these accounts
             // were never asked any of it.
             <p className="text-sm text-amber-300/90 bg-amber-400/10 border border-amber-400/20 rounded-lg px-4 py-3 m-0">
-              This account was created before the application form existed, so there are no
-              application details to show. The sign-in address below is all it was asked for.
+              This submission came from an account created before the application form existed,
+              so there are no application details to show. The address below is all it was asked
+              for.
             </p>
           )}
 
           {hasDetails && (
             <Section title="The organization">
-              <Detail label="Organizer type" value={organizerTypeLabel(organizer.orgType)} />
+              <Detail label="Organizer type" value={organizerTypeLabel(client.orgType)} />
               <Detail label="Based in" value={basedIn} />
               <Detail
                 label="Website or page"
@@ -295,20 +312,20 @@ export default function ApplicationPanel({
                       <span className="sr-only">(opens in a new tab)</span>
                     </a>
                   ) : (
-                    organizer.website
+                    client.website
                   )
                 }
               />
               <Detail
                 label="Events organized before"
-                value={organizerExperienceLabel(organizer.experience)}
+                value={organizerExperienceLabel(client.experience)}
               />
             </Section>
           )}
 
-          <Section title={hasDetails ? 'The person' : 'The account'}>
+          <Section title={hasDetails ? 'The person' : 'The contact'}>
             {hasDetails && <Detail label="Name" value={contactName} />}
-            {hasDetails && <Detail label="Role" value={organizer.contactRole} />}
+            {hasDetails && <Detail label="Role" value={client.contactRole} />}
             <Detail
               label="Email"
               // The whole width when it is the only answer, so a long address
@@ -316,11 +333,11 @@ export default function ApplicationPanel({
               full={!hasDetails}
               value={
                 <a
-                  href={`mailto:${organizer.email}`}
+                  href={`mailto:${client.email}`}
                   className="inline-flex items-start gap-1.5 text-accent-blue hover:underline [overflow-wrap:anywhere] min-w-0"
                 >
                   <Mail size={14} className="shrink-0 mt-0.5" aria-hidden="true" />
-                  {organizer.email}
+                  {client.email}
                 </a>
               }
             />
@@ -328,13 +345,13 @@ export default function ApplicationPanel({
               <Detail
                 label="Mobile number"
                 value={
-                  organizer.phone && (
+                  client.phone && (
                     <a
-                      href={`tel:${organizer.phone}`}
+                      href={`tel:${client.phone}`}
                       className="inline-flex items-start gap-1.5 text-accent-blue hover:underline"
                     >
                       <Phone size={14} className="shrink-0 mt-0.5" aria-hidden="true" />
-                      {displayPhone(organizer.phone)}
+                      {displayPhone(client.phone)}
                     </a>
                   )
                 }
@@ -348,9 +365,9 @@ export default function ApplicationPanel({
                 label="Needs Run As One for"
                 full
                 value={
-                  organizer.services.length > 0 && (
+                  client.services.length > 0 && (
                     <ul className="m-0 p-0 list-none flex flex-wrap gap-2">
-                      {organizer.services.map(service => (
+                      {client.services.map(service => (
                         <li
                           key={service}
                           className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/90"
@@ -362,23 +379,23 @@ export default function ApplicationPanel({
                   )
                 }
               />
-              <Detail label="First event" value={organizer.firstEventName} />
+              <Detail label="First event" value={client.firstEventName} />
               <Detail
                 label="Date"
-                value={organizer.firstEventDate && formatEventDay(organizer.firstEventDate)}
+                value={client.firstEventDate && formatEventDay(client.firstEventDate)}
               />
-              <Detail label="Location" value={organizer.firstEventLocation} />
+              <Detail label="Location" value={client.firstEventLocation} />
               <Detail
                 label="Expected runners"
-                value={expectedParticipantsLabel(organizer.expectedRunners)}
+                value={expectedParticipantsLabel(client.expectedRunners)}
               />
               <Detail
                 label="Anything else they told us"
                 full
                 value={
-                  organizer.applicationNote && (
+                  client.applicationNote && (
                     <span className="whitespace-pre-wrap [overflow-wrap:anywhere]">
-                      {organizer.applicationNote}
+                      {client.applicationNote}
                     </span>
                   )
                 }
@@ -402,15 +419,28 @@ export default function ApplicationPanel({
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+/** One group of answers. `list` draws a `<ul>` rather than a `<dl>`, for the
+ *  Sign-ins, which are people rather than question-and-answer pairs. */
+function Section({
+  title,
+  list = false,
+  children,
+}: {
+  title: string;
+  list?: boolean;
+  children: React.ReactNode;
+}) {
+  const frame = 'm-0 grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 rounded-[12px] border border-white/10 bg-black/30 p-4';
   return (
     <section className="min-w-0">
       <h4 className="m-0 mb-3 text-xs font-bold uppercase tracking-wider text-secondary">
         {title}
       </h4>
-      <dl className="m-0 grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 rounded-[12px] border border-white/10 bg-black/30 p-4">
-        {children}
-      </dl>
+      {list ? (
+        <ul className={`${frame} list-none`}>{children}</ul>
+      ) : (
+        <dl className={frame}>{children}</dl>
+      )}
     </section>
   );
 }

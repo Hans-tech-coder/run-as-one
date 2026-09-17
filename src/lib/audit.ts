@@ -55,6 +55,13 @@ export const AUDIT_ACTIONS = [
   'organizer.rejected',
   'organizer.suspended',
   'organizer.reinstated',
+  // A client submission (ADMIN_MERGE_PLAN.md, Batch 3): invited to sign in as
+  // a viewer, the invitation accepted, archived out of the queue, brought back.
+  'client.invited',
+  'client.invitation.resent',
+  'client.invitation.accepted',
+  'client.archived',
+  'client.restored',
   'event.created',
   'event.updated',
   'event.registration.paused',
@@ -85,6 +92,7 @@ export type AuditEntityType =
   | 'PromoCode'
   | 'RaceResult'
   | 'Organizer'
+  | 'Client'
   | 'StaffAccount'
   | 'StaffMembership';
 

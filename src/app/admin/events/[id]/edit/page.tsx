@@ -30,6 +30,7 @@ import { offersBankTransfer } from '@/lib/registration-form';
 import AdminRouteLoading from '@/app/admin/AdminRouteLoading';
 import { EVENT_FORM_SHAPE } from '@/app/admin/route-loading-shape';
 import BusyLabel from '@/components/ui/BusyLabel';
+import EventClientField from '@/app/admin/events/EventClientField';
 
 // The premade templates that used to sit under /public/certificates are gone —
 // the only way to get a certificate background now is to upload one. An event
@@ -103,6 +104,11 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
   // and a latched flag would clear on the first one to finish.
   const [uploadingPosters, setUploadingPosters] = useState(0);
   const [bankAccounts, setBankAccounts] = useState<BankAccountDraft[]>([]);
+  // Which client the race is for ('' for none), and whether this person may
+  // set it at all — only then is it sent (EventClientField).
+  const [clientId, setClientId] = useState('');
+  const [canLinkClient, setCanLinkClient] = useState(false);
+  const [clientError, setClientError] = useState<string | undefined>();
   // Read-only, and not part of formData for that reason: promotions belong to
   // the marketing screen and nothing here posts them back.
   const [promotions, setPromotions] = useState<EventPromotion[]>([]);
@@ -155,6 +161,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
         );
 
         setEventType(asEventType(data.eventType));
+        setClientId(data.clientId ?? '');
         setRegistrationCount(data._count?.registrations ?? 0);
         setPromotions(data.promotions ?? []);
 
@@ -245,12 +252,15 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
           registrationOpensAt: openingInstantISO(opening),
           categories,
           bankAccounts: cleanBankAccounts(bankAccounts),
+          ...(canLinkClient ? { clientId } : {}),
         }),
       });
 
       if (!res.ok) {
         const data = await res.json();
-        setError(data.error || 'Failed to update event');
+        // A refusal about the client lands under the picker, not in the modal.
+        if (data.errors?.clientId) setClientError(data.errors.clientId);
+        else setError(data.error || 'Failed to update event');
         setIsLoading(false);
         return;
       }
@@ -383,6 +393,15 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
             </div>
             <div className="admin-panel-content">
               <div className="form-grid">
+              <EventClientField
+                value={clientId}
+                onChange={next => {
+                  setClientId(next);
+                  setClientError(undefined);
+                }}
+                onAvailable={setCanLinkClient}
+                error={clientError}
+              />
               <div className="form-group form-group-full">
                 <label className="form-label">Event Title</label>
                 <input 

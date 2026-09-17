@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import { can, getActor, type Actor } from '@/lib/actor';
 
 /**
- * The door to Run As One's own screens that belong to no race — organizer
- * applications, the club list and the feedback inbox (`platform:manage`).
+ * The door to Run As One's own screens that belong to no race — client
+ * submissions, the club list and the feedback inbox (`platform:manage`).
  *
  * These routes were `/api/superadmin/**` and each compared the cookie's role
  * to `SUPER_ADMIN` itself. With one dashboard (ADMIN_MERGE_PLAN.md, Batch 2)

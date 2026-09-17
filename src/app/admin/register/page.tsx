@@ -26,7 +26,6 @@ import {
   EXPECTED_PARTICIPANTS,
   EXPECTED_PARTICIPANTS_LABEL,
   MAX_APPLICATION_NOTE,
-  MIN_ORGANIZER_PASSWORD,
   ORGANIZER_EXPERIENCE,
   ORGANIZER_EXPERIENCE_LABEL,
   ORGANIZER_SERVICES,
@@ -44,19 +43,21 @@ import './../Auth.css';
 /**
  * The organizer application.
  *
- * What this page used to be was a sign-up box: a name, an address, a password,
- * and a super admin left to decide from those three strings whether to hand a
- * stranger the ability to publish a public race and take runners' money. The
- * questions below exist because each of them changes that decision — who the
- * human is and what they do there, whether the organization can be found
- * anywhere outside this form, what they have run before, and what they are
- * about to run.
+ * It used to be a sign-up box — a name, an address, a password — and then an
+ * application a super admin approved or rejected. Since ADMIN_MERGE_PLAN.md
+ * Batch 3 it is neither: **Run As One runs the races**, so what arrives here is
+ * a `Client` submission with no password and no account. It waits on
+ * `/admin/clients` until staff press Send invite, and the invitation is where
+ * the applicant chooses a password. The questions below stay because they are
+ * what Run As One needs before taking on a race — who the human is, whether
+ * the organization can be found anywhere outside this form, what they have run
+ * before, and what they are about to run.
  *
  * Three decisions worth keeping:
  *
  * **It is three steps, not one long page.** The same eighteen fields in one
  * column read as a wall and get abandoned; grouped as "your organization",
- * "you and your account" and "what you are planning" they read as three short
+ * "you and how to reach you" and "what you are planning" they read as three short
  * questions, and the rail at the top says how much is left. The steps are
  * groups of related answers rather than a funnel — nothing is saved until the
  * last one, which is why the rail's dots are not buttons and Back is.
@@ -88,9 +89,9 @@ const STEPS = [
   },
   {
     rail: 'Contact',
-    title: 'You and your account',
+    title: 'You and how to reach you',
     blurb:
-      'Who we talk to, and the email and password you will sign in with once the account is approved.',
+      'Who we talk to, and where. There is no password to choose yet — we set up your sign-in later, by email.',
   },
   {
     rail: 'Your events',
@@ -109,8 +110,6 @@ const STEP_FIELDS: readonly (readonly ApplicationField[])[] = [
     'contactRole',
     'email',
     'phone',
-    'password',
-    'confirmPassword',
   ],
   [
     'services',
@@ -137,8 +136,6 @@ const FIELD_ID: Record<ApplicationField, string> = {
   contactRole: 'apply-role',
   email: 'apply-email',
   phone: 'apply-phone',
-  password: 'apply-password',
-  confirmPassword: 'apply-confirm-password',
   services: 'apply-services',
   firstEventName: 'apply-event-name',
   firstEventDate: 'apply-event-date',
@@ -163,8 +160,6 @@ interface FormState {
   email: string;
   /** E.164, as PhoneField hands it over — the country is part of the value. */
   phone: string;
-  password: string;
-  confirmPassword: string;
   services: string[];
   firstEventName: string;
   firstEventDate: string;
@@ -186,8 +181,6 @@ const EMPTY: FormState = {
   contactRole: '',
   email: '',
   phone: '',
-  password: '',
-  confirmPassword: '',
   services: [],
   firstEventName: '',
   firstEventDate: '',
@@ -249,8 +242,8 @@ export default function AdminRegister() {
 
   /**
    * Ticking a box, with one rule: "Not sure yet" and a named service line
-   * cannot both be true. Choosing either clears the other, so the answer the
-   * super admin reads is never two opposite things at once.
+   * cannot both be true. Choosing either clears the other, so the answer
+   * staff read is never two opposite things at once.
    */
   const toggleService = (service: string) => {
     if (form.services.includes(service)) {
@@ -459,22 +452,23 @@ export default function AdminRegister() {
                   <span className="apply-next__num" aria-hidden="true">2</span>
                   <span>
                     <strong>We may call or email you</strong> on the number and address
-                    you gave, to agree on your per-runner platform fee and the payout
-                    account your registrations settle into.
+                    you gave, to agree on the event, the fees and how registrations are
+                    settled with you.
                   </span>
                 </li>
                 <li>
                   <span className="apply-next__num" aria-hidden="true">3</span>
                   <span>
-                    <strong>Your account opens.</strong> Once approved, sign in with the
-                    email and password you just chose and publish your first race.
+                    <strong>You get your sign-in.</strong> When we are ready to run your
+                    race, we email a link to set a password. Your dashboard then shows
+                    each of your events and how many runners have registered.
                   </span>
                 </li>
               </ol>
 
               <div className="apply-nav apply-nav--end">
-                <Link href="/admin/login" className="btn-gradient text-white">
-                  Go to Sign In
+                <Link href="/" className="btn-gradient text-white">
+                  Back to Run As One
                 </Link>
               </div>
 
@@ -735,8 +729,8 @@ export default function AdminRegister() {
                         aria-describedby={`${FIELD_ID.email}-error ${FIELD_ID.email}-hint`}
                       />
                       <p id={`${FIELD_ID.email}-hint`} className="form-hint">
-                        You will sign in with this, and every reply about your
-                        application goes here.
+                        Every reply about your application goes here, and so
+                        will the link to set up your sign-in.
                       </p>
                       <FieldError id={`${FIELD_ID.email}-error`} message={errors.email} />
                     </div>
@@ -751,52 +745,6 @@ export default function AdminRegister() {
                       error={errors.phone}
                     />
 
-                    <div className="apply-row apply-row--two">
-                      <div className="form-group">
-                        <label className="form-label" htmlFor={FIELD_ID.password}>
-                          Password
-                        </label>
-                        <input
-                          id={FIELD_ID.password}
-                          type="password"
-                          autoComplete="new-password"
-                          value={form.password}
-                          onChange={(e) => set('password', e.target.value)}
-                          className="form-input"
-                          placeholder="••••••••"
-                          aria-invalid={Boolean(errors.password)}
-                          aria-describedby={`${FIELD_ID.password}-error ${FIELD_ID.password}-hint`}
-                        />
-                        <p id={`${FIELD_ID.password}-hint`} className="form-hint">
-                          At least {MIN_ORGANIZER_PASSWORD} characters.
-                        </p>
-                        <FieldError
-                          id={`${FIELD_ID.password}-error`}
-                          message={errors.password}
-                        />
-                      </div>
-
-                      <div className="form-group">
-                        <label className="form-label" htmlFor={FIELD_ID.confirmPassword}>
-                          Confirm Password
-                        </label>
-                        <input
-                          id={FIELD_ID.confirmPassword}
-                          type="password"
-                          autoComplete="new-password"
-                          value={form.confirmPassword}
-                          onChange={(e) => set('confirmPassword', e.target.value)}
-                          className="form-input"
-                          placeholder="••••••••"
-                          aria-invalid={Boolean(errors.confirmPassword)}
-                          aria-describedby={`${FIELD_ID.confirmPassword}-error`}
-                        />
-                        <FieldError
-                          id={`${FIELD_ID.confirmPassword}-error`}
-                          message={errors.confirmPassword}
-                        />
-                      </div>
-                    </div>
                   </>
                 )}
 

@@ -3,6 +3,7 @@ import prisma from '@/lib/db';
 import { createToken, hashPassword, setAuthCookie, verifyPassword } from '@/lib/auth';
 import { staffSessionClaims } from '@/lib/actor';
 import { organizerCanSignIn } from '@/lib/organizer-status';
+import { clientStatusAfter } from '@/lib/client';
 import { recordAudit, type AuditActor } from '@/lib/audit';
 import { MAX_NAME_LENGTH, newPasswordErrors, type FieldErrors } from '@/lib/team';
 import { findOpenInvitation, hashInviteToken } from '@/lib/team-invite';
@@ -23,9 +24,19 @@ import { findOpenInvitation, hashInviteToken } from '@/lib/team-invite';
  *   should not be a way into another person's login.
  *
  * Either way they are signed straight in to the organizer that invited them.
+ *
+ * **A client viewer accepts here too** (ADMIN_MERGE_PLAN.md, Batch 3). Its
+ * membership carries `clientId`, and the claim that accepts it also moves the
+ * client from INVITED to ACTIVE in the same transaction — `getActor()` lets a
+ * viewer in only on an ACTIVE client, so a viewer signed in on a client still
+ * marked INVITED would be signed straight back out. An archived client's
+ * invitation is refused, like a suspended organizer's.
  * The membership is **claimed** with a conditional update before anything
  * else is written, so a link pressed twice cannot accept twice.
  */
+
+/** Thrown inside the accept transaction when the client moved under it. */
+class ClientMovedError extends Error {}
 
 const GONE =
   'This invitation link has expired or has already been used. Ask the person who invited you to send a new one.';
@@ -42,6 +53,24 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
       return NextResponse.json(
         {
           error: `${invitation.organizer.name} is not active right now, so its invitations cannot be accepted. Please contact them.`,
+        },
+        { status: 403 },
+      );
+    }
+    const viewer = invitation.role === 'VIEWER';
+    // Accepted from INVITED, or from ACTIVE when a second contact joins a
+    // client whose first is already in (lib/client.ts). Anything else — an
+    // archived client, a missing one — is not a client that can be signed in to.
+    const clientReady =
+      !viewer ||
+      (invitation.client !== null &&
+        (invitation.client.status === 'ACTIVE' ||
+          clientStatusAfter(invitation.client.status, 'accept') !== null));
+    if (!clientReady) {
+      return NextResponse.json(
+        {
+          error:
+            'This invitation is no longer active. Reply to the invitation email and Run As One will send a new one.',
         },
         { status: 403 },
       );
@@ -94,7 +123,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
       const errors: FieldErrors = newPasswordErrors(body.password, body.confirmPassword);
       const typedName = typeof body.name === 'string' ? body.name.trim() : '';
       if (!typedName) {
-        errors.name = 'Enter your name as your team should see it';
+        errors.name = viewer ? 'Enter your name' : 'Enter your name as your team should see it';
       } else if (typedName.length > MAX_NAME_LENGTH) {
         errors.name = `Keep your name to ${MAX_NAME_LENGTH} characters or fewer`;
       }
@@ -119,6 +148,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
       });
       if (claim.count === 0) return false;
 
+      if (viewer && invitation.client && invitation.client.status !== 'ACTIVE') {
+        const moved = await tx.client.updateMany({
+          where: { id: invitation.client.id, status: invitation.client.status },
+          data: { status: 'ACTIVE' },
+        });
+        // Archived between the page loading and the press: undo the claim too.
+        if (moved.count === 0) throw new ClientMovedError();
+      }
+
       await tx.staffAccount.update({
         where: { id: invitation.staff.id },
         data: {
@@ -130,15 +168,30 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
 
       const person: AuditActor = { ...who, name };
       await recordAudit(tx, person, [
-        {
-          action: 'staff.invitation.accepted',
-          entityType: 'StaffMembership',
-          entityId: invitation.id,
-          summary: `${name} accepted the invitation and joined the team.`,
-          ...(name !== invitation.staff.name
-            ? { changes: { name: [invitation.staff.name, name] } }
-            : {}),
-        },
+        viewer && invitation.client
+          ? {
+              action: 'client.invitation.accepted',
+              entityType: 'Client',
+              entityId: invitation.client.id,
+              summary: `${name} accepted the invitation to sign in for ${invitation.client.name}.`,
+              changes: {
+                ...(invitation.client.status !== 'ACTIVE'
+                  ? { status: [invitation.client.status, 'ACTIVE'] as [string, string] }
+                  : {}),
+                ...(name !== invitation.staff.name
+                  ? { name: [invitation.staff.name, name] as [string, string] }
+                  : {}),
+              },
+            }
+          : {
+              action: 'staff.invitation.accepted',
+              entityType: 'StaffMembership',
+              entityId: invitation.id,
+              summary: `${name} accepted the invitation and joined the team.`,
+              ...(name !== invitation.staff.name
+                ? { changes: { name: [invitation.staff.name, name] } }
+                : {}),
+            },
         {
           action: 'auth.signed_in',
           entityType: 'StaffAccount',
@@ -163,6 +216,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    if (error instanceof ClientMovedError) {
+      return NextResponse.json(
+        {
+          error:
+            'This invitation is no longer active. Reply to the invitation email and Run As One will send a new one.',
+        },
+        { status: 403 },
+      );
+    }
     console.error('Invitation accept error:', error);
     return NextResponse.json(
       { error: 'Something went wrong while accepting the invitation.' },

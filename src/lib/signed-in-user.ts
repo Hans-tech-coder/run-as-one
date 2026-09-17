@@ -33,7 +33,7 @@ export type SignedInUser = {
   organizerName: string;
   /**
    * The sidebar items this person has a reason to open. `platform` is Run As
-   * One's own screens — organizer applications, clubs and feedback — which were
+   * One's own screens — client submissions, clubs and feedback — which were
    * the super admin's sidebar until the dashboards merged.
    */
   nav: { marketing: boolean; team: boolean; activity: boolean; platform: boolean };

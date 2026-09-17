@@ -71,7 +71,7 @@ export default function AdminShell({
       : []),
     ...(user?.nav.platform
       ? [
-          { name: 'Organizers', path: '/admin/organizers', icon: <Building2 size={20} /> },
+          { name: 'Clients', path: '/admin/clients', icon: <Building2 size={20} /> },
           { name: 'Communities', path: '/admin/communities', icon: <Flag size={20} /> },
           { name: 'Feedback', path: '/admin/feedback', icon: <MessageSquare size={20} /> },
         ]
