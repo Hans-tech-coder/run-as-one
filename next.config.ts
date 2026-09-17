@@ -2,6 +2,16 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /**
+   * `forbidden()` and its `forbidden.tsx` boundary (ADMIN_MERGE_PLAN.md,
+   * Batch 4): a client viewer who opens one of the team's dashboard screens
+   * by URL gets a designed not-allowed page inside the sidebar, with a real
+   * 403, rather than a 404 that would read as a broken link. See
+   * requireTeamActor in src/lib/actor.ts and src/app/admin/forbidden.tsx.
+   */
+  experimental: {
+    authInterrupts: true,
+  },
+  /**
    * Results used to live under the event — /events/[slug]/results — and now
    * live in their own section, /results/[slug]. Those old URLs are out in the
    * world already: pasted into Facebook posts, sent to runners in messages,

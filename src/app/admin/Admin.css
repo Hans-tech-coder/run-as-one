@@ -2748,3 +2748,226 @@ textarea.form-input {
 @media (prefers-reduced-motion: reduce) {
   .t-dropdown { transition: none !important; }
 }
+
+/* ── A client viewer's events (ADMIN_MERGE_PLAN.md, Batch 4) ──────────────
+   ViewerDashboard.tsx. One card per race on the admin panel's own ground and
+   border, so a viewer's page is plainly the same dashboard as the team's. The
+   grid is one column on a phone and as many ~340px columns as fit after that;
+   the min(100%, …) keeps a 360px phone from being handed a column wider than
+   itself, as .metrics-grid does. Paid and pending wear the status badges'
+   green and amber, so the colours mean here what they mean everywhere else. */
+.viewer-event-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+  gap: 24px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.viewer-event-grid > li {
+  min-width: 0;
+}
+
+.viewer-event-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+}
+
+/* A fixed ratio rather than the poster's own, so a portrait poster and a
+   landscape one leave every card's counts on the same line of the grid. */
+.viewer-event-poster {
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  overflow: hidden;
+  background: #0f0f14;
+}
+
+.viewer-event-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  padding: var(--space-lg);
+  min-width: 0;
+}
+
+.viewer-event-title {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.viewer-event-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.viewer-event-meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.viewer-event-meta svg {
+  flex-shrink: 0;
+}
+
+.viewer-event-total {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin-top: 4px;
+}
+
+.viewer-event-count {
+  font-family: var(--font-sans);
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.viewer-event-count-label {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.viewer-split-bar {
+  display: flex;
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.viewer-split-bar > .is-paid {
+  background: #52c41a;
+}
+
+.viewer-split-bar > .is-pending {
+  background: #faad14;
+}
+
+.viewer-split-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The dot repeats the bar's colour beside the word, so the legend reads as a
+   key to the bar; the word is what carries the meaning. */
+.viewer-split-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.viewer-split-legend > span::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+}
+
+.viewer-split-legend > .is-paid { color: #52c41a; }
+.viewer-split-legend > .is-paid::before { background: #52c41a; }
+.viewer-split-legend > .is-pending { color: #faad14; }
+.viewer-split-legend > .is-pending::before { background: #faad14; }
+
+.viewer-categories {
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.viewer-categories-title {
+  margin: 0 0 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.viewer-categories > ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Name on the left, the count on the right; on a narrow card the counts drop
+   under the name rather than squeezing it to a few letters. */
+.viewer-category {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.viewer-category:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.viewer-category-name {
+  min-width: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.viewer-category-counts {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.viewer-category-total {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.viewer-category-split {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+@media (width < 40rem) {
+  .viewer-event-grid {
+    gap: 16px;
+  }
+
+  .viewer-event-body {
+    padding: var(--space-md);
+  }
+}

@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { MailQuestion, UserX, Users } from 'lucide-react';
 import prisma from '@/lib/db';
-import { can, canManageMember, grantableRoles, requireActor } from '@/lib/actor';
+import { can, canManageMember, grantableRoles, requireTeamActor } from '@/lib/actor';
 import { TEAM_ROLES, asEventRole, asTeamRole } from '@/lib/permissions';
 import { memberState } from '@/lib/team';
 import { soonestFirst } from '@/lib/event-schedule';
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
  * routes enforce, so the menu is only offered where the route would agree.
  */
 export default async function TeamPage() {
-  const actor = await requireActor();
+  const actor = await requireTeamActor();
 
   if (!can(actor, 'team:manage', { organizerId: actor.orgId })) {
     notFound();

@@ -130,6 +130,8 @@ function ShapeSkeleton({ shape }: { shape: RouteShape }) {
         </div>
       )}
 
+      {shape.eventCards ? <EventCardsSkeleton count={shape.eventCards} /> : null}
+
       {shape.panels ? (
         // Under metric tiles a panel keeps the page's own 32px above it (a
         // page's own `mt-8` under its tiles), collapsing with the grid's margin.
@@ -204,6 +206,40 @@ function FormPanel({ panel }: { panel: FormPanelShape }) {
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * A client viewer's event cards (`ViewerDashboard`), in the real grid and card
+ * frame so the columns and gaps are the page's own: the 16:9 poster, the badge,
+ * a title, the date line, the count, the split bar and its legend, then two
+ * category rows. The grid decides the columns at every width, so this is drawn
+ * once for both layouts.
+ */
+function EventCardsSkeleton({ count }: { count: number }) {
+  return (
+    <ul className="viewer-event-grid">
+      {Array.from({ length: count }, (_, card) => (
+        <li key={card}>
+          <div className="viewer-event-card">
+            <div className="t-skel-skeleton is-pulsing">
+              <div className="t-skel-bar viewer-event-poster" style={{ borderRadius: 0 }} />
+            </div>
+            <div className="viewer-event-body">
+              <div className="t-skel-skeleton is-pulsing flex flex-col gap-3">
+                <div className="t-skel-bar" style={{ width: "5rem", height: "24px", borderRadius: "999px" }} />
+                <div className="t-skel-bar" style={{ width: "75%", height: "20px", margin: "2px 0" }} />
+                <div className="t-skel-bar" style={{ width: "55%", height: "16px", margin: "2px 0" }} />
+                <div className="t-skel-bar" style={{ width: "40%", height: "32px", marginTop: "6px" }} />
+                <div className="t-skel-bar" style={{ width: "100%", height: "8px" }} />
+                <div className="t-skel-bar" style={{ width: "45%", height: "16px", margin: "2px 0" }} />
+                <div className="t-skel-bar" style={{ width: "100%", height: "96px", marginTop: "8px" }} />
+              </div>
+            </div>
+          </div>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -282,6 +318,8 @@ function DesktopSkeleton({ shape }: { shape: RouteShape }) {
           <TableSkeleton {...table} />
         </div>
       )}
+
+      {shape.eventCards ? <EventCardsSkeleton count={shape.eventCards} /> : null}
 
       {panels ? (
         <div className={`flex flex-col gap-8 ${shape.metrics ? "mt-8" : ""}`}>

@@ -36,7 +36,7 @@
  * expire is not a suspension.
  */
 
-import { redirect } from 'next/navigation';
+import { forbidden, redirect } from 'next/navigation';
 import type { Organizer, Prisma, StaffAccount } from '@prisma/client';
 import prisma from './db';
 import { getAuthCookie } from './auth';
@@ -174,6 +174,25 @@ export async function requireActor(): Promise<Actor> {
 }
 
 /**
+ * For every dashboard page that is Run As One's team's work — events,
+ * registrants, results, marketing, clients, communities, feedback, team,
+ * activity: the actor, or the not-allowed page for a client viewer.
+ *
+ * A viewer's own screens are the Overview and its account settings
+ * (ADMIN_MERGE_PLAN.md, Batch 4). Anywhere else answers with `forbidden()`,
+ * which renders `admin/forbidden.tsx` inside the sidebar with a 403, rather
+ * than the empty lists and "not found" each page's own `can()` would give it.
+ * It is asked **before** a page reads anything, so the answer is the same for
+ * every id in the URL and says nothing about which races exist. The pages'
+ * own checks still follow, and every API route refuses a viewer by `can()`.
+ */
+export async function requireTeamActor(): Promise<Actor> {
+  const actor = await requireActor();
+  if (isClientViewer(actor)) forbidden();
+  return actor;
+}
+
+/**
  * The organizer-wide role an actor holds, or null for a STAFF membership that
  * reaches only its assigned events, and for a client viewer. A super admin inside their own tenant row
  * is its owner.
@@ -230,7 +249,8 @@ export function activeMembershipWhere(staffId: string): Prisma.StaffMembershipWh
  */
 export type Reach = { organizerId: string; eventId?: string | null; clientId?: string | null };
 
-function isClientViewer(actor: Actor): boolean {
+/** A client's own sign-in (a VIEWER membership), as opposed to Run As One's team. */
+export function isClientViewer(actor: Actor): boolean {
   return actor.kind === 'STAFF' && actor.role === 'VIEWER';
 }
 

@@ -20,7 +20,7 @@
  */
 
 import prisma from './db';
-import { can, canSomewhere, getActor } from './actor';
+import { can, canSomewhere, getActor, isClientViewer } from './actor';
 import { CLIENT_VIEWER_LABEL, ROLE_LABELS } from './permissions';
 
 export type SignedInUser = {
@@ -29,14 +29,21 @@ export type SignedInUser = {
   initial: string;
   /** "Super Admin", "Admin", "Staff" — what the line under the name says. */
   roleLabel: string;
-  /** The organizer this session acts inside. For an owner it is their own name. */
+  /**
+   * The organization named under the person: the organizer this session acts
+   * inside (for an owner, their own name) — or, for a client viewer, its
+   * client, since Run As One's name would tell a viewer nothing.
+   */
   organizerName: string;
   /**
    * The sidebar items this person has a reason to open. `platform` is Run As
    * One's own screens — client submissions, clubs and feedback — which were
-   * the super admin's sidebar until the dashboards merged.
+   * the super admin's sidebar until the dashboards merged. `events` is false
+   * only for a client viewer, whose whole sidebar is Dashboard and Settings
+   * (ADMIN_MERGE_PLAN.md, Batch 4) — which is also how the route fallback
+   * knows to draw a viewer's Overview.
    */
-  nav: { marketing: boolean; team: boolean; activity: boolean; platform: boolean };
+  nav: { events: boolean; marketing: boolean; team: boolean; activity: boolean; platform: boolean };
 };
 
 export async function getSignedInUser(): Promise<SignedInUser | null> {
@@ -53,6 +60,12 @@ export async function getSignedInUser(): Promise<SignedInUser | null> {
     });
     name = organizer?.name ?? actor.name;
     organizerName = name;
+  } else if (isClientViewer(actor) && actor.clientId) {
+    const client = await prisma.client.findUnique({
+      where: { id: actor.clientId },
+      select: { name: true },
+    });
+    organizerName = client?.name ?? '';
   } else {
     // There is one tenant — Run As One's own organizer row — so there is no
     // longer a switcher listing the others (ADMIN_MERGE_PLAN.md, Batch 2); the
@@ -78,6 +91,7 @@ export async function getSignedInUser(): Promise<SignedInUser | null> {
           : ROLE_LABELS[actor.role],
     organizerName,
     nav: {
+      events: !isClientViewer(actor),
       marketing: canSomewhere(actor, 'promo:view'),
       team: can(actor, 'team:manage', { organizerId: actor.orgId }),
       activity: can(actor, 'activity:view', { organizerId: actor.orgId }),

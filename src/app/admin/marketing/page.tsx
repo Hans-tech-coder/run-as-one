@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import prisma from '@/lib/db';
 import { HandCoins, Tag, Ticket } from 'lucide-react';
 import PromoCodesClient from './PromoCodesClient';
-import { can, canSomewhere, reachableEvents, requireActor } from '@/lib/actor';
+import { can, canSomewhere, reachableEvents, requireTeamActor } from '@/lib/actor';
 import { promoStatus } from '@/lib/discount';
 import { soonestFirst } from '@/lib/event-schedule';
 import { formatPesos } from '@/lib/money';
@@ -11,7 +11,7 @@ import { NO_SPEND, spendByCode } from '@/lib/promo-redemptions';
 import { CATEGORY_ORDER } from '@/lib/category-order';
 
 export default async function MarketingPage() {
-  const actor = await requireActor();
+  const actor = await requireTeamActor();
 
   // Nobody whose role includes no promotions at all has a marketing screen.
   if (!canSomewhere(actor, 'promo:view')) {

@@ -1,6 +1,6 @@
 # One dashboard: merging Admin and Super Admin — work plan
 
-**Status:** Batches 1–3 landed · Batch 4 next · **Owner decisions captured:** 2026-09-17
+**Status:** Batches 1–4 landed · Batch 5 next · **Owner decisions captured:** 2026-09-17
 
 Run As One is no longer a self-serve platform for organizers. **Run As One staff
 create every event and validate every payment**, and runners' money goes to Run
@@ -23,7 +23,7 @@ to know where to pick up.
 | 1 | Production audit (read-only), `Client` model, Viewer role, permissions | yes | Landed (dev) — prod migration at release |
 | 2 | One shell: `/superadmin` screens move into `/admin`, redirects, role-aware sidebar | none | Landed (dev) |
 | 3 | Applications become client submissions — no password, **Send invite** | none | Landed (dev) |
-| 4 | The Viewer dashboard — events and registrant counts | none | Not started |
+| 4 | The Viewer dashboard — events and registrant counts | none | Landed (dev) |
 | 5 | Link existing events to clients, retire the super admin, remove dead code, release | yes (cleanup) | Not started |
 | 6 | Remittance / settlement tracking (Run As One → organizer) | yes | Not started |
 
@@ -213,16 +213,16 @@ invite delivers a link, and accepting it signs the person in as a Viewer.
 
 ## Batch 4 — The Viewer dashboard
 
-- [ ] A Viewer's `/admin` is its own page: its client's events as cards (poster,
+- [x] A Viewer's `/admin` is its own page: its client's events as cards (poster,
   title, date, status — draft / open / paused / done).
-- [ ] Per event: **registrant count** — total, per category, **Paid vs Pending**.
+- [x] Per event: **registrant count** — total, per category, **Paid vs Pending**.
   No money, no names, no runner list.
-- [ ] Sidebar for a Viewer: Dashboard and Account settings (own password) only.
-- [ ] Every other `/admin/**` page and `/api/admin/**` route refuses a Viewer
+- [x] Sidebar for a Viewer: Dashboard and Account settings (own password) only.
+- [x] Every other `/admin/**` page and `/api/admin/**` route refuses a Viewer
   (server check, not hidden links); verify by URL.
-- [ ] Empty state for a Viewer whose client has no linked event yet.
-- [ ] Loading shape and mobile layout.
-- [ ] `PROJECT_GUIDE.md` §6, §7, §10.
+- [x] Empty state for a Viewer whose client has no linked event yet.
+- [x] Loading shape and mobile layout.
+- [x] `PROJECT_GUIDE.md` §6, §7, §10.
 
 **Done when:** a Viewer sees exactly their client's counts and gets a real
 not-allowed page everywhere else.
@@ -496,3 +496,67 @@ Activity's actor kind, the team routes' refusals). **At release, production
 needs the same data change** — owner email and name, the client, the four
 links, and an invite sent from the live site so its link points there.
 
+### Batch 4 — what landed
+
+**Calls made.**
+- **A viewer's `/admin` is *Your Events*** (`admin/ViewerDashboard.tsx`): three
+  tiles (Registered Runners, Paid, Pending Payment) over one card per race —
+  poster, the events table's registration badge (moved to
+  `events/registration-state-badge.ts` so both share it), title, date, place,
+  total, a paid / pending bar with the numbers in words beside it, and each
+  category's `total · N paid · N pending`. The cards are not links. The plan's
+  "draft / open / paused / done" became the badges the app already has (Open,
+  Paused, Scheduled with its date, Full, Race Over): there is no draft state on
+  an event.
+- **The counts live in `lib/client-summary.ts`**, whose returned shape has no
+  money, name or reference field. A registrant is a runner on a PAID or
+  PENDING order, not removed — the staff Overview's and the slot count's own
+  definition. Upcoming races first (soonest), finished ones after.
+- **Refusal is `forbidden()`, not a 404.** `requireTeamActor()` (`actor.ts`)
+  answers a viewer before the page reads anything, and `admin/forbidden.tsx`
+  draws *Not Part of Your View* in the sidebar. That needs
+  **`experimental.authInterrupts`** in `next.config.ts`. It is on every team
+  page, plus `admin/events/layout.tsx` for the two client-component forms.
+  Staff refusals stay the admin's 404. Because `loading.tsx` streams first, the
+  403 is in the RSC stream and the status line reads 200, the same as
+  `notFound()` does today.
+- **API routes needed no change**: every `/api/admin/**` route already refuses
+  a viewer through `can()` / `platformActor()` / `loadManagedMember`, which was
+  verified route by route (below). `admin/profile` and `admin/profile/password`
+  serve it, so Settings keeps name, email and password.
+- Sidebar: `nav.events` (false only for a viewer) hides Events; the role line
+  names the client (`Client Viewer · Cresendo Running Community`). The loading
+  fallback reads the same flag to draw tiles over three event cards.
+- **Batch 3's deferral**: an archived client's viewer is now told *"Your
+  organization's sign-in is not active right now. Please contact Run As One."*
+  at sign-in (same `NO_ACTIVE_ORGANIZER` trail reason).
+
+**Deferred.** Still no way to revoke one viewer short of archiving the client
+(Batch 3's note). The viewer's Settings still offers changing the sign-in
+email, as it does for staff.
+
+**Verified on localhost (2026-09-17)** against `local-dev` with throwaway
+`verify-b4-*` rows — a viewer on the Cresendo Running Community client (all
+four events linked), a viewer on a new empty ACTIVE client, and an ADMIN —
+signed in through `/api/auth/login` and removed afterwards (3 accounts, their
+memberships, 4 audit rows, 1 client). No real row was written.
+- Viewer `/admin`: *Your Events*, 43 registered / 39 paid / 4 pending; Pink
+  Run 2026 42 (39 · 3), Run and Reachout 2026 1 pending (its 5K), BizRun V2.0
+  last as Race Over. Sidebar Dashboard + Settings only. `/admin/settings` loads.
+- Viewer on every other screen — events list, new, edit, registrants and
+  results (a real id and a made-up id alike), marketing, clients, communities,
+  feedback, team, activity: the forbidden boundary (`NEXT_HTTP_ERROR_FALLBACK;403`,
+  *Not Part of Your View*). An unknown `/admin/nope` stays the 404.
+- Viewer against the API, including a real Pink Run registration and runner:
+  event GET 404, PATCH / DELETE / create 403, export and results upload 404,
+  registration email 401, status PATCH 401, runner PUT 401, proof 403, promos
+  403/404, team 403, clients / options / invite / communities / feedback /
+  organizers 403, `api/upload` 403.
+- ADMIN: Overview, Events, Team, Clients and Activity load as before, and its
+  event and clients APIs answer 200.
+- Empty client: tiles at 0 over *No events linked yet* naming the client.
+  Archiving that client refused the next sign-in with the client wording.
+- Layout from the served HTML at 1440, 820 and 360: no horizontal scroll at
+  360 or 820, cards one column on a phone and three at 1440, the loading
+  skeleton drew three tiles over event cards.
+- `npx tsc --noEmit` is clean for `src`; eslint is clean on every changed file.

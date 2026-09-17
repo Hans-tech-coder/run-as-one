@@ -20,7 +20,8 @@ import { routeShape } from './route-loading-shape';
  * answered by the centred figure alone, with none of the frame.
  *
  * It also asks which screens the person has (dashboard-nav.tsx), because the
- * Overview's tile count depends on it.
+ * Overview's tile count depends on it, and a client viewer's Overview is a
+ * different page (tiles over event cards).
  */
 export default function Loading() {
   const pathname = usePathname();
@@ -28,5 +29,13 @@ export default function Loading() {
 
   if (isBarePath(pathname)) return <AuthRouteLoading />;
 
-  return <AdminRouteLoading shape={routeShape(pathname, { platform: nav?.platform ?? false })} />;
+  return (
+    <AdminRouteLoading
+      shape={routeShape(pathname, {
+        platform: nav?.platform ?? false,
+        // Only a client viewer is without Events (signed-in-user.ts).
+        clientViewer: nav ? !nav.events : false,
+      })}
+    />
+  );
 }

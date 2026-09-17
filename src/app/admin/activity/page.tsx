@@ -2,7 +2,7 @@ import React from 'react';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import prisma from '@/lib/db';
-import { can, requireActor } from '@/lib/actor';
+import { can, requireTeamActor } from '@/lib/actor';
 import { loadActivityPage } from '@/lib/activity-store';
 import { soonestFirst } from '@/lib/event-schedule';
 import { SITE_NAME } from '@/lib/site-contact';
@@ -45,7 +45,7 @@ export default async function ActivityPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const actor = await requireActor();
+  const actor = await requireTeamActor();
   if (!can(actor, 'activity:view', { organizerId: actor.orgId })) {
     notFound();
   }

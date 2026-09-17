@@ -66,7 +66,11 @@ export default function AdminShell({
   // Run As One's own screens sit between the race work and the people work.
   const navItems = [
     { name: 'Dashboard', path: '/admin', icon: <LayoutDashboard size={20} /> },
-    { name: 'Events', path: '/admin/events', icon: <Calendar size={20} /> },
+    // Everyone on Run As One's team; never a client viewer, whose sidebar is
+    // Dashboard and Settings alone (ADMIN_MERGE_PLAN.md, Batch 4).
+    ...((user?.nav.events ?? true)
+      ? [{ name: 'Events', path: '/admin/events', icon: <Calendar size={20} /> }]
+      : []),
     ...((user?.nav.marketing ?? true)
       ? [{ name: 'Marketing Tools', path: '/admin/marketing', icon: <Megaphone size={20} /> }]
       : []),
@@ -92,12 +96,16 @@ export default function AdminShell({
   ];
 
   // Run As One's own account is simply the Super Admin (ROLE_LABELS.OWNER).
-  // Anyone else is named with the organizer they are working inside.
+  // Anyone else is named with the organizer they are working inside — or a
+  // client viewer with its own client (signed-in-user.ts).
+  // A viewer whose client has no name left reads as its role alone.
   const roleLine = !user
     ? 'Organizer Admin'
     : user.roleLabel === ROLE_LABELS.OWNER
       ? ROLE_LABELS.OWNER
-      : `${user.roleLabel} · ${user.organizerName}`;
+      : user.organizerName
+        ? `${user.roleLabel} · ${user.organizerName}`
+        : user.roleLabel;
 
   return (
     <DashboardNavProvider value={user?.nav ?? null}>

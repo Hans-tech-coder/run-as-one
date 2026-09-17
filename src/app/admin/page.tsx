@@ -1,13 +1,27 @@
 import React from 'react';
 import { DollarSign, Users, CalendarDays, Landmark } from 'lucide-react';
 import prisma from '@/lib/db';
-import { can, reachableEvents, requireActor } from '@/lib/actor';
+import { can, isClientViewer, reachableEvents, requireActor } from '@/lib/actor';
+import { totalCounts, viewerEventSummaries } from '@/lib/client-summary';
 import { formatPesos } from '@/lib/money';
 import { hasFinished, today } from '@/lib/event-schedule';
 import AdminCardList from './AdminCardList';
+import ViewerDashboard from './ViewerDashboard';
 
 export default async function AdminDashboard() {
   const actor = await requireActor();
+
+  // A client viewer's /admin is its own page (ADMIN_MERGE_PLAN.md, Batch 4):
+  // its races and their registrant counts, and none of the revenue below.
+  if (isClientViewer(actor)) {
+    const [events, client] = await Promise.all([
+      viewerEventSummaries(actor),
+      actor.clientId
+        ? prisma.client.findUnique({ where: { id: actor.clientId }, select: { name: true } })
+        : null,
+    ]);
+    return <ViewerDashboard clientName={client?.name ?? ''} events={events} totals={totalCounts(events)} />;
+  }
 
   // Run As One's own number, beside the organizer-facing three: the per-runner
   // admin fees it has collected. It was the super admin dashboard's

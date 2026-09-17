@@ -14,6 +14,7 @@ import MobileSortMenu from '../MobileSortMenu';
 import RegistrationScheduleModal from './RegistrationScheduleModal';
 import { openingInstantISO, type OpeningDraft } from './registration-opening';
 import { formatEventInstant } from '@/lib/event-schedule';
+import { REGISTRATION_STATES } from './registration-state-badge';
 import { useAlert } from '@/components/ui/AlertProvider';
 import BusyLabel from '@/components/ui/BusyLabel';
 import {
@@ -63,27 +64,6 @@ interface EventsTableClientProps {
   /** Whether this person's role includes `event:create` — Create Event is not offered otherwise. */
   canCreate?: boolean;
 }
-
-/**
- * What the Registration column says, and in what tone.
- *
- * Green for open and amber for paused, matching the badges on the registrants
- * screen. Full and finished are neither: they are not warnings and not good
- * news, they are simply what is true, so they take the neutral badge added for
- * them in Admin.css.
- */
-const REGISTRATION_STATES = {
-  OPEN: { label: 'Open', tone: 'success' },
-  PAUSED: { label: 'Paused', tone: 'pending' },
-  // Amber like Paused, and for the same reason the badge tones give amber to
-  // PENDING: this is a race waiting on a date, not one that needs anybody.
-  // What separates the two in the cell is the line underneath, which names
-  // the date — a badge reading only "Scheduled" would leave the organizer
-  // opening the modal to find out when.
-  SCHEDULED: { label: 'Scheduled', tone: 'pending' },
-  FULL: { label: 'Full', tone: 'neutral' },
-  FINISHED: { label: 'Race Over', tone: 'neutral' },
-} as const;
 
 /**
  * A row's place in the sorted list, for the No. column and the card beside it.

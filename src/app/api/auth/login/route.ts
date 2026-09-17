@@ -167,15 +167,14 @@ export async function POST(request: Request) {
     // even when none of this person's memberships is usable any more — a run
     // of wrong passwords against a suspended validator is exactly what an
     // owner reviewing an incident wants to see.
-    const trailOrganizerId =
-      membership?.organizerId ??
-      (
-        await db.staffMembership.findFirst({
+    const acceptedMembership = membership
+      ? null
+      : await db.staffMembership.findFirst({
           where: { staffId: staff.id, acceptedAt: { not: null } },
           orderBy: { acceptedAt: 'asc' },
-          select: { organizerId: true },
-        })
-      )?.organizerId;
+          select: { organizerId: true, role: true },
+        });
+    const trailOrganizerId = membership?.organizerId ?? acceptedMembership?.organizerId;
 
     const who: AuditActor | null = trailOrganizerId
       ? {
@@ -204,10 +203,14 @@ export async function POST(request: Request) {
 
     if (!membership || !who) {
       if (who) await logAttempt(who, 'StaffAccount', 'NO_ACTIVE_ORGANIZER');
-      return NextResponse.json(
-        { error: 'Your account is not part of an active organizer. Please contact the organizer you work with.' },
-        { status: 403 }
-      );
+      // A client's own sign-in whose client was archived (ADMIN_MERGE_PLAN.md,
+      // Batch 4). It has no organizer it works for, so the team's sentence
+      // would send it to ask somebody who does not exist.
+      const error =
+        acceptedMembership?.role === 'VIEWER'
+          ? "Your organization's sign-in is not active right now. Please contact Run As One."
+          : 'Your account is not part of an active organizer. Please contact the organizer you work with.';
+      return NextResponse.json({ error }, { status: 403 });
     }
 
     await db.$transaction(async tx => {

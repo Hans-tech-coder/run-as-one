@@ -45,6 +45,12 @@ export type RouteShape = {
   };
   /** Form or text panels, top to bottom, below `lg`. */
   panels?: FormPanelShape[];
+  /**
+   * A client viewer's event cards (`.viewer-event-grid`), how many to draw.
+   * The grid lays them out the same way at every width, so both layouts read
+   * this one number.
+   */
+  eventCards?: number;
   /** The same page from `lg` up. */
   lg?: DesktopShape;
 };
@@ -231,13 +237,25 @@ const PATTERNS: [RegExp, RouteShape][] = [
  */
 const OVERVIEW_PLATFORM_METRICS = 4;
 
-/** What the person waiting can open, where that changes a page's shape. */
-export type ShapeViewer = { platform: boolean };
+/**
+ * A client viewer's Overview (ADMIN_MERGE_PLAN.md, Batch 4, `ViewerDashboard`):
+ * three count tiles over its event cards. How many races a client has is not
+ * known while waiting, so three cards are drawn — a full row from `lg` up.
+ */
+const VIEWER_OVERVIEW_SHAPE: RouteShape = { metrics: 3, eventCards: 3 };
+
+/**
+ * What the person waiting can open, where that changes a page's shape:
+ * `platform:manage`, and whether this is a client viewer, whose `/admin` is a
+ * different page altogether.
+ */
+export type ShapeViewer = { platform: boolean; clientViewer?: boolean };
 
 /** The shape to draw for a path, or null for the plain figure (a 404, anything unlisted). */
 export function routeShape(pathname: string | null, viewer?: ShapeViewer): RouteShape | null {
   if (!pathname) return null;
   const path = pathname.length > 1 ? pathname.replace(/\/$/, '') : pathname;
+  if (path === '/admin' && viewer?.clientViewer) return VIEWER_OVERVIEW_SHAPE;
   if (path === '/admin' && viewer?.platform) {
     return { ...EXACT[path], metrics: OVERVIEW_PLATFORM_METRICS };
   }

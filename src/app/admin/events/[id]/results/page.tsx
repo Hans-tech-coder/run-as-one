@@ -1,5 +1,5 @@
 import prisma from '@/lib/db';
-import { can, requireActor } from '@/lib/actor';
+import { can, requireTeamActor } from '@/lib/actor';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import ResultsUploaderClient from './ResultsUploaderClient';
@@ -10,7 +10,7 @@ import { CATEGORY_ORDER } from '@/lib/category-order';
 
 export default async function AdminResultsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const actor = await requireActor();
+  const actor = await requireTeamActor();
 
   // Scoped to the actor's own organizer's events: the session check above
   // only proves *someone* is signed in, and an id in the URL is not proof the

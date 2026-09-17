@@ -2,7 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import prisma from '@/lib/db';
-import { can, requireActor } from '@/lib/actor';
+import { can, requireTeamActor } from '@/lib/actor';
 import RegistrantsTable, { type RegistrantPermissions } from './RegistrantsTable';
 import { latestStatusChanges } from '@/lib/activity-store';
 import AdminNotFound from '../../../AdminNotFound';
@@ -45,7 +45,7 @@ export default async function RegistrantsPage({
   // this page, but its `orgId` is its own Organizer row, which owns no event,
   // so the read above finds nothing for it either. A
   // STAFF member unassigned to this race gets the same "Event not found."
-  const actor = await requireActor();
+  const actor = await requireTeamActor();
 
   // Fetch real runners for this event via the Registrations table
   const found = await prisma.event.findFirst({

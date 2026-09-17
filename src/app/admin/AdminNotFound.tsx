@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { Compass } from 'lucide-react';
+import { Compass, type LucideIcon } from 'lucide-react';
 
 /**
  * The 404 anyone signed in to the dashboard sees, wearing the admin chrome.
@@ -19,6 +19,9 @@ import { Compass } from 'lucide-react';
  * whole address: the registrants and results screens answer an event that is
  * missing, or not this person's, with it. Both misses must read identically
  * (PROJECT_GUIDE §7), so a caller passes one fixed wording and never a reason.
+ *
+ * `admin/forbidden.tsx` wears it too, with its own icon, for a client viewer
+ * who opened one of the team's screens: the same frame, a different answer.
  */
 export default function AdminNotFound({
   homeHref,
@@ -26,12 +29,14 @@ export default function AdminNotFound({
   title = 'Page Not Found',
   heading = 'There is nothing at this address',
   body = 'The link may be an old one, or the record it pointed at may have been deleted. Nothing else has moved — carry on from your dashboard.',
+  icon: Icon = Compass,
 }: {
   homeHref: string;
   homeLabel: string;
   title?: string;
   heading?: string;
   body?: string;
+  icon?: LucideIcon;
 }) {
   return (
     <>
@@ -42,7 +47,7 @@ export default function AdminNotFound({
       <div className="admin-content">
         <div className="admin-panel">
           <div className="empty-state">
-            <Compass size={48} className="empty-icon" aria-hidden="true" />
+            <Icon size={48} className="empty-icon" aria-hidden="true" />
 
             <div>
               <p className="mb-2 text-lg font-bold text-white">
