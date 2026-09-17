@@ -59,6 +59,14 @@ export const PERMISSIONS = [
    * (ADMIN_MERGE_PLAN.md, Batch 2).
    */
   'platform:manage',
+  /**
+   * What Run As One owes each race's organizer and what it has paid them
+   * (ADMIN_MERGE_PLAN.md, Batch 6): the settlement screen and recording or
+   * voiding a remittance. Separate from `platform:manage` because it is money
+   * leaving the company, which the owner may one day want narrower than clubs
+   * and feedback.
+   */
+  'remittance:manage',
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -147,7 +155,7 @@ export const ROLE_LABELS: Record<Role | MembershipRole, string> = {
  */
 export const ROLE_HINTS: Record<Role | MembershipRole, string> = {
   OWNER: "Run As One's own account. Every event and every setting.",
-  ADMIN: 'Every event, the team, client submissions, clubs and feedback. Cannot delete an event or change organizer settings.',
+  ADMIN: 'Every event, the team, client submissions, clubs, feedback and remittances. Cannot delete an event or change organizer settings.',
   STAFF: 'Only the events you assign, with a role on each.',
   EVENT_MANAGER: 'Runs the event: edits it, settles payments, edits runners and loads results. Cannot remove a runner.',
   VALIDATOR: 'Checks payment proofs and settles orders. Cannot edit or remove a runner.',
@@ -185,6 +193,7 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   'org:settings': 'Organizer settings',
   'activity:view': 'Read the activity trail',
   'platform:manage': 'Clients, clubs, feedback and fees',
+  'remittance:manage': 'Record remittances to organizers',
 };
 
 /** STAFF_ACCESS_PLAN.md §3, as data. */
@@ -208,6 +217,7 @@ const MATRIX: Record<Permission, readonly Role[]> = {
   'org:settings': ['OWNER'],
   'activity:view': ['OWNER', 'ADMIN'],
   'platform:manage': ['OWNER', 'ADMIN'],
+  'remittance:manage': ['OWNER', 'ADMIN'],
 };
 
 export function roleCan(role: Role, permission: Permission): boolean {

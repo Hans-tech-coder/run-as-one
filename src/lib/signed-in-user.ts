@@ -41,9 +41,17 @@ export type SignedInUser = {
    * the super admin's sidebar until the dashboards merged. `events` is false
    * only for a client viewer, whose whole sidebar is Dashboard and Settings
    * (ADMIN_MERGE_PLAN.md, Batch 4) — which is also how the route fallback
-   * knows to draw a viewer's Overview.
+   * knows to draw a viewer's Overview. `remittances` is the settlement screen
+   * (Batch 6).
    */
-  nav: { events: boolean; marketing: boolean; team: boolean; activity: boolean; platform: boolean };
+  nav: {
+    events: boolean;
+    marketing: boolean;
+    team: boolean;
+    activity: boolean;
+    platform: boolean;
+    remittances: boolean;
+  };
 };
 
 export async function getSignedInUser(): Promise<SignedInUser | null> {
@@ -91,6 +99,7 @@ export async function getSignedInUser(): Promise<SignedInUser | null> {
       team: can(actor, 'team:manage', { organizerId: actor.orgId }),
       activity: can(actor, 'activity:view', { organizerId: actor.orgId }),
       platform: can(actor, 'platform:manage', { organizerId: actor.orgId }),
+      remittances: can(actor, 'remittance:manage', { organizerId: actor.orgId }),
     },
   };
 }

@@ -127,10 +127,16 @@ function proofFileName(file: File): string {
  * Returns the pathname, not a URL, because a private blob has no permanently
  * valid address; see signedProofUrl().
  */
-export async function uploadPrivateProof(file: unknown): Promise<string> {
+export async function uploadPrivateProof(
+  file: unknown,
+  // `remittances` keeps Run As One's own payout receipts apart from runners'
+  // deposit slips, so a store listing never mixes the two (ADMIN_MERGE_PLAN.md,
+  // Batch 6). Same store, same rules, same signed-URL viewing.
+  folder: 'proofs' | 'remittances' = 'proofs',
+): Promise<string> {
   assertUploadable(file, 'proof');
 
-  const blob = await put(`proofs/${proofFileName(file)}`, file, {
+  const blob = await put(`${folder}/${proofFileName(file)}`, file, {
     access: 'private',
     addRandomSuffix: true,
     contentType: file.type,

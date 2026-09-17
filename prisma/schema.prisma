@@ -122,6 +122,10 @@ model Event {
   /// The staff who may touch this race, and as what. OWNER and ADMIN reach
   /// every event without one; a STAFF membership reaches only these.
   assignments                 EventAssignment[]
+  /// What Run As One has paid the organizer out of this race's collections
+  /// (ADMIN_MERGE_PLAN.md, Batch 6). An event with any row here cannot be
+  /// deleted: the payout record outlives nothing it describes.
+  remittances                 Remittance[]
 }
 
 /// One account a runner can transfer to for this event.
@@ -772,6 +776,54 @@ model Client {
   updatedAt          DateTime @updatedAt
   events             Event[]
   viewers            StaffMembership[]
+}
+
+/// Money Run As One has paid out to the organizer of one race, or that the
+/// organizer has handed back (ADMIN_MERGE_PLAN.md, Batch 6).
+///
+/// Runners pay Run As One; Run As One keeps the platform and transaction fees
+/// and owes the organizer the rest of every PAID order. What is owed is worked
+/// out live from the registrations (src/lib/settlement.ts) and is never stored,
+/// so a later refund lowers it by itself; this table is only what actually
+/// moved. Per event, by the owner's call, because bank accounts are per event.
+///
+/// **Never edited, never deleted.** A mistake is corrected by voiding the row
+/// (`status` VOIDED, with who, when and why) and recording the right one, so
+/// the history of what staff said was paid survives its own corrections.
+///
+/// Storage: one short row per payout — a handful per race.
+model Remittance {
+  id             String    @id @default(cuid())
+  eventId        String
+  event          Event     @relation(fields: [eventId], references: [id])
+  /// PAYOUT (Run As One → organizer) | RETURN (organizer → Run As One, after a
+  /// refund left the organizer overpaid). lib/settlement.ts owns the words.
+  kind           String    @default("PAYOUT")
+  /// Centavos, always positive; `kind` says which way it went.
+  amount         Int
+  /// YYYY-MM-DD in Manila, like Event.date: the day the money moved, which is
+  /// not the day somebody got round to recording it.
+  paidOn         String
+  /// BANK_TRANSFER | GCASH | MAYA | CASH | CHECK | OTHER.
+  method         String
+  /// The bank or e-wallet's reference number, as typed.
+  reference      String?
+  note           String?
+  /// Private blob pathname of the deposit slip or transfer receipt, served only
+  /// through a signed URL, like Registration.proofOfPayment.
+  proof          String?
+  /// RECORDED | VOIDED. Only RECORDED rows count toward what was remitted.
+  status         String    @default("RECORDED")
+  /// Snapshotted like AuditLog.actorName, so the line keeps its author.
+  recordedById   String
+  recordedByName String
+  createdAt      DateTime  @default(now())
+  voidedAt       DateTime?
+  voidedById     String?
+  voidedByName   String?
+  voidReason     String?
+
+  @@index([eventId, createdAt])
 }
 
 /// What somebody did. Append-only: nothing in this app updates or deletes one —

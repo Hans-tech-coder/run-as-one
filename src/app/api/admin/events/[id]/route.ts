@@ -540,6 +540,22 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
+    // A race Run As One has already paid out on is part of the company's
+    // books (ADMIN_MERGE_PLAN.md, Batch 6), and its remittances are never
+    // deleted — voided ones included — so the race cannot go either. Asked
+    // here rather than left to the foreign key, so the modal names the reason.
+    const remittances = await db.remittance.count({ where: { eventId: id } });
+    if (remittances > 0) {
+      return NextResponse.json(
+        {
+          error: `${existingEvent.title} has ${remittances} recorded ${
+            remittances === 1 ? 'remittance' : 'remittances'
+          } to its organizer, so it cannot be deleted.`,
+        },
+        { status: 409 },
+      );
+    }
+
     // Nothing cascades: every foreign key pointing at an event is ON DELETE
     // RESTRICT, so the dependent rows have to be removed children-first or
     // Postgres rejects the delete outright. Order matters — a runner points at

@@ -1,6 +1,6 @@
 # One dashboard: merging Admin and Super Admin — work plan
 
-**Status:** Batches 1–5 landed on `dev` · **release pending** (checklist in Batch 5 notes) · Batch 6 after release · **Owner decisions captured:** 2026-09-17
+**Status:** Batches 1–6 landed on `dev` · **release pending** (checklist in Batch 5 notes, plus Batch 6's migration) · **Owner decisions captured:** 2026-09-17
 
 Run As One is no longer a self-serve platform for organizers. **Run As One staff
 create every event and validate every payment**, and runners' money goes to Run
@@ -24,8 +24,8 @@ to know where to pick up.
 | 2 | One shell: `/superadmin` screens move into `/admin`, redirects, role-aware sidebar | none | Landed (dev) |
 | 3 | Applications become client submissions — no password, **Send invite** | none | Landed (dev) |
 | 4 | The Viewer dashboard — events and registrant counts | none | Landed (dev) |
-| 5 | Link existing events to clients, retire the super admin, remove dead code, release | yes (cleanup) | Landed (dev) — migration not yet on `local-dev`; release pending |
-| 6 | Remittance / settlement tracking (Run As One → organizer) | yes | Not started |
+| 5 | Link existing events to clients, retire the super admin, remove dead code, release | yes (cleanup) | Landed (dev) — migration on `local-dev`; release pending |
+| 6 | Remittance / settlement tracking (Run As One → organizer) | yes | Landed (dev) — migration on `local-dev`; prod at release |
 
 When a batch lands, change its Status to *Landed* and add a short
 **"Batch N — what landed"** note under [Batch notes](#batch-notes): the calls made
@@ -47,7 +47,12 @@ the reasoning that outlives the plan goes into `PROJECT_GUIDE.md`.
 | Bank accounts? | **Still entered per event**, as today. No platform-wide bank settings. |
 | The team members invited today through `/admin/team`? | **They are Run As One staff.** They keep their access. |
 | The organizer owner account that signs in today? | **It is Run As One's own admin account** — the real owner of Run As One, not a client. |
-| Remittance tracking? | **Yes, as the last batch (6)**, after the merge is done. |
+| Remittance tracking? | **Yes, as the last batch (6)**, after the merge is done. Built before the release at the owner's request. |
+| What does Run As One keep? (Batch 6) | **The platform fee and the transaction fee.** The runner already pays PayMongo's cut on top, so the organizer is owed the race entries after discount plus the delivery fee. No percentage. |
+| Who absorbs a promo discount? (Batch 6) | **The organizer.** |
+| Remittance per event or per client? (Batch 6) | **Per event.** |
+| A refund after a payout? (Batch 6) | **The balance goes negative** (Overpaid); the next payout or a recorded return from the organizer brings it back. Nothing recorded is edited. |
+| Does a Viewer see the settlement? (Batch 6) | **No** — counts only, as decided. |
 | Does the platform trail merge into `/admin/activity`? (Batch 2) | **Yes — one Activity screen**, with an *Organizer decisions* shelf. |
 | What happens to the `/superadmin` dashboard? (Batch 2) | **It redirects to `/admin`**, and owners and admins get a *Platform Fees Collected* tile. Total Organizers is not carried over (clients replace it in Batch 3). |
 | Which account is Run As One's? (Batch 1) | **The `seed-crc-organizer` row.** It signed in as `cresendorunningcommunity@gmail.com` as "Cresendo Running Community" until the owner's call below. |
@@ -259,26 +264,26 @@ Runners pay Run As One; Run As One remits to the organizer. This batch records
 what is owed and what was paid.
 
 **Ask the owner before building:**
-- [ ] What Run As One keeps: the per-runner `Event.adminFee` only, or also a
+- [x] What Run As One keeps: the per-runner `Event.adminFee` only, or also a
   percentage, and who absorbs PayMongo's fees?
-- [ ] Is a remittance per event, or per client across events?
-- [ ] Only `PAID` registrations count — confirm how a later `REFUNDED` after a
+- [x] Is a remittance per event, or per client across events?
+- [x] Only `PAID` registrations count — confirm how a later `REFUNDED` after a
   remittance is handled (negative adjustment on the next one?).
-- [ ] Does the Viewer see the settlement (the owner's current answer is counts
+- [x] Does the Viewer see the settlement (the owner's current answer is counts
   only, so the default is **no**)?
 
 **Build (after the answers):**
-- [ ] A settlement rule module in `src/lib` (Prisma-free, integer centavos like
+- [x] A settlement rule module in `src/lib` (Prisma-free, integer centavos like
   the rest of the money code): gross collected, Run As One's share, net owed,
   total remitted, balance.
-- [ ] `Remittance` model: client, event (if per event), amount, paid date, method,
+- [x] `Remittance` model: client, event (if per event), amount, paid date, method,
   reference, note, optional proof (private blob), recorded by, created at.
   Corrections are new rows or a status, never edits that erase history.
-- [ ] Staff screen (`OWNER`/`ADMIN`, new `remittance:manage` permission):
+- [x] Staff screen (`OWNER`/`ADMIN`, new `remittance:manage` permission):
   per event/client — collected, share, owed, remitted, balance; record a
   remittance; list with cards below `lg`.
-- [ ] Every remittance written to the audit trail in the same transaction.
-- [ ] `PROJECT_GUIDE.md` §4, §5, §6, §7, §10.
+- [x] Every remittance written to the audit trail in the same transaction.
+- [x] `PROJECT_GUIDE.md` §4, §5, §6, §7, §10.
 
 **Done when:** for any event the owner can see how much is owed to the organizer,
 record a payout, and see the balance reach zero.
@@ -620,7 +625,8 @@ memberships, 4 audit rows, 1 client). No real row was written.
   reads them.
 
 **Not done in this session.**
-- **The migration is not applied to `local-dev`.** `npx prisma migrate deploy`
+- ~~**The migration is not applied to `local-dev`.**~~ Applied by the owner
+  before Batch 6 (`prisma migrate status` clean on 2026-09-17). `npx prisma migrate deploy`
   was blocked by the session's permission classifier. Run it yourself:
   `.env` points at `local-dev`, and it deletes the two rows you named and drops
   the columns. Until then the code works against `local-dev` as it is.
@@ -646,7 +652,8 @@ minted from the local `JWT_SECRET` and thrown away (no rows written):
 1. **Re-audit** production read-only: the Organizer rows, and PENDING
    registrations. Stop if anything new owns data.
 2. **`npx prisma migrate deploy`** with `DIRECT_URL` pointed at
-   `ep-still-pine-b3n210bs`. It applies Batch 1's three migrations and Batch 5's.
+   `ep-still-pine-b3n210bs`. It applies Batch 1's three migrations, Batch 5's
+   and Batch 6's (`20260917200000_remittances`, one new table).
    The live (old) code keeps working: every addition is a new table or a
    nullable column, and the dropped columns never existed for it.
 3. **Fast-forward `main` onto `dev` and push.** Vercel deploys. Owner sign-in
@@ -662,3 +669,71 @@ minted from the local `JWT_SECRET` and thrown away (no rows written):
    - No registration row is touched.
 5. Spot-check on production: the viewer's *Your Events* counts; staff Pik and
    Kyla sign in unchanged; `admin@stridesync.com` is refused.
+
+### Batch 6 — what landed
+
+**Owner's answers (2026-09-17)** are in *Decisions already made*: Run As One
+keeps the platform and transaction fees, the organizer absorbs discounts, per
+event, a refund after a payout makes the balance negative, no settlement for a
+viewer. Built ahead of the release at the owner's request.
+
+**Calls made.**
+- **What is owed is never stored.** `lib/settlement.ts` computes it from PAID
+  registrations on every read: owed = `totalAmount − platformFee −
+  transactionFee`, which equals entries − discount + delivery by checkout's own
+  identity, and makes collected = share + owed hold by construction.
+  `settlement-store.ts` reads a whole screen in two grouped queries.
+- **`Remittance`** (migration `20260917200000_remittances`, additive): per
+  event, `kind` PAYOUT / RETURN (a return is how an overpaid organizer's refund
+  comes back), positive centavos, `paidOn` day, method, reference, note,
+  optional private receipt under `remittances/` in the proofs store, snapshotted
+  recorder. **No edit and no delete** — `status` VOIDED with who / when / why is
+  the only correction. No `clientId` or `organizerId` column: the event carries
+  both. Event FK is RESTRICT, and the event DELETE route answers 409 naming the
+  count first.
+- **A payout above the balance is allowed**, with an amber line in the dialog;
+  paying ahead of a validation is real.
+- **New permission `remittance:manage`** (OWNER, ADMIN) instead of reusing
+  `platform:manage`, so money can be narrowed later on its own. It shows as a
+  row on the team screen's role table; the ADMIN hint mentions remittances.
+- **Screens:** `/admin/remittances` (four tiles — *Balance Due to Organizers*
+  adds only positive balances — and a list with Balance Due / Overpaid /
+  Settled / No Orders chips) and `/admin/remittances/[eventId]` (tiles, a
+  *How the Balance Is Worked Out* ledger, the remittance list, Record and Void
+  dialogs). Run As One's share rides under Collected on the list rather than
+  taking a column: eight columns overflowed at 1345px. **Owner's follow-up:**
+  the Actions column's bare chevron was unclear to staff, so every row and card
+  now carries an eye with *View Details*, and the table wears the new
+  `.data-table.is-dense` padding so it still fits at 1345px. At 1024px with the
+  sidebar expanded it scrolls inside its wrapper, as Clients already does. The empty state is
+  labelled *No Orders*, since *Nothing Collected* widened the badge column.
+- **Trail:** `remittance.recorded`, `remittance.voided` (with the reason) and
+  `remittance.proof.viewed` on a new *Remittances* Activity shelf.
+
+**Verified on localhost (2026-09-17)** against `local-dev`, signed in by the
+owner as Run As One in the browser pane:
+- List: ₱30,424.00 collected, ₱1,560.00 share, ₱28,864.00 due, Pink Run 2026
+  Balance Due, the other three No Orders. Pink Run's ledger reconciles both
+  ways (30,424 − 1,560 = 31,261 − 2,397 = 28,864); the second is the
+  Overview's *Total Revenue (Net)* formula, though that tile itself was not
+  opened.
+- Dialog: blank amount, `12abc`, and a ₱30,000 overpay warning; recording a
+  ₱10,000 payout moved Remitted and Balance, voiding it with a blank reason was
+  refused under the box, and with a reason it struck the row through and put
+  the balance back.
+- Route: a bad body answered 400 naming kind, amount, date, method and
+  reference; an unknown event 404; a ₱30,000 payout turned the list's badge to
+  Overpaid; a second void 409; a non-void PATCH 400; a receipt with none on
+  file 404. All four trail rows showed under *All remittances*.
+- 360px: no horizontal scroll on either page, cards below `lg`, the dialog fits
+  at 16px boxes with its footer in reach. The table fits at 1345px.
+- The two throwaway remittances (`VERIFY-B6`, `VERIFY-B6-OVER`) and their four
+  trail rows were deleted afterwards; `local-dev` holds no remittance.
+- `npx tsc --noEmit` clean for `src`; eslint clean on every new file.
+
+**Not verified.** A receipt upload (the blob store is shared with production,
+so none was written); the event DELETE refusal against a real race (a wrong
+guard there deletes the race); a STAFF or viewer session on the new pages and
+routes (no such sign-in was available — the code refuses them through
+`requireTeamActor()` and `can(…'remittance:manage'…)`, which the team matrix
+gives only OWNER and ADMIN).

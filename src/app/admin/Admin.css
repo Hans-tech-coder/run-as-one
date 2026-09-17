@@ -554,6 +554,27 @@
   background: rgba(255, 255, 255, 0.02);
 }
 
+/* A table with many short money columns (remittances). 16px between columns
+   instead of 24px, so seven columns and a labelled row action still fit the
+   panel at a laptop's width rather than scrolling sideways. The first and last
+   cells keep the panel's 24px inset, so the table's edges line up with the
+   toolbar above it. */
+.data-table.is-dense th,
+.data-table.is-dense td {
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+.data-table.is-dense th:first-child,
+.data-table.is-dense td:first-child {
+  padding-left: 24px;
+}
+
+.data-table.is-dense th:last-child,
+.data-table.is-dense td:last-child {
+  padding-right: 24px;
+}
+
 /* Status Badges */
 .status-badge {
   display: inline-flex;
@@ -2970,4 +2991,65 @@ textarea.form-input {
   .viewer-event-body {
     padding: var(--space-md);
   }
+}
+
+/* ── A settlement's breakdown (admin/remittances/[eventId]) ──────────────
+   A short ledger: a label and an amount per line, the amounts in tabular
+   figures so the columns of digits line up. A rule line starts a new total;
+   a muted line explains the total above it rather than adding to it, and is
+   inset so it does not read as another term of the sum. On a phone the two
+   still share a line, since every amount is short; a long label wraps. */
+.settlement-lines {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.settlement-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 0;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.settlement-line dt {
+  min-width: 0;
+}
+
+.settlement-line dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--text-primary);
+}
+
+.settlement-line.has-rule {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin-top: 4px;
+  padding-top: 12px;
+}
+
+.settlement-line.is-strong dt,
+.settlement-line.is-strong dd {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.settlement-line.is-muted {
+  padding: 4px 0 4px 16px;
+  font-size: 0.8125rem;
+}
+
+.settlement-line.is-muted dd {
+  color: var(--text-secondary);
+}
+
+/* A voided remittance: still on the list, visibly no longer counting. */
+.remittance-voided {
+  text-decoration: line-through;
+  text-decoration-color: rgba(255, 255, 255, 0.35);
+  color: var(--text-secondary);
 }

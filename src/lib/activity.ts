@@ -67,6 +67,9 @@ export const ACTION_LABELS: Record<AuditAction, string> = {
   'promo.paused': 'Paused a promotion',
   'promo.resumed': 'Resumed a promotion',
   'promo.deleted': 'Deleted a promotion',
+  'remittance.recorded': 'Recorded a remittance',
+  'remittance.voided': 'Voided a remittance',
+  'remittance.proof.viewed': 'Opened a remittance receipt',
 };
 
 /** The one action worded as a warning: somebody tried a password and was refused. */
@@ -91,6 +94,7 @@ export const ACTIVITY_GROUPS = [
   { key: 'promotions', label: 'Promotions', hint: 'Promotions created, edited, paused or deleted' },
   { key: 'team', label: 'Team', hint: 'Invitations, access changes, suspensions and removals' },
   { key: 'access', label: 'Sign-ins', hint: 'Sign-ins, failed sign-ins, and profile or password changes' },
+  { key: 'remittances', label: 'Remittances', hint: 'Payouts to organizers and returns recorded or voided, and receipts opened' },
   { key: 'clients', label: 'Clients', hint: 'Submissions invited or archived, and invitations accepted' },
   { key: 'organizers', label: 'Organizer decisions', hint: 'Applications approved or rejected, accounts suspended or reinstated' },
 ] as const;
@@ -138,6 +142,9 @@ export const ACTION_GROUP: Record<AuditAction, ActivityGroupKey> = {
   'promo.paused': 'promotions',
   'promo.resumed': 'promotions',
   'promo.deleted': 'promotions',
+  'remittance.recorded': 'remittances',
+  'remittance.voided': 'remittances',
+  'remittance.proof.viewed': 'remittances',
 };
 
 const KNOWN_ACTIONS = Object.keys(ACTION_LABELS) as AuditAction[];

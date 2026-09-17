@@ -8,6 +8,7 @@ import {
   Flag,
   History,
   LayoutDashboard,
+  HandCoins,
   Megaphone,
   MessageSquare,
   Settings,
@@ -73,6 +74,11 @@ export default function AdminShell({
       : []),
     ...((user?.nav.marketing ?? true)
       ? [{ name: 'Marketing Tools', path: '/admin/marketing', icon: <Megaphone size={20} /> }]
+      : []),
+    // What Run As One owes each race's organizer (ADMIN_MERGE_PLAN.md,
+    // Batch 6) — money, so it sits first among Run As One's own screens.
+    ...(user?.nav.remittances
+      ? [{ name: 'Remittances', path: '/admin/remittances', icon: <HandCoins size={20} /> }]
       : []),
     ...(user?.nav.platform
       ? [

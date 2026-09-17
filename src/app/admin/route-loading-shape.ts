@@ -198,6 +198,13 @@ const EXACT: Record<string, RouteShape> = {
     list: { frame: 'panel', toolbar: 152 },
     lg: { toolbar: LG_TOOLBAR, table: { ...LG_PLAIN_TABLE, rows: 8 } },
   },
+  // Four money tiles over the races; search, then the four state chips
+  // wrapping under it (ADMIN_MERGE_PLAN.md, Batch 6).
+  '/admin/remittances': {
+    metrics: 4,
+    list: { frame: 'panel', toolbar: 152 },
+    lg: { toolbar: LG_TOOLBAR, table: { ...LG_PLAIN_TABLE, rows: 8 } },
+  },
   // Search, then Add a club's box and button stacked.
   '/admin/communities': {
     list: { frame: 'panel', toolbar: 166 },
@@ -210,6 +217,13 @@ const EXACT: Record<string, RouteShape> = {
   },
 };
 
+/**
+ * The settlement breakdown's sentence and its nine lines: 489px at 390, where
+ * the longer labels wrap, and 368px from `lg` up.
+ */
+const SETTLEMENT_BREAKDOWN = 489;
+const LG_SETTLEMENT_BREAKDOWN = 368;
+
 const PATTERNS: [RegExp, RouteShape][] = [
   [/^\/admin\/events\/[^/]+\/edit$/, EVENT_FORM_SHAPE],
   // Search, Filters, the two queue chips and Sort, then Export; Select All above the cards.
@@ -220,6 +234,12 @@ const PATTERNS: [RegExp, RouteShape][] = [
       // A registrant's row carries the runner under the order ref: 69px.
       lg: { toolbar: LG_TOOLBAR, table: { head: LG_TANSTACK_HEAD, row: 69, rows: 7 } },
     },
+  ],
+  // One race's settlement: four tiles over the breakdown panel, whose nine
+  // lines are drawn as one block.
+  [
+    /^\/admin\/remittances\/[^/]+$/,
+    { metrics: 4, panels: [{ fields: [SETTLEMENT_BREAKDOWN] }], lg: { panels: [{ rows: [LG_SETTLEMENT_BREAKDOWN] }] } },
   ],
   [
     /^\/admin\/events\/[^/]+\/results$/,

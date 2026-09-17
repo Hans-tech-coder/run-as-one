@@ -83,6 +83,11 @@ export const AUDIT_ACTIONS = [
   'promo.paused',
   'promo.resumed',
   'promo.deleted',
+  // Money paid to a race's organizer, or handed back (ADMIN_MERGE_PLAN.md,
+  // Batch 6). A remittance is never edited, so voiding is the only correction.
+  'remittance.recorded',
+  'remittance.voided',
+  'remittance.proof.viewed',
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
@@ -96,7 +101,8 @@ export type AuditEntityType =
   | 'Organizer'
   | 'Client'
   | 'StaffAccount'
-  | 'StaffMembership';
+  | 'StaffMembership'
+  | 'Remittance';
 
 /** Who did it. An `Actor` from lib/actor.ts is one; SYSTEM is the cron or a webhook. */
 export type AuditActor = {
