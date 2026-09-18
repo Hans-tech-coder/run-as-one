@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect, useCallback, useLayoutEffect } from
 import { createPortal } from 'react-dom';
 import { MoreVertical, Send, Trash2, UserCheck, UserCog, UserX } from 'lucide-react';
 import { placeRowMenu, type RowMenuPlacement } from '../row-menu-position';
+import { cssDurationMs } from '@/lib/css-duration';
 
 /**
  * The row menu on the team table.
@@ -70,9 +71,7 @@ export default function TeamActionsMenu({
     }
     const el = dropdownRef.current;
     const closeMs =
-      parseFloat(
-        getComputedStyle(document.documentElement).getPropertyValue('--dropdown-close-dur')
-      ) || 150;
+      cssDurationMs('--dropdown-close-dur', 150);
 
     el.classList.remove('is-open');
     el.classList.add('is-closing');

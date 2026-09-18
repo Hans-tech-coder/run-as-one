@@ -3385,6 +3385,92 @@ textarea.form-input {
   cursor: default;
 }
 
+/* The Dark Mode row's switch — transitions.dev's toggle (27). The row is the
+   control (role="switch"); this is its picture, so it takes no pointer events
+   of its own. Off is a quiet grey track, on is the accent the admin's focus
+   rings already use. */
+.t-toggle {
+  transition: background var(--toggle-track) var(--toggle-ease);
+}
+
+.t-toggle-thumb {
+  translate: 0 0;
+  will-change: translate;
+}
+
+.t-toggle[data-on="true"] .t-toggle-thumb {
+  translate: var(--toggle-travel) 0;
+}
+
+.t-toggle.is-init[data-on="true"] .t-toggle-thumb {
+  animation: t-toggle-on var(--toggle-dur) var(--toggle-ease) both;
+}
+
+.t-toggle.is-init[data-on="false"] .t-toggle-thumb {
+  animation: t-toggle-off var(--toggle-dur) var(--toggle-ease) both;
+}
+
+@keyframes t-toggle-on {
+  0% { translate: 0 0; }
+  55% { translate: calc(var(--toggle-travel) + var(--toggle-ov1)) 0; }
+  80% { translate: calc(var(--toggle-travel) - var(--toggle-ov2)) 0; }
+  100% { translate: var(--toggle-travel) 0; }
+}
+
+@keyframes t-toggle-off {
+  0% { translate: var(--toggle-travel) 0; }
+  55% { translate: calc(0px - var(--toggle-ov1)) 0; }
+  80% { translate: var(--toggle-ov2) 0; }
+  100% { translate: 0 0; }
+}
+
+/* The moon / sun pair sits in one grid cell, so the row keeps the width of
+   one 18px icon while they cross over. */
+.account-theme-icon {
+  flex-shrink: 0;
+}
+
+.account-theme-icon .t-icon {
+  display: grid;
+  place-items: center;
+}
+
+.account-theme-switch {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  width: 36px;
+  height: 20px;
+  padding: 2px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  pointer-events: none;
+}
+
+.account-theme-switch[data-on="true"] {
+  background: var(--accent-blue);
+}
+
+.account-theme-switch .t-toggle-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="light"] .account-theme-switch {
+  background: #e4e4e7;
+}
+
+[data-theme="light"] .account-theme-switch[data-on="true"] {
+  background: var(--accent-blue);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-toggle-thumb { animation: none !important; }
+}
+
 @media (width < 64rem) {
   .account-trigger {
     gap: 6px;

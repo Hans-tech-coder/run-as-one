@@ -193,6 +193,7 @@ src/
                             #   each race's organizer is owed and was paid
                             #   (remittance:manage),
                             #   dashboard-sidebar.ts — the collapsed-rail cookie,
+                            #   dashboard-theme.ts — the Dark Mode cookie,
                             #   AdminCardList — what every table becomes below lg,
                             #   AdminDataTable — the events table's lg-up frame,
                             #   View chip and No. counter, shared by clients,
@@ -213,7 +214,8 @@ src/
                             #   inside it, NotificationsCenter — the header
                             #   bell and its notifications modal,
                             #   AccountMenu — the person beside the bell,
-                            #   opening the settings pages and Log Out)
+                            #   opening the settings pages, the Dark Mode
+                            #   switch and Log Out)
                             # (no superadmin/ folder: /superadmin/** is a
                             #   permanent redirect in next.config.ts)
     api/                    # all route handlers — see §6
@@ -510,6 +512,7 @@ logic again.
 | `app/events/[slug]/register/delivery.ts` | Race-kit delivery tiers — the **money** only. A fee of `0` means **not offered**. `deliveryTiers`, `deliveryFeeFor`. Shared by both wizards so they can never charge differently. The zone codes, their guard and their labels moved to `registration-codes.ts`; this module re-exports them. |
 | `app/events/[slug]/register/validation.ts` | What step 1 requires. Returns *which* fields are wrong, driving the red states, the summary dialog, and where the caret lands. Missing answers are most of it, and there are two exceptions, each named rather than reported as blank: a phone number that is present but the wrong length for its country ("Mobile number must be 10 digits"), and an **email address that is not one** ("Enter a valid email address, like juan@example.com", the rule from `email-address.ts`). The field is `type="email"`, which is no help here — a browser only runs that check on a form *submit*, and step 1 advances through a click handler. |
 | `app/events/[slug]/register/useStepReveal.ts` | **What a change of step does to the page.** Step 1 is long and every later step is short, so leaving the scroll where Next was pressed dropped the runner past the end of the new step, looking at empty space and the footer. Both wizards call it with `step`, attach `panelRef` to the form column and `headingRef` (with `tabIndex={-1}`) to the step heading. On every change of step — Next, Back, or the jump to step 4 — it scrolls the **form column**, not the page, back under the navbar (below 1024px the summary sits above the form, so y=0 would land on the summary), **only ever upwards**, instantly under reduced motion; then moves focus to the heading so a screen reader announces the new step instead of losing focus with the unmounted button. It stops at the column's `scroll-margin-top`, `--wizard-top` in `RegistrationWizard.css` — the same number the sticky summary pins at. The step a runner lands on is never scrolled. |
+| `css-duration.ts` | **`cssDurationMs(token, fallback)` — a motion token's length in ms, client only.** Every timer that waits out a CSS exit (the row menus' and the account menu's close, the Dark Mode label's text swap) reads its length through this. A bare `parseFloat` of the token is wrong: the CSS build rewrites `150ms` as `.15s`, so it read 0.15 and every menu's close fade was cut off at once. It handles both units. |
 | `consent-waiver.ts` | The liability/media/data-privacy waiver. Organizers may override it per event; the default wording is supplied here. **Never present an empty waiver.** |
 | `consent-signature.ts` | **Who signed the waiver.** The tick records that a box was clicked; the typed signature records a person, which is the thing an organizer can hold up afterwards. **Whatever the runner types is accepted** — the only rule is that the box is not blank. It used to demand a match against one of the runners on the order, and that stopped honest people at the last step of the form: middle initials, married names, nicknames, and characters their keyboard renders differently all read as mismatches, and the runners it inconvenienced were never the problem. `normalizeSignature` now only collapses whitespace, so a box holding nothing but spaces still counts as empty. `consentSignatureError` has one message left, and it names its failure: the box is empty. Both wizards and both checkout routes import it, because a signature accepted on screen and refused by the server would be worse than the checkbox alone. |
 | `email-address.ts` | **What counts as an email address, in one place.** A runner's address is the only way an order ever reaches them again, and one with no `@` in it makes every email about that order silent: Resend refuses the send outright, `lastEmailError` records a reason nobody reads for days, and the runner believes they are registered because the wizard said so. That is not hypothetical — `roxymendoza025gmail.com` reached a live order. `normalizeEmailAddress` **trims and nothing else** (a pasted trailing space stops a send on its own; casing is left alone because the local part is case-sensitive on some mail servers), `looksLikeEmailAddress` / `emailAddressError` / `invalidEmailMessage` are the rule and its wording, and `participantEmailError` is what both checkout routes ask of the runners they were handed — naming the runner ("Runner 2: enter a valid email address…") only when there is more than one. The shape is `something@something.something` and deliberately no more: a regex chasing RFC 5322 rejects valid mail more often than it catches bad, and only the mail server truly knows. Every door imports it — both wizards' check, both checkout routes, the runner PUT, staff invitations, the organizer's profile and the feedback form — because a rule enforced in one of them is a rule the other can still write past. |
@@ -603,8 +606,27 @@ under it — the person again, **the settings pages** (`settings/sections.ts`:
 *Profile*, *Security*, *Site Settings* — only with `nav.platform` — and *Your
 Access*, each with its `LinkPending` marker and `aria-current` on the page
 already open; the
-route change folds the menu) and *Log Out* in red, which shows `BusyLabel`
-while it signs out. From `lg` down the trigger is the avatar and chevron
+route change folds the menu), then **the *Dark Mode* switch** in a group of
+its own, then *Log Out* in red, which shows `BusyLabel` while it signs out.
+Dark Mode sits after the pages and before Log Out because the rows above it
+go somewhere and it changes the screen in place. The whole 44px row is the
+control (`role="switch"`, `aria-checked`), pressing it leaves the menu open,
+and the track is transitions.dev's toggle (27, `.t-toggle`, `--toggle-*` in
+`globals.css`) — accent blue when on. **The row shows the theme that is on**:
+a moon and *Dark Mode*, or a sun and *Light Mode*, the icons crossing over
+with the icon swap (09, `.t-icon-swap`) and the words with the text swap
+(04, `.t-text-swap` in `globals.css`, its three phases driven by
+`swapLabel`). Its accessible name stays *Dark Mode* whatever it shows, since a
+switch's name is what it turns on and `aria-checked` says whether. The choice is the `dash_theme` cookie
+(`admin/dashboard-theme.ts`, dark unless it says `light`), which the admin
+layout reads so `DashboardShell` draws `data-theme` on `.admin-layout` on the
+server's first paint; once mounted it mirrors the value onto `<html>` so
+portals and the themed favicon follow, and deletes it on unmount so the
+public site never inherits it. The bare sign-in pages are not themed.
+**The light palette itself has not landed yet** — the switch works and
+persists, but the dashboard's surfaces are still dark-only literals (see the
+light-theme audit in §10), so the light setting currently shows a dark
+dashboard with the logo's light-theme inks. From `lg` down the trigger is the avatar and chevron
 alone. Both sit in `.dash-header-tools`, whose measured width
 `DashboardShell` writes to `--dash-accessory-w` on `<main>`; the headers'
 right padding reads it, falling back to the widest the tools can be before
@@ -1959,11 +1981,11 @@ These are the user's own standing preferences. Follow them without being asked.
 - **The logo draws in four variables, not hexes** — `--logo-ink`, `--logo-mid`,
   `--logo-accent`, `--logo-muted`, defined in `globals.css` and pointing at the
   site tokens so the logo cannot drift from the accents beside it. A
-  `:root[data-theme="light"]` block already holds the light values, with the
+  `[data-theme="light"]` block (any element, not only the root) holds the light values, with the
   two accents deepened (`#d95f00`, `#0062d6`) because brand orange on white is
-  2.8:1 and a thin stroke at that contrast reads as a smudge. **When the
-  light/dark switch lands it only has to set `data-theme` on the root** — the
-  component does not change. A logo on an unusual surface can likewise be
+  2.8:1 and a thin stroke at that contrast reads as a smudge. **The
+  dashboard's Dark Mode switch sets `data-theme`** (on its frame and on the
+  root) — the component does not change. A logo on an unusual surface can likewise be
   re-tinted by setting `--logo-ink` on its container.
 - **The three brand assets outside the component, and why each is a different
   file.** They are not interchangeable and the favicon is not any of the others:
@@ -2074,6 +2096,14 @@ added nothing once their queue was empty.
 `IMPROVEMENTS_PLAN.md` it is now kept only for the reasoning behind each and for
 the decisions it records as not to be relitigated. It is no longer a queue, and
 the file itself says it may be deleted.
+
+**The dashboard has a Dark Mode switch, but not yet a light theme**
+(2026-09-18, on `dev`, uncommitted). The account menu's switch works and
+persists (`dash_theme`, §6), but every admin surface is still a dark-only
+literal. **`LIGHT_THEME_PLAN.md` is the queue**: it holds the audit of
+`src/app/admin` (ten findings, including the undefined `--bg-dark` the frame
+has always read) and three batches, and Batch 1 is what makes the light
+setting usable. No schema change.
 
 **Settings is grouped into four pages** (2026-09-18, on `dev`, uncommitted):
 Profile, Security, Site Settings and Your Access, listed in the account menu in

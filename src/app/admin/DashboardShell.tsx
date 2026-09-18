@@ -7,6 +7,7 @@ import { ChevronLeft } from 'lucide-react';
 import { RunAsOneLogo } from '@/components/RunAsOneLogo';
 import LinkPending from '@/components/ui/LinkPending';
 import { rememberSidebar } from './dashboard-sidebar';
+import type { DashboardTheme } from './dashboard-theme';
 import './Admin.css';
 
 /**
@@ -66,12 +67,21 @@ const isWideOnServer = () => true;
 export default function DashboardShell({
   navItems,
   initialCollapsed = false,
+  theme = 'dark',
   headerAccessory,
   children,
 }: {
   navItems: DashboardNavItem[];
   /** Read from the sidebar cookie by the layout, so the desktop's first paint is already right. */
   initialCollapsed?: boolean;
+  /**
+   * The account menu's Dark Mode choice (dashboard-theme.ts). It is drawn on
+   * the frame from the server's first paint, and mirrored onto `<html>` once
+   * mounted so what portals to `<body>` — row menus, lightboxes, the
+   * notifications modal — and the themed favicon follow it too. The mirror is
+   * removed on the way out, so the public site never inherits the choice.
+   */
+  theme?: DashboardTheme;
   /**
    * What sits at the right end of every page's header — the notification
    * bell and the account menu. Drawn once here rather than in each page's
@@ -94,6 +104,14 @@ export default function DashboardShell({
   // racing the navigation to reset it.
   const [openOn, setOpenOn] = useState<string | null>(null);
   const isOpen = openOn === pathname;
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.dataset.theme = theme;
+    return () => {
+      delete root.dataset.theme;
+    };
+  }, [theme]);
 
   const toggleRef = useRef<HTMLButtonElement>(null);
   const wasOpen = useRef(false);
@@ -195,7 +213,7 @@ export default function DashboardShell({
   };
 
   return (
-    <div className="admin-layout">
+    <div className="admin-layout" data-theme={theme}>
       {/* A phone's open menu lies over the page; this is the thumb's way out.
           Not in the tab order: Esc and the chevron are the keyboard's. */}
       <button

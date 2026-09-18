@@ -1,18 +1,33 @@
 "use client";
 
 import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChevronDown, Globe, IdCard, LogOut, ShieldCheck, UserRound, type LucideIcon } from 'lucide-react';
+import { ChevronDown, Globe, IdCard, LogOut, Moon, ShieldCheck, Sun, UserRound, type LucideIcon } from 'lucide-react';
 import LinkPending from '@/components/ui/LinkPending';
 import BusyLabel from '@/components/ui/BusyLabel';
 import type { SettingsSection, SettingsSectionKey } from './settings/sections';
+import type { DashboardTheme } from './dashboard-theme';
+import { cssDurationMs } from '@/lib/css-duration';
 
 /**
  * The signed-in person, beside the notification bell: avatar, name and role
  * line, and a chevron that opens the account's menu — the settings pages
  * (Profile, Security, Site Settings for `platform:manage`, Your Access; see
- * `settings/sections.ts`) and Log Out.
+ * `settings/sections.ts`), the Dark Mode switch, and Log Out.
+ *
+ * Dark Mode sits after the pages and before Log Out, in a group of its own:
+ * the rows above it go somewhere, this one changes the screen in place, and
+ * Log Out stays last where it always is. The whole row is the switch
+ * (`role="switch"`), so the 44px row is the target rather than the small
+ * track, and pressing it leaves the menu open so the change can be seen
+ * landing. The track is transitions.dev's toggle (27), on `.t-toggle`.
+ * The row says which theme is on: a moon and "Dark Mode", or a sun and
+ * "Light Mode". The icons cross over with the icon swap (09, `.t-icon-swap`)
+ * and the words with the text swap (04, `.t-text-swap`: out upward, then in
+ * from below). Its accessible name stays "Dark Mode" whatever it shows, since
+ * a switch's name is the thing it turns on and `aria-checked` says whether.
  *
  * It used to be the sidebar's foot, with Settings and Log Out as rows above
  * it. The owner moved all three here, to the top right where a dashboard's
@@ -62,11 +77,15 @@ function Avatar({ user }: { user: AccountMenuUser }) {
 export default function AccountMenu({
   user,
   settingsSections,
+  theme,
+  onThemeChange,
   onLogout,
 }: {
   user: AccountMenuUser;
   /** The settings pages this person may open, in menu order. */
   settingsSections: SettingsSection[];
+  theme: DashboardTheme;
+  onThemeChange: (theme: DashboardTheme) => void;
   onLogout: () => Promise<void> | void;
 }) {
   const pathname = usePathname();
@@ -74,6 +93,13 @@ export default function AccountMenu({
   const isOpen = openOn === pathname;
   const [isShown, setIsShown] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  // Set on the first press, so the switch does not play its "off" bounce as the menu opens.
+  const [switchTouched, setSwitchTouched] = useState(false);
+  const isDark = theme === 'dark';
+  const themeLabel = (dark: boolean) => (dark ? 'Dark Mode' : 'Light Mode');
+  const [shownLabel, setShownLabel] = useState(() => themeLabel(isDark));
+  const labelRef = useRef<HTMLSpanElement>(null);
+  const labelTimer = useRef<number | null>(null);
 
   const wrapRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -84,7 +110,7 @@ export default function AccountMenu({
     setIsShown(false);
     if (closeTimer.current) window.clearTimeout(closeTimer.current);
     const closeMs =
-      parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--dropdown-close-dur')) || 150;
+      cssDurationMs('--dropdown-close-dur', 150);
     closeTimer.current = window.setTimeout(() => {
       setOpenOn(null);
       if (returnFocus) triggerRef.current?.focus();
@@ -100,7 +126,31 @@ export default function AccountMenu({
 
   useEffect(() => () => {
     if (closeTimer.current) window.clearTimeout(closeTimer.current);
+    if (labelTimer.current) window.clearTimeout(labelTimer.current);
   }, []);
+
+  // The text swap's three phases: the old words leave upward, the new ones are
+  // put below with no transition, then released to rise into place. A second
+  // press mid-swap restarts it toward the latest choice.
+  const swapLabel = (next: string) => {
+    const el = labelRef.current;
+    if (labelTimer.current) window.clearTimeout(labelTimer.current);
+    if (!el) {
+      setShownLabel(next);
+      return;
+    }
+    el.classList.remove('is-enter-start');
+    el.classList.add('is-exit');
+    const swapMs =
+      cssDurationMs('--text-swap-dur', 150);
+    labelTimer.current = window.setTimeout(() => {
+      flushSync(() => setShownLabel(next));
+      el.classList.remove('is-exit');
+      el.classList.add('is-enter-start');
+      void el.offsetWidth;
+      el.classList.remove('is-enter-start');
+    }, swapMs);
+  };
 
   // A frame after mounting, so the menu transitions in rather than appearing.
   useEffect(() => {
@@ -187,6 +237,34 @@ export default function AccountMenu({
               </Link>
             );
           })}
+          <div className="action-dropdown-divider" />
+          <button
+            type="button"
+            role="switch"
+            aria-checked={isDark}
+            aria-label="Dark Mode"
+            className="action-dropdown-item account-dropdown-item"
+            onClick={() => {
+              setSwitchTouched(true);
+              onThemeChange(isDark ? 'light' : 'dark');
+              swapLabel(themeLabel(!isDark));
+            }}
+          >
+            <span className="t-icon-swap account-theme-icon" data-state={isDark ? 'a' : 'b'} aria-hidden="true">
+              <span className="t-icon" data-icon="a"><Moon size={18} /></span>
+              <span className="t-icon" data-icon="b"><Sun size={18} /></span>
+            </span>
+            <span className="flex-1" aria-hidden="true">
+              <span ref={labelRef} className="t-text-swap">{shownLabel}</span>
+            </span>
+            <span
+              className={`t-toggle account-theme-switch ${switchTouched ? 'is-init' : ''}`}
+              data-on={isDark}
+              aria-hidden="true"
+            >
+              <span className="t-toggle-thumb" />
+            </span>
+          </button>
           <div className="action-dropdown-divider" />
           <button
             type="button"

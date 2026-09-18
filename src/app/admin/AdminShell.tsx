@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   Building2,
@@ -21,6 +21,7 @@ import { SETTINGS_SECTIONS } from './settings/sections';
 import NotificationsCenter from './NotificationsCenter';
 import { DashboardNavProvider } from './dashboard-nav';
 import { isBarePath } from './bare-paths';
+import { rememberDashboardTheme, type DashboardTheme } from './dashboard-theme';
 import './Admin.css';
 
 /**
@@ -40,14 +41,23 @@ import './Admin.css';
 export default function AdminShell({
   user,
   initialCollapsed,
+  initialTheme,
   children,
 }: {
   user: SignedInUser | null;
   initialCollapsed: boolean;
+  /** Read from the theme cookie by the layout (dashboard-theme.ts). */
+  initialTheme: DashboardTheme;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const [theme, setTheme] = useState(initialTheme);
+
+  const changeTheme = (next: DashboardTheme) => {
+    setTheme(next);
+    rememberDashboardTheme(next);
+  };
 
   // The sign-in pages, drawn without the sidebar (bare-paths.ts, which
   // `admin/loading.tsx` reads too so the wait matches the page).
@@ -115,6 +125,7 @@ export default function AdminShell({
       <DashboardShell
         navItems={navItems}
         initialCollapsed={initialCollapsed}
+        theme={theme}
         // Everyone signed in gets the bell; what it lists is their
         // permissions' business (lib/notification-store.ts). The account
         // menu is always there, so Log Out can never be out of reach.
@@ -131,6 +142,8 @@ export default function AdminShell({
               settingsSections={SETTINGS_SECTIONS.filter(
                 section => !section.platformOnly || user?.nav.platform,
               )}
+              theme={theme}
+              onThemeChange={changeTheme}
               onLogout={handleLogout}
             />
           </>

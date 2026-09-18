@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { MoreVertical, CheckCircle, Trash2, Edit, Eye } from 'lucide-react';
 import { placeRowMenu, type RowMenuPlacement } from '../../../row-menu-position';
 import BusyLabel from '@/components/ui/BusyLabel';
+import { cssDurationMs } from '@/lib/css-duration';
 
 interface RegistrantActionsMenuProps {
   runnerId: string;
@@ -82,9 +83,7 @@ export default function RegistrantActionsMenu({
     }
     const el = dropdownRef.current;
     const closeMs =
-      parseFloat(
-        getComputedStyle(document.documentElement).getPropertyValue('--dropdown-close-dur')
-      ) || 150;
+      cssDurationMs('--dropdown-close-dur', 150);
 
     el.classList.remove('is-open');
     el.classList.add('is-closing');

@@ -20,6 +20,7 @@ import {
   ColumnDef,
   flexRender
 } from '@tanstack/react-table';
+import { cssDurationMs } from '@/lib/css-duration';
 
 interface Result {
   id: string;
@@ -188,9 +189,7 @@ function ActionMenu({ path, onViewCert, isGenerating }: { path: string, onViewCe
       setIsOpen(false);
       return;
     }
-    const closeMs = parseFloat(
-      getComputedStyle(document.documentElement).getPropertyValue('--dropdown-close-dur')
-    ) || 150;
+    const closeMs = cssDurationMs('--dropdown-close-dur', 150);
 
     el.classList.remove('is-open');
     el.classList.add('is-closing');

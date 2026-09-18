@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect, useCallback, useLayoutEffect } from
 import { createPortal } from 'react-dom';
 import { MoreVertical } from 'lucide-react';
 import { placeRowMenu, type RowMenuPlacement } from './row-menu-position';
+import { cssDurationMs } from '@/lib/css-duration';
 
 /** One item in a row's ⋮ menu. */
 export interface RowAction {
@@ -65,7 +66,7 @@ export default function RowActionsMenu({
     }
     const el = dropdownRef.current;
     const closeMs =
-      parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--dropdown-close-dur')) || 150;
+      cssDurationMs('--dropdown-close-dur', 150);
 
     el.classList.remove('is-open');
     el.classList.add('is-closing');

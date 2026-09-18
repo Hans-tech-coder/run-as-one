@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect, useCallback, useLayoutEffect } from
 import { createPortal } from 'react-dom';
 import { MoreVertical, CopyPlus, Edit, PauseCircle, PlayCircle, Receipt, Trash2 } from 'lucide-react';
 import { placeRowMenu, type RowMenuPlacement } from '../row-menu-position';
+import { cssDurationMs } from '@/lib/css-duration';
 
 /**
  * The row menu on the marketing table, and on the card each row becomes below
@@ -72,9 +73,7 @@ export default function PromoActionsMenu({
     const el = dropdownRef.current;
 
     const closeMs =
-      parseFloat(
-        getComputedStyle(document.documentElement).getPropertyValue('--dropdown-close-dur')
-      ) || 150;
+      cssDurationMs('--dropdown-close-dur', 150);
 
     el.classList.remove('is-open');
     el.classList.add('is-closing');

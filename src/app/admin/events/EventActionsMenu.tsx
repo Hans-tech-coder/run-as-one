@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { MoreVertical, Users, Trophy, Edit, Trash2, CalendarClock, PauseCircle, PlayCircle } from 'lucide-react';
 import LinkPending from '@/components/ui/LinkPending';
 import { placeRowMenu, type RowMenuPlacement } from '../row-menu-position';
+import { cssDurationMs } from '@/lib/css-duration';
 
 export default function EventActionsMenu({
   eventId,
@@ -72,9 +73,7 @@ export default function EventActionsMenu({
     }
     const el = dropdownRef.current;
 
-    const closeMs = parseFloat(
-      getComputedStyle(document.documentElement).getPropertyValue("--dropdown-close-dur")
-    ) || 150;
+    const closeMs = cssDurationMs('--dropdown-close-dur', 150);
 
     el.classList.remove("is-open");
     el.classList.add("is-closing");
