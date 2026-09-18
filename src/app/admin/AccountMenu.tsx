@@ -3,13 +3,16 @@
 import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChevronDown, LogOut, Settings } from 'lucide-react';
+import { ChevronDown, Globe, IdCard, LogOut, ShieldCheck, UserRound, type LucideIcon } from 'lucide-react';
 import LinkPending from '@/components/ui/LinkPending';
 import BusyLabel from '@/components/ui/BusyLabel';
+import type { SettingsSection, SettingsSectionKey } from './settings/sections';
 
 /**
  * The signed-in person, beside the notification bell: avatar, name and role
- * line, and a chevron that opens the account's menu — Settings and Log Out.
+ * line, and a chevron that opens the account's menu — the settings pages
+ * (Profile, Security, Site Settings for `platform:manage`, Your Access; see
+ * `settings/sections.ts`) and Log Out.
  *
  * It used to be the sidebar's foot, with Settings and Log Out as rows above
  * it. The owner moved all three here, to the top right where a dashboard's
@@ -17,9 +20,9 @@ import BusyLabel from '@/components/ui/BusyLabel';
  *
  * The menu is the row menus' dropdown (`.action-dropdown-menu`, transitions.dev's
  * `.t-dropdown`), hung from the trigger's right edge. It is a disclosure, not
- * an ARIA menu: two ordinary controls in tab order. Esc and a press outside
+ * an ARIA menu: ordinary controls in tab order. Esc and a press outside
  * fold it, and like the notifications modal it remembers the page it was
- * opened on, so pressing Settings folds it once the route changes, with the
+ * opened on, so pressing a settings row folds it once the route changes, with the
  * row's pending marker showing until then. From `lg` down the trigger is the
  * avatar and chevron alone, so the menu opens with the name and role line the
  * trigger no longer has room for.
@@ -33,6 +36,13 @@ export type AccountMenuUser = {
   /** The profile photo set in Settings; without one the initial is drawn. */
   avatarUrl?: string | null;
   avatarStyle?: React.CSSProperties;
+};
+
+const SECTION_ICONS: Record<SettingsSectionKey, LucideIcon> = {
+  profile: UserRound,
+  security: ShieldCheck,
+  site: Globe,
+  access: IdCard,
 };
 
 /** The round avatar: the person's photo when they have set one, else their initial. */
@@ -51,11 +61,12 @@ function Avatar({ user }: { user: AccountMenuUser }) {
 
 export default function AccountMenu({
   user,
-  settingsPath,
+  settingsSections,
   onLogout,
 }: {
   user: AccountMenuUser;
-  settingsPath: string;
+  /** The settings pages this person may open, in menu order. */
+  settingsSections: SettingsSection[];
   onLogout: () => Promise<void> | void;
 }) {
   const pathname = usePathname();
@@ -156,19 +167,26 @@ export default function AccountMenu({
             </span>
           </div>
           <div className="action-dropdown-divider" />
-          <Link
-            href={settingsPath}
-            className="action-dropdown-item account-dropdown-item"
-            aria-current={pathname === settingsPath ? 'page' : undefined}
-            onClick={() => {
-              // Settings already on screen changes no route, so it folds here.
-              if (pathname === settingsPath) close();
-            }}
-          >
-            <Settings size={18} aria-hidden="true" />
-            <span className="flex-1">Settings</span>
-            <LinkPending />
-          </Link>
+          {settingsSections.map(section => {
+            const Icon = SECTION_ICONS[section.key];
+            const current = pathname === section.href;
+            return (
+              <Link
+                key={section.key}
+                href={section.href}
+                className="action-dropdown-item account-dropdown-item"
+                aria-current={current ? 'page' : undefined}
+                onClick={() => {
+                  // The page already on screen changes no route, so it folds here.
+                  if (current) close();
+                }}
+              >
+                <Icon size={18} aria-hidden="true" />
+                <span className="flex-1">{section.label}</span>
+                <LinkPending />
+              </Link>
+            );
+          })}
           <div className="action-dropdown-divider" />
           <button
             type="button"

@@ -181,21 +181,46 @@ const EXACT: Record<string, RouteShape> = {
     // 16px gaps between them: one block above the day's table.
     lg: { toolbar: 167, table: { head: LG_TANSTACK_HEAD, row: 77, rows: 6 } },
   },
-  // Settings, top to bottom as far as a screen shows: the Profile panel (the
-  // photo row, then name and email — side by side from `lg` up), then the
-  // Password panel (a full-width field over a pair). The rest of the page's
-  // panels are below the fold.
+  // Settings is four pages the account menu lists (settings/sections.ts).
+  // Profile: the photo row, then name and email — side by side from `lg` up.
   '/admin/settings': {
+    panels: [{ fields: [AVATAR_ROW_PHONE, FIELD, HINTED], actions: true }],
+    lg: { panels: [{ rows: [AVATAR_ROW_LG, { h: HINTED, split: true }], actions: true }] },
+  },
+  // Security: Password (a full-width field over a pair), then Sign-in
+  // Activity — the last sign-in and its sentence, drawn as one block.
+  '/admin/settings/security': {
     panels: [
-      { fields: [AVATAR_ROW_PHONE, FIELD, HINTED], actions: true },
       { fields: [FIELD, HINTED, FIELD], actions: true },
+      { fields: [140], actions: true },
     ],
     lg: {
       panels: [
-        { rows: [AVATAR_ROW_LG, { h: HINTED, split: true }], actions: true },
         { rows: [FIELD, { h: HINTED, split: true }], actions: true },
+        { rows: [92], actions: true },
       ],
     },
+  },
+  // Site Settings: the admin email and its long hint, the social links (a line
+  // of small print over four boxes, two to a row from `lg` up), then the
+  // Super Admin's platform fee below the fold.
+  '/admin/settings/site': {
+    panels: [
+      { fields: [128], actions: true },
+      { fields: [32, FIELD, FIELD, FIELD, FIELD], actions: true },
+    ],
+    lg: {
+      panels: [
+        { rows: [96], actions: true },
+        { rows: [16, { h: FIELD, split: true }, { h: FIELD, split: true }], actions: true },
+      ],
+    },
+  },
+  // Your Access: the role's facts and sentence, then what the role may do,
+  // each drawn as one block.
+  '/admin/settings/access': {
+    panels: [{ fields: [220] }, { fields: [543] }],
+    lg: { panels: [{ rows: [80] }, { rows: [195] }] },
   },
   // Search, then the status chips and Sort over two rows of 44px. A client's
   // row carries its email under the name: 73px, as on the three below.

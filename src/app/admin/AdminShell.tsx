@@ -17,6 +17,7 @@ import { ROLE_LABELS } from '@/lib/permissions';
 import type { SignedInUser } from '@/lib/signed-in-user';
 import DashboardShell from './DashboardShell';
 import AccountMenu from './AccountMenu';
+import { SETTINGS_SECTIONS } from './settings/sections';
 import NotificationsCenter from './NotificationsCenter';
 import { DashboardNavProvider } from './dashboard-nav';
 import { isBarePath } from './bare-paths';
@@ -127,7 +128,9 @@ export default function AdminShell({
                 avatarUrl: user?.avatarUrl ?? null,
                 roleLine,
               }}
-              settingsPath="/admin/settings"
+              settingsSections={SETTINGS_SECTIONS.filter(
+                section => !section.platformOnly || user?.nav.platform,
+              )}
               onLogout={handleLogout}
             />
           </>
