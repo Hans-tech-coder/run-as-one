@@ -73,6 +73,7 @@ export const ACTION_LABELS: Record<AuditAction, string> = {
   'remittance.proof.viewed': 'Opened a remittance receipt',
   'settings.contact_email.changed': 'Changed the admin email',
   'settings.social_links.changed': 'Changed the social links',
+  'settings.platform_fee.changed': 'Changed the default platform fee',
 };
 
 /** The one action worded as a warning: somebody tried a password and was refused. */
@@ -100,7 +101,7 @@ export const ACTIVITY_GROUPS = [
   { key: 'remittances', label: 'Remittances', hint: 'Payouts to organizers and returns recorded or voided, and receipts opened' },
   { key: 'clients', label: 'Clients', hint: 'Submissions invited or archived, and invitations accepted' },
   { key: 'organizers', label: 'Organizer decisions', hint: 'Applications approved or rejected, accounts suspended or reinstated' },
-  { key: 'settings', label: 'Site settings', hint: 'The admin email the whole site shows and sends from' },
+  { key: 'settings', label: 'Site settings', hint: 'The admin email, the social links and the default platform fee' },
 ] as const;
 
 export type ActivityGroupKey = (typeof ACTIVITY_GROUPS)[number]['key'];
@@ -152,6 +153,7 @@ export const ACTION_GROUP: Record<AuditAction, ActivityGroupKey> = {
   'remittance.proof.viewed': 'remittances',
   'settings.contact_email.changed': 'settings',
   'settings.social_links.changed': 'settings',
+  'settings.platform_fee.changed': 'settings',
 };
 
 const KNOWN_ACTIONS = Object.keys(ACTION_LABELS) as AuditAction[];

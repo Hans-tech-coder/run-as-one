@@ -190,7 +190,7 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   'promo:view': 'See promotions',
   'promo:manage': 'Create and change promotions',
   'team:manage': 'Manage the team',
-  'org:settings': 'Organizer settings',
+  'org:settings': 'Set the default platform fee',
   'activity:view': 'Read the activity trail',
   'platform:manage': 'Clients, clubs, feedback and fees',
   'remittance:manage': 'Record remittances to organizers',

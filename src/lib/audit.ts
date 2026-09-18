@@ -93,6 +93,8 @@ export const AUDIT_ACTIONS = [
   // A site-wide setting staff edit at /admin/settings (lib/site-settings.ts).
   'settings.contact_email.changed',
   'settings.social_links.changed',
+  // The default platform fee a new event starts from (lib/platform-fee.ts).
+  'settings.platform_fee.changed',
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

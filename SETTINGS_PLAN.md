@@ -109,23 +109,30 @@ its own dashboard. A running `next dev` needs a restart after
 
 ---
 
-## ⬜ Batch 4 — Default platform fee
+## ✅ Batch 4 — Default platform fee *(done, 2026-09-18)*
 
-**Who:** Super Admin only (`org:settings`, which nothing uses yet).
+**Who:** Super Admin only (`org:settings`, first put to use by this batch).
 
-- [ ] Decide the home for the value: `Organizer.adminFee` already exists
+- [x] Decide the home for the value: `Organizer.adminFee` already exists
       (centavos, default 6000, currently a dead column), so no migration
       should be needed.
-- [ ] A **Default Platform Fee** panel, peso input, shown only with
+- [x] A **Default Platform Fee** panel, peso input, shown only with
       `org:settings`.
-- [ ] A route to save it (`org:settings`, audited).
-- [ ] The create-event form (`admin/events/new/page.tsx`, today hardcoded to
+- [x] A route to save it (`org:settings`, audited).
+- [x] The create-event form (`admin/events/new/page.tsx`, today hardcoded to
       `adminFee: 60`) starts from the saved default.
-- [ ] Say plainly in the panel that it **only affects new events** — existing
+- [x] Say plainly in the panel that it **only affects new events** — existing
       events keep their own `Event.adminFee`.
-- [ ] Update `PROJECT_GUIDE.md` (§4 Organizer.adminFee is no longer dead, §6).
+- [x] Update `PROJECT_GUIDE.md` (§4 Organizer.adminFee is no longer dead, §6).
 
-**Release:** no migration expected.
+Also: the value lives on `Organizer.adminFee` (no migration); the rule is
+`lib/platform-fee.ts` (`readPlatformFee`, ₱0 to ₱1,000, ≤ 2 decimals); the
+route is `PATCH /api/admin/platform-fee`, audited `settings.platform_fee.changed`
+on the *Site settings* Activity shelf; `/admin/events/new` became a server
+`page.tsx` around `NewEventForm.tsx` so the form starts from the saved value;
+the `org:settings` matrix row now reads *Set the default platform fee*.
+
+**Release:** no migration.
 
 ---
 

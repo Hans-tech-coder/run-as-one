@@ -9,6 +9,7 @@ import { getContactEmail, getSiteSettings } from '@/lib/site-settings';
 import AccessPanels from './AccessPanels';
 import {
   PasswordPanel,
+  PlatformFeePanel,
   ProfilePanel,
   SignInActivityPanel,
   SiteEmailPanel,
@@ -33,7 +34,10 @@ export const metadata: Metadata = {
  * 3. **Admin Email** and **Social Links** — `platform:manage` only (Super
  *    Admin and Admin): the one address the footer, the legal pages and every
  *    email use, and the footer's social icons. Two forms, each saving alone.
- * 4. **Your Role** and what it reaches (AccessPanels), read-only.
+ * 4. **Default Platform Fee** — `org:settings` only (the Super Admin): what a
+ *    new event's Admin Fee starts at, stored on the Organizer row. Existing
+ *    events keep their own fee.
+ * 5. **Your Role** and what it reaches (AccessPanels), read-only.
  *
  * For an owner "the person" is the Organizer row; for a staff member (and a
  * client viewer) it is their own StaffAccount, never the organizer they work
@@ -65,9 +69,13 @@ export default async function AdminSettingsPage() {
   }
 
   const platform = can(actor, 'platform:manage', { organizerId: actor.orgId });
-  const [emailLockedTo, siteSettings] = await Promise.all([
+  const orgSettings = can(actor, 'org:settings', { organizerId: actor.orgId });
+  const [emailLockedTo, siteSettings, organizerSettings] = await Promise.all([
     isClientViewer(actor) ? getContactEmail() : null,
     platform ? getSiteSettings() : null,
+    orgSettings
+      ? prisma.organizer.findUnique({ where: { id: actor.orgId }, select: { adminFee: true } })
+      : null,
   ]);
 
   return (
@@ -102,6 +110,8 @@ export default async function AdminSettingsPage() {
               <SocialLinksPanel settings={{ socialLinks: siteSettings.socialLinks }} />
             </>
           )}
+
+          {organizerSettings && <PlatformFeePanel adminFee={organizerSettings.adminFee} />}
 
           <AccessPanels actor={actor} />
         </div>

@@ -2,7 +2,7 @@
 
 import React, { useId, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Camera, Check, History, KeyRound, LogOut, Mail, Share2, UserCog } from 'lucide-react';
+import { Camera, Check, Coins, History, KeyRound, LogOut, Mail, Share2, UserCog } from 'lucide-react';
 import FieldError from '@/components/ui/FieldError';
 import { useAlert } from '@/components/ui/AlertProvider';
 import { invalidEmailMessage, looksLikeEmailAddress } from '@/lib/email-address';
@@ -19,6 +19,8 @@ import {
 import { BrandGlyph } from '@/components/BrandIcons';
 import PhoneField from '@/app/events/[slug]/register/PhoneField';
 import { DEFAULT_COUNTRY } from '@/lib/phone';
+import { formatPesos } from '@/lib/money';
+import { readPlatformFee } from '@/lib/platform-fee';
 import PasswordField from './PasswordField';
 
 // One constant for this form, the password route and the invitation page.
@@ -1035,6 +1037,132 @@ export function SocialLinksPanel({ settings }: { settings: SocialLinksForm }) {
           <SaveConfirmation
             visible={justSaved && !isDirty}
             message="Social links saved"
+          />
+          <button
+            type="submit"
+            className="btn-light"
+            disabled={isSaving || !isDirty}
+          >
+            {isSaving ? <BusyLabel>Saving</BusyLabel> : 'Save Changes'}
+          </button>
+        </div>
+      </div>
+    </form>
+  );
+}
+
+/**
+ * The **default platform fee** (SETTINGS_PLAN.md Batch 4) — the Super Admin's
+ * alone (`org:settings`), so page.tsx leaves it out for everyone else.
+ *
+ * It is the value a new event's Admin Fee box starts at, nothing more. The
+ * panel says so in words, because the natural reading of "platform fee" is
+ * that it reprices every race; each existing event keeps its own fee, changed
+ * on that event's edit screen.
+ */
+export function PlatformFeePanel({ adminFee }: { adminFee: number }) {
+  // Shadows window.alert on purpose — see AlertProvider.
+  const { alert } = useAlert();
+  const feeId = useId();
+
+  const [saved, setSaved] = useState(adminFee);
+  const [fee, setFee] = useState(() => formatPesos(adminFee));
+  const [error, setError] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [justSaved, setJustSaved] = useState(false);
+
+  // Compared as centavos, so "60" and "60.00" are the same fee and a box
+  // reformatted by hand does not light up Save.
+  const typed = readPlatformFee(fee);
+  const isDirty = typed.value === null ? fee.trim() !== formatPesos(saved) : typed.value !== saved;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (typed.error) {
+      setError(typed.error);
+      return;
+    }
+
+    setIsSaving(true);
+    setJustSaved(false);
+
+    try {
+      const res = await fetch('/api/admin/platform-fee', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminFee: fee.trim() }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (data.errors?.adminFee) {
+          setError(data.errors.adminFee);
+          return;
+        }
+        throw new Error(data.error || 'Could not save the default platform fee');
+      }
+
+      setSaved(data.adminFee);
+      setFee(formatPesos(data.adminFee));
+      setError('');
+      setJustSaved(true);
+    } catch (err: unknown) {
+      await alert(
+        err instanceof Error ? err.message : 'Could not save the default platform fee'
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <form className="admin-panel" onSubmit={handleSubmit} noValidate>
+      <div className="admin-panel-header">
+        <h2 className="admin-panel-title flex items-center gap-2">
+          <Coins size={18} className="text-accent-orange" aria-hidden="true" />
+          Default Platform Fee
+        </h2>
+      </div>
+
+      <div className="admin-panel-content">
+        <div className="form-grid">
+          <div className="form-group">
+            <label className="form-label" htmlFor={feeId}>
+              Admin Fee per Runner (₱)
+            </label>
+            <input
+              id={feeId}
+              type="text"
+              inputMode="decimal"
+              className="form-input"
+              value={fee}
+              placeholder="60.00"
+              onChange={e => {
+                setFee(e.target.value);
+                setError('');
+              }}
+              onBlur={() => setError(fee.trim() ? readPlatformFee(fee).error ?? '' : '')}
+              autoComplete="off"
+              disabled={isSaving}
+              aria-invalid={error ? true : undefined}
+              aria-describedby={error ? `${feeId}-error` : `${feeId}-hint`}
+            />
+            <FieldError id={`${feeId}-error`} message={error} />
+            {!error && (
+              <p id={`${feeId}-hint`} className="text-xs text-secondary">
+                Only affects new events: it is what the Admin Fee box starts at
+                when an event is created. Existing events keep their own fee —
+                change one on that event&apos;s edit screen.
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="form-actions settings-actions">
+          <SaveConfirmation
+            visible={justSaved && !isDirty}
+            message="Default platform fee saved"
           />
           <button
             type="submit"

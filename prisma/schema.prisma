@@ -23,7 +23,9 @@ model Organizer {
   /// Only APPROVED can be signed in to — src/lib/organizer-status.ts, an
   /// allowlist. Plain text so a status can be added without a migration.
   status            String            @default("PENDING")
-  /// Centavos. A dead column: every order's fee comes from `Event.adminFee`.
+  /// Centavos. The **default platform fee** (lib/platform-fee.ts): what a new
+  /// event's Admin Fee starts at, set by the Super Admin on /admin/settings.
+  /// Never charged itself — every order's fee comes from `Event.adminFee`.
   adminFee          Int               @default(6000)
   /// The owner's profile photo, a public blob URL (avatars/ in the public
   /// store), set from /admin/settings. Null shows the name's initial instead.
