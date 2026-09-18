@@ -1877,7 +1877,6 @@ export default function PromoCodesClient({
                         id="promo-from"
                         type="date"
                         className="form-input"
-                        style={{ colorScheme: 'dark' }}
                         value={form.validFrom}
                         onChange={e => set({ validFrom: e.target.value })}
                       />
@@ -1888,7 +1887,6 @@ export default function PromoCodesClient({
                         id="promo-until"
                         type="date"
                         className="form-input"
-                        style={{ colorScheme: 'dark' }}
                         aria-invalid={errorFor('validUntil') ? true : undefined}
                         value={form.validUntil}
                         onChange={e => set({ validUntil: e.target.value })}

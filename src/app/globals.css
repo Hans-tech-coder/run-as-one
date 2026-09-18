@@ -1,11 +1,14 @@
 @import "tailwindcss";
 @source "../";
-@theme {
-  --color-accent-orange: #FF6B00;
-  --color-accent-blue: #007AFF;
-  --color-dark: #050505;
-  --color-primary: #ffffff;
-  --color-secondary: #a1a1aa;
+/* `inline` so each utility reads the variable where it is used rather than the
+   value it had at :root — without it `text-primary` would be a fixed white that
+   no `[data-theme="light"]` block could reach. */
+@theme inline {
+  --color-accent-orange: var(--accent-orange);
+  --color-accent-blue: var(--accent-blue);
+  --color-dark: var(--bg-dark);
+  --color-primary: var(--text-primary);
+  --color-secondary: var(--text-secondary);
 }
 
 /* Base Reset */
@@ -147,6 +150,42 @@ input[type="checkbox"],
   --bg-secondary: rgba(255, 255, 255, 0.03);
   --text-primary: #ffffff;
   --text-secondary: #a1a1aa;
+  --text-muted: #8a8a93;
+
+  /* ── The dashboard palette ───────────────────────────────────
+     Dark values here, light values in the `[data-theme="light"]` block below;
+     a surface reads a name, never a hex, so the two themes cannot drift. Only
+     the dashboard ever sets `data-theme`, so the public site sees these dark
+     values and nothing else. The ink ramp (`--ink-*`) is derived further down,
+     on a selector that re-runs it wherever a theme is set. */
+  --bg-dark: #050505;                         /* the page ground */
+  --ink: #ffffff;                             /* what hairlines, hovers and quiet fills are made of */
+  --dash-surface: rgba(0, 0, 0, 0.3);         /* panel, card, metric */
+  --dash-sunken: rgba(0, 0, 0, 0.2);          /* table heads, drop zones */
+  --dash-field: rgba(0, 0, 0, 0.4);           /* inputs at rest */
+  --dash-field-focus: rgba(0, 0, 0, 0.6);     /* inputs being typed in */
+  --dash-chrome: rgba(0, 0, 0, 0.6);          /* the sidebar */
+  --dash-header: rgba(0, 0, 0, 0.4);          /* the page header */
+  --dash-panel: rgba(15, 15, 20, 0.95);       /* dropdowns, modals, anything floating */
+  --dash-panel-solid: #111114;                /* the same, where nothing may show through */
+  --dash-scrim: rgba(0, 0, 0, 0.6);           /* behind a modal or the phone's menu */
+  --dash-shadow: rgba(0, 0, 0, 0.5);          /* the long shadow under a floating panel */
+  --dash-inverse-bg: #e4e4e7;                 /* .btn-light and the rail's tooltip */
+  --dash-inverse-fg: #09090b;
+  --dash-inverse-hover: #fafafa;
+  --color-scheme: dark;                       /* the browser's own controls */
+
+  /* Status inks. Tuned for black; the light block deepens each until it clears
+     4.5:1 on white, the way the logo's accents were deepened. Tints are
+     `color-mix` of these, so a badge's fill follows its text. */
+  --status-success: #52c41a;
+  --status-warning: #faad14;
+  --status-danger: #ff4d4f;
+
+  /* The accents as text. Brand blue and orange are too dark to read on black
+     and too light to read on white, so words wear these instead. */
+  --accent-blue-text: color-mix(in srgb, var(--accent-blue) 70%, #fff);
+  --accent-orange-text: color-mix(in srgb, var(--accent-orange) 60%, #fff);
   
   --accent-orange: #FF6B00;
   --accent-blue: #007AFF;
@@ -239,7 +278,7 @@ input[type="time"],
 input[type="datetime-local"],
 input[type="month"],
 input[type="week"] {
-  color-scheme: dark;
+  color-scheme: var(--color-scheme);
 }
 
 input[type="date"]::-webkit-calendar-picker-indicator,
@@ -264,7 +303,21 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.55)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3ccircle cx='12' cy='12' r='9'/%3e%3cpath d='M12 7v5l3.5 2'/%3e%3c/svg%3e");
 }
 
-/* Brighten on approach, the way the select chevron and the field border do. */
+/* The light dashboard's glyphs: the same two icons in zinc-600. A data URI
+   cannot read a variable, so the theme swaps the whole image. */
+[data-theme="light"] input[type="date"]::-webkit-calendar-picker-indicator,
+[data-theme="light"] input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+[data-theme="light"] input[type="month"]::-webkit-calendar-picker-indicator,
+[data-theme="light"] input[type="week"]::-webkit-calendar-picker-indicator {
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2352525b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3crect x='3' y='4' width='18' height='18' rx='2'/%3e%3cpath d='M16 2v4M8 2v4M3 10h18'/%3e%3c/svg%3e");
+}
+
+[data-theme="light"] input[type="time"]::-webkit-calendar-picker-indicator {
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2352525b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3ccircle cx='12' cy='12' r='9'/%3e%3cpath d='M12 7v5l3.5 2'/%3e%3c/svg%3e");
+}
+
+/* Brighten on approach, the way the select chevron and the field border do.
+   On a light field "brighter" means darker, hence the second value. */
 input[type="date"]:hover::-webkit-calendar-picker-indicator,
 input[type="time"]:hover::-webkit-calendar-picker-indicator,
 input[type="datetime-local"]:hover::-webkit-calendar-picker-indicator,
@@ -272,6 +325,10 @@ input[type="date"]:focus::-webkit-calendar-picker-indicator,
 input[type="time"]:focus::-webkit-calendar-picker-indicator,
 input[type="datetime-local"]:focus::-webkit-calendar-picker-indicator {
   filter: brightness(1.8);
+}
+
+[data-theme="light"] input:is([type="date"], [type="time"], [type="datetime-local"]):is(:hover, :focus)::-webkit-calendar-picker-indicator {
+  filter: brightness(0.3);
 }
 
 .container {
@@ -355,8 +412,8 @@ input[type="datetime-local"]:focus::-webkit-calendar-picker-indicator {
    `font-medium normal-case tracking-normal` — an address shouted in bold caps
    stops looking like an address, and out-shouts the primary beside it. */
 .btn-secondary {
-  background: rgba(255, 255, 255, 0.04);
-  color: #fff;
+  background: var(--ink-04);
+  color: var(--text-primary);
   border: 1px solid var(--glass-border);
   border-radius: 1rem; /* 16px — matches .btn-gradient */
   padding: 1rem 1.25rem; /* 16px 20px */
@@ -376,7 +433,7 @@ input[type="datetime-local"]:focus::-webkit-calendar-picker-indicator {
   gap: 0.5rem;
 }
 .btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--ink-08);
   /* The warm edge is the only brand colour a quiet button is allowed, and it
      only appears on hover — enough to say "this is also a way forward" without
      competing with the gradient beside it. */
@@ -387,7 +444,7 @@ input[type="datetime-local"]:focus::-webkit-calendar-picker-indicator {
 .btn-secondary:disabled,
 .btn-secondary:disabled:hover {
   opacity: 0.45;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--ink-04);
   border-color: var(--glass-border);
   transform: none;
   cursor: not-allowed;
@@ -472,7 +529,7 @@ input[type="datetime-local"]:focus::-webkit-calendar-picker-indicator {
 }
 
 .input-group input[type="date"] {
-  color-scheme: dark;
+  color-scheme: var(--color-scheme);
 }
 
 /* Invalid state.
@@ -501,6 +558,10 @@ input[type="datetime-local"]:focus::-webkit-calendar-picker-indicator {
   background-position: right 1rem center;
   background-size: 1em;
   padding-right: 2.5rem;
+}
+
+[data-theme="light"] .input-group select {
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2309090b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
 }
 
 @layer utilities {
@@ -1311,6 +1372,84 @@ html, body { overflow-x: clip; }
   --logo-mid: #0062d6;
   --logo-accent: #d95f00;
   --logo-muted: #52525b;
+
+  /* The dashboard palette's light half (the dark half and what each name is
+     for are in :root). White panels on a zinc-100 ground, the ink inverted to
+     zinc-950, and everything that floats solid rather than glassy, because a
+     translucent white panel over a white page reads as a smudge. */
+  --bg-primary: #f4f4f5;
+  --bg-secondary: rgba(9, 9, 11, 0.03);
+  --text-primary: #09090b;
+  --text-secondary: #52525b;   /* 7.7:1 on white */
+  --text-muted: #6b6b73;       /* 5.3:1 on white, 4.8:1 on the ground */
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(9, 9, 11, 0.1);
+
+  --bg-dark: #f4f4f5;
+  --ink: #09090b;
+  --dash-surface: #ffffff;
+  --dash-sunken: rgba(9, 9, 11, 0.03);
+  --dash-field: #ffffff;
+  --dash-field-focus: #ffffff;
+  --dash-chrome: #ffffff;
+  --dash-header: rgba(244, 244, 245, 0.85);
+  --dash-panel: #ffffff;
+  --dash-panel-solid: #ffffff;
+  --dash-scrim: rgba(9, 9, 11, 0.35);
+  --dash-shadow: rgba(9, 9, 11, 0.14);
+  --dash-inverse-bg: #18181b;
+  --dash-inverse-fg: #fafafa;
+  --dash-inverse-hover: #09090b;
+  --color-scheme: light;
+
+  --status-success: #2f7d0f;   /* 5.2:1 on white */
+  --status-warning: #9a5b00;   /* 5.4:1 */
+  --status-danger: #c8282b;    /* 5.5:1 */
+
+  --accent-blue-text: #0062d6; /* 5.7:1 — the logo's deepened blue */
+  --accent-orange-text: #b04d00; /* 5.4:1 */
+
+  color-scheme: light;
+}
+
+/* The ink ramp: the white-on-black alphas the dark dashboard was built from,
+   as names. It is declared on every element that carries a theme as well as
+   the root, because a custom property resolves `var()` where it is declared —
+   declared on :root alone, `--ink-05` would stay white inside a light frame
+   whatever `--ink` said there. */
+:root,
+[data-theme] {
+  --ink-02: color-mix(in srgb, var(--ink) 2%, transparent);
+  --ink-03: color-mix(in srgb, var(--ink) 3%, transparent);
+  --ink-04: color-mix(in srgb, var(--ink) 4%, transparent);
+  --ink-05: color-mix(in srgb, var(--ink) 5%, transparent);
+  --ink-06: color-mix(in srgb, var(--ink) 6%, transparent);
+  --ink-08: color-mix(in srgb, var(--ink) 8%, transparent);
+  --ink-10: color-mix(in srgb, var(--ink) 10%, transparent);
+  --ink-12: color-mix(in srgb, var(--ink) 12%, transparent);
+  --ink-15: color-mix(in srgb, var(--ink) 15%, transparent);
+  --ink-16: color-mix(in srgb, var(--ink) 16%, transparent);
+  --ink-25: color-mix(in srgb, var(--ink) 25%, transparent);
+  --ink-30: color-mix(in srgb, var(--ink) 30%, transparent);
+  --ink-35: color-mix(in srgb, var(--ink) 35%, transparent);
+  --ink-40: color-mix(in srgb, var(--ink) 40%, transparent);
+  --ink-50: color-mix(in srgb, var(--ink) 50%, transparent);
+  --ink-55: color-mix(in srgb, var(--ink) 55%, transparent);
+  --ink-60: color-mix(in srgb, var(--ink) 60%, transparent);
+  --ink-65: color-mix(in srgb, var(--ink) 65%, transparent);
+  --ink-85: color-mix(in srgb, var(--ink) 85%, transparent);
+
+  /* The plan's names for the steps the dashboard leans on most. */
+  --dash-hairline: var(--ink-05);
+  --dash-border: var(--ink-10);
+  --dash-hover: var(--ink-05);
+}
+
+/* A light frame's hairlines need one more step than a dark one's: 5% black on
+   white is fainter to the eye than 5% white on black. */
+[data-theme="light"] {
+  --dash-hairline: var(--ink-08);
+  --dash-border: var(--ink-12);
 }
 
 /* ── Home hero arc — components/HeroArcBackground ─────────────

@@ -264,7 +264,6 @@ export default function RecordRemittanceDialog({
                 id="remittance-paid-on"
                 type="date"
                 className="form-input text-base sm:text-sm"
-                style={{ colorScheme: 'dark' }}
                 max={today}
                 value={paidOn}
                 onChange={e => {

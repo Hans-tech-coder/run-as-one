@@ -7,8 +7,8 @@
 
 .admin-sidebar {
   width: 280px;
-  background: rgba(0, 0, 0, 0.6);
-  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--dash-chrome);
+  border-right: 1px solid var(--dash-hairline);
   display: flex;
   flex-direction: column;
   position: fixed;
@@ -104,7 +104,7 @@
   background: var(--accent-blue);
   /* The ring in the page's own colour cuts the knob out of the sidebar's
      border line, so it reads as sitting on the edge rather than behind it. */
-  box-shadow: 0 0 0 3px var(--bg-dark), 0 4px 12px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 0 0 3px var(--bg-dark), 0 4px 12px var(--dash-shadow);
   transition:
     transform        var(--resize-dur) var(--resize-ease),
     background-color var(--duration-quick) ease;
@@ -165,7 +165,7 @@
 }
 
 .admin-nav-item:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--ink-04);
   color: var(--text-primary);
 }
 
@@ -174,11 +174,12 @@
   outline-offset: -2px;
 }
 
-/* The label is the blue lightened toward white: --accent-blue itself on its
-   own tint falls short of 4.5:1. The bar keeps the true brand blue. */
+/* The label wears --accent-blue-text (lightened on the dark theme, deepened on
+   the light one): --accent-blue itself on its own tint falls short of 4.5:1 on
+   either. The bar keeps the true brand blue. */
 .admin-nav-item.active {
   background: color-mix(in srgb, var(--accent-blue) 14%, transparent);
-  color: color-mix(in srgb, var(--accent-blue) 70%, #fff);
+  color: var(--accent-blue-text);
   font-weight: 600;
   box-shadow: inset -4px 0 0 var(--accent-blue);
 }
@@ -207,7 +208,7 @@
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.06),
     0 2px 6px 0 rgba(0, 0, 0, 0.05),
-    0 8px 28px 0 rgba(0, 0, 0, 0.5);
+    0 8px 28px 0 var(--dash-shadow);
   opacity: 0;
   pointer-events: none;
   transition:
@@ -325,12 +326,12 @@
 
 .admin-header {
   height: 80px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--dash-hairline);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 var(--space-xl);
-  background: rgba(0, 0, 0, 0.4);
+  background: var(--dash-header);
   position: sticky;
   top: 0;
   z-index: 40;
@@ -362,8 +363,8 @@
 
 .metric-card {
   min-width: 0;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--dash-surface);
+  border: 1px solid var(--dash-hairline);
   border-radius: var(--radius-xl);
   padding: var(--space-lg);
   display: flex;
@@ -400,15 +401,15 @@
 
 /* Data Tables */
 .admin-panel {
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--dash-surface);
+  border: 1px solid var(--dash-hairline);
   border-radius: var(--radius-xl);
   overflow: hidden;
 }
 
 .admin-panel-header {
   padding: var(--space-lg);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--dash-hairline);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -439,7 +440,7 @@
 .data-table td {
   padding: 16px 24px;
   text-align: left;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--dash-hairline);
 }
 
 .data-table th {
@@ -447,7 +448,7 @@
   font-weight: 600;
   text-transform: uppercase;
   color: var(--text-secondary);
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--dash-sunken);
   letter-spacing: 0.05em;
 }
 
@@ -461,7 +462,7 @@
 }
 
 .data-table tr:hover td {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--ink-02);
 }
 
 /* Status Badges */
@@ -476,29 +477,29 @@
 }
 
 .status-badge.success {
-  background: rgba(82, 196, 26, 0.1);
-  color: #52c41a;
+  background: color-mix(in srgb, var(--status-success) 10%, transparent);
+  color: var(--status-success);
 }
 
 .status-badge.pending {
-  background: rgba(250, 173, 20, 0.1);
-  color: #faad14;
+  background: color-mix(in srgb, var(--status-warning) 10%, transparent);
+  color: var(--status-warning);
 }
 
 /* Something failed and a person has to act: an email that never went out, for
    one. Amber is already spoken for by PENDING, which is a state that is simply
    waiting and needs nobody. */
 .status-badge.danger {
-  background: rgba(255, 77, 79, 0.1);
-  color: #ff4d4f;
+  background: color-mix(in srgb, var(--status-danger) 10%, transparent);
+  color: var(--status-danger);
 }
 
 /* For a state that is neither good news nor a warning — a sold-out event, a
    race that has been run. Green would congratulate and amber would alarm; both
    would be wrong about a fact that simply is. */
 .status-badge.neutral {
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.65);
+  background: var(--ink-06);
+  color: var(--ink-65);
 }
 
 /* A quiet line under a badge, for something that has not happened yet but is
@@ -514,7 +515,7 @@
 }
 
 .status-note.pending {
-  color: #faad14;
+  color: var(--status-warning);
 }
 
 /* For a note that is a plain fact rather than a warning — the date an event's
@@ -523,7 +524,7 @@
    is true, and repeating the badge's amber underneath it would read as a
    second, louder copy of the badge. */
 .status-note.neutral {
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--ink-55);
 }
 
 /* The events list's Registrants count and its split (EventsTableClient's
@@ -543,9 +544,9 @@
   min-height: 32px;
   padding: 2px 10px;
   border-radius: 100px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.04);
-  color: #fff;
+  border: 1px solid var(--dash-border);
+  background: var(--ink-04);
+  color: var(--text-primary);
   font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
@@ -553,7 +554,7 @@
 
 .reg-count-trigger:hover,
 .reg-count.is-open .reg-count-trigger {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--ink-08);
 }
 
 .reg-count-tip {
@@ -573,7 +574,7 @@
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.06),
     0 2px 6px 0 rgba(0, 0, 0, 0.05),
-    0 8px 28px 0 rgba(0, 0, 0, 0.5);
+    0 8px 28px 0 var(--dash-shadow);
   transform: scale(var(--tt-scale));
   transform-origin: 0% 100%;
   opacity: 0;
@@ -610,8 +611,8 @@
   border-radius: 50%;
 }
 
-.reg-count-dot.is-paid { background: #52c41a; }
-.reg-count-dot.is-pending { background: #faad14; }
+.reg-count-dot.is-paid { background: var(--status-success); }
+.reg-count-dot.is-pending { background: var(--status-warning); }
 
 .reg-count.is-open .reg-count-tip,
 .reg-count-trigger:focus-visible + .reg-count-tip {
@@ -648,7 +649,7 @@
 }
 
 .empty-icon {
-  color: rgba(255, 255, 255, 0.1);
+  color: var(--ink-10);
 }
 
 /* ── The phone's backdrop ─────────────────────────────────────────────────
@@ -697,8 +698,8 @@
   flex-direction: column;
   gap: 12px;
   padding: var(--space-md);
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--dash-surface);
+  border: 1px solid var(--dash-hairline);
   border-radius: var(--radius-xl);
   transition:
     border-color var(--duration-quick) ease,
@@ -706,8 +707,8 @@
 }
 
 .admin-card.is-selected {
-  border-color: rgba(255, 255, 255, 0.25);
-  background: rgba(255, 255, 255, 0.03);
+  border-color: var(--ink-25);
+  background: var(--ink-03);
 }
 
 .admin-card-head {
@@ -810,7 +811,7 @@
 .admin-card-expanded {
   min-width: 0;
   padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid var(--dash-hairline);
 }
 
 .admin-card-actions {
@@ -819,7 +820,7 @@
   align-items: center;
   gap: 8px;
   padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid var(--dash-hairline);
 }
 
 .admin-card-actions > :is(button, a) {
@@ -967,32 +968,32 @@
    `text-orange-400` for years and still drew grey. These are the badge tones,
    so an active queue chip and the badge it collects mean the same thing. */
 .btn-filter.is-pending {
-  color: #faad14;
-  background: rgba(250, 173, 20, 0.1);
-  border-color: rgba(250, 173, 20, 0.25);
+  color: var(--status-warning);
+  background: color-mix(in srgb, var(--status-warning) 10%, transparent);
+  border-color: color-mix(in srgb, var(--status-warning) 25%, transparent);
 }
 
 .btn-filter.is-danger {
-  color: #ff4d4f;
-  border-color: rgba(255, 77, 79, 0.3);
+  color: var(--status-danger);
+  border-color: color-mix(in srgb, var(--status-danger) 30%, transparent);
 }
 
 .btn-filter.is-danger:hover,
 .btn-filter.is-danger.is-active {
-  background: rgba(255, 77, 79, 0.1);
+  background: color-mix(in srgb, var(--status-danger) 10%, transparent);
 }
 
 .btn-filter.is-primary {
-  color: color-mix(in srgb, var(--accent-blue) 70%, #fff);
+  color: var(--accent-blue-text);
 }
 
 /* Approve (the organizers and communities screens). Green only under the
-   pointer, the badge's own #52c41a: at rest an approve is a question, not a
+   pointer, the badge's own var(--status-success): at rest an approve is a question, not a
    status, and it sits beside a red that already is one. This is the hover
    the old `hover:text-green-500` utility asked for and never drew. */
 .btn-filter.is-success:hover {
-  color: #52c41a;
-  background: rgba(82, 196, 26, 0.1);
+  color: var(--status-success);
+  background: color-mix(in srgb, var(--status-success) 10%, transparent);
 }
 
 /* ── The registrants bulk bar (RegistrantsTable.tsx) ─────────────────────
@@ -1026,10 +1027,10 @@
   align-items: center;
   gap: 8px;
   padding: 12px;
-  background: rgba(15, 15, 20, 0.97);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--dash-panel);
+  border: 1px solid var(--dash-border);
   border-radius: var(--radius-xl);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 16px 40px var(--dash-shadow);
 }
 
 .bulk-bar.t-toast {
@@ -1099,10 +1100,10 @@
 .t-tabs {
   --tabs-dur: var(--duration-fast);
   --tabs-ease: var(--ease-smooth-out);
-  --tabs-text-muted: rgba(255, 255, 255, 0.6);
-  --tabs-text-active: #ffffff;
-  --tabs-bar-bg: rgba(0, 0, 0, 0.3);
-  --tabs-pill-bg: rgba(255, 255, 255, 0.1);
+  --tabs-text-muted: var(--ink-60);
+  --tabs-text-active: var(--text-primary);
+  --tabs-bar-bg: var(--dash-surface);
+  --tabs-pill-bg: var(--ink-10);
 }
 
 .t-tabs {
@@ -1162,7 +1163,7 @@
   grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr));
   gap: 4px;
   padding: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--ink-08);
   border-radius: var(--radius-lg);
 }
 
@@ -1186,7 +1187,7 @@
   top: 0;
   height: 0;
   border-radius: calc(var(--radius-lg) - 4px);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 0 0 1px var(--ink-12);
   transition:
     transform var(--tabs-dur) var(--tabs-ease),
     width     var(--tabs-dur) var(--tabs-ease),
@@ -1212,8 +1213,8 @@
 .form-input {
   width: 100%;
   padding: var(--space-md);
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--dash-field);
+  border: 1px solid var(--dash-border);
   border-radius: var(--radius-lg);
   color: var(--text-primary);
   font-family: var(--font-body);
@@ -1223,13 +1224,13 @@
 }
 
 .form-input:focus {
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--dash-field-focus);
   border-color: var(--accent-blue);
   box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.15);
 }
 
 .form-input::placeholder {
-  color: rgba(255, 255, 255, 0.3);
+  color: var(--ink-30);
 }
 
 .form-input:disabled {
@@ -1260,6 +1261,11 @@ select.form-input {
   background-size: 1rem;
 }
 
+/* A data URI cannot read a variable, so the light theme swaps the chevron. */
+[data-theme="light"] select.form-input {
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2352525b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+}
+
 textarea.form-input {
   resize: vertical;
   min-height: 6rem;
@@ -1281,7 +1287,7 @@ textarea.form-input {
   border-radius: 999px;
   background: rgba(0, 122, 255, 0.12);
   border: 1px solid rgba(0, 122, 255, 0.3);
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--ink-85);
   font-size: 0.75rem;
   line-height: 1.4;
 }
@@ -1319,7 +1325,7 @@ textarea.form-input {
 }
 
 .password-toggle:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--ink-08);
   color: var(--text-primary);
 }
 
@@ -1349,7 +1355,7 @@ textarea.form-input {
   gap: var(--space-lg);
   margin-bottom: var(--space-xl);
   padding-bottom: var(--space-xl);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--dash-hairline);
 }
 
 .settings-avatar-image {
@@ -1439,8 +1445,8 @@ textarea.form-input {
   top: 0.45em;
   width: 10px;
   height: 6px;
-  border-left: 2px solid #52c41a;
-  border-bottom: 2px solid #52c41a;
+  border-left: 2px solid var(--status-success);
+  border-bottom: 2px solid var(--status-success);
   transform: rotate(-45deg);
 }
 
@@ -1458,7 +1464,7 @@ textarea.form-input {
   flex-direction: column;
   gap: 6px;
   padding: var(--space-md);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--ink-06);
   border-radius: var(--radius-lg);
 }
 
@@ -1483,14 +1489,14 @@ textarea.form-input {
   font-size: 0.75rem;
   font-weight: 600;
   background: color-mix(in srgb, var(--accent-orange) 14%, transparent);
-  color: color-mix(in srgb, var(--accent-orange) 60%, #fff);
+  color: var(--accent-orange-text);
   white-space: nowrap;
 }
 
 /* A link inside small print or a list: underlined so it is not colour alone,
    with a 44px-tall target where it stands on its own line. */
 .settings-inline-link {
-  color: color-mix(in srgb, var(--accent-blue) 70%, #fff);
+  color: var(--accent-blue-text);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -1518,7 +1524,7 @@ textarea.form-input {
   min-height: 1.5rem;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #52c41a;
+  color: var(--status-success);
 }
 
 /* Form Layouts */
@@ -1579,8 +1585,8 @@ textarea.form-input {
 
 .btn-remove {
   padding: 0.625rem;
-  background: rgba(255, 77, 79, 0.1);
-  color: #ff4d4f;
+  background: color-mix(in srgb, var(--status-danger) 10%, transparent);
+  color: var(--status-danger);
   border-radius: 8px;
   transition: background 0.2s;
   border: none;
@@ -1591,14 +1597,14 @@ textarea.form-input {
 }
 
 .btn-remove:hover {
-  background: rgba(255, 77, 79, 0.2);
+  background: color-mix(in srgb, var(--status-danger) 20%, transparent);
 }
 
 .form-actions {
   display: flex;
   justify-content: flex-end;
   gap: 1rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid var(--dash-border);
   padding-top: 1.5rem;
 }
 
@@ -1648,7 +1654,7 @@ textarea.form-input {
     z-index: 30;
     margin-inline: calc(-1 * var(--space-md));
     padding: 12px var(--space-md) calc(12px + env(safe-area-inset-bottom));
-    background: rgba(10, 10, 12, 0.92);
+    background: var(--dash-panel);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
   }
@@ -1681,7 +1687,7 @@ textarea.form-input {
 /* Toolbar & Search */
 .admin-toolbar {
   padding: var(--space-md) var(--space-lg);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--dash-hairline);
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-md);
@@ -1705,8 +1711,8 @@ textarea.form-input {
 
 .search-input {
   width: 100%;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--dash-field);
+  border: 1px solid var(--dash-border);
   border-radius: var(--radius-md);
   height: 40px;
   padding: 0 16px 0 36px;
@@ -1719,12 +1725,12 @@ textarea.form-input {
 
 .search-input:focus {
   border-color: var(--accent-blue);
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--dash-field-focus);
   box-shadow: 0 0 0 2px rgba(43, 192, 255, 0.1);
 }
 
 .search-input::placeholder {
-  color: rgba(255, 255, 255, 0.3);
+  color: var(--ink-30);
 }
 
 .toolbar-actions {
@@ -1765,7 +1771,7 @@ textarea.form-input {
   gap: 8px;
   padding: 0 16px;
   height: 40px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--dash-border);
   border-radius: var(--radius-md);
   background: transparent;
   color: var(--text-secondary);
@@ -1777,7 +1783,7 @@ textarea.form-input {
 
 .btn-filter:hover {
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--ink-05);
 }
 
 /* The standing action button of the admin side. It replaces the orange
@@ -1804,10 +1810,12 @@ textarea.form-input {
      same in the row they share. */
   border: 1px solid transparent;
   border-radius: var(--radius-md);
-  /* zinc-950 on zinc-200. The icons are lucide, drawn in currentColor, so
-     they darken with the label rather than needing their own rule. */
-  color: #09090b;
-  background: #e4e4e7;
+  /* The inverse of the ground it sits on: zinc-950 on zinc-200 in the dark
+     theme, zinc-50 on zinc-900 in the light one, so the page's primary action
+     is the highest-contrast thing on either. The icons are lucide, drawn in
+     currentColor, so they follow the label rather than needing their own rule. */
+  color: var(--dash-inverse-fg);
+  background: var(--dash-inverse-bg);
   font-size: 0.875rem;
   font-weight: 500;
   font-family: var(--font-body);
@@ -1816,18 +1824,19 @@ textarea.form-input {
   transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
-/* A light button cannot lift by brightening its background much, so it goes
-   the last step to white — the same "brighter on hover" reading the dark
-   controls get from rgba(255,255,255,0.05). */
+/* An inverse button cannot lift by tinting its background much, so it goes
+   the last step away from the ground — to white on the dark theme, to black on
+   the light one — the same "stronger on hover" reading the quiet controls get
+   from --ink-05. */
 .btn-light:hover {
-  background: #fafafa;
+  background: var(--dash-inverse-hover);
 }
 
 /* A button that cannot be pressed must not answer the mouse as though it can. */
 .btn-light:disabled,
 .btn-light:disabled:hover {
   opacity: 0.45;
-  background: #e4e4e7;
+  background: var(--dash-inverse-bg);
   cursor: not-allowed;
 }
 
@@ -1890,8 +1899,8 @@ textarea.form-input {
   --tt-delay: var(--duration-micro);
   --tt-in-ease: var(--ease-out);
   --tt-out-ease: var(--ease-out);
-  --tt-bg: #e4e4e7;
-  --tt-fg: #09090b;
+  --tt-bg: var(--dash-inverse-bg);
+  --tt-fg: var(--dash-inverse-fg);
 }
 
 /* The phone's menu is the desktop's, smaller (the owner's decision: one menu,
@@ -1922,8 +1931,8 @@ textarea.form-input {
       width   var(--resize-dur) var(--resize-ease),
       z-index 0s;
     width: min(256px, 85vw);
-    background: rgba(10, 10, 12, 0.97);
-    box-shadow: 24px 0 48px rgba(0, 0, 0, 0.5);
+    background: var(--dash-panel);
+    box-shadow: 24px 0 48px var(--dash-shadow);
   }
 
   .admin-main {
@@ -1995,7 +2004,7 @@ textarea.form-input {
     margin: 0;
     padding: 0;
     border: 0;
-    background: rgba(0, 0, 0, 0.6);
+    background: var(--dash-scrim);
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
     opacity: 0;
@@ -2266,7 +2275,7 @@ textarea.form-input {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    background: rgba(15, 15, 20, 0.98);
+    background: var(--dash-panel-solid);
   }
 
   .admin-modal-footer > :is(button, a) {
@@ -2318,7 +2327,7 @@ textarea.form-input {
 .file-upload-wrapper {
   position: relative;
   width: 100%;
-  border: 2px dashed rgba(255, 255, 255, 0.15);
+  border: 2px dashed var(--ink-15);
   border-radius: var(--radius-xl);
   padding: 2rem;
   display: flex;
@@ -2326,7 +2335,7 @@ textarea.form-input {
   align-items: center;
   justify-content: center;
   gap: var(--space-md);
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--dash-sunken);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
 }
@@ -2385,7 +2394,7 @@ textarea.form-input {
 
 .file-upload-desc {
   font-size: 0.875rem;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--ink-40);
 }
 
 .file-preview {
@@ -2393,9 +2402,9 @@ textarea.form-input {
   width: 100%;
   border-radius: var(--radius-xl);
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--dash-border);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
-  background: rgba(0,0,0,0.5);
+  background: var(--dash-sunken);
 }
 
 .file-preview img {
@@ -2424,7 +2433,7 @@ textarea.form-input {
 }
 
 .btn-remove-preview {
-  background: rgba(255, 77, 79, 0.9);
+  background: color-mix(in srgb, var(--status-danger) 90%, transparent);
   color: white;
   border: none;
   border-radius: 50px;
@@ -2436,13 +2445,13 @@ textarea.form-input {
   gap: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(255, 77, 79, 0.3);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--status-danger) 30%, transparent);
 }
 
 .btn-remove-preview:hover {
   transform: translateY(-2px);
-  background: #ff4d4f;
-  box-shadow: 0 6px 16px rgba(255, 77, 79, 0.4);
+  background: var(--status-danger);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--status-danger) 40%, transparent);
 }
 
 /* On a touch screen the preview's Remove button lived on :hover alone, which
@@ -2456,7 +2465,7 @@ textarea.form-input {
     background: rgba(0, 0, 0, 0.35);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 1px solid var(--ink-08);
   }
 
   .btn-remove-preview {
@@ -2503,7 +2512,7 @@ textarea.form-input {
 }
 
 .icon-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--ink-10);
   color: var(--text-primary);
 }
 
@@ -2516,26 +2525,26 @@ textarea.form-input {
 }
 
 .icon-btn.success {
-  color: #52c41a;
+  color: var(--status-success);
 }
 
 .icon-btn.success:hover {
-  background: rgba(82, 196, 26, 0.1);
+  background: color-mix(in srgb, var(--status-success) 10%, transparent);
 }
 
 .icon-btn.danger {
-  color: #ff4d4f;
+  color: var(--status-danger);
 }
 
 .icon-btn.danger:hover {
-  background: rgba(255, 77, 79, 0.1);
+  background: color-mix(in srgb, var(--status-danger) 10%, transparent);
 }
 
 /* Modal UI Custom Classes */
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: var(--dash-scrim);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   display: flex;
@@ -2546,10 +2555,10 @@ textarea.form-input {
 }
 
 .modal-container {
-  background: rgba(15, 15, 20, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--dash-panel);
+  border: 1px solid var(--dash-border);
   border-radius: var(--radius-xl);
-  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 24px 48px var(--dash-shadow);
   width: 100%;
   max-width: 600px;
   max-height: 90vh;
@@ -2560,11 +2569,11 @@ textarea.form-input {
 
 .modal-header {
   padding: 1.5rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--dash-hairline);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--ink-02);
 }
 
 .modal-title {
@@ -2589,7 +2598,7 @@ textarea.form-input {
 }
 
 .modal-close:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--ink-10);
   color: var(--text-primary);
 }
 
@@ -2608,7 +2617,7 @@ textarea.form-input {
 }
 
 .modal-body::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--ink-10);
   border-radius: 10px;
 }
 
@@ -2624,7 +2633,7 @@ textarea.form-input {
   color: var(--text-secondary);
   margin-bottom: 0.75rem;
   padding-bottom: 0.5rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--dash-hairline);
 }
 
 .modal-grid {
@@ -2651,8 +2660,8 @@ textarea.form-input {
 }
 
 .modal-proof-box {
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px dashed rgba(255, 255, 255, 0.1);
+  background: var(--dash-sunken);
+  border: 1px dashed var(--ink-10);
   border-radius: var(--radius-md);
   height: 120px;
   display: flex;
@@ -2665,16 +2674,16 @@ textarea.form-input {
 
 .modal-footer {
   padding: 1.25rem 1.5rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid var(--dash-hairline);
   display: flex;
   justify-content: flex-end;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--ink-02);
 }
 
 .modal-btn {
   padding: 0.5rem 1rem;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--ink-10);
+  border: 1px solid var(--dash-hairline);
   color: var(--text-primary);
   border-radius: var(--radius-md);
   font-size: 0.875rem;
@@ -2684,7 +2693,7 @@ textarea.form-input {
 }
 
 .modal-btn:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--ink-15);
 }
 
 /* The older modal frame, where an admin screen still wears it (the results
@@ -2737,7 +2746,7 @@ textarea.form-input {
 }
 
 .action-dropdown-btn:hover, .action-dropdown-btn.active {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--ink-10);
   color: var(--text-primary);
 }
 
@@ -2746,10 +2755,10 @@ textarea.form-input {
   right: 0;
   top: 100%;
   margin-top: 0.25rem;
-  background: rgba(15, 15, 20, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--dash-panel);
+  border: 1px solid var(--dash-border);
   border-radius: var(--radius-md);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 24px var(--dash-shadow);
   /* Sized to the longest label the admin's menus carry — "Manage Results" —
      with room for the icon, the padding and the pending mark that rides on the
      right of a destination item, so no item has to wrap onto a second line or
@@ -2801,63 +2810,37 @@ textarea.form-input {
 
 .action-dropdown-menu.is-navigating .action-dropdown-item.is-navigating {
   opacity: 1;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--ink-05);
   color: var(--text-primary);
 }
 
 .action-dropdown-item:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--ink-05);
   color: var(--text-primary);
 }
 
 .action-dropdown-item.success {
-  color: #52c41a;
+  color: var(--status-success);
 }
 
 .action-dropdown-item.success:hover {
-  background: rgba(82, 196, 26, 0.1);
+  background: color-mix(in srgb, var(--status-success) 10%, transparent);
+  color: var(--status-success);
 }
 
 .action-dropdown-item.danger {
-  color: #ff4d4f;
+  color: var(--status-danger);
 }
 
 .action-dropdown-item.danger:hover {
-  background: rgba(255, 77, 79, 0.1);
+  background: color-mix(in srgb, var(--status-danger) 10%, transparent);
+  color: var(--status-danger);
 }
 
 .action-dropdown-divider {
   height: 1px;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--ink-05);
   margin: 0.25rem 0;
-}
-
-.action-dropdown-item {
-  color: var(--text-secondary);
-  transition: all 0.2s ease;
-}
-
-.action-dropdown-item:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text-primary);
-}
-
-.action-dropdown-item.success {
-  color: #52c41a;
-}
-
-.action-dropdown-item.success:hover {
-  background: rgba(34, 197, 94, 0.1);
-  color: #22c55e;
-}
-
-.action-dropdown-item.danger {
-  color: #ff4d4f;
-}
-
-.action-dropdown-item.danger:hover {
-  background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
 }
 
 /* Dropdown from transitions-dev */
@@ -2919,8 +2902,8 @@ textarea.form-input {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--dash-surface);
+  border: 1px solid var(--dash-hairline);
   border-radius: var(--radius-xl);
   overflow: hidden;
 }
@@ -2931,7 +2914,7 @@ textarea.form-input {
   aspect-ratio: 16 / 9;
   width: 100%;
   overflow: hidden;
-  background: #0f0f14;
+  background: var(--dash-panel-solid);
 }
 
 .viewer-event-body {
@@ -3001,15 +2984,15 @@ textarea.form-input {
   height: 8px;
   border-radius: 999px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--ink-06);
 }
 
 .viewer-split-bar > .is-paid {
-  background: #52c41a;
+  background: var(--status-success);
 }
 
 .viewer-split-bar > .is-pending {
-  background: #faad14;
+  background: var(--status-warning);
 }
 
 .viewer-split-legend {
@@ -3037,15 +3020,15 @@ textarea.form-input {
   border-radius: 999px;
 }
 
-.viewer-split-legend > .is-paid { color: #52c41a; }
-.viewer-split-legend > .is-paid::before { background: #52c41a; }
-.viewer-split-legend > .is-pending { color: #faad14; }
-.viewer-split-legend > .is-pending::before { background: #faad14; }
+.viewer-split-legend > .is-paid { color: var(--status-success); }
+.viewer-split-legend > .is-paid::before { background: var(--status-success); }
+.viewer-split-legend > .is-pending { color: var(--status-warning); }
+.viewer-split-legend > .is-pending::before { background: var(--status-warning); }
 
 .viewer-categories {
   margin-top: 8px;
   padding-top: 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid var(--dash-hairline);
 }
 
 .viewer-categories-title {
@@ -3072,7 +3055,7 @@ textarea.form-input {
   justify-content: space-between;
   gap: 2px 12px;
   padding: 8px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--ink-04);
 }
 
 .viewer-category:last-child {
@@ -3152,7 +3135,7 @@ textarea.form-input {
 }
 
 .settlement-line.has-rule {
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--ink-08);
   margin-top: 4px;
   padding-top: 12px;
 }
@@ -3175,7 +3158,7 @@ textarea.form-input {
 /* A voided remittance: still on the list, visibly no longer counting. */
 .remittance-voided {
   text-decoration: line-through;
-  text-decoration-color: rgba(255, 255, 255, 0.35);
+  text-decoration-color: var(--ink-35);
   color: var(--text-secondary);
 }
 
@@ -3286,7 +3269,7 @@ textarea.form-input {
 
 .account-trigger:hover,
 .account-trigger[aria-expanded="true"] {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--ink-06);
   color: var(--text-primary);
 }
 
@@ -3443,7 +3426,7 @@ textarea.form-input {
   height: 20px;
   padding: 2px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.16);
+  background: var(--ink-16);
   pointer-events: none;
 }
 
@@ -3457,14 +3440,6 @@ textarea.form-input {
   border-radius: 999px;
   background: #fff;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-}
-
-[data-theme="light"] .account-theme-switch {
-  background: #e4e4e7;
-}
-
-[data-theme="light"] .account-theme-switch[data-on="true"] {
-  background: var(--accent-blue);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -3502,7 +3477,7 @@ textarea.form-input {
 }
 
 .notif-overlay.is-open {
-  background: rgba(0, 0, 0, 0.45);
+  background: var(--dash-scrim);
   transition-duration: var(--modal-open-dur);
 }
 
@@ -3512,10 +3487,10 @@ textarea.form-input {
   display: flex;
   flex-direction: column;
   overflow: clip;
-  background: #111114;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--dash-panel-solid);
+  border: 1px solid var(--dash-border);
   border-radius: var(--radius-xl);
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 24px 60px var(--dash-shadow);
   transform-origin: top right;
   outline: none;
 }
@@ -3541,8 +3516,8 @@ textarea.form-input {
 }
 
 .notif-icon-btn:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+  background: var(--ink-06);
 }
 
 .notif-icon-btn:focus-visible,
@@ -3558,11 +3533,11 @@ textarea.form-input {
   justify-content: space-between;
   gap: 12px;
   padding: 0 20px 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--ink-08);
 }
 
 .notif-tabs {
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--ink-08);
 }
 
 .notif-tabs .t-tab {
@@ -3610,7 +3585,7 @@ textarea.form-input {
 }
 
 .notif-row:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--ink-04);
 }
 
 .notif-row.is-unread {
@@ -3647,7 +3622,7 @@ textarea.form-input {
   gap: 4px 8px;
   font-size: 0.875rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .notif-action-chip {
@@ -3655,9 +3630,9 @@ textarea.form-input {
   border-radius: 999px;
   font-size: 0.6875rem;
   font-weight: 600;
-  color: #faad14;
-  background: rgba(250, 173, 20, 0.1);
-  border: 1px solid rgba(250, 173, 20, 0.25);
+  color: var(--status-warning);
+  background: color-mix(in srgb, var(--status-warning) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--status-warning) 25%, transparent);
 }
 
 .notif-sentence {
@@ -3668,7 +3643,7 @@ textarea.form-input {
 }
 
 .notif-row.is-unread .notif-sentence {
-  color: #d4d4d8;
+  color: color-mix(in srgb, var(--text-primary) 50%, var(--text-secondary));
 }
 
 .notif-meta {
@@ -3711,7 +3686,7 @@ textarea.form-input {
   place-items: center;
   border-radius: 999px;
   color: var(--text-secondary);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--ink-05);
 }
 
 .notif-foot {
@@ -3719,7 +3694,7 @@ textarea.form-input {
   padding: 10px 20px;
   font-size: 0.75rem;
   color: var(--text-secondary);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--ink-08);
 }
 
 @media (width < 64rem) {

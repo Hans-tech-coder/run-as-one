@@ -56,7 +56,7 @@ export default async function RootLayout({
 
   return (
     <html lang="en">
-      <body className={`${inter.variable} ${outfit.variable} antialiased bg-[var(--bg-primary)] text-white`} suppressHydrationWarning>
+      <body className={`${inter.variable} ${outfit.variable} antialiased bg-[var(--bg-primary)] text-primary`} suppressHydrationWarning>
         {/* Outside ClientLayoutWrapper: that component returns early for
             /admin, so a provider mounted inside it would
             cover only half the app. */}

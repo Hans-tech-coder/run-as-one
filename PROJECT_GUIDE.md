@@ -623,10 +623,11 @@ layout reads so `DashboardShell` draws `data-theme` on `.admin-layout` on the
 server's first paint; once mounted it mirrors the value onto `<html>` so
 portals and the themed favicon follow, and deletes it on unmount so the
 public site never inherits it. The bare sign-in pages are not themed.
-**The light palette itself has not landed yet** — the switch works and
-persists, but the dashboard's surfaces are still dark-only literals (see the
-light-theme audit in §10), so the light setting currently shows a dark
-dashboard with the logo's light-theme inks. From `lg` down the trigger is the avatar and chevron
+**The light palette is tokens** (`LIGHT_THEME_PLAN.md` Batch 1): the frame,
+sidebar, header, this menu, dropdowns, modals, badges, buttons and form
+controls follow the switch; what is still dark on the light setting is TSX
+literals (Tailwind `white/…` and `gray-…` classes, `bg-[#111]` panels), which
+Batches 2 and 3 convert (§10). From `lg` down the trigger is the avatar and chevron
 alone. Both sit in `.dash-header-tools`, whose measured width
 `DashboardShell` writes to `--dash-accessory-w` on `<main>`; the headers'
 right padding reads it, falling back to the widest the tools can be before
@@ -1846,9 +1847,11 @@ These are the user's own standing preferences. Follow them without being asked.
   mid-stride — and the speed lines pulse in place.
 - **No gradient buttons inside the admin.** Every action in the dashboard —
   toolbar, panel header, form footer, modal submit — wears `.btn-light`
-  (`Admin.css`): a **light pill** — `#e4e4e7` fill, `#09090b` label, white on
-  hover — inverting the near-black panel it sits on, so the one thing worth
-  pressing is the brightest thing on the screen. Icons are lucide and draw in
+  (`Admin.css`): an **inverse pill** — on the dark theme `#e4e4e7` fill,
+  `#09090b` label, white on hover; on the light theme zinc-900 with a zinc-50
+  label, black on hover (`--dash-inverse-*`) — inverting the ground it sits
+  on, so the one thing worth pressing is the highest-contrast thing on the
+  screen. Icons are lucide and draw in
   `currentColor`, so they darken with the label on their own. It stands
   **48px** tall everywhere except inside `.toolbar-actions`, where it drops to
   the 40px of the `.btn-filter` chips sharing its row. A table toolbar holds
@@ -1987,6 +1990,26 @@ These are the user's own standing preferences. Follow them without being asked.
   dashboard's Dark Mode switch sets `data-theme`** (on its frame and on the
   root) — the component does not change. A logo on an unusual surface can likewise be
   re-tinted by setting `--logo-ink` on its container.
+- **The dashboard is themed through tokens, never `dark:` branches**
+  (`LIGHT_THEME_PLAN.md`). `globals.css` `:root` holds the dark values and
+  `[data-theme="light"]` the light ones: `--bg-dark` (the ground, which the
+  frame always read and which was never defined until then), `--dash-surface`,
+  `--dash-sunken`, `--dash-field(-focus)`, `--dash-chrome`, `--dash-header`,
+  `--dash-panel(-solid)`, `--dash-scrim`, `--dash-shadow`,
+  `--dash-inverse-bg/-fg/-hover`, `--text-primary/-secondary/-muted`,
+  `--status-success/-warning/-danger` (deepened on light to clear 4.5:1 on
+  white; tints are `color-mix` of them), `--accent-blue-text` /
+  `--accent-orange-text` for words in brand colour, and `--color-scheme` for
+  the browser's own date pickers. **Every `rgba(255,255,255,a)` is an ink step**
+  `--ink-02` … `--ink-85` (`color-mix` of `--ink`), declared on
+  `:root, [data-theme]` so it re-resolves inside a themed frame; the named
+  steps are `--dash-hairline`, `--dash-border` and `--dash-hover`. The
+  Tailwind colours are `@theme inline`, so `text-primary`, `text-secondary`
+  and `bg-dark` follow the theme. A new dashboard surface reads one of these
+  names; a hex or white-alpha in admin CSS or TSX is a light-theme bug. Data-URI
+  icons cannot read a variable, so each has a `[data-theme="light"]` twin. Only
+  the dashboard sets `data-theme`, so the public site only ever sees the dark
+  values.
 - **The three brand assets outside the component, and why each is a different
   file.** They are not interchangeable and the favicon is not any of the others:
   - **`app/icon.svg`, `app/favicon.ico`, `app/apple-icon.png` — the mark alone,
@@ -2097,13 +2120,21 @@ added nothing once their queue was empty.
 the decisions it records as not to be relitigated. It is no longer a queue, and
 the file itself says it may be deleted.
 
-**The dashboard has a Dark Mode switch, but not yet a light theme**
-(2026-09-18, on `dev`, uncommitted). The account menu's switch works and
-persists (`dash_theme`, §6), but every admin surface is still a dark-only
-literal. **`LIGHT_THEME_PLAN.md` is the queue**: it holds the audit of
-`src/app/admin` (ten findings, including the undefined `--bg-dark` the frame
-has always read) and three batches, and Batch 1 is what makes the light
-setting usable. No schema change.
+**The dashboard has a Dark Mode switch and the first third of a light
+theme** (2026-09-18, on `dev`, uncommitted). The account menu's switch works
+and persists (`dash_theme`, §6). **Light Theme Batch 1 has landed**: the
+palette is tokens (§9), `Admin.css` and `.btn-secondary` read them,
+`--bg-dark` is finally defined (the collapse knob's ring is back), the duplicate
+`.action-dropdown-item` rules are merged, and the date pickers and chevrons
+follow the theme. `Auth.css`'s field rules are scoped to `.auth-container`:
+the dashboard loads that file through `admin/loading.tsx`, and its unscoped
+`.form-input` was stripping the border off dashboard fields (it read an
+undefined `--color-border`) and painting them grey on the light theme. **A
+stylesheet imported anywhere under `/admin` reaches every dashboard page**, so
+its generic class names must be scoped to the page they belong to. **`LIGHT_THEME_PLAN.md` is the queue**: Batch 2 (the shared
+table primitives, modals, bell and toasts) is next, then Batch 3 (the pages).
+Until then the light setting has faint text and dark panels wherever a TSX
+file hard-codes a colour. No schema change.
 
 **Settings is grouped into four pages** (2026-09-18, on `dev`, uncommitted):
 Profile, Security, Site Settings and Your Access, listed in the account menu in

@@ -12,10 +12,41 @@ This file tracks the dashboard's light theme. It records the audit of
   in the `dash_theme` cookie (`admin/dashboard-theme.ts`), drawn as
   `data-theme` on `.admin-layout` on the server's first paint, and mirrored
   onto `<html>` while the dashboard is mounted.
-- **Only the logo reacts so far.** Everything else in the dashboard is painted
-  with dark-only literals, so the light setting shows a dark dashboard, and
-  **the logo's dark light-theme ink disappears against the dark sidebar**.
-  Batch 1 is what makes the switch safe to use.
+- **Batch 1 has landed** (2026-09-18, on `dev`, uncommitted). The palette is
+  tokens, the frame, sidebar, header, account menu, dropdowns, modals, badges,
+  buttons and form controls in `Admin.css` follow the switch, and the dark
+  theme computes to the values it had before (bar three near-identical shades:
+  the proof box, the viewer poster's placeholder and an unread notification's
+  sentence now sit on the nearest token). What is still dark on a
+  light setting is TSX: Tailwind `white/…`, `gray-…` and `black/…` classes and
+  the `bg-[#111]` / `bg-[#050505]` panels (FiltersMenu's sheet, the table
+  pager, the bell's ring). That is Batches 2 and 3.
+
+### How the tokens work (read before Batch 2)
+
+- **Names, in `globals.css`.** `:root` holds the dark values and
+  `[data-theme="light"]` the light ones: `--bg-dark` (page ground), `--ink`
+  (what hairlines and hovers are made of), `--dash-surface`, `--dash-sunken`,
+  `--dash-field`, `--dash-field-focus`, `--dash-chrome` (sidebar),
+  `--dash-header`, `--dash-panel`, `--dash-panel-solid`, `--dash-scrim`,
+  `--dash-shadow`, `--dash-inverse-bg/-fg/-hover` (`.btn-light` and the rail
+  tooltip), `--text-primary/-secondary/-muted`, `--status-success/-warning/-danger`,
+  `--accent-blue-text`, `--accent-orange-text` and `--color-scheme`.
+- **The ink ramp** `--ink-02` … `--ink-85` replaces every
+  `rgba(255,255,255,a)`: it is `color-mix(var(--ink) a%, transparent)`, declared
+  on `:root, [data-theme]` so it re-resolves inside a themed frame (a custom
+  property resolves `var()` where it is declared). `--dash-hairline`,
+  `--dash-border` and `--dash-hover` are named steps on it; the light theme
+  bumps the first two one step, since 5% black reads fainter than 5% white.
+- **For TSX in Batches 2 and 3:** `text-white` → `text-primary`,
+  `text-gray-400` → `text-secondary`, `border-white/10` →
+  `border-[var(--dash-border)]`, `bg-white/5` → `bg-[var(--ink-05)]`,
+  `bg-[#111]` → `bg-[var(--dash-panel-solid)]`, and a `bg-black/60` scrim →
+  `bg-[var(--dash-scrim)]`. `text-primary`, `text-secondary` and `bg-dark` now
+  follow the theme on their own (`@theme inline`).
+- **Left as literals on purpose:** text on a coloured fill (the orange avatar,
+  the blue knob), the black overlays laid over photos (file preview), and the
+  short drop shadows under small controls.
 
 ## Standing decisions (do not relitigate)
 
@@ -97,21 +128,38 @@ previews render their own dark document on purpose and should stay dark.
 
 ---
 
-## ☐ Batch 1: Tokens, and making the switch safe
+## ☑ Batch 1: Tokens, and making the switch safe
 
-- [ ] Define the dashboard palette as variables (surface, raised surface, panel,
+- [x] Define the dashboard palette as variables (surface, raised surface, panel,
       hairline, hover, text primary, secondary and muted, scrim) with dark
       values in `:root` and light values under `[data-theme="light"]`.
-- [ ] Define `--bg-dark`, which fixes finding 9.
-- [ ] Change the `@theme` colours to `@theme inline` so they point at the
+- [x] Define `--bg-dark`, which fixes finding 9.
+- [x] Change the `@theme` colours to `@theme inline` so they point at the
       variables (finding 2).
-- [ ] Tokenise `Admin.css` (finding 5): the frame, the sidebar, the header,
+- [x] Tokenise `Admin.css` (finding 5): the frame, the sidebar, the header,
       dropdowns, modals, `.btn-filter`, `.btn-light` and `.btn-secondary`.
       Merge the duplicate dropdown rules (finding 10).
-- [ ] Add light-theme status colours (finding 6).
-- [ ] Make `color-scheme` and the SVG icons follow the theme (finding 7).
-- [ ] Verify the frame, the menu and one table page in both themes, at 375px
-      and at desktop width.
+- [x] Add light-theme status colours (finding 6).
+- [x] Make `color-scheme` and the SVG icons follow the theme (finding 7).
+- [x] Verify the frame, the menu and one table page in both themes, at 375px
+      and at desktop width. (Dashboard, account menu and Events, 2026-09-18.
+      The frame's dark computed colours match the old literals exactly.)
+- Also done here: the root layout's body is `text-primary` rather than
+  `text-white` (finding 8, one word), and the three inline
+  `colorScheme: 'dark'` styles are gone, since the global date-input rule now
+  follows the theme.
+- **Fixed a field leak found while checking the event form.** `Auth.css`
+  (the sign-in pages) declared an unscoped `.form-input`, and
+  `admin/loading.tsx` imports it through `AuthRouteLoading`, so it loaded on
+  every dashboard page and could override `Admin.css`'s field: a fixed
+  `rgba(0,0,0,0.4)` fill (grey on the light theme) and a border read from the
+  never-defined `--color-border`, which drops the border on both themes. Its
+  field rules (`.form-group`, `.form-label`, `.form-input`, `.form-hint`,
+  `.form-optional`, `.form-textarea`) are now scoped to `.auth-container`,
+  which all four sign-in pages wrap their forms in.
+- One deliberate change to the dark theme: a menu item's success and danger
+  hover keep their own status ink rather than switching to the second set's
+  `#22c55e` / `#ef4444`, which went away with the duplicate rules.
 
 ## ☐ Batch 2: Shared primitives and modals
 

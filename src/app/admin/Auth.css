@@ -209,13 +209,18 @@
   gap: var(--space-lg);
 }
 
-.form-group {
+/* Every field rule below is scoped to `.auth-container`. The dashboard loads
+   this file too (admin/loading.tsx renders AuthRouteLoading), and an unscoped
+   `.form-input` here used to override Admin.css's on every dashboard form —
+   a grey fill on the light theme and, through the never-defined
+   --color-border, no border at all on either. */
+.auth-container .form-group {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
-.form-label {
+.auth-container .form-label {
   font-family: var(--font-body);
   font-size: 0.875rem;
   font-weight: 500;
@@ -223,7 +228,7 @@
   transition: color 0.2s ease;
 }
 
-.form-input {
+.auth-container .form-input {
   width: 100%;
   padding: 1rem 1.25rem;
   background: rgba(0, 0, 0, 0.4);
@@ -236,18 +241,18 @@
   transition: all var(--duration-fast) var(--ease-smooth-out);
 }
 
-.form-input:focus {
+.auth-container .form-input:focus {
   background: rgba(0, 0, 0, 0.6);
   border-color: var(--color-accent);
   box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.15);
 }
 
-.form-input:focus + .form-label,
-.form-input:hover + .form-label {
+.auth-container .form-input:focus + .form-label,
+.auth-container .form-input:hover + .form-label {
   color: var(--text-primary);
 }
 
-.form-input::placeholder {
+.auth-container .form-input::placeholder {
   color: rgba(255, 255, 255, 0.3);
 }
 
@@ -560,7 +565,7 @@
 /* Small print under a field: what the answer is for, or what shape it takes.
    A hint, never a rule — a rule that only appears once the field is wrong is
    what FieldError is for. */
-.form-hint {
+.auth-container .form-hint {
   font-family: var(--font-body);
   font-size: 0.75rem;
   line-height: 1.45;
@@ -569,12 +574,12 @@
 
 /* The optional marker, so a required field is the unmarked default and an
    applicant can see at a glance how little of this is compulsory. */
-.form-optional {
+.auth-container .form-optional {
   font-weight: 500;
   color: rgba(255, 255, 255, 0.4);
 }
 
-.form-textarea {
+.auth-container .form-textarea {
   min-height: 7rem;
   resize: vertical;
   line-height: 1.55;
