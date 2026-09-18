@@ -26,7 +26,7 @@ its box here and update `PROJECT_GUIDE.md` in the same change.
 |---|:-:|:-:|:-:|:-:|
 | Profile (photo, name, email, phone) | ✓ | ✓ | ✓ (with phone) | ✓ (email read-only) |
 | Password | ✓ | ✓ | ✓ | ✓ |
-| Sign-in Activity | — *(Batch 3)* | ✓ | ✓ | ✓ |
+| Sign-in Activity + Sign out other devices | ✓ | ✓ | ✓ | ✓ |
 | Admin Email + Social Links | ✓ | ✓ | — | — |
 | Default Platform Fee | ✓ | — | — | — |
 | Your Role / What You Can Do / Your Events | ✓ | ✓ | ✓ | ✓ |
@@ -80,25 +80,32 @@ the saved link, since the footer no longer links there.
 
 ---
 
-## ⬜ Batch 3 — Sign out every other device
+## ✅ Batch 3 — Sign out every other device *(done, 2026-09-18)*
 
 **Who:** everyone.
 
-- [ ] Add `sessionsValidFrom` (and `lastLoginAt`, so the owner gets Sign-in
+- [x] Add `sessionsValidFrom` (and `lastLoginAt`, so the owner gets Sign-in
       Activity too) to **Organizer** (migration). StaffAccount already has both.
-- [ ] Make `getActor()` (`lib/actor.ts`) check the owner's token `iat` against
+- [x] Make `getActor()` (`lib/actor.ts`) check the owner's token `iat` against
       `sessionsValidFrom`, the way it already does for staff.
-- [ ] Record the owner's `lastLoginAt` in the login route.
-- [ ] A **Sign out other devices** button in Sign-in Activity: bump
+- [x] Record the owner's `lastLoginAt` in the login route.
+- [x] A **Sign out other devices** button in Sign-in Activity: bump
       `sessionsValidFrom`, reissue this session's cookie so the person pressing
       it stays signed in, audit it.
-- [ ] A password change ends the owner's other sessions too (staff already do).
-- [ ] Show Sign-in Activity to the owner.
-- [ ] Update `PROJECT_GUIDE.md` (§4, §5 actor.ts, §6, §7 security model).
+- [x] A password change ends the owner's other sessions too (staff already do).
+- [x] Show Sign-in Activity to the owner.
+- [x] Update `PROJECT_GUIDE.md` (§4, §5 actor.ts, §6, §7 security model).
 
-**Release:** carries a migration → `npx prisma migrate deploy` on production.
-**Careful:** a mistake in the owner's session check signs Run As One out of its
-own dashboard. Test sign-in, sign-out and the button before handing it over.
+Also: both new Organizer columns are **nullable** (null = never ended), so the
+deploy signs nobody out; the button asks first and lives at
+`POST /api/admin/profile/sessions` (audited `profile.sessions.ended`); the Team
+table shows the owner's last sign-in too.
+
+**Release:** carries migration `20260918120000_organizer_sessions` →
+`npx prisma migrate deploy` on production **before** `dev` goes to `main`, or
+every owner request fails on the unknown column and Run As One is locked out of
+its own dashboard. A running `next dev` needs a restart after
+`prisma generate`, for the same reason.
 
 ---
 

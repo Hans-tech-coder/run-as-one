@@ -2,7 +2,7 @@
 
 import React, { useId, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Camera, Check, KeyRound, Mail, Share2, UserCog } from 'lucide-react';
+import { Camera, Check, History, KeyRound, LogOut, Mail, Share2, UserCog } from 'lucide-react';
 import FieldError from '@/components/ui/FieldError';
 import { useAlert } from '@/components/ui/AlertProvider';
 import { invalidEmailMessage, looksLikeEmailAddress } from '@/lib/email-address';
@@ -785,6 +785,94 @@ export function SiteEmailPanel({ settings }: { settings: SiteSettingsForm }) {
  * appears; a live region mounted at the same moment as its text is not
  * reliably announced. Nothing steals focus.
  */
+/**
+ * When the person last signed in, and **Sign out other devices**
+ * (SETTINGS_PLAN.md Batch 3) — everyone has it, the owner included.
+ *
+ * The button moves the account's `sessionsValidFrom` to now and the route
+ * reissues this browser's session, so every other browser is signed out on its
+ * next click and this one carries on. It asks first, because a person who
+ * presses it by mistake loses the dashboard on their phone as well.
+ */
+export function SignInActivityPanel({ lastSignIn }: { lastSignIn: string | null }) {
+  const { alert, confirm } = useAlert();
+  const [isEnding, setIsEnding] = useState(false);
+  const [ended, setEnded] = useState(false);
+
+  const handleSignOutOthers = async () => {
+    const confirmed = await confirm({
+      variant: 'info',
+      title: 'Sign out other devices?',
+      message:
+        'Every other browser and phone signed in to this account will be signed out on its next click. You stay signed in here.',
+      confirmLabel: 'Sign Out Other Devices',
+      cancelLabel: 'Cancel',
+    });
+    if (!confirmed) return;
+
+    setIsEnding(true);
+    setEnded(false);
+    try {
+      const res = await fetch('/api/admin/profile/sessions', { method: 'POST' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || 'Could not sign out your other devices. Please try again.');
+      }
+      setEnded(true);
+    } catch (err: unknown) {
+      await alert(
+        err instanceof Error ? err.message : 'Could not sign out your other devices. Please try again.'
+      );
+    } finally {
+      setIsEnding(false);
+    }
+  };
+
+  return (
+    <section className="admin-panel" aria-labelledby="sign-in-activity-title">
+      <div className="admin-panel-header">
+        <h2 id="sign-in-activity-title" className="admin-panel-title flex items-center gap-2">
+          <History size={18} className="text-accent-blue" aria-hidden="true" />
+          Sign-in Activity
+        </h2>
+      </div>
+      <div className="admin-panel-content">
+        <dl className="settings-facts">
+          <div>
+            <dt>Last sign-in</dt>
+            <dd>{lastSignIn ?? 'Not recorded yet'}</dd>
+          </div>
+        </dl>
+        <p className="text-xs text-secondary mt-3">
+          If you left the dashboard open on a device you no longer have, or a
+          sign-in here was not you, sign out your other devices. If somebody may
+          know your password, change it above — that signs out every other
+          device too.
+        </p>
+
+        <div className="form-actions settings-actions">
+          <SaveConfirmation visible={ended} message="Other devices signed out" />
+          <button
+            type="button"
+            className="btn-light"
+            onClick={handleSignOutOthers}
+            disabled={isEnding}
+          >
+            {isEnding ? (
+              <BusyLabel>Signing Out</BusyLabel>
+            ) : (
+              <>
+                <LogOut size={16} aria-hidden="true" />
+                Sign Out Other Devices
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export function SaveConfirmation({
   visible,
   message,

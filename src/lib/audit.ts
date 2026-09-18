@@ -51,6 +51,8 @@ export const AUDIT_ACTIONS = [
   'staff.removed',
   'profile.updated',
   'profile.password.changed',
+  // "Sign out other devices" on /admin/settings (SETTINGS_PLAN.md Batch 3).
+  'profile.sessions.ended',
   // Retired with the approve / reject screens (ADMIN_MERGE_PLAN.md, Batch 5);
   // kept so decisions recorded before then still carry a label.
   'organizer.approved',

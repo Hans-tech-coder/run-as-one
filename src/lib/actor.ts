@@ -27,11 +27,13 @@
  *   the client to the `where`, and `can()` refuses unless the caller passes
  *   the event's `clientId` and it matches. Forgetting to pass it fails closed.
  *
- * An owner's session is read from the token alone, exactly as the routes did
- * before: nothing about an owner's reach can change mid-session that the
- * routes did not already ignore. The one thing asked of it is that it is Run
- * As One's own row (`RUN_AS_ONE_ORGANIZER_ID`, organizer-status.ts) — no other
- * Organizer row signs in, so a token for one is dead on arrival. A **staff** session is checked against the
+ * An owner's claims are read from the token: nothing about an owner's reach
+ * can change mid-session. Two things are asked of it — that it is Run As One's
+ * own row (`RUN_AS_ONE_ORGANIZER_ID`, organizer-status.ts; no other Organizer
+ * row signs in, so a token for one is dead on arrival), and that it was issued
+ * after the row's `sessionsValidFrom`, so "Sign out other devices" and a
+ * password change end the owner's other sessions now rather than at expiry
+ * (SETTINGS_PLAN.md Batch 3). A **staff** session is checked against the
  * record on every request — status, membership, assignments, the organizer's
  * own status (`organizerCanSignIn`, an allowlist) and
  * `sessionsValidFrom` — because a suspension that waits a day for the JWT to
@@ -95,6 +97,18 @@ export async function getActor(): Promise<Actor | null> {
     // saying otherwise was not issued by this app, or was issued to an account
     // that has since been retired.
     if (session.sub !== session.orgId || session.sub !== RUN_AS_ONE_ORGANIZER_ID) return null;
+
+    // Null until the owner first ends a session, so the deploy that added the
+    // column signed nobody out. Once set, a token older than it is dead.
+    const owner = await prisma.organizer.findUnique({
+      where: { id: session.sub },
+      select: { sessionsValidFrom: true },
+    });
+    if (!owner) return null;
+    if (owner.sessionsValidFrom && issuedBefore(session.iat, owner.sessionsValidFrom)) {
+      return null;
+    }
+
     return {
       id: session.sub,
       kind: session.kind,
@@ -132,12 +146,7 @@ export async function getActor(): Promise<Actor | null> {
 
   // "Sign out everywhere", a password change and a suspension all move this
   // instant forward; every token issued before it is dead.
-  if (
-    session.iat === null ||
-    session.iat * 1000 < membership.staff.sessionsValidFrom.getTime()
-  ) {
-    return null;
-  }
+  if (issuedBefore(session.iat, membership.staff.sessionsValidFrom)) return null;
 
   const role = asMembershipRole(membership.role);
   if (!role) return null;
@@ -170,6 +179,34 @@ export async function getActor(): Promise<Actor | null> {
     assignments,
     clientId,
   };
+}
+
+/** Whether a token issued at `iat` (seconds; null on a very old token) predates `validFrom`. */
+function issuedBefore(iat: number | null, validFrom: Date): boolean {
+  return iat === null || iat * 1000 < validFrom.getTime();
+}
+
+/**
+ * The instant to write into `sessionsValidFrom` to end every session issued so
+ * far. Whole seconds, because a JWT's `iat` is whole seconds: a boundary with a
+ * fractional part would make the session reissued right after it look older
+ * than it, and sign out the very person who pressed the button.
+ */
+export function sessionsCutoff(): Date {
+  return new Date(Math.floor(Date.now() / 1000) * 1000);
+}
+
+/**
+ * The claims to reissue this actor's own session with, after a write that
+ * ended every session of theirs — so the person who made it stays signed in.
+ */
+export function reissuedSessionClaims(actor: Actor): SessionClaims {
+  return actor.kind === 'STAFF'
+    ? staffSessionClaims(
+        { id: actor.id, name: actor.name, email: actor.email },
+        { organizerId: actor.orgId, role: actor.role },
+      )
+    : organizerSessionClaims({ id: actor.id, name: actor.name, email: actor.email });
 }
 
 /** For server pages: the actor, or off to the sign-in screen. */

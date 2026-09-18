@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { createToken, hashPassword, setAuthCookie, verifyPassword } from '@/lib/auth';
-import { getActor, staffSessionClaims } from '@/lib/actor';
+import { getActor, reissuedSessionClaims, sessionsCutoff } from '@/lib/actor';
 import { recordAudit } from '@/lib/audit';
 
 /** What the form enforces too, quoted in the helper text under the field. */
@@ -16,8 +16,9 @@ import { MIN_PASSWORD_LENGTH } from '@/lib/team';
  * password is that proof — a borrowed unlocked laptop cannot lock the real
  * organizer out of their own events.
  *
- * For a **staff member** a password change also ends every other session
- * (`StaffAccount.sessionsValidFrom`), since the usual reason to change one is
+ * A password change also ends every other session of the person's — a staff
+ * member's `StaffAccount.sessionsValidFrom`, the owner's
+ * `Organizer.sessionsValidFrom` — since the usual reason to change one is
  * that somebody else may know it; this session is reissued so the person who
  * just proved themselves is not signed out with the rest. The trail records
  * that the password changed and nothing about it.
@@ -69,9 +70,7 @@ export async function PATCH(request: Request) {
     }
 
     const password = await hashPassword(newPassword);
-    // Whole seconds, because a JWT's `iat` is whole seconds: a boundary with a
-    // fractional part would make the token reissued below older than it.
-    const sessionsValidFrom = new Date(Math.floor(Date.now() / 1000) * 1000);
+    const sessionsValidFrom = sessionsCutoff();
 
     await prisma.$transaction(async tx => {
       if (isStaff) {
@@ -82,7 +81,7 @@ export async function PATCH(request: Request) {
       } else {
         await tx.organizer.update({
           where: { id: actor.id },
-          data: { password },
+          data: { password, sessionsValidFrom },
         });
       }
       await recordAudit(tx, actor, {
@@ -93,15 +92,7 @@ export async function PATCH(request: Request) {
       });
     });
 
-    if (isStaff) {
-      const token = await createToken(
-        staffSessionClaims(
-          { id: actor.id, name: actor.name, email: actor.email },
-          { organizerId: actor.orgId, role: actor.role },
-        ),
-      );
-      await setAuthCookie(token);
-    }
+    await setAuthCookie(await createToken(reissuedSessionClaims(actor)));
 
     return NextResponse.json({ success: true });
   } catch (error) {

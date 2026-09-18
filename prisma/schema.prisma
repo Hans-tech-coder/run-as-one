@@ -13,43 +13,51 @@ datasource db {
 /// `Client` rows. The table kept its name and shape rather than being folded
 /// away, because every tenant check in the app scopes by `organizerId`.
 model Organizer {
-  id         String      @id @default(cuid())
-  email      String      @unique
-  password   String
-  name       String
+  id                String            @id @default(cuid())
+  email             String            @unique
+  password          String
+  name              String
   /// "ORGANIZER" on every row since the super admin account was retired
   /// (ADMIN_MERGE_PLAN.md, Batch 5). Nothing reads it; kept by the owner's call.
-  role       String      @default("ORGANIZER")
+  role              String            @default("ORGANIZER")
   /// Only APPROVED can be signed in to — src/lib/organizer-status.ts, an
   /// allowlist. Plain text so a status can be added without a migration.
-  status     String      @default("PENDING")
+  status            String            @default("PENDING")
   /// Centavos. A dead column: every order's fee comes from `Event.adminFee`.
-  adminFee   Int         @default(6000)
+  adminFee          Int               @default(6000)
   /// The owner's profile photo, a public blob URL (avatars/ in the public
   /// store), set from /admin/settings. Null shows the name's initial instead.
-  avatarUrl  String?
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
-  events     Event[]
-  promoCodes PromoCode[]
+  avatarUrl         String?
+  /// When the owner last signed in, shown under Sign-in Activity on
+  /// /admin/settings. Null until the first sign-in after it was added.
+  lastLoginAt       DateTime?
+  /// Every owner session issued before this instant is dead (lib/actor.ts).
+  /// Moved forward by "Sign out other devices" and by a password change.
+  /// Nullable, unlike StaffAccount's, so adding it signed nobody out: null
+  /// means no session has ever been ended.
+  sessionsValidFrom DateTime?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  events            Event[]
+  promoCodes        PromoCode[]
   /// The people who work inside this organizer besides its owner. The owner is
   /// this row's own email and password and is never a membership — see
   /// StaffAccount for why the tenant and the person are separate.
-  staff      StaffMembership[]
+  staff             StaffMembership[]
 }
 
 model Event {
-  id                          String         @id @default(cuid())
+  id                          String            @id @default(cuid())
   title                       String
   /// The event's segment in its public URL, derived from the title so a link
   /// says what it points at. Unique because two organizers will eventually
   /// both run a "Fun Run"; see src/lib/event-slug.ts.
-  slug                        String         @unique
+  slug                        String            @unique
   date                        String
   location                    String
   imageUrl                    String
   description                 String?
-  logisticsPickup             Boolean        @default(true)
+  logisticsPickup             Boolean           @default(true)
   /// Where a race kit is collected when the runner picks pickup, in the
   /// organizer's own words ("Toby's Sports, SM Clark, 2nd floor"). Null falls
   /// back to standard wording — see src/lib/pickup.ts. It is shown on the
@@ -60,31 +68,31 @@ model Event {
   /// the location because an organizer often knows one before the other.
   pickupSchedule              String?
   /// Centavos. Delivery within the event's province. 0 = tier not offered.
-  logisticsDeliveryFeeInside  Int            @default(0)
+  logisticsDeliveryFeeInside  Int               @default(0)
   /// Centavos. Delivery outside the event's province. 0 = tier not offered.
-  logisticsDeliveryFeeOutside Int            @default(0)
+  logisticsDeliveryFeeOutside Int               @default(0)
   /// Centavos, charged per runner. 6000 = ₱60.00
-  adminFee                    Int            @default(6000)
+  adminFee                    Int               @default(6000)
   /// Centavos, charged once per runner whose shirt size is 4XL or above,
   /// because the larger sizes cost the organizer more to produce. 0 disables
   /// the surcharge. 10000 = ₱100.00, which is what the printed forms quote.
-  shirtSizeUpcharge           Int            @default(10000)
+  shirtSizeUpcharge           Int               @default(10000)
   /// The liability, media, and data-privacy waiver shown above the consent
   /// checkbox, one string per paragraph. Empty means the organizer never wrote
   /// their own, and the standard wording is used instead — see
   /// resolveConsentWaiver. Never present an empty waiver.
-  consentWaiver               String[]       @default([])
+  consentWaiver               String[]          @default([])
   /// Which checkout the runner sees: "ONLINE" (PayMongo + bank transfer) or
   /// "BANK_TRANSFER" (bank transfer only).
-  registrationForm            String         @default("ONLINE")
+  registrationForm            String            @default("ONLINE")
   /// What the event sells: "RACE" (distance categories) or "FUN_RUN"
   /// (inclusion packages, no distances).
-  eventType                   String         @default("RACE")
+  eventType                   String            @default("RACE")
   /// A manual hold on sign-ups, set by the organizer. Distinct from a race
   /// that is over and from an event whose every option has sold out: those
   /// two are facts the app works out for itself, this one is a decision — the
   /// slots and the days both remain, and the organizer has stopped anyway.
-  registrationPaused          Boolean        @default(false)
+  registrationPaused          Boolean           @default(false)
   /// What runners are told while the hold is on, in the organizer's own words
   /// ("Registration reopens once the new singlets arrive"). Null falls back to
   /// the standard sentence — see src/lib/registration-gate.ts. Never left
@@ -108,9 +116,9 @@ model Event {
   /// until staff link it by hand. A client viewer reaches only the events that
   /// name its client, so a null here is invisible to every viewer.
   clientId                    String?
-  client                      Client?        @relation(fields: [clientId], references: [id])
-  createdAt                   DateTime       @default(now())
-  updatedAt                   DateTime       @updatedAt
+  client                      Client?           @relation(fields: [clientId], references: [id])
+  createdAt                   DateTime          @default(now())
+  updatedAt                   DateTime          @updatedAt
   endTime                     String?
   raceKitImageUrl             String?
   startTime                   String?
@@ -118,7 +126,7 @@ model Event {
   certificateTemplate         String?
   bankAccounts                BankAccount[]
   categories                  Category[]
-  organizer                   Organizer      @relation(fields: [organizerId], references: [id])
+  organizer                   Organizer         @relation(fields: [organizerId], references: [id])
   promoCodes                  PromoCode[]
   raceResults                 RaceResult[]
   registrations               Registration[]
@@ -159,7 +167,7 @@ model BankAccount {
 }
 
 model Category {
-  id          String       @id @default(cuid())
+  id          String               @id @default(cuid())
   name        String
   /// "42K" for a race. Empty for a fun run package, which has no distance.
   distance    String
@@ -175,16 +183,16 @@ model Category {
   /// What this option gets you — "Race Singlet", "Finisher Medal". Per category
   /// rather than per event, because a 10K and a 5K rarely include the same
   /// things. Empty means the event page shows no inclusions block.
-  inclusions  String[]     @default([])
+  inclusions  String[]             @default([])
   /// Where this option sits in the event's list, fixed when it is created:
   /// the first option the organizer entered stays first however often the
   /// event is edited, and one added later joins the end. Without it the list
   /// came back in Postgres's physical row order, which an UPDATE rewrites —
   /// saving the event moved every edited option to the bottom. Read through
   /// CATEGORY_ORDER in src/lib/category-order.ts, never ordered by hand.
-  sortOrder   Int          @default(0)
+  sortOrder   Int                  @default(0)
   eventId     String
-  event       Event        @relation(fields: [eventId], references: [id])
+  event       Event                @relation(fields: [eventId], references: [id])
   raceResults RaceResult[]
   runners     Runner[]
   /// The promotions that put this option on a lower price -- see
@@ -193,23 +201,23 @@ model Category {
 }
 
 model Registration {
-  id                String    @id @default(cuid())
-  eventId           String
-  orderRef          String    @unique
-  customerEmail     String
-  customerName      String
-  customerPhone     String?
-  logisticsMethod   String
+  id                      String    @id @default(cuid())
+  eventId                 String
+  orderRef                String    @unique
+  customerEmail           String
+  customerName            String
+  customerPhone           String?
+  logisticsMethod         String
   /// "inside" or "outside" province, when logisticsMethod is "delivery".
   /// The runner's own declaration — it decides which fee was charged.
-  deliveryZone      String?
-  deliveryAddress   String?
+  deliveryZone            String?
+  deliveryAddress         String?
   /// All amounts below are centavos
-  deliveryFee       Int       @default(0)
-  subtotal          Int
-  platformFee       Int       @default(0)
-  transactionFee    Int       @default(0)
-  totalAmount       Int
+  deliveryFee             Int       @default(0)
+  subtotal                Int
+  platformFee             Int       @default(0)
+  transactionFee          Int       @default(0)
+  totalAmount             Int
   /// What the promo code took off, in centavos, and which code it was. The
   /// amount is stored rather than recomputed on read: a code's percentage can
   /// be edited or the code deleted outright, and a receipt has to keep saying
@@ -219,8 +227,8 @@ model Registration {
   /// runningCommunity is: it is what was quoted on the day, and it must keep
   /// reading correctly after the PromoCode row is gone. 0 and null are the
   /// normal case -- most orders carry no discount at all.
-  discountAmount    Int       @default(0)
-  promoCode         String?
+  discountAmount          Int       @default(0)
+  promoCode               String?
   /// Which kind of promotion it was -- "CATEGORY_PRICE" or "BUY_X_GET_Y" --
   /// snapshotted for the same reason promoCode is, and needed for a reason
   /// promoCode alone cannot serve: the receipt has to know whether the
@@ -234,7 +242,7 @@ model Registration {
   ///
   /// Null on the orders that carry no discount, and on every order written
   /// before this column existed.
-  discountType      String?
+  discountType            String?
   /// PAID, PENDING, CANCELLED, REFUNDED or EXPIRED -- guarded against that
   /// list wherever it is written (see api/admin/registrations/[id]/status).
   ///
@@ -246,7 +254,7 @@ model Registration {
   ///
   /// Only PAID and PENDING hold a slot (see lib/registration-gate.ts), so the
   /// sweep releases the seat by the act of changing this column.
-  status            String    @default("PAID")
+  status                  String    @default("PAID")
   /// When the sweep expired this order. Null on every row that was never
   /// swept, which is almost all of them.
   ///
@@ -255,19 +263,19 @@ model Registration {
   /// -- and it is the mark that stops a row being expired twice, which matters
   /// because expiring also hands a promo redemption back and a second pass
   /// would hand back a redemption that was never spent.
-  expiredAt         DateTime?
-  paymentMethod     String    @default("online")
-  checkoutSessionId String?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  proofOfPayment    String?
-  transactionNumber String?
+  expiredAt               DateTime?
+  paymentMethod           String    @default("online")
+  checkoutSessionId       String?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+  proofOfPayment          String?
+  transactionNumber       String?
   /// Whether the customer checked the liability & data-privacy consent box at
   /// submission. false on registrations made before this was required, since
   /// they were never actually asked — not a claim that they refused.
-  consentGiven      Boolean   @default(false)
+  consentGiven            Boolean   @default(false)
   /// When consentGiven was recorded. Null whenever consentGiven is false.
-  consentGivenAt    DateTime?
+  consentGivenAt          DateTime?
   /// The full name the person submitting typed as their digital signature,
   /// stored UPPERCASE like every other registrant field. A tick records only
   /// that a box was clicked; a name typed by hand is the thing an organizer
@@ -279,18 +287,18 @@ model Registration {
   /// whoever is actually doing the paperwork. Null on registrations made
   /// before this was asked for: they were never asked, which is not the same
   /// as having refused.
-  consentSignature  String?
+  consentSignature        String?
   /// What the organizer's payment validator wrote about this order, and who
   /// wrote it when. Internal only -- the runner never sees it and no email
   /// goes out; an assigned staff member reaches out by hand. It is where
   /// "deposit slip is for the wrong amount" lives, so the next person to open
   /// the row does not start the same phone call over again.
-  remarks           String?
+  remarks                 String?
   /// Who last wrote the remarks, stored as their name rather than a relation
   /// to the account: it is a line in a log, and it has to keep reading
   /// correctly if that account is later removed.
-  remarksBy         String?
-  remarksAt         DateTime?
+  remarksBy               String?
+  remarksAt               DateTime?
   /// When each of the two transactional emails actually reached the runner --
   /// null means it never did. Resend's free tier is 100 recipients a day and
   /// stops rather than bills, so a send can simply not happen; before these
@@ -323,8 +331,8 @@ model Registration {
   /// the migration to carry once; see STAFF_ACCESS_PLAN.md §4.5.
   deletedAt               DateTime?
   deletedById             String?
-  event             Event     @relation(fields: [eventId], references: [id])
-  runners           Runner[]
+  event                   Event     @relation(fields: [eventId], references: [id])
+  runners                 Runner[]
 }
 
 model Runner {
@@ -385,15 +393,14 @@ model Runner {
   category              Category     @relation(fields: [categoryId], references: [id])
   registration          Registration @relation(fields: [registrationId], references: [id])
 
+  /// Two runners sharing "-2" on the same order would hand two people the
+  /// same reference, which is the ambiguity runnerNo exists to remove.
+  @@unique([registrationId, runnerNo])
   /// Slot limits are counted by grouping these rows per category, on every
   /// event page and every public listing. Postgres does not index a foreign
   /// key on its own, so without this the count is a sequential scan of every
   /// runner the platform has ever taken.
   @@index([categoryId])
-
-  /// Two runners sharing "-2" on the same order would hand two people the
-  /// same reference, which is the ambiguity runnerNo exists to remove.
-  @@unique([registrationId, runnerNo])
 }
 
 /// The running clubs a runner can pick from at sign-up. One master list across
@@ -424,22 +431,22 @@ model RunningCommunity {
 /// than trusting an amount the browser sent -- exactly as they already do with
 /// the subtotal and the fees. See src/lib/discount.ts.
 model PromoCode {
-  id            String    @id @default(cuid())
+  id             String               @id @default(cuid())
   /// What the runner types at checkout -- or, when `automatic` is set, the
   /// promotion's own name, since there is nothing to type. One column for both
   /// because both answer the same question: what do we call this promotion
   /// when we show it to a runner. Uppercase like every other coded column, and
   /// spaces are allowed, so "EARLY BIRD" reads correctly on a badge.
-  code          String
+  code           String
   /// "CATEGORY_PRICE" | "BUY_X_GET_Y" -- uppercase like every other coded
   /// column, and guarded by asDiscountType at the API door.
-  discountType  String
+  discountType   String
   /// Kept at 0 by both surviving kinds and read by neither: CATEGORY_PRICE
   /// takes its amounts from the categoryPrices rows below and BUY_X_GET_Y from
   /// buyQuantity/getQuantity. The column stays because it is the one place a
   /// future kind whose worth is a single number would put it, and dropping it
   /// would cost a migration to add back.
-  discountValue Int
+  discountValue  Int
   /// How many times this code may be redeemed in total. Null = unlimited. A
   /// single-use voucher is simply a limit of 1, which is why there is no
   /// separate flag: "used once" is a cap, and the cap already exists.
@@ -450,21 +457,21 @@ model PromoCode {
   /// chosen because the rows already say it: a usageLimit means the count, and
   /// its absence means the window (or nothing at all). A voucher batch is the
   /// one exception, since every voucher carries a limit of 1 by construction.
-  usageLimit    Int?
-  usageCount    Int       @default(0)
-  validFrom     DateTime?
-  validUntil    DateTime?
+  usageLimit     Int?
+  usageCount     Int                  @default(0)
+  validFrom      DateTime?
+  validUntil     DateTime?
   /// The event this code is for. Null means every event this organizer runs,
   /// which is what every code created before scoping existed was.
-  eventId       String?
+  eventId        String?
   /// BUY_X_GET_Y only: buy this many at full price and get that many free.
   /// "Register 5, the 6th is free" is buyQuantity 5, getQuantity 1.
-  buyQuantity   Int?
-  getQuantity   Int?
+  buyQuantity    Int?
+  getQuantity    Int?
   /// The batch a bulk-generated voucher was born in ("SUMMER VIP"), so two
   /// hundred single-use codes read as one promotion in the admin instead of
   /// two hundred unrelated rows. Null for a code created on its own.
-  batchLabel    String?
+  batchLabel     String?
   /// A promotion that needs no code: it applies on its own to any order that
   /// meets its conditions. This is what an early bird is -- a discount tied to
   /// a date rather than to something the runner had to be told about. It is
@@ -472,7 +479,7 @@ model PromoCode {
   /// "EARLY BIRD" is not how it is meant to be claimed and it is already on
   /// their order. Where two promotions both apply, only the larger one does --
   /// see bestDiscount in src/lib/discount.ts.
-  automatic     Boolean   @default(false)
+  automatic      Boolean              @default(false)
   /// The organizer's hand on the switch, exactly like Event.registrationPaused
   /// and for the same reason: a promotion that has run out, expired or not
   /// started yet is a fact the app works out for itself, and this one is a
@@ -482,12 +489,12 @@ model PromoCode {
   /// It is what an organizer reaches for instead of deleting: a code printed
   /// on a poster can be switched off and back on, while deleting it leaves a
   /// runner typing a code nobody can explain.
-  paused        Boolean   @default(false)
-  organizerId   String
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  event         Event?    @relation(fields: [eventId], references: [id])
-  organizer     Organizer @relation(fields: [organizerId], references: [id])
+  paused         Boolean              @default(false)
+  organizerId    String
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  event          Event?               @relation(fields: [eventId], references: [id])
+  organizer      Organizer            @relation(fields: [organizerId], references: [id])
   /// CATEGORY_PRICE only: the discounted price this promotion puts each
   /// category on. Empty for every other kind.
   categoryPrices PromoCategoryPrice[]
@@ -643,12 +650,12 @@ model Feedback {
 /// human works for more than one of them, and a payment validated on a Sunday
 /// has to name the human.
 model StaffAccount {
-  id                String   @id @default(cuid())
+  id                String            @id @default(cuid())
   /// Lowercased on write and on every lookup, like every other account email
   /// in this app — see normalizeAccountEmail in lib/text-case.ts. Checked
   /// against Organizer.email too (findAccountByEmail in lib/actor.ts), since
   /// the database cannot enforce uniqueness across two tables.
-  email             String   @unique
+  email             String            @unique
   /// Null until the invitation is accepted: an invited person has no password
   /// yet, and the owner never sets one for them.
   password          String?
@@ -658,19 +665,19 @@ model StaffAccount {
   /// store), set from /admin/settings. Null shows the name's initial instead.
   avatarUrl         String?
   /// "INVITED" | "ACTIVE" | "SUSPENDED"
-  status            String   @default("INVITED")
+  status            String            @default("INVITED")
   /// Base32 TOTP secret, encrypted at rest. Null means 2FA is not set up.
   totpSecret        String?
   totpConfirmedAt   DateTime?
   /// bcrypt hashes, spent one at a time. Never the codes themselves.
-  recoveryCodes     String[] @default([])
+  recoveryCodes     String[]          @default([])
   lastLoginAt       DateTime?
   /// Every session issued before this instant is dead. Bumped on password
   /// change, on suspension, and by "sign out everywhere" — the reason it is
   /// needed is that the JWT lives a day and nothing else can end one early.
-  sessionsValidFrom DateTime @default(now())
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  sessionsValidFrom DateTime          @default(now())
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
   memberships       StaffMembership[]
 }
 
@@ -679,17 +686,17 @@ model StaffAccount {
 /// assistants work several organizers' races in a season, and one email should
 /// be enough for all of them.
 model StaffMembership {
-  id              String   @id @default(cuid())
+  id              String            @id @default(cuid())
   staffId         String
   organizerId     String
   /// "ADMIN" (every event of this organizer) | "STAFF" (only what is assigned)
   /// | "VIEWER" (a client's own sign-in: registrant counts of its client's
   /// events, and nothing else). Never "OWNER" — the owner is the Organizer row
   /// itself.
-  role            String   @default("STAFF")
+  role            String            @default("STAFF")
   /// Who invited them, as a StaffAccount or Organizer id, and when.
   invitedById     String?
-  invitedAt       DateTime @default(now())
+  invitedAt       DateTime          @default(now())
   acceptedAt      DateTime?
   /// sha256 of the invite token. The token itself is only ever in the email.
   inviteTokenHash String?
@@ -718,13 +725,13 @@ model StaffMembership {
 /// Which events a STAFF membership may touch, and as what — the same person can
 /// be a validator on one race and only a viewer on another.
 model EventAssignment {
-  id           String   @id @default(cuid())
+  id           String          @id @default(cuid())
   membershipId String
   eventId      String
   /// "EVENT_MANAGER" | "VALIDATOR" | "ENCODER" | "VIEWER" — see lib/permissions.ts.
   role         String
   assignedById String?
-  createdAt    DateTime @default(now())
+  createdAt    DateTime        @default(now())
   membership   StaffMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
   event        Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
@@ -748,15 +755,15 @@ model EventAssignment {
 ///
 /// Storage: tens of rows of short text — a rounding error on the 0.5 GB tier.
 model Client {
-  id                 String   @id @default(cuid())
+  id                 String            @id @default(cuid())
   /// The organization, as it names itself.
   name               String
   /// Lowercased, like every account email (normalizeAccountEmail). Unique so
   /// one organization cannot collect twice in the submissions list.
-  email              String   @unique
+  email              String            @unique
   /// NEW | INVITED | ACTIVE | ARCHIVED — lib/client.ts owns the vocabulary and
   /// the moves between them. Plain text so a status needs no migration.
-  status             String   @default("NEW")
+  status             String            @default("NEW")
   /// One of ORGANIZER_TYPES (lib/organizer-application.ts), as on Organizer.
   orgType            String?
   contactFirstName   String?
@@ -768,18 +775,18 @@ model Client {
   province           String?
   website            String?
   experience         String?
-  services           String[] @default([])
+  services           String[]          @default([])
   firstEventName     String?
   /// YYYY-MM-DD, like Event.date.
   firstEventDate     String?
   firstEventLocation String?
   expectedRunners    String?
   applicationNote    String?
-  createdAt          DateTime @default(now())
+  createdAt          DateTime          @default(now())
   /// When the latest invitation to sign in was sent. Null until staff press
   /// Send invite (Batch 3).
   invitedAt          DateTime?
-  updatedAt          DateTime @updatedAt
+  updatedAt          DateTime          @updatedAt
   events             Event[]
   viewers            StaffMembership[]
 }

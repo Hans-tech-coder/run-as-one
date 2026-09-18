@@ -214,11 +214,13 @@ function MemberStatus({ member }: { member: TeamMemberRow }) {
 }
 
 function LastSignIn({ member }: { member: TeamMemberRow }) {
-  // The owner signs in as the Organizer row, which has never recorded a
-  // sign-in time — a blank here is honest where "Never" would be false.
-  if (member.isOwner) return <span className="text-secondary">&mdash;</span>;
   return member.lastLoginAt ? (
     <span className="whitespace-nowrap">{shortInstant(member.lastLoginAt)}</span>
+  ) : member.isOwner ? (
+    // The Organizer row only began recording sign-ins in SETTINGS_PLAN.md
+    // Batch 3, so until its next sign-in a blank is honest where "Never"
+    // would be false.
+    <span className="text-secondary">&mdash;</span>
   ) : (
     <span className="text-secondary">Never</span>
   );

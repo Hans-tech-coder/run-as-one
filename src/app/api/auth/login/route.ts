@@ -32,14 +32,12 @@ async function logAttempt(
   who: AuditActor,
   entityType: AuditEntityType,
   outcome:
-    | 'SIGNED_IN'
     | 'WRONG_PASSWORD'
     | 'SUSPENDED'
     | 'NOT_APPROVED'
     | 'NO_ACTIVE_ORGANIZER',
 ) {
   const summaries = {
-    SIGNED_IN: 'Signed in.',
     WRONG_PASSWORD: 'Failed sign-in: wrong password.',
     SUSPENDED: 'Sign-in refused: the account is suspended.',
     NOT_APPROVED: 'Sign-in refused: the account is not approved.',
@@ -47,11 +45,11 @@ async function logAttempt(
   } as const;
 
   await recordAudit(db, who, {
-    action: outcome === 'SIGNED_IN' ? 'auth.signed_in' : 'auth.sign_in_failed',
+    action: 'auth.sign_in_failed',
     entityType,
     entityId: who.id,
     summary: summaries[outcome],
-    changes: outcome === 'SIGNED_IN' ? null : { reason: outcome },
+    changes: { reason: outcome },
   });
 }
 
@@ -115,7 +113,18 @@ export async function POST(request: Request) {
         );
       }
 
-      await logAttempt(who, 'Organizer', 'SIGNED_IN');
+      await db.$transaction(async tx => {
+        await tx.organizer.update({
+          where: { id: organizer.id },
+          data: { lastLoginAt: new Date() },
+        });
+        await recordAudit(tx, who, {
+          action: 'auth.signed_in',
+          entityType: 'Organizer',
+          entityId: organizer.id,
+          summary: 'Signed in.',
+        });
+      });
 
       const token = await createToken(organizerSessionClaims(organizer));
       await setAuthCookie(token);

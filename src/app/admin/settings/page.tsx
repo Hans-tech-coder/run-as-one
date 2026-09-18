@@ -1,14 +1,19 @@
 import React from 'react';
 import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
-import { History } from 'lucide-react';
 import prisma from '@/lib/db';
 import { can, isClientViewer, requireActor } from '@/lib/actor';
 import { formatEventInstant } from '@/lib/event-schedule';
 import { SITE_NAME } from '@/lib/site-contact';
 import { getContactEmail, getSiteSettings } from '@/lib/site-settings';
 import AccessPanels from './AccessPanels';
-import { PasswordPanel, ProfilePanel, SiteEmailPanel, SocialLinksPanel } from './SettingsPanels';
+import {
+  PasswordPanel,
+  ProfilePanel,
+  SignInActivityPanel,
+  SiteEmailPanel,
+  SocialLinksPanel,
+} from './SettingsPanels';
 
 export const metadata: Metadata = {
   title: `Settings | ${SITE_NAME} Admin`,
@@ -22,8 +27,9 @@ export const metadata: Metadata = {
  *    mobile number. The Organizer row has no phone column, so the owner's form
  *    has none. A client viewer's email is read-only (only Run As One's staff
  *    change it) and the form names the admin email to write to.
- * 2. **Password**, then for staff **Sign-in Activity** (`lastLoginAt`; the
- *    Organizer row records none).
+ * 2. **Password**, then **Sign-in Activity** — the last sign-in
+ *    (`lastLoginAt`, on both account tables) and **Sign out other devices**,
+ *    for everyone.
  * 3. **Admin Email** and **Social Links** — `platform:manage` only (Super
  *    Admin and Admin): the one address the footer, the legal pages and every
  *    email use, and the footer's social icons. Two forms, each saving alone.
@@ -47,9 +53,9 @@ export default async function AdminSettingsPage() {
     : await prisma.organizer
         .findUnique({
           where: { id: actor.id },
-          select: { name: true, email: true, avatarUrl: true },
+          select: { name: true, email: true, avatarUrl: true, lastLoginAt: true },
         })
-        .then(row => (row ? { ...row, phone: null, lastLoginAt: null } : null));
+        .then(row => (row ? { ...row, phone: null } : null));
 
   // The cookie is valid but the account behind it is gone — a deleted
   // organizer holding a token that has not expired yet. Send them back to the
@@ -86,32 +92,9 @@ export default async function AdminSettingsPage() {
 
           <PasswordPanel />
 
-          {isStaff && (
-            <section className="admin-panel" aria-labelledby="sign-in-activity-title">
-              <div className="admin-panel-header">
-                <h2 id="sign-in-activity-title" className="admin-panel-title flex items-center gap-2">
-                  <History size={18} className="text-accent-blue" aria-hidden="true" />
-                  Sign-in Activity
-                </h2>
-              </div>
-              <div className="admin-panel-content">
-                <dl className="settings-facts">
-                  <div>
-                    <dt>Last sign-in</dt>
-                    <dd>
-                      {account.lastLoginAt
-                        ? formatEventInstant(account.lastLoginAt)
-                        : 'Not recorded yet'}
-                    </dd>
-                  </div>
-                </dl>
-                <p className="text-xs text-secondary mt-3">
-                  If this was not you, change your password above. Changing it
-                  signs you out on every other device.
-                </p>
-              </div>
-            </section>
-          )}
+          <SignInActivityPanel
+            lastSignIn={account.lastLoginAt ? formatEventInstant(account.lastLoginAt) : null}
+          />
 
           {siteSettings && (
             <>

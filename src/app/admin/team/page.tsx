@@ -44,7 +44,7 @@ export default async function TeamPage() {
   const [organizer, memberships, events] = await Promise.all([
     prisma.organizer.findUnique({
       where: { id: actor.orgId },
-      select: { name: true, email: true },
+      select: { name: true, email: true, lastLoginAt: true },
     }),
     prisma.staffMembership.findMany({
       // A client viewer holds a membership too, but is not on the team.
@@ -123,7 +123,7 @@ export default async function TeamPage() {
       accepted: true,
       state: 'ACTIVE',
       inviteExpiresAt: null,
-      lastLoginAt: null,
+      lastLoginAt: organizer.lastLoginAt?.toISOString() ?? null,
     },
     ...members,
   ];
