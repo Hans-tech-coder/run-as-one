@@ -52,26 +52,31 @@ every dashboard page fails on the unknown `avatarUrl` field.
 
 ---
 
-## ⬜ Batch 2 — Social links
+## ✅ Batch 2 — Social links *(done, 2026-09-18)*
 
 **Who:** `platform:manage` (Super Admin and Admin).
 
-- [ ] Add nullable columns to `SiteSettings` for Facebook, Instagram, TikTok
+- [x] Add nullable columns to `SiteSettings` for Facebook, Instagram, TikTok
       and YouTube URLs (migration; a few bytes).
-- [ ] Read them through `lib/site-settings.ts`, the same cached path as the
+- [x] Read them through `lib/site-settings.ts`, the same cached path as the
       admin email, and expire the cache on save.
-- [ ] A **Social Links** panel beside Admin Email: one field per channel, with a
+- [x] A **Social Links** panel beside Admin Email: one field per channel, with a
       specific message for a link that does not look like one (reuse
       `looksLikeLink` from `lib/organizer-application.ts`).
-- [ ] `PATCH /api/admin/site-settings` accepts the links, audited like the
+- [x] `PATCH /api/admin/site-settings` accepts the links, audited like the
       admin email.
-- [ ] The footer uses the saved link. **A channel with no link hides its icon**
+- [x] The footer uses the saved link. **A channel with no link hides its icon**
       rather than pointing at `/coming-soon`. Check every place that draws
       `SOCIAL_CHANNELS` (`lib/site-contact.ts`) — fix all of them, not one.
-- [ ] Update `PROJECT_GUIDE.md` (§4 SiteSettings, §5 site-settings.ts, §6
+- [x] Update `PROJECT_GUIDE.md` (§4 SiteSettings, §5 site-settings.ts, §6
       settings, "Known open threads").
 
-**Release:** carries a migration → `npx prisma migrate deploy` on production.
+Also: a link must be on its own channel's site (an Instagram link in the
+Facebook box is refused by name), and `/coming-soon?channel=…` now redirects to
+the saved link, since the footer no longer links there.
+
+**Release:** carries migration `20260918110000_site_social_links` →
+`npx prisma migrate deploy` on production.
 
 ---
 

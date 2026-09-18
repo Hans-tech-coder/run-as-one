@@ -8,7 +8,7 @@ import { formatEventInstant } from '@/lib/event-schedule';
 import { SITE_NAME } from '@/lib/site-contact';
 import { getContactEmail, getSiteSettings } from '@/lib/site-settings';
 import AccessPanels from './AccessPanels';
-import { PasswordPanel, ProfilePanel, SiteEmailPanel } from './SettingsPanels';
+import { PasswordPanel, ProfilePanel, SiteEmailPanel, SocialLinksPanel } from './SettingsPanels';
 
 export const metadata: Metadata = {
   title: `Settings | ${SITE_NAME} Admin`,
@@ -24,8 +24,9 @@ export const metadata: Metadata = {
  *    change it) and the form names the admin email to write to.
  * 2. **Password**, then for staff **Sign-in Activity** (`lastLoginAt`; the
  *    Organizer row records none).
- * 3. **Admin Email** — `platform:manage` only (Super Admin and Admin): the one
- *    address the footer, the legal pages and every email use.
+ * 3. **Admin Email** and **Social Links** — `platform:manage` only (Super
+ *    Admin and Admin): the one address the footer, the legal pages and every
+ *    email use, and the footer's social icons. Two forms, each saving alone.
  * 4. **Your Role** and what it reaches (AccessPanels), read-only.
  *
  * For an owner "the person" is the Organizer row; for a staff member (and a
@@ -112,7 +113,12 @@ export default async function AdminSettingsPage() {
             </section>
           )}
 
-          {siteSettings && <SiteEmailPanel settings={siteSettings} />}
+          {siteSettings && (
+            <>
+              <SiteEmailPanel settings={{ contactEmail: siteSettings.contactEmail }} />
+              <SocialLinksPanel settings={{ socialLinks: siteSettings.socialLinks }} />
+            </>
+          )}
 
           <AccessPanels actor={actor} />
         </div>

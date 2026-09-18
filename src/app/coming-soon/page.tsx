@@ -1,10 +1,11 @@
 import React from 'react';
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 import { ChevronRight, Mail, Radar } from 'lucide-react';
 import { IconBadge, StatusPanel } from '@/components/StatusPanel';
-import { SITE_NAME, SOCIAL_CHANNELS, supportMailto } from '@/lib/site-contact';
-import { getContactEmail } from '@/lib/site-settings';
+import { SITE_NAME, SOCIAL_CHANNELS, supportMailto, type SocialChannel } from '@/lib/site-contact';
+import { getSiteSettings } from '@/lib/site-settings';
 
 export const metadata: Metadata = {
   title: `Coming Soon | ${SITE_NAME}`,
@@ -13,21 +14,26 @@ export const metadata: Metadata = {
 };
 
 /**
- * Where the footer's social icons land until those accounts exist.
+ * Where the footer's social icons used to land before those accounts existed.
  *
- * The alternative was an `href="#"` that does nothing, or a guessed profile
- * URL that may not be ours — both leave the runner worse off than a page that
- * simply says the channel is not live yet and hands them a working way to
- * reach us. When the real URLs land in site-contact.ts, the footer points at
- * them directly and this page keeps serving the ones that are still pending.
+ * The footer now shows a channel only once its link is saved at
+ * /admin/settings (lib/site-settings.ts), so nothing on the site links here
+ * any more. The page stays for the addresses already shared or bookmarked: a
+ * channel that has a saved link by now is sent straight to it, and one that
+ * still has none gets this page, which says so plainly and hands the runner a
+ * working way to reach us.
  */
 export default async function ComingSoonPage({
   searchParams,
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  const channel = channelNameFrom((await searchParams).channel);
-  const contactEmail = await getContactEmail();
+  const channel = channelFrom((await searchParams).channel);
+  const { contactEmail, socialLinks } = await getSiteSettings();
+
+  // Only ever a link staff saved, never anything from the query string.
+  const live = channel ? socialLinks[channel.key] : null;
+  if (live) redirect(live);
 
   return (
     <div className="relative flex w-full flex-col items-center overflow-hidden">
@@ -42,7 +48,7 @@ export default async function ComingSoonPage({
               Coming Soon
             </p>
             <h1 className="mb-3 bg-gradient-to-r from-white to-white/60 bg-clip-text text-2xl font-black uppercase tracking-wide text-transparent text-balance sm:text-3xl">
-              {channel ? `Our ${channel} Isn't Live Yet` : 'Our Social Channels Are On The Way'}
+              {channel ? `Our ${channel.name} Isn't Live Yet` : 'Our Social Channels Are On The Way'}
             </h1>
             <p className="m-0 max-w-md text-base leading-relaxed text-secondary">
               We&apos;re still setting this one up. Nothing about registering is
@@ -88,11 +94,11 @@ export default async function ComingSoonPage({
  * Matching rather than echoing: the value lands in a heading, and an arbitrary
  * string from a URL does not belong there.
  */
-function channelNameFrom(value: string | string[] | undefined): string | null {
+function channelFrom(value: string | string[] | undefined): SocialChannel | null {
   const raw = Array.isArray(value) ? value[0] : value;
   if (!raw) return null;
   const match = SOCIAL_CHANNELS.find(
     channel => channel.name.toLowerCase() === raw.trim().toLowerCase()
   );
-  return match ? match.name : null;
+  return match ?? null;
 }

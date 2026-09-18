@@ -8,10 +8,9 @@ import { RunAsOneLogo } from './RunAsOneLogo';
 import {
   SITE_NAME,
   SOCIAL_CHANNELS,
-  socialChannelHref,
   supportMailto,
 } from '@/lib/site-contact';
-import { useContactEmail } from './SiteContactProvider';
+import { useContactEmail, useSocialLinks } from './SiteContactProvider';
 
 /**
  * Every destination in the footer, and nothing that does not exist.
@@ -20,7 +19,9 @@ import { useContactEmail } from './SiteContactProvider';
  * FAQ that were never built, so a runner who trusted the footer landed on a
  * 404 — the worst possible moment on a page whose job is to look like the site
  * can be trusted with a payment. Each href below resolves to a real route, a
- * real mail client, or the coming-soon page that says so plainly.
+ * or a real mail client. A social channel appears only once its link is saved
+ * at /admin/settings; one without a link is left out, not sent to a
+ * placeholder.
  */
 type FooterLink = { label: string; href: string; external?: boolean };
 
@@ -84,6 +85,11 @@ function FooterLinkRow({ link }: { link: FooterLink }) {
 export default function Footer() {
   const year = new Date().getFullYear();
   const contactEmail = useContactEmail();
+  const socialLinks = useSocialLinks();
+  const channels = SOCIAL_CHANNELS.flatMap(channel => {
+    const href = socialLinks[channel.key];
+    return href ? [{ ...channel, href }] : [];
+  });
 
   return (
     <footer className="relative mt-20 sm:mt-32 overflow-hidden rounded-t-[40px] border-t border-white/[0.06] bg-[#0a0a0c]/70 backdrop-blur-xl">
@@ -120,25 +126,30 @@ export default function Footer() {
             <span className="break-words">{contactEmail}</span>
           </a>
 
-          <div>
-            <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-secondary">
-              Follow the community
-            </h2>
-            <ul className="m-0 flex list-none flex-wrap gap-3 p-0">
-              {SOCIAL_CHANNELS.map(channel => (
-                <li key={channel.key}>
-                  <Link
-                    href={socialChannelHref(channel.name)}
-                    aria-label={`${channel.name} — coming soon`}
-                    title={`${channel.name} — coming soon`}
-                    className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-secondary transition-all duration-300 hover:-translate-y-0.5 hover:border-transparent hover:bg-gradient-to-r hover:from-accent-orange hover:to-accent-blue hover:text-white"
-                  >
-                    <BrandGlyph channel={channel.key} size={18} />
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
+          {/* No saved link at all: no heading over an empty row. */}
+          {channels.length > 0 && (
+            <div>
+              <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-secondary">
+                Follow the community
+              </h2>
+              <ul className="m-0 flex list-none flex-wrap gap-3 p-0">
+                {channels.map(channel => (
+                  <li key={channel.key}>
+                    <a
+                      href={channel.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`${SITE_NAME} on ${channel.name} (opens in a new tab)`}
+                      title={channel.name}
+                      className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-secondary transition-all duration-300 hover:-translate-y-0.5 hover:border-transparent hover:bg-gradient-to-r hover:from-accent-orange hover:to-accent-blue hover:text-white"
+                    >
+                      <BrandGlyph channel={channel.key} size={18} />
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
 
         <nav aria-label="Footer" className="grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-3">

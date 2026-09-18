@@ -2,11 +2,21 @@
 
 import React, { useId, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Camera, Check, KeyRound, Mail, UserCog } from 'lucide-react';
+import { Camera, Check, KeyRound, Mail, Share2, UserCog } from 'lucide-react';
 import FieldError from '@/components/ui/FieldError';
 import { useAlert } from '@/components/ui/AlertProvider';
 import { invalidEmailMessage, looksLikeEmailAddress } from '@/lib/email-address';
-import { DEFAULT_CONTACT_EMAIL, EMAIL_SENDING_DOMAIN, canSendFrom } from '@/lib/site-contact';
+import {
+  DEFAULT_CONTACT_EMAIL,
+  EMAIL_SENDING_DOMAIN,
+  MAX_SOCIAL_LINK,
+  SOCIAL_CHANNELS,
+  canSendFrom,
+  socialLinkError,
+  type SocialChannelKey,
+  type SocialLinks,
+} from '@/lib/site-contact';
+import { BrandGlyph } from '@/components/BrandIcons';
 import PhoneField from '@/app/events/[slug]/register/PhoneField';
 import { DEFAULT_COUNTRY } from '@/lib/phone';
 import PasswordField from './PasswordField';
@@ -30,6 +40,10 @@ export type SiteSettingsForm = {
   contactEmail: string;
 };
 
+export type SocialLinksForm = {
+  socialLinks: SocialLinks;
+};
+
 /*
  * The panels of /admin/settings, one per form, each saving on its own.
  *
@@ -37,7 +51,7 @@ export type SiteSettingsForm = {
  * you retype your password, and changing a password should not risk saving a
  * half-edited email alongside it. Each panel owns its own submit, its own busy
  * state, and its own confirmation line. Which panel sits on which section of
- * the page is the section's own page.tsx; the section menu is SettingsNav.
+ * the page is the single page.tsx; there are no section tabs.
  *
  * Errors are held per field and rendered under the input they belong to, the
  * same way the registration wizard does it — a form that only says "something
@@ -787,5 +801,162 @@ export function SaveConfirmation({
         </>
       )}
     </p>
+  );
+}
+
+/** The saved links as the boxes show them: an empty string for no link. */
+function linkDrafts(links: SocialLinks): Record<SocialChannelKey, string> {
+  return Object.fromEntries(
+    SOCIAL_CHANNELS.map(c => [c.key, links[c.key] ?? ''])
+  ) as Record<SocialChannelKey, string>;
+}
+
+/**
+ * The footer's social links, one box per channel in SOCIAL_CHANNELS.
+ *
+ * A box left empty hides that channel's icon in the footer rather than
+ * pointing it anywhere, so the panel says so. Each box is checked when it
+ * loses focus and again on Save (socialLinkError, the same rule the route
+ * applies), so the message sits under the one link that is wrong — including
+ * a link pasted into the wrong channel's box.
+ */
+export function SocialLinksPanel({ settings }: { settings: SocialLinksForm }) {
+  // Shadows window.alert on purpose — see AlertProvider.
+  const { alert } = useAlert();
+  const router = useRouter();
+  const baseId = useId();
+
+  const [saved, setSaved] = useState(() => linkDrafts(settings.socialLinks));
+  const [drafts, setDrafts] = useState(() => linkDrafts(settings.socialLinks));
+  const [errors, setErrors] = useState<FieldErrors>({});
+  const [isSaving, setIsSaving] = useState(false);
+  const [justSaved, setJustSaved] = useState(false);
+
+  const isDirty = SOCIAL_CHANNELS.some(
+    c => drafts[c.key].trim() !== saved[c.key]
+  );
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const found: FieldErrors = {};
+    for (const channel of SOCIAL_CHANNELS) {
+      const problem = socialLinkError(channel, drafts[channel.key]);
+      if (problem) found[channel.key] = problem;
+    }
+    setErrors(found);
+    if (Object.keys(found).length > 0) return;
+
+    setIsSaving(true);
+    setJustSaved(false);
+
+    try {
+      const res = await fetch('/api/admin/site-settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          socialLinks: Object.fromEntries(
+            SOCIAL_CHANNELS.map(c => [c.key, drafts[c.key].trim()])
+          ),
+        }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (data.errors) {
+          setErrors(data.errors);
+          return;
+        }
+        throw new Error(data.error || 'Could not save the social links');
+      }
+
+      // The route stores each link with its https:// scheme; show what it kept.
+      const next = linkDrafts(data.settings.socialLinks);
+      setSaved(next);
+      setDrafts(next);
+      setErrors({});
+      setJustSaved(true);
+      // The footer reads the links from the settings cache the route cleared.
+      router.refresh();
+    } catch (err: unknown) {
+      await alert(
+        err instanceof Error ? err.message : 'Could not save the social links'
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <form className="admin-panel" onSubmit={handleSubmit} noValidate>
+      <div className="admin-panel-header">
+        <h2 className="admin-panel-title flex items-center gap-2">
+          <Share2 size={18} className="text-accent-blue" aria-hidden="true" />
+          Social Links
+        </h2>
+      </div>
+
+      <div className="admin-panel-content">
+        <p className="text-xs text-secondary mb-4">
+          Shown as icons in the footer of every public page. Leave a box empty
+          to hide that icon.
+        </p>
+
+        <div className="form-grid">
+          {SOCIAL_CHANNELS.map(channel => {
+            const id = `${baseId}-${channel.key}`;
+            const error = errors[channel.key];
+            return (
+              <div key={channel.key} className="form-group min-w-0">
+                <label className="form-label flex items-center gap-2" htmlFor={id}>
+                  <BrandGlyph channel={channel.key} size={14} />
+                  {channel.name}
+                </label>
+                <input
+                  id={id}
+                  type="url"
+                  inputMode="url"
+                  className="form-input"
+                  value={drafts[channel.key]}
+                  placeholder={channel.example}
+                  maxLength={MAX_SOCIAL_LINK}
+                  onChange={e => {
+                    const value = e.target.value;
+                    setDrafts(prev => ({ ...prev, [channel.key]: value }));
+                    if (error) setErrors(prev => ({ ...prev, [channel.key]: '' }));
+                  }}
+                  onBlur={() =>
+                    setErrors(prev => ({
+                      ...prev,
+                      [channel.key]: socialLinkError(channel, drafts[channel.key]) ?? '',
+                    }))
+                  }
+                  autoComplete="off"
+                  spellCheck={false}
+                  disabled={isSaving}
+                  aria-invalid={error ? true : undefined}
+                  aria-describedby={error ? `${id}-error` : undefined}
+                />
+                <FieldError id={`${id}-error`} message={error} />
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="form-actions settings-actions">
+          <SaveConfirmation
+            visible={justSaved && !isDirty}
+            message="Social links saved"
+          />
+          <button
+            type="submit"
+            className="btn-light"
+            disabled={isSaving || !isDirty}
+          >
+            {isSaving ? <BusyLabel>Saving</BusyLabel> : 'Save Changes'}
+          </button>
+        </div>
+      </div>
+    </form>
   );
 }

@@ -3,11 +3,13 @@
  *
  * The footer, the 404 page and the two legal pages all quote the same address
  * and the same channel list, so they read it from here instead of each
- * retyping it. The contact address has moved to a platform setting staff edit
- * at /admin/settings (lib/site-settings.ts); what stays here is its default and
- * the rules around it, because client components import this module and the
+ * retyping it. The contact address and the social links have moved to platform
+ * settings staff edit at /admin/settings (lib/site-settings.ts); what stays
+ * here is their defaults and the rules around them, because client components import this module and the
  * settings module reads the database.
  */
+
+import { looksLikeLink, normalizeLink } from './organizer-application';
 
 /**
  * The brand, spelled the one way it is allowed to be spelled.
@@ -88,23 +90,66 @@ export type SocialChannelKey = 'facebook' | 'instagram' | 'tiktok' | 'youtube';
 export type SocialChannel = {
   key: SocialChannelKey;
   name: string;
+  /** Hostnames a link to this channel lives on; a subdomain of one counts. */
+  hosts: readonly string[];
+  /** A sample address for the settings field and its error message. */
+  example: string;
 };
 
 /**
- * The channels the footer shows.
+ * The channels the footer can show, in the order it shows them.
  *
- * None of them has a URL yet, so every one points at /coming-soon rather than
- * at a `#` that goes nowhere or a guessed profile that may not be ours. When
- * the real links exist, give each entry an `href` and let the footer prefer it.
+ * The links themselves are platform settings (lib/site-settings.ts), saved at
+ * /admin/settings. A channel with no saved link is **left out of the footer**
+ * — never pointed at `#`, a guessed profile, or a placeholder page.
  */
 export const SOCIAL_CHANNELS: readonly SocialChannel[] = [
-  { key: 'facebook', name: 'Facebook' },
-  { key: 'instagram', name: 'Instagram' },
-  { key: 'tiktok', name: 'TikTok' },
-  { key: 'youtube', name: 'YouTube' },
+  { key: 'facebook', name: 'Facebook', hosts: ['facebook.com', 'fb.com', 'fb.me'], example: 'facebook.com/runasone' },
+  { key: 'instagram', name: 'Instagram', hosts: ['instagram.com', 'instagr.am'], example: 'instagram.com/runasone' },
+  { key: 'tiktok', name: 'TikTok', hosts: ['tiktok.com'], example: 'tiktok.com/@runasone' },
+  { key: 'youtube', name: 'YouTube', hosts: ['youtube.com', 'youtu.be'], example: 'youtube.com/@runasone' },
 ];
 
-/** Where a social icon sends someone until that channel is live. */
-export function socialChannelHref(name: string): string {
-  return `/coming-soon?channel=${encodeURIComponent(name)}`;
+/** Each channel's saved link, or null when it has none. */
+export type SocialLinks = Record<SocialChannelKey, string | null>;
+
+export const NO_SOCIAL_LINKS: SocialLinks = {
+  facebook: null,
+  instagram: null,
+  tiktok: null,
+  youtube: null,
+};
+
+/** Longer than any real profile address, short enough to stop a pasted essay. */
+export const MAX_SOCIAL_LINK = 300;
+
+/**
+ * What is wrong with a typed link for this channel, or null when it will do.
+ *
+ * Empty is fine — it clears the link and hides the icon. Otherwise the value
+ * has to be a web address (`looksLikeLink`, the rule the organizer application
+ * uses for its website) *on that channel's site*, because the likeliest slip on
+ * a form of four look-alike boxes is pasting the Instagram link into the
+ * Facebook one.
+ */
+export function socialLinkError(channel: SocialChannel, value: string): string | null {
+  const raw = value.trim();
+  if (!raw) return null;
+  if (raw.length > MAX_SOCIAL_LINK) {
+    return `That link is longer than ${MAX_SOCIAL_LINK} characters.`;
+  }
+  if (!looksLikeLink(raw)) {
+    return `That does not look like a web address. Paste the full link, like ${channel.example}.`;
+  }
+  let host: string;
+  try {
+    host = new URL(normalizeLink(raw)).hostname.toLowerCase();
+  } catch {
+    return `That does not look like a web address. Paste the full link, like ${channel.example}.`;
+  }
+  const onChannel = channel.hosts.some(h => host === h || host.endsWith(`.${h}`));
+  if (!onChannel) {
+    return `That is not a ${channel.name} link. Paste the address of the ${channel.name} page, like ${channel.example}.`;
+  }
+  return null;
 }

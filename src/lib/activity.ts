@@ -71,6 +71,7 @@ export const ACTION_LABELS: Record<AuditAction, string> = {
   'remittance.voided': 'Voided a remittance',
   'remittance.proof.viewed': 'Opened a remittance receipt',
   'settings.contact_email.changed': 'Changed the admin email',
+  'settings.social_links.changed': 'Changed the social links',
 };
 
 /** The one action worded as a warning: somebody tried a password and was refused. */
@@ -148,6 +149,7 @@ export const ACTION_GROUP: Record<AuditAction, ActivityGroupKey> = {
   'remittance.voided': 'remittances',
   'remittance.proof.viewed': 'remittances',
   'settings.contact_email.changed': 'settings',
+  'settings.social_links.changed': 'settings',
 };
 
 const KNOWN_ACTIONS = Object.keys(ACTION_LABELS) as AuditAction[];

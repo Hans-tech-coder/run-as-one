@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Outfit } from "next/font/google";
 import "./globals.css";
 import { SITE_NAME, SITE_URL } from "@/lib/site-contact";
-import { getContactEmail } from "@/lib/site-settings";
+import { getSiteSettings } from "@/lib/site-settings";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-body" });
 const outfit = Outfit({ subsets: ["latin"], variable: "--font-sans" });
@@ -49,9 +49,10 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // A platform setting (lib/site-settings.ts), read once here so every client
-  // component under the layout gets the saved address from useContactEmail().
-  const contactEmail = await getContactEmail();
+  // Platform settings (lib/site-settings.ts), read once here so every client
+  // component under the layout gets the saved address from useContactEmail()
+  // and the footer's links from useSocialLinks().
+  const { contactEmail, socialLinks } = await getSiteSettings();
 
   return (
     <html lang="en">
@@ -60,7 +61,7 @@ export default async function RootLayout({
             /admin, so a provider mounted inside it would
             cover only half the app. */}
         <ThemedFavicon />
-        <SiteContactProvider contactEmail={contactEmail}>
+        <SiteContactProvider contactEmail={contactEmail} socialLinks={socialLinks}>
           <AlertProvider>
             <ClientLayoutWrapper>
               {children}

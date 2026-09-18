@@ -90,6 +90,7 @@ export const AUDIT_ACTIONS = [
   'remittance.proof.viewed',
   // A site-wide setting staff edit at /admin/settings (lib/site-settings.ts).
   'settings.contact_email.changed',
+  'settings.social_links.changed',
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

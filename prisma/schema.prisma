@@ -891,5 +891,12 @@ model SiteSettings {
   /// help pages, and the sender, reply-to and footer of every email. Stored
   /// exactly as typed after a trim.
   contactEmail String
+  /// The footer's social links, one per channel in SOCIAL_CHANNELS
+  /// (lib/site-contact.ts), stored with their https:// scheme. Null hides that
+  /// channel's icon rather than pointing it anywhere.
+  facebookUrl  String?
+  instagramUrl String?
+  tiktokUrl    String?
+  youtubeUrl   String?
   updatedAt    DateTime @updatedAt
 }
