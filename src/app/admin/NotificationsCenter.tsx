@@ -77,11 +77,11 @@ const KIND_ICONS: Record<NotificationKind, React.ComponentType<{ size?: number }
 };
 
 const TONE_CLASSES: Record<NotificationTone, string> = {
-  amber: 'bg-amber-400/10 text-amber-300 border-amber-400/20',
-  green: 'bg-emerald-400/10 text-emerald-300 border-emerald-400/20',
-  red: 'bg-red-400/10 text-red-300 border-red-400/20',
-  blue: 'bg-accent-blue/10 text-[#4da3ff] border-accent-blue/25',
-  violet: 'bg-violet-400/10 text-violet-300 border-violet-400/20',
+  amber: 'bg-amber-400/10 text-[var(--tone-amber)] border-amber-400/20',
+  green: 'bg-emerald-400/10 text-[var(--tone-green)] border-emerald-400/20',
+  red: 'bg-red-400/10 text-[var(--tone-red)] border-red-400/20',
+  blue: 'bg-accent-blue/10 text-[var(--accent-blue-text)] border-accent-blue/25',
+  violet: 'bg-violet-400/10 text-[var(--tone-violet)] border-violet-400/20',
 };
 
 function readStored(key: string | null): NotificationReadState {
@@ -330,7 +330,7 @@ export default function NotificationsCenter() {
           >
             <div className="notif-head">
               <div className="min-w-0">
-                <h2 id={titleId} className="m-0 text-lg font-semibold text-white">
+                <h2 id={titleId} className="m-0 text-lg font-semibold text-primary">
                   Notifications
                 </h2>
                 <p className="m-0 mt-0.5 text-sm text-secondary">
@@ -375,7 +375,7 @@ export default function NotificationsCenter() {
                     <span className="notif-empty-icon" aria-hidden="true">
                       <BellOff size={22} />
                     </span>
-                    <p className="m-0 font-medium text-white">
+                    <p className="m-0 font-medium text-primary">
                       {tab === 'unread' ? 'No unread notifications' : 'Nothing new yet'}
                     </p>
                     <p className="m-0 text-sm text-secondary">

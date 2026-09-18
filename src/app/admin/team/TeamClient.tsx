@@ -739,7 +739,7 @@ export default function TeamClient({
                 <Columns size={16} /> View
               </button>
               {isViewOpen && (
-                <div className="toolbar-popover absolute right-0 mt-2 bg-[#050505] border border-white/10 rounded-md p-2 min-w-[150px] z-50 shadow-2xl">
+                <div className="toolbar-popover absolute right-0 mt-2 bg-[var(--dash-popover)] border border-[var(--dash-border)] rounded-md p-2 min-w-[150px] z-50 shadow-2xl">
                   {table.getAllLeafColumns().filter(col => col.getCanHide()).map(column => (
                     <label key={column.id} className="flex items-center gap-2 px-2 py-1.5 hover:bg-white/5 cursor-pointer rounded-md text-sm text-white">
                       <div className={`w-4 h-4 border border-white/10 rounded-sm flex items-center justify-center ${column.getIsVisible() ? 'bg-white/10' : ''}`}>
@@ -904,7 +904,7 @@ export default function TeamClient({
             role="dialog"
             aria-modal="true"
             aria-labelledby="team-form-title"
-            className={`t-modal admin-modal-panel w-full max-w-xl bg-[#111] border border-white/10 rounded-2xl shadow-2xl flex flex-col max-h-[90vh] ${isModalOpen ? 'is-open' : ''} ${isModalClosing ? 'is-closing' : ''}`}
+            className={`t-modal admin-modal-panel w-full max-w-xl bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-2xl shadow-2xl flex flex-col max-h-[90vh] ${isModalOpen ? 'is-open' : ''} ${isModalClosing ? 'is-closing' : ''}`}
           >
             <div className="p-6 border-b border-white/10 flex justify-between items-start gap-4 shrink-0">
               <div className="min-w-0">

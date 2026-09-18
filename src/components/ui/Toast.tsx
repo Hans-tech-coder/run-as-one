@@ -36,7 +36,7 @@ export default function Toast({
 
   return (
     <div
-      className={`t-toast pointer-events-auto w-full sm:w-[22rem] bg-[#111] border ${v.panel} rounded-xl shadow-2xl p-4 flex items-start gap-3 ${
+      className={`t-toast pointer-events-auto w-full sm:w-[22rem] bg-[var(--dash-panel-solid)] border ${v.panel} rounded-xl shadow-2xl p-4 flex items-start gap-3 ${
         open ? "is-open" : ""
       }`}
       /* A failure has to interrupt whatever the screen reader is reading; a
@@ -49,15 +49,15 @@ export default function Toast({
 
       <div className="flex flex-col gap-0.5 min-w-0 flex-1">
         {title && (
-          <p className="text-sm font-semibold text-white m-0">{title}</p>
+          <p className="text-sm font-semibold text-primary m-0">{title}</p>
         )}
-        <div className="text-sm text-gray-400 leading-relaxed">{message}</div>
+        <div className="text-sm text-secondary leading-relaxed">{message}</div>
       </div>
 
       <button
         type="button"
         onClick={onDismiss}
-        className="text-gray-500 hover:text-white transition-colors bg-transparent border-none cursor-pointer p-0 shrink-0"
+        className="text-[var(--text-muted)] hover:text-primary transition-colors bg-transparent border-none cursor-pointer p-0 shrink-0"
         aria-label="Dismiss"
       >
         <X size={16} />

@@ -1012,7 +1012,7 @@ export default function PromoCodesClient({
                 <Columns size={16} /> View
               </button>
               {isViewOpen && (
-                <div className="toolbar-popover absolute right-0 mt-2 bg-[#050505] border border-white/10 rounded-md p-2 min-w-[150px] z-50 shadow-2xl">
+                <div className="toolbar-popover absolute right-0 mt-2 bg-[var(--dash-popover)] border border-[var(--dash-border)] rounded-md p-2 min-w-[150px] z-50 shadow-2xl">
                   {table.getAllLeafColumns().filter(col => col.getCanHide()).map(column => (
                     <label key={column.id} className="flex items-center gap-2 px-2 py-1.5 hover:bg-white/5 cursor-pointer rounded-md text-sm text-white">
                       <div className={`w-4 h-4 border border-white/10 rounded-sm flex items-center justify-center ${column.getIsVisible() ? 'bg-white/10' : ''}`}>
@@ -1287,7 +1287,7 @@ export default function PromoCodesClient({
           role="dialog"
           aria-modal="true"
           aria-labelledby="promo-redemptions-title"
-          className={`t-modal admin-modal-panel w-full max-w-2xl bg-[#111] border border-white/10 rounded-2xl shadow-2xl flex flex-col max-h-[90vh] ${isRedemptionsOpen ? 'is-open' : ''} ${isRedemptionsClosing ? 'is-closing' : ''}`}
+          className={`t-modal admin-modal-panel w-full max-w-2xl bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-2xl shadow-2xl flex flex-col max-h-[90vh] ${isRedemptionsOpen ? 'is-open' : ''} ${isRedemptionsClosing ? 'is-closing' : ''}`}
         >
           <div className="p-6 max-sm:px-4 max-sm:py-3 border-b border-white/10 flex justify-between items-start gap-4 shrink-0">
             <div className="min-w-0">
@@ -1416,7 +1416,7 @@ export default function PromoCodesClient({
             role="dialog"
             aria-modal="true"
             aria-labelledby="promo-form-title"
-            className="admin-modal-panel bg-[#111] border border-white/10 rounded-xl w-full max-w-lg overflow-clip"
+            className="admin-modal-panel bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-xl w-full max-w-lg overflow-clip"
           >
             <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-2 max-sm:px-4 max-sm:pt-3 shrink-0">
               <h2 id="promo-form-title" className="text-xl font-bold m-0 flex items-center gap-2 min-w-0">

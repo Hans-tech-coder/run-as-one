@@ -117,10 +117,10 @@ export default function AdminCardList<T>({
                 type="checkbox"
                 checked={selectAll.checked}
                 onChange={selectAll.toggle}
-                className="appearance-none w-4 h-4 rounded border border-white/20 bg-transparent checked:bg-white checked:border-white cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-white/20"
+                className="appearance-none w-4 h-4 rounded border border-[var(--ink-20)] bg-transparent checked:bg-[var(--ink)] checked:border-[var(--ink)] cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ink-20)]"
               />
               {selectAll.checked && (
-                <Check className="absolute text-black pointer-events-none" size={12} strokeWidth={3} />
+                <Check className="absolute text-[var(--dash-inverse-fg)] pointer-events-none" size={12} strokeWidth={3} />
               )}
             </span>
           </span>
@@ -150,10 +150,10 @@ export default function AdminCardList<T>({
                       checked={isSelected}
                       onChange={() => selection.toggle(item)}
                       aria-label={selection.label(item)}
-                      className="appearance-none w-4 h-4 rounded border border-white/20 bg-transparent checked:bg-white checked:border-white cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-white/20"
+                      className="appearance-none w-4 h-4 rounded border border-[var(--ink-20)] bg-transparent checked:bg-[var(--ink)] checked:border-[var(--ink)] cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ink-20)]"
                     />
                     {isSelected && (
-                      <Check className="absolute text-black pointer-events-none" size={12} strokeWidth={3} />
+                      <Check className="absolute text-[var(--dash-inverse-fg)] pointer-events-none" size={12} strokeWidth={3} />
                     )}
                   </span>
                 </label>

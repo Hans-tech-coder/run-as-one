@@ -25,13 +25,15 @@ import { cn } from "@/lib/utils";
  * `motion/react` is the same library under its newer name) rather than adding
  * a second copy, and it drops the Radix `asChild` slot, which nothing here
  * needed and would have been a new dependency. Its colours are the
- * dashboard's dark surface rather than the reference's light/dark pair, since
- * the admin is dark at every setting.
+ * dashboard's tokens (the ink ramp and the text colours) rather than the
+ * reference's light/dark pair, so it follows the Dark Mode switch the way the
+ * rest of the header does. The badge fills stay literal: they are coloured
+ * fills with white digits on them, the same on either theme.
  */
 
 const SURFACE =
-  "bg-white/[0.04] border border-white/10 hover:bg-white/[0.08] hover:border-white/20";
-const GLYPH = "text-[#9B9AA7] hover:text-white";
+  "bg-[var(--ink-04)] border border-[var(--dash-border)] hover:bg-[var(--ink-08)] hover:border-[var(--ink-20)]";
+const GLYPH = "text-secondary hover:text-primary";
 
 const COLORS = {
   red: "bg-[#FF453A]",
@@ -237,7 +239,7 @@ function CountBadge({
           layout={!reduced}
           aria-hidden
           className={cn(
-            "pointer-events-none absolute z-10 grid place-items-center rounded-full ring-2 ring-[#0b0b0f]",
+            "pointer-events-none absolute z-10 grid place-items-center rounded-full ring-2 ring-[var(--bg-dark)]",
             COLORS[color],
           )}
           style={{
@@ -315,7 +317,7 @@ export function NotificationBell({
       type="button"
       data-slot="notification-bell"
       className={cn(
-        "relative grid place-items-center rounded-full outline-none transition-[transform,background-color,border-color,color] duration-150 active:scale-90 focus-visible:ring-2 focus-visible:ring-[var(--accent-blue)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0b0f] motion-reduce:active:scale-100",
+        "relative grid place-items-center rounded-full outline-none transition-[transform,background-color,border-color,color] duration-150 active:scale-90 focus-visible:ring-2 focus-visible:ring-[var(--accent-blue)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-dark)] motion-reduce:active:scale-100",
         SURFACE,
         GLYPH,
         className,

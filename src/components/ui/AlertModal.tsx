@@ -9,8 +9,8 @@ export type AlertVariant = "error" | "success" | "danger" | "info";
  * The look of every alert in the app, in one place.
  *
  * The markup here is the admin error/success dialog that was copy-pasted into
- * four pages — same #111 panel, same tinted icon badge, same footer split off
- * by a hairline. The variant only swaps colour, icon, and the default wording,
+ * four pages — same solid panel (`--dash-panel-solid`), same tinted icon
+ * badge, same footer split off by a hairline. The variant only swaps colour, icon, and the default wording,
  * so a success in the registration wizard and a success in the admin panel are
  * recognisably the same object.
  *
@@ -40,7 +40,7 @@ export const ALERT_VARIANTS: Record<
     panel: "border-red-500/20",
     badge: "bg-red-500/10 text-red-500",
     confirmBtn:
-      "bg-white/5 hover:bg-white/10 border border-white/10 text-white",
+      "bg-[var(--ink-05)] hover:bg-[var(--ink-10)] border border-[var(--dash-border)] text-primary",
     title: "Action Failed",
     confirmLabel: "Acknowledge",
   },
@@ -65,7 +65,7 @@ export const ALERT_VARIANTS: Record<
     panel: "border-accent-blue/20",
     badge: "bg-accent-blue/10 text-accent-blue",
     confirmBtn:
-      "bg-white/5 hover:bg-white/10 border border-white/10 text-white",
+      "bg-[var(--ink-05)] hover:bg-[var(--ink-10)] border border-[var(--dash-border)] text-primary",
     title: "Heads up",
     confirmLabel: "Got it",
   },
@@ -106,7 +106,7 @@ export default function AlertModal({
 
   return (
     <div
-      className={`fixed inset-0 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
+      className={`fixed inset-0 flex items-center justify-center p-4 bg-[var(--dash-scrim)] backdrop-blur-sm transition-opacity duration-200 ${
         open && !closing ? "opacity-100" : "opacity-0"
       }`}
       /* Above .modal-overlay (9999/10000) so an alert raised from inside the
@@ -115,7 +115,7 @@ export default function AlertModal({
       onClick={busy ? undefined : onCancel}
     >
       <div
-        className={`t-modal w-full max-w-md bg-[#111] border ${v.panel} rounded-2xl shadow-2xl p-6 flex flex-col gap-6 ${
+        className={`t-modal w-full max-w-md bg-[var(--dash-panel-solid)] border ${v.panel} rounded-2xl shadow-2xl p-6 flex flex-col gap-6 ${
           open ? "is-open" : ""
         } ${closing ? "is-closing" : ""}`}
         role={showCancel ? "alertdialog" : "dialog"}
@@ -129,25 +129,25 @@ export default function AlertModal({
             <v.Icon size={24} strokeWidth={2} />
           </div>
           <div className="flex flex-col gap-2">
-            <h3 id={titleId} className="text-xl font-semibold text-white">
+            <h3 id={titleId} className="text-xl font-semibold text-primary">
               {title ?? v.title}
             </h3>
             {/* A div, not a p: a message may be a list of what is missing,
                 and a <ul> inside a <p> is invalid markup the browser silently
                 unnests, which breaks the styling. */}
-            <div id={bodyId} className="text-gray-400 text-sm leading-relaxed">
+            <div id={bodyId} className="text-secondary text-sm leading-relaxed">
               {message}
             </div>
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 pt-2 border-t border-white/5">
+        <div className="flex justify-end gap-3 pt-2 border-t border-[var(--dash-hairline)]">
           {showCancel && (
             <button
               type="button"
               onClick={onCancel}
               disabled={busy}
-              className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white transition-colors"
+              className="px-4 py-2 text-sm font-medium text-[var(--ink-85)] hover:text-primary transition-colors"
             >
               {cancelLabel}
             </button>

@@ -21,6 +21,12 @@ This file tracks the dashboard's light theme. It records the audit of
   light setting is TSX: Tailwind `white/…`, `gray-…` and `black/…` classes and
   the `bg-[#111]` / `bg-[#050505]` panels (FiltersMenu's sheet, the table
   pager, the bell's ring). That is Batches 2 and 3.
+- **Batch 2 has landed** (2026-09-18, on `dev`, uncommitted). The shared
+  table primitives, the toolbar popovers, the notification bell and centre,
+  `AlertModal`, `Toast`, the loader and shimmer tokens, and every `bg-[#111]`
+  modal panel and `bg-[#050505]` toolbar popover in the dashboard now read
+  tokens. What is still dark on a light setting is the pages' own TSX (their
+  headings, table cells, form rows and modal bodies): Batch 3.
 
 ### How the tokens work (read before Batch 2)
 
@@ -44,6 +50,17 @@ This file tracks the dashboard's light theme. It records the audit of
   `bg-[#111]` → `bg-[var(--dash-panel-solid)]`, and a `bg-black/60` scrim →
   `bg-[var(--dash-scrim)]`. `text-primary`, `text-secondary` and `bg-dark` now
   follow the theme on their own (`@theme inline`).
+- **Added in Batch 2:** `--dash-popover` (a toolbar's small menus — Columns,
+  Filters, Sort, page size; `#050505` dark, white light, so the dark theme
+  keeps its exact near-black rather than moving to the panel's `#111114`),
+  `--ink-20`, and `--tone-amber/-green/-red/-violet` for words on a tinted chip
+  (Tailwind's 300 step on dark, its 700 step on light). Also `text-gray-300`
+  → `text-[var(--ink-85)]`, `text-gray-500` → `text-[var(--text-muted)]`, a
+  checked box → `bg-[var(--ink)]` with a `--dash-inverse-fg` tick, and
+  `text-[#4da3ff]` → `text-[var(--accent-blue-text)]`.
+- **A token built from another token resolves where it is declared**, so one
+  derived in `:root` (`--runner-far`, `--shimmer-*`) must be declared again
+  in the `[data-theme="light"]` block, the same way the ink ramp is.
 - **Left as literals on purpose:** text on a coloured fill (the orange avatar,
   the blue knob), the black overlays laid over photos (file preview), and the
   short drop shadows under small controls.
@@ -161,13 +178,23 @@ previews render their own dark document on purpose and should stay dark.
   hover keep their own status ink rather than switching to the second set's
   `#22c55e` / `#ef4444`, which went away with the duplicate rules.
 
-## ☐ Batch 2: Shared primitives and modals
+## ☑ Batch 2: Shared primitives and modals
 
-- [ ] Tokenise `AdminSelect`, `AdminDataTable`, `AdminCardList`,
+- [x] Tokenise `AdminSelect`, `AdminDataTable`, `AdminCardList`,
       `AdminTablePager`, `FiltersMenu`, `FilterOptions`, `MobileSortMenu`,
       `RowActionsMenu` and the `bg-[#111]` / `bg-[#050505]` surfaces (finding 4).
-- [ ] Tokenise `NotificationBell`, `NotificationsCenter`, `AlertModal`,
+- [x] Tokenise `NotificationBell`, `NotificationsCenter`, `AlertModal`,
       `Toast`, and the shimmer and runner tokens (finding 8).
+- [x] Verified on Communities (the shared table, View popover, row actions,
+      the remove confirmation, the notification centre, and the phone's card
+      list and Sort sheet at 375px) in both themes; the dark theme's bell,
+      shimmer and loader tokens compute to the old values.
+- Only the panel surface line was converted in the page files (fill and its
+  hairline); the rest of each page is Batch 3. `ProofLightbox`'s `#0b0b0b`
+  frame stays for Batch 3 with the rest of that file. The bell's badge fills
+  and the solid red and green confirm buttons keep white text, since it sits
+  on a coloured fill. The public register fields' `#0d0d0f` lists stay: the
+  public site is not themed.
 
 ## ☐ Batch 3: Pages, heaviest first
 

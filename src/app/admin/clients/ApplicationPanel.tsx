@@ -213,7 +213,7 @@ export default function ApplicationPanel({
         role="dialog"
         aria-modal="true"
         aria-labelledby="client-application-title"
-        className={`t-modal admin-modal-panel admin-modal-sheet w-full max-w-2xl bg-[#111] border border-white/10 rounded-2xl shadow-2xl flex flex-col max-h-[90vh] ${
+        className={`t-modal admin-modal-panel admin-modal-sheet w-full max-w-2xl bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-2xl shadow-2xl flex flex-col max-h-[90vh] ${
           open ? 'is-open' : ''
         } ${closing ? 'is-closing' : ''}`}
       >

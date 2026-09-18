@@ -102,7 +102,7 @@ input[type="checkbox"],
   --runner-cycle: 700ms;
   --runner-streak-dur: 900ms;
   --runner-body: var(--accent-blue);
-  --runner-far: color-mix(in srgb, var(--accent-blue) 55%, #050505);
+  --runner-far: color-mix(in srgb, var(--accent-blue) 55%, var(--bg-dark));
   --runner-streak: var(--accent-orange);
 
   /* How long a wait may run before the figure's caption admits it is a long
@@ -127,8 +127,8 @@ input[type="checkbox"],
      light-theme colours; this app is dark, so the base is the secondary text
      colour and the band sweeps it toward white. */
   --shimmer-dur: 2000ms;
-  --shimmer-base: #a1a1aa;
-  --shimmer-highlight: #ffffff;
+  --shimmer-base: var(--text-secondary);
+  --shimmer-highlight: var(--text-primary);
   --shimmer-band: 400%;
   --shimmer-ease: linear;
 
@@ -168,6 +168,7 @@ input[type="checkbox"],
   --dash-header: rgba(0, 0, 0, 0.4);          /* the page header */
   --dash-panel: rgba(15, 15, 20, 0.95);       /* dropdowns, modals, anything floating */
   --dash-panel-solid: #111114;                /* the same, where nothing may show through */
+  --dash-popover: #050505;                    /* a toolbar's small menus: Filters, Columns, Sort, page size */
   --dash-scrim: rgba(0, 0, 0, 0.6);           /* behind a modal or the phone's menu */
   --dash-shadow: rgba(0, 0, 0, 0.5);          /* the long shadow under a floating panel */
   --dash-inverse-bg: #e4e4e7;                 /* .btn-light and the rail's tooltip */
@@ -186,6 +187,12 @@ input[type="checkbox"],
      and too light to read on white, so words wear these instead. */
   --accent-blue-text: color-mix(in srgb, var(--accent-blue) 70%, #fff);
   --accent-orange-text: color-mix(in srgb, var(--accent-orange) 60%, #fff);
+  /* Words on a tinted chip (the notification icons' tones): Tailwind's 300
+     step on the dark ground, its 700 step on the light one. */
+  --tone-amber: oklch(87.9% 0.169 91.605);
+  --tone-green: oklch(84.5% 0.143 164.978);
+  --tone-red: oklch(80.8% 0.114 19.571);
+  --tone-violet: oklch(81.1% 0.111 293.571);
   
   --accent-orange: #FF6B00;
   --accent-blue: #007AFF;
@@ -1395,6 +1402,7 @@ html, body { overflow-x: clip; }
   --dash-header: rgba(244, 244, 245, 0.85);
   --dash-panel: #ffffff;
   --dash-panel-solid: #ffffff;
+  --dash-popover: #ffffff;
   --dash-scrim: rgba(9, 9, 11, 0.35);
   --dash-shadow: rgba(9, 9, 11, 0.14);
   --dash-inverse-bg: #18181b;
@@ -1408,6 +1416,18 @@ html, body { overflow-x: clip; }
 
   --accent-blue-text: #0062d6; /* 5.7:1 — the logo's deepened blue */
   --accent-orange-text: #b04d00; /* 5.4:1 */
+  --tone-amber: oklch(55.5% 0.163 48.998);
+  --tone-green: oklch(50.8% 0.118 165.612);
+  --tone-red: oklch(50.5% 0.213 27.518);
+  --tone-violet: oklch(49.1% 0.27 292.581);
+
+  /* Tokens built from the ones above resolve where they are declared, so a
+     light frame has to declare them again or it keeps the :root (dark) result:
+     the loader's far limbs push toward the light ground, and the shimmer's
+     caption runs a dark highlight across grey rather than white across grey. */
+  --runner-far: color-mix(in srgb, var(--accent-blue) 55%, var(--bg-dark));
+  --shimmer-base: var(--text-secondary);
+  --shimmer-highlight: var(--text-primary);
 
   color-scheme: light;
 }
@@ -1429,6 +1449,7 @@ html, body { overflow-x: clip; }
   --ink-12: color-mix(in srgb, var(--ink) 12%, transparent);
   --ink-15: color-mix(in srgb, var(--ink) 15%, transparent);
   --ink-16: color-mix(in srgb, var(--ink) 16%, transparent);
+  --ink-20: color-mix(in srgb, var(--ink) 20%, transparent);
   --ink-25: color-mix(in srgb, var(--ink) 25%, transparent);
   --ink-30: color-mix(in srgb, var(--ink) 30%, transparent);
   --ink-35: color-mix(in srgb, var(--ink) 35%, transparent);

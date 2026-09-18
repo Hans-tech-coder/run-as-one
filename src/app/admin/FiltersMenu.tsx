@@ -75,13 +75,13 @@ export default function FiltersMenu({
         aria-expanded={isOpen}
       >
         <Filter size={16} aria-hidden="true" /> Filters
-        {activeCount > 0 && <span className="ml-1 px-1 bg-white/10 rounded">{activeCount}</span>}
+        {activeCount > 0 && <span className="ml-1 px-1 bg-[var(--ink-10)] rounded">{activeCount}</span>}
       </button>
       {isOpen && (
         <div
           role="group"
           aria-label="Filter the list"
-          className={`toolbar-popover absolute ${align === 'right' ? 'right-0' : 'left-0'} mt-2 w-72 max-h-[70vh] overflow-y-auto bg-[#050505] border border-white/10 rounded-md p-2 z-50 shadow-2xl`}
+          className={`toolbar-popover absolute ${align === 'right' ? 'right-0' : 'left-0'} mt-2 w-72 max-h-[70vh] overflow-y-auto bg-[var(--dash-popover)] border border-[var(--dash-border)] rounded-md p-2 z-50 shadow-2xl`}
         >
           {empty && groups.every(group => group.options.length === 0) && (
             <p className="m-0 px-2 py-3 text-sm text-secondary">{empty}</p>
@@ -103,7 +103,7 @@ export default function FiltersMenu({
             <button
               type="button"
               onClick={onClear}
-              className="mt-1 w-full flex items-center px-2 py-1.5 rounded-md text-sm text-gray-400 bg-transparent border-0 border-t border-white/5 hover:bg-white/5 hover:text-white transition-colors cursor-pointer"
+              className="mt-1 w-full flex items-center px-2 py-1.5 rounded-md text-sm text-secondary bg-transparent border-0 border-t border-[var(--dash-hairline)] hover:bg-[var(--dash-hover)] hover:text-primary transition-colors cursor-pointer"
             >
               Clear filters
             </button>

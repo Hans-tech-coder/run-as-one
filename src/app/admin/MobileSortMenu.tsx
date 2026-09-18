@@ -84,12 +84,12 @@ export default function MobileSortMenu<T>({
         {activeColumn ? (
           <>
             <span>
-              Sort: <span className="text-white">{nameOf(activeColumn)}</span>
+              Sort: <span className="text-primary">{nameOf(activeColumn)}</span>
             </span>
             {active.desc ? (
-              <ArrowDown size={14} className="text-white" aria-hidden="true" />
+              <ArrowDown size={14} className="text-primary" aria-hidden="true" />
             ) : (
-              <ArrowUp size={14} className="text-white" aria-hidden="true" />
+              <ArrowUp size={14} className="text-primary" aria-hidden="true" />
             )}
           </>
         ) : (
@@ -101,7 +101,7 @@ export default function MobileSortMenu<T>({
         <div
           role="group"
           aria-label="Sort the list"
-          className="toolbar-popover absolute left-0 mt-2 w-72 bg-[#050505] border border-white/10 rounded-md p-2 z-50 shadow-2xl"
+          className="toolbar-popover absolute left-0 mt-2 w-72 bg-[var(--dash-popover)] border border-[var(--dash-border)] rounded-md p-2 z-50 shadow-2xl"
         >
           <p className="m-0 px-2 pt-1 pb-2 text-xs font-semibold uppercase tracking-wider text-secondary">
             Sort by
@@ -112,7 +112,7 @@ export default function MobileSortMenu<T>({
               const name = nameOf(column);
               return (
                 <li key={column.id} className="flex items-center justify-between gap-3 px-2 py-1">
-                  <span className={`min-w-0 text-sm ${sorted ? 'text-white font-medium' : 'text-gray-300'}`}>
+                  <span className={`min-w-0 text-sm ${sorted ? 'text-primary font-medium' : 'text-[var(--ink-85)]'}`}>
                     {name}
                   </span>
                   <span className="flex shrink-0 gap-2">
@@ -130,8 +130,8 @@ export default function MobileSortMenu<T>({
                           }}
                           className={`flex items-center justify-center gap-1 h-8 px-2.5 rounded-md border text-xs transition-colors cursor-pointer max-sm:min-w-11 ${
                             isOn
-                              ? 'border-white/30 bg-white/10 text-white'
-                              : 'border-white/10 bg-transparent text-gray-400 hover:bg-white/5 hover:text-white'
+                              ? 'border-[var(--ink-30)] bg-[var(--ink-10)] text-primary'
+                              : 'border-[var(--dash-border)] bg-transparent text-secondary hover:bg-[var(--dash-hover)] hover:text-primary'
                           }`}
                         >
                           {desc ? <ArrowDown size={14} aria-hidden="true" /> : <ArrowUp size={14} aria-hidden="true" />}
@@ -152,7 +152,7 @@ export default function MobileSortMenu<T>({
                 table.resetSorting(true);
                 setIsOpen(false);
               }}
-              className="mt-1 w-full flex items-center px-2 py-1.5 rounded-md text-sm text-gray-400 bg-transparent border-0 border-t border-white/5 hover:bg-white/5 hover:text-white transition-colors cursor-pointer"
+              className="mt-1 w-full flex items-center px-2 py-1.5 rounded-md text-sm text-secondary bg-transparent border-0 border-t border-[var(--dash-hairline)] hover:bg-[var(--dash-hover)] hover:text-primary transition-colors cursor-pointer"
             >
               Clear sort
             </button>

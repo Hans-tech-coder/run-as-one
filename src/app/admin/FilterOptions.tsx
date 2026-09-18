@@ -36,11 +36,11 @@ export default function FilterOptions({
             type="button"
             role="menuitemcheckbox"
             aria-checked={isSelected}
-            className={`w-full flex items-center gap-2 px-2 py-1.5 hover:bg-white/5 cursor-pointer rounded-md text-sm text-left text-white bg-transparent border-0 ${capitalize ? 'capitalize' : ''} ${isSelected ? 'bg-white/5' : ''}`}
+            className={`w-full flex items-center gap-2 px-2 py-1.5 hover:bg-[var(--dash-hover)] cursor-pointer rounded-md text-sm text-left text-primary bg-transparent border-0 ${capitalize ? 'capitalize' : ''} ${isSelected ? 'bg-[var(--ink-05)]' : ''}`}
             onClick={() => onToggle(value)}
           >
-            <span className={`w-4 h-4 shrink-0 border border-white/10 rounded-sm flex items-center justify-center ${isSelected ? 'bg-white/10' : ''}`}>
-              {isSelected && <span className="w-2 h-2 bg-white rounded-sm" />}
+            <span className={`w-4 h-4 shrink-0 border border-[var(--dash-border)] rounded-sm flex items-center justify-center ${isSelected ? 'bg-[var(--ink-10)]' : ''}`}>
+              {isSelected && <span className="w-2 h-2 bg-[var(--ink)] rounded-sm" />}
             </span>
             <span className="min-w-0 [overflow-wrap:anywhere]">
               {label}

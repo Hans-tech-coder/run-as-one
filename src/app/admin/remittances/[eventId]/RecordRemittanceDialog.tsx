@@ -181,7 +181,7 @@ export default function RecordRemittanceDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="remittance-form-title"
-        className={`t-modal admin-modal-panel w-full max-w-xl bg-[#111] border border-white/10 rounded-2xl shadow-2xl flex flex-col max-h-[90vh] ${open ? 'is-open' : ''} ${closing ? 'is-closing' : ''}`}
+        className={`t-modal admin-modal-panel w-full max-w-xl bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-2xl shadow-2xl flex flex-col max-h-[90vh] ${open ? 'is-open' : ''} ${closing ? 'is-closing' : ''}`}
       >
         <div className="p-6 border-b border-white/10 flex justify-between items-start gap-4 shrink-0">
           <div className="min-w-0">

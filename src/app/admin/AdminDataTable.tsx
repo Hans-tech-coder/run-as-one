@@ -55,16 +55,16 @@ export default function AdminDataTable<T>({
   const inset = (columnId: string) => (columnId === leadColumn ? 'pl-8' : '');
 
   return (
-    <div className="dash-desktop-only border border-white/10 rounded-lg overflow-hidden bg-transparent">
+    <div className="dash-desktop-only border border-[var(--dash-border)] rounded-lg overflow-hidden bg-transparent">
       <Table>
         <TableHeader className="bg-transparent">
           {table.getHeaderGroups().map(headerGroup => (
-            <TableRow key={headerGroup.id} className="border-b border-white/10 hover:bg-transparent">
+            <TableRow key={headerGroup.id} className="border-b border-[var(--dash-border)] hover:bg-transparent">
               {headerGroup.headers.map(header => (
                 <TableHead
                   key={header.id}
                   onClick={header.column.getToggleSortingHandler()}
-                  className={`py-4 px-4 text-gray-400 font-medium h-auto ${header.column.getCanSort() ? 'cursor-pointer select-none' : ''} ${inset(header.column.id)}`}
+                  className={`py-4 px-4 text-secondary font-medium h-auto ${header.column.getCanSort() ? 'cursor-pointer select-none' : ''} ${inset(header.column.id)}`}
                 >
                   <div className="flex items-center gap-2">
                     {flexRender(header.column.columnDef.header, header.getContext())}
@@ -81,7 +81,7 @@ export default function AdminDataTable<T>({
         <TableBody>
           {loading ? (
             [0, 1, 2, 3, 4].map(index => (
-              <TableRow key={index} className="border-b border-white/5 hover:bg-transparent">
+              <TableRow key={index} className="border-b border-[var(--dash-hairline)] hover:bg-transparent">
                 {table.getVisibleLeafColumns().map(column => (
                   <TableCell key={column.id} className={`py-4 px-4 ${inset(column.id)}`}>
                     <SkeletonBar className="h-4" style={{ width: `${70 - (index % 3) * 12}%` }} />
@@ -97,20 +97,20 @@ export default function AdminDataTable<T>({
                 <React.Fragment key={row.id}>
                   <TableRow
                     {...props}
-                    className={`border-b border-white/5 hover:bg-white/5 transition-colors ${props.className ?? ''}`}
+                    className={`border-b border-[var(--dash-hairline)] hover:bg-[var(--dash-hover)] transition-colors ${props.className ?? ''}`}
                   >
                     {row.getVisibleCells().map(cell => (
                       <TableCell
                         key={cell.id}
-                        className={`py-4 px-4 text-white ${inset(cell.column.id)} ${cellClassName?.(cell.column.id) ?? ''}`}
+                        className={`py-4 px-4 text-primary ${inset(cell.column.id)} ${cellClassName?.(cell.column.id) ?? ''}`}
                       >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
                     ))}
                   </TableRow>
                   {subRow && (
-                    <TableRow className="border-b border-white/5 hover:bg-transparent">
-                      <TableCell colSpan={columnCount} className="bg-black/30 px-8 py-4">
+                    <TableRow className="border-b border-[var(--dash-hairline)] hover:bg-transparent">
+                      <TableCell colSpan={columnCount} className="bg-[var(--dash-sunken)] px-8 py-4">
                         {subRow}
                       </TableCell>
                     </TableRow>
@@ -120,7 +120,7 @@ export default function AdminDataTable<T>({
             })
           ) : (
             <TableRow>
-              <TableCell colSpan={columnCount} className="py-16 text-center text-gray-500">
+              <TableCell colSpan={columnCount} className="py-16 text-center text-[var(--text-muted)]">
                 {empty}
               </TableCell>
             </TableRow>
@@ -175,20 +175,20 @@ export function AdminColumnsMenu<T>({
         <Columns size={16} /> View
       </button>
       {isOpen && (
-        <div className="toolbar-popover absolute right-0 mt-2 bg-[#050505] border border-white/10 rounded-md p-2 min-w-[150px] z-50 shadow-2xl">
+        <div className="toolbar-popover absolute right-0 mt-2 bg-[var(--dash-popover)] border border-[var(--dash-border)] rounded-md p-2 min-w-[150px] z-50 shadow-2xl">
           {table.getAllLeafColumns().filter(column => column.getCanHide()).map(column => {
             const header = column.columnDef.header;
             const name = labels[column.id] ?? (typeof header === 'string' ? header : column.id);
             return (
-              <label key={column.id} className="flex items-center gap-2 px-2 py-1.5 hover:bg-white/5 cursor-pointer rounded-md text-sm text-white">
-                <div className={`w-4 h-4 border border-white/10 rounded-sm flex items-center justify-center ${column.getIsVisible() ? 'bg-white/10' : ''}`}>
+              <label key={column.id} className="flex items-center gap-2 px-2 py-1.5 hover:bg-[var(--dash-hover)] cursor-pointer rounded-md text-sm text-primary">
+                <div className={`w-4 h-4 border border-[var(--dash-border)] rounded-sm flex items-center justify-center ${column.getIsVisible() ? 'bg-[var(--ink-10)]' : ''}`}>
                   <input
                     type="checkbox"
                     checked={column.getIsVisible()}
                     onChange={column.getToggleVisibilityHandler()}
                     className="opacity-0 absolute w-0 h-0"
                   />
-                  {column.getIsVisible() && <div className="w-2 h-2 bg-white rounded-sm" />}
+                  {column.getIsVisible() && <div className="w-2 h-2 bg-[var(--ink)] rounded-sm" />}
                 </div>
                 <span>{name}</span>
               </label>

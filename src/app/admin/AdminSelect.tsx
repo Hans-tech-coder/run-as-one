@@ -217,14 +217,14 @@ export default function AdminSelect({
           className="form-input flex items-center gap-2 text-left"
         >
           <span
-            className={`flex-1 min-w-0 truncate ${selected ? "" : "text-white/30"}`}
+            className={`flex-1 min-w-0 truncate ${selected ? "" : "text-[var(--ink-30)]"}`}
           >
             {selected ? selected.label : placeholder}
           </span>
           <ChevronDown
             size={16}
             aria-hidden="true"
-            className={`shrink-0 text-white/50 transition-transform duration-200 ${
+            className={`shrink-0 text-[var(--ink-50)] transition-transform duration-200 ${
               isOpen ? "rotate-180" : ""
             }`}
           />
@@ -238,7 +238,7 @@ export default function AdminSelect({
             aria-label={listboxLabel}
             className={`absolute z-50 left-0 right-0 ${
               placement.up ? "bottom-full mb-2" : "top-full mt-2"
-            } overflow-y-auto overscroll-contain rounded-[12px] border border-white/15 bg-[#0d0d0f] shadow-[0_16px_40px_rgba(0,0,0,0.6)] py-1`}
+            } overflow-y-auto overscroll-contain rounded-[12px] border border-[var(--ink-15)] bg-[var(--dash-panel-solid)] shadow-[0_16px_40px_var(--dash-shadow)] py-1`}
             style={{ maxHeight: `${placement.maxHeight}px` }}
           >
             {options.map((option, index) => {
@@ -257,8 +257,8 @@ export default function AdminSelect({
                     commit(index);
                   }}
                   onMouseEnter={() => setActiveIndex(index)}
-                  className={`flex items-start gap-2 px-4 py-3 cursor-pointer text-sm text-white transition-colors ${
-                    index === activeIndex ? "bg-white/10" : ""
+                  className={`flex items-start gap-2 px-4 py-3 cursor-pointer text-sm text-primary transition-colors ${
+                    index === activeIndex ? "bg-[var(--ink-10)]" : ""
                   }`}
                 >
                   <span className="shrink-0 w-4 flex justify-center pt-0.5">

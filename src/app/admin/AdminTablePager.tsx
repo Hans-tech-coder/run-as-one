@@ -71,7 +71,7 @@ export default function AdminTablePager<T>({
 
   return (
     <div className="flex justify-between items-center flex-wrap gap-4 mt-1">
-      <div className="flex items-center gap-3 text-white text-sm font-medium">
+      <div className="flex items-center gap-3 text-primary text-sm font-medium">
         <span className="text-secondary">Rows per page</span>
 
         <div ref={pageSizeRef} className="relative">
@@ -81,17 +81,17 @@ export default function AdminTablePager<T>({
             aria-haspopup="menu"
             aria-expanded={isPageSizeOpen}
             aria-label={`Rows per page: ${pageSize}`}
-            className="flex items-center gap-3 border border-white/10 rounded-md px-3 py-1.5 text-sm text-white bg-transparent hover:bg-white/5 transition-colors cursor-pointer max-sm:min-h-11"
+            className="flex items-center gap-3 border border-[var(--dash-border)] rounded-md px-3 py-1.5 text-sm text-primary bg-transparent hover:bg-[var(--dash-hover)] transition-colors cursor-pointer max-sm:min-h-11"
           >
             {pageSize}
-            <ChevronDown size={14} className="text-gray-400" />
+            <ChevronDown size={14} className="text-secondary" />
           </button>
 
           {isPageSizeOpen && (
             <div
               role="menu"
               aria-label="Rows per page"
-              className="absolute bottom-[calc(100%+4px)] left-0 bg-[#050505] border border-white/10 rounded-md p-1 min-w-[80px] z-50 shadow-2xl"
+              className="absolute bottom-[calc(100%+4px)] left-0 bg-[var(--dash-popover)] border border-[var(--dash-border)] rounded-md p-1 min-w-[80px] z-50 shadow-2xl"
             >
               {pageSizes.map(size => (
                 <button
@@ -99,7 +99,7 @@ export default function AdminTablePager<T>({
                   type="button"
                   role="menuitemradio"
                   aria-checked={pageSize === size}
-                  className={`w-full flex items-center justify-between px-3 py-1.5 cursor-pointer rounded-md text-sm transition-colors bg-transparent border-0 max-sm:min-h-11 ${pageSize === size ? 'bg-white/5 text-white' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
+                  className={`w-full flex items-center justify-between px-3 py-1.5 cursor-pointer rounded-md text-sm transition-colors bg-transparent border-0 max-sm:min-h-11 ${pageSize === size ? 'bg-[var(--ink-05)] text-primary' : 'text-secondary hover:bg-[var(--dash-hover)] hover:text-primary'}`}
                   onClick={() => {
                     table.setPageSize(size);
                     setIsPageSizeOpen(false);
@@ -115,7 +115,7 @@ export default function AdminTablePager<T>({
       </div>
 
       <div className="flex items-center gap-6 max-sm:w-full max-sm:justify-between">
-        <div className="text-white text-sm font-medium">{range}</div>
+        <div className="text-primary text-sm font-medium">{range}</div>
         <div className="flex gap-1 max-sm:gap-2">
           {controls.map(control => (
             <button
@@ -124,7 +124,7 @@ export default function AdminTablePager<T>({
               onClick={control.onClick}
               disabled={control.disabled}
               aria-label={control.label}
-              className={`flex items-center justify-center w-8 h-8 border border-white/10 rounded-md bg-transparent text-gray-400 hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors max-sm:w-11 max-sm:h-11 ${control.shortcut ? 'max-sm:hidden' : ''}`}
+              className={`flex items-center justify-center w-8 h-8 border border-[var(--dash-border)] rounded-md bg-transparent text-secondary hover:bg-[var(--dash-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors max-sm:w-11 max-sm:h-11 ${control.shortcut ? 'max-sm:hidden' : ''}`}
             >
               {control.icon}
             </button>

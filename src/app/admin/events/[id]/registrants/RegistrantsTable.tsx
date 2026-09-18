@@ -1247,7 +1247,7 @@ export default function RegistrantsTable({
               <Columns size={16} /> View
             </button>
             {isViewOpen && (
-              <div className="toolbar-popover absolute right-0 mt-2 bg-[#050505] border border-white/10 rounded-md p-2 min-w-[150px] z-50 shadow-2xl">
+              <div className="toolbar-popover absolute right-0 mt-2 bg-[var(--dash-popover)] border border-[var(--dash-border)] rounded-md p-2 min-w-[150px] z-50 shadow-2xl">
                 {table.getAllLeafColumns().filter(col => col.getCanHide()).map(column => {
                   return (
                     <label key={column.id} className="flex items-center gap-2 px-2 py-1.5 hover:bg-white/5 cursor-pointer rounded-md text-sm text-white">
@@ -1444,7 +1444,7 @@ export default function RegistrantsTable({
             role="dialog"
             aria-modal="true"
             aria-labelledby="registrant-details-title"
-            className="admin-modal-panel admin-modal-sheet bg-[#111] border border-white/10 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-clip shadow-2xl"
+            className="admin-modal-panel admin-modal-sheet bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-clip shadow-2xl"
           >
             <div className="flex justify-between items-center gap-4 p-6 max-sm:px-4 max-sm:py-3 border-b border-white/10 shrink-0">
               <h3 id="registrant-details-title" className="text-xl font-semibold text-white">Registrant Details</h3>
@@ -1835,7 +1835,7 @@ export default function RegistrantsTable({
           role="dialog"
           aria-modal="true"
           aria-labelledby="edit-registrant-title"
-          className={`t-modal admin-modal-panel w-full max-w-2xl bg-[#111] border border-white/10 rounded-2xl shadow-2xl flex flex-col max-h-[90vh] ${isEditOpen ? 'is-open' : ''} ${isEditClosing ? 'is-closing' : ''}`}
+          className={`t-modal admin-modal-panel w-full max-w-2xl bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-2xl shadow-2xl flex flex-col max-h-[90vh] ${isEditOpen ? 'is-open' : ''} ${isEditClosing ? 'is-closing' : ''}`}
         >
           <div className="p-6 max-sm:px-4 max-sm:py-3 border-b border-white/10 flex justify-between items-center gap-4 shrink-0">
             <h3 id="edit-registrant-title" className="text-xl font-semibold text-white">Edit Registrant</h3>
@@ -2021,7 +2021,7 @@ export default function RegistrantsTable({
           role="alertdialog"
           aria-modal="true"
           aria-labelledby="delete-registrant-title"
-          className={`t-modal admin-modal-panel w-full max-w-md bg-[#111] border border-red-500/20 rounded-2xl shadow-2xl p-6 max-sm:p-4 flex flex-col gap-6 ${isDeleteOpen ? 'is-open' : ''} ${isDeleteClosing ? 'is-closing' : ''}`}
+          className={`t-modal admin-modal-panel w-full max-w-md bg-[var(--dash-panel-solid)] border border-red-500/20 rounded-2xl shadow-2xl p-6 max-sm:p-4 flex flex-col gap-6 ${isDeleteOpen ? 'is-open' : ''} ${isDeleteClosing ? 'is-closing' : ''}`}
         >
           <div className="admin-modal-body flex flex-col gap-2">
             <h3 id="delete-registrant-title" className="text-xl font-semibold text-white">Delete Registrant</h3>
@@ -2060,7 +2060,7 @@ export default function RegistrantsTable({
           role="alertdialog"
           aria-modal="true"
           aria-labelledby="bulk-delete-registrants-title"
-          className={`t-modal admin-modal-panel w-full max-w-md bg-[#111] border border-red-500/20 rounded-2xl shadow-2xl p-6 max-sm:p-4 flex flex-col gap-6 ${isBulkDeleteOpen ? 'is-open' : ''} ${isBulkDeleteClosing ? 'is-closing' : ''}`}
+          className={`t-modal admin-modal-panel w-full max-w-md bg-[var(--dash-panel-solid)] border border-red-500/20 rounded-2xl shadow-2xl p-6 max-sm:p-4 flex flex-col gap-6 ${isBulkDeleteOpen ? 'is-open' : ''} ${isBulkDeleteClosing ? 'is-closing' : ''}`}
         >
           <div className="admin-modal-body flex flex-col gap-2">
             <h3 id="bulk-delete-registrants-title" className="text-xl font-semibold text-white">Delete Selected Registrants</h3>
@@ -2114,7 +2114,7 @@ export default function RegistrantsTable({
           role="dialog"
           aria-modal="true"
           aria-labelledby="remarks-modal-title"
-          className={`t-modal admin-modal-panel w-full max-w-lg bg-[#111] border border-white/10 rounded-2xl shadow-2xl flex flex-col ${isRemarksOpen ? 'is-open' : ''} ${isRemarksClosing ? 'is-closing' : ''}`}
+          className={`t-modal admin-modal-panel w-full max-w-lg bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-2xl shadow-2xl flex flex-col ${isRemarksOpen ? 'is-open' : ''} ${isRemarksClosing ? 'is-closing' : ''}`}
         >
           <div className="p-6 max-sm:px-4 max-sm:py-3 border-b border-white/10 flex justify-between items-start gap-4 shrink-0">
             <div className="min-w-0">
@@ -2218,7 +2218,7 @@ export default function RegistrantsTable({
           role="dialog"
           aria-modal="true"
           aria-labelledby="email-modal-title"
-          className={`t-modal admin-modal-panel w-full max-w-2xl bg-[#111] border border-white/10 rounded-2xl shadow-2xl flex flex-col max-h-[90vh] ${isEmailOpen ? 'is-open' : ''} ${isEmailClosing ? 'is-closing' : ''}`}
+          className={`t-modal admin-modal-panel w-full max-w-2xl bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-2xl shadow-2xl flex flex-col max-h-[90vh] ${isEmailOpen ? 'is-open' : ''} ${isEmailClosing ? 'is-closing' : ''}`}
         >
           <div className="p-6 max-sm:px-4 max-sm:py-3 border-b border-white/10 flex justify-between items-start gap-4 shrink-0">
             <div className="min-w-0">

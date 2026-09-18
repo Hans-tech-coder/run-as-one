@@ -121,6 +121,10 @@ export default function AccountMenu({
     if (closeTimer.current) window.clearTimeout(closeTimer.current);
     // A menu folded by a route change was never faded out; start it from hidden.
     setIsShown(false);
+    // The switch is drawn afresh each time the menu opens, so it rests where
+    // the theme is; left marked from an earlier press, it would replay that
+    // press's bounce (Dark sliding to Light) as the menu appears.
+    setSwitchTouched(false);
     setOpenOn(pathname);
   };
 

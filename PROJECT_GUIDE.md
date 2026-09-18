@@ -623,11 +623,12 @@ layout reads so `DashboardShell` draws `data-theme` on `.admin-layout` on the
 server's first paint; once mounted it mirrors the value onto `<html>` so
 portals and the themed favicon follow, and deletes it on unmount so the
 public site never inherits it. The bare sign-in pages are not themed.
-**The light palette is tokens** (`LIGHT_THEME_PLAN.md` Batch 1): the frame,
-sidebar, header, this menu, dropdowns, modals, badges, buttons and form
-controls follow the switch; what is still dark on the light setting is TSX
-literals (Tailwind `white/…` and `gray-…` classes, `bg-[#111]` panels), which
-Batches 2 and 3 convert (§10). From `lg` down the trigger is the avatar and chevron
+**The light palette is tokens** (`LIGHT_THEME_PLAN.md` Batches 1–2): the frame,
+sidebar, header, this menu, dropdowns, modals, badges, buttons, form
+controls, the shared table primitives and toolbar popovers, the bell and the
+notification centre, `AlertModal`, `Toast` and every modal panel follow the
+switch; what is still dark on the light setting is the pages' own TSX
+(Tailwind `white/…` and `gray-…` classes), which Batch 3 converts (§10). From `lg` down the trigger is the avatar and chevron
 alone. Both sit in `.dash-header-tools`, whose measured width
 `DashboardShell` writes to `--dash-accessory-w` on `<main>`; the headers'
 right padding reads it, falling back to the widest the tools can be before
@@ -1995,12 +1996,16 @@ These are the user's own standing preferences. Follow them without being asked.
   `[data-theme="light"]` the light ones: `--bg-dark` (the ground, which the
   frame always read and which was never defined until then), `--dash-surface`,
   `--dash-sunken`, `--dash-field(-focus)`, `--dash-chrome`, `--dash-header`,
-  `--dash-panel(-solid)`, `--dash-scrim`, `--dash-shadow`,
+  `--dash-panel(-solid)`, `--dash-popover` (a toolbar's small menus),
+  `--dash-scrim`, `--dash-shadow`,
   `--dash-inverse-bg/-fg/-hover`, `--text-primary/-secondary/-muted`,
   `--status-success/-warning/-danger` (deepened on light to clear 4.5:1 on
   white; tints are `color-mix` of them), `--accent-blue-text` /
-  `--accent-orange-text` for words in brand colour, and `--color-scheme` for
-  the browser's own date pickers. **Every `rgba(255,255,255,a)` is an ink step**
+  `--accent-orange-text` for words in brand colour, `--tone-amber/-green/-red/-violet`
+  for words on a tinted chip, and `--color-scheme` for
+  the browser's own date pickers. A token derived from another in `:root`
+  (`--runner-far`, `--shimmer-base/-highlight`) is declared again in the
+  light block, or it keeps the dark result. **Every `rgba(255,255,255,a)` is an ink step**
   `--ink-02` … `--ink-85` (`color-mix` of `--ink`), declared on
   `:root, [data-theme]` so it re-resolves inside a themed frame; the named
   steps are `--dash-hairline`, `--dash-border` and `--dash-hover`. The

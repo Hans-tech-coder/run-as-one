@@ -329,7 +329,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
           style={{ zIndex: 100 }}
         >
           <div 
-            className={`t-modal admin-modal-panel w-full max-w-md bg-[#111] border border-red-500/20 rounded-2xl shadow-2xl p-6 flex flex-col gap-6 ${isOpen ? 'is-open' : ''} ${isClosing ? 'is-closing' : ''}`}
+            className={`t-modal admin-modal-panel w-full max-w-md bg-[var(--dash-panel-solid)] border border-red-500/20 rounded-2xl shadow-2xl p-6 flex flex-col gap-6 ${isOpen ? 'is-open' : ''} ${isClosing ? 'is-closing' : ''}`}
             role="dialog"
           >
             <div className="admin-modal-body flex items-start gap-4">
@@ -361,7 +361,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
           style={{ zIndex: 100 }}
         >
           <div 
-            className={`t-modal admin-modal-panel w-full max-w-md bg-[#111] border border-green-500/20 rounded-2xl shadow-2xl p-6 flex flex-col gap-6 ${isSuccessOpen ? 'is-open' : ''} ${isSuccessClosing ? 'is-closing' : ''}`}
+            className={`t-modal admin-modal-panel w-full max-w-md bg-[var(--dash-panel-solid)] border border-green-500/20 rounded-2xl shadow-2xl p-6 flex flex-col gap-6 ${isSuccessOpen ? 'is-open' : ''} ${isSuccessClosing ? 'is-closing' : ''}`}
             role="dialog"
           >
             <div className="admin-modal-body flex items-start gap-4">
