@@ -11,12 +11,12 @@ import {
   HandCoins,
   Megaphone,
   MessageSquare,
-  Settings,
   UsersRound,
 } from 'lucide-react';
 import { ROLE_LABELS } from '@/lib/permissions';
 import type { SignedInUser } from '@/lib/signed-in-user';
 import DashboardShell from './DashboardShell';
+import AccountMenu from './AccountMenu';
 import NotificationsCenter from './NotificationsCenter';
 import { DashboardNavProvider } from './dashboard-nav';
 import { isBarePath } from './bare-paths';
@@ -24,8 +24,9 @@ import './Admin.css';
 
 /**
  * The dashboard's frame. What is only true of `/admin` lives here: which links
- * this person's role opens and how their role reads. The sidebar, the phone's
- * rail and the user block are `DashboardShell`.
+ * this person's role opens and how their role reads. The sidebar and the
+ * phone's rail are `DashboardShell`; the person, Settings and Log Out are
+ * `AccountMenu`, beside the bell in the header.
  *
  * **There is one dashboard.** The super admin had a shell of its own at
  * `/superadmin` until ADMIN_MERGE_PLAN.md's Batch 2; its screens — organizer
@@ -96,12 +97,6 @@ export default function AdminShell({
       : []),
   ];
 
-  // Below the divider with Log Out: the account's own screen, not a page of
-  // the organizer's work.
-  const accountItems = [
-    { name: 'Settings', path: '/admin/settings', icon: <Settings size={20} /> },
-  ];
-
   // Run As One's own account is simply the Super Admin (ROLE_LABELS.OWNER).
   // Anyone else is named with the organizer they are working inside — or a
   // client viewer with its own client (signed-in-user.ts).
@@ -118,17 +113,24 @@ export default function AdminShell({
     <DashboardNavProvider value={user?.nav ?? null}>
       <DashboardShell
         navItems={navItems}
-        secondaryNavItems={accountItems}
         initialCollapsed={initialCollapsed}
-        userBlock={{
-          name: user?.name ?? 'Organizer',
-          initial: user?.initial ?? 'O',
-          roleLine,
-        }}
-        onLogout={handleLogout}
         // Everyone signed in gets the bell; what it lists is their
-        // permissions' business (lib/notification-store.ts).
-        headerAccessory={user ? <NotificationsCenter /> : null}
+        // permissions' business (lib/notification-store.ts). The account
+        // menu is always there, so Log Out can never be out of reach.
+        headerAccessory={
+          <>
+            {user && <NotificationsCenter />}
+            <AccountMenu
+              user={{
+                name: user?.name ?? 'Organizer',
+                initial: user?.initial ?? 'O',
+                roleLine,
+              }}
+              settingsPath="/admin/settings"
+              onLogout={handleLogout}
+            />
+          </>
+        }
       >
         {children}
       </DashboardShell>

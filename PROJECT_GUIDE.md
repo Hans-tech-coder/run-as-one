@@ -211,7 +211,9 @@ src/
                             #   every table's one Filters chip and sheet,
                             #   FilterOptions — one group's checkbox list
                             #   inside it, NotificationsCenter — the header
-                            #   bell and its notifications modal)
+                            #   bell and its notifications modal,
+                            #   AccountMenu — the person beside the bell,
+                            #   opening Settings and Log Out)
                             # (no superadmin/ folder: /superadmin/** is a
                             #   permanent redirect in next.config.ts)
     api/                    # all route handlers — see §6
@@ -570,7 +572,18 @@ reference component, `components/ui/NotificationBell.tsx` (a bell that swings
 and a badge whose digits roll when the unread count rises), ported onto
 `framer-motion` without its Radix slot. It sits in a zero-height slot at the
 top of `<main>`, sticky from `md` up like the header, scrolling with it below;
-every `.admin-header` beside it keeps its right edge clear for it. Pressing it
+every `.admin-header` beside it keeps its right edge clear for it. **Beside
+the bell is the account menu** (`admin/AccountMenu.tsx`, the owner's
+reference: a round avatar, the name over the role line, a chevron): it
+replaced the sidebar's user block and its Settings and Log Out rows. Pressing
+it drops the row menus' dropdown (`.action-dropdown-menu` + `.t-dropdown`)
+under it — the person again, *Settings* (with its `LinkPending` marker; the
+route change folds the menu) and *Log Out* in red, which shows `BusyLabel`
+while it signs out. From `lg` down the trigger is the avatar and chevron
+alone. Both sit in `.dash-header-tools`, whose measured width
+`DashboardShell` writes to `--dash-accessory-w` on `<main>`; the headers'
+right padding reads it, falling back to the widest the tools can be before
+it runs, so a long name never runs under a page's own actions. Pressing the bell
 opens **a dialog** — under the bell from `md` up, a bottom sheet on a phone,
 portalled to `<body>` — with *All / Unread* sliding tabs (`.t-tabs`), *Mark all
 as read*, and the feed under Manila day headings: a tone-coloured icon per
@@ -836,7 +849,7 @@ the admin's own 404.
 Tools shows only with `promo:view` somewhere, **Clients, Communities and
 Feedback only with `platform:manage`** (between Marketing Tools and Team),
 Team only with `team:manage`, Activity only with `activity:view`, and
-the user block's role line reads **Super Admin** (the OWNER role's label), or `Admin · ORGANIZER` /
+the account menu's role line reads **Super Admin** (the OWNER role's label), or `Admin · ORGANIZER` /
 `Staff · ORGANIZER`. There is no organizer switcher: it was removed with
 `api/auth/switch-organizer` in `ADMIN_MERGE_PLAN.md` Batch 2, because Run As
 One is the one tenant and nobody has a second organizer to move to. On `/admin/events`, Create Event needs `event:create`, and each
@@ -1306,11 +1319,11 @@ These are the user's own standing preferences. Follow them without being asked.
   CSS they are written as range queries, `(width < 40rem)` / `48rem` / `64rem`;
   in TSX they are `sm:` / `md:` / `lg:` and their `max-` forms. Never a
   one-off number.
-  - **The menu** is full-width rows under a MENU label. The pages come
-    first, then a divider, then the account rows (`secondaryNavItems`,
-    which is Settings on `/admin`) and **Log Out as a row**. The person, with
-    their name and role line, sits at the foot. The page on screen is a
-    tinted band with a 4px bar on its right edge.
+  - **The menu** is full-width rows under a MENU label: **the pages and
+    nothing else**. The person, Settings and Log Out left the sidebar at the
+    owner's request and live in the header beside the bell
+    (`admin/AccountMenu.tsx`, see "The dashboard" in §6). The page on screen
+    is a tinted band with a 4px bar on its right edge.
   - **From `md` up the menu collapses to an 80px icon rail** from the round
     chevron on its edge. Icons never move. Labels fade but stay each row's
     accessible name, and a tooltip (transitions.dev's 17) names the row on
@@ -2036,6 +2049,10 @@ migration. Read state is per browser. Not yet a notification: remittances owed
 on a finished race (it has no instant of its own to be "new" at), and no
 screen deep-links to one client, club or feedback message yet, so those three
 open their list.
+
+**The account lives in the header** (2026-09-18, on `dev`, uncommitted): the
+sidebar's user block and its Settings and Log Out rows moved into
+`AccountMenu` beside the bell (§6), so the sidebar is the pages alone.
 
 **Every admin table filters through one Filters chip** (2026-09-17, on `dev`,
 uncommitted): `FiltersMenu` was lifted out of the events list and now carries

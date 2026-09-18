@@ -3,22 +3,23 @@
 import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChevronLeft, LogOut } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import { RunAsOneLogo } from '@/components/RunAsOneLogo';
 import LinkPending from '@/components/ui/LinkPending';
 import { rememberSidebar } from './dashboard-sidebar';
 import './Admin.css';
 
 /**
- * The dashboard's frame: the sidebar menu and the user block. It was pulled out
+ * The dashboard's frame: the sidebar menu and the header's tools. It was pulled out
  * of two near-copies, `AdminShell` and the super admin's `SuperAdminShell`,
  * whose fixes kept having to be remembered twice. The super admin's shell is
  * gone since the dashboards merged (ADMIN_MERGE_PLAN.md, Batch 2); `AdminShell`
  * hands over only which links a person is offered and how their role reads.
  *
- * **The menu** is one column of full-width rows under a MENU label: the pages,
- * a divider, then the account rows (Settings, Log Out), with the person at the
- * foot. The page on screen is a tinted band with a bar on its right edge.
+ * **The menu** is one column of full-width rows under a MENU label: the pages
+ * and nothing else. The page on screen is a tinted band with a bar on its
+ * right edge. The person, Settings and Log Out used to sit at its foot; the
+ * owner moved them to the header, beside the bell (`AccountMenu`).
  *
  * **It is the same menu at every width**, the owner's decision: a phone does
  * not get a top bar and a drawer of its own. The round chevron on the edge
@@ -46,14 +47,6 @@ export type DashboardNavItem = {
   icon: React.ReactNode;
 };
 
-export type DashboardUserBlock = {
-  name: string;
-  initial: string;
-  /** The line under the name — "Super Admin", "Staff · RUN AS ONE", "Client Viewer · …". */
-  roleLine: string;
-  avatarStyle?: React.CSSProperties;
-};
-
 const MENU_ID = 'dashboard-menu';
 
 /** Tailwind's `md`, written as the CSS switch writes it. From here up the menu pushes the page. */
@@ -72,26 +65,19 @@ const isWideOnServer = () => true;
 
 export default function DashboardShell({
   navItems,
-  secondaryNavItems = [],
-  userBlock,
-  onLogout,
   initialCollapsed = false,
   headerAccessory,
   children,
 }: {
-  /** The pages, above the divider. */
   navItems: DashboardNavItem[];
-  /** Below the divider, before Log Out — the account's own screens. */
-  secondaryNavItems?: DashboardNavItem[];
-  userBlock: DashboardUserBlock;
-  onLogout: () => void;
   /** Read from the sidebar cookie by the layout, so the desktop's first paint is already right. */
   initialCollapsed?: boolean;
   /**
    * What sits at the right end of every page's header — the notification
-   * bell. Drawn once here rather than in each page's `.admin-header`, and
-   * kept clear of the header's own actions by the padding `Admin.css` gives
-   * every header beside it (`.dash-header-accessory`).
+   * bell and the account menu. Drawn once here rather than in each page's
+   * `.admin-header`, and kept clear of the header's own actions by the
+   * padding `Admin.css` gives every header beside it
+   * (`.dash-header-accessory`), sized from `--dash-accessory-w`.
    */
   headerAccessory?: React.ReactNode;
   children: React.ReactNode;
@@ -111,6 +97,27 @@ export default function DashboardShell({
 
   const toggleRef = useRef<HTMLButtonElement>(null);
   const wasOpen = useRef(false);
+  const mainRef = useRef<HTMLElement>(null);
+  const hasAccessory = Boolean(headerAccessory);
+  const toolsRef = useRef<HTMLDivElement>(null);
+
+  // The header keeps its right edge clear by the tools' real width: a long
+  // name widens the account trigger, and a phone hides its words. Until this
+  // runs, `Admin.css` reserves the widest the tools can be at each width, so
+  // the first paint may leave extra room but never overlaps.
+  useEffect(() => {
+    const tools = toolsRef.current;
+    const main = mainRef.current;
+    if (!tools || !main) return;
+    const observer = new ResizeObserver(() => {
+      main.style.setProperty('--dash-accessory-w', `${Math.ceil(tools.offsetWidth)}px`);
+    });
+    observer.observe(tools);
+    return () => {
+      observer.disconnect();
+      main.style.removeProperty('--dash-accessory-w');
+    };
+  }, [hasAccessory]);
 
   const close = useCallback(() => setOpenOn(null), []);
 
@@ -226,36 +233,19 @@ export default function DashboardShell({
 
         <nav className="admin-nav" aria-label="Dashboard">
           <div className="admin-nav-group">{navItems.map(renderLink)}</div>
-
-          <div className="admin-nav-divider" aria-hidden="true" />
-
-          <div className="admin-nav-group">
-            {secondaryNavItems.map(renderLink)}
-            <button type="button" className="admin-nav-item admin-nav-logout" onClick={onLogout}>
-              <span className="admin-nav-icon" aria-hidden="true"><LogOut size={20} /></span>
-              <span className="admin-nav-label">Log Out</span>
-              <span className="admin-nav-tip" aria-hidden="true">Log Out</span>
-            </button>
-          </div>
         </nav>
-
-        <div className="admin-user">
-          <div className="admin-user-avatar" style={userBlock.avatarStyle} aria-hidden="true">
-            {userBlock.initial}
-          </div>
-          <div className="admin-user-info">
-            <div className="admin-user-name">{userBlock.name}</div>
-            <div className="admin-user-role" title={userBlock.roleLine}>{userBlock.roleLine}</div>
-          </div>
-          <span className="admin-nav-tip" aria-hidden="true">
-            <span className="admin-nav-tip-title">{userBlock.name}</span>
-            <span className="admin-nav-tip-sub">{userBlock.roleLine}</span>
-          </span>
-        </div>
       </aside>
 
-      <main className={`admin-main ${headerAccessory ? 'has-header-accessory' : ''}`} inert={isOpen}>
-        {headerAccessory && <div className="dash-header-accessory">{headerAccessory}</div>}
+      <main
+        ref={mainRef}
+        className={`admin-main ${headerAccessory ? 'has-header-accessory' : ''}`}
+        inert={isOpen}
+      >
+        {headerAccessory && (
+          <div className="dash-header-accessory">
+            <div ref={toolsRef} className="dash-header-tools">{headerAccessory}</div>
+          </div>
+        )}
         {children}
       </main>
     </div>

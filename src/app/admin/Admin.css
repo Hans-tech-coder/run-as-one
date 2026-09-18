@@ -42,10 +42,9 @@
 }
 
 .admin-nav {
-  padding: 4px 0 var(--space-md);
+  padding: 4px 0 calc(var(--space-md) + env(safe-area-inset-bottom));
   flex: 1;
-  /* A short phone held sideways cannot fit every row and the user
-     block; the menu scrolls so the person at the foot stays on screen. */
+  /* A short phone held sideways cannot fit every row; the menu scrolls. */
   min-height: 0;
   overflow-y: auto;
   display: flex;
@@ -130,13 +129,6 @@
   gap: 4px;
 }
 
-.admin-nav-divider {
-  flex-shrink: 0;
-  height: 1px;
-  margin: var(--space-md) 24px;
-  background: rgba(255, 255, 255, 0.08);
-}
-
 .admin-nav-item {
   position: relative;
   display: flex;
@@ -191,13 +183,6 @@
   box-shadow: inset -4px 0 0 var(--accent-blue);
 }
 
-/* Leaving is the one row that ends the session; it warns on hover the way
-   the old logout icon did. */
-.admin-nav-logout:hover {
-  color: #ff4d4f;
-  background: rgba(255, 77, 79, 0.08);
-}
-
 /* The collapsed rail's tooltip: transitions.dev's tooltip (17-tooltip),
    opened to the right of the row instead of above it. It fades in after a
    short delay and leaves at once. Only the collapsed rail shows it (see the
@@ -228,18 +213,6 @@
   transition:
     opacity   var(--tt-out-dur) var(--tt-out-ease),
     transform var(--tt-out-dur) var(--tt-out-ease);
-}
-
-.admin-nav-tip-title {
-  display: block;
-  font-weight: 600;
-}
-
-.admin-nav-tip-sub {
-  display: block;
-  margin-top: 2px;
-  font-size: 0.75rem;
-  color: #52525b;
 }
 
 /* The clicked-and-waiting marker inside a link — the sidebar's nav items and
@@ -336,69 +309,6 @@
 @media (prefers-reduced-motion: reduce) {
   .admin-content,
   .admin-header-title { animation: none !important; }
-}
-
-/* 20px on the left centres the 40px avatar in the collapsed rail. The rule
-   above it is inset like the menu's divider rather than edge to edge. */
-.admin-user {
-  position: relative;
-  padding: var(--space-md) var(--space-md) var(--space-lg) 20px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.admin-user::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 24px;
-  right: 24px;
-  height: 1px;
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.admin-user-avatar {
-  width: 40px;
-  height: 40px;
-  flex-shrink: 0;
-  border-radius: 12px;
-  background: var(--accent-orange);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  color: white;
-}
-
-.admin-user-info {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  transition: opacity var(--duration-quick) ease;
-}
-
-.admin-user-name {
-  font-weight: 600;
-  color: var(--text-primary);
-  font-size: 0.9rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.admin-user-role {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  text-transform: capitalize;
-}
-
-/* "Staff · PINK RUN EVENTS" can outrun the sidebar; it ends in an ellipsis and
-   the full line is in the element's title. */
-.admin-user-role {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 /* Main Content */
@@ -1884,32 +1794,11 @@ textarea.form-input {
     gap: 2px;
   }
 
-  .admin-nav-divider {
-    margin: var(--space-sm) 16px;
-  }
-
   /* 44px rows with the icon at 18px, centred in the 56px rail. */
   .admin-nav-item {
     min-height: 44px;
     gap: 14px;
     padding-left: 18px;
-    font-size: 0.875rem;
-  }
-
-  /* 12px on the left centres the 32px avatar in the rail. */
-  .admin-user {
-    padding: var(--space-sm) var(--space-sm) calc(var(--space-md) + env(safe-area-inset-bottom)) 12px;
-  }
-
-  .admin-user::before {
-    left: 16px;
-    right: 16px;
-  }
-
-  .admin-user-avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 10px;
     font-size: 0.875rem;
   }
 
@@ -1919,8 +1808,7 @@ textarea.form-input {
 
   /* At rest: the rail. */
   .admin-sidebar:not(.is-open) .rao-logo__word,
-  .admin-sidebar:not(.is-open) .admin-nav-label,
-  .admin-sidebar:not(.is-open) .admin-user-info {
+  .admin-sidebar:not(.is-open) .admin-nav-label {
     opacity: 0;
   }
 
@@ -2011,8 +1899,7 @@ textarea.form-input {
   }
 
   .admin-sidebar.is-collapsed .rao-logo__word,
-  .admin-sidebar.is-collapsed .admin-nav-label,
-  .admin-sidebar.is-collapsed .admin-user-info {
+  .admin-sidebar.is-collapsed .admin-nav-label {
     opacity: 0;
   }
 
@@ -2031,23 +1918,13 @@ textarea.form-input {
     right: 4px;
   }
 
-  .admin-sidebar.is-collapsed .admin-nav-divider {
-    margin-inline: 16px;
-  }
-
-  .admin-sidebar.is-collapsed .admin-user::before {
-    left: 16px;
-    right: 16px;
-  }
-
   .admin-sidebar.is-collapsed .admin-nav-tip {
     display: block;
   }
 
   /* The delay belongs only to the showing rule, so leaving plays at once. */
   .admin-sidebar.is-collapsed .admin-nav-item:hover .admin-nav-tip,
-  .admin-sidebar.is-collapsed .admin-nav-item:focus-visible .admin-nav-tip,
-  .admin-sidebar.is-collapsed .admin-user:hover .admin-nav-tip {
+  .admin-sidebar.is-collapsed .admin-nav-item:focus-visible .admin-nav-tip {
     opacity: 1;
     transform: translate(0, -50%) scale(1);
     transition-duration: var(--tt-in-dur);
@@ -2064,7 +1941,6 @@ textarea.form-input {
   .admin-menu-label,
   .admin-nav-label,
   .admin-nav-tip,
-  .admin-user-info,
   .rao-logo__word {
     transition: none !important;
   }
@@ -3142,12 +3018,18 @@ textarea.form-input {
   color: var(--text-secondary);
 }
 
-/* ── Notifications (NotificationsCenter.tsx) ─────────────────────────────
-   The bell is drawn once by the shell, not by each page: a zero-height slot
-   at the top of <main> holds it at the right end of whatever .admin-header
-   the page drew, and every header beside it keeps its right edge clear of
-   it. From `md` up the slot is sticky, as the header is; below `md` the
-   header scrolls with the page, so the slot does too. 44px to press. */
+/* ── Header tools (NotificationsCenter.tsx, AccountMenu.tsx) ──────────────
+   The bell and the account menu are drawn once by the shell, not by each
+   page: a zero-height slot at the top of <main> holds them at the right end
+   of whatever .admin-header the page drew, and every header beside it keeps
+   its right edge clear of them. From `md` up the slot is sticky, as the
+   header is; below `md` the header scrolls with the page, so the slot does
+   too. 44px to press.
+
+   How much a header keeps clear is `--dash-accessory-w`, the tools' measured
+   width, which DashboardShell sets on <main>. Before it has run, the fallback
+   is the widest the tools can be at that width: a bell, the gap, and an
+   account trigger whose name has hit its max-width. */
 .admin-main.has-header-accessory {
   position: relative;
 }
@@ -3168,8 +3050,17 @@ textarea.form-input {
   margin-top: 18px;
 }
 
+/* Its own height rather than the zero-height slot's, or the tools centre on
+   the slot's top edge and ride up out of the header. */
+.dash-header-tools {
+  display: flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 12px;
+}
+
 .has-header-accessory .admin-header {
-  padding-right: calc(var(--space-xl) + 44px + var(--space-md));
+  padding-right: calc(var(--space-xl) + var(--dash-accessory-w, 300px) + var(--space-md));
 }
 
 @media (width < 64rem) {
@@ -3181,8 +3072,12 @@ textarea.form-input {
     margin-top: 8px;
   }
 
+  .dash-header-tools {
+    gap: 8px;
+  }
+
   .has-header-accessory .admin-header {
-    padding-right: calc(var(--space-lg) + 44px + 12px);
+    padding-right: calc(var(--space-lg) + var(--dash-accessory-w, 122px) + 12px);
   }
 }
 
@@ -3199,8 +3094,148 @@ textarea.form-input {
   }
 
   .has-header-accessory .admin-header {
-    padding-right: calc(var(--space-md) + 44px + 12px);
+    padding-right: calc(var(--space-md) + var(--dash-accessory-w, 122px) + 12px);
   }
+}
+
+/* The account trigger: the person as the sidebar's foot used to show them,
+   round like the reference, with a chevron that turns when the menu opens.
+   From `lg` down it is the avatar and chevron alone, and the menu carries
+   the name instead. */
+.account-menu {
+  position: relative;
+}
+
+.account-trigger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  padding: 4px 10px 4px 4px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-secondary);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-quick) ease,
+    color            var(--duration-quick) ease;
+}
+
+.account-trigger:hover,
+.account-trigger[aria-expanded="true"] {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+}
+
+.account-trigger:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
+}
+
+.account-avatar {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--accent-orange);
+  color: #fff;
+  font-size: 0.9375rem;
+  font-weight: 700;
+}
+
+.account-trigger-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  max-width: 160px;
+  line-height: 1.25;
+}
+
+.account-name,
+.account-role {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.account-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.account-role {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.account-chevron {
+  flex-shrink: 0;
+  transition: transform var(--duration-quick) var(--ease-smooth-out);
+}
+
+.account-trigger[aria-expanded="true"] .account-chevron {
+  transform: rotate(180deg);
+}
+
+/* The row menus' dropdown, hung from the trigger's right edge and wide
+   enough for a name and role line that the trigger may have truncated. */
+.account-dropdown {
+  top: calc(100% + 8px);
+  right: 0;
+  margin-top: 0;
+  width: 256px;
+  padding: 0.375rem 0;
+}
+
+.account-dropdown-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0.5rem 1rem 0.625rem;
+}
+
+.account-dropdown-head .account-role {
+  margin-top: 2px;
+}
+
+.account-dropdown-item {
+  gap: 12px;
+  min-height: 44px;
+  text-decoration: none;
+}
+
+.account-dropdown-item:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: -2px;
+}
+
+.account-dropdown-item[aria-current="page"] {
+  color: var(--text-primary);
+}
+
+.account-dropdown-item:disabled {
+  cursor: default;
+}
+
+@media (width < 64rem) {
+  .account-trigger {
+    gap: 6px;
+    padding-right: 8px;
+  }
+
+  .account-trigger-text {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .account-chevron { transition: none !important; }
 }
 
 /* The dialog. From `md` up it hangs under the bell; below `md` it is a sheet
