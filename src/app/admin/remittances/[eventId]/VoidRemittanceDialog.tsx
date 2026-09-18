@@ -106,7 +106,7 @@ export default function VoidRemittanceDialog({
             on the list, marked voided with your reason. If the amount was wrong, record the right one after.
           </p>
           <div className="flex flex-col gap-2">
-            <label htmlFor="void-reason" className="text-sm font-medium text-white">
+            <label htmlFor="void-reason" className="text-sm font-medium text-primary">
               Reason
             </label>
             <textarea

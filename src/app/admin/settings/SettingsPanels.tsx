@@ -367,7 +367,7 @@ export function ProfilePanel({
     <form className="admin-panel" onSubmit={handleSubmit} noValidate>
       <div className="admin-panel-header">
         <h2 className="admin-panel-title flex items-center gap-2">
-          <UserCog size={18} className="text-accent-blue" aria-hidden="true" />
+          <UserCog size={18} className="text-accent-blue-ink" aria-hidden="true" />
           Your Profile
         </h2>
       </div>
@@ -584,7 +584,7 @@ export function PasswordPanel() {
     <form className="admin-panel" onSubmit={handleSubmit} noValidate>
       <div className="admin-panel-header">
         <h2 className="admin-panel-title flex items-center gap-2">
-          <KeyRound size={18} className="text-accent-orange" aria-hidden="true" />
+          <KeyRound size={18} className="text-accent-orange-ink" aria-hidden="true" />
           Password
         </h2>
       </div>
@@ -725,7 +725,7 @@ export function SiteEmailPanel({ settings }: { settings: SiteSettingsForm }) {
     <form className="admin-panel" onSubmit={handleSubmit} noValidate>
       <div className="admin-panel-header">
         <h2 className="admin-panel-title flex items-center gap-2">
-          <Mail size={18} className="text-accent-blue" aria-hidden="true" />
+          <Mail size={18} className="text-accent-blue-ink" aria-hidden="true" />
           Admin Email
         </h2>
       </div>
@@ -834,7 +834,7 @@ export function SignInActivityPanel({ lastSignIn }: { lastSignIn: string | null 
     <section className="admin-panel" aria-labelledby="sign-in-activity-title">
       <div className="admin-panel-header">
         <h2 id="sign-in-activity-title" className="admin-panel-title flex items-center gap-2">
-          <History size={18} className="text-accent-blue" aria-hidden="true" />
+          <History size={18} className="text-accent-blue-ink" aria-hidden="true" />
           Sign-in Activity
         </h2>
       </div>
@@ -981,7 +981,7 @@ export function SocialLinksPanel({ settings }: { settings: SocialLinksForm }) {
     <form className="admin-panel" onSubmit={handleSubmit} noValidate>
       <div className="admin-panel-header">
         <h2 className="admin-panel-title flex items-center gap-2">
-          <Share2 size={18} className="text-accent-blue" aria-hidden="true" />
+          <Share2 size={18} className="text-accent-blue-ink" aria-hidden="true" />
           Social Links
         </h2>
       </div>
@@ -1120,7 +1120,7 @@ export function PlatformFeePanel({ adminFee }: { adminFee: number }) {
     <form className="admin-panel" onSubmit={handleSubmit} noValidate>
       <div className="admin-panel-header">
         <h2 className="admin-panel-title flex items-center gap-2">
-          <Coins size={18} className="text-accent-orange" aria-hidden="true" />
+          <Coins size={18} className="text-accent-orange-ink" aria-hidden="true" />
           Default Platform Fee
         </h2>
       </div>

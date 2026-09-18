@@ -6,6 +6,8 @@
 @theme inline {
   --color-accent-orange: var(--accent-orange);
   --color-accent-blue: var(--accent-blue);
+  --color-accent-orange-ink: var(--accent-orange-ink);
+  --color-accent-blue-ink: var(--accent-blue-ink);
   --color-dark: var(--bg-dark);
   --color-primary: var(--text-primary);
   --color-secondary: var(--text-secondary);
@@ -193,6 +195,12 @@ input[type="checkbox"],
   --tone-green: oklch(84.5% 0.143 164.978);
   --tone-red: oklch(80.8% 0.114 19.571);
   --tone-violet: oklch(81.1% 0.111 293.571);
+  /* The brand hexes themselves as text or icon colour (`text-accent-blue-ink`).
+     On the dark ground they are exactly the accents, as the pages always drew
+     them; the light block swaps in the logo's deepened pair, since #007AFF and
+     #FF6B00 fall under 4.5:1 on white. Fills keep `bg-accent-*`. */
+  --accent-blue-ink: var(--accent-blue);
+  --accent-orange-ink: var(--accent-orange);
   
   --accent-orange: #FF6B00;
   --accent-blue: #007AFF;
@@ -1420,6 +1428,8 @@ html, body { overflow-x: clip; }
   --tone-green: oklch(50.8% 0.118 165.612);
   --tone-red: oklch(50.5% 0.213 27.518);
   --tone-violet: oklch(49.1% 0.27 292.581);
+  --accent-blue-ink: #0062d6;
+  --accent-orange-ink: #b04d00;
 
   /* Tokens built from the ones above resolve where they are declared, so a
      light frame has to declare them again or it keeps the :root (dark) result:

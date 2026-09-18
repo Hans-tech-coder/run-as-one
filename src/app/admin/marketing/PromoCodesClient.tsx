@@ -248,7 +248,7 @@ function RedemptionsPlaceholder() {
       {[0, 1, 2].map(i => (
         <div
           key={i}
-          className="flex items-start justify-between gap-4 rounded-lg border border-white/10 bg-black/30 p-4 mb-3 last:mb-0"
+          className="flex items-start justify-between gap-4 rounded-lg border border-[var(--dash-border)] bg-[var(--dash-surface)] p-4 mb-3 last:mb-0"
         >
           <span className="flex flex-col gap-2 min-w-0 flex-1">
             <SkeletonBar className="h-4 w-32" />
@@ -351,7 +351,7 @@ function VoucherCodes({
         <button
           type="button"
           onClick={onCopy}
-          className="shrink-0 flex items-center gap-2 text-xs font-bold text-white hover:text-accent-orange transition-colors max-lg:min-h-11 max-lg:px-2 max-lg:-mr-2"
+          className="shrink-0 flex items-center gap-2 text-xs font-bold text-primary hover:text-accent-orange-ink transition-colors max-lg:min-h-11 max-lg:px-2 max-lg:-mr-2"
         >
           {copied ? <Check size={14} /> : <Copy size={14} />}
           {copied ? 'Copied' : 'Copy all codes'}
@@ -363,8 +363,8 @@ function VoucherCodes({
             key={voucher.id}
             className={`rounded-md border px-2.5 py-1 font-mono text-xs ${
               voucher.usageCount > 0
-                ? 'border-white/5 bg-white/5 text-secondary line-through'
-                : 'border-white/10 bg-black/40 text-white'
+                ? 'border-[var(--dash-hairline)] bg-[var(--ink-05)] text-secondary line-through'
+                : 'border-[var(--dash-border)] bg-[var(--dash-field)] text-primary'
             }`}
           >
             {voucher.code}
@@ -720,9 +720,9 @@ export default function PromoCodesClient({
                 type="checkbox"
                 checked={isChecked}
                 onChange={table.getToggleAllPageRowsSelectedHandler()}
-                className="appearance-none w-4 h-4 rounded border border-white/20 bg-transparent checked:bg-white checked:border-white cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-white/20"
+                className="appearance-none w-4 h-4 rounded border border-[var(--ink-20)] bg-transparent checked:bg-[var(--ink)] checked:border-[var(--ink)] cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ink-20)]"
               />
-              {isChecked && <Check className="absolute text-black pointer-events-none" size={12} strokeWidth={3} />}
+              {isChecked && <Check className="absolute text-[var(--dash-inverse-fg)] pointer-events-none" size={12} strokeWidth={3} />}
             </div>
           </div>
         );
@@ -736,9 +736,9 @@ export default function PromoCodesClient({
                 type="checkbox"
                 checked={isChecked}
                 onChange={row.getToggleSelectedHandler()}
-                className="appearance-none w-4 h-4 rounded border border-white/20 bg-transparent checked:bg-white checked:border-white cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-white/20"
+                className="appearance-none w-4 h-4 rounded border border-[var(--ink-20)] bg-transparent checked:bg-[var(--ink)] checked:border-[var(--ink)] cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ink-20)]"
               />
-              {isChecked && <Check className="absolute text-black pointer-events-none" size={12} strokeWidth={3} />}
+              {isChecked && <Check className="absolute text-[var(--dash-inverse-fg)] pointer-events-none" size={12} strokeWidth={3} />}
             </div>
           </div>
         );
@@ -750,7 +750,7 @@ export default function PromoCodesClient({
       id: "index",
       header: "No.",
       cell: ({ row, table }) => (
-        <span className="text-gray-400 font-mono">
+        <span className="text-secondary font-mono">
           {rowPosition(table.getSortedRowModel().flatRows, row)}
         </span>
       ),
@@ -782,7 +782,7 @@ export default function PromoCodesClient({
               className={`text-secondary transition-transform ${isOpen ? 'rotate-180' : ''}`}
             />
             <span>
-              <span className="font-bold text-accent-blue block">{group.batchLabel}</span>
+              <span className="font-bold text-accent-blue-ink block">{group.batchLabel}</span>
               <span className="text-xs text-secondary">
                 {group.codes.length} single-use vouchers
               </span>
@@ -790,7 +790,7 @@ export default function PromoCodesClient({
           </button>
         ) : (
           <span>
-            <span className="font-bold text-accent-blue block">{group.terms.code}</span>
+            <span className="font-bold text-accent-blue-ink block">{group.terms.code}</span>
             {/* Naming it here rather than in a column of its own: what an
                 organizer needs at a glance is whether this is something they
                 have to hand out. */}
@@ -978,7 +978,7 @@ export default function PromoCodesClient({
 
   return (
     <>
-      <div className="flex flex-col gap-4 w-full text-white">
+      <div className="flex flex-col gap-4 w-full text-primary">
         {/* Top Toolbar */}
         <div className="admin-toolbar" style={{ padding: '0 0 16px 0', borderBottom: 'none' }}>
           <div className="toolbar-actions" style={{ flex: 1 }}>
@@ -993,7 +993,7 @@ export default function PromoCodesClient({
               {globalFilter && (
                 <button
                   onClick={() => setGlobalFilter('')}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-300 bg-transparent border-none cursor-pointer"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--ink-85)] bg-transparent border-none cursor-pointer"
                   aria-label="Clear search"
                 >
                   <X size={14} />
@@ -1014,15 +1014,15 @@ export default function PromoCodesClient({
               {isViewOpen && (
                 <div className="toolbar-popover absolute right-0 mt-2 bg-[var(--dash-popover)] border border-[var(--dash-border)] rounded-md p-2 min-w-[150px] z-50 shadow-2xl">
                   {table.getAllLeafColumns().filter(col => col.getCanHide()).map(column => (
-                    <label key={column.id} className="flex items-center gap-2 px-2 py-1.5 hover:bg-white/5 cursor-pointer rounded-md text-sm text-white">
-                      <div className={`w-4 h-4 border border-white/10 rounded-sm flex items-center justify-center ${column.getIsVisible() ? 'bg-white/10' : ''}`}>
+                    <label key={column.id} className="flex items-center gap-2 px-2 py-1.5 hover:bg-[var(--ink-05)] cursor-pointer rounded-md text-sm text-primary">
+                      <div className={`w-4 h-4 border border-[var(--dash-border)] rounded-sm flex items-center justify-center ${column.getIsVisible() ? 'bg-[var(--ink-10)]' : ''}`}>
                         <input
                           type="checkbox"
                           checked={column.getIsVisible()}
                           onChange={column.getToggleVisibilityHandler()}
                           className="opacity-0 absolute w-0 h-0"
                         />
-                        {column.getIsVisible() && <div className="w-2 h-2 bg-white rounded-sm" />}
+                        {column.getIsVisible() && <div className="w-2 h-2 bg-[var(--ink)] rounded-sm" />}
                       </div>
                       <span className="capitalize">{COLUMN_LABELS[column.id] ?? column.id}</span>
                     </label>
@@ -1042,16 +1042,16 @@ export default function PromoCodesClient({
         </div>
 
         {/* Table Area — from `lg` up; the cards below take its place under it. */}
-        <div className="dash-desktop-only border border-white/10 rounded-lg overflow-hidden bg-transparent">
+        <div className="dash-desktop-only border border-[var(--dash-border)] rounded-lg overflow-hidden bg-transparent">
           <Table>
             <TableHeader className="bg-transparent">
               {table.getHeaderGroups().map(headerGroup => (
-                <TableRow key={headerGroup.id} className="border-b border-white/10 hover:bg-transparent">
+                <TableRow key={headerGroup.id} className="border-b border-[var(--dash-border)] hover:bg-transparent">
                   {headerGroup.headers.map(header => (
                     <TableHead
                       key={header.id}
                       onClick={header.column.getToggleSortingHandler()}
-                      className={`py-4 px-4 text-gray-400 font-medium h-auto ${header.column.getCanSort() ? 'cursor-pointer select-none' : ''} ${header.column.id === 'code' ? 'pl-8' : ''}`}
+                      className={`py-4 px-4 text-secondary font-medium h-auto ${header.column.getCanSort() ? 'cursor-pointer select-none' : ''} ${header.column.id === 'code' ? 'pl-8' : ''}`}
                     >
                       <div className="flex items-center gap-2">
                         {flexRender(header.column.columnDef.header, header.getContext())}
@@ -1074,11 +1074,11 @@ export default function PromoCodesClient({
 
                   return (
                     <React.Fragment key={row.id}>
-                      <TableRow className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                      <TableRow className="border-b border-[var(--dash-hairline)] hover:bg-[var(--ink-05)] transition-colors">
                         {row.getVisibleCells().map(cell => (
                           <TableCell
                             key={cell.id}
-                            className={`py-4 px-4 text-white ${cell.column.id === 'code' ? 'pl-8' : ''}`}
+                            className={`py-4 px-4 text-primary ${cell.column.id === 'code' ? 'pl-8' : ''}`}
                           >
                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
                           </TableCell>
@@ -1090,8 +1090,8 @@ export default function PromoCodesClient({
                           and a panel covering the table is in the way of
                           checking them against the rest of the list. */}
                       {isBatch && isOpen && (
-                        <TableRow className="border-b border-white/5 hover:bg-transparent">
-                          <TableCell colSpan={row.getVisibleCells().length} className="bg-black/30 px-8 py-4">
+                        <TableRow className="border-b border-[var(--dash-hairline)] hover:bg-transparent">
+                          <TableCell colSpan={row.getVisibleCells().length} className="bg-[var(--dash-surface)] px-8 py-4">
                             <VoucherCodes
                               group={group}
                               copied={copied === group.key}
@@ -1105,7 +1105,7 @@ export default function PromoCodesClient({
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={columns.length} className="py-16 text-center text-gray-500">
+                  <TableCell colSpan={columns.length} className="py-16 text-center text-[var(--text-muted)]">
                     {groups.length === 0
                       ? 'No promotions yet. A code you create here is redeemed by runners in the registration wizard, and an automatic promotion applies on its own.'
                       : 'No promotion matches that search.'}
@@ -1136,7 +1136,7 @@ export default function PromoCodesClient({
               <span className="font-mono">{rowPosition(table.getSortedRowModel().flatRows, row)}</span>
             )}
             title={row => (
-              <span className="font-bold text-accent-blue">
+              <span className="font-bold text-accent-blue-ink">
                 {row.original.batchLabel ?? row.original.terms.code}
               </span>
             )}
@@ -1249,7 +1249,7 @@ export default function PromoCodesClient({
               </>
             )}
             empty={
-              <div className="border border-white/10 rounded-lg py-16 px-4 text-center text-gray-500">
+              <div className="border border-[var(--dash-border)] rounded-lg py-16 px-4 text-center text-[var(--text-muted)]">
                 {groups.length === 0
                   ? 'No promotions yet. A code you create here is redeemed by runners in the registration wizard, and an automatic promotion applies on its own.'
                   : 'No promotion matches that search.'}
@@ -1277,7 +1277,7 @@ export default function PromoCodesClient({
         rather than a hunt through a table of a thousand runners.
       */}
       <div
-        className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
+        className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--dash-scrim)] backdrop-blur-sm transition-opacity duration-200 ${
           isRedemptionsOpen && !isRedemptionsClosing
             ? 'opacity-100 pointer-events-auto'
             : 'opacity-0 pointer-events-none'
@@ -1289,11 +1289,11 @@ export default function PromoCodesClient({
           aria-labelledby="promo-redemptions-title"
           className={`t-modal admin-modal-panel w-full max-w-2xl bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-2xl shadow-2xl flex flex-col max-h-[90vh] ${isRedemptionsOpen ? 'is-open' : ''} ${isRedemptionsClosing ? 'is-closing' : ''}`}
         >
-          <div className="p-6 max-sm:px-4 max-sm:py-3 border-b border-white/10 flex justify-between items-start gap-4 shrink-0">
+          <div className="p-6 max-sm:px-4 max-sm:py-3 border-b border-[var(--dash-border)] flex justify-between items-start gap-4 shrink-0">
             <div className="min-w-0">
-              <h3 id="promo-redemptions-title" className="text-xl font-semibold text-white m-0">Redemptions</h3>
+              <h3 id="promo-redemptions-title" className="text-xl font-semibold text-primary m-0">Redemptions</h3>
               {redemptionsOf && (
-                <p className="text-sm text-gray-400 mt-1 m-0 [overflow-wrap:anywhere]">
+                <p className="text-sm text-secondary mt-1 m-0 [overflow-wrap:anywhere]">
                   {`${redemptionsOf.batchLabel ?? redemptionsOf.terms.code} · ${redemptionsOf.used} redeemed · ₱${formatPesos(redemptionsOf.given)} given away`}
                 </p>
               )}
@@ -1302,7 +1302,7 @@ export default function PromoCodesClient({
                 the header's height and the icon's place. */}
             <button
               onClick={closeRedemptions}
-              className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-full text-gray-400 hover:text-white transition-colors bg-transparent border-none cursor-pointer"
+              className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-full text-secondary hover:text-primary transition-colors bg-transparent border-none cursor-pointer"
               aria-label="Close"
             >
               <X size={20} />
@@ -1321,13 +1321,13 @@ export default function PromoCodesClient({
             >
               <div className="space-y-3">
                 {redemptionsError && (
-                  <p className="text-sm text-red-400 m-0">{redemptionsError}</p>
+                  <p className="text-sm text-[var(--status-danger)] m-0">{redemptionsError}</p>
                 )}
 
                 {/* An empty state that says so, rather than a hidden panel: "nobody
                     has used this yet" is an answer, and the organizer asked. */}
                 {redemptions && redemptions.redemptions.length === 0 && (
-                  <p className="text-sm text-gray-400 m-0">
+                  <p className="text-sm text-secondary m-0">
                     {`Nobody has used this ${
                       redemptions.automatic ? 'promotion' : 'code'
                     } yet, so it has given away ₱0.00.`}
@@ -1338,10 +1338,10 @@ export default function PromoCodesClient({
                   <Link
                     key={order.id}
                     href={`/admin/events/${order.eventId}/registrants?search=${encodeURIComponent(order.orderRef)}`}
-                    className="flex items-start justify-between gap-4 rounded-lg border border-white/10 bg-black/30 p-4 no-underline transition-colors hover:border-white/20 hover:bg-white/5"
+                    className="flex items-start justify-between gap-4 rounded-lg border border-[var(--dash-border)] bg-[var(--dash-surface)] p-4 no-underline transition-colors hover:border-[var(--ink-20)] hover:bg-[var(--ink-05)]"
                   >
                     <span className="flex flex-col gap-1 min-w-0">
-                      <span className="font-mono text-sm font-bold text-white flex items-center gap-2 [overflow-wrap:anywhere]">
+                      <span className="font-mono text-sm font-bold text-primary flex items-center gap-2 [overflow-wrap:anywhere]">
                         {order.orderRef}
                         <ExternalLink size={13} className="text-secondary shrink-0" aria-hidden="true" />
                       </span>
@@ -1360,11 +1360,11 @@ export default function PromoCodesClient({
                       {/* Inside a batch this is the only thing telling one
                           redemption from another — which voucher went where. */}
                       {redemptions.isBatch && order.code && (
-                        <span className="font-mono text-xs text-accent-blue">{order.code}</span>
+                        <span className="font-mono text-xs text-accent-blue-ink">{order.code}</span>
                       )}
                     </span>
                     <span className="flex flex-col items-end gap-1 shrink-0">
-                      <span className="text-sm font-bold text-white">
+                      <span className="text-sm font-bold text-primary">
                         {`−₱${formatPesos(order.discountAmount)}`}
                       </span>
                       <span
@@ -1377,13 +1377,13 @@ export default function PromoCodesClient({
                 ))}
 
                 {redemptions?.truncated && (
-                  <p className="text-xs text-gray-500 m-0">
+                  <p className="text-xs text-[var(--text-muted)] m-0">
                     {`Showing the ${redemptions.limit} most recent orders. There are more.`}
                   </p>
                 )}
 
                 {redemptions && redemptions.redemptions.length > 0 && (
-                  <p className="text-xs text-gray-500 m-0">
+                  <p className="text-xs text-[var(--text-muted)] m-0">
                     A code is spent when the order is placed, so an order still waiting on payment
                     appears here and counts as a redemption &mdash; but nothing it was given is
                     counted as money until it is paid.
@@ -1393,11 +1393,11 @@ export default function PromoCodesClient({
             </SkeletonSwap>
           </div>
 
-          <div className="admin-modal-footer p-6 max-sm:p-4 border-t border-white/10 flex justify-end bg-black/20 shrink-0">
+          <div className="admin-modal-footer p-6 max-sm:p-4 border-t border-[var(--dash-border)] flex justify-end bg-[var(--dash-sunken)] shrink-0">
             <button
               type="button"
               onClick={closeRedemptions}
-              className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white transition-colors bg-transparent border-none cursor-pointer"
+              className="px-4 py-2 text-sm font-medium text-[var(--ink-85)] hover:text-primary transition-colors bg-transparent border-none cursor-pointer"
             >
               Close
             </button>
@@ -1406,7 +1406,7 @@ export default function PromoCodesClient({
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 max-sm:p-3">
+        <div className="fixed inset-0 bg-[var(--dash-scrim)] backdrop-blur-sm z-50 flex items-center justify-center p-4 max-sm:p-3">
           {/* On the dashboard's modal frame (.admin-modal-panel): the panel
               never grows past the viewport, the form scrolls inside it, and
               the submit waits in the footer. It used to be a page-long panel
@@ -1420,13 +1420,13 @@ export default function PromoCodesClient({
           >
             <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-2 max-sm:px-4 max-sm:pt-3 shrink-0">
               <h2 id="promo-form-title" className="text-xl font-bold m-0 flex items-center gap-2 min-w-0">
-                <Tag size={20} className="text-accent-orange shrink-0" />
+                <Tag size={20} className="text-accent-orange-ink shrink-0" />
                 {editing ? 'Edit Promotion' : duplicating ? 'Duplicate Promotion' : 'Create Discount'}
               </h2>
               <button
                 type="button"
                 onClick={() => setShowModal(false)}
-                className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-full text-secondary hover:text-white"
+                className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-full text-secondary hover:text-primary"
                 aria-label="Close"
               >
                 <X size={20} />
@@ -1538,7 +1538,7 @@ export default function PromoCodesClient({
                         return (
                           <div
                             key={category.id}
-                            className="rounded-[10px] border border-white/10 bg-black/30 p-3"
+                            className="rounded-[10px] border border-[var(--dash-border)] bg-[var(--dash-surface)] p-3"
                           >
                             {/* One stacked block per category below `sm`: the
                                 name on its own line, then the list price, then
@@ -1547,11 +1547,11 @@ export default function PromoCodesClient({
                                 way the table-wide desktop line reads. */}
                             <div className="flex flex-wrap items-center gap-x-3 gap-y-2 max-sm:grid max-sm:grid-cols-2">
                               <span className="min-w-[6rem] flex-1 flex flex-wrap items-center gap-x-2 gap-y-1 max-sm:col-span-2 max-sm:min-w-0">
-                                <span className="text-sm font-bold uppercase tracking-wide text-white">
+                                <span className="text-sm font-bold uppercase tracking-wide text-primary">
                                   {category.name}
                                 </span>
                                 {category.distance && (
-                                  <span className="shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-secondary">
+                                  <span className="shrink-0 rounded-full bg-[var(--ink-10)] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-secondary">
                                     {category.distance}
                                   </span>
                                 )}
@@ -1713,7 +1713,7 @@ export default function PromoCodesClient({
                 {/* A column below `sm`: three labels such as "Single-use
                     vouchers" do not share a 300px row without breaking in
                     half, and each option becomes a 44px row. */}
-                <div className="flex max-sm:flex-col rounded-[10px] border border-white/10 bg-black/30 p-1">
+                <div className="flex max-sm:flex-col rounded-[10px] border border-[var(--dash-border)] bg-[var(--dash-surface)] p-1">
                   {CLAIMS.map(option => {
                     // A discounted category price is drawn onto the options a
                     // runner is choosing between, so it cannot be something
@@ -1732,10 +1732,10 @@ export default function PromoCodesClient({
                         aria-pressed={claim === option.value}
                         className={`flex-1 rounded-[8px] px-3 py-2 max-sm:min-h-11 text-sm font-bold transition-colors ${
                           claim === option.value
-                            ? 'bg-white/10 text-white'
+                            ? 'bg-[var(--ink-10)] text-primary'
                             : unavailable
                               ? 'text-secondary/40 cursor-not-allowed'
-                              : 'text-secondary hover:text-white'
+                              : 'text-secondary hover:text-primary'
                         }`}
                       >
                         {option.label}
@@ -1906,7 +1906,7 @@ export default function PromoCodesClient({
 
             {/* Outside the scrolling body, so it is always in reach; `form`
                 ties it back to the form it submits. */}
-            <div className="admin-modal-footer px-6 pt-4 pb-6 max-sm:p-4 border-t border-white/10 shrink-0">
+            <div className="admin-modal-footer px-6 pt-4 pb-6 max-sm:p-4 border-t border-[var(--dash-border)] shrink-0">
               <button
                 type="submit"
                 form="promo-form"

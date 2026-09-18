@@ -144,28 +144,28 @@ export default function RolePicker() {
           {`Allowed ${allowed} of ${MATRIX_PERMISSIONS.length}`}
         </p>
 
-        <ul className="m-0 mt-2 p-0 list-none border border-white/10 rounded-lg">
+        <ul className="m-0 mt-2 p-0 list-none border border-[var(--dash-border)] rounded-lg">
           {MATRIX_PERMISSIONS.map(permission => {
             const yes = roleCan(role, permission);
             return (
               <li
                 key={permission}
-                className="flex items-center gap-3 px-4 py-3 border-b border-white/5 last:border-b-0"
+                className="flex items-center gap-3 px-4 py-3 border-b border-[var(--dash-hairline)] last:border-b-0"
               >
                 <span
                   className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${
-                    yes ? 'bg-accent-orange/15 text-accent-orange' : 'bg-white/5 text-white/30'
+                    yes ? 'bg-accent-orange/15 text-accent-orange-ink' : 'bg-[var(--ink-05)] text-[var(--ink-30)]'
                   }`}
                   aria-hidden="true"
                 >
                   {yes ? <Check size={14} strokeWidth={3} /> : <Minus size={14} />}
                 </span>
-                <span className={`min-w-0 flex-1 text-sm ${yes ? 'text-white' : 'text-white/45'}`}>
+                <span className={`min-w-0 flex-1 text-sm ${yes ? 'text-primary' : 'text-[var(--ink-50)]'}`}>
                   {PERMISSION_LABELS[permission]}
                 </span>
                 {/* Said in words as well as by the icon, so the answer never rests
                     on colour alone. */}
-                <span className={`shrink-0 whitespace-nowrap text-xs ${yes ? 'text-secondary' : 'text-white/35'}`}>
+                <span className={`shrink-0 whitespace-nowrap text-xs ${yes ? 'text-secondary' : 'text-[var(--ink-35)]'}`}>
                   {yes ? 'Allowed' : 'Not allowed'}
                 </span>
               </li>

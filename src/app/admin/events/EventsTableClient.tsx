@@ -170,7 +170,7 @@ function CategoryChips({ categories }: { categories?: CategoryChip[] }) {
         return (
           <li
             key={category.id}
-            className="max-w-full truncate whitespace-nowrap rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-xs text-white"
+            className="max-w-full truncate whitespace-nowrap rounded-full border border-[var(--dash-border)] bg-[var(--ink-05)] px-2.5 py-0.5 text-xs text-primary"
           >
             {category.name}
             {showDistance && <span className="text-secondary">{` · ${distance}`}</span>}
@@ -455,9 +455,9 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
                 type="checkbox"
                 checked={isChecked}
                 onChange={table.getToggleAllPageRowsSelectedHandler()}
-                className="appearance-none w-4 h-4 rounded border border-white/20 bg-transparent checked:bg-white checked:border-white cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-white/20"
+                className="appearance-none w-4 h-4 rounded border border-[var(--ink-20)] bg-transparent checked:bg-[var(--ink)] checked:border-[var(--ink)] cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ink-20)]"
               />
-              {isChecked && <Check className="absolute text-black pointer-events-none" size={12} strokeWidth={3} />}
+              {isChecked && <Check className="absolute text-[var(--dash-inverse-fg)] pointer-events-none" size={12} strokeWidth={3} />}
             </div>
           </div>
         );
@@ -471,9 +471,9 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
                 type="checkbox"
                 checked={isChecked}
                 onChange={row.getToggleSelectedHandler()}
-                className="appearance-none w-4 h-4 rounded border border-white/20 bg-transparent checked:bg-white checked:border-white cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-white/20"
+                className="appearance-none w-4 h-4 rounded border border-[var(--ink-20)] bg-transparent checked:bg-[var(--ink)] checked:border-[var(--ink)] cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ink-20)]"
               />
-              {isChecked && <Check className="absolute text-black pointer-events-none" size={12} strokeWidth={3} />}
+              {isChecked && <Check className="absolute text-[var(--dash-inverse-fg)] pointer-events-none" size={12} strokeWidth={3} />}
             </div>
           </div>
         );
@@ -485,7 +485,7 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
       id: "index",
       header: "No.",
       cell: ({ row, table }) => (
-        <span className="text-gray-400 font-mono">{row.original.listNo ?? rowPosition(table.getSortedRowModel().flatRows, row)}</span>
+        <span className="text-secondary font-mono">{row.original.listNo ?? rowPosition(table.getSortedRowModel().flatRows, row)}</span>
       ),
       enableSorting: false,
       enableHiding: false,
@@ -603,7 +603,7 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
   const deletingRegistrations = deletingEvent?._count?.registrations ?? 0;
 
   return (
-    <div className="flex flex-col gap-4 w-full text-white">
+    <div className="flex flex-col gap-4 w-full text-primary">
       {/* Top Toolbar */}
       <div className="admin-toolbar" style={{ padding: '0 0 16px 0', borderBottom: 'none' }}>
         <div className="toolbar-actions" style={{ flex: 1 }}>
@@ -618,7 +618,7 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
             {globalFilter && (
               <button 
                 onClick={() => setGlobalFilter('')}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-300 bg-transparent border-none cursor-pointer"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--ink-85)] bg-transparent border-none cursor-pointer"
               >
                 <X size={14} />
               </button>
@@ -642,15 +642,15 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
               <div className="toolbar-popover absolute right-0 mt-2 bg-[var(--dash-popover)] border border-[var(--dash-border)] rounded-md p-2 min-w-[150px] z-50 shadow-2xl">
                 {table.getAllLeafColumns().filter(col => col.getCanHide()).map(column => {
                   return (
-                    <label key={column.id} className="flex items-center gap-2 px-2 py-1.5 hover:bg-white/5 cursor-pointer rounded-md text-sm text-white">
-                      <div className={`w-4 h-4 border border-white/10 rounded-sm flex items-center justify-center ${column.getIsVisible() ? 'bg-white/10' : ''}`}>
+                    <label key={column.id} className="flex items-center gap-2 px-2 py-1.5 hover:bg-[var(--ink-05)] cursor-pointer rounded-md text-sm text-primary">
+                      <div className={`w-4 h-4 border border-[var(--dash-border)] rounded-sm flex items-center justify-center ${column.getIsVisible() ? 'bg-[var(--ink-10)]' : ''}`}>
                         <input
                           type="checkbox"
                           checked={column.getIsVisible()}
                           onChange={column.getToggleVisibilityHandler()}
                           className="opacity-0 absolute w-0 h-0"
                         />
-                        {column.getIsVisible() && <div className="w-2 h-2 bg-white rounded-sm" />}
+                        {column.getIsVisible() && <div className="w-2 h-2 bg-[var(--ink)] rounded-sm" />}
                       </div>
                       <span className="capitalize">{column.id === 'title' ? 'Event Name' : column.id === 'registered' ? 'Registrants' : column.id}</span>
                     </label>
@@ -678,16 +678,16 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
       </div>
 
       {/* Table Area — from `lg` up; the cards below take its place under it. */}
-      <div className="dash-desktop-only border border-white/10 rounded-lg overflow-hidden bg-transparent">
+      <div className="dash-desktop-only border border-[var(--dash-border)] rounded-lg overflow-hidden bg-transparent">
         <Table>
           <TableHeader className="bg-transparent">
             {table.getHeaderGroups().map(headerGroup => (
-              <TableRow key={headerGroup.id} className="border-b border-white/10 hover:bg-transparent">
+              <TableRow key={headerGroup.id} className="border-b border-[var(--dash-border)] hover:bg-transparent">
                 {headerGroup.headers.map(header => (
                   <TableHead 
                     key={header.id}
                     onClick={header.column.getToggleSortingHandler()}
-                    className={`py-4 px-4 text-gray-400 font-medium h-auto ${header.column.getCanSort() ? 'cursor-pointer select-none' : ''} ${header.column.id === 'title' ? 'pl-8' : ''}`}
+                    className={`py-4 px-4 text-secondary font-medium h-auto ${header.column.getCanSort() ? 'cursor-pointer select-none' : ''} ${header.column.id === 'title' ? 'pl-8' : ''}`}
                   >
                     <div className="flex items-center gap-2">
                       {flexRender(
@@ -707,9 +707,9 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
           <TableBody>
             {table.getRowModel().rows.length > 0 ? (
               table.getRowModel().rows.map(row => (
-                <TableRow key={row.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                <TableRow key={row.id} className="border-b border-[var(--dash-hairline)] hover:bg-[var(--ink-05)] transition-colors">
                   {row.getVisibleCells().map(cell => (
-                    <TableCell key={cell.id} className={`py-4 px-4 text-white ${cell.column.id === 'title' ? 'pl-8' : ''}`}>
+                    <TableCell key={cell.id} className={`py-4 px-4 text-primary ${cell.column.id === 'title' ? 'pl-8' : ''}`}>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
@@ -717,7 +717,7 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="py-16 text-center text-gray-500">
+                <TableCell colSpan={columns.length} className="py-16 text-center text-[var(--text-muted)]">
                   {emptyMessage}
                 </TableCell>
               </TableRow>
@@ -769,7 +769,7 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
             </>
           )}
           empty={
-            <div className="border border-white/10 rounded-lg py-16 px-4 text-center text-gray-500">
+            <div className="border border-[var(--dash-border)] rounded-lg py-16 px-4 text-center text-[var(--text-muted)]">
               {emptyMessage}
             </div>
           }
@@ -794,7 +794,7 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
 
       {/* Delete Confirmation Modal */}
       <div 
-        className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
+        className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--dash-scrim)] backdrop-blur-sm transition-opacity duration-200 ${
           isDeleteOpen && !isDeleteClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
       >
@@ -806,19 +806,19 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
         >
           <div className="admin-modal-body flex flex-col gap-6">
             <div className="flex items-start gap-4">
-              <div className="p-3 bg-red-500/10 rounded-full text-red-500 shrink-0 mt-1">
+              <div className="p-3 bg-red-500/10 rounded-full text-[var(--status-danger)] shrink-0 mt-1">
                 <AlertCircle size={24} strokeWidth={2} />
               </div>
               <div className="flex flex-col gap-2 min-w-0">
-                <h3 id="delete-event-title" className="text-xl font-semibold text-white">Delete Event</h3>
-                <p className="text-gray-400 text-sm leading-relaxed [overflow-wrap:anywhere]">
-                  Are you sure you want to delete <span className="font-semibold text-white">{deletingEvent?.title}</span>? This action cannot be undone and will permanently remove the event from the database.
+                <h3 id="delete-event-title" className="text-xl font-semibold text-primary">Delete Event</h3>
+                <p className="text-secondary text-sm leading-relaxed [overflow-wrap:anywhere]">
+                  Are you sure you want to delete <span className="font-semibold text-primary">{deletingEvent?.title}</span>? This action cannot be undone and will permanently remove the event from the database.
                 </p>
               </div>
             </div>
 
             {deletingRegistrations > 0 && (
-              <div className="bg-red-500/10 border border-red-500/50 p-4 rounded-lg flex items-center gap-3 text-red-500">
+              <div className="bg-red-500/10 border border-red-500/50 p-4 rounded-lg flex items-center gap-3 text-[var(--status-danger)]">
                 <AlertCircle size={20} className="shrink-0" />
                 <p className="text-sm">
                   This event has {deletingRegistrations} registration{deletingRegistrations === 1 ? '' : 's'}. Deleting it also erases those registrations, their runners, and any uploaded race results.
@@ -827,11 +827,11 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
             )}
           </div>
 
-          <div className="admin-modal-footer flex justify-end gap-3 pt-2 border-t border-white/5">
+          <div className="admin-modal-footer flex justify-end gap-3 pt-2 border-t border-[var(--dash-hairline)]">
             <button 
               type="button" 
               onClick={closeDeleteModal} 
-              className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white transition-colors"
+              className="px-4 py-2 text-sm font-medium text-[var(--ink-85)] hover:text-primary transition-colors"
             >
               Cancel
             </button>

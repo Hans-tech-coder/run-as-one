@@ -123,7 +123,7 @@ export default function SettlementClient({
       id: 'index',
       header: 'No.',
       cell: ({ row, table }) => (
-        <span className="text-gray-400 font-mono">{rowPosition(table.getSortedRowModel().flatRows, row)}</span>
+        <span className="text-secondary font-mono">{rowPosition(table.getSortedRowModel().flatRows, row)}</span>
       ),
       enableSorting: false,
       enableHiding: false,
@@ -211,7 +211,7 @@ export default function SettlementClient({
 
   return (
     <>
-      <div className="flex flex-col gap-4 w-full text-white">
+      <div className="flex flex-col gap-4 w-full text-primary">
         <div className="admin-toolbar" style={{ padding: '0 0 16px 0', borderBottom: 'none' }}>
           <div className="toolbar-actions items-center" style={{ flex: 1 }}>
             <h2 className="admin-panel-title mr-auto">Remittances</h2>
@@ -266,7 +266,7 @@ export default function SettlementClient({
               ) : null
             }
             empty={
-              <div className="border border-white/10 rounded-lg py-16 px-4 text-center text-gray-500">{EMPTY_MESSAGE}</div>
+              <div className="border border-[var(--dash-border)] rounded-lg py-16 px-4 text-center text-[var(--text-muted)]">{EMPTY_MESSAGE}</div>
             }
           />
         </div>

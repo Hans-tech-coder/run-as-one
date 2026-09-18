@@ -263,7 +263,7 @@ export default function AdminSelect({
                 >
                   <span className="shrink-0 w-4 flex justify-center pt-0.5">
                     {isSelected && (
-                      <Check size={16} className="text-accent-orange" />
+                      <Check size={16} className="text-accent-orange-ink" />
                     )}
                   </span>
                   <span className="min-w-0">

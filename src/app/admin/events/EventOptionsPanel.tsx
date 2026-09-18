@@ -130,7 +130,7 @@ export default function EventOptionsPanel({
                   } ${
                     isSelected
                       ? 'border-accent-blue bg-accent-blue/10'
-                      : `border-white/10 bg-white/[0.02] ${locked ? '' : 'hover:border-white/20'}`
+                      : `border-[var(--dash-border)] bg-[var(--ink-02)] ${locked ? '' : 'hover:border-[var(--ink-20)]'}`
                   }`}
                 >
                   <input
@@ -145,7 +145,7 @@ export default function EventOptionsPanel({
                   <div className="flex items-center gap-3">
                     <span
                       className={`rounded-lg p-2 ${
-                        isSelected ? 'bg-accent-blue/20 text-accent-blue' : 'bg-white/5 text-gray-400'
+                        isSelected ? 'bg-accent-blue/20 text-accent-blue-ink' : 'bg-[var(--ink-05)] text-secondary'
                       }`}
                     >
                       <Icon size={20} />
@@ -167,7 +167,7 @@ export default function EventOptionsPanel({
 
         <div className="flex flex-col gap-6">
           {options.map((row, idx) => (
-            <div key={idx} className="rounded-xl border border-white/10 bg-white/[0.02] p-4 sm:p-5">
+            <div key={idx} className="rounded-xl border border-[var(--dash-border)] bg-[var(--ink-02)] p-4 sm:p-5">
               <div className="flex items-center justify-between mb-4">
                 <span className="text-sm font-medium text-secondary uppercase tracking-wider">
                   {words.rowLabel} {idx + 1}

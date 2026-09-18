@@ -27,6 +27,11 @@ This file tracks the dashboard's light theme. It records the audit of
   modal panel and `bg-[#050505]` toolbar popover in the dashboard now read
   tokens. What is still dark on a light setting is the pages' own TSX (their
   headings, table cells, form rows and modal bodies): Batch 3.
+- **Batch 3 has landed** (2026-09-18, on `dev`, uncommitted). **The plan is
+  finished.** Every dashboard page's TSX reads tokens; a sweep of
+  `src/app/admin` (sign-in, register and invite excepted) finds no
+  `text-white`, `white/…`, `black/…` or `gray-…` class left beyond the
+  exceptions listed under Batch 3.
 
 ### How the tokens work (read before Batch 2)
 
@@ -196,12 +201,45 @@ previews render their own dark document on purpose and should stay dark.
   on a coloured fill. The public register fields' `#0d0d0f` lists stay: the
   public site is not themed.
 
-## ☐ Batch 3: Pages, heaviest first
+## ☑ Batch 3: Pages, heaviest first
 
-- [ ] `RegistrantsTable` and `ProofLightbox`.
-- [ ] `PromoCodesClient` and the event create and edit forms.
-- [ ] Team, Clients, Activity, Feedback, Remittances, Results, Communities,
+- [x] `RegistrantsTable` and `ProofLightbox`.
+- [x] `PromoCodesClient` and the event create and edit forms.
+- [x] Team, Clients, Activity, Feedback, Remittances, Results, Communities,
       Settings, and the Viewer dashboard.
-- [ ] Sweep for any `text-white`, `white/…` or `black/…` class left over
+- [x] Sweep for any `text-white`, `white/…` or `black/…` class left over
       (finding 3). The only ones allowed to remain are text on a coloured fill,
       such as the orange avatar or a solid button.
+- Done as one pass over all 94 dashboard TSX files with the Batch 1/2 mapping
+  (plus `text-white/NN` → the nearest ink step, `bg-black/20|30|40` →
+  `--dash-sunken|surface|field`, every `bg-black/60–90` scrim →
+  `--dash-scrim`, `border-gray-700/50` → `--dash-border`), and the checkbox,
+  column dot and white "primary" button copied from `AdminCardList` /
+  `.btn-light` (`--ink` fill, `--dash-inverse-*`). `AdminRouteLoading`'s
+  inline rgba, ResultsUploader's red asterisk, RecordRemittanceDialog's
+  `#faad14` and ProofLightbox's `#0b0b0b` frame read tokens too.
+- **Added: `--accent-blue-ink` / `--accent-orange-ink`** (Tailwind
+  `text-accent-blue-ink`, `text-accent-orange-ink`), for words and icons in
+  brand colour. They are the exact brand hexes on dark, so the 36 former
+  `text-accent-blue` / `text-accent-orange` uses do not move there, and the
+  logo's deepened pair on light, since the brand hexes fall below 4.5:1 on
+  white. `--accent-*-text` stays for the places that already used it.
+- **Status words moved onto the status tokens**: `text-red-400/500`,
+  `text-green-400/500`, `text-orange-400`, `text-amber-400` →
+  `--status-danger/-success/-warning`, and the amber notice's
+  `text-amber-300/90` → `--tone-amber`. On dark this is a small, deliberate
+  shift (e.g. `#f87171` → `#ff4d4f`), so a status reads the same colour on
+  every screen; on light it is what makes them legible.
+- **Left literal on purpose:** `text-white` on the solid red and green confirm
+  buttons, the black veil and white words over the proof thumbnail (a photo
+  overlay), the PDF iframe's white page, the certificate preview's own
+  `#111` ink in the event editor (it draws the printed certificate), and
+  Communities' orange-tinted border. The sign-in, register and invite pages
+  are not themed (standing decision).
+- Verified in light on Events, Registrants (table, detail modal, lightbox),
+  Promo codes and its create modal, Team and its role matrix, Activity, the
+  event editor, and at 375px on Registrants (no horizontal scroll). An
+  automated probe for near-white text or near-black fills came back clean on
+  every other page (Overview, the four Settings pages, New Event, Results,
+  Clients, Feedback, Communities, Remittances and a settlement). On dark the
+  converted classes compute to their old values.

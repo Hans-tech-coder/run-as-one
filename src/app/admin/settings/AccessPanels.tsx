@@ -59,7 +59,7 @@ export default async function AccessPanels({ actor }: { actor: Actor }) {
       <section className="admin-panel" aria-labelledby="access-role-title">
         <div className="admin-panel-header">
           <h2 id="access-role-title" className="admin-panel-title flex items-center gap-2">
-            <IdCard size={18} className="text-accent-blue" aria-hidden="true" />
+            <IdCard size={18} className="text-accent-blue-ink" aria-hidden="true" />
             Your Role
           </h2>
         </div>
@@ -94,7 +94,7 @@ export default async function AccessPanels({ actor }: { actor: Actor }) {
         <section className="admin-panel" aria-labelledby="access-can-title">
           <div className="admin-panel-header">
             <h2 id="access-can-title" className="admin-panel-title flex items-center gap-2">
-              <ListChecks size={18} className="text-accent-orange" aria-hidden="true" />
+              <ListChecks size={18} className="text-accent-orange-ink" aria-hidden="true" />
               What You Can Do
             </h2>
           </div>
@@ -112,7 +112,7 @@ export default async function AccessPanels({ actor }: { actor: Actor }) {
         <section className="admin-panel" aria-labelledby="access-events-title">
           <div className="admin-panel-header">
             <h2 id="access-events-title" className="admin-panel-title flex items-center gap-2">
-              <CalendarDays size={18} className="text-accent-orange" aria-hidden="true" />
+              <CalendarDays size={18} className="text-accent-orange-ink" aria-hidden="true" />
               Your Events
             </h2>
           </div>

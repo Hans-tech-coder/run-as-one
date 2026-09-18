@@ -36,7 +36,7 @@ export default function RolesPanel() {
     <section className="admin-panel mt-8" aria-labelledby="roles-panel-title">
       <div className="admin-panel-header">
         <h2 id="roles-panel-title" className="admin-panel-title flex items-center gap-2">
-          <ShieldCheck size={18} className="text-accent-blue" aria-hidden="true" />
+          <ShieldCheck size={18} className="text-accent-blue-ink" aria-hidden="true" />
           What Each Role Can Do
         </h2>
       </div>
@@ -52,17 +52,17 @@ export default function RolesPanel() {
           <RolePicker />
         </div>
 
-        <div className="dash-desktop-only border border-white/10 rounded-lg overflow-x-auto">
+        <div className="dash-desktop-only border border-[var(--dash-border)] rounded-lg overflow-x-auto">
           <Table>
             <TableHeader className="bg-transparent">
-              <TableRow className="border-b border-white/10 hover:bg-transparent">
-                <TableHead className="py-4 px-4 text-gray-400 font-medium h-auto pl-6">
+              <TableRow className="border-b border-[var(--dash-border)] hover:bg-transparent">
+                <TableHead className="py-4 px-4 text-secondary font-medium h-auto pl-6">
                   Permission
                 </TableHead>
                 {MATRIX_ROLES.map(role => (
                   <TableHead
                     key={role}
-                    className="py-4 px-3 text-gray-400 font-medium h-auto text-center whitespace-nowrap"
+                    className="py-4 px-3 text-secondary font-medium h-auto text-center whitespace-nowrap"
                   >
                     <abbr title={ROLE_HINTS[role]} className="no-underline">
                       {ROLE_LABELS[role]}
@@ -73,16 +73,16 @@ export default function RolesPanel() {
             </TableHeader>
             <TableBody>
               {MATRIX_PERMISSIONS.map(permission => (
-                <TableRow key={permission} className="border-b border-white/5 hover:bg-white/5">
-                  <TableCell className="py-3 px-4 pl-6 text-white whitespace-nowrap">
+                <TableRow key={permission} className="border-b border-[var(--dash-hairline)] hover:bg-[var(--ink-05)]">
+                  <TableCell className="py-3 px-4 pl-6 text-primary whitespace-nowrap">
                     {PERMISSION_LABELS[permission]}
                   </TableCell>
                   {MATRIX_ROLES.map(role => (
                     <TableCell key={role} className="py-3 px-3 text-center">
                       {roleCan(role, permission) ? (
-                        <Check size={16} className="inline text-accent-orange" aria-label="Yes" />
+                        <Check size={16} className="inline text-accent-orange-ink" aria-label="Yes" />
                       ) : (
-                        <span className="text-white/20" aria-label="No">
+                        <span className="text-[var(--ink-20)]" aria-label="No">
                           &mdash;
                         </span>
                       )}

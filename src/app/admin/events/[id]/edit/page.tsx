@@ -323,7 +323,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
 
       <div className="admin-content max-w-4xl mx-auto">
         <div 
-          className={`fixed inset-0 z-50 flex items-center justify-center p-4 max-sm:p-3 bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
+          className={`fixed inset-0 z-50 flex items-center justify-center p-4 max-sm:p-3 bg-[var(--dash-scrim)] backdrop-blur-sm transition-opacity duration-200 ${
             error && !isClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
           }`}
           style={{ zIndex: 100 }}
@@ -333,19 +333,19 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
             role="dialog"
           >
             <div className="admin-modal-body flex items-start gap-4">
-              <div className="p-3 bg-red-500/10 rounded-full text-red-500 shrink-0 mt-1">
+              <div className="p-3 bg-red-500/10 rounded-full text-[var(--status-danger)] shrink-0 mt-1">
                 <AlertCircle size={24} strokeWidth={2} />
               </div>
               <div className="flex min-w-0 flex-col gap-2">
-                <h3 className="text-xl font-semibold text-white">Action Failed</h3>
-                <p className="text-gray-400 text-sm leading-relaxed [overflow-wrap:anywhere]">{error}</p>
+                <h3 className="text-xl font-semibold text-primary">Action Failed</h3>
+                <p className="text-secondary text-sm leading-relaxed [overflow-wrap:anywhere]">{error}</p>
               </div>
             </div>
-            <div className="admin-modal-footer flex justify-end pt-2 border-t border-white/5">
+            <div className="admin-modal-footer flex justify-end pt-2 border-t border-[var(--dash-hairline)]">
               <button 
                 type="button"
                 onClick={closeErrorModal} 
-                className="px-5 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm font-medium text-white transition-colors"
+                className="px-5 py-2 bg-[var(--ink-05)] hover:bg-[var(--ink-10)] border border-[var(--dash-border)] rounded-lg text-sm font-medium text-primary transition-colors"
               >
                 Acknowledge
               </button>
@@ -355,7 +355,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
 
         {/* Success Modal */}
         <div 
-          className={`fixed inset-0 z-50 flex items-center justify-center p-4 max-sm:p-3 bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
+          className={`fixed inset-0 z-50 flex items-center justify-center p-4 max-sm:p-3 bg-[var(--dash-scrim)] backdrop-blur-sm transition-opacity duration-200 ${
             successMsg && !isSuccessClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
           }`}
           style={{ zIndex: 100 }}
@@ -365,15 +365,15 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
             role="dialog"
           >
             <div className="admin-modal-body flex items-start gap-4">
-              <div className="p-3 bg-green-500/10 rounded-full text-green-500 shrink-0 mt-1">
+              <div className="p-3 bg-green-500/10 rounded-full text-[var(--status-success)] shrink-0 mt-1">
                 <CheckCircle size={24} strokeWidth={2} />
               </div>
               <div className="flex min-w-0 flex-col gap-2">
-                <h3 className="text-xl font-semibold text-white">Success</h3>
-                <p className="text-gray-400 text-sm leading-relaxed [overflow-wrap:anywhere]">{successMsg}</p>
+                <h3 className="text-xl font-semibold text-primary">Success</h3>
+                <p className="text-secondary text-sm leading-relaxed [overflow-wrap:anywhere]">{successMsg}</p>
               </div>
             </div>
-            <div className="admin-modal-footer flex justify-end pt-2 border-t border-white/5">
+            <div className="admin-modal-footer flex justify-end pt-2 border-t border-[var(--dash-hairline)]">
               <button 
                 type="button"
                 onClick={closeSuccessModal} 
@@ -778,7 +778,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
 
               {/* Coordinates Preview */}
               {formData.certificateTemplate && (
-                <div className="mt-8 border border-gray-700/50 rounded-lg p-4 sm:p-6 bg-dark-card/50">
+                <div className="mt-8 border border-[var(--dash-border)] rounded-lg p-4 sm:p-6 bg-dark-card/50">
                   <h3 className="text-lg font-bold text-primary mb-4">Visual Layout Preview</h3>
                   <p className="text-secondary text-sm mb-6">Adjust the sliders to position the text exactly where you want it on your certificate.</p>
                   
@@ -804,7 +804,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
                             <div>
                               <label className="form-label flex justify-between">
                                 <span>Name Position (Y%)</span>
-                                <span className="text-accent-blue">{coords.nameY || 50}%</span>
+                                <span className="text-accent-blue-ink">{coords.nameY || 50}%</span>
                               </label>
                               <input 
                                 type="range" min="0" max="100" 
@@ -816,7 +816,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
                             <div>
                               <label className="form-label flex justify-between">
                                 <span>Finish Time Position (Y%)</span>
-                                <span className="text-accent-blue">{coords.timeY || 60}%</span>
+                                <span className="text-accent-blue-ink">{coords.timeY || 60}%</span>
                               </label>
                               <input 
                                 type="range" min="0" max="100" 
@@ -828,7 +828,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
                             <div>
                               <label className="form-label flex justify-between">
                                 <span>Category Position (Y%)</span>
-                                <span className="text-accent-blue">{coords.catY || 70}%</span>
+                                <span className="text-accent-blue-ink">{coords.catY || 70}%</span>
                               </label>
                               <input 
                                 type="range" min="0" max="100" 
@@ -844,7 +844,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
 
                     {/* Preview Box */}
                     <div className="w-full lg:w-2/3">
-                      <div className="relative w-full aspect-[1.414] bg-dark-bg border border-gray-700/50 rounded-md overflow-hidden shadow-xl">
+                      <div className="relative w-full aspect-[1.414] bg-dark-bg border border-[var(--dash-border)] rounded-md overflow-hidden shadow-xl">
                         {/* Background Image */}
                         {formData.certificateTemplate.startsWith('data:application/pdf') ? (
                           <div className="absolute inset-0 flex items-center justify-center p-8 text-center text-secondary bg-dark-bg/80 z-0">

@@ -2001,7 +2001,9 @@ These are the user's own standing preferences. Follow them without being asked.
   `--dash-inverse-bg/-fg/-hover`, `--text-primary/-secondary/-muted`,
   `--status-success/-warning/-danger` (deepened on light to clear 4.5:1 on
   white; tints are `color-mix` of them), `--accent-blue-text` /
-  `--accent-orange-text` for words in brand colour, `--tone-amber/-green/-red/-violet`
+  `--accent-orange-text` for words in brand colour, `--accent-blue-ink` /
+  `--accent-orange-ink` (`text-accent-blue-ink`) for the same where the dark
+  theme must keep the exact brand hex, `--tone-amber/-green/-red/-violet`
   for words on a tinted chip, and `--color-scheme` for
   the browser's own date pickers. A token derived from another in `:root`
   (`--runner-far`, `--shimmer-base/-highlight`) is declared again in the
@@ -2011,7 +2013,12 @@ These are the user's own standing preferences. Follow them without being asked.
   steps are `--dash-hairline`, `--dash-border` and `--dash-hover`. The
   Tailwind colours are `@theme inline`, so `text-primary`, `text-secondary`
   and `bg-dark` follow the theme. A new dashboard surface reads one of these
-  names; a hex or white-alpha in admin CSS or TSX is a light-theme bug. Data-URI
+  names; a hex or white-alpha in admin CSS or TSX is a light-theme bug, and so
+  is a `text-white`, `white/…`, `black/…`, `gray-…` or `text-accent-*` class.
+  The only literals allowed are words on a solid coloured fill (a red or green
+  confirm button, a badge), the black veil over a photo, and the event
+  editor's certificate preview, which draws the printed certificate. Status
+  words read `--status-*`, never Tailwind's `red-400` / `green-400`. Data-URI
   icons cannot read a variable, so each has a `[data-theme="light"]` twin. Only
   the dashboard sets `data-theme`, so the public site only ever sees the dark
   values.
@@ -2125,21 +2132,23 @@ added nothing once their queue was empty.
 the decisions it records as not to be relitigated. It is no longer a queue, and
 the file itself says it may be deleted.
 
-**The dashboard has a Dark Mode switch and the first third of a light
-theme** (2026-09-18, on `dev`, uncommitted). The account menu's switch works
-and persists (`dash_theme`, §6). **Light Theme Batch 1 has landed**: the
-palette is tokens (§9), `Admin.css` and `.btn-secondary` read them,
-`--bg-dark` is finally defined (the collapse knob's ring is back), the duplicate
+**The dashboard has a Dark Mode switch and a complete light theme**
+(2026-09-18, on `dev`, uncommitted). The account menu's switch works and
+persists (`dash_theme`, §6), and **all three batches of `LIGHT_THEME_PLAN.md`
+have landed**: the palette is tokens (§9); `Admin.css`, the shared table
+primitives, modals, bell and toasts read them; and every dashboard page's TSX
+has been swept onto them, with brand-coloured words on the new
+`--accent-*-ink` pair and status words on `--status-*`. The plan file is now
+kept only for its reasoning and its list of deliberate literals. `--bg-dark` is
+finally defined (the collapse knob's ring is back), the duplicate
 `.action-dropdown-item` rules are merged, and the date pickers and chevrons
 follow the theme. `Auth.css`'s field rules are scoped to `.auth-container`:
 the dashboard loads that file through `admin/loading.tsx`, and its unscoped
 `.form-input` was stripping the border off dashboard fields (it read an
 undefined `--color-border`) and painting them grey on the light theme. **A
 stylesheet imported anywhere under `/admin` reaches every dashboard page**, so
-its generic class names must be scoped to the page they belong to. **`LIGHT_THEME_PLAN.md` is the queue**: Batch 2 (the shared
-table primitives, modals, bell and toasts) is next, then Batch 3 (the pages).
-Until then the light setting has faint text and dark panels wherever a TSX
-file hard-codes a colour. No schema change.
+its generic class names must be scoped to the page they belong to. The
+sign-in, register and invite pages stay dark by decision. No schema change.
 
 **Settings is grouped into four pages** (2026-09-18, on `dev`, uncommitted):
 Profile, Security, Site Settings and Your Access, listed in the account menu in

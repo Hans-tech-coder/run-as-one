@@ -363,14 +363,14 @@ export default function ResultsUploaderClient({ event }: { event: any }) {
       </div>
 
       {error && (
-        <div className="bg-red-500/10 border border-red-500/50 p-4 rounded-lg flex items-center gap-3 text-red-500">
+        <div className="bg-red-500/10 border border-red-500/50 p-4 rounded-lg flex items-center gap-3 text-[var(--status-danger)]">
           <AlertCircle size={20} className="shrink-0" />
           <p className="text-sm min-w-0 [overflow-wrap:anywhere]">{error}</p>
         </div>
       )}
 
       {success && (
-        <div className="bg-green-500/10 border border-green-500/50 p-4 rounded-lg flex items-center gap-3 text-green-400">
+        <div className="bg-green-500/10 border border-green-500/50 p-4 rounded-lg flex items-center gap-3 text-[var(--status-success)]">
           <CheckCircle2 size={20} className="shrink-0" />
           <p className="text-sm min-w-0 [overflow-wrap:anywhere]">{success}</p>
         </div>
@@ -410,7 +410,7 @@ export default function ResultsUploaderClient({ event }: { event: any }) {
                   : undefined;
 
               const required = (text: string) => (
-                <>{text} <span style={{ color: '#ff4d4f' }}>*</span></>
+                <>{text} <span style={{ color: 'var(--status-danger)' }}>*</span></>
               );
 
               return (
@@ -419,13 +419,13 @@ export default function ResultsUploaderClient({ event }: { event: any }) {
                 // would otherwise be cut off at the panel's edge.
                 <div
                   key={sheetName}
-                  className="admin-panel mb-8 border border-white/10 hover:border-accent-blue/30 transition-colors"
+                  className="admin-panel mb-8 border border-[var(--dash-border)] hover:border-accent-blue/30 transition-colors"
                   style={{ overflow: 'visible' }}
                 >
-                  <div className="admin-panel-header border-b border-gray-700/50 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/[0.02] p-5 rounded-t-[var(--radius-xl)]">
+                  <div className="admin-panel-header border-b border-[var(--dash-border)] flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[var(--ink-02)] p-5 rounded-t-[var(--radius-xl)]">
                     <div className="flex flex-col min-w-0 max-md:self-stretch">
-                      <h4 className="font-bold text-lg text-white flex items-center gap-2 min-w-0 [overflow-wrap:anywhere]">
-                        <FileSpreadsheet size={18} className="text-accent-blue shrink-0" /> {sheetName}
+                      <h4 className="font-bold text-lg text-primary flex items-center gap-2 min-w-0 [overflow-wrap:anywhere]">
+                        <FileSpreadsheet size={18} className="text-accent-blue-ink shrink-0" /> {sheetName}
                       </h4>
                       <p className="text-xs text-secondary mt-1">
                         Found {rowCount} {rowCount === 1 ? 'row' : 'rows'} below the header on row {map.headerRow + 1}

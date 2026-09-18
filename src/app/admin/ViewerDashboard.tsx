@@ -52,7 +52,7 @@ export default function ViewerDashboard({
             <div className="empty-state">
               <CalendarDays size={48} className="empty-icon" aria-hidden="true" />
               <div>
-                <p className="mb-2 text-lg font-bold text-white">No events linked yet</p>
+                <p className="mb-2 text-lg font-bold text-primary">No events linked yet</p>
                 <p className="m-0 max-w-md text-sm leading-relaxed">
                   When Run As One links a race to {clientName || 'your organization'}, it appears
                   here with how many runners have registered — paid and pending, and for each

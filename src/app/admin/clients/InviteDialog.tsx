@@ -143,12 +143,12 @@ export default function InviteDialog({
         <div className="flex flex-col gap-4">
           <p className="m-0">
             They get an email with a link to choose a password, then sign in to see{' '}
-            <span className="text-white [overflow-wrap:anywhere]">{clientName}</span>&apos;s events
+            <span className="text-primary [overflow-wrap:anywhere]">{clientName}</span>&apos;s events
             and how many runners have registered. Nothing else.
             {resend && ' The link sent before stops working.'}
           </p>
           <div className="flex flex-col gap-2">
-            <label htmlFor={nameId} className="text-sm font-medium text-white">
+            <label htmlFor={nameId} className="text-sm font-medium text-primary">
               Name
             </label>
             <input
@@ -171,7 +171,7 @@ export default function InviteDialog({
             <FieldError id={`${nameId}-error`} message={errors.name} />
           </div>
           <div className="flex flex-col gap-2">
-            <label htmlFor={emailId} className="text-sm font-medium text-white">
+            <label htmlFor={emailId} className="text-sm font-medium text-primary">
               Email Address
             </label>
             <input

@@ -66,7 +66,7 @@ export default function RegistrationScheduleModal({
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--dash-scrim)] backdrop-blur-sm transition-opacity duration-200 ${
         isOpen && !isClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
       }`}
     >
@@ -76,25 +76,25 @@ export default function RegistrationScheduleModal({
         aria-modal="true"
         aria-labelledby="registration-schedule-title"
       >
-        <div className="p-6 border-b border-white/10 flex justify-between items-start gap-4 shrink-0">
+        <div className="p-6 border-b border-[var(--dash-border)] flex justify-between items-start gap-4 shrink-0">
           <div className="flex items-start gap-3 min-w-0">
-            <span className="p-2 rounded-lg bg-accent-blue/10 text-accent-blue shrink-0">
+            <span className="p-2 rounded-lg bg-accent-blue/10 text-accent-blue-ink shrink-0">
               <CalendarClock size={20} />
             </span>
             <div className="min-w-0">
-              <h3 id="registration-schedule-title" className="text-xl font-semibold text-white m-0">
+              <h3 id="registration-schedule-title" className="text-xl font-semibold text-primary m-0">
                 Registration Opening
               </h3>
               {/* The row this is about. The menu it was opened from is gone by
                   now, and three events down a table look alike. */}
-              <p className="text-sm text-gray-400 m-0 mt-1 [overflow-wrap:anywhere]">{event?.title}</p>
+              <p className="text-sm text-secondary m-0 mt-1 [overflow-wrap:anywhere]">{event?.title}</p>
             </div>
           </div>
           {/* 44px to press; the negative margin keeps the 20px icon exactly
               where it sat, as .admin-back-link does. */}
           <button
             onClick={onClose}
-            className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center text-gray-400 hover:text-white transition-colors"
+            className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center text-secondary hover:text-primary transition-colors"
             aria-label="Close"
           >
             <X size={20} />
@@ -123,18 +123,18 @@ export default function RegistrationScheduleModal({
               so an organizer who paused this race is told that before they
               press the button, not after they wonder why it reopened. */}
           {event?.registrationPaused && (
-            <p className="text-sm text-amber-300/90 bg-amber-400/10 border border-amber-400/20 rounded-lg px-4 py-3 m-0">
+            <p className="text-sm text-[var(--tone-amber)] bg-amber-400/10 border border-amber-400/20 rounded-lg px-4 py-3 m-0">
               Sign-ups for this event are paused. Saving here lifts that hold, so registration
               follows the choice above from now on.
             </p>
           )}
         </div>
 
-        <div className="admin-modal-footer p-6 border-t border-white/10 flex justify-end gap-3 shrink-0">
+        <div className="admin-modal-footer p-6 border-t border-[var(--dash-border)] flex justify-end gap-3 shrink-0">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white transition-colors"
+            className="px-4 py-2 text-sm font-medium text-[var(--ink-85)] hover:text-primary transition-colors"
           >
             Cancel
           </button>

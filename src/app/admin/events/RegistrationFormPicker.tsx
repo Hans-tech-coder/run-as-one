@@ -54,7 +54,7 @@ export default function RegistrationFormPicker({
             className={`relative flex cursor-pointer flex-col gap-3 rounded-xl border p-4 sm:p-5 transition-colors ${
               isSelected
                 ? 'border-accent-blue bg-accent-blue/10'
-                : 'border-white/10 bg-white/[0.02] hover:border-white/20'
+                : 'border-[var(--dash-border)] bg-[var(--ink-02)] hover:border-[var(--ink-20)]'
             }`}
           >
             <input
@@ -68,7 +68,7 @@ export default function RegistrationFormPicker({
             <div className="flex items-center gap-3">
               <span
                 className={`rounded-lg p-2 ${
-                  isSelected ? 'bg-accent-blue/20 text-accent-blue' : 'bg-white/5 text-gray-400'
+                  isSelected ? 'bg-accent-blue/20 text-accent-blue-ink' : 'bg-[var(--ink-05)] text-secondary'
                 }`}
               >
                 <Icon size={20} />

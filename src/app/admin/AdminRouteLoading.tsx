@@ -349,13 +349,13 @@ function TableSkeleton({
   boxed?: boolean;
 }) {
   return (
-    <div className={boxed ? "border border-white/10 rounded-lg overflow-hidden" : "data-table-wrapper"}>
+    <div className={boxed ? "border border-[var(--dash-border)] rounded-lg overflow-hidden" : "data-table-wrapper"}>
       <div
         className="t-skel-skeleton is-pulsing flex items-center px-4"
         style={{
           height: `${head}px`,
-          background: "rgba(0, 0, 0, 0.2)",
-          borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
+          background: "var(--dash-sunken)",
+          borderBottom: "1px solid var(--dash-border)",
         }}
       >
         <div className="t-skel-bar" style={{ width: "30%", height: "12px" }} />
@@ -367,7 +367,7 @@ function TableSkeleton({
           className="t-skel-skeleton is-pulsing flex items-center px-4"
           style={{
             height: `${row}px`,
-            borderBottom: index === rows - 1 ? undefined : "1px solid rgba(255, 255, 255, 0.05)",
+            borderBottom: index === rows - 1 ? undefined : "1px solid var(--dash-hairline)",
           }}
         >
           {/* The rows are not all one length, so the bars are not either. */}

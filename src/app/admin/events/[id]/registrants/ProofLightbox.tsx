@@ -267,9 +267,9 @@ export default function ProofLightbox({
   // 44px on a phone, where the tools are a bar under the image and a thumb
   // rather than a pointer presses them.
   const toolBtn =
-    'flex items-center justify-center w-10 h-10 max-sm:w-11 max-sm:h-11 rounded-lg border border-white/10 bg-white/5 text-gray-300 ' +
-    'hover:bg-white/10 hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed ' +
-    'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white';
+    'flex items-center justify-center w-10 h-10 max-sm:w-11 max-sm:h-11 rounded-lg border border-[var(--dash-border)] bg-[var(--ink-05)] text-[var(--ink-85)] ' +
+    'hover:bg-[var(--ink-10)] hover:text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed ' +
+    'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ink)]';
 
   return createPortal(
     /*
@@ -280,25 +280,25 @@ export default function ProofLightbox({
       tools, then the order it has to agree with and Validate at the bottom.
     */
     <div
-      className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-sm flex items-center justify-center p-0 sm:p-6"
+      className="fixed inset-0 z-[60] bg-[var(--dash-scrim)] backdrop-blur-sm flex items-center justify-center p-0 sm:p-6"
       onMouseDown={e => { if (e.target === e.currentTarget) requestClose(); }}
     >
       <div
-        className={`t-modal w-full h-full max-w-6xl flex flex-col rounded-2xl max-sm:rounded-none border border-white/10 max-sm:border-0 bg-[#0b0b0b] shadow-2xl overflow-hidden ${frameState}`}
+        className={`t-modal w-full h-full max-w-6xl flex flex-col rounded-2xl max-sm:rounded-none border border-[var(--dash-border)] max-sm:border-0 bg-[var(--dash-panel-solid)] shadow-2xl overflow-hidden ${frameState}`}
         role="dialog"
         aria-modal="true"
         aria-label={`Proof of payment for order ${orderRef}`}
       >
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-white/10 shrink-0 max-sm:contents">
-          <div className="min-w-0 max-sm:order-1 max-sm:shrink-0 max-sm:px-4 max-sm:py-3 max-sm:border-b max-sm:border-white/10">
-            <p className="text-sm font-semibold text-white m-0 truncate">Proof of Payment</p>
-            <p className="text-xs text-gray-500 m-0 truncate">
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-[var(--dash-border)] shrink-0 max-sm:contents">
+          <div className="min-w-0 max-sm:order-1 max-sm:shrink-0 max-sm:px-4 max-sm:py-3 max-sm:border-b max-sm:border-[var(--dash-border)]">
+            <p className="text-sm font-semibold text-primary m-0 truncate">Proof of Payment</p>
+            <p className="text-xs text-[var(--text-muted)] m-0 truncate">
               {orderRef}
               {isPdf && ' · PDF'}
             </p>
           </div>
 
-          <div className="ml-auto flex items-center gap-1.5 sm:gap-2 max-sm:order-3 max-sm:shrink-0 max-sm:ml-0 max-sm:justify-between max-sm:px-4 max-sm:py-2 max-sm:border-t max-sm:border-white/10">
+          <div className="ml-auto flex items-center gap-1.5 sm:gap-2 max-sm:order-3 max-sm:shrink-0 max-sm:ml-0 max-sm:justify-between max-sm:px-4 max-sm:py-2 max-sm:border-t max-sm:border-[var(--dash-border)]">
             {!isPdf && (
               <>
                 <button
@@ -316,7 +316,7 @@ export default function ProofLightbox({
                 <button
                   type="button"
                   onClick={reset}
-                  className="hidden sm:flex items-center justify-center min-w-[4rem] h-10 px-2 rounded-lg border border-white/10 bg-white/5 text-xs font-medium text-gray-300 tabular-nums hover:bg-white/10 hover:text-white transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                  className="hidden sm:flex items-center justify-center min-w-[4rem] h-10 px-2 rounded-lg border border-[var(--dash-border)] bg-[var(--ink-05)] text-xs font-medium text-[var(--ink-85)] tabular-nums hover:bg-[var(--ink-10)] hover:text-primary transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ink)]"
                   title="Reset the view (0)"
                 >
                   {Math.round(scale * 100)}%
@@ -357,7 +357,7 @@ export default function ProofLightbox({
 
         <div
           ref={viewportRef}
-          className={`relative flex-1 min-h-0 overflow-hidden flex items-center justify-center bg-black/60 max-sm:order-2 ${isPdf ? '' : 'touch-none'}`}
+          className={`relative flex-1 min-h-0 overflow-hidden flex items-center justify-center bg-[var(--dash-scrim)] max-sm:order-2 ${isPdf ? '' : 'touch-none'}`}
           onPointerDown={isPdf ? undefined : pointerDown}
           onPointerMove={isPdf ? undefined : pointerMove}
           onPointerUp={isPdf ? undefined : pointerUp}
@@ -369,17 +369,17 @@ export default function ProofLightbox({
         >
           {!loaded && !failed && (
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="w-8 h-8 rounded-full border-2 border-white/20 border-t-white/70 animate-spin" aria-hidden="true" />
+              <span className="w-8 h-8 rounded-full border-2 border-[var(--ink-20)] border-t-[var(--ink-65)] animate-spin" aria-hidden="true" />
               <span className="sr-only">Loading the proof of payment</span>
             </div>
           )}
 
           {failed ? (
             <div className="px-6 text-center">
-              <p className="text-sm text-gray-300 m-0">This receipt could not be loaded.</p>
-              <p className="text-xs text-gray-500 mt-1 m-0">
+              <p className="text-sm text-[var(--ink-85)] m-0">This receipt could not be loaded.</p>
+              <p className="text-xs text-[var(--text-muted)] mt-1 m-0">
                 Its link is signed and short-lived — close this and open it again, or{' '}
-                <a href={src} target="_blank" rel="noopener noreferrer" className="text-accent-blue hover:underline">
+                <a href={src} target="_blank" rel="noopener noreferrer" className="text-accent-blue-ink hover:underline">
                   try it in a new tab
                 </a>
                 .
@@ -420,20 +420,20 @@ export default function ProofLightbox({
         {/* What the receipt has to agree with. Reading a number off the image
             and checking it against the order is the whole job, and it was
             being done across two screens. */}
-        <div className="shrink-0 border-t border-white/10 bg-black/40 px-4 py-3 flex flex-wrap items-center gap-x-6 gap-y-3 max-sm:order-4 max-sm:pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+        <div className="shrink-0 border-t border-[var(--dash-border)] bg-[var(--dash-field)] px-4 py-3 flex flex-wrap items-center gap-x-6 gap-y-3 max-sm:order-4 max-sm:pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
           <p className="flex flex-col m-0 text-sm">
-            <span className="text-xs text-gray-500">Order Total</span>
-            <span className="text-white font-medium">&#8369;{formatPesos(totalAmount)}</span>
+            <span className="text-xs text-[var(--text-muted)]">Order Total</span>
+            <span className="text-primary font-medium">&#8369;{formatPesos(totalAmount)}</span>
           </p>
           <p className="flex flex-col m-0 text-sm min-w-0">
-            <span className="text-xs text-gray-500">Transaction No.</span>
-            <span className={`font-medium [overflow-wrap:anywhere] ${transactionNumber ? 'text-white' : 'text-gray-500 italic'}`}>
+            <span className="text-xs text-[var(--text-muted)]">Transaction No.</span>
+            <span className={`font-medium [overflow-wrap:anywhere] ${transactionNumber ? 'text-primary' : 'text-[var(--text-muted)] italic'}`}>
               {transactionNumber || 'Not given'}
             </span>
           </p>
           <p className="flex flex-col m-0 text-sm">
-            <span className="text-xs text-gray-500">Status</span>
-            <span className="text-white font-medium">{status}</span>
+            <span className="text-xs text-[var(--text-muted)]">Status</span>
+            <span className="text-primary font-medium">{status}</span>
           </p>
 
           <div className="ml-auto flex items-center gap-4 max-sm:ml-0 max-sm:w-full max-sm:flex-col max-sm:items-stretch max-sm:gap-3">
@@ -441,15 +441,15 @@ export default function ProofLightbox({
               // Hidden only between `sm` and `lg`, where the toolbar's icon is
               // in plain sight. A phone is where a browser is likeliest to
               // refuse a PDF inline, so the words stay there.
-              <p className="hidden max-sm:block lg:block text-xs text-gray-600 m-0">
+              <p className="hidden max-sm:block lg:block text-xs text-[var(--text-muted)] m-0">
                 Will not display?{' '}
-                <a href={src} target="_blank" rel="noopener noreferrer" className="text-accent-blue hover:underline">
+                <a href={src} target="_blank" rel="noopener noreferrer" className="text-accent-blue-ink hover:underline">
                   Open it in a new tab
                 </a>
                 <span className="max-sm:hidden"> &middot; Esc closes</span>
               </p>
             ) : (
-              <p className="hidden xl:block text-xs text-gray-600 m-0">
+              <p className="hidden xl:block text-xs text-[var(--text-muted)] m-0">
                 Scroll or pinch to zoom &middot; drag or arrow keys to pan &middot; R rotates &middot; Esc closes
               </p>
             )}

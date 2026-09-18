@@ -82,9 +82,9 @@ interface FeedbackRow {
 /** The icon and the tone each kind wears in the table. Lucide in currentColor,
  *  like every other icon in the dashboard. */
 const KIND_META: Record<FeedbackKind, { icon: React.ReactNode; tone: string }> = {
-  ISSUE: { icon: <AlertTriangle size={14} />, tone: 'text-red-400' },
-  SUGGESTION: { icon: <Lightbulb size={14} />, tone: 'text-amber-400' },
-  FEATURE: { icon: <Sparkles size={14} />, tone: 'text-accent-blue' },
+  ISSUE: { icon: <AlertTriangle size={14} />, tone: 'text-[var(--status-danger)]' },
+  SUGGESTION: { icon: <Lightbulb size={14} />, tone: 'text-[var(--status-warning)]' },
+  FEATURE: { icon: <Sparkles size={14} />, tone: 'text-accent-blue-ink' },
 };
 
 /** Manila, spelled out — the same zone every other date on this site is read
@@ -263,7 +263,7 @@ export default function FeedbackClient() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-4 w-full text-white">
+        <div className="flex flex-col gap-4 w-full text-primary">
           <div className="admin-toolbar" style={{ padding: '0 0 16px 0', borderBottom: 'none' }}>
             <div className="toolbar-actions" style={{ flex: 1 }}>
               <div className="search-wrapper">
@@ -280,7 +280,7 @@ export default function FeedbackClient() {
                   // otherwise.
                   <button
                     onClick={() => setSearch('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center border-none bg-transparent text-gray-500 hover:text-gray-300 max-sm:right-0 max-sm:h-11 max-sm:w-11"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center border-none bg-transparent text-[var(--text-muted)] hover:text-[var(--ink-85)] max-sm:right-0 max-sm:h-11 max-sm:w-11"
                     aria-label="Clear search"
                   >
                     <X size={14} />
@@ -441,7 +441,7 @@ export default function FeedbackClient() {
                   );
                 }}
                 empty={
-                  <div className="border border-white/10 rounded-lg py-16 px-4 text-center text-gray-500">
+                  <div className="border border-[var(--dash-border)] rounded-lg py-16 px-4 text-center text-[var(--text-muted)]">
                     {emptyMessage}
                   </div>
                 }
@@ -634,12 +634,12 @@ function MessageDetail({
         {row.message}
       </p>
 
-      <dl className="mt-4 grid grid-cols-1 gap-3 border-t border-white/5 pt-4 text-xs sm:grid-cols-2">
+      <dl className="mt-4 grid grid-cols-1 gap-3 border-t border-[var(--dash-hairline)] pt-4 text-xs sm:grid-cols-2">
         <div className="min-w-0">
           <dt className="mb-1 font-bold uppercase tracking-wider text-secondary">
             Page they were on
           </dt>
-          <dd className="m-0 break-all font-mono text-white/80">
+          <dd className="m-0 break-all font-mono text-[var(--ink-85)]">
             {row.pagePath || 'Not recorded'}
           </dd>
         </div>
@@ -647,7 +647,7 @@ function MessageDetail({
           <dt className="mb-1 font-bold uppercase tracking-wider text-secondary">
             Browser
           </dt>
-          <dd className="m-0 break-all text-white/80">
+          <dd className="m-0 break-all text-[var(--ink-85)]">
             {row.userAgent || 'Not recorded'}
           </dd>
         </div>

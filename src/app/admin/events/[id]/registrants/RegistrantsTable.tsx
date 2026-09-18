@@ -95,9 +95,9 @@ function statusTone(status: string): string {
 
 /** The same three tones as Tailwind classes, for the detail modal's pill. */
 function statusPillClass(status: string): string {
-  if (status === 'PAID') return 'bg-green-500/20 text-green-400 border border-green-500/20';
-  if (status === 'EXPIRED') return 'bg-white/10 text-gray-300 border border-white/10';
-  return 'bg-orange-500/20 text-orange-400 border border-orange-500/20';
+  if (status === 'PAID') return 'bg-green-500/20 text-[var(--status-success)] border border-green-500/20';
+  if (status === 'EXPIRED') return 'bg-[var(--ink-10)] text-[var(--ink-85)] border border-[var(--dash-border)]';
+  return 'bg-orange-500/20 text-[var(--status-warning)] border border-orange-500/20';
 }
 
 /**
@@ -124,7 +124,7 @@ function needsValidation(runner: { status: string; isBankTransfer: boolean }): b
  */
 function StatusProvenanceNote({ runner }: { runner: RegistrantRow }) {
   const line = statusProvenance(runner.status, runner.isBankTransfer, runner.statusRecord ?? null);
-  return line ? <span className="text-xs text-gray-500 mt-1.5">{line}</span> : null;
+  return line ? <span className="text-xs text-[var(--text-muted)] mt-1.5">{line}</span> : null;
 }
 
 const GENDER_OPTIONS = [
@@ -810,9 +810,9 @@ export default function RegistrantsTable({
                 type="checkbox"
                 checked={isChecked}
                 onChange={table.getToggleAllPageRowsSelectedHandler()}
-                className="appearance-none w-4 h-4 rounded border border-white/20 bg-transparent checked:bg-white checked:border-white cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-white/20"
+                className="appearance-none w-4 h-4 rounded border border-[var(--ink-20)] bg-transparent checked:bg-[var(--ink)] checked:border-[var(--ink)] cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ink-20)]"
               />
-              {isChecked && <Check className="absolute text-black pointer-events-none" size={12} strokeWidth={3} />}
+              {isChecked && <Check className="absolute text-[var(--dash-inverse-fg)] pointer-events-none" size={12} strokeWidth={3} />}
             </div>
           </div>
         );
@@ -826,9 +826,9 @@ export default function RegistrantsTable({
                 type="checkbox"
                 checked={isChecked}
                 onChange={row.getToggleSelectedHandler()}
-                className="appearance-none w-4 h-4 rounded border border-white/20 bg-transparent checked:bg-white checked:border-white cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-white/20"
+                className="appearance-none w-4 h-4 rounded border border-[var(--ink-20)] bg-transparent checked:bg-[var(--ink)] checked:border-[var(--ink)] cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ink-20)]"
               />
-              {isChecked && <Check className="absolute text-black pointer-events-none" size={12} strokeWidth={3} />}
+              {isChecked && <Check className="absolute text-[var(--dash-inverse-fg)] pointer-events-none" size={12} strokeWidth={3} />}
             </div>
           </div>
         );
@@ -849,7 +849,7 @@ export default function RegistrantsTable({
       id: "index",
       header: "No.",
       cell: ({ row }) => (
-        <span className="text-gray-400 font-mono">{row.original.regNo}</span>
+        <span className="text-secondary font-mono">{row.original.regNo}</span>
       ),
       enableSorting: false,
       enableHiding: false,
@@ -1157,7 +1157,7 @@ export default function RegistrantsTable({
   };
 
   return (
-    <div className="flex flex-col gap-4 w-full text-white">
+    <div className="flex flex-col gap-4 w-full text-primary">
       {/* Top Toolbar */}
       <div className="admin-toolbar" style={{ padding: '0 0 16px 0', borderBottom: 'none' }}>
         <div className="toolbar-actions" style={{ flex: 1 }}>
@@ -1174,7 +1174,7 @@ export default function RegistrantsTable({
                 type="button"
                 onClick={() => setGlobalFilter('')}
                 aria-label="Clear search"
-                className="absolute right-1 max-sm:right-0 top-1/2 -translate-y-1/2 flex items-center justify-center w-8 h-8 max-sm:w-11 max-sm:h-11 text-gray-500 hover:text-gray-300 bg-transparent border-none cursor-pointer"
+                className="absolute right-1 max-sm:right-0 top-1/2 -translate-y-1/2 flex items-center justify-center w-8 h-8 max-sm:w-11 max-sm:h-11 text-[var(--text-muted)] hover:text-[var(--ink-85)] bg-transparent border-none cursor-pointer"
               >
                 <X size={14} />
               </button>
@@ -1213,7 +1213,7 @@ export default function RegistrantsTable({
               : 'Show only the bank transfers waiting for their payment to be checked'}
           >
             <Hourglass size={16} /> Needs Validation
-            {needsValidationCount > 0 && <span className="ml-1 px-1 bg-white/10 rounded">{needsValidationCount}</span>}
+            {needsValidationCount > 0 && <span className="ml-1 px-1 bg-[var(--ink-10)] rounded">{needsValidationCount}</span>}
           </button>
 
           {/*
@@ -1234,7 +1234,7 @@ export default function RegistrantsTable({
               : 'Show only the registrants whose email never went out'}
           >
             <MailWarning size={16} /> Unsent Email
-            {unsentEmailCount > 0 && <span className="ml-1 px-1 bg-white/10 rounded">{unsentEmailCount}</span>}
+            {unsentEmailCount > 0 && <span className="ml-1 px-1 bg-[var(--ink-10)] rounded">{unsentEmailCount}</span>}
           </button>
 
           {/* Which columns the table shows. Cards have no columns to hide, so
@@ -1250,15 +1250,15 @@ export default function RegistrantsTable({
               <div className="toolbar-popover absolute right-0 mt-2 bg-[var(--dash-popover)] border border-[var(--dash-border)] rounded-md p-2 min-w-[150px] z-50 shadow-2xl">
                 {table.getAllLeafColumns().filter(col => col.getCanHide()).map(column => {
                   return (
-                    <label key={column.id} className="flex items-center gap-2 px-2 py-1.5 hover:bg-white/5 cursor-pointer rounded-md text-sm text-white">
-                      <div className={`w-4 h-4 border border-white/10 rounded-sm flex items-center justify-center ${column.getIsVisible() ? 'bg-white/10' : ''}`}>
+                    <label key={column.id} className="flex items-center gap-2 px-2 py-1.5 hover:bg-[var(--ink-05)] cursor-pointer rounded-md text-sm text-primary">
+                      <div className={`w-4 h-4 border border-[var(--dash-border)] rounded-sm flex items-center justify-center ${column.getIsVisible() ? 'bg-[var(--ink-10)]' : ''}`}>
                         <input
                           type="checkbox"
                           checked={column.getIsVisible()}
                           onChange={column.getToggleVisibilityHandler()}
                           className="opacity-0 absolute w-0 h-0"
                         />
-                        {column.getIsVisible() && <div className="w-2 h-2 bg-white rounded-sm" />}
+                        {column.getIsVisible() && <div className="w-2 h-2 bg-[var(--ink)] rounded-sm" />}
                       </div>
                       <span className="capitalize">{column.id === 'runnerRef' ? 'Reference' : column.id}</span>
                     </label>
@@ -1289,16 +1289,16 @@ export default function RegistrantsTable({
       </div>
 
       {/* Table Area — from `lg` up; the cards below take its place under it. */}
-      <div className="dash-desktop-only border border-white/10 rounded-lg overflow-hidden bg-transparent">
+      <div className="dash-desktop-only border border-[var(--dash-border)] rounded-lg overflow-hidden bg-transparent">
         <Table>
           <TableHeader className="bg-transparent">
             {table.getHeaderGroups().map(headerGroup => (
-              <TableRow key={headerGroup.id} className="border-b border-white/10 hover:bg-transparent">
+              <TableRow key={headerGroup.id} className="border-b border-[var(--dash-border)] hover:bg-transparent">
                 {headerGroup.headers.map(header => (
                   <TableHead
                     key={header.id}
                     onClick={header.column.getToggleSortingHandler()}
-                    className={`py-4 px-4 text-gray-400 font-medium h-auto ${header.column.getCanSort() ? 'cursor-pointer select-none' : ''} ${header.column.id === 'runnerRef' ? 'pl-8' : ''}`}
+                    className={`py-4 px-4 text-secondary font-medium h-auto ${header.column.getCanSort() ? 'cursor-pointer select-none' : ''} ${header.column.id === 'runnerRef' ? 'pl-8' : ''}`}
                   >
                     <div className="flex items-center gap-2">
                       {flexRender(
@@ -1318,9 +1318,9 @@ export default function RegistrantsTable({
           <TableBody>
             {table.getRowModel().rows.length > 0 ? (
               table.getRowModel().rows.map(row => (
-                <TableRow key={row.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                <TableRow key={row.id} className="border-b border-[var(--dash-hairline)] hover:bg-[var(--ink-05)] transition-colors">
                   {row.getVisibleCells().map(cell => (
-                    <TableCell key={cell.id} className={`py-4 px-4 text-white ${cell.column.id === 'runnerRef' ? 'pl-8' : ''}`}>
+                    <TableCell key={cell.id} className={`py-4 px-4 text-primary ${cell.column.id === 'runnerRef' ? 'pl-8' : ''}`}>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
@@ -1328,7 +1328,7 @@ export default function RegistrantsTable({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="py-16 text-center text-gray-500">
+                <TableCell colSpan={columns.length} className="py-16 text-center text-[var(--text-muted)]">
                   No registrants found.
                 </TableCell>
               </TableRow>
@@ -1399,7 +1399,7 @@ export default function RegistrantsTable({
           ]}
           actions={row => renderRowActions(row.original, 'card')}
           empty={
-            <div className="border border-white/10 rounded-lg py-16 px-4 text-center text-gray-500">
+            <div className="border border-[var(--dash-border)] rounded-lg py-16 px-4 text-center text-[var(--text-muted)]">
               No registrants found.
             </div>
           }
@@ -1439,19 +1439,19 @@ export default function RegistrantsTable({
       {viewingRunner && (
         // Below `sm` a full-height sheet (.admin-modal-sheet): the sections
         // stack, and the footer at the bottom edge carries every way onward.
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 max-sm:p-0">
+        <div className="fixed inset-0 bg-[var(--dash-scrim)] backdrop-blur-sm z-50 flex items-center justify-center p-4 max-sm:p-0">
           <div
             role="dialog"
             aria-modal="true"
             aria-labelledby="registrant-details-title"
             className="admin-modal-panel admin-modal-sheet bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-clip shadow-2xl"
           >
-            <div className="flex justify-between items-center gap-4 p-6 max-sm:px-4 max-sm:py-3 border-b border-white/10 shrink-0">
-              <h3 id="registrant-details-title" className="text-xl font-semibold text-white">Registrant Details</h3>
+            <div className="flex justify-between items-center gap-4 p-6 max-sm:px-4 max-sm:py-3 border-b border-[var(--dash-border)] shrink-0">
+              <h3 id="registrant-details-title" className="text-xl font-semibold text-primary">Registrant Details</h3>
               <button
                 onClick={() => setViewingRunner(null)}
                 aria-label="Close"
-                className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-full text-gray-400 hover:text-white transition-colors"
+                className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-full text-secondary hover:text-primary transition-colors"
               >
                 <X size={20} />
               </button>
@@ -1460,61 +1460,61 @@ export default function RegistrantsTable({
             <div className="admin-modal-body p-6 max-sm:p-4 overflow-y-auto flex-1">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-4">
-                  <h4 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Runner Info</h4>
+                  <h4 className="text-sm font-semibold text-secondary uppercase tracking-wider">Runner Info</h4>
                   <div className="space-y-2 text-sm">
-                    <p className="flex flex-col"><span className="text-gray-500">Name</span> <span className="text-white font-medium">{viewingRunner.name}</span></p>
-                    <p className="flex flex-col"><span className="text-gray-500">Email</span> <span className="text-white font-medium">{viewingRunner.email}</span></p>
-                    <p className="flex flex-col"><span className="text-gray-500">Phone</span> <span className="text-white font-medium">{viewingRunner.phone}</span></p>
-                    <p className="flex flex-col"><span className="text-gray-500">Gender</span> <span className="text-white font-medium capitalize">{viewingRunner.gender}</span></p>
-                    <p className="flex flex-col"><span className="text-gray-500">Birthdate</span> <span className="text-white font-medium">{viewingRunner.birthdate}</span></p>
+                    <p className="flex flex-col"><span className="text-[var(--text-muted)]">Name</span> <span className="text-primary font-medium">{viewingRunner.name}</span></p>
+                    <p className="flex flex-col"><span className="text-[var(--text-muted)]">Email</span> <span className="text-primary font-medium">{viewingRunner.email}</span></p>
+                    <p className="flex flex-col"><span className="text-[var(--text-muted)]">Phone</span> <span className="text-primary font-medium">{viewingRunner.phone}</span></p>
+                    <p className="flex flex-col"><span className="text-[var(--text-muted)]">Gender</span> <span className="text-primary font-medium capitalize">{viewingRunner.gender}</span></p>
+                    <p className="flex flex-col"><span className="text-[var(--text-muted)]">Birthdate</span> <span className="text-primary font-medium">{viewingRunner.birthdate}</span></p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
-                  <h4 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Race Details</h4>
+                  <h4 className="text-sm font-semibold text-secondary uppercase tracking-wider">Race Details</h4>
                   <div className="space-y-2 text-sm">
-                    <p className="flex flex-col"><span className="text-gray-500">Category</span> <span className="text-white font-medium">{viewingRunner.category}</span></p>
+                    <p className="flex flex-col"><span className="text-[var(--text-muted)]">Category</span> <span className="text-primary font-medium">{viewingRunner.category}</span></p>
                     {/* Fun-run packages have none, and a blank row reads like
                         missing data rather than an absent field. */}
-                    {viewingRunner.distance && <p className="flex flex-col"><span className="text-gray-500">Distance</span> <span className="text-white font-medium">{viewingRunner.distance}</span></p>}
-                    <p className="flex flex-col"><span className="text-gray-500">Shirt Size</span> <span className="text-white font-medium">{viewingRunner.size}</span></p>
+                    {viewingRunner.distance && <p className="flex flex-col"><span className="text-[var(--text-muted)]">Distance</span> <span className="text-primary font-medium">{viewingRunner.distance}</span></p>}
+                    <p className="flex flex-col"><span className="text-[var(--text-muted)]">Shirt Size</span> <span className="text-primary font-medium">{viewingRunner.size}</span></p>
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8 pt-8 border-t border-white/10">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8 pt-8 border-t border-[var(--dash-border)]">
                 <div className="space-y-4">
-                  <h4 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Emergency Contact</h4>
+                  <h4 className="text-sm font-semibold text-secondary uppercase tracking-wider">Emergency Contact</h4>
                   <div className="space-y-2 text-sm">
-                    <p className="flex flex-col"><span className="text-gray-500">Name</span> <span className="text-white font-medium">{viewingRunner.emergencyContactName}</span></p>
-                    <p className="flex flex-col"><span className="text-gray-500">Phone</span> <span className="text-white font-medium">{viewingRunner.emergencyContactPhone}</span></p>
+                    <p className="flex flex-col"><span className="text-[var(--text-muted)]">Name</span> <span className="text-primary font-medium">{viewingRunner.emergencyContactName}</span></p>
+                    <p className="flex flex-col"><span className="text-[var(--text-muted)]">Phone</span> <span className="text-primary font-medium">{viewingRunner.emergencyContactPhone}</span></p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
-                  <h4 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Medical Info</h4>
-                  <div className="text-sm text-white font-medium whitespace-pre-wrap">{viewingRunner.medicalConditions || 'None provided'}</div>
+                  <h4 className="text-sm font-semibold text-secondary uppercase tracking-wider">Medical Info</h4>
+                  <div className="text-sm text-primary font-medium whitespace-pre-wrap">{viewingRunner.medicalConditions || 'None provided'}</div>
                 </div>
                 <div className="space-y-4">
-                  <h4 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Running Community</h4>
-                  <div className="text-sm text-white font-medium">{viewingRunner.runningCommunity || 'Independent Runner'}</div>
+                  <h4 className="text-sm font-semibold text-secondary uppercase tracking-wider">Running Community</h4>
+                  <div className="text-sm text-primary font-medium">{viewingRunner.runningCommunity || 'Independent Runner'}</div>
                 </div>
               </div>
 
-              <div className="mt-8 pt-8 border-t border-white/10 space-y-4">
-                <h4 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Transaction Details</h4>
+              <div className="mt-8 pt-8 border-t border-[var(--dash-border)] space-y-4">
+                <h4 className="text-sm font-semibold text-secondary uppercase tracking-wider">Transaction Details</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                   {/* Only on a group order, where the two differ. A solo
                       registration's runner reference *is* its order reference,
                       so printing it twice would say nothing twice. */}
                   {viewingRunner.runnerRef !== viewingRunner.orderRef && (
-                    <p className="flex flex-col"><span className="text-gray-500">Runner Ref</span> <span className="text-white font-medium">{viewingRunner.runnerRef}</span></p>
+                    <p className="flex flex-col"><span className="text-[var(--text-muted)]">Runner Ref</span> <span className="text-primary font-medium">{viewingRunner.runnerRef}</span></p>
                   )}
                   {/* The order reference is kept beside it: this runner's ref
                       identifies the person, the order ref is what the whole
                       group paid under and what a bank line will match. */}
-                  <p className="flex flex-col"><span className="text-gray-500">Order Ref</span> <span className="text-white font-medium">{viewingRunner.orderRef}</span></p>
-                  <p className="flex flex-col"><span className="text-gray-500">Status</span>
+                  <p className="flex flex-col"><span className="text-[var(--text-muted)]">Order Ref</span> <span className="text-primary font-medium">{viewingRunner.orderRef}</span></p>
+                  <p className="flex flex-col"><span className="text-[var(--text-muted)]">Status</span>
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium w-fit mt-1 ${statusPillClass(viewingRunner.status)}`}>
                       {viewingRunner.status}
                     </span>
@@ -1523,7 +1523,7 @@ export default function RegistrantsTable({
                         and what it gave back. Without this the organizer is
                         looking at an order that changed on its own. */}
                     {viewingRunner.status === 'EXPIRED' && (
-                      <span className="text-xs text-gray-500 mt-1.5">
+                      <span className="text-xs text-[var(--text-muted)] mt-1.5">
                         Unpaid online checkout, released
                         {viewingRunner.expiredAt
                           ? ` on ${new Date(viewingRunner.expiredAt).toLocaleString()}`
@@ -1538,22 +1538,22 @@ export default function RegistrantsTable({
                     {permissions.activity && (
                       <Link
                         href={orderActivityPath(viewingRunner.orderRef, eventId)}
-                        className="text-xs font-medium text-accent-blue hover:underline mt-1.5 w-fit"
+                        className="text-xs font-medium text-accent-blue-ink hover:underline mt-1.5 w-fit"
                       >
                         See this order&rsquo;s activity
                       </Link>
                     )}
                   </p>
-                  <p className="flex flex-col"><span className="text-gray-500">Payment Method</span> <span className="text-white font-medium">{viewingRunner.paymentMethod}</span></p>
-                  <p className="flex flex-col"><span className="text-gray-500">Logistics</span> <span className="text-white font-medium">{viewingRunner.logisticsMethod}</span></p>
+                  <p className="flex flex-col"><span className="text-[var(--text-muted)]">Payment Method</span> <span className="text-primary font-medium">{viewingRunner.paymentMethod}</span></p>
+                  <p className="flex flex-col"><span className="text-[var(--text-muted)]">Logistics</span> <span className="text-primary font-medium">{viewingRunner.logisticsMethod}</span></p>
                   {viewingRunner.isDelivery && viewingRunner.deliveryZone && (
-                    <p className="flex flex-col"><span className="text-gray-500">Delivery Area</span> <span className="text-white font-medium">{viewingRunner.deliveryZone}</span></p>
+                    <p className="flex flex-col"><span className="text-[var(--text-muted)]">Delivery Area</span> <span className="text-primary font-medium">{viewingRunner.deliveryZone}</span></p>
                   )}
                   {viewingRunner.isDelivery && (
-                    <p className="flex flex-col sm:col-span-2"><span className="text-gray-500">Address</span> <span className="text-white font-medium">{viewingRunner.deliveryAddress}</span></p>
+                    <p className="flex flex-col sm:col-span-2"><span className="text-[var(--text-muted)]">Address</span> <span className="text-primary font-medium">{viewingRunner.deliveryAddress}</span></p>
                   )}
                   {viewingRunner.isBankTransfer && viewingRunner.transactionNumber && (
-                    <p className="flex flex-col"><span className="text-gray-500">Transaction No.</span> <span className="text-white font-medium">{viewingRunner.transactionNumber}</span></p>
+                    <p className="flex flex-col"><span className="text-[var(--text-muted)]">Transaction No.</span> <span className="text-primary font-medium">{viewingRunner.transactionNumber}</span></p>
                   )}
                   {/* Only when there was one. A discount is the usual reason a
                       transfer arrives short of the sticker price, so the code
@@ -1561,39 +1561,39 @@ export default function RegistrantsTable({
                       a report nobody opens mid-phone-call. */}
                   {viewingRunner.discountAmount > 0 && (
                     <p className="flex flex-col">
-                      <span className="text-gray-500">Discount</span>
-                      <span className="text-white font-medium">
+                      <span className="text-[var(--text-muted)]">Discount</span>
+                      <span className="text-primary font-medium">
                         −₱{formatPesos(viewingRunner.discountAmount)}
                         {viewingRunner.promoCode && (
-                          <span className="text-gray-500 font-normal"> &middot; {viewingRunner.promoCode}</span>
+                          <span className="text-[var(--text-muted)] font-normal"> &middot; {viewingRunner.promoCode}</span>
                         )}
                       </span>
                     </p>
                   )}
-                  <p className="flex flex-col"><span className="text-gray-500">Order Total</span> <span className="text-white font-medium">₱{formatPesos(viewingRunner.totalAmount)}</span></p>
+                  <p className="flex flex-col"><span className="text-[var(--text-muted)]">Order Total</span> <span className="text-primary font-medium">₱{formatPesos(viewingRunner.totalAmount)}</span></p>
                   <p className="flex flex-col">
-                    <span className="text-gray-500">Waiver Consent</span>
+                    <span className="text-[var(--text-muted)]">Waiver Consent</span>
                     {viewingRunner.consentGiven ? (
-                      <span className="inline-flex items-center gap-1 text-green-400 font-medium w-fit mt-1">
+                      <span className="inline-flex items-center gap-1 text-[var(--status-success)] font-medium w-fit mt-1">
                         Agreed
                         {viewingRunner.consentGivenAt && (
-                          <span className="text-gray-500 font-normal">
+                          <span className="text-[var(--text-muted)] font-normal">
                             &middot; {new Date(viewingRunner.consentGivenAt).toLocaleString()}
                           </span>
                         )}
                       </span>
                     ) : (
-                      <span className="text-orange-400 font-medium w-fit mt-1">
+                      <span className="text-[var(--status-warning)] font-medium w-fit mt-1">
                         Not on record
                       </span>
                     )}
                   </p>
                   <p className="flex flex-col">
-                    <span className="text-gray-500">Signed By</span>
+                    <span className="text-[var(--text-muted)]">Signed By</span>
                     {/* The name typed under the tick. Registrations taken
                         before a signature was asked for say so plainly rather
                         than showing an empty line that reads like a bug. */}
-                    <span className={`font-medium ${viewingRunner.consentSignature ? 'text-white' : 'text-gray-500 italic'}`}>
+                    <span className={`font-medium ${viewingRunner.consentSignature ? 'text-primary' : 'text-[var(--text-muted)] italic'}`}>
                       {viewingRunner.consentSignature || 'Not asked at the time'}
                     </span>
                   </p>
@@ -1604,28 +1604,28 @@ export default function RegistrantsTable({
                     emails them. */}
                 <div className="mt-6">
                   <div className="flex items-center justify-between gap-4 mb-2">
-                    <p className="text-gray-500 text-sm m-0">Remarks (internal)</p>
+                    <p className="text-[var(--text-muted)] text-sm m-0">Remarks (internal)</p>
                     {permissions.remark && (
                       <button
                         onClick={() => openRemarksModal(viewingRunner.id)}
-                        className="text-xs font-medium text-accent-blue hover:underline bg-transparent border-none cursor-pointer p-0"
+                        className="text-xs font-medium text-accent-blue-ink hover:underline bg-transparent border-none cursor-pointer p-0"
                       >
                         {viewingRunner.remarks ? 'Edit remarks' : 'Add remarks'}
                       </button>
                     )}
                   </div>
                   {viewingRunner.remarks ? (
-                    <div className="rounded-lg border border-white/10 bg-black/30 p-4">
-                      <p className="text-sm text-white whitespace-pre-wrap m-0">{viewingRunner.remarks}</p>
+                    <div className="rounded-lg border border-[var(--dash-border)] bg-[var(--dash-surface)] p-4">
+                      <p className="text-sm text-primary whitespace-pre-wrap m-0">{viewingRunner.remarks}</p>
                       {(viewingRunner.remarksBy || viewingRunner.remarksAt) && (
-                        <p className="text-xs text-gray-500 mt-3 m-0">
+                        <p className="text-xs text-[var(--text-muted)] mt-3 m-0">
                           {viewingRunner.remarksBy || 'Unknown'}
                           {viewingRunner.remarksAt && ` \u00b7 ${new Date(viewingRunner.remarksAt).toLocaleString()}`}
                         </p>
                       )}
                     </div>
                   ) : (
-                    <p className="text-sm text-gray-500 italic m-0">No remarks yet.</p>
+                    <p className="text-sm text-[var(--text-muted)] italic m-0">No remarks yet.</p>
                   )}
                 </div>
 
@@ -1635,11 +1635,11 @@ export default function RegistrantsTable({
                     order, not about the person on this row. */}
                 <div className="mt-6">
                   <div className="flex items-center justify-between gap-4 mb-2">
-                    <p className="text-gray-500 text-sm m-0">Email Delivery</p>
+                    <p className="text-[var(--text-muted)] text-sm m-0">Email Delivery</p>
                     {permissions.email && (
                       <button
                         onClick={() => openEmailModal(viewingRunner.id)}
-                        className="text-xs font-medium text-accent-blue hover:underline bg-transparent border-none cursor-pointer p-0"
+                        className="text-xs font-medium text-accent-blue-ink hover:underline bg-transparent border-none cursor-pointer p-0"
                       >
                         {viewingRunner.emailPending ? 'Send by hand' : 'View email'}
                       </button>
@@ -1647,15 +1647,15 @@ export default function RegistrantsTable({
                   </div>
                   {viewingRunner.emailPending ? (
                     <div className="space-y-1">
-                      <p className="text-sm text-red-400 m-0">
+                      <p className="text-sm text-[var(--status-danger)] m-0">
                         The {viewingRunner.emailPendingLabel} email has not gone out.
                       </p>
                       {viewingRunner.lastEmailError && (
-                        <p className="text-xs text-gray-500 m-0">{viewingRunner.lastEmailError}</p>
+                        <p className="text-xs text-[var(--text-muted)] m-0">{viewingRunner.lastEmailError}</p>
                       )}
                     </div>
                   ) : (
-                    <p className="text-sm text-green-400 m-0">
+                    <p className="text-sm text-[var(--status-success)] m-0">
                       Sent
                       {viewingRunner.manualEmailSentBy
                         ? ` · last one by hand, by ${viewingRunner.manualEmailSentBy}`
@@ -1670,11 +1670,11 @@ export default function RegistrantsTable({
                 {permissions.proof && viewingRunner.isBankTransfer && (
                   <div className="mt-6">
                     <div className="flex items-center justify-between gap-4 mb-2">
-                      <p className="text-gray-500 text-sm m-0">Proof of Payment</p>
+                      <p className="text-[var(--text-muted)] text-sm m-0">Proof of Payment</p>
                       {viewingRunner.proofOfPayment && (
                         <button
                           onClick={() => setProofRunner(viewingRunner)}
-                          className="text-xs font-medium text-accent-blue hover:underline bg-transparent border-none cursor-pointer p-0"
+                          className="text-xs font-medium text-accent-blue-ink hover:underline bg-transparent border-none cursor-pointer p-0"
                         >
                           View fullscreen
                         </button>
@@ -1689,7 +1689,7 @@ export default function RegistrantsTable({
                         type="button"
                         onClick={() => setProofRunner(viewingRunner)}
                         aria-label="Open the proof of payment full screen"
-                        className="group relative w-full rounded-lg overflow-hidden border border-white/10 max-h-[300px] max-sm:max-h-none flex items-center justify-center bg-black/50 cursor-zoom-in p-0 hover:border-white/30 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                        className="group relative w-full rounded-lg overflow-hidden border border-[var(--dash-border)] max-h-[300px] max-sm:max-h-none flex items-center justify-center bg-[var(--dash-sunken)] cursor-zoom-in p-0 hover:border-[var(--ink-30)] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ink)]"
                       >
                         {/*
                           Receipts are private blobs — there is no permanently valid
@@ -1703,9 +1703,9 @@ export default function RegistrantsTable({
                           renders the document itself.
                         */}
                         {viewingRunner.proofIsPdf ? (
-                          <span className="flex flex-col items-center gap-2 py-10 text-gray-400">
-                            <FileText size={32} className="text-accent-blue" aria-hidden="true" />
-                            <span className="text-sm font-medium text-white">PDF receipt</span>
+                          <span className="flex flex-col items-center gap-2 py-10 text-secondary">
+                            <FileText size={32} className="text-accent-blue-ink" aria-hidden="true" />
+                            <span className="text-sm font-medium text-primary">PDF receipt</span>
                             <span className="text-xs">Click to read it full screen</span>
                           </span>
                         ) : (
@@ -1720,7 +1720,7 @@ export default function RegistrantsTable({
                         </span>
                       </button>
                     ) : (
-                      <div className="border border-dashed border-white/20 rounded-lg p-8 flex flex-col items-center justify-center text-gray-500">
+                      <div className="border border-dashed border-[var(--ink-20)] rounded-lg p-8 flex flex-col items-center justify-center text-[var(--text-muted)]">
                         <Eye size={24} className="mb-2 opacity-50" />
                         <p className="text-sm">No proof attached yet</p>
                       </div>
@@ -1733,7 +1733,7 @@ export default function RegistrantsTable({
             {/* On a phone the footer holds only the actions below, so a role
                 with none of them (an encoder, a viewer) gets no empty bar. */}
             <div
-              className={`admin-modal-footer p-6 max-sm:p-4 border-t border-white/10 flex justify-between items-center bg-black/20 shrink-0 ${
+              className={`admin-modal-footer p-6 max-sm:p-4 border-t border-[var(--dash-border)] flex justify-between items-center bg-[var(--dash-sunken)] shrink-0 ${
                 (permissions.validate && needsValidation(viewingRunner)) ||
                 (permissions.proof && viewingRunner.isBankTransfer && viewingRunner.proofOfPayment) ||
                 permissions.remark ||
@@ -1798,7 +1798,7 @@ export default function RegistrantsTable({
               )}
               <button
                 onClick={() => setViewingRunner(null)}
-                className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white transition-colors max-sm:hidden"
+                className="px-4 py-2 text-sm font-medium text-[var(--ink-85)] hover:text-primary transition-colors max-sm:hidden"
               >
                 Close
               </button>
@@ -1827,7 +1827,7 @@ export default function RegistrantsTable({
 
       {/* Edit Modal */}
       <div
-        className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
+        className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--dash-scrim)] backdrop-blur-sm transition-opacity duration-200 ${
           isEditOpen && !isEditClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
       >
@@ -1837,12 +1837,12 @@ export default function RegistrantsTable({
           aria-labelledby="edit-registrant-title"
           className={`t-modal admin-modal-panel w-full max-w-2xl bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-2xl shadow-2xl flex flex-col max-h-[90vh] ${isEditOpen ? 'is-open' : ''} ${isEditClosing ? 'is-closing' : ''}`}
         >
-          <div className="p-6 max-sm:px-4 max-sm:py-3 border-b border-white/10 flex justify-between items-center gap-4 shrink-0">
-            <h3 id="edit-registrant-title" className="text-xl font-semibold text-white">Edit Registrant</h3>
+          <div className="p-6 max-sm:px-4 max-sm:py-3 border-b border-[var(--dash-border)] flex justify-between items-center gap-4 shrink-0">
+            <h3 id="edit-registrant-title" className="text-xl font-semibold text-primary">Edit Registrant</h3>
             <button
               onClick={closeEditModal}
               aria-label="Close"
-              className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-full text-gray-400 hover:text-white transition-colors"
+              className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-full text-secondary hover:text-primary transition-colors"
             >
               <X size={20} />
             </button>
@@ -1959,8 +1959,8 @@ export default function RegistrantsTable({
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-white/10">
-                  <h4 className="text-white font-medium mb-4">Emergency Contact</h4>
+                <div className="pt-4 border-t border-[var(--dash-border)]">
+                  <h4 className="text-primary font-medium mb-4">Emergency Contact</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="form-group">
                       <label className="form-label" htmlFor="edit-runner-emergency-name">Contact Name</label>
@@ -1991,11 +1991,11 @@ export default function RegistrantsTable({
             )}
           </div>
 
-          <div className="admin-modal-footer p-6 max-sm:p-4 border-t border-white/10 flex justify-end gap-3 shrink-0 bg-black/20">
+          <div className="admin-modal-footer p-6 max-sm:p-4 border-t border-[var(--dash-border)] flex justify-end gap-3 shrink-0 bg-[var(--dash-sunken)]">
             <button
               type="button"
               onClick={closeEditModal}
-              className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white transition-colors"
+              className="px-4 py-2 text-sm font-medium text-[var(--ink-85)] hover:text-primary transition-colors"
             >
               Cancel
             </button>
@@ -2003,7 +2003,7 @@ export default function RegistrantsTable({
               type="submit"
               form="edit-runner-form"
               disabled={isSaving}
-              className="px-6 py-2 bg-white text-black rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
+              className="px-6 py-2 bg-[var(--dash-inverse-bg)] text-[var(--dash-inverse-fg)] rounded-lg text-sm font-medium hover:bg-[var(--dash-inverse-hover)] transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
             >
               {isSaving ? <BusyLabel>Saving</BusyLabel> : 'Save Changes'}
             </button>
@@ -2013,7 +2013,7 @@ export default function RegistrantsTable({
 
       {/* Delete Confirmation Modal */}
       <div
-        className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
+        className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--dash-scrim)] backdrop-blur-sm transition-opacity duration-200 ${
           isDeleteOpen && !isDeleteClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
       >
@@ -2024,17 +2024,17 @@ export default function RegistrantsTable({
           className={`t-modal admin-modal-panel w-full max-w-md bg-[var(--dash-panel-solid)] border border-red-500/20 rounded-2xl shadow-2xl p-6 max-sm:p-4 flex flex-col gap-6 ${isDeleteOpen ? 'is-open' : ''} ${isDeleteClosing ? 'is-closing' : ''}`}
         >
           <div className="admin-modal-body flex flex-col gap-2">
-            <h3 id="delete-registrant-title" className="text-xl font-semibold text-white">Delete Registrant</h3>
-            <p className="text-gray-400 text-sm leading-relaxed [overflow-wrap:anywhere]">
+            <h3 id="delete-registrant-title" className="text-xl font-semibold text-primary">Delete Registrant</h3>
+            <p className="text-secondary text-sm leading-relaxed [overflow-wrap:anywhere]">
               Are you sure you want to delete {deletingRunner?.name}? This action cannot be undone and will permanently remove them from the database.
             </p>
           </div>
 
-          <div className="admin-modal-footer flex justify-end gap-3 pt-2 border-t border-white/5">
+          <div className="admin-modal-footer flex justify-end gap-3 pt-2 border-t border-[var(--dash-hairline)]">
             <button
               type="button"
               onClick={closeDeleteModal}
-              className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white transition-colors"
+              className="px-4 py-2 text-sm font-medium text-[var(--ink-85)] hover:text-primary transition-colors"
             >
               Cancel
             </button>
@@ -2052,7 +2052,7 @@ export default function RegistrantsTable({
 
       {/* Bulk Delete Confirmation Modal */}
       <div
-        className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
+        className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--dash-scrim)] backdrop-blur-sm transition-opacity duration-200 ${
           isBulkDeleteOpen && !isBulkDeleteClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
       >
@@ -2063,17 +2063,17 @@ export default function RegistrantsTable({
           className={`t-modal admin-modal-panel w-full max-w-md bg-[var(--dash-panel-solid)] border border-red-500/20 rounded-2xl shadow-2xl p-6 max-sm:p-4 flex flex-col gap-6 ${isBulkDeleteOpen ? 'is-open' : ''} ${isBulkDeleteClosing ? 'is-closing' : ''}`}
         >
           <div className="admin-modal-body flex flex-col gap-2">
-            <h3 id="bulk-delete-registrants-title" className="text-xl font-semibold text-white">Delete Selected Registrants</h3>
-            <p className="text-gray-400 text-sm leading-relaxed">
+            <h3 id="bulk-delete-registrants-title" className="text-xl font-semibold text-primary">Delete Selected Registrants</h3>
+            <p className="text-secondary text-sm leading-relaxed">
               Are you sure you want to delete the {table.getSelectedRowModel().rows.length} selected registrants? This action cannot be undone and will permanently remove them from the database.
             </p>
           </div>
 
-          <div className="admin-modal-footer flex justify-end gap-3 pt-2 border-t border-white/5">
+          <div className="admin-modal-footer flex justify-end gap-3 pt-2 border-t border-[var(--dash-hairline)]">
             <button
               type="button"
               onClick={closeBulkDeleteModal}
-              className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white transition-colors"
+              className="px-4 py-2 text-sm font-medium text-[var(--ink-85)] hover:text-primary transition-colors"
             >
               Cancel
             </button>
@@ -2103,7 +2103,7 @@ export default function RegistrantsTable({
         assigned staff member follows up by hand.
       */}
       <div
-        className={`fixed inset-0 z-50 flex items-center justify-center p-4 max-sm:p-3 max-sm:items-start bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
+        className={`fixed inset-0 z-50 flex items-center justify-center p-4 max-sm:p-3 max-sm:items-start bg-[var(--dash-scrim)] backdrop-blur-sm transition-opacity duration-200 ${
           isRemarksOpen && !isRemarksClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
       >
@@ -2116,11 +2116,11 @@ export default function RegistrantsTable({
           aria-labelledby="remarks-modal-title"
           className={`t-modal admin-modal-panel w-full max-w-lg bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-2xl shadow-2xl flex flex-col ${isRemarksOpen ? 'is-open' : ''} ${isRemarksClosing ? 'is-closing' : ''}`}
         >
-          <div className="p-6 max-sm:px-4 max-sm:py-3 border-b border-white/10 flex justify-between items-start gap-4 shrink-0">
+          <div className="p-6 max-sm:px-4 max-sm:py-3 border-b border-[var(--dash-border)] flex justify-between items-start gap-4 shrink-0">
             <div className="min-w-0">
-              <h3 id="remarks-modal-title" className="text-xl font-semibold text-white m-0">Payment Remarks</h3>
+              <h3 id="remarks-modal-title" className="text-xl font-semibold text-primary m-0">Payment Remarks</h3>
               {remarkingRunner && (
-                <p className="text-sm text-gray-400 mt-1 m-0 [overflow-wrap:anywhere]">
+                <p className="text-sm text-secondary mt-1 m-0 [overflow-wrap:anywhere]">
                   Order {remarkingRunner.orderRef} &middot;{' '}
                   {runnersOnOrder(remarkingRunner) > 1
                     ? `${runnersOnOrder(remarkingRunner)} runners`
@@ -2131,14 +2131,14 @@ export default function RegistrantsTable({
             <button
               onClick={closeRemarksModal}
               aria-label="Close"
-              className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-full text-gray-400 hover:text-white transition-colors bg-transparent border-none cursor-pointer p-0"
+              className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-full text-secondary hover:text-primary transition-colors bg-transparent border-none cursor-pointer p-0"
             >
               <X size={20} />
             </button>
           </div>
 
           <div className="admin-modal-body p-6 max-sm:p-4 space-y-3">
-            <label htmlFor="registration-remarks" className="block text-sm text-gray-400">
+            <label htmlFor="registration-remarks" className="block text-sm text-secondary">
               What did you find when you checked this payment?
             </label>
             <textarea
@@ -2147,27 +2147,27 @@ export default function RegistrantsTable({
               onChange={e => setRemarksDraft(e.target.value)}
               rows={5}
               placeholder="e.g. Deposit slip is for ₱1,200 but the order total is ₱1,500. Called the runner on 09/06."
-              className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-base text-white placeholder-gray-500 focus:outline-none focus:border-white/30 resize-y"
+              className="w-full bg-[var(--dash-surface)] border border-[var(--dash-border)] rounded-lg px-4 py-3 text-base text-primary placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--ink-30)] resize-y"
             />
-            <p className="text-xs text-gray-500 m-0">
+            <p className="text-xs text-[var(--text-muted)] m-0">
               Internal only. The runner is never shown this and no email is sent
               {remarkingRunner && runnersOnOrder(remarkingRunner) > 1
                 ? '. It applies to every runner on this order.'
                 : '.'}
             </p>
             {remarkingRunner?.remarksBy && remarkingRunner?.remarksAt && (
-              <p className="text-xs text-gray-500 m-0">
+              <p className="text-xs text-[var(--text-muted)] m-0">
                 Last written by {remarkingRunner.remarksBy} on{' '}
                 {new Date(remarkingRunner.remarksAt).toLocaleString()}.
               </p>
             )}
           </div>
 
-          <div className="admin-modal-footer p-6 max-sm:p-4 border-t border-white/10 flex justify-end gap-3 bg-black/20 shrink-0">
+          <div className="admin-modal-footer p-6 max-sm:p-4 border-t border-[var(--dash-border)] flex justify-end gap-3 bg-[var(--dash-sunken)] shrink-0">
             <button
               type="button"
               onClick={closeRemarksModal}
-              className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white transition-colors bg-transparent border-none cursor-pointer"
+              className="px-4 py-2 text-sm font-medium text-[var(--ink-85)] hover:text-primary transition-colors bg-transparent border-none cursor-pointer"
             >
               Cancel
             </button>
@@ -2175,7 +2175,7 @@ export default function RegistrantsTable({
               type="button"
               onClick={handleRemarksSave}
               disabled={isSavingRemarks || (!remarksDraft.trim() && !remarkingRunner?.remarks)}
-              className="px-6 py-2 bg-white text-black rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
+              className="px-6 py-2 bg-[var(--dash-inverse-bg)] text-[var(--dash-inverse-fg)] rounded-lg text-sm font-medium hover:bg-[var(--dash-inverse-hover)] transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
             >
               {isSavingRemarks
                 ? <BusyLabel>Saving</BusyLabel>
@@ -2210,7 +2210,7 @@ export default function RegistrantsTable({
         would leak its styles into the admin and inherit the admin's own.
       */}
       <div
-        className={`fixed inset-0 z-50 flex items-center justify-center p-4 max-sm:p-3 bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
+        className={`fixed inset-0 z-50 flex items-center justify-center p-4 max-sm:p-3 bg-[var(--dash-scrim)] backdrop-blur-sm transition-opacity duration-200 ${
           isEmailOpen && !isEmailClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
       >
@@ -2220,13 +2220,13 @@ export default function RegistrantsTable({
           aria-labelledby="email-modal-title"
           className={`t-modal admin-modal-panel w-full max-w-2xl bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-2xl shadow-2xl flex flex-col max-h-[90vh] ${isEmailOpen ? 'is-open' : ''} ${isEmailClosing ? 'is-closing' : ''}`}
         >
-          <div className="p-6 max-sm:px-4 max-sm:py-3 border-b border-white/10 flex justify-between items-start gap-4 shrink-0">
+          <div className="p-6 max-sm:px-4 max-sm:py-3 border-b border-[var(--dash-border)] flex justify-between items-start gap-4 shrink-0">
             <div className="min-w-0">
-              <h3 id="email-modal-title" className="text-xl font-semibold text-white m-0">
+              <h3 id="email-modal-title" className="text-xl font-semibold text-primary m-0">
                 {emailMessage && !emailMessage.outstanding ? 'Email Already Sent' : 'Send This Email By Hand'}
               </h3>
               {emailRunner && (
-                <p className="text-sm text-gray-400 mt-1 m-0 [overflow-wrap:anywhere]">
+                <p className="text-sm text-secondary mt-1 m-0 [overflow-wrap:anywhere]">
                   Order {emailRunner.orderRef} &middot;{' '}
                   {runnersOnOrder(emailRunner) > 1
                     ? `${runnersOnOrder(emailRunner)} runners`
@@ -2238,42 +2238,42 @@ export default function RegistrantsTable({
             <button
               onClick={closeEmailModal}
               aria-label="Close"
-              className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-full text-gray-400 hover:text-white transition-colors bg-transparent border-none cursor-pointer p-0"
+              className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-full text-secondary hover:text-primary transition-colors bg-transparent border-none cursor-pointer p-0"
             >
               <X size={20} />
             </button>
           </div>
 
           <div className="admin-modal-body p-6 max-sm:p-4 overflow-y-auto flex-1 space-y-4">
-            {isLoadingEmail && <p className="text-sm text-gray-400 m-0">Preparing the email&hellip;</p>}
+            {isLoadingEmail && <p className="text-sm text-secondary m-0">Preparing the email&hellip;</p>}
 
             {!isLoadingEmail && emailLoadError && (
-              <p className="text-sm text-red-400 m-0">{emailLoadError}</p>
+              <p className="text-sm text-[var(--status-danger)] m-0">{emailLoadError}</p>
             )}
 
             {!isLoadingEmail && emailMessage && (
               <>
-                <div className="rounded-lg border border-white/10 bg-black/30 p-4 space-y-3 text-sm">
+                <div className="rounded-lg border border-[var(--dash-border)] bg-[var(--dash-surface)] p-4 space-y-3 text-sm">
                   <span className="flex flex-col">
-                    <span className="text-gray-500">To</span>
-                    <span className="text-white font-medium break-all select-all">{emailMessage.to}</span>
+                    <span className="text-[var(--text-muted)]">To</span>
+                    <span className="text-primary font-medium break-all select-all">{emailMessage.to}</span>
                   </span>
                   <span className="flex flex-col">
-                    <span className="text-gray-500">Subject</span>
-                    <span className="text-white font-medium select-all [overflow-wrap:anywhere]">{emailMessage.subject}</span>
+                    <span className="text-[var(--text-muted)]">Subject</span>
+                    <span className="text-primary font-medium select-all [overflow-wrap:anywhere]">{emailMessage.subject}</span>
                   </span>
                 </div>
 
                 {/* Resend's own words, so a quota stop is not mistaken for a
                     bad address — the two need opposite responses. */}
                 {emailMessage.lastEmailError && (
-                  <p className="text-xs text-red-400 m-0 [overflow-wrap:anywhere]">
+                  <p className="text-xs text-[var(--status-danger)] m-0 [overflow-wrap:anywhere]">
                     Last delivery attempt failed: {emailMessage.lastEmailError}
                   </p>
                 )}
 
                 {!emailMessage.outstanding && (
-                  <p className="text-xs text-gray-500 m-0">
+                  <p className="text-xs text-[var(--text-muted)] m-0">
                     This one already went out
                     {emailMessage.manualEmailSentAt && emailMessage.manualEmailSentBy
                       ? `, sent by hand by ${emailMessage.manualEmailSentBy} on ${new Date(emailMessage.manualEmailSentAt).toLocaleString()}`
@@ -2282,7 +2282,7 @@ export default function RegistrantsTable({
                   </p>
                 )}
 
-                <div className="rounded-lg overflow-hidden border border-white/10 bg-black/50">
+                <div className="rounded-lg overflow-hidden border border-[var(--dash-border)] bg-[var(--dash-sunken)]">
                   <iframe
                     srcDoc={previewEmailHtml(emailMessage.html)}
                     sandbox=""
@@ -2295,7 +2295,7 @@ export default function RegistrantsTable({
                   <button
                     type="button"
                     onClick={handleCopyFormattedEmail}
-                    className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors border-none cursor-pointer max-sm:flex-1 max-sm:basis-full max-sm:justify-center max-sm:min-h-11"
+                    className="flex items-center gap-2 px-4 py-2 bg-[var(--dash-inverse-bg)] text-[var(--dash-inverse-fg)] rounded-lg text-sm font-medium hover:bg-[var(--dash-inverse-hover)] transition-colors border-none cursor-pointer max-sm:flex-1 max-sm:basis-full max-sm:justify-center max-sm:min-h-11"
                   >
                     <Copy size={16} />
                     {copyState === 'copied'
@@ -2307,13 +2307,13 @@ export default function RegistrantsTable({
                   <button
                     type="button"
                     onClick={handleOpenInMailApp}
-                    className="flex items-center gap-2 px-4 py-2 border border-white/10 text-white rounded-lg text-sm font-medium hover:bg-white/5 transition-colors bg-transparent cursor-pointer max-sm:flex-1 max-sm:basis-full max-sm:justify-center max-sm:min-h-11"
+                    className="flex items-center gap-2 px-4 py-2 border border-[var(--dash-border)] text-primary rounded-lg text-sm font-medium hover:bg-[var(--ink-05)] transition-colors bg-transparent cursor-pointer max-sm:flex-1 max-sm:basis-full max-sm:justify-center max-sm:min-h-11"
                   >
                     <ExternalLink size={16} /> Open In My Email App
                   </button>
                 </div>
 
-                <p className="text-xs text-gray-500 m-0">
+                <p className="text-xs text-[var(--text-muted)] m-0">
                   Copying keeps the design. Your email app opens with the recipient and subject
                   filled in but a plain-text body, which a long email can have cut short. Send it
                   from your own address, then mark it below so it leaves the list.
@@ -2322,11 +2322,11 @@ export default function RegistrantsTable({
             )}
           </div>
 
-          <div className="admin-modal-footer p-6 max-sm:p-4 border-t border-white/10 flex justify-end items-center gap-3 bg-black/20 shrink-0">
+          <div className="admin-modal-footer p-6 max-sm:p-4 border-t border-[var(--dash-border)] flex justify-end items-center gap-3 bg-[var(--dash-sunken)] shrink-0">
             <button
               type="button"
               onClick={closeEmailModal}
-              className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white transition-colors bg-transparent border-none cursor-pointer"
+              className="px-4 py-2 text-sm font-medium text-[var(--ink-85)] hover:text-primary transition-colors bg-transparent border-none cursor-pointer"
             >
               Close
             </button>

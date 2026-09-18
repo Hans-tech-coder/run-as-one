@@ -265,7 +265,7 @@ export default function ClientsClient() {
       id: 'index',
       header: 'No.',
       cell: ({ row, table }) => (
-        <span className="text-gray-400 font-mono">{rowPosition(table.getSortedRowModel().flatRows, row)}</span>
+        <span className="text-secondary font-mono">{rowPosition(table.getSortedRowModel().flatRows, row)}</span>
       ),
       enableSorting: false,
       enableHiding: false,
@@ -337,7 +337,7 @@ export default function ClientsClient() {
       </header>
 
       <div className="admin-content">
-        <div className="flex flex-col gap-4 w-full text-white">
+        <div className="flex flex-col gap-4 w-full text-primary">
           <div className="admin-toolbar" style={{ padding: '0 0 16px 0', borderBottom: 'none' }}>
             <div className="toolbar-actions" style={{ flex: 1 }}>
               <div className="search-wrapper">
@@ -352,7 +352,7 @@ export default function ClientsClient() {
                 {searchTerm && (
                   <button
                     onClick={() => setSearchTerm('')}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-300 bg-transparent border-none cursor-pointer"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--ink-85)] bg-transparent border-none cursor-pointer"
                     aria-label="Clear search"
                   >
                     <X size={14} />
@@ -430,7 +430,7 @@ export default function ClientsClient() {
                 isLoading ? (
                   <AdminCardListSkeleton cards={3} fields={3} className="is-flush" />
                 ) : (
-                  <div className="border border-white/10 rounded-lg py-16 px-4 text-center text-gray-500">
+                  <div className="border border-[var(--dash-border)] rounded-lg py-16 px-4 text-center text-[var(--text-muted)]">
                     {emptyMessage}
                   </div>
                 )

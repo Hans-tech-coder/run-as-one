@@ -107,7 +107,7 @@ function ActorLine({ row, layout }: { row: ActivityRow; layout: 'table' | 'card'
   const line = row.actorEmail ? `${kind} · ${row.actorEmail}` : kind;
   return (
     <span className="block min-w-0">
-      <span className="block font-semibold text-white [overflow-wrap:anywhere]">{row.actorName}</span>
+      <span className="block font-semibold text-primary [overflow-wrap:anywhere]">{row.actorName}</span>
       <span
         className={`block text-xs text-secondary ${layout === 'table' ? 'truncate' : '[overflow-wrap:anywhere]'}`}
         title={layout === 'table' ? line : undefined}
@@ -137,7 +137,7 @@ function ActionLabel({ row }: { row: ActivityRow }) {
   return isWarningAction(row.action) ? (
     <span className="status-badge danger">{actionLabel(row.action)}</span>
   ) : (
-    <span className="font-medium text-white">{actionLabel(row.action)}</span>
+    <span className="font-medium text-primary">{actionLabel(row.action)}</span>
   );
 }
 
@@ -156,7 +156,7 @@ function EntryDetails({ row }: { row: ActivityRow }) {
             {lines.map(line => (
               <div key={line.field} className="grid gap-x-4 gap-y-0.5 sm:grid-cols-[minmax(8rem,12rem)_1fr]">
                 <dt className="text-secondary">{line.field}</dt>
-                <dd className={`m-0 min-w-0 [overflow-wrap:anywhere] ${line.redacted ? 'text-secondary italic' : 'text-white'}`}>
+                <dd className={`m-0 min-w-0 [overflow-wrap:anywhere] ${line.redacted ? 'text-secondary italic' : 'text-primary'}`}>
                   {line.text}
                 </dd>
               </div>
@@ -170,19 +170,19 @@ function EntryDetails({ row }: { row: ActivityRow }) {
       <dl className="m-0 grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="min-w-0">
           <dt className="text-xs text-secondary">Recorded</dt>
-          <dd className="m-0 text-white">{formatTrailInstant(row.at, true)}</dd>
+          <dd className="m-0 text-primary">{formatTrailInstant(row.at, true)}</dd>
         </div>
         <div className="min-w-0">
           <dt className="text-xs text-secondary">Kind</dt>
-          <dd className="m-0 text-white">{group ?? 'Other'}</dd>
+          <dd className="m-0 text-primary">{group ?? 'Other'}</dd>
         </div>
         <div className="min-w-0">
           <dt className="text-xs text-secondary">IP address</dt>
-          <dd className="m-0 font-mono text-white [overflow-wrap:anywhere]">{row.ip ?? 'Not recorded'}</dd>
+          <dd className="m-0 font-mono text-primary [overflow-wrap:anywhere]">{row.ip ?? 'Not recorded'}</dd>
         </div>
         <div className="min-w-0">
           <dt className="text-xs text-secondary">Device</dt>
-          <dd className="m-0 text-white" title={row.userAgent ?? undefined}>
+          <dd className="m-0 text-primary" title={row.userAgent ?? undefined}>
             {device ?? 'Not recorded'}
           </dd>
         </div>
@@ -398,7 +398,7 @@ export default function ActivityClient({
 
   const emptyMessage = filtered ? (
     <>
-      <p className="m-0 text-white font-medium">Nothing in the trail matches these filters.</p>
+      <p className="m-0 text-primary font-medium">Nothing in the trail matches these filters.</p>
       <p className="m-0 mt-1">Widen the dates or clear a filter to see more.</p>
       <button type="button" onClick={clearFilters} className="btn-filter mt-4 max-lg:min-h-11">
         <RotateCcw size={16} aria-hidden="true" /> Clear filters
@@ -406,7 +406,7 @@ export default function ActivityClient({
     </>
   ) : (
     <>
-      <p className="m-0 text-white font-medium">Nothing has been recorded yet.</p>
+      <p className="m-0 text-primary font-medium">Nothing has been recorded yet.</p>
       <p className="m-0 mt-1">
         Every validated payment, edited runner, opened proof, organizer decision and sign-in will appear here under the name of the person who did it.
       </p>
@@ -416,7 +416,7 @@ export default function ActivityClient({
   const toggle = (id: string) => setOpenId(current => (current === id ? null : id));
 
   return (
-    <div className="flex flex-col gap-4 w-full text-white">
+    <div className="flex flex-col gap-4 w-full text-primary">
       {/* Search and the Filters chip — Dates, Person, Event and Activity, each
           but Dates taking several at once. */}
       <div className="admin-toolbar" style={{ padding: '0 0 4px 0', borderBottom: 'none' }}>
@@ -433,7 +433,7 @@ export default function ActivityClient({
             {search && (
               <button
                 onClick={() => setSearch('')}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-300 bg-transparent border-none cursor-pointer"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--ink-85)] bg-transparent border-none cursor-pointer"
                 aria-label="Clear search"
               >
                 <X size={14} />
@@ -510,31 +510,31 @@ export default function ActivityClient({
         aria-busy={isPending}
       >
         {/* The table, from `lg` up. */}
-        <div className="dash-desktop-only border border-white/10 rounded-lg overflow-hidden bg-transparent">
+        <div className="dash-desktop-only border border-[var(--dash-border)] rounded-lg overflow-hidden bg-transparent">
           <Table>
             <TableHeader className="bg-transparent">
-              <TableRow className="border-b border-white/10 hover:bg-transparent">
-                <TableHead className="py-4 px-4 pl-8 text-gray-400 font-medium h-auto w-28">Time</TableHead>
-                <TableHead className="py-4 px-4 text-gray-400 font-medium h-auto w-[16rem]">Person</TableHead>
-                <TableHead className="py-4 px-4 text-gray-400 font-medium h-auto">What happened</TableHead>
-                <TableHead className="py-4 px-4 text-gray-400 font-medium h-auto w-[14rem]">Event</TableHead>
-                <TableHead className="py-4 px-4 text-gray-400 font-medium h-auto w-28">Details</TableHead>
+              <TableRow className="border-b border-[var(--dash-border)] hover:bg-transparent">
+                <TableHead className="py-4 px-4 pl-8 text-secondary font-medium h-auto w-28">Time</TableHead>
+                <TableHead className="py-4 px-4 text-secondary font-medium h-auto w-[16rem]">Person</TableHead>
+                <TableHead className="py-4 px-4 text-secondary font-medium h-auto">What happened</TableHead>
+                <TableHead className="py-4 px-4 text-secondary font-medium h-auto w-[14rem]">Event</TableHead>
+                <TableHead className="py-4 px-4 text-secondary font-medium h-auto w-28">Details</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {days.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={columnCount} className="py-16 px-4 text-center text-gray-500">
+                  <TableCell colSpan={columnCount} className="py-16 px-4 text-center text-[var(--text-muted)]">
                     {emptyMessage}
                   </TableCell>
                 </TableRow>
               ) : (
                 days.map(group => (
                   <React.Fragment key={group.day}>
-                    <TableRow className="border-b border-white/5 hover:bg-transparent">
+                    <TableRow className="border-b border-[var(--dash-hairline)] hover:bg-transparent">
                       <TableCell
                         colSpan={columnCount}
-                        className="py-2 px-4 pl-8 bg-white/[0.03] text-xs font-semibold uppercase tracking-wider text-secondary"
+                        className="py-2 px-4 pl-8 bg-[var(--ink-03)] text-xs font-semibold uppercase tracking-wider text-secondary"
                       >
                         {formatTrailDayHeading(group.day, now)}
                       </TableCell>
@@ -543,7 +543,7 @@ export default function ActivityClient({
                       const isOpen = openId === row.id;
                       return (
                         <React.Fragment key={row.id}>
-                          <TableRow className={`border-b border-white/5 hover:bg-white/5 transition-colors ${isOpen ? 'bg-white/[0.03]' : ''}`}>
+                          <TableRow className={`border-b border-[var(--dash-hairline)] hover:bg-[var(--ink-05)] transition-colors ${isOpen ? 'bg-[var(--ink-03)]' : ''}`}>
                             <TableCell className="py-4 px-4 pl-8 align-top text-secondary whitespace-nowrap">
                               {formatTrailTime(row.at)}
                             </TableCell>
@@ -558,7 +558,7 @@ export default function ActivityClient({
                                 )}
                               </span>
                             </TableCell>
-                            <TableCell className="py-4 px-4 align-top max-w-[14rem] text-white">
+                            <TableCell className="py-4 px-4 align-top max-w-[14rem] text-primary">
                               <EventLine row={row} />
                             </TableCell>
                             {/* Under its own header, never pushed to the row's right edge (§8, rule 6). */}
@@ -579,9 +579,9 @@ export default function ActivityClient({
                             </TableCell>
                           </TableRow>
                           {isOpen && (
-                            <TableRow className="border-b border-white/5 hover:bg-transparent">
+                            <TableRow className="border-b border-[var(--dash-hairline)] hover:bg-transparent">
                               <TableCell colSpan={columnCount} className="px-4 pl-8 pb-4 pt-0">
-                                <div className="rounded-[12px] border border-white/10 bg-black/30 p-4">
+                                <div className="rounded-[12px] border border-[var(--dash-border)] bg-[var(--dash-surface)] p-4">
                                   <EntryDetails row={row} />
                                 </div>
                               </TableCell>
@@ -600,7 +600,7 @@ export default function ActivityClient({
         {/* The same page of entries as cards, below `lg`, under the same day headings. */}
         <div className="dash-mobile-only">
           {days.length === 0 ? (
-            <div className="border border-white/10 rounded-lg py-12 px-4 text-center text-gray-500">{emptyMessage}</div>
+            <div className="border border-[var(--dash-border)] rounded-lg py-12 px-4 text-center text-[var(--text-muted)]">{emptyMessage}</div>
           ) : (
             <div className="flex flex-col gap-4">
               {days.map(group => (

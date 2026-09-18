@@ -171,7 +171,7 @@ const searchMembers: FilterFn<TeamMemberRow> = (row, _columnId, filterValue) => 
 
 function YouChip() {
   return (
-    <span className="shrink-0 whitespace-nowrap rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-semibold text-secondary">
+    <span className="shrink-0 whitespace-nowrap rounded-full bg-[var(--ink-10)] px-2 py-0.5 text-[11px] font-semibold text-secondary">
       You
     </span>
   );
@@ -187,7 +187,7 @@ function MemberEvents({ member }: { member: TeamMemberRow }) {
     <ul className="m-0 p-0 list-none flex flex-col gap-1">
       {shown.map(assignment => (
         <li key={assignment.eventId} className="text-sm">
-          <span className="text-white">{assignment.eventTitle}</span>
+          <span className="text-primary">{assignment.eventTitle}</span>
           <span className="text-secondary whitespace-nowrap"> &middot; {ROLE_LABELS[assignment.role]}</span>
         </li>
       ))}
@@ -577,9 +577,9 @@ export default function TeamClient({
                 aria-label="Select every row on this page"
                 checked={isChecked}
                 onChange={table.getToggleAllPageRowsSelectedHandler()}
-                className="appearance-none w-4 h-4 rounded border border-white/20 bg-transparent checked:bg-white checked:border-white cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-white/20"
+                className="appearance-none w-4 h-4 rounded border border-[var(--ink-20)] bg-transparent checked:bg-[var(--ink)] checked:border-[var(--ink)] cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ink-20)]"
               />
-              {isChecked && <Check className="absolute text-black pointer-events-none" size={12} strokeWidth={3} />}
+              {isChecked && <Check className="absolute text-[var(--dash-inverse-fg)] pointer-events-none" size={12} strokeWidth={3} />}
             </div>
           </div>
         );
@@ -594,9 +594,9 @@ export default function TeamClient({
                 aria-label={`Select ${row.original.name}`}
                 checked={isChecked}
                 onChange={row.getToggleSelectedHandler()}
-                className="appearance-none w-4 h-4 rounded border border-white/20 bg-transparent checked:bg-white checked:border-white cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-white/20"
+                className="appearance-none w-4 h-4 rounded border border-[var(--ink-20)] bg-transparent checked:bg-[var(--ink)] checked:border-[var(--ink)] cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ink-20)]"
               />
-              {isChecked && <Check className="absolute text-black pointer-events-none" size={12} strokeWidth={3} />}
+              {isChecked && <Check className="absolute text-[var(--dash-inverse-fg)] pointer-events-none" size={12} strokeWidth={3} />}
             </div>
           </div>
         );
@@ -611,7 +611,7 @@ export default function TeamClient({
       // marketing table gives: sorting rebuilds the rows.
       cell: ({ row, table }) => {
         const index = table.getSortedRowModel().flatRows.findIndex(sorted => sorted.id === row.id);
-        return <span className="text-gray-400 font-mono">{index + 1}</span>;
+        return <span className="text-secondary font-mono">{index + 1}</span>;
       },
       enableSorting: false,
       enableHiding: false,
@@ -622,7 +622,7 @@ export default function TeamClient({
       accessorFn: row => row.name,
       cell: ({ row }) => (
         <span className="block min-w-0">
-          <span className="flex items-center gap-2 font-bold text-white">
+          <span className="flex items-center gap-2 font-bold text-primary">
             <span className="truncate">{row.original.name}</span>
             {row.original.isSelf && <YouChip />}
           </span>
@@ -662,7 +662,7 @@ export default function TeamClient({
         const member = row.original;
         if (!member.canManage) {
           return (
-            <span className="text-white/30 pl-2" title={manageReason(member)}>
+            <span className="text-[var(--ink-30)] pl-2" title={manageReason(member)}>
               &mdash;
             </span>
           );
@@ -708,7 +708,7 @@ export default function TeamClient({
 
   return (
     <>
-      <div className="flex flex-col gap-4 w-full text-white">
+      <div className="flex flex-col gap-4 w-full text-primary">
         {/* Top Toolbar */}
         <div className="admin-toolbar" style={{ padding: '0 0 16px 0', borderBottom: 'none' }}>
           <div className="toolbar-actions" style={{ flex: 1 }}>
@@ -724,7 +724,7 @@ export default function TeamClient({
               {globalFilter && (
                 <button
                   onClick={() => setGlobalFilter('')}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-300 bg-transparent border-none cursor-pointer"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--ink-85)] bg-transparent border-none cursor-pointer"
                   aria-label="Clear search"
                 >
                   <X size={14} />
@@ -741,15 +741,15 @@ export default function TeamClient({
               {isViewOpen && (
                 <div className="toolbar-popover absolute right-0 mt-2 bg-[var(--dash-popover)] border border-[var(--dash-border)] rounded-md p-2 min-w-[150px] z-50 shadow-2xl">
                   {table.getAllLeafColumns().filter(col => col.getCanHide()).map(column => (
-                    <label key={column.id} className="flex items-center gap-2 px-2 py-1.5 hover:bg-white/5 cursor-pointer rounded-md text-sm text-white">
-                      <div className={`w-4 h-4 border border-white/10 rounded-sm flex items-center justify-center ${column.getIsVisible() ? 'bg-white/10' : ''}`}>
+                    <label key={column.id} className="flex items-center gap-2 px-2 py-1.5 hover:bg-[var(--ink-05)] cursor-pointer rounded-md text-sm text-primary">
+                      <div className={`w-4 h-4 border border-[var(--dash-border)] rounded-sm flex items-center justify-center ${column.getIsVisible() ? 'bg-[var(--ink-10)]' : ''}`}>
                         <input
                           type="checkbox"
                           checked={column.getIsVisible()}
                           onChange={column.getToggleVisibilityHandler()}
                           className="opacity-0 absolute w-0 h-0"
                         />
-                        {column.getIsVisible() && <div className="w-2 h-2 bg-white rounded-sm" />}
+                        {column.getIsVisible() && <div className="w-2 h-2 bg-[var(--ink)] rounded-sm" />}
                       </div>
                       <span>{COLUMN_LABELS[column.id] ?? column.id}</span>
                     </label>
@@ -771,16 +771,16 @@ export default function TeamClient({
         </div>
 
         {/* Table Area — from `lg` up; the cards below take its place under it. */}
-        <div className="dash-desktop-only border border-white/10 rounded-lg overflow-x-auto bg-transparent">
+        <div className="dash-desktop-only border border-[var(--dash-border)] rounded-lg overflow-x-auto bg-transparent">
           <Table>
             <TableHeader className="bg-transparent">
               {table.getHeaderGroups().map(headerGroup => (
-                <TableRow key={headerGroup.id} className="border-b border-white/10 hover:bg-transparent">
+                <TableRow key={headerGroup.id} className="border-b border-[var(--dash-border)] hover:bg-transparent">
                   {headerGroup.headers.map(header => (
                     <TableHead
                       key={header.id}
                       onClick={header.column.getToggleSortingHandler()}
-                      className={`py-4 px-4 text-gray-400 font-medium h-auto ${header.column.getCanSort() ? 'cursor-pointer select-none' : ''} ${header.column.id === 'member' ? 'pl-8' : ''}`}
+                      className={`py-4 px-4 text-secondary font-medium h-auto ${header.column.getCanSort() ? 'cursor-pointer select-none' : ''} ${header.column.id === 'member' ? 'pl-8' : ''}`}
                     >
                       <div className="flex items-center gap-2">
                         {flexRender(header.column.columnDef.header, header.getContext())}
@@ -797,11 +797,11 @@ export default function TeamClient({
             <TableBody>
               {table.getRowModel().rows.length > 0 ? (
                 table.getRowModel().rows.map(row => (
-                  <TableRow key={row.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                  <TableRow key={row.id} className="border-b border-[var(--dash-hairline)] hover:bg-[var(--ink-05)] transition-colors">
                     {row.getVisibleCells().map(cell => (
                       <TableCell
                         key={cell.id}
-                        className={`py-4 px-4 text-white align-top ${cell.column.id === 'member' ? 'pl-8 max-w-[18rem]' : ''}`}
+                        className={`py-4 px-4 text-primary align-top ${cell.column.id === 'member' ? 'pl-8 max-w-[18rem]' : ''}`}
                       >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
@@ -810,7 +810,7 @@ export default function TeamClient({
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={columns.length} className="py-16 text-center text-gray-500">
+                  <TableCell colSpan={columns.length} className="py-16 text-center text-[var(--text-muted)]">
                     Nobody on the team matches that search.
                   </TableCell>
                 </TableRow>
@@ -867,7 +867,7 @@ export default function TeamClient({
               )
             }
             empty={
-              <div className="border border-white/10 rounded-lg py-16 px-4 text-center text-gray-500">
+              <div className="border border-[var(--dash-border)] rounded-lg py-16 px-4 text-center text-[var(--text-muted)]">
                 Nobody on the team matches that search.
               </div>
             }
@@ -891,7 +891,7 @@ export default function TeamClient({
           the one .btn-light — because a new control copies an existing one. */}
       {modalMounted && draft && (
         <div
-          className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
+          className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--dash-scrim)] backdrop-blur-sm transition-opacity duration-200 ${
             isModalOpen && !isModalClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
           }`}
           onMouseDown={e => {
@@ -906,17 +906,17 @@ export default function TeamClient({
             aria-labelledby="team-form-title"
             className={`t-modal admin-modal-panel w-full max-w-xl bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-2xl shadow-2xl flex flex-col max-h-[90vh] ${isModalOpen ? 'is-open' : ''} ${isModalClosing ? 'is-closing' : ''}`}
           >
-            <div className="p-6 border-b border-white/10 flex justify-between items-start gap-4 shrink-0">
+            <div className="p-6 border-b border-[var(--dash-border)] flex justify-between items-start gap-4 shrink-0">
               <div className="min-w-0">
-                <h3 id="team-form-title" className="text-xl font-semibold text-white m-0 flex items-center gap-2">
+                <h3 id="team-form-title" className="text-xl font-semibold text-primary m-0 flex items-center gap-2">
                   {editing ? (
-                    <UserCog size={20} className="text-accent-blue shrink-0" aria-hidden="true" />
+                    <UserCog size={20} className="text-accent-blue-ink shrink-0" aria-hidden="true" />
                   ) : (
-                    <UserPlus size={20} className="text-accent-orange shrink-0" aria-hidden="true" />
+                    <UserPlus size={20} className="text-accent-orange-ink shrink-0" aria-hidden="true" />
                   )}
                   {editing ? 'Edit Access' : 'Invite a Team Member'}
                 </h3>
-                <p className="text-sm text-gray-400 mt-1 m-0 truncate">
+                <p className="text-sm text-secondary mt-1 m-0 truncate">
                   {editing
                     ? `${editing.name} · ${editing.email}`
                     : 'They choose their own password from the link we email them.'}
@@ -927,7 +927,7 @@ export default function TeamClient({
               <button
                 type="button"
                 onClick={closeModal}
-                className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center text-gray-400 hover:text-white transition-colors bg-transparent border-none cursor-pointer p-0"
+                className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center text-secondary hover:text-primary transition-colors bg-transparent border-none cursor-pointer p-0"
                 aria-label="Close"
               >
                 <X size={20} />
@@ -1010,7 +1010,7 @@ export default function TeamClient({
                       {draft.assignments.map((assignment, index) => (
                         <div
                           key={assignment.key}
-                          className="rounded-[10px] border border-white/10 bg-black/30 p-3 flex flex-col gap-1"
+                          className="rounded-[10px] border border-[var(--dash-border)] bg-[var(--dash-surface)] p-3 flex flex-col gap-1"
                         >
                           <div className="grid gap-x-3 sm:grid-cols-2">
                             <AdminSelect
@@ -1070,7 +1070,7 @@ export default function TeamClient({
               )}
             </div>
 
-            <div className="admin-modal-footer p-6 border-t border-white/10 flex justify-end items-center gap-3 bg-black/20 shrink-0">
+            <div className="admin-modal-footer p-6 border-t border-[var(--dash-border)] flex justify-end items-center gap-3 bg-[var(--dash-sunken)] shrink-0">
               <button
                 type="button"
                 onClick={closeModal}

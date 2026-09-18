@@ -201,7 +201,7 @@ export default function ApplicationPanel({
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center p-4 max-sm:p-0 bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 max-sm:p-0 bg-[var(--dash-scrim)] backdrop-blur-sm transition-opacity duration-200 ${
         open && !closing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
       }`}
       onMouseDown={e => {
@@ -217,19 +217,19 @@ export default function ApplicationPanel({
           open ? 'is-open' : ''
         } ${closing ? 'is-closing' : ''}`}
       >
-        <div className="p-6 max-sm:p-4 border-b border-white/10 flex justify-between items-start gap-4 shrink-0">
+        <div className="p-6 max-sm:p-4 border-b border-[var(--dash-border)] flex justify-between items-start gap-4 shrink-0">
           <div className="flex items-start gap-3 min-w-0">
-            <span className="p-2 rounded-lg bg-accent-blue/10 text-accent-blue shrink-0">
+            <span className="p-2 rounded-lg bg-accent-blue/10 text-accent-blue-ink shrink-0">
               <FileText size={20} aria-hidden="true" />
             </span>
             <div className="min-w-0">
               <h3
                 id="client-application-title"
-                className="text-xl font-semibold text-white m-0 [overflow-wrap:anywhere]"
+                className="text-xl font-semibold text-primary m-0 [overflow-wrap:anywhere]"
               >
                 {client.name}
               </h3>
-              <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-gray-400">
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-secondary">
                 {statusBadge}
                 <span>Applied {appliedOn(client.createdAt)}</span>
                 {client.invitedAt && (
@@ -244,7 +244,7 @@ export default function ApplicationPanel({
             ref={closeRef}
             type="button"
             onClick={requestClose}
-            className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center text-gray-400 hover:text-white transition-colors bg-transparent border-none cursor-pointer p-0"
+            className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center text-secondary hover:text-primary transition-colors bg-transparent border-none cursor-pointer p-0"
             aria-label="Close"
           >
             <X size={20} />
@@ -269,7 +269,7 @@ export default function ApplicationPanel({
                     className="min-w-0 sm:col-span-2 flex flex-wrap items-start justify-between gap-x-4 gap-y-1"
                   >
                     <div className="min-w-0">
-                      <div className="text-sm text-white/90 [overflow-wrap:anywhere]">{viewer.staff.name}</div>
+                      <div className="text-sm text-[var(--ink-85)] [overflow-wrap:anywhere]">{viewer.staff.name}</div>
                       <div className="text-xs text-secondary [overflow-wrap:anywhere]">
                         {viewer.staff.email} · Invited {invitedOn(viewer.invitedAt)}
                       </div>
@@ -286,7 +286,7 @@ export default function ApplicationPanel({
           {!hasDetails && (
             // One honest sentence instead of fifteen blanks: these accounts
             // were never asked any of it.
-            <p className="text-sm text-amber-300/90 bg-amber-400/10 border border-amber-400/20 rounded-lg px-4 py-3 m-0">
+            <p className="text-sm text-[var(--tone-amber)] bg-amber-400/10 border border-amber-400/20 rounded-lg px-4 py-3 m-0">
               This submission came from an account created before the application form existed,
               so there are no application details to show. The address below is all it was asked
               for.
@@ -305,7 +305,7 @@ export default function ApplicationPanel({
                       href={website}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-start gap-1.5 text-accent-blue hover:underline break-all"
+                      className="inline-flex items-start gap-1.5 text-accent-blue-ink hover:underline break-all"
                     >
                       {website.replace(/^https?:\/\//i, '')}
                       <ExternalLink size={14} className="shrink-0 mt-0.5" aria-hidden="true" />
@@ -334,7 +334,7 @@ export default function ApplicationPanel({
               value={
                 <a
                   href={`mailto:${client.email}`}
-                  className="inline-flex items-start gap-1.5 text-accent-blue hover:underline [overflow-wrap:anywhere] min-w-0"
+                  className="inline-flex items-start gap-1.5 text-accent-blue-ink hover:underline [overflow-wrap:anywhere] min-w-0"
                 >
                   <Mail size={14} className="shrink-0 mt-0.5" aria-hidden="true" />
                   {client.email}
@@ -348,7 +348,7 @@ export default function ApplicationPanel({
                   client.phone && (
                     <a
                       href={`tel:${client.phone}`}
-                      className="inline-flex items-start gap-1.5 text-accent-blue hover:underline"
+                      className="inline-flex items-start gap-1.5 text-accent-blue-ink hover:underline"
                     >
                       <Phone size={14} className="shrink-0 mt-0.5" aria-hidden="true" />
                       {displayPhone(client.phone)}
@@ -370,7 +370,7 @@ export default function ApplicationPanel({
                       {client.services.map(service => (
                         <li
                           key={service}
-                          className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/90"
+                          className="rounded-full border border-[var(--dash-border)] bg-[var(--ink-05)] px-3 py-1 text-xs text-[var(--ink-85)]"
                         >
                           {organizerServiceLabel(service)}
                         </li>
@@ -404,11 +404,11 @@ export default function ApplicationPanel({
           )}
         </div>
 
-        <div className="admin-modal-footer p-6 max-sm:p-4 border-t border-white/10 flex flex-wrap justify-end gap-3 shrink-0">
+        <div className="admin-modal-footer p-6 max-sm:p-4 border-t border-[var(--dash-border)] flex flex-wrap justify-end gap-3 shrink-0">
           <button
             type="button"
             onClick={requestClose}
-            className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white transition-colors"
+            className="px-4 py-2 text-sm font-medium text-[var(--ink-85)] hover:text-primary transition-colors"
           >
             Close
           </button>
@@ -430,7 +430,7 @@ function Section({
   list?: boolean;
   children: React.ReactNode;
 }) {
-  const frame = 'm-0 grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 rounded-[12px] border border-white/10 bg-black/30 p-4';
+  const frame = 'm-0 grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 rounded-[12px] border border-[var(--dash-border)] bg-[var(--dash-surface)] p-4';
   return (
     <section className="min-w-0">
       <h4 className="m-0 mb-3 text-xs font-bold uppercase tracking-wider text-secondary">
@@ -460,7 +460,7 @@ function Detail({
   return (
     <div className={`min-w-0 ${full ? 'sm:col-span-2' : ''}`}>
       <dt className="mb-1 text-xs text-secondary">{label}</dt>
-      <dd className={`m-0 text-sm ${blank ? 'text-secondary italic' : 'text-white/90'} [overflow-wrap:anywhere]`}>
+      <dd className={`m-0 text-sm ${blank ? 'text-secondary italic' : 'text-[var(--ink-85)]'} [overflow-wrap:anywhere]`}>
         {blank ? 'Not given' : value}
       </dd>
     </div>

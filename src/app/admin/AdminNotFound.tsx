@@ -50,7 +50,7 @@ export default function AdminNotFound({
             <Icon size={48} className="empty-icon" aria-hidden="true" />
 
             <div>
-              <p className="mb-2 text-lg font-bold text-white">
+              <p className="mb-2 text-lg font-bold text-primary">
                 {heading}
               </p>
               {/* No mention of the sidebar: on a phone it is a rail of icons,

@@ -212,7 +212,7 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
 
       <div className="admin-content max-w-4xl mx-auto">
         <div 
-          className={`fixed inset-0 z-50 flex items-center justify-center p-4 max-sm:p-3 bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
+          className={`fixed inset-0 z-50 flex items-center justify-center p-4 max-sm:p-3 bg-[var(--dash-scrim)] backdrop-blur-sm transition-opacity duration-200 ${
             error && !isClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
           }`}
           style={{ zIndex: 100 }}
@@ -222,19 +222,19 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
             role="dialog"
           >
             <div className="admin-modal-body flex items-start gap-4">
-              <div className="p-3 bg-red-500/10 rounded-full text-red-500 shrink-0 mt-1">
+              <div className="p-3 bg-red-500/10 rounded-full text-[var(--status-danger)] shrink-0 mt-1">
                 <AlertCircle size={24} strokeWidth={2} />
               </div>
               <div className="flex min-w-0 flex-col gap-2">
-                <h3 className="text-xl font-semibold text-white">Action Failed</h3>
-                <p className="text-gray-400 text-sm leading-relaxed [overflow-wrap:anywhere]">{error}</p>
+                <h3 className="text-xl font-semibold text-primary">Action Failed</h3>
+                <p className="text-secondary text-sm leading-relaxed [overflow-wrap:anywhere]">{error}</p>
               </div>
             </div>
-            <div className="admin-modal-footer flex justify-end pt-2 border-t border-white/5">
+            <div className="admin-modal-footer flex justify-end pt-2 border-t border-[var(--dash-hairline)]">
               <button 
                 type="button"
                 onClick={closeErrorModal} 
-                className="px-5 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm font-medium text-white transition-colors"
+                className="px-5 py-2 bg-[var(--ink-05)] hover:bg-[var(--ink-10)] border border-[var(--dash-border)] rounded-lg text-sm font-medium text-primary transition-colors"
               >
                 Acknowledge
               </button>
@@ -244,7 +244,7 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
 
         {/* Success Modal */}
         <div 
-          className={`fixed inset-0 z-50 flex items-center justify-center p-4 max-sm:p-3 bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
+          className={`fixed inset-0 z-50 flex items-center justify-center p-4 max-sm:p-3 bg-[var(--dash-scrim)] backdrop-blur-sm transition-opacity duration-200 ${
             successMsg && !isSuccessClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
           }`}
           style={{ zIndex: 100 }}
@@ -254,15 +254,15 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
             role="dialog"
           >
             <div className="admin-modal-body flex items-start gap-4">
-              <div className="p-3 bg-green-500/10 rounded-full text-green-500 shrink-0 mt-1">
+              <div className="p-3 bg-green-500/10 rounded-full text-[var(--status-success)] shrink-0 mt-1">
                 <CheckCircle size={24} strokeWidth={2} />
               </div>
               <div className="flex min-w-0 flex-col gap-2">
-                <h3 className="text-xl font-semibold text-white">Success</h3>
-                <p className="text-gray-400 text-sm leading-relaxed [overflow-wrap:anywhere]">{successMsg}</p>
+                <h3 className="text-xl font-semibold text-primary">Success</h3>
+                <p className="text-secondary text-sm leading-relaxed [overflow-wrap:anywhere]">{successMsg}</p>
               </div>
             </div>
-            <div className="admin-modal-footer flex justify-end pt-2 border-t border-white/5">
+            <div className="admin-modal-footer flex justify-end pt-2 border-t border-[var(--dash-hairline)]">
               <button 
                 type="button"
                 onClick={closeSuccessModal} 

@@ -168,7 +168,7 @@ export default function RecordRemittanceDialog({
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--dash-scrim)] backdrop-blur-sm transition-opacity duration-200 ${
         open && !closing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
       }`}
       onMouseDown={e => {
@@ -183,20 +183,20 @@ export default function RecordRemittanceDialog({
         aria-labelledby="remittance-form-title"
         className={`t-modal admin-modal-panel w-full max-w-xl bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-2xl shadow-2xl flex flex-col max-h-[90vh] ${open ? 'is-open' : ''} ${closing ? 'is-closing' : ''}`}
       >
-        <div className="p-6 border-b border-white/10 flex justify-between items-start gap-4 shrink-0">
+        <div className="p-6 border-b border-[var(--dash-border)] flex justify-between items-start gap-4 shrink-0">
           <div className="min-w-0">
-            <h3 id="remittance-form-title" className="text-xl font-semibold text-white m-0 flex items-center gap-2">
-              <HandCoins size={20} className="text-accent-blue shrink-0" aria-hidden="true" />
+            <h3 id="remittance-form-title" className="text-xl font-semibold text-primary m-0 flex items-center gap-2">
+              <HandCoins size={20} className="text-accent-blue-ink shrink-0" aria-hidden="true" />
               Record a Remittance
             </h3>
-            <p className="text-sm text-gray-400 mt-1 m-0 truncate">
+            <p className="text-sm text-secondary mt-1 m-0 truncate">
               {eventTitle} · balance {formatSignedPesos(balance)}
             </p>
           </div>
           <button
             type="button"
             onClick={() => !busy && close()}
-            className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center text-gray-400 hover:text-white transition-colors bg-transparent border-none cursor-pointer p-0"
+            className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center text-secondary hover:text-primary transition-colors bg-transparent border-none cursor-pointer p-0"
             aria-label="Close"
           >
             <X size={20} />
@@ -245,7 +245,7 @@ export default function RecordRemittanceDialog({
               {!errors.amount && after !== null && (
                 <p
                   id="remittance-amount-after"
-                  className={`text-xs mt-2 mb-0 ${after < 0 ? 'text-[#faad14]' : 'text-secondary'}`}
+                  className={`text-xs mt-2 mb-0 ${after < 0 ? 'text-[var(--status-warning)]' : 'text-secondary'}`}
                 >
                   {after < 0
                     ? `This is ${formatSignedPesos(-after)} more than the balance, so the event will read Overpaid.`
@@ -338,8 +338,8 @@ export default function RecordRemittanceDialog({
               Receipt <span className="text-secondary font-normal">(optional)</span>
             </span>
             {proof ? (
-              <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-4 py-3">
-                <span className="text-sm text-white min-w-0 truncate">{proof.name}</span>
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--dash-border)] bg-[var(--dash-sunken)] px-4 py-3">
+                <span className="text-sm text-primary min-w-0 truncate">{proof.name}</span>
                 <button
                   type="button"
                   className="btn-filter max-lg:min-h-11"
@@ -366,8 +366,8 @@ export default function RecordRemittanceDialog({
                   aria-describedby={errors.proof ? 'remittance-proof-error' : undefined}
                 />
                 <div className="file-upload-content">
-                  <UploadCloud size={24} className="text-accent-blue" aria-hidden="true" />
-                  <div className="text-sm text-white">Upload the transfer receipt</div>
+                  <UploadCloud size={24} className="text-accent-blue-ink" aria-hidden="true" />
+                  <div className="text-sm text-primary">Upload the transfer receipt</div>
                   <div className="text-xs">
                     {describeUploadTypes('proof')}, up to {MAX_UPLOAD_MB} MB
                   </div>
@@ -380,7 +380,7 @@ export default function RecordRemittanceDialog({
           {formError && <FieldError id="remittance-form-error" message={formError} />}
         </div>
 
-        <div className="admin-modal-footer p-6 border-t border-white/10 flex justify-end items-center gap-3 bg-black/20 shrink-0">
+        <div className="admin-modal-footer p-6 border-t border-[var(--dash-border)] flex justify-end items-center gap-3 bg-[var(--dash-sunken)] shrink-0">
           <button
             type="button"
             onClick={() => close()}

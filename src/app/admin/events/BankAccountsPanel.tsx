@@ -62,7 +62,7 @@ export default function BankAccountsPanel({
         </p>
 
         {accounts.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-white/15 bg-white/[0.02] p-6 text-center">
+          <div className="rounded-xl border border-dashed border-[var(--ink-15)] bg-[var(--ink-02)] p-6 text-center">
             <Landmark size={28} className="mx-auto mb-3 opacity-50" />
             <p className="text-sm m-0 mb-1">No accounts added yet.</p>
             <p className="text-xs opacity-70 m-0">
@@ -74,7 +74,7 @@ export default function BankAccountsPanel({
         ) : (
           <div className="flex flex-col gap-6">
             {accounts.map((account, idx) => (
-              <div key={idx} className="rounded-xl border border-white/10 bg-white/[0.02] p-4 sm:p-5">
+              <div key={idx} className="rounded-xl border border-[var(--dash-border)] bg-[var(--ink-02)] p-4 sm:p-5">
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-sm font-medium text-secondary uppercase tracking-wider">
                     Account {idx + 1}

@@ -57,7 +57,7 @@ export default function EventPromotionsPanel({
         </p>
 
         {promotions.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-white/15 bg-white/[0.02] p-6 max-sm:p-4 text-center">
+          <div className="rounded-xl border border-dashed border-[var(--ink-15)] bg-[var(--ink-02)] p-6 max-sm:p-4 text-center">
             <Tag size={28} className="mx-auto mb-3 opacity-50" />
             <p className="text-sm m-0 mb-1">No promotions reach this event.</p>
             <p className="text-xs opacity-70 m-0">
@@ -75,10 +75,10 @@ export default function EventPromotionsPanel({
               return (
                 <div
                   key={promo.key}
-                  className="flex items-start justify-between gap-4 max-sm:flex-col max-sm:gap-3 rounded-xl border border-white/10 bg-white/[0.02] p-4"
+                  className="flex items-start justify-between gap-4 max-sm:flex-col max-sm:gap-3 rounded-xl border border-[var(--dash-border)] bg-[var(--ink-02)] p-4"
                 >
                   <div className="min-w-0">
-                    <span className="block font-bold text-accent-blue [overflow-wrap:anywhere]">{promo.name}</span>
+                    <span className="block font-bold text-accent-blue-ink [overflow-wrap:anywhere]">{promo.name}</span>
                     <span className="block text-sm">{describePromo(promo.terms)}</span>
                     {/* How it is claimed and how far it reaches, in the one
                         line where both matter: a code scoped to every event
