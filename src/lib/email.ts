@@ -1,6 +1,7 @@
 import type { Prisma } from '@prisma/client';
 import { Resend } from 'resend';
-import { CONTACT_EMAIL, SITE_NAME, SITE_URL } from './site-contact';
+import { DEFAULT_CONTACT_EMAIL, SITE_NAME, SITE_URL, canSendFrom } from './site-contact';
+import { getContactEmail } from './site-settings';
 import { formatPesos } from './money';
 import { isPricedIn } from './discount';
 import { formatEventDay, formatEventInstant } from './event-schedule';
@@ -15,9 +16,11 @@ import {
 } from './registration-codes';
 
 /**
- * Transactional email, sent through Resend from the verified
- * info@cresendorunningcommunity.com mailbox (site-contact.ts owns the
- * address; this module owns what gets sent from it).
+ * Transactional email, sent through Resend from the contact address staff set
+ * at /admin/settings (lib/site-settings.ts owns the address, site-contact.ts
+ * the rule for when it may be the sender; this module owns what gets sent).
+ * Every email reads the saved address when it is built, so its footer, its
+ * reply-to and its sender follow a change to the setting on the next send.
  *
  * Two emails go out per registration, never one:
  *  1. sendRegistrationReceivedEmail — fired the moment a registration row is
@@ -63,8 +66,15 @@ import {
  * held a colon — one of RFC 5322's specials, at which a parser stops and drops
  * the rest of a bare display-name wherever the receiving client decides.
  * Quoting keeps the whole name one atom whatever the constant holds.
+ *
+ * The address is the saved contact email when Resend can send from its domain
+ * (`canSendFrom`), and the verified default otherwise — replies still reach the
+ * saved address through `replyTo`, so a runner never notices the difference.
  */
-const FROM_ADDRESS = `"${SITE_NAME}" <${CONTACT_EMAIL}>`;
+function fromAddress(contactEmail: string): string {
+  const sender = canSendFrom(contactEmail) ? contactEmail : DEFAULT_CONTACT_EMAIL;
+  return `"${SITE_NAME}" <${sender}>`;
+}
 const BRAND_ORANGE = '#FF6B00';
 const BRAND_BLUE = '#007AFF';
 
@@ -137,8 +147,9 @@ async function sendEmail(message: EmailMessage): Promise<EmailOutcome> {
   }
 
   try {
+    const contactEmail = await getContactEmail();
     const { error } = await resend.emails.send({
-      from: FROM_ADDRESS,
+      from: fromAddress(contactEmail),
       // One recipient, deliberately. Resend meters its free tier by
       // *recipient*, not by message, and counts a bcc as one of them — so the
       // archive copy this used to carry doubled the quota cost of every send,
@@ -146,7 +157,7 @@ async function sendEmail(message: EmailMessage): Promise<EmailOutcome> {
       // a hundred a day. Resend's own dashboard already keeps a log of
       // everything sent, which is what the archive mailbox was for.
       to: message.to,
-      replyTo: CONTACT_EMAIL,
+      replyTo: contactEmail,
       subject: message.subject,
       html: message.html,
       // The text alternative exists anyway now that the template renders one,
@@ -429,7 +440,7 @@ const STATUS_STYLES: Record<StatusTone, { bg: string; border: string; color: str
  * a thin gradient bar as the one accent touch, a status pill, and the same
  * footer. The status is the one thing each email varies in the header.
  */
-function renderHtml(doc: EmailDocument): string {
+function renderHtml(doc: EmailDocument, contactEmail: string): string {
   const style = STATUS_STYLES[doc.status.tone];
   const body = `
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
@@ -476,7 +487,7 @@ function renderHtml(doc: EmailDocument): string {
               <td style="padding: 20px 32px; border-top: 1px solid rgba(255,255,255,0.08);">
                 <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 12px; line-height: 1.6; color: #6b6b76; text-align: center;">
                   Questions about this ${escapeHtml(doc.footerTopic ?? 'order')}? Reply to this email or reach us at
-                  <a href="mailto:${CONTACT_EMAIL}" style="color: ${BRAND_BLUE}; text-decoration: none;">${CONTACT_EMAIL}</a>.<br/>
+                  <a href="mailto:${escapeHtml(contactEmail)}" style="color: ${BRAND_BLUE}; text-decoration: none;">${escapeHtml(contactEmail)}</a>.<br/>
                   &copy; ${new Date().getFullYear()} ${SITE_NAME}. All rights reserved.
                 </p>
               </td>
@@ -558,7 +569,7 @@ function blockText(block: Block): string {
   }
 }
 
-function renderText(doc: EmailDocument): string {
+function renderText(doc: EmailDocument, contactEmail: string): string {
   const body = doc.blocks
     .map(blockText)
     .join('\n\n')
@@ -572,13 +583,20 @@ function renderText(doc: EmailDocument): string {
     body,
     '',
     '—',
-    `Questions about this ${doc.footerTopic ?? 'order'}? Reply to this email or reach us at ${CONTACT_EMAIL}.`,
+    `Questions about this ${doc.footerTopic ?? 'order'}? Reply to this email or reach us at ${contactEmail}.`,
     `(c) ${new Date().getFullYear()} ${SITE_NAME}. All rights reserved.`,
   ].join('\n');
 }
 
-function renderMessage(doc: EmailDocument): EmailMessage {
-  return { to: doc.to, subject: doc.subject, html: renderHtml(doc), text: renderText(doc) };
+/** Async only for the contact address, which is a setting read from the database. */
+async function renderMessage(doc: EmailDocument): Promise<EmailMessage> {
+  const contactEmail = await getContactEmail();
+  return {
+    to: doc.to,
+    subject: doc.subject,
+    html: renderHtml(doc, contactEmail),
+    text: renderText(doc, contactEmail),
+  };
 }
 
 /* ────────────────────────────────────────────────────────────────────────
@@ -773,7 +791,7 @@ function summaryRows(registration: RegistrationWithDetails, totalLabel: string):
  * deliberately does not claim the money has been received, only that the
  * registration has.
  */
-export function registrationReceivedEmail(registration: RegistrationWithDetails): EmailMessage {
+export function registrationReceivedEmail(registration: RegistrationWithDetails): Promise<EmailMessage> {
   const { event } = registration;
   const paidByBankTransfer = isBankTransfer(registration.paymentMethod);
   const firstName = registration.customerName.split(' ')[0] || registration.customerName;
@@ -831,7 +849,7 @@ export function registrationReceivedEmail(registration: RegistrationWithDetails)
  * receipt; the received email above already told the runner their details
  * were captured, so this one is entirely about the money.
  */
-export function registrationConfirmationEmail(registration: RegistrationWithDetails): EmailMessage {
+export function registrationConfirmationEmail(registration: RegistrationWithDetails): Promise<EmailMessage> {
   const { event, runners } = registration;
   const paidByBankTransfer = isBankTransfer(registration.paymentMethod);
   const firstName = registration.customerName.split(' ')[0] || registration.customerName;
@@ -885,13 +903,13 @@ export function registrationConfirmationEmail(registration: RegistrationWithDeta
 export function sendRegistrationReceivedEmail(
   registration: RegistrationWithDetails
 ): Promise<EmailOutcome> {
-  return sendEmail(registrationReceivedEmail(registration));
+  return registrationReceivedEmail(registration).then(sendEmail);
 }
 
 export function sendRegistrationConfirmationEmail(
   registration: RegistrationWithDetails
 ): Promise<EmailOutcome> {
-  return sendEmail(registrationConfirmationEmail(registration));
+  return registrationConfirmationEmail(registration).then(sendEmail);
 }
 
 /* ────────────────────────────────────────────────────────────────────────
@@ -923,7 +941,7 @@ export interface StaffInvitationInput {
  * work. It never carries a password, and says plainly that nobody but the
  * invitee will know the one they choose.
  */
-export function staffInvitationEmail(input: StaffInvitationInput): EmailMessage {
+export function staffInvitationEmail(input: StaffInvitationInput): Promise<EmailMessage> {
   const firstName = input.inviteeName.split(' ')[0] || input.inviteeName;
   // An owner's name is the organizer's name, and "CRC EVENTS invited you to
   // join CRC EVENTS" reads as a mistake.
@@ -977,7 +995,7 @@ export function staffInvitationEmail(input: StaffInvitationInput): EmailMessage 
 }
 
 export function sendStaffInvitationEmail(input: StaffInvitationInput): Promise<EmailOutcome> {
-  return sendEmail(staffInvitationEmail(input));
+  return staffInvitationEmail(input).then(sendEmail);
 }
 
 /* ────────────────────────────────────────────────────────────────────────
@@ -1006,7 +1024,7 @@ export interface ClientInvitationInput {
  * show, so nobody signs in expecting to edit a race or read a runner list. It
  * never carries a password; the link lets them choose one.
  */
-export function clientInvitationEmail(input: ClientInvitationInput): EmailMessage {
+export function clientInvitationEmail(input: ClientInvitationInput): Promise<EmailMessage> {
   const firstName = input.inviteeName.split(' ')[0] || input.inviteeName;
 
   return renderMessage({
@@ -1052,5 +1070,5 @@ export function clientInvitationEmail(input: ClientInvitationInput): EmailMessag
 }
 
 export function sendClientInvitationEmail(input: ClientInvitationInput): Promise<EmailOutcome> {
-  return sendEmail(clientInvitationEmail(input));
+  return clientInvitationEmail(input).then(sendEmail);
 }

@@ -89,7 +89,7 @@ export function latestEmailKind(registration: EmailDeliveryRecord): EmailKind {
 }
 
 /** The rendered email, in both of its renderings. */
-export function emailForKind(registration: RegistrationWithDetails, kind: EmailKind): EmailMessage {
+export function emailForKind(registration: RegistrationWithDetails, kind: EmailKind): Promise<EmailMessage> {
   return kind === EMAIL_KINDS.CONFIRMATION
     ? registrationConfirmationEmail(registration)
     : registrationReceivedEmail(registration);

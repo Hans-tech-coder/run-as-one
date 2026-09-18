@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { ChevronRight, Mail } from 'lucide-react';
-import { CONTACT_EMAIL, LEGAL_LAST_UPDATED, SUPPORT_MAILTO } from '@/lib/site-contact';
+import { LEGAL_LAST_UPDATED, supportMailto } from '@/lib/site-contact';
 
 export type LegalSection = {
   heading: string;
@@ -29,12 +29,15 @@ export default function LegalPage({
   intro,
   icon,
   sections,
+  contactEmail,
 }: {
   eyebrow: string;
   title: string;
   intro: string;
   icon: React.ReactNode;
   sections: LegalSection[];
+  /** The saved contact address (lib/site-settings.ts), read by the page. */
+  contactEmail: string;
 }) {
   return (
     <div className="relative flex w-full flex-col items-center overflow-hidden">
@@ -138,11 +141,11 @@ export default function LegalPage({
           </p>
           <div className="flex w-full flex-col items-stretch justify-center gap-3 sm:w-auto sm:flex-row sm:flex-wrap">
             <a
-              href={SUPPORT_MAILTO}
+              href={supportMailto(contactEmail)}
               className="btn-secondary shrink-0 whitespace-nowrap"
             >
               <Mail size={18} aria-hidden="true" className="shrink-0 text-accent-orange" />
-              <span className="font-medium normal-case tracking-normal">{CONTACT_EMAIL}</span>
+              <span className="font-medium normal-case tracking-normal">{contactEmail}</span>
             </a>
             <Link
               href="/events"

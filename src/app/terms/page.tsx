@@ -2,7 +2,8 @@ import React from 'react';
 import type { Metadata } from 'next';
 import { Scale } from 'lucide-react';
 import LegalPage, { type LegalSection } from '@/components/LegalPage';
-import { CONTACT_EMAIL, SITE_NAME } from '@/lib/site-contact';
+import { SITE_NAME } from '@/lib/site-contact';
+import { getContactEmail } from '@/lib/site-settings';
 
 export const metadata: Metadata = {
   title: `Terms of Service | ${SITE_NAME}`,
@@ -23,7 +24,8 @@ export const metadata: Metadata = {
  * itself — this document is deliberately the layer above it, and section 8
  * says so rather than restating it.
  */
-const SECTIONS: LegalSection[] = [
+/** The contact address is a platform setting, so the sections are built per request. */
+const sections = (contactEmail: string): LegalSection[] => [
   {
     heading: `What ${SITE_NAME} is`,
     body: [
@@ -115,19 +117,22 @@ const SECTIONS: LegalSection[] = [
   {
     heading: 'Contact',
     body: [
-      `Questions about these terms go to ${CONTACT_EMAIL}. Questions about a specific race — its route, its kit, its refunds — are answered fastest by that event’s organizer.`,
+      `Questions about these terms go to ${contactEmail}. Questions about a specific race — its route, its kit, its refunds — are answered fastest by that event’s organizer.`,
     ],
   },
 ];
 
-export default function TermsPage() {
+export default async function TermsPage() {
+  const contactEmail = await getContactEmail();
+
   return (
     <LegalPage
       eyebrow="The Fine Print"
       title="Terms of Service"
       intro={`What you agree to when you register through ${SITE_NAME}, and where our responsibility ends and the event organizer's begins.`}
       icon={<Scale size={20} aria-hidden="true" />}
-      sections={SECTIONS}
+      sections={sections(contactEmail)}
+      contactEmail={contactEmail}
     />
   );
 }

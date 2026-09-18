@@ -88,6 +88,8 @@ export const AUDIT_ACTIONS = [
   'remittance.recorded',
   'remittance.voided',
   'remittance.proof.viewed',
+  // A site-wide setting staff edit at /admin/settings (lib/site-settings.ts).
+  'settings.contact_email.changed',
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
@@ -102,7 +104,8 @@ export type AuditEntityType =
   | 'Client'
   | 'StaffAccount'
   | 'StaffMembership'
-  | 'Remittance';
+  | 'Remittance'
+  | 'SiteSettings';
 
 /** Who did it. An `Actor` from lib/actor.ts is one; SYSTEM is the cron or a webhook. */
 export type AuditActor = {

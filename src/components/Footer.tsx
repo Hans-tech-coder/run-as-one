@@ -6,12 +6,12 @@ import { Mail } from 'lucide-react';
 import { BrandGlyph } from './BrandIcons';
 import { RunAsOneLogo } from './RunAsOneLogo';
 import {
-  CONTACT_EMAIL,
   SITE_NAME,
   SOCIAL_CHANNELS,
-  SUPPORT_MAILTO,
   socialChannelHref,
+  supportMailto,
 } from '@/lib/site-contact';
+import { useContactEmail } from './SiteContactProvider';
 
 /**
  * Every destination in the footer, and nothing that does not exist.
@@ -24,7 +24,8 @@ import {
  */
 type FooterLink = { label: string; href: string; external?: boolean };
 
-const COLUMNS: { heading: string; links: FooterLink[] }[] = [
+/** Built per render: Contact Us follows the saved contact address. */
+const columns = (contactEmail: string): { heading: string; links: FooterLink[] }[] => [
   {
     heading: 'Explore',
     links: [
@@ -49,7 +50,7 @@ const COLUMNS: { heading: string; links: FooterLink[] }[] = [
       { label: 'Send Feedback', href: '/feedback' },
       { label: 'Terms of Service', href: '/terms' },
       { label: 'Privacy Policy', href: '/privacy' },
-      { label: 'Contact Us', href: SUPPORT_MAILTO, external: true },
+      { label: 'Contact Us', href: supportMailto(contactEmail), external: true },
     ],
   },
 ];
@@ -82,6 +83,7 @@ function FooterLinkRow({ link }: { link: FooterLink }) {
 
 export default function Footer() {
   const year = new Date().getFullYear();
+  const contactEmail = useContactEmail();
 
   return (
     <footer className="relative mt-20 sm:mt-32 overflow-hidden rounded-t-[40px] border-t border-white/[0.06] bg-[#0a0a0c]/70 backdrop-blur-xl">
@@ -111,11 +113,11 @@ export default function Footer() {
           </p>
 
           <a
-            href={SUPPORT_MAILTO}
+            href={supportMailto(contactEmail)}
             className="inline-flex w-fit max-w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white no-underline transition-colors duration-200 hover:border-accent-orange/40 hover:bg-white/[0.08] sm:text-base"
           >
             <Mail size={18} aria-hidden="true" className="shrink-0 text-accent-orange" />
-            <span className="break-words">{CONTACT_EMAIL}</span>
+            <span className="break-words">{contactEmail}</span>
           </a>
 
           <div>
@@ -140,7 +142,7 @@ export default function Footer() {
         </div>
 
         <nav aria-label="Footer" className="grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-3">
-          {COLUMNS.map(column => (
+          {columns(contactEmail).map(column => (
             <div key={column.heading} className="flex flex-col">
               <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-white/90">
                 {column.heading}

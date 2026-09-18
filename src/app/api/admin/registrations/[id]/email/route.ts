@@ -89,7 +89,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     // what the runner received and resend it if they ask.
     const pending = outstandingEmail(registration);
     const kind = pending ?? latestEmailKind(registration);
-    const message = emailForKind(registration, kind);
+    const message = await emailForKind(registration, kind);
 
     return NextResponse.json({
       kind,

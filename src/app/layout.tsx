@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Outfit } from "next/font/google";
 import "./globals.css";
 import { SITE_NAME, SITE_URL } from "@/lib/site-contact";
+import { getContactEmail } from "@/lib/site-settings";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-body" });
 const outfit = Outfit({ subsets: ["latin"], variable: "--font-sans" });
@@ -41,12 +42,17 @@ export const metadata: Metadata = {
 import ClientLayoutWrapper from "./ClientLayoutWrapper";
 import ThemedFavicon from "@/components/ThemedFavicon";
 import { AlertProvider } from "@/components/ui/AlertProvider";
+import { SiteContactProvider } from "@/components/SiteContactProvider";
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // A platform setting (lib/site-settings.ts), read once here so every client
+  // component under the layout gets the saved address from useContactEmail().
+  const contactEmail = await getContactEmail();
+
   return (
     <html lang="en">
       <body className={`${inter.variable} ${outfit.variable} antialiased bg-[var(--bg-primary)] text-white`} suppressHydrationWarning>
@@ -54,11 +60,13 @@ export default function RootLayout({
             /admin, so a provider mounted inside it would
             cover only half the app. */}
         <ThemedFavicon />
-        <AlertProvider>
-          <ClientLayoutWrapper>
-            {children}
-          </ClientLayoutWrapper>
-        </AlertProvider>
+        <SiteContactProvider contactEmail={contactEmail}>
+          <AlertProvider>
+            <ClientLayoutWrapper>
+              {children}
+            </ClientLayoutWrapper>
+          </AlertProvider>
+        </SiteContactProvider>
       </body>
     </html>
   );

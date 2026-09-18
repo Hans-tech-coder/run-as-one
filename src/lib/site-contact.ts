@@ -3,9 +3,10 @@
  *
  * The footer, the 404 page and the two legal pages all quote the same address
  * and the same channel list, so they read it from here instead of each
- * retyping it. These are constants today; a platform settings screen is
- * meant to own them later, and when it does this module is the only file that
- * has to change.
+ * retyping it. The contact address has moved to a platform setting staff edit
+ * at /admin/settings (lib/site-settings.ts); what stays here is its default and
+ * the rules around it, because client components import this module and the
+ * settings module reads the database.
  */
 
 /**
@@ -42,10 +43,37 @@ export const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ??
   'https://run-as-one.cresendorunningcommunity.com';
 
-/** The inbox a runner or an organizer actually reaches. */
-export const CONTACT_EMAIL = 'info@cresendorunningcommunity.com';
+/**
+ * The inbox a runner or an organizer reaches until somebody saves a different
+ * one at /admin/settings. Never read this to *show* the address — read
+ * `getContactEmail()` in lib/site-settings.ts (server) or `useContactEmail()`
+ * in components/SiteContactProvider.tsx (client), which return the saved one.
+ */
+export const DEFAULT_CONTACT_EMAIL = 'info@cresendorunningcommunity.com';
 
-export const SUPPORT_MAILTO = `mailto:${CONTACT_EMAIL}`;
+/**
+ * The one domain Resend is verified to send from.
+ *
+ * Resend refuses a `from` address on any other domain, so the contact email
+ * can only be the sender while it is on this domain. Set to a Gmail or any
+ * other address, it still becomes the reply-to and every address the app
+ * shows, and mail goes out from `DEFAULT_CONTACT_EMAIL` instead — a runner's
+ * receipt must never stop because of a settings change. Verifying a new
+ * domain in Resend is what moves the sender; change this constant with it.
+ * The API key is send-only, so the app cannot ask Resend which domains are
+ * verified and has to be told here.
+ */
+export const EMAIL_SENDING_DOMAIN = 'cresendorunningcommunity.com';
+
+/** Whether mail can go out *from* this address, not only reply to it. */
+export function canSendFrom(email: string): boolean {
+  return email.split('@').pop()?.toLowerCase() === EMAIL_SENDING_DOMAIN;
+}
+
+/** A `mailto:` link for the contact address. */
+export function supportMailto(email: string): string {
+  return `mailto:${email}`;
+}
 
 /**
  * The date the Terms and the Privacy Policy were last rewritten.

@@ -2,7 +2,8 @@ import React from 'react';
 import type { Metadata } from 'next';
 import { MessageSquareHeart } from 'lucide-react';
 import FeedbackForm from './FeedbackForm';
-import { CONTACT_EMAIL, SITE_NAME, SUPPORT_MAILTO } from '@/lib/site-contact';
+import { SITE_NAME, supportMailto } from '@/lib/site-contact';
+import { getContactEmail } from '@/lib/site-settings';
 import { asSitePath } from '@/lib/feedback';
 
 export const metadata: Metadata = {
@@ -42,6 +43,7 @@ export default async function FeedbackPage({
 }) {
   const raw = (await searchParams).from;
   const pagePath = asSitePath(Array.isArray(raw) ? raw[0] : raw);
+  const contactEmail = await getContactEmail();
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col items-center pb-20 pt-8 sm:pt-12">
@@ -72,10 +74,10 @@ export default async function FeedbackPage({
       <p className="mt-6 text-center text-sm text-secondary">
         Need to send a screenshot or talk it through?{' '}
         <a
-          href={SUPPORT_MAILTO}
+          href={supportMailto(contactEmail)}
           className="text-white underline decoration-accent-orange/50 underline-offset-4 transition-colors hover:decoration-accent-orange"
         >
-          {CONTACT_EMAIL}
+          {contactEmail}
         </a>
       </p>
     </div>

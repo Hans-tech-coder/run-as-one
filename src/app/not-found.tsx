@@ -3,7 +3,8 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { Calendar, ChevronRight, Compass, Mail, Trophy } from 'lucide-react';
 import { IconBadge, StatusPanel } from '@/components/StatusPanel';
-import { SITE_NAME, SUPPORT_MAILTO } from '@/lib/site-contact';
+import { SITE_NAME, supportMailto } from '@/lib/site-contact';
+import { getContactEmail } from '@/lib/site-settings';
 
 export const metadata: Metadata = {
   title: `Page Not Found | ${SITE_NAME}`,
@@ -24,7 +25,9 @@ export const metadata: Metadata = {
  * not "wrong website", and the fastest way to say so is to keep the frame the
  * runner was already looking at and change only what is inside it.
  */
-export default function NotFound() {
+export default async function NotFound() {
+  const contactEmail = await getContactEmail();
+
   return (
     <div className="relative flex w-full flex-col items-center overflow-hidden">
       <div className="relative z-10 flex w-full max-w-3xl flex-col items-center">
@@ -81,7 +84,7 @@ export default function NotFound() {
           Or pick up from here
         </p>
         <ul className="m-0 grid w-full list-none grid-cols-1 gap-3 p-0 sm:grid-cols-3">
-          {DESTINATIONS.map(destination => (
+          {destinations(contactEmail).map(destination => (
             <li key={destination.label}>
               <DestinationCard {...destination} />
             </li>
@@ -92,7 +95,8 @@ export default function NotFound() {
   );
 }
 
-const DESTINATIONS = [
+/** Built per request: the contact address is a platform setting. */
+const destinations = (contactEmail: string) => [
   {
     label: 'Upcoming Events',
     body: 'Every race and fun run open for registration.',
@@ -108,7 +112,7 @@ const DESTINATIONS = [
   {
     label: 'Contact Us',
     body: 'Tell us which link sent you here.',
-    href: SUPPORT_MAILTO,
+    href: supportMailto(contactEmail),
     icon: Mail,
     external: true,
   },

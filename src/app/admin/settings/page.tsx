@@ -2,8 +2,9 @@ import React from 'react';
 import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import prisma from '@/lib/db';
-import { requireActor } from '@/lib/actor';
+import { can, requireActor } from '@/lib/actor';
 import { SITE_NAME } from '@/lib/site-contact';
+import { getSiteSettings } from '@/lib/site-settings';
 import AccountSettingsClient from './AccountSettingsClient';
 
 export const metadata: Metadata = {
@@ -14,9 +15,10 @@ export const metadata: Metadata = {
  * The signed-in person's own account settings.
  *
  * Scoped to the person signed in: their display name, the address they sign in
- * with, and their password. Anything that belongs to the whole site — the
- * contact address and the social channels in src/lib/site-contact.ts — is the
- * Run As One's to change site-wide, and will live on a settings screen of its own.
+ * with, and their password. Below those, and only for somebody holding
+ * `platform:manage`, the site-wide admin email (lib/site-settings.ts) — the
+ * one address the footer, the legal pages and every email use. Everyone else
+ * never sees that panel, and its route refuses them anyway.
  *
  * For an owner that person is the Organizer row; for a staff member it is their
  * own StaffAccount, never the organizer they work for.
@@ -41,6 +43,10 @@ export default async function AdminSettingsPage() {
     redirect('/admin/login');
   }
 
+  const siteSettings = can(actor, 'platform:manage', { organizerId: actor.orgId })
+    ? await getSiteSettings()
+    : null;
+
   return (
     <>
       <header className="admin-header">
@@ -48,7 +54,7 @@ export default async function AdminSettingsPage() {
       </header>
 
       <div className="admin-content max-w-4xl mx-auto w-full">
-        <AccountSettingsClient organizer={account} />
+        <AccountSettingsClient organizer={account} siteSettings={siteSettings} />
       </div>
     </>
   );

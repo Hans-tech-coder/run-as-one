@@ -20,7 +20,8 @@ import AuthHomeLink from '../AuthHomeLink';
 // brings its own `.input-group` label and small print, which is why it is not
 // wrapped in a `.form-group` like the fields around it.
 import PhoneField from '@/app/events/[slug]/register/PhoneField';
-import { CONTACT_EMAIL, SUPPORT_MAILTO } from '@/lib/site-contact';
+import { supportMailto } from '@/lib/site-contact';
+import { useContactEmail } from '@/components/SiteContactProvider';
 import {
   APPLICATION_PHONE_COUNTRY,
   EXPECTED_PARTICIPANTS,
@@ -213,6 +214,7 @@ function Optional() {
 }
 
 export default function AdminRegister() {
+  const contactEmail = useContactEmail();
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<FormState>(EMPTY);
   const [errors, setErrors] = useState<ApplicationErrors>({});
@@ -474,8 +476,8 @@ export default function AdminRegister() {
 
               <p className="mt-6 text-xs text-secondary">
                 Something to add, or a question in the meantime? Write to{' '}
-                <a href={SUPPORT_MAILTO} className="auth-link">
-                  {CONTACT_EMAIL}
+                <a href={supportMailto(contactEmail)} className="auth-link">
+                  {contactEmail}
                 </a>
                 .
               </p>

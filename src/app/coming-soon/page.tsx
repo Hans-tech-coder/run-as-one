@@ -3,7 +3,8 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { ChevronRight, Mail, Radar } from 'lucide-react';
 import { IconBadge, StatusPanel } from '@/components/StatusPanel';
-import { CONTACT_EMAIL, SITE_NAME, SOCIAL_CHANNELS, SUPPORT_MAILTO } from '@/lib/site-contact';
+import { SITE_NAME, SOCIAL_CHANNELS, supportMailto } from '@/lib/site-contact';
+import { getContactEmail } from '@/lib/site-settings';
 
 export const metadata: Metadata = {
   title: `Coming Soon | ${SITE_NAME}`,
@@ -26,6 +27,7 @@ export default async function ComingSoonPage({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const channel = channelNameFrom((await searchParams).channel);
+  const contactEmail = await getContactEmail();
 
   return (
     <div className="relative flex w-full flex-col items-center overflow-hidden">
@@ -66,11 +68,11 @@ export default async function ComingSoonPage({
               />
             </Link>
             <a
-              href={SUPPORT_MAILTO}
+              href={supportMailto(contactEmail)}
               className="btn-secondary w-full shrink-0 whitespace-nowrap text-center sm:w-auto"
             >
               <Mail size={18} aria-hidden="true" className="shrink-0 text-accent-orange" />
-              <span className="font-medium normal-case tracking-normal">{CONTACT_EMAIL}</span>
+              <span className="font-medium normal-case tracking-normal">{contactEmail}</span>
             </a>
           </div>
         </StatusPanel>

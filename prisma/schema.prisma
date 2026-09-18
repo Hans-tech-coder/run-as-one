@@ -872,3 +872,18 @@ model AuditLog {
   @@index([actorId, createdAt])
   @@index([organizerId, action, createdAt])
 }
+
+/// Site-wide details Run As One's staff edit from /admin/settings rather than
+/// in code. **One row**, keyed "site"; no row yet means every value falls back
+/// to its default in lib/site-contact.ts, so the app works before anybody has
+/// saved the form. Read through lib/site-settings.ts, never directly.
+///
+/// Storage: one row of a few dozen bytes.
+model SiteSettings {
+  id           String   @id @default("site")
+  /// The one address the app shows and mails from: the footer, the legal and
+  /// help pages, and the sender, reply-to and footer of every email. Stored
+  /// exactly as typed after a trim.
+  contactEmail String
+  updatedAt    DateTime @updatedAt
+}

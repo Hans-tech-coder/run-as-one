@@ -2,7 +2,8 @@ import React from 'react';
 import type { Metadata } from 'next';
 import { ShieldCheck } from 'lucide-react';
 import LegalPage, { type LegalSection } from '@/components/LegalPage';
-import { CONTACT_EMAIL, SITE_NAME } from '@/lib/site-contact';
+import { SITE_NAME } from '@/lib/site-contact';
+import { getContactEmail } from '@/lib/site-settings';
 
 export const metadata: Metadata = {
   title: `Privacy Policy | ${SITE_NAME}`,
@@ -22,7 +23,8 @@ export const metadata: Metadata = {
  * at checkout. This page is the standing version of it: broader, always
  * reachable, and not tied to one organizer's wording.
  */
-const SECTIONS: LegalSection[] = [
+/** The contact address is a platform setting, so the sections are built per request. */
+const sections = (contactEmail: string): LegalSection[] => [
   {
     heading: 'Who this covers',
     body: [
@@ -101,7 +103,7 @@ const SECTIONS: LegalSection[] = [
     heading: 'Your rights',
     body: [
       'Under the Data Privacy Act you may ask to see the personal data we hold about you, have it corrected if it is wrong, object to how it is being processed, ask for it to be erased or blocked where the law allows, receive a copy in a portable form, and complain to the National Privacy Commission.',
-      `To exercise any of these, email ${CONTACT_EMAIL} from the address on your registration and tell us what you need. We will respond within a reasonable period.`,
+      `To exercise any of these, email ${contactEmail} from the address on your registration and tell us what you need. We will respond within a reasonable period.`,
       'Two limits worth stating plainly: we cannot erase data an organizer is legally required to keep for tax or dispute purposes, and a published finishing time is a public race record.',
     ],
   },
@@ -115,19 +117,22 @@ const SECTIONS: LegalSection[] = [
     heading: 'Changes and contact',
     body: [
       'We will update this notice as the platform changes, and the date at the top always tells you when it was last rewritten.',
-      `For anything on this page — a question, a request, or a complaint — write to ${CONTACT_EMAIL}.`,
+      `For anything on this page — a question, a request, or a complaint — write to ${contactEmail}.`,
     ],
   },
 ];
 
-export default function PrivacyPage() {
+export default async function PrivacyPage() {
+  const contactEmail = await getContactEmail();
+
   return (
     <LegalPage
       eyebrow="Data Privacy Act of 2012"
       title="Privacy Policy"
       intro="What we collect when you register for a race, why each field exists, who gets to see it, and how to get it corrected or removed."
       icon={<ShieldCheck size={20} aria-hidden="true" />}
-      sections={SECTIONS}
+      sections={sections(contactEmail)}
+      contactEmail={contactEmail}
     />
   );
 }

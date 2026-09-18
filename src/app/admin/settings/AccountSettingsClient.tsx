@@ -2,10 +2,11 @@
 
 import React, { useId, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, KeyRound, UserCog } from 'lucide-react';
+import { Check, KeyRound, Mail, UserCog } from 'lucide-react';
 import FieldError from '@/components/ui/FieldError';
 import { useAlert } from '@/components/ui/AlertProvider';
 import { invalidEmailMessage, looksLikeEmailAddress } from '@/lib/email-address';
+import { DEFAULT_CONTACT_EMAIL, EMAIL_SENDING_DOMAIN, canSendFrom } from '@/lib/site-contact';
 import PasswordField from './PasswordField';
 
 // One constant for this form, the password route and the invitation page.
@@ -22,6 +23,10 @@ export type OrganizerProfile = {
   email: string;
 };
 
+export type SiteSettingsForm = {
+  contactEmail: string;
+};
+
 /**
  * The organizer's own account, in two panels that save separately.
  *
@@ -36,8 +41,11 @@ export type OrganizerProfile = {
  */
 export default function AccountSettingsClient({
   organizer,
+  siteSettings,
 }: {
   organizer: OrganizerProfile;
+  /** Present only for `platform:manage`; null hides the site panel. */
+  siteSettings: SiteSettingsForm | null;
 }) {
   // Shadows window.alert on purpose — see AlertProvider.
   const { alert } = useAlert();
@@ -46,6 +54,7 @@ export default function AccountSettingsClient({
     <div className="settings-stack">
       <ProfilePanel organizer={organizer} alert={alert} />
       <PasswordPanel alert={alert} />
+      {siteSettings && <SiteEmailPanel settings={siteSettings} alert={alert} />}
     </div>
   );
 }
@@ -360,6 +369,144 @@ function PasswordPanel({ alert }: { alert: AlertFn }) {
             disabled={isSaving || !hasInput}
           >
             {isSaving ? <BusyLabel>Changing</BusyLabel> : 'Change Password'}
+          </button>
+        </div>
+      </div>
+    </form>
+  );
+}
+
+/**
+ * The admin email: the one address the whole site shows and sends from.
+ *
+ * Saved separately from the person's own profile, because it is not theirs —
+ * changing it changes the footer on every public page and every email a runner
+ * receives next. The hint under the box says which of the two jobs the address
+ * will do: Resend can only send from its verified domain, so any other address
+ * becomes the reply-to while mail keeps going out from the default.
+ */
+function SiteEmailPanel({
+  settings,
+  alert,
+}: {
+  settings: SiteSettingsForm;
+  alert: AlertFn;
+}) {
+  const router = useRouter();
+  const emailId = useId();
+
+  const [saved, setSaved] = useState(settings.contactEmail);
+  const [email, setEmail] = useState(settings.contactEmail);
+  const [error, setError] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [justSaved, setJustSaved] = useState(false);
+
+  const isDirty = email.trim() !== saved;
+  const shaped = looksLikeEmailAddress(email);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!email.trim()) {
+      setError('Enter the email address the site should use');
+      return;
+    }
+    if (!shaped) {
+      setError(invalidEmailMessage('info@example.com'));
+      return;
+    }
+
+    setIsSaving(true);
+    setJustSaved(false);
+
+    try {
+      const res = await fetch('/api/admin/site-settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contactEmail: email.trim() }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (data.errors?.contactEmail) {
+          setError(data.errors.contactEmail);
+          return;
+        }
+        throw new Error(data.error || 'Could not save the admin email');
+      }
+
+      setSaved(data.settings.contactEmail);
+      setEmail(data.settings.contactEmail);
+      setError('');
+      setJustSaved(true);
+      // The footer and every server-rendered page read the address from the
+      // settings cache the route just cleared.
+      router.refresh();
+    } catch (err: unknown) {
+      await alert(
+        err instanceof Error ? err.message : 'Could not save the admin email'
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Said about what is in the box, so the consequence is visible before saving.
+  const hint =
+    shaped && !canSendFrom(email.trim())
+      ? `Emails will still be sent from ${DEFAULT_CONTACT_EMAIL}, because only @${EMAIL_SENDING_DOMAIN} addresses are verified for sending. Replies and every address on the site will use this one.`
+      : 'Shown in the footer, the Terms and Privacy pages and every email, and used as the sender and reply-to of every email.';
+
+  return (
+    <form className="admin-panel" onSubmit={handleSubmit} noValidate>
+      <div className="admin-panel-header">
+        <h2 className="admin-panel-title flex items-center gap-2">
+          <Mail size={18} className="text-accent-blue" aria-hidden="true" />
+          Admin Email
+        </h2>
+      </div>
+
+      <div className="admin-panel-content">
+        <div className="form-grid">
+          <div className="form-group-full">
+            <label className="form-label" htmlFor={emailId}>
+              Site Email Address
+            </label>
+            <input
+              id={emailId}
+              type="email"
+              className="form-input"
+              value={email}
+              placeholder="info@example.com"
+              onChange={e => {
+                setEmail(e.target.value);
+                setError('');
+              }}
+              autoComplete="off"
+              disabled={isSaving}
+              aria-invalid={error ? true : undefined}
+              aria-describedby={error ? `${emailId}-error` : `${emailId}-hint`}
+            />
+            <FieldError id={`${emailId}-error`} message={error} />
+            {!error && (
+              <p id={`${emailId}-hint`} className="text-xs text-secondary">
+                {hint}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="form-actions settings-actions">
+          <SaveConfirmation
+            visible={justSaved && !isDirty}
+            message="Admin email saved"
+          />
+          <button
+            type="submit"
+            className="btn-light"
+            disabled={isSaving || !isDirty}
+          >
+            {isSaving ? <BusyLabel>Saving</BusyLabel> : 'Save Changes'}
           </button>
         </div>
       </div>
