@@ -27,6 +27,8 @@ export type SignedInUser = {
   name: string;
   /** First letter of the name, for the round avatar. */
   initial: string;
+  /** The person's profile photo (set in Settings); null draws the initial. */
+  avatarUrl: string | null;
   /** "Super Admin", "Admin", "Staff" — what the line under the name says. */
   roleLabel: string;
   /**
@@ -60,14 +62,16 @@ export async function getSignedInUser(): Promise<SignedInUser | null> {
 
   let name = actor.name;
   let organizerName = actor.name;
+  let avatarUrl: string | null = null;
 
   if (actor.kind !== 'STAFF') {
     const organizer = await prisma.organizer.findUnique({
       where: { id: actor.id },
-      select: { name: true },
+      select: { name: true, avatarUrl: true },
     });
     name = organizer?.name ?? actor.name;
     organizerName = name;
+    avatarUrl = organizer?.avatarUrl ?? null;
   } else if (isClientViewer(actor) && actor.clientId) {
     const client = await prisma.client.findUnique({
       where: { id: actor.clientId },
@@ -85,12 +89,21 @@ export async function getSignedInUser(): Promise<SignedInUser | null> {
     organizerName = organizer?.name ?? '';
   }
 
+  if (actor.kind === 'STAFF') {
+    const staff = await prisma.staffAccount.findUnique({
+      where: { id: actor.id },
+      select: { avatarUrl: true },
+    });
+    avatarUrl = staff?.avatarUrl ?? null;
+  }
+
   name = name.trim();
   if (!name) return null;
 
   return {
     name,
     initial: name.charAt(0).toUpperCase(),
+    avatarUrl,
     roleLabel: actor.role === 'VIEWER' ? CLIENT_VIEWER_LABEL : ROLE_LABELS[actor.role],
     organizerName,
     nav: {

@@ -1338,6 +1338,167 @@ textarea.form-input {
   display: flex;
   flex-direction: column;
   gap: var(--space-xl);
+  min-width: 0;
+}
+
+/* The optional profile photo at the top of the Profile panel: the circle
+   beside its label and buttons, stacked under each other below `sm`. */
+.settings-avatar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  margin-bottom: var(--space-xl);
+  padding-bottom: var(--space-xl);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.settings-avatar-image {
+  width: 96px;
+  height: 96px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--accent-orange);
+  color: #fff;
+  font-size: 2.25rem;
+  font-weight: 700;
+}
+
+.settings-avatar-image img,
+.account-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.settings-avatar-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.settings-avatar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+@media (width < 40rem) {
+  .settings-avatar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* Label-and-value pairs on the read-only panels (Sign-in Activity, Your
+   Role): stacked on a phone, three across where there is room. */
+.settings-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--space-md);
+  margin: 0;
+}
+
+.settings-facts dt {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.settings-facts dd {
+  margin: 2px 0 0;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.settings-can-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 8px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.settings-can-list li {
+  position: relative;
+  padding-left: 20px;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+}
+
+.settings-can-list li::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 0.45em;
+  width: 10px;
+  height: 6px;
+  border-left: 2px solid #52c41a;
+  border-bottom: 2px solid #52c41a;
+  transform: rotate(-45deg);
+}
+
+.settings-event-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.settings-event {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--space-md);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-lg);
+}
+
+.settings-event-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.settings-event-title {
+  margin: 0;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.settings-role-pill {
+  flex-shrink: 0;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--accent-orange) 14%, transparent);
+  color: color-mix(in srgb, var(--accent-orange) 60%, #fff);
+  white-space: nowrap;
+}
+
+/* A link inside small print or a list: underlined so it is not colour alone,
+   with a 44px-tall target where it stands on its own line. */
+.settings-inline-link {
+  color: color-mix(in srgb, var(--accent-blue) 70%, #fff);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.settings-event .settings-inline-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
 }
 
 /* .form-actions puts the button on the right; this makes room for the "saved"
@@ -3145,6 +3306,7 @@ textarea.form-input {
   color: #fff;
   font-size: 0.9375rem;
   font-weight: 700;
+  overflow: hidden;
 }
 
 .account-trigger-text {

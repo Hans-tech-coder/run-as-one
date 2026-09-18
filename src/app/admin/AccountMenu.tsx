@@ -30,8 +30,24 @@ export type AccountMenuUser = {
   initial: string;
   /** "Super Admin", "Staff · RUN AS ONE", "Client Viewer · …". */
   roleLine: string;
+  /** The profile photo set in Settings; without one the initial is drawn. */
+  avatarUrl?: string | null;
   avatarStyle?: React.CSSProperties;
 };
+
+/** The round avatar: the person's photo when they have set one, else their initial. */
+function Avatar({ user }: { user: AccountMenuUser }) {
+  return (
+    <span className="account-avatar" style={user.avatarStyle} aria-hidden="true">
+      {user.avatarUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={user.avatarUrl} alt="" width={36} height={36} />
+      ) : (
+        user.initial
+      )}
+    </span>
+  );
+}
 
 export default function AccountMenu({
   user,
@@ -118,9 +134,7 @@ export default function AccountMenu({
         aria-label={`Account: ${user.name}, ${user.roleLine}`}
         onClick={() => (isOpen ? close() : open())}
       >
-        <span className="account-avatar" style={user.avatarStyle} aria-hidden="true">
-          {user.initial}
-        </span>
+        <Avatar user={user} />
         <span className="account-trigger-text" aria-hidden="true">
           <span className="account-name">{user.name}</span>
           <span className="account-role">{user.roleLine}</span>
@@ -135,9 +149,7 @@ export default function AccountMenu({
           data-origin="top-right"
         >
           <div className="account-dropdown-head">
-            <span className="account-avatar" style={user.avatarStyle} aria-hidden="true">
-              {user.initial}
-            </span>
+            <Avatar user={user} />
             <span className="min-w-0">
               <span className="account-name">{user.name}</span>
               <span className="account-role" title={user.roleLine}>{user.roleLine}</span>

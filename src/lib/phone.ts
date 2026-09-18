@@ -279,3 +279,31 @@ export function maxNationalDigits(iso2: string): number {
   const expected = expectedNationalDigits(country.iso2);
   return expected ?? MAX_E164_DIGITS - country.dial.length;
 }
+
+/**
+ * What is wrong with a number that has been typed, or null when it dials.
+ *
+ * Checked against the country the number itself names rather than the field's
+ * default, because the field lets a person pick another one and a rule that
+ * ignored their pick would refuse a number that dials. An empty value is the
+ * caller's to judge — required on an application, optional on a profile — so
+ * this only speaks about what is there. The sample is a Philippine number, so
+ * it is only offered when that is the country being talked about; a wrong
+ * example is worse than none.
+ */
+export function phoneNumberError(
+  value: string,
+  defaultCountry: string = DEFAULT_COUNTRY
+): string | null {
+  const parsed = parseE164(value);
+  const country = countryFor(parsed.iso2 ?? defaultCountry);
+  if (!parsed.national) {
+    return 'Enter your mobile number in digits, like 9171234567.';
+  }
+  if (isPlausiblePhone(country.iso2, parsed.national)) return null;
+  const expected = expectedNationalDigits(country.iso2);
+  const example = country.iso2 === DEFAULT_COUNTRY ? ', like 9171234567' : '';
+  return expected
+    ? `${country.name} mobile numbers are ${expected} digits after +${country.dial}${example}.`
+    : `That does not look like a complete ${country.name} number.`;
+}

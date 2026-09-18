@@ -124,6 +124,7 @@ export default function AdminShell({
               user={{
                 name: user?.name ?? 'Organizer',
                 initial: user?.initial ?? 'O',
+                avatarUrl: user?.avatarUrl ?? null,
                 roleLine,
               }}
               settingsPath="/admin/settings"

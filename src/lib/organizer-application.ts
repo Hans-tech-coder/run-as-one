@@ -26,13 +26,7 @@
  */
 
 import { looksLikeEmailAddress } from './email-address';
-import {
-  countryFor,
-  expectedNationalDigits,
-  isPlausiblePhone,
-  parseE164,
-  toE164,
-} from './phone';
+import { phoneNumberError, toE164 } from './phone';
 
 /* ────────────────────────── The closed vocabularies ───────────────────── */
 
@@ -438,25 +432,14 @@ export function readOrganizerApplication(input: ApplicationInput): {
   }
 
   // Required, unlike the website: this is the number somebody rings when a
-  // payment has to be confirmed on race morning and email is too slow. Its
-  // length is checked against the country the number itself names rather than
-  // against the Philippines, because the field lets an organizer pick another
-  // one and a rule that ignored their pick would refuse a number that dials.
-  const typedPhone = textOf(input.phone);
-  const parsedPhone = parseE164(phone);
-  const phoneCountry = countryFor(parsedPhone.iso2 ?? APPLICATION_PHONE_COUNTRY);
-  if (!typedPhone) {
+  // payment has to be confirmed on race morning and email is too slow. What
+  // counts as a number that dials is phone.ts's call (phoneNumberError), shared
+  // with the dashboard's own profile form.
+  if (!textOf(input.phone)) {
     errors.phone = 'Enter a mobile number we can reach you on.';
-  } else if (!parsedPhone.national) {
-    errors.phone = 'Enter your mobile number in digits, like 9171234567.';
-  } else if (!isPlausiblePhone(phoneCountry.iso2, parsedPhone.national)) {
-    const expected = expectedNationalDigits(phoneCountry.iso2);
-    // The sample is a Philippine number, so it is only offered when that is
-    // the country being talked about. A wrong example is worse than none.
-    const example = phoneCountry.iso2 === APPLICATION_PHONE_COUNTRY ? ', like 9171234567' : '';
-    errors.phone = expected
-      ? `${phoneCountry.name} mobile numbers are ${expected} digits after +${phoneCountry.dial}${example}.`
-      : `That does not look like a complete ${phoneCountry.name} number.`;
+  } else {
+    const phoneError = phoneNumberError(phone, APPLICATION_PHONE_COUNTRY);
+    if (phoneError) errors.phone = phoneError;
   }
 
   /* Step 3 — what they want to run. */

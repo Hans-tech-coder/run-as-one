@@ -1,12 +1,14 @@
 "use client";
 
-import React, { useId, useState } from 'react';
+import React, { useId, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, KeyRound, Mail, UserCog } from 'lucide-react';
+import { Camera, Check, KeyRound, Mail, UserCog } from 'lucide-react';
 import FieldError from '@/components/ui/FieldError';
 import { useAlert } from '@/components/ui/AlertProvider';
 import { invalidEmailMessage, looksLikeEmailAddress } from '@/lib/email-address';
 import { DEFAULT_CONTACT_EMAIL, EMAIL_SENDING_DOMAIN, canSendFrom } from '@/lib/site-contact';
+import PhoneField from '@/app/events/[slug]/register/PhoneField';
+import { DEFAULT_COUNTRY } from '@/lib/phone';
 import PasswordField from './PasswordField';
 
 // One constant for this form, the password route and the invitation page.
@@ -15,69 +17,254 @@ import BusyLabel from '@/components/ui/BusyLabel';
 
 type FieldErrors = Record<string, string>;
 
-/** Awaitable stand-in for window.alert, handed down from useAlert. */
-type AlertFn = (message: string) => Promise<void>;
-
-export type OrganizerProfile = {
+export type AccountProfile = {
   name: string;
   email: string;
+  /** A staff account's mobile number, E.164; null when none is saved. */
+  phone: string | null;
+  /** The profile photo's public URL; null shows the name's initial. */
+  avatarUrl: string | null;
 };
 
 export type SiteSettingsForm = {
   contactEmail: string;
 };
 
-/**
- * The organizer's own account, in two panels that save separately.
+/*
+ * The panels of /admin/settings, one per form, each saving on its own.
  *
  * Separately on purpose: correcting a typo in your own name should not make
  * you retype your password, and changing a password should not risk saving a
  * half-edited email alongside it. Each panel owns its own submit, its own busy
- * state, and its own confirmation line.
+ * state, and its own confirmation line. Which panel sits on which section of
+ * the page is the section's own page.tsx; the section menu is SettingsNav.
  *
  * Errors are held per field and rendered under the input they belong to, the
  * same way the registration wizard does it — a form that only says "something
- * is wrong" leaves the organizer hunting for what.
+ * is wrong" leaves the person hunting for what.
  */
-export default function AccountSettingsClient({
-  organizer,
-  siteSettings,
+
+/** The square the photo is shrunk to before upload: sharp at 2× on a 96px circle. */
+const AVATAR_PIXELS = 256;
+
+/**
+ * The picked file, centre-cropped to a square and shrunk to AVATAR_PIXELS as a
+ * JPEG — a few kilobytes instead of a phone's 4 MB photo, which is what keeps
+ * the public blob store small (the storage budget is the owner's concern) and
+ * the account menu quick to draw. Throws when the browser cannot read it.
+ */
+async function squareAvatar(file: File): Promise<Blob> {
+  const bitmap = await createImageBitmap(file);
+  const side = Math.min(bitmap.width, bitmap.height);
+  const canvas = document.createElement('canvas');
+  canvas.width = AVATAR_PIXELS;
+  canvas.height = AVATAR_PIXELS;
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('This browser cannot prepare the photo');
+  context.drawImage(
+    bitmap,
+    (bitmap.width - side) / 2,
+    (bitmap.height - side) / 2,
+    side,
+    side,
+    0,
+    0,
+    AVATAR_PIXELS,
+    AVATAR_PIXELS,
+  );
+  bitmap.close();
+  const blob = await new Promise<Blob | null>(resolve =>
+    canvas.toBlob(resolve, 'image/jpeg', 0.88),
+  );
+  if (!blob) throw new Error('This browser cannot prepare the photo');
+  return blob;
+}
+
+/**
+ * The optional profile photo, at the top of the Profile panel.
+ *
+ * It saves the moment a photo is picked or removed rather than waiting for
+ * Save Changes: a photo is one decision, and holding it hostage to a half-
+ * edited email would make the person choose between the two. The account menu
+ * beside the bell shows it after the refresh; without one it keeps the
+ * initial it always had.
+ */
+function AvatarField({
+  name,
+  avatarUrl,
+  onSaved,
 }: {
-  organizer: OrganizerProfile;
-  /** Present only for `platform:manage`; null hides the site panel. */
-  siteSettings: SiteSettingsForm | null;
+  name: string;
+  avatarUrl: string | null;
+  onSaved: (avatarUrl: string | null) => void;
 }) {
-  // Shadows window.alert on purpose — see AlertProvider.
   const { alert } = useAlert();
+  const router = useRouter();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const hintId = useId();
+  const [busy, setBusy] = useState<'upload' | 'remove' | null>(null);
+  const [error, setError] = useState('');
+
+  const initial = name.trim().charAt(0).toUpperCase() || '?';
+
+  const upload = async (file: File) => {
+    setError('');
+    if (!file.type.startsWith('image/')) {
+      setError('Choose a JPG, PNG, WebP or GIF image');
+      return;
+    }
+    setBusy('upload');
+    try {
+      const body = new FormData();
+      body.append('file', await squareAvatar(file), 'avatar.jpg');
+      const res = await fetch('/api/admin/profile/avatar', { method: 'POST', body });
+      const data = await res.json();
+      if (!res.ok) {
+        // An upload rule the server refused (type, size) belongs under the
+        // photo; anything else is a failure worth a dialog.
+        if (res.status === 400 && data.error) {
+          setError(data.error);
+          return;
+        }
+        throw new Error(data.error || 'Could not upload your photo');
+      }
+      onSaved(data.avatarUrl);
+      router.refresh();
+    } catch (err: unknown) {
+      await alert(err instanceof Error ? err.message : 'Could not upload your photo');
+    } finally {
+      setBusy(null);
+      if (inputRef.current) inputRef.current.value = '';
+    }
+  };
+
+  const remove = async () => {
+    setError('');
+    setBusy('remove');
+    try {
+      const res = await fetch('/api/admin/profile/avatar', { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not remove your photo');
+      onSaved(null);
+      router.refresh();
+    } catch (err: unknown) {
+      await alert(err instanceof Error ? err.message : 'Could not remove your photo');
+    } finally {
+      setBusy(null);
+    }
+  };
 
   return (
-    <div className="settings-stack">
-      <ProfilePanel organizer={organizer} alert={alert} />
-      <PasswordPanel alert={alert} />
-      {siteSettings && <SiteEmailPanel settings={siteSettings} alert={alert} />}
+    <div className="settings-avatar">
+      <span className="settings-avatar-image" aria-hidden="true">
+        {avatarUrl ? (
+          // A 256px square from the public blob store; next/image would add a
+          // remote-pattern entry for one small picture.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={avatarUrl} alt="" width={96} height={96} />
+        ) : (
+          initial
+        )}
+      </span>
+
+      <div className="settings-avatar-body">
+        <p className="form-label m-0">Profile Photo</p>
+        <p id={hintId} className="text-xs text-secondary m-0">
+          Optional. Shown beside your name in the dashboard. A square photo works best.
+        </p>
+        <div className="settings-avatar-actions">
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            className="sr-only"
+            tabIndex={-1}
+            aria-hidden="true"
+            onChange={e => {
+              const file = e.target.files?.[0];
+              if (file) void upload(file);
+            }}
+          />
+          <button
+            type="button"
+            className="btn-light"
+            onClick={() => inputRef.current?.click()}
+            disabled={busy !== null}
+            aria-describedby={hintId}
+          >
+            {busy === 'upload' ? (
+              <BusyLabel>Uploading</BusyLabel>
+            ) : (
+              <>
+                <Camera size={16} aria-hidden="true" />
+                {avatarUrl ? 'Change Photo' : 'Upload Photo'}
+              </>
+            )}
+          </button>
+          {avatarUrl && (
+            <button
+              type="button"
+              className="btn-cancel"
+              onClick={() => void remove()}
+              disabled={busy !== null}
+            >
+              {busy === 'remove' ? <BusyLabel>Removing</BusyLabel> : 'Remove'}
+            </button>
+          )}
+        </div>
+        <FieldError id={`${hintId}-error`} message={error} />
+      </div>
     </div>
   );
 }
 
-function ProfilePanel({
-  organizer,
-  alert,
+/**
+ * The person's own name, sign-in email and — for a staff account — phone.
+ *
+ * Changing the email opens a Current Password box under it, because the route
+ * asks for one: the address is what the account signs in with. A client
+ * viewer's email is shown read-only with the admin email to write to instead,
+ * since only Run As One's staff change it.
+ */
+export function ProfilePanel({
+  profile,
+  nameLabel,
+  hasPhone,
+  emailLockedTo,
 }: {
-  organizer: OrganizerProfile;
-  alert: AlertFn;
+  profile: AccountProfile;
+  /** "Organizer Name" for Run As One's own account, "Full Name" for a person. */
+  nameLabel: string;
+  /** Only a staff account has a phone column. */
+  hasPhone: boolean;
+  /** Set for a client viewer: the admin email that changes their sign-in email. */
+  emailLockedTo: string | null;
 }) {
+  // Shadows window.alert on purpose — see AlertProvider.
+  const { alert } = useAlert();
   const router = useRouter();
   const nameId = useId();
   const emailId = useId();
+  const phoneId = useId();
 
-  const [saved, setSaved] = useState(organizer);
-  const [name, setName] = useState(organizer.name);
-  const [email, setEmail] = useState(organizer.email);
+  const [saved, setSaved] = useState(profile);
+  const [name, setName] = useState(profile.name);
+  const [email, setEmail] = useState(profile.email);
+  const [phone, setPhone] = useState(profile.phone ?? '');
+  const [avatarUrl, setAvatarUrl] = useState(profile.avatarUrl);
+  const [currentPassword, setCurrentPassword] = useState('');
   const [errors, setErrors] = useState<FieldErrors>({});
   const [isSaving, setIsSaving] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
 
-  const isDirty = name !== saved.name || email !== saved.email;
+  // Compared the way the route compares, so a change of case alone does not
+  // ask for a password the server would not.
+  const emailChanging =
+    email.trim().toLowerCase() !== saved.email.trim().toLowerCase();
+  const isDirty =
+    name !== saved.name ||
+    emailChanging ||
+    (hasPhone && phone !== (saved.phone ?? ''));
 
   // A message stops being true the moment the organizer acts on it, so each
   // field drops its own error as it is edited. Leaving it up would have them
@@ -94,6 +281,8 @@ function ProfilePanel({
       next.email = 'Enter the email address you sign in with';
     } else if (!looksLikeEmailAddress(email)) {
       next.email = invalidEmailMessage('you@example.com');
+    } else if (emailChanging && !currentPassword) {
+      next.currentPassword = 'Enter your current password to change your email';
     }
     return next;
   };
@@ -112,7 +301,12 @@ function ProfilePanel({
       const res = await fetch('/api/admin/profile', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), email: email.trim() }),
+        body: JSON.stringify({
+          name: name.trim(),
+          email: email.trim(),
+          ...(hasPhone ? { phone } : {}),
+          ...(emailChanging ? { currentPassword } : {}),
+        }),
       });
       const data = await res.json();
 
@@ -127,9 +321,17 @@ function ProfilePanel({
         throw new Error(data.error || 'Could not save your profile');
       }
 
-      setSaved(data.organizer);
-      setName(data.organizer.name);
-      setEmail(data.organizer.email);
+      const next: AccountProfile = {
+        name: data.organizer.name,
+        email: data.organizer.email,
+        phone: data.organizer.phone ?? null,
+        avatarUrl,
+      };
+      setSaved(next);
+      setName(next.name);
+      setEmail(next.email);
+      setPhone(next.phone ?? '');
+      setCurrentPassword('');
       setErrors({});
       setJustSaved(true);
       // Every server component on this side reads the organizer out of the
@@ -155,10 +357,12 @@ function ProfilePanel({
       </div>
 
       <div className="admin-panel-content">
+        <AvatarField name={saved.name} avatarUrl={avatarUrl} onSaved={setAvatarUrl} />
+
         <div className="form-grid">
           <div className="form-group">
             <label className="form-label" htmlFor={nameId}>
-              Organizer Name
+              {nameLabel}
             </label>
             <input
               id={nameId}
@@ -192,6 +396,7 @@ function ProfilePanel({
               }}
               autoComplete="email"
               disabled={isSaving}
+              readOnly={emailLockedTo !== null}
               aria-invalid={errors.email ? true : undefined}
               aria-describedby={
                 errors.email ? `${emailId}-error` : `${emailId}-hint`
@@ -200,10 +405,54 @@ function ProfilePanel({
             <FieldError id={`${emailId}-error`} message={errors.email} />
             {!errors.email && (
               <p id={`${emailId}-hint`} className="text-xs text-secondary">
-                This is the address you sign in with.
+                {emailLockedTo ? (
+                  <>
+                    This is the address you sign in with. To change it, email{' '}
+                    <a className="settings-inline-link" href={`mailto:${emailLockedTo}`}>
+                      {emailLockedTo}
+                    </a>
+                    .
+                  </>
+                ) : (
+                  'This is the address you sign in with.'
+                )}
               </p>
             )}
           </div>
+
+          {/* Only while the email differs from the saved one: the route asks
+              for proof before it moves the account's sign-in address. */}
+          {emailChanging && (
+            <div className="form-group-full">
+              <PasswordField
+                label="Current Password"
+                value={currentPassword}
+                onChange={value => {
+                  setCurrentPassword(value);
+                  clearError('currentPassword');
+                }}
+                autoComplete="current-password"
+                error={errors.currentPassword}
+                hint="Needed to change the email you sign in with."
+                disabled={isSaving}
+              />
+            </div>
+          )}
+
+          {hasPhone && (
+            <PhoneField
+              id={phoneId}
+              label="Mobile Number"
+              value={phone}
+              defaultCountry={DEFAULT_COUNTRY}
+              onChange={e164 => {
+                setPhone(e164);
+                clearError('phone');
+              }}
+              hint="Optional. How your team reaches you on race day."
+              error={errors.phone}
+            />
+          )}
         </div>
 
         <div className="form-actions settings-actions">
@@ -226,7 +475,10 @@ function ProfilePanel({
   );
 }
 
-function PasswordPanel({ alert }: { alert: AlertFn }) {
+/** The person's own password. */
+export function PasswordPanel() {
+  // Shadows window.alert on purpose — see AlertProvider.
+  const { alert } = useAlert();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -385,13 +637,9 @@ function PasswordPanel({ alert }: { alert: AlertFn }) {
  * will do: Resend can only send from its verified domain, so any other address
  * becomes the reply-to while mail keeps going out from the default.
  */
-function SiteEmailPanel({
-  settings,
-  alert,
-}: {
-  settings: SiteSettingsForm;
-  alert: AlertFn;
-}) {
+export function SiteEmailPanel({ settings }: { settings: SiteSettingsForm }) {
+  // Shadows window.alert on purpose — see AlertProvider.
+  const { alert } = useAlert();
   const router = useRouter();
   const emailId = useId();
 
@@ -523,7 +771,7 @@ function SiteEmailPanel({
  * appears; a live region mounted at the same moment as its text is not
  * reliably announced. Nothing steals focus.
  */
-function SaveConfirmation({
+export function SaveConfirmation({
   visible,
   message,
 }: {

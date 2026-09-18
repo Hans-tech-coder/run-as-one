@@ -25,6 +25,9 @@ model Organizer {
   status     String      @default("PENDING")
   /// Centavos. A dead column: every order's fee comes from `Event.adminFee`.
   adminFee   Int         @default(6000)
+  /// The owner's profile photo, a public blob URL (avatars/ in the public
+  /// store), set from /admin/settings. Null shows the name's initial instead.
+  avatarUrl  String?
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
   events     Event[]
@@ -651,6 +654,9 @@ model StaffAccount {
   password          String?
   name              String
   phone             String?
+  /// The person's profile photo, a public blob URL (avatars/ in the public
+  /// store), set from /admin/settings. Null shows the name's initial instead.
+  avatarUrl         String?
   /// "INVITED" | "ACTIVE" | "SUSPENDED"
   status            String   @default("INVITED")
   /// Base32 TOTP secret, encrypted at rest. Null means 2FA is not set up.

@@ -102,6 +102,10 @@ const HINTED = 111;
 const TEXTAREA = 183;
 /** A label over a drop zone. */
 const UPLOAD = 219;
+/** The profile photo row with its rule under it, on a phone (stacked). */
+const AVATAR_ROW_PHONE = 280;
+/** The same from `lg` up, the circle beside its label and buttons. */
+const AVATAR_ROW_LG = 144;
 
 /**
  * The create and edit forms, as far down as a phone first shows and a little
@@ -177,17 +181,19 @@ const EXACT: Record<string, RouteShape> = {
     // 16px gaps between them: one block above the day's table.
     lg: { toolbar: 167, table: { head: LG_TANSTACK_HEAD, row: 77, rows: 6 } },
   },
+  // Settings, top to bottom as far as a screen shows: the Profile panel (the
+  // photo row, then name and email — side by side from `lg` up), then the
+  // Password panel (a full-width field over a pair). The rest of the page's
+  // panels are below the fold.
   '/admin/settings': {
     panels: [
-      { fields: [FIELD, HINTED], actions: true },
+      { fields: [AVATAR_ROW_PHONE, FIELD, HINTED], actions: true },
       { fields: [FIELD, HINTED, FIELD], actions: true },
     ],
-    // `.form-grid` pairs them: one row in the first panel, a full-width field
-    // over a pair in the second.
     lg: {
       panels: [
-        { rows: [{ h: 111, split: true }], actions: true },
-        { rows: [87, { h: 111, split: true }], actions: true },
+        { rows: [AVATAR_ROW_LG, { h: HINTED, split: true }], actions: true },
+        { rows: [FIELD, { h: HINTED, split: true }], actions: true },
       ],
     },
   },
