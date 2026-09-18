@@ -3141,3 +3141,346 @@ textarea.form-input {
   text-decoration-color: rgba(255, 255, 255, 0.35);
   color: var(--text-secondary);
 }
+
+/* ── Notifications (NotificationsCenter.tsx) ─────────────────────────────
+   The bell is drawn once by the shell, not by each page: a zero-height slot
+   at the top of <main> holds it at the right end of whatever .admin-header
+   the page drew, and every header beside it keeps its right edge clear of
+   it. From `md` up the slot is sticky, as the header is; below `md` the
+   header scrolls with the page, so the slot does too. 44px to press. */
+.admin-main.has-header-accessory {
+  position: relative;
+}
+
+.dash-header-accessory {
+  position: sticky;
+  top: 0;
+  z-index: 45;
+  height: 0;
+  display: flex;
+  justify-content: flex-end;
+  padding-right: var(--space-xl);
+  pointer-events: none;
+}
+
+.dash-header-accessory > * {
+  pointer-events: auto;
+  margin-top: 18px;
+}
+
+.has-header-accessory .admin-header {
+  padding-right: calc(var(--space-xl) + 44px + var(--space-md));
+}
+
+@media (width < 64rem) {
+  .dash-header-accessory {
+    padding-right: var(--space-lg);
+  }
+
+  .dash-header-accessory > * {
+    margin-top: 8px;
+  }
+
+  .has-header-accessory .admin-header {
+    padding-right: calc(var(--space-lg) + 44px + 12px);
+  }
+}
+
+@media (width < 48rem) {
+  .dash-header-accessory {
+    position: absolute;
+    inset: 0 0 auto 0;
+  }
+}
+
+@media (width < 40rem) {
+  .dash-header-accessory {
+    padding-right: var(--space-md);
+  }
+
+  .has-header-accessory .admin-header {
+    padding-right: calc(var(--space-md) + 44px + 12px);
+  }
+}
+
+/* The dialog. From `md` up it hangs under the bell; below `md` it is a sheet
+   from the bottom edge. The backdrop is lighter than a form modal's: this is
+   a glance at a list, not a task that takes over the screen. */
+.notif-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1150;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 72px var(--space-xl) var(--space-xl);
+  background: rgba(0, 0, 0, 0);
+  transition: background-color var(--modal-close-dur) var(--modal-ease);
+}
+
+.notif-overlay.is-open {
+  background: rgba(0, 0, 0, 0.45);
+  transition-duration: var(--modal-open-dur);
+}
+
+.notif-panel {
+  width: min(440px, 100%);
+  max-height: min(640px, calc(100dvh - 96px));
+  display: flex;
+  flex-direction: column;
+  overflow: clip;
+  background: #111114;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  transform-origin: top right;
+  outline: none;
+}
+
+.notif-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: 20px 20px 12px;
+}
+
+.notif-icon-btn {
+  width: 44px;
+  height: 44px;
+  margin: -10px -10px 0 0;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  color: var(--text-secondary);
+  transition: color var(--duration-quick) ease, background-color var(--duration-quick) ease;
+}
+
+.notif-icon-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.notif-icon-btn:focus-visible,
+.notif-row:focus-visible,
+.notif-tabs .t-tab:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: -2px;
+}
+
+.notif-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 20px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.notif-tabs {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.notif-tabs .t-tab {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.notif-mark-all {
+  white-space: nowrap;
+}
+
+.notif-mark-all:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.notif-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: 8px;
+}
+
+.notif-day {
+  margin: 0;
+  padding: 14px 20px 6px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.notif-row {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 20px;
+  color: inherit;
+  text-decoration: none;
+  transition: background-color var(--duration-quick) ease;
+}
+
+.notif-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.notif-row.is-unread {
+  background: rgba(10, 132, 255, 0.05);
+}
+
+.notif-row.is-unread:hover {
+  background: rgba(10, 132, 255, 0.09);
+}
+
+.notif-kind {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  border-width: 1px;
+  border-style: solid;
+}
+
+.notif-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.notif-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.notif-action-chip {
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #faad14;
+  background: rgba(250, 173, 20, 0.1);
+  border: 1px solid rgba(250, 173, 20, 0.25);
+}
+
+.notif-sentence {
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.notif-row.is-unread .notif-sentence {
+  color: #d4d4d8;
+}
+
+.notif-meta {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  padding-top: 2px;
+}
+
+.notif-age {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.notif-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #0a84ff;
+  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.18);
+}
+
+.notif-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 48px 32px;
+  text-align: center;
+}
+
+.notif-empty-icon {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 4px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.notif-foot {
+  margin: 0;
+  padding: 10px 20px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+@media (width < 64rem) {
+  .notif-overlay {
+    padding: 64px var(--space-lg) var(--space-lg);
+  }
+}
+
+@media (width < 48rem) {
+  .notif-overlay {
+    align-items: flex-end;
+    justify-content: stretch;
+    padding: 0;
+  }
+
+  .notif-panel {
+    width: 100%;
+    max-height: 85dvh;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    border-bottom-width: 0;
+    transform-origin: bottom center;
+  }
+
+  .notif-foot {
+    padding-bottom: calc(10px + env(safe-area-inset-bottom));
+  }
+
+  .notif-row,
+  .notif-day {
+    padding-inline: var(--space-md);
+  }
+
+  .notif-head,
+  .notif-toolbar {
+    padding-inline: var(--space-md);
+  }
+}
+
+@media (width < 24rem) {
+  .notif-toolbar {
+    flex-wrap: wrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notif-overlay { transition: none !important; }
+}

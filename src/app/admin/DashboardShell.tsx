@@ -76,6 +76,7 @@ export default function DashboardShell({
   userBlock,
   onLogout,
   initialCollapsed = false,
+  headerAccessory,
   children,
 }: {
   /** The pages, above the divider. */
@@ -86,6 +87,13 @@ export default function DashboardShell({
   onLogout: () => void;
   /** Read from the sidebar cookie by the layout, so the desktop's first paint is already right. */
   initialCollapsed?: boolean;
+  /**
+   * What sits at the right end of every page's header — the notification
+   * bell. Drawn once here rather than in each page's `.admin-header`, and
+   * kept clear of the header's own actions by the padding `Admin.css` gives
+   * every header beside it (`.dash-header-accessory`).
+   */
+  headerAccessory?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -246,7 +254,8 @@ export default function DashboardShell({
         </div>
       </aside>
 
-      <main className="admin-main" inert={isOpen}>
+      <main className={`admin-main ${headerAccessory ? 'has-header-accessory' : ''}`} inert={isOpen}>
+        {headerAccessory && <div className="dash-header-accessory">{headerAccessory}</div>}
         {children}
       </main>
     </div>

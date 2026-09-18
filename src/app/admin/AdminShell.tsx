@@ -17,6 +17,7 @@ import {
 import { ROLE_LABELS } from '@/lib/permissions';
 import type { SignedInUser } from '@/lib/signed-in-user';
 import DashboardShell from './DashboardShell';
+import NotificationsCenter from './NotificationsCenter';
 import { DashboardNavProvider } from './dashboard-nav';
 import { isBarePath } from './bare-paths';
 import './Admin.css';
@@ -125,6 +126,9 @@ export default function AdminShell({
           roleLine,
         }}
         onLogout={handleLogout}
+        // Everyone signed in gets the bell; what it lists is their
+        // permissions' business (lib/notification-store.ts).
+        headerAccessory={user ? <NotificationsCenter /> : null}
       >
         {children}
       </DashboardShell>
