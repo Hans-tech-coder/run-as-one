@@ -2236,6 +2236,22 @@ added nothing once their queue was empty.
 the decisions it records as not to be relitigated. It is no longer a queue, and
 the file itself says it may be deleted.
 
+**`MARKETING_DISCOUNTS_PLAN.md` and `PACER_DISCOUNT_PLAN.md` are open queues,
+with nothing landed yet** (both written 2026-09-19 from the owner's decisions).
+The first brings **percentage and fixed-amount** codes back to
+`/admin/marketing`, reversing the removal recorded under §4 *PromoCode*. It
+adds an optional per-code category restriction (a `PromoCategory` table) and
+shared-code limits **counted in runners**. A voucher covers one runner, the
+most expensive entry. The second, which runs only after the first, adds
+**pacer codes**: one free entry per named pacer, one category, solo orders
+only, managed at `/admin/events/[id]/pacers`, and never listed in Marketing.
+Staff send each code themselves, so the screen reminds them which pacers have
+not been sent theirs (`codeSentAt`). A
+Super-Admin-only admin-fee waiver makes such an order ₱0, and it completes as
+`COMPLIMENTARY` without reaching PayMongo. Each file holds its decisions,
+batches and open questions; the behaviour described in §4–§7 is unchanged
+until a batch lands.
+
 **`GUARDIAN_CONSENT_PLAN.md` is finished — all four batches have landed**, and
 the file is kept only for the owner's decisions and the reasoning behind them.
 A birthdate can no longer be in the future anywhere it is written:
