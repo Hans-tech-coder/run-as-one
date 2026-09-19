@@ -13,6 +13,19 @@ import { CalendarDays, X } from "lucide-react";
 import FieldError from "@/components/ui/FieldError";
 import { isCalendarDay, today } from "@/lib/event-schedule";
 import { cssDurationMs } from "@/lib/css-duration";
+import {
+  MONTHS,
+  WEEKDAYS,
+  addDays,
+  addMonths,
+  clampDay as clamp,
+  dayParts as parts,
+  daysInMonth,
+  formatCalendarDay,
+  isoDay as iso,
+  monthWeeks,
+  weekday,
+} from "@/lib/calendar-day";
 import SelectField, { type SelectOption } from "./SelectField";
 
 /**
@@ -38,8 +51,8 @@ import SelectField, { type SelectOption } from "./SelectField";
  * The trigger carries the id the wizard hands it, so `focusField` still lands
  * here after a failed Next, and the error is wired exactly like SelectField's.
  *
- * Every date here is a calendar day, not an instant. The arithmetic runs on
- * Date.UTC and reads back with the UTC getters, so no timezone ever touches it.
+ * Every date here is a calendar day, not an instant; the arithmetic is
+ * `lib/calendar-day.ts`, shared with the dashboard's AdminDatePicker.
  *
  * On a phone the calendar rises as a bottom sheet (portalled to <body>, because
  * the wizard's panels carry transforms that would trap a fixed element) with
@@ -47,81 +60,15 @@ import SelectField, { type SelectOption } from "./SelectField";
  * from it with transitions.dev's dropdown (`.t-dropdown`).
  */
 
-const MONTHS = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-] as const;
-
-const WEEKDAYS = [
-  ["Su", "Sunday"],
-  ["Mo", "Monday"],
-  ["Tu", "Tuesday"],
-  ["We", "Wednesday"],
-  ["Th", "Thursday"],
-  ["Fr", "Friday"],
-  ["Sa", "Saturday"],
-] as const;
-
 /** How far back the Year list reaches: a century covers every runner. */
 const YEARS_BACK = 100;
 
 /** Matches Tailwind's `sm` (640px): below it the calendar is a bottom sheet. */
 const PHONE_QUERY = "(max-width: 639.98px)";
 
-function parts(day: string): [number, number, number] {
-  const [y, m, d] = day.split("-").map(Number);
-  return [y, m, d];
-}
-
-function iso(y: number, m: number, d: number): string {
-  return `${String(y).padStart(4, "0")}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-}
-
-function daysInMonth(y: number, m: number): number {
-  return new Date(Date.UTC(y, m, 0)).getUTCDate();
-}
-
-function addDays(day: string, n: number): string {
-  const [y, m, d] = parts(day);
-  const t = new Date(Date.UTC(y, m - 1, d + n));
-  return iso(t.getUTCFullYear(), t.getUTCMonth() + 1, t.getUTCDate());
-}
-
-/** Moves by whole months, keeping the day where the month allows (Mar 31 − 1 → Feb 28). */
-function addMonths(day: string, n: number): string {
-  const [y, m, d] = parts(day);
-  const index = y * 12 + (m - 1) + n;
-  const ny = Math.floor(index / 12);
-  const nm = (index % 12) + 1;
-  return iso(ny, nm, Math.min(d, daysInMonth(ny, nm)));
-}
-
-function weekday(day: string): number {
-  const [y, m, d] = parts(day);
-  return new Date(Date.UTC(y, m - 1, d)).getUTCDay();
-}
-
 /** "March 4, 2014" — the words a runner would say, never an ambiguous 03/04/14. */
 export function formatBirthdate(day: string): string {
-  if (!isCalendarDay(day)) return "";
-  const [y, m, d] = parts(day);
-  return `${MONTHS[m - 1]} ${d}, ${y}`;
-}
-
-function clamp(day: string, min: string, max: string): string {
-  if (day > max) return max;
-  if (day < min) return min;
-  return day;
+  return isCalendarDay(day) ? formatCalendarDay(day) : "";
 }
 
 function subscribePhone(onChange: () => void) {
@@ -316,19 +263,9 @@ export default function BirthdatePicker({
   // --- The month on screen -------------------------------------------------
   const [viewYear, viewMonth] = parts(focusDay);
   const [, maxMonth] = parts(max);
-  const monthLength = daysInMonth(viewYear, viewMonth);
-  const lead = weekday(iso(viewYear, viewMonth, 1));
-  const cells: (string | null)[] = [
-    ...Array.from({ length: lead }, () => null),
-    ...Array.from({ length: monthLength }, (_, i) =>
-      iso(viewYear, viewMonth, i + 1),
-    ),
-  ];
   // Always six weeks, so the calendar keeps one height from month to month
   // and the sheet does not jump under the runner's thumb while they browse.
-  while (cells.length < 42) cells.push(null);
-  const weeks: (string | null)[][] = [];
-  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
+  const weeks = monthWeeks(viewYear, viewMonth);
 
   const monthOptions: SelectOption[] = MONTHS.slice(
     0,
@@ -503,11 +440,11 @@ export default function BirthdatePicker({
             <div
               aria-hidden="true"
               onClick={() => close(true)}
-              className={`birthdate-backdrop ${isShown ? "is-open" : "is-closing"} absolute inset-0 bg-black/60`}
+              className={`date-sheet-backdrop ${isShown ? "is-open" : "is-closing"} absolute inset-0 bg-black/60`}
             />
             <div
               {...dialogProps}
-              className={`birthdate-sheet ${isShown ? "is-open" : "is-closing"} absolute inset-x-0 bottom-0 rounded-t-[20px] border-t border-white/15 bg-[#0d0d0f] px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-[0_-16px_40px_rgba(0,0,0,0.6)]`}
+              className={`date-sheet ${isShown ? "is-open" : "is-closing"} absolute inset-x-0 bottom-0 rounded-t-[20px] border-t border-white/15 bg-[#0d0d0f] px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-[0_-16px_40px_rgba(0,0,0,0.6)]`}
             >
               <div className="mb-3 flex items-center justify-between">
                 <span className="text-sm font-semibold text-white">

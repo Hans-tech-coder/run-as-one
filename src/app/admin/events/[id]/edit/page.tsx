@@ -31,6 +31,7 @@ import AdminRouteLoading from '@/app/admin/AdminRouteLoading';
 import { EVENT_FORM_SHAPE } from '@/app/admin/route-loading-shape';
 import BusyLabel from '@/components/ui/BusyLabel';
 import EventClientField from '@/app/admin/events/EventClientField';
+import AdminDatePicker from '../../../AdminDatePicker';
 
 // The premade templates that used to sit under /public/certificates are gone —
 // the only way to get a certificate background now is to upload one. An event
@@ -425,16 +426,13 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
                   placeholder="Route, assembly time, cut-off, what runners should bring — anything they'd ask about before signing up."
                 />
               </div>
-              <div className="form-group">
-                <label className="form-label">Date</label>
-                <input 
-                  type="date" 
-                  value={formData.date}
-                  onChange={e => setFormData({...formData, date: e.target.value})}
-                  className="form-input"
-                  required
-                />
-              </div>
+              <AdminDatePicker
+                id="event-date"
+                label="Date"
+                value={formData.date}
+                dialogLabel="Choose the race date"
+                onChange={date => setFormData({...formData, date})}
+              />
               <div className="form-group">
                 <label className="form-label">Location</label>
                 <input 

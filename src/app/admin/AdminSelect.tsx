@@ -47,6 +47,7 @@ export default function AdminSelect({
   id,
   error,
   hint,
+  hideLabel = false,
 }: {
   /** A node rather than a string, so a required field can carry its asterisk. */
   label: React.ReactNode;
@@ -58,6 +59,11 @@ export default function AdminSelect({
   id?: string;
   error?: string;
   hint?: React.ReactNode;
+  /**
+   * Keeps the label for screen readers but not on screen, for a select whose
+   * meaning its surroundings already show (AdminDatePicker's Month and Year).
+   */
+  hideLabel?: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
@@ -179,8 +185,11 @@ export default function AdminSelect({
     if (e.key === "Escape") {
       if (isOpen) {
         // This sits inside a modal that closes on Escape as well; dismissing
-        // the list must not also throw away the form behind it.
+        // the list must not also throw away the form behind it. Immediate as
+        // well: a dialog listening on `document` shares the node React's own
+        // listener sits on, where plain stopPropagation does not reach it.
         e.stopPropagation();
+        e.nativeEvent.stopImmediatePropagation();
         close();
       }
       return;
@@ -195,7 +204,7 @@ export default function AdminSelect({
 
   return (
     <div className="form-group">
-      <label className="form-label" htmlFor={triggerId}>
+      <label className={hideLabel ? "sr-only" : "form-label"} htmlFor={triggerId}>
         {label}
       </label>
 

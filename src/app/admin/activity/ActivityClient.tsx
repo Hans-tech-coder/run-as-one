@@ -12,7 +12,6 @@ import {
 } from '@tanstack/react-table';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import RunnerLoader from '@/components/ui/RunnerLoader';
-import FieldError from '@/components/ui/FieldError';
 import FiltersMenu, { type FilterGroup } from '../FiltersMenu';
 import AdminCardList from '../AdminCardList';
 import AdminTablePager from '../AdminTablePager';
@@ -43,6 +42,7 @@ import {
 } from '@/lib/activity';
 import type { ActivityPerson } from '@/lib/activity-store';
 import type { AuditAction } from '@/lib/audit';
+import AdminDatePicker from '../AdminDatePicker';
 
 /**
  * The activity screen's filters and list.
@@ -453,34 +453,28 @@ export default function ActivityClient({
           hold, and the boxes stay in view while the reading changes. */}
       {filters.range === 'custom' && (
         <div className="grid gap-x-4 sm:grid-cols-2 xl:grid-cols-4 -mt-2">
-          <div className="form-group min-w-0">
-            <label className="form-label" htmlFor="activity-from">From</label>
-            <input
-              id="activity-from"
-              type="date"
-              className="form-input"
-              value={from}
-              max={to || undefined}
-              onChange={e => setDates(e.target.value, to)}
-              aria-invalid={shownErrors.from ? true : undefined}
-              aria-describedby={shownErrors.from ? 'activity-from-error' : undefined}
-            />
-            <FieldError id="activity-from-error" message={shownErrors.from} />
-          </div>
-          <div className="form-group min-w-0">
-            <label className="form-label" htmlFor="activity-to">To</label>
-            <input
-              id="activity-to"
-              type="date"
-              className="form-input"
-              value={to}
-              min={from || undefined}
-              onChange={e => setDates(from, e.target.value)}
-              aria-invalid={shownErrors.to ? true : undefined}
-              aria-describedby={shownErrors.to ? 'activity-to-error' : undefined}
-            />
-            <FieldError id="activity-to-error" message={shownErrors.to} />
-          </div>
+          <AdminDatePicker
+            id="activity-from"
+            label="From"
+            className="min-w-0"
+            value={from}
+            max={to || undefined}
+            clearable
+            dialogLabel="Choose the first day"
+            onChange={next => setDates(next, to)}
+            error={shownErrors.from}
+          />
+          <AdminDatePicker
+            id="activity-to"
+            label="To"
+            className="min-w-0"
+            value={to}
+            min={from || undefined}
+            clearable
+            dialogLabel="Choose the last day"
+            onChange={next => setDates(from, next)}
+            error={shownErrors.to}
+          />
         </div>
       )}
 

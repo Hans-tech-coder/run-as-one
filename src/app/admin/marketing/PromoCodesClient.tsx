@@ -66,6 +66,7 @@ import {
 import { MAX_VOUCHER_BATCH } from '@/lib/voucher-codes';
 import { formatPesos } from '@/lib/money';
 import type { PromoRedemption } from '@/lib/promo-redemptions';
+import AdminDatePicker from '../AdminDatePicker';
 
 /**
  * The organizer's discount codes: what exists, and the form that makes more.
@@ -1871,28 +1872,25 @@ export default function PromoCodesClient({
                   {/* Stacked below `sm`: a date box half of a phone's modal is
                       too narrow for the date and its calendar icon. */}
                   <div className="flex max-sm:flex-col gap-4">
-                    <div className="form-group flex-1">
-                      <label className="form-label" htmlFor="promo-from">Starts</label>
-                      <input
-                        id="promo-from"
-                        type="date"
-                        className="form-input"
-                        value={form.validFrom}
-                        onChange={e => set({ validFrom: e.target.value })}
-                      />
-                    </div>
-                    <div className="form-group flex-1">
-                      <label className="form-label" htmlFor="promo-until">Ends</label>
-                      <input
-                        id="promo-until"
-                        type="date"
-                        className="form-input"
-                        aria-invalid={errorFor('validUntil') ? true : undefined}
-                        value={form.validUntil}
-                        onChange={e => set({ validUntil: e.target.value })}
-                      />
-                      <FieldError id="promo-until-error" message={errorFor('validUntil')} />
-                    </div>
+                    <AdminDatePicker
+                      id="promo-from"
+                      label="Starts"
+                      className="flex-1 min-w-0"
+                      value={form.validFrom}
+                      clearable
+                      dialogLabel="Choose the first day it works"
+                      onChange={next => set({ validFrom: next })}
+                    />
+                    <AdminDatePicker
+                      id="promo-until"
+                      label="Ends"
+                      className="flex-1 min-w-0"
+                      value={form.validUntil}
+                      clearable
+                      dialogLabel="Choose the last day it works"
+                      onChange={next => set({ validUntil: next })}
+                      error={errorFor('validUntil') || undefined}
+                    />
                   </div>
                   <p className="text-xs text-secondary">
                     Dates are Manila days: a promotion that ends on the 30th works to the end of
@@ -2031,6 +2029,6 @@ function manilaCalendarDay(iso: string | null): string {
   if (!iso) return '';
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return '';
-  // en-CA formats as YYYY-MM-DD, which is what <input type="date"> wants.
+  // en-CA formats as YYYY-MM-DD, the value AdminDatePicker holds.
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(date);
 }

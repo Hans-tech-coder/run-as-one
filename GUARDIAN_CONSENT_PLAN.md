@@ -143,7 +143,8 @@ popover's open and close.
 
 **Out of scope:** the dashboard's other native date inputs (event date, promo
 windows, activity filter, remittance). They could adopt the picker later as a
-separate task, but not in this plan.
+separate task, but not in this plan. *(Done afterwards as that separate task,
+2026-09-19: `admin/AdminDatePicker` — see the last line of Where it stands.)*
 
 **Done when:** both wizards use the new picker, future days cannot be chosen,
 and it works with keyboard, mouse and touch.
@@ -292,3 +293,11 @@ consented for them, export it, and print a sheet for kit claiming.
   by the owner's call. They want the client's or event's own logo there
   instead once the dashboard has a setting for it; until then Run As One is the
   default, and stays the fallback after.
+- 2026-09-19: the Batch 2 *out of scope* item was taken up by the owner as a
+  separate task. Every native date input under `src/app/admin` now uses
+  `admin/AdminDatePicker` (the event date on create and edit, the registration
+  opening day, the promo windows, the activity range, a remittance's Sent On,
+  the runner edit's birthdate and the organizer application's target date).
+  The calendar arithmetic moved into `lib/calendar-day.ts`, shared with
+  `BirthdatePicker`, and the bottom sheet's CSS moved to `globals.css` as
+  `.date-sheet`. Time inputs stay native.

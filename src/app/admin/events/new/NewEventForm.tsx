@@ -22,6 +22,7 @@ import { cleanBankAccounts, type BankAccountDraft } from '@/app/admin/events/ban
 import { offersBankTransfer } from '@/lib/registration-form';
 import BusyLabel from '@/components/ui/BusyLabel';
 import EventClientField from '@/app/admin/events/EventClientField';
+import AdminDatePicker from '../../AdminDatePicker';
 
 /**
  * The create-event form. `page.tsx` reads the default platform fee on the
@@ -314,16 +315,13 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
                   placeholder="Route, assembly time, cut-off, what runners should bring — anything they'd ask about before signing up."
                 />
               </div>
-              <div className="form-group">
-                <label className="form-label">Date</label>
-                <input 
-                  type="date" 
-                  value={formData.date}
-                  onChange={e => setFormData({...formData, date: e.target.value})}
-                  className="form-input"
-                  required
-                />
-              </div>
+              <AdminDatePicker
+                id="event-date"
+                label="Date"
+                value={formData.date}
+                dialogLabel="Choose the race date"
+                onChange={date => setFormData({...formData, date})}
+              />
               <div className="form-group">
                 <label className="form-label">Location</label>
                 <input 

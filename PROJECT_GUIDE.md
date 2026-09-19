@@ -521,6 +521,7 @@ logic again.
 | `app/events/[slug]/register/validation.ts` | What step 1 requires. Returns *which* fields are wrong, driving the red states, the summary dialog, and where the caret lands. Missing answers are most of it, and there are two exceptions, each named rather than reported as blank: a phone number that is present but the wrong length for its country ("Mobile number must be 10 digits"), and an **email address that is not one** ("Enter a valid email address, like juan@example.com", the rule from `email-address.ts`). The field is `type="email"`, which is no help here — a browser only runs that check on a form *submit*, and step 1 advances through a click handler. |
 | `app/events/[slug]/register/useStepReveal.ts` | **What a change of step does to the page.** Step 1 is long and every later step is short, so leaving the scroll where Next was pressed dropped the runner past the end of the new step, looking at empty space and the footer. Both wizards call it with `step`, attach `panelRef` to the form column and `headingRef` (with `tabIndex={-1}`) to the step heading. On every change of step — Next, Back, or the jump to step 4 — it scrolls the **form column**, not the page, back under the navbar (below 1024px the summary sits above the form, so y=0 would land on the summary), **only ever upwards**, instantly under reduced motion; then moves focus to the heading so a screen reader announces the new step instead of losing focus with the unmounted button. It stops at the column's `scroll-margin-top`, `--wizard-top` in `RegistrationWizard.css` — the same number the sticky summary pins at. The step a runner lands on is never scrolled. |
 | `css-duration.ts` | **`cssDurationMs(token, fallback)` — a motion token's length in ms, client only.** Every timer that waits out a CSS exit (the row menus' and the account menu's close, the Dark Mode label's text swap) reads its length through this. A bare `parseFloat` of the token is wrong: the CSS build rewrites `150ms` as `.15s`, so it read 0.15 and every menu's close fade was cut off at once. It handles both units. |
+| `calendar-day.ts` | **Arithmetic on `YYYY-MM-DD` calendar days, for the two drawn calendars** (`BirthdatePicker`, `AdminDatePicker`) so they cannot disagree about a month's length or where it starts: `MONTHS`/`WEEKDAYS`, `addDays`, `addMonths` (keeps the day where the month allows, Mar 31 − 1 → Feb 28), `weekday`, `clampDay`, `monthWeeks` (always six weeks, so a calendar never changes height) and `formatCalendarDay` ("March 4, 2014", never 03/04/14). Everything runs on `Date.UTC` with the UTC getters, so no timezone touches a day; "today" is not here but Manila's `today()` in `event-schedule.ts`. |
 | `consent-waiver.ts` | The liability/media/data-privacy waiver. Organizers may override it per event; the default wording is supplied here. **Never present an empty waiver.** |
 | `consent-signature.ts` | **Who signed the waiver.** The tick records that a box was clicked; the typed signature records a person, which is the thing an organizer can hold up afterwards. **Whatever the runner types is accepted** — the only rule is that the box is not blank. It used to demand a match against one of the runners on the order, and that stopped honest people at the last step of the form: middle initials, married names, nicknames, and characters their keyboard renders differently all read as mismatches, and the runners it inconvenienced were never the problem. `normalizeSignature` now only collapses whitespace, so a box holding nothing but spaces still counts as empty. `consentSignatureError` has one message left, and it names its failure: the box is empty. Both wizards and both checkout routes import it, because a signature accepted on screen and refused by the server would be worse than the checkbox alone. |
 | `email-address.ts` | **What counts as an email address, in one place.** A runner's address is the only way an order ever reaches them again, and one with no `@` in it makes every email about that order silent: Resend refuses the send outright, `lastEmailError` records a reason nobody reads for days, and the runner believes they are registered because the wizard said so. That is not hypothetical — `roxymendoza025gmail.com` reached a live order. `normalizeEmailAddress` **trims and nothing else** (a pasted trailing space stops a send on its own; casing is left alone because the local part is case-sensitive on some mail servers), `looksLikeEmailAddress` / `emailAddressError` / `invalidEmailMessage` are the rule and its wording, and `participantEmailError` is what both checkout routes ask of the runners they were handed — naming the runner ("Runner 2: enter a valid email address…") only when there is more than one. The shape is `something@something.something` and deliberately no more: a regex chasing RFC 5322 rejects valid mail more often than it catches bad, and only the mail server truly knows. Every door imports it — both wizards' check, both checkout routes, the runner PUT, staff invitations, the organizer's profile and the feedback form — because a rule enforced in one of them is a rule the other can still write past. |
@@ -1262,7 +1263,8 @@ These are the user's own standing preferences. Follow them without being asked.
    designed page — that is what `/coming-soon` and `StatusPanel` exist for.
 2. **The UI must look expensive and uniform.** Browser and OS default controls
    (native `<select>`, `alert()`, `confirm()`) are unacceptable. A new control
-   copies an existing one: `SelectField`, `Combobox`, `BirthdatePicker`, `AlertProvider`'s
+   copies an existing one: `SelectField`, `Combobox`, `BirthdatePicker`, `AdminSelect`,
+   `AdminDatePicker`, `AlertProvider`'s
    `alert`/`confirm`, `AlertModal`, `StatusPanel`, `FieldError`.
 3. **Consult the project's `ui-ux-pro-max` skill for UI/UX work** rather than
    designing ad hoc. Skills stay project-scoped in `.claude/skills/` — nothing is
@@ -1536,8 +1538,8 @@ These are the user's own standing preferences. Follow them without being asked.
     summary sidebars stick now too. Never put `overflow-x: hidden` back on
     `html` or `body`.
   - **Forms on a touch screen.** A `.form-grid` cell may shrink
-    (`min-width: 0`), so a native date or time input cannot hold a column
-    open. Below `lg` a row's remove button, the add link and a checkbox's
+    (`min-width: 0`), so a native time input cannot hold a column open (the
+    dashboard has no native date input left; see `AdminDatePicker` below). Below `lg` a row's remove button, the add link and a checkbox's
     label row are 44px, and an uploaded image's Remove is a bar under the
     image instead of a hover overlay. Below `sm` the drop zone tightens and a
     settings button spans the width. A money box carries
@@ -1706,7 +1708,7 @@ These are the user's own standing preferences. Follow them without being asked.
   popover opening with `.t-dropdown`; below `sm` it is a bottom sheet portalled
   to `<body>` (the wizard's panels carry transforms that would trap a fixed
   element) with 44px day cells, a backdrop, a close button and the page scroll
-  locked, animated by `.birthdate-sheet` in `RegistrationWizard.css` on the
+  locked, animated by `.date-sheet` / `.date-sheet-backdrop` in `globals.css` on the
   dropdown's motion tokens. The value in and out stays a `YYYY-MM-DD` string,
   and it takes `id` / `error` exactly like SelectField, so validation and
   `focusField` did not change. Its outside-click listener runs in the **capture
@@ -1714,9 +1716,33 @@ These are the user's own standing preferences. Follow them without being asked.
   so a bubbling check found the target in no document and closed the calendar
   on every pick. `SelectField` gained `hideLabel` (label kept for screen
   readers only) for that header pair. Any new runner-facing date field uses
-  this picker; the dashboard's own date inputs (event date, promo windows,
-  activity filter, remittance, the runner edit modal) are still native and are
-  a separate task.
+  this picker. Its date arithmetic lives in `lib/calendar-day.ts` (§5).
+- **A date picked on the dashboard is `admin/AdminDatePicker`, never a native
+  `<input type="date">`.** It is BirthdatePicker in the admin's clothes — the
+  `.form-label` / `.form-input` trigger showing the day in words with a
+  calendar icon, a Month + Year **`AdminSelect`** header (AdminSelect gained
+  `hideLabel` for it), the same APG keyboard, six-week grid, `.t-dropdown`
+  popover from `sm` up and `.date-sheet` bottom sheet below it with 44px cells
+  — on the dashboard tokens, so it follows both themes. A sibling rather than
+  one shared component for AdminSelect's reason: two design systems. What it
+  adds: **`min` / `max`** in either direction (days outside are disabled and
+  unfocusable; with neither, the Year list spans ten years either side of
+  today and of the value), **`clearable`** (a Clear button, for a field that
+  may be blank) and a **Today** button whenever today is pickable, `hint`,
+  `disabled`, `className` for the `.form-group`, and `invalid` /
+  `describedBy` for a field whose message is drawn elsewhere (the opening
+  picker's one line under date and time). The trigger is named by its label
+  **and** its value (`aria-labelledby`). The desktop popover is **portalled to
+  `<body>` with `position: fixed`**, placed under the field or flipped above
+  it and kept on screen, because a modal's scrolling body would clip it;
+  `data-theme` sits on `<html>` while the dashboard is mounted, so the portal
+  keeps the theme. **Escape closes only the calendar**: dialogs here listen on
+  `document`, where React's `stopPropagation` does not reach, so it also calls
+  `nativeEvent.stopImmediatePropagation()` (AdminSelect now does the same for
+  its open list). In use on the event date (create and edit), the registration
+  opening day, the promo windows, the activity range, a remittance's Sent On,
+  the runner edit's birthdate (today back a century) and the organizer
+  application's target date. Time inputs are still native `type="time"`.
 - **Chrome every dashboard page shares goes through `DashboardShell`, not into each page.** The notification bell is the model: one `headerAccessory` slot at the top of `<main>`, and CSS (`.has-header-accessory .admin-header`) that keeps every page's header clear of it. Something meant for every header is added there, never pasted into fifteen `page.tsx` files.
 - **A row with more than one action has a ⋮ menu, never a row of chips.** The
   Actions cell holds one `.action-dropdown-btn` whose menu lists each action
@@ -2208,7 +2234,7 @@ both wizards pick it with the custom `BirthdatePicker` (§9; Batch 2), which
 cannot select a day after today in Manila, step 1 validation gives the specific message from
 `lib/minor-consent.ts` and highlights the field, both checkout routes refuse it
 with `participantBirthdateError`, and the admin runner edit refuses it (its
-modal keeps a native input with `max`, outside the plan's scope). **Batch 3**
+modal now picks it with `AdminDatePicker`, capped at today). **Batch 3**
 asks for guardian consent: a runner 12 or under on race day gets a
 *Parent/Guardian Consent* panel in their card (`register/GuardianConsent.tsx`:
 name, `SelectField` relationship, a tick naming the child), step 1 validation

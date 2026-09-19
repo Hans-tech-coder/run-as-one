@@ -24,6 +24,7 @@ import {
   readRemittance,
   type RemittanceFieldErrors,
 } from '@/lib/settlement';
+import AdminDatePicker from '../../AdminDatePicker';
 
 /**
  * **Record Remittance** — one payout to a race's organizer, or money the
@@ -256,26 +257,19 @@ export default function RecordRemittanceDialog({
           </div>
 
           <div className="form-grid">
-            <div className="form-group">
-              <label className="form-label" htmlFor="remittance-paid-on">
-                Sent On
-              </label>
-              <input
-                id="remittance-paid-on"
-                type="date"
-                className="form-input text-base sm:text-sm"
-                max={today}
-                value={paidOn}
-                onChange={e => {
-                  setPaidOn(e.target.value);
-                  clear('paidOn');
-                }}
-                disabled={busy}
-                aria-invalid={errors.paidOn ? true : undefined}
-                aria-describedby={errors.paidOn ? 'remittance-paid-on-error' : undefined}
-              />
-              <FieldError id="remittance-paid-on-error" message={errors.paidOn} />
-            </div>
+            <AdminDatePicker
+              id="remittance-paid-on"
+              label="Sent On"
+              max={today}
+              value={paidOn}
+              dialogLabel="Choose the day it was sent"
+              onChange={day => {
+                setPaidOn(day);
+                clear('paidOn');
+              }}
+              disabled={busy}
+              error={errors.paidOn || undefined}
+            />
             <AdminSelect
               label="Method"
               listboxLabel="How the money was sent"

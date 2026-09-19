@@ -8,6 +8,7 @@ import {
   isScheduledOpening,
   type OpeningDraft,
 } from './registration-opening';
+import AdminDatePicker from '../AdminDatePicker';
 
 /**
  * Chooses when an event starts taking sign-ups.
@@ -120,24 +121,20 @@ export default function RegistrationOpeningPicker({
 
       {scheduled && (
         <div className="flex flex-col gap-4 rounded-xl border border-[var(--dash-border)] bg-[var(--dash-sunken)] p-4 sm:p-5">
-          {/* min-w-0 on each field: a native date or time input carries an
+          {/* min-w-0 on each field: the native time input carries an
               intrinsic width of its own, and without it a grid track holds
               that width open past a 360px screen's edge. */}
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="form-group min-w-0">
-              <label className="form-label" htmlFor={dateId}>
-                Opening Date
-              </label>
-              <input
-                id={dateId}
-                type="date"
-                value={value.day}
-                onChange={(e) => onChange({ ...value, day: e.target.value })}
-                className="form-input"
-                aria-describedby={error ? errorId : undefined}
-                aria-invalid={error ? true : undefined}
-              />
-            </div>
+            <AdminDatePicker
+              id={dateId}
+              label="Opening Date"
+              className="min-w-0"
+              value={value.day}
+              dialogLabel="Choose the opening date"
+              onChange={(day) => onChange({ ...value, day })}
+              invalid={Boolean(error)}
+              describedBy={error ? errorId : undefined}
+            />
             <div className="form-group min-w-0">
               <label className="form-label" htmlFor={timeId}>
                 Opening Time

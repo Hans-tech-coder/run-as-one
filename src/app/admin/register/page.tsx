@@ -40,6 +40,7 @@ import {
 } from '@/lib/organizer-application';
 
 import './../Auth.css';
+import AdminDatePicker from '../AdminDatePicker';
 
 /**
  * The organizer application.
@@ -828,25 +829,20 @@ export default function AdminRegister() {
                     </div>
 
                     <div className="apply-row apply-row--two">
-                      <div className="form-group">
-                        <label className="form-label" htmlFor={FIELD_ID.firstEventDate}>
-                          Target Date
-                          <Optional />
-                        </label>
-                        <input
-                          id={FIELD_ID.firstEventDate}
-                          type="date"
-                          value={form.firstEventDate}
-                          onChange={(e) => set('firstEventDate', e.target.value)}
-                          className="form-input"
-                          aria-invalid={Boolean(errors.firstEventDate)}
-                          aria-describedby={`${FIELD_ID.firstEventDate}-error`}
-                        />
-                        <FieldError
-                          id={`${FIELD_ID.firstEventDate}-error`}
-                          message={errors.firstEventDate}
-                        />
-                      </div>
+                      <AdminDatePicker
+                        id={FIELD_ID.firstEventDate}
+                        label={
+                          <>
+                            Target Date
+                            <Optional />
+                          </>
+                        }
+                        value={form.firstEventDate}
+                        clearable
+                        dialogLabel="Choose the target date"
+                        onChange={(day) => set('firstEventDate', day)}
+                        error={errors.firstEventDate}
+                      />
 
                       <div className="form-group">
                         <label

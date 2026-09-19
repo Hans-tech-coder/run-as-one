@@ -1543,3 +1543,42 @@ html, body { overflow-x: clip; }
 @media (prefers-reduced-motion: reduce) {
   .hero-arc { transition: none !important; }
 }
+
+/* A drawn calendar's phone layout (BirthdatePicker, AdminDatePicker): a bottom
+   sheet that rises from the edge the thumb is already at. It borrows the
+   dropdown's motion tokens rather than inventing a timing of its own, so the
+   sheet and the sm-up popover (.t-dropdown) open and close at the same pace.
+   Closing is the shorter of the two, as everywhere else in transitions.dev.
+   Here rather than in the wizard's stylesheet because both sides of the site
+   use it. */
+.date-sheet-backdrop {
+  opacity: 0;
+  transition: opacity var(--dropdown-open-dur) var(--dropdown-ease);
+}
+.date-sheet-backdrop.is-open {
+  opacity: 1;
+}
+.date-sheet-backdrop.is-closing {
+  opacity: 0;
+  transition-duration: var(--dropdown-close-dur);
+}
+
+.date-sheet {
+  transform: translateY(100%);
+  transition: transform var(--dropdown-open-dur) var(--dropdown-ease);
+  will-change: transform;
+}
+.date-sheet.is-open {
+  transform: translateY(0);
+}
+.date-sheet.is-closing {
+  transform: translateY(100%);
+  transition-duration: var(--dropdown-close-dur);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .date-sheet-backdrop,
+  .date-sheet {
+    transition: none !important;
+  }
+}

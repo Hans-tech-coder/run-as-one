@@ -52,6 +52,7 @@ import {
   guardianLine,
   needsGuardianConsent,
 } from '@/lib/minor-consent';
+import AdminDatePicker from '../../../AdminDatePicker';
 
 /**
  * What the signed-in person may do on this event, decided by page.tsx with the
@@ -2085,18 +2086,19 @@ export default function RegistrantsTable({
                     listboxLabel="Gender"
                     onChange={gender => setEditingRunner({...editingRunner, gender})}
                   />
-                  <div className="form-group">
-                    <label className="form-label" htmlFor="edit-runner-birthdate">Birthdate</label>
-                    <input
-                      id="edit-runner-birthdate"
-                      type="date"
-                      required
-                      max={today()}
-                      value={editingRunner.birthdate || ''}
-                      onChange={e => setEditingRunner({...editingRunner, birthdate: e.target.value})}
-                      className="form-input"
-                    />
-                  </div>
+                  {/* Today back a century, the reach of the wizard's
+                      BirthdatePicker: a birthdate is never in the future. */}
+                  <AdminDatePicker
+                    id="edit-runner-birthdate"
+                    label="Birthdate"
+                    className="min-w-0"
+                    max={today()}
+                    min={`${Number(today().slice(0, 4)) - 100}-01-01`}
+                    value={editingRunner.birthdate || ''}
+                    placeholder="Select the birthdate"
+                    dialogLabel="Choose the birthdate"
+                    onChange={birthdate => setEditingRunner({...editingRunner, birthdate})}
+                  />
                   <div className="form-group">
                     <label className="form-label" htmlFor="edit-runner-size">Shirt Size</label>
                     {/* Free text with suggestions rather than AdminSelect: a
