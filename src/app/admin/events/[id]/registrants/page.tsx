@@ -18,6 +18,14 @@ import {
   logisticsMethodLabel,
   paymentMethodLabel,
 } from '@/lib/registration-codes';
+import {
+  GUARDIAN_RELATIONSHIP_LABELS,
+  ageOn,
+  asGuardianRelationship,
+  guardianLine,
+  needsGuardianConsent,
+} from '@/lib/minor-consent';
+import { formatEventInstant } from '@/lib/event-schedule';
 
 export default async function RegistrantsPage({
   params,
@@ -146,6 +154,27 @@ export default async function RegistrantsPage({
         phone: runner.phone,
         gender: runner.gender,
         birthdate: runner.birthdate,
+        // Guardian consent (GUARDIAN_CONSENT_PLAN.md Batch 4). Whether this
+        // runner is a minor is decided here, against the race day, with the
+        // same rule the wizards and the checkout routes use — never re-derived
+        // from the guardian columns, because a row from before Batch 3, or a
+        // birthdate staff corrected later, is a minor with none on file, and
+        // that is exactly the row the organizer has to be told about.
+        isMinor: needsGuardianConsent(runner.birthdate, event.date),
+        ageOnRaceDay: ageOn(runner.birthdate, event.date),
+        guardianName: runner.guardianName,
+        guardianRelationship: asGuardianRelationship(runner.guardianRelationship),
+        guardianRelationshipLabel: (() => {
+          const known = asGuardianRelationship(runner.guardianRelationship);
+          return known ? GUARDIAN_RELATIONSHIP_LABELS[known] : null;
+        })(),
+        guardianLine: guardianLine(runner.guardianName, runner.guardianRelationship),
+        // Worded on the server, in Manila time, so the modal and the CSV read
+        // the same instant the same way on every organizer's machine.
+        guardianConsentAt: runner.guardianConsentAt ? runner.guardianConsentAt.toISOString() : null,
+        guardianConsentAtLabel: runner.guardianConsentAt
+          ? formatEventInstant(runner.guardianConsentAt)
+          : null,
         category: runner.category.name,
         distance: runner.category.distance,
         size: runner.singletSize,
@@ -247,6 +276,7 @@ export default async function RegistrantsPage({
         <RegistrantsTable
           runners={runners}
           eventId={id}
+          raceDay={event.date}
           initialSearch={search ?? ''}
           permissions={permissions}
         />

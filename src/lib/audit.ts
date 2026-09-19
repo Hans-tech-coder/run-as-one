@@ -158,6 +158,10 @@ export const SENSITIVE_RUNNER_FIELDS = [
   'emergencyContactName',
   'emergencyContactPhone',
   'medicalConditions',
+  // A minor's parent or guardian (GUARDIAN_CONSENT_PLAN.md Batch 4): a second
+  // person's name and their tie to a child, so no less private than the rest.
+  'guardianName',
+  'guardianRelationship',
 ] as const;
 
 /** A value longer than this is recorded as "changed" rather than copied. */

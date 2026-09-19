@@ -286,3 +286,25 @@ export function storedGuardianConsent(
     guardianConsentAt: now,
   };
 }
+
+// ---------------------------------------------------------------------------
+// What organizers read (GUARDIAN_CONSENT_PLAN.md, Batch 4)
+// ---------------------------------------------------------------------------
+
+/**
+ * "MARIA DELA CRUZ (Parent)" — the guardian as one line, the way the
+ * registrant detail, the printable consent and both registration emails show
+ * them. Null when no name is on file, so a caller can say that instead of
+ * printing an empty pair of brackets. An unrecognised relationship (a value
+ * written before `asGuardianRelationship` guarded the column) drops the
+ * brackets rather than showing a raw code.
+ */
+export function guardianLine(
+  name: string | null | undefined,
+  relationship: string | null | undefined,
+): string | null {
+  const who = typeof name === 'string' ? name.replace(/\s+/g, ' ').trim() : '';
+  if (!who) return null;
+  const known = asGuardianRelationship(relationship);
+  return known ? `${who} (${GUARDIAN_RELATIONSHIP_LABELS[known]})` : who;
+}

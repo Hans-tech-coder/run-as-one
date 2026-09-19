@@ -14,7 +14,7 @@ import {
   recordAudit,
 } from '@/lib/audit';
 import { runnerRef } from '@/lib/order-ref';
-import { birthdateError } from '@/lib/minor-consent';
+import { asGuardianRelationship, birthdateError } from '@/lib/minor-consent';
 
 /**
  * Editing and removing one runner on an order.
@@ -38,6 +38,8 @@ const EDITABLE_FIELDS = [
   'emergencyContactPhone',
   'medicalConditions',
   'runningCommunity',
+  'guardianName',
+  'guardianRelationship',
 ] as const;
 
 /** The runner, its order and how many live runners that order holds. */
@@ -94,7 +96,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       emergencyContactName,
       emergencyContactPhone,
       medicalConditions,
-      runningCommunity
+      runningCommunity,
+      guardianName,
+      guardianRelationship,
     } = body;
 
     // The address every email about this order goes to. An organizer fixing a
@@ -118,6 +122,31 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       }
     }
 
+    // The guardian (GUARDIAN_CONSENT_PLAN.md Batch 4). Staff may correct the
+    // name and the relationship; `guardianConsentAt` is never written here,
+    // because it records when the guardian agreed through the form and a
+    // correction by staff is not that. Neither is required, even when the
+    // birthdate makes the runner a minor: the modal warns, and the consent is
+    // signed on paper at kit claiming. A body without the keys (an older
+    // client) leaves both columns alone.
+    const touchesGuardian = 'guardianName' in body || 'guardianRelationship' in body;
+    let guardian: { guardianName: string | null; guardianRelationship: string | null } | null = null;
+    if (touchesGuardian) {
+      const hasRelationship =
+        typeof guardianRelationship === 'string' && guardianRelationship.trim() !== '';
+      const relationship = asGuardianRelationship(guardianRelationship);
+      if (hasRelationship && !relationship) {
+        return NextResponse.json({ error: 'Select a relationship' }, { status: 400 });
+      }
+      const name = optionalUpperCaseForStorage(guardianName);
+      // A relationship with nobody named is not a guardian on file, so
+      // clearing the name clears both.
+      guardian = {
+        guardianName: name,
+        guardianRelationship: name ? relationship : null,
+      };
+    }
+
     const data = {
       // Registrant text is stored uppercase, exactly as the wizards store it
       // (lib/text-case.ts) — an organizer fixing a typo must not be the one
@@ -136,7 +165,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       medicalConditions: optionalUpperCaseForStorage(medicalConditions),
       // Blank clears back to the default rather than storing an empty
       // string, so a club tally still adds up to the head count.
-      runningCommunity: asRunnerCommunity(runningCommunity)
+      runningCommunity: asRunnerCommunity(runningCommunity),
+      ...(guardian ?? {}),
     };
 
     const updatedRunner = await db.$transaction(async tx => {

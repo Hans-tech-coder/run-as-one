@@ -6,7 +6,7 @@ import {
   Search, Download, Eye, X, Trash2,
   Columns, ChevronUp, ChevronDown, CheckCircle, Check,
   MessageSquare, MessageSquareText, Mail, MailWarning, Copy, ExternalLink, Maximize2, FileText,
-  Hourglass
+  Hourglass, Printer, TriangleAlert
 } from 'lucide-react';
 import RegistrantActionsMenu from './RegistrantActionsMenu';
 import ProofLightbox from './ProofLightbox';
@@ -41,6 +41,17 @@ import { today } from '@/lib/event-schedule';
 import { orderActivityPath, statusProvenance } from '@/lib/activity';
 import BusyLabel from '@/components/ui/BusyLabel';
 import FiltersMenu, { type FilterGroup } from '../../../FiltersMenu';
+import {
+  GUARDIAN_CONSENT_MAX_AGE,
+  GUARDIAN_NAME_PLACEHOLDER,
+  GUARDIAN_RELATIONSHIPS,
+  GUARDIAN_RELATIONSHIP_LABELS,
+  GUARDIAN_RELATIONSHIP_PLACEHOLDER,
+  ageOn,
+  asGuardianRelationship,
+  guardianLine,
+  needsGuardianConsent,
+} from '@/lib/minor-consent';
 
 /**
  * What the signed-in person may do on this event, decided by page.tsx with the
@@ -61,6 +72,12 @@ export type RegistrantPermissions = {
 
 interface RegistrantsTableProps {
   eventId: string;
+  /**
+   * The race day (`Event.date`, YYYY-MM-DD). A runner's age is counted on it,
+   * so the edit modal can tell staff when a corrected birthdate makes someone
+   * a minor (lib/minor-consent.ts).
+   */
+  raceDay: string;
   runners: any[];
   permissions: RegistrantPermissions;
   /**
@@ -128,6 +145,34 @@ function StatusProvenanceNote({ runner }: { runner: RegistrantRow }) {
   return line ? <span className="text-xs text-[var(--text-muted)] mt-1.5">{line}</span> : null;
 }
 
+/**
+ * The *Minor* chip beside a runner 12 or under on race day. Blue, the
+ * informational tone: being a minor is a fact about the runner, not a problem
+ * with the order — the amber "No guardian consent on file" line is what says
+ * when something is missing.
+ */
+function MinorBadge() {
+  return (
+    <span
+      className="status-badge info"
+      title={`${GUARDIAN_CONSENT_MAX_AGE} or under on race day, so a parent or guardian consents for them.`}
+    >
+      Minor
+    </span>
+  );
+}
+
+/** The relationship options for the edit modal, from the one vocabulary. */
+const GUARDIAN_RELATIONSHIP_OPTIONS = GUARDIAN_RELATIONSHIPS.map(value => ({
+  value,
+  label: GUARDIAN_RELATIONSHIP_LABELS[value],
+}));
+
+/** Where an organizer prints one runner's consent sheet for kit claiming. */
+function consentSheetPath(eventId: string, runnerId: string): string {
+  return `/admin/events/${eventId}/registrants/${runnerId}/consent`;
+}
+
 const GENDER_OPTIONS = [
   { value: 'MALE', label: 'MALE' },
   { value: 'FEMALE', label: 'FEMALE' },
@@ -151,6 +196,7 @@ function previewEmailHtml(html: string): string {
 
 export default function RegistrantsTable({
   eventId,
+  raceDay,
   runners: initialRunners,
   initialSearch = '',
   permissions,
@@ -213,6 +259,11 @@ export default function RegistrantsTable({
   // the green badge appearing where they clicked. The registration order below
   // stays exactly as it is; this only narrows what is shown.
   const [showOnlyNeedsValidation, setShowOnlyNeedsValidation] = useState(false);
+
+  // The *Minors* option in the Filters sheet. Like the two queues it narrows
+  // the data rather than a column, because being a minor is not a column: it
+  // is the birthdate read against the race day (lib/minor-consent.ts).
+  const [showOnlyMinors, setShowOnlyMinors] = useState(false);
 
   // Bulk Delete Modal State
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
@@ -558,10 +609,31 @@ export default function RegistrantsTable({
         // The API returns the updated runner. We need to merge it carefully
         setRunners(runners.map(r => r.id === editingRunner.id ? {
           ...r,
+          firstName: updatedRunnerData.firstName,
+          lastName: updatedRunnerData.lastName,
           name: `${updatedRunnerData.firstName} ${updatedRunnerData.lastName}`,
           email: updatedRunnerData.email,
+          phone: updatedRunnerData.phone,
+          gender: updatedRunnerData.gender,
           size: updatedRunnerData.singletSize,
           runningCommunity: updatedRunnerData.runningCommunity,
+          emergencyContactName: updatedRunnerData.emergencyContactName,
+          emergencyContactPhone: updatedRunnerData.emergencyContactPhone,
+          medicalConditions: updatedRunnerData.medicalConditions || '',
+          // A corrected birthdate can make a runner a minor, or stop them
+          // being one, so the chip and the consent block follow the save
+          // rather than waiting for a reload. The consent time is never
+          // edited: it is when the guardian agreed, not when staff typed.
+          birthdate: updatedRunnerData.birthdate,
+          isMinor: needsGuardianConsent(updatedRunnerData.birthdate ?? '', raceDay),
+          ageOnRaceDay: ageOn(updatedRunnerData.birthdate ?? '', raceDay),
+          guardianName: updatedRunnerData.guardianName,
+          guardianRelationship: asGuardianRelationship(updatedRunnerData.guardianRelationship),
+          guardianRelationshipLabel: (() => {
+            const known = asGuardianRelationship(updatedRunnerData.guardianRelationship);
+            return known ? GUARDIAN_RELATIONSHIP_LABELS[known] : null;
+          })(),
+          guardianLine: guardianLine(updatedRunnerData.guardianName, updatedRunnerData.guardianRelationship),
           // Preserve other original properties like orderRef, amount, status which belong to Registration
         } : r));
         closeEditModal();
@@ -881,7 +953,10 @@ export default function RegistrantsTable({
       header: "Name",
       cell: ({ row }) => (
         <div className="font-medium text-primary">
-          <div>{row.original.name}</div>
+          <div className="flex items-center gap-2 flex-wrap">
+            {row.original.name}
+            {row.original.isMinor && <MinorBadge />}
+          </div>
           <div className="text-xs text-secondary font-normal">{row.original.email}</div>
         </div>
       ),
@@ -956,9 +1031,10 @@ export default function RegistrantsTable({
       runners.filter(
         r =>
           (!showOnlyUnsentEmail || r.emailPending) &&
-          (!showOnlyNeedsValidation || needsValidation(r))
+          (!showOnlyNeedsValidation || needsValidation(r)) &&
+          (!showOnlyMinors || r.isMinor)
       ),
-    [runners, showOnlyUnsentEmail, showOnlyNeedsValidation]
+    [runners, showOnlyUnsentEmail, showOnlyNeedsValidation, showOnlyMinors]
   );
 
   const unsentEmailCount = useMemo(() => runners.filter(r => r.emailPending).length, [runners]);
@@ -997,6 +1073,8 @@ export default function RegistrantsTable({
   if (selectedCount > 0 && selectedCount !== bulkBarCount) {
     setBulkBarCount(selectedCount);
   }
+
+  const hasMinors = useMemo(() => runners.some(r => r.isMinor), [runners]);
 
   const uniqueCategories = useMemo(() => {
     const cats = new Set(runners.map(r => r.category).filter(Boolean));
@@ -1044,8 +1122,20 @@ export default function RegistrantsTable({
     { label: 'Category', options: uniqueCategories, selected: selectedCategories, onToggle: toggleCategory, capitalize: false },
     { label: 'Logistics', options: uniqueLogistics, selected: selectedLogistics, onToggle: toggleLogistics, capitalize: true },
     { label: 'Payment', options: uniquePayment, selected: selectedPayment, onToggle: togglePayment, capitalize: true },
+    // Offered only on a race that has a minor, so the sheet never lists an
+    // option that could only ever empty the table.
+    {
+      label: 'Age',
+      options: hasMinors
+        ? [{ value: 'MINOR', label: `Minors (${GUARDIAN_CONSENT_MAX_AGE} and under)` }]
+        : [],
+      selected: showOnlyMinors ? ['MINOR'] : [],
+      onToggle: () => setShowOnlyMinors(on => !on),
+      capitalize: false,
+    },
   ];
   const clearFilters = () => {
+    setShowOnlyMinors(false);
     for (const id of ['category', 'logisticsMethod', 'paymentMethod']) {
       table.getColumn(id)?.setFilterValue(undefined);
     }
@@ -1083,6 +1173,7 @@ export default function RegistrantsTable({
   const handleExportCSV = () => {
     const headers = [
       'Runner Ref', 'Order Ref', 'First Name', 'Last Name', 'Email', 'Phone', 'Gender', 'Birthdate',
+      'Guardian Name', 'Guardian Relationship', 'Guardian Consent At',
       'Category', 'Distance', 'Shirt Size', 'Emergency Contact', 'Emergency Phone',
       'Running Community', 'Medical Conditions', 'Logistics Method', 'Delivery Area', 'Delivery Address', 'Payment Method', 'Promo Code', 'Order Discount', 'Order Total', 'Status'
     ];
@@ -1113,6 +1204,11 @@ export default function RegistrantsTable({
         csvPhone(runner.phone),
         csvField(runner.gender),
         csvField(runner.birthdate),
+        // Blank for a runner who needed none. A minor with none on file is
+        // blank here too; the detail modal is where that is called out.
+        csvField(runner.guardianName || ''),
+        csvField(runner.guardianRelationshipLabel || ''),
+        csvField(runner.guardianConsentAtLabel || ''),
         csvField(runner.category),
         csvField(runner.distance),
         csvField(runner.size),
@@ -1377,6 +1473,7 @@ export default function RegistrantsTable({
           subtitle={row => row.original.runnerRef}
           badges={row => (
             <>
+              {row.original.isMinor && <MinorBadge />}
               {renderStatusBadges(row.original)}
               {/* What the table's badges say only on hover, said in words:
                   a phone has no hover. Allowed to wrap, unlike the chips. */}
@@ -1463,11 +1560,29 @@ export default function RegistrantsTable({
                 <div className="space-y-4">
                   <h4 className="text-sm font-semibold text-secondary uppercase tracking-wider">Runner Info</h4>
                   <div className="space-y-2 text-sm">
-                    <p className="flex flex-col"><span className="text-[var(--text-muted)]">Name</span> <span className="text-primary font-medium">{viewingRunner.name}</span></p>
+                    <p className="flex flex-col">
+                      <span className="text-[var(--text-muted)]">Name</span>
+                      <span className="text-primary font-medium flex items-center gap-2 flex-wrap">
+                        {viewingRunner.name}
+                        {viewingRunner.isMinor && <MinorBadge />}
+                      </span>
+                    </p>
                     <p className="flex flex-col"><span className="text-[var(--text-muted)]">Email</span> <span className="text-primary font-medium">{viewingRunner.email}</span></p>
                     <p className="flex flex-col"><span className="text-[var(--text-muted)]">Phone</span> <span className="text-primary font-medium">{viewingRunner.phone}</span></p>
                     <p className="flex flex-col"><span className="text-[var(--text-muted)]">Gender</span> <span className="text-primary font-medium capitalize">{viewingRunner.gender}</span></p>
-                    <p className="flex flex-col"><span className="text-[var(--text-muted)]">Birthdate</span> <span className="text-primary font-medium">{viewingRunner.birthdate}</span></p>
+                    <p className="flex flex-col">
+                      <span className="text-[var(--text-muted)]">Birthdate</span>
+                      <span className="text-primary font-medium">
+                        {viewingRunner.birthdate}
+                        {/* The age the consent rule is counted on, so the chip
+                            above is never a verdict nobody can check. */}
+                        {viewingRunner.isMinor && viewingRunner.ageOnRaceDay !== null && (
+                          <span className="text-[var(--text-muted)] font-normal">
+                            {' '}&middot; {viewingRunner.ageOnRaceDay} on race day
+                          </span>
+                        )}
+                      </span>
+                    </p>
                   </div>
                 </div>
 
@@ -1482,6 +1597,57 @@ export default function RegistrantsTable({
                   </div>
                 </div>
               </div>
+
+              {/* Parent/Guardian consent (GUARDIAN_CONSENT_PLAN.md Batch 4).
+                  Shown for a minor, and for anyone with a guardian on file —
+                  a birthdate corrected upward leaves the consent that was
+                  given, and hiding it would hide what the guardian agreed to.
+                  A minor with none on file gets the amber line rather than
+                  nothing: a row from before consent was asked for, or a
+                  birthdate staff corrected later, is the case the organizer
+                  has to catch at kit claiming. */}
+              {(viewingRunner.isMinor || viewingRunner.guardianName) && (
+                <div className="mt-8 pt-8 border-t border-[var(--dash-border)] space-y-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <h4 className="text-sm font-semibold text-secondary uppercase tracking-wider m-0">Parent/Guardian Consent</h4>
+                    {/* A new tab, so the list and this modal are still where
+                        the organizer left them after printing. */}
+                    <Link
+                      href={consentSheetPath(eventId, viewingRunner.id)}
+                      target="_blank"
+                      rel="noopener"
+                      className="inline-flex items-center gap-1.5 text-xs font-medium text-accent-blue-ink hover:underline min-h-11 -my-3"
+                    >
+                      <Printer size={14} aria-hidden="true" /> Print guardian consent
+                    </Link>
+                  </div>
+                  {viewingRunner.guardianName ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+                      <p className="flex flex-col"><span className="text-[var(--text-muted)]">Guardian</span> <span className="text-primary font-medium">{viewingRunner.guardianName}</span></p>
+                      <p className="flex flex-col"><span className="text-[var(--text-muted)]">Relationship</span> <span className="text-primary font-medium">{viewingRunner.guardianRelationshipLabel || '—'}</span></p>
+                      <p className="flex flex-col">
+                        <span className="text-[var(--text-muted)]">Consent Given</span>
+                        {/* Null when staff typed the guardian in afterwards:
+                            that records who the guardian is, not that they
+                            agreed, so it is not dressed up as a consent. */}
+                        <span className={`font-medium ${viewingRunner.guardianConsentAtLabel ? 'text-primary' : 'text-[var(--text-muted)] italic'}`}>
+                          {viewingRunner.guardianConsentAtLabel || 'Not through the form'}
+                        </span>
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="flex items-start gap-2 text-sm text-[var(--status-warning)] font-medium m-0">
+                      <TriangleAlert size={16} className="shrink-0 mt-0.5" aria-hidden="true" />
+                      <span>
+                        No guardian consent on file.
+                        <span className="block text-xs font-normal text-[var(--text-muted)] mt-1">
+                          Print the consent and have the parent or guardian sign it at kit claiming.
+                        </span>
+                      </span>
+                    </p>
+                  )}
+                </div>
+              )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8 pt-8 border-t border-[var(--dash-border)]">
                 <div className="space-y-4">
@@ -1989,6 +2155,57 @@ export default function RegistrantsTable({
                     </div>
                   </div>
                 </div>
+
+                {/* The guardian, for a runner the birthdate above makes a
+                    minor on race day, or one who already has a guardian on
+                    file. Neither field is required: staff are correcting data
+                    here, not registering, so a birthdate that makes someone a
+                    minor warns and still saves (GUARDIAN_CONSENT_PLAN.md
+                    Batch 4). The consent itself is signed on paper at kit
+                    claiming when the form never collected it. */}
+                {(() => {
+                  const editAge = ageOn(editingRunner.birthdate || '', raceDay);
+                  const editIsMinor = needsGuardianConsent(editingRunner.birthdate || '', raceDay);
+                  if (!editIsMinor && !editingRunner.guardianName && !editingRunner.guardianRelationship) {
+                    return null;
+                  }
+                  return (
+                    <div className="pt-4 border-t border-[var(--dash-border)]">
+                      <h4 className="text-primary font-medium mb-4">Parent/Guardian</h4>
+                      {editIsMinor && !editingRunner.guardianConsentAt && (
+                        <p role="status" className="flex items-start gap-2 text-sm text-[var(--status-warning)] mb-4 mt-0">
+                          <TriangleAlert size={16} className="shrink-0 mt-0.5" aria-hidden="true" />
+                          <span>
+                            This birthdate makes the runner {editAge} on race day, and no guardian consent was given
+                            through the form. You can still save; have the parent or guardian sign the printed consent
+                            at kit claiming.
+                          </span>
+                        </p>
+                      )}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="form-group">
+                          <label className="form-label" htmlFor="edit-runner-guardian-name">Guardian Name</label>
+                          <input
+                            id="edit-runner-guardian-name"
+                            type="text"
+                            value={editingRunner.guardianName || ''}
+                            onChange={e => setEditingRunner({...editingRunner, guardianName: upperCaseAsTyped(e.target.value)})}
+                            placeholder={GUARDIAN_NAME_PLACEHOLDER}
+                            className="form-input"
+                          />
+                        </div>
+                        <AdminSelect
+                          label="Relationship"
+                          value={editingRunner.guardianRelationship || ''}
+                          options={GUARDIAN_RELATIONSHIP_OPTIONS}
+                          placeholder={GUARDIAN_RELATIONSHIP_PLACEHOLDER}
+                          listboxLabel="Relationship"
+                          onChange={guardianRelationship => setEditingRunner({...editingRunner, guardianRelationship})}
+                        />
+                      </div>
+                    </div>
+                  );
+                })()}
               </form>
             )}
           </div>

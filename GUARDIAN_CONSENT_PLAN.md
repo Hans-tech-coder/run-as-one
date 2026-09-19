@@ -164,9 +164,9 @@ This batch carries a **Prisma migration**. When it is promoted to `main`, run
 
       This is small storage on a small share of rows, so it is fine on the
       Neon free tier. Existing rows stay null and are not backfilled.
-- [ ] Create the migration against the **development** Neon branch only.
-      *Written (`20260919120000_runner_guardian_consent`), not yet applied —
-      see Where it stands.*
+- [x] Create the migration against the **development** Neon branch only.
+      (`20260919120000_runner_guardian_consent`; `prisma migrate status` on
+      `local-dev` reads up to date as of Batch 4.)
 - [x] **`minor-consent.ts`:** add the labels and copy (`GUARDIAN_RELATIONSHIPS`,
       a checkbox sentence that takes the child's name, the placeholder), plus
       `participantGuardianError(participants, raceDay)`, which both routes and
@@ -198,30 +198,30 @@ POST, and the three columns are saved.
 
 ## Batch 4: organizers can see it
 
-- [ ] **Registrant detail** (`RegistrantsTable.tsx` detail view): a *Minor* badge
+- [x] **Registrant detail** (`RegistrantsTable.tsx` detail view): a *Minor* badge
       next to the runner, and a *Parent/Guardian consent* block showing the
       name, relationship and time it was given. A minor with no consent on
       file (a row from before Batch 3, or a birthdate a staff member edited
       later) shows an amber "No guardian consent on file" line rather than
       nothing.
-- [ ] **Printable consent:** a *Print guardian consent* action on that block
+- [x] **Printable consent:** a *Print guardian consent* action on that block
       (a print-styled view or page, **no PDF library**) with the event, the
       runner, the guardian, the time, the waiver text, and a blank signature
       line for kit claiming. It must be a real page, not a dead link.
-- [ ] **CSV export:** add Guardian Name, Guardian Relationship and Guardian
+- [x] **CSV export:** add Guardian Name, Guardian Relationship and Guardian
       Consent At columns.
-- [ ] **Runner edit modal and `api/admin/runners/[id]`:** staff can edit the
+- [x] **Runner edit modal and `api/admin/runners/[id]`:** staff can edit the
       guardian name and relationship. Add them to the audit field list in
       `audit.ts`. If an edited birthdate makes the runner a minor, **warn but
       do not block**; staff are correcting data, not registering.
-- [ ] **Confirmation email** (`email.ts`): under a minor's details, add a
+- [x] **Confirmation email** (`email.ts`): under a minor's details, add a
       "Parent/Guardian: NAME (Parent)" line.
-- [ ] Optional, only if it stays small: a *Minors* option in the registrants
+- [x] Optional, only if it stays small: a *Minors* option in the registrants
       table's single Filters chip, following the existing Filters sheet
       pattern rather than a new toggle chip.
-- [ ] Verify at desktop and mobile widths in both dashboard themes (light and
+- [x] Verify at desktop and mobile widths in both dashboard themes (light and
       dark).
-- [ ] `PROJECT_GUIDE.md` §6 (any new page or route), §10, and mark this plan
+- [x] `PROJECT_GUIDE.md` §6 (any new page or route), §10, and mark this plan
       finished.
 
 **Done when:** an organizer can tell which runners are minors, see who
@@ -262,3 +262,33 @@ consented for them, export it, and print a sheet for kit claiming.
   browser at desktop and 375px on the bank-transfer wizard (panel shows, names
   the child, errors per field, clears when the birthdate changes to over 12);
   no order was submitted. Next: Batch 4, organizers can see it.
+- 2026-09-19: **Batch 4 landed** (uncommitted); the plan's work is done.
+  `page.tsx` marks each registrant `isMinor` / `ageOnRaceDay` against
+  `event.date` and carries the guardian columns; the table shows a blue *Minor*
+  chip (`.status-badge.info`) in the row, the card and the detail modal, whose
+  new *Parent/Guardian Consent* block shows guardian, relationship and consent
+  time (Manila), or an amber *No guardian consent on file*, with *Print
+  guardian consent* opening `registrants/[runnerId]/consent` in a new tab: a
+  paper sheet printed by `window.print()` (a portalled copy on `<body>`, so the
+  dashboard's scrolling shell cannot clip it) with the event, runner,
+  guardian (blanks to fill in by hand when none is on file), consent sentence,
+  the event's waiver and signature lines for kit claiming. The CSV gained three
+  guardian columns; Filters gained *Age → Minors*; the edit modal and `PUT
+  /api/admin/runners/[id]` edit the guardian name and relationship (audited as
+  sensitive, `guardianConsentAt` never written) and warn without blocking when
+  a corrected birthdate makes a runner a minor. `guardianLine` in
+  `minor-consent.ts` words the guardian for the modal, the sheet and both
+  emails (received: a *Parent/Guardian* row under Birthdate; receipt: a line
+  under the runner). Both emails were rendered in memory and checked;
+  type-check and lint are clean. Verified in the browser on `local-dev` (which
+  holds no real minor, so one runner's birthdate was set to 2015 through the
+  edit modal and restored afterwards, leaving only its audit rows): the edit
+  modal's warning, the chip in row, card and modal, the amber no-consent line,
+  a staff-entered guardian ("Not through the form"), the Age → Minors filter,
+  the print page and a simulation of its print rules (the sheet alone, no
+  frame), at desktop and 375px (no horizontal scroll) and on both dashboard
+  themes. The CSV columns were checked in code, not by downloading a file.
+- 2026-09-19: the printable sheet now carries the Run As One logo at its head,
+  by the owner's call. They want the client's or event's own logo there
+  instead once the dashboard has a setting for it; until then Run As One is the
+  default, and stays the fallback after.

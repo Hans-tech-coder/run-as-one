@@ -6,6 +6,7 @@ import { formatPesos } from './money';
 import { isPricedIn } from './discount';
 import { formatEventDay, formatEventInstant } from './event-schedule';
 import { runnerRef } from './order-ref';
+import { guardianLine } from './minor-consent';
 import { PICKUP_FALLBACK, pickupDetails } from './pickup';
 import {
   LOGISTICS_METHODS,
@@ -217,6 +218,8 @@ type Row =
       category: string;
       community: string | null;
       size: string | null;
+      /** "MARIA DELA CRUZ (Parent)" for a minor with a guardian on file. */
+      guardian: string | null;
     };
 
 type Block =
@@ -353,6 +356,11 @@ function rowHtml(row: Row, isLastRunner: boolean): string {
         ${
           row.community
             ? `<div style="font-size: 12px; color: #8b8b96; margin-top: 2px;">${escapeHtml(row.community)}</div>`
+            : ''
+        }
+        ${
+          row.guardian
+            ? `<div style="font-size: 12px; color: #8b8b96; margin-top: 2px;">Parent/Guardian: ${escapeHtml(row.guardian)}</div>`
             : ''
         }
       </td>
@@ -547,6 +555,7 @@ function rowText(row: Row): string[] {
         row.name,
         `  ${row.reference}${MIDDOT}${row.category}`,
         ...(row.community ? [`  ${row.community}`] : []),
+        ...(row.guardian ? [`  Parent/Guardian: ${row.guardian}`] : []),
         ...(row.size ? [`  Size: ${row.size}`] : []),
         '',
       ];
@@ -666,6 +675,9 @@ function runnerRows(registration: RegistrationWithDetails): Row[] {
     category: runner.category.name,
     community: runner.runningCommunity || null,
     size: runner.singletSize || null,
+    // Only a minor has one (lib/minor-consent.ts storedGuardianConsent writes
+    // nulls for everyone else), so its presence is the test.
+    guardian: guardianLine(runner.guardianName, runner.guardianRelationship),
   }));
 }
 
@@ -693,6 +705,13 @@ function runnerDetailRows(registration: RegistrationWithDetails): Row[] {
       ...(runner.singletSize ? [{ kind: 'info' as const, label: 'Shirt Size', value: runner.singletSize }] : []),
       { kind: 'info', label: 'Gender', value: runner.gender },
       { kind: 'info', label: 'Birthdate', value: runner.birthdate },
+      // The guardian who consented, under the details of the minor they
+      // consented for — so a parent reading the email sees their own name on
+      // record, and a typo in it can be caught now rather than at kit claiming.
+      ...(() => {
+        const guardian = guardianLine(runner.guardianName, runner.guardianRelationship);
+        return guardian ? [{ kind: 'info' as const, label: 'Parent/Guardian', value: guardian }] : [];
+      })(),
       { kind: 'info', label: 'Email', value: runner.email },
       { kind: 'info', label: 'Phone', value: runner.phone },
       {

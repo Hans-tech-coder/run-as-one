@@ -502,6 +502,15 @@
   color: var(--ink-65);
 }
 
+/* Something worth knowing about a person that is neither a state nor a
+   warning — a runner who is a minor on race day. Blue, the dashboard's
+   informational accent; the amber "no consent on file" line beside it is what
+   calls for action. */
+.status-badge.info {
+  background: color-mix(in srgb, var(--accent-blue-ink) 12%, transparent);
+  color: var(--accent-blue-ink);
+}
+
 /* A quiet line under a badge, for something that has not happened yet but is
    about to — a promotion in its last few days. Not a second badge: two pills
    in one cell read as two states, and a promotion ending on Friday is still
