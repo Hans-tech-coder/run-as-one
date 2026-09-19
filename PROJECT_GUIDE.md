@@ -923,7 +923,7 @@ Show* chip rather than shifting the rows being read. Entries sit under Manila
 day headings (*Today · Sep 15*). Columns: Time, Person (name, then *Staff ·
 email*), What happened (the verb's label, a failed sign-in as a red badge, and
 the entry's sentence), Event (*Deleted event* when the race is gone), and a
-Details chevron opening a second row with what changed field by field, the
+Details chevron opening a second row (plain content, no boxed panel) with what changed field by field, the
 exact instant, IP address and device. **Below `lg`** the same page is
 `AdminCardList` cards per day, the details behind a *Show details* accordion
 (`.t-acc`). The pager is `AdminTablePager` at 25 / 50 / 100 a page) ·

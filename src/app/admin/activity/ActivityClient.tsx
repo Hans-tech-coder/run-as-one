@@ -574,8 +574,8 @@ export default function ActivityClient({
                           </TableRow>
                           {isOpen && (
                             <TableRow className="border-b border-[var(--dash-hairline)] hover:bg-transparent">
-                              <TableCell colSpan={columnCount} className="px-4 pl-8 pb-4 pt-0">
-                                <div className="rounded-[12px] border border-[var(--dash-border)] bg-[var(--dash-surface)] p-4">
+                              <TableCell colSpan={columnCount} className="px-4 pl-8 py-4">
+                                <div>
                                   <EntryDetails row={row} />
                                 </div>
                               </TableCell>

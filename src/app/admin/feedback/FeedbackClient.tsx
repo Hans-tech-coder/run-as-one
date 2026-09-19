@@ -406,6 +406,7 @@ export default function FeedbackClient() {
                               row={row}
                               saving={isSaving}
                               onReview={() => setStatus(row, 'REVIEWED')}
+                              showReview={false}
                             />
                           </div>
                         </div>
@@ -623,10 +624,14 @@ function MessageDetail({
   row,
   saving,
   onReview,
+  showReview = true,
 }: {
   row: FeedbackRow;
   saving: boolean;
   onReview: () => void;
+  /** The card already has Mark Reviewed in its footer, beside the actions
+   *  menu, so it opts out of a second one here. */
+  showReview?: boolean;
 }) {
   return (
     <>
@@ -653,30 +658,35 @@ function MessageDetail({
         </div>
       </dl>
 
-      <div className="mt-4 flex flex-wrap gap-2">
-        {row.email ? (
-          <a
-            href={`mailto:${row.email}?subject=${encodeURIComponent(
-              'Re: your feedback on Run As One',
-            )}`}
-            className="btn-filter no-underline max-lg:min-h-11"
-          >
-            <Mail size={16} /> Reply by email
-          </a>
-        ) : (
+      {/* The note (when there is no address) reads on the left; the actions sit
+          together on the right, vertically centred against it. */}
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+        {!row.email && (
           <span className="text-xs text-secondary">
             No address left, so there is nobody to reply to.
           </span>
         )}
-        {row.status === 'NEW' && (
-          <button
-            onClick={onReview}
-            disabled={saving}
-            className="btn-filter max-lg:min-h-11"
-          >
-            <CheckCircle size={16} /> Mark reviewed
-          </button>
-        )}
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          {row.email && (
+            <a
+              href={`mailto:${row.email}?subject=${encodeURIComponent(
+                'Re: your feedback on Run As One',
+              )}`}
+              className="btn-filter no-underline max-lg:min-h-11"
+            >
+              <Mail size={16} /> Reply by email
+            </a>
+          )}
+          {showReview && row.status === 'NEW' && (
+            <button
+              onClick={onReview}
+              disabled={saving}
+              className="btn-filter max-lg:min-h-11"
+            >
+              <CheckCircle size={16} /> Mark reviewed
+            </button>
+          )}
+        </div>
       </div>
     </>
   );
