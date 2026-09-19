@@ -24,7 +24,8 @@ import React from "react";
  * boundary for an animation a keyframe already does.
  *
  * Sizes: `sm` is 1.3em, so it sits in a button or a table cell at the size of
- * the text beside it; `md` 64px; `lg` 104px, filling a page on its way.
+ * the text beside it; `md` 48px; `lg` 72px, filling a page on its way. On a
+ * phone (≤640px) they drop to 40px and 56px.
  * `tone="current"` draws it in the surrounding text colour — brand blue would
  * vanish into the blue end of the gradient buttons.
  */

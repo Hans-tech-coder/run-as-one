@@ -899,11 +899,11 @@ input[type="datetime-local"]:focus::-webkit-calendar-picker-indicator {
    shin's origin is the knee *in its thigh's rotated space*, which is why the
    shin groups sit inside the thigh groups rather than beside them. */
 .t-runner {
-  --runner-size: 64px;
+  --runner-size: 48px;
   display: inline-flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
 }
 .t-runner--sm { --runner-size: 1.3em; gap: 0; }
 
@@ -916,7 +916,15 @@ input[type="datetime-local"]:focus::-webkit-calendar-picker-indicator {
   align-items: center;
   gap: 8px;
 }
-.t-runner--lg { --runner-size: 104px; gap: 18px; }
+.t-runner--lg { --runner-size: 72px; gap: 14px; }
+/* A phone gets a smaller figure still: at full size the page loader crowded a
+   375px screen. `sm` is left alone, it follows the text beside it. */
+@media (max-width: 640px) {
+  .t-runner--md { --runner-size: 40px; gap: 8px; }
+  .t-runner--lg { --runner-size: 56px; gap: 10px; }
+  .t-runner--md .t-runner__caption,
+  .t-runner--lg .t-runner__caption { font-size: 0.8125rem; }
+}
 
 .t-runner--current {
   --runner-body: currentColor;

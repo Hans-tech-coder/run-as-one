@@ -176,7 +176,9 @@ src/
   app/
     layout.tsx              # fonts, metadata, AlertProvider, ClientLayoutWrapper
     globals.css             # design tokens + most global styling
-    page.tsx                # home — showcases upcoming events
+    (home)/                 # `/` — page.tsx showcases upcoming events;
+                            #   loading.tsx is its own wait (route group so
+                            #   the boundary covers `/` alone)
     events/                 # public listing, event page, registration wizards
     results/                # everything about a race that has been run:
                             #   landing, winners board, leaderboard, one runner
@@ -1323,7 +1325,7 @@ These are the user's own standing preferences. Follow them without being asked.
   build-time `new Date()` would also keep a finished race in the grid and count
   down to an opening that had already come. So `/`, `/events` and `/results`
   each export `dynamic = 'force-dynamic'`, with the reasoning written out in
-  `src/app/page.tsx`. The `[slug]` pages under `/events` and `/results` are
+  `src/app/(home)/page.tsx`. The `[slug]` pages under `/events` and `/results` are
   already server-rendered on demand because they take a dynamic segment and
   have no `generateStaticParams` — that is why the event page was right while
   the listing in front of it was wrong — but **any new public page that queries
@@ -1866,12 +1868,14 @@ These are the user's own standing preferences. Follow them without being asked.
   the two sides half a `--runner-cycle` apart), with brand-orange speed lines
   streaming off behind. The owner asked for it because a runner who presses
   Register and sees nothing move assumes the button is broken. Three sizes —
-  `sm` (1.3em, beside a word or in a cell), `md`, `lg` filling a page — and
+  `sm` (1.3em, beside a word or in a cell), `md` (48px), `lg` (72px) filling a
+  page, dropping to 40px / 56px at ≤640px because the owner found the old
+  64px / 104px figure too big, above all on a phone — and
   `tone="current"` to draw it in the surrounding text colour, which is what the
   dashboard's `LinkPending` uses. Hook-free and pure CSS, so it can render in a
   `loading.tsx` without dragging it across the client boundary. A new wait on
   the public side should be one of these four:
-  - **A page on its way** — four `loading.tsx` files render
+  - **A page on its way** — five `loading.tsx` files render
     `components/PublicRouteLoading`, a **loading screen**: the `lg` figure with
     a shimmering caption (transitions.dev's shimmer-text, `.t-shimmer`) on a
     **viewport-fixed stage** under the navbar, on the page's own ground with a
@@ -1890,7 +1894,12 @@ These are the user's own standing preferences. Follow them without being asked.
     `--runner-slow-after` (5s) its caption swaps to "Still loading, hang
     tight" through the text-swap motion (`slowCaption` on `RunnerLoader`,
     timed in CSS so the fallback stays hook-free) — a long wait is explained,
-    never left looking stuck. `/` and the legal pages are prerendered and need
+    never left looking stuck. **`/` has one too**, `(home)/loading.tsx`: the
+    home page is `force-dynamic` (it reads the live listing), so Home from
+    another page sat still until the reads came back. The page lives in the
+    `(home)` route group so that boundary covers `/` alone — a root
+    `app/loading.tsx` would answer every top-level move, the way into `/admin`
+    included, with the public screen. The legal pages are prerendered and need
     none.
   - **The page arriving** — `<main>` carries `.public-main`, and each page
     rendered into it fades and un-blurs on mount over `--skel-reveal-dur`, the

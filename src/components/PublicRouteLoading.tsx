@@ -5,12 +5,13 @@ import RunnerLoader from "@/components/ui/RunnerLoader";
  * What the public site shows while a page is being fetched: a loading screen
  * under the navbar, the running figure centred in it.
  *
- * Used by four `loading.tsx` files, two per section: `events/` and `results/`
+ * Used by five `loading.tsx` files. `(home)/` covers `/`, which reads the live
+ * listing on every request. The rest come two per section: `events/` and `results/`
  * catch arriving at a race, and `events/[slug]/` and `results/[slug]/` catch
  * moving within one — event page to wizard, winners board to leaderboard to a
  * runner's result. A fallback only shows when the segment directly under it
  * changes, which is why the section-level pair alone left those moves showing
- * the old page. `/` and the legal pages are prerendered and need none.
+ * the old page. The legal pages are prerendered and need none.
  *
  * Two layers (`.public-route-loading` in globals.css). The outer one is an
  * in-flow spacer a viewport tall, so the footer stays below the fold. The
