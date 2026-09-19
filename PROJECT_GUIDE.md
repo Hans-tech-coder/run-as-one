@@ -1220,7 +1220,7 @@ These are the user's own standing preferences. Follow them without being asked.
    designed page — that is what `/coming-soon` and `StatusPanel` exist for.
 2. **The UI must look expensive and uniform.** Browser and OS default controls
    (native `<select>`, `alert()`, `confirm()`) are unacceptable. A new control
-   copies an existing one: `SelectField`, `Combobox`, `AlertProvider`'s
+   copies an existing one: `SelectField`, `Combobox`, `BirthdatePicker`, `AlertProvider`'s
    `alert`/`confirm`, `AlertModal`, `StatusPanel`, `FieldError`.
 3. **Consult the project's `ui-ux-pro-max` skill for UI/UX work** rather than
    designing ad hoc. Skills stay project-scoped in `.claude/skills/` — nothing is
@@ -1649,6 +1649,32 @@ These are the user's own standing preferences. Follow them without being asked.
   the admin has no native select left. The registrants edit modal's Gender
   field moved in Mobile Batch 3; its Shirt Size is still a free-text box with a `<datalist>`,
   which AdminSelect cannot replace because a size may be left blank or typed.
+- **A date a runner picks is never a native `<input type="date">`.** The
+  runner-facing control is `events/[slug]/register/BirthdatePicker`
+  (GUARDIAN_CONSENT_PLAN.md Batch 2), used by both wizards. Its trigger is
+  SelectField's field (showing "March 4, 2014" in words, or the sentence-case
+  "Select your birthdate"); it opens a calendar whose header is a **Month and a
+  Year `SelectField`** (the year list runs from this Manila year back 100, so a
+  birthdate is two taps away, not a hundred "previous month" presses), with
+  days after `today()` disabled and unfocusable, future months left out of the
+  current year's Month list, and a fixed six-week grid so its height never
+  jumps. Keyboard is the APG date-picker set: arrows move a day or a week,
+  Home/End the week, PageUp/PageDown a month (Shift for a year), Enter picks,
+  Esc closes and returns focus to the trigger. From `sm` up it is an anchored
+  popover opening with `.t-dropdown`; below `sm` it is a bottom sheet portalled
+  to `<body>` (the wizard's panels carry transforms that would trap a fixed
+  element) with 44px day cells, a backdrop, a close button and the page scroll
+  locked, animated by `.birthdate-sheet` in `RegistrationWizard.css` on the
+  dropdown's motion tokens. The value in and out stays a `YYYY-MM-DD` string,
+  and it takes `id` / `error` exactly like SelectField, so validation and
+  `focusField` did not change. Its outside-click listener runs in the **capture
+  phase**: a Month or Year option commits and unmounts on its own pointerdown,
+  so a bubbling check found the target in no document and closed the calendar
+  on every pick. `SelectField` gained `hideLabel` (label kept for screen
+  readers only) for that header pair. Any new runner-facing date field uses
+  this picker; the dashboard's own date inputs (event date, promo windows,
+  activity filter, remittance, the runner edit modal) are still native and are
+  a separate task.
 - **Chrome every dashboard page shares goes through `DashboardShell`, not into each page.** The notification bell is the model: one `headerAccessory` slot at the top of `<main>`, and CSS (`.has-header-accessory .admin-header`) that keeps every page's header clear of it. Something meant for every header is added there, never pasted into fifteen `page.tsx` files.
 - **A row with more than one action has a ⋮ menu, never a row of chips.** The
   Actions cell holds one `.action-dropdown-btn` whose menu lists each action
@@ -2133,13 +2159,13 @@ added nothing once their queue was empty.
 the decisions it records as not to be relitigated. It is no longer a queue, and
 the file itself says it may be deleted.
 
-**`GUARDIAN_CONSENT_PLAN.md` is in progress — Batch 1 of 4 has landed.** A
-birthdate can no longer be in the future anywhere it is written: both wizards'
-Birthdate inputs carry `max={today()}` (a stopgap until Batch 2's custom
-picker), step 1 validation gives the specific message from
+**`GUARDIAN_CONSENT_PLAN.md` is in progress — Batches 1 and 2 of 4 have
+landed.** A birthdate can no longer be in the future anywhere it is written:
+both wizards pick it with the custom `BirthdatePicker` (§9; Batch 2), which
+cannot select a day after today in Manila, step 1 validation gives the specific message from
 `lib/minor-consent.ts` and highlights the field, both checkout routes refuse it
 with `participantBirthdateError`, and the admin runner edit refuses it (its
-modal's input also has the `max`). The "12 and under on race day" rule exists
+modal keeps a native input with `max`, outside the plan's scope). The "12 and under on race day" rule exists
 in `minor-consent.ts` but nothing asks for guardian consent yet — that is
 Batch 3, and organizers see it in Batch 4.
 

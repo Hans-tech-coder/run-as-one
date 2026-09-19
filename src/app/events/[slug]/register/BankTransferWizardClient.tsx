@@ -48,6 +48,7 @@ import ConsentWaiver, { SIGNATURE_FIELD_ID } from "./ConsentWaiver";
 import { consentSignatureError } from "@/lib/consent-signature";
 import PhoneField from "./PhoneField";
 import GenderField from "./GenderField";
+import BirthdatePicker from "./BirthdatePicker";
 import { resolveConsentWaiver } from "@/lib/consent-waiver";
 import ShirtSizeField from "./ShirtSizeField";
 import {
@@ -93,7 +94,7 @@ import {
   validateRunners,
   type RunnerField,
 } from "./validation";
-import { formatEventDayShort, today } from "@/lib/event-schedule";
+import { formatEventDayShort } from "@/lib/event-schedule";
 import { useStepReveal } from "./useStepReveal";
 import "./RegistrationWizard.css";
 
@@ -1188,29 +1189,14 @@ export default function BankTransferWizardClient({
                           handleParticipantChange(idx, "gender", gender)
                         }
                       />
-                      <div className="input-group">
-                        <label htmlFor={runnerFieldId(idx, "birthdate")}>
-                          Birthdate
-                        </label>
-                        <input
-                          {...fieldAria(idx, "birthdate")}
-                          type="date"
-                          // Stopgap until the custom picker: no future days.
-                          max={today()}
-                          value={p.birthdate}
-                          onChange={(e) =>
-                            handleParticipantChange(
-                              idx,
-                              "birthdate",
-                              e.target.value,
-                            )
-                          }
-                        />
-                        <FieldError
-                          id={`${runnerFieldId(idx, "birthdate")}-error`}
-                          message={errorFor(idx, "birthdate")}
-                        />
-                      </div>
+                      <BirthdatePicker
+                        id={runnerFieldId(idx, "birthdate")}
+                        error={errorFor(idx, "birthdate")}
+                        value={p.birthdate}
+                        onChange={(birthdate) =>
+                          handleParticipantChange(idx, "birthdate", birthdate)
+                        }
+                      />
                       {shouldAskShirtSize(
                         event.categories,
                         p.categoryId,

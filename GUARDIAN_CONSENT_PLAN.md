@@ -110,7 +110,7 @@ This replaces the native date control in both wizards. Load the
 `ui-ux-pro-max` skill before designing it, and `transitions-dev` for the
 popover's open and close.
 
-- [ ] **New `src/components/ui/BirthdatePicker.tsx`**, or under `register/` if
+- [x] **New `src/components/ui/BirthdatePicker.tsx`**, or under `register/` if
       nothing else needs it. Before designing, look at `SelectField.tsx` and
       `Combobox.tsx` and copy their trigger, popover, border and focus styles
       so the picker looks like the fields next to it.
@@ -135,10 +135,10 @@ popover's open and close.
         state, validation and the API do not change.
       - The id stays `runnerFieldId(idx, "birthdate")`, so "focus the first
         invalid field" after a failed submit still lands on it.
-- [ ] Swap it into **both** wizards.
-- [ ] Verify in the browser at desktop and mobile widths, in the dark theme
+- [x] Swap it into **both** wizards.
+- [x] Verify in the browser at desktop and mobile widths, in the dark theme
       (the public site). Screenshot the proof.
-- [ ] `PROJECT_GUIDE.md` §8/§9: record the picker as the reusable date control
+- [x] `PROJECT_GUIDE.md` §8/§9: record the picker as the reusable date control
       for runner-facing forms.
 
 **Out of scope:** the dashboard's other native date inputs (event date, promo
@@ -235,3 +235,13 @@ consented for them, export it, and print a sheet for kit claiming.
   and `PUT /api/admin/runners/[id]` refuse a future birthdate (the admin route
   still lets a blank one through for older rows, and its edit modal also got
   the `max`). Next: Batch 2, the custom picker.
+- 2026-09-19: **Batch 2 landed.** `register/BirthdatePicker.tsx` replaces the
+  native date input in both wizards: SelectField's trigger showing the date in
+  words, a Month + Year SelectField header (years back 100 from Manila's
+  today), future days disabled, APG keyboard (arrows, Home/End, PageUp/PageDown
+  with Shift for a year, Enter, Esc), a `.t-dropdown` popover from `sm` up and a
+  portalled bottom sheet with 44px cells below it. `SelectField` gained
+  `hideLabel`. Verified at 1280px and 375px on the public (dark) site with
+  keyboard, mouse and touch; the card-payment wizard shares the same code but
+  both live events use bank transfer, so it was type-checked rather than
+  clicked. Next: Batch 3, guardian consent from form to database.

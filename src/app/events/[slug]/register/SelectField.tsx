@@ -40,6 +40,7 @@ export default function SelectField({
   onChange,
   id,
   error,
+  hideLabel = false,
 }: {
   label: string;
   value: string;
@@ -54,6 +55,11 @@ export default function SelectField({
   id?: string;
   /** What the field still wants, or nothing when it is satisfied. */
   error?: string;
+  /**
+   * Keeps the label for screen readers only, for a select whose purpose the
+   * layout already shows — the Month and Year pair heading BirthdatePicker.
+   */
+  hideLabel?: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
@@ -161,7 +167,9 @@ export default function SelectField({
 
   return (
     <div className="input-group">
-      <label htmlFor={triggerId}>{label}</label>
+      <label htmlFor={triggerId} className={hideLabel ? "sr-only" : undefined}>
+        {label}
+      </label>
 
       <div ref={wrapperRef} className="relative">
         <button

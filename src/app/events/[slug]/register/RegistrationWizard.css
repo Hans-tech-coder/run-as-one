@@ -689,3 +689,40 @@
     width: 100%;
   }
 }
+
+/* BirthdatePicker's phone layout: a bottom sheet that rises from the edge the
+   thumb is already at. It borrows the dropdown's motion tokens rather than
+   inventing a timing of its own, so the sheet and the sm-up popover
+   (.t-dropdown) open and close at the same pace. Closing is the shorter of the
+   two, as everywhere else in transitions.dev. */
+.birthdate-backdrop {
+  opacity: 0;
+  transition: opacity var(--dropdown-open-dur) var(--dropdown-ease);
+}
+.birthdate-backdrop.is-open {
+  opacity: 1;
+}
+.birthdate-backdrop.is-closing {
+  opacity: 0;
+  transition-duration: var(--dropdown-close-dur);
+}
+
+.birthdate-sheet {
+  transform: translateY(100%);
+  transition: transform var(--dropdown-open-dur) var(--dropdown-ease);
+  will-change: transform;
+}
+.birthdate-sheet.is-open {
+  transform: translateY(0);
+}
+.birthdate-sheet.is-closing {
+  transform: translateY(100%);
+  transition-duration: var(--dropdown-close-dur);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .birthdate-backdrop,
+  .birthdate-sheet {
+    transition: none !important;
+  }
+}
