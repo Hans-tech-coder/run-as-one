@@ -73,7 +73,7 @@ The logic comes first, with no schema change. After this batch nobody can
 submit a future birthdate, and the "is this runner a minor?" rule exists in one
 place.
 
-- [ ] **New `src/lib/minor-consent.ts`**, free of Prisma so both wizards can
+- [x] **New `src/lib/minor-consent.ts`**, free of Prisma so both wizards can
       import it:
       - `GUARDIAN_CONSENT_MAX_AGE = 12`
       - `ageOn(birthdate: string, day: string): number | null` gives whole
@@ -87,18 +87,18 @@ place.
         "Birthdate can't be in the future".
       - The header comment records the owner's decisions above: race-day age,
         ≤ 12, every event, no minimum age.
-- [ ] **Both wizards:** as a stopgap until Batch 2, set `max={today()}` on the
+- [x] **Both wizards:** as a stopgap until Batch 2, set `max={today()}` on the
       native input.
-- [ ] **`validation.ts`:** the `birthdate` message comes from `birthdateError`,
+- [x] **`validation.ts`:** the `birthdate` message comes from `birthdateError`,
       so a future date gives a specific message and highlights the field.
-- [ ] **Both checkout routes:** add a `participantBirthdateError(participants)`
+- [x] **Both checkout routes:** add a `participantBirthdateError(participants)`
       in `minor-consent.ts`, used the same way as `participantEmailError`. When
       there is more than one runner, it names the runner ("Runner 2: birthdate
       can't be in the future").
-- [ ] **Admin runner edit** (`api/admin/runners/[id]`) refuses a future
+- [x] **Admin runner edit** (`api/admin/runners/[id]`) refuses a future
       birthdate too, because a rule enforced at one door can still be written
       past at another.
-- [ ] `PROJECT_GUIDE.md` §5 gets a row for `minor-consent.ts`, and §10 gets a
+- [x] `PROJECT_GUIDE.md` §5 gets a row for `minor-consent.ts`, and §10 gets a
       line.
 
 **Done when:** a future date cannot be picked, typed or POSTed, and the message
@@ -228,3 +228,10 @@ consented for them, export it, and print a sheet for kit claiming.
 ## Where it stands
 
 - 2026-09-19: plan written. No batch started.
+- 2026-09-19: **Batch 1 landed.** `src/lib/minor-consent.ts` holds the rule
+  (`ageOn`, `needsGuardianConsent`, `birthdateError`,
+  `participantBirthdateError`); both wizards cap the native input at
+  `max={today()}` and validate through `birthdateError`; both checkout routes
+  and `PUT /api/admin/runners/[id]` refuse a future birthdate (the admin route
+  still lets a blank one through for older rows, and its edit modal also got
+  the `max`). Next: Batch 2, the custom picker.

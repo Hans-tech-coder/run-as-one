@@ -93,7 +93,7 @@ import {
   validateRunners,
   type RunnerField,
 } from "./validation";
-import { formatEventDayShort } from "@/lib/event-schedule";
+import { formatEventDayShort, today } from "@/lib/event-schedule";
 import { useStepReveal } from "./useStepReveal";
 import "./RegistrationWizard.css";
 
@@ -1195,6 +1195,8 @@ export default function BankTransferWizardClient({
                         <input
                           {...fieldAria(idx, "birthdate")}
                           type="date"
+                          // Stopgap until the custom picker: no future days.
+                          max={today()}
                           value={p.birthdate}
                           onChange={(e) =>
                             handleParticipantChange(

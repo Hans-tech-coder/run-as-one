@@ -14,6 +14,7 @@ import {
   recordAudit,
 } from '@/lib/audit';
 import { runnerRef } from '@/lib/order-ref';
+import { birthdateError } from '@/lib/minor-consent';
 
 /**
  * Editing and removing one runner on an order.
@@ -104,6 +105,17 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     const emailProblem = emailAddressError(email);
     if (emailProblem) {
       return NextResponse.json({ error: emailProblem }, { status: 400 });
+    }
+
+    // The checkout routes refuse a future birthdate, so this door does too —
+    // a rule enforced at one entrance can still be written past at another.
+    // Blank is left alone: rows from before the field was required may have
+    // none, and fixing a phone number must not demand one.
+    if (typeof birthdate === 'string' && birthdate.trim() !== '') {
+      const birthdateProblem = birthdateError(birthdate);
+      if (birthdateProblem) {
+        return NextResponse.json({ error: birthdateProblem }, { status: 400 });
+      }
     }
 
     const data = {

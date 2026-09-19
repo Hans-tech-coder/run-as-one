@@ -17,6 +17,7 @@ import {
   subtotalWithUpcharge,
 } from '@/lib/shirt-size';
 import { hasFinished } from '@/lib/event-schedule';
+import { participantBirthdateError } from '@/lib/minor-consent';
 import {
   SlotsUnavailableError,
   openingNote,
@@ -101,6 +102,13 @@ export async function POST(request: Request) {
       emailAddressError(customerEmail, { blank: 'Enter an email address for this order' });
     if (emailProblem) {
       return NextResponse.json({ error: emailProblem }, { status: 400 });
+    }
+
+    // A birthdate from the future is refused here as well as in the wizard, so
+    // a direct POST cannot store one. See lib/minor-consent.ts.
+    const birthdateProblem = participantBirthdateError(participants);
+    if (birthdateProblem) {
+      return NextResponse.json({ error: birthdateProblem }, { status: 400 });
     }
 
     // Trimmed, never cased: a space pasted in from a contact card is enough to

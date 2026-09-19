@@ -1,5 +1,6 @@
 import { emailAddressError } from "@/lib/email-address";
 import { sellsPackages } from "@/lib/event-type";
+import { birthdateError } from "@/lib/minor-consent";
 import {
   expectedNationalDigits,
   normalizeNational,
@@ -202,6 +203,14 @@ export function validateRunner(
   if (!errors.email) {
     const message = emailFormatMessage(participant.email);
     if (message) errors.email = message;
+  }
+
+  // A filled box is not a valid birthdate: a malformed or future day gets its
+  // own message. The rule lives in lib/minor-consent.ts, shared with both
+  // checkout routes.
+  if (!errors.birthdate) {
+    const message = birthdateError(participant.birthdate);
+    if (message) errors.birthdate = message;
   }
 
   return errors;

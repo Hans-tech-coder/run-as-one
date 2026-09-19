@@ -37,6 +37,7 @@ import {
 import { SHIRT_SIZES } from '@/lib/shirt-size';
 import { upperCaseAsTyped } from '@/lib/text-case';
 import { formatPesos } from '@/lib/money';
+import { today } from '@/lib/event-schedule';
 import { orderActivityPath, statusProvenance } from '@/lib/activity';
 import BusyLabel from '@/components/ui/BusyLabel';
 import FiltersMenu, { type FilterGroup } from '../../../FiltersMenu';
@@ -1924,6 +1925,7 @@ export default function RegistrantsTable({
                       id="edit-runner-birthdate"
                       type="date"
                       required
+                      max={today()}
                       value={editingRunner.birthdate || ''}
                       onChange={e => setEditingRunner({...editingRunner, birthdate: e.target.value})}
                       className="form-input"
