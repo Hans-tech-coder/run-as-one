@@ -720,9 +720,20 @@
   transition-duration: var(--dropdown-close-dur);
 }
 
+/* The Parent/Guardian Consent panel (GuardianConsent.tsx) arrives with the
+   wizard's own fadeIn, but without `forwards`: a transform left standing on the
+   panel would make it a stacking context and trap the Relationship menu under
+   the fields that follow it. */
+.guardian-reveal {
+  animation: fadeIn 0.3s ease;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .birthdate-backdrop,
   .birthdate-sheet {
     transition: none !important;
+  }
+  .guardian-reveal {
+    animation: none;
   }
 }

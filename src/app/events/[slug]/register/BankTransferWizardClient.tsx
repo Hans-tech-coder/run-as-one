@@ -49,6 +49,8 @@ import { consentSignatureError } from "@/lib/consent-signature";
 import PhoneField from "./PhoneField";
 import GenderField from "./GenderField";
 import BirthdatePicker from "./BirthdatePicker";
+import GuardianConsent from "./GuardianConsent";
+import { ageOn, needsGuardianConsent } from "@/lib/minor-consent";
 import { resolveConsentWaiver } from "@/lib/consent-waiver";
 import ShirtSizeField from "./ShirtSizeField";
 import {
@@ -128,7 +130,21 @@ interface Participant {
   emergencyContactPhone: string;
   medicalConditions: string;
   runningCommunity: string;
+  /**
+   * Asked only while this runner is 12 or under on race day, and cleared the
+   * moment they are not (lib/minor-consent.ts, GuardianConsent.tsx).
+   */
+  guardianName: string;
+  guardianRelationship: string;
+  guardianConsent: boolean;
 }
+
+/** The guardian answers of a runner who does not owe them. */
+const NO_GUARDIAN = {
+  guardianName: "",
+  guardianRelationship: "",
+  guardianConsent: false,
+} as const;
 
 const TOTAL_STEPS = 3;
 
@@ -197,6 +213,7 @@ export default function BankTransferWizardClient({
       emergencyContactPhone: "",
       medicalConditions: "",
       runningCommunity: "",
+      ...NO_GUARDIAN,
     },
   ]);
 
@@ -296,7 +313,25 @@ export default function BankTransferWizardClient({
         ? upperCaseAsTyped(value)
         : value,
     };
+    // A birthdate that no longer makes this runner 12 or under on race day
+    // retires the guardian panel, and its answers go with it so nothing stale
+    // is submitted.
+    if (field === "birthdate" && !needsGuardianConsent(value, event.date)) {
+      newParticipants[index] = { ...newParticipants[index], ...NO_GUARDIAN };
+    }
     setParticipants(newParticipants);
+  };
+
+  /** The Parent/Guardian Consent panel's answers — one of them is a boolean. */
+  const handleGuardianChange = (
+    index: number,
+    patch: Partial<
+      Pick<Participant, "guardianName" | "guardianRelationship" | "guardianConsent">
+    >,
+  ) => {
+    setParticipants((prev) =>
+      prev.map((p, i) => (i === index ? { ...p, ...patch } : p)),
+    );
   };
 
   /**
@@ -357,6 +392,7 @@ export default function BankTransferWizardClient({
           emergencyContactName: "",
           emergencyContactPhone: "",
           medicalConditions: "",
+          ...NO_GUARDIAN,
         })),
       ];
     });
@@ -1197,6 +1233,26 @@ export default function BankTransferWizardClient({
                           handleParticipantChange(idx, "birthdate", birthdate)
                         }
                       />
+                      {needsGuardianConsent(p.birthdate, event.date) && (
+                        <GuardianConsent
+                          runnerIndex={idx}
+                          childName={`${p.firstName} ${p.lastName}`}
+                          age={ageOn(p.birthdate, event.date) ?? 0}
+                          name={p.guardianName}
+                          relationship={p.guardianRelationship}
+                          consent={p.guardianConsent}
+                          onNameChange={(guardianName) =>
+                            handleGuardianChange(idx, { guardianName })
+                          }
+                          onRelationshipChange={(guardianRelationship) =>
+                            handleGuardianChange(idx, { guardianRelationship })
+                          }
+                          onConsentChange={(guardianConsent) =>
+                            handleGuardianChange(idx, { guardianConsent })
+                          }
+                          errorFor={(field) => errorFor(idx, field)}
+                        />
+                      )}
                       {shouldAskShirtSize(
                         event.categories,
                         p.categoryId,

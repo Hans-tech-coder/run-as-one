@@ -1,6 +1,13 @@
 import { emailAddressError } from "@/lib/email-address";
 import { sellsPackages } from "@/lib/event-type";
-import { birthdateError } from "@/lib/minor-consent";
+import {
+  asGuardianRelationship,
+  birthdateError,
+  GUARDIAN_FIELD_MESSAGES,
+  GUARDIAN_FIELDS,
+  needsGuardianConsent,
+  type GuardianField,
+} from "@/lib/minor-consent";
 import {
   expectedNationalDigits,
   normalizeNational,
@@ -33,6 +40,7 @@ export type RunnerField =
   | "phone"
   | "gender"
   | "birthdate"
+  | GuardianField
   | "singletSize"
   | "emergencyContactName"
   | "emergencyContactPhone";
@@ -46,6 +54,7 @@ const FIELD_ORDER: RunnerField[] = [
   "phone",
   "gender",
   "birthdate",
+  ...GUARDIAN_FIELDS,
   "singletSize",
   "emergencyContactName",
   "emergencyContactPhone",
@@ -60,6 +69,9 @@ const LABELS: Record<RunnerField, string> = {
   phone: "Mobile number",
   gender: "Gender",
   birthdate: "Birthdate",
+  guardianName: "Parent/guardian name",
+  guardianRelationship: "Relationship",
+  guardianConsent: "Parent/guardian consent",
   singletSize: "Shirt size",
   emergencyContactName: "Emergency contact name",
   emergencyContactPhone: "Emergency contact number",
@@ -78,6 +90,7 @@ const MESSAGES: Record<RunnerField, string> = {
   phone: "Enter a mobile number",
   gender: "Select a gender",
   birthdate: "Enter a birthdate",
+  ...GUARDIAN_FIELD_MESSAGES,
   singletSize: "Select a shirt size",
   emergencyContactName: "Enter an emergency contact name",
   emergencyContactPhone: "Enter an emergency contact number",
@@ -142,10 +155,15 @@ export type RunnerErrors = Partial<Record<RunnerField, string>>;
  */
 export type ValidatedEvent = {
   eventType?: unknown;
+  /** Race day, `YYYY-MM-DD` — the day a runner's age is taken on. */
+  date?: unknown;
   categories?: readonly SizableCategory[] | null;
 };
 
-/** A runner as the wizards hold one; every validated field is a string. */
+/**
+ * A runner as the wizards hold one; every validated field is a string except
+ * the guardian's tick, which is a boolean.
+ */
 export type ValidatedRunner = Partial<Record<RunnerField, unknown>>;
 
 /** Stable DOM id per control, so the summary knows where to send the caret. */
@@ -161,6 +179,10 @@ export function runnerFieldId(index: number, field: RunnerField): string {
  * is chosen yet, whenever every option this event sells does. An event that
  * also sells something with nothing to wear leaves the question undecided until
  * a category is picked, so it is not owed yet either.
+ *
+ * The three guardian answers are owed only by a runner who is 12 or under on
+ * race day (lib/minor-consent.ts) — the same moment the wizard shows the panel
+ * that asks them.
  */
 export function requiredFieldsFor(
   participant: ValidatedRunner,
@@ -168,11 +190,20 @@ export function requiredFieldsFor(
 ): RunnerField[] {
   const chosenId =
     typeof participant.categoryId === "string" ? participant.categoryId : "";
+  const minor =
+    typeof participant.birthdate === "string" &&
+    typeof event.date === "string" &&
+    needsGuardianConsent(participant.birthdate, event.date);
 
-  return FIELD_ORDER.filter(
-    (field) =>
-      field !== "singletSize" || shouldAskShirtSize(event.categories, chosenId),
-  );
+  return FIELD_ORDER.filter((field) => {
+    if (field === "singletSize") {
+      return shouldAskShirtSize(event.categories, chosenId);
+    }
+    if ((GUARDIAN_FIELDS as readonly RunnerField[]).includes(field)) {
+      return minor;
+    }
+    return true;
+  });
 }
 
 export function validateRunner(
@@ -211,6 +242,16 @@ export function validateRunner(
   if (!errors.birthdate) {
     const message = birthdateError(participant.birthdate);
     if (message) errors.birthdate = message;
+  }
+
+  // A relationship the server would not accept is as unanswered as a blank
+  // one. Only reached when the runner owes it — see requiredFieldsFor.
+  if (
+    requiredFieldsFor(participant, event).includes("guardianRelationship") &&
+    !errors.guardianRelationship &&
+    !asGuardianRelationship(participant.guardianRelationship)
+  ) {
+    errors.guardianRelationship = GUARDIAN_FIELD_MESSAGES.guardianRelationship;
   }
 
   return errors;

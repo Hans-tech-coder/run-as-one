@@ -16,7 +16,11 @@ import {
   subtotalWithUpcharge,
 } from '@/lib/shirt-size';
 import { hasFinished } from '@/lib/event-schedule';
-import { participantBirthdateError } from '@/lib/minor-consent';
+import {
+  participantBirthdateError,
+  participantGuardianError,
+  storedGuardianConsent,
+} from '@/lib/minor-consent';
 import {
   SlotsUnavailableError,
   openingNote,
@@ -133,6 +137,14 @@ export async function POST(request: Request) {
     });
     if (!event) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
+    }
+
+    // A runner 12 or under on race day needs a parent or guardian's name,
+    // relationship and tick (lib/minor-consent.ts). Checked here as well as in
+    // the wizard, and only now, because the age is taken on this event's date.
+    const guardianProblem = participantGuardianError(participants, event.date);
+    if (guardianProblem) {
+      return NextResponse.json({ error: guardianProblem }, { status: 400 });
     }
 
     // The event page stops offering registration once a race has been run, but
@@ -332,6 +344,9 @@ export async function POST(request: Request) {
               medicalConditions: optionalUpperCaseForStorage(p.medicalConditions),
               // Blank answers land on INDEPENDENT RUNNER; the field is optional.
               runningCommunity: runnerCommunity(p),
+              // Nulls for a runner who does not need consent, whatever the
+              // client sent; the timestamp is always the server's.
+              ...storedGuardianConsent(p, event.date),
             }))
           }
         },

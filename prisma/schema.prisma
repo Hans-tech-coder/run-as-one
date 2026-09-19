@@ -381,6 +381,17 @@ model Runner {
   /// must not change if Run As One's staff later rename or remove that club.
   /// Blank answers are stored as "INDEPENDENT RUNNER", itself a listed option.
   runningCommunity      String       @default("INDEPENDENT RUNNER")
+  /// The parent or legal guardian who consented for a runner aged 12 or under
+  /// on race day (src/lib/minor-consent.ts), uppercase like every other
+  /// registrant name. Null for every runner who did not need consent, and for
+  /// rows written before guardian consent existed — those are not backfilled.
+  guardianName          String?
+  /// "PARENT" | "LEGAL_GUARDIAN", guarded by asGuardianRelationship(). A plain
+  /// string rather than an enum, like every other closed vocabulary here.
+  guardianRelationship  String?
+  /// When the checkout route wrote the guardian's consent — stamped by the
+  /// server with the order, never taken from the client.
+  guardianConsentAt     DateTime?
   createdAt             DateTime     @default(now())
   updatedAt             DateTime     @updatedAt
   /// When an organizer or staff member removed this runner, and whose id did

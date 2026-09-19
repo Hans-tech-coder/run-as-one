@@ -1,12 +1,12 @@
 import { isCalendarDay, today } from './event-schedule';
+import { optionalUpperCaseForStorage } from './text-case';
 
 /**
  * Who counts as a minor on a race, and what a birthdate has to be.
  *
  * A runner young enough needs a parent or guardian's consent before they can be
- * registered (the consent itself arrives in a later change; this module is the
- * rule it will hang off). The owner's decisions, recorded here so nobody
- * re-litigates them in a component:
+ * registered. The owner's decisions, recorded here so nobody re-litigates them
+ * in a component:
  *
  * - **Twelve and under** needs consent (`GUARDIAN_CONSENT_MAX_AGE`).
  * - **Age on race day**, not on the day of registering. A runner who is 12 when
@@ -15,6 +15,11 @@ import { isCalendarDay, today } from './event-schedule';
  *   `Event` column for it.
  * - **No minimum age.** Nothing here refuses a runner for being too young.
  * - **No future birthdates.** Today (in Manila) is the latest day accepted.
+ * - **Consent is given inside the form**, the way the order's own waiver is:
+ *   the guardian's name, their relationship, and a tick that names the child.
+ *   No printable form to download, sign, scan and upload — that is the step a
+ *   parent on a phone abandons the order at. No guardian phone either; the
+ *   runner's emergency contact already covers it.
  *
  * Kept free of Prisma so both wizards can import it next to the checkout
  * routes, which is what stops the form and the server from disagreeing.
@@ -127,4 +132,157 @@ export function participantBirthdateError(
     return `Runner ${index + 1}: ${problem[0].toLowerCase()}${problem.slice(1)}`;
   }
   return undefined;
+}
+
+// ---------------------------------------------------------------------------
+// Guardian consent (GUARDIAN_CONSENT_PLAN.md, Batch 3)
+// ---------------------------------------------------------------------------
+
+/**
+ * Who may consent. Stored as the plain string on `Runner.guardianRelationship`,
+ * guarded by `asGuardianRelationship`, like every other closed vocabulary here.
+ */
+export const GUARDIAN_RELATIONSHIPS = ['PARENT', 'LEGAL_GUARDIAN'] as const;
+
+export type GuardianRelationship = (typeof GUARDIAN_RELATIONSHIPS)[number];
+
+/** What a person reads for each stored value. */
+export const GUARDIAN_RELATIONSHIP_LABELS: Record<GuardianRelationship, string> = {
+  PARENT: 'Parent',
+  LEGAL_GUARDIAN: 'Legal Guardian',
+};
+
+/** The relationship, or null when it is not one we offer. */
+export function asGuardianRelationship(value: unknown): GuardianRelationship | null {
+  if (typeof value !== 'string') return null;
+  const upper = value.trim().toUpperCase();
+  return (GUARDIAN_RELATIONSHIPS as readonly string[]).includes(upper)
+    ? (upper as GuardianRelationship)
+    : null;
+}
+
+/**
+ * A sample of the answer, so uppercase like the stored name
+ * (lib/text-case.ts). The relationship's placeholder is an instruction instead,
+ * and stays sentence case.
+ */
+export const GUARDIAN_NAME_PLACEHOLDER = 'MARIA DELA CRUZ';
+export const GUARDIAN_RELATIONSHIP_PLACEHOLDER = 'Select relationship';
+
+/**
+ * The sentence the guardian ticks. It names the child, so the tick is consent
+ * for this runner rather than for "the minor" in general — which matters on an
+ * order that carries two children.
+ */
+export function guardianConsentSentence(childName: string): string {
+  const name = childName.replace(/\s+/g, ' ').trim() || 'this runner';
+  return `I am the parent or legal guardian of ${name} and I consent to their participation in this event, including the Disclaimer, Consent & Data Privacy Waiver on their behalf.`;
+}
+
+/** The three answers a runner who needs consent owes, in form order. */
+export const GUARDIAN_FIELDS = [
+  'guardianName',
+  'guardianRelationship',
+  'guardianConsent',
+] as const;
+
+export type GuardianField = (typeof GUARDIAN_FIELDS)[number];
+
+/** Each phrased as the fix, shared by the wizards and the routes. */
+export const GUARDIAN_FIELD_MESSAGES: Record<GuardianField, string> = {
+  guardianName: "Enter the parent or guardian's full name",
+  guardianRelationship: 'Select a relationship',
+  guardianConsent: 'The parent or guardian must agree for this runner',
+};
+
+type GuardianAnswers = {
+  birthdate?: unknown;
+  guardianName?: unknown;
+  guardianRelationship?: unknown;
+  guardianConsent?: unknown;
+};
+
+/**
+ * What this runner still owes for guardian consent on a race held on
+ * `raceDay` — empty when they do not need it at all.
+ */
+export function guardianErrors(
+  participant: GuardianAnswers | null | undefined,
+  raceDay: unknown,
+): Partial<Record<GuardianField, string>> {
+  const birthdate = participant?.birthdate;
+  if (
+    typeof birthdate !== 'string' ||
+    typeof raceDay !== 'string' ||
+    !needsGuardianConsent(birthdate.trim(), raceDay)
+  ) {
+    return {};
+  }
+
+  const errors: Partial<Record<GuardianField, string>> = {};
+  const name = participant?.guardianName;
+  if (typeof name !== 'string' || name.trim() === '') {
+    errors.guardianName = GUARDIAN_FIELD_MESSAGES.guardianName;
+  }
+  if (!asGuardianRelationship(participant?.guardianRelationship)) {
+    errors.guardianRelationship = GUARDIAN_FIELD_MESSAGES.guardianRelationship;
+  }
+  if (participant?.guardianConsent !== true) {
+    errors.guardianConsent = GUARDIAN_FIELD_MESSAGES.guardianConsent;
+  }
+  return errors;
+}
+
+/**
+ * The checkout routes' door for guardian consent, like
+ * `participantBirthdateError`: the first gap on the first runner who needs
+ * consent, named by number when the order has more than one runner.
+ */
+export function participantGuardianError(
+  participants: unknown,
+  raceDay: unknown,
+): string | undefined {
+  if (!Array.isArray(participants)) return undefined;
+
+  for (const [index, participant] of participants.entries()) {
+    const errors = guardianErrors(participant as GuardianAnswers | null, raceDay);
+    const problem = GUARDIAN_FIELDS.map((field) => errors[field]).find(Boolean);
+    if (!problem) continue;
+
+    if (participants.length === 1) return problem;
+    return `Runner ${index + 1}: ${problem[0].toLowerCase()}${problem.slice(1)}`;
+  }
+  return undefined;
+}
+
+/**
+ * The three `Runner` columns as a checkout route writes them. A runner who
+ * does not need consent gets nulls even if the client sent answers, and the
+ * timestamp is always the server's. Call only after
+ * `participantGuardianError` has passed.
+ */
+export function storedGuardianConsent(
+  participant: GuardianAnswers | null | undefined,
+  raceDay: unknown,
+  now: Date = new Date(),
+): {
+  guardianName: string | null;
+  guardianRelationship: GuardianRelationship | null;
+  guardianConsentAt: Date | null;
+} {
+  const birthdate = participant?.birthdate;
+  const needed =
+    typeof birthdate === 'string' &&
+    typeof raceDay === 'string' &&
+    needsGuardianConsent(birthdate.trim(), raceDay);
+
+  if (!needed) {
+    return { guardianName: null, guardianRelationship: null, guardianConsentAt: null };
+  }
+
+  return {
+    guardianName: optionalUpperCaseForStorage(participant?.guardianName),
+    guardianRelationship: asGuardianRelationship(participant?.guardianRelationship),
+    guardianConsentAt: now,
+  };
 }

@@ -153,7 +153,7 @@ and it works with keyboard, mouse and touch.
 This batch carries a **Prisma migration**. When it is promoted to `main`, run
 `npx prisma migrate deploy` against production by hand.
 
-- [ ] **Schema:** add three nullable columns to `Runner`, each with a `///`
+- [x] **Schema:** add three nullable columns to `Runner`, each with a `///`
       doc comment:
       - `guardianName String?` (uppercase)
       - `guardianRelationship String?` (`PARENT` | `LEGAL_GUARDIAN`, a plain
@@ -165,29 +165,31 @@ This batch carries a **Prisma migration**. When it is promoted to `main`, run
       This is small storage on a small share of rows, so it is fine on the
       Neon free tier. Existing rows stay null and are not backfilled.
 - [ ] Create the migration against the **development** Neon branch only.
-- [ ] **`minor-consent.ts`:** add the labels and copy (`GUARDIAN_RELATIONSHIPS`,
+      *Written (`20260919120000_runner_guardian_consent`), not yet applied —
+      see Where it stands.*
+- [x] **`minor-consent.ts`:** add the labels and copy (`GUARDIAN_RELATIONSHIPS`,
       a checkbox sentence that takes the child's name, the placeholder), plus
       `participantGuardianError(participants, raceDay)`, which both routes and
       both wizards use.
-- [ ] **New `register/GuardianConsent.tsx`:** the panel described in *The
+- [x] **New `register/GuardianConsent.tsx`:** the panel described in *The
       approach*. It uses the app's own checkbox look (copy
       `ConsentWaiver.tsx`'s custom box), `SelectField`, and `FieldError`, and
       it reveals with the same transition the wizard already uses.
-- [ ] **Both wizards:** the participant state gets `guardianName`,
+- [x] **Both wizards:** the participant state gets `guardianName`,
       `guardianRelationship` and `guardianConsent`. Render `GuardianConsent`
       under Birthdate when `needsGuardianConsent(p.birthdate, event.date)` is
       true, and clear the three fields when it becomes false. Send them in
       `participants`.
-- [ ] **`validation.ts`:** add the three fields to `RunnerField`, the field
+- [x] **`validation.ts`:** add the three fields to `RunnerField`, the field
       order and the labels. Each is required **only** when the runner needs
       consent, and each has its own message ("Enter the parent or guardian's
       full name", "Select a relationship", "The parent or guardian must agree
       for this runner").
-- [ ] **Both checkout routes:** run `participantGuardianError` with
+- [x] **Both checkout routes:** run `participantGuardianError` with
       `event.date`, then write the three columns (the name through
       `optionalUpperCaseForStorage`, the timestamp as `new Date()`). Runners
       who do not need consent get nulls even if the client sent something.
-- [ ] `PROJECT_GUIDE.md`: §4 (the Runner columns), §5 (expand the
+- [x] `PROJECT_GUIDE.md`: §4 (the Runner columns), §5 (expand the
       `minor-consent.ts` row), §10.
 
 **Done when:** a runner ≤ 12 on race day cannot be registered without the
@@ -245,3 +247,18 @@ consented for them, export it, and print a sheet for kit claiming.
   keyboard, mouse and touch; the card-payment wizard shares the same code but
   both live events use bank transfer, so it was type-checked rather than
   clicked. Next: Batch 3, guardian consent from form to database.
+- 2026-09-19: **Batch 3 landed** (uncommitted). `Runner` gained
+  `guardianName`, `guardianRelationship`, `guardianConsentAt`; migration
+  `20260919120000_runner_guardian_consent` was written by hand because the
+  session could not run `prisma migrate dev` — **apply it to the development
+  branch with `npx prisma migrate dev` before registering through the wizard**,
+  and run `npx prisma migrate deploy` against production on promotion.
+  `minor-consent.ts` gained the vocabulary, copy, `guardianErrors`,
+  `participantGuardianError` and `storedGuardianConsent`;
+  `register/GuardianConsent.tsx` is the panel (reveals with the wizard's
+  `fadeIn` via `.guardian-reveal`, without `forwards`, so the Relationship menu
+  is not trapped under the next field). Both wizards hold, clear and send the
+  three answers; `validation.ts` owes them only for a minor. Verified in the
+  browser at desktop and 375px on the bank-transfer wizard (panel shows, names
+  the child, errors per field, clears when the birthdate changes to over 12);
+  no order was submitted. Next: Batch 4, organizers can see it.
