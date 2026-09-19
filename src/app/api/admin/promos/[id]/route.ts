@@ -36,6 +36,7 @@ import { promoTermsFromInput } from '@/lib/promo-input';
 const EDITABLE_TERMS = [
   'code',
   'discountType',
+  'discountValue',
   'eventId',
   'buyQuantity',
   'getQuantity',
@@ -69,13 +70,16 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         automatic: true,
         paused: true,
         discountType: true,
+        discountValue: true,
         eventId: true,
         buyQuantity: true,
         getQuantity: true,
         validFrom: true,
         validUntil: true,
         usageLimit: true,
+        usageCount: true,
         categoryPrices: { select: { categoryId: true, price: true, usageLimit: true } },
+        categories: { select: { categoryId: true } },
       },
     });
     if (!existing || !can(actor, 'promo:manage', { organizerId: actor.orgId })) {
@@ -115,6 +119,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       // suddenly need telling. Creating the other one is the honest way.
       { ...body, automatic: existing.automatic },
       actor.orgId,
+      // The runners already counted, so a new runner limit cannot go under
+      // them. A batch's limit is fixed at 1 below, so its count is not asked.
+      existing.batchLabel ? undefined : { usageCount: existing.usageCount },
     );
     if ('problem' in terms) {
       return NextResponse.json(terms.problem, { status: 400 });
@@ -210,9 +217,38 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         });
       }
 
+      // The category restriction is **replaced**, for every voucher of a
+      // batch at once. Unlike the price rows above these carry no count, so
+      // nothing is lost by writing them fresh, and a batch whose vouchers
+      // disagreed about who they are for would be two promotions under one
+      // name.
+      const members = existing.batchLabel
+        ? await tx.promoCode.findMany({
+            where: batchWhere(existing, actor.orgId),
+            select: { id: true },
+          })
+        : [{ id: existing.id }];
+      const memberIds = members.map(member => member.id);
+      await tx.promoCategory.deleteMany({ where: { promoCodeId: { in: memberIds } } });
+      if (terms.categoryIds.length > 0) {
+        await tx.promoCategory.createMany({
+          data: memberIds.flatMap(promoCodeId =>
+            terms.categoryIds.map(categoryId => ({ promoCodeId, categoryId })),
+          ),
+          skipDuplicates: true,
+        });
+      }
+
       const changes = changedFields(existing, { ...existing, ...data }, EDITABLE_TERMS);
       if (priceListKey(existing.categoryPrices) !== priceListKey(terms.categoryPrices)) {
         changes.categoryPrices = CHANGED;
+      }
+      const categoriesBefore = existing.categories.map(row => row.categoryId).sort().join('|');
+      if (categoriesBefore !== [...terms.categoryIds].sort().join('|')) {
+        changes.categories = [
+          existing.categories.length > 0 ? existing.categories.length : 'ALL',
+          terms.categoryIds.length > 0 ? terms.categoryIds.length : 'ALL',
+        ];
       }
       if (Object.keys(changes).length > 0) {
         await recordAudit(tx, actor, {

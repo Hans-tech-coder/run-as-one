@@ -3,10 +3,13 @@ import { formatPesos, toCentavos } from '@/lib/money';
 import { CATEGORY_ORDER } from '@/lib/category-order';
 import {
   DISCOUNT_TYPES,
+  DISCOUNT_TYPE_LABELS,
+  MAX_PERCENT_OFF,
   PromoCategoryPrice,
   asDiscountType,
   categoryPriceField,
   categorySeatsField,
+  limitCountsRunners,
 } from '@/lib/discount';
 
 /**
@@ -22,11 +25,11 @@ import {
  * The route refuses rather than repairs, and every rejection names the field it
  * came from, per the project's rule that validation says exactly what is wrong.
  *
- * A promotion's window is simply its dates now. There was briefly a choice
- * between a date window and a count of redemptions, and the count was removed
- * because it had no kind of promotion left to limit: a repricing promotion is
- * capped per category on its own price rows, in runners, and a group deal is
- * bounded by the group it needs.
+ * What caps a promotion depends on its kind. A repricing promotion is capped
+ * per category on its own price rows, in runners. A group deal is bounded by
+ * the group it needs. A percentage or fixed-amount code shared by everyone may
+ * carry a **runner limit** in `usageLimit` (`limitCountsRunners`); a voucher is
+ * a limit of 1, set by the create route. Any of them may also have dates.
  */
 
 /** What the marketing form can say about a promotion. */
@@ -45,6 +48,18 @@ export interface PromoInput {
    * missing for a category means its price has no cap of its own.
    */
   categoryLimits?: unknown;
+  /**
+   * PERCENTAGE: the whole percent, as typed. FIXED: pesos, as typed — stored
+   * as centavos.
+   */
+  discountValue?: unknown;
+  /** PERCENTAGE and FIXED: the category ids it is restricted to. Empty = all. */
+  categoryIds?: unknown;
+  /**
+   * PERCENTAGE and FIXED as one shared code: how many runners may get it in
+   * total. Blank means no limit.
+   */
+  usageLimit?: unknown;
 }
 
 /** The columns every promotion carries, whatever shape it is claimed in. */
@@ -52,7 +67,10 @@ export interface PromoTermsData {
   discountType: string;
   discountValue: number;
   eventId: string | null;
-  /** Always null from the form; the batch branch of the create route sets 1. */
+  /**
+   * The runner limit a shared percentage or fixed code was given, and null
+   * for every other kind. The batch branch of the create route sets 1.
+   */
   usageLimit: number | null;
   validFrom: Date | null;
   validUntil: Date | null;
@@ -79,6 +97,22 @@ export interface PromoInputError {
 export interface PromoData {
   data: PromoTermsData;
   categoryPrices: PromoCategoryPrice[];
+  /**
+   * The PromoCategory rows to write, as category ids. Always present and empty
+   * for every kind but PERCENTAGE and FIXED — and empty for those too when the
+   * promotion is for every category — so an edit that changed the kind or
+   * widened it back to everyone clears the rows the old terms left behind.
+   */
+  categoryIds: string[];
+}
+
+/** What an edit knows about the promotion it is changing. */
+export interface PromoCurrent {
+  /**
+   * Runners (or orders, for the older kinds) already counted against the cap.
+   * A new limit may not go below it, the same rule the seat caps follow.
+   */
+  usageCount: number;
 }
 
 /**
@@ -94,6 +128,8 @@ export interface PromoData {
 export async function promoTermsFromInput(
   input: PromoInput,
   organizerId: string,
+  /** The promotion being edited, or undefined when creating one. */
+  current?: PromoCurrent,
 ): Promise<PromoData | { problem: PromoInputError }> {
   const type = asDiscountType(input.discountType);
   if (!type) {
@@ -101,6 +137,18 @@ export async function promoTermsFromInput(
   }
 
   const automatic = input.automatic === true;
+
+  // Not offered for these kinds yet (owner, 2026-09-19): an automatic
+  // percentage would be on every order with no limit anybody set, and the
+  // early bird it would be used for is what CATEGORY_PRICE already is. The
+  // form disables the option; this is the same rule where it cannot be
+  // walked past.
+  if (automatic && limitCountsRunners(type)) {
+    return problem(
+      `${DISCOUNT_TYPE_LABELS[type]} is given with a shared code or single-use vouchers, not automatically. Choose one of those under "How runners get it".`,
+      'automatic',
+    );
+  }
 
   let scopedEventId: string | null = null;
   if (input.eventId) {
@@ -130,6 +178,23 @@ export async function promoTermsFromInput(
     categoryPrices = priced.categoryPrices;
   }
 
+  let discountValue = 0;
+  let categoryIds: string[] = [];
+  let usageLimit: number | null = null;
+  if (limitCountsRunners(type)) {
+    const value = discountValueFromInput(type, input.discountValue);
+    if ('problem' in value) return value;
+    discountValue = value.discountValue;
+
+    const scoped = await categoryIdsFromInput(input.categoryIds, scopedEventId);
+    if ('problem' in scoped) return scoped;
+    categoryIds = scoped.categoryIds;
+
+    const limit = runnerLimitFromInput(input.usageLimit, current);
+    if ('problem' in limit) return limit;
+    usageLimit = limit.usageLimit;
+  }
+
   const from = startOfManilaDay(input.validFrom);
   // The end of the day, not its start: an organizer typing a single date as the
   // last day means the whole of it.
@@ -141,15 +206,15 @@ export async function promoTermsFromInput(
   return {
     data: {
       discountType: type,
-      // Read by neither surviving kind; see the column's own note in
-      // schema.prisma for why it is still there.
-      discountValue: 0,
+      // 0 for the two kinds that read their amounts from elsewhere.
+      discountValue,
       eventId: scopedEventId,
-      // Never set from the form. Written as null rather than omitted so an
-      // edit clears any cap a promotion carried from before the marketing form
-      // stopped offering one; the create route's batch branch overrides it
-      // with 1, which is what makes a voucher single-use.
-      usageLimit: null,
+      // The runner limit of a shared percentage or fixed code, and null for
+      // everything else. Written as null rather than omitted so an edit clears
+      // a cap the promotion no longer has; the create route's batch branch and
+      // the edit route override it with 1 for vouchers, which is what makes a
+      // voucher single-use.
+      usageLimit,
       validFrom: from,
       validUntil: until,
       buyQuantity: buy,
@@ -157,7 +222,113 @@ export async function promoTermsFromInput(
       automatic,
     },
     categoryPrices,
+    categoryIds,
   };
+}
+
+/**
+ * What a percentage or fixed-amount promotion is worth, as the column holds it.
+ *
+ * A percentage is a whole number from 1 to 100 — "12.5%" is refused rather
+ * than rounded, because rounding is the app choosing a discount the organizer
+ * did not type. A fixed amount is pesos, stored as centavos, and must be above
+ * zero; there is no ceiling, since each runner's discount is capped at their
+ * own entry anyway.
+ */
+function discountValueFromInput(
+  type: string,
+  raw: unknown,
+): { discountValue: number } | { problem: PromoInputError } {
+  const typed = String(raw ?? '').trim();
+
+  if (type === DISCOUNT_TYPES.PERCENTAGE) {
+    if (!typed) return problem('Enter the percentage off, from 1 to 100.', 'discountValue');
+    const percent = Number(typed);
+    if (!Number.isInteger(percent) || percent < 1 || percent > MAX_PERCENT_OFF) {
+      return problem('The percentage off has to be a whole number from 1 to 100.', 'discountValue');
+    }
+    return { discountValue: percent };
+  }
+
+  if (!typed) return problem('Enter how many pesos come off each runner.', 'discountValue');
+  const centavos = toCentavos(typed);
+  if (!Number.isFinite(Number(typed)) || centavos <= 0) {
+    return problem('The amount off has to be more than ₱0.', 'discountValue');
+  }
+  return { discountValue: centavos };
+}
+
+/**
+ * The categories a percentage or fixed-amount promotion is restricted to.
+ *
+ * Empty is the default and means every category. Otherwise every id has to be
+ * a category of the one event the promotion is scoped to: categories belong to
+ * a race, so "all my events" has none to name, and an id from the browser is
+ * not proof that it belongs to this organizer's race.
+ */
+async function categoryIdsFromInput(
+  raw: unknown,
+  eventId: string | null,
+): Promise<{ categoryIds: string[] } | { problem: PromoInputError }> {
+  const wanted = Array.isArray(raw)
+    ? [...new Set(raw.map(id => String(id ?? '').trim()).filter(Boolean))]
+    : [];
+  if (wanted.length === 0) return { categoryIds: [] };
+
+  if (!eventId) {
+    return problem(
+      'Categories belong to one race, so pick the event first, or leave this on All categories.',
+      'categoryIds',
+    );
+  }
+
+  const found = await prisma.category.findMany({
+    where: { eventId, id: { in: wanted } },
+    select: { id: true },
+    orderBy: CATEGORY_ORDER,
+  });
+  if (found.length !== wanted.length) {
+    return problem(
+      'One of those categories is not part of this event any more. Choose them again.',
+      'categoryIds',
+    );
+  }
+
+  return { categoryIds: found.map(category => category.id) };
+}
+
+/**
+ * The runner limit of a shared percentage or fixed-amount code.
+ *
+ * Blank means no limit. Otherwise a positive whole number, and never below the
+ * runners already counted: those places were promised to people who have
+ * registered, and a cap under them would read as oversold for ever. The same
+ * rule the per-category seat caps follow.
+ */
+function runnerLimitFromInput(
+  raw: unknown,
+  current: PromoCurrent | undefined,
+): { usageLimit: number | null } | { problem: PromoInputError } {
+  const typed = String(raw ?? '').trim();
+  if (!typed) return { usageLimit: null };
+
+  const limit = Number(typed);
+  if (!Number.isInteger(limit) || limit < 1) {
+    return problem(
+      'Enter how many runners can get this discount as a whole number, or leave it blank for no limit.',
+      'usageLimit',
+    );
+  }
+
+  const counted = current?.usageCount ?? 0;
+  if (limit < counted) {
+    return problem(
+      `${counted} runner${counted === 1 ? ' has' : 's have'} already got this discount, so the limit cannot go below ${counted}.`,
+      'usageLimit',
+    );
+  }
+
+  return { usageLimit: limit };
 }
 
 /**

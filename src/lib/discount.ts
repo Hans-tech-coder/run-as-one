@@ -2,6 +2,7 @@
 // import is a `import type`, so it is erased at build and this module stays
 // safe for the wizards to import — see the note below.
 import { today } from '@/lib/event-schedule';
+import { formatPesos } from '@/lib/money';
 
 /**
  * Promo codes: what kinds exist, when one applies, and what it takes off.
@@ -22,15 +23,16 @@ import { today } from '@/lib/event-schedule';
  */
 
 /**
- * The two kinds of promotion. Stored UPPERCASE like every other coded column
+ * The four kinds of promotion. Stored UPPERCASE like every other coded column
  * in this schema.
  *
- * There used to be four — a percentage, a flat amount, and free delivery
- * alongside these two — and all three were removed together. They were the
- * kinds a general-purpose store needs, and this is not a store: an organizer
- * running a race thinks in *prices per distance*, not in percentages off a
- * basket. `CATEGORY_PRICE` is that thought said directly, and it is the one a
- * runner can read off the event page without arithmetic.
+ * `CATEGORY_PRICE` and `BUY_X_GET_Y` are the race-shaped kinds: a second price
+ * list for one race, and a deal on a group. `PERCENTAGE` and `FIXED` are the
+ * number-off kinds, and they are **per runner, on the runner's entry line** —
+ * the category price plus that runner's shirt upcharge, the same base
+ * `runnerPrices` gives `BUY_X_GET_Y` — never off the order as a basket and
+ * never off a fee. Which runners one of them reaches is decided by
+ * `perRunnerSavings`, and its cap counts runners (`limitCountsRunners`).
  */
 export const DISCOUNT_TYPES = {
   /**
@@ -42,6 +44,10 @@ export const DISCOUNT_TYPES = {
   CATEGORY_PRICE: 'CATEGORY_PRICE',
   /** "Register 5, the 6th is free." */
   BUY_X_GET_Y: 'BUY_X_GET_Y',
+  /** 20% off each discounted runner's entry. `discountValue` is the whole percent. */
+  PERCENTAGE: 'PERCENTAGE',
+  /** ₱200 off each discounted runner's entry. `discountValue` is centavos. */
+  FIXED: 'FIXED',
 } as const;
 
 export type DiscountType = (typeof DISCOUNT_TYPES)[keyof typeof DISCOUNT_TYPES];
@@ -66,7 +72,32 @@ export function asDiscountType(value: unknown): DiscountType | null {
 export const DISCOUNT_TYPE_LABELS: Record<DiscountType, string> = {
   CATEGORY_PRICE: 'Discounted category price',
   BUY_X_GET_Y: 'Buy X, get Y free',
+  PERCENTAGE: 'Percentage off',
+  FIXED: 'Fixed amount off',
 };
+
+/**
+ * Whether this kind's `usageLimit` and `usageCount` count **runners** rather
+ * than orders.
+ *
+ * True for the per-runner kinds: a group of five on a code limited to 50 uses
+ * up five, because what the organizer is rationing is discounted places, and a
+ * cap in orders could be claimed by 50 groups of ten. The older kinds keep
+ * counting orders, unchanged. A voucher is a limit of 1 either way, and since a
+ * per-runner voucher covers exactly one runner, one runner and one order mean
+ * the same thing there.
+ *
+ * Written once because the checkout that spends the cap, the expiry sweep that
+ * gives it back, the form that sets it and the table that reports it all have
+ * to agree about what the number means.
+ */
+export function limitCountsRunners(discountType: unknown): boolean {
+  const type = asDiscountType(discountType);
+  return type === DISCOUNT_TYPES.PERCENTAGE || type === DISCOUNT_TYPES.FIXED;
+}
+
+/** The most a PERCENTAGE promotion may take off, in whole percent. */
+export const MAX_PERCENT_OFF = 100;
 
 /**
  * One category on a promotion's price list: which option, and what it costs
@@ -130,17 +161,19 @@ export function categorySeatsField(categoryId: string): string {
 export interface PromoTerms {
   code: string;
   discountType: string;
-  /** Unused by both surviving kinds; kept because the column is. */
+  /**
+   * PERCENTAGE: the whole percent, 1–100. FIXED: centavos off each discounted
+   * runner's entry. 0 for the other two kinds, which read their amounts from
+   * elsewhere.
+   */
   discountValue: number;
   /**
-   * How many redemptions the promotion allows in total, or null.
+   * The promotion's cap, or null for none. A **voucher is a limit of 1** —
+   * that is what makes a batch single-use.
    *
-   * No longer set by the marketing form. It survives because a **voucher is a
-   * limit of 1** — that is what makes a batch single-use — and because
-   * `isExhausted` still has to answer for the promotions that carry one. A
-   * repricing promotion is capped per category on its price rows instead, in
-   * runners rather than orders, which is a different question this column
-   * could never have answered.
+   * Counted in runners for PERCENTAGE and FIXED and in orders for the older
+   * kinds — see `limitCountsRunners`. A repricing promotion sets none here; it
+   * is capped per category on its price rows instead.
    */
   usageLimit: number | null;
   usageCount: number;
@@ -155,6 +188,19 @@ export interface PromoTerms {
    * query simply did not ask for them — `categoryPricesOf` normalises both.
    */
   categoryPrices?: PromoCategoryPrice[];
+  /**
+   * PERCENTAGE and FIXED only: the categories whose runners it discounts.
+   * Empty or absent means every category. See PromoCategory in schema.prisma.
+   */
+  categoryIds?: string[];
+  /**
+   * The names of those same categories, in the event's own order, for the
+   * sentences that name them: "10K and 21K only" under a promotion, and
+   * "SUMMER10 is only for 10K and 21K runners." when an order has none of
+   * them. Carried with the terms because this module is pure and cannot look
+   * them up.
+   */
+  categoryNames?: string[];
   /**
    * True when this promotion needs no code — it applies on its own to any
    * order that meets its conditions. `code` is then its *name*, which is what
@@ -258,7 +304,11 @@ export interface AppliedDiscount {
  * would look like a different price.
  */
 export function isPricedIn(discountType: unknown): boolean {
-  return asDiscountType(discountType) === DISCOUNT_TYPES.CATEGORY_PRICE;
+  const type = asDiscountType(discountType);
+  // The per-runner kinds are priced in too: each discounted runner has their
+  // own lower price, which is exactly what a sale price already is, and it is
+  // what lets `Runner.promoPrice` record who was discounted.
+  return type === DISCOUNT_TYPES.CATEGORY_PRICE || limitCountsRunners(type);
 }
 
 /**
@@ -300,10 +350,13 @@ export function categoryPricesOf(promo: PromoTerms): PromoCategoryPrice[] {
  * so a ₱500 code on a ₱300 order takes off ₱300 and never turns the total
  * negative.
  *
- * Fees are never discounted. The platform fee is the platform's and the
- * transaction fee is PayMongo's; neither is the organizer's to give away, and
- * a percentage that quietly ate the platform's commission would be a bug
- * nobody notices until the month's payout.
+ * **Fees are never discounted**, by any kind. Every branch discounts the
+ * goods — category prices and shirt upcharges — and nothing else: the admin
+ * fee is the platform's, the delivery fee pays a courier and the transaction
+ * fee is PayMongo's, so none of them is the organizer's to give away. A
+ * percentage that quietly ate the platform's commission would be a bug nobody
+ * notices until the month's payout, which is why `OrderBasis` does not even
+ * carry the fees.
  */
 export function discountAmountFor(promo: PromoTerms, order: OrderBasis): number {
   const type = asDiscountType(promo.discountType);
@@ -326,7 +379,104 @@ export function discountAmountFor(promo: PromoTerms, order: OrderBasis): number 
       const off = cheapestFirst.slice(0, free).reduce((sum, price) => sum + price, 0);
       return clamp(off, order.subtotal);
     }
+    case DISCOUNT_TYPES.PERCENTAGE:
+    case DISCOUNT_TYPES.FIXED:
+      return clamp(
+        perRunnerSavings(promo, order).reduce((sum, saving) => sum + saving, 0),
+        order.subtotal,
+      );
   }
+}
+
+/**
+ * The categories a per-runner promotion is restricted to, or an empty list for
+ * every category. Normalised once, like `categoryPricesOf`, so a query that did
+ * not ask for them reads as "no restriction" rather than as a crash.
+ */
+export function promoCategoryIdsOf(promo: PromoTerms): string[] {
+  return Array.isArray(promo.categoryIds) ? promo.categoryIds : [];
+}
+
+/**
+ * How many more runners a per-runner promotion may discount, or null for as
+ * many as come.
+ *
+ * Its `usageLimit` counts runners (`limitCountsRunners`), so what is left is the
+ * limit less the runners already counted. A voucher is a limit of 1, which is
+ * how "a voucher covers exactly one runner" falls out of the same rule as "a
+ * shared code with 3 places left discounts 3 of a group of 5".
+ */
+export function runnersLeft(promo: Pick<PromoTerms, 'usageLimit' | 'usageCount'>): number | null {
+  const limit = positive(promo.usageLimit);
+  if (limit === null) return null;
+  return Math.max(0, limit - Math.max(0, Math.floor(Number(promo.usageCount) || 0)));
+}
+
+/**
+ * What each runner on this order saves under a PERCENTAGE or FIXED promotion,
+ * by index — zero for everyone under any other kind.
+ *
+ * **The one walk every reading of these kinds goes through**: the amount
+ * charged, the price on each runner's line, the runners counted against the
+ * limit at checkout and the runners handed back when an order expires. Two
+ * walks would be two answers to "who got the discount", and the money would
+ * follow one while the receipt printed the other — the same reason
+ * `categoryPriceSavings` exists for the repricing kind.
+ *
+ * 1. Keep only the runners in the promotion's categories (all of them when it
+ *    names none).
+ * 2. Sort them by entry line, most expensive first. On a tie the earlier
+ *    runner comes first, so the discount lands on the card the group filled
+ *    in first.
+ * 3. Take as many as the promotion still allows (`runnersLeft`): 1 for a
+ *    voucher, the places left for a capped shared code, all of them otherwise.
+ *    A short code is split rather than refused, as `categoryPriceSavings`
+ *    splits a nearly-gone sale.
+ * 4. Each runner taken saves `min(entry, fixed)` or `floor(entry × % / 100)`,
+ *    rounded down to the centavo.
+ *
+ * **Most expensive first** is the opposite of `BUY_X_GET_Y`'s cheapest-first,
+ * and on purpose: a free runner is a gift an organizer defends by giving away
+ * the smaller entry, but a limited discount is the group's to use, and it
+ * should do the most it can for them.
+ */
+export function perRunnerSavings(promo: PromoTerms, order: OrderBasis): number[] {
+  const type = asDiscountType(promo.discountType);
+  const savings = order.runnerPrices.map(() => 0);
+  if (!limitCountsRunners(type)) return savings;
+
+  const value = positive(promo.discountValue);
+  if (value === null) return savings;
+
+  const only = new Set(promoCategoryIdsOf(promo));
+  const left = runnersLeft(promo);
+
+  const chosen = order.runnerPrices
+    .map((entry, index) => ({ entry, index }))
+    .filter(({ entry, index }) => {
+      if (entry <= 0) return false;
+      if (only.size === 0) return true;
+      const categoryId = order.runnerCategories[index]?.categoryId;
+      return categoryId !== undefined && only.has(categoryId);
+    })
+    .sort((a, b) => (a.entry === b.entry ? a.index - b.index : b.entry - a.entry))
+    .slice(0, left === null ? undefined : left);
+
+  for (const { entry, index } of chosen) {
+    savings[index] =
+      type === DISCOUNT_TYPES.FIXED
+        ? Math.min(entry, value)
+        : Math.floor((entry * Math.min(value, MAX_PERCENT_OFF)) / 100);
+  }
+  return savings;
+}
+
+/**
+ * How many runners on this order a per-runner promotion discounts: what the
+ * checkout adds to `usageCount` for these kinds. Zero for every other kind.
+ */
+export function runnersDiscounted(promo: PromoTerms, order: OrderBasis): number {
+  return perRunnerSavings(promo, order).filter(saving => saving > 0).length;
 }
 
 /**
@@ -574,10 +724,15 @@ export function applyPromo(
   if (!type) return null;
   const amount = discountAmountFor(promo, order);
   if (amount <= 0) return null;
-  const pricedIn = type === DISCOUNT_TYPES.CATEGORY_PRICE;
+  const pricedIn = isPricedIn(type);
   // From the same walk that produced `amount`, so the price on a runner's line
   // and the money coming off the order cannot describe different orders.
-  const savings = pricedIn ? categoryPriceSavings(promo, order) : [];
+  const savings =
+    type === DISCOUNT_TYPES.CATEGORY_PRICE
+      ? categoryPriceSavings(promo, order)
+      : pricedIn
+        ? perRunnerSavings(promo, order)
+        : [];
 
   return {
     code: promo.code,
@@ -589,7 +744,11 @@ export function applyPromo(
     pricedIn,
     salePriceByRunner: pricedIn
       ? order.runnerCategories.map((runner, index) =>
-          savings[index] > 0 ? runner.listPrice - savings[index] : null,
+          // A category price, like every entry here. A per-runner discount
+          // comes off the entry line, which also holds the runner's shirt
+          // upcharge, so a discount bigger than the category price itself
+          // floors this at zero rather than going negative.
+          savings[index] > 0 ? Math.max(0, runner.listPrice - savings[index]) : null,
         )
       : order.runnerCategories.map(() => null),
   };
@@ -612,6 +771,10 @@ export function describePromo(promo: PromoTerms): string {
       const get = positive(promo.getQuantity) ?? 0;
       return `Register ${buy}, get ${get} free`;
     }
+    case DISCOUNT_TYPES.PERCENTAGE:
+      return `${positive(promo.discountValue) ?? 0}% off`;
+    case DISCOUNT_TYPES.FIXED:
+      return `₱${formatPesoAmount(positive(promo.discountValue) ?? 0)} off`;
     default:
       return 'Discount';
   }
@@ -725,10 +888,9 @@ function manilaDaysUntil(date: Date): number | null {
  * The strings a person reads under a promotion: what it needs, and how long it
  * lasts.
  *
- * There are no order minimums left to list. A promotion is limited by a count
- * of redemptions or by a window of dates, and the only thing a promotion can
- * still *require* of an order is the group size a buy-X-get-Y needs to pay
- * anything at all.
+ * There are no order minimums to list. What a promotion can say about itself
+ * is the group size a buy-X-get-Y needs, the categories and the runner cap of
+ * a per-runner discount, and its window of dates.
  *
  * One list, used by the organizer's marketing table and by the badge a runner
  * sees on the event page, so the conditions an organizer set and the
@@ -742,6 +904,16 @@ export function promoConditions(promo: PromoTerms): string[] {
   // seventh runner belongs on a second order rather than earning more.
   const group = promoGroupSize(promo);
   if (group) parts.push(`${group} runners on one order`);
+
+  // A per-runner discount says who it is for and how many places it has.
+  if (limitCountsRunners(promo.discountType)) {
+    const names = promo.categoryNames ?? [];
+    if (promoCategoryIdsOf(promo).length > 0 && names.length > 0) {
+      parts.push(`${joinNames(names)} only`);
+    }
+    const limit = positive(promo.usageLimit);
+    if (limit !== null) parts.push(`${limit} runner${limit === 1 ? '' : 's'}`);
+  }
 
   const from = asDate(promo.validFrom);
   const until = asDate(promo.validUntil);
@@ -861,9 +1033,16 @@ export function promoCodeError(
     return `${promo.code} is not being accepted at the moment. Contact the organizer if you were given it.`;
   }
 
+  if (limitCountsRunners(type) && !PER_RUNNER_CHECKOUT_READY) {
+    return `${promo.code} can't be used at checkout just yet. Please try again soon, or contact the organizer.`;
+  }
+
   if (isExhausted(promo)) {
-    return promo.usageLimit === 1
-      ? `${promo.code} is a single-use voucher and has already been claimed.`
+    if (promo.usageLimit === 1) {
+      return `${promo.code} is a single-use voucher and has already been claimed.`;
+    }
+    return limitCountsRunners(type)
+      ? `${promo.code} has already been given to as many runners as it allows.`
       : `${promo.code} has already been used the maximum number of times.`;
   }
 
@@ -884,12 +1063,40 @@ export function promoCodeError(
     return `${promo.code} gives you ${positive(promo.getQuantity)} free when ${positive(promo.buyQuantity)} register, so it needs ${group} runners on one order — you have ${runners}.`;
   }
 
+  // A per-runner discount restricted to categories nobody on this order
+  // entered. Named, because "takes nothing off" would leave the group guessing
+  // which distance it was for.
+  const only = promoCategoryIdsOf(promo);
+  if (limitCountsRunners(type) && only.length > 0) {
+    const inScope = order.runnerCategories.some(runner => only.includes(runner.categoryId));
+    if (!inScope) {
+      const names = promo.categoryNames ?? [];
+      return names.length > 0
+        ? `${promo.code} is only for ${joinNames(names)} runners.`
+        : `${promo.code} is only for runners in certain categories, and nobody on this order is in one.`;
+    }
+  }
+
   if (discountAmountFor(promo, order) <= 0) {
     return `${promo.code} takes nothing off this order.`;
   }
 
   return null;
 }
+
+/**
+ * Whether the checkout can take a PERCENTAGE or FIXED promotion yet.
+ *
+ * **Temporary: Marketing Discounts Plan, Batch 1 until Batch 2.** Batch 1 lets
+ * an organizer create these promotions and prices them in this module, but
+ * the checkout routes still add one redemption per order rather than one per
+ * discounted runner, and the code lookup does not yet send the categories.
+ * Taking such a code before Batch 2 would undercount its runner limit and
+ * ignore its categories, so until then it is refused with a sentence of its
+ * own — on screen and at checkout alike, since both read this gate. Batch 2
+ * deletes this constant and its one use above.
+ */
+const PER_RUNNER_CHECKOUT_READY = false;
 
 /**
  * What a runner is told when the code they typed is not one of ours.
@@ -915,6 +1122,11 @@ export function unknownPromoCodeError(code: string): string {
  *
  * A promotion with no caps of any kind is never exhausted, which is the same
  * answer this gave before either kind existed.
+ *
+ * The order cap needs no special case for the per-runner kinds: their
+ * `usageLimit` and `usageCount` both count runners (`limitCountsRunners`), so
+ * the one comparison answers "every discounted place is gone" for them and
+ * "every redemption is gone" for the older kinds.
  */
 export function isExhausted(
   promo: Pick<PromoTerms, 'usageLimit' | 'usageCount' | 'categoryPrices'>,
@@ -1075,6 +1287,22 @@ function clamp(amount: number, ceiling: number): number {
   const value = Math.floor(Number(amount) || 0);
   if (value <= 0) return 0;
   return Math.min(value, Math.max(0, Math.floor(ceiling)));
+}
+
+/**
+ * Pesos for a phrase rather than a receipt: "₱200 off", but "₱199.50 off".
+ * The trailing .00 that `formatPesos` rightly prints on an amount due is noise
+ * in the name of a discount.
+ */
+function formatPesoAmount(centavos: number): string {
+  const full = formatPesos(centavos);
+  return full.endsWith('.00') ? full.slice(0, -3) : full;
+}
+
+/** "10K", "10K and 21K", "5K, 10K and 21K". */
+function joinNames(names: string[]): string {
+  if (names.length <= 1) return names[0] ?? '';
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
 }
 
 function positive(value: number | null | undefined): number | null {

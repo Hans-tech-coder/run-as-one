@@ -58,6 +58,7 @@ import {
   categorySeatsField,
   describePromo,
   isExhausted,
+  limitCountsRunners,
   normalizePromoCode,
   promoConditions,
   promoEndingSoon,
@@ -99,6 +100,10 @@ type PromoRow = {
   getQuantity: number | null;
   /** CATEGORY_PRICE only: what this promotion puts each category on. */
   categoryPrices: PromoCategoryPrice[];
+  /** PERCENTAGE and FIXED: the categories it is restricted to. Empty = all. */
+  categoryIds: string[];
+  /** Their names, in the event's order, for "20% off · 10K, 21K only". */
+  categoryNames: string[];
   batchLabel: string | null;
   automatic: boolean;
   paused: boolean;
@@ -163,6 +168,15 @@ const BLANK_FORM = {
    * category's price has no cap of its own.
    */
   categoryLimits: {} as Record<string, string>,
+  /**
+   * PERCENTAGE: the whole percent. FIXED: pesos off each runner. Blank for the
+   * other kinds.
+   */
+  discountValue: '',
+  /** PERCENTAGE and FIXED: the categories it is for. Empty means all of them. */
+  categoryIds: [] as string[],
+  /** PERCENTAGE and FIXED as one shared code: the runner limit. Blank = none. */
+  usageLimit: '',
   validFrom: '',
   validUntil: '',
   batchLabel: '',
@@ -202,6 +216,32 @@ const CLAIMS: { value: Claim; label: string; hint: string }[] = [
     hint: 'No code at all. It applies on its own to every qualifying order and is shown on the event page. This is what an early bird is, and the only way a discounted category price can be given.',
   },
 ];
+
+/**
+ * What a promotion gives, as the table and the cards print it: "20% off", and
+ * for a per-runner discount restricted to categories, "10K, 21K only" after it.
+ */
+function discountSummary(terms: PromoRow): { gives: string; only: string | null } {
+  const only =
+    limitCountsRunners(terms.discountType) && terms.categoryNames.length > 0
+      ? `${terms.categoryNames.join(', ')} only`
+      : null;
+  return { gives: describePromo(terms), only };
+}
+
+/** The same, on one line, where there is no room for small print. */
+function discountLine(terms: PromoRow): string {
+  const { gives, only } = discountSummary(terms);
+  return only ? `${gives} · ${only}` : gives;
+}
+
+/** How many times a promotion has been used, in the unit its cap counts. */
+function usedPhrase(group: Group): string {
+  const unit = limitCountsRunners(group.terms.discountType) && !group.batchLabel
+    ? (group.used === 1 ? 'runner' : 'runners')
+    : (group.used === 1 ? 'time' : 'times');
+  return `${group.used} ${unit}`;
+}
 
 /** What the View menu calls a column, where its id is not the whole name. */
 const COLUMN_LABELS: Record<string, string> = {
@@ -304,6 +344,22 @@ function PromoStatusBadge({ group }: { group: Group }) {
 
 /** The Used column, for the table cell and the card alike. */
 function UsedCount({ group }: { group: Group }) {
+  // A shared percentage or fixed code counts runners, so it says so: "12 of 50
+  // runners" is a different fact from twelve orders. A voucher batch still
+  // reads as codes used out of codes generated, since one voucher is one runner.
+  const inRunners = limitCountsRunners(group.terms.discountType) && !group.batchLabel;
+  if (inRunners) {
+    return (
+      <span className="block">
+        {group.used}
+        <span className="text-secondary">
+          {group.left !== null
+            ? ` of ${group.used + group.left} runners`
+            : ` runner${group.used === 1 ? '' : 's'}`}
+        </span>
+      </span>
+    );
+  }
   return (
     <>
       <span className="block">
@@ -521,6 +577,7 @@ export default function PromoCodesClient({
     e.preventDefault();
     setIsSubmitting(true);
     setFieldError(null);
+    const perRunner = limitCountsRunners(form.discountType);
 
     try {
       // An edit targets any member of the group: the route treats a batch as
@@ -550,6 +607,13 @@ export default function PromoCodesClient({
               form.discountType === DISCOUNT_TYPES.CATEGORY_PRICE
                 ? form.categoryLimits
                 : {},
+            // The per-runner kinds' own fields, and only theirs, for the same
+            // reason: boxes a kind never rendered are not values it has.
+            discountValue: perRunner ? form.discountValue : '',
+            categoryIds: perRunner && form.eventId ? form.categoryIds : [],
+            // A runner limit belongs to one shared code. Vouchers are 1 each,
+            // set by the route.
+            usageLimit: perRunner && claim === 'CODE' ? form.usageLimit : '',
           }),
         },
       );
@@ -641,7 +705,7 @@ export default function PromoCodesClient({
     // organizer assuming it will unwind a discount somebody already had.
     const used =
       group.used > 0
-        ? ` It has been used ${group.used} time${group.used === 1 ? '' : 's'}; those registrations keep the discount they were given.`
+        ? ` It has been used ${usedPhrase(group)}; those registrations keep the discount they were given.`
         : '';
 
     const ok = await confirm({
@@ -808,7 +872,15 @@ export default function PromoCodesClient({
       id: "discount",
       header: "Discount",
       accessorFn: row => describePromo(row.terms),
-      cell: ({ row }) => describePromo(row.original.terms),
+      cell: ({ row }) => {
+        const { gives, only } = discountSummary(row.original.terms);
+        return (
+          <span>
+            <span className="block">{gives}</span>
+            {only && <span className="text-xs text-secondary">{only}</span>}
+          </span>
+        );
+      },
     },
     {
       id: "event",
@@ -944,8 +1016,19 @@ export default function PromoCodesClient({
    * that moves.
    */
   const chooseType = (next: DiscountType) => {
-    set({ discountType: next });
+    // Switching between percentage and fixed clears the value: 20 means
+    // twenty percent in one and twenty pesos in the other, and carrying it
+    // across would turn one discount into a very different one unseen.
+    const valueMeansSomethingElse =
+      limitCountsRunners(next) && limitCountsRunners(type) && next !== type;
+    set({
+      discountType: next,
+      ...(valueMeansSomethingElse ? { discountValue: '' } : {}),
+    });
     if (next === DISCOUNT_TYPES.CATEGORY_PRICE) setClaim('AUTOMATIC');
+    // Not offered for the per-runner kinds yet, so the claim moves to the
+    // first one that is, rather than leaving a disabled option selected.
+    if (limitCountsRunners(next) && claim === 'AUTOMATIC') setClaim('CODE');
   };
 
   /**
@@ -957,7 +1040,20 @@ export default function PromoCodesClient({
    * form that looks filled in.
    */
   const chooseEvent = (next: string) => {
-    set({ eventId: next, categoryPrices: {} });
+    set({ eventId: next, categoryPrices: {}, categoryIds: [] });
+  };
+
+  /**
+   * One category toggled in or out of a per-runner discount. Emptying the
+   * list is the same as choosing All categories, which is what it means.
+   */
+  const toggleCategory = (categoryId: string) => {
+    const on = form.categoryIds.includes(categoryId);
+    set({
+      categoryIds: on
+        ? form.categoryIds.filter(id => id !== categoryId)
+        : [...form.categoryIds, categoryId],
+    });
   };
 
   /** One option's promotion price, as the organizer types it. */
@@ -976,6 +1072,10 @@ export default function PromoCodesClient({
   // "50 runners at this price, until the 30th" is one perfectly ordinary
   // early bird.
   const perCategoryLimits = type === DISCOUNT_TYPES.CATEGORY_PRICE;
+
+  // Percentage or fixed: a value per runner, optional categories, and a limit
+  // counted in runners.
+  const perRunner = limitCountsRunners(type);
 
   return (
     <>
@@ -1154,7 +1254,7 @@ export default function PromoCodesClient({
               </div>
             )}
             fields={row => [
-              { label: 'Discount', value: describePromo(row.original.terms) },
+              { label: 'Discount', value: discountLine(row.original.terms) },
               {
                 label: 'Applies To',
                 value: row.original.terms.event ? row.original.terms.event.title : 'All my events',
@@ -1443,7 +1543,7 @@ export default function PromoCodesClient({
                 {editing.batchLabel
                   ? `Editing all ${editing.codes.length} vouchers in this batch. The codes themselves stay as they are, and each stays single-use.`
                   : editing.used > 0
-                    ? `Used ${editing.used} time${editing.used === 1 ? '' : 's'} already. Those registrations keep the discount they were given — a change here only affects new ones.`
+                    ? `Used ${usedPhrase(editing)} already. Those registrations keep the discount they were given — a change here only affects new ones.`
                     : 'Not used yet, so a change here affects every registration from now on.'}
               </p>
             )}
@@ -1462,24 +1562,9 @@ export default function PromoCodesClient({
             )}
 
             <form id="promo-form" onSubmit={handleSubmit} className="flex flex-col gap-5">
-              {/* Scope first: what a code is worth reads differently once you
-                  know whether it is for one race or all of them. */}
-              <AdminSelect
-                label="Applies to"
-                listboxLabel="Event this code applies to"
-                value={form.eventId}
-                onChange={chooseEvent}
-                error={errorFor('eventId')}
-                options={[
-                  { value: ALL_EVENTS, label: 'All my events', hint: 'Every event you run, now and later' },
-                  ...events.map(event => ({
-                    value: event.id,
-                    label: event.title,
-                    hint: event.date,
-                  })),
-                ]}
-              />
-
+              {/* The kind first, then what it is worth, then where it
+                  applies: a percentage reads as a complete thought before
+                  anyone has to decide which race it is for. */}
               <AdminSelect
                 label="Discount type"
                 listboxLabel="Kind of discount"
@@ -1497,8 +1582,153 @@ export default function PromoCodesClient({
                     label: DISCOUNT_TYPE_LABELS.BUY_X_GET_Y,
                     hint: 'Register 5, the 6th is free',
                   },
+                  {
+                    value: DISCOUNT_TYPES.PERCENTAGE,
+                    label: DISCOUNT_TYPE_LABELS.PERCENTAGE,
+                    hint: "20% off each runner's entry",
+                  },
+                  {
+                    value: DISCOUNT_TYPES.FIXED,
+                    label: DISCOUNT_TYPE_LABELS.FIXED,
+                    hint: "₱200 off each runner's entry",
+                  },
                 ]}
               />
+
+              {/* What a per-runner discount is worth. The unit sits inside the
+                  box, so "20" can only be read one way; the value is cleared
+                  when the kind switches for the same reason. */}
+              {perRunner && (
+                <div className="form-group">
+                  <label className="form-label" htmlFor="promo-value">
+                    {type === DISCOUNT_TYPES.PERCENTAGE ? 'Percentage off' : 'Amount off'}
+                  </label>
+                  <span className="relative block w-48 max-sm:w-full">
+                    {type === DISCOUNT_TYPES.FIXED && (
+                      <span
+                        aria-hidden="true"
+                        className="pointer-events-none absolute top-1/2 -translate-y-1/2 text-secondary"
+                        style={{ left: 'var(--space-md)' }}
+                      >
+                        &#8369;
+                      </span>
+                    )}
+                    <input
+                      id="promo-value"
+                      type="number"
+                      min={type === DISCOUNT_TYPES.PERCENTAGE ? 1 : 0.01}
+                      max={type === DISCOUNT_TYPES.PERCENTAGE ? 100 : undefined}
+                      step={type === DISCOUNT_TYPES.PERCENTAGE ? 1 : 0.01}
+                      inputMode={type === DISCOUNT_TYPES.PERCENTAGE ? 'numeric' : 'decimal'}
+                      className="form-input w-full"
+                      // Inline because `.form-input` sets its own padding and
+                      // outranks a utility class; room for the ₱ or the %.
+                      style={
+                        type === DISCOUNT_TYPES.FIXED
+                          ? { paddingLeft: 'calc(var(--space-md) + 1.1em)' }
+                          : { paddingRight: 'calc(var(--space-md) + 1.1em)' }
+                      }
+                      placeholder={type === DISCOUNT_TYPES.PERCENTAGE ? '20' : '200'}
+                      aria-invalid={errorFor('discountValue') ? true : undefined}
+                      aria-describedby="promo-value-hint"
+                      value={form.discountValue}
+                      onChange={e => set({ discountValue: e.target.value })}
+                    />
+                    {type === DISCOUNT_TYPES.PERCENTAGE && (
+                      <span
+                        aria-hidden="true"
+                        className="pointer-events-none absolute top-1/2 -translate-y-1/2 text-secondary"
+                        style={{ right: 'var(--space-md)' }}
+                      >
+                        %
+                      </span>
+                    )}
+                  </span>
+                  <FieldError id="promo-value-error" message={errorFor('discountValue')} />
+                  <p id="promo-value-hint" className="text-xs text-secondary">
+                    {type === DISCOUNT_TYPES.PERCENTAGE
+                      ? "Off each discounted runner's entry: their category price plus any shirt upcharge. Fees are never discounted."
+                      : "Off each discounted runner's entry, never below ₱0 for that runner. Fees are never discounted."}
+                  </p>
+                </div>
+              )}
+
+              <AdminSelect
+                label="Event"
+                listboxLabel="Event this promotion applies to"
+                value={form.eventId}
+                onChange={chooseEvent}
+                error={errorFor('eventId')}
+                options={[
+                  { value: ALL_EVENTS, label: 'All my events', hint: 'Every event you run, now and later' },
+                  ...events.map(event => ({
+                    value: event.id,
+                    label: event.title,
+                    hint: event.date,
+                  })),
+                ]}
+              />
+
+              {/* Which runners a per-runner discount is for. Only once a race
+                  is chosen, because categories belong to one race.
+
+                  A row of toggles in the claim picker's own frame and states
+                  rather than a native multi-select, which is a browser control
+                  and a poor one on a phone. Each carries a check mark as well
+                  as its fill, so being on is never told by colour alone. */}
+              {perRunner && form.eventId && scopedCategories.length > 0 && (
+                <div className="form-group">
+                  <span className="form-label" id="promo-scope-label">Applies to</span>
+                  <div
+                    role="group"
+                    aria-labelledby="promo-scope-label"
+                    className="flex flex-wrap gap-1 rounded-[10px] border border-[var(--dash-border)] bg-[var(--dash-surface)] p-1"
+                  >
+                    {[
+                      { id: null as string | null, label: 'All categories', distance: '' },
+                      ...scopedCategories.map(category => ({
+                        id: category.id as string | null,
+                        label: category.name,
+                        distance: category.distance,
+                      })),
+                    ].map(option => {
+                      const on =
+                        option.id === null
+                          ? form.categoryIds.length === 0
+                          : form.categoryIds.includes(option.id);
+                      return (
+                        <button
+                          key={option.id ?? 'all'}
+                          type="button"
+                          aria-pressed={on}
+                          onClick={() =>
+                            option.id === null ? set({ categoryIds: [] }) : toggleCategory(option.id)
+                          }
+                          className={`flex min-h-11 items-center gap-1.5 rounded-[8px] px-3 py-2 text-sm font-bold transition-colors max-sm:flex-1 max-sm:justify-center ${
+                            on ? 'bg-[var(--ink-10)] text-primary' : 'text-secondary hover:text-primary'
+                          }`}
+                        >
+                          {on && <Check size={14} aria-hidden="true" className="shrink-0" />}
+                          <span>{option.label}</span>
+                          {option.distance && (
+                            <span className="rounded-full bg-[var(--ink-10)] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-secondary">
+                              {option.distance}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <FieldError id="promo-scope-error" message={errorFor('categoryIds')} />
+                  <p className="text-xs text-secondary">Runners in other categories pay full price.</p>
+                </div>
+              )}
+              {perRunner && !form.eventId && (
+                <p className="-mt-3 m-0 text-xs text-secondary">
+                  For every category of every event. Pick one event to limit it to some of its
+                  categories.
+                </p>
+              )}
 
               {/* The price list.
 
@@ -1722,8 +1952,12 @@ export default function PromoCodesClient({
                     // are disabled rather than hidden: a control that loses
                     // buttons when a select changes reads as a bug, and a
                     // disabled one with a reason under it reads as a rule.
+                    // The per-runner kinds are the mirror image: a code or
+                    // vouchers, never automatic (not offered yet — the early
+                    // bird it would be for is the category price).
                     const unavailable =
-                      type === DISCOUNT_TYPES.CATEGORY_PRICE && option.value !== 'AUTOMATIC';
+                      (type === DISCOUNT_TYPES.CATEGORY_PRICE && option.value !== 'AUTOMATIC') ||
+                      (perRunner && option.value === 'AUTOMATIC');
                     return (
                       <button
                         key={option.value}
@@ -1744,12 +1978,51 @@ export default function PromoCodesClient({
                     );
                   })}
                 </div>
+                <FieldError id="promo-claim-error" message={errorFor('automatic')} />
                 <p className="text-xs text-secondary">
                   {type === DISCOUNT_TYPES.CATEGORY_PRICE
                     ? 'A discounted category price is shown on the event page beside the option it reprices, so there is nothing to hand out and no code to type.'
                     : CLAIMS.find(option => option.value === claim)?.hint}
+                  {perRunner &&
+                    ' Automatic is not offered for a percentage or a fixed amount. For an early bird, use a discounted category price.'}
                 </p>
               </div>
+
+              {/* How many runners a shared per-runner code can reach. Counted
+                  in runners, like the seat caps on a category price, so a
+                  group of five uses five. */}
+              {perRunner && claim === 'CODE' && (
+                <div className="form-group">
+                  <label className="form-label" htmlFor="promo-limit">Runner limit (optional)</label>
+                  <input
+                    id="promo-limit"
+                    type="number"
+                    min="1"
+                    step="1"
+                    inputMode="numeric"
+                    className="form-input w-48 max-sm:w-full"
+                    placeholder="No limit"
+                    aria-invalid={errorFor('usageLimit') ? true : undefined}
+                    aria-describedby="promo-limit-hint"
+                    value={form.usageLimit}
+                    onChange={e => set({ usageLimit: e.target.value })}
+                  />
+                  <FieldError id="promo-limit-error" message={errorFor('usageLimit')} />
+                  <p id="promo-limit-hint" className="text-xs text-secondary">
+                    How many runners can get this discount in total. A group of 5 uses 5. Leave
+                    blank for no limit.
+                    {editing && editing.used > 0
+                      ? ` ${editing.used} runner${editing.used === 1 ? ' has' : 's have'} already got it, so the limit cannot go below that.`
+                      : ''}
+                  </p>
+                </div>
+              )}
+              {perRunner && claim === 'VOUCHERS' && (
+                <p className="-mt-3 m-0 text-xs text-secondary">
+                  Each voucher covers one runner on one order: the runner with the most expensive
+                  entry among those it applies to.
+                </p>
+              )}
 
               {claim === 'AUTOMATIC' ? (
                 <div className="form-group">
@@ -1846,14 +2119,10 @@ export default function PromoCodesClient({
 
               {/* When it runs.
 
-                  A date window and nothing else. There used to be a choice
-                  here — a window, or a count of redemptions — but the count
-                  had no kind of promotion left to limit once the percentage
-                  and flat-amount codes went: a repricing promotion is capped
-                  per category on its own price rows, in runners, and a group
-                  deal is bounded by the group it needs. An option that governs
-                  nothing is worse than no option, because an organizer has to
-                  read it before working that out.
+                  Dates only. The counts live with the kind they limit: seats
+                  per category on a category price, the runner limit above for
+                  a shared percentage or fixed code, and one per voucher. A cap
+                  and a window may both be set.
 
                   Both dates stay optional, so a promotion with neither simply
                   runs until it is paused — which is what an uncapped one
@@ -2015,6 +2284,19 @@ function formFrom(group: Group): typeof BLANK_FORM {
         .filter(entry => (entry.usageLimit ?? 0) > 0)
         .map(entry => [entry.categoryId, String(entry.usageLimit)]),
     ),
+    // A percent is stored as typed; a fixed amount is centavos, back to pesos.
+    discountValue: !limitCountsRunners(promo.discountType)
+      ? ''
+      : promo.discountType === DISCOUNT_TYPES.FIXED
+        ? String(promo.discountValue / 100)
+        : String(promo.discountValue),
+    categoryIds: [...(promo.categoryIds ?? [])],
+    // A shared code's runner limit. A voucher's 1 is not the organizer's
+    // number, so a batch — and a copy of one — leaves the box blank.
+    usageLimit:
+      limitCountsRunners(promo.discountType) && !group.batchLabel && promo.usageLimit
+        ? String(promo.usageLimit)
+        : '',
     // The date inputs want a Manila calendar day, not an instant: a window
     // that ends at 23:59 Manila is already the next day in UTC, and reading it
     // back as one would move every end date forward by a day on every save.

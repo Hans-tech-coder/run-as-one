@@ -40,6 +40,13 @@ export default async function MarketingPage() {
         categoryPrices: {
           select: { categoryId: true, price: true, usageLimit: true, usageCount: true },
         },
+        // The categories a percentage or fixed-amount promotion is for, with
+        // their names so the table can say "10K, 21K only" and the edit form
+        // can light the same toggles. In the event's own order.
+        categories: {
+          select: { categoryId: true, category: { select: { name: true } } },
+          orderBy: { category: { sortOrder: 'asc' } },
+        },
       },
     }),
     // The organizer's own events, for the "which event is this code for?"
@@ -124,8 +131,10 @@ export default async function MarketingPage() {
         </div>
 
         <PromoCodesClient
-          initialPromos={promoCodes.map(promo => ({
+          initialPromos={promoCodes.map(({ categories, ...promo }) => ({
             ...promo,
+            categoryIds: categories.map(row => row.categoryId),
+            categoryNames: categories.map(row => row.category.name),
             // Per code, so the client can add them up per promotion the same
             // way it already adds up redemptions across a voucher batch.
             given: (spend.get(promo.code) ?? NO_SPEND).given,

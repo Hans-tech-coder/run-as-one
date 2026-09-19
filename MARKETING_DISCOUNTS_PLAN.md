@@ -105,44 +105,46 @@ the runners handed back when an order expires must all read the same walk.
 
 ## Batch 1: the rule, the data and the marketing form
 
-- [ ] **Migration** adding `PromoCategory`. Add the relation on `PromoCode` and
+- [x] **Migration** adding `PromoCategory`. Add the relation on `PromoCode` and
   `Category`.
-- [ ] **`discount.ts`**:
-  - [ ] `PERCENTAGE` and `FIXED` in `DISCOUNT_TYPES` and `DISCOUNT_TYPE_LABELS`
+- [x] **`discount.ts`**:
+  - [x] `PERCENTAGE` and `FIXED` in `DISCOUNT_TYPES` and `DISCOUNT_TYPE_LABELS`
     (*Percentage off*, *Fixed amount off*).
-  - [ ] `PromoTerms` gains `categoryIds?: string[]`, and add
+  - [x] `PromoTerms` gains `categoryIds?: string[]`, and add
     `limitCountsRunners`.
-  - [ ] The allocation walk above (`perRunnerSavings`), and cases in
+  - [x] The allocation walk above (`perRunnerSavings`), and cases in
     `discountAmountFor` and `applyPromo` that read it. `isPricedIn` becomes true
     for the new kinds.
-  - [ ] `promoCodeError`: a code whose categories match no runner on the order
+  - [x] `promoCodeError`: a code whose categories match no runner on the order
     is refused by name ("SUMMER10 is only for 10K and 21K runners."). This
     needs category names, so the lookup passes them in with the terms.
-  - [ ] `isExhausted` and the status badge work for runner-counted caps.
-  - [ ] `describePromo` ("20% off", "₱200 off") and `promoConditions`
+  - [x] `isExhausted` and the status badge work for runner-counted caps.
+  - [x] `describePromo` ("20% off", "₱200 off") and `promoConditions`
     ("10K and 21K only", "50 runners").
-  - [ ] Rewrite the header comment and the "Fees are never discounted" note so
+  - [x] Rewrite the header comment and the "Fees are never discounted" note so
     they are true again.
-- [ ] **`promo-input.ts`**: read `discountValue` (a percent of 1–100, or pesos
+- [x] **`promo-input.ts`**: read `discountValue` (a percent of 1–100, or pesos
   converted to centavos and greater than 0), `categoryIds` (each must belong to
   the scoped event, so refuse them without one), and `usageLimit` for a shared
   code (a positive whole number or blank, and never below the runners already
   counted, the same rule the seat caps follow). Refuse Automatic for these
   kinds, naming the field.
-- [ ] **`api/admin/promos` POST and `[id]` PATCH** write the `PromoCategory`
+- [x] **`api/admin/promos` POST and `[id]` PATCH** write the `PromoCategory`
   rows in the same transaction as the promotion (and for every voucher in a
   batch). An edit replaces them; unlike seat rows, these carry no count, so
   replacing them is safe. Audit entries include the value and categories.
-- [ ] **The marketing screen**: the form, table and cards as set out in
+- [x] **The marketing screen**: the form, table and cards as set out in
   *The marketing screen* below.
-- [ ] `PROJECT_GUIDE.md`: §4 (`PromoCode` rewritten, `PromoCategory` added), §5
+- [x] `PROJECT_GUIDE.md`: §4 (`PromoCode` rewritten, `PromoCategory` added), §5
   (`discount.ts`, `promo-input.ts`), §6 (`/admin/marketing`, the promo
   routes), §10.
 
 Between this batch and the next, a new percentage or fixed code can be created
-but checkout does not price it yet. `promoCodeError` would answer "takes
-nothing off this order", which is safe. **Do not promote `dev` to `main` until
-Batch 2 lands.**
+but no runner can use it. The walk does price it, so "takes nothing off" would
+not have held; instead `discount.ts` has a temporary
+`PER_RUNNER_CHECKOUT_READY = false`, and `promoCodeError` refuses every
+`PERCENTAGE`/`FIXED` code with its own sentence, on screen and at checkout
+alike. **Do not promote `dev` to `main` until Batch 2 lands.**
 
 ## Batch 2: the runner side and checkout
 
@@ -241,5 +243,25 @@ Every toggle is at least 44px tall. Save stays in the fixed footer.
 
 ## Where it stands
 
-- 2026-09-19: the plan was written from the owner's decisions. No batch has
-  started.
+- 2026-09-19: the plan was written from the owner's decisions.
+- 2026-09-19: **Batch 1 landed** (uncommitted until the owner says so).
+  Migration `20260919180000_promo_category`. Notes for Batch 2:
+  - **Delete `PER_RUNNER_CHECKOUT_READY`** and its one use in `promoCodeError`.
+  - `promo-store.ts` `PROMO_TERMS_SELECT` does not select the categories yet.
+    Add them there and map them to `categoryIds` / `categoryNames` (in
+    `CATEGORY_ORDER`) for the lookup, the automatic query and `resolveDiscount`.
+    The marketing page already does this mapping; copy it.
+  - Use `runnersDiscounted(promo, order)` for the amount `redeemPromoCode` adds
+    when `limitCountsRunners(type)`, and `runnersLeft` for the refusal.
+  - `salePriceByRunner` stays a **category** price. A per-runner discount comes
+    off category price plus shirt upcharge, so when it is bigger than the
+    category price alone (100%, or a fixed amount above a cheap category with a
+    3XL upcharge) the category price floors at ₱0 while the upcharge is still
+    discounted. The summary and emails must show that runner's line so that it
+    still adds up to the total.
+  - The marketing screen has **no Filters sheet**, so there was no type filter
+    to extend. Building one is its own piece of work, not part of this plan.
+  - Verified with a script against the plan's examples (20% limited to 3 on a
+    group of 5 across 10K and 21K; ₱300 voucher on a ₱250 3K; 10K-only on a
+    21K order; ties going to the earlier runner). The form was not checked in
+    a browser, because Prisma could not be run in this session (see the chat).

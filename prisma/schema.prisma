@@ -200,6 +200,9 @@ model Category {
   /// The promotions that put this option on a lower price -- see
   /// PromoCategoryPrice.
   promoPrices PromoCategoryPrice[]
+  /// The percentage and fixed-amount promotions restricted to this option --
+  /// see PromoCategory.
+  promoScopes PromoCategory[]
 }
 
 model Registration {
@@ -451,25 +454,25 @@ model PromoCode {
   /// when we show it to a runner. Uppercase like every other coded column, and
   /// spaces are allowed, so "EARLY BIRD" reads correctly on a badge.
   code           String
-  /// "CATEGORY_PRICE" | "BUY_X_GET_Y" -- uppercase like every other coded
-  /// column, and guarded by asDiscountType at the API door.
+  /// "CATEGORY_PRICE" | "BUY_X_GET_Y" | "PERCENTAGE" | "FIXED" -- uppercase
+  /// like every other coded column, and guarded by asDiscountType at the API
+  /// door, so adding a kind needs no enum migration.
   discountType   String
-  /// Kept at 0 by both surviving kinds and read by neither: CATEGORY_PRICE
-  /// takes its amounts from the categoryPrices rows below and BUY_X_GET_Y from
-  /// buyQuantity/getQuantity. The column stays because it is the one place a
-  /// future kind whose worth is a single number would put it, and dropping it
-  /// would cost a migration to add back.
+  /// The worth of a kind whose worth is one number. PERCENTAGE: the whole
+  /// percent off each discounted runner's entry, 1-100. FIXED: centavos off
+  /// each discounted runner's entry, capped at that entry. 0 for
+  /// CATEGORY_PRICE (its amounts are the categoryPrices rows below) and for
+  /// BUY_X_GET_Y (buyQuantity/getQuantity).
   discountValue  Int
-  /// How many times this code may be redeemed in total. Null = unlimited. A
-  /// single-use voucher is simply a limit of 1, which is why there is no
-  /// separate flag: "used once" is a cap, and the cap already exists.
+  /// The cap on this promotion, or null for none. A single-use voucher is
+  /// simply a limit of 1, which is why there is no separate flag.
   ///
-  /// A promotion is limited **either** by this count **or** by the window
-  /// below, never by both, and the marketing form makes that an explicit
-  /// choice -- see promo-input.ts. There is no column recording which was
-  /// chosen because the rows already say it: a usageLimit means the count, and
-  /// its absence means the window (or nothing at all). A voucher batch is the
-  /// one exception, since every voucher carries a limit of 1 by construction.
+  /// **What it counts depends on the kind** -- see limitCountsRunners in
+  /// src/lib/discount.ts. PERCENTAGE and FIXED count **runners**: a group of
+  /// five on a code limited to 50 uses up five, and a voucher (limit 1) covers
+  /// exactly one runner. The older kinds count **orders**. CATEGORY_PRICE sets
+  /// none here at all; its caps are per category, on PromoCategoryPrice.
+  /// A cap and the date window below may both be set.
   usageLimit     Int?
   usageCount     Int                  @default(0)
   validFrom      DateTime?
@@ -511,6 +514,9 @@ model PromoCode {
   /// CATEGORY_PRICE only: the discounted price this promotion puts each
   /// category on. Empty for every other kind.
   categoryPrices PromoCategoryPrice[]
+  /// PERCENTAGE and FIXED only: the categories whose runners this discounts.
+  /// No rows means every category -- see PromoCategory.
+  categories     PromoCategory[]
 
   /// Unique per organizer rather than globally. A code is now looked up
   /// through the event a runner is registering for, so we always know whose it
@@ -568,6 +574,31 @@ model PromoCategoryPrice {
 
   /// One price per category per promotion: a promotion cannot quote the 10K
   /// twice and leave the checkout to pick.
+  @@unique([promoCodeId, categoryId])
+  @@index([categoryId])
+}
+
+/// One category a PERCENTAGE or FIXED promotion is restricted to.
+///
+/// **No rows means every category**, which is the default the organizer starts
+/// from. With rows, only runners in those categories are discounted and the
+/// rest of the order pays full price; an order with none of them is refused by
+/// name ("SUMMER10 is only for 10K and 21K runners.").
+///
+/// A row per pair rather than an array column, so a category that is deleted
+/// takes its rows with it instead of leaving an id nothing can resolve. The rows
+/// carry no count -- the promotion's own usageLimit is the only cap -- which is
+/// why an edit may simply replace them, unlike PromoCategoryPrice.
+///
+/// Small by construction: a batch of 500 vouchers restricted to two categories
+/// is 1,000 two-id rows. Cascades on both sides, like PromoCategoryPrice.
+model PromoCategory {
+  id          String    @id @default(cuid())
+  promoCodeId String
+  categoryId  String
+  promo       PromoCode @relation(fields: [promoCodeId], references: [id], onDelete: Cascade)
+  category    Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
   @@unique([promoCodeId, categoryId])
   @@index([categoryId])
 }

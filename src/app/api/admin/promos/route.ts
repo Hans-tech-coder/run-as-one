@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { can, getActor } from '@/lib/actor';
-import { recordAudit } from '@/lib/audit';
-import { MAX_PROMO_CODE_LENGTH, normalizePromoCode } from '@/lib/discount';
+import { AuditChanges, recordAudit } from '@/lib/audit';
+import { MAX_PROMO_CODE_LENGTH, limitCountsRunners, normalizePromoCode } from '@/lib/discount';
 import { MAX_VOUCHER_BATCH, newVoucherCodes } from '@/lib/voucher-codes';
 import { promoTermsFromInput, wholeNumber } from '@/lib/promo-input';
 
@@ -88,6 +88,25 @@ export async function POST(request: Request) {
           skipDuplicates: true,
         });
 
+        // The category restriction, for every voucher in the batch, in the
+        // same transaction: a voucher saved without its categories would
+        // discount a runner the organizer meant to leave at full price.
+        // createMany cannot nest the rows, so the new vouchers are read back
+        // by the codes just generated — not by label alone, which an older
+        // batch of the same name could share.
+        if (terms.categoryIds.length > 0) {
+          const vouchers = await tx.promoCode.findMany({
+            where: { organizerId: actor.orgId, code: { in: codes } },
+            select: { id: true },
+          });
+          await tx.promoCategory.createMany({
+            data: vouchers.flatMap(voucher =>
+              terms.categoryIds.map(categoryId => ({ promoCodeId: voucher.id, categoryId })),
+            ),
+            skipDuplicates: true,
+          });
+        }
+
         // One row for the batch, not one per voucher: the organizer made one
         // decision, and the codes themselves are not worth copying into a log.
         await recordAudit(tx, actor, {
@@ -95,7 +114,12 @@ export async function POST(request: Request) {
           entityType: 'PromoCode',
           eventId: shared.eventId,
           summary: `Generated ${rows.count} single-use vouchers in batch ${label}.`,
-          changes: { batchLabel: label, vouchers: rows.count, discountType: shared.discountType },
+          changes: {
+            batchLabel: label,
+            vouchers: rows.count,
+            discountType: shared.discountType,
+            ...auditedTerms(shared, terms.categoryIds),
+          },
         });
 
         return rows;
@@ -155,6 +179,12 @@ export async function POST(request: Request) {
           ...(terms.categoryPrices.length > 0
             ? { categoryPrices: { create: terms.categoryPrices } }
             : {}),
+          // The category restriction, for the same reason in the same
+          // statement: a restricted code saved without its categories would
+          // discount every runner.
+          ...(terms.categoryIds.length > 0
+            ? { categories: { create: terms.categoryIds.map(categoryId => ({ categoryId })) } }
+            : {}),
         },
       });
 
@@ -169,6 +199,7 @@ export async function POST(request: Request) {
         changes: {
           discountType: row.discountType,
           ...(terms.categoryPrices.length > 0 ? { categoryPrices: terms.categoryPrices.length } : {}),
+          ...auditedTerms(row, terms.categoryIds),
         },
       });
 
@@ -180,4 +211,22 @@ export async function POST(request: Request) {
     console.error('Promo Creation Error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
+}
+
+/**
+ * What a percentage or fixed-amount promotion was created with, for the trail:
+ * its value, its runner limit and how many categories it is restricted to
+ * ('ALL' for none). Empty for the older kinds, whose entries already say what
+ * they need.
+ */
+function auditedTerms(
+  terms: { discountType: string; discountValue: number; usageLimit: number | null },
+  categoryIds: string[],
+): AuditChanges {
+  if (!limitCountsRunners(terms.discountType)) return {};
+  return {
+    discountValue: terms.discountValue,
+    ...(terms.usageLimit !== null ? { usageLimit: terms.usageLimit } : {}),
+    categories: categoryIds.length > 0 ? categoryIds.length : 'ALL',
+  };
 }
