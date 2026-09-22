@@ -7,6 +7,7 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
+    "map": "node scripts/gen-feature-map.mjs",
     "test:blob": "jiti scripts/test-blob.ts",
     "seed:dev": "jiti scripts/seed-dev.ts",
     "uppercase:existing": "jiti scripts/uppercase-existing-data.ts"
