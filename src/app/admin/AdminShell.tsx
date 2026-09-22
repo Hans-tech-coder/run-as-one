@@ -11,11 +11,12 @@ import {
   HandCoins,
   Megaphone,
   MessageSquare,
+  Settings,
   UsersRound,
 } from 'lucide-react';
 import { ROLE_LABELS } from '@/lib/permissions';
 import type { SignedInUser } from '@/lib/signed-in-user';
-import DashboardShell from './DashboardShell';
+import DashboardShell, { type DashboardNavGroup } from './DashboardShell';
 import AccountMenu from './AccountMenu';
 import { SETTINGS_SECTIONS } from './settings/sections';
 import NotificationsCenter from './NotificationsCenter';
@@ -77,36 +78,69 @@ export default function AdminShell({
   // Only the screens this person's role opens (lib/signed-in-user.ts). The
   // pages check again for themselves; this is what keeps a validator from
   // being offered a Marketing link that would only answer with a 404.
-  // Run As One's own screens sit between the race work and the people work.
-  const navItems = [
-    { name: 'Dashboard', path: '/admin', icon: <LayoutDashboard size={20} /> },
-    // Everyone on Run As One's team; never a client viewer, whose sidebar is
-    // Dashboard and Settings alone (ADMIN_MERGE_PLAN.md, Batch 4).
-    ...((user?.nav.events ?? true)
-      ? [{ name: 'Events', path: '/admin/events', icon: <Calendar size={20} /> }]
-      : []),
-    ...((user?.nav.marketing ?? true)
-      ? [{ name: 'Marketing Tools', path: '/admin/marketing', icon: <Megaphone size={20} /> }]
-      : []),
-    // What Run As One owes each race's organizer (ADMIN_MERGE_PLAN.md,
-    // Batch 6) — money, so it sits first among Run As One's own screens.
-    ...(user?.nav.remittances
-      ? [{ name: 'Remittances', path: '/admin/remittances', icon: <HandCoins size={20} /> }]
-      : []),
-    ...(user?.nav.platform
-      ? [
-          { name: 'Clients', path: '/admin/clients', icon: <Building2 size={20} /> },
-          { name: 'Communities', path: '/admin/communities', icon: <Flag size={20} /> },
-          { name: 'Feedback', path: '/admin/feedback', icon: <MessageSquare size={20} /> },
-        ]
-      : []),
-    ...(user?.nav.team
-      ? [{ name: 'Team', path: '/admin/team', icon: <UsersRound size={20} /> }]
-      : []),
-    ...(user?.nav.activity
-      ? [{ name: 'Activity', path: '/admin/activity', icon: <History size={20} /> }]
-      : []),
+  //
+  // The order was always meaningful — the race work, then Run As One's own
+  // screens, then the people work — but nine rows under one MENU label showed
+  // none of it. They are handed over grouped now (DASHBOARD_SHELL_PLAN.md,
+  // Batch 1); the shell drops a group nobody's role fills, and only draws the
+  // headings when more than one of them survives, so a validator's two rows
+  // and a client viewer's one are not labelled at all.
+  const navGroups: DashboardNavGroup[] = [
+    { label: null, items: [{ name: 'Dashboard', path: '/admin', icon: <LayoutDashboard size={20} /> }] },
+    {
+      label: 'Races',
+      items: [
+        // Everyone on Run As One's team; never a client viewer, whose sidebar
+        // is Dashboard and Settings alone (ADMIN_MERGE_PLAN.md, Batch 4).
+        ...((user?.nav.events ?? true)
+          ? [{ name: 'Events', path: '/admin/events', icon: <Calendar size={20} /> }]
+          : []),
+        ...((user?.nav.marketing ?? true)
+          ? [{ name: 'Marketing Tools', path: '/admin/marketing', icon: <Megaphone size={20} /> }]
+          : []),
+      ],
+    },
+    {
+      label: 'Platform',
+      items: [
+        // What Run As One owes each race's organizer (ADMIN_MERGE_PLAN.md,
+        // Batch 6) — money, so it sits first among Run As One's own screens.
+        ...(user?.nav.remittances
+          ? [{ name: 'Remittances', path: '/admin/remittances', icon: <HandCoins size={20} /> }]
+          : []),
+        ...(user?.nav.platform
+          ? [
+              { name: 'Clients', path: '/admin/clients', icon: <Building2 size={20} /> },
+              { name: 'Communities', path: '/admin/communities', icon: <Flag size={20} /> },
+              { name: 'Feedback', path: '/admin/feedback', icon: <MessageSquare size={20} /> },
+            ]
+          : []),
+      ],
+    },
+    {
+      label: 'Organization',
+      items: [
+        ...(user?.nav.team
+          ? [{ name: 'Team', path: '/admin/team', icon: <UsersRound size={20} /> }]
+          : []),
+        ...(user?.nav.activity
+          ? [{ name: 'Activity', path: '/admin/activity', icon: <History size={20} /> }]
+          : []),
+      ],
+    },
   ];
+
+  // The settings pages are reached from the account menu, not the sidebar, so
+  // the quick jump is told about them separately — a person looking for
+  // "Password" should not have to know which menu hides it.
+  const quickJumpExtras = SETTINGS_SECTIONS.filter(
+    section => !section.platformOnly || user?.nav.platform,
+  ).map(section => ({
+    label: section.label,
+    href: section.href,
+    group: 'Settings',
+    icon: <Settings size={20} />,
+  }));
 
   // Run As One's own account is simply the Super Admin (ROLE_LABELS.OWNER).
   // Anyone else is named with the organizer they are working inside — or a
@@ -123,7 +157,8 @@ export default function AdminShell({
   return (
     <DashboardNavProvider value={user?.nav ?? null}>
       <DashboardShell
-        navItems={navItems}
+        navGroups={navGroups}
+        quickJumpExtras={quickJumpExtras}
         initialCollapsed={initialCollapsed}
         theme={theme}
         // Everyone signed in gets the bell; what it lists is their

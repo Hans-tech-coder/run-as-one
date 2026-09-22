@@ -32,6 +32,14 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  /* It is the way back to the Overview now, not decoration. */
+  text-decoration: none;
+}
+
+.admin-brand:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: -2px;
+  border-radius: 8px;
 }
 
 /* The mark is sized here rather than with a utility on the component, so the
@@ -42,13 +50,25 @@
 }
 
 .admin-nav {
-  padding: 4px 0 calc(var(--space-md) + env(safe-area-inset-bottom));
+  padding: 4px 0 var(--space-md);
   flex: 1;
-  /* A short phone held sideways cannot fit every row; the menu scrolls. */
+  /* A short phone held sideways cannot fit every row, and neither can a
+     zoomed desktop: the menu scrolls at every width. It once stopped
+     scrolling while collapsed, so that the per-row tooltips could reach out
+     past the rail — the tooltip is one `fixed` element drawn by the shell
+     now (DashboardShell.tsx), so nothing has to escape this box. */
   min-height: 0;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+}
+
+/* The way out of the dashboard — the live public site, in a new tab. Held
+   against the floor so it does not scroll away with the menu. */
+.admin-sidebar-foot {
+  flex-shrink: 0;
+  border-top: 1px solid var(--dash-hairline);
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 /* ── The menu (DashboardShell.tsx) ────────────────────────────────────────
@@ -123,10 +143,40 @@
   outline-offset: 3px;
 }
 
+/* One run of rows under one heading. The hairline between groups is always
+   drawn — it survives the collapse to a rail, where it is the only thing left
+   saying that the nine icons are three kinds of work. The heading's words are
+   conditional (DashboardShell.tsx): they appear only when two or more labelled
+   groups survive the role filter. */
 .admin-nav-group {
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+.admin-nav-group.has-rule {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--dash-hairline);
+}
+
+/* On the rail the words go, not the space they sat in: height and opacity run
+   on the sidebar's own clock, so the rows settle as the edge travels rather
+   than jumping when it arrives. */
+.admin-nav-group-label {
+  height: 20px;
+  padding-left: 30px;
+  overflow: hidden;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  line-height: 20px;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  transition:
+    height  var(--resize-dur) var(--resize-ease),
+    opacity var(--duration-quick) ease;
 }
 
 .admin-nav-item {
@@ -185,18 +235,30 @@
 }
 
 /* The collapsed rail's tooltip: transitions.dev's tooltip (17-tooltip),
-   opened to the right of the row instead of above it. It fades in after a
-   short delay and leaves at once. Only the collapsed rail shows it (see the
-   desktop block under Responsive); the rows' own labels are the accessible
-   names, so it is aria-hidden. */
-.admin-nav-tip {
-  display: none;
-  position: absolute;
-  top: 50%;
-  left: calc(100% + 12px);
+   opened to the right of the row instead of above it.
+   It is **one element for the whole menu**, drawn by the shell outside the
+   sidebar and placed from the hovered row's rect. A copy inside each row
+   needed the menu to be given `overflow: visible` while collapsed so the tips
+   could reach past the rail — which took the menu's scrollbar with it, and on
+   a short or zoomed viewport put the last rows out of reach. `fixed` escapes
+   nothing, so the menu scrolls at every width.
+   It arrives on an animation rather than a transition, because it is mounted
+   at the moment it is shown and there is no resting state to travel from; the
+   delay is the animation's. Leaving is the unmount, which is the instant exit
+   the preset asks for. The rows' own labels are the accessible names, so it is
+   aria-hidden. */
+.dash-rail-tip {
+  position: fixed;
   z-index: 60;
-  transform: translate(0, -50%) scale(var(--tt-scale));
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transform: translate(0, -50%);
   transform-origin: 0% 50%;
+  /* Sweeping the rail moves this element rather than replacing it, so the
+     travel between two icons is a slide on the quick step instead of a fade
+     out and a fade back in. */
+  transition: top var(--duration-quick) var(--ease-smooth-out);
   padding: 8px 12px;
   border-radius: 8px;
   background: var(--tt-bg);
@@ -209,11 +271,289 @@
     0 0 0 1px rgba(0, 0, 0, 0.06),
     0 2px 6px 0 rgba(0, 0, 0, 0.05),
     0 8px 28px 0 var(--dash-shadow);
-  opacity: 0;
   pointer-events: none;
+  animation: dash-rail-tip-in var(--tt-in-dur) var(--tt-in-ease) var(--tt-delay) backwards;
+}
+
+/* The key that does the same thing, as a key rather than as a stray character
+   in the sentence. A bare "[" on the end of "Expand menu" read as a typo. It
+   sits on the tooltip's own inverse surface, so it is tinted from the
+   foreground colour rather than from the page's. */
+.dash-rail-tip-key {
+  flex-shrink: 0;
+  min-width: 18px;
+  padding: 1px 5px;
+  border: 1px solid color-mix(in srgb, var(--tt-fg) 25%, transparent);
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--tt-fg) 10%, transparent);
+  font-family: var(--font-body);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: center;
+}
+
+@keyframes dash-rail-tip-in {
+  from {
+    opacity: 0;
+    transform: translate(0, -50%) scale(var(--tt-scale));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dash-rail-tip {
+    animation-duration: 1ms;
+    transition: none;
+  }
+}
+
+/* The keyboard's way past the menu, and the first thing Tab reaches on any
+   dashboard page. Out of sight until it has focus, then over everything. */
+.dash-skip-link {
+  position: fixed;
+  top: 12px;
+  left: -200vw;
+  z-index: 100;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: var(--accent-blue);
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: 0 8px 28px var(--dash-shadow);
+}
+
+.dash-skip-link:focus-visible {
+  left: 12px;
+  outline: 2px solid var(--text-primary);
+  outline-offset: 2px;
+}
+
+/* The quick jump's own row in the sidebar (DashboardQuickJump.tsx). A menu
+   row in every respect but the hint at its end, so the shortcut is something
+   the sidebar tells you rather than something you have to be told. */
+.dash-jump-trigger {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  width: 100%;
+  min-height: 40px;
+  margin-bottom: 4px;
+  padding: 0 var(--space-md) 0 30px;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
   transition:
-    opacity   var(--tt-out-dur) var(--tt-out-ease),
-    transform var(--tt-out-dur) var(--tt-out-ease);
+    background-color var(--duration-quick) ease,
+    color            var(--duration-quick) ease;
+}
+
+.dash-jump-trigger:hover {
+  background: var(--ink-04);
+  color: var(--text-primary);
+}
+
+.dash-jump-trigger:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: -2px;
+}
+
+.dash-jump-hint {
+  flex-shrink: 0;
+  padding: 2px 6px;
+  border: 1px solid var(--dash-border);
+  border-radius: 6px;
+  background: var(--ink-04);
+  font-family: var(--font-body);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--text-secondary);
+  transition: opacity var(--duration-quick) ease;
+}
+
+/* ── The quick jump (DashboardQuickJump.tsx) ─────────────────────────────
+   The app's modal, sat high on the screen rather than centred: a palette is
+   answered by typing, and the eye should not have to travel to the middle to
+   start. The scrim, the solid panel and the scale-in are `AlertModal`'s, so
+   this is recognisably the same object as every other dialog in the app.
+   Below AlertModal's 10050, so an alert raised from here still covers it. */
+.dash-jump-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 9990;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 12vh var(--space-md) var(--space-md);
+  background: var(--dash-scrim);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  opacity: 0;
+  transition: opacity var(--modal-open-dur) var(--modal-ease);
+}
+
+.dash-jump-scrim.is-open {
+  opacity: 1;
+}
+
+.dash-jump-panel {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 560px;
+  max-height: 100%;
+  overflow: hidden;
+  border: 1px solid var(--dash-border);
+  border-radius: 16px;
+  background: var(--dash-panel-solid);
+  box-shadow: 0 24px 64px var(--dash-shadow);
+}
+
+.dash-jump-field {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 12px;
+  padding: 0 var(--space-lg);
+  height: 56px;
+  border-bottom: 1px solid var(--dash-hairline);
+  color: var(--text-secondary);
+}
+
+/* 1rem, not smaller: anything under 16px makes iOS Safari zoom the page the
+   moment the field takes focus. */
+.dash-jump-input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  outline: none;
+}
+
+.dash-jump-input::placeholder {
+  color: var(--text-secondary);
+}
+
+.dash-jump-list {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: var(--space-sm);
+  list-style: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.dash-jump-row {
+  padding: 2px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+/* The heading rides on the first row of its run, so a search that crosses
+   sections still says which is which without a separate list level. */
+.dash-jump-group {
+  display: block;
+  padding: 10px 10px 4px;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.dash-jump-row-body {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 42px;
+  padding: 0 10px;
+  border-radius: 10px;
+  color: var(--text-secondary);
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+
+/* There is no hover state of its own: the pointer moves the same cursor the
+   arrows move, so the row under the mouse and the row Enter would open are
+   never two different rows. */
+.dash-jump-row.is-active .dash-jump-row-body {
+  background: color-mix(in srgb, var(--accent-blue) 14%, transparent);
+  color: var(--accent-blue-text);
+}
+
+.dash-jump-row-icon {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.dash-jump-row-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dash-jump-row-enter {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.dash-jump-empty {
+  margin: 0;
+  padding: var(--space-lg);
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.dash-jump-foot {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  padding: 10px var(--space-lg);
+  border-top: 1px solid var(--dash-hairline);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+}
+
+.dash-jump-foot kbd {
+  display: inline-block;
+  min-width: 18px;
+  margin-right: 4px;
+  padding: 1px 5px;
+  border: 1px solid var(--dash-border);
+  border-radius: 5px;
+  background: var(--ink-04);
+  font-family: var(--font-body);
+  font-size: 0.6875rem;
+  text-align: center;
+}
+
+/* A phone gets the screen: higher on it, and a shorter list so the keyboard
+   never pushes the field out of view. */
+@media (width < 40rem) {
+  .dash-jump-scrim {
+    padding-top: 8vh;
+  }
+
+  .dash-jump-foot {
+    display: none;
+  }
 }
 
 /* The clicked-and-waiting marker inside a link — the sidebar's nav items and
@@ -1083,20 +1423,20 @@
 /* The content column's left edge: the 80px rail when the tablet's sidebar is
    collapsed, the 56px rail below `md` (where the cookie means nothing), and
    the content's own 16px inset below `sm`. */
-.admin-sidebar.is-collapsed + .admin-main .bulk-bar {
+.admin-sidebar.is-collapsed ~ .admin-main .bulk-bar {
   left: calc(80px + var(--space-lg));
 }
 
 @media (width < 48rem) {
   .bulk-bar,
-  .admin-sidebar.is-collapsed + .admin-main .bulk-bar {
+  .admin-sidebar.is-collapsed ~ .admin-main .bulk-bar {
     left: calc(56px + var(--space-lg));
   }
 }
 
 @media (width < 40rem) {
   .bulk-bar,
-  .admin-sidebar.is-collapsed + .admin-main .bulk-bar {
+  .admin-sidebar.is-collapsed ~ .admin-main .bulk-bar {
     left: calc(56px + var(--space-md));
     right: var(--space-md);
   }
@@ -1987,8 +2327,23 @@ textarea.form-input {
 
   /* At rest: the rail. */
   .admin-sidebar:not(.is-open) .rao-logo__word,
-  .admin-sidebar:not(.is-open) .admin-nav-label {
+  .admin-sidebar:not(.is-open) .admin-nav-label,
+  .admin-sidebar:not(.is-open) .dash-jump-hint {
     opacity: 0;
+  }
+
+  /* The group headings give their row back on the rail; the hairline between
+     the groups is what still divides them. */
+  .admin-sidebar:not(.is-open) .admin-nav-group-label {
+    height: 0;
+    opacity: 0;
+  }
+
+  .dash-jump-trigger {
+    min-height: 40px;
+    gap: 14px;
+    padding-left: 18px;
+    font-size: 0.875rem;
   }
 
   /* MENU slides left so it clears the chevron on the rail's edge. */
@@ -2073,12 +2428,20 @@ textarea.form-input {
     width: 80px;
   }
 
-  .admin-sidebar.is-collapsed + .admin-main {
+  .admin-sidebar.is-collapsed ~ .admin-main {
     margin-left: 80px;
   }
 
   .admin-sidebar.is-collapsed .rao-logo__word,
-  .admin-sidebar.is-collapsed .admin-nav-label {
+  .admin-sidebar.is-collapsed .admin-nav-label,
+  .admin-sidebar.is-collapsed .dash-jump-hint {
+    opacity: 0;
+  }
+
+  /* The group headings give their row back on the rail; the hairline between
+     the groups is what still divides them. */
+  .admin-sidebar.is-collapsed .admin-nav-group-label {
+    height: 0;
     opacity: 0;
   }
 
@@ -2087,28 +2450,9 @@ textarea.form-input {
     margin-left: -9px;
   }
 
-  /* The tooltips reach out past the rail, which a scrolling menu would clip. */
-  .admin-sidebar.is-collapsed .admin-nav {
-    overflow: visible;
-  }
-
   .admin-sidebar.is-collapsed .nav-pending {
     position: absolute;
     right: 4px;
-  }
-
-  .admin-sidebar.is-collapsed .admin-nav-tip {
-    display: block;
-  }
-
-  /* The delay belongs only to the showing rule, so leaving plays at once. */
-  .admin-sidebar.is-collapsed .admin-nav-item:hover .admin-nav-tip,
-  .admin-sidebar.is-collapsed .admin-nav-item:focus-visible .admin-nav-tip {
-    opacity: 1;
-    transform: translate(0, -50%) scale(1);
-    transition-duration: var(--tt-in-dur);
-    transition-timing-function: var(--tt-in-ease);
-    transition-delay: var(--tt-delay);
   }
 }
 
@@ -2119,7 +2463,8 @@ textarea.form-input {
   .admin-collapse-knob,
   .admin-menu-label,
   .admin-nav-label,
-  .admin-nav-tip,
+  .admin-nav-group-label,
+  .dash-jump-hint,
   .rao-logo__word {
     transition: none !important;
   }

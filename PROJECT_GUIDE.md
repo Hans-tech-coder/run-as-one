@@ -52,6 +52,8 @@ folded into §5 and §9.
 | Plan | State |
 | --- | --- |
 | `ADMIN_MERGE_PLAN.md` | **active** — batches 1–6 on `dev`, release pending |
+| `DASHBOARD_SHELL_PLAN.md` | **active** — Batch 1 on `dev`; batches 2–3 deferred by the owner |
+| `OVERVIEW_PLAN.md` | **active** — Batch 1 not started; decisions recorded |
 | `PACER_DISCOUNT_PLAN.md` | **active** — all three batches in, release pending |
 | `STAFF_ACCESS_PLAN.md` | **active** — phases 4 and 5 not started |
 | `GUARDIAN_CONSENT_PLAN.md` | done |

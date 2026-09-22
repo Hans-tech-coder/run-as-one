@@ -115,10 +115,40 @@
     owner's request and live in the header beside the bell
     (`admin/AccountMenu.tsx`, see "The dashboard" in §6). The page on screen
     is a tinted band with a 4px bar on its right edge.
+  - **The rows are grouped, and a row stays lit for everything under it**
+    (`DASHBOARD_SHELL_PLAN.md`, Batch 1). `AdminShell` hands the shell
+    `DashboardNavGroup[]` — Dashboard alone, then **Races**, **Platform**,
+    **Organization** — and the shell drops a group nobody's role fills. A
+    hairline always divides the groups; **the headings' words appear only when
+    two or more labelled groups survive the role filter**, so a validator's two
+    rows and a client viewer's one are not labelled at all. Active state is
+    `isActivePath()`: exact for `/admin`, prefix for the rest, so every screen
+    inside an event keeps Events lit. **Never compare the pathname to a row's
+    path with `===`** — that is what left the seven deepest pages in the
+    dashboard with no row lit.
+  - **A footer holds *View public site***, and the mark at the top is a link
+    back to `/admin`. A **skip link** to `#dash-main` is the first focusable
+    thing on every dashboard page.
+  - **Quick jump is ⌘K / Ctrl+K** (`admin/DashboardQuickJump.tsx`) over the
+    menu and the settings pages, plus a discoverable row in the sidebar — a
+    shortcut nobody is told about is not a feature. It is an ARIA combobox on
+    the app's own `.t-modal`, not a new dialog. Destinations outside the menu
+    reach it through the shell's `quickJumpExtras`.
   - **From `md` up the menu collapses to an 80px icon rail** from the round
-    chevron on its edge. Icons never move. Labels fade but stay each row's
-    accessible name, and a tooltip (transitions.dev's 17) names the row on
-    hover and focus. The choice is kept in the `dash_sidebar` cookie
+    chevron on its edge. Icons never move. Labels
+    fade but stay each row's accessible name, and a tooltip (transitions.dev's
+    17) names the row on hover and focus. **That tooltip is one `fixed`
+    element drawn by the shell** and placed from the hovered row's rect: a copy
+    per row needed `overflow: visible` on the menu to escape the rail, which
+    took its scrollbar with it and put the last rows out of reach on a short or
+    zoomed viewport. It is driven by **one delegated handler** on the menu, not
+    handlers per row — per-row `mouseleave` fires before the next row's
+    `mouseenter`, which tore the tooltip down between every pair of icons and
+    made the rail flicker. **It renders after `<main>`**, and the rules that
+    narrow the page to the rail use `~`, not `+`: a `fixed` element between the
+    sidebar and the page once broke
+    `.admin-sidebar.is-collapsed + .admin-main` on every hover, and the whole
+    screen jumped 200px and back. The collapse choice is kept in the `dash_sidebar` cookie
     (`admin/dashboard-sidebar.ts`), which both layouts read, so the first
     paint is already the right width.
   - **Below `md` it is the same menu, smaller.** This is the owner's decision:

@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-36 pages · 46 API routes · 67 modules in `src/lib` · 300 files · 64,165 lines
+36 pages · 46 API routes · 67 modules in `src/lib` · 301 files · 64,730 lines
 
 ---
 
@@ -24,7 +24,7 @@ The route, the server component behind it, and the client components beside it.
 | Route | Page | Beside it |
 | --- | --- | --- |
 | `/` | [`/(home)/page.tsx`](../src/app/%28home%29/page.tsx) | — |
-| `/admin` | [`/admin/page.tsx`](../src/app/admin/page.tsx) | `AccountMenu.tsx` `AdminCardEdit.tsx` `AdminCardList.tsx` `AdminDataTable.tsx` `AdminDatePicker.tsx` `AdminNotFound.tsx` `AdminRouteLoading.tsx` `AdminSelect.tsx` `AdminShell.tsx` `AdminTablePager.tsx` `AuthHomeLink.tsx` `AuthRouteLoading.tsx` `bare-paths.ts` `dashboard-nav.tsx` `dashboard-sidebar.ts` `dashboard-theme.ts` `DashboardShell.tsx` `FilterOptions.tsx` `FiltersMenu.tsx` `forbidden.tsx` `MobileSortMenu.tsx` `NotificationsCenter.tsx` `route-loading-shape.ts` `row-menu-position.ts` `RowActionsMenu.tsx` `ViewerDashboard.tsx` |
+| `/admin` | [`/admin/page.tsx`](../src/app/admin/page.tsx) | `AccountMenu.tsx` `AdminCardEdit.tsx` `AdminCardList.tsx` `AdminDataTable.tsx` `AdminDatePicker.tsx` `AdminNotFound.tsx` `AdminRouteLoading.tsx` `AdminSelect.tsx` `AdminShell.tsx` `AdminTablePager.tsx` `AuthHomeLink.tsx` `AuthRouteLoading.tsx` `bare-paths.ts` `dashboard-nav.tsx` `dashboard-sidebar.ts` `dashboard-theme.ts` `DashboardQuickJump.tsx` `DashboardShell.tsx` `FilterOptions.tsx` `FiltersMenu.tsx` `forbidden.tsx` `MobileSortMenu.tsx` `NotificationsCenter.tsx` `route-loading-shape.ts` `row-menu-position.ts` `RowActionsMenu.tsx` `ViewerDashboard.tsx` |
 | `/admin/[...missing]` | [`/admin/[...missing]/page.tsx`](../src/app/admin/[...missing]/page.tsx) | — |
 | `/admin/activity` | [`/admin/activity/page.tsx`](../src/app/admin/activity/page.tsx) | `ActivityClient.tsx` |
 | `/admin/clients` | [`/admin/clients/page.tsx`](../src/app/admin/clients/page.tsx) | `ApplicationPanel.tsx` `ClientsClient.tsx` `InviteDialog.tsx` |
@@ -222,6 +222,7 @@ when a task touches one, split it before editing rather than after.
 | 599 | [`src/app/api/admin/events/[id]/route.ts`](../src/app/api/admin/events/[id]/route.ts) |
 | 588 | [`src/app/admin/AdminDatePicker.tsx`](../src/app/admin/AdminDatePicker.tsx) |
 | 573 | [`src/app/admin/events/[id]/results/ResultsUploaderClient.tsx`](../src/app/admin/events/[id]/results/ResultsUploaderClient.tsx) |
+| 550 | [`src/app/admin/DashboardShell.tsx`](../src/app/admin/DashboardShell.tsx) |
 | 548 | [`src/app/admin/NotificationsCenter.tsx`](../src/app/admin/NotificationsCenter.tsx) |
 | 546 | [`src/lib/organizer-application.ts`](../src/lib/organizer-application.ts) |
 | 540 | [`src/app/admin/clients/ClientsClient.tsx`](../src/app/admin/clients/ClientsClient.tsx) |
