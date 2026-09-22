@@ -28,7 +28,13 @@ import {
   pauseNote,
   reserveSlots,
 } from '@/lib/registration-gate';
-import { deliverReceivedEmail } from '@/lib/email-delivery';
+import { deliverConfirmationEmail, deliverReceivedEmail } from '@/lib/email-delivery';
+import {
+  FREE_ORDER_COLUMNS,
+  chargeableTotal,
+  isFreeOrder,
+  platformFeeAfterDiscount,
+} from '@/lib/free-checkout';
 import {
   optionalUpperCaseForStorage,
   upperCaseForStorage,
@@ -76,9 +82,10 @@ export async function POST(request: Request) {
     const participantsStr = formData.get('participants') as string;
     const participants = JSON.parse(participantsStr || '[]');
 
-    if (!proofFile) {
-      return NextResponse.json({ error: 'Proof of payment is required' }, { status: 400 });
-    }
+    // The proof is required a little further down instead of here: an order
+    // that costs nothing has no deposit slip to show, and whether it costs
+    // nothing is only knowable once the event and the promo code have been
+    // read. See lib/free-checkout.ts.
 
     // The wizard already disables its submit button without this, but the
     // waiver is a legal gate, not a data-completeness one — an unauthorized
@@ -187,7 +194,6 @@ export async function POST(request: Request) {
         ? asDeliveryZone(deliveryZone)
         : null;
     const expectedDeliveryFee = deliveryFeeFor(event, zone);
-    const expectedPlatformFee = event.adminFee * participants.length;
     // Category prices plus the large-size surcharge. Checked rather than
     // trusted: without this, a client could post a subtotal that leaves out the
     // 4XL surcharge and pay the smaller amount.
@@ -197,9 +203,11 @@ export async function POST(request: Request) {
       event.shirtSizeUpcharge
     );
 
+    // The admin fee is checked a few lines below instead of here, because a
+    // pacer code can waive it (lib/free-checkout.ts) and the code has to be
+    // resolved before we know what the fee should be.
     if (
       deliveryFee !== expectedDeliveryFee ||
-      platformFee !== expectedPlatformFee ||
       subtotal !== expectedSubtotal
     ) {
       return NextResponse.json(
@@ -227,12 +235,38 @@ export async function POST(request: Request) {
     }
     const discountAmount = discount.applied?.amount ?? 0;
 
+    // The admin fee, with a pacer's waiver applied if the winning code carries
+    // one. Recomputed from the row like every other amount here: a client that
+    // posted a waived fee it had not earned would be handing itself Run As
+    // One's commission.
+    const expectedPlatformFee = platformFeeAfterDiscount(
+      event.adminFee,
+      participants.length,
+      discount.applied,
+    );
+    if (platformFee !== expectedPlatformFee) {
+      return NextResponse.json(
+        { error: 'Prices have changed. Please reload the page and try again.' },
+        { status: 409 }
+      );
+    }
+
+    // Whether there is anything left to transfer — **the server's own answer**,
+    // from figures it recomputed, never from the request. See
+    // lib/free-checkout.ts.
+    const chargeable = chargeableTotal({
+      subtotal: expectedSubtotal,
+      deliveryFee: expectedDeliveryFee,
+      platformFee: expectedPlatformFee,
+      discountAmount,
+    });
+    const free = isFreeOrder(chargeable);
+
     // The total matters more here than on the online route: this runner has
     // already transferred the money and is uploading the slip, so the amount
     // written on the order is what an organizer will reconcile against their
     // bank statement. A bank transfer carries no transaction fee.
-    const expectedTotal =
-      expectedSubtotal + expectedDeliveryFee + expectedPlatformFee + transactionFee - discountAmount;
+    const expectedTotal = chargeable + transactionFee;
     if (totalAmount !== expectedTotal) {
       return NextResponse.json(
         { error: 'Prices have changed. Please reload the page and try again.' },
@@ -240,11 +274,20 @@ export async function POST(request: Request) {
       );
     }
 
+    // The deposit slip, required for every order there is money behind. A free
+    // order has none — there was no transfer — and demanding one would be
+    // asking a pacer to photograph a payment they were told not to make.
+    if (!free && !proofFile) {
+      return NextResponse.json({ error: 'Proof of payment is required' }, { status: 400 });
+    }
+
     // 1. Store the receipt as a private blob. This route is public — anyone can
     // reach it — so uploadPrivateProof() enforces the type and size limits.
     // What we keep is the blob pathname; admins view it through
     // /api/admin/proof/[id], which signs a short-lived URL after checking auth.
-    const proofPathname = await uploadPrivateProof(proofFile);
+    // A free order stores none: there is nothing it could be proof of, and a
+    // file attached to one is ignored rather than kept.
+    const proofPathname = free || !proofFile ? null : await uploadPrivateProof(proofFile);
 
     // Registrant text is stored uppercase (lib/text-case.ts). The wizard
     // already uppercases as the runner types, but this request did not have to
@@ -310,8 +353,14 @@ export async function POST(request: Request) {
           discountType: discountAmount > 0 ? discount.applied?.type ?? null : null,
           paymentMethod: storedPaymentMethod,
           proofOfPayment: proofPathname,
-          transactionNumber: transactionNumber,
+          transactionNumber: free ? null : transactionNumber,
           status: 'PENDING', // Waiting for manual validation by admin
+          // Nothing to transfer, so nothing to validate. Spread *after* the
+          // two lines above so it has the last word: a free order is written
+          // PAID and COMPLIMENTARY with its chargeable amounts forced to zero,
+          // which is also what keeps it out of the organizer's queue of
+          // transfers to check. See lib/free-checkout.ts.
+          ...(free ? FREE_ORDER_COLUMNS : {}),
           // Checked above; recorded here as the organizer's evidence that the
           // waiver was agreed to at the moment of this specific submission.
           consentGiven: true,
@@ -366,7 +415,11 @@ export async function POST(request: Request) {
     // receipt (deliverConfirmationEmail) waits for that admin action. Whether
     // the send actually happened is written onto the registration, since on
     // Resend's free tier it may simply not have — see lib/email-delivery.ts.
-    await deliverReceivedEmail(registration);
+    //
+    // A free order has no transfer to verify and is already PAID, so it gets
+    // the receipt straight away. See FREE_ORDER_EMAIL_NOTE in
+    // lib/free-checkout.ts.
+    await (free ? deliverConfirmationEmail : deliverReceivedEmail)(registration);
 
     return NextResponse.json({
       success: true, 

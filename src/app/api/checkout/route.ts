@@ -29,7 +29,13 @@ import {
   pauseNote,
   reserveSlots,
 } from '@/lib/registration-gate';
-import { deliverReceivedEmail } from '@/lib/email-delivery';
+import { deliverConfirmationEmail, deliverReceivedEmail } from '@/lib/email-delivery';
+import {
+  FREE_ORDER_COLUMNS,
+  chargeableTotal,
+  isFreeOrder,
+  platformFeeAfterDiscount,
+} from '@/lib/free-checkout';
 import {
   optionalUpperCaseForStorage,
   upperCaseForStorage,
@@ -121,13 +127,11 @@ export async function POST(request: Request) {
     // case-sensitive on some mail servers.
     const storedCustomerEmail = normalizeEmailAddress(customerEmail);
 
+    // Read now, checked further down: an order that turns out to cost nothing
+    // never reaches PayMongo, so it must not be refused for a key it will not
+    // use. The check stays *before* the write, so a misconfigured key still
+    // fails without leaving an unpayable registration behind.
     const secretKey = process.env.PAYMONGO_SECRET_KEY;
-    if (!secretKey || secretKey === 'sk_test_PLACEHOLDER_KEY') {
-      return NextResponse.json(
-        { error: 'PayMongo Secret Key is missing or invalid. Please update .env.local' },
-        { status: 500 }
-      );
-    }
 
     // Amounts arrive as centavos. Round defensively — Prisma rejects a
     // non-integer for an Int column, and a stray decimal here would 500.
@@ -201,7 +205,6 @@ export async function POST(request: Request) {
         ? asDeliveryZone(deliveryZone)
         : null;
     const expectedDeliveryFee = deliveryFeeFor(event, zone);
-    const expectedPlatformFee = event.adminFee * participants.length;
     // Category prices plus the large-size surcharge. Checked rather than
     // trusted: without this, a client could post a subtotal that leaves out the
     // 4XL surcharge and pay the smaller amount.
@@ -211,9 +214,11 @@ export async function POST(request: Request) {
       event.shirtSizeUpcharge
     );
 
+    // The admin fee is checked a few lines below instead of here, because a
+    // pacer code can waive it (lib/free-checkout.ts) and the code has to be
+    // resolved before we know what the fee should be.
     if (
       deliveryFeeCents !== expectedDeliveryFee ||
-      platformFeeCents !== expectedPlatformFee ||
       subtotalCents !== expectedSubtotal
     ) {
       return NextResponse.json(
@@ -241,22 +246,59 @@ export async function POST(request: Request) {
     }
     const discountAmount = discount.applied?.amount ?? 0;
 
+    // The admin fee, with a pacer's waiver applied if the winning code carries
+    // one. Recomputed from the row like every other amount here: a client that
+    // posted a waived fee it had not earned would be handing itself Run As
+    // One's commission.
+    const expectedPlatformFee = platformFeeAfterDiscount(
+      event.adminFee,
+      participants.length,
+      discount.applied,
+    );
+    if (platformFeeCents !== expectedPlatformFee) {
+      return NextResponse.json(
+        { error: 'Prices have changed. Please reload the page and try again.' },
+        { status: 409 }
+      );
+    }
+
+    // Whether there is anything left to collect — **the server's own answer**,
+    // from figures it recomputed, never from the request. A free order skips
+    // PayMongo entirely, so this is the one decision a posted `amount: 0` must
+    // not be able to reach. See lib/free-checkout.ts.
+    const chargeable = chargeableTotal({
+      subtotal: expectedSubtotal,
+      deliveryFee: expectedDeliveryFee,
+      platformFee: expectedPlatformFee,
+      discountAmount,
+    });
+    const free = isFreeOrder(chargeable);
+
     // The one amount that was never checked before, and it has to be now: with
     // a discount in play, an order that under-reports it would be billed more
     // than the summary promised and one that over-reports it would be billed
     // less. The transaction fee is still the client's own figure — PayMongo's
     // rate table lives in the wizard — so this pins the total against it
-    // rather than re-deriving it.
-    const expectedTotal =
-      expectedSubtotal +
-      expectedDeliveryFee +
-      expectedPlatformFee +
-      transactionFeeCents -
-      discountAmount;
-    if (amountCents !== expectedTotal) {
+    // rather than re-deriving it. On a free order there is nothing for a
+    // transaction fee to be a share of, so it is zero and a posted fee is a
+    // disagreement like any other.
+    const expectedTransactionFee = free ? 0 : transactionFeeCents;
+    const expectedTotal = chargeable + expectedTransactionFee;
+    if (amountCents !== expectedTotal || transactionFeeCents !== expectedTransactionFee) {
       return NextResponse.json(
         { error: 'Prices have changed. Please reload the page and try again.' },
         { status: 409 }
+      );
+    }
+
+    // Checked only now, and only for an order that will actually be charged:
+    // still before the write, so a misconfigured key cannot leave an unpayable
+    // registration behind, but no longer in the way of an order PayMongo will
+    // never see.
+    if (!free && (!secretKey || secretKey === 'sk_test_PLACEHOLDER_KEY')) {
+      return NextResponse.json(
+        { error: 'PayMongo Secret Key is missing or invalid. Please update .env.local' },
+        { status: 500 }
       );
     }
 
@@ -321,6 +363,12 @@ export async function POST(request: Request) {
           discountType: discountAmount > 0 ? discount.applied?.type ?? null : null,
           paymentMethod: storedPaymentMethod,
           status: 'PENDING', // All payments start as PENDING until verified by webhook or admin
+          // Nothing to collect, so nothing to wait for. Spread *after* the two
+          // lines above so it has the last word: a free order is written PAID
+          // and COMPLIMENTARY, with its three chargeable amounts forced to
+          // zero rather than copied from a request that was only checked
+          // against them. See lib/free-checkout.ts.
+          ...(free ? FREE_ORDER_COLUMNS : {}),
           // Checked above; recorded here as the organizer's evidence that the
           // waiver was agreed to at the moment of this specific submission.
           consentGiven: true,
@@ -375,16 +423,33 @@ export async function POST(request: Request) {
     // actual receipt only goes out once the webhook confirms PAID. Whether the
     // send actually happened is written onto the registration, since on
     // Resend's free tier it may simply not have — see lib/email-delivery.ts.
-    await deliverReceivedEmail(registration);
+    //
+    // A free order is already PAID, so it gets the receipt instead: asking a
+    // pacer to wait for a payment that does not exist would be the one mail
+    // they cannot act on. See FREE_ORDER_EMAIL_NOTE in lib/free-checkout.ts.
+    await (free ? deliverConfirmationEmail : deliverReceivedEmail)(registration);
 
     const finalSuccessUrl = successUrl.includes('?') ? `${successUrl}&orderRef=${orderRef}` : `${successUrl}?orderRef=${orderRef}`;
     const finalCancelUrl = cancelUrl.includes('?') ? `${cancelUrl}&orderRef=${orderRef}&cancel=true` : `${cancelUrl}?orderRef=${orderRef}&cancel=true`;
+
+    // **Never PayMongo.** There is nothing to charge, and a zero-amount
+    // checkout session is rejected outright — so the runner goes straight to
+    // the confirmation screen the paid path reaches after paying. Answered in
+    // the same shape as every other branch here, so the wizard needs no second
+    // way of reading a success.
+    if (free) {
+      return NextResponse.json({ checkout_url: finalSuccessUrl });
+    }
 
     if (storedPaymentMethod === PAYMENT_METHODS.BANK_TRANSFER) {
       return NextResponse.json({
         checkout_url: finalSuccessUrl
       });
     }
+
+    // Checked above, and a free order has already returned — so from here on
+    // there is a key, and the two PayMongo calls below can say so.
+    const paymongoKey = secretKey as string;
 
     // Every amount below is already in centavos, which is also the unit
     // PayMongo expects — so no conversion happens here.
@@ -468,7 +533,7 @@ export async function POST(request: Request) {
 
     // Branch logic: Use Payment Intents API for direct e-wallets redirect, otherwise use Checkout Session
     if (storedPaymentMethod === 'GCASH' || storedPaymentMethod === 'PAYMAYA') {
-      const auth = `Basic ${Buffer.from(secretKey).toString('base64')}`;
+      const auth = `Basic ${Buffer.from(paymongoKey).toString('base64')}`;
 
       // 1. Create Payment Intent
       const piRes = await fetch('https://api.paymongo.com/v1/payment_intents', {
@@ -562,7 +627,7 @@ export async function POST(request: Request) {
       headers: {
         accept: 'application/json',
         'content-type': 'application/json',
-        authorization: `Basic ${Buffer.from(secretKey).toString('base64')}`
+        authorization: `Basic ${Buffer.from(paymongoKey).toString('base64')}`
       },
       body: JSON.stringify({
         data: {

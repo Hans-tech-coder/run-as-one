@@ -233,6 +233,16 @@ export interface PromoTerms {
    * is a decision, and it is the one that can be undone with one click.
    */
   paused?: boolean;
+  /**
+   * `PACER` only: this free entry also waives Run As One's admin fee.
+   *
+   * The one flag in this module that reaches a fee, and it is carried rather
+   * than turned into centavos — see `discountAmountFor`'s comment and
+   * `platformFeeAfterDiscount` below, which is the only thing that spends it.
+   * Only the Super Admin can set it (`promo:waive-fee`), because the admin fee
+   * is the platform's own money.
+   */
+  waiveAdminFee?: boolean;
 }
 
 /** One runner's category, and what that category lists at today. */
@@ -314,6 +324,17 @@ export interface AppliedDiscount {
    * could only ever answer with one of those two numbers.
    */
   salePriceByRunner: (number | null)[];
+  /**
+   * Whether Run As One's admin fee is waived along with the entry.
+   *
+   * True only for a `PACER` code whose `waiveAdminFee` is set. It is a flag
+   * rather than centavos inside `amount` on purpose: `amount` is money off the
+   * **goods** everywhere else in this app — it is what `Registration.
+   * discountAmount` stores and what *Given Away* counts — and folding a fee
+   * into it would quietly change the meaning of a column four screens read.
+   * `platformFeeAfterDiscount` is the one place that spends this.
+   */
+  waivesAdminFee: boolean;
 }
 
 /**
@@ -364,6 +385,66 @@ export function categoryPricesOf(promo: PromoTerms): PromoCategoryPrice[] {
   return Array.isArray(promo.categoryPrices) ? promo.categoryPrices : [];
 }
 
+/** Whether these terms are a pacer's free entry rather than a promotion. */
+export function isPacerCode(promo: Pick<PromoTerms, 'discountType'>): boolean {
+  return asDiscountType(promo.discountType) === DISCOUNT_TYPES.PACER;
+}
+
+/**
+ * Which runner on this order a pacer code covers, or −1.
+ *
+ * A pacer code is a free entry for **one named person in one category**, so
+ * there is exactly one runner it can be about: the single runner on the order,
+ * and only if they entered the category the code is locked to. Anything else is
+ * refused by `promoCodeError` rather than quietly discounted — a code that
+ * covered "whichever runner happens to be in the 21K" would be a free entry the
+ * organizer never agreed to hand to that person.
+ *
+ * Written as an index because every other kind here speaks in indexes into
+ * `runnerPrices`, and because the entry line this takes off is that runner's
+ * own — category price plus their shirt upcharge, which is what
+ * `PACER_DISCOUNT_PLAN.md` settled the code covers.
+ *
+ * A pacer code with no `PromoCategory` row at all cannot happen — the POST
+ * route writes the category in the same statement as the code — but if one
+ * ever did, it covers nobody rather than everybody: on a rule about free
+ * entries, the safe end of an impossible case is the one that gives nothing
+ * away.
+ */
+export function pacerRunnerIndex(promo: PromoTerms, order: OrderBasis): number {
+  if (order.runnerPrices.length !== 1) return -1;
+  const only = promoCategoryIdsOf(promo);
+  if (only.length === 0) return -1;
+  return only.includes(order.runnerCategories[0]?.categoryId ?? '') ? 0 : -1;
+}
+
+/**
+ * The admin fee this order actually owes, once the winning discount has had its
+ * say.
+ *
+ * **The one exception to "fees are never discounted"**, and the only function
+ * in this app that spends `AppliedDiscount.waivesAdminFee`. Written here, right
+ * beside the rule it is an exception to, so a reader who finds a fee waived
+ * somewhere lands on the sentence that allowed it (`PACER_DISCOUNT_PLAN.md`).
+ *
+ * Both wizards and both checkout routes call it, for the reason every other
+ * amount in this module is shared: a fee the summary showed as waived and the
+ * server then charged would be the worst bug this feature could have — the
+ * pacer was promised a free entry.
+ *
+ * It waives the fee for **every** runner on the order, which costs nothing in
+ * practice: a pacer code is refused on an order of more than one
+ * (`promoCodeError`), so there is only ever the pacer's own fee to waive.
+ */
+export function platformFeeAfterDiscount(
+  adminFeePerRunner: number,
+  runners: number,
+  applied: AppliedDiscount | null | undefined,
+): number {
+  if (applied?.waivesAdminFee) return 0;
+  return Math.max(0, Math.floor(adminFeePerRunner) * Math.max(0, runners));
+}
+
 /**
  * How much this code takes off this order, in centavos.
  *
@@ -386,9 +467,10 @@ export function categoryPricesOf(promo: PromoTerms): PromoCategoryPrice[] {
  * company's own decision about its own money, which is why only the Super
  * Admin may set it (`promo:waive-fee`). The waiver travels as its own flag on
  * `AppliedDiscount` rather than as centavos added here, so this amount stays
- * what it has always been: money off the goods. Written down as an exception
+ * what it has always been: money off the goods; `platformFeeAfterDiscount`
+ * above is the only thing that spends it. Written down as an exception
  * because a reader who finds a fee waived somewhere must be able to find the
- * sentence that allowed it. See `PACER_DISCOUNT_PLAN.md`, Batch 2.
+ * sentence that allowed it. See `PACER_DISCOUNT_PLAN.md`.
  */
 export function discountAmountFor(promo: PromoTerms, order: OrderBasis): number {
   const type = asDiscountType(promo.discountType);
@@ -417,14 +499,21 @@ export function discountAmountFor(promo: PromoTerms, order: OrderBasis): number 
         perRunnerSavings(promo, order).reduce((sum, saving) => sum + saving, 0),
         order.subtotal,
       );
-    // Batch 1 of PACER_DISCOUNT_PLAN.md creates pacer codes and the screen
-    // that manages them; Batch 2 is what makes one spendable at checkout. Zero
-    // until then, on purpose: a half-wired kind that took *something* off would
-    // be a number nobody decided, and zero is the honest answer while the
-    // pricing rule does not exist yet. `dev` is not promoted to `main` between
-    // the two batches, so no runner can meet this state.
-    case DISCOUNT_TYPES.PACER:
-      return 0;
+    // The whole of one runner's entry line — the category price plus their own
+    // shirt upcharge, exactly what `runnerPrices` already holds — because that
+    // is what a pacer was promised: they run for free. No percentage and no
+    // amount is read from the row, which is why `discountValue` is unused for
+    // this kind.
+    //
+    // Delivery is deliberately not in here: `runnerPrices` is goods, and the
+    // owner settled that a pacer who wants their kit couriered pays the courier
+    // (PACER_DISCOUNT_PLAN.md). The admin fee is not here either — it is a fee,
+    // and it travels as `waivesAdminFee` per the note above.
+    case DISCOUNT_TYPES.PACER: {
+      const runner = pacerRunnerIndex(promo, order);
+      if (runner < 0) return 0;
+      return clamp(order.runnerPrices[runner], order.subtotal);
+    }
   }
 }
 
@@ -708,6 +797,14 @@ export function freeSlotOffer(
  * Ties go to the automatic one, because it is the promotion the organizer set
  * running rather than one a runner happened to be handed, and because leaving
  * a typed code unspent keeps it available for the next order.
+ *
+ * **A pacer code wins outright**, whatever the arithmetic says. It already
+ * takes off the whole entry, so nothing can beat it on amount — but it may
+ * also waive the admin fee, and that is worth money this comparison cannot
+ * see. An automatic promotion that happened to tie would otherwise leave the
+ * pacer paying a fee they were told was covered, and leave their single-use
+ * code unspent besides. A pacer on somebody else's race is not a shopper
+ * looking for the best deal; they were handed one specific thing.
  */
 export function bestDiscount(
   promos: (PromoTerms | null | undefined)[],
@@ -724,7 +821,10 @@ export function bestDiscount(
     const applied = applyPromo(promo, order);
     if (!applied) continue;
 
+    if (best?.type === DISCOUNT_TYPES.PACER) continue;
+
     if (
+      applied.type === DISCOUNT_TYPES.PACER ||
       !best ||
       applied.amount > best.amount ||
       (applied.amount === best.amount && applied.automatic && !best.automatic)
@@ -782,6 +882,9 @@ export function applyPromo(
     usageLimit: promo.usageLimit,
     automatic: promo.automatic === true,
     freeRunners: freeRunnerIndexes(promo, order.runnerPrices),
+    // Carried off the row, and only ever true for a pacer code: nothing else
+    // in this app may reach a fee. See `platformFeeAfterDiscount`.
+    waivesAdminFee: type === DISCOUNT_TYPES.PACER && promo.waiveAdminFee === true,
     pricedIn,
     salePriceByRunner: pricedIn
       ? order.runnerCategories.map((runner, index) =>
@@ -1103,10 +1206,33 @@ export function promoCodeError(
     return `${promo.code} gives you ${positive(promo.getQuantity)} free when ${positive(promo.buyQuantity)} register, so it needs ${group} runners on one order — you have ${runners}.`;
   }
 
+  const only = promoCategoryIdsOf(promo);
+
+  // A pacer code is a free entry for one named person in one category, and it
+  // is refused on anything else rather than applied to part of it — a code that
+  // silently covered one runner of four would be the organizer giving away an
+  // entry they never named a person for.
+  if (type === DISCOUNT_TYPES.PACER) {
+    // Not "this order is too big". The pacer is not doing anything wrong, and
+    // the sentence has to tell them what to do instead, because their slot is
+    // the one at stake: a group order that expires unpaid would release it.
+    if (runners !== 1) {
+      return `${promo.code} covers one runner. Register the pacer on their own, then register the rest of the group as a separate order.`;
+    }
+    const entered = order.runnerCategories[0]?.categoryId ?? '';
+    if (!only.includes(entered)) {
+      // Named, so a pacer who picked the wrong distance can simply go back and
+      // change it. The category is where their slot was actually set aside.
+      const name = (promo.categoryNames ?? [])[0];
+      return name
+        ? `${promo.code} is for the ${name}. Change the category to use it.`
+        : `${promo.code} is for a different category of this race.`;
+    }
+  }
+
   // A per-runner discount restricted to categories nobody on this order
   // entered. Named, because "takes nothing off" would leave the group guessing
   // which distance it was for.
-  const only = promoCategoryIdsOf(promo);
   if (limitCountsRunners(type) && only.length > 0) {
     const inScope = order.runnerCategories.some(runner => only.includes(runner.categoryId));
     if (!inScope) {

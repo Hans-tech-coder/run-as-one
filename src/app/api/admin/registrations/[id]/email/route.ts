@@ -155,6 +155,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       where: { id: registration.id },
       select: {
         status: true,
+        // For outstandingEmail: a complimentary order never owed the received one.
+        paymentMethod: true,
         receivedEmailSentAt: true,
         confirmationEmailSentAt: true,
         lastEmailError: true,

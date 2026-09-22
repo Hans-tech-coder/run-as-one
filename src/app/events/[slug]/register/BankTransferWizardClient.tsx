@@ -74,6 +74,13 @@ import {
   promoStatus,
   type PromoTerms,
 } from "@/lib/discount";
+import {
+  FREE_ORDER_SUBMIT_LABEL,
+  FREE_ORDER_TOTAL_LABEL,
+  chargeableTotal,
+  isFreeOrder,
+  platformFeeAfterDiscount,
+} from "@/lib/free-checkout";
 import PromoCodeField from "./PromoCodeField";
 import FreeSlotOffer from "./FreeSlotOffer";
 import GroupLimitNotice from "./GroupLimitNotice";
@@ -442,9 +449,6 @@ export default function BankTransferWizardClient({
   const deliveryFee =
     logisticsMethod === "DELIVERY" ? deliveryFeeFor(event, deliveryZone) : 0;
 
-  // Platform Fee (per participant, set per event by the organizer)
-  const platformFee = adminFeePerRunner * participants.length;
-
   // What the applied code is worth right now, from the same module the
   // checkout route uses as its last word (lib/discount.ts) — so what this
   // summary promises and what the organizer expects in their account cannot
@@ -476,6 +480,27 @@ export default function BankTransferWizardClient({
     promoOrder,
   );
   const discountAmount = discount?.amount ?? 0;
+
+  // Platform Fee (per participant, set per event by the organizer), less a
+  // pacer's waiver where the winning code carries one. Computed after the
+  // discount rather than before, because that waiver is the one thing in this
+  // app that can reach a fee — the rule is `platformFeeAfterDiscount`, which
+  // the checkout route runs again as its last word.
+  const adminFeeWaived = discount?.waivesAdminFee === true;
+  const platformFee = platformFeeAfterDiscount(
+    adminFeePerRunner,
+    participants.length,
+    discount,
+  );
+
+  // Nothing left to transfer — a pacer's free entry with the fee waived, or
+  // any other order that comes to zero. There is then no deposit slip to
+  // upload and no reference number to quote, so this step stops being about a
+  // bank at all. See lib/free-checkout.ts; the server decides it again from
+  // its own figures.
+  const isFree = isFreeOrder(
+    chargeableTotal({ subtotal, deliveryFee, platformFee, discountAmount }),
+  );
 
   // A good code that simply lost. Not an error — nothing is wrong with it and
   // it stays unspent — but saying nothing would look like the box was broken.
@@ -639,7 +664,9 @@ export default function BankTransferWizardClient({
   };
 
   const handleManualSubmit = async () => {
-    if (!proofFile) {
+    // Asked of every order there is money behind, and of no other: a free
+    // entry has no transfer and so no slip to photograph.
+    if (!isFree && !proofFile) {
       alert({
         variant: "info",
         title: "Proof of Payment Required",
@@ -676,7 +703,8 @@ export default function BankTransferWizardClient({
     setIsProcessing(true);
     try {
       const formData = new FormData();
-      formData.append("proofFile", proofFile);
+      // Nothing to attach on a free order, and the route expects none.
+      if (proofFile && !isFree) formData.append("proofFile", proofFile);
 
       // Append primitive registration data
       formData.append("eventId", eventId);
@@ -693,8 +721,11 @@ export default function BankTransferWizardClient({
       formData.append("platformFee", platformFee.toString());
       formData.append("transactionFee", "0");
       formData.append("totalAmount", totalAmount.toString());
-      formData.append("paymentMethod", "BANK_TRANSFER");
-      formData.append("transactionNumber", transactionNumber);
+      // A free order has no method, because nothing is being paid by one. The
+      // server writes COMPLIMENTARY itself once its own arithmetic agrees the
+      // total is zero — this is only what the wizard believes.
+      formData.append("paymentMethod", isFree ? "COMPLIMENTARY" : "BANK_TRANSFER");
+      formData.append("transactionNumber", isFree ? "" : transactionNumber);
       formData.append("consentGiven", String(consentGiven));
       formData.append("consentSignature", consentSignature);
       // The code the runner typed, and only that. The amount it is worth is
@@ -729,6 +760,15 @@ export default function BankTransferWizardClient({
     }
   };
 
+  // Whether the order that just landed cost nothing. Read off the **saved**
+  // registration rather than off `isFree`, because this screen is reached
+  // after a round trip and the wizard's own state is back at its defaults by
+  // then — the same reason the pickup panel below reads the saved row. A free
+  // order is written PAID with a total of zero (lib/free-checkout.ts), so
+  // there is nothing for an organizer to verify and nothing due.
+  const confirmedFree =
+    registration?.status === "PAID" && registration?.totalAmount === 0;
+
   if (isSuccessParam) {
     return (
       <div className="wizard-page">
@@ -741,17 +781,31 @@ export default function BankTransferWizardClient({
                 <CheckCircle2 size={48} className="text-accent-blue" />
               </div>
               <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight mb-4">
-                Registration Submitted!
+                {confirmedFree
+                  ? "Registration Confirmed!"
+                  : "Registration Submitted!"}
               </h1>
               <p className="text-secondary text-base sm:text-lg mb-6 sm:mb-8">
-                Your registration for <strong>{event.title}</strong> has been
-                received.
+                Your registration for <strong>{event.title}</strong> has been{" "}
+                {confirmedFree ? "confirmed" : "received"}.
               </p>
               {/* Unlike the online wizard, nothing here is settled yet — the
-                  organizer still has to check the receipt against their bank. */}
+                  organizer still has to check the receipt against their bank.
+                  Except on a free entry, where there was no transfer to check:
+                  telling a pacer to wait for a verification that will never
+                  come would leave them watching an inbox for nothing. */}
               <p className="text-sm text-secondary mb-8 max-w-md mx-auto">
-                The organizer will verify your bank transfer and confirm your
-                slot. You will be notified at{" "}
+                {confirmedFree ? (
+                  <>
+                    Your slot is confirmed — there was nothing to pay. Your
+                    receipt has been sent to{" "}
+                  </>
+                ) : (
+                  <>
+                    The organizer will verify your bank transfer and confirm
+                    your slot. You will be notified at{" "}
+                  </>
+                )}
                 <span className="text-white">
                   {registration?.customerEmail || participants[0].email}
                 </span>
@@ -768,9 +822,16 @@ export default function BankTransferWizardClient({
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-secondary text-sm">Amount Due</span>
+                  <span className="text-secondary text-sm">
+                    {confirmedFree ? "Total Paid" : "Amount Due"}
+                  </span>
                   <span className="text-accent-orange font-bold text-xl">
-                    ₱{formatPesos(registration?.totalAmount || totalAmount)}
+                    {/* `??`, not `||`: a free order's stored total is 0, and a
+                        falsy-check would throw it away and print the wizard's
+                        own recomputed figure instead — which, after the round
+                        trip, is a fresh form's default rather than this
+                        order's. */}
+                    ₱{formatPesos(registration?.totalAmount ?? totalAmount)}
                   </span>
                 </div>
               </div>
@@ -995,9 +1056,22 @@ export default function BankTransferWizardClient({
 
                 <div className="flex justify-between items-center text-sm mt-2 pt-2 border-t border-white/5">
                   <span className="text-secondary">Platform Fee</span>
-                  <span className="text-white">
-                    ₱{formatPesos(platformFee)}
-                  </span>
+                  {/* A waived fee is shown struck through rather than simply
+                      absent: the pacer was told the fee was covered, so the
+                      line that says so has to be visible — a row that vanished
+                      would look like the fee was never charged to anyone. */}
+                  {adminFeeWaived ? (
+                    <span className="whitespace-nowrap">
+                      <span className="text-secondary/60 line-through">
+                        ₱{formatPesos(adminFeePerRunner * participants.length)}
+                      </span>{" "}
+                      <span className="font-bold text-emerald-400">₱0.00</span>
+                    </span>
+                  ) : (
+                    <span className="text-white">
+                      ₱{formatPesos(platformFee)}
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -1098,7 +1172,8 @@ export default function BankTransferWizardClient({
                     ? "Runner Details & Packages"
                     : "Runner Details & Categories")}
                 {step === 2 && "Logistics"}
-                {step === 3 && "Bank Transfer & Proof of Payment"}
+                {step === 3 &&
+                  (isFree ? "Review & Confirm" : "Bank Transfer & Proof of Payment")}
               </h2>
             </div>
 
@@ -1617,13 +1692,29 @@ export default function BankTransferWizardClient({
                 <div className="checkout-total-box bg-accent-orange/10 border border-accent-orange/20 rounded-3xl mb-8 text-center py-10 relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-64 h-64 bg-accent-orange/20 rounded-full blur-[80px] -mr-32 -mt-32"></div>
                   <div className="relative z-10 text-secondary mb-2 uppercase tracking-widest text-sm font-bold">
-                    Total Amount to Transfer
+                    {isFree ? FREE_ORDER_TOTAL_LABEL : "Total Amount to Transfer"}
                   </div>
                   <div className="relative z-10 text-5xl font-extrabold text-white">
                     ₱{formatPesos(totalAmount)}
                   </div>
+                  {/* Said out loud rather than left for the runner to infer
+                      from a zero: a total of ₱0 on a page that has always
+                      asked for a bank transfer reads as a page that has not
+                      finished loading. */}
+                  {isFree && (
+                    <div className="relative z-10 mt-2 text-secondary text-sm">
+                      Your entry is covered — there is nothing to transfer and
+                      no receipt to upload.
+                    </div>
+                  )}
                 </div>
 
+                {/* Everything from here to the waiver is about a transfer that
+                    is not happening. Hidden rather than disabled: a bank panel
+                    and an upload box on an order worth ₱0 would have a pacer
+                    hunting for a payment to make. */}
+                {!isFree && (
+                <>
                 <div className="flex items-start gap-3 mb-8 p-5 rounded-[16px] border border-accent-blue/20 bg-accent-blue/5">
                   <Landmark
                     size={22}
@@ -1768,6 +1859,8 @@ export default function BankTransferWizardClient({
                     className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-white placeholder-gray-500 focus:border-accent-blue transition-all"
                   />
                 </div>
+                </>
+                )}
 
                 <ConsentWaiver
                   paragraphs={consentWaiverParagraphs}
@@ -1779,23 +1872,33 @@ export default function BankTransferWizardClient({
                   onSignatureBlur={() => setSignatureTouched(true)}
                 />
 
-                <div className="form-actions mt-10 flex justify-end">
-                  <button
-                    className={`btn-gradient flex items-center justify-center gap-2 px-10 py-4 text-lg group shadow-xl shadow-accent-orange/20 ${isProcessing || !proofFile || !transactionNumber.trim() || !consentGiven || bankAccounts.length === 0 ? "opacity-50 pointer-events-none" : ""}`}
-                    onClick={handleManualSubmit}
-                    disabled={
-                      isProcessing ||
+                {/* A free order owes none of the things the paid one is
+                    blocked on — no slip, no reference number, and no bank
+                    account for the organizer to receive money into. */}
+                {(() => {
+                  const blocked = isFree
+                    ? isProcessing || !consentGiven
+                    : isProcessing ||
                       !proofFile ||
                       !transactionNumber.trim() ||
                       !consentGiven ||
-                      bankAccounts.length === 0
-                    }
-                  >
-                    {isProcessing
-                      ? "Submitting Registration"
-                      : "Submit & Finish Registration"}
-                  </button>
-                </div>
+                      bankAccounts.length === 0;
+                  return (
+                    <div className="form-actions mt-10 flex justify-end">
+                      <button
+                        className={`btn-gradient flex items-center justify-center gap-2 px-10 py-4 text-lg group shadow-xl shadow-accent-orange/20 ${blocked ? "opacity-50 pointer-events-none" : ""}`}
+                        onClick={handleManualSubmit}
+                        disabled={blocked}
+                      >
+                        {isProcessing
+                          ? "Submitting Registration"
+                          : isFree
+                            ? FREE_ORDER_SUBMIT_LABEL
+                            : "Submit & Finish Registration"}
+                      </button>
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </div>

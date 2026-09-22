@@ -77,6 +77,16 @@ export const PAYMENT_METHODS = {
   BANK_TRANSFER: 'BANK_TRANSFER',
   GCASH: 'GCASH',
   CARD: 'CARD',
+  /**
+   * Nothing was paid, because nothing was owed — a pacer's free entry with the
+   * admin fee waived (`PACER_DISCOUNT_PLAN.md`, `src/lib/free-checkout.ts`).
+   *
+   * A method of its own rather than a blank or a zero-peso "bank transfer",
+   * because every screen that prints how an order was paid has to be able to
+   * say something true about it, and because an admin looking for transfers
+   * to verify must never be handed an order with no payment to find.
+   */
+  COMPLIMENTARY: 'COMPLIMENTARY',
 } as const;
 
 /**
@@ -94,6 +104,7 @@ const PAYMENT_METHOD_LABELS: Record<string, string> = {
   QRPH: 'QR Ph',
   GRAB_PAY: 'GrabPay',
   BANK_TRANSFER: 'Bank Transfer',
+  COMPLIMENTARY: 'Complimentary',
 };
 
 export function paymentMethodLabel(value: unknown): string {
@@ -139,4 +150,16 @@ export function paymongoPaymentType(value: unknown): string {
 /** Whether a registration was paid by bank transfer — the one method an admin verifies by hand. */
 export function isBankTransfer(value: unknown): boolean {
   return asCode(value) === PAYMENT_METHODS.BANK_TRANSFER;
+}
+
+/**
+ * Whether nothing was ever owed on this registration.
+ *
+ * The one method with no payment behind it at all, which is why several rules
+ * have to ask: there is no transfer to verify, no receipt to chase, and no
+ * "we're waiting for your payment" email that would make any sense to send.
+ * See lib/free-checkout.ts.
+ */
+export function isComplimentary(value: unknown): boolean {
+  return asCode(value) === PAYMENT_METHODS.COMPLIMENTARY;
 }

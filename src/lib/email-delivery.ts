@@ -1,5 +1,6 @@
 import type { Prisma } from '@prisma/client';
 import prisma from './db';
+import { isComplimentary } from './registration-codes';
 import {
   type EmailMessage,
   type EmailOutcome,
@@ -58,6 +59,11 @@ export const EMAIL_KIND_LABELS: Record<EmailKind, string> = {
 /** The columns the backlog rule reads — any row shape carrying them will do. */
 export interface EmailDeliveryRecord {
   status: string;
+  /**
+   * Needed only to spot a complimentary order, which is the one kind that
+   * never owes the received email. See `outstandingEmail`.
+   */
+  paymentMethod: string;
   receivedEmailSentAt: Date | null;
   confirmationEmailSentAt: Date | null;
 }
@@ -70,8 +76,18 @@ export interface EmailDeliveryRecord {
  * money is in: a bank transfer sits PENDING for days and has no receipt to be
  * missing yet. When both are outstanding the received one is named first,
  * because it is the one that tells the runner their details were captured.
+ *
+ * **A complimentary order is the exception**, and it has to be: nothing was
+ * ever owed on it, so the checkout sends the receipt at once and deliberately
+ * sends no "we've received your registration, we're waiting for your payment"
+ * (lib/free-checkout.ts). Without this branch a pacer's free entry would sit
+ * in the backlog for good, and the one thing a staff member could do about it
+ * is hand-send the very mail that was withheld on purpose.
  */
 export function outstandingEmail(registration: EmailDeliveryRecord): EmailKind | null {
+  if (isComplimentary(registration.paymentMethod)) {
+    return registration.confirmationEmailSentAt ? null : EMAIL_KINDS.CONFIRMATION;
+  }
   if (!registration.receivedEmailSentAt) return EMAIL_KINDS.RECEIVED;
   if (registration.status === 'PAID' && !registration.confirmationEmailSentAt) {
     return EMAIL_KINDS.CONFIRMATION;

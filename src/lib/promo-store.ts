@@ -33,6 +33,11 @@ export const PROMO_TERMS_SELECT = {
   getQuantity: true,
   automatic: true,
   paused: true,
+  // Only ever set on a pacer code, and selected here rather than at each call
+  // site for the same reason the price list below is: a query that forgot to
+  // ask would leave the wizard quoting an admin fee the checkout then waives,
+  // which is the one disagreement this feature cannot afford.
+  waiveAdminFee: true,
   // The price list of a CATEGORY_PRICE promotion, selected here rather than at
   // each call site: the event page slashes prices with it, the wizard's picker
   // repeats them, and the checkout charges by them, so a query that forgot to

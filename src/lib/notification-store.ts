@@ -67,6 +67,8 @@ async function teamNotifications(actor: Actor, now: Date): Promise<AppNotificati
     eventId: true,
     createdAt: true,
     status: true,
+    // For outstandingEmail: a complimentary order never owed the received one.
+    paymentMethod: true,
     receivedEmailSentAt: true,
     confirmationEmailSentAt: true,
     event: { select: { title: true } },
@@ -111,7 +113,10 @@ async function teamNotifications(actor: Actor, now: Date): Promise<AppNotificati
         deletedAt: null,
         createdAt: { gte: since },
         // outstandingEmail's rule, as a where: the received email never
-        // went out, or the order is paid and its receipt never did.
+        // went out, or the order is paid and its receipt never did. A
+        // deliberate superset — a complimentary order is owed no received
+        // email at all and matches the first arm anyway — which is why
+        // `outstandingEmail` still has the last word on each row below.
         OR: [
           { receivedEmailSentAt: null },
           { status: 'PAID', confirmationEmailSentAt: null },

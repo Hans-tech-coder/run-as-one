@@ -132,13 +132,13 @@ The URL follows the same rule (`/admin/events/[id]/…`).
   `permissions.ts`), §6 (the page, the routes, the action menu), §7 (who may
   waive), §10.
 
-After this batch, a code exists but checkout does not accept it yet;
-`promoCodeError` reads it as taking nothing off. **Do not promote `dev` to
-`main` until Batch 2 lands.**
+After this batch a code existed but checkout did not accept it yet, which is why
+`dev` was held back from `main` in between. **Batch 2 has since landed**, so that
+hold is lifted.
 
 ## Batch 2: the pacer registers, and the free checkout
 
-- [ ] **`discount.ts`**: `PACER` pricing is the full entry line of the one
+- [x] **`discount.ts`**: `PACER` pricing is the full entry line of the one
   runner in its category. `promoCodeError` refuses:
   - more than one runner: "Pacer codes cover one runner. Register the pacer on
     their own, then register the rest of the group as a separate order."
@@ -146,13 +146,12 @@ After this batch, a code exists but checkout does not accept it yet;
   `AppliedDiscount` carries `waivesAdminFee`.
   The pacer code **always wins** over any automatic promotion, because it
   already takes off the whole entry.
-- [ ] **The fee in the wizard summary**: when `waivesAdminFee` applies, the
+- [x] **The fee in the wizard summary**: when `waivesAdminFee` applies, the
   admin fee line shows as waived (struck through at ₱0), and the transaction
   fee is 0 because there is nothing to charge.
-- [ ] **Both wizards, total ₱0**: the payment step disappears (the step
-  counter shows one fewer step) and the last button reads *Complete
-  registration* instead of a payment button.
-- [ ] **The free checkout path, on the server.** One shared helper in `lib`,
+- [x] **Both wizards, total ₱0**: the payment step disappears and the last
+  button reads *Complete registration* instead of a payment button.
+- [x] **The free checkout path, on the server.** One shared helper in `lib`,
   called by both checkout routes **only when their own recomputed total is
   exactly 0**. The client never decides this. The helper:
   - runs every existing check (consent, the waiver, birthdate, guardian
@@ -164,14 +163,14 @@ After this batch, a code exists but checkout does not accept it yet;
     payment" email, because there is nothing to wait for.
   Both routes change `expectedPlatformFee` to 0 for a waived pacer order, so
   the fee pin still holds.
-- [ ] **Non-waived pacer**: nothing new. The total is the admin fee (plus any
+- [x] **Non-waived pacer**: nothing new. The total is the admin fee (plus any
   delivery), and it goes through the normal checkout.
-- [ ] Verify on `local-dev`: a waived pacer completing with no payment page and
+- [x] Verify on `local-dev`: a waived pacer completing with no payment page and
   one confirmation email; a non-waived pacer paying only the admin fee; a
   pacer code refused on a group of 2 and on the wrong category; a used code
   refused a second time; a posted total of 0 on an order that is **not** free
   being refused with 409.
-- [ ] `PROJECT_GUIDE.md`: §5 (the helper, `discount.ts`), §6 (both wizards),
+- [x] `PROJECT_GUIDE.md`: §5 (the helper, `discount.ts`), §6 (both wizards),
   §7 (the ₱0 path is decided on the server only), §10.
 
 ## Batch 3: pacers everywhere else the dashboard shows an order
@@ -303,3 +302,88 @@ After this batch, a code exists but checkout does not accept it yet;
   Also worth knowing: the dev server must be **restarted** after this batch is
   pulled, or the newly-created `api/.../pacers` directory is not registered and
   every write answers 404.
+
+- 2026-09-22: **Batch 2 landed** (uncommitted until the owner says so). A pacer
+  code is now spendable: it takes off the whole entry line, refuses a group and
+  a wrong category by name, wins `bestDiscount` outright, and — when the fee is
+  waived — completes as a ₱0 `COMPLIMENTARY` order that never touches PayMongo.
+  `tsc --noEmit` is clean and `next build` compiles.
+
+  Decisions taken while building, and why:
+
+  - **The free path is about the total, not about pacers.** The plan says the
+    helper runs "only when their own recomputed total is exactly 0", and that
+    turned out to be the better rule to write down: an organizer with a ₱0
+    admin fee running a 100%-off code reaches the same place, and PayMongo
+    rejects a zero charge either way. So `lib/free-checkout.ts` is named for the
+    ₱0 order rather than for the pacer.
+  - **The helper holds the rule, not the write.** The plan asked for a helper
+    that re-runs every check inside its own transaction. Instead the free path
+    *is* the existing path, with `FREE_ORDER_COLUMNS` spread over the payment
+    columns and an early return before PayMongo — so no check can be skipped by
+    construction, which is stronger than a second helper that would have to
+    re-list them, and it avoids a third copy of the `registration.create` block.
+  - **`PACER` is a deduction, not a priced-in sale.** The summary reads
+    "PACER-10KM-KZ2G — Free pacer entry −₱1,499.00", which shows what was given
+    away; making it priced-in would have put ₱0 on the runner's line, dragged
+    `perRunnerSavings` and `Runner.promoPrice` into a kind they say nothing
+    about, and touched the expiry sweep's seat accounting for no gain.
+  - **`platformFeeAfterDiscount` lives in `discount.ts`**, beside the "fees are
+    never discounted" doctrine it is the exception to, and is re-exported from
+    `free-checkout.ts`. The comment that names the exception now points at the
+    one function that spends it.
+  - **The step counter could not lose a step in the online wizard's plain
+    path.** The promo box lives *on* the payment step, so the step that would
+    disappear is the step where the pacer types the code — removing it is
+    circular. What happens instead: step 3 is retitled *Review & Confirm*, every
+    payment method is hidden, and step 4 (proof upload) becomes unreachable, so
+    a free order is three steps where a bank transfer would have been four. The
+    bank-transfer wizard was always three and keeps three, with its bank panel,
+    drop zone and reference-number box hidden.
+  - **`acceptsPromoCodes` was deliberately left alone.** Batch 1 flagged it as a
+    rough edge, but showing the promo box on an event whose only typed code is a
+    pacer's is *required* — the pacer has to be able to type it. The other half
+    of that note is fixed: the code no longer reads as taking nothing off.
+
+  Two defects were found by looking and are fixed:
+
+  - **A `COMPLIMENTARY` order would have sat in the unsent-email backlog for
+    good.** `outstandingEmail` said every registration owes the received email,
+    and a free order deliberately never gets one — so the row would have stayed
+    in *Unsent Email* forever, and the only thing staff could do about it was
+    hand-send the very mail that was withheld on purpose. It now has a
+    `COMPLIMENTARY` branch (`isComplimentary`, new in `registration-codes.ts`),
+    which is why `EmailDeliveryRecord` gained `paymentMethod` and two selects
+    grew a column.
+  - **Both wizards' success screens read the stored total with `||`**, so a free
+    order's ₱0 was thrown away and replaced by the wizard's own recomputed
+    figure — which, after the round trip, is a freshly-defaulted form. The
+    online wizard printed "Total Paid ₱40.00" on an order that cost nothing.
+    Both now use `??`.
+
+- 2026-09-22: **Batch 2 verified in the browser** on `local-dev`, against *Run
+  and Reachout 2026*, which also runs an automatic `CATEGORY_PRICE` early bird —
+  so the "pacer wins outright" rule was exercised for real. Confirmed: a waived
+  pacer's summary (entry back at list price, early bird displaced, −₱1,499.00,
+  the admin fee struck through at ₱0.00, total ₱0.00), *Review & Confirm*, the
+  bank panel / drop zone / reference box gone, *Complete registration*, and the
+  order landing as `COMPLIMENTARY` / `PAID` / ₱0 with the **receipt** sent (not
+  the acknowledgement) and the pacer's row turning *Registered* with its order
+  reference. A **non-waived** pacer priced correctly at ₱40.00 with the bank
+  transfer step intact. Refusals, checked against the server rather than only
+  the screen: a group of 2 gives 400 "covers one runner…"; the wrong category
+  gives "PACER-5KM-M4NF is for the 5K. Change the category to use it."; a used
+  code gives 400 "single-use voucher and has already been claimed."; a posted
+  total of 0 on an order that is not free gives 409; a posted platform fee of 0
+  with no code that earned it gives 409. The **online wizard** was verified too,
+  by temporarily switching that event's checkout form to ONLINE and switching it
+  back afterwards — no other open event on `local-dev` uses it. At **375px** the
+  waived-fee row reads "₱40.00 ₱0.00" on one line and `scrollWidth` equals
+  `clientWidth`, so there is no horizontal scroll.
+
+  Test data left on `local-dev` for the owner to dispose of: registrations
+  **RM-75D5D9F8** (MARIA PACER TEST, 10K) and **RM-2CFF25AE** (PEDRO FEEPAYER,
+  5K), and the two pacer rows behind them. They are not deleted here because the
+  standing rule is that registration rows are never removed as cleanup without
+  the owner naming them. The unused third pacer created for the mobile check was
+  removed.

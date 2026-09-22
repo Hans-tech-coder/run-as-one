@@ -74,6 +74,13 @@ import {
   promoStatus,
   type PromoTerms,
 } from "@/lib/discount";
+import {
+  FREE_ORDER_SUBMIT_LABEL,
+  FREE_ORDER_TOTAL_LABEL,
+  chargeableTotal,
+  isFreeOrder,
+  platformFeeAfterDiscount,
+} from "@/lib/free-checkout";
 import PromoCodeField from "./PromoCodeField";
 import FreeSlotOffer from "./FreeSlotOffer";
 import GroupLimitNotice from "./GroupLimitNotice";
@@ -463,9 +470,6 @@ export default function RegistrationWizardClient({
   const deliveryFee =
     logisticsMethod === "DELIVERY" ? deliveryFeeFor(event, deliveryZone) : 0;
 
-  // Platform Fee (DB-driven per participant)
-  const platformFee = adminFeePerRunner * participants.length;
-
   // What the applied code is worth right now, from the same module the
   // checkout route uses as its last word (lib/discount.ts) — so what this
   // summary promises and what the server bills cannot disagree. A code that
@@ -496,6 +500,28 @@ export default function RegistrationWizardClient({
     promoOrder,
   );
   const discountAmount = discount?.amount ?? 0;
+
+  // Platform Fee (DB-driven per participant), less a pacer's waiver where the
+  // winning code carries one. Computed after the discount rather than before,
+  // because that waiver is the one thing in this app that can reach a fee —
+  // the rule is `platformFeeAfterDiscount`, which the checkout route runs
+  // again as its last word, so the summary and the charge cannot disagree.
+  const adminFeeWaived = discount?.waivesAdminFee === true;
+  const platformFee = platformFeeAfterDiscount(
+    adminFeePerRunner,
+    participants.length,
+    discount,
+  );
+
+  // Nothing left to collect — a pacer's free entry with the fee waived, or any
+  // other order that happens to come to zero. PayMongo cannot charge ₱0, so
+  // this order takes the free path instead: no payment method, no payment
+  // step, and a registration that is confirmed the moment it is placed. The
+  // server decides this again from its own figures; this copy only decides
+  // what the wizard draws. See lib/free-checkout.ts.
+  const isFree = isFreeOrder(
+    chargeableTotal({ subtotal, deliveryFee, platformFee, discountAmount }),
+  );
 
   // A good code that simply lost. Not an error — nothing is wrong with it and
   // it stays unspent — but saying nothing would look like the box was broken.
@@ -533,7 +559,7 @@ export default function RegistrationWizardClient({
 
   // Dynamic Transaction Fee based on payment method
   let transactionFee = 0;
-  if (step === 3 && paymentMethod !== "BANK_TRANSFER") {
+  if (step === 3 && paymentMethod !== "BANK_TRANSFER" && !isFree) {
     // Net of the discount: PayMongo's cut is a share of what they actually
     // process, so charging the runner a fee on money nobody is collecting
     // would hand the difference to no one.
@@ -711,7 +737,11 @@ export default function RegistrationWizardClient({
       return;
     }
 
-    if (paymentMethod === "BANK_TRANSFER") {
+    // Not when the order is free: there is no deposit slip for a transfer
+    // nobody is making, and step 4 exists only to collect one. A runner who
+    // had already chosen Bank Transfer before applying a pacer code lands here
+    // with the old choice still in state, so the free path wins over it.
+    if (paymentMethod === "BANK_TRANSFER" && !isFree) {
       setStep(4);
       return;
     }
@@ -738,7 +768,11 @@ export default function RegistrationWizardClient({
           deliveryFee: deliveryFee,
           platformFee: platformFee,
           transactionFee: transactionFee,
-          paymentMethod: paymentMethod,
+          // A free order has no method, because nothing is being paid by one.
+          // The server writes COMPLIMENTARY itself once its own arithmetic
+          // agrees the total is zero — this is only what the wizard believes,
+          // and it is checked like every other amount here.
+          paymentMethod: isFree ? "COMPLIMENTARY" : paymentMethod,
           consentGiven: consentGiven,
           consentSignature: consentSignature,
           // The code the runner typed, and only that. The amount it is worth is
@@ -905,7 +939,12 @@ export default function RegistrationWizardClient({
                 <div className="flex justify-between items-center">
                   <span className="text-secondary text-sm">Total Paid</span>
                   <span className="text-accent-orange font-bold text-xl">
-                    ₱{formatPesos(registration?.totalAmount || totalAmount)}
+                    {/* `??`, not `||`: a free order's stored total is 0, and a
+                        falsy-check would throw it away and print the wizard's
+                        own recomputed figure instead — which, after the round
+                        trip, is a fresh form's default rather than this
+                        order's. */}
+                    ₱{formatPesos(registration?.totalAmount ?? totalAmount)}
                   </span>
                 </div>
               </div>
@@ -1130,12 +1169,25 @@ export default function RegistrationWizardClient({
 
                 <div className="flex justify-between items-center text-sm mt-2 pt-2 border-t border-white/5">
                   <span className="text-secondary">Platform Fee</span>
-                  <span className="text-white">
-                    ₱{formatPesos(platformFee)}
-                  </span>
+                  {/* A waived fee is shown struck through rather than simply
+                      absent: the pacer was told the fee was covered, so the
+                      line that says so has to be visible — a row that vanished
+                      would look like the fee was never charged to anyone. */}
+                  {adminFeeWaived ? (
+                    <span className="whitespace-nowrap">
+                      <span className="text-secondary/60 line-through">
+                        ₱{formatPesos(adminFeePerRunner * participants.length)}
+                      </span>{" "}
+                      <span className="font-bold text-emerald-400">₱0.00</span>
+                    </span>
+                  ) : (
+                    <span className="text-white">
+                      ₱{formatPesos(platformFee)}
+                    </span>
+                  )}
                 </div>
 
-                {step === 3 && paymentMethod !== "BANK_TRANSFER" && (
+                {step === 3 && paymentMethod !== "BANK_TRANSFER" && !isFree && (
                   <div className="flex justify-between items-center text-sm mt-2 pt-2 border-t border-white/5">
                     <span className="text-secondary">Transaction Fee</span>
                     <span className="text-white">
@@ -1164,13 +1216,18 @@ export default function RegistrationWizardClient({
               <div
                 className="absolute top-1/2 left-0 h-[3px] bg-accent-orange -translate-y-1/2 z-0 transition-all duration-700 ease-in-out rounded-full shadow-[0_0_12px_rgba(255,107,43,0.8)]"
                 style={{
-                  width: `${((step - 1) / (paymentMethod === "BANK_TRANSFER" || step === 4 ? 3 : 2)) * 100}%`,
+                  width: `${((step - 1) / (!isFree && (paymentMethod === "BANK_TRANSFER" || step === 4) ? 3 : 2)) * 100}%`,
                 }}
               ></div>
 
               {[1, 2, 3, 4].map((s) => {
+                // A free order has no deposit slip to upload, so the fourth
+                // step is gone and the counter says three — the same rule that
+                // hides the payment methods on step 3.
                 const totalStepsShown =
-                  paymentMethod === "BANK_TRANSFER" || step === 4 ? 4 : 3;
+                  !isFree && (paymentMethod === "BANK_TRANSFER" || step === 4)
+                    ? 4
+                    : 3;
                 if (s === 4 && totalStepsShown === 3) return null;
 
                 const isActive = step === s;
@@ -1242,7 +1299,7 @@ export default function RegistrationWizardClient({
                     ? "Runner Details & Packages"
                     : "Runner Details & Categories")}
                 {step === 2 && "Logistics"}
-                {step === 3 && "Checkout & Payment"}
+                {step === 3 && (isFree ? "Review & Confirm" : "Checkout & Payment")}
                 {step === 4 && "Upload Proof of Payment"}
               </h2>
             </div>
@@ -1745,9 +1802,16 @@ export default function RegistrationWizardClient({
             {step === 3 && (
               <div className="step-content relative z-10 animate-fade-in">
                 <p className="text-secondary text-base sm:text-lg mb-6 sm:mb-8">
-                  Choose how you want to pay for your registration.
+                  {isFree
+                    ? "There is nothing to pay for this registration. Check your details below, sign the waiver, and you are done."
+                    : "Choose how you want to pay for your registration."}
                 </p>
 
+                {/* No payment method when there is nothing to charge. The
+                    cards are not merely disabled: every one of them leads to a
+                    payment this runner does not owe, and PayMongo refuses a
+                    ₱0 charge outright. */}
+                {!isFree && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
                   <div
                     className={`group relative overflow-hidden border ${paymentMethod === "GCASH" ? "border-[#007DFE] bg-[#007DFE]/10" : "border-white/10 bg-black/40 hover:border-[#007DFE]/50"} rounded-[16px] p-6 cursor-pointer transition-all flex items-center gap-4`}
@@ -1864,6 +1928,7 @@ export default function RegistrationWizardClient({
                   </div>
                   )}
                 </div>
+                )}
 
                 {/* Only when a code could actually be typed. An event running
                     automatic promotions alone, or none, shows no box — they
@@ -1884,11 +1949,20 @@ export default function RegistrationWizardClient({
                 <div className="checkout-total-box bg-accent-orange/10 border border-accent-orange/20 rounded-3xl mb-8 text-center py-10 relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-64 h-64 bg-accent-orange/20 rounded-full blur-[80px] -mr-32 -mt-32"></div>
                   <div className="relative z-10 text-secondary mb-2 uppercase tracking-widest text-sm font-bold">
-                    Total Amount to Pay
+                    {isFree ? FREE_ORDER_TOTAL_LABEL : "Total Amount to Pay"}
                   </div>
                   <div className="relative z-10 text-5xl font-extrabold text-white">
                     ₱{formatPesos(totalAmount)}
                   </div>
+                  {/* Said out loud rather than left for the runner to infer
+                      from a zero: a total of ₱0 on a page that has always
+                      asked for money reads as a page that has not finished
+                      loading. */}
+                  {isFree && (
+                    <div className="relative z-10 mt-2 text-secondary text-sm">
+                      Your entry is covered — there is no payment step.
+                    </div>
+                  )}
                 </div>
 
                 <ConsentWaiver
@@ -1909,10 +1983,14 @@ export default function RegistrationWizardClient({
                   >
                     {isProcessing ? (
                       <BusyLabel>
-                        {paymentMethod !== "BANK_TRANSFER"
-                          ? "Connecting to PayMongo"
-                          : "Processing"}
+                        {isFree
+                          ? "Completing your registration"
+                          : paymentMethod !== "BANK_TRANSFER"
+                            ? "Connecting to PayMongo"
+                            : "Processing"}
                       </BusyLabel>
+                    ) : isFree ? (
+                      FREE_ORDER_SUBMIT_LABEL
                     ) : paymentMethod !== "BANK_TRANSFER" ? (
                       `Pay ₱${formatPesos(totalAmount)}`
                     ) : (
