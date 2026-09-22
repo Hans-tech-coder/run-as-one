@@ -40,9 +40,27 @@ export const PROMO_TERMS_SELECT = {
   categoryPrices: {
     select: { categoryId: true, price: true, usageLimit: true, usageCount: true },
   },
+  categories: {
+    select: { categoryId: true, category: { select: { name: true } } },
+    orderBy: { category: { sortOrder: 'asc' } },
+  },
 } as const;
 
+export type StoredPromoRaw = Omit<PromoTerms, 'categoryIds' | 'categoryNames'> & {
+  id: string;
+  categories: { categoryId: string; category: { name: string } }[];
+};
+
 export type StoredPromo = PromoTerms & { id: string };
+
+function mapStoredPromo(raw: StoredPromoRaw): StoredPromo {
+  const { categories, ...rest } = raw;
+  return {
+    ...rest,
+    categoryIds: categories.map(c => c.categoryId),
+    categoryNames: categories.map(c => c.category.name),
+  };
+}
 
 /**
  * The code this event will honour, or null.
@@ -60,7 +78,7 @@ export async function findPromoCode(
   const cleaned = normalizePromoCode(code);
   if (!cleaned) return null;
 
-  return prisma.promoCode.findFirst({
+  const raw = await prisma.promoCode.findFirst({
     where: {
       code: cleaned,
       organizerId: event.organizerId,
@@ -74,6 +92,8 @@ export async function findPromoCode(
     },
     select: PROMO_TERMS_SELECT,
   });
+
+  return raw ? mapStoredPromo(raw as StoredPromoRaw) : null;
 }
 
 /**
@@ -89,7 +109,7 @@ export async function automaticPromosFor(event: {
   id: string;
   organizerId: string;
 }): Promise<StoredPromo[]> {
-  return prisma.promoCode.findMany({
+  const raw = await prisma.promoCode.findMany({
     where: {
       organizerId: event.organizerId,
       automatic: true,
@@ -98,6 +118,8 @@ export async function automaticPromosFor(event: {
     select: PROMO_TERMS_SELECT,
     orderBy: { createdAt: 'asc' },
   });
+
+  return raw.map(r => mapStoredPromo(r as StoredPromoRaw));
 }
 
 /**
@@ -195,7 +217,8 @@ export async function eventPromotions(event: {
   const grouped = new Map<string, EventPromotion>();
 
   for (const promo of promos) {
-    const { id: _id, eventId, batchLabel, ...terms } = promo;
+    const { id: _id, eventId, batchLabel, ...raw } = promo;
+    const terms = mapStoredPromo(raw as StoredPromoRaw);
     const key = batchLabel ? `batch:${batchLabel}` : `code:${promo.id}`;
 
     const existing = grouped.get(key);

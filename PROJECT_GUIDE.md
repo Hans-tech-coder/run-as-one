@@ -2257,15 +2257,7 @@ the file itself says it may be deleted.
 **percentage and fixed-amount** codes back to `/admin/marketing`, with an
 optional per-code category restriction (`PromoCategory`) and shared-code
 limits **counted in runners**; a voucher covers one runner, the most expensive
-entry. **Its Batch 1 is in (2026-09-19)**: the migration
-`20260919180000_promo_category`, the rule in `discount.ts`
-(`perRunnerSavings`, `limitCountsRunners`, wording), `promo-input.ts`, both
-promo routes and the marketing form and table. **An organizer can create these
-codes, but no runner can use one yet** — `PER_RUNNER_CHECKOUT_READY` keeps
-`promoCodeError` refusing them until Batch 2 (lookup, wizards, checkout
-counting runners, expiry giving runners back, emails). **Do not promote `dev`
-to `main` until Batch 2 lands**, and releasing it needs `npx prisma migrate
-deploy` against production. The second, which runs only after the first, adds
+entry. **Both batches are in (2026-09-19)**: both kinds are fully operational, including checkout runner counting, expiry restocks, and partial application messages on the wizards. Releasing it needs `npx prisma migrate deploy` against production. The second, which runs only after the first, adds
 **pacer codes**: one free entry per named pacer, one category, solo orders
 only, managed at `/admin/events/[id]/pacers`, and never listed in Marketing.
 Staff send each code themselves, so the screen reminds them which pacers have

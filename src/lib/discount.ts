@@ -254,6 +254,8 @@ export interface AppliedDiscount {
   amount: number;
   /** How the discount describes itself in the summary: "10% off". */
   label: string;
+  /** The usage limit of the promotion, for rendering partial application messages. */
+  usageLimit: number | null;
   /** True when nobody had to type anything to get it. */
   automatic: boolean;
   /**
@@ -739,6 +741,7 @@ export function applyPromo(
     type,
     amount,
     label: describePromo(promo),
+    usageLimit: promo.usageLimit,
     automatic: promo.automatic === true,
     freeRunners: freeRunnerIndexes(promo, order.runnerPrices),
     pricedIn,
@@ -1033,10 +1036,6 @@ export function promoCodeError(
     return `${promo.code} is not being accepted at the moment. Contact the organizer if you were given it.`;
   }
 
-  if (limitCountsRunners(type) && !PER_RUNNER_CHECKOUT_READY) {
-    return `${promo.code} can't be used at checkout just yet. Please try again soon, or contact the organizer.`;
-  }
-
   if (isExhausted(promo)) {
     if (promo.usageLimit === 1) {
       return `${promo.code} is a single-use voucher and has already been claimed.`;
@@ -1083,20 +1082,6 @@ export function promoCodeError(
 
   return null;
 }
-
-/**
- * Whether the checkout can take a PERCENTAGE or FIXED promotion yet.
- *
- * **Temporary: Marketing Discounts Plan, Batch 1 until Batch 2.** Batch 1 lets
- * an organizer create these promotions and prices them in this module, but
- * the checkout routes still add one redemption per order rather than one per
- * discounted runner, and the code lookup does not yet send the categories.
- * Taking such a code before Batch 2 would undercount its runner limit and
- * ignore its categories, so until then it is refused with a sentence of its
- * own — on screen and at checkout alike, since both read this gate. Batch 2
- * deletes this constant and its one use above.
- */
-const PER_RUNNER_CHECKOUT_READY = false;
 
 /**
  * What a runner is told when the code they typed is not one of ours.
@@ -1206,6 +1191,11 @@ export async function redeemPromoCode(
    * send them looking for a button that does not exist.
    */
   automatic = false,
+  /** 
+   * The number of runners receiving the discount. Used only when 
+   * limitCountsRunners(type) is true.
+   */
+  runnersClaimed = 1,
 ): Promise<void> {
   const retry = automatic
     ? 'Reload the page to see your updated total — nothing has been charged.'
@@ -1214,8 +1204,8 @@ export async function redeemPromoCode(
   // wizards, which are client components, and pulling @prisma/client into the
   // browser bundle to interpolate one id would be the same poor trade
   // order-ref.ts refused when it chose Web Crypto over node's.
-  const locked: { usageLimit: number | null; usageCount: number }[] = await tx.$queryRaw`
-    SELECT "usageLimit", "usageCount" FROM "PromoCode" WHERE "id" = ${promoId} FOR UPDATE`;
+  const locked: { usageLimit: number | null; usageCount: number; discountType: string }[] = await tx.$queryRaw`
+    SELECT "usageLimit", "usageCount", "discountType" FROM "PromoCode" WHERE "id" = ${promoId} FOR UPDATE`;
 
   const row = locked[0];
   if (!row) {
@@ -1224,14 +1214,27 @@ export async function redeemPromoCode(
     );
   }
 
+  const claimCount = limitCountsRunners(row.discountType) ? runnersClaimed : 1;
+
   // The order cap, where there is one. A repricing promotion sets none — its
   // limits are the per-category seats below — so this is skipped for it.
-  if (row.usageLimit !== null && row.usageCount >= row.usageLimit) {
-    throw new PromoUnavailableError(
-      row.usageLimit === 1
-        ? `${code} was claimed by someone else while you were checking out. ${retry}`
-        : `${code} reached its usage limit while you were checking out. ${retry}`,
-    );
+  if (row.usageLimit !== null) {
+    const left = row.usageLimit - row.usageCount;
+    if (left < claimCount) {
+      if (limitCountsRunners(row.discountType)) {
+        throw new PromoUnavailableError(
+          left <= 0
+            ? `${code} ran out while you were checking out. ${retry}`
+            : `Only ${left} more discounted place${left === 1 ? '' : 's'} were left on ${code}, and you have ${claimCount} runners using it. ${retry}`
+        );
+      } else {
+        throw new PromoUnavailableError(
+          row.usageLimit === 1
+            ? `${code} was claimed by someone else while you were checking out. ${retry}`
+            : `${code} reached its usage limit while you were checking out. ${retry}`,
+        );
+      }
+    }
   }
 
   // The seats at the promotion price, claimed the way reserveSlots claims a
@@ -1279,7 +1282,7 @@ export async function redeemPromoCode(
 
   await tx.promoCode.update({
     where: { id: promoId },
-    data: { usageCount: { increment: 1 } },
+    data: { usageCount: { increment: claimCount } },
   });
 }
 

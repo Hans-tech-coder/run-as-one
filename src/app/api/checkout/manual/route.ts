@@ -43,6 +43,7 @@ import {
   PromoUnavailableError,
   categorySeatsClaimed,
   redeemPromoCode,
+  runnersDiscounted,
 } from '@/lib/discount';
 import { resolveDiscount } from '@/lib/promo-store';
 
@@ -276,8 +277,9 @@ export async function POST(request: Request) {
           // walk that priced it — so the seats spent and the money taken off
           // can never describe different orders.
           categorySeatsClaimed(discount.promo, promoOrder),
-          discount.promo.automatic,
-        );
+            discount.promo.automatic,
+            runnersDiscounted(discount.promo, promoOrder)
+          );
       }
 
       return tx.registration.create({

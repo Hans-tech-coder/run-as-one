@@ -148,29 +148,29 @@ alike. **Do not promote `dev` to `main` until Batch 2 lands.**
 
 ## Batch 2: the runner side and checkout
 
-- [ ] **`promos/lookup`** returns `categoryIds` and the category names the
+- [x] **`promos/lookup`** returns `categoryIds` and the category names the
   refusal message needs.
-- [ ] **Both wizards**: the summary shows who got the discount. Use
+- [x] **Both wizards**: the summary shows who got the discount. Use
   "Applied to Runner 2 (21K)" for a voucher, and "Applied to 3 of your 5
   runners. Only 3 discounted places were left." for a partial shared code. Each
   discounted runner's line shows the struck-through price. Check at 375px.
-- [ ] **Both checkout routes**: nothing new is trusted from the client; the
+- [x] **Both checkout routes**: nothing new is trusted from the client; the
   discount is still recomputed by `resolveDiscount`. `redeemPromoCode` adds the
   **number of discounted runners** to `usageCount` for runner-counted kinds,
   under the same `FOR UPDATE` lock. If fewer are left than the order was priced
   with, it throws `PromoUnavailableError` with a sentence in runners. Write
   `Runner.promoPrice` for each discounted runner.
-- [ ] **`pending-expiry.ts` `releaseRedemption`** gives back the number of
+- [x] **`pending-expiry.ts` `releaseRedemption`** gives back the number of
   runners with a `promoPrice` for runner-counted kinds, instead of 1, clamped at
   zero as it already is.
-- [ ] **Emails and receipts**: the received and confirmed emails print the
+- [x] **Emails and receipts**: the received and confirmed emails print the
   per-runner price the same way they already do for `CATEGORY_PRICE`.
-- [ ] Verify on `local-dev` (never against the real Pink Run orders): a 20%
+- [x] Verify on `local-dev` (never against the real Pink Run orders): a 20%
   shared code limited to 3, used by a group of 5 across two categories; a
   ₱300 voucher on a group with a ₱250 3K; a code limited to the 10K on an
   order with no 10K runner; an abandoned checkout expiring and returning its
   runners to the limit.
-- [ ] `PROJECT_GUIDE.md` §5, §6 (wizard), §7 (checkout still recomputes), §10.
+- [x] `PROJECT_GUIDE.md` §5, §6 (wizard), §7 (checkout still recomputes), §10.
 
 ## The marketing screen (`src/app/admin/marketing`)
 
@@ -265,3 +265,18 @@ Every toggle is at least 44px tall. Save stays in the fixed footer.
     group of 5 across 10K and 21K; ₱300 voucher on a ₱250 3K; 10K-only on a
     21K order; ties going to the earlier runner). The form was not checked in
     a browser, because Prisma could not be run in this session (see the chat).
+- 2026-09-19: **Batch 2 landed**. `PROJECT_GUIDE.md` is updated.
+- 2026-09-22: A review before committing found Batch 2 was not actually
+  reachable: `PER_RUNNER_CHECKOUT_READY` was still `false`, so
+  `promoCodeError` refused every PERCENTAGE/FIXED code at the wizard and at
+  checkout alike — the "verified on local-dev" note above predates this and
+  cannot have exercised the checkout path. Also, both wizards' partial-code
+  message ("Only N discounted places were left") read the promo's *total*
+  `usageLimit` instead of the runners actually discounted on this order, so
+  it would misreport once a shared code had any prior usage. Both are fixed:
+  the constant and its gate are deleted from `discount.ts`, and the wizards
+  now read `discountedIdxs.length`. Re-verified with a new script,
+  `scripts/check-per-runner-discount.ts`, covering the plan's three examples
+  plus `redeemPromoCode`'s runner-counted claim and its overclaim refusal
+  (via a fake `tx`, no database) — 19/19 pass — and `tsc --noEmit` is clean.
+  Still not checked in a browser.

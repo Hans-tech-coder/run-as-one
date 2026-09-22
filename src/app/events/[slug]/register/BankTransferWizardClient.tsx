@@ -912,11 +912,7 @@ export default function BankTransferWizardClient({
                           in lib/discount.ts. */}
                       <span className="font-bold text-white">
                         ₱
-                        {cat
-                          ? formatPesos(
-                              chargedRunnerPrice(discount, idx, cat.price),
-                            )
-                          : "0.00"}
+                        {cat ? (discount?.pricedIn && discount.salePriceByRunner[idx] !== null && discount.salePriceByRunner[idx]! < cat.price ? <><span className="line-through text-secondary mr-2 font-normal">₱{formatPesos(cat.price)}</span>{formatPesos(discount.salePriceByRunner[idx]!)}</> : formatPesos(chargedRunnerPrice(discount, idx, cat.price))) : "0.00"}
                       </span>
                     </div>
                   );
@@ -962,12 +958,21 @@ export default function BankTransferWizardClient({
                             .join(", ")}
                         </span>
                       )}
-                      {discount.pricedIn && (
-                        <span className="block text-xs mt-0.5">
-                          Already in the prices above — you save ₱
-                          {formatPesos(discount.amount)}
-                        </span>
-                      )}
+                      {(discount.type === 'PERCENTAGE' || discount.type === 'FIXED') && (() => {
+  const discountedIdxs = discount.salePriceByRunner.map((p, i) => (p !== null ? i : -1)).filter((i) => i !== -1);
+  if (discountedIdxs.length === 0) return null;
+  if (discount.usageLimit === 1) {
+    const idx = discountedIdxs[0];
+    const cat = event.categories.find((c: any) => c.id === participants[idx].categoryId);
+    return <span className="block text-xs mt-0.5 text-white">Applied to Runner {idx + 1} {cat ? '(' + cat.name + ')' : ''}</span>;
+  } else if (discountedIdxs.length < participants.length) {
+    return <span className="block text-xs mt-0.5 text-white">Applied to {discountedIdxs.length} of your {participants.length} runners. Only {discountedIdxs.length} discounted places were left.</span>;
+  }
+  return null;
+})()}
+{discount.pricedIn && discount.type === 'CATEGORY_PRICE' && (
+  <span className="block text-xs mt-0.5">Already in the prices above — you save ₱{formatPesos(discount.amount)}</span>
+)}
                     </span>
                     {/* Named but not subtracted again when the prices
                         above are already the promotion's. Saying nothing at
@@ -975,9 +980,15 @@ export default function BankTransferWizardClient({
                         gave them the price, and a second −₱ would read as a
                         discount they are not getting twice. */}
                     <span className="font-bold text-emerald-400 whitespace-nowrap">
-                      {discount.pricedIn
-                        ? "Applied"
-                        : `−₱${formatPesos(discount.amount)}`}
+                      {(() => {
+  if (!discount.pricedIn) return '−₱' + formatPesos(discount.amount);
+  const catSavings = participants.reduce((sum, p, idx) => {
+    const cat = event.categories.find((c: any) => c.id === p.categoryId);
+    const sale = discount.salePriceByRunner[idx];
+    return cat && sale !== null ? sum + (cat.price - sale) : sum;
+  }, 0);
+  return discount.amount > catSavings ? '−₱' + formatPesos(discount.amount - catSavings) : "Applied";
+})()}
                     </span>
                   </div>
                 )}

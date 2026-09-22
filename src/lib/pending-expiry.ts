@@ -237,15 +237,17 @@ async function releaseRedemption(tx: any, registration: Sweepable): Promise<bool
   });
   if (!promo) return false;
 
-  const locked: { usageCount: number }[] = await tx.$queryRaw`
-    SELECT "usageCount" FROM "PromoCode" WHERE "id" = ${promo.id} FOR UPDATE`;
+  const locked: { usageCount: number; discountType: string }[] = await tx.$queryRaw`
+    SELECT "usageCount", "discountType" FROM "PromoCode" WHERE "id" = ${promo.id} FOR UPDATE`;
   const row = locked[0];
   if (!row) return false;
 
   // The seats this order actually took, per category, read off the runners.
+  let discountedRunners = 0;
   const seats = new Map<string, number>();
   for (const runner of registration.runners) {
     if (runner.promoPrice === null) continue;
+    discountedRunners++;
     seats.set(runner.categoryId, (seats.get(runner.categoryId) ?? 0) + 1);
   }
 
@@ -272,9 +274,12 @@ async function releaseRedemption(tx: any, registration: Sweepable): Promise<bool
     });
   }
 
+  const { limitCountsRunners } = await import('@/lib/discount');
+  const countBack = limitCountsRunners(row.discountType) ? Math.max(0, discountedRunners) : 1;
+
   await tx.promoCode.update({
     where: { id: promo.id },
-    data: { usageCount: Math.max(0, row.usageCount - 1) },
+    data: { usageCount: Math.max(0, row.usageCount - countBack) },
   });
   return true;
 }
