@@ -49,6 +49,20 @@ export const PERMISSIONS = [
   'results:manage',
   'promo:view',
   'promo:manage',
+  /**
+   * Waiving Run As One's admin fee on a pacer's free entry
+   * (`PACER_DISCOUNT_PLAN.md`). `OWNER` alone, because the admin fee is Run As
+   * One's own money (`settlement.ts`): an organizer's admin may give away the
+   * organizer's entry — that is what `promo:manage` is — but not the
+   * platform's commission on it.
+   *
+   * **Deliberately not `org:settings`.** That verb means "set the default
+   * platform fee", and it happens to be OWNER-only today; a route that
+   * borrowed it would break the moment the owner decided an admin may set
+   * default fees, and it would be checking the wrong question in the meantime.
+   * Routes check verbs, never role names, so a new decision needs a new verb.
+   */
+  'promo:waive-fee',
   'team:manage',
   'org:settings',
   'activity:view',
@@ -154,8 +168,8 @@ export const ROLE_LABELS: Record<Role | MembershipRole, string> = {
  * from the words that describe it.
  */
 export const ROLE_HINTS: Record<Role | MembershipRole, string> = {
-  OWNER: "Run As One's own account. Every event and every setting.",
-  ADMIN: 'Every event, the team, client submissions, clubs, feedback and remittances. Cannot delete an event or change organizer settings.',
+  OWNER: "Run As One's own account. Every event, every setting, and the only account that can waive the admin fee on a pacer's entry.",
+  ADMIN: "Every event, the team, client submissions, clubs, feedback and remittances. Cannot delete an event, change organizer settings, or waive Run As One's admin fee on a pacer's entry.",
   STAFF: 'Only the events you assign, with a role on each.',
   EVENT_MANAGER: 'Runs the event: edits it, settles payments, edits runners and loads results. Cannot remove a runner.',
   VALIDATOR: 'Checks payment proofs and settles orders. Cannot edit or remove a runner.',
@@ -189,6 +203,7 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   'results:manage': 'Upload results',
   'promo:view': 'See promotions',
   'promo:manage': 'Create and change promotions',
+  'promo:waive-fee': "Waive Run As One's admin fee",
   'team:manage': 'Manage the team',
   'org:settings': 'Set the default platform fee',
   'activity:view': 'Read the activity trail',
@@ -213,6 +228,7 @@ const MATRIX: Record<Permission, readonly Role[]> = {
   'results:manage': ['OWNER', 'ADMIN', 'EVENT_MANAGER', 'ENCODER'],
   'promo:view': ['OWNER', 'ADMIN', 'EVENT_MANAGER', 'VIEWER'],
   'promo:manage': ['OWNER', 'ADMIN'],
+  'promo:waive-fee': ['OWNER'],
   'team:manage': ['OWNER', 'ADMIN'],
   'org:settings': ['OWNER'],
   'activity:view': ['OWNER', 'ADMIN'],

@@ -85,6 +85,15 @@ export const AUDIT_ACTIONS = [
   'promo.paused',
   'promo.resumed',
   'promo.deleted',
+  // A pacer's free entry for one race (PACER_DISCOUNT_PLAN.md). `pacer.updated`
+  // covers a rename, a hold and the "sent / not sent" mark; waiving the admin
+  // fee is **its own verb**, because that one is Run As One giving away its own
+  // commission and it should never be something a reader has to expand a
+  // changes blob to find.
+  'pacer.created',
+  'pacer.updated',
+  'pacer.fee_waived',
+  'pacer.deleted',
   // Money paid to a race's organizer, or handed back (ADMIN_MERGE_PLAN.md,
   // Batch 6). A remittance is never edited, so voiding is the only correction.
   'remittance.recorded',

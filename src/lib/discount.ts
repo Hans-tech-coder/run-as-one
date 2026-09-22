@@ -23,7 +23,7 @@ import { formatPesos } from '@/lib/money';
  */
 
 /**
- * The four kinds of promotion. Stored UPPERCASE like every other coded column
+ * The five kinds of discount. Stored UPPERCASE like every other coded column
  * in this schema.
  *
  * `CATEGORY_PRICE` and `BUY_X_GET_Y` are the race-shaped kinds: a second price
@@ -33,6 +33,12 @@ import { formatPesos } from '@/lib/money';
  * `runnerPrices` gives `BUY_X_GET_Y` — never off the order as a basket and
  * never off a fee. Which runners one of them reaches is decided by
  * `perRunnerSavings`, and its cap counts runners (`limitCountsRunners`).
+ *
+ * `PACER` is the odd one out, and deliberately so: the other four are
+ * marketing, offered to whoever qualifies, and a pacer code is a free entry
+ * handed to one named person so they will run the race for the organizer. It
+ * is the only kind that can reach a fee, and the only one managed outside
+ * `/admin/marketing`.
  */
 export const DISCOUNT_TYPES = {
   /**
@@ -48,6 +54,16 @@ export const DISCOUNT_TYPES = {
   PERCENTAGE: 'PERCENTAGE',
   /** ₱200 off each discounted runner's entry. `discountValue` is centavos. */
   FIXED: 'FIXED',
+  /**
+   * A free entry for one named pacer, in one category of one race
+   * (`PACER_DISCOUNT_PLAN.md`). `discountValue` is unused: the discount is
+   * always the whole entry line of the one runner it covers, and
+   * `PromoCode.waiveAdminFee` says whether Run As One's admin fee goes with
+   * it. It is the one kind that is not a promotion — it is given to a person,
+   * which is why it is managed on the event's own Pacers screen and kept out
+   * of `/admin/marketing`. See `src/lib/pacer.ts`.
+   */
+  PACER: 'PACER',
 } as const;
 
 export type DiscountType = (typeof DISCOUNT_TYPES)[keyof typeof DISCOUNT_TYPES];
@@ -74,6 +90,10 @@ export const DISCOUNT_TYPE_LABELS: Record<DiscountType, string> = {
   BUY_X_GET_Y: 'Buy X, get Y free',
   PERCENTAGE: 'Percentage off',
   FIXED: 'Fixed amount off',
+  // Never offered in the marketing form's kind picker: a pacer code is created
+  // on the event's Pacers screen, which knows the category it is locked to.
+  // The label exists for the places that print a stored kind back.
+  PACER: 'Pacer free entry',
 };
 
 /**
@@ -352,13 +372,23 @@ export function categoryPricesOf(promo: PromoTerms): PromoCategoryPrice[] {
  * so a ₱500 code on a ₱300 order takes off ₱300 and never turns the total
  * negative.
  *
- * **Fees are never discounted**, by any kind. Every branch discounts the
+ * **Fees are never discounted here**, by any kind. Every branch discounts the
  * goods — category prices and shirt upcharges — and nothing else: the admin
  * fee is the platform's, the delivery fee pays a courier and the transaction
  * fee is PayMongo's, so none of them is the organizer's to give away. A
  * percentage that quietly ate the platform's commission would be a bug nobody
  * notices until the month's payout, which is why `OrderBasis` does not even
  * carry the fees.
+ *
+ * **There is exactly one deliberate exception, and it is not in this
+ * function.** A `PACER` code may waive Run As One's admin fee
+ * (`PromoCode.waiveAdminFee`) — the one case where giving a fee away is the
+ * company's own decision about its own money, which is why only the Super
+ * Admin may set it (`promo:waive-fee`). The waiver travels as its own flag on
+ * `AppliedDiscount` rather than as centavos added here, so this amount stays
+ * what it has always been: money off the goods. Written down as an exception
+ * because a reader who finds a fee waived somewhere must be able to find the
+ * sentence that allowed it. See `PACER_DISCOUNT_PLAN.md`, Batch 2.
  */
 export function discountAmountFor(promo: PromoTerms, order: OrderBasis): number {
   const type = asDiscountType(promo.discountType);
@@ -387,6 +417,14 @@ export function discountAmountFor(promo: PromoTerms, order: OrderBasis): number 
         perRunnerSavings(promo, order).reduce((sum, saving) => sum + saving, 0),
         order.subtotal,
       );
+    // Batch 1 of PACER_DISCOUNT_PLAN.md creates pacer codes and the screen
+    // that manages them; Batch 2 is what makes one spendable at checkout. Zero
+    // until then, on purpose: a half-wired kind that took *something* off would
+    // be a number nobody decided, and zero is the honest answer while the
+    // pricing rule does not exist yet. `dev` is not promoted to `main` between
+    // the two batches, so no runner can meet this state.
+    case DISCOUNT_TYPES.PACER:
+      return 0;
   }
 }
 
@@ -778,6 +816,9 @@ export function describePromo(promo: PromoTerms): string {
       return `${positive(promo.discountValue) ?? 0}% off`;
     case DISCOUNT_TYPES.FIXED:
       return `₱${formatPesoAmount(positive(promo.discountValue) ?? 0)} off`;
+    // No number to quote: a pacer code is the whole entry, every time.
+    case DISCOUNT_TYPES.PACER:
+      return 'Free pacer entry';
     default:
       return 'Discount';
   }

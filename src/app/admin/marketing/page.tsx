@@ -9,7 +9,16 @@ import { soonestFirst } from '@/lib/event-schedule';
 import { formatPesos } from '@/lib/money';
 import { NO_SPEND, spendByCode } from '@/lib/promo-redemptions';
 import { CATEGORY_ORDER } from '@/lib/category-order';
+import { NOT_A_PACER } from '@/lib/pacer-store';
 
+/**
+ * **Pacer codes are not promotions and are not on this screen.** They are free
+ * entries given to named people, managed on each event's own Pacers screen
+ * (`/admin/events/[id]/pacers`). Listing them here would add their entries to
+ * *Given Away* and *Times Redeemed* and put a per-person list into a table built
+ * for campaigns — see `NOT_A_PACER` in `lib/pacer-store.ts`, which the metric
+ * cards below read through the same query.
+ */
 export default async function MarketingPage() {
   const actor = await requireTeamActor();
 
@@ -24,8 +33,8 @@ export default async function MarketingPage() {
   // only through an organizer-wide role.
   const orgWide = can(actor, 'promo:view', { organizerId: actor.orgId });
   const promoWhere = orgWide
-    ? { organizerId: actor.orgId }
-    : { organizerId: actor.orgId, event: reachableEvents(actor, 'promo:view') };
+    ? { organizerId: actor.orgId, ...NOT_A_PACER }
+    : { organizerId: actor.orgId, ...NOT_A_PACER, event: reachableEvents(actor, 'promo:view') };
 
   const [promoCodes, events, spend] = await Promise.all([
     prisma.promoCode.findMany({

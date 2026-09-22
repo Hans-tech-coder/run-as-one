@@ -8,6 +8,7 @@ import {
   withSlotCounts,
 } from '@/lib/registration-gate';
 import { CATEGORY_ORDER } from '@/lib/category-order';
+import { pacersNeedingCodeSentByEvent } from '@/lib/pacer-store';
 import EventsTableClient from './EventsTableClient';
 
 export default async function AdminEventsPage() {
@@ -72,6 +73,15 @@ export default async function AdminEventsPage() {
     registered.set(order.eventId, tally);
   }
 
+  // How many pacers of each race still need their code sent by hand, for the
+  // count on the row menu's Pacers item. One grouped query for the whole page,
+  // like the slot counts above it — a query per row is how a list of twenty
+  // races stops loading.
+  const pacersNotSent = await pacersNeedingCodeSentByEvent(
+    actor.orgId,
+    ordered.map(event => event.id),
+  );
+
   const rows = ordered.map((event, index) => ({
     ...event,
     // The No. column: the event's place in the order above, fixed here so a
@@ -90,7 +100,11 @@ export default async function AdminEventsPage() {
     access: {
       edit: can(actor, 'event:edit', { organizerId: actor.orgId, eventId: event.id }),
       delete: can(actor, 'event:delete', { organizerId: actor.orgId, eventId: event.id }),
+      // The same verb the Pacers screen and its routes ask, so nobody is
+      // offered a page that would answer "Event not found."
+      pacers: can(actor, 'promo:manage', { organizerId: actor.orgId, eventId: event.id }),
     },
+    pacersNotSent: pacersNotSent.get(event.id) ?? 0,
   }));
 
   return (

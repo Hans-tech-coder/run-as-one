@@ -279,6 +279,20 @@ const PATTERNS: [RegExp, RouteShape][] = [
       lg: { toolbar: LG_TOOLBAR, table: { head: LG_TANSTACK_HEAD, row: 61, rows: 8 } },
     },
   ],
+  // Pacers: the paragraph explaining what a pacer code is, the category
+  // heading, and then Add Pacer. The paragraph is four lines on a phone and two
+  // from `lg` up, and it stands above the toolbar rather than in it — so it is
+  // counted into the toolbar's height here, which is what the skeleton draws
+  // above the list. One table per category; the fallback cannot know how many
+  // categories a race has, so it draws one group of four rows, the shape of a
+  // race with pacers on one distance.
+  [
+    /^\/admin\/events\/[^/]+\/pacers$/,
+    {
+      list: { frame: 'page', toolbar: 236 },
+      lg: { toolbar: 132, table: { head: LG_TANSTACK_HEAD, row: 69, rows: 4 } },
+    },
+  ],
 ];
 
 /**

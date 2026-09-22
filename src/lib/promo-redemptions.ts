@@ -1,4 +1,5 @@
 import prisma from '@/lib/db';
+import { PACER_DISCOUNT_TYPE } from '@/lib/pacer';
 
 /**
  * What a promotion actually cost, and which orders spent it.
@@ -28,6 +29,13 @@ import prisma from '@/lib/db';
  * every promotion with an abandoned checkout in its past. The two numbers are
  * genuinely different, and the screens above show both rather than quietly
  * preferring one.
+ *
+ * **Pacer entries are left out.** A pacer code is not a promotion — it is a
+ * free entry given to a named person — so counting one here would add it to
+ * *Given Away* and to the marketing table's totals, where it would look like a
+ * campaign that cost the organizer money. The filter is on
+ * `Registration.discountType`, the snapshot taken at checkout, rather than on
+ * the promotion, which may be gone by the time this runs.
  *
  * Server-only, like `promo-store.ts` and for the same reason: the rule that
  * *prices* a promotion lives in `discount.ts` and is imported by both wizards,
@@ -83,6 +91,8 @@ export async function spendByCode(organizerId: string): Promise<Map<string, Prom
     by: ['promoCode'],
     where: {
       promoCode: { not: null },
+      // Not a pacer's free entry — see the note at the top of this file.
+      discountType: { not: PACER_DISCOUNT_TYPE },
       status: MONEY_MOVED_STATUS,
       event: { organizerId },
     },
@@ -135,7 +145,11 @@ export async function redemptionsFor(
   if (codes.length === 0) return { redemptions: [], truncated: false };
 
   const rows = await prisma.registration.findMany({
-    where: { promoCode: { in: codes }, event: { organizerId } },
+    where: {
+      promoCode: { in: codes },
+      discountType: { not: PACER_DISCOUNT_TYPE },
+      event: { organizerId },
+    },
     orderBy: { createdAt: 'desc' },
     // One more than we will show, so "there are more of these" is a fact from
     // the database rather than a guess from a full page.

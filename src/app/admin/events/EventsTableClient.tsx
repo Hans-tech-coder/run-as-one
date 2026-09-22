@@ -61,7 +61,9 @@ type EventRow = {
   registrationOpensAt?: string | Date | null;
   registrationPaused?: boolean | null;
   /** What this person may do from the row's menu (events/page.tsx). Absent means an owner. */
-  access?: { edit: boolean; delete: boolean };
+  access?: { edit: boolean; delete: boolean; pacers?: boolean };
+  /** How many of this race's pacers have not been sent their code (events/page.tsx). */
+  pacersNotSent?: number;
   _count?: { registrations: number };
 };
 
@@ -418,6 +420,8 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
         // Decided on the server with the same can() each route asks
         // (events/page.tsx). A row without `access` is an owner's.
         canEdit={event.access?.edit ?? true}
+        canManagePacers={event.access?.pacers ?? true}
+        pacersNotSent={event.pacersNotSent ?? 0}
         onTogglePause={
           (event.access?.edit ?? true)
             ? () => handleTogglePause(event)

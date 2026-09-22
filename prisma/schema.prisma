@@ -506,6 +506,26 @@ model PromoCode {
   /// on a poster can be switched off and back on, while deleting it leaves a
   /// runner typing a code nobody can explain.
   paused         Boolean              @default(false)
+  /// PACER only: whether this pacer's free entry also waives Run As One's
+  /// admin fee, which makes the whole order 0 and skips the payment step
+  /// entirely. **Only the Super Admin may turn it on** (`promo:waive-fee` in
+  /// src/lib/permissions.ts), because the admin fee is Run As One's own money
+  /// (settlement.ts) and waiving it is the company giving it away -- so it is
+  /// not a decision an organizer's admin makes. Off by default and off for
+  /// every other kind, since no other kind touches a fee at all.
+  waiveAdminFee  Boolean              @default(false)
+  /// PACER only: the pacer this code was made for, uppercase like every other
+  /// stored name. A pacer code is not a promotion but a free entry given to a
+  /// named person, so the dashboard has to be able to say whose it is; it is
+  /// never shown to a runner. See src/lib/pacer.ts.
+  assigneeName   String?
+  /// PACER only: when staff marked this code as sent to its pacer, or null
+  /// until they do. **The app sends no email to a pacer** -- staff copy the
+  /// code and send it themselves -- so the only way the dashboard can warn
+  /// about a pacer who was never told is for someone to say so here.
+  /// Copying the code deliberately does not set it: copying is not sending,
+  /// and a guessed mark would hide exactly the pacer this column exists for.
+  codeSentAt     DateTime?
   organizerId    String
   createdAt      DateTime             @default(now())
   updatedAt      DateTime             @updatedAt

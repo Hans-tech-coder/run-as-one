@@ -56,6 +56,11 @@ export function newVoucherCodes(prefix: string, count: number): string[] {
  * is a voucher anyone can mint, and the Web API keeps this module importable
  * from anywhere in the app — the same call `order-ref.ts` makes for the same
  * reason.
+ *
+ * Exported as `randomCodeBlock` below, because a pacer code
+ * (`PACER-21KM-7KQ4`, see `pacer.ts`) is read off a chat message and typed into
+ * a phone exactly like a voucher, and should therefore be built from the same
+ * unambiguous alphabet rather than a second one that happens to look similar.
  */
 function randomBlock(length: number): string {
   const bytes = new Uint8Array(length);
@@ -69,4 +74,16 @@ function randomBlock(length: number): string {
     out += ALPHABET[byte % ALPHABET.length];
   }
   return out;
+}
+
+/**
+ * `length` characters of the alphabet above — the random half of any code this
+ * app asks a person to retype.
+ *
+ * A thin export rather than a copy in `pacer.ts`: what makes these codes
+ * readable is the alphabet, and two alphabets maintained separately is one of
+ * them quietly regaining the letter O.
+ */
+export function randomCodeBlock(length: number): string {
+  return randomBlock(length);
 }

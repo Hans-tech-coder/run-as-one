@@ -3,10 +3,11 @@
 import React, { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
-import { MoreVertical, Users, Trophy, Edit, Trash2, CalendarClock, PauseCircle, PlayCircle } from 'lucide-react';
+import { MoreVertical, Users, Trophy, Edit, Trash2, CalendarClock, PauseCircle, PlayCircle, Footprints } from 'lucide-react';
 import LinkPending from '@/components/ui/LinkPending';
 import { placeRowMenu, type RowMenuPlacement } from '../row-menu-position';
 import { cssDurationMs } from '@/lib/css-duration';
+import { pacerMenuLabel } from '@/lib/pacer';
 
 export default function EventActionsMenu({
   eventId,
@@ -14,6 +15,8 @@ export default function EventActionsMenu({
   registrationState = 'OPEN',
   isPausing = false,
   canEdit = true,
+  canManagePacers = false,
+  pacersNotSent = 0,
   onTogglePause,
   onSchedule,
   onDelete
@@ -32,6 +35,19 @@ export default function EventActionsMenu({
    * the same `can()` its route asks.
    */
   canEdit?: boolean;
+  /**
+   * Whether this person's role includes `promo:manage` — the verb the Pacers
+   * screen and its routes ask. Without it the item is not offered, the same way
+   * Edit Event is withheld.
+   */
+  canManagePacers?: boolean;
+  /**
+   * How many of this race's pacers have not been sent their code yet
+   * (`needsCodeSent` in lib/pacer.ts). It is on the menu item because the app
+   * emails no pacer: a forgotten one is otherwise invisible until somebody
+   * thinks to open the screen.
+   */
+  pacersNotSent?: number;
   onTogglePause?: () => void;
   /** Opens the modal that decides when sign-ups start. */
   onSchedule?: () => void;
@@ -166,10 +182,23 @@ export default function EventActionsMenu({
     }
   };
 
-  /* The three destinations, built from one shape so the pending treatment
-     cannot end up on two of them and not the third. */
+  /* The destinations, built from one shape so the pending treatment cannot end
+     up on some of them and not the rest. */
   const destinations = [
     { href: `/admin/events/${eventId}/registrants`, icon: <Users size={16} />, label: 'Registrants' },
+    // Under Registrants, because a pacer is a registrant the organizer invited,
+    // and above Results, which only matter once the race has been run. The
+    // count rides in the label rather than in a badge of its own, so the item
+    // reads as one sentence: "Pacers · 3 not sent".
+    ...(canManagePacers
+      ? [
+          {
+            href: `/admin/events/${eventId}/pacers`,
+            icon: <Footprints size={16} />,
+            label: pacerMenuLabel(pacersNotSent),
+          },
+        ]
+      : []),
     { href: `/admin/events/${eventId}/results`, icon: <Trophy size={16} />, label: 'Manage Results' },
     ...(canEdit
       ? [{ href: `/admin/events/${eventId}/edit`, icon: <Edit size={16} />, label: 'Edit Event' }]

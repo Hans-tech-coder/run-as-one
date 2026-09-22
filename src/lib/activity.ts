@@ -68,6 +68,10 @@ export const ACTION_LABELS: Record<AuditAction, string> = {
   'promo.paused': 'Paused a promotion',
   'promo.resumed': 'Resumed a promotion',
   'promo.deleted': 'Deleted a promotion',
+  'pacer.created': 'Added a pacer',
+  'pacer.updated': 'Changed a pacer',
+  'pacer.fee_waived': "Waived Run As One's admin fee for a pacer",
+  'pacer.deleted': 'Removed a pacer',
   'remittance.recorded': 'Recorded a remittance',
   'remittance.voided': 'Voided a remittance',
   'remittance.proof.viewed': 'Opened a remittance receipt',
@@ -96,6 +100,11 @@ export const ACTIVITY_GROUPS = [
   { key: 'data', label: 'Personal data', hint: 'Payment proofs opened and registrant lists exported' },
   { key: 'events', label: 'Events', hint: 'Events created, edited, paused, scheduled or deleted, and results uploaded' },
   { key: 'promotions', label: 'Promotions', hint: 'Promotions created, edited, paused or deleted' },
+  // Its own shelf rather than a corner of Promotions, because a pacer code is
+  // not a promotion — it is a free entry given to a named person — and because
+  // the one entry here that is about Run As One's own money (an admin fee
+  // waived) must not be lost among a race's campaigns.
+  { key: 'pacers', label: 'Pacers', hint: "Pacers added, renamed, marked as sent, paused or removed, and admin fees waived" },
   { key: 'team', label: 'Team', hint: 'Invitations, access changes, suspensions and removals' },
   { key: 'access', label: 'Sign-ins', hint: 'Sign-ins, failed sign-ins, other devices signed out, and profile or password changes' },
   { key: 'remittances', label: 'Remittances', hint: 'Payouts to organizers and returns recorded or voided, and receipts opened' },
@@ -148,6 +157,10 @@ export const ACTION_GROUP: Record<AuditAction, ActivityGroupKey> = {
   'promo.paused': 'promotions',
   'promo.resumed': 'promotions',
   'promo.deleted': 'promotions',
+  'pacer.created': 'pacers',
+  'pacer.updated': 'pacers',
+  'pacer.fee_waived': 'pacers',
+  'pacer.deleted': 'pacers',
   'remittance.recorded': 'remittances',
   'remittance.voided': 'remittances',
   'remittance.proof.viewed': 'remittances',

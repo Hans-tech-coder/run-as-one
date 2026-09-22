@@ -3751,3 +3751,197 @@ textarea.form-input {
 @media (prefers-reduced-motion: reduce) {
   .notif-overlay { transition: none !important; }
 }
+
+/* ── A switch on an admin form (.admin-switch-row) ─────────────────────────
+   Built for the Pacers screen's "Include admin fee in discount", which is a
+   decision about Run As One's own money and deserves a control that reads as
+   deliberate rather than as one more checkbox in a column of them.
+
+   It is the account menu's Dark Mode switch, generalised: the same `.t-toggle`
+   motion (transitions.dev's toggle, 27) and the same track geometry, lifted out
+   of `.account-theme-switch` so a form can use it too. The row is the control
+   (role="switch"); the track takes no pointer events of its own, so a tap
+   anywhere on the row counts.
+
+   The whole row is the 44px target, and a disabled row still reads its reason:
+   the hint under the label is the sentence, not a tooltip, because the person
+   who cannot use it is exactly the person who needs to be told why. */
+.admin-switch-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  width: 100%;
+  min-height: 44px;
+  padding: 12px 16px;
+  border: 1px solid var(--dash-border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.admin-switch-row:hover:not(:disabled) {
+  background: var(--ink-05);
+}
+
+.admin-switch-row[aria-checked="true"] {
+  border-color: color-mix(in srgb, var(--accent-blue) 45%, var(--dash-border));
+}
+
+/* Not `opacity` on the row: the hint under the label is the one thing a person
+   who may not use this control still has to read, and fading the reason along
+   with the switch is how a refusal becomes a mystery. The track alone dims. */
+.admin-switch-row:disabled {
+  cursor: not-allowed;
+  background: var(--dash-sunken);
+}
+
+.admin-switch-row:disabled .admin-switch {
+  opacity: 0.5;
+}
+
+.admin-switch-label {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-weight: 500;
+}
+
+.admin-switch-hint {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.admin-switch {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  width: 36px;
+  height: 20px;
+  padding: 2px;
+  border-radius: 999px;
+  background: var(--ink-16);
+  pointer-events: none;
+}
+
+.admin-switch[data-on="true"] {
+  background: var(--accent-blue);
+}
+
+.admin-switch .t-toggle-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
+}
+
+/* ── The Pacers screen (admin/events/[id]/pacers) ──────────────────────────
+   Pacers are grouped by category, because a pacer code is locked to one and
+   "who is pacing the 21K?" is the question this screen is opened with. Each
+   group is a heading over the table from `lg` up, and over the cards below it. */
+.pacer-group + .pacer-group {
+  margin-top: var(--space-xl);
+}
+
+.pacer-group-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: var(--space-sm);
+}
+
+.pacer-group-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* The category's distance, kept beside its name rather than dropped as a
+   redundancy: the name is what the organizer typed and the distance is what a
+   pacer actually runs, and the two are not always the same thing. */
+.pacer-group-distance {
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.pacer-group-count {
+  margin-left: auto;
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+}
+
+/* The code itself: monospace, because it is read one character at a time off
+   this screen and typed into a chat message. It never wraps mid-code — a
+   `PACER-21KM-7KQ4` broken across two lines is a code somebody mistypes. */
+.pacer-code {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+/* The copy button beside the code. A 44px target that looks like a 16px icon,
+   the same trick the card list's checkbox uses. */
+.pacer-copy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin: -6px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.pacer-copy:hover {
+  color: var(--text-primary);
+  background: var(--ink-05);
+}
+
+/* The chips under a row's status, wrapping rather than widening the column. */
+.pacer-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+/* The amber header line, and the same amber on a row's chip. It carries an icon
+   as well as its colour, because colour alone is not a message (a person who
+   cannot tell amber from grey still has to be able to see that a code has not
+   been sent). */
+.pacer-reminder {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: var(--space-lg);
+  color: var(--status-warning);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.pacer-reminder svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}

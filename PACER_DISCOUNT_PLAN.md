@@ -77,9 +77,11 @@ The URL follows the same rule (`/admin/events/[id]/…`).
   rule rather than the schema.
 - `eventId` is required, `usageLimit` is 1, and `automatic` is false.
 - The code is generated as `PACER-<category>-<4 random>`, for example
-  `PACER-21K-7KQ4`, using the `voucher-codes.ts` alphabet. The category part
-  is its name with anything that is not a letter or digit removed, and
-  shortened.
+  `PACER-21KM-7KQ4`, using the `voucher-codes.ts` alphabet. The category part
+  is its **distance** with anything that is not a letter or digit removed, and
+  shortened; its **name** is the fallback for a category with no distance
+  recorded. (The owner chose the distance over the name on 2026-09-22, after
+  seeing "HALF-MARATHON" come out as `PACER-HALFMARA-…`.)
 - **New permission verb `promo:waive-fee`**, granted to `OWNER` only, with a
   label and a `ROLE_HINTS` line. Do not reuse `org:settings`: that verb means
   "set the default platform fee", and routes check verbs, never role names.
@@ -92,20 +94,20 @@ The URL follows the same rule (`/admin/events/[id]/…`).
 
 ## Batch 1: pacer codes and the Pacers screen
 
-- [ ] **Migration** for `waiveAdminFee`, `assigneeName` and `codeSentAt`. Add `PACER` to
+- [x] **Migration** for `waiveAdminFee`, `assigneeName` and `codeSentAt`. Add `PACER` to
   `DISCOUNT_TYPES`, and `promo:waive-fee` to the matrix.
-- [ ] **`src/lib/pacer.ts`** (Prisma-free): the rules for what a pacer code
+- [x] **`src/lib/pacer.ts`** (Prisma-free): the rules for what a pacer code
   is, `pacerCodeFor(categoryName)`, and input checks (a name is required, the
   category must belong to this event, `waiveAdminFee` needs
   `promo:waive-fee`). Each refusal names its field.
-- [ ] **`api/admin/events/[id]/pacers`**: GET (the list), POST (add a pacer and
+- [x] **`api/admin/events/[id]/pacers`**: GET (the list), POST (add a pacer and
   generate the code). **`[pacerId]`**: PATCH (rename, pause or unpause,
   toggle the waiver, mark as sent or not sent) and DELETE (only while the code is unclaimed; once used,
   pause it instead). Require `promo:manage` scoped to the event's organizer.
   If the waiver changes without `promo:waive-fee`, answer 403 with the field.
   Every write is audited; a waiver turned on is its own verb
   (`pacer.fee_waived`) with a label and an Activity group, so it stands out.
-- [ ] **`/admin/events/[id]/pacers`**, from the action menu's *Pacers* item:
+- [x] **`/admin/events/[id]/pacers`**, from the action menu's *Pacers* item:
   - The header gives the event name and a line saying what a pacer code is.
   - Pacers are **grouped by category** (in `CATEGORY_ORDER`, name and
     distance). Each row shows the name, the code with a copy button, the
@@ -123,10 +125,10 @@ The URL follows the same rule (`/admin/events/[id]/…`).
   - Buttons use the dashboard's outline style, not the gradient.
   - Below `lg`, rows become cards, with no horizontal scroll at 375px, and the
     loading state draws this layout (`RunnerLoader`).
-- [ ] **Hide pacer codes from `/admin/marketing`**: `page.tsx`'s query and its
+- [x] **Hide pacer codes from `/admin/marketing`**: `page.tsx`'s query and its
   metric cards exclude `discountType = 'PACER'`, and so does
   `promo-redemptions.ts`.
-- [ ] `PROJECT_GUIDE.md`: §4 (`PromoCode` columns, `PACER`), §5 (`pacer.ts`,
+- [x] `PROJECT_GUIDE.md`: §4 (`PromoCode` columns, `PACER`), §5 (`pacer.ts`,
   `permissions.ts`), §6 (the page, the routes, the action menu), §7 (who may
   waive), §10.
 
@@ -220,3 +222,84 @@ After this batch, a code exists but checkout does not accept it yet;
 
 - 2026-09-19: the plan was written from the owner's decisions. Waits on
   `MARKETING_DISCOUNTS_PLAN.md`.
+- 2026-09-22: **Batch 1 landed** (uncommitted until the owner says so).
+  Migration `20260922100000_pacer_codes`, applied to `local-dev` only —
+  production needs `npx prisma migrate deploy` at release. `tsc --noEmit` is
+  clean and `next build` compiles, with all three new routes registered.
+
+  What was built beyond the letter of the checklist, and why:
+
+  - **`src/lib/pacer-store.ts`** as well as `pacer.ts`. `pacer.ts` had to stay
+    Prisma-free (the screen is a client component and imports its rules), so the
+    queries, `PACER_SELECT` and `NOT_A_PACER` live in a store module beside it,
+    the same split `promo-store.ts` / `discount.ts` already uses. `PACER_SELECT`
+    started life as an export from the POST route, which Next would have been
+    entitled to reject as a non-handler export from a `route.ts`.
+  - **`randomCodeBlock`** exported from `voucher-codes.ts`, so `pacerCodeFor`
+    uses that module's unambiguous alphabet rather than a second copy of it.
+  - **A *Waive / Charge admin fee* row action**, Super Admin only, withheld by
+    not passing its handler. The plan's row-action list does not name it but the
+    PATCH route does, and something has to be able to call it — otherwise the
+    waiver could only ever be set at creation.
+  - **A new shared `.admin-switch-row`** in `Admin.css` for the waiver toggle:
+    the account menu's Dark Mode switch generalised out of
+    `.account-theme-switch`, since nothing reusable existed. A disabled row keeps
+    its hint at full contrast and dims only the track — the person who may not
+    use it is the one who has to read why. Documented in `PROJECT_GUIDE.md` §9.
+  - **`PROJECT_GUIDE.md` drift fixed in passing**: its `discount.ts` entry still
+    described `PER_RUNNER_CHECKOUT_READY`, which `MARKETING_DISCOUNTS_PLAN.md`
+    Batch 2 deleted from the code on 2026-09-22.
+
+  Notes for Batch 2:
+
+  - `discountAmountFor` has a `case DISCOUNT_TYPES.PACER: return 0` that Batch 2
+    replaces with the real pricing. `describePromo` already says "Free pacer
+    entry".
+  - **`promo-store.ts` was deliberately left alone**, which is the one rough edge
+    of this batch. `findPromoCode` will therefore *find* a pacer code, and
+    `acceptsPromoCodes` counts one when deciding whether to show the wizard's
+    promo box — so an event whose only typed code is a pacer's now shows that
+    box, and a pacer typing their code would be told it takes nothing off. Both
+    are Batch 2's territory (it is the batch that teaches checkout the kind), and
+    **this is the concrete reason `dev` must not reach `main` in between.**
+  - The `PacerRow` the screen receives already carries `order`
+    (`pacerOrdersByCode`), so Batch 3's *"N of M pacers registered"* header needs
+    no new query.
+- 2026-09-22: **Batch 1 verified in the browser** on `local-dev`, signed in as
+  the Super Admin, against BizRun V2.0. Confirmed end to end: the *Pacers* item
+  and its “Pacers · 1 not sent” count; the screen, its empty state and the amber
+  header line; the modal (category options keeping name **and** distance, the
+  uppercase placeholder, the switch off by default and enabled for the Super
+  Admin); field-specific validation on both boxes; creation (a lowercase name
+  stored uppercase, `PACER-HALFMARA-RFGG` generated); **copying leaving the
+  *Code not sent* chip in place**; mark as sent / not sent; rename leaving the
+  code untouched; pause; the fee waiver and its blue chip; delete with its
+  confirmation; the trail carrying `pacer.created`, five `pacer.updated` and a
+  separate `pacer.fee_waived`; the Activity *Pacers* group; the matrix row
+  (Super Admin only); and `/admin/marketing` unchanged — the pacer code absent
+  and all three metric cards identical to their pre-test values. 375px: cards,
+  no horizontal scroll, nothing overflowing. The test pacer was deleted
+  afterwards and the event is back to zero.
+
+  Two defects were found by looking and are fixed:
+
+  - **The rename trail entry read circularly** — “Pacer MARIA SANTOS: renamed to
+    MARIA SANTOS” — because the PATCH route summarised the change under the
+    *new* name. It now uses the name as it was (`priorName`), while the waiver
+    entry keeps the current one, since that entry identifies a person rather
+    than describing a change to their name.
+  - **The card footer had a lone ⋮ on the left**, where every other card list in
+    the dashboard pairs a labelled shortcut with the menu pushed right. The
+    pacer card now carries a *Copy code* button beside the menu.
+
+  One thing was raised and then settled: the code's middle section was the
+  category **name**, shortened to 8 characters, so “HALF-MARATHON” became
+  `PACER-HALFMARA-RFGG`. **The owner chose the distance instead** — cleaner and
+  shorter — so `pacerCodeFor` now takes the category and prefers
+  `Category.distance`, keeping the name only as the fallback for a category
+  that has no distance. The data section above and `PROJECT_GUIDE.md` §5 say
+  the same.
+
+  Also worth knowing: the dev server must be **restarted** after this batch is
+  pulled, or the newly-created `api/.../pacers` directory is not registered and
+  every write answers 404.
