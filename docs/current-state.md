@@ -42,10 +42,22 @@ and send the receipt instead of the acknowledgement, never touching PayMongo.
 Two defects found while verifying were fixed with it: a `COMPLIMENTARY` order
 would have sat in the unsent-email backlog for good (`outstandingEmail` now
 knows about it), and both wizards' success screens read the stored total with
-`||`, which threw a free order's ₱0 away. **Batch 3 is still open** — the
-dashboard does not yet badge a pacer on the registrants list, filter or export
-one, or account for one in settlement — but nothing is half-wired, so `dev` may
-be promoted whenever the owner says. Releasing it still needs
+`||`, which threw a free order's ₱0 away. **Batch 3 finishes the dashboard side (2026-09-22)**: the
+registrants list marks each row `isPacer` from the order's own `discountType`
+snapshot and wears a blue *Pacer* chip under the status — where it explains a
+PAID row with nothing collected — with a **Type → Pacers** option in the one
+Filters sheet and a **Pacer** column in the CSV; the detail modal repeats the
+chip, prints *Complimentary: pacer entry* under the payment method, and no
+longer claims PayMongo settled a free order (`statusProvenance` now takes
+`{ isBankTransfer, isComplimentary }`). A complimentary order cannot reach the
+*Needs Validation* queue or the bell, which both ask for PENDING **and** bank
+transfer. `settlement.ts` needed no arithmetic — a ₱0 order adds nothing to
+collected and nothing to Run As One's share — and now says so in its header,
+naming the breakdown's *Discounts* line as where a pacer shows. The Pacers
+screen gained **"N of M pacers registered"**. **The registrants screen was split
+in the same change**, from 2,571 lines to 2,017: `RegistrantDetailModal.tsx`,
+`registrant-display.tsx` and `registrant-csv.ts` beside it. `dev` may be
+promoted whenever the owner says. Releasing it still needs
 `npx prisma migrate deploy` against production for Batch 1's migration. Each file holds its decisions,
 batches and open questions; the behaviour described in §4–§7 is unchanged
 until a batch lands.

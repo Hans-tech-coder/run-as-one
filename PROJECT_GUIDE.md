@@ -52,7 +52,7 @@ folded into §5 and §9.
 | Plan | State |
 | --- | --- |
 | `ADMIN_MERGE_PLAN.md` | **active** — batches 1–6 on `dev`, release pending |
-| `PACER_DISCOUNT_PLAN.md` | **active** — batch 2 open |
+| `PACER_DISCOUNT_PLAN.md` | **active** — all three batches in, release pending |
 | `STAFF_ACCESS_PLAN.md` | **active** — phases 4 and 5 not started |
 | `GUARDIAN_CONSENT_PLAN.md` | done |
 | `LIGHT_THEME_PLAN.md` | done |

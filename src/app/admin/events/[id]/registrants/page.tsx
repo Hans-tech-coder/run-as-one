@@ -15,9 +15,11 @@ import {
   asLogisticsMethod,
   deliveryZoneLabel,
   isBankTransfer,
+  isComplimentary,
   logisticsMethodLabel,
   paymentMethodLabel,
 } from '@/lib/registration-codes';
+import { DISCOUNT_TYPES, asDiscountType } from '@/lib/discount';
 import {
   GUARDIAN_RELATIONSHIP_LABELS,
   ageOn,
@@ -213,6 +215,17 @@ export default async function RegistrantsPage({
         isDelivery:
           asLogisticsMethod(reg.logisticsMethod) === LOGISTICS_METHODS.DELIVERY,
         isBankTransfer: isBankTransfer(reg.paymentMethod),
+        // A free pacer entry, read from the discount this order snapshotted
+        // rather than from the promo code, which staff may since have paused
+        // or deleted (PACER_DISCOUNT_PLAN.md Batch 3). Decided here for the
+        // same reason the two branches above are: the table is a client
+        // island, and matching a label back against a string is how a screen
+        // starts disagreeing with the database.
+        isPacer: asDiscountType(reg.discountType) === DISCOUNT_TYPES.PACER,
+        // ₱0 and nothing to validate. The chip above says *why* it was free;
+        // this says how it was settled, and it is what stops the detail modal
+        // printing a bare COMPLIMENTARY nobody can interpret.
+        isComplimentary: isComplimentary(reg.paymentMethod),
         proofOfPayment: reg.proofOfPayment,
         // Whether that proof is a PDF rather than a photo. Decided here, off
         // the stored pathname, because the module that knows the rule imports

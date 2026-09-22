@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-36 pages · 46 API routes · 67 modules in `src/lib` · 297 files · 63,914 lines
+36 pages · 46 API routes · 67 modules in `src/lib` · 300 files · 64,165 lines
 
 ---
 
@@ -32,7 +32,7 @@ The route, the server component behind it, and the client components beside it.
 | `/admin/events` | [`/admin/events/page.tsx`](../src/app/admin/events/page.tsx) | `bank-account-draft.ts` `BankAccountsPanel.tsx` `category-draft.ts` `ConsentWaiverField.tsx` `event-not-found.ts` `EventActionsMenu.tsx` `EventClientField.tsx` `EventOptionsPanel.tsx` `EventPromotionsPanel.tsx` `EventsTableClient.tsx` `InclusionsField.tsx` `PosterField.tsx` `registration-opening.ts` `registration-state-badge.ts` `RegistrationFormPicker.tsx` `RegistrationOpeningPicker.tsx` `RegistrationScheduleModal.tsx` |
 | `/admin/events/[id]/edit` | [`/admin/events/[id]/edit/page.tsx`](../src/app/admin/events/[id]/edit/page.tsx) | — |
 | `/admin/events/[id]/pacers` | [`/admin/events/[id]/pacers/page.tsx`](../src/app/admin/events/[id]/pacers/page.tsx) | `PacerActionsMenu.tsx` `PacersClient.tsx` |
-| `/admin/events/[id]/registrants` | [`/admin/events/[id]/registrants/page.tsx`](../src/app/admin/events/[id]/registrants/page.tsx) | `ProofLightbox.tsx` `RegistrantActionsMenu.tsx` `RegistrantsTable.tsx` |
+| `/admin/events/[id]/registrants` | [`/admin/events/[id]/registrants/page.tsx`](../src/app/admin/events/[id]/registrants/page.tsx) | `ProofLightbox.tsx` `registrant-csv.ts` `registrant-display.tsx` `RegistrantActionsMenu.tsx` `RegistrantDetailModal.tsx` `RegistrantsTable.tsx` |
 | `/admin/events/[id]/registrants/[runnerId]/consent` | [`/admin/events/[id]/registrants/[runnerId]/consent/page.tsx`](../src/app/admin/events/[id]/registrants/[runnerId]/consent/page.tsx) | `PrintableSheet.tsx` |
 | `/admin/events/[id]/results` | [`/admin/events/[id]/results/page.tsx`](../src/app/admin/events/[id]/results/page.tsx) | `ResultsTableClient.tsx` `ResultsUploaderClient.tsx` |
 | `/admin/events/new` | [`/admin/events/new/page.tsx`](../src/app/admin/events/new/page.tsx) | `NewEventForm.tsx` |
@@ -201,9 +201,9 @@ when a task touches one, split it before editing rather than after.
 
 | Lines | File |
 | --- | --- |
-| 2572 | [`src/app/admin/events/[id]/registrants/RegistrantsTable.tsx`](../src/app/admin/events/[id]/registrants/RegistrantsTable.tsx) |
 | 2317 | [`src/app/admin/marketing/PromoCodesClient.tsx`](../src/app/admin/marketing/PromoCodesClient.tsx) |
 | 2191 | [`src/app/events/[slug]/register/RegistrationWizardClient.tsx`](../src/app/events/[slug]/register/RegistrationWizardClient.tsx) |
+| 2018 | [`src/app/admin/events/[id]/registrants/RegistrantsTable.tsx`](../src/app/admin/events/[id]/registrants/RegistrantsTable.tsx) |
 | 1931 | [`src/app/events/[slug]/register/BankTransferWizardClient.tsx`](../src/app/events/[slug]/register/BankTransferWizardClient.tsx) |
 | 1504 | [`src/lib/discount.ts`](../src/lib/discount.ts) |
 | 1179 | [`src/app/admin/settings/SettingsPanels.tsx`](../src/app/admin/settings/SettingsPanels.tsx) |
@@ -212,12 +212,12 @@ when a task touches one, split it before editing rather than after.
 | 1015 | [`src/app/admin/register/page.tsx`](../src/app/admin/register/page.tsx) |
 | 929 | [`src/app/admin/events/[id]/edit/page.tsx`](../src/app/admin/events/[id]/edit/page.tsx) |
 | 856 | [`src/app/admin/events/EventsTableClient.tsx`](../src/app/admin/events/EventsTableClient.tsx) |
-| 757 | [`src/app/admin/events/[id]/pacers/PacersClient.tsx`](../src/app/admin/events/[id]/pacers/PacersClient.tsx) |
+| 775 | [`src/app/admin/events/[id]/pacers/PacersClient.tsx`](../src/app/admin/events/[id]/pacers/PacersClient.tsx) |
 | 750 | [`src/app/results/[slug]/full/FullResultsClient.tsx`](../src/app/results/[slug]/full/FullResultsClient.tsx) |
 | 696 | [`src/app/api/checkout/route.ts`](../src/app/api/checkout/route.ts) |
 | 694 | [`src/app/admin/feedback/FeedbackClient.tsx`](../src/app/admin/feedback/FeedbackClient.tsx) |
 | 663 | [`src/app/admin/activity/ActivityClient.tsx`](../src/app/admin/activity/ActivityClient.tsx) |
-| 611 | [`src/lib/activity.ts`](../src/lib/activity.ts) |
+| 622 | [`src/lib/activity.ts`](../src/lib/activity.ts) |
 | 607 | [`src/app/admin/events/new/NewEventForm.tsx`](../src/app/admin/events/new/NewEventForm.tsx) |
 | 599 | [`src/app/api/admin/events/[id]/route.ts`](../src/app/api/admin/events/[id]/route.ts) |
 | 588 | [`src/app/admin/AdminDatePicker.tsx`](../src/app/admin/AdminDatePicker.tsx) |
@@ -225,6 +225,7 @@ when a task touches one, split it before editing rather than after.
 | 548 | [`src/app/admin/NotificationsCenter.tsx`](../src/app/admin/NotificationsCenter.tsx) |
 | 546 | [`src/lib/organizer-application.ts`](../src/lib/organizer-application.ts) |
 | 540 | [`src/app/admin/clients/ClientsClient.tsx`](../src/app/admin/clients/ClientsClient.tsx) |
+| 512 | [`src/app/admin/events/[id]/registrants/RegistrantDetailModal.tsx`](../src/app/admin/events/[id]/registrants/RegistrantDetailModal.tsx) |
 | 503 | [`src/app/feedback/FeedbackForm.tsx`](../src/app/feedback/FeedbackForm.tsx) |
 | 493 | [`src/lib/promo-input.ts`](../src/lib/promo-input.ts) |
 | 473 | [`src/app/admin/communities/CommunitiesClient.tsx`](../src/app/admin/communities/CommunitiesClient.tsx) |

@@ -1,12 +1,11 @@
 "use client";
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import Link from 'next/link';
 import {
   Search, Download, Eye, X, Trash2,
-  Columns, ChevronUp, ChevronDown, CheckCircle, Check,
-  MessageSquare, MessageSquareText, Mail, MailWarning, Copy, ExternalLink, Maximize2, FileText,
-  Hourglass, Printer, TriangleAlert
+  Columns, ChevronUp, ChevronDown, Check,
+  MessageSquare, MessageSquareText, Mail, MailWarning, Copy, ExternalLink,
+  Hourglass, TriangleAlert
 } from 'lucide-react';
 import RegistrantActionsMenu from './RegistrantActionsMenu';
 import ProofLightbox from './ProofLightbox';
@@ -36,9 +35,7 @@ import {
 } from '@tanstack/react-table';
 import { SHIRT_SIZES } from '@/lib/shirt-size';
 import { upperCaseAsTyped } from '@/lib/text-case';
-import { formatPesos } from '@/lib/money';
 import { today } from '@/lib/event-schedule';
-import { orderActivityPath, statusProvenance } from '@/lib/activity';
 import BusyLabel from '@/components/ui/BusyLabel';
 import FiltersMenu, { type FilterGroup } from '../../../FiltersMenu';
 import {
@@ -53,6 +50,14 @@ import {
   needsGuardianConsent,
 } from '@/lib/minor-consent';
 import AdminDatePicker from '../../../AdminDatePicker';
+import RegistrantDetailModal from './RegistrantDetailModal';
+import {
+  MinorBadge,
+  PacerBadge,
+  needsValidation,
+  statusTone,
+} from './registrant-display';
+import { buildRegistrantCsv, downloadRegistrantCsv } from './registrant-csv';
 
 /**
  * What the signed-in person may do on this event, decided by page.tsx with the
@@ -96,83 +101,11 @@ interface RegistrantsTableProps {
 /** One row as page.tsx builds it; named so the render helpers below can say so. */
 type RegistrantRow = RegistrantsTableProps['runners'][number];
 
-/**
- * The badge tone a payment status wears.
- *
- * EXPIRED is **neutral**, not amber and not red. It is an online checkout
- * nobody came back to finish, swept by lib/pending-expiry.ts so its slot and
- * its promo redemption go back into circulation — a fact that simply is, in
- * the same voice as a race that has been run. Amber would put it beside
- * PENDING, which is a payment still expected; red would call the organizer to
- * act on something already handled on their behalf.
- */
-function statusTone(status: string): string {
-  if (status === 'PAID') return 'success';
-  if (status === 'EXPIRED') return 'neutral';
-  return 'pending';
-}
-
-/** The same three tones as Tailwind classes, for the detail modal's pill. */
-function statusPillClass(status: string): string {
-  if (status === 'PAID') return 'bg-green-500/20 text-[var(--status-success)] border border-green-500/20';
-  if (status === 'EXPIRED') return 'bg-[var(--ink-10)] text-[var(--ink-85)] border border-[var(--dash-border)]';
-  return 'bg-orange-500/20 text-[var(--status-warning)] border border-orange-500/20';
-}
-
-/**
- * Whether this row is waiting on a person to check a payment.
- *
- * PENDING alone is not the question. An online checkout sitting at PENDING is
- * one nobody came back to finish, and lib/pending-expiry.ts sweeps it away on
- * its own — there is nothing for a validator to do with it. A bank transfer at
- * PENDING is the opposite: somebody uploaded a deposit slip and is waiting for
- * a human to look at it. That pair is the same rule the detail modal and the
- * receipt lightbox already use to decide whether to offer the Validate button,
- * kept in one place so the queue and the button can never disagree about what
- * is in it.
- */
-function needsValidation(runner: { status: string; isBankTransfer: boolean }): boolean {
-  return runner.status === 'PENDING' && runner.isBankTransfer;
-}
-
-/**
- * Who settled this order, under its status in the detail modal — "Validated
- * by Ana Cruz · Sep 13, 2026, 4:02 PM" — beside the remarks line that already
- * names its author. The wording, and when it declines to name anyone, is
- * statusProvenance in lib/activity.ts.
- */
-function StatusProvenanceNote({ runner }: { runner: RegistrantRow }) {
-  const line = statusProvenance(runner.status, runner.isBankTransfer, runner.statusRecord ?? null);
-  return line ? <span className="text-xs text-[var(--text-muted)] mt-1.5">{line}</span> : null;
-}
-
-/**
- * The *Minor* chip beside a runner 12 or under on race day. Blue, the
- * informational tone: being a minor is a fact about the runner, not a problem
- * with the order — the amber "No guardian consent on file" line is what says
- * when something is missing.
- */
-function MinorBadge() {
-  return (
-    <span
-      className="status-badge info"
-      title={`${GUARDIAN_CONSENT_MAX_AGE} or under on race day, so a parent or guardian consents for them.`}
-    >
-      Minor
-    </span>
-  );
-}
-
 /** The relationship options for the edit modal, from the one vocabulary. */
 const GUARDIAN_RELATIONSHIP_OPTIONS = GUARDIAN_RELATIONSHIPS.map(value => ({
   value,
   label: GUARDIAN_RELATIONSHIP_LABELS[value],
 }));
-
-/** Where an organizer prints one runner's consent sheet for kit claiming. */
-function consentSheetPath(eventId: string, runnerId: string): string {
-  return `/admin/events/${eventId}/registrants/${runnerId}/consent`;
-}
 
 const GENDER_OPTIONS = [
   { value: 'MALE', label: 'MALE' },
@@ -265,6 +198,13 @@ export default function RegistrantsTable({
   // the data rather than a column, because being a minor is not a column: it
   // is the birthdate read against the race day (lib/minor-consent.ts).
   const [showOnlyMinors, setShowOnlyMinors] = useState(false);
+
+  // The *Pacers* option, for the same reason (PACER_DISCOUNT_PLAN.md Batch 3).
+  // It narrows the data rather than a column: what a pacer entry is lives in
+  // the order's discount snapshot, and the organizer reaches for this on race
+  // morning — "who are my pacers and have they all claimed a kit" is one
+  // question, not a scroll through everyone.
+  const [showOnlyPacers, setShowOnlyPacers] = useState(false);
 
   // Bulk Delete Modal State
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
@@ -756,6 +696,12 @@ export default function RegistrantsTable({
       >
         {runner.status}
       </span>
+      {/* Under the status rather than beside the name, because it explains
+          the status: a pacer's order reads PAID with nothing collected, and
+          without this chip that looks like a payment somebody forgot to
+          record (PACER_DISCOUNT_PLAN.md Batch 3). Drawn here, so the table
+          cell and the card's badge row carry it alike. */}
+      {runner.isPacer && <PacerBadge />}
       {runner.emailPending && (
         /* The project's own badge rather than a new one (standing rule
            §8.2), in the danger tone: an unsent email is a failure, not a
@@ -1033,9 +979,10 @@ export default function RegistrantsTable({
         r =>
           (!showOnlyUnsentEmail || r.emailPending) &&
           (!showOnlyNeedsValidation || needsValidation(r)) &&
-          (!showOnlyMinors || r.isMinor)
+          (!showOnlyMinors || r.isMinor) &&
+          (!showOnlyPacers || r.isPacer)
       ),
-    [runners, showOnlyUnsentEmail, showOnlyNeedsValidation, showOnlyMinors]
+    [runners, showOnlyUnsentEmail, showOnlyNeedsValidation, showOnlyMinors, showOnlyPacers]
   );
 
   const unsentEmailCount = useMemo(() => runners.filter(r => r.emailPending).length, [runners]);
@@ -1076,6 +1023,8 @@ export default function RegistrantsTable({
   }
 
   const hasMinors = useMemo(() => runners.some(r => r.isMinor), [runners]);
+
+  const hasPacers = useMemo(() => runners.some(r => r.isPacer), [runners]);
 
   const uniqueCategories = useMemo(() => {
     const cats = new Set(runners.map(r => r.category).filter(Boolean));
@@ -1134,59 +1083,39 @@ export default function RegistrantsTable({
       onToggle: () => setShowOnlyMinors(on => !on),
       capitalize: false,
     },
+    // Offered only on a race that has one, on the same rule as Age above.
+    // *Type*, not *Pacer*, because this is the group that will hold whatever
+    // other kind of entry the app learns to give away.
+    {
+      label: 'Type',
+      options: hasPacers ? [{ value: 'PACER', label: 'Pacers' }] : [],
+      selected: showOnlyPacers ? ['PACER'] : [],
+      onToggle: () => setShowOnlyPacers(on => !on),
+      capitalize: false,
+    },
   ];
   const clearFilters = () => {
     setShowOnlyMinors(false);
+    setShowOnlyPacers(false);
     for (const id of ['category', 'logisticsMethod', 'paymentMethod']) {
       table.getColumn(id)?.setFilterValue(undefined);
     }
   };
 
   /**
-   * The registrants export, written to survive Excel.
-   *
-   * Three things had to be true and were not:
-   *
-   *  - **Every field is quoted.** Only some of them used to be, so a runner
-   *    named "DELA CRUZ, JR." or a category called "10K, Open" pushed every
-   *    following column one to the right for that row alone — the kind of
-   *    damage nobody notices until the race-day list is already printed.
-   *  - **Phone numbers reach Excel as text.** `+639171234567` bare is read as
-   *    a formula, because a leading `+` starts one, and lands in the cell as
-   *    the number 639171234567 with the plus gone. The `="…"` form is the one
-   *    spelling Excel, Google Sheets and LibreOffice all read back as the
-   *    literal string.
-   *  - **A UTF-8 BOM leads the file.** Without it Excel opens a UTF-8 CSV as
-   *    the system codepage, and the first "Ñ" in a Filipino name arrives as
-   *    mojibake.
-   *
-   * CRLF line endings for the same reason: RFC 4180 asks for them, and Excel
-   * is the reader this file exists for.
+   * The export, as the table calls it: the columns and the Excel-proofing
+   * live in registrant-csv.ts, and what leaves here is whichever rows are on
+   * screen — the selection if there is one, every filtered row otherwise.
    */
-  const csvField = (value: unknown): string =>
-    `"${String(value ?? '').replace(/"/g, '""')}"`;
-
-  const csvPhone = (value: unknown): string => {
-    const number = String(value ?? '').replace(/"/g, '');
-    return number ? `"=""${number}"""` : csvField('');
-  };
-
   const handleExportCSV = () => {
-    const headers = [
-      'Runner Ref', 'Order Ref', 'First Name', 'Last Name', 'Email', 'Phone', 'Gender', 'Birthdate',
-      'Guardian Name', 'Guardian Relationship', 'Guardian Consent At',
-      'Category', 'Distance', 'Shirt Size', 'Emergency Contact', 'Emergency Phone',
-      'Running Community', 'Medical Conditions', 'Logistics Method', 'Delivery Area', 'Delivery Address', 'Payment Method', 'Promo Code', 'Order Discount', 'Order Total', 'Status'
-    ];
-
-    // Use selected rows if any, otherwise fallback to all filtered rows
     const selectedRows = table.getSelectedRowModel().rows;
     const rowsToExport = selectedRows.length > 0 ? selectedRows : table.getFilteredRowModel().rows;
 
-    // The file is built here, in the browser, so the audit trail can only be
-    // told about it (api/admin/events/[id]/registrants/export). Fire and
-    // forget, with keepalive so the request outlives the download starting: a
-    // log that failed must not cost the organizer their file.
+    // The file is built in the browser from rows the screen already holds, so
+    // the audit trail can only be told about it
+    // (api/admin/events/[id]/registrants/export). Fire and forget, with
+    // keepalive so the request outlives the download starting: a log that
+    // failed must not cost the organizer their file.
     void fetch(`/api/admin/events/${eventId}/registrants/export`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1194,64 +1123,7 @@ export default function RegistrantsTable({
       keepalive: true,
     }).catch(() => {});
 
-    const csvRows = rowsToExport.map(r => {
-      const runner = r.original;
-      return [
-        csvField(runner.runnerRef),
-        csvField(runner.orderRef),
-        csvField(runner.firstName),
-        csvField(runner.lastName),
-        csvField(runner.email),
-        csvPhone(runner.phone),
-        csvField(runner.gender),
-        csvField(runner.birthdate),
-        // Blank for a runner who needed none. A minor with none on file is
-        // blank here too; the detail modal is where that is called out.
-        csvField(runner.guardianName || ''),
-        csvField(runner.guardianRelationshipLabel || ''),
-        csvField(runner.guardianConsentAtLabel || ''),
-        csvField(runner.category),
-        csvField(runner.distance),
-        csvField(runner.size),
-        csvField(runner.emergencyContactName),
-        csvPhone(runner.emergencyContactPhone),
-        csvField(runner.runningCommunity),
-        csvField(runner.medicalConditions || 'None'),
-        csvField(runner.logisticsMethod),
-        csvField(runner.deliveryZone),
-        csvField(runner.deliveryAddress),
-        csvField(runner.paymentMethod),
-        // The order's money, repeated on each of its runners. A group's five
-        // rows carry the same three figures because they are one payment —
-        // summing this column would double-count, and an organizer matching a
-        // bank line needs the figure on whichever row they searched for.
-        csvField(runner.promoCode || ''),
-        csvField(runner.discountAmount ? formatPesos(runner.discountAmount) : ''),
-        csvField(formatPesos(runner.totalAmount)),
-        csvField(runner.status),
-      ].join(',');
-    });
-
-    const csvContent = [headers.map(csvField).join(','), ...csvRows].join('\r\n');
-    // U+FEFF, the byte order mark, spelled out rather than pasted in as the
-    // invisible character it is. It has to be the very first thing in the file
-    // or Excel reads the rest as the system codepage instead of UTF-8.
-    const BOM = String.fromCharCode(0xfeff);
-    const blob = new Blob([BOM, csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `registrants_event_${eventId}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    // The blob stays in memory for the life of the document otherwise, and an
-    // organizer exports the same list over and over while checking payments.
-    // Released on the next tick, not immediately: some browsers have not
-    // finished handing the URL to the download manager when click() returns,
-    // and revoking under them cancels the download.
-    setTimeout(() => URL.revokeObjectURL(url), 0);
+    downloadRegistrantCsv(buildRegistrantCsv(rowsToExport.map(r => r.original)), eventId);
   };
 
   return (
@@ -1536,443 +1408,17 @@ export default function RegistrantsTable({
       </div>
 
       {viewingRunner && (
-        // Below `sm` a full-height sheet (.admin-modal-sheet): the sections
-        // stack, and the footer at the bottom edge carries every way onward.
-        <div className="fixed inset-0 bg-[var(--dash-scrim)] backdrop-blur-sm z-50 flex items-center justify-center p-4 max-sm:p-0">
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="registrant-details-title"
-            className="admin-modal-panel admin-modal-sheet bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-clip shadow-2xl"
-          >
-            <div className="flex justify-between items-center gap-4 p-6 max-sm:px-4 max-sm:py-3 border-b border-[var(--dash-border)] shrink-0">
-              <h3 id="registrant-details-title" className="text-xl font-semibold text-primary">Registrant Details</h3>
-              <button
-                onClick={() => setViewingRunner(null)}
-                aria-label="Close"
-                className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-full text-secondary hover:text-primary transition-colors"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="admin-modal-body p-6 max-sm:p-4 overflow-y-auto flex-1">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-4">
-                  <h4 className="text-sm font-semibold text-secondary uppercase tracking-wider">Runner Info</h4>
-                  <div className="space-y-2 text-sm">
-                    <p className="flex flex-col">
-                      <span className="text-[var(--text-muted)]">Name</span>
-                      <span className="text-primary font-medium flex items-center gap-2 flex-wrap">
-                        {viewingRunner.name}
-                        {viewingRunner.isMinor && <MinorBadge />}
-                      </span>
-                    </p>
-                    <p className="flex flex-col"><span className="text-[var(--text-muted)]">Email</span> <span className="text-primary font-medium">{viewingRunner.email}</span></p>
-                    <p className="flex flex-col"><span className="text-[var(--text-muted)]">Phone</span> <span className="text-primary font-medium">{viewingRunner.phone}</span></p>
-                    <p className="flex flex-col"><span className="text-[var(--text-muted)]">Gender</span> <span className="text-primary font-medium capitalize">{viewingRunner.gender}</span></p>
-                    <p className="flex flex-col">
-                      <span className="text-[var(--text-muted)]">Birthdate</span>
-                      <span className="text-primary font-medium">
-                        {viewingRunner.birthdate}
-                        {/* The age the consent rule is counted on, so the chip
-                            above is never a verdict nobody can check. */}
-                        {viewingRunner.isMinor && viewingRunner.ageOnRaceDay !== null && (
-                          <span className="text-[var(--text-muted)] font-normal">
-                            {' '}&middot; {viewingRunner.ageOnRaceDay} on race day
-                          </span>
-                        )}
-                      </span>
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <h4 className="text-sm font-semibold text-secondary uppercase tracking-wider">Race Details</h4>
-                  <div className="space-y-2 text-sm">
-                    <p className="flex flex-col"><span className="text-[var(--text-muted)]">Category</span> <span className="text-primary font-medium">{viewingRunner.category}</span></p>
-                    {/* Fun-run packages have none, and a blank row reads like
-                        missing data rather than an absent field. */}
-                    {viewingRunner.distance && <p className="flex flex-col"><span className="text-[var(--text-muted)]">Distance</span> <span className="text-primary font-medium">{viewingRunner.distance}</span></p>}
-                    <p className="flex flex-col"><span className="text-[var(--text-muted)]">Shirt Size</span> <span className="text-primary font-medium">{viewingRunner.size}</span></p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Parent/Guardian consent (GUARDIAN_CONSENT_PLAN.md Batch 4).
-                  Shown for a minor, and for anyone with a guardian on file —
-                  a birthdate corrected upward leaves the consent that was
-                  given, and hiding it would hide what the guardian agreed to.
-                  A minor with none on file gets the amber line rather than
-                  nothing: a row from before consent was asked for, or a
-                  birthdate staff corrected later, is the case the organizer
-                  has to catch at kit claiming. */}
-              {(viewingRunner.isMinor || viewingRunner.guardianName) && (
-                <div className="mt-8 pt-8 border-t border-[var(--dash-border)] space-y-4">
-                  <div className="flex items-center justify-between gap-4">
-                    <h4 className="text-sm font-semibold text-secondary uppercase tracking-wider m-0">Parent/Guardian Consent</h4>
-                    {/* A new tab, so the list and this modal are still where
-                        the organizer left them after printing. */}
-                    <Link
-                      href={consentSheetPath(eventId, viewingRunner.id)}
-                      target="_blank"
-                      rel="noopener"
-                      className="inline-flex items-center gap-1.5 text-xs font-medium text-accent-blue-ink hover:underline min-h-11 -my-3"
-                    >
-                      <Printer size={14} aria-hidden="true" /> Print guardian consent
-                    </Link>
-                  </div>
-                  {viewingRunner.guardianName ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-                      <p className="flex flex-col"><span className="text-[var(--text-muted)]">Guardian</span> <span className="text-primary font-medium">{viewingRunner.guardianName}</span></p>
-                      <p className="flex flex-col"><span className="text-[var(--text-muted)]">Relationship</span> <span className="text-primary font-medium">{viewingRunner.guardianRelationshipLabel || '—'}</span></p>
-                      <p className="flex flex-col">
-                        <span className="text-[var(--text-muted)]">Consent Given</span>
-                        {/* Null when staff typed the guardian in afterwards:
-                            that records who the guardian is, not that they
-                            agreed, so it is not dressed up as a consent. */}
-                        <span className={`font-medium ${viewingRunner.guardianConsentAtLabel ? 'text-primary' : 'text-[var(--text-muted)] italic'}`}>
-                          {viewingRunner.guardianConsentAtLabel || 'Not through the form'}
-                        </span>
-                      </p>
-                    </div>
-                  ) : (
-                    <p className="flex items-start gap-2 text-sm text-[var(--status-warning)] font-medium m-0">
-                      <TriangleAlert size={16} className="shrink-0 mt-0.5" aria-hidden="true" />
-                      <span>
-                        No guardian consent on file.
-                        <span className="block text-xs font-normal text-[var(--text-muted)] mt-1">
-                          Print the consent and have the parent or guardian sign it at kit claiming.
-                        </span>
-                      </span>
-                    </p>
-                  )}
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8 pt-8 border-t border-[var(--dash-border)]">
-                <div className="space-y-4">
-                  <h4 className="text-sm font-semibold text-secondary uppercase tracking-wider">Emergency Contact</h4>
-                  <div className="space-y-2 text-sm">
-                    <p className="flex flex-col"><span className="text-[var(--text-muted)]">Name</span> <span className="text-primary font-medium">{viewingRunner.emergencyContactName}</span></p>
-                    <p className="flex flex-col"><span className="text-[var(--text-muted)]">Phone</span> <span className="text-primary font-medium">{viewingRunner.emergencyContactPhone}</span></p>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <h4 className="text-sm font-semibold text-secondary uppercase tracking-wider">Medical Info</h4>
-                  <div className="text-sm text-primary font-medium whitespace-pre-wrap">{viewingRunner.medicalConditions || 'None provided'}</div>
-                </div>
-                <div className="space-y-4">
-                  <h4 className="text-sm font-semibold text-secondary uppercase tracking-wider">Running Community</h4>
-                  <div className="text-sm text-primary font-medium">{viewingRunner.runningCommunity || 'Independent Runner'}</div>
-                </div>
-              </div>
-
-              <div className="mt-8 pt-8 border-t border-[var(--dash-border)] space-y-4">
-                <h4 className="text-sm font-semibold text-secondary uppercase tracking-wider">Transaction Details</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                  {/* Only on a group order, where the two differ. A solo
-                      registration's runner reference *is* its order reference,
-                      so printing it twice would say nothing twice. */}
-                  {viewingRunner.runnerRef !== viewingRunner.orderRef && (
-                    <p className="flex flex-col"><span className="text-[var(--text-muted)]">Runner Ref</span> <span className="text-primary font-medium">{viewingRunner.runnerRef}</span></p>
-                  )}
-                  {/* The order reference is kept beside it: this runner's ref
-                      identifies the person, the order ref is what the whole
-                      group paid under and what a bank line will match. */}
-                  <p className="flex flex-col"><span className="text-[var(--text-muted)]">Order Ref</span> <span className="text-primary font-medium">{viewingRunner.orderRef}</span></p>
-                  <p className="flex flex-col"><span className="text-[var(--text-muted)]">Status</span>
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium w-fit mt-1 ${statusPillClass(viewingRunner.status)}`}>
-                      {viewingRunner.status}
-                    </span>
-                    {/* An EXPIRED row is the one status nobody chose, so it is
-                        the one that has to explain itself: what happened, when,
-                        and what it gave back. Without this the organizer is
-                        looking at an order that changed on its own. */}
-                    {viewingRunner.status === 'EXPIRED' && (
-                      <span className="text-xs text-[var(--text-muted)] mt-1.5">
-                        Unpaid online checkout, released
-                        {viewingRunner.expiredAt
-                          ? ` on ${new Date(viewingRunner.expiredAt).toLocaleString()}`
-                          : ''}
-                        . The slot{viewingRunner.promoCode ? ' and the promo code' : ''} went back.
-                      </span>
-                    )}
-                    <StatusProvenanceNote runner={viewingRunner} />
-                    {/* Everything that happened to this order — the proof
-                        opened, the remarks rewritten, the runner edited — for
-                        the people who can read the trail. */}
-                    {permissions.activity && (
-                      <Link
-                        href={orderActivityPath(viewingRunner.orderRef, eventId)}
-                        className="text-xs font-medium text-accent-blue-ink hover:underline mt-1.5 w-fit"
-                      >
-                        See this order&rsquo;s activity
-                      </Link>
-                    )}
-                  </p>
-                  <p className="flex flex-col"><span className="text-[var(--text-muted)]">Payment Method</span> <span className="text-primary font-medium">{viewingRunner.paymentMethod}</span></p>
-                  <p className="flex flex-col"><span className="text-[var(--text-muted)]">Logistics</span> <span className="text-primary font-medium">{viewingRunner.logisticsMethod}</span></p>
-                  {viewingRunner.isDelivery && viewingRunner.deliveryZone && (
-                    <p className="flex flex-col"><span className="text-[var(--text-muted)]">Delivery Area</span> <span className="text-primary font-medium">{viewingRunner.deliveryZone}</span></p>
-                  )}
-                  {viewingRunner.isDelivery && (
-                    <p className="flex flex-col sm:col-span-2"><span className="text-[var(--text-muted)]">Address</span> <span className="text-primary font-medium">{viewingRunner.deliveryAddress}</span></p>
-                  )}
-                  {viewingRunner.isBankTransfer && viewingRunner.transactionNumber && (
-                    <p className="flex flex-col"><span className="text-[var(--text-muted)]">Transaction No.</span> <span className="text-primary font-medium">{viewingRunner.transactionNumber}</span></p>
-                  )}
-                  {/* Only when there was one. A discount is the usual reason a
-                      transfer arrives short of the sticker price, so the code
-                      that caused it belongs next to the amount rather than in
-                      a report nobody opens mid-phone-call. */}
-                  {viewingRunner.discountAmount > 0 && (
-                    <p className="flex flex-col">
-                      <span className="text-[var(--text-muted)]">Discount</span>
-                      <span className="text-primary font-medium">
-                        −₱{formatPesos(viewingRunner.discountAmount)}
-                        {viewingRunner.promoCode && (
-                          <span className="text-[var(--text-muted)] font-normal"> &middot; {viewingRunner.promoCode}</span>
-                        )}
-                      </span>
-                    </p>
-                  )}
-                  <p className="flex flex-col"><span className="text-[var(--text-muted)]">Order Total</span> <span className="text-primary font-medium">₱{formatPesos(viewingRunner.totalAmount)}</span></p>
-                  <p className="flex flex-col">
-                    <span className="text-[var(--text-muted)]">Waiver Consent</span>
-                    {viewingRunner.consentGiven ? (
-                      <span className="inline-flex items-center gap-1 text-[var(--status-success)] font-medium w-fit mt-1">
-                        Agreed
-                        {viewingRunner.consentGivenAt && (
-                          <span className="text-[var(--text-muted)] font-normal">
-                            &middot; {new Date(viewingRunner.consentGivenAt).toLocaleString()}
-                          </span>
-                        )}
-                      </span>
-                    ) : (
-                      <span className="text-[var(--status-warning)] font-medium w-fit mt-1">
-                        Not on record
-                      </span>
-                    )}
-                  </p>
-                  <p className="flex flex-col">
-                    <span className="text-[var(--text-muted)]">Signed By</span>
-                    {/* The name typed under the tick. Registrations taken
-                        before a signature was asked for say so plainly rather
-                        than showing an empty line that reads like a bug. */}
-                    <span className={`font-medium ${viewingRunner.consentSignature ? 'text-primary' : 'text-[var(--text-muted)] italic'}`}>
-                      {viewingRunner.consentSignature || 'Not asked at the time'}
-                    </span>
-                  </p>
-                </div>
-
-                {/* The validator's notes. Internal - this block has no
-                    equivalent anywhere the runner can see, and nothing here
-                    emails them. */}
-                <div className="mt-6">
-                  <div className="flex items-center justify-between gap-4 mb-2">
-                    <p className="text-[var(--text-muted)] text-sm m-0">Remarks (internal)</p>
-                    {permissions.remark && (
-                      <button
-                        onClick={() => openRemarksModal(viewingRunner.id)}
-                        className="text-xs font-medium text-accent-blue-ink hover:underline bg-transparent border-none cursor-pointer p-0"
-                      >
-                        {viewingRunner.remarks ? 'Edit remarks' : 'Add remarks'}
-                      </button>
-                    )}
-                  </div>
-                  {viewingRunner.remarks ? (
-                    <div className="rounded-lg border border-[var(--dash-border)] bg-[var(--dash-surface)] p-4">
-                      <p className="text-sm text-primary whitespace-pre-wrap m-0">{viewingRunner.remarks}</p>
-                      {(viewingRunner.remarksBy || viewingRunner.remarksAt) && (
-                        <p className="text-xs text-[var(--text-muted)] mt-3 m-0">
-                          {viewingRunner.remarksBy || 'Unknown'}
-                          {viewingRunner.remarksAt && ` \u00b7 ${new Date(viewingRunner.remarksAt).toLocaleString()}`}
-                        </p>
-                      )}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-[var(--text-muted)] italic m-0">No remarks yet.</p>
-                  )}
-                </div>
-
-                {/* Whether this order's emails actually left the building. It
-                    belongs beside the payment details rather than in the runner
-                    section above: like the remarks, it is a fact about the
-                    order, not about the person on this row. */}
-                <div className="mt-6">
-                  <div className="flex items-center justify-between gap-4 mb-2">
-                    <p className="text-[var(--text-muted)] text-sm m-0">Email Delivery</p>
-                    {permissions.email && (
-                      <button
-                        onClick={() => openEmailModal(viewingRunner.id)}
-                        className="text-xs font-medium text-accent-blue-ink hover:underline bg-transparent border-none cursor-pointer p-0"
-                      >
-                        {viewingRunner.emailPending ? 'Send by hand' : 'View email'}
-                      </button>
-                    )}
-                  </div>
-                  {viewingRunner.emailPending ? (
-                    <div className="space-y-1">
-                      <p className="text-sm text-[var(--status-danger)] m-0">
-                        The {viewingRunner.emailPendingLabel} email has not gone out.
-                      </p>
-                      {viewingRunner.lastEmailError && (
-                        <p className="text-xs text-[var(--text-muted)] m-0">{viewingRunner.lastEmailError}</p>
-                      )}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-[var(--status-success)] m-0">
-                      Sent
-                      {viewingRunner.manualEmailSentBy
-                        ? ` · last one by hand, by ${viewingRunner.manualEmailSentBy}`
-                        : ''}
-                    </p>
-                  )}
-                </div>
-
-                {/* The proof route needs `proof:view` — an encoder or a viewer
-                    reads the order without the deposit slip, and is not shown
-                    a thumbnail that could only fail to load. */}
-                {permissions.proof && viewingRunner.isBankTransfer && (
-                  <div className="mt-6">
-                    <div className="flex items-center justify-between gap-4 mb-2">
-                      <p className="text-[var(--text-muted)] text-sm m-0">Proof of Payment</p>
-                      {viewingRunner.proofOfPayment && (
-                        <button
-                          onClick={() => setProofRunner(viewingRunner)}
-                          className="text-xs font-medium text-accent-blue-ink hover:underline bg-transparent border-none cursor-pointer p-0"
-                        >
-                          View fullscreen
-                        </button>
-                      )}
-                    </div>
-                    {viewingRunner.proofOfPayment ? (
-                      // The thumbnail is the second door to the same viewer.
-                      // A receipt this size says a slip was uploaded; nobody
-                      // reads a reference number off it, so clicking it is
-                      // the first thing an organizer tries.
-                      <button
-                        type="button"
-                        onClick={() => setProofRunner(viewingRunner)}
-                        aria-label="Open the proof of payment full screen"
-                        className="group relative w-full rounded-lg overflow-hidden border border-[var(--dash-border)] max-h-[300px] max-sm:max-h-none flex items-center justify-center bg-[var(--dash-sunken)] cursor-zoom-in p-0 hover:border-[var(--ink-30)] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ink)]"
-                      >
-                        {/*
-                          Receipts are private blobs — there is no permanently valid
-                          URL for one. This route checks that the logged-in admin owns
-                          the event, then redirects to a short-lived signed URL.
-
-                          A bank-emailed receipt arrives as a PDF, and the first page
-                          of one is not something an <img> can draw — it would render
-                          as a broken picture and read as a lost upload. That one gets
-                          a card saying what it is instead; the viewer behind it
-                          renders the document itself.
-                        */}
-                        {viewingRunner.proofIsPdf ? (
-                          <span className="flex flex-col items-center gap-2 py-10 text-secondary">
-                            <FileText size={32} className="text-accent-blue-ink" aria-hidden="true" />
-                            <span className="text-sm font-medium text-primary">PDF receipt</span>
-                            <span className="text-xs">Click to read it full screen</span>
-                          </span>
-                        ) : (
-                          <img
-                            src={`/api/admin/proof/${viewingRunner.registrationId}`}
-                            alt="Proof of Payment"
-                            className="max-w-full max-h-[300px] object-contain max-sm:w-full max-sm:max-h-[70dvh]"
-                          />
-                        )}
-                        <span className="absolute inset-0 flex items-center justify-center gap-2 bg-black/60 text-sm font-medium text-white opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity">
-                          <Maximize2 size={16} aria-hidden="true" /> Click to enlarge
-                        </span>
-                      </button>
-                    ) : (
-                      <div className="border border-dashed border-[var(--ink-20)] rounded-lg p-8 flex flex-col items-center justify-center text-[var(--text-muted)]">
-                        <Eye size={24} className="mb-2 opacity-50" />
-                        <p className="text-sm">No proof attached yet</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* On a phone the footer holds only the actions below, so a role
-                with none of them (an encoder, a viewer) gets no empty bar. */}
-            <div
-              className={`admin-modal-footer p-6 max-sm:p-4 border-t border-[var(--dash-border)] flex justify-between items-center bg-[var(--dash-sunken)] shrink-0 ${
-                (permissions.validate && needsValidation(viewingRunner)) ||
-                (permissions.proof && viewingRunner.isBankTransfer && viewingRunner.proofOfPayment) ||
-                permissions.remark ||
-                permissions.email
-                  ? ''
-                  : 'max-sm:hidden'
-              }`}
-            >
-              <div className="max-sm:contents">
-                {/* The dashboard's own action button, not the public site's
-                    gradient — and the one in the receipt lightbox is now its
-                    peer, so the two have to read alike. */}
-                {permissions.validate && viewingRunner.status === 'PENDING' && viewingRunner.isBankTransfer && (
-                  <button
-                    onClick={() => validatePayment(viewingRunner)}
-                    disabled={updatingId === viewingRunner.registrationId}
-                    className="btn-light max-sm:basis-full"
-                  >
-                    <CheckCircle className="w-4 h-4" />
-                    {updatingId === viewingRunner.registrationId ? <BusyLabel>Validating</BusyLabel> : 'Validate Payment'}
-                  </button>
-                )}
-              </div>
-              {/*
-                Below `sm` only. On a phone the body's own links to the proof,
-                the remarks and the email are a long scroll away, so the footer
-                carries them beside Validate and nothing onward leaves reach.
-                The header's close stands in for Close there.
-              */}
-              {permissions.proof && viewingRunner.isBankTransfer && viewingRunner.proofOfPayment && (
-                <button
-                  type="button"
-                  onClick={() => setProofRunner(viewingRunner)}
-                  className="btn-filter justify-center dash-phone-only"
-                >
-                  <Maximize2 size={16} aria-hidden="true" /> Proof
-                </button>
-              )}
-              {permissions.remark && (
-                <button
-                  type="button"
-                  onClick={() => openRemarksModal(viewingRunner.id)}
-                  className={`btn-filter justify-center dash-phone-only ${viewingRunner.remarks ? 'is-primary' : ''}`}
-                >
-                  {viewingRunner.remarks
-                    ? <MessageSquareText size={16} aria-hidden="true" />
-                    : <MessageSquare size={16} aria-hidden="true" />}
-                  Remarks
-                </button>
-              )}
-              {permissions.email && (
-                <button
-                  type="button"
-                  onClick={() => openEmailModal(viewingRunner.id)}
-                  className={`btn-filter justify-center dash-phone-only ${viewingRunner.emailPending ? 'is-danger' : ''}`}
-                >
-                  {viewingRunner.emailPending
-                    ? <MailWarning size={16} aria-hidden="true" />
-                    : <Mail size={16} aria-hidden="true" />}
-                  Email
-                </button>
-              )}
-              <button
-                onClick={() => setViewingRunner(null)}
-                className="px-4 py-2 text-sm font-medium text-[var(--ink-85)] hover:text-primary transition-colors max-sm:hidden"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
+        <RegistrantDetailModal
+          runner={viewingRunner}
+          eventId={eventId}
+          permissions={permissions}
+          updatingId={updatingId}
+          onClose={() => setViewingRunner(null)}
+          onValidate={validatePayment}
+          onOpenProof={setProofRunner}
+          onOpenRemarks={openRemarksModal}
+          onOpenEmail={openEmailModal}
+        />
       )}
 
       {/* The receipt, full screen. Sits above the detail modal rather than

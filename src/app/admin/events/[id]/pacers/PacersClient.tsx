@@ -116,6 +116,15 @@ export default function PacersClient({
    * worse answer than a screen that shows the pacer and lets somebody deal with
    * them.
    */
+  /**
+   * How far down the list is (`PACER_DISCOUNT_PLAN.md` Batch 3). Counted here
+   * from the rows the screen holds rather than handed down from the server, so
+   * adding or deleting a pacer moves it at once — and from the same
+   * `isPacerRegistered` the chip on each row reads, so the line and the list
+   * can never disagree about who has signed up.
+   */
+  const registeredCount = useMemo(() => pacers.filter(isPacerRegistered).length, [pacers]);
+
   const groups = useMemo(() => {
     const byCategory = categories.map(category => ({
       key: category.id,
@@ -469,6 +478,15 @@ export default function PacersClient({
         contact. <strong>Send the code to them yourself</strong> — the app emails no pacer — then
         mark it as sent.
       </p>
+
+      {/* Where this race stands, in one line. The reminder above says what is
+          still owed to the pacers; this says what they have done with it, and
+          it is the figure an organizer counts bibs and singlets against. */}
+      {pacers.length > 0 && (
+        <p className="mb-6 -mt-3 text-sm font-medium text-primary">
+          {registeredCount} of {pacers.length} {pacers.length === 1 ? 'pacer' : 'pacers'} registered
+        </p>
+      )}
 
       <div className="admin-toolbar">
         <div className="toolbar-actions">

@@ -586,10 +586,17 @@ const STATUS_VERBS: Record<string, string> = {
  * under today's badge would be the trail putting words in their mouth. Where
  * there is no matching record the line says what is actually known: an online
  * payment was settled by PayMongo, and anything else predates the trail.
+ *
+ * **How the order was paid arrives as an object, not a bare boolean**, because
+ * there are now three answers and not two. A complimentary order
+ * (`PACER_DISCOUNT_PLAN.md`) is written PAID by the free-checkout path and
+ * never reaches PayMongo, so the online sentence would be a plain untruth
+ * under its badge — and a boolean in a positional slot is exactly how the
+ * third case gets missed.
  */
 export function statusProvenance(
   status: string,
-  isBankTransfer: boolean,
+  paidBy: { isBankTransfer: boolean; isComplimentary: boolean },
   record: StatusRecord | null,
 ): string | null {
   const current = status.toUpperCase();
@@ -597,7 +604,11 @@ export function statusProvenance(
     return `${STATUS_VERBS[current]} by ${record.by} · ${formatTrailInstant(record.at)}`;
   }
   if (current === 'PAID') {
-    return isBankTransfer
+    // Nobody settled it and nobody has to: the order was ₱0, so checkout
+    // wrote it paid on the spot. Saying so is the whole line — there is no
+    // person to name and no payment to trace.
+    if (paidBy.isComplimentary) return 'Free entry — nothing was charged, so there was nothing to settle.';
+    return paidBy.isBankTransfer
       ? 'Who validated this is not on record. It was settled before the activity trail began.'
       : 'Paid online through PayMongo.';
   }

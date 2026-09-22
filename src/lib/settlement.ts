@@ -16,6 +16,17 @@
  *   an order refunded after a payout simply stops counting — what is owed drops,
  *   and the balance goes negative (*Overpaid*) until the next payout absorbs it
  *   or the organizer's return is recorded. Nothing already recorded is edited.
+ * - **A ₱0 complimentary order settles itself.** A pacer's free entry
+ *   (`PACER_DISCOUNT_PLAN.md`) is written `PAID` with a total, a platform fee
+ *   and a transaction fee all of zero, so it adds nothing to collected and
+ *   nothing to Run As One's share — owed moves by zero, which is right: the
+ *   organizer gave the entry away and nobody paid for it. It needs no clause
+ *   of its own here, and deliberately has none: a special case for pacers
+ *   would be a second way to compute the same zero. Where it *does* show is
+ *   the event breakdown, under **Discounts**, because the entry is counted at
+ *   list price and given back in full — the same reading a 100%-off promotion
+ *   gets. A **non-waived** pacer pays only the admin fee, which lands in
+ *   `platformFee` and so in Run As One's share, exactly as it should.
  * - **Per event**, because bank accounts are per event.
  *
  * Owed is computed as the order's total less Run As One's two fees, rather than

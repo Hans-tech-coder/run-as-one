@@ -175,20 +175,20 @@ hold is lifted.
 
 ## Batch 3: pacers everywhere else the dashboard shows an order
 
-- [ ] **Registrants**: a *Pacer* chip on the row, the card and the detail
+- [x] **Registrants**: a *Pacer* chip on the row, the card and the detail
   modal (read from `Registration.discountType`); a *Type → Pacers* option in
   the one Filters sheet; and a Pacer column in the CSV export.
-- [ ] **Payments and validation**: a `COMPLIMENTARY` order never appears as
+- [x] **Payments and validation**: a `COMPLIMENTARY` order never appears as
   waiting for a payment check, and its detail says *Complimentary: pacer
   entry*.
-- [ ] **Settlement** (`settlement.ts`): check that a ₱0 order adds nothing
+- [x] **Settlement** (`settlement.ts`): check that a ₱0 order adds nothing
   owed and that a non-waived pacer's admin fee is counted as Run As One's.
   Add a line to the settlement breakdown if pacers appear there.
-- [ ] **The Pacers screen**: *Registered* links go to the registrant, and the
+- [x] **The Pacers screen**: *Registered* links go to the registrant, and the
   header shows "N of M pacers registered".
-- [ ] Check every screen that prints a payment method or a fee so none shows
+- [x] Check every screen that prints a payment method or a fee so none shows
   "₱0 via undefined" (the fix-display-defects-everywhere rule).
-- [ ] `PROJECT_GUIDE.md` §6, §10.
+- [x] `PROJECT_GUIDE.md` §6, §10.
 
 ## Settled after the plan was written (owner, 2026-09-19)
 
@@ -387,3 +387,84 @@ hold is lifted.
   standing rule is that registration rows are never removed as cleanup without
   the owner naming them. The unused third pacer created for the mobile check was
   removed.
+
+- 2026-09-22: **Batch 3 landed and was verified in the browser** (uncommitted
+  until the owner says so), on `local-dev` against *Run and Reachout 2026* and
+  the two pacer orders Batch 2 left there. `tsc --noEmit` is clean.
+
+  **The registrants screen was split first**, because the task landed inside it
+  and it was the repository's largest file at 2,571 lines (`AGENTS.md`: split
+  before editing). It is now 2,017, beside three new files in the same folder:
+
+  - **`RegistrantDetailModal.tsx`** — the four-hundred-line panel behind the Eye
+    button. It holds no state of its own; every way onward (validate, receipt,
+    remarks, send by hand) calls back to a modal the table still owns, so the
+    split moved *reading* an order out and left *writing* to one where it was.
+  - **`registrant-display.tsx`** — the tones and chips the table cell, the card
+    and the modal all have to agree on (`statusTone`, `statusPillClass`,
+    `needsValidation`, `StatusProvenanceNote`, `MinorBadge`, the new
+    `PacerBadge`, `consentSheetPath`). This is what stops a chip meaning one
+    thing in a row and another in the modal that row opens.
+  - **`registrant-csv.ts`** — the export's column list and its Excel-proofing
+    (quoting, the `="…"` phone form, the BOM, CRLF). Adding a column no longer
+    means opening the table.
+
+  The plan's own checklist, and the decisions taken while building:
+
+  - **The chip sits under the status, not beside the name.** The plan asked for
+    it on "the row, the card and the detail modal". Putting it in
+    `renderStatusBadges` gets the row and the card from one place — but the
+    better reason is that it *explains* the status: a pacer's order reads PAID
+    with nothing collected, and without the chip that looks like a payment
+    somebody forgot to record. The modal repeats it beside the name, where
+    *Minor* already is.
+  - **`isPacer` is decided on the server**, from the order's own `discountType`
+    snapshot rather than from the promo code — staff may since have paused or
+    deleted it — and in `page.tsx` rather than the client, the same doctrine
+    that file already applies to `isBankTransfer` and `isDelivery`.
+    `isComplimentary` came with it.
+  - **Payments and validation needed no code.** A complimentary order is `PAID`
+    with `paymentMethod = COMPLIMENTARY`, so it fails both halves of
+    `needsValidation` (PENDING **and** bank transfer) and both halves of the
+    bell's query in `notification-store.ts`. That is now written down in
+    `registrant-display.tsx` rather than left to be rediscovered.
+  - **Settlement needed no arithmetic, and that is the finding.** A ₱0 order
+    adds nothing to collected and nothing to Run As One's share, so owed moves
+    by zero; a non-waived pacer's admin fee lands in `platformFee` and so in
+    Run As One's share. A special case for pacers would have been a second way
+    to compute the same zero. The plan's "add a line to the breakdown" is
+    already there: the entry is counted at list price and given back in full,
+    under **Discounts**, exactly as a 100%-off promotion is. `settlement.ts`'s
+    header now says all of this.
+  - **The Pacers screen's *Registered* link already went to the registrant**
+    (Batch 1). What was missing was the count, which is derived in the client
+    from the rows on screen with the same `isPacerRegistered` the chips read, so
+    it moves the moment a pacer is added or deleted.
+
+  One defect was found by looking and is fixed:
+
+  - **A free order's status line claimed PayMongo settled it.** Under the PAID
+    badge the detail modal read "Paid online through PayMongo." on an order that
+    never touched PayMongo, because `statusProvenance` had only two answers and
+    chose between them on `isBankTransfer`. It now takes
+    `{ isBankTransfer, isComplimentary }` — an object, not a bare boolean,
+    because a third case arriving in a positional slot is exactly how this was
+    missed — and a complimentary order reads "Free entry — nothing was charged,
+    so there was nothing to settle."
+
+  Verified in the browser, signed in as the Super Admin: the *PACER* chip on
+  both rows and in the modal; *Complimentary: pacer entry* under COMPLIMENTARY;
+  the discount reading −₱1,499.00 · PACER-10KM-KZ2G against an order total of
+  ₱0.00; the new status line; **Filters → Type → Pacers** narrowing the table to
+  1-2 of 2 and offered only because this race has pacers (the *Age* group is
+  absent on the same rule, since it has no minors); the CSV read back out of the
+  download blob with **Pacer** between *Payment Method* and *Promo Code*, blank
+  for the ordinary runner and `YES` for the pacer, all 27 columns aligned and
+  the phone cells still in their `="…"` form; and the Pacers screen showing
+  "2 of 2 pacers registered". At **375px** the card carries PAID and PACER side
+  by side and `scrollWidth` equals `clientWidth`.
+
+  Still on `local-dev` for the owner to dispose of: the two Batch 2 test
+  registrations, **RM-75D5D9F8** and **RM-2CFF25AE**, and the pacer rows behind
+  them. Both pacers have the admin fee waived, which is why both read
+  COMPLIMENTARY.
