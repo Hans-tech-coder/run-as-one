@@ -1,9 +1,0 @@
-id,title,severity,timestamp,file
-vuln-0001,IDOR in Event Category Updates,HIGH,2026-09-23 01:54:16 UTC,vulnerabilities/vuln-0001.md
-vuln-0002,PayMongo Webhook Signature Authentication Bypass via Missing Header,HIGH,2026-09-23 01:54:37 UTC,vulnerabilities/vuln-0002.md
-vuln-0003,Insecure Direct Object Reference on Category ID allows Payment Bypass,HIGH,2026-09-23 01:55:03 UTC,vulnerabilities/vuln-0003.md
-vuln-0007,Negative Transaction Fee Allows Payment Bypass,HIGH,2026-09-23 01:56:26 UTC,vulnerabilities/vuln-0007.md
-vuln-0004,Empty Participants Array allows Free Ghost Registration Creation,MEDIUM,2026-09-23 01:55:26 UTC,vulnerabilities/vuln-0004.md
-vuln-0005,Authentication Bypass in Middleware via Path Normalization (src/proxy.ts),MEDIUM,2026-09-23 01:55:38 UTC,vulnerabilities/vuln-0005.md
-vuln-0006,Incomplete Logout / Failure to Invalidate JWT on Server Side,MEDIUM,2026-09-23 01:55:58 UTC,vulnerabilities/vuln-0006.md
-vuln-0008,Path Traversal in /api/upload via Unsanitized file.name,MEDIUM,2026-09-23 01:56:37 UTC,vulnerabilities/vuln-0008.md

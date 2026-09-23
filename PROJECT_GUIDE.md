@@ -42,28 +42,23 @@ task can go straight to two or three files instead of searching for them. Regene
 it with `node scripts/gen-feature-map.mjs` after adding a route or a `src/lib`
 module.
 
-### Plan documents at the repo root
+### Plans: `ON_HOLD.md` and `docs/archive/`
 
-The `*_PLAN.md` files are working documents for one piece of work each. **Read one
-only if the task is inside it.** A finished plan is history, not instructions — the
-guide and the code are the authority, and a finished plan's rules are already
-folded into §5 and §9.
+**`ON_HOLD.md`** at the root lists everything that was planned and not built,
+plus the pending production release steps (12 migrations to run with
+`npx prisma migrate deploy`, and the owner's post-release checklist). Every
+feature there is on hold by the owner's call: start one only when asked.
 
-| Plan | State |
-| --- | --- |
-| `ADMIN_MERGE_PLAN.md` | **active** — batches 1–6 on `dev`, release pending |
-| `OVERVIEW_PLAN.md` | done — Batch 1 on `dev`, release pending |
-| `PACER_DISCOUNT_PLAN.md` | **active** — all three batches in, release pending |
-| `STAFF_ACCESS_PLAN.md` | **active** — phases 4 and 5 not started |
-| `DASHBOARD_SHELL_PLAN.md` | done — batches 1–3 on `dev`, release pending |
-| `GUARDIAN_CONSENT_PLAN.md` | done |
-| `LIGHT_THEME_PLAN.md` | done |
-| `MARKETING_DISCOUNTS_PLAN.md` | done |
-| `SETTINGS_PLAN.md` | done |
+Every finished `*_PLAN.md` lives in **`docs/archive/`**. Code comments, the
+schema, migrations and `docs/` still cite these files by bare filename (for
+example "`ADMIN_MERGE_PLAN.md` Batch 4"), so look them up there. An archived
+plan is history, not instructions. The guide and the code are the authority,
+and each plan's rules are already folded into §5 and §9. Read an archived plan
+only when a task needs the reasoning behind a decision.
 
-They stay at the root rather than moving to `docs/`, because more than a hundred
-header comments across `src/**` cite them by that path. When a plan finishes, mark
-it done in this table instead of deleting it.
+When new work needs a plan, write it at the root as `<NAME>_PLAN.md`. Move it
+into `docs/archive/` when it finishes. Anything it leaves undone goes into
+`ON_HOLD.md`.
 
 **§5 is the big one and it is a table.** When a task touches one subject, grep
 `docs/domain-rules.md` for that module's name rather than reading the file whole:
@@ -110,7 +105,7 @@ event on `/admin/remittances` (`ADMIN_MERGE_PLAN.md` Batch 6, §5
   fallback** — Vercel's disk is read-only, so `writeFile` is never an option.
 - Other notable deps: `jose` (JWT), `bcryptjs`, `pdf-lib` (e-certificates),
   `xlsx` (results import / registrant export), `@tanstack/react-table`,
-  `framer-motion`, `gsap`, `lucide-react`.
+  `framer-motion`, `lucide-react`.
 - **Production is live** at `https://run-as-one.cresendorunningcommunity.com`
   — Vercel project `run-as-one`, linked to `Hans-tech-coder/run-as-one`. Every
   push to `main` deploys to production; there is no manual deploy step. That
@@ -291,7 +286,6 @@ src/
                             #   RunnerLoader, BusyLabel, LinkPendingIcon,
                             #   RunnerOverlay, NotificationBell
   lib/                      # domain logic — see §5. Read these before re-deriving a rule.
-  data/mockEvents.ts        # legacy mock data
 prisma/schema.prisma        # the data model, heavily commented
 vercel.json                 # scheduled work (crons) — see §2
 scripts/                    # seed + one-off maintenance scripts

@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-36 pages · 47 API routes · 67 modules in `src/lib` · 303 files · 64,894 lines
+36 pages · 47 API routes · 67 modules in `src/lib` · 301 files · 65,103 lines
 
 ---
 
@@ -202,7 +202,7 @@ when a task touches one, split it before editing rather than after.
 
 | Lines | File |
 | --- | --- |
-| 2317 | [`src/app/admin/marketing/PromoCodesClient.tsx`](../src/app/admin/marketing/PromoCodesClient.tsx) |
+| 2314 | [`src/app/admin/marketing/PromoCodesClient.tsx`](../src/app/admin/marketing/PromoCodesClient.tsx) |
 | 2191 | [`src/app/events/[slug]/register/RegistrationWizardClient.tsx`](../src/app/events/[slug]/register/RegistrationWizardClient.tsx) |
 | 2018 | [`src/app/admin/events/[id]/registrants/RegistrantsTable.tsx`](../src/app/admin/events/[id]/registrants/RegistrantsTable.tsx) |
 | 1931 | [`src/app/events/[slug]/register/BankTransferWizardClient.tsx`](../src/app/events/[slug]/register/BankTransferWizardClient.tsx) |
@@ -230,6 +230,7 @@ when a task touches one, split it before editing rather than after.
 | 512 | [`src/app/admin/events/[id]/registrants/RegistrantDetailModal.tsx`](../src/app/admin/events/[id]/registrants/RegistrantDetailModal.tsx) |
 | 503 | [`src/app/feedback/FeedbackForm.tsx`](../src/app/feedback/FeedbackForm.tsx) |
 | 493 | [`src/lib/promo-input.ts`](../src/lib/promo-input.ts) |
+| 491 | [`src/app/admin/AdminRouteLoading.tsx`](../src/app/admin/AdminRouteLoading.tsx) |
 | 472 | [`src/app/admin/communities/CommunitiesClient.tsx`](../src/app/admin/communities/CommunitiesClient.tsx) |
 | 472 | [`src/app/events/[slug]/register/BirthdatePicker.tsx`](../src/app/events/[slug]/register/BirthdatePicker.tsx) |
 | 469 | [`src/app/admin/clients/ApplicationPanel.tsx`](../src/app/admin/clients/ApplicationPanel.tsx) |
@@ -237,6 +238,6 @@ when a task touches one, split it before editing rather than after.
 | 460 | [`src/app/events/[slug]/page.tsx`](../src/app/events/[slug]/page.tsx) |
 | 458 | [`src/lib/registration-gate.ts`](../src/lib/registration-gate.ts) |
 | 455 | [`src/app/api/checkout/manual/route.ts`](../src/app/api/checkout/manual/route.ts) |
-| 435 | [`src/app/admin/AdminRouteLoading.tsx`](../src/app/admin/AdminRouteLoading.tsx) |
 | 428 | [`src/lib/actor.ts`](../src/lib/actor.ts) |
+| 427 | [`src/app/admin/page.tsx`](../src/app/admin/page.tsx) |
 | 416 | [`src/app/admin/events/[id]/results/ResultsTableClient.tsx`](../src/app/admin/events/[id]/results/ResultsTableClient.tsx) |

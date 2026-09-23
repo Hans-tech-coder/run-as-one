@@ -3,6 +3,13 @@
 
 ## 10. Current state
 
+**What is still open lives in `ON_HOLD.md`** at the repo root: the pending
+production release (12 migrations and the owner's checklist) and the features
+the owner put on hold. Every `*_PLAN.md` cited below is now in `docs/archive/`,
+and all of those plans are finished. Where an entry below says "Read the plan's
+Status table" or describes a batch as still to come, `ON_HOLD.md` has the
+current answer.
+
 **The Overview answers the morning question** (2026-09-23, `OVERVIEW_PLAN.md`
 Batch 1, on `dev`, uncommitted): pending bank transfers as an oldest-first
 queue with their age, one row per live race with its fill, the tiles and
@@ -468,7 +475,6 @@ Known open threads:
   The runner is not emailed; the organizer sees the neutral `EXPIRED` badge on
   the registrants screen, and the detail modal says when it happened and what
   went back.
-- `src/data/mockEvents.ts` is legacy and is no longer the source for real pages.
 - A **Prisma schema change needs the dev server restarted** before it takes
   effect: `next dev` bundles the generated client, so a running server keeps
   the pre-migration data model and rejects a write to a brand-new column with

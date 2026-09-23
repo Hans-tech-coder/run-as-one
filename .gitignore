@@ -55,3 +55,6 @@ screenshot.png
 
 # Keep env example
 !.env.example
+
+# Strix security scan output (contains vulnerability findings)
+strix_runs/
