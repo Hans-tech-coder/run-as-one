@@ -11,6 +11,7 @@ import {
   looksLikeEmail,
 } from '@/lib/feedback';
 import { FEEDBACK_RULE, allowRequest, callerKey } from '@/lib/rate-limit';
+import { UploadError, uploadPrivateProof } from '@/lib/blob';
 
 /**
  * Where the feedback form posts. Public, because the people most worth hearing
@@ -52,9 +53,17 @@ export async function POST(request: Request) {
       );
     }
 
-    const body = await request.json().catch(() => null);
-    if (!body || typeof body !== 'object') {
+    // Multipart rather than JSON, because the form may carry a screenshot. The
+    // text fields are read into a plain object so the checks below stay the
+    // same string checks they always were.
+    const form = await request.formData().catch(() => null);
+    if (!form) {
       return refuse('message', 'We could not read that. Please try again.');
+    }
+    const body: Record<string, unknown> = {};
+    for (const key of ['kind', 'message', 'name', 'email', 'pagePath']) {
+      const value = form.get(key);
+      if (typeof value === 'string') body[key] = value;
     }
 
     const kind = asFeedbackKind((body as Record<string, unknown>).kind);
@@ -103,6 +112,20 @@ export async function POST(request: Request) {
     const userAgent =
       request.headers.get('user-agent')?.slice(0, MAX_FEEDBACK_USER_AGENT) || null;
 
+    // Last, once every text rule has passed, so a refused message never leaves
+    // an orphaned file in the store. An empty file input posts a zero-byte
+    // File, which is "no screenshot", not an error.
+    const rawScreenshot = form.get('screenshot');
+    let screenshot: string | null = null;
+    if (rawScreenshot instanceof File && rawScreenshot.size > 0) {
+      try {
+        screenshot = await uploadPrivateProof(rawScreenshot, 'feedback', 'image');
+      } catch (error) {
+        if (error instanceof UploadError) return refuse('screenshot', error.message);
+        throw error;
+      }
+    }
+
     await prisma.feedback.create({
       data: {
         kind,
@@ -111,6 +134,7 @@ export async function POST(request: Request) {
         email: email || null,
         pagePath: asSitePath((body as Record<string, unknown>).pagePath),
         userAgent,
+        screenshot,
       },
       select: { id: true },
     });

@@ -632,6 +632,8 @@ input[type="datetime-local"]:focus::-webkit-calendar-picker-indicator {
 /* The feedback form is the first surface with five rows to reveal. The ladder
    is arithmetic, so it extends by adding a step rather than by re-tuning. */
 .t-stagger-line--5 { transition-delay: calc(var(--stagger-stagger) * 4); }
+/* ...and the sixth, once it grew a screenshot field. */
+.t-stagger-line--6 { transition-delay: calc(var(--stagger-stagger) * 5); }
 
 .t-stagger.is-shown .t-stagger-line {
   opacity: 1;

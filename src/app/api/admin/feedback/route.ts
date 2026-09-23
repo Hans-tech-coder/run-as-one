@@ -34,12 +34,20 @@ export async function GET() {
         email: true,
         pagePath: true,
         userAgent: true,
+        screenshot: true,
         status: true,
         createdAt: true,
       },
     });
 
-    return NextResponse.json({ feedback });
+    // Only whether a screenshot exists leaves this route; the private pathname
+    // stays on the server and the picture opens through [id]/screenshot.
+    return NextResponse.json({
+      feedback: feedback.map(({ screenshot, ...row }) => ({
+        ...row,
+        hasScreenshot: !!screenshot,
+      })),
+    });
   } catch (error) {
     console.error('Failed to fetch feedback:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

@@ -98,14 +98,18 @@ shape:
   race.** One message somebody sent through `/feedback`: `kind` (`ISSUE` |
   `SUGGESTION` | `FEATURE`, guarded by `asFeedbackKind`), the `message` itself,
   an optional `name` and `email`, the `pagePath` they came from and a truncated
-  `userAgent`, plus `status` (`NEW` | `REVIEWED`) — the platform owner's own
+  `userAgent`, an optional `screenshot` (a pathname in the **private** Blob
+  store under `feedback/`, opened only through the signed-URL route
+  `/api/admin/feedback/[id]/screenshot`; the inbox list returns just
+  `hasScreenshot`, and deleting the row deletes the file), plus `status` (`NEW` | `REVIEWED`) — the platform owner's own
   triage mark, which the sender never sees. **It deliberately has no relation to
   Organizer or Registration**: most feedback arrives from a signed-out runner, so
   a foreign key would be null on the majority of rows and would tempt a later
   reader into thinking a null meant something. Nothing in the product reads this
   table and no email is built on it. The message is capped at
   `MAX_FEEDBACK_MESSAGE` and the user agent is truncated on the way in, so a row
-  is under 3 KB even at its worst — a thousand of them is a rounding error
+  is under 3 KB even at its worst (the screenshot, up to 4 MB, lives in Blob
+  storage, not in Postgres) — a thousand of them is a rounding error
   against the 0.5 GB tier.
 - **PromoCode** — a discount an organizer hands out, redeemed at checkout.
   `discountType` is **`CATEGORY_PRICE`** (a second price list for one race —

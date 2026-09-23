@@ -7,7 +7,6 @@ import {
   ChevronDown,
   Inbox,
   Lightbulb,
-  Mail,
   MessageSquare,
   RotateCcw,
   Search,
@@ -25,6 +24,7 @@ import {
   type VisibilityState,
 } from '@tanstack/react-table';
 import RowActionsMenu from '@/app/admin/RowActionsMenu';
+import MessageDetail, { type FeedbackRow } from './MessageDetail';
 import { useAlert } from '@/components/ui/AlertProvider';
 import AdminCardList, { AdminCardListSkeleton } from '@/app/admin/AdminCardList';
 import AdminDataTable, { AdminColumnsMenu } from '@/app/admin/AdminDataTable';
@@ -67,18 +67,6 @@ import DashboardHeader from '@/app/admin/DashboardHeader';
  * pressed by a thumb that meant to read. Open is `openId`, the one the table's
  * row reads, so a message stays open across a resize.
  */
-
-interface FeedbackRow {
-  id: string;
-  kind: string;
-  message: string;
-  name: string | null;
-  email: string | null;
-  pagePath: string | null;
-  userAgent: string | null;
-  status: string;
-  createdAt: string;
-}
 
 /** The icon and the tone each kind wears in the table. Lucide in currentColor,
  *  like every other icon in the dashboard. */
@@ -609,84 +597,6 @@ function FeedbackSender({ row }: { row: FeedbackRow }) {
         {row.name || ANONYMOUS_SENDER}
       </span>
       {row.email && <div className="status-note neutral">{row.email}</div>}
-    </>
-  );
-}
-
-/**
- * The opened message: every word of it, where the sender was and on what, and
- * the two things worth doing next. One component for the table's second row
- * and the card's accordion, so what an open message shows cannot differ by
- * screen width.
- */
-function MessageDetail({
-  row,
-  saving,
-  onReview,
-  showReview = true,
-}: {
-  row: FeedbackRow;
-  saving: boolean;
-  onReview: () => void;
-  /** The card already has Mark Reviewed in its footer, beside the actions
-   *  menu, so it opts out of a second one here. */
-  showReview?: boolean;
-}) {
-  return (
-    <>
-      <p className="m-0 whitespace-pre-wrap text-sm leading-relaxed text-primary [overflow-wrap:anywhere]">
-        {row.message}
-      </p>
-
-      <dl className="mt-4 grid grid-cols-1 gap-3 border-t border-[var(--dash-hairline)] pt-4 text-xs sm:grid-cols-2">
-        <div className="min-w-0">
-          <dt className="mb-1 font-bold uppercase tracking-wider text-secondary">
-            Page they were on
-          </dt>
-          <dd className="m-0 break-all font-mono text-[var(--ink-85)]">
-            {row.pagePath || 'Not recorded'}
-          </dd>
-        </div>
-        <div className="min-w-0">
-          <dt className="mb-1 font-bold uppercase tracking-wider text-secondary">
-            Browser
-          </dt>
-          <dd className="m-0 break-all text-[var(--ink-85)]">
-            {row.userAgent || 'Not recorded'}
-          </dd>
-        </div>
-      </dl>
-
-      {/* The note (when there is no address) reads on the left; the actions sit
-          together on the right, vertically centred against it. */}
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-        {!row.email && (
-          <span className="text-xs text-secondary">
-            No address left, so there is nobody to reply to.
-          </span>
-        )}
-        <div className="ml-auto flex flex-wrap items-center gap-2">
-          {row.email && (
-            <a
-              href={`mailto:${row.email}?subject=${encodeURIComponent(
-                'Re: your feedback on Run As One',
-              )}`}
-              className="btn-filter no-underline max-lg:min-h-11"
-            >
-              <Mail size={16} /> Reply by email
-            </a>
-          )}
-          {showReview && row.status === 'NEW' && (
-            <button
-              onClick={onReview}
-              disabled={saving}
-              className="btn-filter max-lg:min-h-11"
-            >
-              <CheckCircle size={16} /> Mark reviewed
-            </button>
-          )}
-        </div>
-      </div>
     </>
   );
 }

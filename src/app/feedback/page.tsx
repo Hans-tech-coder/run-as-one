@@ -67,12 +67,12 @@ export default async function FeedbackPage({
 
       <FeedbackForm pagePath={pagePath} />
 
-      {/* The address stays on the page on purpose. Some things need an
-          attachment, a screenshot or a thread, and a form is the wrong shape
-          for those — offering only the form would send that person away with
-          nothing. */}
+      {/* The address stays on the page on purpose. The form takes one
+          screenshot, but some things need several files or a thread, and a
+          form is the wrong shape for those — offering only the form would
+          send that person away with nothing. */}
       <p className="mt-6 text-center text-sm text-secondary">
-        Need to send a screenshot or talk it through?{' '}
+        Need to send more files or talk it through?{' '}
         <a
           href={supportMailto(contactEmail)}
           className="text-white underline decoration-accent-orange/50 underline-offset-4 transition-colors hover:decoration-accent-orange"

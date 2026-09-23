@@ -1,4 +1,4 @@
-import { put, issueSignedToken, presignUrl } from '@vercel/blob';
+import { put, del, issueSignedToken, presignUrl } from '@vercel/blob';
 import {
   MAX_UPLOAD_BYTES,
   allowedTypes,
@@ -134,10 +134,14 @@ export async function uploadPrivateProof(
   file: unknown,
   // `remittances` keeps Run As One's own payout receipts apart from runners'
   // deposit slips, so a store listing never mixes the two (ADMIN_MERGE_PLAN.md,
-  // Batch 6). Same store, same rules, same signed-URL viewing.
-  folder: 'proofs' | 'remittances' = 'proofs',
+  // Batch 6). Same store, same rules, same signed-URL viewing. `feedback`
+  // holds the screenshot a sender attaches to /feedback — a picture of the
+  // page they were on can show a name or a reference number just as a slip
+  // does, so it is private too.
+  folder: 'proofs' | 'remittances' | 'feedback' = 'proofs',
+  kind: UploadKind = 'proof',
 ): Promise<string> {
-  assertUploadable(file, 'proof');
+  assertUploadable(file, kind);
 
   const blob = await put(`${folder}/${safeFileName(file, 'proof')}`, file, {
     access: 'private',
@@ -147,6 +151,11 @@ export async function uploadPrivateProof(
   });
 
   return blob.pathname;
+}
+
+/** Removes one private blob by the pathname uploadPrivateProof returned. */
+export async function deletePrivateFile(pathname: string): Promise<void> {
+  await del(pathname, { token: storeToken('private') });
 }
 
 /**

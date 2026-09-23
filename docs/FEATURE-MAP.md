@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-36 pages · 47 API routes · 67 modules in `src/lib` · 301 files · 65,103 lines
+36 pages · 48 API routes · 67 modules in `src/lib` · 305 files · 65,467 lines
 
 ---
 
@@ -36,7 +36,7 @@ The route, the server component behind it, and the client components beside it.
 | `/admin/events/[id]/registrants/[runnerId]/consent` | [`/admin/events/[id]/registrants/[runnerId]/consent/page.tsx`](../src/app/admin/events/[id]/registrants/[runnerId]/consent/page.tsx) | `PrintableSheet.tsx` |
 | `/admin/events/[id]/results` | [`/admin/events/[id]/results/page.tsx`](../src/app/admin/events/[id]/results/page.tsx) | `ResultsTableClient.tsx` `ResultsUploaderClient.tsx` |
 | `/admin/events/new` | [`/admin/events/new/page.tsx`](../src/app/admin/events/new/page.tsx) | `NewEventForm.tsx` |
-| `/admin/feedback` | [`/admin/feedback/page.tsx`](../src/app/admin/feedback/page.tsx) | `FeedbackClient.tsx` |
+| `/admin/feedback` | [`/admin/feedback/page.tsx`](../src/app/admin/feedback/page.tsx) | `FeedbackClient.tsx` `MessageDetail.tsx` |
 | `/admin/invite/[token]` | [`/admin/invite/[token]/page.tsx`](../src/app/admin/invite/[token]/page.tsx) | `InviteAcceptClient.tsx` |
 | `/admin/login` | [`/admin/login/page.tsx`](../src/app/admin/login/page.tsx) | — |
 | `/admin/marketing` | [`/admin/marketing/page.tsx`](../src/app/admin/marketing/page.tsx) | `PromoActionsMenu.tsx` `PromoCodesClient.tsx` |
@@ -52,7 +52,7 @@ The route, the server component behind it, and the client components beside it.
 | `/events` | [`/events/page.tsx`](../src/app/events/page.tsx) | — |
 | `/events/[slug]` | [`/events/[slug]/page.tsx`](../src/app/events/[slug]/page.tsx) | — |
 | `/events/[slug]/register` | [`/events/[slug]/register/page.tsx`](../src/app/events/[slug]/register/page.tsx) | `BankDetailsModal.tsx` `BankTransferWizardClient.tsx` `BirthdatePicker.tsx` `CategoryPicker.tsx` `Combobox.tsx` `CommunityPicker.tsx` `ConsentWaiver.tsx` `delivery.ts` `FreeSlotOffer.tsx` `GenderField.tsx` `GroupLimitNotice.tsx` `GuardianConsent.tsx` `PhoneField.tsx` `PosterLightbox.tsx` `PromoCodeField.tsx` `RegistrationWizardClient.tsx` `SelectField.tsx` `ShirtSizeField.tsx` `SizeGuideModal.tsx` `useStepReveal.ts` `validation.ts` |
-| `/feedback` | [`/feedback/page.tsx`](../src/app/feedback/page.tsx) | `FeedbackForm.tsx` |
+| `/feedback` | [`/feedback/page.tsx`](../src/app/feedback/page.tsx) | `FeedbackForm.tsx` `FeedbackSent.tsx` `ScreenshotField.tsx` |
 | `/privacy` | [`/privacy/page.tsx`](../src/app/privacy/page.tsx) | — |
 | `/results` | [`/results/page.tsx`](../src/app/results/page.tsx) | — |
 | `/results/[slug]` | [`/results/[slug]/page.tsx`](../src/app/results/[slug]/page.tsx) | — |
@@ -80,6 +80,7 @@ The route, the server component behind it, and the client components beside it.
 | `/api/admin/events/[id]/results/upload` | POST | [`/admin/events/[id]/results/upload/route.ts`](../src/app/api/admin/events/[id]/results/upload/route.ts) |
 | `/api/admin/feedback` | GET | [`/admin/feedback/route.ts`](../src/app/api/admin/feedback/route.ts) |
 | `/api/admin/feedback/[id]` | PATCH DELETE | [`/admin/feedback/[id]/route.ts`](../src/app/api/admin/feedback/[id]/route.ts) |
+| `/api/admin/feedback/[id]/screenshot` | GET | [`/admin/feedback/[id]/screenshot/route.ts`](../src/app/api/admin/feedback/[id]/screenshot/route.ts) |
 | `/api/admin/notifications` | GET | [`/admin/notifications/route.ts`](../src/app/api/admin/notifications/route.ts) |
 | `/api/admin/platform-fee` | PATCH | [`/admin/platform-fee/route.ts`](../src/app/api/admin/platform-fee/route.ts) |
 | `/api/admin/profile` | PATCH | [`/admin/profile/route.ts`](../src/app/api/admin/profile/route.ts) |
@@ -203,7 +204,7 @@ when a task touches one, split it before editing rather than after.
 | Lines | File |
 | --- | --- |
 | 2314 | [`src/app/admin/marketing/PromoCodesClient.tsx`](../src/app/admin/marketing/PromoCodesClient.tsx) |
-| 2191 | [`src/app/events/[slug]/register/RegistrationWizardClient.tsx`](../src/app/events/[slug]/register/RegistrationWizardClient.tsx) |
+| 2170 | [`src/app/events/[slug]/register/RegistrationWizardClient.tsx`](../src/app/events/[slug]/register/RegistrationWizardClient.tsx) |
 | 2018 | [`src/app/admin/events/[id]/registrants/RegistrantsTable.tsx`](../src/app/admin/events/[id]/registrants/RegistrantsTable.tsx) |
 | 1931 | [`src/app/events/[slug]/register/BankTransferWizardClient.tsx`](../src/app/events/[slug]/register/BankTransferWizardClient.tsx) |
 | 1504 | [`src/lib/discount.ts`](../src/lib/discount.ts) |
@@ -215,10 +216,10 @@ when a task touches one, split it before editing rather than after.
 | 856 | [`src/app/admin/events/EventsTableClient.tsx`](../src/app/admin/events/EventsTableClient.tsx) |
 | 775 | [`src/app/admin/events/[id]/pacers/PacersClient.tsx`](../src/app/admin/events/[id]/pacers/PacersClient.tsx) |
 | 750 | [`src/app/results/[slug]/full/FullResultsClient.tsx`](../src/app/results/[slug]/full/FullResultsClient.tsx) |
-| 696 | [`src/app/api/checkout/route.ts`](../src/app/api/checkout/route.ts) |
-| 693 | [`src/app/admin/feedback/FeedbackClient.tsx`](../src/app/admin/feedback/FeedbackClient.tsx) |
+| 694 | [`src/app/api/checkout/route.ts`](../src/app/api/checkout/route.ts) |
 | 663 | [`src/app/admin/activity/ActivityClient.tsx`](../src/app/admin/activity/ActivityClient.tsx) |
 | 622 | [`src/lib/activity.ts`](../src/lib/activity.ts) |
+| 603 | [`src/app/admin/feedback/FeedbackClient.tsx`](../src/app/admin/feedback/FeedbackClient.tsx) |
 | 601 | [`src/app/admin/events/new/NewEventForm.tsx`](../src/app/admin/events/new/NewEventForm.tsx) |
 | 599 | [`src/app/api/admin/events/[id]/route.ts`](../src/app/api/admin/events/[id]/route.ts) |
 | 588 | [`src/app/admin/AdminDatePicker.tsx`](../src/app/admin/AdminDatePicker.tsx) |
@@ -228,16 +229,16 @@ when a task touches one, split it before editing rather than after.
 | 539 | [`src/app/admin/clients/ClientsClient.tsx`](../src/app/admin/clients/ClientsClient.tsx) |
 | 524 | [`src/app/admin/DashboardShell.tsx`](../src/app/admin/DashboardShell.tsx) |
 | 512 | [`src/app/admin/events/[id]/registrants/RegistrantDetailModal.tsx`](../src/app/admin/events/[id]/registrants/RegistrantDetailModal.tsx) |
-| 503 | [`src/app/feedback/FeedbackForm.tsx`](../src/app/feedback/FeedbackForm.tsx) |
 | 493 | [`src/lib/promo-input.ts`](../src/lib/promo-input.ts) |
 | 491 | [`src/app/admin/AdminRouteLoading.tsx`](../src/app/admin/AdminRouteLoading.tsx) |
 | 472 | [`src/app/admin/communities/CommunitiesClient.tsx`](../src/app/admin/communities/CommunitiesClient.tsx) |
 | 472 | [`src/app/events/[slug]/register/BirthdatePicker.tsx`](../src/app/events/[slug]/register/BirthdatePicker.tsx) |
+| 472 | [`src/app/feedback/FeedbackForm.tsx`](../src/app/feedback/FeedbackForm.tsx) |
 | 469 | [`src/app/admin/clients/ApplicationPanel.tsx`](../src/app/admin/clients/ApplicationPanel.tsx) |
 | 469 | [`src/app/admin/events/[id]/registrants/ProofLightbox.tsx`](../src/app/admin/events/[id]/registrants/ProofLightbox.tsx) |
+| 467 | [`src/app/api/checkout/manual/route.ts`](../src/app/api/checkout/manual/route.ts) |
 | 460 | [`src/app/events/[slug]/page.tsx`](../src/app/events/[slug]/page.tsx) |
 | 458 | [`src/lib/registration-gate.ts`](../src/lib/registration-gate.ts) |
-| 455 | [`src/app/api/checkout/manual/route.ts`](../src/app/api/checkout/manual/route.ts) |
 | 428 | [`src/lib/actor.ts`](../src/lib/actor.ts) |
 | 427 | [`src/app/admin/page.tsx`](../src/app/admin/page.tsx) |
 | 416 | [`src/app/admin/events/[id]/results/ResultsTableClient.tsx`](../src/app/admin/events/[id]/results/ResultsTableClient.tsx) |

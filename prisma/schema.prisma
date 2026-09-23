@@ -689,6 +689,12 @@ model Feedback {
   /// The browser, truncated. "It does not work on my phone" is unactionable;
   /// the same sentence with a Safari build number is a bug we can chase.
   userAgent String?
+  /// The one screenshot a sender may attach, as a pathname in the PRIVATE Blob
+  /// store (folder `feedback/`), never a URL: a screenshot of a checkout can
+  /// show a name, an amount or a bank reference, so it is read only through a
+  /// short-lived signed link from /api/admin/feedback/[id]/screenshot, exactly
+  /// like a deposit slip. Null when they did not attach one.
+  screenshot String?
   /// "NEW" | "REVIEWED" -- the platform owner's own triage mark, so the inbox
   /// can show what has not been read yet. Nothing the sender ever sees, and
   /// deliberately not a workflow: two states are enough to keep a queue.

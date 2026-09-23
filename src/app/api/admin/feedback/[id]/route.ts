@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { platformActor } from '../../platform-actor';
 import { asFeedbackStatus } from '@/lib/feedback';
+import { deletePrivateFile } from '@/lib/blob';
 
 /**
  * Marking one message read, or throwing one away.
@@ -58,7 +59,16 @@ export async function DELETE(
     if (refusal) return refusal;
 
     const { id } = await params;
-    await prisma.feedback.delete({ where: { id } });
+    const deleted = await prisma.feedback.delete({ where: { id }, select: { screenshot: true } });
+
+    // The row was the only thing pointing at its screenshot, so the file goes
+    // with it. A failure here is logged rather than reported: the message the
+    // reader asked to remove is already gone.
+    if (deleted.screenshot) {
+      await deletePrivateFile(deleted.screenshot).catch(error =>
+        console.error('Failed to delete feedback screenshot:', error),
+      );
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

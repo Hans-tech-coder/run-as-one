@@ -1,10 +1,8 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
-import { AlertTriangle, CheckCircle2, ChevronRight, Lightbulb, Send, Sparkles } from "lucide-react";
+import { AlertTriangle, Lightbulb, Send, Sparkles } from "lucide-react";
 import FieldError from "@/components/ui/FieldError";
-import LinkPendingIcon from "@/components/ui/LinkPendingIcon";
 import { useAlert } from "@/components/ui/AlertProvider";
 import BusyLabel from "@/components/ui/BusyLabel";
 import {
@@ -17,6 +15,8 @@ import {
   looksLikeEmail,
   type FeedbackKind,
 } from "@/lib/feedback";
+import FeedbackSent from "./FeedbackSent";
+import ScreenshotField from "./ScreenshotField";
 
 /**
  * The form itself.
@@ -44,7 +44,7 @@ import {
  * do its job.
  */
 
-type Field = "kind" | "message" | "name" | "email";
+type Field = "kind" | "message" | "screenshot" | "name" | "email";
 
 /** The icon each kind wears. Lucide, in currentColor, like every other icon in
  *  the app — never an emoji. */
@@ -56,11 +56,12 @@ const KIND_ICON: Record<FeedbackKind, React.ReactNode> = {
 
 /** Form order, so the caret lands on the first thing that is wrong rather than
  *  on whichever key the object happens to iterate first. */
-const FIELD_ORDER: Field[] = ["kind", "message", "name", "email"];
+const FIELD_ORDER: Field[] = ["kind", "message", "screenshot", "name", "email"];
 
 const FIELD_ID: Record<Field, string> = {
   kind: "feedback-kind",
   message: "feedback-message",
+  screenshot: "feedback-screenshot",
   name: "feedback-name",
   email: "feedback-email",
 };
@@ -72,6 +73,7 @@ export default function FeedbackForm({ pagePath }: { pagePath: string | null }) 
   const [message, setMessage] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [screenshot, setScreenshot] = useState<File | null>(null);
 
   const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
   const [isSending, setIsSending] = useState(false);
@@ -179,17 +181,17 @@ export default function FeedbackForm({ pagePath }: { pagePath: string | null }) 
     setIsSending(true);
 
     try {
-      const res = await fetch("/api/feedback", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          kind,
-          message: message.trim(),
-          name: name.trim(),
-          email: email.trim(),
-          pagePath,
-        }),
-      });
+      // Multipart, because a screenshot may ride along. No Content-Type
+      // header: the browser writes the boundary itself.
+      const body = new FormData();
+      body.set("kind", kind);
+      body.set("message", message.trim());
+      body.set("name", name.trim());
+      body.set("email", email.trim());
+      if (pagePath) body.set("pagePath", pagePath);
+      if (screenshot) body.set("screenshot", screenshot);
+
+      const res = await fetch("/api/feedback", { method: "POST", body });
 
       const data = await res.json().catch(() => ({}));
 
@@ -233,74 +235,28 @@ export default function FeedbackForm({ pagePath }: { pagePath: string | null }) 
   const sendAnother = () => {
     setKind("");
     setMessage("");
+    setScreenshot(null);
     setErrors({});
     setIsSent(false);
   };
 
+  const setPanel = (el: HTMLElement | null) => {
+    panelRef.current = el;
+  };
+
   if (isSent) {
     return (
-      <div
-        ref={(el) => {
-          panelRef.current = el;
-        }}
-        className="t-stagger scroll-mt-[var(--nav-offset)] glass-panel relative overflow-clip rounded-3xl border border-white/10 bg-gradient-to-b from-white/5 to-transparent p-8 text-center sm:p-12"
-      >
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute left-1/2 top-0 h-64 w-64 -translate-x-1/2 rounded-full bg-accent-blue/20 blur-[80px]"
-        />
-
-        <div className="t-stagger-line t-stagger-line--1 relative z-10 flex flex-col items-center">
-          <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-accent-blue/10">
-            <CheckCircle2 size={40} className="text-accent-blue" aria-hidden="true" />
-          </div>
-
-          {/* role="status" so a screen reader is told the send worked without
-              having to go looking for the heading that replaced the form. */}
-          <h2
-            role="status"
-            className="mb-3 text-2xl font-extrabold tracking-tight text-white sm:text-3xl"
-          >
-            Thank You — We Have It
-          </h2>
-          <p className="m-0 max-w-md text-base leading-relaxed text-secondary">
-            {email.trim()
-              ? "A real person reads every one of these. If yours needs an answer, we will reply to the address you left."
-              : "A real person reads every one of these. You did not leave an address, so we cannot reply — but the message is on the pile either way."}
-          </p>
-
-          <div className="mt-8 flex w-full flex-col items-stretch justify-center gap-3 sm:flex-row sm:flex-wrap">
-            <Link
-              href="/events"
-              className="btn-gradient group w-full shrink-0 whitespace-nowrap no-underline shadow-xl shadow-accent-orange/20 sm:w-auto"
-            >
-              <span>Browse Events</span>
-              <LinkPendingIcon>
-                <ChevronRight
-                  size={18}
-                  aria-hidden="true"
-                  className="shrink-0 transition-transform group-hover:translate-x-1"
-                />
-              </LinkPendingIcon>
-            </Link>
-            <button
-              type="button"
-              onClick={sendAnother}
-              className="btn-secondary w-full shrink-0 whitespace-nowrap sm:w-auto"
-            >
-              Send Another
-            </button>
-          </div>
-        </div>
-      </div>
+      <FeedbackSent
+        hasEmail={!!email.trim()}
+        onSendAnother={sendAnother}
+        panelRef={setPanel}
+      />
     );
   }
 
   return (
     <form
-      ref={(el) => {
-        panelRef.current = el;
-      }}
+      ref={setPanel}
       onSubmit={handleSubmit}
       noValidate
       className="t-stagger scroll-mt-[var(--nav-offset)] glass-panel relative overflow-clip rounded-3xl border border-white/10 bg-gradient-to-b from-white/5 to-transparent p-5 sm:p-8"
@@ -422,8 +378,21 @@ export default function FeedbackForm({ pagePath }: { pagePath: string | null }) 
           </p>
         </div>
 
-        {/* 3 — who sent it, both optional */}
-        <div className="t-stagger-line t-stagger-line--3 grid grid-cols-1 gap-5 sm:grid-cols-2">
+        {/* 3 — what they saw, optional */}
+        <div className="t-stagger-line t-stagger-line--3">
+          <ScreenshotField
+            id={FIELD_ID.screenshot}
+            file={screenshot}
+            error={errors.screenshot}
+            onChange={({ file, error }) => {
+              setScreenshot(file);
+              setErrors((prev) => ({ ...prev, screenshot: error }));
+            }}
+          />
+        </div>
+
+        {/* 4 — who sent it, both optional */}
+        <div className="t-stagger-line t-stagger-line--4 grid grid-cols-1 gap-5 sm:grid-cols-2">
           <div className="input-group">
             <label htmlFor={FIELD_ID.name}>
               Your name <span className="text-secondary/70">(optional)</span>
@@ -475,7 +444,7 @@ export default function FeedbackForm({ pagePath }: { pagePath: string | null }) 
 
         {/* The page they came from, stated rather than collected silently. */}
         {pagePath && (
-          <p className="t-stagger-line t-stagger-line--4 m-0 rounded-[12px] border border-white/5 bg-black/30 px-4 py-3 text-xs text-secondary">
+          <p className="t-stagger-line t-stagger-line--5 m-0 rounded-[12px] border border-white/5 bg-black/30 px-4 py-3 text-xs text-secondary">
             We will attach the page you came from —{" "}
             <span className="break-all font-mono text-white/80">{pagePath}</span> — and
             your browser version, so an issue is easier to trace.
@@ -485,7 +454,7 @@ export default function FeedbackForm({ pagePath }: { pagePath: string | null }) 
         <button
           type="submit"
           disabled={isSending}
-          className="btn-gradient t-stagger-line t-stagger-line--5 w-full shadow-xl shadow-accent-orange/20"
+          className="btn-gradient t-stagger-line t-stagger-line--6 w-full shadow-xl shadow-accent-orange/20"
         >
           {isSending ? (
             <BusyLabel>Sending</BusyLabel>
