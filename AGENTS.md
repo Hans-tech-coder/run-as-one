@@ -32,6 +32,30 @@ oriented" is the most expensive possible way to start, and it is never necessary
 4. **One feature per session.** A long session re-sends its whole history every
    turn, so finishing a batch and starting fresh is cheaper than continuing.
 
+# Which skill for which task
+
+The active skills live flat in `.claude/skills/` (Claude Code) and
+`.agents/skills/` (other agents). Pick from this table instead of browsing the
+list; one or two skills per task is the norm.
+
+| Task | Skill |
+|---|---|
+| Bug fix or small behavior change | `surgical-patch`; `investigate-first` when the cause is unknown |
+| New feature | `lean-build`; plus `ui-ux-pro-max` (and `transitions-dev` if it animates) for UI |
+| Refactor or splitting a large file | `safe-refactor` |
+| Prisma queries | `prisma-client-api` |
+| Prisma CLI / schema migration | `prisma-cli`, `migration` |
+| Checking finished work | `verify-and-stop`; `caveman-review` for a diff review |
+| Stress-testing a plan | `grilling` |
+| Ending a session mid-work | `/handoff` |
+| Merge conflict (dev → main) | `resolving-merge-conflicts` |
+| Security audit | built-in `/security-review`; the Strix skills only on request, **never against the production URL** |
+| Saving tokens | `caveman*`, `cavecrew` |
+
+Skills that do not fit this stack or duplicate the ones above are parked in
+`.agents/skills-archive/` and `.claude/skills-archive/`, which no agent reads.
+Move one back into the active folder only when a task needs it.
+
 # Keep the guide accurate
 
 Any change that adds or alters a feature, a model or column, a page or API route,

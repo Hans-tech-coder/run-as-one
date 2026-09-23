@@ -295,7 +295,8 @@ src/
 prisma/schema.prisma        # the data model, heavily commented
 vercel.json                 # scheduled work (crons) — see §2
 scripts/                    # seed + one-off maintenance scripts
-.claude/skills/             # project-scoped skills (ui-ux-pro-max, 21st-*, prisma-*)
+.claude/skills/             # active project skills — task→skill table in AGENTS.md
+.claude/skills-archive/     # parked skills no agent reads (same for .agents/)
 ```
 
 ---
