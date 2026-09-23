@@ -115,3 +115,32 @@ export const FREE_ORDER_SUBMIT_LABEL = 'Complete registration';
 
 /** And what the summary calls a total of zero, instead of "Total Amount to Pay". */
 export const FREE_ORDER_TOTAL_LABEL = 'Nothing to Pay';
+
+/**
+ * PayMongo's cut on an order, added on top for the runner to pay.
+ *
+ * **Recomputed by the server, never taken from the request.** It used to live
+ * only in the online wizard, so both checkout routes trusted the posted fee and
+ * merely checked that the posted total agreed with it — a client posting a
+ * negative fee and a matching lower total paid less than the goods cost
+ * (Strix vuln-0014). Both routes now ask this of the chargeable total they
+ * recomputed themselves, and the wizard asks it of its own, so the two cannot
+ * disagree.
+ *
+ * VAT-inclusive rates, and the fee is grossed up so it covers itself:
+ * `(base × rate + fixed) / (1 − rate)`, rounded up to the next centavo so the
+ * merchant never absorbs a fraction. Bank transfer, a free order and any method
+ * PayMongo does not charge for carry no fee.
+ */
+const PAYMONGO_RATES: Record<string, { rate: number; fixed: number }> = {
+  GCASH: { rate: 0.025, fixed: 0 },
+  MAYA: { rate: 0.02, fixed: 0 },
+  QRPH: { rate: 0.015, fixed: 0 },
+  CARD: { rate: 0.035, fixed: 1500 }, // ₱15.00
+};
+
+export function transactionFeeFor(chargeable: number, paymentMethod: string | null | undefined): number {
+  const terms = paymentMethod ? PAYMONGO_RATES[paymentMethod] : undefined;
+  if (!terms || isFreeOrder(chargeable)) return 0;
+  return Math.ceil((chargeable * terms.rate + terms.fixed) / (1 - terms.rate));
+}

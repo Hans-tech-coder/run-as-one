@@ -35,6 +35,7 @@ import {
   chargeableTotal,
   isFreeOrder,
   platformFeeAfterDiscount,
+  transactionFeeFor,
 } from '@/lib/free-checkout';
 import {
   optionalUpperCaseForStorage,
@@ -274,15 +275,12 @@ export async function POST(request: Request) {
     });
     const free = isFreeOrder(chargeable);
 
-    // The one amount that was never checked before, and it has to be now: with
-    // a discount in play, an order that under-reports it would be billed more
-    // than the summary promised and one that over-reports it would be billed
-    // less. The transaction fee is still the client's own figure — PayMongo's
-    // rate table lives in the wizard — so this pins the total against it
-    // rather than re-deriving it. On a free order there is nothing for a
-    // transaction fee to be a share of, so it is zero and a posted fee is a
-    // disagreement like any other.
-    const expectedTransactionFee = free ? 0 : transactionFeeCents;
+    // Every amount is now the server's own. The transaction fee used to be the
+    // client's figure, pinned only against the posted total — so a negative fee
+    // with a matching lower total paid less than the goods cost (Strix
+    // vuln-0014). It is recomputed here from the chargeable total and the
+    // method (lib/free-checkout.ts), and a free order's is zero.
+    const expectedTransactionFee = transactionFeeFor(chargeable, paymentMethod);
     const expectedTotal = chargeable + expectedTransactionFee;
     if (amountCents !== expectedTotal || transactionFeeCents !== expectedTransactionFee) {
       return NextResponse.json(

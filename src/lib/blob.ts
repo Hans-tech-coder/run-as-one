@@ -93,7 +93,10 @@ export async function uploadPublicFile(
 ): Promise<string> {
   assertUploadable(file, kind);
 
-  const blob = await put(`${folder}/${file.name}`, file, {
+  // Same cleaning as a proof: the client names the file, so a name like
+  // `../../x.html` would otherwise land outside `folder` with an extension the
+  // content type never agreed to (Strix vuln-0013).
+  const blob = await put(`${folder}/${safeFileName(file, 'upload')}`, file, {
     access: 'public',
     addRandomSuffix: true,
     contentType: file.type,
@@ -111,11 +114,11 @@ export async function uploadPublicFile(
  * `<img>` and a PDF frame, and a receipt saved as `slip` or `slip.jpg` by a
  * banking app that then hands over a PDF would otherwise be drawn as a broken
  * image. And any directory part is dropped, so a crafted name cannot scatter
- * files around the private store.
+ * files around the store. Public uploads use it too.
  */
-function proofFileName(file: File): string {
+function safeFileName(file: File, fallback: string): string {
   const base =
-    file.name.split(/[\\/]/).pop()?.replace(/\.[^.]*$/, '').trim() || 'proof';
+    file.name.split(/[\\/]/).pop()?.replace(/\.[^.]*$/, '').trim() || fallback;
 
   return `${base}.${extensionForType(file.type)}`;
 }
@@ -136,7 +139,7 @@ export async function uploadPrivateProof(
 ): Promise<string> {
   assertUploadable(file, 'proof');
 
-  const blob = await put(`${folder}/${proofFileName(file)}`, file, {
+  const blob = await put(`${folder}/${safeFileName(file, 'proof')}`, file, {
     access: 'private',
     addRandomSuffix: true,
     contentType: file.type,

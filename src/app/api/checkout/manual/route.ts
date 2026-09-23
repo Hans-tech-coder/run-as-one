@@ -265,9 +265,11 @@ export async function POST(request: Request) {
     // The total matters more here than on the online route: this runner has
     // already transferred the money and is uploading the slip, so the amount
     // written on the order is what an organizer will reconcile against their
-    // bank statement. A bank transfer carries no transaction fee.
-    const expectedTotal = chargeable + transactionFee;
-    if (totalAmount !== expectedTotal) {
+    // bank statement. A bank transfer carries no transaction fee, so a posted
+    // one is refused rather than trusted — a negative fee would otherwise pull
+    // the total below what the goods cost (Strix vuln-0014).
+    const expectedTotal = chargeable;
+    if (totalAmount !== expectedTotal || transactionFee !== 0) {
       return NextResponse.json(
         { error: 'Prices have changed. Please reload the page and try again.' },
         { status: 409 }

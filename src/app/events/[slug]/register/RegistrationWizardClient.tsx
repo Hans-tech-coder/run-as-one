@@ -80,6 +80,7 @@ import {
   chargeableTotal,
   isFreeOrder,
   platformFeeAfterDiscount,
+  transactionFeeFor,
 } from "@/lib/free-checkout";
 import PromoCodeField from "./PromoCodeField";
 import FreeSlotOffer from "./FreeSlotOffer";
@@ -557,36 +558,14 @@ export default function RegistrationWizardClient({
   const groupLimit = promoGroupSize(groupPromo);
   const atGroupLimit = groupLimit !== null && participants.length >= groupLimit;
 
-  // Dynamic Transaction Fee based on payment method
-  let transactionFee = 0;
-  if (step === 3 && paymentMethod !== "BANK_TRANSFER" && !isFree) {
-    // Net of the discount: PayMongo's cut is a share of what they actually
-    // process, so charging the runner a fee on money nobody is collecting
-    // would hand the difference to no one.
-    const baseAmountForFee = subtotal + deliveryFee + platformFee - discountAmount;
-
-    // Using VAT-inclusive rates (PayMongo deducts this from the total gross amount)
-    // Formula to perfectly cover the fee: Fee = (Base * rate + fixed) / (1 - rate)
-    if (paymentMethod === "GCASH") {
-      const rate = 0.025; // 2.5%
-      transactionFee = (baseAmountForFee * rate) / (1 - rate);
-    } else if (paymentMethod === "MAYA") {
-      const rate = 0.02; // 2.0%
-      transactionFee = (baseAmountForFee * rate) / (1 - rate);
-    } else if (paymentMethod === "QRPH") {
-      const rate = 0.015; // 1.5%
-      transactionFee = (baseAmountForFee * rate) / (1 - rate);
-    } else if (paymentMethod === "CARD") {
-      const rate = 0.035; // 3.5%
-      const fixed = 1500; // ₱15.00 in centavos
-      transactionFee = (baseAmountForFee * rate + fixed) / (1 - rate);
-    }
-
-    // Round up to the next whole centavo so the merchant never absorbs a
-    // fraction. This is the only place a non-integer can appear, because the
-    // rate multiplication above produces a fractional centavo.
-    transactionFee = Math.ceil(transactionFee);
-  }
+  // PayMongo's cut, from the same function both checkout routes recompute it
+  // with (lib/free-checkout.ts). Net of the discount: it is a share of what
+  // PayMongo actually processes. Shown only on step 3, where the method is
+  // chosen.
+  const transactionFee =
+    step === 3
+      ? transactionFeeFor(subtotal + deliveryFee + platformFee - discountAmount, paymentMethod)
+      : 0;
 
   const totalAmount =
     subtotal + deliveryFee + platformFee + transactionFee - discountAmount;
