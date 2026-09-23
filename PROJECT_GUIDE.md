@@ -91,7 +91,7 @@ event on `/admin/remittances` (`ADMIN_MERGE_PLAN.md` Batch 6, §5
 
 ## 2. Stack and hard constraints
 
-- **Next.js 16.2 (App Router) + React 19**, TypeScript, deployed on **Vercel**.
+- **Next.js 16.3 (App Router) + React 19**, TypeScript, deployed on **Vercel**.
 - **This is NOT the Next.js in your training data.** Breaking API and convention
   changes. **Read the relevant guide in `node_modules/next/dist/docs/` before
   writing Next-specific code.** Two changes that bite immediately:
@@ -104,7 +104,7 @@ event on `/admin/remittances` (`ADMIN_MERGE_PLAN.md` Batch 6, §5
 - **Vercel Blob** for every uploaded file. There is **no local filesystem
   fallback** — Vercel's disk is read-only, so `writeFile` is never an option.
 - Other notable deps: `jose` (JWT), `bcryptjs`, `pdf-lib` (e-certificates),
-  `xlsx` (results import / registrant export), `@tanstack/react-table`,
+  `xlsx` (results import / registrant export; installed from the SheetJS CDN tarball, since npm has no patched release), `@tanstack/react-table`,
   `framer-motion`, `lucide-react`.
 - **Production is live** at `https://run-as-one.cresendorunningcommunity.com`
   — Vercel project `run-as-one`, linked to `Hans-tech-coder/run-as-one`. Every

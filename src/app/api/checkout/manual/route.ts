@@ -55,8 +55,18 @@ import { resolveDiscount } from '@/lib/promo-store';
 
 export async function POST(request: Request) {
   try {
-    const formData = await request.formData();
-    
+    // A body that is not a form (JSON, empty, malformed) is a bad request from
+    // the caller, not a server failure, so it is refused before anything else.
+    let formData: FormData;
+    try {
+      formData = await request.formData();
+    } catch {
+      return NextResponse.json(
+        { error: 'Send the order as a form with the payment proof attached.' },
+        { status: 400 }
+      );
+    }
+
     const proofFile = formData.get('proofFile') as File | null;
     const eventId = formData.get('eventId') as string;
     const customerEmail = formData.get('customerEmail') as string;

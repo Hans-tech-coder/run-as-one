@@ -18,22 +18,27 @@ each one below says what a cold session needs to pick it up.
 - Side effect: the scan's PoC placed a real order (`attacker@example.com`) in the
   **dev** database. It is left alone until the owner decides what to do with it.
 
-## Batch 2: dependencies (next session)
+## Batch 2: dependencies (done 2026-09-23, uncommitted until the owner says so)
 
-1. **CRITICAL vuln-0003: `next` 16.2.12 → ≥ 16.3.3.** The RCE only affects Windows
-   hosts. Production runs on Vercel (Linux), so the live risk is low, but the fix
-   is cheap. Read `node_modules/next/dist/docs/` for the upgrade notes, bump
-   `next` (and `eslint-config-next` if it is pinned to match), then run
-   `npm run build` and smoke-test checkout on localhost.
-2. **HIGH vuln-0005 / LOW vuln-0006: `xlsx` 0.18.5.** npm has no fixed version.
-   SheetJS only publishes fixes on its own CDN tarball
-   (`https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz`). The only use is
-   `XLSX.read` in `src/app/admin/events/[id]/results/ResultsUploaderClient.tsx`,
-   on a file an admin picks. **The owner decides:** the CDN tarball (recommended)
-   or another parser.
-3. INFO findings (postcss, fast-uri, deepmerge-ts) are transitive. Run
-   `npm audit` after step 1 and take only what `npm audit fix` resolves without
-   `--force`.
+1. **CRITICAL vuln-0003.** `next` and `eslint-config-next` are pinned at
+   **16.3.6**. The 16.3 codemods (`cache-components-instant-false`,
+   `remove-partial-prefetch`) are only for opting into new features, so neither
+   was run. `npm run build` passes.
+2. **HIGH vuln-0005 / LOW vuln-0006.** The owner chose the SheetJS CDN tarball,
+   so `xlsx` now points at `https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz`
+   (0.20.3). The API is unchanged. A write-then-`XLSX.read` round trip with the
+   uploader's `sheet_to_json` options returns the expected rows.
+3. **Transitive.** `npm audit fix` without `--force` fixed `fast-uri` and
+   `js-yaml`. Still open, because they need `--force` (a breaking major):
+   `deepmerge-ts` < 8 and `mysql2` ≤ 3.23.0. Leave them unless a later scan
+   shows they can be reached.
+4. **Smoke test on localhost (16.3.6 dev server).** `/events/pink-run-2026/register`
+   renders step 1 and the order summary (₱799 + ₱40 fee) with no console errors.
+   `/api/checkout` (JSON) and `/api/checkout/manual` (multipart) both reject an
+   empty body with 400 and write nothing. No order was placed.
+   Aside, not from the upgrade: sending JSON or an empty body to
+   `/api/checkout/manual` used to return 500. Fixed: the route now returns 400
+   when the body is not a form.
 
 ## Batch 3: verify
 
