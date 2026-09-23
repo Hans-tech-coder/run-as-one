@@ -6,6 +6,7 @@ import type {
   DesktopRow,
   DesktopShape,
   FormPanelShape,
+  LinkPanelShape,
   RouteShape,
 } from "./route-loading-shape";
 import DashboardHeader from './DashboardHeader';
@@ -109,14 +110,16 @@ function ShapeSkeleton({ shape }: { shape: RouteShape }) {
         </>
       )}
 
-      {list?.frame === "titled-panel" && (
-        <div className="admin-panel">
-          <div className="admin-panel-header">
-            <PanelTitle />
+      <OverviewStack panels={shape.linkPanels} lg={false}>
+        {list?.frame === "titled-panel" && (
+          <div className="admin-panel">
+            <div className="admin-panel-header">
+              <PanelTitle />
+            </div>
+            <AdminCardListSkeleton />
           </div>
-          <AdminCardListSkeleton />
-        </div>
-      )}
+        )}
+      </OverviewStack>
 
       {shape.eventCards ? <EventCardsSkeleton count={shape.eventCards} /> : null}
 
@@ -144,6 +147,57 @@ function ToolbarSkeleton({ height }: { height: number }) {
     <div className="t-skel-skeleton is-pulsing flex w-full flex-col gap-2" style={{ height: `${height}px` }}>
       <div className="t-skel-bar" style={{ width: "100%", height: "40px", flexShrink: 0 }} />
       {height > 48 && <div className="t-skel-bar" style={{ width: "100%", flex: 1 }} />}
+    </div>
+  );
+}
+
+/**
+ * The Overview's link-row panels, in the page's own `.overview-stack` with the
+ * titled list as its last block, so the 32px between blocks is the page's gap
+ * and not a copy of it. With no link panels the list is drawn as it always was.
+ */
+function OverviewStack({
+  panels,
+  lg,
+  children,
+}: {
+  panels?: LinkPanelShape[];
+  lg: boolean;
+  children: React.ReactNode;
+}) {
+  if (!panels?.length) return <>{children}</>;
+  return (
+    <div className="overview-stack">
+      {panels.map((panel, index) =>
+        panel.rows === 0 ? (
+          <div key={index} className="overview-quiet">
+            <div className="t-skel-skeleton is-pulsing w-full">
+              <div className="t-skel-bar" style={{ width: "55%", height: "16px" }} />
+            </div>
+          </div>
+        ) : (
+          <div key={index} className="admin-panel">
+            <div className="admin-panel-header">
+              <PanelTitle />
+            </div>
+            <div className="overview-list">
+              {Array.from({ length: panel.rows }, (_, row) => (
+                <div
+                  key={row}
+                  className="overview-row t-skel-skeleton is-pulsing"
+                  style={{ height: `${(lg ? panel.lgRow : panel.row) ?? 64}px`, flexWrap: "nowrap" }}
+                >
+                  <div className="flex flex-1 flex-col gap-2">
+                    <div className="t-skel-bar" style={{ width: "50%", height: "16px" }} />
+                    <div className="t-skel-bar" style={{ width: "35%", height: "12px" }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ),
+      )}
+      {children}
     </div>
   );
 }
@@ -289,14 +343,16 @@ function DesktopSkeleton({ shape }: { shape: RouteShape }) {
         </>
       )}
 
-      {list?.frame === "titled-panel" && (
-        <div className="admin-panel">
-          <div className="admin-panel-header">
-            <PanelTitle />
+      <OverviewStack panels={shape.linkPanels} lg>
+        {list?.frame === "titled-panel" && (
+          <div className="admin-panel">
+            <div className="admin-panel-header">
+              <PanelTitle />
+            </div>
+            <TableSkeleton {...table} />
           </div>
-          <TableSkeleton {...table} />
-        </div>
-      )}
+        )}
+      </OverviewStack>
 
       {shape.eventCards ? <EventCardsSkeleton count={shape.eventCards} /> : null}
 

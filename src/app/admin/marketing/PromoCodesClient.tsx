@@ -66,6 +66,7 @@ import {
 } from '@/lib/discount';
 import { MAX_VOUCHER_BATCH } from '@/lib/voucher-codes';
 import { formatPesos } from '@/lib/money';
+import { formatInstantDay } from '@/lib/event-schedule';
 import type { PromoRedemption } from '@/lib/promo-redemptions';
 import AdminDatePicker from '../AdminDatePicker';
 
@@ -1452,11 +1453,7 @@ export default function PromoCodesClient({
                       <span className="text-xs text-secondary truncate max-sm:whitespace-normal">
                         {`${order.eventTitle} · ${order.runners} ${
                           order.runners === 1 ? 'runner' : 'runners'
-                        } · ${new Date(order.createdAt).toLocaleDateString('en-PH', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric',
-                        })}`}
+                        } · ${formatInstantDay(order.createdAt)}`}
                       </span>
                       {/* Inside a batch this is the only thing telling one
                           redemption from another — which voucher went where. */}

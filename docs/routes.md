@@ -115,18 +115,39 @@ naming the client. The wait draws three tiles over three event cards
 only**, and **every other `/admin` screen answers it with *Not Part of Your
 View*** (`admin/forbidden.tsx`, §7) — Settings stays, name, email and password
 as for anyone. Everyone else's `/admin` is the
-dashboard (an Overview of three tiles — **Total Revenue (Net)**,
-**Total Registrants**, **Active Events** — plus a fourth, **Platform Fees
-Collected** (the `platformFee` of PAID orders), for `platform:manage` only: it
-was the super admin dashboard's *Platform Revenue* tile, and Run As One now
-keeps that money itself. The super admin dashboard's *Total Organizers* and
-*Transaction Volume* tiles were not carried over — clients replace organizers in
-Batch 3, and volume is the net revenue beside it plus fees. `loading.tsx` draws
-four tiles for the same people through `dashboard-nav.tsx`. Then the five most recent
-registrations. There is no *Page Views* tile: it was a placeholder that only
-ever read `N/A`, and a metric card that never carries a number teaches an
-organizer to stop reading the row. Do not re-add a tile until something real
-counts behind it) · `/admin/login` · **`/admin/register` — the organizer
+dashboard's **Overview** (`OVERVIEW_PLAN.md` Batch 1), four blocks and no more
+— the owner wants the work queue and the numbers, but not a long page:
+**tiles** — **Total Revenue (Net)** (`subtotal + deliveryFee − discountAmount`
+of PAID orders), **Total Registrants** (runners on PAID orders), **Active
+Events** (races not finished, `upcomingEvents`), plus **Platform Fees
+Collected** (the `platformFee` of PAID orders) for `platform:manage` only — all
+**all-time**, with no period selector (per-period money is
+`/admin/remittances`). **Every tile is a link**: the money tiles to
+`/admin/remittances` for `remittance:manage`, otherwise to `/admin/events`; the
+other two to `/admin/events`. Then **Awaiting Verification** — PENDING **bank
+transfers** only (an online PENDING waits on PayMongo and is swept by
+`pending-expiry.ts`), the count in the heading, the five **oldest first**, each
+with the customer, race, reference, runners, amount and **how long it has
+waited** (amber from 48h), each opening
+`/admin/events/[id]/registrants?search=<orderRef>`. **With nothing waiting it
+is one quiet line** (`.overview-quiet`), not an empty state, so a calm morning
+does not lengthen the page. Then **Live Events** — one row per race not
+finished, soonest first, up to six (then *All N* to `/admin/events`): title,
+paid and pending runners, a fill bar and *N of M slots* when every option is
+capped (else *No slot cap*, the same reading `fullEventIds` gives), and the
+date; each opens its registrants. Hidden when nothing is live. Last, the five
+most recent PAID registrations, each reference opening its order the same way
+(*View Order* on a phone's card); empty, it offers *Create Event* (or *Go to
+Events* without `event:create`). **Everything is counted by the database** — an
+`aggregate`, two `count`s, two `runner.groupBy`s and three bounded `findMany`s,
+run together — never a whole table reduced in JavaScript, and every query goes
+through `reachableEvents(actor, 'registration:view')`, so a STAFF member's
+queue and numbers cover only assigned races. Dates are the **Manila** day
+(`formatInstantDay`). The wait draws the tiles, the queue as its quiet line,
+two live rows and the recent list (`route-loading-shape.ts`, `linkPanels`).
+There is no *Page Views* tile: it was a placeholder that only ever read `N/A`,
+and a metric card that never carries a number teaches an organizer to stop
+reading the row. Do not re-add a tile until something real counts behind it · `/admin/login` · **`/admin/register` — the organizer
 application, which since `ADMIN_MERGE_PLAN.md` Batch 3 creates a `Client`
 submission and no account** (both drawn without the sidebar, and both carrying
 `AuthHomeLink` back to the public site — §8). It is a **three-step form**, not

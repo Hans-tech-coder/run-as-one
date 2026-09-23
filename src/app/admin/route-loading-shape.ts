@@ -44,6 +44,12 @@ export type RouteShape = {
   /** Form or text panels, top to bottom, below `lg`. */
   panels?: FormPanelShape[];
   /**
+   * The Overview's link-row panels (`.overview-stack`), top to bottom, drawn
+   * between the tiles and the titled list at every width. A panel of no rows
+   * is the one-line `.overview-quiet` bar that stands in for an empty queue.
+   */
+  linkPanels?: LinkPanelShape[];
+  /**
    * A client viewer's event cards (`.viewer-event-grid`), how many to draw.
    * The grid lays them out the same way at every width, so both layouts read
    * this one number.
@@ -51,6 +57,15 @@ export type RouteShape = {
   eventCards?: number;
   /** The same page from `lg` up. */
   lg?: DesktopShape;
+};
+
+export type LinkPanelShape = {
+  /** How many `.overview-row`s to draw; 0 is the quiet one-line bar. */
+  rows: number;
+  /** One row's height below `lg`, where its two ends stack. */
+  row?: number;
+  /** The same row from `lg` up, its two ends side by side. */
+  lgRow?: number;
 };
 
 export type FormPanelShape = {
@@ -143,6 +158,14 @@ const THREE_ROW_TOOLBAR = 144;
 /** Every dashboard toolbar is one 40px row inside its padding from `lg` up. */
 const LG_TOOLBAR = 40;
 
+/**
+ * A live race's `.overview-row` — title, paid/pending line, fill bar — at 390px,
+ * where the date and slots drop under it, and from `lg` up, where they sit
+ * beside it.
+ */
+const OVERVIEW_LIVE_ROW = 120;
+const OVERVIEW_LIVE_ROW_LG = 88;
+
 /** A `.data-table`'s header and body rows (the Dashboard's recent registrations, the last one left). */
 const LG_PLAIN_TABLE = { head: 51, row: 54 };
 
@@ -151,8 +174,12 @@ const LG_TANSTACK_HEAD = 53;
 
 const EXACT: Record<string, RouteShape> = {
   // Three tiles, or four for `platform:manage` — see OVERVIEW_PLATFORM_METRICS.
+  // Then the queue, drawn as its quiet line because on most mornings nothing
+  // is waiting, and the live races at two rows — a guess, since how many are
+  // live is not known while waiting; two is the usual calendar.
   '/admin': {
     metrics: 3,
+    linkPanels: [{ rows: 0 }, { rows: 2, row: OVERVIEW_LIVE_ROW, lgRow: OVERVIEW_LIVE_ROW_LG }],
     list: { frame: 'titled-panel' },
     // The panel holds the five latest registrations, and only ever five.
     lg: { table: { ...LG_PLAIN_TABLE, rows: 5 } },

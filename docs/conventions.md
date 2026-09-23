@@ -90,6 +90,16 @@
   with *View Details* — never a bare chevron or a glyph whose meaning lives only
   in a hover `title`, which a phone does not have. The owner's call after a
   chevron-only Actions column on the Remittances list read as unclear.
+- **A list whose every row goes to one place is a link list, not a table**
+  (`.overview-list` / `.overview-row` in `Admin.css`, the Overview's queue and
+  live races). The **whole row is the link** — at least 64px tall, hover and
+  focus ring on the row — so there is no action column to explain; the
+  trailing chevron is only the "this opens" cue beside a row whose text already
+  names what it is, and it drops on a phone, where the row's two ends stack
+  instead of scrolling. A metric tile that opens its explanation is
+  `.metric-card.is-link` (a `Link`, border and surface answer the pointer).
+  A row with an *action* — anything besides opening — is still a table row with
+  a labelled button, per the rule above.
 - **Changing who is signed in ends with `router.refresh()`.** The sidebar is
   rendered by the **layout** (`admin/layout.tsx` reads `getSignedInUser()`), and
   the sign-in pages live *under* `/admin`, so they share that layout — rendered
@@ -293,7 +303,9 @@
     shape (the Overview's tile count also reads `dashboard-nav.tsx`, since
     `platform:manage` adds a fourth) from `admin/route-loading-shape.ts`.
     Below `lg` that is metric tiles, the toolbar's wrapped rows and a card
-    list in its frame, or form panels field by field. The same entry's `lg`
+    list in its frame, or form panels field by field — and on the Overview,
+    `linkPanels` between the tiles and the list: the queue as its one-line
+    quiet bar, then live-race rows at their measured height. The same entry's `lg`
     block is the desktop: the toolbar in the one row it unwraps into, and the
     **table** the cards stand in for — its header band and its rows at that
     screen's own row height — or a panel's rows in a real `.form-grid`, where

@@ -12,9 +12,39 @@ viewer still landing on its own screen.
 
 | Batch | What | State |
 | --- | --- | --- |
-| 1 | Make the Overview answer the morning question: pending queue, live events, real aggregates, working links, Manila dates | not started |
+| 1 | Make the Overview answer the morning question: pending queue, live events, real aggregates, working links, Manila dates | **Landed (dev)** — complete, uncommitted |
 
-Batch 1 has not been started. The plan below is complete enough to begin from.
+**Batch 1 has landed; the plan is finished** (2026-09-23, on `dev`,
+uncommitted). What shipped:
+
+- **Queries.** `page.tsx` issues eight fixed queries, run together: the live
+  races (`findMany`, `upcomingEvents` + `soonestFirst`), one `aggregate` for
+  revenue and platform fees, a `count` of runners on PAID orders, a `count` and
+  a `take: 5` `findMany` for the queue, a `take: 5` `findMany` for recent
+  orders, and two `runner.groupBy`s (PAID, PENDING) for the live races' fill.
+  Nothing loads a table to reduce it in JavaScript. Checked against the
+  local-dev branch: revenue, registrants and fees equal the old per-row sums to
+  the centavo. All go through `reachableEvents(actor, 'registration:view')`.
+- **Awaiting Verification** counts PENDING **bank transfers** only — an online
+  PENDING is waiting on PayMongo and `pending-expiry.ts` sweeps it — the five
+  oldest, with age (amber from 48h), each opening its race's registrants with
+  `?search=<orderRef>` (the precedent the marketing screen set). With nothing
+  waiting it is the one-line `.overview-quiet` bar.
+- **Live Events**: up to six rows, then *All N*; paid/pending, and a fill bar
+  with *N of M slots* only when every option is capped (else *No slot cap*).
+  Hidden when nothing is live.
+- **Tiles are links** (`.metric-card.is-link`): money to `/admin/remittances`
+  for `remittance:manage`, otherwise `/admin/events`. Recent rows link by
+  reference (*View Order* on a phone card). The empty state offers *Create
+  Event* or *Go to Events*.
+- **Manila dates**: new `formatInstantDay` in `lib/event-schedule.ts`, used on
+  the Overview and in `marketing/PromoCodesClient.tsx`. `ApplicationPanel.tsx`
+  already passed `timeZone: 'Asia/Manila'` and needed nothing.
+- **Skeleton**: `RouteShape.linkPanels` (route-loading-shape.ts), drawn by
+  `AdminRouteLoading`'s `OverviewStack`; live rows measured at 120px (390) and
+  88px (`lg`).
+- **Recent Registrations was kept**, as the plan required. If the page reads
+  long in use, it is the block to raise with the owner — not to drop unasked.
 
 ## How to run it
 

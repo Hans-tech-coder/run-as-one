@@ -3,6 +3,12 @@
 
 ## 10. Current state
 
+**The Overview answers the morning question** (2026-09-23, `OVERVIEW_PLAN.md`
+Batch 1, on `dev`, uncommitted): pending bank transfers as an oldest-first
+queue with their age, one row per live race with its fill, the tiles and
+recent orders all links, every figure counted by the database instead of in
+JavaScript, and Manila dates. No migration. See §6 `/admin`.
+
 **`FEATURES_CHECKLIST.md` and `IMPROVEMENTS_PLAN.md` are deleted.** Both were
 finished — every major section of the roadmap ticked through the results and
 e-certificate module, and all fourteen improvements across `IMPROVEMENTS_PLAN`'s

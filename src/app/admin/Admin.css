@@ -832,6 +832,208 @@
   overflow-wrap: anywhere;
 }
 
+/* A tile that opens the screen explaining its number (the Overview). The
+   border answers the pointer rather than a lift: tiles sit in a grid, and one
+   jumping out of line reads as a glitch. */
+.metric-card.is-link {
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+
+.metric-card.is-link:hover {
+  border-color: var(--dash-border);
+  background: var(--dash-hover);
+}
+
+.metric-card.is-link:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
+}
+
+/* ── The Overview's blocks (OVERVIEW_PLAN.md) ─────────────────────────────
+   The queue, the live races and the recent orders, 32px apart — the gap the
+   route skeleton draws between them (route-loading-shape.ts, linkPanels). */
+.overview-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+/* Nothing awaiting verification: one line in place of a panel, so a calm
+   morning does not make the page longer. */
+.overview-quiet {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 56px;
+  padding: 0 var(--space-lg);
+  border: 1px solid var(--dash-hairline);
+  border-radius: var(--radius-xl);
+  background: var(--dash-surface);
+  color: var(--text-secondary);
+  font-size: 0.9375rem;
+}
+
+.overview-quiet svg {
+  flex-shrink: 0;
+  color: var(--status-success);
+}
+
+.overview-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 22px;
+  margin-left: 8px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--status-warning) 16%, transparent);
+  color: var(--status-warning);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  vertical-align: 2px;
+}
+
+.overview-panel-note {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+
+.overview-panel-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+.overview-panel-link:hover { color: var(--text-primary); }
+
+.overview-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.overview-list > * + * { border-top: 1px solid var(--dash-hairline); }
+
+/* One row, one destination: the whole row is the link, at least 64px tall,
+   and its two ends wrap under each other rather than squeezing at 360px. */
+.overview-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 64px;
+  padding: 12px var(--space-lg);
+  color: inherit;
+  text-decoration: none;
+  transition: background-color 150ms ease;
+}
+
+.overview-row:hover { background: var(--dash-hover); }
+
+.overview-row:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: -2px;
+}
+
+.overview-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.overview-row-title {
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.overview-row-meta {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.overview-row-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.overview-row-amount {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.overview-age {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.overview-age.is-overdue {
+  color: var(--status-warning);
+  font-weight: 600;
+}
+
+.overview-row-go {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+}
+
+/* A live race's fill: paid then pending, against the slots it has. */
+.overview-fill {
+  height: 6px;
+  max-width: 320px;
+  margin-top: 4px;
+}
+
+/* The recent table's reference is the row's way to its order. */
+.overview-ref {
+  color: var(--text-primary);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: var(--dash-border);
+  text-underline-offset: 3px;
+}
+
+.overview-ref:hover { text-decoration-color: currentColor; }
+
+@media (max-width: 639px) {
+  /* A phone stacks the row's two ends: the name over a line holding the
+     amount and the age. The chevron goes — the full-width row is plainly one
+     target, and its 28px are worth more to the text. */
+  .overview-row { flex-wrap: wrap; gap: 8px; }
+  .overview-row-main { flex-basis: 100%; }
+  .overview-row-go { display: none; }
+  .overview-row-side {
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .metric-card.is-link,
+  .overview-row { transition: none; }
+}
+
 /* Data Tables */
 .admin-panel {
   background: var(--dash-surface);

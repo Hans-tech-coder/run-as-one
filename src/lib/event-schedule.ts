@@ -247,3 +247,18 @@ export function formatEventInstantShort(value: Date | string, now: Date = new Da
   const readable = formatEventDayShort(day);
   return sameYear ? readable.replace(/,\s*\d{4}$/, '') : readable;
 }
+
+/**
+ * "Sep 23, 2026" — the Manila calendar day an instant fell on, for the
+ * dashboard's order and redemption dates.
+ *
+ * A bare `toLocaleDateString()` reads the zone of whatever machine renders it,
+ * and a server component renders on Vercel in UTC: an order placed at 07:00 in
+ * Manila printed as the day before. Taking the day in Manila first, then
+ * printing it the way event days are printed, makes the server and a browser
+ * anywhere agree.
+ */
+export function formatInstantDay(value: Date | string): string {
+  const { day } = eventInstantParts(value);
+  return day ? formatEventDayShort(day) : '';
+}
