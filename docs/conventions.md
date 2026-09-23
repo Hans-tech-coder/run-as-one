@@ -134,6 +134,25 @@
     shortcut nobody is told about is not a feature. It is an ARIA combobox on
     the app's own `.t-modal`, not a new dialog. Destinations outside the menu
     reach it through the shell's `quickJumpExtras`.
+  - **It reaches races by name too**, from two characters up, through
+    `GET /api/admin/search` (§6, Batch 2). Three rules keep a networked
+    palette from feeling like one, and any other search-as-you-type screen
+    should copy them:
+    - **The instant answer renders first and is never displaced.** The rows
+      already in the browser are drawn from the first keystroke and stay put
+      while the request is in flight; fetched rows **append** under their own
+      heading. An answer arriving between a keystroke and Enter therefore
+      cannot move the row the cursor is already on.
+    - **A failed fetch has no error state.** It records an empty result and
+      says nothing — the menu's own rows are on screen and still work, and a
+      banner over them would take away the one thing the palette can always
+      do.
+    - **The query's state is derived, not stored.** `searching` is
+      "the last answer's needle ≠ the field's", and the previous rows stand
+      only while the word they answered is being extended or backspaced. That
+      is what stops a cleared box followed by a new word from showing the old
+      race for a beat — and it keeps `setState` out of an effect body, which
+      the React compiler's lint rule refuses anyway.
   - **From `md` up the menu collapses to an 80px icon rail** from the round
     chevron on its edge. Icons never move. Labels
     fade but stay each row's accessible name, and a tooltip (transitions.dev's

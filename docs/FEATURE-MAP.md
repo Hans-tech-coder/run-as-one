@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-36 pages · 46 API routes · 67 modules in `src/lib` · 301 files · 64,730 lines
+36 pages · 47 API routes · 67 modules in `src/lib` · 302 files · 64,906 lines
 
 ---
 
@@ -97,6 +97,7 @@ The route, the server component behind it, and the client components beside it.
 | `/api/admin/remittances/[id]/proof` | GET | [`/admin/remittances/[id]/proof/route.ts`](../src/app/api/admin/remittances/[id]/proof/route.ts) |
 | `/api/admin/runners/[id]` | PUT DELETE | [`/admin/runners/[id]/route.ts`](../src/app/api/admin/runners/[id]/route.ts) |
 | `/api/admin/runners/bulk-delete` | POST | [`/admin/runners/bulk-delete/route.ts`](../src/app/api/admin/runners/bulk-delete/route.ts) |
+| `/api/admin/search` | GET | [`/admin/search/route.ts`](../src/app/api/admin/search/route.ts) |
 | `/api/admin/site-settings` | PATCH | [`/admin/site-settings/route.ts`](../src/app/api/admin/site-settings/route.ts) |
 | `/api/admin/team` | POST | [`/admin/team/route.ts`](../src/app/api/admin/team/route.ts) |
 | `/api/admin/team/[id]` | PATCH DELETE | [`/admin/team/[id]/route.ts`](../src/app/api/admin/team/[id]/route.ts) |

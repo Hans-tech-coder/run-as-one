@@ -10,7 +10,7 @@ Dashboard alone.
 | Batch | What | State |
 | --- | --- | --- |
 | 1 | The menu finds its place again: sub-route active state, grouped sections, quick jump, footer, skip link | **Landed (dev)** — complete |
-| 2 | Quick jump reaches events by name (search API) | **Deferred by the owner**, not abandoned |
+| 2 | Quick jump reaches events by name (search API) | **Landed (dev)** — complete |
 | 3 | The shell owns the header: retire `--dash-accessory-w`, add breadcrumbs | **Deferred by the owner**, not abandoned |
 
 Batches 2 and 3 were **staged deliberately**, not left half-done. The owner was
@@ -19,17 +19,16 @@ split off because reaching events by name needs a search route that Batch 1's
 client-only quick jump does not. The project's rule is **one batch per
 session**, so each of these is meant to be started fresh.
 
+**Batch 3 is still pending and still deferred on purpose.** Everything a cold
+session needs to run it is under its own heading below — what
+`--dash-accessory-w` does today, why 25 page files each have to remember it,
+and where breadcrumbs belong. Nothing about it was started in Batch 2.
+
 ## How to run a pending batch
 
 Open a new session in this repository and paste the matching line. Everything
 the session needs is in this file — it does not need the conversation that
 produced it.
-
-**Batch 2:**
-
-```
-Read DASHBOARD_SHELL_PLAN.md and do Batch 2 only. Stop when it is done.
-```
 
 **Batch 3:**
 
@@ -110,24 +109,61 @@ down because each is easy to reintroduce:
   from the row, so the chevron's protruding button no longer throws its tooltip
   further out than the rest.
 
-## Batch 2 — the quick jump reaches events (deferred)
+## Batch 2 — what landed
 
-Batch 1's quick jump (`admin/DashboardQuickJump.tsx`) searches a list that is
-already in the browser: the menu's rows plus the settings pages, handed to the
-shell as `quickJumpExtras`. Reaching **a single race by name** — "pink" landing
-on Pink Run 2026's registrants — is what staff will actually want, and it needs
-a route, because the events a person may see depend on their role.
+Batch 1's quick jump searched a list already in the browser. It now also
+reaches **a single race by name**: typing "pink" and pressing Enter lands on
+Pink Run 2026's registrants, which was this batch's acceptance test and is
+verified.
 
-What it takes:
+- **`GET /api/admin/search`** (`api/admin/search/route.ts`). `?q=` matched
+  against event titles, case-insensitively, answering
+  `{ events: [{ id, title, day, href }] }`. Signed-in only (401), and what
+  comes back is `reachableEvents(actor, 'registration:view')` — the same gate
+  the registrants page enforces, asked of `actor.ts` rather than re-derived
+  here. A **client viewer** holds `event:view-summary` alone, so that `where`
+  is empty for one and its palette stays the Batch 1 menu.
+  - **The match happens on the server for a reason**: shipping every title to
+    the browser so it could filter there would hand a STAFF member the names of
+    the races they were deliberately not assigned to.
+  - A query under **2 characters** is answered `{ events: [] }` with no
+    database call; results are capped at **8**. The palette is a way to *one*
+    known thing, and the menu's own rows have to stay in view underneath it.
+  - **Registrants is the destination**, not the edit form: a person typing a
+    race's name on event day is looking for the people in it. The heading
+    (*Event registrants*) says so, so the jump is never a surprise.
+- **Debounced fetching in `DashboardQuickJump`** — 180ms, one `AbortController`
+  per run, hits appended under their own heading **below** the static rows.
+  Each row carries the race's day (`.dash-jump-row-meta`), so two similar
+  titles are told apart; the title ellipsises against it.
+- **The static list stays answerable with no network.** It renders from the
+  first keystroke and is never displaced, and a failed fetch records an empty
+  result **silently** — no error state at all. An error banner over rows that
+  still work would take away the one thing the palette can always do.
 
-- A `GET /api/admin/search` returning events the actor may reach
-  (`reachableEvents(actor, 'registration:view')` in `lib/actor.ts` is the same
-  gate the Overview uses), matched on title, capped at ~8 rows.
-- Debounced fetching in `DashboardQuickJump`, merged under their own heading
-  below the static rows, so typing never makes the menu's own destinations
-  disappear.
-- The static list must stay answerable with no network: a failed or slow fetch
-  leaves the menu rows working, never an empty palette.
+### Worth not re-deriving
+
+- **The search's state is derived, not stored.** `searching` is "the last
+  answer's needle ≠ the field's", and the previous rows stand only while the
+  word they answered is being extended or backspaced (`holds`). Storing it
+  meant clearing state synchronously in an effect body, which this repo's lint
+  refuses (*"Calling setState synchronously within an effect can trigger
+  cascading renders"*) — and deriving it also fixed the real bug behind that
+  rule: a cleared box followed by a new word briefly showed the previous
+  search's race.
+- **`live` beside the `AbortController`.** Aborting rejects the fetch, whose
+  `catch` runs *after* the next request is already out; without the flag that
+  rejection publishes an answer to a search nobody is making any more.
+- **Results append, never interleave**, so an answer arriving between a
+  keystroke and Enter cannot move the row the cursor is already on.
+- **The group heading is *Event registrants*, not *Races***. *Races* is the
+  sidebar's own group label: a static match under it followed by event rows
+  under the same name would render **no** heading for the events (the heading
+  only draws when the group changes), and the races would read as menu rows.
+
+Checked at 360px: no horizontal overflow, the date holds its place, the title
+ellipsises against it. Docs updated in the same change — §6 (the route), §9
+(the three rules a networked palette follows), §10.
 
 ## Batch 3 — the header (deferred)
 

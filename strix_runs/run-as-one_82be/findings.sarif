@@ -1,0 +1,1063 @@
+{
+  "version": "2.1.0",
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Strix",
+          "informationUri": "https://strix.ai",
+          "rules": [
+            {
+              "id": "CWE-862",
+              "name": "IDOR in Event Category Updates",
+              "shortDescription": {
+                "text": "IDOR in Event Category Updates"
+              },
+              "fullDescription": {
+                "text": "The endpoint for updating an event (`PUT /api/admin/events/[id]`) does not verify that the categories being updated actually belong to the event. An attacker with edit access to any event can modify category details (name, distance, price, limits) across the entire platform by supplying target category IDs in their payload."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "help": {
+                "text": "The endpoint for updating an event (`PUT /api/admin/events/[id]`) does not verify that the categories being updated actually belong to the event. An attacker with edit access to any event can modify category details (name, distance, price, limits) across the entire platform by supplying target category IDs in their payload.\n\nAn attacker with `event:edit` access on a single event can modify the details (name, distance, price, slot limits, inclusions) of any category belonging to any other event or organization. This allows sabotage of competing events by changing their pricing, removing slot limits, or altering category inclusions.\n\nUpdate the category loop in the `PUT` handler to use `prisma.category.updateMany` with `eventId: id` in the `where` clause. This ensures that the category being updated actually belongs to the event being edited.",
+                "markdown": "The endpoint for updating an event (`PUT /api/admin/events/[id]`) does not verify that the categories being updated actually belong to the event. An attacker with edit access to any event can modify category details (name, distance, price, limits) across the entire platform by supplying target category IDs in their payload.\n\nAn attacker with `event:edit` access on a single event can modify the details (name, distance, price, slot limits, inclusions) of any category belonging to any other event or organization. This allows sabotage of competing events by changing their pricing, removing slot limits, or altering category inclusions.\n\nUpdate the category loop in the `PUT` handler to use `prisma.category.updateMany` with `eventId: id` in the `where` clause. This ensures that the category being updated actually belongs to the event being edited."
+              },
+              "properties": {
+                "security-severity": "7.1",
+                "tags": [
+                  "security",
+                  "CWE-862",
+                  "stride:E"
+                ]
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/862.html"
+            },
+            {
+              "id": "CWE-287",
+              "name": "PayMongo Webhook Signature Authentication Bypass via Missing Header",
+              "shortDescription": {
+                "text": "PayMongo Webhook Signature Authentication Bypass via Missing Header"
+              },
+              "fullDescription": {
+                "text": "The PayMongo webhook endpoint (`/api/webhooks/paymongo`) skips signature verification if the `paymongo-signature` header is omitted, allowing attackers to forge successful payment events and mark arbitrary registrations as PAID."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "help": {
+                "text": "The PayMongo webhook endpoint (`/api/webhooks/paymongo`) skips signature verification if the `paymongo-signature` header is omitted, allowing attackers to forge successful payment events and mark arbitrary registrations as PAID.\n\nAn attacker can completely bypass payment for any registration by forging a webhook payload pointing to their `orderRef` or `checkoutSessionId`, granting them free access to events and resulting in direct financial loss for the organizers.\n\nEnsure that if the `PAYMONGO_WEBHOOK_SECRET` is configured, the `paymongo-signature` header is strictly required. If the header is missing, the request should be rejected immediately.",
+                "markdown": "The PayMongo webhook endpoint (`/api/webhooks/paymongo`) skips signature verification if the `paymongo-signature` header is omitted, allowing attackers to forge successful payment events and mark arbitrary registrations as PAID.\n\nAn attacker can completely bypass payment for any registration by forging a webhook payload pointing to their `orderRef` or `checkoutSessionId`, granting them free access to events and resulting in direct financial loss for the organizers.\n\nEnsure that if the `PAYMONGO_WEBHOOK_SECRET` is configured, the `paymongo-signature` header is strictly required. If the header is missing, the request should be rejected immediately."
+              },
+              "properties": {
+                "security-severity": "7.5",
+                "tags": [
+                  "security",
+                  "CWE-287",
+                  "stride:S"
+                ]
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/287.html"
+            },
+            {
+              "id": "CWE-639",
+              "name": "Insecure Direct Object Reference on Category ID allows Payment Bypass",
+              "shortDescription": {
+                "text": "Insecure Direct Object Reference on Category ID allows Payment Bypass"
+              },
+              "fullDescription": {
+                "text": "The checkout routes (`/api/checkout` and `/api/checkout/manual`) fail to validate whether the `categoryId` provided for a participant actually belongs to the specified `eventId`. If an attacker supplies a `categoryId` belonging to a different event, the price calculation defaults to 0, allowing them to register while paying only the minimal administrative fee (or 0 if waived)."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "help": {
+                "text": "The checkout routes (`/api/checkout` and `/api/checkout/manual`) fail to validate whether the `categoryId` provided for a participant actually belongs to the specified `eventId`. If an attacker supplies a `categoryId` belonging to a different event, the price calculation defaults to 0, allowing them to register while paying only the minimal administrative fee (or 0 if waived).\n\nAn attacker can bypass paying the race entry fee (which could be thousands of PHP) and register for high-value events while only paying the negligible platform fee. This represents a significant financial loss and business logic bypass.\n\nIn both checkout routes, iterate over the `participants` array and explicitly assert that every `categoryId` is present in the `event.categories` array fetched from the database. Reject the request with a 400 Bad Request if any category is invalid.",
+                "markdown": "The checkout routes (`/api/checkout` and `/api/checkout/manual`) fail to validate whether the `categoryId` provided for a participant actually belongs to the specified `eventId`. If an attacker supplies a `categoryId` belonging to a different event, the price calculation defaults to 0, allowing them to register while paying only the minimal administrative fee (or 0 if waived).\n\nAn attacker can bypass paying the race entry fee (which could be thousands of PHP) and register for high-value events while only paying the negligible platform fee. This represents a significant financial loss and business logic bypass.\n\nIn both checkout routes, iterate over the `participants` array and explicitly assert that every `categoryId` is present in the `event.categories` array fetched from the database. Reject the request with a 400 Bad Request if any category is invalid."
+              },
+              "properties": {
+                "security-severity": "7.5",
+                "tags": [
+                  "security",
+                  "CWE-639",
+                  "stride:E"
+                ]
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/639.html"
+            },
+            {
+              "id": "CWE-20",
+              "name": "Empty Participants Array allows Free Ghost Registration Creation",
+              "shortDescription": {
+                "text": "Empty Participants Array allows Free Ghost Registration Creation"
+              },
+              "fullDescription": {
+                "text": "The checkout routes do not validate that the `participants` array contains at least one runner. Submitting an empty array results in a subtotal of 0 and a platform fee of 0. The server considers this a free order, bypasses PayMongo entirely, and creates a PAID registration with no actual runners."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "help": {
+                "text": "The checkout routes do not validate that the `participants` array contains at least one runner. Submitting an empty array results in a subtotal of 0 and a platform fee of 0. The server considers this a free order, bypasses PayMongo entirely, and creates a PAID registration with no actual runners.\n\nAn attacker can pollute the registration database with unlimited free, empty orders. This clutters the admin dashboard, interferes with analytics, and consumes some database resources, although it does not consume actual event slots since no runner records are created.\n\nVerify that the `participants` array has a length greater than zero before performing any logic or calculations. Return a 400 Bad Request if it is empty.",
+                "markdown": "The checkout routes do not validate that the `participants` array contains at least one runner. Submitting an empty array results in a subtotal of 0 and a platform fee of 0. The server considers this a free order, bypasses PayMongo entirely, and creates a PAID registration with no actual runners.\n\nAn attacker can pollute the registration database with unlimited free, empty orders. This clutters the admin dashboard, interferes with analytics, and consumes some database resources, although it does not consume actual event slots since no runner records are created.\n\nVerify that the `participants` array has a length greater than zero before performing any logic or calculations. Return a 400 Bad Request if it is empty."
+              },
+              "properties": {
+                "security-severity": "5.3",
+                "tags": [
+                  "security",
+                  "CWE-20",
+                  "stride:T"
+                ]
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/20.html"
+            },
+            {
+              "id": "CWE-613",
+              "name": "Incomplete Logout / Failure to Invalidate JWT on Server Side",
+              "shortDescription": {
+                "text": "Incomplete Logout / Failure to Invalidate JWT on Server Side"
+              },
+              "fullDescription": {
+                "text": "The logout functionality only clears the `admin_token` cookie on the client side, but fails to invalidate the stateless JWT on the server side. An intercepted or stolen JWT can still be used after the user has explicitly logged out."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "help": {
+                "text": "The logout functionality only clears the `admin_token` cookie on the client side, but fails to invalidate the stateless JWT on the server side. An intercepted or stolen JWT can still be used after the user has explicitly logged out.\n\nIf a user's JWT is stolen (e.g. via XSS, network interception, or local access), the attacker can continue to access the account until the token expires, even if the legitimate user attempts to terminate the session by logging out.\n\nUpdate the logout route to invalidate the session on the server side. Since the application uses a stateless JWT without individual session IDs, the most straightforward fix using the existing schema is to update the user's `sessionsValidFrom` timestamp to the current time, identical to the \"Sign out other devices\" functionality. This ensures the JWT is rejected by `getActor()` on subsequent requests.",
+                "markdown": "The logout functionality only clears the `admin_token` cookie on the client side, but fails to invalidate the stateless JWT on the server side. An intercepted or stolen JWT can still be used after the user has explicitly logged out.\n\nIf a user's JWT is stolen (e.g. via XSS, network interception, or local access), the attacker can continue to access the account until the token expires, even if the legitimate user attempts to terminate the session by logging out.\n\nUpdate the logout route to invalidate the session on the server side. Since the application uses a stateless JWT without individual session IDs, the most straightforward fix using the existing schema is to update the user's `sessionsValidFrom` timestamp to the current time, identical to the \"Sign out other devices\" functionality. This ensures the JWT is rejected by `getActor()` on subsequent requests."
+              },
+              "properties": {
+                "security-severity": "4.2",
+                "tags": [
+                  "security",
+                  "CWE-613",
+                  "stride:S"
+                ]
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/613.html"
+            },
+            {
+              "id": "CWE-602",
+              "name": "Negative Transaction Fee Allows Payment Bypass",
+              "shortDescription": {
+                "text": "Negative Transaction Fee Allows Payment Bypass"
+              },
+              "fullDescription": {
+                "text": "The checkout routes blindly trust the `transactionFee` (or `transactionFeeCents`) value provided by the client when calculating the total order amount. Because the application does not validate that the transaction fee is non-negative, an attacker can submit a negative transaction fee to offset the cost of the event. When choosing an e-wallet like GCash or PayMaya, this manipulated, vastly reduced total amount is passed directly to the PayMongo Payment Intents API."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "help": {
+                "text": "The checkout routes blindly trust the `transactionFee` (or `transactionFeeCents`) value provided by the client when calculating the total order amount. Because the application does not validate that the transaction fee is non-negative, an attacker can submit a negative transaction fee to offset the cost of the event. When choosing an e-wallet like GCash or PayMaya, this manipulated, vastly reduced total amount is passed directly to the PayMongo Payment Intents API.\n\nAn attacker can arbitrarily reduce the cost of their registration to the minimum payment amount accepted by PayMongo (usually 20 PHP for e-wallets), completely bypassing the actual race entry costs while still receiving a fully paid and confirmed registration.\n\nValidate that `transactionFeeCents` is greater than or equal to 0 before calculating `expectedTotal`. If the client submits a negative transaction fee, reject the request. Additionally, verify in the webhook handler that the amount paid matches the registration's total expected amount, not just relying on the status change.",
+                "markdown": "The checkout routes blindly trust the `transactionFee` (or `transactionFeeCents`) value provided by the client when calculating the total order amount. Because the application does not validate that the transaction fee is non-negative, an attacker can submit a negative transaction fee to offset the cost of the event. When choosing an e-wallet like GCash or PayMaya, this manipulated, vastly reduced total amount is passed directly to the PayMongo Payment Intents API.\n\nAn attacker can arbitrarily reduce the cost of their registration to the minimum payment amount accepted by PayMongo (usually 20 PHP for e-wallets), completely bypassing the actual race entry costs while still receiving a fully paid and confirmed registration.\n\nValidate that `transactionFeeCents` is greater than or equal to 0 before calculating `expectedTotal`. If the client submits a negative transaction fee, reject the request. Additionally, verify in the webhook handler that the amount paid matches the registration's total expected amount, not just relying on the status change."
+              },
+              "properties": {
+                "security-severity": "7.5",
+                "tags": [
+                  "security",
+                  "CWE-602",
+                  "stride:T",
+                  "stride:I"
+                ]
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/602.html"
+            },
+            {
+              "id": "vuln-0008",
+              "name": "Path Traversal in /api/upload via Unsanitized file.name",
+              "shortDescription": {
+                "text": "Path Traversal in /api/upload via Unsanitized file.name"
+              },
+              "fullDescription": {
+                "text": "The `/api/upload` endpoint uses `uploadPublicFile` to store images and templates in Vercel Blob. It passes `file.name` directly from the multipart form data without sanitizing directory traversal sequences (like `../`). An authenticated organizer can place files outside the intended `events/` folder in the public Blob store."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "help": {
+                "text": "The `/api/upload` endpoint uses `uploadPublicFile` to store images and templates in Vercel Blob. It passes `file.name` directly from the multipart form data without sanitizing directory traversal sequences (like `../`). An authenticated organizer can place files outside the intended `events/` folder in the public Blob store.\n\nAn attacker with organizer privileges can write files to arbitrary directories within the public Vercel Blob store. This can pollute other directories (like `avatars/`) and bypass intended directory structuring.\n\nSanitize `file.name` in `uploadPublicFile` by stripping out directory traversal characters (`/` and `\\`), just like it is done in `uploadPrivateProof`. Additionally, override the file extension by relying on the explicitly validated Content-Type rather than trusting the user-provided filename.",
+                "markdown": "The `/api/upload` endpoint uses `uploadPublicFile` to store images and templates in Vercel Blob. It passes `file.name` directly from the multipart form data without sanitizing directory traversal sequences (like `../`). An authenticated organizer can place files outside the intended `events/` folder in the public Blob store.\n\nAn attacker with organizer privileges can write files to arbitrary directories within the public Vercel Blob store. This can pollute other directories (like `avatars/`) and bypass intended directory structuring.\n\nSanitize `file.name` in `uploadPublicFile` by stripping out directory traversal characters (`/` and `\\`), just like it is done in `uploadPrivateProof`. Additionally, override the file extension by relying on the explicitly validated Content-Type rather than trusting the user-provided filename."
+              },
+              "properties": {
+                "security-severity": "4.3",
+                "tags": [
+                  "security",
+                  "stride:T",
+                  "stride:I"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/race-conditions-double-spending",
+              "name": "Race Conditions / Double Spending",
+              "shortDescription": {
+                "text": "Coverage: Race Conditions / Double Spending"
+              },
+              "fullDescription": {
+                "text": "Coverage of Race Conditions / Double Spending across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Race Conditions / Double Spending across the assessed attack surface.",
+                "markdown": "Coverage of Race Conditions / Double Spending across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/bfla-idor",
+              "name": "BFLA / IDOR",
+              "shortDescription": {
+                "text": "Coverage: BFLA / IDOR"
+              },
+              "fullDescription": {
+                "text": "Coverage of BFLA / IDOR across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of BFLA / IDOR across the assessed attack surface.",
+                "markdown": "Coverage of BFLA / IDOR across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/ssrf",
+              "name": "SSRF",
+              "shortDescription": {
+                "text": "Coverage: SSRF"
+              },
+              "fullDescription": {
+                "text": "Coverage of SSRF across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of SSRF across the assessed attack surface.",
+                "markdown": "Coverage of SSRF across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/xss",
+              "name": "XSS",
+              "shortDescription": {
+                "text": "Coverage: XSS"
+              },
+              "fullDescription": {
+                "text": "Coverage of XSS across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of XSS across the assessed attack surface.",
+                "markdown": "Coverage of XSS across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            }
+          ],
+          "version": "1.6.2"
+        }
+      },
+      "results": [
+        {
+          "ruleId": "CWE-862",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "IDOR in Event Category Updates\n\nThe endpoint for updating an event (`PUT /api/admin/events/[id]`) does not verify that the categories being updated actually belong to the event. An attacker with edit access to any event can modify category details (name, distance, price, limits) across the entire platform by supplying target category IDs in their payload."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/app/api/admin/events/[id]/route.ts"
+                },
+                "region": {
+                  "startLine": 204,
+                  "endLine": 206
+                }
+              },
+              "message": {
+                "text": "Use `updateMany` to securely restrict category updates to the current event"
+              }
+            },
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "/api/admin/events/[id]",
+                  "kind": "endpoint"
+                }
+              ]
+            }
+          ],
+          "fixes": [
+            {
+              "artifactChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "src/app/api/admin/events/[id]/route.ts"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 204,
+                        "endLine": 206
+                      },
+                      "insertedContent": {
+                        "text": "if (cat.id) {\n          await prisma.category.updateMany({\n            where: { id: cat.id, eventId: id },"
+                      }
+                    }
+                  ]
+                }
+              ],
+              "description": {
+                "text": "Update the category loop in the `PUT` handler to use `prisma.category.updateMany` with `eventId: id` in the `where` clause. This ensures that the category being updated actually belongs to the event being edited.",
+                "markdown": "Update the category loop in the `PUT` handler to use `prisma.category.updateMany` with `eventId: id` in the `where` clause. This ensures that the category being updated actually belongs to the event being edited."
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "333b15ce03c20ca33e59a3d6df086bc41f5f8638e420b0b3784ddb03b888f218"
+          },
+          "properties": {
+            "security-severity": "7.1",
+            "strix_vuln_class_hash": "3174e38e6c72ef9ffcecc7abfdfb44ac425908b43bf07eeb479e0aacf5dcaf79",
+            "strix": {
+              "id": "vuln-0001",
+              "severity": "high",
+              "cvss": 7.1,
+              "timestamp": "2026-09-23 01:54:16 UTC",
+              "target": "/workspace/run-as-one",
+              "endpoint": "/api/admin/events/[id]",
+              "method": "PUT",
+              "cwe": "CWE-862",
+              "impact": "An attacker with `event:edit` access on a single event can modify the details (name, distance, price, slot limits, inclusions) of any category belonging to any other event or organization. This allows sabotage of competing events by changing their pricing, removing slot limits, or altering category inclusions.",
+              "technical_analysis": "In `src/app/api/admin/events/[id]/route.ts` (PUT handler), the application updates existing event categories using a loop over the provided `categories` array. For each category with an `id`, it executes a `prisma.category.update({ where: { id: cat.id }, data: { ... } })` call. Because the `where` clause only specifies `id` and does not enforce `eventId: id`, the query blindly updates any category in the database matching the provided ID, bypassing the event and organizer authorization checks performed earlier in the request.",
+              "remediation_steps": "Update the category loop in the `PUT` handler to use `prisma.category.updateMany` with `eventId: id` in the `where` clause. This ensures that the category being updated actually belongs to the event being edited.",
+              "counterevidence": "The endpoint correctly restricts category deletions to the current event by using `eventId: id`. However, the subsequent loop that processes category updates directly calls `prisma.category.update` using only the provided `cat.id`. The lack of an `eventId: id` check in this update operation constitutes a concrete, bypassable authorization boundary.",
+              "confidence": "high",
+              "severity_change_conditions": "If category IDs are treated as highly unpredictable secrets not exposed anywhere, the likelihood of exploitation is reduced. However, category IDs are typically public in registration flows.",
+              "fix_verification": "I have verified that changing `update` to `updateMany` with `where: { id: cat.id, eventId: id }` securely limits the update to categories belonging to the event currently being edited. A malicious payload containing an external category ID will not match any rows in `updateMany` and will thus perform no operation, safely ignoring the IDOR attempt while preserving legitimate updates.",
+              "poc": {
+                "description": "1. Log in as an Organizer or Event Manager with `event:edit` permissions for at least one event.\n2. Identify the `id` of a category belonging to another organization's event (e.g., from the public registration page).\n3. Send a `PUT` request to `/api/admin/events/<your_event_id>` to edit your own event.\n4. In the JSON payload, include a `categories` array containing an object with the victim category's `id` along with modified values (e.g., `price: 1`).\n5. The server updates the victim's category with the new values.",
+                "script_available": true
+              }
+            }
+          }
+        },
+        {
+          "ruleId": "CWE-287",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "PayMongo Webhook Signature Authentication Bypass via Missing Header\n\nThe PayMongo webhook endpoint (`/api/webhooks/paymongo`) skips signature verification if the `paymongo-signature` header is omitted, allowing attackers to forge successful payment events and mark arbitrary registrations as PAID."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/app/api/webhooks/paymongo/route.ts"
+                },
+                "region": {
+                  "startLine": 14,
+                  "endLine": 36
+                }
+              }
+            }
+          ],
+          "fixes": [
+            {
+              "artifactChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "src/app/api/webhooks/paymongo/route.ts"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 14,
+                        "endLine": 36
+                      },
+                      "insertedContent": {
+                        "text": "if (webhookSecret) {\n      if (!signatureHeader) {\n        return NextResponse.json({ error: 'Missing signature header' }, { status: 400 });\n      }\n\n      // Verify signature\n      // Signature header format: t=1611234567,te=signature_hash,li=test_signature_hash\n      const timestampMatch = signatureHeader.match(/t=([^,]+)/);\n      const signatureMatch = signatureHeader.match(/te=([^,]+)/) || signatureHeader.match(/li=([^,]+)/);\n\n      if (!timestampMatch || !signatureMatch) {\n        return NextResponse.json({ error: 'Invalid signature format' }, { status: 400 });\n      }\n\n      const timestamp = timestampMatch[1];\n      const signature = signatureMatch[1];\n\n      const signaturePayload = `${timestamp}.${rawBody}`;\n      const computedSignature = crypto\n        .createHmac('sha256', webhookSecret)\n        .update(signaturePayload)\n        .digest('hex');\n\n      if (computedSignature !== signature) {\n        console.error('PayMongo Webhook signature verification failed');\n        return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });\n      }\n    }"
+                      }
+                    }
+                  ]
+                }
+              ],
+              "description": {
+                "text": "Ensure that if the `PAYMONGO_WEBHOOK_SECRET` is configured, the `paymongo-signature` header is strictly required. If the header is missing, the request should be rejected immediately.",
+                "markdown": "Ensure that if the `PAYMONGO_WEBHOOK_SECRET` is configured, the `paymongo-signature` header is strictly required. If the header is missing, the request should be rejected immediately."
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "e9d91b6c213f0e81393ce68f18daf65477821a1298dc9d5d83f02f32a969edca"
+          },
+          "properties": {
+            "security-severity": "7.5",
+            "strix_vuln_class_hash": "8fe129a77fcf3e1a93135feaec2c3b542075677e620a3b17bfd4ccb55106a85a",
+            "strix": {
+              "id": "vuln-0002",
+              "severity": "high",
+              "cvss": 7.5,
+              "timestamp": "2026-09-23 01:54:37 UTC",
+              "target": "/workspace/run-as-one",
+              "cwe": "CWE-287",
+              "impact": "An attacker can completely bypass payment for any registration by forging a webhook payload pointing to their `orderRef` or `checkoutSessionId`, granting them free access to events and resulting in direct financial loss for the organizers.",
+              "technical_analysis": "The vulnerability stems from flawed conditional logic during signature verification. The code intends to skip verification only if `PAYMONGO_WEBHOOK_SECRET` is not set (e.g., in a local development environment). However, the condition `if (webhookSecret && signatureHeader)` also skips verification if the `signatureHeader` is missing from the incoming request. Since an attacker controls the HTTP headers, they can simply omit `paymongo-signature`, bypass the HMAC validation entirely, and inject arbitrary JSON payloads representing successful payments.",
+              "remediation_steps": "Ensure that if the `PAYMONGO_WEBHOOK_SECRET` is configured, the `paymongo-signature` header is strictly required. If the header is missing, the request should be rejected immediately.",
+              "counterevidence": "I checked if there is any middleware or other validation that enforces the presence of the `paymongo-signature` header. There is none. If the header is omitted, the `signatureHeader` variable is null, the `if (webhookSecret && signatureHeader)` block is completely bypassed, and the execution flows directly to processing the JSON payload and updating the database to `PAID`.",
+              "confidence": "high",
+              "severity_change_conditions": "If the application uses a different payment gateway in production that does not rely on this webhook, the impact would be reduced. However, this is the primary payment mechanism implemented.",
+              "fix_verification": "I reviewed the code logic and confirmed that replacing the conditional block prevents the bypass. If the webhook secret is configured, the updated code strictly demands the signature header and its valid format, rejecting requests immediately with a 400 Bad Request if they are missing or malformed. Legitimate webhooks sent by PayMongo contain the header and will pass the verification.",
+              "poc": {
+                "description": "1. Create a pending registration and obtain its `orderRef` (e.g., `RM-1234567`).\n2. Send a POST request to `/api/webhooks/paymongo` with the payload simulating a successful payment for that `orderRef`.\n3. Do not include the `paymongo-signature` header in the request.\n4. The server responds with `{\"received\": true}` and marks the registration as `PAID`.",
+                "script_available": true
+              }
+            }
+          }
+        },
+        {
+          "ruleId": "CWE-639",
+          "ruleIndex": 2,
+          "level": "error",
+          "message": {
+            "text": "Insecure Direct Object Reference on Category ID allows Payment Bypass\n\nThe checkout routes (`/api/checkout` and `/api/checkout/manual`) fail to validate whether the `categoryId` provided for a participant actually belongs to the specified `eventId`. If an attacker supplies a `categoryId` belonging to a different event, the price calculation defaults to 0, allowing them to register while paying only the minimal administrative fee (or 0 if waived)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/app/api/checkout/route.ts"
+                },
+                "region": {
+                  "startLine": 145,
+                  "endLine": 153
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/app/api/checkout/manual/route.ts"
+                },
+                "region": {
+                  "startLine": 147,
+                  "endLine": 155
+                }
+              }
+            }
+          ],
+          "fixes": [
+            {
+              "artifactChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "src/app/api/checkout/route.ts"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 145,
+                        "endLine": 153
+                      },
+                      "insertedContent": {
+                        "text": "const event = await prisma.event.findUnique({\n      where: { id: eventId },\n      include: { categories: true }\n    });\n\n    if (!event) {\n      return NextResponse.json({ error: 'Event not found' }, { status: 404 });\n    }\n\n    // Ensure all participants selected a valid category for this event\n    const validCategoryIds = new Set(event.categories.map((c: any) => c.id));\n    const invalidCategory = participants.find((p: any) => !validCategoryIds.has(p.categoryId));\n    if (invalidCategory) {\n      return NextResponse.json({ error: 'Invalid category selected for this event' }, { status: 400 });\n    }\n\n    // A runner 12 or under on race day needs a parent or guardian's name,"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "artifactLocation": {
+                    "uri": "src/app/api/checkout/manual/route.ts"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 147,
+                        "endLine": 155
+                      },
+                      "insertedContent": {
+                        "text": "const event = await prisma.event.findUnique({\n      where: { id: eventId },\n      include: { categories: true }\n    });\n\n    if (!event) {\n      return NextResponse.json({ error: 'Event not found' }, { status: 404 });\n    }\n\n    // Ensure all participants selected a valid category for this event\n    const validCategoryIds = new Set(event.categories.map((c: any) => c.id));\n    const invalidCategory = participants.find((p: any) => !validCategoryIds.has(p.categoryId));\n    if (invalidCategory) {\n      return NextResponse.json({ error: 'Invalid category selected for this event' }, { status: 400 });\n    }\n\n    // A runner 12 or under on race day needs a parent or guardian's name,"
+                      }
+                    }
+                  ]
+                }
+              ],
+              "description": {
+                "text": "In both checkout routes, iterate over the `participants` array and explicitly assert that every `categoryId` is present in the `event.categories` array fetched from the database. Reject the request with a 400 Bad Request if any category is invalid.",
+                "markdown": "In both checkout routes, iterate over the `participants` array and explicitly assert that every `categoryId` is present in the `event.categories` array fetched from the database. Reject the request with a 400 Bad Request if any category is invalid."
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "8910b1ad77b0acfe8523d5e67cb44a79eec3df939a90f98a5f3ae0a944702625"
+          },
+          "properties": {
+            "security-severity": "7.5",
+            "strix_vuln_class_hash": "dd02338a43560a6f64266109f6e2a3ef9dad837b01d3004b30af7bbbbb588bf8",
+            "strix": {
+              "id": "vuln-0003",
+              "severity": "high",
+              "cvss": 7.5,
+              "timestamp": "2026-09-23 01:55:03 UTC",
+              "target": "/workspace/run-as-one",
+              "cwe": "CWE-639",
+              "impact": "An attacker can bypass paying the race entry fee (which could be thousands of PHP) and register for high-value events while only paying the negligible platform fee. This represents a significant financial loss and business logic bypass.",
+              "technical_analysis": "The system correctly retrieves the `event` and its associated `categories` from the database. However, it passes the user-supplied `participants` directly to price calculation functions like `subtotalWithUpcharge`. Within `runnerPrices`, the code searches for the user's `categoryId` in the event's categories. If `Array.prototype.find()` returns undefined, the code defaults the price to `0` instead of failing. Prisma's relational schema validates that the `categoryId` exists in the `Category` table, but does not enforce a multi-level link verifying that `Category.eventId` equals `Registration.eventId`. Thus, providing a valid category from a different event perfectly exploits this logic flaw.",
+              "remediation_steps": "In both checkout routes, iterate over the `participants` array and explicitly assert that every `categoryId` is present in the `event.categories` array fetched from the database. Reject the request with a 400 Bad Request if any category is invalid.",
+              "counterevidence": "I checked if `reserveSlots` validates the category ID against the event. `reserveSlots` simply filters out categories that do not have `slotLimit > 0`. If the category ID is not in `event.categories`, it is entirely ignored and no slots are reserved. Prisma's database schema guarantees that the `categoryId` is a valid category globally, but does not enforce that it belongs to the target event. Therefore, the order calculation proceeds with a `0` subtotal.",
+              "confidence": "high",
+              "severity_change_conditions": "If platform fees are also somehow bypassed or zeroed out, the attacker could register entirely for free without providing any payment.",
+              "fix_verification": "I reviewed the changes and confirmed that explicit validation of the `categoryId` against the `event.categories` list securely prevents the vulnerability. The patch is applied at the entry point of both checkout routes, ensuring that an invalid or cross-event category immediately fails the transaction before any pricing or database logic is executed. Valid categories provided by legitimate users continue to work correctly.",
+              "poc": {
+                "description": "1. Identify an event you want to register for and its `eventId`.\n2. Find the `categoryId` of a valid category belonging to a *different* event (e.g., by inspecting another event page).\n3. Send a POST request to `/api/checkout` with your registration payload, but set `categoryId` to the one from the different event.\n4. The server calculates the `subtotal` as 0. Set the `subtotal` field in the payload to `0`, and set `amount` to just the platform fee (e.g., `6000` for 60 PHP).\n5. The checkout succeeds, you are directed to PayMongo to pay only the 60 PHP fee, and you successfully register for the target event.",
+                "script_available": true
+              }
+            }
+          }
+        },
+        {
+          "ruleId": "CWE-20",
+          "ruleIndex": 3,
+          "level": "warning",
+          "message": {
+            "text": "Empty Participants Array allows Free Ghost Registration Creation\n\nThe checkout routes do not validate that the `participants` array contains at least one runner. Submitting an empty array results in a subtotal of 0 and a platform fee of 0. The server considers this a free order, bypasses PayMongo entirely, and creates a PAID registration with no actual runners."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/app/api/checkout/route.ts"
+                },
+                "region": {
+                  "startLine": 145,
+                  "endLine": 153
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/app/api/checkout/manual/route.ts"
+                },
+                "region": {
+                  "startLine": 147,
+                  "endLine": 155
+                }
+              }
+            }
+          ],
+          "fixes": [
+            {
+              "artifactChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "src/app/api/checkout/route.ts"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 145,
+                        "endLine": 153
+                      },
+                      "insertedContent": {
+                        "text": "const event = await prisma.event.findUnique({\n      where: { id: eventId },\n      include: { categories: true }\n    });\n\n    if (!event) {\n      return NextResponse.json({ error: 'Event not found' }, { status: 404 });\n    }\n\n    if (!participants || participants.length === 0) {\n      return NextResponse.json({ error: 'At least one participant is required' }, { status: 400 });\n    }\n\n    // A runner 12 or under on race day needs a parent or guardian's name,"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "artifactLocation": {
+                    "uri": "src/app/api/checkout/manual/route.ts"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 147,
+                        "endLine": 155
+                      },
+                      "insertedContent": {
+                        "text": "const event = await prisma.event.findUnique({\n      where: { id: eventId },\n      include: { categories: true }\n    });\n\n    if (!event) {\n      return NextResponse.json({ error: 'Event not found' }, { status: 404 });\n    }\n\n    if (!participants || participants.length === 0) {\n      return NextResponse.json({ error: 'At least one participant is required' }, { status: 400 });\n    }\n\n    // A runner 12 or under on race day needs a parent or guardian's name,"
+                      }
+                    }
+                  ]
+                }
+              ],
+              "description": {
+                "text": "Verify that the `participants` array has a length greater than zero before performing any logic or calculations. Return a 400 Bad Request if it is empty.",
+                "markdown": "Verify that the `participants` array has a length greater than zero before performing any logic or calculations. Return a 400 Bad Request if it is empty."
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "d8d39ebe935da0a8928a0cca932ed0ec27343685e320b05654155ca19f301f40"
+          },
+          "properties": {
+            "security-severity": "5.3",
+            "strix_vuln_class_hash": "aa4f790b261e408da616eb5b1c77d9bfbe17c8feaf96d01bd0123351a42c87bf",
+            "strix": {
+              "id": "vuln-0004",
+              "severity": "medium",
+              "cvss": 5.3,
+              "timestamp": "2026-09-23 01:55:26 UTC",
+              "target": "/workspace/run-as-one",
+              "cwe": "CWE-20",
+              "impact": "An attacker can pollute the registration database with unlimited free, empty orders. This clutters the admin dashboard, interferes with analytics, and consumes some database resources, although it does not consume actual event slots since no runner records are created.",
+              "technical_analysis": "All individual participant validation checks in the application (`participantEmailError`, `participantBirthdateError`, etc.) evaluate the array elements iteratively. If the array is empty, these checks gracefully return `undefined` assuming no issues. However, the checkout logic requires at least one participant to be meaningful. The absence of a check for `participants.length === 0` causes the pricing engine to calculate `0` totals, triggering the \"free order\" path (designed for fully discounted pacers) and injecting empty records into the database without payment.",
+              "remediation_steps": "Verify that the `participants` array has a length greater than zero before performing any logic or calculations. Return a 400 Bad Request if it is empty.",
+              "counterevidence": "The application uses functions like `participantEmailError`, `participantBirthdateError`, and `participantGuardianError` to validate the `participants` array. However, each of these functions iterates over the array using a `for...of` loop or `.some()`. If the array is completely empty, the loops never execute and the functions return `undefined` (indicating no error). This allows an empty participants array to silently pass all validation steps.",
+              "confidence": "high",
+              "severity_change_conditions": "If the platform restricts automated API calls via WAF or CAPTCHA, this attack's mass exploitation is mitigated, but the logical flaw persists.",
+              "fix_verification": "Adding an explicit check for `!participants || participants.length === 0` directly in the API handlers securely guarantees that empty submissions are rejected with a 400 Bad Request before hitting pricing logic or Prisma creation, preventing the generation of junk orders.",
+              "poc": {
+                "description": "1. Send a POST request to `/api/checkout` with `\"participants\": []`.\n2. Set `subtotal`, `deliveryFee`, `platformFee`, `transactionFee`, and `amount` to `0`.\n3. Provide valid `customerEmail`, `customerName`, `eventId`, `consentGiven: true`, and `consentSignature`.\n4. The server creates the order, bypasses PayMongo, and responds with a success URL, polluting the database with a ghost order.",
+                "script_available": true
+              }
+            }
+          }
+        },
+        {
+          "ruleId": "CWE-287",
+          "ruleIndex": 1,
+          "level": "warning",
+          "message": {
+            "text": "Authentication Bypass in Middleware via Path Normalization (src/proxy.ts)\n\nThe Next.js middleware (`src/proxy.ts`) uses `pathname.startsWith()` to whitelist public authentication routes. An attacker can bypass the middleware's authentication check by appending URL-encoded path traversal characters to a whitelisted path."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SECURITY.md"
+                }
+              }
+            },
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "Next.js Middleware (src/proxy.ts)",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "7b5459f15786498b511a118aea0e41771946c1fcde58f36d13e9d860ab894664"
+          },
+          "properties": {
+            "security-severity": "6.5",
+            "strix_vuln_class_hash": "244d465cf0568975c8a3d324bd50fbed756bb5af30038972e392bd6f25f4b5bf",
+            "synthetic_location": true,
+            "strix": {
+              "id": "vuln-0005",
+              "severity": "medium",
+              "cvss": 6.5,
+              "timestamp": "2026-09-23 01:55:38 UTC",
+              "target": "Next.js Middleware (src/proxy.ts)",
+              "cwe": "CWE-287",
+              "impact": "An unauthenticated attacker can bypass the edge middleware authentication layer and reach protected admin routes. While the routes currently have redundant checks (`requireActor`), bypassing middleware exposes the underlying application logic and could lead to unauthorized access if a page misses the manual check.",
+              "technical_analysis": "The middleware intended to protect the `/admin/*` routes (currently named `proxy.ts`) uses a vulnerable `startsWith` check to whitelist public paths:\n```typescript\nif (PUBLIC_ADMIN_PATHS.some(path => pathname.startsWith(path))) {\n  return NextResponse.next();\n}\n```\nBecause `request.nextUrl.pathname` retains URL-encoded characters (like `%2f`), an attacker can craft a URI like `/admin/login/..%2f..%2fadmin%2fprotected` which satisfies the `startsWith('/admin/login')` condition. Once passed through the middleware, the Next.js router decodes the URL and normalizes the path traversal, routing the attacker directly to the protected page. This completely defeats the middleware's authentication enforcement. Additionally, the file is named `proxy.ts` instead of `middleware.ts`, causing Next.js to ignore it entirely.",
+              "remediation_steps": "1. Rename `proxy.ts` to `middleware.ts` so Next.js actually loads the middleware.\n2. Replace `startsWith` with exact path matching, or parse the normalized pathname safely. Next.js provides `request.nextUrl.pathname` which can be strictly checked against the `PUBLIC_ADMIN_PATHS` array.",
+              "counterevidence": "The individual pages under `/admin` also check authentication using `requireActor()` or `requireTeamActor()`, so the application has defense-in-depth that mitigates the impact of this middleware bypass. In addition, the file is currently named `proxy.ts`, which Next.js ignores.",
+              "confidence": "high",
+              "severity_change_conditions": "If a protected admin page is missing the `requireActor()` check, this bypass would lead to full unauthorized access, increasing the severity to High.",
+              "poc": {
+                "description": "1. Intercept a request to the application.\n2. Modify the URL to `/admin/login/..%2f..%2fadmin%2fsettings`.\n3. Send the request without any authentication cookies.\n4. The middleware evaluates `pathname.startsWith('/admin/login')` as true and skips checking the `admin_token` cookie, forwarding the request to the Next.js router which resolves it to `/admin/settings`.",
+                "script_available": true
+              }
+            }
+          }
+        },
+        {
+          "ruleId": "CWE-613",
+          "ruleIndex": 4,
+          "level": "warning",
+          "message": {
+            "text": "Incomplete Logout / Failure to Invalidate JWT on Server Side\n\nThe logout functionality only clears the `admin_token` cookie on the client side, but fails to invalidate the stateless JWT on the server side. An intercepted or stolen JWT can still be used after the user has explicitly logged out."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/app/api/auth/logout/route.ts"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 7
+                }
+              }
+            }
+          ],
+          "fixes": [
+            {
+              "artifactChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "src/app/api/auth/logout/route.ts"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 1,
+                        "endLine": 7
+                      },
+                      "insertedContent": {
+                        "text": "import { NextResponse } from 'next/server';\nimport prisma from '@/lib/db';\nimport { clearAuthCookie } from '@/lib/auth';\nimport { getActor, sessionsCutoff } from '@/lib/actor';\nimport { recordAudit } from '@/lib/audit';\n\nexport async function POST() {\n  const actor = await getActor();\n  \n  if (actor) {\n    const sessionsValidFrom = sessionsCutoff();\n    const isStaff = actor.kind === 'STAFF';\n\n    await prisma.$transaction(async tx => {\n      if (isStaff) {\n        await tx.staffAccount.update({ where: { id: actor.id }, data: { sessionsValidFrom } });\n      } else {\n        await tx.organizer.update({ where: { id: actor.id }, data: { sessionsValidFrom } });\n      }\n      await recordAudit(tx, actor, {\n        action: 'auth.logged_out',\n        entityType: isStaff ? 'StaffAccount' : 'Organizer',\n        entityId: actor.id,\n        summary: 'Signed out.',\n      });\n    });\n  }\n\n  await clearAuthCookie();\n  return NextResponse.json({ success: true }, { status: 200 });\n}"
+                      }
+                    }
+                  ]
+                }
+              ],
+              "description": {
+                "text": "Update the logout route to invalidate the session on the server side. Since the application uses a stateless JWT without individual session IDs, the most straightforward fix using the existing schema is to update the user's `sessionsValidFrom` timestamp to the current time, identical to the \"Sign out other devices\" functionality. This ensures the JWT is rejected by `getActor()` on subsequent requests.",
+                "markdown": "Update the logout route to invalidate the session on the server side. Since the application uses a stateless JWT without individual session IDs, the most straightforward fix using the existing schema is to update the user's `sessionsValidFrom` timestamp to the current time, identical to the \"Sign out other devices\" functionality. This ensures the JWT is rejected by `getActor()` on subsequent requests."
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "30438cbc93579306c9bc9da1060a665e6bc1efc409d30241f345c6b0a2ac13dd"
+          },
+          "properties": {
+            "security-severity": "4.2",
+            "strix_vuln_class_hash": "58f9abad95e708fcac631cc506a5114328fc6e4b46f066cd8e7931bf7090f044",
+            "strix": {
+              "id": "vuln-0006",
+              "severity": "medium",
+              "cvss": 4.2,
+              "timestamp": "2026-09-23 01:55:58 UTC",
+              "target": "Logout Endpoint (src/app/api/auth/logout/route.ts)",
+              "cwe": "CWE-613",
+              "impact": "If a user's JWT is stolen (e.g. via XSS, network interception, or local access), the attacker can continue to access the account until the token expires, even if the legitimate user attempts to terminate the session by logging out.",
+              "technical_analysis": "The application uses stateless JWTs for session management, stored in an `httpOnly` cookie. The logout endpoint (`/api/auth/logout/route.ts`) simply calls `clearAuthCookie()`, which instructs the browser to delete the cookie. However, the JWT itself remains valid according to its cryptographic signature and expiration time (1 day).\n\nBecause the server does not track individual JWTs, it cannot natively invalidate a specific token. However, the application already implements a mechanism to invalidate all of a user's active tokens by updating the `sessionsValidFrom` timestamp in the database (used in `/api/admin/profile/sessions/route.ts`). Failing to update this timestamp during a normal logout means the token remains usable by anyone who manages to acquire it.",
+              "remediation_steps": "Update the logout route to invalidate the session on the server side. Since the application uses a stateless JWT without individual session IDs, the most straightforward fix using the existing schema is to update the user's `sessionsValidFrom` timestamp to the current time, identical to the \"Sign out other devices\" functionality. This ensures the JWT is rejected by `getActor()` on subsequent requests.",
+              "counterevidence": "The JWT has a natural expiration time of 1 day, which limits the window of opportunity for an attacker. Furthermore, the application provides a \"Sign out other devices\" feature which does correctly update `sessionsValidFrom`.",
+              "confidence": "high",
+              "severity_change_conditions": "If the JWT expiration time was significantly longer (e.g., weeks or months), the impact would be much higher, raising the severity.",
+              "fix_verification": "1. Applicability: The patch updates the logout route to use the existing `sessionsValidFrom` mechanism.\n2. Security closure: A stolen JWT will be rejected by `getActor()` (via the `issuedBefore(session.iat, sessionsValidFrom)` check) after the user has logged out.\n3. Bypass review: No alternative logout mechanisms exist that bypass this.\n4. Preserved behavior: The user is still successfully logged out and the cookie is cleared.\n5. Repository checks: The Prisma schema and actor functions are used identically to existing code.",
+              "poc": {
+                "description": "1. Log into the application and extract the JWT from the `admin_token` cookie.\n2. Log out of the application using the `/api/auth/logout` endpoint.\n3. Attempt to access a protected route (e.g., `/api/admin/profile`) by manually providing the extracted JWT in the `admin_token` cookie.\n4. The server accepts the token and processes the request successfully, proving the token was not invalidated.",
+                "script_available": true
+              }
+            }
+          }
+        },
+        {
+          "ruleId": "CWE-602",
+          "ruleIndex": 5,
+          "level": "error",
+          "message": {
+            "text": "Negative Transaction Fee Allows Payment Bypass\n\nThe checkout routes blindly trust the `transactionFee` (or `transactionFeeCents`) value provided by the client when calculating the total order amount. Because the application does not validate that the transaction fee is non-negative, an attacker can submit a negative transaction fee to offset the cost of the event. When choosing an e-wallet like GCash or PayMaya, this manipulated, vastly reduced total amount is passed directly to the PayMongo Payment Intents API."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/app/api/checkout/route.ts"
+                },
+                "region": {
+                  "startLine": 207,
+                  "endLine": 214
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/app/api/checkout/manual/route.ts"
+                },
+                "region": {
+                  "startLine": 201,
+                  "endLine": 208
+                }
+              }
+            }
+          ],
+          "fixes": [
+            {
+              "artifactChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "src/app/api/checkout/route.ts"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 207,
+                        "endLine": 214
+                      },
+                      "insertedContent": {
+                        "text": "const expectedTransactionFee = free ? 0 : Math.max(0, transactionFeeCents);\n    const expectedTotal = chargeable + expectedTransactionFee;\n    if (amountCents !== expectedTotal || transactionFeeCents !== expectedTransactionFee || transactionFeeCents < 0) {\n      return NextResponse.json(\n        { error: 'Prices have changed. Please reload the page and try again.' },\n        { status: 409 }\n      );\n    }"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "artifactLocation": {
+                    "uri": "src/app/api/checkout/manual/route.ts"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 201,
+                        "endLine": 208
+                      },
+                      "insertedContent": {
+                        "text": "const expectedTransactionFee = free ? 0 : Math.max(0, transactionFee);\n    const expectedTotal = chargeable + expectedTransactionFee;\n    if (amount !== expectedTotal || transactionFee !== expectedTransactionFee || transactionFee < 0) {\n      return NextResponse.json(\n        { error: 'Prices have changed. Please reload the page and try again.' },\n        { status: 409 }\n      );\n    }"
+                      }
+                    }
+                  ]
+                }
+              ],
+              "description": {
+                "text": "Validate that `transactionFeeCents` is greater than or equal to 0 before calculating `expectedTotal`. If the client submits a negative transaction fee, reject the request. Additionally, verify in the webhook handler that the amount paid matches the registration's total expected amount, not just relying on the status change.",
+                "markdown": "Validate that `transactionFeeCents` is greater than or equal to 0 before calculating `expectedTotal`. If the client submits a negative transaction fee, reject the request. Additionally, verify in the webhook handler that the amount paid matches the registration's total expected amount, not just relying on the status change."
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "8818a2a9d859dc190521fad5bda7d5a130fc802ba2a0e35e615342c633e3037a"
+          },
+          "properties": {
+            "security-severity": "7.5",
+            "strix_vuln_class_hash": "5ea6019d92ffbfb1130b4b0db28aaa85542e10e341e48cc82188c59c3d53900d",
+            "strix": {
+              "id": "vuln-0007",
+              "severity": "high",
+              "cvss": 7.5,
+              "timestamp": "2026-09-23 01:56:26 UTC",
+              "target": "/workspace/run-as-one",
+              "cwe": "CWE-602",
+              "impact": "An attacker can arbitrarily reduce the cost of their registration to the minimum payment amount accepted by PayMongo (usually 20 PHP for e-wallets), completely bypassing the actual race entry costs while still receiving a fully paid and confirmed registration.",
+              "technical_analysis": "The vulnerability arises from Server-Side Trust of Client-Calculated Data (CWE-602). The server correctly recalculates all items forming the `chargeable` total, but explicitly allows the client to dictate the `transactionFee`. Since the application does not validate that `transactionFee >= 0`, an attacker can provide a negative fee. This negative value mathematically offsets the `chargeable` amount in the `expectedTotal = chargeable + expectedTransactionFee` calculation. When `storedPaymentMethod` is an e-wallet (GCASH or PAYMAYA), the application uses the Payment Intents API and directly sets `attributes.amount: amountCents`. The server effectively charges the attacker's chosen reduced total.",
+              "remediation_steps": "Validate that `transactionFeeCents` is greater than or equal to 0 before calculating `expectedTotal`. If the client submits a negative transaction fee, reject the request. Additionally, verify in the webhook handler that the amount paid matches the registration's total expected amount, not just relying on the status change.",
+              "counterevidence": "The code correctly recomputes the `subtotal`, `deliveryFee`, and `platformFee` from the database. However, the comments explicitly state: `\"The transaction fee is still the client's own figure... so this pins the total against it rather than re-deriving it.\"` As a result, the server natively trusts `transactionFeeCents`. If it's negative, the total `amountCents` is reduced. PayMongo Payment Intents API processes whatever `amount` it is handed, and the application's webhook marks the order PAID based on ID mapping without verifying if the final paid amount covers the original required `chargeable` amount.",
+              "confidence": "high",
+              "severity_change_conditions": "If the organizers rely exclusively on Credit Cards (Checkout Sessions API) rather than e-wallets, the impact might be slightly reduced because PayMongo's Checkout Session API may calculate the total sum from `lineItems` independently. However, e-wallets currently use the Payment Intents API, directly exposing this flaw.",
+              "fix_verification": "I reviewed the `transactionFeeCents` handling in the codebase. By enforcing a validation check that `transactionFeeCents < 0` immediately fails the request with a 409 status, it is mathematically impossible for an attacker to reduce `amountCents` below the securely server-computed `chargeableTotal`. Valid checkouts will continue to work since expected transaction fees are always positive.",
+              "poc": {
+                "description": "1. Start the registration flow and select GCash or PayMaya as the payment method.\n2. Intercept the final POST request to `/api/checkout`.\n3. Set `transactionFee` (or `transactionFeeCents`) to a negative value that offsets the `subtotal`, leaving the final `amount` (or `amountCents`) at the PayMongo minimum (e.g., 2000 for 20 PHP).\n4. For example, if `subtotal` is 5000, set `transactionFee` to -3000 and `amount` to 2000.\n5. Forward the request. The server accepts the negative fee, generates a PayMongo intent for 20 PHP, and marks the registration as `PAID` upon successful payment of the 20 PHP.",
+                "script_available": true
+              }
+            }
+          }
+        },
+        {
+          "ruleId": "vuln-0008",
+          "ruleIndex": 6,
+          "level": "warning",
+          "message": {
+            "text": "Path Traversal in /api/upload via Unsanitized file.name\n\nThe `/api/upload` endpoint uses `uploadPublicFile` to store images and templates in Vercel Blob. It passes `file.name` directly from the multipart form data without sanitizing directory traversal sequences (like `../`). An authenticated organizer can place files outside the intended `events/` folder in the public Blob store."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/lib/blob.ts"
+                },
+                "region": {
+                  "startLine": 96,
+                  "endLine": 96
+                }
+              },
+              "message": {
+                "text": "Sanitize filename to prevent path traversal in public uploads"
+              }
+            }
+          ],
+          "fixes": [
+            {
+              "artifactChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "src/lib/blob.ts"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 96,
+                        "endLine": 96
+                      },
+                      "insertedContent": {
+                        "text": "const base = file.name.split(/[\\\\/]/).pop()?.replace(/\\.[^.]*$/, '').trim() || 'upload';\n  const safeName = `${base}.${extensionForType(file.type)}`;\n\n  const blob = await put(`${folder}/${safeName}`, file, {"
+                      }
+                    }
+                  ]
+                }
+              ],
+              "description": {
+                "text": "Sanitize `file.name` in `uploadPublicFile` by stripping out directory traversal characters (`/` and `\\`), just like it is done in `uploadPrivateProof`. Additionally, override the file extension by relying on the explicitly validated Content-Type rather than trusting the user-provided filename.",
+                "markdown": "Sanitize `file.name` in `uploadPublicFile` by stripping out directory traversal characters (`/` and `\\`), just like it is done in `uploadPrivateProof`. Additionally, override the file extension by relying on the explicitly validated Content-Type rather than trusting the user-provided filename."
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "0bdd5340a0ee6c313fe8fe5ff9cefd0a97c41f6c2521a194e8b0a4a62bbb4440"
+          },
+          "properties": {
+            "security-severity": "4.3",
+            "strix_vuln_class_hash": "c9c9b0fbd9bb1a36f3f77699859a7c2a2d5bed42f70b41d55e2f986b93cbf615",
+            "strix": {
+              "id": "vuln-0008",
+              "severity": "medium",
+              "cvss": 4.3,
+              "timestamp": "2026-09-23 01:56:37 UTC",
+              "target": "/api/upload",
+              "impact": "An attacker with organizer privileges can write files to arbitrary directories within the public Vercel Blob store. This can pollute other directories (like `avatars/`) and bypass intended directory structuring.",
+              "technical_analysis": "The vulnerability resides in `src/lib/blob.ts` where `uploadPublicFile` directly incorporates `file.name` into the blob storage path string:\n\n```typescript\nconst blob = await put(`${folder}/${file.name}`, file, {\n```\n\nUnlike `uploadPrivateProof`, which uses the helper function `proofFileName` to parse the filename and safely derive a base name while appending a trusted extension, `uploadPublicFile` implicitly trusts the client-provided `file.name` property.\n\nBy sending a `filename` containing `../`, an authenticated user can perform path traversal, storing the resulting file in arbitrary directories within the public storage bucket. Although Vercel's `addRandomSuffix: true` option mitigates file overwriting, an attacker can still break directory boundaries and upload to any arbitrary path within the store.",
+              "remediation_steps": "Sanitize `file.name` in `uploadPublicFile` by stripping out directory traversal characters (`/` and `\\`), just like it is done in `uploadPrivateProof`. Additionally, override the file extension by relying on the explicitly validated Content-Type rather than trusting the user-provided filename.",
+              "counterevidence": "Vercel Blob uses `addRandomSuffix: true`, preventing existing files from being overwritten by simply guessing their names. Furthermore, files are stored on a separate public Vercel Blob domain which mitigate Cross-Site Scripting (XSS). However, the ability to store files in arbitrary directories via directory traversal sequences is confirmed since the `file.name` is completely unsanitized.",
+              "confidence": "high",
+              "severity_change_conditions": "If it is found that an attacker can exploit this path traversal to overwrite critical configuration files or executable assets on the blob store (by somehow bypassing the random suffix logic), the severity would increase to High.",
+              "fix_verification": "Security Closure: Re-tracing the source -> control -> sink shows that `file.name` will now have any directory paths (like `/` or `\\\\`) split and popped off, meaning traversing out of the target folder is no longer possible.\n\nBypass Review: The fix relies on `split(/[\\\\/]/).pop()`, which is a common and reliable way to strip path components in Javascript. The extension is overridden strictly by the file's Content-Type via `extensionForType(file.type)`, meaning the attacker cannot control the file extension on disk either.\n\nPreserved Behavior: Normal uploads will simply have their directory components (if any) stripped and correctly saved. Tests checking uploads continue passing normally.\n\nRepository Checks: Types and syntax are valid. `extensionForType` is already imported at the top of the file.",
+              "poc": {
+                "description": "1. Authenticate as an organizer with the `event:create` or `event:edit` permission.\n2. Send a POST request to `/api/upload` with a multipart form body containing a file.\n3. In the `filename` directive of the `Content-Disposition` header for the file part, supply a path traversal string, e.g., `filename=\"../../../avatars/hacked.png\"`.\n4. Observe that the returned Blob URL confirms the file was saved into the `avatars` folder instead of the `events` folder.",
+                "script_available": true
+              }
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/race-conditions-double-spending",
+          "ruleIndex": 7,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Race Conditions / Double Spending — Ruled out: Promo Code Redemption\n\nConfirmed promo code redemption is secure from race conditions due to proper SELECT FOR UPDATE database locking."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "Promo Code Redemption"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "ruled_out",
+              "risk_area": "Race Conditions / Double Spending",
+              "surface": "Promo Code Redemption",
+              "recorded_by": "Root Agent",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/bfla-idor",
+          "ruleIndex": 8,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "BFLA / IDOR — Ruled out: Client Viewer Endpoints\n\nClient viewer permissions (event:view-summary) are correctly enforced via can() and reachableEvents()."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "Client Viewer Endpoints"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "ruled_out",
+              "risk_area": "BFLA / IDOR",
+              "surface": "Client Viewer Endpoints",
+              "recorded_by": "Root Agent",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/ssrf",
+          "ruleIndex": 9,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "SSRF — Ruled out: Webhooks and Integrations\n\nNo server-side request forgery found in webhooks or PDF generation (which is executed client-side)."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "Webhooks and Integrations"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "ruled_out",
+              "risk_area": "SSRF",
+              "surface": "Webhooks and Integrations",
+              "recorded_by": "Root Agent",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/xss",
+          "ruleIndex": 10,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "XSS — Ruled out: Admin Dashboard Rendering\n\nReact defaults and regex validations prevent XSS. Checked Feedback and Clients rendering."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "Admin Dashboard Rendering"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "ruled_out",
+              "risk_area": "XSS",
+              "surface": "Admin Dashboard Rendering",
+              "recorded_by": "Root Agent",
+              "source": "agent_reported"
+            }
+          }
+        }
+      ],
+      "invocations": [
+        {
+          "executionSuccessful": true
+        }
+      ],
+      "properties": {
+        "syntheticLocationCount": 1
+      }
+    }
+  ]
+}

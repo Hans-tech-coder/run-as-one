@@ -62,6 +62,21 @@ promoted whenever the owner says. Releasing it still needs
 batches and open questions; the behaviour described in §4–§7 is unchanged
 until a batch lands.
 
+**`DASHBOARD_SHELL_PLAN.md` Batch 2 is in (2026-09-23).** The dashboard's quick
+jump now reaches a race by name: `GET /api/admin/search` (§6) matches event
+titles behind `reachableEvents(actor, 'registration:view')` and
+`DashboardQuickJump` merges the hits under an **Event registrants** heading
+below the menu's own rows, each row carrying the race's day so two similar
+titles are told apart. Typing "pink" and pressing Enter lands on Pink Run
+2026's registrants. Verified signed in on `localhost:3000` and at 360px, where
+the list has no horizontal overflow and long titles ellipsise against the date.
+The palette's Batch 1 behaviour is untouched when the search is short, slow or
+failing, which is the point — see §9 for the three rules that hold that, and
+copy them into any other search-as-you-type screen. **Batch 3 (the shell owning
+the header, retiring `--dash-accessory-w`, breadcrumbs) is still deferred**; it
+touches ~25 files and is its own session, and the plan carries everything
+needed to start it cold.
+
 **`GUARDIAN_CONSENT_PLAN.md` is finished — all four batches have landed**, and
 the file is kept only for the owner's decisions and the reasoning behind them.
 A birthdate can no longer be in the future anywhere it is written:

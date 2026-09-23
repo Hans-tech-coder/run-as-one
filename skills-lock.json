@@ -1,179 +1,233 @@
 {
-  "version": 1,
-  "skills": {
-    "cavecrew": {
-      "source": "JuliusBrussee/caveman",
-      "sourceType": "github",
-      "skillPath": "skills/cavecrew/SKILL.md",
-      "computedHash": "32d5320fb7c8b717e8c434e250ac987bebf48f553d0444afbe8215ea38ae5c09"
-    },
-    "caveman": {
-      "source": "JuliusBrussee/caveman",
-      "sourceType": "github",
-      "skillPath": "skills/caveman/SKILL.md",
-      "computedHash": "43ab924e4422a09c24d16dc81349771513bc801c1be21077c252952fe753e6b6"
-    },
-    "caveman-commit": {
-      "source": "JuliusBrussee/caveman",
-      "sourceType": "github",
-      "skillPath": "skills/caveman-commit/SKILL.md",
-      "computedHash": "b416cf134b0f33ddadeca7977aebdbb2d3db79a166d0fce2e1aabeec98132766"
-    },
-    "caveman-compress": {
-      "source": "JuliusBrussee/caveman",
-      "sourceType": "github",
-      "skillPath": "skills/caveman-compress/SKILL.md",
-      "computedHash": "d171ec4013ed22754a72383a55b0ed934c005897d0f2eb0cebb3484af69a22e5"
-    },
-    "caveman-discover": {
-      "source": "JuliusBrussee/caveman",
-      "sourceType": "github",
-      "skillPath": "skills/caveman-discover/SKILL.md",
-      "computedHash": "6850e0ca7bd7a35a1f447cbd342f91b76ece1fb2e3473ad894e51e69746df8a2"
-    },
-    "caveman-evidence-review": {
-      "source": "JuliusBrussee/caveman",
-      "sourceType": "github",
-      "skillPath": "skills/caveman-evidence-review/SKILL.md",
-      "computedHash": "6a2db0191082500739416c87ff896a7894f98aa867f15c70fe932e4d72edd327"
-    },
-    "caveman-explore": {
-      "source": "JuliusBrussee/caveman",
-      "sourceType": "github",
-      "skillPath": "skills/caveman-explore/SKILL.md",
-      "computedHash": "e22fc4edb9feb5046809c74d969b06092b8d7db851aa8502a53a185bba27c57a"
-    },
-    "caveman-help": {
-      "source": "JuliusBrussee/caveman",
-      "sourceType": "github",
-      "skillPath": "skills/caveman-help/SKILL.md",
-      "computedHash": "8b03b0526c2c96f9b44dfde8f2d0063351ec9bbfa946de7a6316c96f6024ca75"
-    },
-    "caveman-learn": {
-      "source": "JuliusBrussee/caveman",
-      "sourceType": "github",
-      "skillPath": "skills/caveman-learn/SKILL.md",
-      "computedHash": "d25fd3ece9b571e1cffd93ca2594ab1919471b27b9c1589fc1c8b7e9c7d6071b"
-    },
-    "caveman-manage": {
-      "source": "JuliusBrussee/caveman",
-      "sourceType": "github",
-      "skillPath": "skills/caveman-manage/SKILL.md",
-      "computedHash": "fdd3834941a8a576cae0ac96a38dfec6ac4bd26ef209ba9997468ca11aaf19f4"
-    },
-    "caveman-optimize": {
-      "source": "JuliusBrussee/caveman",
-      "sourceType": "github",
-      "skillPath": "skills/caveman-optimize/SKILL.md",
-      "computedHash": "5e859a3a8305b5559b2f528616f634324449a426054704d43ef0b6ec8c1d9807"
-    },
-    "caveman-review": {
-      "source": "JuliusBrussee/caveman",
-      "sourceType": "github",
-      "skillPath": "skills/caveman-review/SKILL.md",
-      "computedHash": "36a4007c5c0c6b90b5accfee1cd769a86e4963b651dece2ce5f17a223a0abb4b"
-    },
-    "caveman-setup": {
-      "source": "JuliusBrussee/caveman",
-      "sourceType": "github",
-      "skillPath": "skills/caveman-setup/SKILL.md",
-      "computedHash": "b12b9f8f3fe6b499334a4b319ae1a16aa2da5c2d11e5bc85efd3236eac5213aa"
-    },
-    "caveman-stats": {
-      "source": "JuliusBrussee/caveman",
-      "sourceType": "github",
-      "skillPath": "skills/caveman-stats/SKILL.md",
-      "computedHash": "f59785c3571b4016fda470fef975adf48af2b29cac0df0ad43c8c8a8d1bd8f88"
-    },
-    "investigate-first": {
-      "source": "JuliusBrussee/caveman",
-      "sourceType": "github",
-      "skillPath": "skills/investigate-first/SKILL.md",
-      "computedHash": "59b581b5abfc0e19b7dd5a7c3bb2b16621ab5e94e085065c7b724a9c86cc3d4d"
-    },
-    "lean-build": {
-      "source": "JuliusBrussee/caveman",
-      "sourceType": "github",
-      "skillPath": "skills/lean-build/SKILL.md",
-      "computedHash": "6074721f1653e6e9d6381595b094284807b8d5d001d7d3977ec534679b16a63c"
-    },
-    "migration": {
-      "source": "JuliusBrussee/caveman",
-      "sourceType": "github",
-      "skillPath": "skills/migration/SKILL.md",
-      "computedHash": "7348b2d21ca05bdecc1e4ec2c8b63515ccb1700c8a261fdbd458b04b7383945b"
-    },
-    "prisma-cli": {
-      "source": "prisma/skills",
-      "sourceType": "github",
-      "skillPath": "prisma-cli/SKILL.md",
-      "computedHash": "f41a5af7f25a686631a0e2a8b7031f3c57e0e06b81932f6389736d930d05fa54"
-    },
-    "prisma-client-api": {
-      "source": "prisma/skills",
-      "sourceType": "github",
-      "skillPath": "prisma-client-api/SKILL.md",
-      "computedHash": "7825288518e0722b497de03367a1aee477fc61b0b488d456b9b6257294c005ae"
-    },
-    "prisma-compute": {
-      "source": "prisma/skills",
-      "sourceType": "github",
-      "skillPath": "prisma-compute/SKILL.md",
-      "computedHash": "b2e1d4b2fda6f523b2eb4a38e25c12b7800e4a2801a97b750e95df8131addec0"
-    },
-    "prisma-database-setup": {
-      "source": "prisma/skills",
-      "sourceType": "github",
-      "skillPath": "prisma-database-setup/SKILL.md",
-      "computedHash": "0911d9454bd48df3badd23a50fd90a280eabb15dcbd472c14e7b729075dadefb"
-    },
-    "prisma-driver-adapter-implementation": {
-      "source": "prisma/skills",
-      "sourceType": "github",
-      "skillPath": "prisma-driver-adapter-implementation/SKILL.md",
-      "computedHash": "86034220752575ac0551aa3d579ed0bdfb90616000ae5703bf11e47b655ec7d1"
-    },
-    "prisma-mongodb-upgrade": {
-      "source": "prisma/skills",
-      "sourceType": "github",
-      "skillPath": "prisma-mongodb-upgrade/SKILL.md",
-      "computedHash": "f9ba440e88ca4cec9801d04762296e29e99ca08cb8a8156e4f783ecf90279c8f"
-    },
-    "prisma-postgres": {
-      "source": "prisma/skills",
-      "sourceType": "github",
-      "skillPath": "prisma-postgres/SKILL.md",
-      "computedHash": "66dc44132bdb85cfa369e21a8512c6427c574f5186c8631d345aca9b111091c1"
-    },
-    "prisma-postgres-setup": {
-      "source": "prisma/skills",
-      "sourceType": "github",
-      "skillPath": "prisma-postgres-setup/SKILL.md",
-      "computedHash": "c89d3aa91285d8e4964fcaa5238c99a3d3c20b617e032e731cf632330a85a5a6"
-    },
-    "prisma-upgrade-v7": {
-      "source": "prisma/skills",
-      "sourceType": "github",
-      "skillPath": "prisma-upgrade-v7/SKILL.md",
-      "computedHash": "dcc6c71adca6b22f37c5bda5ac7fd63c3bb59495596a22e06a29c7c85371558f"
-    },
-    "safe-refactor": {
-      "source": "JuliusBrussee/caveman",
-      "sourceType": "github",
-      "skillPath": "skills/safe-refactor/SKILL.md",
-      "computedHash": "9df34a21a7a2c18ce13dbbe4a3f66b4e91df9e4bc33c1c9da8a80261583367ec"
-    },
-    "surgical-patch": {
-      "source": "JuliusBrussee/caveman",
-      "sourceType": "github",
-      "skillPath": "skills/surgical-patch/SKILL.md",
-      "computedHash": "028b9c3574142d19639d9f8eb11fbb01c58479f8f441e957d598a7215e79f95d"
-    },
-    "verify-and-stop": {
-      "source": "JuliusBrussee/caveman",
-      "sourceType": "github",
-      "skillPath": "skills/verify-and-stop/SKILL.md",
-      "computedHash": "3d67de16a2b3c48b643bc511ebc4cb86e6c7105215d8428b6140cbcb73aba4e6"
-    }
-  }
+    "version":  1,
+    "skills":  {
+                   "cavecrew":  {
+                                    "source":  "JuliusBrussee/caveman",
+                                    "sourceType":  "github",
+                                    "skillPath":  "skills/cavecrew/SKILL.md",
+                                    "computedHash":  "32d5320fb7c8b717e8c434e250ac987bebf48f553d0444afbe8215ea38ae5c09"
+                                },
+                   "caveman":  {
+                                   "source":  "JuliusBrussee/caveman",
+                                   "sourceType":  "github",
+                                   "skillPath":  "skills/caveman/SKILL.md",
+                                   "computedHash":  "43ab924e4422a09c24d16dc81349771513bc801c1be21077c252952fe753e6b6"
+                               },
+                   "caveman-commit":  {
+                                          "source":  "JuliusBrussee/caveman",
+                                          "sourceType":  "github",
+                                          "skillPath":  "skills/caveman-commit/SKILL.md",
+                                          "computedHash":  "b416cf134b0f33ddadeca7977aebdbb2d3db79a166d0fce2e1aabeec98132766"
+                                      },
+                   "caveman-compress":  {
+                                            "source":  "JuliusBrussee/caveman",
+                                            "sourceType":  "github",
+                                            "skillPath":  "skills/caveman-compress/SKILL.md",
+                                            "computedHash":  "d171ec4013ed22754a72383a55b0ed934c005897d0f2eb0cebb3484af69a22e5"
+                                        },
+                   "caveman-discover":  {
+                                            "source":  "JuliusBrussee/caveman",
+                                            "sourceType":  "github",
+                                            "skillPath":  "skills/caveman-discover/SKILL.md",
+                                            "computedHash":  "6850e0ca7bd7a35a1f447cbd342f91b76ece1fb2e3473ad894e51e69746df8a2"
+                                        },
+                   "caveman-evidence-review":  {
+                                                   "source":  "JuliusBrussee/caveman",
+                                                   "sourceType":  "github",
+                                                   "skillPath":  "skills/caveman-evidence-review/SKILL.md",
+                                                   "computedHash":  "6a2db0191082500739416c87ff896a7894f98aa867f15c70fe932e4d72edd327"
+                                               },
+                   "caveman-explore":  {
+                                           "source":  "JuliusBrussee/caveman",
+                                           "sourceType":  "github",
+                                           "skillPath":  "skills/caveman-explore/SKILL.md",
+                                           "computedHash":  "e22fc4edb9feb5046809c74d969b06092b8d7db851aa8502a53a185bba27c57a"
+                                       },
+                   "caveman-help":  {
+                                        "source":  "JuliusBrussee/caveman",
+                                        "sourceType":  "github",
+                                        "skillPath":  "skills/caveman-help/SKILL.md",
+                                        "computedHash":  "8b03b0526c2c96f9b44dfde8f2d0063351ec9bbfa946de7a6316c96f6024ca75"
+                                    },
+                   "caveman-learn":  {
+                                         "source":  "JuliusBrussee/caveman",
+                                         "sourceType":  "github",
+                                         "skillPath":  "skills/caveman-learn/SKILL.md",
+                                         "computedHash":  "d25fd3ece9b571e1cffd93ca2594ab1919471b27b9c1589fc1c8b7e9c7d6071b"
+                                     },
+                   "caveman-manage":  {
+                                          "source":  "JuliusBrussee/caveman",
+                                          "sourceType":  "github",
+                                          "skillPath":  "skills/caveman-manage/SKILL.md",
+                                          "computedHash":  "fdd3834941a8a576cae0ac96a38dfec6ac4bd26ef209ba9997468ca11aaf19f4"
+                                      },
+                   "caveman-optimize":  {
+                                            "source":  "JuliusBrussee/caveman",
+                                            "sourceType":  "github",
+                                            "skillPath":  "skills/caveman-optimize/SKILL.md",
+                                            "computedHash":  "5e859a3a8305b5559b2f528616f634324449a426054704d43ef0b6ec8c1d9807"
+                                        },
+                   "caveman-review":  {
+                                          "source":  "JuliusBrussee/caveman",
+                                          "sourceType":  "github",
+                                          "skillPath":  "skills/caveman-review/SKILL.md",
+                                          "computedHash":  "36a4007c5c0c6b90b5accfee1cd769a86e4963b651dece2ce5f17a223a0abb4b"
+                                      },
+                   "caveman-setup":  {
+                                         "source":  "JuliusBrussee/caveman",
+                                         "sourceType":  "github",
+                                         "skillPath":  "skills/caveman-setup/SKILL.md",
+                                         "computedHash":  "b12b9f8f3fe6b499334a4b319ae1a16aa2da5c2d11e5bc85efd3236eac5213aa"
+                                     },
+                   "caveman-stats":  {
+                                         "source":  "JuliusBrussee/caveman",
+                                         "sourceType":  "github",
+                                         "skillPath":  "skills/caveman-stats/SKILL.md",
+                                         "computedHash":  "f59785c3571b4016fda470fef975adf48af2b29cac0df0ad43c8c8a8d1bd8f88"
+                                     },
+                   "investigate-first":  {
+                                             "source":  "JuliusBrussee/caveman",
+                                             "sourceType":  "github",
+                                             "skillPath":  "skills/investigate-first/SKILL.md",
+                                             "computedHash":  "59b581b5abfc0e19b7dd5a7c3bb2b16621ab5e94e085065c7b724a9c86cc3d4d"
+                                         },
+                   "lean-build":  {
+                                      "source":  "JuliusBrussee/caveman",
+                                      "sourceType":  "github",
+                                      "skillPath":  "skills/lean-build/SKILL.md",
+                                      "computedHash":  "6074721f1653e6e9d6381595b094284807b8d5d001d7d3977ec534679b16a63c"
+                                  },
+                   "migration":  {
+                                     "source":  "JuliusBrussee/caveman",
+                                     "sourceType":  "github",
+                                     "skillPath":  "skills/migration/SKILL.md",
+                                     "computedHash":  "7348b2d21ca05bdecc1e4ec2c8b63515ccb1700c8a261fdbd458b04b7383945b"
+                                 },
+                   "prisma-cli":  {
+                                      "source":  "prisma/skills",
+                                      "sourceType":  "github",
+                                      "skillPath":  "prisma-cli/SKILL.md",
+                                      "computedHash":  "f41a5af7f25a686631a0e2a8b7031f3c57e0e06b81932f6389736d930d05fa54"
+                                  },
+                   "prisma-client-api":  {
+                                             "source":  "prisma/skills",
+                                             "sourceType":  "github",
+                                             "skillPath":  "prisma-client-api/SKILL.md",
+                                             "computedHash":  "7825288518e0722b497de03367a1aee477fc61b0b488d456b9b6257294c005ae"
+                                         },
+                   "prisma-compute":  {
+                                          "source":  "prisma/skills",
+                                          "sourceType":  "github",
+                                          "skillPath":  "prisma-compute/SKILL.md",
+                                          "computedHash":  "b2e1d4b2fda6f523b2eb4a38e25c12b7800e4a2801a97b750e95df8131addec0"
+                                      },
+                   "prisma-database-setup":  {
+                                                 "source":  "prisma/skills",
+                                                 "sourceType":  "github",
+                                                 "skillPath":  "prisma-database-setup/SKILL.md",
+                                                 "computedHash":  "0911d9454bd48df3badd23a50fd90a280eabb15dcbd472c14e7b729075dadefb"
+                                             },
+                   "prisma-driver-adapter-implementation":  {
+                                                                "source":  "prisma/skills",
+                                                                "sourceType":  "github",
+                                                                "skillPath":  "prisma-driver-adapter-implementation/SKILL.md",
+                                                                "computedHash":  "86034220752575ac0551aa3d579ed0bdfb90616000ae5703bf11e47b655ec7d1"
+                                                            },
+                   "prisma-mongodb-upgrade":  {
+                                                  "source":  "prisma/skills",
+                                                  "sourceType":  "github",
+                                                  "skillPath":  "prisma-mongodb-upgrade/SKILL.md",
+                                                  "computedHash":  "f9ba440e88ca4cec9801d04762296e29e99ca08cb8a8156e4f783ecf90279c8f"
+                                              },
+                   "prisma-postgres":  {
+                                           "source":  "prisma/skills",
+                                           "sourceType":  "github",
+                                           "skillPath":  "prisma-postgres/SKILL.md",
+                                           "computedHash":  "66dc44132bdb85cfa369e21a8512c6427c574f5186c8631d345aca9b111091c1"
+                                       },
+                   "prisma-postgres-setup":  {
+                                                 "source":  "prisma/skills",
+                                                 "sourceType":  "github",
+                                                 "skillPath":  "prisma-postgres-setup/SKILL.md",
+                                                 "computedHash":  "c89d3aa91285d8e4964fcaa5238c99a3d3c20b617e032e731cf632330a85a5a6"
+                                             },
+                   "prisma-upgrade-v7":  {
+                                             "source":  "prisma/skills",
+                                             "sourceType":  "github",
+                                             "skillPath":  "prisma-upgrade-v7/SKILL.md",
+                                             "computedHash":  "dcc6c71adca6b22f37c5bda5ac7fd63c3bb59495596a22e06a29c7c85371558f"
+                                         },
+                   "safe-refactor":  {
+                                         "source":  "JuliusBrussee/caveman",
+                                         "sourceType":  "github",
+                                         "skillPath":  "skills/safe-refactor/SKILL.md",
+                                         "computedHash":  "9df34a21a7a2c18ce13dbbe4a3f66b4e91df9e4bc33c1c9da8a80261583367ec"
+                                     },
+                   "surgical-patch":  {
+                                          "source":  "JuliusBrussee/caveman",
+                                          "sourceType":  "github",
+                                          "skillPath":  "skills/surgical-patch/SKILL.md",
+                                          "computedHash":  "028b9c3574142d19639d9f8eb11fbb01c58479f8f441e957d598a7215e79f95d"
+                                      },
+                   "verify-and-stop":  {
+                                           "source":  "JuliusBrussee/caveman",
+                                           "sourceType":  "github",
+                                           "skillPath":  "skills/verify-and-stop/SKILL.md",
+                                           "computedHash":  "3d67de16a2b3c48b643bc511ebc4cb86e6c7105215d8428b6140cbcb73aba4e6"
+                                       },
+                   "api-security-testing":  {
+                                                "computedHash":  "82570223442e373ce9d0df8f8e9bf1213a9c4ba5d9c3ce5b2ca56cc0f406fb3d",
+                                                "source":  "usestrix/strix",
+                                                "sourceType":  "github",
+                                                "skillPath":  "skills/api-security-testing/SKILL.md"
+                                            },
+                   "application-security-testing":  {
+                                                        "computedHash":  "d2d1295faabedba5f12f11bd87f3892637005a2c0e42c5e21edc5a86c2746b8b",
+                                                        "source":  "usestrix/strix",
+                                                        "sourceType":  "github",
+                                                        "skillPath":  "skills/application-security-testing/SKILL.md"
+                                                    },
+                   "ci-security-scanning-with-strix":  {
+                                                           "computedHash":  "82f776b0f9adc4f3ea22b5278a58649f8cf4f746eb2f8c1f5b8c8db293cf8c77",
+                                                           "source":  "usestrix/strix",
+                                                           "sourceType":  "github",
+                                                           "skillPath":  "skills/ci-security-scanning-with-strix/SKILL.md"
+                                                       },
+                   "find-security-vulnerabilities-in-code":  {
+                                                                 "computedHash":  "4714bc3003c452140da2a2aa394e9ed5346c41d825ff0b7b1069a76e5209ed1c",
+                                                                 "source":  "usestrix/strix",
+                                                                 "sourceType":  "github",
+                                                                 "skillPath":  "skills/find-security-vulnerabilities-in-code/SKILL.md"
+                                                             },
+                   "fix-security-vulnerabilities-with-strix":  {
+                                                                   "computedHash":  "ec1d522716136c1f6489dec387911072993b6353be6befbf49d92751878c8162",
+                                                                   "source":  "usestrix/strix",
+                                                                   "sourceType":  "github",
+                                                                   "skillPath":  "skills/fix-security-vulnerabilities-with-strix/SKILL.md"
+                                                               },
+                   "managed-pentesting-with-strix":  {
+                                                         "computedHash":  "a30a7d1ce7e93dba9624ec42ed1bb293919426b76402e434b39ac6672c1b1890",
+                                                         "source":  "usestrix/strix",
+                                                         "sourceType":  "github",
+                                                         "skillPath":  "skills/managed-pentesting-with-strix/SKILL.md"
+                                                     },
+                   "owasp-top-10-testing":  {
+                                                "computedHash":  "42377694d6eaf0cd970d607e8e8ed3dbf9e9f2d0c8fa2f6010467182878beab8",
+                                                "source":  "usestrix/strix",
+                                                "sourceType":  "github",
+                                                "skillPath":  "skills/owasp-top-10-testing/SKILL.md"
+                                            },
+                   "penetration-testing-with-strix":  {
+                                                          "computedHash":  "47bf02e94bf881cc5ff8520af3099ebcaee47d3e870188571eb1ebe3825e7ea4",
+                                                          "source":  "usestrix/strix",
+                                                          "sourceType":  "github",
+                                                          "skillPath":  "skills/penetration-testing-with-strix/SKILL.md"
+                                                      },
+                   "web-app-penetration-testing":  {
+                                                       "computedHash":  "33161edb0ffcbd657f5073b0edd0edb52fc63738053d6e746f0d0836d8a3c244",
+                                                       "source":  "usestrix/strix",
+                                                       "sourceType":  "github",
+                                                       "skillPath":  "skills/web-app-penetration-testing/SKILL.md"
+                                                   }
+               }
 }
