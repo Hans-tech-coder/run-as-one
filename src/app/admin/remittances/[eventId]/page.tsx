@@ -1,8 +1,7 @@
 import React from 'react';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { ArrowLeft, HandCoins, Landmark, Scale, Wallet } from 'lucide-react';
+import { HandCoins, Landmark, Scale, Wallet } from 'lucide-react';
 import { can, requireTeamActor } from '@/lib/actor';
 import { SITE_NAME } from '@/lib/site-contact';
 import { eventSettlement } from '@/lib/settlement-store';
@@ -11,6 +10,7 @@ import { SETTLEMENT_STATE_COPY, formatSignedPesos } from '@/lib/settlement';
 import AdminNotFound from '../../AdminNotFound';
 import SettlementBadge from '../SettlementBadge';
 import SettlementClient from './SettlementClient';
+import DashboardHeader from '@/app/admin/DashboardHeader';
 
 export const metadata: Metadata = {
   title: `Settlement | ${SITE_NAME} Admin`,
@@ -51,18 +51,7 @@ export default async function Page({ params }: { params: Promise<{ eventId: stri
 
   return (
     <>
-      <header className="admin-header">
-        <div className="flex items-center gap-4 min-w-0">
-          <Link
-            href="/admin/remittances"
-            className="admin-back-link text-secondary hover:text-primary transition-colors"
-            aria-label="Back to Remittances"
-          >
-            <ArrowLeft size={20} />
-          </Link>
-          <h1 className="admin-header-title truncate">{event.title}</h1>
-        </div>
-      </header>
+      <DashboardHeader title={event.title} crumbs={[{ label: 'Remittances', href: '/admin/remittances' }]} />
 
       <div className="admin-content">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-6 text-sm text-secondary">

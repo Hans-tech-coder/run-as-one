@@ -10,6 +10,7 @@ import {
 import { CATEGORY_ORDER } from '@/lib/category-order';
 import { pacersNeedingCodeSentByEvent } from '@/lib/pacer-store';
 import EventsTableClient from './EventsTableClient';
+import DashboardHeader from '@/app/admin/DashboardHeader';
 
 export default async function AdminEventsPage() {
   const actor = await requireTeamActor();
@@ -109,9 +110,7 @@ export default async function AdminEventsPage() {
 
   return (
     <>
-      <header className="admin-header">
-        <h1 className="admin-header-title">Events</h1>
-      </header>
+      <DashboardHeader title="Events" />
 
       <div className="admin-content">
         <EventsTableClient

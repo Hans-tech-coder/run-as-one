@@ -27,6 +27,7 @@ import {
   clientContactName,
   clientStatusLabel,
 } from '@/lib/client';
+import DashboardHeader from '@/app/admin/DashboardHeader';
 
 /**
  * The client submissions — every organization that applied through
@@ -332,9 +333,7 @@ export default function ClientsClient() {
 
   return (
     <>
-      <header className="admin-header">
-        <h1 className="admin-header-title">Clients</h1>
-      </header>
+      <DashboardHeader title="Clients" />
 
       <div className="admin-content">
         <div className="flex flex-col gap-4 w-full text-primary">

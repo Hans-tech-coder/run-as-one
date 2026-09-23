@@ -1,6 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Compass, type LucideIcon } from 'lucide-react';
+import DashboardHeader from './DashboardHeader';
 
 /**
  * The 404 anyone signed in to the dashboard sees, wearing the admin chrome.
@@ -40,9 +41,7 @@ export default function AdminNotFound({
 }) {
   return (
     <>
-      <header className="admin-header">
-        <h1 className="admin-header-title">{title}</h1>
-      </header>
+      <DashboardHeader title={title} />
 
       <div className="admin-content">
         <div className="admin-panel">

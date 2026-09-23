@@ -1,6 +1,4 @@
 import React from 'react';
-import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
 import prisma from '@/lib/db';
 import { can, requireTeamActor } from '@/lib/actor';
 import RegistrantsTable, { type RegistrantPermissions } from './RegistrantsTable';
@@ -28,6 +26,7 @@ import {
   needsGuardianConsent,
 } from '@/lib/minor-consent';
 import { formatEventInstant } from '@/lib/event-schedule';
+import DashboardHeader from '@/app/admin/DashboardHeader';
 
 export default async function RegistrantsPage({
   params,
@@ -276,14 +275,7 @@ export default async function RegistrantsPage({
 
   return (
     <>
-      <header className="admin-header">
-        <div className="flex items-center gap-4">
-          <Link href="/admin/events" className="admin-back-link text-secondary hover:text-primary transition-colors" aria-label="Back to Events">
-            <ArrowLeft size={20} />
-          </Link>
-          <h1 className="admin-header-title">Registrants: {event.title}</h1>
-        </div>
-      </header>
+      <DashboardHeader title="Registrants" crumbs={[{ label: 'Events', href: '/admin/events' }, { label: event.title }]} />
 
       <div className="admin-content">
         <RegistrantsTable

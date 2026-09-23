@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, UploadCloud, Trash, AlertCircle, CheckCircle } from 'lucide-react';
+import { UploadCloud, Trash, AlertCircle, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 import RegistrationFormPicker from '../RegistrationFormPicker';
 import RegistrationOpeningPicker from '../RegistrationOpeningPicker';
@@ -23,6 +23,7 @@ import { offersBankTransfer } from '@/lib/registration-form';
 import BusyLabel from '@/components/ui/BusyLabel';
 import EventClientField from '@/app/admin/events/EventClientField';
 import AdminDatePicker from '../../AdminDatePicker';
+import DashboardHeader from '@/app/admin/DashboardHeader';
 
 /**
  * The create-event form. `page.tsx` reads the default platform fee on the
@@ -202,14 +203,7 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
 
   return (
     <>
-      <header className="admin-header">
-        <div className="flex items-center gap-4">
-          <Link href="/admin/events" className="admin-back-link text-secondary hover:text-primary transition-colors" aria-label="Back to Events">
-            <ArrowLeft size={20} />
-          </Link>
-          <h1 className="admin-header-title">Create New Event</h1>
-        </div>
-      </header>
+      <DashboardHeader title="Create New Event" crumbs={[{ label: 'Events', href: '/admin/events' }]} />
 
       <div className="admin-content max-w-4xl mx-auto">
         <div 

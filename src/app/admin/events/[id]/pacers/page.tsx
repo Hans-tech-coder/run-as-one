@@ -1,6 +1,4 @@
 import React from 'react';
-import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
 import { can, requireTeamActor } from '@/lib/actor';
 import prisma from '@/lib/db';
 import { CATEGORY_ORDER } from '@/lib/category-order';
@@ -9,6 +7,7 @@ import { pacerOrdersByCode, pacersForEvent } from '@/lib/pacer-store';
 import AdminNotFound from '../../../AdminNotFound';
 import { EVENT_NOT_FOUND } from '../../event-not-found';
 import PacersClient, { type PacerRow } from './PacersClient';
+import DashboardHeader from '@/app/admin/DashboardHeader';
 
 /**
  * One race's pacers: the people the organizer has given a free entry to, the
@@ -83,18 +82,7 @@ export default async function PacersPage({ params }: { params: Promise<{ id: str
 
   return (
     <>
-      <header className="admin-header flex items-center justify-between">
-        <div className="flex items-center gap-4 min-w-0">
-          <Link
-            href="/admin/events"
-            className="admin-back-link text-secondary hover:text-primary transition-colors"
-            aria-label="Back to Events"
-          >
-            <ArrowLeft size={20} />
-          </Link>
-          <h1 className="admin-header-title">Pacers for {event.title}</h1>
-        </div>
-      </header>
+      <DashboardHeader title="Pacers" crumbs={[{ label: 'Events', href: '/admin/events' }, { label: event.title }]} />
 
       <div className="admin-content">
         <PacersClient

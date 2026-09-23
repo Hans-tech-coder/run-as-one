@@ -8,6 +8,7 @@ import { RunAsOneLogo } from '@/components/RunAsOneLogo';
 import LinkPending from '@/components/ui/LinkPending';
 import { rememberSidebar } from './dashboard-sidebar';
 import type { DashboardTheme } from './dashboard-theme';
+import { HeaderToolsProvider } from './DashboardHeader';
 import DashboardQuickJump, { useModifierLabel, type QuickJumpTarget } from './DashboardQuickJump';
 import './Admin.css';
 
@@ -146,10 +147,10 @@ export default function DashboardShell({
   theme?: DashboardTheme;
   /**
    * What sits at the right end of every page's header — the notification
-   * bell and the account menu. Drawn once here rather than in each page's
-   * `.admin-header`, and kept clear of the header's own actions by the
-   * padding `Admin.css` gives every header beside it
-   * (`.dash-header-accessory`), sized from `--dash-accessory-w`.
+   * bell and the account menu. Handed down through context to
+   * `DashboardHeader`, which every page draws its header with, so the tools
+   * are a flex item in the header's own row rather than floated over it
+   * (DASHBOARD_SHELL_PLAN.md, Batch 3).
    */
   headerAccessory?: React.ReactNode;
   /**
@@ -185,27 +186,6 @@ export default function DashboardShell({
   const jumpRef = useRef<HTMLButtonElement>(null);
   const sidebarRef = useRef<HTMLElement>(null);
   const wasOpen = useRef(false);
-  const mainRef = useRef<HTMLElement>(null);
-  const hasAccessory = Boolean(headerAccessory);
-  const toolsRef = useRef<HTMLDivElement>(null);
-
-  // The header keeps its right edge clear by the tools' real width: a long
-  // name widens the account trigger, and a phone hides its words. Until this
-  // runs, `Admin.css` reserves the widest the tools can be at each width, so
-  // the first paint may leave extra room but never overlaps.
-  useEffect(() => {
-    const tools = toolsRef.current;
-    const main = mainRef.current;
-    if (!tools || !main) return;
-    const observer = new ResizeObserver(() => {
-      main.style.setProperty('--dash-accessory-w', `${Math.ceil(tools.offsetWidth)}px`);
-    });
-    observer.observe(tools);
-    return () => {
-      observer.disconnect();
-      main.style.removeProperty('--dash-accessory-w');
-    };
-  }, [hasAccessory]);
 
   const close = useCallback(() => setOpenOn(null), []);
 
@@ -498,17 +478,11 @@ export default function DashboardShell({
 
       <main
         id={MAIN_ID}
-        ref={mainRef}
         tabIndex={-1}
-        className={`admin-main ${headerAccessory ? 'has-header-accessory' : ''}`}
+        className="admin-main"
         inert={isOpen}
       >
-        {headerAccessory && (
-          <div className="dash-header-accessory">
-            <div ref={toolsRef} className="dash-header-tools">{headerAccessory}</div>
-          </div>
-        )}
-        {children}
+        <HeaderToolsProvider value={headerAccessory ?? null}>{children}</HeaderToolsProvider>
       </main>
 
       {/* The rail's tooltip: one element for the whole menu, placed from the

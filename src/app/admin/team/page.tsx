@@ -10,6 +10,7 @@ import { soonestFirst } from '@/lib/event-schedule';
 import { SITE_NAME } from '@/lib/site-contact';
 import TeamClient, { type TeamMemberRow } from './TeamClient';
 import RolesPanel from './RolesPanel';
+import DashboardHeader from '@/app/admin/DashboardHeader';
 
 export const metadata: Metadata = {
   title: `Team | ${SITE_NAME} Admin`,
@@ -134,9 +135,7 @@ export default async function TeamPage() {
 
   return (
     <>
-      <header className="admin-header">
-        <h1 className="admin-header-title">Team</h1>
-      </header>
+      <DashboardHeader title="Team" />
 
       <div className="admin-content">
         <div className="metrics-grid mb-8">

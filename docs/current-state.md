@@ -72,10 +72,11 @@ titles are told apart. Typing "pink" and pressing Enter lands on Pink Run
 the list has no horizontal overflow and long titles ellipsise against the date.
 The palette's Batch 1 behaviour is untouched when the search is short, slow or
 failing, which is the point — see §9 for the three rules that hold that, and
-copy them into any other search-as-you-type screen. **Batch 3 (the shell owning
-the header, retiring `--dash-accessory-w`, breadcrumbs) is still deferred**; it
-touches ~25 files and is its own session, and the plan carries everything
-needed to start it cold.
+copy them into any other search-as-you-type screen. **Batch 3 has landed too:**
+every page draws its header with `DashboardHeader`, the bell and account menu
+ride in its row through context, `--dash-accessory-w` and its `ResizeObserver`
+are gone, and the back arrows on the eight deep pages are breadcrumb trails
+(`Events › Pink Run 2026 › Registrants`). The plan is finished.
 
 **`GUARDIAN_CONSENT_PLAN.md` is finished — all four batches have landed**, and
 the file is kept only for the owner's decisions and the reasoning behind them.

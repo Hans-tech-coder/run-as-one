@@ -923,7 +923,7 @@ export default function TeamClient({
                 </p>
               </div>
               {/* 44px to press; the negative margin leaves the 20px icon where
-                  it sat, as .admin-back-link does. */}
+                  it sat. */}
               <button
                 type="button"
                 onClick={closeModal}

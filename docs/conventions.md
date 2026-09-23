@@ -247,7 +247,9 @@
     dropped.
   - A panel's inset is 16px below `sm`. A modal's close button is 44px with a
     -12px margin, so its icon does not move.
-  - A header back arrow wears `.admin-back-link` for its 44px hit area.
+  - A page header has no back arrow: its breadcrumb trail (`DashboardHeader`'s
+    `crumbs`) is the way back, each link a 44px target by padding and negative
+    margin.
   - **A bulk action below `lg` is a bottom bar, not a toolbar chip.** The
     registrants list's `.bulk-bar` ("N selected · Export · Delete · Clear")
     is fixed to the viewport and lined up with the content column, with a
@@ -350,8 +352,8 @@
     a glass pill it read as a third button on a page whose whole job is to get
     one button pressed, and it pulled the eye before Sign In did. It is still
     a 44px target (padding, not a background, and a negative left margin pulls
-    the arrow flush with the card's edge — the same trick `.admin-back-link`
-    uses), and it names the site rather than saying "Home", which on a page
+    the arrow flush with the card's edge — the same trick the header's
+    breadcrumb links use), and it names the site rather than saying "Home", which on a page
     headed *Admin Portal* would be ambiguous. The invitation page keeps `.auth-card` on its own and is
     unchanged — it is a one-time destination from an email and already offers
     *Go to Sign In*.
@@ -481,7 +483,7 @@
   opening day, the promo windows, the activity range, a remittance's Sent On,
   the runner edit's birthdate (today back a century) and the organizer
   application's target date. Time inputs are still native `type="time"`.
-- **Chrome every dashboard page shares goes through `DashboardShell`, not into each page.** The notification bell is the model: one `headerAccessory` slot at the top of `<main>`, and CSS (`.has-header-accessory .admin-header`) that keeps every page's header clear of it. Something meant for every header is added there, never pasted into fifteen `page.tsx` files.
+- **Chrome every dashboard page shares goes through `DashboardShell`, not into each page.** Every page draws its header with `<DashboardHeader title crumbs? actions? />` (`admin/DashboardHeader.tsx`), never a hand-written `<header className="admin-header">`. The page says only what it is; the shell hands the bell and the account menu down through context (`HeaderToolsProvider`), and they sit in the header's own flex row, so nothing is measured and nothing pads itself clear of them. `crumbs` are the ancestors, outermost first — the page itself is the `<h1>`, never repeated in the trail — and a crumb with no `href` (an event, which has no page of its own) is plain text, not a dead link. Something meant for every header is added to `DashboardHeader`, never pasted into twenty-five `page.tsx` files.
 - **A row with more than one action has a ⋮ menu, never a row of chips.** The
   Actions cell holds one `.action-dropdown-btn` whose menu lists each action
   as icon + label, destructive ones red below a divider — the events table's

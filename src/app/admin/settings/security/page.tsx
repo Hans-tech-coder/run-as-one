@@ -5,6 +5,7 @@ import { formatEventInstant } from '@/lib/event-schedule';
 import { SITE_NAME } from '@/lib/site-contact';
 import { loadOwnAccount } from '../account';
 import { PasswordPanel, SignInActivityPanel } from '../SettingsPanels';
+import DashboardHeader from '@/app/admin/DashboardHeader';
 
 export const metadata: Metadata = {
   title: `Security | ${SITE_NAME} Admin`,
@@ -21,9 +22,7 @@ export default async function SecuritySettingsPage() {
 
   return (
     <>
-      <header className="admin-header">
-        <h1 className="admin-header-title">Security</h1>
-      </header>
+      <DashboardHeader title="Security" />
 
       <div className="admin-content max-w-4xl mx-auto w-full">
         <div className="settings-stack">

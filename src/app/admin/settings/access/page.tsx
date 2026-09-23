@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { requireActor } from '@/lib/actor';
 import { SITE_NAME } from '@/lib/site-contact';
 import AccessPanels from '../AccessPanels';
+import DashboardHeader from '@/app/admin/DashboardHeader';
 
 export const metadata: Metadata = {
   title: `Your Access | ${SITE_NAME} Admin`,
@@ -17,9 +18,7 @@ export default async function AccessSettingsPage() {
 
   return (
     <>
-      <header className="admin-header">
-        <h1 className="admin-header-title">Your Access</h1>
-      </header>
+      <DashboardHeader title="Your Access" />
 
       <div className="admin-content max-w-4xl mx-auto w-full">
         <div className="settings-stack">

@@ -4,6 +4,7 @@ import EventImage from '@/components/EventImage';
 import { formatEventDayShort, formatEventInstant } from '@/lib/event-schedule';
 import type { RegistrantCounts, ViewerEventSummary } from '@/lib/client-summary';
 import { REGISTRATION_STATES } from './events/registration-state-badge';
+import DashboardHeader from './DashboardHeader';
 
 /**
  * A client viewer's `/admin` (ADMIN_MERGE_PLAN.md, Batch 4): its own races,
@@ -36,9 +37,7 @@ export default function ViewerDashboard({
 }) {
   return (
     <>
-      <header className="admin-header">
-        <h1 className="admin-header-title">Your Events</h1>
-      </header>
+      <DashboardHeader title="Your Events" />
 
       <div className="admin-content">
         <div className="metrics-grid">

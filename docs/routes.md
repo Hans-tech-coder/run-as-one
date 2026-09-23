@@ -81,10 +81,9 @@ controls, the shared table primitives and toolbar popovers, the bell and the
 notification centre, `AlertModal`, `Toast` and every modal panel follow the
 switch; what is still dark on the light setting is the pages' own TSX
 (Tailwind `white/…` and `gray-…` classes), which Batch 3 converts (§10). From `lg` down the trigger is the avatar and chevron
-alone. Both sit in `.dash-header-tools`, whose measured width
-`DashboardShell` writes to `--dash-accessory-w` on `<main>`; the headers'
-right padding reads it, falling back to the widest the tools can be before
-it runs, so a long name never runs under a page's own actions. Pressing the bell
+alone. Both sit in `.dash-header-tools`, the last flex item in every page's
+`DashboardHeader` row (handed down from `DashboardShell` through context), so
+a long name pushes the title to ellipsise rather than running under it. Pressing the bell
 opens **a dialog** — under the bell from `md` up, a bottom sheet on a phone,
 portalled to `<body>` — with *All / Unread* sliding tabs (`.t-tabs`), *Mark all
 as read*, and the feed under Manila day headings: a tone-coloured icon per

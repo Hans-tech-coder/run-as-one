@@ -5,6 +5,7 @@ import { SITE_NAME } from '@/lib/site-contact';
 import { getContactEmail } from '@/lib/site-settings';
 import { loadOwnAccount } from './account';
 import { ProfilePanel } from './SettingsPanels';
+import DashboardHeader from '@/app/admin/DashboardHeader';
 
 export const metadata: Metadata = {
   title: `Profile | ${SITE_NAME} Admin`,
@@ -27,9 +28,7 @@ export default async function ProfileSettingsPage() {
 
   return (
     <>
-      <header className="admin-header">
-        <h1 className="admin-header-title">Profile</h1>
-      </header>
+      <DashboardHeader title="Profile" />
 
       <div className="admin-content max-w-4xl mx-auto w-full">
         <div className="settings-stack">

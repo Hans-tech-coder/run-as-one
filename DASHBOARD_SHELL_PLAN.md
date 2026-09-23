@@ -11,33 +11,12 @@ Dashboard alone.
 | --- | --- | --- |
 | 1 | The menu finds its place again: sub-route active state, grouped sections, quick jump, footer, skip link | **Landed (dev)** — complete |
 | 2 | Quick jump reaches events by name (search API) | **Landed (dev)** — complete |
-| 3 | The shell owns the header: retire `--dash-accessory-w`, add breadcrumbs | **Deferred by the owner**, not abandoned |
+| 3 | The shell owns the header: retire `--dash-accessory-w`, add breadcrumbs | **Landed (dev)** — complete |
 
-Batches 2 and 3 were **staged deliberately**, not left half-done. The owner was
-asked when to do the header work and chose "sariling batch mamaya"; Batch 2 was
-split off because reaching events by name needs a search route that Batch 1's
-client-only quick jump does not. The project's rule is **one batch per
-session**, so each of these is meant to be started fresh.
-
-**Batch 3 is still pending and still deferred on purpose.** Everything a cold
-session needs to run it is under its own heading below — what
-`--dash-accessory-w` does today, why 25 page files each have to remember it,
-and where breadcrumbs belong. Nothing about it was started in Batch 2.
-
-## How to run a pending batch
-
-Open a new session in this repository and paste the matching line. Everything
-the session needs is in this file — it does not need the conversation that
-produced it.
-
-**Batch 3:**
-
-```
-Read DASHBOARD_SHELL_PLAN.md and do Batch 3 only. Stop when it is done.
-```
-
-When a batch lands, change its row above to **Landed (dev)** and write what
-shipped under its own heading, the way Batch 1 is written up below.
+**All three batches have landed; the plan is finished.** Batches 2 and 3 were
+staged deliberately — the owner chose to do the header work as its own batch
+("sariling batch mamaya"), and the project's rule is one batch per session — so
+each was started fresh from this file.
 
 ---
 
@@ -165,17 +144,44 @@ Checked at 360px: no horizontal overflow, the date holds its place, the title
 ellipsises against it. Docs updated in the same change — §6 (the route), §9
 (the three rules a networked palette follows), §10.
 
-## Batch 3 — the header (deferred)
+## Batch 3 — what landed
 
-The bell and the account menu are a zero-height sticky slot at the top of
-`<main>`, and a `ResizeObserver` writes their measured width to
-`--dash-accessory-w` so that each of **25** page files can pad its own
-`.admin-header` clear of them. It works, but every new page has to remember it.
+The bell and the account menu used to be a zero-height sticky slot at the top
+of `<main>`, with a `ResizeObserver` writing their measured width to
+`--dash-accessory-w` so that each of **25** page files could pad its own
+`.admin-header` clear of them. Every new page had to remember it.
 
-The shell should own the header bar: one `<header class="admin-header">` drawn by
-`DashboardShell`, with the title supplied by the page. That retires the measured
-variable, and it is where breadcrumbs belong (`Events › Pink Run 2026 ›
-Registrants`) — the dashboard is three levels deep in places, and the
-`.admin-back-link` in 11 files is standing in for them today.
+- **`admin/DashboardHeader.tsx`** draws every page's header. A page passes
+  `title`, optional `crumbs` and optional `actions` (the consent sheet's Print
+  button is the only one today); `loading` draws the title as the pulsing bar
+  for `AdminRouteLoading`. All 25 hand-written `<header className="admin-header">`
+  blocks are gone.
+- **The tools ride in the header's own row.** `DashboardShell` hands
+  `headerAccessory` down through `HeaderToolsProvider` (context), and
+  `DashboardHeader` renders it as the last flex item. There is nothing to
+  measure, so the `ResizeObserver`, `--dash-accessory-w`,
+  `.dash-header-accessory` and `.has-header-accessory` are all deleted.
+  A long title ellipsises (from `lg` up) or clamps to two lines (below) against
+  the tools instead of being padded clear of them.
+- **Breadcrumbs replace `.admin-back-link`** on the eight deep pages, and the
+  class is gone. The trail is the ancestors; the page is the `<h1>` under it:
+  - New / Edit Event → `Events` › *Create New Event* / *Edit Event*
+  - Pacers, Registrants, Results → `Events › {event}` › *Pacers* / *Registrants*
+    / *Race Results* (the titles lost their "for {event}" — the name is in the
+    trail, one line up, not dropped)
+  - Consent → `Events › {event} › Registrants` › *Guardian Consent: {child}*
+  - Remittance detail → `Remittances` › *{event}*
+- **An event crumb is plain text, not a link.** There is no
+  `/admin/events/[id]` page — an event is reached through its four screens —
+  and a crumb linking to one of them would make the trail lie about where it
+  goes on the other three.
+- **The trail is one line at every width.** The first crumb keeps its word; the
+  ones after it ellipsise, so a long race name shortens on a phone rather than
+  disappearing. Crumb links are 44px targets by padding and negative margin.
+- **The header is `z-index: 45`** (was 40) — what the floating slot had — so
+  the account menu dropping out of it still clears anything a page positions
+  beneath, and it is `position: relative` rather than `static` below `md` for
+  the same reason: it scrolls with the page there, as before.
 
-It touches ~25 files, so it is its own batch and its own session.
+Docs updated in the same change — §6 (the bell's placement), §9 (the header
+convention, the back-link line), §10, and the guide's plan table.

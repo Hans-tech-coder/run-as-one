@@ -6,6 +6,7 @@ import { can, requireActor } from '@/lib/actor';
 import { SITE_NAME } from '@/lib/site-contact';
 import { getSiteSettings } from '@/lib/site-settings';
 import { PlatformFeePanel, SiteEmailPanel, SocialLinksPanel } from '../SettingsPanels';
+import DashboardHeader from '@/app/admin/DashboardHeader';
 
 export const metadata: Metadata = {
   title: `Site Settings | ${SITE_NAME} Admin`,
@@ -40,9 +41,7 @@ export default async function SiteSettingsPage() {
 
   return (
     <>
-      <header className="admin-header">
-        <h1 className="admin-header-title">Site Settings</h1>
-      </header>
+      <DashboardHeader title="Site Settings" />
 
       <div className="admin-content max-w-4xl mx-auto w-full">
         <div className="settings-stack">

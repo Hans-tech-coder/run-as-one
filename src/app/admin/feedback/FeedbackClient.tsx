@@ -38,6 +38,7 @@ import {
   feedbackKindLabel,
   type FeedbackKind,
 } from '@/lib/feedback';
+import DashboardHeader from '@/app/admin/DashboardHeader';
 
 /**
  * What people have told us about the app itself.
@@ -228,9 +229,7 @@ export default function FeedbackClient() {
 
   return (
     <>
-      <header className="admin-header">
-        <h1 className="admin-header-title">Feedback</h1>
-      </header>
+      <DashboardHeader title="Feedback" />
 
       <div className="admin-content">
         <div className="metrics-grid" style={{ marginBottom: '24px' }}>

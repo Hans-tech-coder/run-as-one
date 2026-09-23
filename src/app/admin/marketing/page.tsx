@@ -10,6 +10,7 @@ import { formatPesos } from '@/lib/money';
 import { NO_SPEND, spendByCode } from '@/lib/promo-redemptions';
 import { CATEGORY_ORDER } from '@/lib/category-order';
 import { NOT_A_PACER } from '@/lib/pacer-store';
+import DashboardHeader from '@/app/admin/DashboardHeader';
 
 /**
  * **Pacer codes are not promotions and are not on this screen.** They are free
@@ -106,9 +107,7 @@ export default async function MarketingPage() {
 
   return (
     <>
-      <header className="admin-header">
-        <h1 className="admin-header-title">Marketing Tools</h1>
-      </header>
+      <DashboardHeader title="Marketing Tools" />
 
       <div className="admin-content">
         <div className="metrics-grid mb-8">

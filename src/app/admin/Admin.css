@@ -675,18 +675,38 @@
   min-height: 100vh;
 }
 
+/* The page's header, drawn by DashboardHeader.tsx for every page: the trail
+   and the title on the left, the page's own actions, then the shell's tools.
+   z-index 45 so the account menu, which drops out of it, clears anything the
+   page positions beneath. */
 .admin-header {
   height: 80px;
   border-bottom: 1px solid var(--dash-hairline);
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: var(--space-md);
   padding: 0 var(--space-xl);
   background: var(--dash-header);
   position: sticky;
   top: 0;
-  z-index: 40;
+  z-index: 45;
   backdrop-filter: blur(20px);
+}
+
+.admin-header-lead {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+}
+
+.admin-header-actions {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .admin-header-title {
@@ -695,6 +715,68 @@
   font-weight: 600;
   color: var(--text-primary);
   margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The breadcrumb trail above the title. One line at every width: the first
+   crumb (the section) keeps its whole word and the ones after it ellipsise,
+   so a long event name shortens rather than dropping out on a phone. */
+.dash-crumbs {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+  color: var(--text-secondary);
+}
+
+.dash-crumb {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.dash-crumb:first-child {
+  flex-shrink: 0;
+}
+
+.dash-crumb-link,
+.dash-crumb-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 20px of text, a 44px target: the padding reaches out and the margin takes
+   it back, so the trail sits as tight as plain text. */
+.dash-crumb-link {
+  padding: 12px 0;
+  margin: -12px 0;
+  border-radius: 4px;
+  color: var(--text-secondary);
+  transition: color var(--duration-quick) ease;
+}
+
+.dash-crumb-link:hover {
+  color: var(--text-primary);
+}
+
+.dash-crumb-link:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: -10px;
+}
+
+.dash-crumb-sep {
+  flex-shrink: 0;
+  margin: 0 4px;
+  color: var(--ink-35);
 }
 
 .admin-content {
@@ -1017,25 +1099,6 @@
    below). From `md` up the menu pushes the page instead, and this never shows. */
 .dash-backdrop {
   display: none;
-}
-
-/* The back arrow on the edit, registrants, results and new-event headers. The
-   icon is 20px and was the whole target; the negative margin gives it a 44px
-   hit area without moving the arrow or the title beside it a pixel. */
-.admin-back-link {
-  width: 44px;
-  height: 44px;
-  margin: -12px;
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-}
-
-.admin-back-link:focus-visible {
-  outline: 2px solid var(--accent-blue);
-  outline-offset: -6px;
 }
 
 /* ── The card list (AdminCardList.tsx) ───────────────────────────────────
@@ -2399,9 +2462,10 @@ textarea.form-input {
       visibility 0s;
   }
 
-  /* Page headers stay in the flow on a phone, leaving the screen to the page. */
+  /* Page headers stay in the flow on a phone, leaving the screen to the page.
+     Relative, not static, so the account menu still layers over the page. */
   .admin-header {
-    position: static;
+    position: relative;
   }
 }
 
@@ -2482,10 +2546,10 @@ textarea.form-input {
 }
 
 @media (width < 64rem) {
-  /* A title such as "Registrants: {event.title}" is as long as the organizer
-     made it: the header grows to two lines rather than spilling out. Its
-     inline padding follows .admin-content's so the title and the page beneath
-     it share one left edge. */
+  /* A title such as "Guardian Consent: {child}" is as long as the data made
+     it: the header grows to two lines rather than spilling out. Its inline
+     padding follows .admin-content's so the title and the page beneath it
+     share one left edge. */
   .admin-header {
     height: auto;
     min-height: 60px;
@@ -2495,17 +2559,22 @@ textarea.form-input {
     column-gap: var(--space-md);
   }
 
-  .admin-header > * {
-    min-width: 0;
+  /* The tools stay on the title's row; the page's own actions take the next
+     line once the title needs the room. */
+  .admin-header-lead {
+    flex: 1 1 12rem;
   }
 
-  /* Header actions take the next line once the title needs the room. */
-  .admin-header > :first-child {
-    flex: 1 1 16rem;
+  .dash-header-tools {
+    order: 1;
+  }
+
+  .admin-header-actions {
+    order: 2;
   }
 
   .admin-header-title {
-    min-width: 0;
+    white-space: normal;
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
@@ -3528,82 +3597,23 @@ textarea.form-input {
 }
 
 /* ── Header tools (NotificationsCenter.tsx, AccountMenu.tsx) ──────────────
-   The bell and the account menu are drawn once by the shell, not by each
-   page: a zero-height slot at the top of <main> holds them at the right end
-   of whatever .admin-header the page drew, and every header beside it keeps
-   its right edge clear of them. From `md` up the slot is sticky, as the
-   header is; below `md` the header scrolls with the page, so the slot does
-   too. 44px to press.
-
-   How much a header keeps clear is `--dash-accessory-w`, the tools' measured
-   width, which DashboardShell sets on <main>. Before it has run, the fallback
-   is the widest the tools can be at that width: a bell, the gap, and an
-   account trigger whose name has hit its max-width. */
-.admin-main.has-header-accessory {
-  position: relative;
-}
-
-.dash-header-accessory {
-  position: sticky;
-  top: 0;
-  z-index: 45;
-  height: 0;
-  display: flex;
-  justify-content: flex-end;
-  padding-right: var(--space-xl);
-  pointer-events: none;
-}
-
-.dash-header-accessory > * {
-  pointer-events: auto;
-  margin-top: 18px;
-}
-
-/* Its own height rather than the zero-height slot's, or the tools centre on
-   the slot's top edge and ride up out of the header. */
+   The bell and the account menu are handed to every page's header by the
+   shell (DashboardHeader.tsx) and sit in its row as the last flex item, so a
+   long title gives way to them by layout alone. They used to float over the
+   page's header from a zero-height slot, with their measured width written to
+   `--dash-accessory-w` for every header to pad itself clear of; that variable
+   is gone (DASHBOARD_SHELL_PLAN.md, Batch 3). 44px to press. */
 .dash-header-tools {
+  flex: none;
   display: flex;
-  align-self: flex-start;
   align-items: center;
   gap: 12px;
-}
-
-.has-header-accessory .admin-header {
-  padding-right: calc(var(--space-xl) + var(--dash-accessory-w, 300px) + var(--space-md));
+  margin-left: auto;
 }
 
 @media (width < 64rem) {
-  .dash-header-accessory {
-    padding-right: var(--space-lg);
-  }
-
-  .dash-header-accessory > * {
-    margin-top: 8px;
-  }
-
   .dash-header-tools {
     gap: 8px;
-  }
-
-  .has-header-accessory .admin-header {
-    padding-right: calc(var(--space-lg) + var(--dash-accessory-w, 122px) + 12px);
-  }
-}
-
-@media (width < 48rem) {
-  .dash-header-accessory {
-    position: absolute;
-    inset: 0 0 auto 0;
-  }
-}
-
-@media (width < 40rem) {
-  .dash-header-accessory {
-    padding-right: var(--space-md);
-  }
-
-  .has-header-accessory .admin-header {
-    padding-right: calc(var(--space-md) + var(--dash-accessory-w, 122px) + 12px);
   }
 }
 

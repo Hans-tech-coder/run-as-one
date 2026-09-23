@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Save, X, AlertCircle, CheckCircle, UploadCloud, Trash } from 'lucide-react';
+import { Save, X, AlertCircle, CheckCircle, UploadCloud, Trash } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toPesos } from '@/lib/money';
@@ -32,6 +32,7 @@ import { EVENT_FORM_SHAPE } from '@/app/admin/route-loading-shape';
 import BusyLabel from '@/components/ui/BusyLabel';
 import EventClientField from '@/app/admin/events/EventClientField';
 import AdminDatePicker from '../../../AdminDatePicker';
+import DashboardHeader from '@/app/admin/DashboardHeader';
 
 // The premade templates that used to sit under /public/certificates are gone —
 // the only way to get a certificate background now is to upload one. An event
@@ -313,14 +314,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
 
   return (
     <>
-      <header className="admin-header">
-        <div className="flex items-center gap-4">
-          <Link href="/admin/events" className="admin-back-link text-secondary hover:text-primary transition-colors" aria-label="Back to Events">
-            <ArrowLeft size={20} />
-          </Link>
-          <h1 className="admin-header-title">Edit Event</h1>
-        </div>
-      </header>
+      <DashboardHeader title="Edit Event" crumbs={[{ label: 'Events', href: '/admin/events' }]} />
 
       <div className="admin-content max-w-4xl mx-auto">
         <div 

@@ -7,6 +7,7 @@ import { formatPesos } from '@/lib/money';
 import { hasFinished, today } from '@/lib/event-schedule';
 import AdminCardList from './AdminCardList';
 import ViewerDashboard from './ViewerDashboard';
+import DashboardHeader from './DashboardHeader';
 
 export default async function AdminDashboard() {
   const actor = await requireActor();
@@ -89,9 +90,7 @@ export default async function AdminDashboard() {
 
   return (
     <>
-      <header className="admin-header">
-        <h1 className="admin-header-title">Overview</h1>
-      </header>
+      <DashboardHeader title="Overview" />
 
       <div className="admin-content">
         <div className="metrics-grid">

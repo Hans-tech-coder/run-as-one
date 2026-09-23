@@ -18,6 +18,7 @@ import AdminDataTable, { AdminColumnsMenu, rowPosition } from '@/app/admin/Admin
 import AdminTablePager from '@/app/admin/AdminTablePager';
 import MobileSortMenu from '@/app/admin/MobileSortMenu';
 import RowActionsMenu from '@/app/admin/RowActionsMenu';
+import DashboardHeader from '@/app/admin/DashboardHeader';
 
 /**
  * The shared list of running clubs every event's registration form suggests.
@@ -193,9 +194,7 @@ export default function CommunitiesClient() {
 
   return (
     <>
-      <header className="admin-header">
-        <h1 className="admin-header-title">Running Communities</h1>
-      </header>
+      <DashboardHeader title="Running Communities" />
 
       <div className="admin-content">
         {pendingCount > 0 && (

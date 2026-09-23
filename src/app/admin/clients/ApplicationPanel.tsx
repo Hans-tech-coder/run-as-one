@@ -239,7 +239,7 @@ export default function ApplicationPanel({
             </div>
           </div>
           {/* 44px to press; the negative margin leaves the 20px icon where it
-              sat, as .admin-back-link does. */}
+              sat. */}
           <button
             ref={closeRef}
             type="button"

@@ -7,6 +7,7 @@ import { SITE_NAME } from '@/lib/site-contact';
 import { eventSettlements } from '@/lib/settlement-store';
 import { formatSignedPesos } from '@/lib/settlement';
 import RemittancesClient from './RemittancesClient';
+import DashboardHeader from '@/app/admin/DashboardHeader';
 
 export const metadata: Metadata = {
   title: `Remittances | ${SITE_NAME} Admin`,
@@ -49,9 +50,7 @@ export default async function Page() {
 
   return (
     <>
-      <header className="admin-header">
-        <h1 className="admin-header-title">Remittances</h1>
-      </header>
+      <DashboardHeader title="Remittances" />
 
       <div className="admin-content">
         <div className="metrics-grid">

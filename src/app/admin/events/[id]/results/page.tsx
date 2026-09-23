@@ -1,12 +1,11 @@
 import prisma from '@/lib/db';
 import { can, requireTeamActor } from '@/lib/actor';
-import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
 import ResultsUploaderClient from './ResultsUploaderClient';
 import ResultsTableClient from './ResultsTableClient';
 import AdminNotFound from '../../../AdminNotFound';
 import { EVENT_NOT_FOUND } from '../../event-not-found';
 import { CATEGORY_ORDER } from '@/lib/category-order';
+import DashboardHeader from '@/app/admin/DashboardHeader';
 
 export default async function AdminResultsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -40,14 +39,7 @@ export default async function AdminResultsPage({ params }: { params: Promise<{ i
 
   return (
     <>
-      <header className="admin-header flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link href="/admin/events" className="admin-back-link text-secondary hover:text-primary transition-colors" aria-label="Back to Events">
-            <ArrowLeft size={20} />
-          </Link>
-          <h1 className="admin-header-title">Race Results for {event.title}</h1>
-        </div>
-      </header>
+      <DashboardHeader title="Race Results" crumbs={[{ label: 'Events', href: '/admin/events' }, { label: event.title }]} />
 
       <div className="admin-content">
         <ResultsTableClient results={results} event={event} />

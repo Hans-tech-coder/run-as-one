@@ -7,6 +7,7 @@ import { loadActivityPage } from '@/lib/activity-store';
 import { soonestFirst } from '@/lib/event-schedule';
 import { SITE_NAME } from '@/lib/site-contact';
 import ActivityClient, { type ActivityRow } from './ActivityClient';
+import DashboardHeader from '@/app/admin/DashboardHeader';
 
 export const metadata: Metadata = {
   title: `Activity | ${SITE_NAME} Admin`,
@@ -71,9 +72,7 @@ export default async function ActivityPage({
 
   return (
     <>
-      <header className="admin-header">
-        <h1 className="admin-header-title">Activity</h1>
-      </header>
+      <DashboardHeader title="Activity" />
 
       <div className="admin-content">
         <ActivityClient

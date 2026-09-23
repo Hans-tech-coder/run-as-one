@@ -1,6 +1,5 @@
 import React from 'react';
-import Link from 'next/link';
-import { ArrowLeft, TriangleAlert } from 'lucide-react';
+import { TriangleAlert } from 'lucide-react';
 import prisma from '@/lib/db';
 import { can, requireTeamActor } from '@/lib/actor';
 import AdminNotFound from '../../../../../AdminNotFound';
@@ -18,6 +17,7 @@ import {
 } from '@/lib/minor-consent';
 import { RunAsOneLogo } from '@/components/RunAsOneLogo';
 import PrintableSheet, { PrintButton } from './PrintableSheet';
+import DashboardHeader from '@/app/admin/DashboardHeader';
 
 /**
  * One runner's parent/guardian consent, as a sheet to print for kit claiming
@@ -193,19 +193,15 @@ export default async function GuardianConsentSheetPage({
 
   return (
     <>
-      <header className="admin-header">
-        <div className="flex items-center gap-4 min-w-0">
-          <Link
-            href={registrantsHref}
-            className="admin-back-link text-secondary hover:text-primary transition-colors"
-            aria-label="Back to Registrants"
-          >
-            <ArrowLeft size={20} />
-          </Link>
-          <h1 className="admin-header-title truncate">Guardian Consent: {childName}</h1>
-        </div>
-        <PrintButton />
-      </header>
+      <DashboardHeader
+        title={`Guardian Consent: ${childName}`}
+        crumbs={[
+          { label: 'Events', href: '/admin/events' },
+          { label: event.title },
+          { label: 'Registrants', href: registrantsHref },
+        ]}
+        actions={<PrintButton />}
+      />
 
       <div className="admin-content">
         {/* A sheet for a runner who does not need one is still printable —

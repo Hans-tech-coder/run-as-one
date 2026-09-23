@@ -91,7 +91,7 @@ export default function RegistrationScheduleModal({
             </div>
           </div>
           {/* 44px to press; the negative margin keeps the 20px icon exactly
-              where it sat, as .admin-back-link does. */}
+              where it sat. */}
           <button
             onClick={onClose}
             className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center text-secondary hover:text-primary transition-colors"

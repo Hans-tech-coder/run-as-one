@@ -8,6 +8,7 @@ import type {
   FormPanelShape,
   RouteShape,
 } from "./route-loading-shape";
+import DashboardHeader from './DashboardHeader';
 
 /**
  * What the dashboard shows while a page is being fetched.
@@ -39,11 +40,7 @@ import type {
 export default function AdminRouteLoading({ shape }: { shape?: RouteShape | null }) {
   return (
     <>
-      <header className="admin-header">
-        <div className="t-skel-skeleton is-pulsing" aria-hidden="true">
-          <div className="t-skel-bar" style={{ width: "180px", height: "20px" }} />
-        </div>
-      </header>
+      <DashboardHeader loading />
 
       {shape ? (
         <div className="admin-content is-route-loading">
