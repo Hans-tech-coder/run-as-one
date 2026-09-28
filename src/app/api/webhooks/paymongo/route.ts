@@ -11,53 +11,52 @@ export async function POST(request: Request) {
     // PayMongo webhook secret logic (Optional but recommended in production)
     const webhookSecret = process.env.PAYMONGO_WEBHOOK_SECRET;
 
-    if (webhookSecret && signatureHeader) {
-      // Verify signature
-      // Signature header format: t=1611234567,te=signature_hash,li=test_signature_hash
-      const timestampMatch = signatureHeader.match(/t=([^,]+)/);
-      const signatureMatch = signatureHeader.match(/te=([^,]+)/) || signatureHeader.match(/li=([^,]+)/);
+    if (webhookSecret) {
+      // Header format: t=<timestamp>,te=<test-mode sig>,li=<live-mode sig>.
+      // Only the current mode's slot is filled. A request that is unsigned or
+      // unparseable is rejected — otherwise anyone could mark an order PAID.
+      const timestampMatch = signatureHeader?.match(/t=([^,]+)/);
+      const signatureMatch = signatureHeader?.match(/te=([^,]+)/) || signatureHeader?.match(/li=([^,]+)/);
 
-      if (timestampMatch && signatureMatch) {
-        const timestamp = timestampMatch[1];
-        const signature = signatureMatch[1];
+      if (!timestampMatch || !signatureMatch) {
+        console.error('PayMongo Webhook: missing or malformed signature header');
+        return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
+      }
 
-        const signaturePayload = `${timestamp}.${rawBody}`;
-        const computedSignature = crypto
-          .createHmac('sha256', webhookSecret)
-          .update(signaturePayload)
-          .digest('hex');
+      const computedSignature = crypto
+        .createHmac('sha256', webhookSecret)
+        .update(`${timestampMatch[1]}.${rawBody}`)
+        .digest('hex');
 
-        if (computedSignature !== signature) {
-          console.error('PayMongo Webhook signature verification failed');
-          return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
-        }
+      if (computedSignature !== signatureMatch[1]) {
+        console.error('PayMongo Webhook signature verification failed');
+        return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
       }
     }
 
+    // Envelope: { data: { type: 'event', attributes: { type: '<event name>', data: <resource> } } }.
+    // `data.type` is always "event"; the event name is one level down.
     const body = JSON.parse(rawBody);
-    const event = body.data;
+    const eventType: string | undefined = body.data?.attributes?.type;
+    const resource = body.data?.attributes?.data;
 
-    if (!event || !event.type) {
+    if (!eventType || !resource) {
       return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
     }
 
-    // We listen to successful payment events
-    // For e-wallet / payment intent: "payment.paid"
-    // For checkout sessions (links): "checkout_session.payment.paid"
-    if (event.type === 'payment.paid' || event.type === 'checkout_session.payment.paid') {
+    // Card / QRPh go through a Checkout Session (we store its cs_ id);
+    // GCash / Maya go through a Payment Intent (we store its pi_ id).
+    if (eventType === 'payment.paid' || eventType === 'checkout_session.payment.paid') {
       let referenceNumber = '';
       let paymentIntentId = '';
 
-      if (event.type === 'checkout_session.payment.paid') {
-        const attributes = event.attributes.data.attributes;
-        referenceNumber = attributes.reference_number;
-        // In this case, the data.id is the checkout_session id (cs_...)
-        // which matches what we saved in checkoutSessionId
-        paymentIntentId = event.attributes.data.id || '';
-      } else if (event.type === 'payment.paid') {
-        const attributes = event.attributes;
-        referenceNumber = attributes.description; // Depending on how we mapped it
-        paymentIntentId = event.attributes.data?.id || '';
+      if (eventType === 'checkout_session.payment.paid') {
+        referenceNumber = resource.attributes?.reference_number || '';
+        paymentIntentId = resource.id || '';
+      } else {
+        // A card payment also fires payment.paid, carrying the session's
+        // internal pi_ — it matches nothing and is ignored, which is fine.
+        paymentIntentId = resource.attributes?.payment_intent_id || '';
       }
 
       // Try to find the registration by checkoutSessionId (which we used for piId) OR orderRef
@@ -73,6 +72,11 @@ export async function POST(request: Request) {
         registration = await prisma.registration.findFirst({
           where: { orderRef: referenceNumber }
         });
+      }
+
+      if (registration?.status === 'PAID') {
+        // PayMongo retries deliveries; the receipt went out on the first one.
+        return NextResponse.json({ received: true });
       }
 
       if (registration) {
