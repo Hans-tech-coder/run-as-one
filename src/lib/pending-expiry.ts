@@ -283,3 +283,61 @@ async function releaseRedemption(tx: any, registration: Sweepable): Promise<bool
   });
   return true;
 }
+
+/**
+ * Which registrations an admin list shows: everything except an online order
+ * that was never paid.
+ *
+ * The owner's rule: a card / QRPh / GCash / Maya order is not a registration
+ * until PayMongo confirms the money, so it stays off the registrants screen
+ * while it is PENDING and after the sweep above turns it EXPIRED. It still
+ * holds its slot in the background (SLOT_HOLDING_STATUSES) — hiding it changes
+ * what an organizer sees, not what the capacity count believes.
+ *
+ * A bank transfer is always listed: its PENDING is the organizer's to-do list.
+ */
+export function listedRegistrationWhere() {
+  return {
+    OR: [
+      { status: { notIn: ['PENDING', 'EXPIRED'] } },
+      { paymentMethod: { equals: PAYMENT_METHODS.BANK_TRANSFER, mode: 'insensitive' as const } },
+    ],
+  };
+}
+
+/**
+ * Undo an online order whose PayMongo checkout could not even be created.
+ *
+ * The row is written first because that write is what reserves the slot and
+ * spends the promo (see api/checkout), but when PayMongo then rejects the
+ * request the runner never reached a payment page and only saw an error. The
+ * owner's ruling is that such an attempt leaves no trace: the row and its
+ * runners are deleted in the same request and the promo redemption is handed
+ * back, so a retry starts clean instead of stacking duplicate PENDING orders.
+ *
+ * Guarded to a PENDING, non-bank-transfer row, so it can never remove an order
+ * somebody has paid for or a transfer awaiting verification.
+ */
+export async function discardFailedCheckout(registrationId: string): Promise<void> {
+  await prisma.$transaction(async tx => {
+    const registration = await tx.registration.findFirst({
+      where: {
+        id: registrationId,
+        status: 'PENDING',
+        NOT: { paymentMethod: { equals: PAYMENT_METHODS.BANK_TRANSFER, mode: 'insensitive' } },
+      },
+      select: {
+        id: true,
+        orderRef: true,
+        promoCode: true,
+        event: { select: { organizerId: true } },
+        runners: { where: { deletedAt: null }, select: { categoryId: true, promoPrice: true } },
+      },
+    });
+    if (!registration) return;
+
+    await releaseRedemption(tx, registration);
+    await tx.runner.deleteMany({ where: { registrationId } });
+    await tx.registration.delete({ where: { id: registrationId } });
+  });
+}

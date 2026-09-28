@@ -144,7 +144,11 @@ export function deliveryZoneLabel(value: unknown): string {
  * stored code is converted here at the boundary and nowhere else.
  */
 export function paymongoPaymentType(value: unknown): string {
-  return asCode(value).toLowerCase();
+  const code = asCode(value);
+  // The wizard stores Maya as MAYA, but PayMongo still spells it `paymaya`
+  // and rejects `maya` outright ("maya is an invalid payment_method").
+  if (code === 'MAYA') return 'paymaya';
+  return code.toLowerCase();
 }
 
 /** Whether a registration was paid by bank transfer — the one method an admin verifies by hand. */

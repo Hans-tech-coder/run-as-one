@@ -30,6 +30,7 @@ import {
   reserveSlots,
 } from '@/lib/registration-gate';
 import { deliverConfirmationEmail, deliverReceivedEmail } from '@/lib/email-delivery';
+import { discardFailedCheckout } from '@/lib/pending-expiry';
 import {
   FREE_ORDER_COLUMNS,
   chargeableTotal,
@@ -56,6 +57,10 @@ import {
 import { resolveDiscount } from '@/lib/promo-store';
 
 export async function POST(request: Request) {
+  // Set once an online order is written and cleared once PayMongo accepts it.
+  // Anything that ends the request while it is still set — a PayMongo
+  // rejection or a thrown error — discards the order (discardFailedCheckout).
+  let unconfirmedOnlineOrderId: string | null = null;
   try {
     const body = await request.json();
     const { 
@@ -416,16 +421,26 @@ export async function POST(request: Request) {
     // by anyone who has not actually registered.
     await recordWriteInCommunities(participants);
 
-    // Sent now, not after payment: the runner should see their submitted
-    // details are correct before they've even reached PayMongo's page. The
-    // actual receipt only goes out once the webhook confirms PAID. Whether the
-    // send actually happened is written onto the registration, since on
-    // Resend's free tier it may simply not have — see lib/email-delivery.ts.
+    // Which email goes out now, if any. Whether a send actually happened is
+    // written onto the registration, since on Resend's free tier it may simply
+    // not have — see lib/email-delivery.ts.
     //
-    // A free order is already PAID, so it gets the receipt instead: asking a
-    // pacer to wait for a payment that does not exist would be the one mail
-    // they cannot act on. See FREE_ORDER_EMAIL_NOTE in lib/free-checkout.ts.
-    await (free ? deliverConfirmationEmail : deliverReceivedEmail)(registration);
+    //  - A free order is already PAID, so it gets the receipt: asking a pacer
+    //    to wait for a payment that does not exist would be the one mail they
+    //    cannot act on. See FREE_ORDER_EMAIL_NOTE in lib/free-checkout.ts.
+    //  - A bank transfer gets the "received" email, since it will sit PENDING
+    //    for days while an organizer checks the deposit slip.
+    //  - An online payment gets nothing yet. It is not a registration until
+    //    PayMongo confirms the money (owner's rule), so the webhook sends one
+    //    receipt carrying every submitted detail — and a checkout that errors
+    //    or is abandoned never emails the runner at all.
+    if (free) {
+      await deliverConfirmationEmail(registration);
+    } else if (storedPaymentMethod === PAYMENT_METHODS.BANK_TRANSFER) {
+      await deliverReceivedEmail(registration);
+    } else {
+      unconfirmedOnlineOrderId = registration.id;
+    }
 
     const finalSuccessUrl = successUrl.includes('?') ? `${successUrl}&orderRef=${orderRef}` : `${successUrl}?orderRef=${orderRef}`;
     const finalCancelUrl = cancelUrl.includes('?') ? `${cancelUrl}&orderRef=${orderRef}&cancel=true` : `${cancelUrl}?orderRef=${orderRef}&cancel=true`;
@@ -530,7 +545,7 @@ export async function POST(request: Request) {
     }
 
     // Branch logic: Use Payment Intents API for direct e-wallets redirect, otherwise use Checkout Session
-    if (storedPaymentMethod === 'GCASH' || storedPaymentMethod === 'PAYMAYA') {
+    if (storedPaymentMethod === 'GCASH' || storedPaymentMethod === 'MAYA' || storedPaymentMethod === 'PAYMAYA') {
       const auth = `Basic ${Buffer.from(paymongoKey).toString('base64')}`;
 
       // 1. Create Payment Intent
@@ -614,6 +629,7 @@ export async function POST(request: Request) {
         data: { checkoutSessionId: piId } // Repurposing field for tracking
       });
 
+      unconfirmedOnlineOrderId = null;
       return NextResponse.json({
         checkout_url: redirectUrl
       });
@@ -668,6 +684,7 @@ export async function POST(request: Request) {
       data: { checkoutSessionId: data.data.id }
     });
 
+    unconfirmedOnlineOrderId = null;
     return NextResponse.json({
       checkout_url: data.data.attributes.checkout_url
     });
@@ -689,5 +706,18 @@ export async function POST(request: Request) {
       { error: 'Internal Server Error', message: error.message },
       { status: 500 }
     );
+  } finally {
+    // Still set means PayMongo never accepted this order: one of its calls
+    // was rejected or something threw. The runner saw an error, not a
+    // payment page, so the order is removed and its slot and promo handed
+    // back (lib/pending-expiry.ts discardFailedCheckout).
+    if (unconfirmedOnlineOrderId) {
+      try {
+        await discardFailedCheckout(unconfirmedOnlineOrderId);
+      } catch (discardError) {
+        // Left PENDING, the daily expire-pending sweep still releases it.
+        console.error('Checkout: could not discard failed order', discardError);
+      }
+    }
   }
 }

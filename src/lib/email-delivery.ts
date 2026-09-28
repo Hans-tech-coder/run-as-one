@@ -1,6 +1,6 @@
 import type { Prisma } from '@prisma/client';
 import prisma from './db';
-import { isComplimentary } from './registration-codes';
+import { isBankTransfer } from './registration-codes';
 import {
   type EmailMessage,
   type EmailOutcome,
@@ -85,8 +85,13 @@ export interface EmailDeliveryRecord {
  * is hand-send the very mail that was withheld on purpose.
  */
 export function outstandingEmail(registration: EmailDeliveryRecord): EmailKind | null {
-  if (isComplimentary(registration.paymentMethod)) {
-    return registration.confirmationEmailSentAt ? null : EMAIL_KINDS.CONFIRMATION;
+  // Only a bank transfer is sent the "received" email. A free order is PAID on
+  // the spot, and an online one is emailed once, by the webhook, when PayMongo
+  // confirms it — so for both the receipt is the only email that can be owed.
+  if (!isBankTransfer(registration.paymentMethod)) {
+    return registration.status === 'PAID' && !registration.confirmationEmailSentAt
+      ? EMAIL_KINDS.CONFIRMATION
+      : null;
   }
   if (!registration.receivedEmailSentAt) return EMAIL_KINDS.RECEIVED;
   if (registration.status === 'PAID' && !registration.confirmationEmailSentAt) {

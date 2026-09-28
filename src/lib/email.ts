@@ -865,8 +865,10 @@ export function registrationReceivedEmail(registration: RegistrationWithDetails)
 /**
  * Sent once a registration reaches PAID — online via the PayMongo webhook, or
  * manual once an admin confirms a bank transfer proof. This is the official
- * receipt; the received email above already told the runner their details
- * were captured, so this one is entirely about the money.
+ * receipt. A bank transfer already had the received email above, so its
+ * receipt is about the money and keeps the compact runner line. Every other
+ * order (online, free) never got that email, so its receipt also carries the
+ * contact, logistics and full per-runner details.
  */
 export function registrationConfirmationEmail(registration: RegistrationWithDetails): Promise<EmailMessage> {
   const { event, runners } = registration;
@@ -895,13 +897,27 @@ export function registrationConfirmationEmail(registration: RegistrationWithDeta
         kind: 'card',
         rows: orderRows(
           registration,
-          paidByBankTransfer && registration.transactionNumber
-            ? [{ kind: 'info', label: 'Transaction No.', value: registration.transactionNumber }]
-            : []
+          paidByBankTransfer
+            ? registration.transactionNumber
+              ? [{ kind: 'info', label: 'Transaction No.', value: registration.transactionNumber }]
+              : []
+            : [
+                // Only a bank transfer gets the "received" email first; for
+                // every other order this receipt is the one email, so it
+                // carries what that one would have shown.
+                { kind: 'info', label: 'Submitted By', value: registration.customerName },
+                { kind: 'info', label: 'Contact Email', value: registration.customerEmail },
+                ...(registration.customerPhone
+                  ? [{ kind: 'info' as const, label: 'Contact Phone', value: registration.customerPhone }]
+                  : []),
+                ...logisticsRows(registration),
+              ]
         ),
       },
       { kind: 'heading', text: `Registered Runner${runners.length > 1 ? 's' : ''}` },
-      { kind: 'rows', rows: runnerRows(registration) },
+      paidByBankTransfer
+        ? { kind: 'rows', rows: runnerRows(registration) }
+        : { kind: 'card', rows: runnerDetailRows(registration) },
       { kind: 'heading', text: 'Payment Summary' },
       { kind: 'rows', rows: summaryRows(registration, 'Total Paid') },
       {

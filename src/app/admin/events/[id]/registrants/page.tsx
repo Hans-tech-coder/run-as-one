@@ -26,6 +26,7 @@ import {
   needsGuardianConsent,
 } from '@/lib/minor-consent';
 import { formatEventInstant } from '@/lib/event-schedule';
+import { listedRegistrationWhere } from '@/lib/pending-expiry';
 import DashboardHeader from '@/app/admin/DashboardHeader';
 
 export default async function RegistrantsPage({
@@ -66,6 +67,9 @@ export default async function RegistrantsPage({
         // it: validating one payment moved that order, and the person sitting
         // at "No. 1" was not the first person who registered.
         orderBy: { createdAt: 'asc' },
+        // An online order is listed only once PayMongo has confirmed it; an
+        // unpaid or abandoned one stays off this screen (lib/pending-expiry.ts).
+        where: listedRegistrationWhere(),
         include: {
           runners: {
             // The same reason one level down. A group's members were coming
