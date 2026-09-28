@@ -223,7 +223,13 @@
     `overflow: clip`, so a footer's own background cannot paint square
     corners past its rounded edge. Both are defined in `Admin.css`, and every
     dashboard dialog wears them, the event forms' success and failure dialogs
-    included.
+    included. A modal whose fields change with a choice (the promo form's
+    *Discount type* and *How runners get it*) uses
+    **`admin/SmoothModalBody`** in place of the bare body `div`: it measures
+    its content and eases the height (`.t-resize`, transitions-dev card
+    resize), and it holds the panel's top where it opened (centred) so only
+    the bottom edge moves — rising only if the bottom would leave the screen.
+    It keeps `scrollbar-gutter: stable` and still scrolls past the cap.
   - **Every TanStack table's pager is `admin/AdminTablePager`.** It holds the
     rows-per-page menu, the range and First / Previous / Next / Last. Below
     `sm` it shows only the range and 44px Previous / Next. It counts with
@@ -483,7 +489,13 @@
   may be blank) and a **Today** button whenever today is pickable, `hint`,
   `disabled`, `className` for the `.form-group`, and `invalid` /
   `describedBy` for a field whose message is drawn elsewhere (the opening
-  picker's one line under date and time). The trigger is named by its label
+  picker's one line under date and time), and **`withTime`** — a date **and** a
+  time of day in the one calendar (Hour / Minute / AM-PM `AdminSelect`s under
+  the grid, a **Done** button), never a second time field beside it. Its value
+  is `YYYY-MM-DDTHH:mm` (24-hour, Manila), picking a day keeps the calendar
+  open and commits live, a new day takes `defaultTime`, and the placeholder
+  becomes "Select a date and time". The promo window's Starts / Ends use it.
+  The trigger is named by its label
   **and** its value (`aria-labelledby`). The desktop popover is **portalled to
   `<body>` with `position: fixed`**, placed under the field or flipped above
   it and kept on screen, because a modal's scrolling body would clip it;

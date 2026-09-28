@@ -64,7 +64,37 @@ import AdminSelect, { type AdminSelectOption } from "./AdminSelect";
  * 44px day cells. Keyboard is the APG date-picker set, as in BirthdatePicker.
  * The value in and out is `YYYY-MM-DD`, or "" for none, exactly what the
  * native input gave, so no form's state or API changed.
+ *
+ * `withTime` puts a time of day in the same calendar, under the month, rather
+ * than a second field beside it (the promo window's Starts and Ends). The value
+ * is then `YYYY-MM-DDTHH:mm`, 24-hour, and picking a day no longer closes the
+ * calendar — the time is still to be set, so a Done button closes it instead.
+ * The day and the time are committed as they change, so dismissing the
+ * calendar by clicking away loses nothing. A day picked with no time yet takes
+ * `defaultTime`.
  */
+
+/** 1–12 for the Hour list, 00–59 for the Minute list. */
+const HOUR_OPTIONS: AdminSelectOption[] = Array.from({ length: 12 }, (_, i) => ({
+  value: String(i + 1),
+  label: String(i + 1),
+}));
+const MINUTE_OPTIONS: AdminSelectOption[] = Array.from({ length: 60 }, (_, i) => {
+  const m = String(i).padStart(2, "0");
+  return { value: m, label: m };
+});
+const MERIDIEM_OPTIONS: AdminSelectOption[] = [
+  { value: "AM", label: "AM" },
+  { value: "PM", label: "PM" },
+];
+
+const TIME_OF_DAY = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/** A 24-hour `HH:mm` as the clock an organizer reads ("5:00 PM"). */
+export function formatTimeOfDay(time: string): string {
+  const [h, m] = time.split(":").map(Number);
+  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
+}
 
 /** Matches Tailwind's `sm` (640px): below it the calendar is a bottom sheet. */
 const PHONE_QUERY = "(max-width: 639.98px)";
@@ -96,7 +126,9 @@ export default function AdminDatePicker({
   id,
   error,
   hint,
-  placeholder = "Select a date",
+  placeholder,
+  withTime = false,
+  defaultTime = "00:00",
   min,
   max,
   clearable = false,
@@ -117,6 +149,10 @@ export default function AdminDatePicker({
   hint?: React.ReactNode;
   /** An instruction, so sentence case (§9 on placeholders). */
   placeholder?: string;
+  /** Adds a time of day inside the calendar; the value becomes `YYYY-MM-DDTHH:mm`. */
+  withTime?: boolean;
+  /** The time a newly picked day starts with, `HH:mm` 24-hour. */
+  defaultTime?: string;
   /** The earliest pickable day, `YYYY-MM-DD`. */
   min?: string;
   /** The latest pickable day, `YYYY-MM-DD`. */
@@ -161,7 +197,13 @@ export default function AdminDatePicker({
   // changed from the header select must not pull focus out of that select.
   const moveFocus = useRef(false);
 
-  const selected = isCalendarDay(value) ? value : "";
+  const valueDay = withTime ? value.slice(0, 10) : value;
+  const selected = isCalendarDay(valueDay) ? valueDay : "";
+  const valueTime = value.slice(11, 16);
+  const time = withTime && TIME_OF_DAY.test(valueTime) ? valueTime : defaultTime;
+  const [hour24, minute] = time.split(":");
+  const hour12 = String(Number(hour24) % 12 || 12);
+  const meridiem = Number(hour24) < 12 ? "AM" : "PM";
   const minBound = min && isCalendarDay(min) ? min : "";
   const maxBound = max && isCalendarDay(max) ? max : "";
 
@@ -273,8 +315,21 @@ export default function AdminDatePicker({
 
   const pick = (day: string) => {
     if (!isPickable(day)) return;
+    if (withTime) {
+      // The time is still to be set, so the calendar stays open.
+      onChange(`${day}T${time}`);
+      return;
+    }
     onChange(day);
     close(true);
+  };
+
+  // A time changed before any day is picked lands on the day in view.
+  const setTime = (h12: string, m: string, ampm: string) => {
+    const h = (Number(h12) % 12) + (ampm === "PM" ? 12 : 0);
+    const day = selected || (isPickable(focusDay) ? focusDay : "");
+    if (!day) return;
+    onChange(`${day}T${String(h).padStart(2, "0")}:${m}`);
   };
 
   const moveTo = (day: string) => {
@@ -448,7 +503,39 @@ export default function AdminDatePicker({
         ))}
       </div>
 
-      {(canPickToday || showClear) && (
+      {withTime && (
+        <div className="mt-2 border-t border-[var(--dash-hairline)] pt-3">
+          <span className="mb-2 block text-xs font-medium text-secondary">Time (Philippine time)</span>
+          <div className="grid grid-cols-3 gap-2">
+            <AdminSelect
+              label="Hour"
+              hideLabel
+              listboxLabel="Hour"
+              value={hour12}
+              options={HOUR_OPTIONS}
+              onChange={(h) => setTime(h, minute, meridiem)}
+            />
+            <AdminSelect
+              label="Minute"
+              hideLabel
+              listboxLabel="Minute"
+              value={minute}
+              options={MINUTE_OPTIONS}
+              onChange={(m) => setTime(hour12, m, meridiem)}
+            />
+            <AdminSelect
+              label="AM or PM"
+              hideLabel
+              listboxLabel="AM or PM"
+              value={meridiem}
+              options={MERIDIEM_OPTIONS}
+              onChange={(a) => setTime(hour12, minute, a)}
+            />
+          </div>
+        </div>
+      )}
+
+      {(canPickToday || showClear || withTime) && (
         <div className="mt-2 flex items-center justify-between gap-2 border-t border-[var(--dash-hairline)] pt-2">
           {showClear ? (
             <button
@@ -464,15 +551,29 @@ export default function AdminDatePicker({
           ) : (
             <span />
           )}
-          {canPickToday && (
-            <button
-              type="button"
-              onClick={() => pick(now)}
-              className="rounded-lg px-3 h-11 sm:h-9 text-sm font-medium text-accent-blue-ink hover:bg-[var(--ink-05)] focus:outline-none focus-visible:shadow-[0_0_0_2px_var(--accent-blue)]"
-            >
-              Today
-            </button>
-          )}
+          <span className="flex items-center gap-1">
+            {canPickToday && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (withTime) setFocusDay(now);
+                  pick(now);
+                }}
+                className="rounded-lg px-3 h-11 sm:h-9 text-sm font-medium text-accent-blue-ink hover:bg-[var(--ink-05)] focus:outline-none focus-visible:shadow-[0_0_0_2px_var(--accent-blue)]"
+              >
+                Today
+              </button>
+            )}
+            {withTime && (
+              <button
+                type="button"
+                onClick={() => close(true)}
+                className="rounded-lg px-3 h-11 sm:h-9 text-sm font-semibold text-primary hover:bg-[var(--ink-05)] focus:outline-none focus-visible:shadow-[0_0_0_2px_var(--accent-blue)]"
+              >
+                Done
+              </button>
+            )}
+          </span>
         </div>
       )}
     </>
@@ -521,7 +622,11 @@ export default function AdminDatePicker({
             id={valueId}
             className={`flex-1 min-w-0 truncate ${selected ? "" : "text-[var(--ink-30)]"}`}
           >
-            {selected ? formatCalendarDay(selected) : placeholder}
+            {selected
+              ? withTime
+                ? `${formatCalendarDay(selected)} · ${formatTimeOfDay(time)}`
+                : formatCalendarDay(selected)
+              : (placeholder ?? (withTime ? "Select a date and time" : "Select a date"))}
           </span>
           <CalendarDays
             size={16}

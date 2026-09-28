@@ -1494,10 +1494,25 @@ function asDate(value: string | Date | null | undefined): Date | null {
 function formatDay(date: Date): string {
   // en-US, matching formatEventDay in event-schedule.ts — "31 January" and
   // "January 31" appearing on the same screen would look like two apps.
-  return new Intl.DateTimeFormat('en-US', {
+  const day = new Intl.DateTimeFormat('en-US', {
     timeZone: 'Asia/Manila',
     month: 'long',
     day: 'numeric',
     year: 'numeric',
   }).format(date);
+  // A window can start or end mid-day. A day's own edges (00:00 and 23:59,
+  // what a date picked with no time is stored as) stay a bare date.
+  const clock = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Manila',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).format(date);
+  if (clock === '00:00' || clock === '23:59') return day;
+  const time = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Manila',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(date);
+  return `${day}, ${time}`;
 }

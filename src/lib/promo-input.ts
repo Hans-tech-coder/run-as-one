@@ -197,10 +197,11 @@ export async function promoTermsFromInput(
 
   const from = startOfManilaDay(input.validFrom);
   // The end of the day, not its start: an organizer typing a single date as the
-  // last day means the whole of it.
+  // last day means the whole of it. A time from the form ends at the end of
+  // that minute, so "ends 5:00 PM" still works during 5:00 PM.
   const until = endOfManilaDay(input.validUntil);
   if (from && until && from.getTime() > until.getTime()) {
-    return problem('The end date is before the start date.', 'validUntil');
+    return problem('The end is before the start.', 'validUntil');
   }
 
   return {
@@ -467,26 +468,35 @@ function problem(error: string, field: string): { problem: PromoInputError } {
 /**
  * A date field from the form, or null.
  *
- * The form sends `YYYY-MM-DD`, which `new Date()` reads as midnight **UTC** —
+ * The form sends `YYYY-MM-DDTHH:mm`, a date and a Manila time of day (a bare
+ * `YYYY-MM-DD` is still read as the whole day). `new Date()` reads either in
+ * **UTC** on the server —
  * eight hours behind Manila, so a code set to start today would already be live
  * yesterday evening and one set to end today would expire at 8am. Both ends are
  * therefore pinned to Manila explicitly, the same timezone `event-schedule.ts`
  * insists on for the same reason.
  */
-function manilaDay(value: unknown, timeOfDay: string): Date | null {
+function manilaDay(value: unknown, timeOfDay: string, seconds: string): Date | null {
   const raw = String(value ?? '').trim();
   if (!raw) return null;
   const calendarDay = /^\d{4}-\d{2}-\d{2}$/.test(raw);
-  const date = new Date(calendarDay ? `${raw}T${timeOfDay}+08:00` : raw);
+  const localMinute = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(raw);
+  const date = new Date(
+    calendarDay
+      ? `${raw}T${timeOfDay}+08:00`
+      : localMinute
+        ? `${raw}:${seconds}+08:00`
+        : raw,
+  );
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-/** The first moment of a Manila day, for `validFrom`. */
+/** The first moment of a Manila day or minute, for `validFrom`. */
 function startOfManilaDay(value: unknown): Date | null {
-  return manilaDay(value, '00:00:00');
+  return manilaDay(value, '00:00:00', '00');
 }
 
-/** The last moment of a Manila day, for `validUntil`. */
+/** The last moment of a Manila day or minute, for `validUntil`. */
 function endOfManilaDay(value: unknown): Date | null {
-  return manilaDay(value, '23:59:59');
+  return manilaDay(value, '23:59:59', '59');
 }

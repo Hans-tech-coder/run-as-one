@@ -1543,6 +1543,38 @@
   overscroll-behavior: contain;
 }
 
+/* Card resize (transitions-dev 01), for SmoothModalBody: the body's measured
+   height eases instead of jumping when the form inside changes. */
+.t-resize {
+  transition:
+    width  var(--resize-dur) var(--resize-ease),
+    height var(--resize-dur) var(--resize-ease);
+  will-change: width, height;
+}
+
+/* No scrollbar flash while a growing body is still shorter than its content.
+   The gutter is kept either way, so hiding and showing the scrollbar never
+   changes the content's width — which would reflow it, change its height,
+   start another resize and hold the body unscrollable in a loop. */
+.admin-modal-body.t-resize {
+  scrollbar-gutter: stable;
+}
+
+.admin-modal-body[data-resizing] {
+  overflow-y: hidden;
+}
+
+/* The panel's top holds while its body resizes; when the bottom would leave
+   the screen, SmoothModalBody raises it on the same curve. */
+.admin-modal-panel:has(> .admin-modal-body.t-resize) {
+  transition: margin-top var(--resize-dur) var(--resize-ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-resize,
+  .admin-modal-panel:has(> .admin-modal-body.t-resize) { transition: none !important; }
+}
+
 /* ── Toolbar popover (.toolbar-popover) ──────────────────────────────────
    A filter chip's menu. Anchored to its chip, but never wider than the screen.
    It must not be placed inside an element with a filter, transform or

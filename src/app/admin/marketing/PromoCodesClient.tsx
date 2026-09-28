@@ -69,6 +69,7 @@ import { formatPesos } from '@/lib/money';
 import { formatInstantDay } from '@/lib/event-schedule';
 import type { PromoRedemption } from '@/lib/promo-redemptions';
 import AdminDatePicker from '../AdminDatePicker';
+import SmoothModalBody from '../SmoothModalBody';
 
 /**
  * The organizer's discount codes: what exists, and the form that makes more.
@@ -1514,7 +1515,7 @@ export default function PromoCodesClient({
             role="dialog"
             aria-modal="true"
             aria-labelledby="promo-form-title"
-            className="admin-modal-panel bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-xl w-full max-w-lg overflow-clip"
+            className="admin-modal-panel bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-xl w-full max-w-2xl overflow-clip"
           >
             <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-2 max-sm:px-4 max-sm:pt-3 shrink-0">
               <h2 id="promo-form-title" className="text-xl font-bold m-0 flex items-center gap-2 min-w-0">
@@ -1531,7 +1532,7 @@ export default function PromoCodesClient({
               </button>
             </div>
 
-            <div className="admin-modal-body px-6 pt-2 pb-6 max-sm:px-4">
+            <SmoothModalBody className="px-6 pt-2 pb-6 max-sm:px-4">
 
             {/* What an edit cannot change, said once at the top rather than
                 as a surprise on a greyed-out field further down. */}
@@ -1558,39 +1559,57 @@ export default function PromoCodesClient({
               </p>
             )}
 
-            <form id="promo-form" onSubmit={handleSubmit} className="flex flex-col gap-5">
-              {/* The kind first, then what it is worth, then where it
-                  applies: a percentage reads as a complete thought before
-                  anyone has to decide which race it is for. */}
-              <AdminSelect
-                label="Discount type"
-                listboxLabel="Kind of discount"
-                value={type}
-                onChange={next => chooseType(next as DiscountType)}
-                error={errorFor('discountType')}
-                options={[
-                  {
-                    value: DISCOUNT_TYPES.CATEGORY_PRICE,
-                    label: DISCOUNT_TYPE_LABELS.CATEGORY_PRICE,
-                    hint: 'A lower price on the distances you choose',
-                  },
-                  {
-                    value: DISCOUNT_TYPES.BUY_X_GET_Y,
-                    label: DISCOUNT_TYPE_LABELS.BUY_X_GET_Y,
-                    hint: 'Register 5, the 6th is free',
-                  },
-                  {
-                    value: DISCOUNT_TYPES.PERCENTAGE,
-                    label: DISCOUNT_TYPE_LABELS.PERCENTAGE,
-                    hint: "20% off each runner's entry",
-                  },
-                  {
-                    value: DISCOUNT_TYPES.FIXED,
-                    label: DISCOUNT_TYPE_LABELS.FIXED,
-                    hint: "₱200 off each runner's entry",
-                  },
-                ]}
-              />
+            <form id="promo-form" onSubmit={handleSubmit} className="flex flex-col gap-5 @container">
+              {/* The kind and the race side by side where the modal is wide
+                  enough (stacked on a phone), then what a per-runner kind is
+                  worth under them. `min-w-0` lets a long event title truncate
+                  inside its column instead of widening it. */}
+              <div className="grid gap-5 @min-[30rem]:grid-cols-2 [&>*]:min-w-0">
+                <AdminSelect
+                  label="Discount type"
+                  listboxLabel="Kind of discount"
+                  value={type}
+                  onChange={next => chooseType(next as DiscountType)}
+                  error={errorFor('discountType')}
+                  options={[
+                    {
+                      value: DISCOUNT_TYPES.CATEGORY_PRICE,
+                      label: DISCOUNT_TYPE_LABELS.CATEGORY_PRICE,
+                      hint: 'A lower price on the distances you choose',
+                    },
+                    {
+                      value: DISCOUNT_TYPES.BUY_X_GET_Y,
+                      label: DISCOUNT_TYPE_LABELS.BUY_X_GET_Y,
+                      hint: 'Register 5, the 6th is free',
+                    },
+                    {
+                      value: DISCOUNT_TYPES.PERCENTAGE,
+                      label: DISCOUNT_TYPE_LABELS.PERCENTAGE,
+                      hint: "20% off each runner's entry",
+                    },
+                    {
+                      value: DISCOUNT_TYPES.FIXED,
+                      label: DISCOUNT_TYPE_LABELS.FIXED,
+                      hint: "₱200 off each runner's entry",
+                    },
+                  ]}
+                />
+                <AdminSelect
+                  label="Event"
+                  listboxLabel="Event this promotion applies to"
+                  value={form.eventId}
+                  onChange={chooseEvent}
+                  error={errorFor('eventId')}
+                  options={[
+                    { value: ALL_EVENTS, label: 'All my events', hint: 'Every event you run, now and later' },
+                    ...events.map(event => ({
+                      value: event.id,
+                      label: event.title,
+                      hint: event.date,
+                    })),
+                  ]}
+                />
+              </div>
 
               {/* What a per-runner discount is worth. The unit sits inside the
                   box, so "20" can only be read one way; the value is cleared
@@ -1600,7 +1619,10 @@ export default function PromoCodesClient({
                   <label className="form-label" htmlFor="promo-value">
                     {type === DISCOUNT_TYPES.PERCENTAGE ? 'Percentage off' : 'Amount off'}
                   </label>
-                  <span className="relative block w-48 max-sm:w-full">
+                  {/* As wide as the Discount type box above it: half the form less
+                      half the grid's gap-5, from the width the two columns
+                      appear at; the whole row when they are stacked. */}
+                  <span className="relative block w-full @min-[30rem]:w-[calc(50%-0.625rem)]">
                     {type === DISCOUNT_TYPES.FIXED && (
                       <span
                         aria-hidden="true"
@@ -1649,22 +1671,6 @@ export default function PromoCodesClient({
                   </p>
                 </div>
               )}
-
-              <AdminSelect
-                label="Event"
-                listboxLabel="Event this promotion applies to"
-                value={form.eventId}
-                onChange={chooseEvent}
-                error={errorFor('eventId')}
-                options={[
-                  { value: ALL_EVENTS, label: 'All my events', hint: 'Every event you run, now and later' },
-                  ...events.map(event => ({
-                    value: event.id,
-                    label: event.title,
-                    hint: event.date,
-                  })),
-                ]}
-              />
 
               {/* Which runners a per-runner discount is for. Only once a race
                   is chosen, because categories belong to one race.
@@ -1936,12 +1942,14 @@ export default function PromoCodesClient({
                   the code, and the reverse would leave a promotion nobody
                   was ever told about. Creating the other one is the honest
                   way, and the route refuses the change too. */}
-              <div className="form-group" hidden={Boolean(editing)}>
+              <div className="form-group @container" hidden={Boolean(editing)}>
                 <span className="form-label">How runners get it</span>
-                {/* A column below `sm`: three labels such as "Single-use
-                    vouchers" do not share a 300px row without breaking in
-                    half, and each option becomes a 44px row. */}
-                <div className="flex max-sm:flex-col rounded-[10px] border border-[var(--dash-border)] bg-[var(--dash-surface)] p-1">
+                {/* One line per label, never two: each option is as wide as
+                    its words (`flex-auto`, `nowrap`). Where the modal itself
+                    is too narrow for all three on one row — measured on the
+                    field, not the screen, since a desktop modal is narrow
+                    too — it becomes a column of 44px rows. */}
+                <div className="flex @max-[25rem]:flex-col rounded-[10px] border border-[var(--dash-border)] bg-[var(--dash-surface)] p-1">
                   {CLAIMS.map(option => {
                     // A discounted category price is drawn onto the options a
                     // runner is choosing between, so it cannot be something
@@ -1962,7 +1970,7 @@ export default function PromoCodesClient({
                         disabled={unavailable}
                         onClick={() => { setClaim(option.value); setFieldError(null); }}
                         aria-pressed={claim === option.value}
-                        className={`flex-1 rounded-[8px] px-3 py-2 max-sm:min-h-11 text-sm font-bold transition-colors ${
+                        className={`flex-auto whitespace-nowrap rounded-[8px] px-3 py-2 @max-[25rem]:min-h-11 text-sm font-bold transition-colors ${
                           claim === option.value
                             ? 'bg-[var(--ink-10)] text-primary'
                             : unavailable
@@ -2121,7 +2129,8 @@ export default function PromoCodesClient({
                   a shared percentage or fixed code, and one per voucher. A cap
                   and a window may both be set.
 
-                  Both dates stay optional, so a promotion with neither simply
+                  Each is a date and a time of day, picked in the one
+                  calendar. Both stay optional, so a promotion with neither simply
                   runs until it is paused — which is what an uncapped one
                   always did. */}
               <div className="form-group">
@@ -2134,17 +2143,21 @@ export default function PromoCodesClient({
                   </p>
                 )}
 
-                <div className="mt-2 flex flex-col gap-4">
-                  {/* Stacked below `sm`: a date box half of a phone's modal is
-                      too narrow for the date and its calendar icon. */}
-                  <div className="flex max-sm:flex-col gap-4">
+                <div className="mt-2 flex flex-col gap-4 @container">
+                  {/* Side by side only where each half still shows "Select a
+                      date and time" (or "October 31, 2026 · 11:59 PM") whole —
+                      measured on the modal, not the screen, since the desktop
+                      modal is narrow too. Stacked otherwise. */}
+                  <div className="flex flex-col @min-[30rem]:flex-row gap-4">
                     <AdminDatePicker
                       id="promo-from"
                       label="Starts"
                       className="flex-1 min-w-0"
                       value={form.validFrom}
                       clearable
-                      dialogLabel="Choose the first day it works"
+                      withTime
+                      defaultTime="00:00"
+                      dialogLabel="Choose when it starts working"
                       onChange={next => set({ validFrom: next })}
                     />
                     <AdminDatePicker
@@ -2153,20 +2166,22 @@ export default function PromoCodesClient({
                       className="flex-1 min-w-0"
                       value={form.validUntil}
                       clearable
-                      dialogLabel="Choose the last day it works"
+                      withTime
+                      defaultTime="23:59"
+                      dialogLabel="Choose when it stops working"
                       onChange={next => set({ validUntil: next })}
                       error={errorFor('validUntil') || undefined}
                     />
                   </div>
                   <p className="text-xs text-secondary">
-                    Dates are Manila days: a promotion that ends on the 30th works to the end of
-                    the 30th. Leave both blank and it runs until you pause it.
+                    Philippine time. A promotion that ends at 11:59 PM on the 30th works to the
+                    end of the 30th. Leave both blank and it runs until you pause it.
                   </p>
                 </div>
               </div>
 
             </form>
-            </div>
+            </SmoothModalBody>
 
             {/* Outside the scrolling body, so it is always in reach; `form`
                 ties it back to the form it submits. */}
@@ -2294,20 +2309,33 @@ function formFrom(group: Group): typeof BLANK_FORM {
       limitCountsRunners(promo.discountType) && !group.batchLabel && promo.usageLimit
         ? String(promo.usageLimit)
         : '',
-    // The date inputs want a Manila calendar day, not an instant: a window
-    // that ends at 23:59 Manila is already the next day in UTC, and reading it
-    // back as one would move every end date forward by a day on every save.
-    validFrom: manilaCalendarDay(promo.validFrom),
-    validUntil: manilaCalendarDay(promo.validUntil),
+    // The pickers want a Manila date and time, not an instant: a window that
+    // ends at 23:59 Manila is already the next day in UTC, and reading it back
+    // as one would move every end date forward by a day on every save.
+    validFrom: manilaDateTime(promo.validFrom),
+    validUntil: manilaDateTime(promo.validUntil),
     batchLabel: group.batchLabel ?? '',
   };
 }
 
-/** An ISO instant as the `YYYY-MM-DD` a Manila organizer meant by it. */
-function manilaCalendarDay(iso: string | null): string {
+/** An ISO instant as the `YYYY-MM-DDTHH:mm` a Manila organizer meant by it. */
+function manilaDateTime(iso: string | null): string {
   if (!iso) return '';
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return '';
-  // en-CA formats as YYYY-MM-DD, the value AdminDatePicker holds.
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(date);
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Manila',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    })
+      .formatToParts(date)
+      .map(part => [part.type, part.value]),
+  );
+  // The value AdminDatePicker's `withTime` mode holds.
+  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
 }
