@@ -4545,3 +4545,113 @@ textarea.form-input {
   flex-shrink: 0;
   margin-top: 1px;
 }
+
+/* "About This Event" editor (DescriptionEditor.tsx).
+   The wrapper wears .form-input's field, border and focus ring, so the toolbar
+   and the text read as one control rather than a textarea with a strip stuck
+   on top of it. */
+.rich-editor {
+  background: var(--dash-field);
+  border: 1px solid var(--dash-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.rich-editor:focus-within {
+  background: var(--dash-field-focus);
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.15);
+}
+
+.rich-editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-xs);
+  padding: 6px;
+  border-bottom: 1px solid var(--dash-hairline);
+}
+
+.rich-editor-tools,
+.rich-editor-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.rich-editor-btn,
+.rich-editor-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  color: var(--ink-60);
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.rich-editor-btn {
+  width: 34px;
+  height: 34px;
+}
+
+.rich-editor-tab {
+  height: 30px;
+  padding: 0 12px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.rich-editor-btn:hover:not(:disabled),
+.rich-editor-tab:hover {
+  background: var(--dash-hover);
+  color: var(--text-primary);
+}
+
+.rich-editor-btn:focus-visible,
+.rich-editor-tab:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 1px;
+}
+
+.rich-editor-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.rich-editor-tab[aria-selected="true"] {
+  background: var(--ink-08);
+  color: var(--text-primary);
+}
+
+.rich-editor-input {
+  display: block;
+  width: 100%;
+  min-height: 200px;
+  padding: var(--space-md);
+  background: transparent;
+  border: 0;
+  outline: none;
+  resize: vertical;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.rich-editor-input::placeholder {
+  color: var(--ink-30);
+}
+
+.rich-editor-preview {
+  --rich-strong: var(--text-primary);
+  min-height: 200px;
+  padding: var(--space-md);
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.rich-editor-empty {
+  color: var(--ink-30);
+}

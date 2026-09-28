@@ -24,6 +24,7 @@ import BusyLabel from '@/components/ui/BusyLabel';
 import EventClientField from '@/app/admin/events/EventClientField';
 import AdminDatePicker from '../../AdminDatePicker';
 import DashboardHeader from '@/app/admin/DashboardHeader';
+import DescriptionEditor from '../DescriptionEditor';
 
 /**
  * The create-event form. `page.tsx` reads the default platform fee on the
@@ -301,11 +302,9 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
                 <label className="form-label">
                   About This Event <span className="text-xs opacity-70">- optional</span>
                 </label>
-                <textarea
+                <DescriptionEditor
                   value={formData.description}
-                  onChange={e => setFormData({...formData, description: e.target.value})}
-                  className="form-input"
-                  rows={5}
+                  onChange={description => setFormData({...formData, description})}
                   placeholder="Route, assembly time, cut-off, what runners should bring — anything they'd ask about before signing up."
                 />
               </div>

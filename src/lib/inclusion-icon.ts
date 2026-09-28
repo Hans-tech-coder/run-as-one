@@ -27,6 +27,7 @@ import {
   Shirt,
   Ticket,
   Timer,
+  TowelRack,
   Utensils,
   Watch,
   createLucideIcon,
@@ -34,7 +35,7 @@ import {
 } from 'lucide-react';
 
 /**
- * The two icons lucide does not carry, drawn on its own 24-unit grid through
+ * The icons lucide does not carry, drawn on its own 24-unit grid through
  * its own factory so they take the same stroke, size and props as every other
  * icon in the app — a hand-rolled <svg> would drift the moment an icon size
  * changes anywhere else.
@@ -52,6 +53,12 @@ const RaceFlag = createLucideIcon('RaceFlag', [
 const Bandana = createLucideIcon('Bandana', [
   ['path', { d: 'M3 8c4-4 14-4 18 0', key: 'tie' }],
   ['path', { d: 'M5.5 7.5 12 20l6.5-12.5', key: 'cloth' }],
+]);
+
+/** A sock: the ribbed cuff, the leg, and the foot turning toward the toe. */
+const Sock = createLucideIcon('Sock', [
+  ['path', { d: 'M6 2h9v9.5l5 3.8a3.2 3.2 0 0 1-3.9 5.1L8.4 14.6A5.5 5.5 0 0 1 6 10Z', key: 'sock' }],
+  ['path', { d: 'M6 6h9', key: 'cuff' }],
 ]);
 
 /**
@@ -72,6 +79,8 @@ const RULES: readonly { icon: LucideIcon; keywords: readonly string[] }[] = [
   { icon: Medal, keywords: ['medal', 'medallion'] },
   { icon: RaceFlag, keywords: ['bib', 'race number', 'race no'] },
   { icon: Bandana, keywords: ['bandana', 'bandanna', 'scarf', 'buff', 'neckerchief'] },
+  { icon: Sock, keywords: ['sock'] },
+  { icon: TowelRack, keywords: ['towel'] },
   { icon: Watch, keywords: ['wristband', 'band', 'headband', 'armband', 'tracker'] },
   { icon: Badge, keywords: ['pin', 'badge', 'patch'] },
   { icon: Timer, keywords: ['timing', 'chip', 'timer'] },

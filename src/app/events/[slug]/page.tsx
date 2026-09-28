@@ -37,6 +37,7 @@ import LinkPendingIcon from '@/components/ui/LinkPendingIcon';
 import { automaticPromosFor, promoTerms } from '@/lib/promo-store';
 import { categorySalePrices } from '@/lib/discount';
 import { CATEGORY_ORDER } from '@/lib/category-order';
+import RichText from '@/components/RichText';
 
 export default async function EventDetailsPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -135,11 +136,12 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ s
             {event.description?.trim() && (
               <div className="info-block glass-panel p-8 rounded-3xl border border-white/10 hover:border-accent-blue/30 transition-colors t-stagger-line t-stagger-line--3">
                 <h2 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 text-white tracking-tight">About The Event</h2>
-                {/* whitespace-pre-line because the field is a textarea: the
-                    paragraph breaks an organizer types are theirs to keep. */}
-                <p className="text-base sm:text-lg text-secondary leading-relaxed whitespace-pre-line">
-                  {event.description}
-                </p>
+                {/* Headings, lists and emphasis come from the admin editor's
+                    toolbar; see src/lib/rich-text.ts for what it may contain. */}
+                <RichText
+                  source={event.description}
+                  className="text-base sm:text-lg text-secondary leading-relaxed"
+                />
               </div>
             )}
 
