@@ -570,6 +570,12 @@ export default function RegistrationWizardClient({
   const totalAmount =
     subtotal + deliveryFee + platformFee + transactionFee - discountAmount;
 
+  // The waiver sits directly above the button that actually submits the
+  // registration. Online and free orders submit from step 3; a bank transfer
+  // submits from step 4, after the deposit slip — the same order the
+  // bank-transfer-only wizard already uses (BankTransferWizardClient).
+  const waiverOnStep4 = paymentMethod === "BANK_TRANSFER" && !isFree;
+
   // Validation checks
   //
   // What each runner still owes, recomputed from state on every keystroke. One
@@ -690,6 +696,16 @@ export default function RegistrationWizardClient({
   const handleBack = () => setStep((prev) => prev - 1);
 
   const handleCheckout = async () => {
+    // Not when the order is free: there is no deposit slip for a transfer
+    // nobody is making, and step 4 exists only to collect one. A runner who
+    // had already chosen Bank Transfer before applying a pacer code lands here
+    // with the old choice still in state, so the free path wins over it.
+    // Checked before the waiver, which a bank transfer signs on step 4.
+    if (waiverOnStep4) {
+      setStep(4);
+      return;
+    }
+
     // The button is already disabled without this, but the check is repeated
     // here in case state gets here some other way — the same defensive style
     // as the proofFile check in handleManualSubmit below.
@@ -713,15 +729,6 @@ export default function RegistrationWizardClient({
         message: signatureProblem,
       });
       focusField(SIGNATURE_FIELD_ID);
-      return;
-    }
-
-    // Not when the order is free: there is no deposit slip for a transfer
-    // nobody is making, and step 4 exists only to collect one. A runner who
-    // had already chosen Bank Transfer before applying a pacer code lands here
-    // with the old choice still in state, so the free path wins over it.
-    if (paymentMethod === "BANK_TRANSFER" && !isFree) {
-      setStep(4);
       return;
     }
 
@@ -797,8 +804,8 @@ export default function RegistrationWizardClient({
       return;
     }
 
-    // Reaching step 4 already required checking the box on step 3 — this
-    // guards the case where that never happened for some other reason.
+    // A bank transfer signs the waiver here on step 4, just above this
+    // button. The button is disabled without it; this repeats the check.
     if (!consentGiven) {
       alert({
         variant: "info",
@@ -1944,21 +1951,23 @@ export default function RegistrationWizardClient({
                   )}
                 </div>
 
-                <ConsentWaiver
-                  paragraphs={consentWaiverParagraphs}
-                  checked={consentGiven}
-                  onChange={setConsentGiven}
-                  signature={consentSignature}
-                  onSignatureChange={setConsentSignature}
-                  signatureError={signatureError}
-                  onSignatureBlur={() => setSignatureTouched(true)}
-                />
+                {!waiverOnStep4 && (
+                  <ConsentWaiver
+                    paragraphs={consentWaiverParagraphs}
+                    checked={consentGiven}
+                    onChange={setConsentGiven}
+                    signature={consentSignature}
+                    onSignatureChange={setConsentSignature}
+                    signatureError={signatureError}
+                    onSignatureBlur={() => setSignatureTouched(true)}
+                  />
+                )}
 
                 <div className="form-actions mt-10 flex justify-end">
                   <button
-                    className={`btn-gradient flex items-center justify-center gap-2 px-10 py-4 text-lg group shadow-xl shadow-accent-orange/20 ${isProcessing || !consentGiven ? "opacity-50 pointer-events-none" : ""}`}
+                    className={`btn-gradient flex items-center justify-center gap-2 px-10 py-4 text-lg group shadow-xl shadow-accent-orange/20 ${isProcessing || (!waiverOnStep4 && !consentGiven) ? "opacity-50 pointer-events-none" : ""}`}
                     onClick={handleCheckout}
-                    disabled={isProcessing || !consentGiven}
+                    disabled={isProcessing || (!waiverOnStep4 && !consentGiven)}
                   >
                     {isProcessing ? (
                       <BusyLabel>
@@ -2110,12 +2119,25 @@ export default function RegistrationWizardClient({
                   />
                 </div>
 
+                <ConsentWaiver
+                  paragraphs={consentWaiverParagraphs}
+                  checked={consentGiven}
+                  onChange={setConsentGiven}
+                  signature={consentSignature}
+                  onSignatureChange={setConsentSignature}
+                  signatureError={signatureError}
+                  onSignatureBlur={() => setSignatureTouched(true)}
+                />
+
                 <div className="form-actions mt-10 flex justify-end">
                   <button
-                    className={`btn-gradient flex items-center justify-center gap-2 px-10 py-4 text-lg group shadow-xl shadow-accent-orange/20 ${isProcessing || !proofFile || !transactionNumber.trim() ? "opacity-50 pointer-events-none" : ""}`}
+                    className={`btn-gradient flex items-center justify-center gap-2 px-10 py-4 text-lg group shadow-xl shadow-accent-orange/20 ${isProcessing || !proofFile || !transactionNumber.trim() || !consentGiven ? "opacity-50 pointer-events-none" : ""}`}
                     onClick={handleManualSubmit}
                     disabled={
-                      isProcessing || !proofFile || !transactionNumber.trim()
+                      isProcessing ||
+                      !proofFile ||
+                      !transactionNumber.trim() ||
+                      !consentGiven
                     }
                   >
                     {isProcessing
