@@ -35,7 +35,14 @@
   Communities, Feedback and the Overview's fee tile ask `platform:manage`
   (`OWNER`, `ADMIN`); their pages answer anyone else with the admin's 404 and
   their routes go through `api/admin/platform-actor.ts` (401 / 403). A STAFF
-  member, whatever their event roles, and a client viewer are refused.
+  member, whatever their event roles, and a client viewer are refused. **`can()`
+  also pins it to Run As One's row** (`RUN_AS_ONE_ORGANIZER_ID`): those tables
+  are global, so the usual `reach.organizerId === actor.orgId` check protects
+  nothing, and an OWNER or ADMIN membership on a leftover self-serve Organizer
+  row that is still `APPROVED` would otherwise reach every client, all feedback
+  and the site settings. Owner sessions were already pinned in `getActor()`;
+  staff sessions are only status-checked, which is what this closes (Strix
+  vuln-0001, 2026-09-29).
 - **Route handlers re-check auth themselves.** The proxy does not cover
   `/api/**`, so every admin route calls `getActor()` (`actor.ts`, §5), scopes
   its queries to `actor.orgId`, and asks `can(actor, permission, …)` before it

@@ -309,6 +309,16 @@ export function can(actor: Actor, permission: Permission, reach: Reach): boolean
   // no other organizer's data to reach.
   if (reach.organizerId !== actor.orgId) return false;
 
+  // Platform management — site settings, all feedback, clients, communities —
+  // acts on global tables no organizerId scopes, so the check above protects
+  // nothing there. It is Run As One's own work: an OWNER or ADMIN membership on
+  // any other Organizer row (a self-serve leftover whose status is still
+  // APPROVED) must not reach it. Owner sessions are already pinned in
+  // getActor; staff sessions are only status-checked (Strix vuln-0001).
+  if (permission === 'platform:manage' && reach.organizerId !== RUN_AS_ONE_ORGANIZER_ID) {
+    return false;
+  }
+
   // A client viewer: its one permission, on one event, of its own client.
   if (isClientViewer(actor)) {
     return (

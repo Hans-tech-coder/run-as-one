@@ -4,7 +4,8 @@
 ## 10. Current state
 
 **What is still open lives in `ON_HOLD.md`** at the repo root: the pending
-production release (12 migrations and the owner's checklist) and the features
+production release (15 migrations, one of them destructive, and the owner's
+checklist) and the features
 the owner put on hold. Every `*_PLAN.md` cited below is now in `docs/archive/`,
 and all of those plans are finished. Where an entry below says "Read the plan's
 Status table" or describes a batch as still to come, `ON_HOLD.md` has the
