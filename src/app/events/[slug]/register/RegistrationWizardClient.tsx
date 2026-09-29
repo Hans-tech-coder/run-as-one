@@ -1469,6 +1469,7 @@ export default function RegistrationWizardClient({
                             handleParticipantChange(idx, "singletSize", size)
                           }
                           onOpenSizeGuide={() => setShowSizeGuideModal(true)}
+                          showMeasurements={!event.sizeChartImageUrl}
                         />
                       )}
 
@@ -2161,6 +2162,7 @@ export default function RegistrationWizardClient({
       {showSizeGuideModal && (
         <SizeGuideModal
           upcharge={shirtSizeUpcharge}
+          imageUrl={event.sizeChartImageUrl}
           onClose={() => setShowSizeGuideModal(false)}
         />
       )}

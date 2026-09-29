@@ -122,7 +122,16 @@ model Event {
   createdAt                   DateTime          @default(now())
   updatedAt                   DateTime          @updatedAt
   endTime                     String?
+  /// Deprecated: superseded by `highlights`, which the 20260929090000 migration
+  /// backfilled from it. No code reads or writes it; drop it in a later
+  /// migration once that release is live in production.
   raceKitImageUrl             String?
+  /// The event page's highlight posters, [{ url, caption }] in display order.
+  /// JSON, so every read and write goes through lib/event-highlights.ts.
+  highlights                  Json              @default("[]")
+  /// Optional organizer-supplied size chart image; null means the register
+  /// page shows the default chart from lib/shirt-size.ts.
+  sizeChartImageUrl           String?
   startTime                   String?
   certificateCoordinates      String?
   certificateTemplate         String?

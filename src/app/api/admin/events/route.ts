@@ -18,6 +18,7 @@ import {
 } from '@/lib/registration-gate';
 import { CATEGORY_ORDER } from '@/lib/category-order';
 import { readClientLink } from '@/lib/client-store';
+import { cleanHighlights } from '@/lib/event-highlights';
 
 export async function POST(request: Request) {
   try {
@@ -33,7 +34,7 @@ export async function POST(request: Request) {
     }
 
     const data = await request.json();
-    const { title, date, startTime, endTime, location, imageUrl, raceKitImageUrl, description, logisticsPickup, pickupLocation, pickupSchedule, logisticsDeliveryFeeInside, logisticsDeliveryFeeOutside, adminFee, shirtSizeUpcharge, consentWaiver, registrationForm, eventType, registrationOpensAt, categories, bankAccounts } = data;
+    const { title, date, startTime, endTime, location, imageUrl, highlights, sizeChartImageUrl, description, logisticsPickup, pickupLocation, pickupSchedule, logisticsDeliveryFeeInside, logisticsDeliveryFeeOutside, adminFee, shirtSizeUpcharge, consentWaiver, registrationForm, eventType, registrationOpensAt, categories, bankAccounts } = data;
 
     if (!title || !date || !location) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -87,7 +88,8 @@ export async function POST(request: Request) {
           endTime: endTime || null,
           location,
           imageUrl: imageUrl || '',
-          raceKitImageUrl: raceKitImageUrl || null,
+          highlights: cleanHighlights(highlights),
+          sizeChartImageUrl: sizeChartImageUrl || null,
           description: description || '',
           logisticsPickup: Boolean(logisticsPickup),
           // Where and when a kit is collected, in the organizer's own words.

@@ -20,6 +20,7 @@ import {
 import { eventPromotions } from '@/lib/promo-store';
 import { CATEGORY_ORDER } from '@/lib/category-order';
 import { readClientLink } from '@/lib/client-store';
+import { cleanHighlights } from '@/lib/event-highlights';
 
 /**
  * The event columns the edit form writes, in the order the trail lists them.
@@ -34,7 +35,8 @@ const EVENT_FIELDS = [
   'endTime',
   'location',
   'imageUrl',
-  'raceKitImageUrl',
+  'highlights',
+  'sizeChartImageUrl',
   'description',
   'logisticsPickup',
   'pickupLocation',
@@ -129,7 +131,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
     const { id } = await params;
     const data = await request.json();
-    const { title, date, startTime, endTime, location, imageUrl, raceKitImageUrl, description, logisticsPickup, pickupLocation, pickupSchedule, logisticsDeliveryFeeInside, logisticsDeliveryFeeOutside, adminFee, shirtSizeUpcharge, consentWaiver, registrationForm, eventType, registrationPaused, registrationPauseNote, registrationOpensAt, certificateTemplate, certificateCoordinates, categories, bankAccounts } = data;
+    const { title, date, startTime, endTime, location, imageUrl, highlights, sizeChartImageUrl, description, logisticsPickup, pickupLocation, pickupSchedule, logisticsDeliveryFeeInside, logisticsDeliveryFeeOutside, adminFee, shirtSizeUpcharge, consentWaiver, registrationForm, eventType, registrationPaused, registrationPauseNote, registrationOpensAt, certificateTemplate, certificateCoordinates, categories, bankAccounts } = data;
 
     if (!title || !date || !location) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -232,7 +234,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
           endTime: endTime || null,
           location,
           imageUrl: imageUrl || '',
-          raceKitImageUrl: raceKitImageUrl || null,
+          highlights: cleanHighlights(highlights),
+          sizeChartImageUrl: sizeChartImageUrl || null,
           description: description || '',
           logisticsPickup: Boolean(logisticsPickup),
           // Where and when a kit is collected, in the organizer's own words.

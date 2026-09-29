@@ -26,7 +26,18 @@ shape:
   `statusNote` / `statusChangedAt`. Owns `Event[]`, `PromoCode[]` and `staff`
   (`StaffMembership[]`).
 - **Event** — title, unique **`slug`**, `date` (**string `YYYY-MM-DD`**, not
-  DateTime), location, imagery, logistics fees, `adminFee`, `shirtSizeUpcharge`,
+  DateTime), location, imagery (`imageUrl`; `highlights`, a JSON list of `{ url, caption }`
+  posters shown as "Event Highlights" on the event page — race kit, trophies,
+  venue, after party — always read and written through `lib/event-highlights.ts`,
+  managed in the admin through `HighlightsField` / `HighlightsModal` and shown
+  publicly by `components/EventHighlightsGallery` (posters laid out on the page;
+  a tap opens `components/ui/ZoomLightbox`, full screen with zoom, round
+  thumbnails and a circular reveal between images);
+  `raceKitImageUrl` is **deprecated**, backfilled into `highlights` as a
+  "Race Kit" entry and unread, to be dropped by a later migration; and an optional
+  `sizeChartImageUrl` — when null the register page's size guide shows the
+  default chart from `lib/shirt-size.ts`; when set it shows the image and the
+  size dropdown drops the default inches), logistics fees, `adminFee`, `shirtSizeUpcharge`,
   `consentWaiver` (string[] of paragraphs), `registrationForm`
   (`ONLINE` | `BANK_TRANSFER`), `eventType` (`RACE` | `FUN_RUN`),
   `registrationPaused` + `registrationPauseNote` (the organizer's manual hold on

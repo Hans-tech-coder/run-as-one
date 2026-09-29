@@ -1,0 +1,45 @@
+/* EventHighlightsGallery tiles.
+ *
+ * Plain CSS rather than Tailwind's hover: variant, because Tailwind v4 wraps
+ * hover: in @media (hover: hover) — the PRIMARY pointer. A touchscreen laptop
+ * reports its primary pointer as touch, so a visitor there with a mouse got no
+ * hover at all. Here :hover applies whenever it happens, and the "tap to open"
+ * badge shows only when no pointer at all can hover (any-hover: none), i.e.
+ * a phone or tablet. */
+
+.hl-tile-img {
+  transition: opacity 300ms ease, transform 300ms ease;
+}
+
+.hl-tile:hover .hl-tile-img,
+.hl-tile:focus-visible .hl-tile-img {
+  opacity: 0.6;
+  transform: scale(1.03);
+}
+
+.hl-tile-notice {
+  opacity: 0;
+  transition: opacity 300ms ease;
+}
+
+.hl-tile:hover .hl-tile-notice,
+.hl-tile:focus-visible .hl-tile-notice {
+  opacity: 1;
+}
+
+.hl-tile-badge {
+  display: none;
+}
+
+@media (any-hover: none) {
+  .hl-tile-notice { display: none; }
+  .hl-tile-badge { display: flex; }
+  .hl-tile:hover .hl-tile-img { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hl-tile-img,
+  .hl-tile-notice { transition: none; }
+  .hl-tile:hover .hl-tile-img,
+  .hl-tile:focus-visible .hl-tile-img { transform: none; }
+}

@@ -1352,6 +1352,7 @@ export default function BankTransferWizardClient({
                             handleParticipantChange(idx, "singletSize", size)
                           }
                           onOpenSizeGuide={() => setShowSizeGuideModal(true)}
+                          showMeasurements={!event.sizeChartImageUrl}
                         />
                       )}
 
@@ -1915,6 +1916,7 @@ export default function BankTransferWizardClient({
       {showSizeGuideModal && (
         <SizeGuideModal
           upcharge={shirtSizeUpcharge}
+          imageUrl={event.sizeChartImageUrl}
           onClose={() => setShowSizeGuideModal(false)}
         />
       )}

@@ -38,6 +38,8 @@ import { automaticPromosFor, promoTerms } from '@/lib/promo-store';
 import { categorySalePrices } from '@/lib/discount';
 import { CATEGORY_ORDER } from '@/lib/category-order';
 import RichText from '@/components/RichText';
+import { cleanHighlights } from '@/lib/event-highlights';
+import EventHighlightsGallery from '@/components/EventHighlightsGallery';
 
 export default async function EventDetailsPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -69,6 +71,7 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ s
   // race they cannot run is the one outcome this page must not allow;
   // /register turns them away too, for anyone who typed the URL.
   const finished = hasFinished(event);
+  const highlights = cleanHighlights(event.highlights);
 
   // Once the organizer has uploaded the times, this race has left /events for
   // good. It is no longer something you sign up for, and what a visitor opening
@@ -178,10 +181,13 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ s
               </div>
             )}
 
-            {event.raceKitImageUrl && (
-               <div className="info-block glass-panel p-8 rounded-3xl border border-white/10 hover:border-accent-blue/30 transition-colors t-stagger-line t-stagger-line--5">
-                 <h2 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 text-white tracking-tight">Race Kit Reveal</h2>
-                 <img src={event.raceKitImageUrl} alt="Race Kit Poster" className="w-full rounded-2xl border border-white/10 shadow-2xl" />
+            {/* Everything the organizer wants to show off — race kit, trophies,
+                the venue, an after party — as one gallery that opens full
+                screen with zoom, so small print on a poster can be read. */}
+            {highlights.length > 0 && (
+               <div className="info-block glass-panel p-6 sm:p-8 rounded-3xl border border-white/10 hover:border-accent-blue/30 transition-colors t-stagger-line t-stagger-line--5">
+                 <h2 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 text-white tracking-tight">Event Highlights</h2>
+                 <EventHighlightsGallery highlights={highlights} title={event.title} />
                </div>
             )}
           </div>

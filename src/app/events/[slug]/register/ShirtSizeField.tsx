@@ -32,6 +32,7 @@ export default function ShirtSizeField({
   onOpenSizeGuide,
   id,
   error,
+  showMeasurements = true,
 }: {
   value: string;
   /** Centavos added for 4XL and above on this event. 0 means no upcharge. */
@@ -42,6 +43,11 @@ export default function ShirtSizeField({
   id?: string;
   /** Set when a category that includes a shirt has no size chosen. */
   error?: string;
+  /**
+   * False when the event uploaded its own size chart: the default chart's
+   * inches would then contradict the organizer's, so the list shows sizes only.
+   */
+  showMeasurements?: boolean;
 }) {
   const typed = normalizeShirtSize(value);
 
@@ -65,9 +71,11 @@ export default function ShirtSizeField({
               <Shirt size={16} className="shrink-0 text-white/30" />
             )}
             <span className="font-medium w-12 shrink-0">{row.size}</span>
-            <span className="text-secondary text-xs">
-              {row.width}&quot; W &times; {row.length}&quot; L
-            </span>
+            {showMeasurements && (
+              <span className="text-secondary text-xs">
+                {row.width}&quot; W &times; {row.length}&quot; L
+              </span>
+            )}
             {costsMore && (
               <span className="ml-auto text-xs text-accent-orange shrink-0">
                 +&#8369;{formatPesos(upcharge)}
@@ -100,7 +108,7 @@ export default function ShirtSizeField({
       },
       ...listed,
     ];
-  }, [typed, upcharge]);
+  }, [typed, upcharge, showMeasurements]);
 
   return (
     <Combobox

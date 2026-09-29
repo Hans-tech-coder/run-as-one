@@ -25,6 +25,8 @@ import EventClientField from '@/app/admin/events/EventClientField';
 import AdminDatePicker from '../../AdminDatePicker';
 import DashboardHeader from '@/app/admin/DashboardHeader';
 import DescriptionEditor from '../DescriptionEditor';
+import HighlightsField from '@/app/admin/events/HighlightsField';
+import { type EventHighlight } from '@/lib/event-highlights';
 
 /**
  * The create-event form. `page.tsx` reads the default platform fee on the
@@ -49,7 +51,8 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
     endTime: '',
     location: '',
     imageUrl: '',
-    raceKitImageUrl: '',
+    highlights: [] as EventHighlight[],
+    sizeChartImageUrl: '',
     description: '',
     logisticsPickup: true,
     // Where and when a race kit is collected. Only meaningful while
@@ -344,7 +347,7 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
                   className="form-input"
                 />
               </div>
-              <div className="form-group">
+              <div className="form-group form-group-full">
                 <label className="form-label">Cover Image</label>
                 {!formData.imageUrl ? (
                   <div className="file-upload-wrapper" style={{ opacity: uploadingField ? 0.6 : 1 }}>
@@ -381,14 +384,24 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
                 )}
               </div>
               
+              <HighlightsField
+                value={formData.highlights}
+                onChange={update => setFormData(prev => ({ ...prev, highlights: update(prev.highlights) }))}
+                onError={setError}
+                onBusyChange={busy => setUploadingPosters(n => (busy ? n + 1 : n - 1))}
+              />
+
+              {/* Optional: an organizer whose shirts run to their own measurements
+                  uploads their chart; without one the register page shows the
+                  default chart from lib/shirt-size.ts. */}
               <div className="form-group">
-                <label className="form-label">Race Kit Poster (Optional)</label>
-                {!formData.raceKitImageUrl ? (
-                  <div className="file-upload-wrapper" style={{ opacity: uploadingField ? 0.6 : 1 }}>
+                <label className="form-label">Size Chart (Optional)</label>
+                {!formData.sizeChartImageUrl ? (
+                  <div className="file-upload-wrapper media-tile" style={{ opacity: uploadingField ? 0.6 : 1 }}>
                     <input
                       type="file"
                       accept="image/*"
-                      onChange={e => handleImageUpload(e, 'raceKitImageUrl')}
+                      onChange={e => handleImageUpload(e, 'sizeChartImageUrl')}
                       className="file-upload-input"
                       disabled={uploadingField !== null}
                     />
@@ -397,21 +410,21 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
                         <UploadCloud size={32} />
                       </div>
                       <div className="file-upload-title">
-                        {uploadingField === 'raceKitImageUrl' ? <BusyLabel>Uploading</BusyLabel> : 'Click to upload race kit poster'}
+                        {uploadingField === 'sizeChartImageUrl' ? <BusyLabel>Uploading</BusyLabel> : 'Click to upload size chart'}
                       </div>
-                      <div className="file-upload-desc">Optional • PNG, JPG (ideal for social sharing)</div>
+                      <div className="file-upload-desc">Optional • PNG, JPG. Leave empty to use the default size chart.</div>
                     </div>
                   </div>
                 ) : (
-                  <div className="file-preview">
-                    <img src={formData.raceKitImageUrl} alt="Race Kit Preview" />
+                  <div className="file-preview media-tile">
+                    <img src={formData.sizeChartImageUrl} alt="Size Chart Preview" />
                     <div className="file-preview-overlay">
-                      <button 
-                        type="button" 
-                        onClick={() => setFormData(prev => ({ ...prev, raceKitImageUrl: '' }))}
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, sizeChartImageUrl: '' }))}
                         className="btn-remove-preview"
                       >
-                        <Trash size={16} /> Remove Poster
+                        <Trash size={16} /> Remove Size Chart
                       </button>
                     </div>
                   </div>
