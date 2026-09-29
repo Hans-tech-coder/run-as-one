@@ -33,11 +33,13 @@ import {
   offersDelivery,
   deliveryFeeFor,
   defaultDeliveryZone,
+  needsDeliveryZoneChoice,
   type DeliveryZone,
 } from "./delivery";
 import { type BankAccountView } from "@/lib/bank-accounts";
 import {
   asLogisticsMethod,
+  deliveryZoneLabelFor,
   type LogisticsMethod,
 } from "@/lib/registration-codes";
 import BankDetailsModal from "./BankDetailsModal";
@@ -234,6 +236,11 @@ export default function BankTransferWizardClient({
 
   const availableTiers = deliveryTiers(event);
   const selectedTier = availableTiers.find((t) => t.zone === deliveryZone);
+  // Blank when both zones cost the same: the runner was never asked, so the
+  // pre-selected zone is not theirs to be shown (lib/registration-codes.ts).
+  const summaryZoneLabel = selectedTier
+    ? deliveryZoneLabelFor(event, selectedTier.zone)
+    : "";
 
   // Payment state. The method is fixed — this wizard exists precisely because
   // the organizer chose not to offer anything else.
@@ -994,7 +1001,7 @@ export default function BankTransferWizardClient({
                   <div className="flex justify-between items-center text-sm mt-2 pt-2 border-t border-white/5">
                     <span className="text-secondary">
                       Delivery Fee
-                      {selectedTier ? ` (${selectedTier.label})` : ""}
+                      {summaryZoneLabel ? ` (${summaryZoneLabel})` : ""}
                     </span>
                     <span className="text-white">
                       ₱{formatPesos(deliveryFee)}
@@ -1574,7 +1581,7 @@ export default function BankTransferWizardClient({
                         address nationwide.
                       </div>
                       <div className="relative z-10 font-bold text-accent-blue">
-                        {availableTiers.length > 1
+                        {needsDeliveryZoneChoice(event)
                           ? `+₱${formatPesos(
                               Math.min(...availableTiers.map((t) => t.fee)),
                             )} onwards`
@@ -1587,8 +1594,9 @@ export default function BankTransferWizardClient({
                 {logisticsMethod === "DELIVERY" && (
                   <div className="animate-fade-in flex flex-col gap-6">
                     {/* Only worth asking when there is an actual choice. With a
-                        single tier the zone is already selected for them. */}
-                    {availableTiers.length > 1 && (
+                        single tier, or two at the same fee, the zone is already
+                        selected for them. */}
+                    {needsDeliveryZoneChoice(event) && (
                       <div className="input-group full-width">
                         <label>Delivery Area</label>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">

@@ -11,7 +11,7 @@ import { EMAIL_KIND_LABELS, outstandingEmail } from '@/lib/email-delivery';
 import {
   LOGISTICS_METHODS,
   asLogisticsMethod,
-  deliveryZoneLabel,
+  deliveryZoneLabelFor,
   isBankTransfer,
   isComplimentary,
   logisticsMethodLabel,
@@ -209,8 +209,9 @@ export default async function RegistrantsPage({
         // a runner's uppercase name, not a choice being offered.
         logisticsMethod: logisticsMethodLabel(reg.logisticsMethod).toUpperCase(),
         // The zone the runner declared at checkout — it decides which delivery
-        // fee they were charged, so the organizer needs to see it.
-        deliveryZone: deliveryZoneLabel(reg.deliveryZone).toUpperCase(),
+        // fee they were charged, so the organizer needs to see it. Blank when
+        // both zones cost the same, since the runner was never asked.
+        deliveryZone: deliveryZoneLabelFor(event, reg.deliveryZone).toUpperCase(),
         deliveryAddress: reg.deliveryAddress || 'N/A',
         paymentMethod: paymentMethodLabel(reg.paymentMethod).toUpperCase(),
         // The branches the screen actually needs, decided from the code rather

@@ -11,7 +11,7 @@ import { PICKUP_FALLBACK, pickupDetails } from './pickup';
 import {
   LOGISTICS_METHODS,
   asLogisticsMethod,
-  deliveryZoneLabel,
+  deliveryZoneLabelFor,
   isBankTransfer,
   paymentMethodLabel,
 } from './registration-codes';
@@ -613,8 +613,8 @@ async function renderMessage(doc: EmailDocument): Promise<EmailMessage> {
  * ──────────────────────────────────────────────────────────────────────── */
 
 /** The money line's own wording, built from the shared zone label. */
-function deliveryFeeLabel(zone: string | null): string {
-  const label = deliveryZoneLabel(zone);
+function deliveryFeeLabel(registration: RegistrationWithDetails): string {
+  const label = deliveryZoneLabelFor(registration.event, registration.deliveryZone);
   return label ? `Delivery — ${label}` : 'Delivery Fee';
 }
 
@@ -649,7 +649,7 @@ function logisticsRows(registration: RegistrationWithDetails): Row[] {
     if (schedule) rows.push({ kind: 'info', label: 'Pickup Schedule', value: schedule });
     return rows;
   }
-  const zoneLabel = deliveryZoneLabel(registration.deliveryZone) || 'Delivery';
+  const zoneLabel = deliveryZoneLabelFor(registration.event, registration.deliveryZone) || 'Delivery';
   const value = registration.deliveryAddress ? `${zoneLabel} — ${registration.deliveryAddress}` : zoneLabel;
   return [{ kind: 'info', label: 'Delivery', value }];
 }
@@ -761,7 +761,7 @@ function summaryRows(registration: RegistrationWithDetails, totalLabel: string):
       ? [
           {
             kind: 'amount' as const,
-            label: deliveryFeeLabel(registration.deliveryZone),
+            label: deliveryFeeLabel(registration),
             centavos: registration.deliveryFee,
           },
         ]

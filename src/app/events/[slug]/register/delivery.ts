@@ -82,13 +82,27 @@ export function deliveryFeeFor(
 }
 
 /**
- * The zone to start on. With only one tier available there is nothing to
- * choose, so it is picked for the runner; with two, they must decide.
+ * Whether the runner has to pick a delivery area. Only when the tiers cost
+ * different amounts: with one tier, or two at the same fee, the answer changes
+ * nothing they pay, so the wizard does not ask.
+ */
+export function needsDeliveryZoneChoice(event: {
+  logisticsDeliveryFeeInside: number;
+  logisticsDeliveryFeeOutside: number;
+}): boolean {
+  const tiers = deliveryTiers(event);
+  return tiers.length > 1 && tiers.some((t) => t.fee !== tiers[0].fee);
+}
+
+/**
+ * The zone to start on. When there is no real choice (see
+ * needsDeliveryZoneChoice) the first tier is picked for the runner; when the
+ * fees differ, they must decide.
  */
 export function defaultDeliveryZone(event: {
   logisticsDeliveryFeeInside: number;
   logisticsDeliveryFeeOutside: number;
 }): DeliveryZone | null {
   const tiers = deliveryTiers(event);
-  return tiers.length === 1 ? tiers[0].zone : null;
+  return tiers.length > 0 && !needsDeliveryZoneChoice(event) ? tiers[0].zone : null;
 }

@@ -137,6 +137,23 @@ export function deliveryZoneLabel(value: unknown): string {
 }
 
 /**
+ * The zone label as this event's runners and organizer should see it.
+ *
+ * Empty when the event offers both zones at the same fee: the wizard does not
+ * ask then (register/delivery.ts, needsDeliveryZoneChoice), so the stored zone
+ * is a default rather than the runner's answer, and printing it would misstate
+ * where they live. Decided from the event's current fees.
+ */
+export function deliveryZoneLabelFor(
+  event: { logisticsDeliveryFeeInside: number; logisticsDeliveryFeeOutside: number },
+  value: unknown,
+): string {
+  const inside = event.logisticsDeliveryFeeInside;
+  if (inside > 0 && inside === event.logisticsDeliveryFeeOutside) return '';
+  return deliveryZoneLabel(value);
+}
+
+/**
  * The only place a payment method is lowercased.
  *
  * PayMongo's `payment_method_types`, `payment_method_allowed` and payment
