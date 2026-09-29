@@ -49,6 +49,7 @@ list; one or two skills per task is the norm.
 | Stress-testing a plan | `grilling` |
 | Ending a session mid-work | `/handoff` |
 | Merge conflict (dev → main) | `resolving-merge-conflicts` |
+| QA before promoting `dev` to `main` | `pre-deploy-qa` (the owner runs its Strix step by hand) |
 | Security audit | built-in `/security-review`; the Strix skills only on request, **never against the production URL** |
 | Saving tokens | `caveman*`, `cavecrew` |
 

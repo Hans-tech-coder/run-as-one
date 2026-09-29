@@ -114,9 +114,13 @@ event on `/admin/remittances` (`ADMIN_MERGE_PLAN.md` Batch 6, §5
 - **Work lands on `dev`, not `main`.** Because a push to `main` ships to
   production, day-to-day commits go to the long-lived `dev` branch, and every
   push to `dev` gets its own Vercel preview deployment. `main` is only advanced
-  — by fast-forwarding it onto `dev` and pushing — when the owner explicitly
-  asks to deploy. The local checkout (which the owner runs `localhost:3000`
-  from) tracks `dev`. Never push to `main` without being told to.
+  — by fast-forwarding it onto `dev` and pushing — and **the owner does that
+  step by hand**; an agent hands over the commands (`pre-deploy-qa`'s
+  `deploy-commands.md`) and never pushes `main` itself. The local checkout (which the owner runs `localhost:3000`
+  from) tracks `dev`. Before a
+  promotion, the `pre-deploy-qa` skill runs the gates, a review of
+  `origin/main..dev`, and a registration walkthrough on localhost; its Strix
+  scan is run by the owner in their own terminal, never by an agent.
 - **Hosting budget matters.** Vercel + Neon's free 0.5 GB Postgres tier. Weigh
   storage cost before proposing schema growth, and say so when you do.
 
