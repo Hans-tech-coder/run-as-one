@@ -7,7 +7,7 @@ import { asDeliveryZone, deliveryFeeFor } from '@/app/events/[slug]/register/del
 import {
   LOGISTICS_METHODS,
   asLogisticsMethod,
-  asPaymentMethod,
+  PAYMENT_METHODS,
 } from '@/lib/registration-codes';
 import {
   runnerCategories,
@@ -83,7 +83,6 @@ export async function POST(request: Request) {
     const platformFee = centavos('platformFee');
     const transactionFee = centavos('transactionFee');
     const totalAmount = centavos('totalAmount');
-    const paymentMethod = formData.get('paymentMethod') as string;
     const transactionNumber = formData.get('transactionNumber') as string;
     const consentGiven = formData.get('consentGiven') === 'true';
     const consentSignature = formData.get('consentSignature') as string;
@@ -193,12 +192,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: openingNote(event) }, { status: 409 });
     }
 
-    // Both codes go into the database uppercase, like every other coded
+    // The logistics code goes into the database uppercase, like every other coded
     // column (lib/registration-codes.ts), and through their guards rather than
     // straight off the request: a stale tab still posts the old lowercase
     // spelling, and it has to keep pricing correctly.
     const storedLogisticsMethod = asLogisticsMethod(logisticsMethod);
-    const storedPaymentMethod = asPaymentMethod(paymentMethod);
+    // Always a bank transfer, whatever the form says: this route only takes
+    // orders paid by deposit slip. A posted "GCASH" would otherwise write an
+    // order the registrants list hides (listedRegistrationWhere) and the 24h
+    // sweep expires despite its slip. A free order is rewritten COMPLIMENTARY
+    // below by FREE_ORDER_COLUMNS.
+    const storedPaymentMethod = PAYMENT_METHODS.BANK_TRANSFER;
     const zone =
       storedLogisticsMethod === LOGISTICS_METHODS.DELIVERY
         ? asDeliveryZone(deliveryZone)

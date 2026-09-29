@@ -135,9 +135,40 @@ export const FREE_ORDER_TOTAL_LABEL = 'Nothing to Pay';
 const PAYMONGO_RATES: Record<string, { rate: number; fixed: number }> = {
   GCASH: { rate: 0.025, fixed: 0 },
   MAYA: { rate: 0.02, fixed: 0 },
+  // The older spelling of Maya, which /api/checkout still routes to PayMongo —
+  // without it here the order would reach PayMongo carrying no fee.
+  PAYMAYA: { rate: 0.02, fixed: 0 },
   QRPH: { rate: 0.015, fixed: 0 },
   CARD: { rate: 0.035, fixed: 1500 }, // ₱15.00
 };
+
+/**
+ * **The PayMongo methods runners are offered right now** — the switch.
+ *
+ * Owner's call (2026-09-29): QR Ph only for now. The live PayMongo account is
+ * not yet a business account, and QR Ph is the one method it can take; GCash,
+ * Maya or card would reach PayMongo and fail at the last step. Once the
+ * business account is approved, add them back here (`'GCASH'`, `'MAYA'`,
+ * `'CARD'`) — the wizard's cards and the checkout route both read this list.
+ * Bank transfer is not PayMongo's and is not governed by it.
+ */
+export const OFFERED_PAYMONGO_METHODS: readonly string[] = ['QRPH'];
+
+/**
+ * Whether PayMongo takes payment by this (stored, uppercase) method *and* it is
+ * currently offered.
+ *
+ * The online checkout refuses anything else on a chargeable order: a method
+ * missing from the table above would reach PayMongo with no fee added, so the
+ * organizer would absorb PayMongo's cut, and one not offered would fail there.
+ */
+export function isPayMongoMethod(paymentMethod: string | null | undefined): boolean {
+  return Boolean(
+    paymentMethod &&
+      PAYMONGO_RATES[paymentMethod] &&
+      OFFERED_PAYMONGO_METHODS.includes(paymentMethod),
+  );
+}
 
 export function transactionFeeFor(chargeable: number, paymentMethod: string | null | undefined): number {
   const terms = paymentMethod ? PAYMONGO_RATES[paymentMethod] : undefined;

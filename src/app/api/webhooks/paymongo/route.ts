@@ -79,12 +79,31 @@ export async function POST(request: Request) {
         return NextResponse.json({ received: true });
       }
 
+      if (registration && registration.status !== 'PENDING') {
+        // Only a PENDING order is waiting for this payment. An EXPIRED one has
+        // already handed its slot and promo back (lib/pending-expiry.ts), and a
+        // CANCELLED / REFUNDED one was closed by a person — flipping either to
+        // PAID would oversell the category or reopen a closed order. Left as it
+        // is for the organizer to reinstate or refund; answered 200 so PayMongo
+        // stops retrying.
+        console.error(
+          `PayMongo Webhook: payment for ${registration.orderRef} arrived while it was ${registration.status}; not marked PAID — needs a manual reinstate or refund`
+        );
+        return NextResponse.json({ received: true });
+      }
+
       if (registration) {
         // Update the registration status to PAID
-        await prisma.registration.update({
-          where: { id: registration.id },
+        // Conditional on PENDING, so two deliveries racing each other (or the
+        // sweep expiring it in between) cannot both flip it and send two
+        // receipts.
+        const flipped = await prisma.registration.updateMany({
+          where: { id: registration.id, status: 'PENDING' },
           data: { status: 'PAID' }
         });
+        if (flipped.count === 0) {
+          return NextResponse.json({ received: true });
+        }
 
         console.log(`Successfully updated registration ${registration.orderRef} to PAID`);
 

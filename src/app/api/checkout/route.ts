@@ -8,6 +8,7 @@ import {
   PAYMENT_METHODS,
   asLogisticsMethod,
   asPaymentMethod,
+  paymentMethodLabel,
   paymongoPaymentType,
 } from '@/lib/registration-codes';
 import {
@@ -35,6 +36,8 @@ import {
   FREE_ORDER_COLUMNS,
   chargeableTotal,
   isFreeOrder,
+  OFFERED_PAYMONGO_METHODS,
+  isPayMongoMethod,
   platformFeeAfterDiscount,
   transactionFeeFor,
 } from '@/lib/free-checkout';
@@ -285,7 +288,26 @@ export async function POST(request: Request) {
     // with a matching lower total paid less than the goods cost (Strix
     // vuln-0014). It is recomputed here from the chargeable total and the
     // method (lib/free-checkout.ts), and a free order's is zero.
-    const expectedTransactionFee = transactionFeeFor(chargeable, paymentMethod);
+    //
+    // From the *stored* method, and only for one PayMongo actually charges a
+    // fee on: the raw value would price "gcash" or "PAYMAYA" at no fee while
+    // PayMongo still took its cut from the organizer.
+    if (
+      !free &&
+      storedPaymentMethod !== PAYMENT_METHODS.BANK_TRANSFER &&
+      !isPayMongoMethod(storedPaymentMethod)
+    ) {
+      return NextResponse.json(
+        {
+          error: `Choose a payment method: ${[
+            ...OFFERED_PAYMONGO_METHODS.map(paymentMethodLabel),
+            'bank transfer',
+          ].join(' or ')}.`,
+        },
+        { status: 400 }
+      );
+    }
+    const expectedTransactionFee = transactionFeeFor(chargeable, storedPaymentMethod);
     const expectedTotal = chargeable + expectedTransactionFee;
     if (amountCents !== expectedTotal || transactionFeeCents !== expectedTransactionFee) {
       return NextResponse.json(

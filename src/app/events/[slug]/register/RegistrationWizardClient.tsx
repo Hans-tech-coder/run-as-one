@@ -77,6 +77,7 @@ import {
 import {
   FREE_ORDER_SUBMIT_LABEL,
   FREE_ORDER_TOTAL_LABEL,
+  OFFERED_PAYMONGO_METHODS,
   chargeableTotal,
   isFreeOrder,
   platformFeeAfterDiscount,
@@ -252,10 +253,19 @@ export default function RegistrationWizardClient({
   const availableTiers = deliveryTiers(event);
   const selectedTier = availableTiers.find((t) => t.zone === deliveryZone);
 
-  // Payment state
+  // Payment state. Starts on the first PayMongo method currently offered
+  // (OFFERED_PAYMONGO_METHODS), so the summary never prices a card nobody can
+  // see; bank transfer when none is.
   const [paymentMethod, setPaymentMethod] = useState<
     "GCASH" | "MAYA" | "QRPH" | "CARD" | "BANK_TRANSFER"
-  >("GCASH");
+  >(
+    (OFFERED_PAYMONGO_METHODS[0] ?? "BANK_TRANSFER") as
+      | "GCASH"
+      | "MAYA"
+      | "QRPH"
+      | "CARD"
+      | "BANK_TRANSFER",
+  );
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderRef, setOrderRef] = useState<string>(
     isCancelParam && registration ? registration.orderRef : "",
@@ -1800,6 +1810,7 @@ export default function RegistrationWizardClient({
                     ₱0 charge outright. */}
                 {!isFree && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+                  {OFFERED_PAYMONGO_METHODS.includes("GCASH") && (
                   <div
                     className={`group relative overflow-hidden border ${paymentMethod === "GCASH" ? "border-[#007DFE] bg-[#007DFE]/10" : "border-white/10 bg-black/40 hover:border-[#007DFE]/50"} rounded-[16px] p-6 cursor-pointer transition-all flex items-center gap-4`}
                     onClick={() => setPaymentMethod("GCASH")}
@@ -1819,7 +1830,9 @@ export default function RegistrationWizardClient({
                       </div>
                     </div>
                   </div>
+                  )}
 
+                  {OFFERED_PAYMONGO_METHODS.includes("MAYA") && (
                   <div
                     className={`group relative overflow-hidden border ${paymentMethod === "MAYA" ? "border-[#00A164] bg-[#00A164]/10" : "border-white/10 bg-black/40 hover:border-[#00A164]/50"} rounded-[16px] p-6 cursor-pointer transition-all flex items-center gap-4`}
                     onClick={() => setPaymentMethod("MAYA")}
@@ -1839,7 +1852,9 @@ export default function RegistrationWizardClient({
                       </div>
                     </div>
                   </div>
+                  )}
 
+                  {OFFERED_PAYMONGO_METHODS.includes("QRPH") && (
                   <div
                     className={`group relative overflow-hidden border ${paymentMethod === "QRPH" ? "border-accent-blue bg-accent-blue/10" : "border-white/10 bg-black/40 hover:border-accent-blue/50"} rounded-[16px] p-6 cursor-pointer transition-all flex items-center gap-4`}
                     onClick={() => setPaymentMethod("QRPH")}
@@ -1859,7 +1874,9 @@ export default function RegistrationWizardClient({
                       </div>
                     </div>
                   </div>
+                  )}
 
+                  {OFFERED_PAYMONGO_METHODS.includes("CARD") && (
                   <div
                     className={`group relative flex cursor-pointer items-center gap-4 overflow-hidden rounded-[16px] border ${
                       paymentMethod === "CARD"
@@ -1887,6 +1904,7 @@ export default function RegistrationWizardClient({
                       </div>
                     </div>
                   </div>
+                  )}
 
                   {/* Offered only when the organizer has given somewhere to
                       send the money. Without an account this option would take
