@@ -298,10 +298,13 @@ export default function PhoneField({
                       data-index={index}
                       role="option"
                       aria-selected={isSelected}
+                      // Mouse on pointerdown; a finger on click, so a swipe
+                      // through the list scrolls instead of picking.
                       onPointerDown={e => {
                         e.preventDefault();
-                        pick(c);
+                        if (e.pointerType === "mouse") pick(c);
                       }}
+                      onClick={() => pick(c)}
                       onMouseEnter={() => setActiveIndex(index)}
                       className={`flex items-center gap-2.5 px-4 py-2.5 cursor-pointer text-sm transition-colors ${
                         index === activeIndex ? "bg-white/10" : ""

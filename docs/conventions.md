@@ -451,6 +451,12 @@
   the admin has no native select left. The registrants edit modal's Gender
   field moved in Mobile Batch 3; its Shirt Size is still a free-text box with a `<datalist>`,
   which AdminSelect cannot replace because a size may be left blank or typed.
+  **An option picks on pointerdown for a mouse and on click for a finger** —
+  in AdminSelect, SelectField, Combobox and PhoneField alike. A touch's
+  pointerdown is also where a scroll through the list starts, so committing
+  there chose whatever row the swipe began on (the Hour / Minute lists could
+  not be scrolled on a phone); a scroll cancels the click, a tap does not.
+  A new list copies that pair of handlers.
 - **A date a runner picks is never a native `<input type="date">`.** The
   runner-facing control is `events/[slug]/register/BirthdatePicker`
   (GUARDIAN_CONSENT_PLAN.md Batch 2), used by both wizards. Its trigger is
@@ -470,7 +476,7 @@
   dropdown's motion tokens. The value in and out stays a `YYYY-MM-DD` string,
   and it takes `id` / `error` exactly like SelectField, so validation and
   `focusField` did not change. Its outside-click listener runs in the **capture
-  phase**: a Month or Year option commits and unmounts on its own pointerdown,
+  phase**: a Month or Year option commits and unmounts on its own pointerdown (a mouse's; a finger's commits on click),
   so a bubbling check found the target in no document and closed the calendar
   on every pick. `SelectField` gained `hideLabel` (label kept for screen
   readers only) for that header pair. Any new runner-facing date field uses

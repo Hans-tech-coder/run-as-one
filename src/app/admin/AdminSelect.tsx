@@ -259,12 +259,15 @@ export default function AdminSelect({
                   data-index={index}
                   role="option"
                   aria-selected={isSelected}
-                  // pointerdown, not click: the trigger's blur would otherwise
-                  // close the list before a click ever landed.
+                  // A mouse picks on pointerdown, so the trigger keeps focus.
+                  // A finger picks on click: pointerdown is where a scroll
+                  // starts too, and a swipe through the list must not choose
+                  // the row it began on. A scroll cancels the click.
                   onPointerDown={(e) => {
                     e.preventDefault();
-                    commit(index);
+                    if (e.pointerType === "mouse") commit(index);
                   }}
+                  onClick={() => commit(index)}
                   onMouseEnter={() => setActiveIndex(index)}
                   className={`flex items-start gap-2 px-4 py-3 cursor-pointer text-sm text-primary transition-colors ${
                     index === activeIndex ? "bg-[var(--ink-10)]" : ""

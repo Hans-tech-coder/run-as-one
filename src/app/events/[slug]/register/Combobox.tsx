@@ -208,12 +208,15 @@ export default function Combobox({
                 data-index={index}
                 role="option"
                 aria-selected={Boolean(row.selected)}
-                // pointerdown, not click: the input's blur would otherwise close
-                // the list before a click ever landed.
+                // A mouse picks on pointerdown, so the input keeps focus. A
+                // finger picks on click: pointerdown is where a scroll starts
+                // too, and a swipe through the list must not choose the row it
+                // began on. A scroll cancels the click.
                 onPointerDown={e => {
                   e.preventDefault();
-                  commit(row);
+                  if (e.pointerType === 'mouse') commit(row);
                 }}
+                onClick={() => commit(row)}
                 onMouseEnter={() => setActiveIndex(index)}
                 className={`flex items-center gap-2 px-4 py-3 cursor-pointer text-sm transition-colors ${
                   index === activeIndex ? 'bg-white/10' : ''
