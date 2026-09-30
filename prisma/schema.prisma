@@ -69,6 +69,11 @@ model Event {
   /// When that pickup window is open ("March 12-14, 10AM-7PM"). Separate from
   /// the location because an organizer often knows one before the other.
   pickupSchedule              String?
+  /// The province the event is held in, spelled as src/lib/ph-provinces.json
+  /// has it ("Tarlac", "Metro Manila"). The two delivery tiers are measured
+  /// from here: with it set, the wizard picks Inside or Outside from the
+  /// runner's own address instead of asking. Null = the runner still chooses.
+  province                    String?
   /// Centavos. Delivery within the event's province. 0 = tier not offered.
   logisticsDeliveryFeeInside  Int               @default(0)
   /// Centavos. Delivery outside the event's province. 0 = tier not offered.

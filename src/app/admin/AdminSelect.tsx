@@ -74,6 +74,7 @@ export default function AdminSelect({
   const [placement, setPlacement] = useState({ up: false, maxHeight: LIST_MAX_HEIGHT });
   const wrapperRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
+  const typeahead = useRef<{ query: string; timer?: number }>({ query: "" });
   const baseId = useId();
   const listboxId = `${baseId}-listbox`;
   const triggerId = id ?? `${baseId}-trigger`;
@@ -196,6 +197,25 @@ export default function AdminSelect({
     }
 
     if (e.key === "Tab") close();
+
+    // Type-ahead, as a native select does: letters typed within half a second
+    // of each other build one query ("ta" → Tarlac), and the first option that
+    // starts with it is highlighted. The province list is 85 long; nobody
+    // should have to scroll to T.
+    if (e.key.length === 1 && e.key !== " " && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      window.clearTimeout(typeahead.current.timer);
+      typeahead.current.query += e.key.toLowerCase();
+      typeahead.current.timer = window.setTimeout(() => {
+        typeahead.current.query = "";
+      }, 500);
+      const match = options.findIndex((o) =>
+        o.label.toLowerCase().startsWith(typeahead.current.query),
+      );
+      if (match < 0) return;
+      e.preventDefault();
+      if (!isOpen) setIsOpen(true);
+      setActiveIndex(match);
+    }
   };
 
   const describedBy =

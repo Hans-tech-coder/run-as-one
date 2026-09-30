@@ -33,8 +33,23 @@ import {
   deliveryFeeFor,
   defaultDeliveryZone,
   needsDeliveryZoneChoice,
+  deliveryProvinceOf,
+  offersZone,
+  zoneForProvince,
+  zoneNoteFor,
   type DeliveryZone,
 } from "./delivery";
+import DeliveryAddressFields from "./DeliveryAddressFields";
+import DeliveryAreaPanel from "./DeliveryAreaPanel";
+import {
+  ADDRESS_PART_LABELS,
+  addressPartFieldId,
+  composeDeliveryAddress,
+  EMPTY_DELIVERY_ADDRESS,
+  missingAddressParts,
+  parseDeliveryAddress,
+  type DeliveryAddressParts,
+} from "./delivery-address";
 import { type BankAccountView } from "@/lib/bank-accounts";
 import {
   asDeliveryZone,
@@ -243,14 +258,27 @@ export default function RegistrationWizardClient({
       ? asLogisticsMethod(registration.logisticsMethod)
       : "PICKUP",
   );
-  const [deliveryAddress, setDeliveryAddress] = useState(
-    isCancelParam && registration ? registration.deliveryAddress || "" : "",
-  );
-  const [deliveryZone, setDeliveryZone] = useState<DeliveryZone | null>(
+  const [deliveryAddressParts, setDeliveryAddressParts] =
+    useState<DeliveryAddressParts>(
+      isCancelParam && registration
+        ? parseDeliveryAddress(registration.deliveryAddress)
+        : EMPTY_DELIVERY_ADDRESS,
+    );
+  const deliveryAddress = composeDeliveryAddress(deliveryAddressParts);
+  const [chosenZone, setChosenZone] = useState<DeliveryZone | null>(
     isCancelParam && registration?.deliveryZone
       ? asDeliveryZone(registration.deliveryZone)
       : defaultDeliveryZone(event),
   );
+  // When the event's province is known (set, or read off its location), the
+  // runner's own address decides the zone and the fees are only a note
+  // (delivery.ts, deliveryProvinceOf).
+  const deliveryProvince = deliveryProvinceOf(event);
+  const autoZone = deliveryProvince !== null;
+  const deliveryZone = autoZone
+    ? zoneForProvince(event, deliveryAddressParts.province)
+    : chosenZone;
+  const zoneNote = zoneNoteFor(event, deliveryZone);
 
   const availableTiers = deliveryTiers(event);
   const selectedTier = availableTiers.find((t) => t.zone === deliveryZone);
@@ -621,17 +649,15 @@ export default function RegistrationWizardClient({
     } as const;
   };
 
-  const deliveryAddressError =
-    showErrors &&
-    logisticsMethod === "DELIVERY" &&
-    deliveryZone !== null &&
-    deliveryAddress.trim() === ""
-      ? "Enter a complete delivery address"
-      : undefined;
+  const missingAddress = missingAddressParts(deliveryAddressParts);
 
   const validateStep2 = () => {
     if (logisticsMethod === "PICKUP") return true;
-    return deliveryZone !== null && deliveryAddress.trim() !== "";
+    return (
+      deliveryZone !== null &&
+      missingAddress.length === 0 &&
+      offersZone(event, deliveryZone)
+    );
   };
 
   const handleNext = async () => {
@@ -693,16 +719,27 @@ export default function RegistrationWizardClient({
 
     if (step === 2 && !validateStep2()) {
       setShowErrors(true);
+      // Without the event's province the runner picks the area first; with
+      // it, the area follows the province, which the address list covers.
+      const needsArea = !autoZone && deliveryZone === null;
       await alert({
         variant: "info",
-        title:
-          deliveryZone === null ? "Choose a delivery area" : "Address needed",
-        message:
-          deliveryZone === null
-            ? "Please choose whether delivery is inside or outside the province."
-            : "Please provide a complete delivery address so the kit reaches you.",
+        title: needsArea
+          ? "Choose a delivery area"
+          : missingAddress.length > 0
+            ? "Delivery address incomplete"
+            : "Delivery not available",
+        message: needsArea
+          ? "Please choose whether delivery is inside or outside the province."
+          : missingAddress.length > 0
+            ? `Please fill in: ${missingAddress
+                .map((part) => ADDRESS_PART_LABELS[part])
+                .join(", ")}.`
+            : (zoneNote?.error ?? ""),
       });
-      if (deliveryZone !== null) focusField("delivery-address");
+      if (!needsArea) {
+        focusField(addressPartFieldId(missingAddress[0] ?? "province"));
+      }
       return;
     }
 
@@ -1720,71 +1757,27 @@ export default function RegistrationWizardClient({
 
                 {logisticsMethod === "DELIVERY" && (
                   <div className="animate-fade-in flex flex-col gap-6">
-                    {/* Only worth asking when there is an actual choice. With a
-                        single tier, or two at the same fee, the zone is already
-                        selected for them. */}
+                    {/* Only when the two fees differ: with one tier, or two
+                        at the same fee, there is nothing to tell apart. */}
                     {needsDeliveryZoneChoice(event) && (
-                      <div className="input-group full-width">
-                        <label>Delivery Area</label>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
-                          {availableTiers.map((tier) => (
-                            <div
-                              key={tier.zone}
-                              className={`border rounded-[16px] p-5 cursor-pointer transition-all flex justify-between items-center gap-4 ${
-                                deliveryZone === tier.zone
-                                  ? "border-accent-blue bg-accent-blue/10"
-                                  : "border-white/10 bg-black/40 hover:border-white/30 hover:bg-white/5"
-                              }`}
-                              onClick={() => setDeliveryZone(tier.zone)}
-                            >
-                              <div className="flex items-center gap-3">
-                                {deliveryZone === tier.zone && (
-                                  <CheckCircle2
-                                    size={20}
-                                    className="text-accent-blue shrink-0"
-                                  />
-                                )}
-                                <span className="font-medium text-white">
-                                  {tier.label}
-                                </span>
-                              </div>
-                              <span className="font-bold text-accent-blue whitespace-nowrap">
-                                +₱{formatPesos(tier.fee)}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                        <p className="text-xs text-secondary mt-3">
-                          Relative to {event.location}. Choose Outside Province
-                          if your address is in a different province.
-                        </p>
-                      </div>
+                      <DeliveryAreaPanel
+                        tiers={availableTiers}
+                        zone={deliveryZone}
+                        province={deliveryProvince}
+                        location={event.location}
+                        onChoose={setChosenZone}
+                      />
                     )}
 
-                    <div className="input-group full-width">
-                      <label htmlFor="delivery-address">
-                        Complete Delivery Address
-                      </label>
-                      <textarea
-                        id="delivery-address"
-                        aria-invalid={deliveryAddressError ? true : undefined}
-                        aria-describedby={
-                          deliveryAddressError
-                            ? "delivery-address-error"
-                            : undefined
-                        }
-                        value={deliveryAddress}
-                        onChange={(e) =>
-                          setDeliveryAddress(upperCaseAsTyped(e.target.value))
-                        }
-                        placeholder="HOUSE/UNIT NO., STREET, BARANGAY, CITY/MUNICIPALITY, PROVINCE, ZIP CODE"
-                        rows={4}
-                      ></textarea>
-                      <FieldError
-                        id="delivery-address-error"
-                        message={deliveryAddressError}
-                      />
-                    </div>
+                    <DeliveryAddressFields
+                      value={deliveryAddressParts}
+                      onChange={setDeliveryAddressParts}
+                      showErrors={
+                        showErrors && (autoZone || deliveryZone !== null)
+                      }
+                      defaultCountry={defaultCountry}
+                      zoneNote={zoneNote}
+                    />
                   </div>
                 )}
 

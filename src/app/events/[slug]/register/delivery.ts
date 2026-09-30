@@ -1,8 +1,12 @@
 import {
   DELIVERY_ZONES,
   deliveryZoneLabel,
+  asDeliveryZone,
   type DeliveryZone,
 } from '@/lib/registration-codes';
+import { formatPesos } from '@/lib/money';
+import { findProvince, inferProvince, samePlace } from '@/lib/ph-address';
+import { parseDeliveryAddress } from './delivery-address';
 
 /**
  * Delivery pricing, shared by both registration wizards.
@@ -105,4 +109,84 @@ export function defaultDeliveryZone(event: {
 }): DeliveryZone | null {
   const tiers = deliveryTiers(event);
   return tiers.length > 0 && !needsDeliveryZoneChoice(event) ? tiers[0].zone : null;
+}
+
+type EventPlace = { province?: string | null; location?: string | null };
+
+/**
+ * The province the delivery tiers are measured from: the one the organizer
+ * picked (`Event.province`), else the one the event's location names
+ * ("Capitol Lingayen, Pangasinan"), so an event made before the picker existed
+ * still prices delivery from the address. Null only when neither says.
+ */
+export function deliveryProvinceOf(event: EventPlace): string | null {
+  return findProvince(event.province)?.name ?? inferProvince(event.location)?.name ?? null;
+}
+
+/**
+ * The zone an address falls in, when the event's province is known
+ * (deliveryProvinceOf). Inside when the runner's province is the same one,
+ * Outside otherwise; null until the address names a province on the list, or when the
+ * event has none set — then the runner still chooses (defaultDeliveryZone).
+ */
+export function zoneForProvince(
+  event: EventPlace,
+  addressProvince: string,
+): DeliveryZone | null {
+  const home = deliveryProvinceOf(event);
+  // Only a province on the list counts: half-typed "TARL" is not "outside".
+  if (!home || !findProvince(addressProvince)) return null;
+  return samePlace(home, addressProvince)
+    ? DELIVERY_ZONES.INSIDE
+    : DELIVERY_ZONES.OUTSIDE;
+}
+
+/** Whether this event delivers to that zone at all (a fee of 0 = not offered). */
+export function offersZone(
+  event: { logisticsDeliveryFeeInside: number; logisticsDeliveryFeeOutside: number },
+  zone: DeliveryZone | null,
+): boolean {
+  return deliveryTiers(event).some((t) => t.zone === zone);
+}
+
+/**
+ * The zone a checkout is priced at. With the event's province set, the posted
+ * zone is ignored and the one the address falls in is used instead — the
+ * wizard never asked, and a tab that posts "INSIDE" for a Davao address must
+ * not get the cheaper tier. Without it, the runner's own choice stands.
+ */
+export function resolveDeliveryZone(
+  event: EventPlace,
+  postedZone: unknown,
+  deliveryAddress: string | null | undefined,
+): DeliveryZone | null {
+  if (!deliveryProvinceOf(event)) return asDeliveryZone(postedZone);
+  return zoneForProvince(event, parseDeliveryAddress(deliveryAddress).province);
+}
+
+/**
+ * What the address form says under the province once the zone is known from
+ * it: the tier and its fee, or — when the event does not deliver there — why
+ * not, so the runner can switch to pickup before pressing Next.
+ */
+export function zoneNoteFor(
+  event: EventPlace & {
+    logisticsDeliveryFeeInside: number;
+    logisticsDeliveryFeeOutside: number;
+  },
+  zone: DeliveryZone | null,
+): { text?: string; error?: string } | undefined {
+  const home = deliveryProvinceOf(event);
+  if (!home || !zone) return undefined;
+  const inside = zone === DELIVERY_ZONES.INSIDE;
+  if (!offersZone(event, zone)) {
+    return {
+      error: inside
+        ? `This event only delivers outside ${home}. Choose On-site Pickup instead.`
+        : `This event only delivers within ${home}. Choose On-site Pickup instead.`,
+    };
+  }
+  return {
+    text: `${inside ? 'Inside' : 'Outside'} ${home}: delivery fee ₱${formatPesos(deliveryFeeFor(event, zone))}`,
+  };
 }

@@ -19,6 +19,7 @@ import {
 import { CATEGORY_ORDER } from '@/lib/category-order';
 import { readClientLink } from '@/lib/client-store';
 import { cleanHighlights } from '@/lib/event-highlights';
+import { findProvince, inferProvince } from '@/lib/ph-address';
 
 export async function POST(request: Request) {
   try {
@@ -34,7 +35,7 @@ export async function POST(request: Request) {
     }
 
     const data = await request.json();
-    const { title, date, startTime, endTime, location, imageUrl, highlights, sizeChartImageUrl, description, logisticsPickup, pickupLocation, pickupSchedule, logisticsDeliveryFeeInside, logisticsDeliveryFeeOutside, adminFee, shirtSizeUpcharge, consentWaiver, registrationForm, eventType, registrationOpensAt, categories, bankAccounts } = data;
+    const { title, date, startTime, endTime, location, province, imageUrl, highlights, sizeChartImageUrl, description, logisticsPickup, pickupLocation, pickupSchedule, logisticsDeliveryFeeInside, logisticsDeliveryFeeOutside, adminFee, shirtSizeUpcharge, consentWaiver, registrationForm, eventType, registrationOpensAt, categories, bankAccounts } = data;
 
     if (!title || !date || !location) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -99,6 +100,10 @@ export async function POST(request: Request) {
           pickupLocation: pickupLocation?.trim() || null,
           pickupSchedule: pickupSchedule?.trim() || null,
           // The admin form collects pesos; storage is centavos.
+          // Only a province on the list: the wizard compares the runner's
+          // address against it to price delivery. Left unpicked, the one the
+          // location names is saved instead (lib/ph-address.ts).
+          province: findProvince(province)?.name ?? inferProvince(location)?.name ?? null,
           logisticsDeliveryFeeInside: toCentavos(logisticsDeliveryFeeInside),
           logisticsDeliveryFeeOutside: toCentavos(logisticsDeliveryFeeOutside),
           adminFee: toCentavos(adminFee),

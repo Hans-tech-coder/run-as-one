@@ -43,6 +43,7 @@ export default function Combobox({
   onNormalize,
   id,
   error,
+  fullWidth = true,
 }: {
   label: string;
   value: string;
@@ -64,6 +65,8 @@ export default function Combobox({
   id?: string;
   /** What the field still wants, or nothing when it is satisfied. */
   error?: string;
+  /** Spans both columns of the wizard's grid; the address pickers pair up. */
+  fullWidth?: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
@@ -153,7 +156,7 @@ export default function Combobox({
   };
 
   return (
-    <div className="input-group full-width">
+    <div className={fullWidth ? "input-group full-width" : "input-group"}>
       {headerRight ? (
         <div className="flex justify-between items-center mb-1">
           <label htmlFor={inputId} className="mb-0">

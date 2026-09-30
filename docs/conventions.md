@@ -304,6 +304,10 @@
   - **A picker's list stays on screen.** `AdminSelect` measures when it
     opens: below its trigger when the list fits, above it when there is more
     room there, and never taller than the room it opens into.
+  - **A long picker answers to typing.** `AdminSelect` has a native select's
+    type-ahead: letters typed within half a second build one query and the
+    first option starting with it is highlighted (and the list opened), so
+    the 85-province *Event Province* list reaches Tarlac with "ta".
   - **A wait is the page's shape, at both widths.** `admin/loading.tsx` and
     `admin/events/loading.tsx` read the URL and hand `AdminRouteLoading` a
     shape (the Overview's tile count also reads `dashboard-nav.tsx`, since

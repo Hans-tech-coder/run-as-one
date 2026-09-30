@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-36 pages · 48 API routes · 69 modules in `src/lib` · 311 files · 66,582 lines
+36 pages · 48 API routes · 70 modules in `src/lib` · 319 files · 68,301 lines
 
 ---
 
@@ -29,7 +29,7 @@ The route, the server component behind it, and the client components beside it.
 | `/admin/activity` | [`/admin/activity/page.tsx`](../src/app/admin/activity/page.tsx) | `ActivityClient.tsx` |
 | `/admin/clients` | [`/admin/clients/page.tsx`](../src/app/admin/clients/page.tsx) | `ApplicationPanel.tsx` `ClientsClient.tsx` `InviteDialog.tsx` |
 | `/admin/communities` | [`/admin/communities/page.tsx`](../src/app/admin/communities/page.tsx) | `CommunitiesClient.tsx` |
-| `/admin/events` | [`/admin/events/page.tsx`](../src/app/admin/events/page.tsx) | `bank-account-draft.ts` `BankAccountsPanel.tsx` `category-draft.ts` `ConsentWaiverField.tsx` `DescriptionEditor.tsx` `event-not-found.ts` `EventActionsMenu.tsx` `EventClientField.tsx` `EventOptionsPanel.tsx` `EventPromotionsPanel.tsx` `EventsTableClient.tsx` `HighlightsField.tsx` `InclusionsField.tsx` `PosterField.tsx` `registration-opening.ts` `registration-state-badge.ts` `RegistrationFormPicker.tsx` `RegistrationOpeningPicker.tsx` `RegistrationScheduleModal.tsx` |
+| `/admin/events` | [`/admin/events/page.tsx`](../src/app/admin/events/page.tsx) | `bank-account-draft.ts` `BankAccountsPanel.tsx` `category-draft.ts` `ConsentWaiverField.tsx` `DescriptionEditor.tsx` `event-not-found.ts` `EventActionsMenu.tsx` `EventClientField.tsx` `EventOptionsPanel.tsx` `EventPromotionsPanel.tsx` `EventProvinceField.tsx` `EventsTableClient.tsx` `HighlightsField.tsx` `HighlightsModal.tsx` `InclusionsField.tsx` `PosterField.tsx` `registration-opening.ts` `registration-state-badge.ts` `RegistrationFormPicker.tsx` `RegistrationOpeningPicker.tsx` `RegistrationScheduleModal.tsx` |
 | `/admin/events/[id]/edit` | [`/admin/events/[id]/edit/page.tsx`](../src/app/admin/events/[id]/edit/page.tsx) | — |
 | `/admin/events/[id]/pacers` | [`/admin/events/[id]/pacers/page.tsx`](../src/app/admin/events/[id]/pacers/page.tsx) | `PacerActionsMenu.tsx` `PacersClient.tsx` |
 | `/admin/events/[id]/registrants` | [`/admin/events/[id]/registrants/page.tsx`](../src/app/admin/events/[id]/registrants/page.tsx) | `ProofLightbox.tsx` `registrant-csv.ts` `registrant-display.tsx` `RegistrantActionsMenu.tsx` `RegistrantDetailModal.tsx` `RegistrantsTable.tsx` |
@@ -51,7 +51,7 @@ The route, the server component behind it, and the client components beside it.
 | `/coming-soon` | [`/coming-soon/page.tsx`](../src/app/coming-soon/page.tsx) | — |
 | `/events` | [`/events/page.tsx`](../src/app/events/page.tsx) | — |
 | `/events/[slug]` | [`/events/[slug]/page.tsx`](../src/app/events/[slug]/page.tsx) | — |
-| `/events/[slug]/register` | [`/events/[slug]/register/page.tsx`](../src/app/events/[slug]/register/page.tsx) | `BankDetailsModal.tsx` `BankTransferWizardClient.tsx` `BirthdatePicker.tsx` `CategoryPicker.tsx` `Combobox.tsx` `CommunityPicker.tsx` `ConsentWaiver.tsx` `delivery.ts` `FreeSlotOffer.tsx` `GenderField.tsx` `GroupLimitNotice.tsx` `GuardianConsent.tsx` `PhoneField.tsx` `PosterLightbox.tsx` `PromoCodeField.tsx` `RegistrationWizardClient.tsx` `SelectField.tsx` `ShirtSizeField.tsx` `SizeGuideModal.tsx` `useStepReveal.ts` `validation.ts` |
+| `/events/[slug]/register` | [`/events/[slug]/register/page.tsx`](../src/app/events/[slug]/register/page.tsx) | `BankDetailsModal.tsx` `BankTransferWizardClient.tsx` `BirthdatePicker.tsx` `CategoryPicker.tsx` `Combobox.tsx` `CommunityPicker.tsx` `ConsentWaiver.tsx` `delivery-address.ts` `delivery.ts` `DeliveryAddressFields.tsx` `DeliveryAreaPanel.tsx` `FreeSlotOffer.tsx` `GenderField.tsx` `GroupLimitNotice.tsx` `GuardianConsent.tsx` `PhoneField.tsx` `PosterLightbox.tsx` `PromoCodeField.tsx` `RegistrationWizardClient.tsx` `SelectField.tsx` `ShirtSizeField.tsx` `SizeGuideModal.tsx` `useStepReveal.ts` `validation.ts` |
 | `/feedback` | [`/feedback/page.tsx`](../src/app/feedback/page.tsx) | `FeedbackForm.tsx` `FeedbackSent.tsx` `ScreenshotField.tsx` |
 | `/privacy` | [`/privacy/page.tsx`](../src/app/privacy/page.tsx) | — |
 | `/results` | [`/results/page.tsx`](../src/app/results/page.tsx) | — |
@@ -168,6 +168,7 @@ the file itself.
 | [`pacer.ts`](../src/lib/pacer.ts) | What a pacer code is, and when the dashboard has to nag about it (`PACER_DISCOUNT_PLAN.md`). |
 | [`pending-expiry.ts`](../src/lib/pending-expiry.ts) | When an unpaid online checkout stops holding what it took. |
 | [`permissions.ts`](../src/lib/permissions.ts) | Who may do what inside an organizer's admin — the whole matrix, in one file. |
+| [`ph-address.ts`](../src/lib/ph-address.ts) | Where in the Philippines a place is. |
 | [`phone.ts`](../src/lib/phone.ts) | Phone numbers: the country list, and the rules for turning what a runner types into something storable. |
 | [`pickup.ts`](../src/lib/pickup.ts) | What a runner who chooses on-site pick-up is told. |
 | [`platform-fee.ts`](../src/lib/platform-fee.ts) | The **default platform fee** — what a new event's Admin Fee box starts at (SETTINGS_PLAN.md Batch 4). |
@@ -206,25 +207,25 @@ when a task touches one, split it before editing rather than after.
 | Lines | File |
 | --- | --- |
 | 2342 | [`src/app/admin/marketing/PromoCodesClient.tsx`](../src/app/admin/marketing/PromoCodesClient.tsx) |
-| 2194 | [`src/app/events/[slug]/register/RegistrationWizardClient.tsx`](../src/app/events/[slug]/register/RegistrationWizardClient.tsx) |
+| 2213 | [`src/app/events/[slug]/register/RegistrationWizardClient.tsx`](../src/app/events/[slug]/register/RegistrationWizardClient.tsx) |
 | 2018 | [`src/app/admin/events/[id]/registrants/RegistrantsTable.tsx`](../src/app/admin/events/[id]/registrants/RegistrantsTable.tsx) |
-| 1933 | [`src/app/events/[slug]/register/BankTransferWizardClient.tsx`](../src/app/events/[slug]/register/BankTransferWizardClient.tsx) |
+| 1931 | [`src/app/events/[slug]/register/BankTransferWizardClient.tsx`](../src/app/events/[slug]/register/BankTransferWizardClient.tsx) |
 | 1519 | [`src/lib/discount.ts`](../src/lib/discount.ts) |
 | 1179 | [`src/app/admin/settings/SettingsPanels.tsx`](../src/app/admin/settings/SettingsPanels.tsx) |
 | 1110 | [`src/lib/email.ts`](../src/lib/email.ts) |
 | 1093 | [`src/app/admin/team/TeamClient.tsx`](../src/app/admin/team/TeamClient.tsx) |
 | 1015 | [`src/app/admin/register/page.tsx`](../src/app/admin/register/page.tsx) |
-| 936 | [`src/app/admin/events/[id]/edit/page.tsx`](../src/app/admin/events/[id]/edit/page.tsx) |
+| 944 | [`src/app/admin/events/[id]/edit/page.tsx`](../src/app/admin/events/[id]/edit/page.tsx) |
 | 856 | [`src/app/admin/events/EventsTableClient.tsx`](../src/app/admin/events/EventsTableClient.tsx) |
 | 775 | [`src/app/admin/events/[id]/pacers/PacersClient.tsx`](../src/app/admin/events/[id]/pacers/PacersClient.tsx) |
+| 757 | [`src/app/api/checkout/route.ts`](../src/app/api/checkout/route.ts) |
 | 750 | [`src/app/results/[slug]/full/FullResultsClient.tsx`](../src/app/results/[slug]/full/FullResultsClient.tsx) |
-| 724 | [`src/app/api/checkout/route.ts`](../src/app/api/checkout/route.ts) |
 | 693 | [`src/app/admin/AdminDatePicker.tsx`](../src/app/admin/AdminDatePicker.tsx) |
 | 663 | [`src/app/admin/activity/ActivityClient.tsx`](../src/app/admin/activity/ActivityClient.tsx) |
 | 622 | [`src/lib/activity.ts`](../src/lib/activity.ts) |
-| 613 | [`src/app/admin/events/new/NewEventForm.tsx`](../src/app/admin/events/new/NewEventForm.tsx) |
+| 620 | [`src/app/admin/events/new/NewEventForm.tsx`](../src/app/admin/events/new/NewEventForm.tsx) |
+| 608 | [`src/app/api/admin/events/[id]/route.ts`](../src/app/api/admin/events/[id]/route.ts) |
 | 603 | [`src/app/admin/feedback/FeedbackClient.tsx`](../src/app/admin/feedback/FeedbackClient.tsx) |
-| 602 | [`src/app/api/admin/events/[id]/route.ts`](../src/app/api/admin/events/[id]/route.ts) |
 | 573 | [`src/app/admin/events/[id]/results/ResultsUploaderClient.tsx`](../src/app/admin/events/[id]/results/ResultsUploaderClient.tsx) |
 | 548 | [`src/app/admin/NotificationsCenter.tsx`](../src/app/admin/NotificationsCenter.tsx) |
 | 546 | [`src/lib/organizer-application.ts`](../src/lib/organizer-application.ts) |
@@ -233,14 +234,14 @@ when a task touches one, split it before editing rather than after.
 | 512 | [`src/app/admin/events/[id]/registrants/RegistrantDetailModal.tsx`](../src/app/admin/events/[id]/registrants/RegistrantDetailModal.tsx) |
 | 503 | [`src/lib/promo-input.ts`](../src/lib/promo-input.ts) |
 | 491 | [`src/app/admin/AdminRouteLoading.tsx`](../src/app/admin/AdminRouteLoading.tsx) |
-| 484 | [`src/app/events/[slug]/page.tsx`](../src/app/events/[slug]/page.tsx) |
+| 482 | [`src/app/api/checkout/manual/route.ts`](../src/app/api/checkout/manual/route.ts) |
 | 472 | [`src/app/admin/communities/CommunitiesClient.tsx`](../src/app/admin/communities/CommunitiesClient.tsx) |
 | 472 | [`src/app/events/[slug]/register/BirthdatePicker.tsx`](../src/app/events/[slug]/register/BirthdatePicker.tsx) |
 | 472 | [`src/app/feedback/FeedbackForm.tsx`](../src/app/feedback/FeedbackForm.tsx) |
 | 469 | [`src/app/admin/clients/ApplicationPanel.tsx`](../src/app/admin/clients/ApplicationPanel.tsx) |
 | 469 | [`src/app/admin/events/[id]/registrants/ProofLightbox.tsx`](../src/app/admin/events/[id]/registrants/ProofLightbox.tsx) |
-| 467 | [`src/app/api/checkout/manual/route.ts`](../src/app/api/checkout/manual/route.ts) |
+| 468 | [`src/app/events/[slug]/page.tsx`](../src/app/events/[slug]/page.tsx) |
 | 458 | [`src/lib/registration-gate.ts`](../src/lib/registration-gate.ts) |
-| 428 | [`src/lib/actor.ts`](../src/lib/actor.ts) |
+| 438 | [`src/lib/actor.ts`](../src/lib/actor.ts) |
 | 427 | [`src/app/admin/page.tsx`](../src/app/admin/page.tsx) |
 | 416 | [`src/app/admin/events/[id]/results/ResultsTableClient.tsx`](../src/app/admin/events/[id]/results/ResultsTableClient.tsx) |

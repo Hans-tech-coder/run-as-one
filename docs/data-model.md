@@ -46,7 +46,15 @@ shape:
   case — means it is registrable the moment it is published), `pickupLocation`
   + `pickupSchedule`
   (where and when a race kit is collected — `logisticsPickup` only ever said
-  *that* pickup existed), certificate template + coordinates, and **`clientId`** — which client the race
+  *that* pickup existed), `province` (the province the event is held in,
+  spelled as `src/lib/ph-provinces.json` has it; set on the event form's
+  *Event Province* picker. The two delivery tiers are measured from it: set, the
+  wizard and both checkout routes price delivery from the province in the
+  runner's address and the *Delivery Area* picker becomes a read-only fee note.
+  Left unpicked, the events API saves the province the location names, and the
+  wizard and checkout read it off the location the same way for older rows;
+  only when neither says does the runner still choose — see `delivery.ts`
+  `deliveryProvinceOf`), certificate template + coordinates, and **`clientId`** — which client the race
   is run for (null = not linked yet; staff link a race through the event form's Client
   picker, and a null is invisible to every client viewer). Owns `Category[]`, `BankAccount[]`, `Registration[]`,
   `RaceResult[]` and `Remittance[]` — **an event with any remittance cannot be

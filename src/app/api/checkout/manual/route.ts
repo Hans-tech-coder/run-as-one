@@ -3,7 +3,7 @@ import prisma from '@/lib/db';
 import { newOrderRef } from '@/lib/order-ref';
 import { recordWriteInCommunities, runnerCommunity } from '@/lib/running-community-store';
 import { uploadPrivateProof, UploadError } from '@/lib/blob';
-import { asDeliveryZone, deliveryFeeFor } from '@/app/events/[slug]/register/delivery';
+import { deliveryFeeFor, offersZone, resolveDeliveryZone } from '@/app/events/[slug]/register/delivery';
 import {
   LOGISTICS_METHODS,
   asLogisticsMethod,
@@ -203,10 +203,21 @@ export async function POST(request: Request) {
     // sweep expires despite its slip. A free order is rewritten COMPLIMENTARY
     // below by FREE_ORDER_COLUMNS.
     const storedPaymentMethod = PAYMENT_METHODS.BANK_TRANSFER;
+    // With the event's province set, the zone comes from the address the
+    // runner gave, not from what the tab posted (delivery.ts).
     const zone =
       storedLogisticsMethod === LOGISTICS_METHODS.DELIVERY
-        ? asDeliveryZone(deliveryZone)
+        ? resolveDeliveryZone(event, deliveryZone, deliveryAddress)
         : null;
+    if (
+      storedLogisticsMethod === LOGISTICS_METHODS.DELIVERY &&
+      !offersZone(event, zone)
+    ) {
+      return NextResponse.json(
+        { error: 'Delivery is not available to that address. Choose on-site pickup, or check the province.' },
+        { status: 400 }
+      );
+    }
     const expectedDeliveryFee = deliveryFeeFor(event, zone);
     // Category prices plus the large-size surcharge. Checked rather than
     // trusted: without this, a client could post a subtotal that leaves out the

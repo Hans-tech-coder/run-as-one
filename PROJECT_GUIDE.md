@@ -133,6 +133,7 @@ npm run lint
 npm run seed:dev   # scripts/seed-dev.ts
 npm run uppercase:existing  # brings pre-uppercase-rule rows into line; --write to apply
 npm run test:blob  # scripts/test-blob.ts — exercises both blob stores
+node scripts/gen-psgc.mjs <psgc data folder>  # rebuilds the address lists; see its header
 ```
 
 `npx prisma migrate dev` / `npx prisma generate` for schema work. Migrations run

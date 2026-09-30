@@ -27,6 +27,8 @@ import DashboardHeader from '@/app/admin/DashboardHeader';
 import DescriptionEditor from '../DescriptionEditor';
 import HighlightsField from '@/app/admin/events/HighlightsField';
 import { type EventHighlight } from '@/lib/event-highlights';
+import EventProvinceField from '../EventProvinceField';
+import { inferProvince } from '@/lib/ph-address';
 
 /**
  * The create-event form. `page.tsx` reads the default platform fee on the
@@ -59,6 +61,7 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
     // pickup is offered, and both are optional — see lib/pickup.ts.
     pickupLocation: '',
     pickupSchedule: '',
+    province: '',
     logisticsDeliveryFeeInside: 0,
     logisticsDeliveryFeeOutside: 0,
     // Pesos on this form; the API converts to centavos. Starts at the default
@@ -499,6 +502,11 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
                         the organizer will confirm — never a blank line. */}
                   </>
                 )}
+                <EventProvinceField
+                  value={formData.province}
+                  location={formData.location}
+                  onChange={province => setFormData({...formData, province})}
+                />
                 <div className="form-group">
                   <label className="form-label">Delivery — Inside Province (₱) <span className="text-xs opacity-70">- 0 to hide this option</span></label>
                   <input
@@ -520,7 +528,7 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
                   />
                 </div>
                 <p className="form-group-full text-xs text-secondary">
-                  Runners pick their own zone at checkout. Leave both at 0 to offer pickup only.
+                  {formData.province || inferProvince(formData.location) ? "The runner's address decides the zone." : 'Runners pick their own zone at checkout.'} Leave both at 0 to offer pickup only.
                 </p>
               </div>
             </div>

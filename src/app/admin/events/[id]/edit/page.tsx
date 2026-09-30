@@ -36,6 +36,8 @@ import DashboardHeader from '@/app/admin/DashboardHeader';
 import DescriptionEditor from '../../DescriptionEditor';
 import HighlightsField from '@/app/admin/events/HighlightsField';
 import { cleanHighlights, type EventHighlight } from '@/lib/event-highlights';
+import EventProvinceField from '../../EventProvinceField';
+import { inferProvince } from '@/lib/ph-address';
 
 // The premade templates that used to sit under /public/certificates are gone —
 // the only way to get a certificate background now is to upload one. An event
@@ -79,6 +81,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
     // pickup is offered, and both are optional — see lib/pickup.ts.
     pickupLocation: '',
     pickupSchedule: '',
+    province: '',
     logisticsDeliveryFeeInside: 0,
     logisticsDeliveryFeeOutside: 0,
     // Pesos on this form; the PUT route converts to centavos.
@@ -141,6 +144,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
           pickupSchedule: data.pickupSchedule || '',
           // The API returns centavos; every money input on this form is pesos.
           // The PUT route converts back with toCentavos().
+          province: data.province || '',
           logisticsDeliveryFeeInside: toPesos(data.logisticsDeliveryFeeInside),
           logisticsDeliveryFeeOutside: toPesos(data.logisticsDeliveryFeeOutside),
           adminFee: toPesos(data.adminFee),
@@ -618,6 +622,11 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
                         the organizer will confirm — never a blank line. */}
                   </>
                 )}
+                <EventProvinceField
+                  value={formData.province}
+                  location={formData.location}
+                  onChange={province => setFormData({...formData, province})}
+                />
                 <div className="form-group">
                   <label className="form-label">Delivery — Inside Province (₱) <span className="text-xs opacity-70">- 0 to hide this option</span></label>
                   <input
@@ -639,7 +648,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
                   />
                 </div>
                 <p className="form-group-full text-xs text-secondary">
-                  Runners pick their own zone at checkout. Leave both at 0 to offer pickup only.
+                  {formData.province || inferProvince(formData.location) ? "The runner's address decides the zone." : 'Runners pick their own zone at checkout.'} Leave both at 0 to offer pickup only.
                 </p>
               </div>
             </div>
