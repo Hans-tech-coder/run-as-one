@@ -27,6 +27,7 @@ export default function CategoryPrice({
   sale,
   className = '',
   dimmed = false,
+  stacked = false,
 }: {
   /** `Category.price`, in centavos. */
   price: number;
@@ -36,6 +37,13 @@ export default function CategoryPrice({
   className?: string;
   /** True on a sold-out option, which mutes the whole pair. */
   dimmed?: boolean;
+  /**
+   * Put the struck price above the one being charged instead of beside it.
+   * For rows that also carry a name and chips (the event page's sidebar and
+   * the wizard's picker), where the pair side by side squeezes the name into a
+   * wrap and, on a narrow phone, drops the price onto a line of its own.
+   */
+  stacked?: boolean;
 }) {
   // Defensive rather than decorative: a promotion whose price has been
   // overtaken by a change to the category's own would otherwise draw a line
@@ -55,7 +63,13 @@ export default function CategoryPrice({
 
   return (
     <span className="flex shrink-0 flex-col items-end gap-1">
-      <span className="flex items-baseline gap-2">
+      <span
+        className={
+          stacked
+            ? 'flex flex-col items-end leading-tight'
+            : 'flex items-baseline gap-2'
+        }
+      >
         {/* Announced as a sentence rather than left to the strikethrough, which
             screen readers are not obliged to convey — "1,200 900" read out flat
             is a worse price than either of them. The visual pair is hidden from
@@ -66,7 +80,7 @@ export default function CategoryPrice({
         </span>
         <s
           aria-hidden="true"
-          className={`text-sm font-semibold tabular-nums ${
+          className={`${stacked ? 'text-xs' : 'text-sm'} font-semibold tabular-nums ${
             dimmed ? 'text-white/25' : 'text-secondary'
           }`}
         >

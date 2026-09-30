@@ -210,8 +210,8 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ s
                     const body = (
                       <>
                       <div className="absolute top-0 right-0 w-32 h-32 bg-accent-orange/10 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-accent-orange/20 transition-all"></div>
-                      <div className="relative z-10 flex flex-col items-start gap-1">
-                        <div className={cat.isFull ? 'font-bold text-lg text-white/60' : 'font-bold text-lg text-white'}>{cat.name}</div>
+                      <div className="relative z-10 min-w-0 flex-1 flex flex-col items-start gap-1">
+                        <div className={cat.isFull ? 'font-bold text-lg leading-snug break-words text-white/60' : 'font-bold text-lg leading-snug break-words text-white'}>{cat.name}</div>
                         <div className="flex flex-wrap items-center gap-2">
                           {/* Packages have no distance; an empty pill is worse
                               than no pill. */}
@@ -236,6 +236,7 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ s
                           price={cat.price}
                           sale={salePrices.get(cat.id)}
                           dimmed={cat.isFull}
+                          stacked
                           className={
                             cat.isFull
                               ? 'text-lg sm:text-xl font-bold shrink-0 text-white/40'

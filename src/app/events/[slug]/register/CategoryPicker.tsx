@@ -238,7 +238,8 @@ export default function CategoryPicker({
                         price={cat.price}
                         sale={salePrices?.get(cat.id)}
                         dimmed={isFull}
-                        className={`text-lg sm:text-xl font-bold tabular-nums shrink-0 ${
+                        stacked
+                        className={`text-base min-[400px]:text-lg sm:text-xl font-bold tabular-nums shrink-0 ${
                           isFull ? 'text-white/40' : 'text-accent-orange'
                         }`}
                       />
