@@ -27,8 +27,7 @@ import DashboardHeader from '@/app/admin/DashboardHeader';
 import DescriptionEditor from '../DescriptionEditor';
 import HighlightsField from '@/app/admin/events/HighlightsField';
 import { type EventHighlight } from '@/lib/event-highlights';
-import EventProvinceField from '../EventProvinceField';
-import { inferProvince } from '@/lib/ph-address';
+import LogisticsPanel, { deliveryFees, deliveryProblem } from '../LogisticsPanel';
 
 /**
  * The create-event form. `page.tsx` reads the default platform fee on the
@@ -124,6 +123,8 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
   // rather than in the error modal: a validation message belongs beside the
   // box it is about.
   const [openingError, setOpeningError] = useState<string | null>(null);
+  const [deliveryOn, setDeliveryOn] = useState(false);
+  const [deliveryError, setDeliveryError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -147,12 +148,22 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
       return;
     }
 
+    // Delivery switched on with both zones at 0 would quietly save as pickup
+    // only; the message sits under the two fee fields that need a number.
+    const deliveryFault = deliveryProblem(deliveryOn, formData);
+    setDeliveryError(deliveryFault);
+    if (deliveryFault) {
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const res = await fetch('/api/admin/events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
+          ...deliveryFees(deliveryOn, formData),
           eventType,
           registrationOpensAt: openingInstantISO(opening),
           categories,
@@ -455,84 +466,13 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
           />
 
           {/* Logistics Options */}
-          <div className="admin-panel">
-            <div className="admin-panel-header">
-              <h2 className="admin-panel-title">Logistics & Race Kits</h2>
-            </div>
-            <div className="admin-panel-content">
-              <div className="form-grid">
-                <div className="checkbox-group form-group-full">
-                  <input
-                    type="checkbox"
-                    id="pickup"
-                    checked={formData.logisticsPickup}
-                    onChange={e => setFormData({...formData, logisticsPickup: e.target.checked})}
-                    className="w-5 h-5 accent-accent-blue"
-                  />
-                  <label htmlFor="pickup" className="text-primary font-medium">Allow On-site Pickup (Free)</label>
-                </div>
-                {formData.logisticsPickup && (
-                  <>
-                    <div className="form-group form-group-full">
-                      <label className="form-label">
-                        Pickup Location <span className="text-xs opacity-70">- where runners collect their kit</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.pickupLocation}
-                        onChange={e => setFormData({...formData, pickupLocation: e.target.value})}
-                        className="form-input"
-                        placeholder="e.g. Toby's Sports, SM City Clark, 2nd Floor"
-                      />
-                    </div>
-                    <div className="form-group form-group-full">
-                      <label className="form-label">
-                        Pickup Schedule <span className="text-xs opacity-70">- when that window is open</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.pickupSchedule}
-                        onChange={e => setFormData({...formData, pickupSchedule: e.target.value})}
-                        className="form-input"
-                        placeholder="e.g. March 12-14, 10AM to 7PM"
-                      />
-                    </div>
-                    {/* Both are optional because a venue is usually settled
-                        weeks before the hours are. Left blank, the wizard says
-                        the organizer will confirm — never a blank line. */}
-                  </>
-                )}
-                <EventProvinceField
-                  value={formData.province}
-                  location={formData.location}
-                  onChange={province => setFormData({...formData, province})}
-                />
-                <div className="form-group">
-                  <label className="form-label">Delivery — Inside Province (₱) <span className="text-xs opacity-70">- 0 to hide this option</span></label>
-                  <input
-                    type="number" inputMode="decimal"
-                    value={formData.logisticsDeliveryFeeInside}
-                    onChange={e => setFormData({...formData, logisticsDeliveryFeeInside: Number(e.target.value)})}
-                    className="form-input"
-                    min={0}
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Delivery — Outside Province (₱) <span className="text-xs opacity-70">- 0 to hide this option</span></label>
-                  <input
-                    type="number" inputMode="decimal"
-                    value={formData.logisticsDeliveryFeeOutside}
-                    onChange={e => setFormData({...formData, logisticsDeliveryFeeOutside: Number(e.target.value)})}
-                    className="form-input"
-                    min={0}
-                  />
-                </div>
-                <p className="form-group-full text-xs text-secondary">
-                  {formData.province || inferProvince(formData.location) ? "The runner's address decides the zone." : 'Runners pick their own zone at checkout.'} Leave both at 0 to offer pickup only.
-                </p>
-              </div>
-            </div>
-          </div>
+          <LogisticsPanel
+            draft={formData}
+            onChange={patch => setFormData({...formData, ...patch})}
+            deliveryOn={deliveryOn}
+            onDeliveryChange={on => { setDeliveryOn(on); setDeliveryError(null); }}
+            deliveryError={deliveryError}
+          />
 
           {/* Registration & Fees */}
           <div className="admin-panel">

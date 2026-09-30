@@ -241,8 +241,18 @@ export default function BankTransferWizardClient({
   ]);
 
   // Logistics state
-  const [logisticsMethod, setLogisticsMethod] =
-    useState<LogisticsMethod>("PICKUP");
+  // The race's only way to hand over a kit, or null when the runner chooses.
+  // A delivery-only race must start on DELIVERY: its lone card is an info
+  // card, not a button, so nothing else would ever move it off PICKUP.
+  const onlyMethod: LogisticsMethod | null =
+    event.logisticsPickup && offersDelivery(event)
+      ? null
+      : offersDelivery(event)
+        ? "DELIVERY"
+        : "PICKUP";
+  const [logisticsMethod, setLogisticsMethod] = useState<LogisticsMethod>(
+    onlyMethod ?? "PICKUP",
+  );
   const [deliveryAddressParts, setDeliveryAddressParts] =
     useState<DeliveryAddressParts>(EMPTY_DELIVERY_ADDRESS);
   const deliveryAddress = composeDeliveryAddress(deliveryAddressParts);
@@ -1520,28 +1530,39 @@ export default function BankTransferWizardClient({
             {/* STEP 2: Logistics */}
             {step === 2 && (
               <div className="step-content">
+                {/* A question only when there is a choice. With one method
+                    the lone card is the answer, so the line says what the
+                    race offers instead of asking the runner to pick. */}
                 <p className="text-secondary mb-6">
-                  How would you like to receive your race kits?
+                  {!onlyMethod
+                    ? "How would you like to receive your race kits?"
+                    : onlyMethod === "DELIVERY"
+                      ? "Race kits for this race are delivered to your address."
+                      : "Race kits for this race are claimed on-site."}
                 </p>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+                <div className={`grid grid-cols-1 gap-4 mb-8 ${onlyMethod ? "" : "sm:grid-cols-2"}`}>
                   {event.logisticsPickup && (
                     <div
-                      className={`group relative overflow-hidden border rounded-[16px] p-6 cursor-pointer transition-all ${
-                        logisticsMethod === "PICKUP"
-                          ? "border-accent-blue bg-accent-blue/10 shadow-[0_0_20px_rgba(0,122,255,0.15)]"
-                          : "border-white/10 bg-black/40 hover:border-white/30 hover:bg-white/5"
+                      className={`group relative overflow-hidden border rounded-[16px] p-6 transition-all ${
+                        onlyMethod
+                          ? "border-white/10 bg-white/[0.03]"
+                          : logisticsMethod === "PICKUP"
+                            ? "cursor-pointer border-accent-blue bg-accent-blue/10 shadow-[0_0_20px_rgba(0,122,255,0.15)]"
+                            : "cursor-pointer border-white/10 bg-black/40 hover:border-white/30 hover:bg-white/5"
                       }`}
-                      onClick={() => setLogisticsMethod("PICKUP")}
+                      onClick={onlyMethod ? undefined : () => setLogisticsMethod("PICKUP")}
                     >
-                      <div
-                        className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl -mr-16 -mt-16 transition-colors ${logisticsMethod === "PICKUP" ? "bg-accent-blue/20" : "bg-white/5 group-hover:bg-white/10"}`}
-                      ></div>
+                      {!onlyMethod && (
+                        <div
+                          className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl -mr-16 -mt-16 transition-colors ${logisticsMethod === "PICKUP" ? "bg-accent-blue/20" : "bg-white/5 group-hover:bg-white/10"}`}
+                        ></div>
+                      )}
                       <div className="relative z-10 flex justify-between items-start mb-3">
                         <div className="font-bold text-xl text-white">
                           On-site Pickup
                         </div>
-                        {logisticsMethod === "PICKUP" && (
+                        {!onlyMethod && logisticsMethod === "PICKUP" && (
                           <CheckCircle2
                             size={24}
                             className="text-accent-blue"
@@ -1589,21 +1610,25 @@ export default function BankTransferWizardClient({
 
                   {offersDelivery(event) && (
                     <div
-                      className={`group relative overflow-hidden border rounded-[16px] p-6 cursor-pointer transition-all ${
-                        logisticsMethod === "DELIVERY"
-                          ? "border-accent-blue bg-accent-blue/10 shadow-[0_0_20px_rgba(0,122,255,0.15)]"
-                          : "border-white/10 bg-black/40 hover:border-white/30 hover:bg-white/5"
+                      className={`group relative overflow-hidden border rounded-[16px] p-6 transition-all ${
+                        onlyMethod
+                          ? "border-white/10 bg-white/[0.03]"
+                          : logisticsMethod === "DELIVERY"
+                            ? "cursor-pointer border-accent-blue bg-accent-blue/10 shadow-[0_0_20px_rgba(0,122,255,0.15)]"
+                            : "cursor-pointer border-white/10 bg-black/40 hover:border-white/30 hover:bg-white/5"
                       }`}
-                      onClick={() => setLogisticsMethod("DELIVERY")}
+                      onClick={onlyMethod ? undefined : () => setLogisticsMethod("DELIVERY")}
                     >
-                      <div
-                        className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl -mr-16 -mt-16 transition-colors ${logisticsMethod === "DELIVERY" ? "bg-accent-blue/20" : "bg-white/5 group-hover:bg-white/10"}`}
-                      ></div>
+                      {!onlyMethod && (
+                        <div
+                          className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl -mr-16 -mt-16 transition-colors ${logisticsMethod === "DELIVERY" ? "bg-accent-blue/20" : "bg-white/5 group-hover:bg-white/10"}`}
+                        ></div>
+                      )}
                       <div className="relative z-10 flex justify-between items-start mb-3">
                         <div className="font-bold text-xl text-white">
                           Door-to-Door Delivery
                         </div>
-                        {logisticsMethod === "DELIVERY" && (
+                        {!onlyMethod && logisticsMethod === "DELIVERY" && (
                           <CheckCircle2
                             size={24}
                             className="text-accent-blue"

@@ -54,7 +54,13 @@ shape:
   Left unpicked, the events API saves the province the location names, and the
   wizard and checkout read it off the location the same way for older rows;
   only when neither says does the runner still choose — see `delivery.ts`
-  `deliveryProvinceOf`), certificate template + coordinates, and **`clientId`** — which client the race
+  `deliveryProvinceOf`). There is **no delivery flag**: a race delivers when
+  `logisticsDeliveryFeeInside`/`Outside` is above 0, and a zone at 0 is not
+  offered. The event form shows it as a *Delivery* switch
+  (`admin/events/LogisticsPanel.tsx`, shared by create and edit) that reveals
+  the province and the two fees; switched off, both fees save as 0, and
+  switched on with both at 0 the form refuses to save. Then certificate
+  template + coordinates, and **`clientId`** — which client the race
   is run for (null = not linked yet; staff link a race through the event form's Client
   picker, and a null is invisible to every client viewer). Owns `Category[]`, `BankAccount[]`, `Registration[]`,
   `RaceResult[]` and `Remittance[]` — **an event with any remittance cannot be
