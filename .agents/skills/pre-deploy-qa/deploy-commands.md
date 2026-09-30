@@ -29,13 +29,18 @@ Take the **direct** (not pooled) connection string of the production branch from
 the Neon console: branch `dev`, endpoint `ep-still-pine-b3n210bs`. It is set for this
 terminal only; `.env` is not touched, and a variable set here wins over `.env`.
 
+Use **single quotes** (a `$` in the password is expanded inside double quotes) and
+only the `postgresql://…` string itself (Neon's copy button can wrap it in
+`psql '…'`, which fails with P1013). Check it before running anything:
+
 ```powershell
-$env:DIRECT_URL = "<production direct connection string>"
+$env:DIRECT_URL = '<production direct connection string>'
+$env:DIRECT_URL -match 'ep-still-pine-b3n210bs\.' -and $env:DIRECT_URL -notmatch '-pooler'
 npx prisma migrate status
 ```
 
-`migrate status` names the host it connected to. It must say `ep-still-pine-b3n210bs`
-and list the new migration as not yet applied. Then:
+The check must print `True`. `migrate status` names the host it connected to and
+lists the migrations not yet applied. Then:
 
 ```powershell
 npx prisma migrate deploy
@@ -43,8 +48,21 @@ Remove-Item Env:DIRECT_URL
 ```
 
 Migrate **before** pushing `main`: the new code expects the new columns, and the old
-code still running meanwhile ignores extra ones. If a migration drops or renames
-something, the QA report says so and gives a different order.
+code still running meanwhile ignores extra ones.
+
+**If a migration drops or renames a column the live code still reads**, a bare
+`migrate deploy` breaks the live site until the new deploy is Ready. Postpone that
+one migration (expand, then contract — first used on 2026-09-30 for
+`retire_super_admin`):
+
+1. Back up first: a Neon branch from production, auto-delete after 7 days.
+2. `npx prisma migrate resolve --applied <destructive_migration>` — recorded, not run.
+3. `npx prisma migrate deploy` — applies the others; the live code keeps working.
+4. Promote `main` (step 3 below) and check the live site. Instant Rollback still
+   works here, since the old columns are still there.
+5. Only then: `npx prisma db execute --file prisma/migrations/<destructive_migration>/migration.sql`,
+   then `npx prisma migrate status` should report up to date. From here, rolling
+   back the code no longer works; the Neon backup is the way back.
 
 ## 3. Promote `main`
 

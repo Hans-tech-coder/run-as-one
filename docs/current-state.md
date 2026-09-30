@@ -3,9 +3,17 @@
 
 ## 10. Current state
 
-**What is still open lives in `ON_HOLD.md`** at the repo root: the pending
-production release (15 migrations, one of them destructive, and the owner's
-checklist) and the features
+**Production is current as of 2026-09-30.** Everything on `dev` up to
+`974adf5` — the admin merge, remittances, settings, guardian consent, pacer
+codes, promo categories, highlights and the rest — is live, with all 15
+migrations applied (`retire_super_admin` last, after the code was live). The
+live PayMongo account is not yet a business account, so the online wizard
+offers **QR Ph only** (`OFFERED_PAYMONGO_METHODS` in `lib/free-checkout.ts`)
+until it is. Where an entry below says something is "not released" or
+"production is N migrations behind", it predates this release.
+
+**What is still open lives in `ON_HOLD.md`** at the repo root: the clean-up of
+the retired test accounts and the features
 the owner put on hold. Every `*_PLAN.md` cited below is now in `docs/archive/`,
 and all of those plans are finished. Where an entry below says "Read the plan's
 Status table" or describes a batch as still to come, `ON_HOLD.md` has the

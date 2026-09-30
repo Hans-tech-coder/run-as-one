@@ -10,86 +10,22 @@ The release steps come first because they block production, not a feature.
 
 ---
 
-## 1. Release to production (pending, on the owner's word)
+## 1. After the 2026-09-30 release: retired test accounts
 
-`dev` holds work that production does not have yet, including **15 Prisma
-migrations** (count re-checked 2026-09-29). These do not reach production on
-their own: production and development are separate Neon branches.
+The release this section used to hold **is live** (2026-09-30): all 15
+migrations are on production, `main` is at `974adf5`, and the owner finished
+the in-app steps (Run As One's account on `runasoneph@gmail.com`, the
+Cresendo Running Community client, its events linked, the invite sent) and the
+spot-checks. `retire_super_admin` was run **after** the new code went live
+(recorded with `migrate resolve --applied`, then its SQL through
+`prisma db execute`), because it drops columns the old code still read — the
+pattern is in `.claude/skills/pre-deploy-qa/deploy-commands.md`.
 
-Migrations waiting for production:
-
-```
-20260916063805_organizer_application_details
-20260916120000_organizer_status_decision
-20260917120000_clients_and_viewer_role
-20260917180000_retire_super_admin      <- the only destructive one (see below)
-20260917200000_remittances
-20260918090000_site_settings
-20260918100000_account_avatar
-20260918110000_site_social_links
-20260918120000_organizer_sessions
-20260919120000_runner_guardian_consent
-20260919180000_promo_category
-20260922100000_pacer_codes
-20260923090000_feedback_screenshot
-20260928090000_event_size_chart_image
-20260929090000_event_highlights
-```
-
-**A bare `migrate deploy` is not safe here.** Fourteen of these are additive
-(new tables, nullable columns, NOT NULL columns with defaults), so the code
-still live keeps working after them. `retire_super_admin` is not: it drops 17
-`Organizer` columns that production's current code still selects
-(`prisma.organizer.findUnique` without a `select`, in `lib/actor.ts`), so from
-the moment it runs until the new deploy is Ready, sign-in on the live site
-errors. Its data was already copied onto `Client` by `clients_and_viewer_role`.
-The fix is expand-then-contract: record it as applied, deploy the rest, ship
-the code, and only then run its SQL.
-
-Do the release **in this order** (the in-app steps are from the Batch 5 notes
-in `docs/archive/ADMIN_MERGE_PLAN.md`). Every database command runs with
-`$env:DIRECT_URL` set to production's **direct** connection string for this
-terminal only (`prisma.config.ts` reads it):
-
-1. **Back up production.** In the Neon console, create a branch from
-   production (`ep-still-pine-b3n210bs`) named for the date. It is instant and
-   is the way back if anything below goes wrong.
-2. **Re-audit production, read-only.** `npx prisma migrate status` must name
-   `ep-still-pine-b3n210bs` and list exactly the migrations above as not yet
-   applied. If it also lists `20260912044340_registration_opens_at` or
-   `20260912055118_feedback_inbox`, production still has the old history gap
-   (P3018): mark each with `npx prisma migrate resolve --applied <name>` first
-   (`docs/archive/STAFF_ACCESS_PLAN.md`). Check the Organizer rows and the
-   PENDING registrations too; the PENDING orders on Pink Run 2026 are real
-   customers. Stop if anything new owns data.
-3. **Postpone the destructive one:**
-   `npx prisma migrate resolve --applied 20260917180000_retire_super_admin`.
-4. **`npx prisma migrate deploy`** — applies the other fourteen. The live code
-   keeps working.
-5. **Fast-forward `main` onto `dev` and push.** Wait for Vercel's Production
-   deployment to reach **Ready**.
-6. **Now run the postponed SQL:**
-   `npx prisma db execute --file prisma/migrations/20260917180000_retire_super_admin/migration.sql`.
-   Then `npx prisma migrate status` should say the database is up to date.
-7. **On the live site, signed in as the owner:**
-   - Settings: change the email to `runasoneph@gmail.com` and the name to
-     "Run As One".
-   - Create the Cresendo Running Community client
-     (`cresendorunningcommunity@gmail.com`) through `/admin/register`.
-   - Link Cresendo's events to that client, one at a time, through each event's
-     edit form. (Written when there were four; there are now five, and
-     Pangasinan Marathon may belong to a different client. The owner decides.)
-   - Press **Send invite** on `/admin/clients`, so the invite link points at
-     the live site.
-   - Do not touch any registration row.
-8. **Spot-check production:**
-   - The viewer's *Your Events* counts are right.
-   - Staff Pik and Kyla still sign in as before.
-   - `admin@stridesync.com` is refused.
-
-After the release, the owner decides whether to remove the retired test
-accounts: "System Owner", and the test clients "Super Admin Test" and "Test".
-Confirm the exact rows first.
+Still the owner's call: whether to remove what is left of the retired test
+accounts. That migration deleted the "System Owner" and "Super Admin Test"
+Organizer rows only if they owned nothing, so check what remains of them and
+of the test client "Test" before deleting anything. Confirm the exact rows
+first.
 
 ---
 
