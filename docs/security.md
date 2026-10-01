@@ -133,7 +133,12 @@
 - **Never trust client amounts.** `checkout` and `checkout/manual` refetch the
   event and recompute the delivery fee, platform fee, subtotal (including the
   shirt upcharge) and **the promo discount** before writing or billing.
-  Mismatches are rejected. The request carries the promo *code*, never what it
+  Mismatches are rejected. Before any of that, **every runner's `categoryId`
+  must be one of this event's own options** (`participantCategoryError` in
+  `registration-gate.ts`, 400): pricing and slot counting look the option up in
+  `event.categories`, and a miss priced the runner at ₱0 and skipped the caps,
+  so a public option id from another event bought a near-free entry (Strix
+  vuln-0002). The request carries the promo *code*, never what it
   is worth — and only the code the runner **typed**, never the name of the
   discount that won: an automatic promotion's `code` column is its name, which
   `findPromoCode` deliberately never matches, so posting it refused every order

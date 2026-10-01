@@ -27,6 +27,7 @@ import {
   SlotsUnavailableError,
   openingNote,
   opensLater,
+  participantCategoryError,
   pauseNote,
   reserveSlots,
 } from '@/lib/registration-gate';
@@ -161,6 +162,14 @@ export async function POST(request: Request) {
 
     if (!event) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
+    }
+
+    // Every runner must be entered into one of this event's own options: one
+    // from another event would be priced at ₱0 and skip the slot caps (see
+    // participantCategoryError in lib/registration-gate.ts).
+    const categoryProblem = participantCategoryError(participants, event.categories);
+    if (categoryProblem) {
+      return NextResponse.json({ error: categoryProblem }, { status: 400 });
     }
 
     // A runner 12 or under on race day needs a parent or guardian's name,

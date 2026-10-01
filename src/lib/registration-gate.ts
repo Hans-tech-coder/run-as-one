@@ -311,6 +311,39 @@ export function slotShortfalls(
   return shortfalls;
 }
 
+/**
+ * Why this order's runners cannot all be entered into this event, if they
+ * cannot.
+ *
+ * Every runner must name one of the event's own options. Pricing and slot
+ * counting both look a runner's option up in `event.categories`, and a miss
+ * there prices the runner at ₱0 and skips every cap — so an option id from
+ * another event (ids are public; the register page ships them) would buy a
+ * free entry past a full race. The checkout routes call this right after the
+ * event is loaded, before anything is priced or written.
+ */
+export function participantCategoryError(
+  participants: unknown,
+  categories: { id: string }[],
+): string | undefined {
+  if (!Array.isArray(participants) || participants.length === 0) {
+    return 'Add at least one runner to this order.';
+  }
+
+  const offered = new Set(categories.map((category) => category.id));
+  for (const [index, participant] of participants.entries()) {
+    const id = (participant as { categoryId?: unknown } | null)?.categoryId;
+    const runner = participants.length === 1 ? 'Choose' : `Runner ${index + 1}: choose`;
+    if (typeof id !== 'string' || id === '') {
+      return `${runner} a race category.`;
+    }
+    if (!offered.has(id)) {
+      return `${runner} a race category from this event — the one selected is not offered here. Reload the page and pick again.`;
+    }
+  }
+  return undefined;
+}
+
 /** The sentence a runner reads when their order no longer fits. */
 export function shortfallMessage(shortfalls: SlotShortfall[]): string {
   const parts = shortfalls.map(({ name, wanted, available }) =>
