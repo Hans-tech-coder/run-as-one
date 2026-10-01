@@ -121,6 +121,11 @@ import {
 } from "./validation";
 import { formatEventDayShort } from "@/lib/event-schedule";
 import { useStepReveal } from "./useStepReveal";
+import RunnerAddressFields, {
+  startingAddress,
+  withResolvedAddresses,
+  withoutRunner,
+} from "./RunnerAddressFields";
 import "./RegistrationWizard.css";
 
 /**
@@ -160,6 +165,13 @@ interface Participant {
   guardianName: string;
   guardianRelationship: string;
   guardianConsent: boolean;
+  /** Home address, required of every runner — lib/runner-address.ts. */
+  addressProvince: string;
+  addressCity: string;
+  addressBarangay: string;
+  addressStreet: string;
+  /** The earlier runner (0-based) whose address this one shares, or null. */
+  addressSameAs: number | null;
 }
 
 /** The guardian answers of a runner who does not owe them. */
@@ -237,6 +249,7 @@ export default function BankTransferWizardClient({
       medicalConditions: "",
       runningCommunity: "",
       ...NO_GUARDIAN,
+      ...startingAddress(0),
     },
   ]);
 
@@ -371,6 +384,25 @@ export default function BankTransferWizardClient({
     setParticipants(newParticipants);
   };
 
+  /** The Home Address block: four parts and the "same address as" choice. */
+  const handleAddressChange = (
+    index: number,
+    patch: Partial<
+      Pick<
+        Participant,
+        | "addressProvince"
+        | "addressCity"
+        | "addressBarangay"
+        | "addressStreet"
+        | "addressSameAs"
+      >
+    >,
+  ) => {
+    setParticipants((prev) =>
+      prev.map((p, i) => (i === index ? { ...p, ...patch } : p)),
+    );
+  };
+
   /** The Parent/Guardian Consent panel's answers — one of them is a boolean. */
   const handleGuardianChange = (
     index: number,
@@ -442,6 +474,7 @@ export default function BankTransferWizardClient({
           emergencyContactPhone: "",
           medicalConditions: "",
           ...NO_GUARDIAN,
+          ...startingAddress(prev.length + offset),
         })),
       ];
     });
@@ -453,9 +486,9 @@ export default function BankTransferWizardClient({
 
   const removeParticipant = (index: number) => {
     if (participants.length > 1) {
-      const newParticipants = [...participants];
-      newParticipants.splice(index, 1);
-      setParticipants(newParticipants);
+      // Anyone sharing the removed runner's address moves back to Runner 1
+      // rather than being left pointing at nobody — see RunnerAddressFields.
+      setParticipants(withoutRunner(participants, index));
     }
   };
 
@@ -787,7 +820,11 @@ export default function BankTransferWizardClient({
       formData.append("promoCode", promo && !promoProblem ? promo.code : "");
 
       // Append complex data as JSON string
-      formData.append("participants", JSON.stringify(participants));
+      // Every runner carries its resolved home address; the route stores it.
+      formData.append(
+        "participants",
+        JSON.stringify(withResolvedAddresses(participants)),
+      );
 
       const response = await fetch("/api/checkout/manual", {
         method: "POST",
@@ -1420,6 +1457,13 @@ export default function BankTransferWizardClient({
                         onAdd={rememberCommunity}
                       />
                     </div>
+
+                    <RunnerAddressFields
+                      index={idx}
+                      runners={participants}
+                      errors={showErrors ? (runnerErrors[idx] ?? {}) : {}}
+                      onChange={(patch) => handleAddressChange(idx, patch)}
+                    />
 
                     <h4 className="mt-6 mb-3 text-secondary">
                       Health &amp; Emergency Info

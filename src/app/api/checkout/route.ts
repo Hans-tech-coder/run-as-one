@@ -47,6 +47,7 @@ import {
   upperCaseForStorage,
 } from '@/lib/text-case';
 import { consentSignatureError } from '@/lib/consent-signature';
+import { participantAddressError, storedRunnerAddress } from '@/lib/runner-address';
 import {
   emailAddressError,
   normalizeEmailAddress,
@@ -178,6 +179,14 @@ export async function POST(request: Request) {
     const guardianProblem = participantGuardianError(participants, event.date);
     if (guardianProblem) {
       return NextResponse.json({ error: guardianProblem }, { status: 400 });
+    }
+
+    // Every runner's home address, pickup or delivery (lib/runner-address.ts).
+    // The wizard posts each runner's resolved copy, "same as Runner 1"
+    // included, so each one is checked and stored on its own row.
+    const addressProblem = participantAddressError(participants);
+    if (addressProblem) {
+      return NextResponse.json({ error: addressProblem }, { status: 400 });
     }
 
     // The event page stops offering registration once a race has been run, but
@@ -451,6 +460,7 @@ export async function POST(request: Request) {
               // Nulls for a runner who does not need consent, whatever the
               // client sent; the timestamp is always the server's.
               ...storedGuardianConsent(p, event.date),
+              ...storedRunnerAddress(p),
             }))
           }
         },

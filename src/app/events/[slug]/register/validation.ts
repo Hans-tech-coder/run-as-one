@@ -14,6 +14,11 @@ import {
   parseE164,
 } from "@/lib/phone";
 import {
+  RUNNER_ADDRESS_FIELDS,
+  runnerAddressProblems,
+  type RunnerAddressField,
+} from "@/lib/runner-address";
+import {
   shouldAskShirtSize,
   type SizableCategory,
 } from "@/lib/shirt-size";
@@ -42,6 +47,7 @@ export type RunnerField =
   | "birthdate"
   | GuardianField
   | "singletSize"
+  | RunnerAddressField
   | "emergencyContactName"
   | "emergencyContactPhone";
 
@@ -56,6 +62,7 @@ const FIELD_ORDER: RunnerField[] = [
   "birthdate",
   ...GUARDIAN_FIELDS,
   "singletSize",
+  ...RUNNER_ADDRESS_FIELDS,
   "emergencyContactName",
   "emergencyContactPhone",
 ];
@@ -73,6 +80,10 @@ const LABELS: Record<RunnerField, string> = {
   guardianRelationship: "Relationship",
   guardianConsent: "Parent/guardian consent",
   singletSize: "Shirt size",
+  addressProvince: "Home province",
+  addressCity: "Home city/municipality",
+  addressBarangay: "Home barangay",
+  addressStreet: "Home house/unit no. & street",
   emergencyContactName: "Emergency contact name",
   emergencyContactPhone: "Emergency contact number",
 };
@@ -92,6 +103,10 @@ const MESSAGES: Record<RunnerField, string> = {
   birthdate: "Enter a birthdate",
   ...GUARDIAN_FIELD_MESSAGES,
   singletSize: "Select a shirt size",
+  addressProvince: "Choose a province",
+  addressCity: "Choose a city or municipality",
+  addressBarangay: "Choose a barangay",
+  addressStreet: "Enter the house/unit number and street",
   emergencyContactName: "Enter an emergency contact name",
   emergencyContactPhone: "Enter an emergency contact number",
 };
@@ -164,7 +179,14 @@ export type ValidatedEvent = {
  * A runner as the wizards hold one; every validated field is a string except
  * the guardian's tick, which is a boolean.
  */
-export type ValidatedRunner = Partial<Record<RunnerField, unknown>>;
+export type ValidatedRunner = Partial<Record<RunnerField, unknown>> & {
+  /**
+   * The earlier runner (0-based index) whose home address this one shares, or
+   * null when it typed its own — see lib/runner-address.ts. A runner sharing
+   * one owes no address fields of its own; the runner it points at does.
+   */
+  addressSameAs?: number | null;
+};
 
 /** Stable DOM id per control, so the summary knows where to send the caret. */
 export function runnerFieldId(index: number, field: RunnerField): string {
@@ -201,6 +223,9 @@ export function requiredFieldsFor(
     }
     if ((GUARDIAN_FIELDS as readonly RunnerField[]).includes(field)) {
       return minor;
+    }
+    if ((RUNNER_ADDRESS_FIELDS as readonly RunnerField[]).includes(field)) {
+      return typeof participant.addressSameAs !== "number";
     }
     return true;
   });
@@ -242,6 +267,16 @@ export function validateRunner(
   if (!errors.birthdate) {
     const message = birthdateError(participant.birthdate);
     if (message) errors.birthdate = message;
+  }
+
+  // A province typed rather than picked, or a city not on its province's
+  // list, is as unanswered as a blank one — the checkout routes hold the same
+  // line (lib/runner-address.ts).
+  if (typeof participant.addressSameAs !== "number") {
+    const problems = runnerAddressProblems(participant);
+    for (const field of RUNNER_ADDRESS_FIELDS) {
+      if (!errors[field] && problems[field]) errors[field] = problems[field];
+    }
   }
 
   // A relationship the server would not accept is as unanswered as a blank

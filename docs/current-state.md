@@ -19,6 +19,15 @@ on 2026-10-01 (read one with `git show 3126357:docs/archive/<NAME>_PLAN.md`). Wh
 Status table" or describes a batch as still to come, `ON_HOLD.md` has the
 current answer.
 
+**Every runner gives a home address on Step 1** (2026-10-01,
+`RUNNER_ADDRESS_PLAN.md` Batch 1, on `dev`, uncommitted): four parts per
+runner in both wizards, Runner 2 onward defaulting to "Same address as Runner
+1", validated and stored on each `Runner` row by both checkout routes (§5
+`runner-address.ts`). **Carries migration `runner_home_address`**, so the
+release needs `npx prisma migrate deploy` against production. Still to come:
+Batch 2 (Step 2 reuses it; one delivery fee per distinct address) and Batch 3
+(the admin side shows, edits and exports it).
+
 **The Overview answers the morning question** (2026-09-23, `OVERVIEW_PLAN.md`
 Batch 1, on `dev`, uncommitted): pending bank transfers as an oldest-first
 queue with their age, one row per live race with its fill, the tiles and

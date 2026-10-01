@@ -398,6 +398,23 @@ model Runner {
   /// must not change if Run As One's staff later rename or remove that club.
   /// Blank answers are stored as "INDEPENDENT RUNNER", itself a listed option.
   runningCommunity      String       @default("INDEPENDENT RUNNER")
+  /// The runner's home address, required of every runner on Step 1 whether
+  /// they chose pickup or delivery (src/lib/runner-address.ts,
+  /// RUNNER_ADDRESS_PLAN.md): when a race is postponed and runners switch to
+  /// delivery, the organizer needs an address for the ones who chose pickup.
+  /// Uppercase, one part per column; joined for display by
+  /// formatRunnerAddress in the same shape as Registration.deliveryAddress.
+  ///
+  /// Each row holds its own copy even when the wizard said "same as Runner 1",
+  /// so no read ever follows a reference. The province has its own column so
+  /// logistics can filter and group by it.
+  ///
+  /// Nullable because every row written before this existed — Pink Run's
+  /// real PENDING orders among them — has no address, and none is invented.
+  addressStreet         String?
+  addressBarangay       String?
+  addressCity           String?
+  addressProvince       String?
   /// The parent or legal guardian who consented for a runner aged 12 or under
   /// on race day (src/lib/minor-consent.ts), uppercase like every other
   /// registrant name. Null for every runner who did not need consent, and for

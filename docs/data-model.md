@@ -114,6 +114,16 @@ shape:
   runner who did not need consent, and for rows written before it existed (not
   backfilled). Staff may correct `guardianName` / `guardianRelationship` through
   the runner edit; `guardianConsentAt` is only ever the checkout's stamp.
+  **Home address** (`RUNNER_ADDRESS_PLAN.md` Batch 1, migration
+  `runner_home_address`): `addressStreet`, `addressBarangay`, `addressCity`,
+  `addressProvince`, uppercase, required of every runner at checkout whether
+  they chose pickup or delivery (`runner-address.ts`). Each row holds its own
+  resolved copy even when the wizard said "same as Runner 1", so no read
+  follows a reference; the province is its own column so logistics can group
+  by it. Nullable: rows written before it (Pink Run's real PENDING orders
+  among them) have none and none is invented. Printed with
+  `formatRunnerAddress`, the same `STREET, BARANGAY, CITY, PROVINCE` shape as
+  `deliveryAddress`. Not yet shown or editable on the admin side (Batch 3).
   Indexed on `categoryId`, which is how
   taken slots are counted.
 - **RunningCommunity** — the shared master club list. `slug` is the uppercased

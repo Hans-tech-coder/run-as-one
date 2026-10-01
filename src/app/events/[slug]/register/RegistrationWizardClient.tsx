@@ -125,6 +125,12 @@ import {
 import { formatEventDayShort } from "@/lib/event-schedule";
 import { useStepReveal } from "./useStepReveal";
 import BusyLabel from "@/components/ui/BusyLabel";
+import RunnerAddressFields, {
+  startingAddress,
+  withResolvedAddresses,
+  withoutRunner,
+  restoredSameAs,
+} from "./RunnerAddressFields";
 import "./RegistrationWizard.css";
 
 interface Participant {
@@ -148,6 +154,13 @@ interface Participant {
   guardianName: string;
   guardianRelationship: string;
   guardianConsent: boolean;
+  /** Home address, required of every runner — lib/runner-address.ts. */
+  addressProvince: string;
+  addressCity: string;
+  addressBarangay: string;
+  addressStreet: string;
+  /** The earlier runner (0-based) whose address this one shares, or null. */
+  addressSameAs: number | null;
 }
 
 /** The guardian answers of a runner who does not owe them. */
@@ -229,7 +242,17 @@ export default function RegistrationWizardClient({
           guardianName: r.guardianName || "",
           guardianRelationship: r.guardianRelationship || "",
           guardianConsent: Boolean(r.guardianConsentAt),
+          addressProvince: r.addressProvince || "",
+          addressCity: r.addressCity || "",
+          addressBarangay: r.addressBarangay || "",
+          addressStreet: r.addressStreet || "",
+          addressSameAs: null,
         }))
+          // The rows hold resolved copies, so "same as" is rebuilt from them.
+          .map((p: Participant, i: number, all: Participant[]) => ({
+            ...p,
+            addressSameAs: restoredSameAs(all)[i],
+          }))
       : [
           {
             id: Date.now(),
@@ -246,6 +269,7 @@ export default function RegistrationWizardClient({
             medicalConditions: "",
             runningCommunity: "",
             ...NO_GUARDIAN,
+            ...startingAddress(0),
           },
         ],
   );
@@ -407,6 +431,25 @@ export default function RegistrationWizardClient({
     setParticipants(newParticipants);
   };
 
+  /** The Home Address block: four parts and the "same address as" choice. */
+  const handleAddressChange = (
+    index: number,
+    patch: Partial<
+      Pick<
+        Participant,
+        | "addressProvince"
+        | "addressCity"
+        | "addressBarangay"
+        | "addressStreet"
+        | "addressSameAs"
+      >
+    >,
+  ) => {
+    setParticipants((prev) =>
+      prev.map((p, i) => (i === index ? { ...p, ...patch } : p)),
+    );
+  };
+
   /** The Parent/Guardian Consent panel's answers — one of them is a boolean. */
   const handleGuardianChange = (
     index: number,
@@ -478,6 +521,7 @@ export default function RegistrationWizardClient({
           emergencyContactPhone: "",
           medicalConditions: "",
           ...NO_GUARDIAN,
+          ...startingAddress(prev.length + offset),
         })),
       ];
     });
@@ -489,9 +533,9 @@ export default function RegistrationWizardClient({
 
   const removeParticipant = (index: number) => {
     if (participants.length > 1) {
-      const newParticipants = [...participants];
-      newParticipants.splice(index, 1);
-      setParticipants(newParticipants);
+      // Anyone sharing the removed runner's address moves back to Runner 1
+      // rather than being left pointing at nobody — see RunnerAddressFields.
+      setParticipants(withoutRunner(participants, index));
     }
   };
 
@@ -810,7 +854,8 @@ export default function RegistrationWizardClient({
           customerEmail: participants[0].email,
           customerName: `${participants[0].firstName} ${participants[0].lastName}`,
           eventId: eventId,
-          participants: participants,
+          // Every runner carries its resolved home address; the route stores it.
+          participants: withResolvedAddresses(participants),
           logisticsMethod: logisticsMethod,
           deliveryZone: deliveryZone,
           deliveryAddress: deliveryAddress,
@@ -925,7 +970,11 @@ export default function RegistrationWizardClient({
       formData.append("promoCode", promo && !promoProblem ? promo.code : "");
 
       // Append complex data as JSON string
-      formData.append("participants", JSON.stringify(participants));
+      // Every runner carries its resolved home address; the route stores it.
+      formData.append(
+        "participants",
+        JSON.stringify(withResolvedAddresses(participants)),
+      );
 
       const response = await fetch("/api/checkout/manual", {
         method: "POST",
@@ -1550,6 +1599,13 @@ export default function RegistrationWizardClient({
                         onAdd={rememberCommunity}
                       />
                     </div>
+
+                    <RunnerAddressFields
+                      index={idx}
+                      runners={participants}
+                      errors={showErrors ? (runnerErrors[idx] ?? {}) : {}}
+                      onChange={(patch) => handleAddressChange(idx, patch)}
+                    />
 
                     <h4 className="mt-6 mb-3 text-secondary">
                       Health & Emergency Info
