@@ -158,3 +158,24 @@ export function storedRunnerAddress(
     addressStreet: upperCaseForStorage(text(participant?.addressStreet).replace(/—/g, '-').replace(/\s+/g, ' ').trim()),
   };
 }
+
+/**
+ * Runners grouped by where they live, in order of first appearance: one group
+ * per distinct address, keyed on the stored (uppercased, comma-free) form so
+ * "Rizal St." and "RIZAL ST." are one household. This is what a split delivery
+ * ships as — one parcel, and one delivery fee, per group (RUNNER_ADDRESS_PLAN.md
+ * Batch 2). Pass resolved addresses; a runner with none on file is its own group.
+ */
+export function groupByAddress(
+  runners: readonly Partial<Record<RunnerAddressField, unknown>>[],
+): { address: RunnerAddress; runners: number[] }[] {
+  const groups: { key: string; address: RunnerAddress; runners: number[] }[] = [];
+  runners.forEach((runner, index) => {
+    const address = storedRunnerAddress(runner);
+    const key = formatRunnerAddress(address);
+    const group = key ? groups.find((g) => g.key === key) : undefined;
+    if (group) group.runners.push(index);
+    else groups.push({ key, address, runners: [index] });
+  });
+  return groups.map(({ address, runners: members }) => ({ address, runners: members }));
+}

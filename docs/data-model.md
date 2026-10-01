@@ -77,6 +77,13 @@ shape:
   exactly as typed, optional QR image, `sortOrder`.
 - **Registration** — one order. `orderRef` unique; all amounts centavos
   (`subtotal`, `deliveryFee`, `platformFee`, `transactionFee`, `totalAmount`);
+  **`deliverySplit`** (`RUNNER_ADDRESS_PLAN.md` Batch 2, migration
+  `delivery_split`, default false): a group delivery that ships each kit to its
+  runner's own `Runner` home address instead of one address. Then
+  `deliveryAddress` and `deliveryZone` are null (the parcels can sit in
+  different zones), and `deliveryFee` is the sum of one tier per distinct
+  address, recomputed by the checkout routes (`register/delivery-split.ts`).
+  Stored explicitly, never inferred from a null address;
   `status` (`PAID`, `PENDING`…), `paymentMethod`, `proofOfPayment` (private blob
   **pathname**, not URL), `transactionNumber`, `consentGiven` + `consentGivenAt` + `consentSignature`
   (the name typed under the tick — any non-empty text is accepted, see
@@ -123,7 +130,8 @@ shape:
   by it. Nullable: rows written before it (Pink Run's real PENDING orders
   among them) have none and none is invented. Printed with
   `formatRunnerAddress`, the same `STREET, BARANGAY, CITY, PROVINCE` shape as
-  `deliveryAddress`. Not yet shown or editable on the admin side (Batch 3).
+  `deliveryAddress`. A `deliverySplit` order ships to these. Not yet shown or
+  editable on the admin side (Batch 3).
   Indexed on `categoryId`, which is how
   taken slots are counted.
 - **RunningCommunity** — the shared master club list. `slug` is the uppercased

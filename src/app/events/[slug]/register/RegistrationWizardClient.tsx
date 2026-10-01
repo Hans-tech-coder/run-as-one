@@ -27,34 +27,12 @@ import {
   describeUploadTypes,
 } from "@/lib/uploads";
 import { PICKUP_FALLBACK, pickupDetails } from "@/lib/pickup";
-import {
-  deliveryTiers,
-  offersDelivery,
-  deliveryFeeFor,
-  defaultDeliveryZone,
-  needsDeliveryZoneChoice,
-  deliveryProvinceOf,
-  offersZone,
-  zoneForProvince,
-  zoneNoteFor,
-  type DeliveryZone,
-} from "./delivery";
-import DeliveryAddressFields from "./DeliveryAddressFields";
-import DeliveryAreaPanel from "./DeliveryAreaPanel";
-import {
-  ADDRESS_PART_LABELS,
-  addressPartFieldId,
-  composeDeliveryAddress,
-  EMPTY_DELIVERY_ADDRESS,
-  missingAddressParts,
-  parseDeliveryAddress,
-  type DeliveryAddressParts,
-} from "./delivery-address";
+import { deliveryTiers, offersDelivery, needsDeliveryZoneChoice } from "./delivery";
+import DeliveryStep from "./DeliveryStep";
+import { useDeliveryPlan } from "./useDeliveryPlan";
 import { type BankAccountView } from "@/lib/bank-accounts";
 import {
-  asDeliveryZone,
   asLogisticsMethod,
-  deliveryZoneLabelFor,
   type LogisticsMethod,
 } from "@/lib/registration-codes";
 import BankDetailsModal from "./BankDetailsModal";
@@ -292,35 +270,13 @@ export default function RegistrationWizardClient({
         ? asLogisticsMethod(registration.logisticsMethod)
         : "PICKUP"),
   );
-  const [deliveryAddressParts, setDeliveryAddressParts] =
-    useState<DeliveryAddressParts>(
-      isCancelParam && registration
-        ? parseDeliveryAddress(registration.deliveryAddress)
-        : EMPTY_DELIVERY_ADDRESS,
-    );
-  const deliveryAddress = composeDeliveryAddress(deliveryAddressParts);
-  const [chosenZone, setChosenZone] = useState<DeliveryZone | null>(
-    isCancelParam && registration?.deliveryZone
-      ? asDeliveryZone(registration.deliveryZone)
-      : defaultDeliveryZone(event),
-  );
-  // When the event's province is known (set, or read off its location), the
-  // runner's own address decides the zone and the fees are only a note
-  // (delivery.ts, deliveryProvinceOf).
-  const deliveryProvince = deliveryProvinceOf(event);
-  const autoZone = deliveryProvince !== null;
-  const deliveryZone = autoZone
-    ? zoneForProvince(event, deliveryAddressParts.province)
-    : chosenZone;
-  const zoneNote = zoneNoteFor(event, deliveryZone);
-
-  const availableTiers = deliveryTiers(event);
-  const selectedTier = availableTiers.find((t) => t.zone === deliveryZone);
-  // Blank when both zones cost the same: the runner was never asked, so the
-  // pre-selected zone is not theirs to be shown (lib/registration-codes.ts).
-  const summaryZoneLabel = selectedTier
-    ? deliveryZoneLabelFor(event, selectedTier.zone)
-    : "";
+  // Step 2's address, zone, split shipping and fee (useDeliveryPlan.ts).
+  const delivery = useDeliveryPlan({
+    event,
+    runners: participants,
+    logisticsMethod,
+    restored: isCancelParam ? registration : null,
+  });
 
   // Payment state. Starts on the first PayMongo method currently offered
   // (OFFERED_PAYMONGO_METHODS), so the summary never prices a card nobody can
@@ -567,8 +523,7 @@ export default function RegistrationWizardClient({
   // the subtotal the server re-derives and checks at checkout.
   const subtotal = categoryTotal + sizeUpcharge;
 
-  const deliveryFee =
-    logisticsMethod === "DELIVERY" ? deliveryFeeFor(event, deliveryZone) : 0;
+  const deliveryFee = delivery.fee;
 
   // What the applied code is worth right now, from the same module the
   // checkout route uses as its last word (lib/discount.ts) — so what this
@@ -703,17 +658,6 @@ export default function RegistrationWizardClient({
     } as const;
   };
 
-  const missingAddress = missingAddressParts(deliveryAddressParts);
-
-  const validateStep2 = () => {
-    if (logisticsMethod === "PICKUP") return true;
-    return (
-      deliveryZone !== null &&
-      missingAddress.length === 0 &&
-      offersZone(event, deliveryZone)
-    );
-  };
-
   const handleNext = async () => {
     if (step === 1 && hasErrors(runnerErrors)) {
       setShowErrors(true);
@@ -771,29 +715,15 @@ export default function RegistrationWizardClient({
       return;
     }
 
-    if (step === 2 && !validateStep2()) {
+    const deliveryProblem = step === 2 ? delivery.problem() : null;
+    if (deliveryProblem) {
       setShowErrors(true);
-      // Without the event's province the runner picks the area first; with
-      // it, the area follows the province, which the address list covers.
-      const needsArea = !autoZone && deliveryZone === null;
       await alert({
         variant: "info",
-        title: needsArea
-          ? "Choose a delivery area"
-          : missingAddress.length > 0
-            ? "Delivery address incomplete"
-            : "Delivery not available",
-        message: needsArea
-          ? "Please choose whether delivery is inside or outside the province."
-          : missingAddress.length > 0
-            ? `Please fill in: ${missingAddress
-                .map((part) => ADDRESS_PART_LABELS[part])
-                .join(", ")}.`
-            : (zoneNote?.error ?? ""),
+        title: deliveryProblem.title,
+        message: deliveryProblem.message,
       });
-      if (!needsArea) {
-        focusField(addressPartFieldId(missingAddress[0] ?? "province"));
-      }
+      if (deliveryProblem.focusId) focusField(deliveryProblem.focusId);
       return;
     }
 
@@ -857,8 +787,9 @@ export default function RegistrationWizardClient({
           // Every runner carries its resolved home address; the route stores it.
           participants: withResolvedAddresses(participants),
           logisticsMethod: logisticsMethod,
-          deliveryZone: deliveryZone,
-          deliveryAddress: deliveryAddress,
+          deliveryZone: delivery.zone,
+          deliveryAddress: delivery.address,
+          deliverySplit: delivery.split,
           subtotal: subtotal,
           deliveryFee: deliveryFee,
           platformFee: platformFee,
@@ -951,8 +882,9 @@ export default function RegistrationWizardClient({
         `${participants[0].firstName} ${participants[0].lastName}`,
       );
       formData.append("logisticsMethod", logisticsMethod);
-      formData.append("deliveryZone", deliveryZone || "");
-      formData.append("deliveryAddress", deliveryAddress || "");
+      formData.append("deliveryZone", delivery.zone || "");
+      formData.append("deliveryAddress", delivery.address);
+      formData.append("deliverySplit", String(delivery.split));
       formData.append("subtotal", subtotal.toString());
       formData.append("deliveryFee", deliveryFee.toString());
       formData.append("platformFee", platformFee.toString());
@@ -1206,7 +1138,7 @@ export default function RegistrationWizardClient({
                   <div className="flex justify-between items-center text-sm mt-2 pt-2 border-t border-white/5">
                     <span className="text-secondary">
                       Delivery Fee
-                      {summaryZoneLabel ? ` (${summaryZoneLabel})` : ""}
+                      {delivery.feeLabel ? ` (${delivery.feeLabel})` : ""}
                     </span>
                     <span className="text-white">
                       ₱{formatPesos(deliveryFee)}
@@ -1828,38 +1760,22 @@ export default function RegistrationWizardClient({
                       <div className="relative z-10 font-bold text-accent-blue">
                         {needsDeliveryZoneChoice(event)
                           ? `+₱${formatPesos(
-                              Math.min(...availableTiers.map((t) => t.fee)),
+                              Math.min(...deliveryTiers(event).map((t) => t.fee)),
                             )} onwards`
-                          : `+₱${formatPesos(availableTiers[0].fee)}`}
+                          : `+₱${formatPesos(deliveryTiers(event)[0].fee)}`}
                       </div>
                     </div>
                   )}
                 </div>
 
                 {logisticsMethod === "DELIVERY" && (
-                  <div className="animate-fade-in flex flex-col gap-6">
-                    {/* Only when the two fees differ: with one tier, or two
-                        at the same fee, there is nothing to tell apart. */}
-                    {needsDeliveryZoneChoice(event) && (
-                      <DeliveryAreaPanel
-                        tiers={availableTiers}
-                        zone={deliveryZone}
-                        province={deliveryProvince}
-                        location={event.location}
-                        onChoose={setChosenZone}
-                      />
-                    )}
-
-                    <DeliveryAddressFields
-                      value={deliveryAddressParts}
-                      onChange={setDeliveryAddressParts}
-                      showErrors={
-                        showErrors && (autoZone || deliveryZone !== null)
-                      }
-                      defaultCountry={defaultCountry}
-                      zoneNote={zoneNote}
-                    />
-                  </div>
+                  <DeliveryStep
+                    plan={delivery}
+                    event={event}
+                    runners={participants}
+                    showErrors={showErrors}
+                    defaultCountry={defaultCountry}
+                  />
                 )}
 
                 <div className="form-actions mt-10 flex justify-end animate-fade-in">

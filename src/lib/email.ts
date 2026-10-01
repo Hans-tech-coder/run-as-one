@@ -8,6 +8,7 @@ import { formatEventDay, formatEventInstant } from './event-schedule';
 import { runnerRef } from './order-ref';
 import { guardianLine } from './minor-consent';
 import { PICKUP_FALLBACK, pickupDetails } from './pickup';
+import { formatRunnerAddress, groupByAddress } from './runner-address';
 import {
   LOGISTICS_METHODS,
   asLogisticsMethod,
@@ -649,9 +650,30 @@ function logisticsRows(registration: RegistrationWithDetails): Row[] {
     if (schedule) rows.push({ kind: 'info', label: 'Pickup Schedule', value: schedule });
     return rows;
   }
+  if (registration.deliverySplit) return splitDeliveryRows(registration);
   const zoneLabel = deliveryZoneLabelFor(registration.event, registration.deliveryZone) || 'Delivery';
   const value = registration.deliveryAddress ? `${zoneLabel} — ${registration.deliveryAddress}` : zoneLabel;
   return [{ kind: 'info', label: 'Delivery', value }];
+}
+
+/**
+ * A split delivery ships each kit to its runner's home address, one parcel
+ * per household (RUNNER_ADDRESS_PLAN.md Batch 2), so the email says which
+ * runners share which parcel rather than printing one address.
+ */
+function splitDeliveryRows(registration: RegistrationWithDetails): Row[] {
+  const runners = byRunnerNo(registration);
+  const shipments = groupByAddress(runners);
+  return shipments.map((shipment, i) => {
+    const names = shipment.runners
+      .map((r) => `${runners[r].firstName} ${runners[r].lastName}`)
+      .join(', ');
+    return {
+      kind: 'info',
+      label: `Delivery ${i + 1} of ${shipments.length}`,
+      value: `${names} — ${formatRunnerAddress(shipment.address)}`,
+    };
+  });
 }
 
 /**

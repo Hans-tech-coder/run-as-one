@@ -24,9 +24,14 @@ current answer.
 runner in both wizards, Runner 2 onward defaulting to "Same address as Runner
 1", validated and stored on each `Runner` row by both checkout routes (§5
 `runner-address.ts`). **Carries migration `runner_home_address`**, so the
-release needs `npx prisma migrate deploy` against production. Still to come:
-Batch 2 (Step 2 reuses it; one delivery fee per distinct address) and Batch 3
-(the admin side shows, edits and exports it).
+release needs `npx prisma migrate deploy` against production. **Batch 2**
+(2026-10-01, uncommitted): Step 2 delivers to Runner 1's home address with
+*Change*, and a group whose addresses differ may ship each kit to its runner's
+own address at one fee per distinct address (§5 `delivery-split.ts`); both
+wizards' delivery state moved into `useDeliveryPlan.ts` / `DeliveryStep.tsx`.
+**Carries migration `delivery_split`** (`Registration.deliverySplit`). Still to
+come: Batch 3 (the admin side shows, edits and exports addresses, and which
+runners ship where).
 
 **The Overview answers the morning question** (2026-09-23, `OVERVIEW_PLAN.md`
 Batch 1, on `dev`, uncommitted): pending bank transfers as an oldest-first

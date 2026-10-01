@@ -231,6 +231,10 @@ model Registration {
   /// The runner's own declaration — it decides which fee was charged.
   deliveryZone            String?
   deliveryAddress         String?
+  /// A group delivery that ships each kit to its runner's own home address
+  /// (the Runner address columns) instead of one deliveryAddress, which is then
+  /// null. One fee per distinct address — RUNNER_ADDRESS_PLAN.md Batch 2.
+  deliverySplit           Boolean   @default(false)
   /// All amounts below are centavos
   deliveryFee             Int       @default(0)
   subtotal                Int

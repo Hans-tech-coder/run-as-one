@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import FieldError from "@/components/ui/FieldError";
 import { upperCaseAsTyped } from "@/lib/text-case";
 import { Check } from "lucide-react";
@@ -19,6 +20,10 @@ import {
  * (AddressPlaceFields.tsx), so the courier gets a place that exists. The
  * rules — which parts are required, how they join into the stored string —
  * live in delivery-address.ts; this is only the form.
+ *
+ * With `place`, the province, city, barangay and street are not asked here:
+ * the wizard shows that node instead (Runner 1's home address, with Change),
+ * and only the ZIP, landmark and receiver remain — RUNNER_ADDRESS_PLAN.md.
  */
 
 export interface DeliveryZoneNote {
@@ -34,6 +39,8 @@ export default function DeliveryAddressFields({
   showErrors,
   defaultCountry,
   zoneNote,
+  place,
+  headerAction,
 }: {
   value: DeliveryAddressParts;
   onChange: (next: DeliveryAddressParts) => void;
@@ -41,6 +48,10 @@ export default function DeliveryAddressFields({
   /** For the receiver's number, like the runners' own. */
   defaultCountry: string;
   zoneNote?: DeliveryZoneNote;
+  /** Shown in place of the place pickers and street, when those are settled elsewhere. */
+  place?: ReactNode;
+  /** Beside the heading, e.g. a way back to the home address. */
+  headerAction?: ReactNode;
 }) {
   const problems = showErrors ? addressProblems(value) : {};
   const set = (patch: Partial<DeliveryAddressParts>) =>
@@ -61,24 +72,30 @@ export default function DeliveryAddressFields({
 
   return (
     <div className="input-group full-width">
-      <label>Delivery Address</label>
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+        <label>Delivery Address</label>
+        {headerAction}
+      </div>
       <p className="text-xs text-secondary mb-2">
-        Pick your province first, then your city and barangay, so the courier
-        can find your door on the first try.
+        {place
+          ? "Add a ZIP code or landmark if it helps the courier find the door."
+          : "Pick your province first, then your city and barangay, so the courier can find your door on the first try."}
       </p>
 
       <div className="form-grid">
-        <AddressPlaceFields
-          value={value}
-          onChange={set}
-          idFor={addressPartFieldId}
-          errors={{
-            province: problems.province ?? zoneNote?.error,
-            city: problems.city,
-            barangay: problems.barangay,
-          }}
-          provinceHint={!zoneNote?.error ? zoneNote?.text : undefined}
-        />
+        {place ?? (
+          <AddressPlaceFields
+            value={value}
+            onChange={set}
+            idFor={addressPartFieldId}
+            errors={{
+              province: problems.province ?? zoneNote?.error,
+              city: problems.city,
+              barangay: problems.barangay,
+            }}
+            provinceHint={!zoneNote?.error ? zoneNote?.text : undefined}
+          />
+        )}
         <div className="input-group">
           <label htmlFor={addressPartFieldId("zip")}>
             {ADDRESS_PART_LABELS.zip} (Optional)
@@ -96,23 +113,25 @@ export default function DeliveryAddressFields({
           <FieldError id={`${addressPartFieldId("zip")}-error`} message={problems.zip} />
         </div>
 
-        <div className="input-group full-width">
-          <label htmlFor={addressPartFieldId("street")}>
-            {ADDRESS_PART_LABELS.street}
-          </label>
-          <input
-            {...aria("street")}
-            type="text"
-            value={value.street}
-            onChange={(e) => text("street", e.target.value)}
-            placeholder="BLK 5 LOT 12, RIZAL ST., GREENVILLE SUBD."
-            maxLength={150}
-          />
-          <FieldError
-            id={`${addressPartFieldId("street")}-error`}
-            message={problems.street}
-          />
-        </div>
+        {!place && (
+          <div className="input-group full-width">
+            <label htmlFor={addressPartFieldId("street")}>
+              {ADDRESS_PART_LABELS.street}
+            </label>
+            <input
+              {...aria("street")}
+              type="text"
+              value={value.street}
+              onChange={(e) => text("street", e.target.value)}
+              placeholder="BLK 5 LOT 12, RIZAL ST., GREENVILLE SUBD."
+              maxLength={150}
+            />
+            <FieldError
+              id={`${addressPartFieldId("street")}-error`}
+              message={problems.street}
+            />
+          </div>
+        )}
 
         <div className="input-group full-width">
           <label htmlFor={addressPartFieldId("landmark")}>

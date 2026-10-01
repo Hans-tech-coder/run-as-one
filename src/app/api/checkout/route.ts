@@ -2,9 +2,8 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { newOrderRef } from '@/lib/order-ref';
 import { recordWriteInCommunities, runnerCommunity } from '@/lib/running-community-store';
-import { deliveryFeeFor, offersZone, resolveDeliveryZone } from '@/app/events/[slug]/register/delivery';
+import { checkoutDelivery } from '@/app/events/[slug]/register/delivery-split';
 import {
-  LOGISTICS_METHODS,
   PAYMENT_METHODS,
   asLogisticsMethod,
   asPaymentMethod,
@@ -80,6 +79,7 @@ export async function POST(request: Request) {
       logisticsMethod,
       deliveryZone,
       deliveryAddress,
+      deliverySplit,
       subtotal,
       deliveryFee,
       platformFee,
@@ -228,21 +228,20 @@ export async function POST(request: Request) {
     const storedLogisticsMethod = asLogisticsMethod(logisticsMethod);
     const storedPaymentMethod = asPaymentMethod(paymentMethod);
     // With the event's province set, the zone comes from the address the
-    // runner gave, not from what the tab posted (delivery.ts).
-    const zone =
-      storedLogisticsMethod === LOGISTICS_METHODS.DELIVERY
-        ? resolveDeliveryZone(event, deliveryZone, deliveryAddress)
-        : null;
-    if (
-      storedLogisticsMethod === LOGISTICS_METHODS.DELIVERY &&
-      !offersZone(event, zone)
-    ) {
-      return NextResponse.json(
-        { error: 'Delivery is not available to that address. Choose on-site pickup, or check the province.' },
-        { status: 400 }
-      );
+    // runner gave, not from what the tab posted; a split delivery is priced
+    // per distinct home address (delivery-split.ts).
+    const delivery = checkoutDelivery(event, {
+      logisticsMethod,
+      deliveryZone,
+      deliveryAddress,
+      deliverySplit,
+      participants,
+    });
+    if ('error' in delivery) {
+      return NextResponse.json({ error: delivery.error }, { status: 400 });
     }
-    const expectedDeliveryFee = deliveryFeeFor(event, zone);
+    const { zone, split } = delivery;
+    const expectedDeliveryFee = delivery.fee;
     // Category prices plus the large-size surcharge. Checked rather than
     // trusted: without this, a client could post a subtotal that leaves out the
     // 4XL surcharge and pay the smaller amount.
@@ -398,7 +397,9 @@ export async function POST(request: Request) {
           logisticsMethod: storedLogisticsMethod,
           // Only meaningful for delivery; pickup leaves it null.
           deliveryZone: zone,
-          deliveryAddress: storedDeliveryAddress,
+          // Split orders ship to each runner's own row address instead.
+          deliveryAddress: split ? null : storedDeliveryAddress,
+          deliverySplit: split,
           deliveryFee: deliveryFeeCents,
           subtotal: subtotalCents,
           platformFee: platformFeeCents,
