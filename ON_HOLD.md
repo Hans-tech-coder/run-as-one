@@ -1,10 +1,12 @@
 # On hold
 
-Everything that was planned and **not** built, gathered from the plan documents
-now kept in `docs/archive/`. Every item here is on hold by the owner's choice.
-Start one only when the owner asks, and read the archived plan named with it
-before writing any code. When an item is picked up, give it its own plan file at
-the root, and delete it from this list once it has landed.
+Everything that was planned and **not** built, gathered from the finished plan
+documents. Those plans were deleted on 2026-10-01; each item below names its
+source, which can still be read with
+`git show 3126357:docs/archive/<NAME>_PLAN.md`. Every item here is on hold by
+the owner's choice. Start one only when the owner asks, and read its source plan
+before writing any code. When an item is picked up, give it its own plan file in
+`docs/plans/`, and delete it from this list once it has landed.
 
 The release steps come first because they block production, not a feature.
 
@@ -31,7 +33,7 @@ first.
 
 ## 2. Two-factor sign-in (TOTP)
 
-*Source: `docs/archive/STAFF_ACCESS_PLAN.md`, Batch 4. `SETTINGS_PLAN.md` also
+*Source: `STAFF_ACCESS_PLAN.md`, Batch 4. `SETTINGS_PLAN.md` also
 put it on hold with "owner's call, revisit only when asked".*
 
 - A security panel under Settings. The user enrols by scanning a QR code,
@@ -42,13 +44,13 @@ put it on hold with "owner's call, revisit only when asked".*
 - 2FA uses TOTP, not SMS. That is settled.
 - The settings page has one page of panels and no sub-routes, so this goes on
   that page as a panel, not on its own route. See the standing decisions in
-  `docs/archive/SETTINGS_PLAN.md`.
+  `SETTINGS_PLAN.md` (from git history).
 - Needs a migration for the TOTP secret and the recovery codes. Keep it small,
   because the database is on Neon's free 0.5 GB tier.
 
 ## 3. Google sign-in and the sign-in retention sweep (optional)
 
-*Source: `docs/archive/STAFF_ACCESS_PLAN.md`, Batch 5.*
+*Source: `STAFF_ACCESS_PLAN.md`, Batch 5.*
 
 - **Google sign-in**, bound to an invited account's verified email. Nobody signs
   up through Google. It only signs in an account that already exists.
@@ -60,7 +62,7 @@ put it on hold with "owner's call, revisit only when asked".*
 
 ## 4. Organizer's logo on printed documents
 
-*Source: `docs/archive/GUARDIAN_CONSENT_PLAN.md`, "Where it stands".*
+*Source: `GUARDIAN_CONSENT_PLAN.md`, "Where it stands".*
 
 The printed guardian consent sheet
 (`admin/events/[id]/registrants/[runnerId]/consent`) shows the Run As One logo.
@@ -69,8 +71,22 @@ a setting for it. Run As One stays the default and the fallback.
 
 ## 5. Revoking a single client viewer (check first)
 
-*Source: `docs/archive/ADMIN_MERGE_PLAN.md`, the deferred notes in Batches 3–4.*
+*Source: `ADMIN_MERGE_PLAN.md`, the deferred notes in Batches 3–4.*
 
 When those batches landed, the only way to cut off one client viewer's sign-in
 was to archive the whole client. Check `/admin/clients` before you start,
 because a later change may already have added a suspend option.
+
+## 6. Leftovers from the 2026-09-23 security fixes
+
+*Source: `SECURITY_FIX_PLAN.md`, closed 2026-10-01 after the owner's verification
+scan (`run-as-one-scan_97fc`) completed with no findings. Read it with
+`git show 3126357:SECURITY_FIX_PLAN.md`.*
+
+- **The Strix test order in the dev database.** The scan's proof of concept
+  placed an order as `attacker@example.com` in the **dev** database (not
+  production). It is left alone until the owner decides what to do with it.
+  Confirm the exact rows before touching them.
+- **Two transitive advisories still open:** `deepmerge-ts` < 8 and `mysql2`
+  ≤ 3.23.0. Fixing them needs `npm audit fix --force` (a breaking major), so
+  leave them unless a later scan shows they can be reached.

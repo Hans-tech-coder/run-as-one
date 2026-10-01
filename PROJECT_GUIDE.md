@@ -42,23 +42,25 @@ task can go straight to two or three files instead of searching for them. Regene
 it with `node scripts/gen-feature-map.mjs` after adding a route or a `src/lib`
 module.
 
-### Plans: `ON_HOLD.md` and `docs/archive/`
+### Plans: `ON_HOLD.md` and `docs/plans/`
 
 **`ON_HOLD.md`** at the root lists everything that was planned and not built,
 plus the pending production release steps (12 migrations to run with
 `npx prisma migrate deploy`, and the owner's post-release checklist). Every
 feature there is on hold by the owner's call: start one only when asked.
 
-Every finished `*_PLAN.md` lives in **`docs/archive/`**. Code comments, the
-schema, migrations and `docs/` still cite these files by bare filename (for
-example "`ADMIN_MERGE_PLAN.md` Batch 4"), so look them up there. An archived
-plan is history, not instructions. The guide and the code are the authority,
-and each plan's rules are already folded into §5 and §9. Read an archived plan
-only when a task needs the reasoning behind a decision.
+When new work needs a plan, write it as **`docs/plans/<NAME>_PLAN.md`**. That
+folder is gitignored on purpose: a plan is a working handoff between sessions,
+never committed, and **deleted once its work has landed**. Anything it leaves
+undone goes into `ON_HOLD.md` first. Because the folder is not in git, a plan
+exists only in the main checkout, not in a fresh worktree or clone.
 
-When new work needs a plan, write it at the root as `<NAME>_PLAN.md`. Move it
-into `docs/archive/` when it finishes. Anything it leaves undone goes into
-`ON_HOLD.md`.
+Finished plans are not kept. The old `docs/archive/` was deleted on 2026-10-01;
+code comments, the schema, migrations and `docs/` still cite those plans by bare
+filename (for example "`ADMIN_MERGE_PLAN.md` Batch 4"). Their rules are already
+folded into §5 and §9, which are the authority. When a task truly needs the
+reasoning behind one, read it from git history:
+`git show 3126357:docs/archive/<NAME>_PLAN.md`.
 
 **§5 is the big one and it is a table.** When a task touches one subject, grep
 `docs/domain-rules.md` for that module's name rather than reading the file whole:

@@ -58,3 +58,6 @@ screenshot.png
 
 # Strix security scan output (contains vulnerability findings)
 strix_runs/
+
+# Working plan documents (deleted once implemented; never committed)
+docs/plans/

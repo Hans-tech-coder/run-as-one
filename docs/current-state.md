@@ -14,8 +14,8 @@ until it is. Where an entry below says something is "not released" or
 
 **What is still open lives in `ON_HOLD.md`** at the repo root: the clean-up of
 the retired test accounts and the features
-the owner put on hold. Every `*_PLAN.md` cited below is now in `docs/archive/`,
-and all of those plans are finished. Where an entry below says "Read the plan's
+the owner put on hold. Every `*_PLAN.md` cited below is finished and was deleted
+on 2026-10-01 (read one with `git show 3126357:docs/archive/<NAME>_PLAN.md`). Where an entry below says "Read the plan's
 Status table" or describes a batch as still to come, `ON_HOLD.md` has the
 current answer.
 
