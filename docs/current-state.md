@@ -29,9 +29,13 @@ release needs `npx prisma migrate deploy` against production. **Batch 2**
 *Change*, and a group whose addresses differ may ship each kit to its runner's
 own address at one fee per distinct address (§5 `delivery-split.ts`); both
 wizards' delivery state moved into `useDeliveryPlan.ts` / `DeliveryStep.tsx`.
-**Carries migration `delivery_split`** (`Registration.deliverySplit`). Still to
-come: Batch 3 (the admin side shows, edits and exports addresses, and which
-runners ship where).
+**Carries migration `delivery_split`** (`Registration.deliverySplit`). **Batch 3**
+(2026-10-01, uncommitted): the registrants screen shows the address (Province
+column and filter, detail modal), staff edit it in the edit modal (now
+`RunnerEditModal.tsx`), the CSV exports *Home Address* and *Province*, and a
+split order shows each runner's own parcel and the order's parcel list (§6). No
+migration. The plan's "manual entry at `/admin/register`" was not built: that
+route is the organizer application, and no screen adds a runner by hand.
 
 **The Overview answers the morning question** (2026-09-23, `OVERVIEW_PLAN.md`
 Batch 1, on `dev`, uncommitted): pending bank transfers as an oldest-first

@@ -26,6 +26,7 @@ import { formatPesos } from '@/lib/money';
 import { orderActivityPath } from '@/lib/activity';
 import type { RegistrantPermissions } from './RegistrantsTable';
 import {
+  DeliveryParcels,
   MinorBadge,
   PacerBadge,
   StatusProvenanceNote,
@@ -36,6 +37,7 @@ import {
 
 export default function RegistrantDetailModal({
   runner,
+  orderRunners,
   eventId,
   permissions,
   updatingId,
@@ -46,6 +48,12 @@ export default function RegistrantDetailModal({
   onOpenEmail,
 }: {
   runner: any;
+  /**
+   * Every live runner on this runner's order, in order, as the table holds
+   * them now — so a split order's parcels are grouped from the addresses on
+   * screen, including one staff just corrected, not from the page load.
+   */
+  orderRunners: any[];
   eventId: string;
   permissions: RegistrantPermissions;
   /** The registration currently being validated, so its button can say so. */
@@ -174,6 +182,15 @@ export default function RegistrantDetailModal({
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8 pt-8 border-t border-[var(--dash-border)]">
               <div className="space-y-4">
+                <h4 className="text-sm font-semibold text-secondary uppercase tracking-wider">Home Address</h4>
+                <div className="text-sm text-primary font-medium">
+                  {runner.homeAddress || (
+                    <span className="text-[var(--text-muted)] font-normal">Not on file (registered before addresses were collected)</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-4">
                 <h4 className="text-sm font-semibold text-secondary uppercase tracking-wider">Emergency Contact</h4>
                 <div className="space-y-2 text-sm">
                   <p className="flex flex-col"><span className="text-[var(--text-muted)]">Name</span> <span className="text-primary font-medium">{runner.emergencyContactName}</span></p>
@@ -252,8 +269,11 @@ export default function RegistrantDetailModal({
                 {runner.isDelivery && runner.deliveryZone && (
                   <p className="flex flex-col"><span className="text-[var(--text-muted)]">Delivery Area</span> <span className="text-primary font-medium">{runner.deliveryZone}</span></p>
                 )}
-                {runner.isDelivery && (
+                {runner.isDelivery && !runner.deliverySplit && (
                   <p className="flex flex-col sm:col-span-2"><span className="text-[var(--text-muted)]">Address</span> <span className="text-primary font-medium">{runner.deliveryAddress}</span></p>
+                )}
+                {runner.isDelivery && runner.deliverySplit && (
+                  <DeliveryParcels runner={runner} orderRunners={orderRunners} />
                 )}
                 {runner.isBankTransfer && runner.transactionNumber && (
                   <p className="flex flex-col"><span className="text-[var(--text-muted)]">Transaction No.</span> <span className="text-primary font-medium">{runner.transactionNumber}</span></p>

@@ -27,6 +27,8 @@ import {
 } from '@/lib/minor-consent';
 import { formatEventInstant } from '@/lib/event-schedule';
 import { listedRegistrationWhere } from '@/lib/pending-expiry';
+import { formatRunnerAddress } from '@/lib/runner-address';
+import { shipmentsFor } from '@/app/events/[slug]/register/delivery-split';
 import DashboardHeader from '@/app/admin/DashboardHeader';
 
 export default async function RegistrantsPage({
@@ -126,7 +128,13 @@ export default async function RegistrantsPage({
     // the same answer drives the row's mark, the backlog filter and the
     // manual-send modal, and three copies of it would eventually disagree.
     const pendingEmail = outstandingEmail(reg);
-    reg.runners.forEach(runner => {
+    // A split order (RUNNER_ADDRESS_PLAN.md Batch 2) stores no one delivery
+    // address: each household is its own parcel, shipped to the home address
+    // its runners gave. Grouped here with the same rule the checkout charged
+    // by, so each row can say where its own kit goes and in which zone.
+    const shipments = reg.deliverySplit ? shipmentsFor(event, reg.runners) : null;
+    reg.runners.forEach((runner, runnerIndex) => {
+      const shipment = shipments?.find(s => s.runners.includes(runnerIndex));
       runners.push({
         id: runner.id,
         registrationId: reg.id,
@@ -196,6 +204,16 @@ export default async function RegistrantsPage({
         expiredAt: reg.expiredAt ? reg.expiredAt.toISOString() : null,
         emergencyContactName: runner.emergencyContactName,
         emergencyContactPhone: runner.emergencyContactPhone,
+        // The runner's home address (RUNNER_ADDRESS_PLAN.md). The four parts
+        // raw, for the edit modal to PUT back, and joined once for the table,
+        // the detail modal and the CSV. Empty on rows from before it was
+        // collected, never a display word, for the same reason as medical
+        // conditions below.
+        addressProvince: runner.addressProvince ?? '',
+        addressCity: runner.addressCity ?? '',
+        addressBarangay: runner.addressBarangay ?? '',
+        addressStreet: runner.addressStreet ?? '',
+        homeAddress: formatRunnerAddress(runner),
         // Kept raw, not defaulted to a readable "None": the edit modal PUTs
         // this row straight back, so a display word here would be saved as the
         // runner's actual medical history. The table, the modal and the export
@@ -211,8 +229,9 @@ export default async function RegistrantsPage({
         // The zone the runner declared at checkout — it decides which delivery
         // fee they were charged, so the organizer needs to see it. Blank when
         // both zones cost the same, since the runner was never asked.
-        deliveryZone: deliveryZoneLabelFor(event, reg.deliveryZone).toUpperCase(),
-        deliveryAddress: reg.deliveryAddress || 'N/A',
+        deliveryZone: deliveryZoneLabelFor(event, shipment ? shipment.zone : reg.deliveryZone).toUpperCase(),
+        deliveryAddress: (shipment ? formatRunnerAddress(shipment.address) : reg.deliveryAddress) || 'N/A',
+        deliverySplit: reg.deliverySplit,
         paymentMethod: paymentMethodLabel(reg.paymentMethod).toUpperCase(),
         // The branches the screen actually needs, decided from the code rather
         // than by matching the label back against a string.

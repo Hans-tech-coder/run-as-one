@@ -5,14 +5,13 @@ import {
   Search, Download, Eye, X, Trash2,
   Columns, ChevronUp, ChevronDown, Check,
   MessageSquare, MessageSquareText, Mail, MailWarning, Copy, ExternalLink,
-  Hourglass, TriangleAlert
+  Hourglass
 } from 'lucide-react';
 import RegistrantActionsMenu from './RegistrantActionsMenu';
 import ProofLightbox from './ProofLightbox';
 import AdminCardList from '../../../AdminCardList';
 import AdminTablePager from '../../../AdminTablePager';
 import MobileSortMenu from '../../../MobileSortMenu';
-import AdminSelect from '../../../AdminSelect';
 import { useAlert } from '@/components/ui/AlertProvider';
 import {
   Table,
@@ -33,24 +32,11 @@ import {
   SortingState,
   VisibilityState,
 } from '@tanstack/react-table';
-import { SHIRT_SIZES } from '@/lib/shirt-size';
-import { upperCaseAsTyped } from '@/lib/text-case';
-import { today } from '@/lib/event-schedule';
 import BusyLabel from '@/components/ui/BusyLabel';
 import FiltersMenu, { type FilterGroup } from '../../../FiltersMenu';
-import {
-  GUARDIAN_CONSENT_MAX_AGE,
-  GUARDIAN_NAME_PLACEHOLDER,
-  GUARDIAN_RELATIONSHIPS,
-  GUARDIAN_RELATIONSHIP_LABELS,
-  GUARDIAN_RELATIONSHIP_PLACEHOLDER,
-  ageOn,
-  asGuardianRelationship,
-  guardianLine,
-  needsGuardianConsent,
-} from '@/lib/minor-consent';
-import AdminDatePicker from '../../../AdminDatePicker';
+import { GUARDIAN_CONSENT_MAX_AGE } from '@/lib/minor-consent';
 import RegistrantDetailModal from './RegistrantDetailModal';
+import RunnerEditModal, { mergeSavedRunner } from './RunnerEditModal';
 import {
   MinorBadge,
   PacerBadge,
@@ -98,19 +84,11 @@ interface RegistrantsTableProps {
   initialSearch?: string;
 }
 
+/** The Province filter's choice for rows with no home address on file. */
+const NO_PROVINCE = 'NOT ON FILE';
+
 /** One row as page.tsx builds it; named so the render helpers below can say so. */
 type RegistrantRow = RegistrantsTableProps['runners'][number];
-
-/** The relationship options for the edit modal, from the one vocabulary. */
-const GUARDIAN_RELATIONSHIP_OPTIONS = GUARDIAN_RELATIONSHIPS.map(value => ({
-  value,
-  label: GUARDIAN_RELATIONSHIP_LABELS[value],
-}));
-
-const GENDER_OPTIONS = [
-  { value: 'MALE', label: 'MALE' },
-  { value: 'FEMALE', label: 'FEMALE' },
-] as const;
 
 /**
  * The email preview's own small stylesheet, added to the copy shown in the
@@ -151,7 +129,6 @@ export default function RegistrantsTable({
   const [editingRunner, setEditingRunner] = useState<any | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isEditClosing, setIsEditClosing] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
 
   // Delete Modal State
   const [deletingRunner, setDeletingRunner] = useState<any | null>(null);
@@ -519,7 +496,9 @@ export default function RegistrantsTable({
   const openEditModal = (runnerId: string) => {
     const runner = runners.find(r => r.id === runnerId);
     if (runner) {
-      setEditingRunner({ ...runner });
+      // The row carries the shirt size as `size`; the route takes it as
+      // `singletSize`, so without this the field opened blank.
+      setEditingRunner({ ...runner, singletSize: runner.size ?? '' });
       setIsEditOpen(true);
     }
   };
@@ -531,74 +510,6 @@ export default function RegistrantsTable({
       setIsEditClosing(false);
       setEditingRunner(null);
     }, 150);
-  };
-
-  const handleEditSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingRunner) return;
-
-    setIsSaving(true);
-    try {
-      const res = await fetch(`/api/admin/runners/${editingRunner.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editingRunner),
-      });
-
-      if (res.ok) {
-        const updatedRunnerData = await res.json();
-        // The API returns the updated runner. We need to merge it carefully
-        setRunners(runners.map(r => r.id === editingRunner.id ? {
-          ...r,
-          firstName: updatedRunnerData.firstName,
-          lastName: updatedRunnerData.lastName,
-          name: `${updatedRunnerData.firstName} ${updatedRunnerData.lastName}`,
-          email: updatedRunnerData.email,
-          phone: updatedRunnerData.phone,
-          gender: updatedRunnerData.gender,
-          size: updatedRunnerData.singletSize,
-          runningCommunity: updatedRunnerData.runningCommunity,
-          emergencyContactName: updatedRunnerData.emergencyContactName,
-          emergencyContactPhone: updatedRunnerData.emergencyContactPhone,
-          medicalConditions: updatedRunnerData.medicalConditions || '',
-          // A corrected birthdate can make a runner a minor, or stop them
-          // being one, so the chip and the consent block follow the save
-          // rather than waiting for a reload. The consent time is never
-          // edited: it is when the guardian agreed, not when staff typed.
-          birthdate: updatedRunnerData.birthdate,
-          isMinor: needsGuardianConsent(updatedRunnerData.birthdate ?? '', raceDay),
-          ageOnRaceDay: ageOn(updatedRunnerData.birthdate ?? '', raceDay),
-          guardianName: updatedRunnerData.guardianName,
-          guardianRelationship: asGuardianRelationship(updatedRunnerData.guardianRelationship),
-          guardianRelationshipLabel: (() => {
-            const known = asGuardianRelationship(updatedRunnerData.guardianRelationship);
-            return known ? GUARDIAN_RELATIONSHIP_LABELS[known] : null;
-          })(),
-          guardianLine: guardianLine(updatedRunnerData.guardianName, updatedRunnerData.guardianRelationship),
-          // Preserve other original properties like orderRef, amount, status which belong to Registration
-        } : r));
-        closeEditModal();
-      } else {
-        // The route's own words, not a generic refusal: the one edit it turns
-        // down is an email address that would never deliver, and "Failed to
-        // update runner" would leave an organizer guessing which field.
-        const { error } = await res.json().catch(() => ({ error: '' }));
-        alert({
-          variant: 'error',
-          title: 'Runner Not Saved',
-          message: error || 'The runner could not be updated. Please try again.',
-        });
-      }
-    } catch (e) {
-      console.error(e);
-      alert({
-        variant: 'error',
-        title: 'Runner Not Saved',
-        message: 'Something went wrong while updating this runner. Please try again.',
-      });
-    } finally {
-      setIsSaving(false);
-    }
   };
 
   const openDeleteModal = (runnerId: string) => {
@@ -927,6 +838,20 @@ export default function RegistrantsTable({
       cell: ({ row }) => row.original.size,
     },
     {
+      // The province of the runner's home address (RUNNER_ADDRESS_PLAN.md
+      // Batch 3), its own column so logistics can sort and filter by it; the
+      // whole address is in the detail modal and the CSV. A dash on rows
+      // from before addresses were collected.
+      id: "province",
+      accessorFn: row => row.addressProvince || '',
+      header: "Province",
+      cell: ({ row }) => row.original.addressProvince || <span className="text-[var(--text-muted)]">—</span>,
+      filterFn: (row, columnId, filterValue) => {
+        if (!filterValue || filterValue.length === 0) return true;
+        return filterValue.includes(row.getValue(columnId) || NO_PROVINCE);
+      }
+    },
+    {
       accessorKey: "logisticsMethod",
       header: "Logistics",
       cell: ({ row }) => <span className="capitalize">{row.original.logisticsMethod}</span>,
@@ -1031,6 +956,14 @@ export default function RegistrantsTable({
     return Array.from(cats).sort();
   }, [runners]);
 
+  // "Not on file" last, after the provinces, for the rows from before
+  // addresses were collected — offered only when there are some.
+  const uniqueProvinces = useMemo(() => {
+    const provinces = Array.from(new Set(runners.map(r => r.addressProvince).filter(Boolean))).sort();
+    if (provinces.length === 0) return [];
+    return runners.some(r => !r.addressProvince) ? [...provinces, NO_PROVINCE] : provinces;
+  }, [runners]);
+
   const uniqueLogistics = useMemo(() => {
     const logs = new Set(runners.map(r => r.logisticsMethod).filter(Boolean));
     return Array.from(logs).sort();
@@ -1043,6 +976,7 @@ export default function RegistrantsTable({
 
   const selectedCategories = (table.getColumn('category')?.getFilterValue() as string[]) || [];
   const selectedLogistics = (table.getColumn('logisticsMethod')?.getFilterValue() as string[]) || [];
+  const selectedProvinces = (table.getColumn('province')?.getFilterValue() as string[]) || [];
   const selectedPayment = (table.getColumn('paymentMethod')?.getFilterValue() as string[]) || [];
 
   const toggleCategory = (cat: string) => {
@@ -1059,6 +993,13 @@ export default function RegistrantsTable({
     table.getColumn('logisticsMethod')?.setFilterValue(newSelected.length ? newSelected : undefined);
   };
 
+  const toggleProvince = (province: string) => {
+    const newSelected = selectedProvinces.includes(province)
+      ? selectedProvinces.filter(p => p !== province)
+      : [...selectedProvinces, province];
+    table.getColumn('province')?.setFilterValue(newSelected.length ? newSelected : undefined);
+  };
+
   const togglePayment = (pay: string) => {
     const newSelected = selectedPayment.includes(pay)
       ? selectedPayment.filter(p => p !== pay)
@@ -1072,6 +1013,7 @@ export default function RegistrantsTable({
     { label: 'Category', options: uniqueCategories, selected: selectedCategories, onToggle: toggleCategory, capitalize: false },
     { label: 'Logistics', options: uniqueLogistics, selected: selectedLogistics, onToggle: toggleLogistics, capitalize: true },
     { label: 'Payment', options: uniquePayment, selected: selectedPayment, onToggle: togglePayment, capitalize: true },
+    { label: 'Province', options: uniqueProvinces, selected: selectedProvinces, onToggle: toggleProvince, capitalize: false },
     // Offered only on a race that has a minor, so the sheet never lists an
     // option that could only ever empty the table.
     {
@@ -1097,7 +1039,7 @@ export default function RegistrantsTable({
   const clearFilters = () => {
     setShowOnlyMinors(false);
     setShowOnlyPacers(false);
-    for (const id of ['category', 'logisticsMethod', 'paymentMethod']) {
+    for (const id of ['category', 'province', 'logisticsMethod', 'paymentMethod']) {
       table.getColumn(id)?.setFilterValue(undefined);
     }
   };
@@ -1365,6 +1307,7 @@ export default function RegistrantsTable({
           fields={row => [
             { label: 'Category', value: row.original.category },
             { label: 'Size', value: row.original.size || '—' },
+            { label: 'Province', value: row.original.addressProvince || '—' },
             { label: 'Logistics', value: row.original.logisticsMethod },
             { label: 'Payment', value: row.original.paymentMethod },
           ]}
@@ -1410,6 +1353,7 @@ export default function RegistrantsTable({
       {viewingRunner && (
         <RegistrantDetailModal
           runner={viewingRunner}
+          orderRunners={runners.filter(r => r.registrationId === viewingRunner.registrationId)}
           eventId={eventId}
           permissions={permissions}
           updatingId={updatingId}
@@ -1439,244 +1383,19 @@ export default function RegistrantsTable({
         />
       )}
 
-      {/* Edit Modal */}
-      <div
-        className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--dash-scrim)] backdrop-blur-sm transition-opacity duration-200 ${
-          isEditOpen && !isEditClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-        }`}
-      >
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="edit-registrant-title"
-          className={`t-modal admin-modal-panel w-full max-w-2xl bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-2xl shadow-2xl flex flex-col max-h-[90vh] ${isEditOpen ? 'is-open' : ''} ${isEditClosing ? 'is-closing' : ''}`}
-        >
-          <div className="p-6 max-sm:px-4 max-sm:py-3 border-b border-[var(--dash-border)] flex justify-between items-center gap-4 shrink-0">
-            <h3 id="edit-registrant-title" className="text-xl font-semibold text-primary">Edit Registrant</h3>
-            <button
-              onClick={closeEditModal}
-              aria-label="Close"
-              className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-full text-secondary hover:text-primary transition-colors"
-            >
-              <X size={20} />
-            </button>
-          </div>
-
-          <div className="admin-modal-body p-6 max-sm:p-4 overflow-y-auto">
-            {editingRunner && (
-              <form id="edit-runner-form" onSubmit={handleEditSubmit} className="flex flex-col gap-6">
-                {/* One column below `sm`. The fields wear the admin's own
-                    .form-label / .form-input, the pair AdminSelect wears, so
-                    Gender sits among them as one of them — and .form-input is
-                    16px, so a phone never zooms into a field. */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="form-group">
-                    <label className="form-label" htmlFor="edit-runner-first-name">First Name</label>
-                    <input
-                      id="edit-runner-first-name"
-                      type="text"
-                      required
-                      value={editingRunner.firstName || ''}
-                      onChange={e => setEditingRunner({...editingRunner, firstName: upperCaseAsTyped(e.target.value)})}
-                      className="form-input"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label" htmlFor="edit-runner-last-name">Last Name</label>
-                    <input
-                      id="edit-runner-last-name"
-                      type="text"
-                      required
-                      value={editingRunner.lastName || ''}
-                      onChange={e => setEditingRunner({...editingRunner, lastName: upperCaseAsTyped(e.target.value)})}
-                      className="form-input"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="form-group">
-                    <label className="form-label" htmlFor="edit-runner-email">Email</label>
-                    <input
-                      id="edit-runner-email"
-                      type="email"
-                      required
-                      value={editingRunner.email || ''}
-                      onChange={e => setEditingRunner({...editingRunner, email: e.target.value})}
-                      className="form-input"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label" htmlFor="edit-runner-phone">Phone</label>
-                    <input
-                      id="edit-runner-phone"
-                      type="text"
-                      inputMode="tel"
-                      required
-                      value={editingRunner.phone || ''}
-                      onChange={e => setEditingRunner({...editingRunner, phone: e.target.value})}
-                      className="form-input"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  {/* Uppercased on read as well as on write: rows created
-                      before gender was stored uppercase still hold "Male",
-                      and a value matching no option would silently show the
-                      wrong one. */}
-                  <AdminSelect
-                    label="Gender"
-                    value={(editingRunner.gender || '').toUpperCase()}
-                    options={GENDER_OPTIONS}
-                    listboxLabel="Gender"
-                    onChange={gender => setEditingRunner({...editingRunner, gender})}
-                  />
-                  {/* Today back a century, the reach of the wizard's
-                      BirthdatePicker: a birthdate is never in the future. */}
-                  <AdminDatePicker
-                    id="edit-runner-birthdate"
-                    label="Birthdate"
-                    className="min-w-0"
-                    max={today()}
-                    min={`${Number(today().slice(0, 4)) - 100}-01-01`}
-                    value={editingRunner.birthdate || ''}
-                    placeholder="Select the birthdate"
-                    dialogLabel="Choose the birthdate"
-                    onChange={birthdate => setEditingRunner({...editingRunner, birthdate})}
-                  />
-                  <div className="form-group">
-                    <label className="form-label" htmlFor="edit-runner-size">Shirt Size</label>
-                    {/* Free text with suggestions rather than AdminSelect: a
-                        package with no shirt leaves it blank. */}
-                    <input
-                      id="edit-runner-size"
-                      type="text"
-                      list="shirt-size-options"
-                      value={editingRunner.singletSize || ''}
-                      onChange={e => setEditingRunner({...editingRunner, singletSize: e.target.value})}
-                      placeholder="Blank if no shirt in this package"
-                      className="form-input"
-                    />
-                    <datalist id="shirt-size-options">
-                      {SHIRT_SIZES.map(size => <option key={size} value={size} />)}
-                    </datalist>
-                  </div>
-                  <div className="form-group sm:col-span-2">
-                    <label className="form-label" htmlFor="edit-runner-community">Running Community</label>
-                    <input
-                      id="edit-runner-community"
-                      type="text"
-                      value={editingRunner.runningCommunity || ''}
-                      onChange={e => setEditingRunner({...editingRunner, runningCommunity: upperCaseAsTyped(e.target.value)})}
-                      placeholder="INDEPENDENT RUNNER"
-                      className="form-input"
-                    />
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t border-[var(--dash-border)]">
-                  <h4 className="text-primary font-medium mb-4">Emergency Contact</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="form-group">
-                      <label className="form-label" htmlFor="edit-runner-emergency-name">Contact Name</label>
-                      <input
-                        id="edit-runner-emergency-name"
-                        type="text"
-                        required
-                        value={editingRunner.emergencyContactName || ''}
-                        onChange={e => setEditingRunner({...editingRunner, emergencyContactName: upperCaseAsTyped(e.target.value)})}
-                        className="form-input"
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label" htmlFor="edit-runner-emergency-phone">Contact Phone</label>
-                      <input
-                        id="edit-runner-emergency-phone"
-                        type="text"
-                        inputMode="tel"
-                        required
-                        value={editingRunner.emergencyContactPhone || ''}
-                        onChange={e => setEditingRunner({...editingRunner, emergencyContactPhone: e.target.value})}
-                        className="form-input"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* The guardian, for a runner the birthdate above makes a
-                    minor on race day, or one who already has a guardian on
-                    file. Neither field is required: staff are correcting data
-                    here, not registering, so a birthdate that makes someone a
-                    minor warns and still saves (GUARDIAN_CONSENT_PLAN.md
-                    Batch 4). The consent itself is signed on paper at kit
-                    claiming when the form never collected it. */}
-                {(() => {
-                  const editAge = ageOn(editingRunner.birthdate || '', raceDay);
-                  const editIsMinor = needsGuardianConsent(editingRunner.birthdate || '', raceDay);
-                  if (!editIsMinor && !editingRunner.guardianName && !editingRunner.guardianRelationship) {
-                    return null;
-                  }
-                  return (
-                    <div className="pt-4 border-t border-[var(--dash-border)]">
-                      <h4 className="text-primary font-medium mb-4">Parent/Guardian</h4>
-                      {editIsMinor && !editingRunner.guardianConsentAt && (
-                        <p role="status" className="flex items-start gap-2 text-sm text-[var(--status-warning)] mb-4 mt-0">
-                          <TriangleAlert size={16} className="shrink-0 mt-0.5" aria-hidden="true" />
-                          <span>
-                            This birthdate makes the runner {editAge} on race day, and no guardian consent was given
-                            through the form. You can still save; have the parent or guardian sign the printed consent
-                            at kit claiming.
-                          </span>
-                        </p>
-                      )}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="form-group">
-                          <label className="form-label" htmlFor="edit-runner-guardian-name">Guardian Name</label>
-                          <input
-                            id="edit-runner-guardian-name"
-                            type="text"
-                            value={editingRunner.guardianName || ''}
-                            onChange={e => setEditingRunner({...editingRunner, guardianName: upperCaseAsTyped(e.target.value)})}
-                            placeholder={GUARDIAN_NAME_PLACEHOLDER}
-                            className="form-input"
-                          />
-                        </div>
-                        <AdminSelect
-                          label="Relationship"
-                          value={editingRunner.guardianRelationship || ''}
-                          options={GUARDIAN_RELATIONSHIP_OPTIONS}
-                          placeholder={GUARDIAN_RELATIONSHIP_PLACEHOLDER}
-                          listboxLabel="Relationship"
-                          onChange={guardianRelationship => setEditingRunner({...editingRunner, guardianRelationship})}
-                        />
-                      </div>
-                    </div>
-                  );
-                })()}
-              </form>
-            )}
-          </div>
-
-          <div className="admin-modal-footer p-6 max-sm:p-4 border-t border-[var(--dash-border)] flex justify-end gap-3 shrink-0 bg-[var(--dash-sunken)]">
-            <button
-              type="button"
-              onClick={closeEditModal}
-              className="px-4 py-2 text-sm font-medium text-[var(--ink-85)] hover:text-primary transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              form="edit-runner-form"
-              disabled={isSaving}
-              className="px-6 py-2 bg-[var(--dash-inverse-bg)] text-[var(--dash-inverse-fg)] rounded-lg text-sm font-medium hover:bg-[var(--dash-inverse-hover)] transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
-            >
-              {isSaving ? <BusyLabel>Saving</BusyLabel> : 'Save Changes'}
-            </button>
-          </div>
-        </div>
-      </div>
+      <RunnerEditModal
+        runner={editingRunner}
+        setRunner={setEditingRunner}
+        isOpen={isEditOpen}
+        isClosing={isEditClosing}
+        raceDay={raceDay}
+        onClose={closeEditModal}
+        onSaved={saved =>
+          setRunners(current =>
+            current.map(r => (r.id === saved.id ? mergeSavedRunner(r, saved, raceDay) : r)),
+          )
+        }
+      />
 
       {/* Delete Confirmation Modal */}
       <div

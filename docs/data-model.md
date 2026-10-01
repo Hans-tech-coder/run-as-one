@@ -130,8 +130,9 @@ shape:
   by it. Nullable: rows written before it (Pink Run's real PENDING orders
   among them) have none and none is invented. Printed with
   `formatRunnerAddress`, the same `STREET, BARANGAY, CITY, PROVINCE` shape as
-  `deliveryAddress`. A `deliverySplit` order ships to these. Not yet shown or
-  editable on the admin side (Batch 3).
+  `deliveryAddress`. A `deliverySplit` order ships to these. Staff see, filter,
+  export and edit it on the registrants screen (Batch 3); an edit is optional but
+  all-or-nothing, and is audited as sensitive.
   Indexed on `categoryId`, which is how
   taken slots are counted.
 - **RunningCommunity** — the shared master club list. `slug` is the uppercased

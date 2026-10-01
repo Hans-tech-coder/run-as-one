@@ -15,6 +15,13 @@ import {
 } from '@/lib/audit';
 import { runnerRef } from '@/lib/order-ref';
 import { asGuardianRelationship, birthdateError } from '@/lib/minor-consent';
+import {
+  RUNNER_ADDRESS_FIELDS,
+  RUNNER_ADDRESS_LABELS,
+  runnerAddressProblems,
+  storedRunnerAddress,
+  type RunnerAddress,
+} from '@/lib/runner-address';
 
 /**
  * Editing and removing one runner on an order.
@@ -40,6 +47,10 @@ const EDITABLE_FIELDS = [
   'runningCommunity',
   'guardianName',
   'guardianRelationship',
+  'addressStreet',
+  'addressBarangay',
+  'addressCity',
+  'addressProvince',
 ] as const;
 
 /** The runner, its order and how many live runners that order holds. */
@@ -147,6 +158,32 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       };
     }
 
+    // The home address (RUNNER_ADDRESS_PLAN.md Batch 3). Optional here, as
+    // the birthdate is: rows from before it was collected have none, and
+    // fixing a phone number must not demand one. All four blank clears it;
+    // anything else must be the whole address, held to the wizard's bar and
+    // stored the way the checkout routes store it. A body without the keys
+    // (an older client) leaves the columns alone.
+    let address: { [K in keyof RunnerAddress]: string | null } | null = null;
+    if (RUNNER_ADDRESS_FIELDS.some(field => field in body)) {
+      const given = RUNNER_ADDRESS_FIELDS.some(
+        field => typeof body[field] === 'string' && body[field].trim() !== '',
+      );
+      if (given) {
+        const problems = runnerAddressProblems(body);
+        const field = RUNNER_ADDRESS_FIELDS.find(f => problems[f]);
+        if (field) {
+          return NextResponse.json(
+            { error: `Home address — ${RUNNER_ADDRESS_LABELS[field]}: ${problems[field]!.toLowerCase()}` },
+            { status: 400 },
+          );
+        }
+        address = storedRunnerAddress(body);
+      } else {
+        address = { addressProvince: null, addressCity: null, addressBarangay: null, addressStreet: null };
+      }
+    }
+
     const data = {
       // Registrant text is stored uppercase, exactly as the wizards store it
       // (lib/text-case.ts) — an organizer fixing a typo must not be the one
@@ -167,6 +204,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       // string, so a club tally still adds up to the head count.
       runningCommunity: asRunnerCommunity(runningCommunity),
       ...(guardian ?? {}),
+      ...(address ?? {}),
     };
 
     const updatedRunner = await db.$transaction(async tx => {

@@ -171,6 +171,12 @@ export const SENSITIVE_RUNNER_FIELDS = [
   // person's name and their tie to a child, so no less private than the rest.
   'guardianName',
   'guardianRelationship',
+  // Where a runner lives (RUNNER_ADDRESS_PLAN.md Batch 3): the trail says it
+  // changed, never what it changed from or to.
+  'addressStreet',
+  'addressBarangay',
+  'addressCity',
+  'addressProvince',
 ] as const;
 
 /** A value longer than this is recorded as "changed" rather than copied. */

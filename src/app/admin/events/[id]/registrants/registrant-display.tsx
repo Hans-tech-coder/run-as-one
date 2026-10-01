@@ -11,6 +11,7 @@
 import React from 'react';
 import { statusProvenance } from '@/lib/activity';
 import { GUARDIAN_CONSENT_MAX_AGE } from '@/lib/minor-consent';
+import { formatRunnerAddress, groupByAddress, type RunnerAddress } from '@/lib/runner-address';
 
 /**
  * The badge tone a payment status wears.
@@ -115,4 +116,51 @@ export function PacerBadge() {
 /** Where an organizer prints one runner's consent sheet for kit claiming. */
 export function consentSheetPath(eventId: string, runnerId: string): string {
   return `/admin/events/${eventId}/registrants/${runnerId}/consent`;
+}
+
+/**
+ * Which runners ship where, on an order that ships each kit to its runner's
+ * own home (RUNNER_ADDRESS_PLAN.md Batch 3). Runners who share an address are
+ * one parcel, grouped by the same rule the checkout charged by, so the list
+ * here is the list of parcels the order paid for — unless staff have since
+ * corrected an address, in which case it is where the kits should now go.
+ */
+export function DeliveryParcels({
+  runner,
+  orderRunners,
+}: {
+  runner: { id: string };
+  /** The order's live runners, in runner order, as the table holds them. */
+  orderRunners: ({ id: string; name: string; runnerRef: string } & Partial<RunnerAddress>)[];
+}) {
+  const parcels = groupByAddress(orderRunners);
+  return (
+    <div className="flex flex-col gap-2 sm:col-span-2">
+      <span className="text-[var(--text-muted)]">
+        Shipped to each runner&apos;s home &middot; {parcels.length} {parcels.length === 1 ? 'parcel' : 'parcels'}
+      </span>
+      <ol className="m-0 p-0 list-none flex flex-col gap-2">
+        {parcels.map((parcel, i) => {
+          const members = parcel.runners.map(index => orderRunners[index]);
+          const mine = members.some(member => member.id === runner.id);
+          return (
+            <li
+              key={i}
+              className={`rounded-lg border border-[var(--dash-border)] px-3 py-2 ${mine ? 'bg-[var(--ink-05)]' : ''}`}
+            >
+              <span className="block text-xs text-[var(--text-muted)]">
+                Parcel {i + 1} of {parcels.length}{mine ? ' · this runner' : ''}
+              </span>
+              <span className="block text-primary font-medium">
+                {members.map(member => `${member.name} (${member.runnerRef})`).join(', ')}
+              </span>
+              <span className="block text-secondary break-words">
+                {formatRunnerAddress(parcel.address) || 'No home address on file'}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
 }

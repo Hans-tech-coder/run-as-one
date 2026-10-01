@@ -39,7 +39,7 @@ export const REGISTRANT_CSV_HEADERS = [
   'Runner Ref', 'Order Ref', 'First Name', 'Last Name', 'Email', 'Phone', 'Gender', 'Birthdate',
   'Guardian Name', 'Guardian Relationship', 'Guardian Consent At',
   'Category', 'Distance', 'Shirt Size', 'Emergency Contact', 'Emergency Phone',
-  'Running Community', 'Medical Conditions', 'Logistics Method', 'Delivery Area', 'Delivery Address',
+  'Running Community', 'Medical Conditions', 'Home Address', 'Province', 'Logistics Method', 'Delivery Area', 'Delivery Address',
   'Payment Method', 'Pacer', 'Promo Code', 'Order Discount', 'Order Total', 'Status'
 ];
 
@@ -66,7 +66,15 @@ function registrantCsvRow(runner: any): string {
     csvPhone(runner.emergencyContactPhone),
     csvField(runner.runningCommunity),
     csvField(runner.medicalConditions || 'None'),
+    // The whole address, then the province again on its own (RUNNER_ADDRESS_
+    // PLAN.md Batch 3): logistics sorts and groups this sheet by province,
+    // and a province buried at the end of a joined address cannot be sorted
+    // on. Blank on rows from before the address was collected.
+    csvField(runner.homeAddress || ''),
+    csvField(runner.addressProvince || ''),
     csvField(runner.logisticsMethod),
+    // On a split order these are this runner's own parcel: their zone and
+    // their home address (registrants/page.tsx).
     csvField(runner.deliveryZone),
     csvField(runner.deliveryAddress),
     csvField(runner.paymentMethod),
