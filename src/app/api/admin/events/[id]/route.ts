@@ -195,6 +195,17 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       );
     }
 
+    // A category sent with an id must already be one of this event's: the
+    // permission above is for this event only, so an id from another race
+    // would let an event-scoped manager rename or reprice an option there.
+    const ownCategoryIds = new Set(current.categories.map((c) => c.id));
+    if (categories.some((c: any) => c.id && !ownCategoryIds.has(c.id))) {
+      return NextResponse.json(
+        { error: 'One of the categories does not belong to this event. Reload the page and try again.' },
+        { status: 400 },
+      );
+    }
+
     const slug = current.title === title
       ? current.slug
       : await uniqueEventSlug(title, async (candidate) => {
@@ -299,7 +310,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       for (const cat of categories) {
         if (cat.id) {
           await prisma.category.update({
-            where: { id: cat.id },
+            // Scoped to this event as well, so the write itself can never
+            // land on another race's option.
+            where: { id: cat.id, eventId: id },
             data: {
               // Uppercased like the runner's own fields: this name is printed
               // beside them in the registrants table, the export and the emails.
