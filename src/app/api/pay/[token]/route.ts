@@ -62,7 +62,7 @@ export async function POST(
     const order = await prisma.registration.findUnique({
       where: { id: registrationId },
       include: {
-        event: { select: { title: true, slug: true } },
+        event: { select: { title: true, slug: true, shirtSizeUpcharge: true } },
         runners: { where: { deletedAt: null }, orderBy: { runnerNo: 'asc' }, include: { category: true } },
       },
     });

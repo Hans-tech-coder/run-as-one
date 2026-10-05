@@ -529,9 +529,11 @@ export async function POST(request: Request) {
         description,
         customerName: storedCustomerName,
         customerEmail: storedCustomerEmail,
-        runners: participants.flatMap((p: any) => {
+        // Each at their own price, large-size upcharge included, so the line
+        // items add up to the subtotal checked above.
+        runners: participants.flatMap((p: any, index: number) => {
           const category = event.categories.find((c: any) => c.id === p.categoryId);
-          return category ? [{ categoryName: category.name, categoryPrice: category.price }] : [];
+          return category ? [{ categoryName: category.name, price: promoOrder.runnerPrices[index] }] : [];
         }),
         subtotalCents: expectedSubtotal,
         discountAmount,

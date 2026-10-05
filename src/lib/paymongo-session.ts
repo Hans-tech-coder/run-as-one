@@ -1,4 +1,5 @@
 import { paymongoPaymentType } from '@/lib/registration-codes';
+import { runnerPrices } from '@/lib/shirt-size';
 
 /**
  * The PayMongo payment page an order is sent to, built in one place for the
@@ -33,8 +34,10 @@ export type PaymongoOrder = {
   description: string;
   customerName: string;
   customerEmail: string;
-  /** Each runner's category, in runner order. */
-  runners: { categoryName: string; categoryPrice: number }[];
+  /** Each runner's category and what they cost — the category's price plus
+   *  their own large-size upcharge (`runnerPrices`, lib/shirt-size.ts) — in
+   *  runner order. */
+  runners: { categoryName: string; price: number }[];
   /** The goods before any discount (the order's `subtotal`). */
   subtotalCents: number;
   discountAmount: number;
@@ -74,14 +77,27 @@ export function paymongoLineItems(order: PaymongoOrder): LineItem[] {
         quantity: 1,
       });
     }
-  } else {
+  } else if (order.runners.reduce((sum, runner) => sum + runner.price, 0) === order.subtotalCents) {
+    // Each runner at their own price, upcharge included, so the lines add up
+    // to the subtotal and PayMongo charges the order's total.
     order.runners.forEach((runner, index) => {
       lineItems.push({
         currency: 'PHP',
-        amount: runner.categoryPrice,
+        amount: runner.price,
         name: `Runner ${index + 1} (${runner.categoryName})`,
         quantity: 1,
       });
+    });
+  } else if (order.subtotalCents > 0) {
+    // The runners no longer price out to the stored subtotal — a category
+    // repriced since the order was placed, rebuilt on the resume path. The
+    // order's own figure is what is owed, so it is billed as one line.
+    const count = order.runners.length;
+    lineItems.push({
+      currency: 'PHP',
+      amount: order.subtotalCents,
+      name: `Registration — ${count} runner${count === 1 ? '' : 's'}`,
+      quantity: 1,
     });
   }
 
@@ -115,9 +131,13 @@ type StoredOrder = {
   deliveryFee: number;
   platformFee: number;
   transactionFee: number;
-  event: { title: string };
+  event: { title: string; shirtSizeUpcharge: number };
   /** Live runners only, in runner order. */
-  runners: { category: { name: string; price: number } }[];
+  runners: {
+    categoryId: string;
+    singletSize: string;
+    category: { id: string; name: string; price: number; inclusions: string[] };
+  }[];
 };
 
 /**
@@ -126,6 +146,9 @@ type StoredOrder = {
  * their first.
  */
 export function paymongoOrderFromRegistration(order: StoredOrder): PaymongoOrder {
+  // Priced as the checkout priced them: the category plus the runner's own
+  // large-size upcharge, from the size stored on the runner.
+  const prices = runnerPrices(order.runners, order.runners.map(r => r.category), order.event.shirtSizeUpcharge);
   return {
     orderRef: order.orderRef,
     amountCents: order.totalAmount,
@@ -133,7 +156,7 @@ export function paymongoOrderFromRegistration(order: StoredOrder): PaymongoOrder
     description: `Registration for ${order.event.title}`,
     customerName: order.customerName,
     customerEmail: order.customerEmail,
-    runners: order.runners.map(r => ({ categoryName: r.category.name, categoryPrice: r.category.price })),
+    runners: order.runners.map((r, i) => ({ categoryName: r.category.name, price: prices[i] })),
     subtotalCents: order.subtotal,
     discountAmount: order.discountAmount,
     promoCode: order.promoCode,
