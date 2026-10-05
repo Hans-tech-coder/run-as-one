@@ -996,7 +996,8 @@
   color: var(--text-secondary);
 }
 
-/* A live race's fill: paid then pending, against the slots it has. */
+/* A live race's fill: paid, awaiting verification, then unpaid checkouts,
+   against the slots it has. */
 .overview-fill {
   height: 6px;
   max-width: 320px;
@@ -1181,6 +1182,14 @@
   display: inline-flex;
 }
 
+/* The count and, when a race has any, its "+N unpaid" beside it. */
+.reg-count-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
 .reg-count-trigger {
   display: inline-flex;
   align-items: center;
@@ -1199,6 +1208,27 @@
 .reg-count-trigger:hover,
 .reg-count.is-open .reg-count-trigger {
   background: var(--ink-08);
+}
+
+/* The count is the way to the registrants screen, so it is a link. */
+a.reg-count-trigger {
+  text-decoration: none;
+}
+
+/* Unpaid checkouts are beside the registrants, not among them: a quieter,
+   dashed chip, so it never reads as part of the count. */
+.reg-count-trigger.is-unpaid {
+  gap: 4px;
+  padding: 2px 8px;
+  border-style: dashed;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+}
+
+.reg-count-trigger.is-unpaid:hover,
+.reg-count.is-open .reg-count-trigger.is-unpaid {
+  background: var(--ink-04);
 }
 
 .reg-count-tip {
@@ -1234,6 +1264,15 @@
   left: auto;
   right: 0;
   transform-origin: 100% 100%;
+}
+
+/* A sentence rather than a split: wraps, so it fits a phone. */
+.reg-count-tip.is-note {
+  display: block;
+  width: max-content;
+  max-width: 220px;
+  white-space: normal;
+  line-height: 1.4;
 }
 
 .reg-count-tip-row {
@@ -3850,6 +3889,13 @@ textarea.form-input {
   background: var(--status-warning);
 }
 
+/* An unpaid online checkout holds a slot but is not a registrant
+   (pending-expiry.ts, unpaidCheckoutWhere), so it fills the bar in a lighter,
+   neutral segment rather than a status colour. */
+.viewer-split-bar > .is-unpaid {
+  background: var(--ink-20);
+}
+
 .viewer-split-legend {
   display: flex;
   flex-wrap: wrap;
@@ -3879,6 +3925,17 @@ textarea.form-input {
 .viewer-split-legend > .is-paid::before { background: var(--status-success); }
 .viewer-split-legend > .is-pending { color: var(--status-warning); }
 .viewer-split-legend > .is-pending::before { background: var(--status-warning); }
+.viewer-split-legend > .is-unpaid { color: var(--text-secondary); }
+.viewer-split-legend > .is-unpaid::before { background: var(--ink-30); }
+
+/* What an unpaid checkout is, said once on the card: a viewer has no list to
+   open, so the explanation stands where a link would be. */
+.viewer-unpaid-note {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
 
 .viewer-categories {
   margin-top: 8px;

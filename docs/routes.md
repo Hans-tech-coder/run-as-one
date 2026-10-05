@@ -99,18 +99,21 @@ view, on return to the tab and on each open. A bare path (sign-in, register,
 invite) has no bell.
 
 **A client viewer's `/admin` is its own page** (`ADMIN_MERGE_PLAN.md` Batch 4,
-`admin/ViewerDashboard.tsx`, reading `client-summary.ts`): *Your Events* — three
-tiles (Registered Runners, Paid, Pending Payment) over one card per race: the
+`admin/ViewerDashboard.tsx`, reading `client-summary.ts`): *Your Events* — four
+tiles (Registered Runners, Paid, Awaiting Verification, Unpaid Checkouts) over one card per race: the
 poster at 16:9, the events table's own registration badge
 (`events/registration-state-badge.ts`, shared so the two never word a state
-differently; *Opens …* under Scheduled), title, date and place, the total, a
-paid / pending bar that is `aria-hidden` with the numbers written beside it in
-words, and each category's total with `N paid · N pending`. **No money, names,
+differently; *Opens …* under Scheduled), title, date and place, the total (paid plus awaiting verification — **an unpaid online checkout is
+never a registered runner**), a paid / awaiting / unpaid bar that is
+`aria-hidden` with the numbers written beside it in words (unpaid the lighter,
+neutral segment), a one-line explanation of unpaid checkouts when a race has
+any (the viewer has no list to open), and each category's total with
+`N paid · N awaiting` (`· N unpaid` when there are some). **No money, names,
 references or links** — the cards are not pressable, because nothing behind a
 race is the viewer's to open. The grid is one column on a phone and ~340px
 columns after; a category's counts drop under its name when they cannot share
 the line. With no linked race the tiles read 0 over *No events linked yet*,
-naming the client. The wait draws three tiles over three event cards
+naming the client. The wait draws four tiles over three event cards
 (`VIEWER_OVERVIEW_SHAPE`). A viewer's sidebar is **Dashboard and Settings
 only**, and **every other `/admin` screen answers it with *Not Part of Your
 View*** (`admin/forbidden.tsx`, §7) — Settings stays, name, email and password
@@ -118,7 +121,7 @@ as for anyone. Everyone else's `/admin` is the
 dashboard's **Overview** (`OVERVIEW_PLAN.md` Batch 1), four blocks and no more
 — the owner wants the work queue and the numbers, but not a long page:
 **tiles** — **Total Revenue (Net)** (`subtotal + deliveryFee − discountAmount`
-of PAID orders), **Total Registrants** (runners on PAID orders), **Active
+of PAID orders), **Total Registrants** (runners on PAID orders and on bank transfers awaiting verification — the same registrants every screen counts, never an unpaid checkout), **Active
 Events** (races not finished, `upcomingEvents`), plus **Platform Fees
 Collected** (the `platformFee` of PAID orders) for `platform:manage` only — all
 **all-time**, with no period selector (per-period money is
@@ -126,14 +129,18 @@ Collected** (the `platformFee` of PAID orders) for `platform:manage` only — al
 `/admin/remittances` for `remittance:manage`, otherwise to `/admin/events`; the
 other two to `/admin/events`. Then **Awaiting Verification** — PENDING **bank
 transfers** only (an online PENDING waits on PayMongo and is swept by
-`pending-expiry.ts`), the count in the heading, the five **oldest first**, each
+`pending-expiry.ts`) that still have a live runner (an order emptied by
+removing its runners is nobody to verify), the count in the heading, the five **oldest first**, each
 with the customer, race, reference, runners, amount and **how long it has
 waited** (amber from 48h), each opening
 `/admin/events/[id]/registrants?search=<orderRef>`. **With nothing waiting it
 is one quiet line** (`.overview-quiet`), not an empty state, so a calm morning
 does not lengthen the page. Then **Live Events** — one row per race not
 finished, soonest first, up to six (then *All N* to `/admin/events`): title,
-paid and pending runners, a fill bar and *N of M slots* when every option is
+runners paid, awaiting verification and — when there are any — on unpaid
+checkouts (`heldPlacesByCategory`; only the first two are registrants), a fill
+bar with unpaid as a lighter neutral segment, and *N of M slots* (all three
+hold a slot) when every option is
 capped (else *No slot cap*, the same reading `fullEventIds` gives), and the
 date; each opens its registrants. Hidden when nothing is live. Last, the five
 most recent PAID registrations, each reference opening its order the same way
@@ -197,10 +204,16 @@ has no account yet ·
 come first, soonest at the top, then the races already run, most recent first —
 sorted in `events/page.tsx`, which also fixes each row's **No.** (`listNo`) so a
 search, filter or column sort never renumbers it. A **Registrants** column
-counts the runners holding a place — PAID plus PENDING, in people not orders,
-removed runners excluded, one query for the page — and hovering it, focusing it
-or tapping it on a phone opens a tooltip (`.reg-count-tip`, the rail tooltip's
-`--tt-*` tokens) splitting it into *Paid / Validated* and *Pending*. **One
+counts the registrants — runners on PAID orders and on bank transfers awaiting
+verification, in people not orders, removed runners excluded, the same people
+the registrants screen lists (`heldPlacesByCategory` in `pending-expiry.ts`,
+three grouped queries for the page). The count is a **link to the registrants
+screen**; hovering or focusing it opens a tooltip (`.reg-count-tip`, the rail
+tooltip's `--tt-*` tokens) splitting it into *Paid / Validated* and *Awaiting
+verification*. **Unpaid online checkouts are never in the count**
+(`UNPAID_ORDERS_PLAN.md`): a dashed **"+N unpaid"** chip sits beside it, whose
+tap, hover or focus explains *Online checkout not paid yet. Expires
+automatically.* It is not a link yet. **One
 *Filters* chip at every width** (`FiltersMenu`, §9 — the pattern every table
 filter copies) opens a popover (a bottom sheet on a phone) holding **Client** (only
 for `platform:manage`, built from the listed races' clients plus *No client

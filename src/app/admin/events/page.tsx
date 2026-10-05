@@ -9,6 +9,7 @@ import {
 } from '@/lib/registration-gate';
 import { CATEGORY_ORDER } from '@/lib/category-order';
 import { pacersNeedingCodeSentByEvent } from '@/lib/pacer-store';
+import { heldPlacesByCategory, type HeldPlaces } from '@/lib/pending-expiry';
 import EventsTableClient from './EventsTableClient';
 import DashboardHeader from '@/app/admin/DashboardHeader';
 
@@ -50,28 +51,26 @@ export default async function AdminEventsPage() {
     ordered.flatMap((event) => event.categories.map((category) => category.id)),
   );
 
-  // Who has registered for each race, in people rather than orders — a group
-  // of five is five runners — split into the paid and the still pending, the
-  // same two statuses that hold a slot. Cancelled, refunded and expired orders
-  // hold nobody's place and are not counted; removed runners never are.
-  const orders = await db.registration.findMany({
-    where: {
-      eventId: { in: ordered.map((event) => event.id) },
-      status: { in: ['PAID', 'PENDING'] },
-      deletedAt: null,
-    },
-    select: {
-      eventId: true,
-      status: true,
-      _count: { select: { runners: { where: { deletedAt: null } } } },
-    },
+  // Who holds a place in each race, in people rather than orders — a group of
+  // five is five runners — split the way every screen splits it
+  // (heldPlacesByCategory): paid and awaiting verification are registrants, an
+  // unpaid online checkout is shown beside them and never in the count.
+  // Cancelled, refunded and expired orders hold nobody's place; removed
+  // runners never count.
+  const held = await heldPlacesByCategory({
+    categoryId: { in: ordered.flatMap((event) => event.categories.map((category) => category.id)) },
   });
-  const registered = new Map<string, { paid: number; pending: number }>();
-  for (const order of orders) {
-    const tally = registered.get(order.eventId) ?? { paid: 0, pending: 0 };
-    if (order.status === 'PAID') tally.paid += order._count.runners;
-    else tally.pending += order._count.runners;
-    registered.set(order.eventId, tally);
+  const registered = new Map<string, HeldPlaces>();
+  for (const event of ordered) {
+    const tally: HeldPlaces = { paid: 0, awaiting: 0, unpaid: 0 };
+    for (const category of event.categories) {
+      const places = held.get(category.id);
+      if (!places) continue;
+      tally.paid += places.paid;
+      tally.awaiting += places.awaiting;
+      tally.unpaid += places.unpaid;
+    }
+    registered.set(event.id, tally);
   }
 
   // How many pacers of each race still need their code sent by hand, for the
@@ -88,7 +87,7 @@ export default async function AdminEventsPage() {
     // The No. column: the event's place in the order above, fixed here so a
     // search, a filter or a column sort never renumbers the list.
     listNo: index + 1,
-    registered: registered.get(event.id) ?? { paid: 0, pending: 0 },
+    registered: registered.get(event.id) ?? { paid: 0, awaiting: 0, unpaid: 0 },
     registrationState: registrationState(
       event,
       withSlotCounts(event.categories, taken),

@@ -6,7 +6,7 @@ import { can, isClientViewer, reachableEvents, requireActor } from '@/lib/actor'
 import { totalCounts, viewerEventSummaries } from '@/lib/client-summary';
 import { formatPesos } from '@/lib/money';
 import { formatEventDayShort, formatInstantDay, soonestFirst, today, upcomingEvents } from '@/lib/event-schedule';
-import { PAYMENT_METHODS } from '@/lib/registration-codes';
+import { awaitingVerificationWhere, heldPlacesByCategory } from '@/lib/pending-expiry';
 import AdminCardList from './AdminCardList';
 import ViewerDashboard from './ViewerDashboard';
 import DashboardHeader from './DashboardHeader';
@@ -102,21 +102,16 @@ export default async function AdminDashboard() {
   // hand against a deposit slip; a PENDING online checkout is waiting on
   // PayMongo, not on staff, and the nightly sweep expires it
   // (src/lib/pending-expiry.ts). Both still hold a slot, so the live-race rows
-  // below count every PENDING runner.
+  // below show the unpaid checkouts too — beside the registrants, not in them.
+  //
+  // An order whose every runner was removed is nobody to verify, so it is not
+  // in the queue (UNPAID_ORDERS_PLAN.md: an emptied test order sat here).
   const awaiting = {
-    status: 'PENDING',
+    ...awaitingVerificationWhere(),
     deletedAt: null,
-    paymentMethod: { equals: PAYMENT_METHODS.BANK_TRANSFER, mode: 'insensitive' as const },
     event: reachable,
+    runners: { some: { deletedAt: null } },
   };
-
-  const liveRunners = (status: 'PAID' | 'PENDING') =>
-    prisma.runner.groupBy({
-      by: ['categoryId'],
-      // A removed runner is kept for the audit trail, not for the head count.
-      where: { deletedAt: null, registration: { status, deletedAt: null }, category: { event: live } },
-      _count: { _all: true },
-    });
 
   const [
     liveEvents,
@@ -125,8 +120,7 @@ export default async function AdminDashboard() {
     awaitingCount,
     queue,
     recent,
-    livePaid,
-    livePending,
+    liveHeld,
   ] = await Promise.all([
     prisma.event.findMany({
       where: live,
@@ -146,7 +140,18 @@ export default async function AdminDashboard() {
       where: paidOrders,
       _sum: { subtotal: true, deliveryFee: true, discountAmount: true, platformFee: true },
     }),
-    prisma.runner.count({ where: { deletedAt: null, registration: paidOrders } }),
+    // Registrants as every screen counts them (pending-expiry.ts): paid, and
+    // bank transfers awaiting verification. Never an unpaid online checkout.
+    prisma.runner.count({
+      where: {
+        deletedAt: null,
+        registration: {
+          OR: [{ status: 'PAID' }, awaitingVerificationWhere()],
+          deletedAt: null,
+          event: reachable,
+        },
+      },
+    }),
     prisma.registration.count({ where: awaiting }),
     prisma.registration.findMany({
       where: awaiting,
@@ -177,31 +182,35 @@ export default async function AdminDashboard() {
         _count: { select: { runners: { where: { deletedAt: null } } } },
       },
     }),
-    liveRunners('PAID'),
-    liveRunners('PENDING'),
+    heldPlacesByCategory({ category: { event: live } }),
   ]);
 
   const sum = money._sum;
   const totalRevenue = (sum.subtotal ?? 0) + (sum.deliveryFee ?? 0) - (sum.discountAmount ?? 0);
   const platformFees = sum.platformFee ?? 0;
 
-  // Per race: the runners on paid and on pending orders, and how full that is
-  // when every option has a cap. An option with no cap makes the race
-  // unlimited — the same reading fullEventIds gives the public listings — so
-  // there is no "full" to measure and the row shows the counts alone.
-  const paidBy = new Map(livePaid.map(row => [row.categoryId, row._count._all]));
-  const pendingBy = new Map(livePending.map(row => [row.categoryId, row._count._all]));
+  // Per race: the runners paid, awaiting verification and on unpaid
+  // checkouts (heldPlacesByCategory — the split every screen uses), and how
+  // full that is when every option has a cap. All three hold a slot, so all
+  // three fill the bar; only the first two are registrants. An option with no
+  // cap makes the race unlimited — the same reading fullEventIds gives the
+  // public listings — so there is no "full" to measure and the row shows the
+  // counts alone.
   const liveRows = liveEvents.map(event => {
     let paid = 0;
-    let pending = 0;
+    let awaiting = 0;
+    let unpaid = 0;
     for (const category of event.categories) {
-      paid += paidBy.get(category.id) ?? 0;
-      pending += pendingBy.get(category.id) ?? 0;
+      const places = liveHeld.get(category.id);
+      if (!places) continue;
+      paid += places.paid;
+      awaiting += places.awaiting;
+      unpaid += places.unpaid;
     }
     const capped =
       event.categories.length > 0 && event.categories.every(category => (category.slotLimit ?? 0) > 0);
     const capacity = capped ? event.categories.reduce((n, category) => n + (category.slotLimit ?? 0), 0) : null;
-    return { id: event.id, title: event.title, date: event.date, paid, pending, capacity };
+    return { id: event.id, title: event.title, date: event.date, paid, awaiting, unpaid, capacity };
   });
 
   const now = new Date();
@@ -306,7 +315,7 @@ export default async function AdminDashboard() {
               </div>
               <ul className="overview-list">
                 {liveRows.slice(0, LIVE_ROWS).map(event => {
-                  const taken = event.paid + event.pending;
+                  const taken = event.paid + event.awaiting + event.unpaid;
                   const pct = (n: number) => (event.capacity ? `${Math.min(100, (n / event.capacity) * 100)}%` : '0%');
                   return (
                     <li key={event.id}>
@@ -315,12 +324,16 @@ export default async function AdminDashboard() {
                           <span className="overview-row-title">{event.title}</span>
                           <span className="viewer-split-legend">
                             <span className="is-paid">{event.paid.toLocaleString('en-US')} paid</span>
-                            <span className="is-pending">{event.pending.toLocaleString('en-US')} pending</span>
+                            <span className="is-pending">{event.awaiting.toLocaleString('en-US')} awaiting verification</span>
+                            {event.unpaid > 0 && (
+                              <span className="is-unpaid">{event.unpaid.toLocaleString('en-US')} unpaid checkout{event.unpaid === 1 ? '' : 's'}</span>
+                            )}
                           </span>
                           {event.capacity !== null && (
                             <span className="viewer-split-bar overview-fill" aria-hidden="true">
                               <span className="is-paid" style={{ width: pct(event.paid) }} />
-                              <span className="is-pending" style={{ width: pct(event.pending) }} />
+                              <span className="is-pending" style={{ width: pct(event.awaiting) }} />
+                              <span className="is-unpaid" style={{ width: pct(event.unpaid) }} />
                             </span>
                           )}
                         </span>

@@ -50,8 +50,8 @@ type EventRow = {
   id: string;
   /** Its place in the list's order, fixed on the server (events/page.tsx), so filtering never renumbers. */
   listNo?: number;
-  /** Runners holding a place: paid, and pending a payment or its validation. */
-  registered?: { paid: number; pending: number };
+  /** Runners holding a place: paid, a bank transfer awaiting verification, an unpaid online checkout (heldPlacesByCategory). */
+  registered?: { paid: number; awaiting: number; unpaid: number };
   client?: { id: string; name: string } | null;
   title: string;
   date: string;
@@ -79,15 +79,53 @@ interface EventsTableClientProps {
 const NO_CLIENT = '__none__';
 
 /**
- * The Registrants cell: how many runners hold a place, and — on hover, focus,
- * or a tap on a phone, which has no hover — how many of them have paid and how
- * many are still pending. The split is behind a tooltip rather than in the
- * cell because the total is what a row is scanned for; the split is the
- * follow-up question.
+ * The Registrants cell: how many registrants the race has — paid, and bank
+ * transfers awaiting verification, the same people the registrants screen
+ * lists — and the way to that screen. The split is behind a tooltip on hover
+ * or keyboard focus rather than in the cell, because the total is what a row
+ * is scanned for; the split is the follow-up question.
+ *
+ * Unpaid online checkouts sit beside the count as "+N unpaid", never in it
+ * (UNPAID_ORDERS_PLAN.md): a client once read four registrants here where the
+ * registrants screen listed one. They still hold a slot until the sweep
+ * expires them, which is why they are shown at all.
  */
 function RegisteredCount({ event, alignEnd = false }: { event: EventRow; /** Open the tip leftwards, for a count at the right of a card. */ alignEnd?: boolean }) {
-  const { paid, pending } = event.registered ?? { paid: 0, pending: 0 };
-  const total = paid + pending;
+  const { paid, awaiting, unpaid } = event.registered ?? { paid: 0, awaiting: 0, unpaid: 0 };
+  const total = paid + awaiting;
+
+  return (
+    <span className="reg-count-group">
+      <span className={`reg-count ${alignEnd ? 'is-end' : ''}`}>
+        <Link
+          href={`/admin/events/${event.id}/registrants`}
+          className="reg-count-trigger"
+          aria-label={`${total} ${total === 1 ? 'registrant' : 'registrants'} for ${event.title}: ${paid} paid, ${awaiting} awaiting verification. Open registrants.`}
+        >
+          <Users size={14} aria-hidden="true" />
+          <span className="tabular-nums">{total}</span>
+        </Link>
+        <span className="reg-count-tip" aria-hidden="true">
+          <span className="reg-count-tip-row">
+            <span className="reg-count-dot is-paid" />Paid / Validated<b>{paid}</b>
+          </span>
+          <span className="reg-count-tip-row">
+            <span className="reg-count-dot is-pending" />Awaiting verification<b>{awaiting}</b>
+          </span>
+        </span>
+      </span>
+      {unpaid > 0 && <UnpaidCount count={unpaid} title={event.title} alignEnd={alignEnd} />}
+    </span>
+  );
+}
+
+/**
+ * "+N unpaid" beside a race's registrant count. Not a link yet: the
+ * registrants screen's Unpaid checkouts tab it will open arrives later
+ * (UNPAID_ORDERS_PLAN.md, Batch 3). Until then a tap, hover or focus explains
+ * it, since a phone has no hover.
+ */
+function UnpaidCount({ count, title, alignEnd }: { count: number; title: string; alignEnd: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef<HTMLSpanElement>(null);
 
@@ -104,22 +142,16 @@ function RegisteredCount({ event, alignEnd = false }: { event: EventRow; /** Ope
     <span ref={ref} className={`reg-count ${alignEnd ? 'is-end' : ''} ${isOpen ? 'is-open' : ''}`}>
       <button
         type="button"
-        className="reg-count-trigger"
+        className="reg-count-trigger is-unpaid"
         onClick={() => setIsOpen(open => !open)}
         onKeyDown={e => { if (e.key === 'Escape') setIsOpen(false); }}
         aria-expanded={isOpen}
-        aria-label={`${total} registered for ${event.title}: ${paid} paid, ${pending} pending`}
+        aria-label={`${count} unpaid ${count === 1 ? 'checkout' : 'checkouts'} for ${title}: online checkout not paid yet, expires automatically.`}
       >
-        <Users size={14} aria-hidden="true" />
-        <span className="tabular-nums">{total}</span>
+        <span className="tabular-nums">+{count}</span> unpaid
       </button>
-      <span className="reg-count-tip" aria-hidden="true">
-        <span className="reg-count-tip-row">
-          <span className="reg-count-dot is-paid" />Paid / Validated<b>{paid}</b>
-        </span>
-        <span className="reg-count-tip-row">
-          <span className="reg-count-dot is-pending" />Pending<b>{pending}</b>
-        </span>
+      <span className="reg-count-tip is-note" aria-hidden="true">
+        Online checkout not paid yet. Expires automatically.
       </span>
     </span>
   );
@@ -507,7 +539,7 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
     {
       id: "registered",
       header: "Registrants",
-      accessorFn: (row) => (row.registered?.paid ?? 0) + (row.registered?.pending ?? 0),
+      accessorFn: (row) => (row.registered?.paid ?? 0) + (row.registered?.awaiting ?? 0),
       cell: ({ row }) => <RegisteredCount event={row.original} />,
     },
     {

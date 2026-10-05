@@ -1,5 +1,5 @@
 import React from 'react';
-import { BadgeCheck, CalendarDays, Hourglass, MapPin, Users } from 'lucide-react';
+import { BadgeCheck, CalendarDays, Hourglass, MapPin, ShoppingCart, Users } from 'lucide-react';
 import EventImage from '@/components/EventImage';
 import { formatEventDayShort, formatEventInstant } from '@/lib/event-schedule';
 import type { RegistrantCounts, ViewerEventSummary } from '@/lib/client-summary';
@@ -16,12 +16,17 @@ import DashboardHeader from './DashboardHeader';
  * a viewer may open, and a card that looks pressable and goes nowhere is the
  * dead end §8 forbids.
  *
- * Three tiles total the races — registered, paid, pending — then one card per
- * race: its poster, the same registration badge the team's events table
- * wears, its date and place, its total, and the paid / pending split over
- * the whole race and per category. The split bar is drawn for the eye only
- * (`aria-hidden`); the two numbers beside it are words, so the colours never
- * carry the meaning on their own.
+ * Four tiles total the races — registered, paid, awaiting verification and
+ * unpaid checkouts — then one card per race: its poster, the same
+ * registration badge the team's events table wears, its date and place, its
+ * total, and the split over the whole race and per category. The split bar is
+ * drawn for the eye only (`aria-hidden`); the numbers beside it are words, so
+ * the colours never carry the meaning on their own.
+ *
+ * **Unpaid checkouts are not registered runners** (UNPAID_ORDERS_PLAN.md): a
+ * client once read four registrants on a race that had one. They are shown
+ * apart, with one line saying what they are, because a viewer has no list to
+ * open and look for itself.
  *
  * Server-rendered, no client state. The route's wait draws the same tiles and
  * cards (`route-loading-shape.ts`, `VIEWER_OVERVIEW_SHAPE`).
@@ -43,7 +48,8 @@ export default function ViewerDashboard({
         <div className="metrics-grid">
           <Tile title="Registered Runners" value={totals.total} icon={<Users size={20} />} />
           <Tile title="Paid" value={totals.paid} icon={<BadgeCheck size={20} />} />
-          <Tile title="Pending Payment" value={totals.pending} icon={<Hourglass size={20} />} />
+          <Tile title="Awaiting Verification" value={totals.awaiting} icon={<Hourglass size={20} />} />
+          <Tile title="Unpaid Checkouts" value={totals.unpaid} icon={<ShoppingCart size={20} />} />
         </div>
 
         {events.length === 0 ? (
@@ -54,8 +60,8 @@ export default function ViewerDashboard({
                 <p className="mb-2 text-lg font-bold text-primary">No events linked yet</p>
                 <p className="m-0 max-w-md text-sm leading-relaxed">
                   When Run As One links a race to {clientName || 'your organization'}, it appears
-                  here with how many runners have registered — paid and pending, and for each
-                  category.
+                  here with how many runners have registered — paid and awaiting verification,
+                  and for each category.
                 </p>
               </div>
             </div>
@@ -131,8 +137,19 @@ function EventSummaryCard({ event }: { event: ViewerEventSummary }) {
         <SplitBar counts={event.counts} />
         <p className="viewer-split-legend">
           <span className="is-paid">{event.counts.paid.toLocaleString('en-US')} Paid</span>
-          <span className="is-pending">{event.counts.pending.toLocaleString('en-US')} Pending</span>
+          <span className="is-pending">{event.counts.awaiting.toLocaleString('en-US')} Awaiting verification</span>
+          {event.counts.unpaid > 0 && (
+            <span className="is-unpaid">
+              {event.counts.unpaid.toLocaleString('en-US')} Unpaid checkout{event.counts.unpaid === 1 ? '' : 's'}
+            </span>
+          )}
         </p>
+        {event.counts.unpaid > 0 && (
+          <p className="viewer-unpaid-note">
+            Unpaid checkouts are online payments not finished yet. They are not counted as
+            registered and expire automatically.
+          </p>
+        )}
 
         {event.categories.length > 0 && (
           <div className="viewer-categories">
@@ -149,7 +166,8 @@ function EventSummaryCard({ event }: { event: ViewerEventSummary }) {
                       {category.total.toLocaleString('en-US')}
                     </span>
                     <span className="viewer-category-split">
-                      {category.paid.toLocaleString('en-US')} paid · {category.pending.toLocaleString('en-US')} pending
+                      {category.paid.toLocaleString('en-US')} paid · {category.awaiting.toLocaleString('en-US')} awaiting
+                      {category.unpaid > 0 && ` · ${category.unpaid.toLocaleString('en-US')} unpaid`}
                     </span>
                   </span>
                 </li>
@@ -162,15 +180,21 @@ function EventSummaryCard({ event }: { event: ViewerEventSummary }) {
   );
 }
 
-/** Paid against pending across the race, for the eye; the legend under it says it in words. */
+/**
+ * Paid, awaiting verification and unpaid across the race, for the eye; the
+ * legend under it says it in words. Unpaid is the lighter segment at the end:
+ * it holds a slot, but it is not a registrant.
+ */
 function SplitBar({ counts }: { counts: RegistrantCounts }) {
-  const paidShare = counts.total > 0 ? (counts.paid / counts.total) * 100 : 0;
+  const whole = counts.total + counts.unpaid;
+  const share = (n: number) => `${(n / whole) * 100}%`;
   return (
-    <div className={`viewer-split-bar ${counts.total === 0 ? 'is-empty' : ''}`} aria-hidden="true">
-      {counts.total > 0 && (
+    <div className={`viewer-split-bar ${whole === 0 ? 'is-empty' : ''}`} aria-hidden="true">
+      {whole > 0 && (
         <>
-          <span className="is-paid" style={{ width: `${paidShare}%` }} />
-          <span className="is-pending" style={{ width: `${100 - paidShare}%` }} />
+          <span className="is-paid" style={{ width: share(counts.paid) }} />
+          <span className="is-pending" style={{ width: share(counts.awaiting) }} />
+          <span className="is-unpaid" style={{ width: share(counts.unpaid) }} />
         </>
       )}
     </div>

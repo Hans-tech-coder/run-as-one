@@ -269,7 +269,8 @@ labelled **Super Admin**; Cresendo Running Community
 (`cresendorunningcommunity@gmail.com`) is a client with all four events linked
 and an invite sent — **production needs the same at release** (plan's notes).
 **Batch 4 (the Viewer dashboard):** a viewer's `/admin` is *Your Events* —
-count tiles and one card per race with its total, paid vs pending and
+count tiles and one card per race with its total, paid vs pending (since
+UNPAID_ORDERS_PLAN Batch 1: paid, awaiting verification and unpaid apart) and
 per-category counts, no money (`client-summary.ts`, `ViewerDashboard.tsx`); its
 sidebar is Dashboard and Settings; every team screen answers it with the
 designed *Not Part of Your View* page through `requireTeamActor()` /
@@ -502,6 +503,19 @@ Known open threads:
   The runner is not emailed; the organizer sees the neutral `EXPIRED` badge on
   the registrants screen, and the detail modal says when it happened and what
   went back.
+- **One meaning of "registrant" on every screen** (`UNPAID_ORDERS_PLAN.md`
+  Batch 1, 2026-10-05). A client read four registrants on the overview and the
+  events table where the registrants screen listed one: the counts took every
+  PENDING runner, the list hid unpaid online checkouts. A registrant is now a
+  runner on a PAID order or a bank transfer awaiting verification; an unpaid
+  online checkout is shown beside the count ("+N unpaid", "Unpaid Checkouts"),
+  never in it. The events table, the overview's live rows and the client
+  viewer all count through `heldPlacesByCategory` in `pending-expiry.ts`, and
+  the overview's awaiting-verification queue skips an order with no live
+  runner. Slot capacity is unchanged. Still to come in that plan: the
+  "Unpaid checkouts" tab on the registrants screen (which "+N unpaid" will
+  link to), "Check with PayMongo", and cancelling an order when its last
+  runner is removed.
 - A **Prisma schema change needs the dev server restarted** before it takes
   effect: `next dev` bundles the generated client, so a running server keeps
   the pre-migration data model and rejects a write to a brand-new column with

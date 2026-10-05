@@ -331,10 +331,10 @@ const OVERVIEW_PLATFORM_METRICS = 4;
 
 /**
  * A client viewer's Overview (ADMIN_MERGE_PLAN.md, Batch 4, `ViewerDashboard`):
- * three count tiles over its event cards. How many races a client has is not
+ * four count tiles over its event cards. How many races a client has is not
  * known while waiting, so three cards are drawn — a full row from `lg` up.
  */
-const VIEWER_OVERVIEW_SHAPE: RouteShape = { metrics: 3, eventCards: 3 };
+const VIEWER_OVERVIEW_SHAPE: RouteShape = { metrics: 4, eventCards: 3 };
 
 /**
  * What the person waiting can open, where that changes a page's shape:

@@ -1,3 +1,4 @@
+import type { Prisma } from '@prisma/client';
 import prisma from '@/lib/db';
 import { PAYMENT_METHODS } from '@/lib/registration-codes';
 
@@ -303,6 +304,83 @@ export function listedRegistrationWhere() {
       { paymentMethod: { equals: PAYMENT_METHODS.BANK_TRANSFER, mode: 'insensitive' as const } },
     ],
   };
+}
+
+/**
+ * A bank transfer sitting PENDING: money a runner says they sent, waiting on a
+ * person to check the deposit slip. It is a registrant — the listed screen
+ * shows it (`listedRegistrationWhere`) and the overview's queue is made of it.
+ */
+export function awaitingVerificationWhere() {
+  return {
+    status: 'PENDING',
+    paymentMethod: { equals: PAYMENT_METHODS.BANK_TRANSFER, mode: 'insensitive' as const },
+  };
+}
+
+/**
+ * An online checkout that was opened and never paid — `listedRegistrationWhere`'s
+ * counterpart, the PENDING orders that list leaves out.
+ *
+ * The owner's ruling (UNPAID_ORDERS_PLAN.md, 2026-10-05): this is **never
+ * called a registrant**. A client once read four registrants on the overview
+ * where the registrants screen listed one, because the counts took every
+ * PENDING runner and the list did not. Every screen now counts from these two
+ * filters and `PAID`, so the count and the list cannot drift apart again.
+ *
+ * It still holds its slot until the sweep expires it — the capacity count
+ * (`SLOT_HOLDING_STATUSES`) is unchanged; only the word on the screen is.
+ */
+export function unpaidCheckoutWhere() {
+  return {
+    status: 'PENDING',
+    NOT: { paymentMethod: { equals: PAYMENT_METHODS.BANK_TRANSFER, mode: 'insensitive' as const } },
+  };
+}
+
+/**
+ * The runners holding a place, in the three kinds every screen names: paid,
+ * awaiting verification (a bank transfer) and unpaid checkout. Registrants are
+ * the first two; together the three are the taken slots.
+ */
+export type HeldPlaces = { paid: number; awaiting: number; unpaid: number };
+
+/**
+ * `HeldPlaces` per category for the runners `runnerWhere` picks, in three
+ * grouped queries however many categories there are. One function for the
+ * events table, the overview and the client viewer, so none of them can sort a
+ * runner into a different kind than the others.
+ *
+ * A removed runner, or one on a removed order, is kept for the trail and never
+ * counted.
+ */
+export async function heldPlacesByCategory(
+  runnerWhere: Prisma.RunnerWhereInput,
+): Promise<Map<string, HeldPlaces>> {
+  const count = (registration: Prisma.RegistrationWhereInput) =>
+    prisma.runner.groupBy({
+      by: ['categoryId'],
+      where: { ...runnerWhere, deletedAt: null, registration: { ...registration, deletedAt: null } },
+      _count: { _all: true },
+    });
+  const [paid, awaiting, unpaid] = await Promise.all([
+    count({ status: 'PAID' }),
+    count(awaitingVerificationWhere()),
+    count(unpaidCheckoutWhere()),
+  ]);
+
+  const byCategory = new Map<string, HeldPlaces>();
+  const add = (rows: typeof paid, kind: keyof HeldPlaces) => {
+    for (const row of rows) {
+      const places = byCategory.get(row.categoryId) ?? { paid: 0, awaiting: 0, unpaid: 0 };
+      places[kind] += row._count._all;
+      byCategory.set(row.categoryId, places);
+    }
+  };
+  add(paid, 'paid');
+  add(awaiting, 'awaiting');
+  add(unpaid, 'unpaid');
+  return byCategory;
 }
 
 /**
