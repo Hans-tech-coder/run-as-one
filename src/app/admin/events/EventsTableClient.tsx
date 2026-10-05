@@ -114,42 +114,27 @@ function RegisteredCount({ event, alignEnd = false }: { event: EventRow; /** Ope
           </span>
         </span>
       </span>
-      {unpaid > 0 && <UnpaidCount count={unpaid} title={event.title} alignEnd={alignEnd} />}
+      {unpaid > 0 && <UnpaidCount count={unpaid} eventId={event.id} title={event.title} alignEnd={alignEnd} />}
     </span>
   );
 }
 
 /**
- * "+N unpaid" beside a race's registrant count. Not a link yet: the
- * registrants screen's Unpaid checkouts tab it will open arrives later
- * (UNPAID_ORDERS_PLAN.md, Batch 3). Until then a tap, hover or focus explains
- * it, since a phone has no hover.
+ * "+N unpaid" beside a race's registrant count: a link to the registrants
+ * screen's Unpaid checkouts tab (UNPAID_ORDERS_PLAN.md Batch 3), where staff
+ * follow these orders up. Hover or keyboard focus shows what it means; on a
+ * phone, which has no hover, the tab it opens says the same at the top.
  */
-function UnpaidCount({ count, title, alignEnd }: { count: number; title: string; alignEnd: boolean }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const ref = useRef<HTMLSpanElement>(null);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const close = (e: PointerEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setIsOpen(false);
-    };
-    document.addEventListener('pointerdown', close);
-    return () => document.removeEventListener('pointerdown', close);
-  }, [isOpen]);
-
+function UnpaidCount({ count, eventId, title, alignEnd }: { count: number; eventId: string; title: string; alignEnd: boolean }) {
   return (
-    <span ref={ref} className={`reg-count ${alignEnd ? 'is-end' : ''} ${isOpen ? 'is-open' : ''}`}>
-      <button
-        type="button"
+    <span className={`reg-count ${alignEnd ? 'is-end' : ''}`}>
+      <Link
+        href={`/admin/events/${eventId}/registrants?tab=unpaid`}
         className="reg-count-trigger is-unpaid"
-        onClick={() => setIsOpen(open => !open)}
-        onKeyDown={e => { if (e.key === 'Escape') setIsOpen(false); }}
-        aria-expanded={isOpen}
-        aria-label={`${count} unpaid ${count === 1 ? 'checkout' : 'checkouts'} for ${title}: online checkout not paid yet, expires automatically.`}
+        aria-label={`${count} unpaid ${count === 1 ? 'checkout' : 'checkouts'} for ${title}: online checkout not paid yet, expires automatically. Open unpaid checkouts.`}
       >
         <span className="tabular-nums">+{count}</span> unpaid
-      </button>
+      </Link>
       <span className="reg-count-tip is-note" aria-hidden="true">
         Online checkout not paid yet. Expires automatically.
       </span>

@@ -80,6 +80,10 @@ export const AUDIT_ACTIONS = [
   'runner.deleted',
   'proof.viewed',
   'registrants.exported',
+  // The Unpaid checkouts tab's own file (UNPAID_ORDERS_PLAN.md Batch 3): the
+  // contacts of people who never paid, so it is recorded apart from the
+  // registrant list rather than counted as one.
+  'unpaid_checkouts.exported',
   'promo.created',
   'promo.updated',
   'promo.paused',

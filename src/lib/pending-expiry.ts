@@ -339,6 +339,57 @@ export function unpaidCheckoutWhere() {
 }
 
 /**
+ * The hour (UTC) the sweep runs. It must match the cron in `vercel.json`
+ * (`0 18 * * *`, 02:00 Manila). The two cannot share one value, because
+ * `vercel.json` is not code, so a change to one must be made in the other too.
+ */
+export const SWEEP_HOUR_UTC = 18;
+
+/**
+ * The latest time an unpaid online checkout created at `createdAt` can still
+ * be PENDING. It is the first sweep that finds the order past the window, plus
+ * one hour, because Vercel's Hobby plan runs a daily cron at some point within
+ * the hour, not on the minute.
+ *
+ * Shown on the Unpaid checkouts tab as "expires by". Computed from the real
+ * schedule rather than `createdAt + PENDING_EXPIRY_HOURS`, because the sweep
+ * runs once a day: an order opened at 03:00 Manila holds its slot for almost
+ * two days, and staff following it up need that true answer.
+ */
+export function expiresBy(createdAt: Date): Date {
+  const eligibleAfter = createdAt.getTime() + PENDING_EXPIRY_HOURS * 60 * 60 * 1000;
+  const sweep = new Date(eligibleAfter);
+  sweep.setUTCHours(SWEEP_HOUR_UTC, 0, 0, 0);
+  // The sweep only takes orders created strictly before its own cutoff, so a
+  // run at the exact moment the window closes does not take this one yet.
+  if (sweep.getTime() <= eligibleAfter) sweep.setUTCDate(sweep.getUTCDate() + 1);
+  return new Date(sweep.getTime() + 60 * 60 * 1000);
+}
+
+/**
+ * The orders on the registrants screen's Unpaid checkouts tab
+ * (UNPAID_ORDERS_PLAN.md Batch 3): every unpaid online checkout, plus the ones
+ * the sweep already expired, until race day is over.
+ *
+ * The expired ones stay because staff follow these orders up by hand: a runner
+ * whose checkout expired last night may still want to enter. After race day
+ * there is no one left to follow up, so they leave the tab (the rows stay in
+ * the database). `raceDay` and `today` are both Manila calendar days, the
+ * format `Event.date` holds.
+ *
+ * An order with no live runner is left out, as it is from the overview's
+ * queue. There is nobody on it to contact.
+ */
+export function unpaidFollowUpWhere(raceDay: string, today: string): Prisma.RegistrationWhereInput {
+  return {
+    deletedAt: null,
+    status: today <= raceDay ? { in: ['PENDING', 'EXPIRED'] } : 'PENDING',
+    NOT: { paymentMethod: { equals: PAYMENT_METHODS.BANK_TRANSFER, mode: 'insensitive' } },
+    runners: { some: { deletedAt: null } },
+  };
+}
+
+/**
  * The runners holding a place, in the three kinds every screen names: paid,
  * awaiting verification (a bank transfer) and unpaid checkout. Registrants are
  * the first two; together the three are the taken slots.

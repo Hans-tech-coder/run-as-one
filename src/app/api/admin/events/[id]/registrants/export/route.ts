@@ -15,6 +15,10 @@ import { recordAudit } from '@/lib/audit';
  * so there is no server step to hang the record on — the registrants table
  * tells this route before it builds the file. It records only how many rows
  * and whether they were a selection, never which people or what they said.
+ *
+ * The Unpaid checkouts tab's export comes here too, with `list: 'unpaid'`,
+ * and is recorded as its own action: those rows are orders, not registrants,
+ * and an incident review has to be able to tell the two files apart.
  */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -35,13 +39,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const body = await request.json().catch(() => ({}));
     const count = Math.max(0, Math.floor(Number(body?.count) || 0));
     const selected = body?.selected === true;
+    const unpaid = body?.list === 'unpaid';
+    const noun = unpaid
+      ? `unpaid checkout${count === 1 ? '' : 's'}`
+      : `registrant${count === 1 ? '' : 's'}`;
 
     await recordAudit(prisma, actor, {
-      action: 'registrants.exported',
+      action: unpaid ? 'unpaid_checkouts.exported' : 'registrants.exported',
       entityType: 'Event',
       entityId: event.id,
       eventId: event.id,
-      summary: `Exported ${count} registrant${count === 1 ? '' : 's'} from ${event.title} to CSV${selected ? ' (selected rows)' : ''}.`,
+      summary: `Exported ${count} ${noun} from ${event.title} to CSV${selected ? ' (selected rows)' : ''}.`,
       changes: { rows: count, selection: selected },
     });
 

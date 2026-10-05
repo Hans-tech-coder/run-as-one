@@ -943,6 +943,53 @@
   outline-offset: -2px;
 }
 
+/* A row with a second destination inside it (a live race's unpaid checkouts).
+   A link cannot hold another link, so the row is a box, its title's link
+   stretches over the whole row, and the inner link sits above that. The row
+   still reads and clicks as one target. */
+.overview-row.has-links {
+  position: relative;
+}
+
+.overview-row-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.overview-row-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+.overview-row-link:focus-visible {
+  outline: none;
+}
+
+.overview-row.has-links:has(.overview-row-link:focus-visible) {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: -2px;
+}
+
+.overview-row-sublink {
+  position: relative;
+  z-index: 1;
+  text-decoration: underline;
+  text-decoration-color: var(--ink-30);
+  text-underline-offset: 3px;
+}
+
+.overview-row-sublink:hover {
+  color: var(--text-primary);
+  text-decoration-color: currentColor;
+}
+
+.overview-row-sublink:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 .overview-row-main {
   display: flex;
   flex-direction: column;
@@ -1889,6 +1936,49 @@ a.reg-count-trigger {
     width     var(--tabs-dur) var(--tabs-ease),
     height    var(--tabs-dur) var(--tabs-ease);
   will-change: transform, width, height;
+}
+
+/* The registrants screen's Registrants / Unpaid checkouts tabs
+   (RegistrantsTabs.tsx). 44px targets. Below `sm` the bar takes the full width
+   and the two tabs share it, a label wrapping rather than the bar running off a
+   360px screen; RegistrantsTabs sets the pill's height and top from the tab. */
+.registrants-tabs {
+  align-self: flex-start;
+  max-width: 100%;
+}
+
+.registrants-tabs .t-tab {
+  height: auto;
+  min-height: 44px;
+  padding: 6px 16px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.registrants-tabs .t-tab:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 1px;
+}
+
+.registrants-tabs .t-tabs-pill {
+  height: 44px;
+  transition:
+    transform var(--tabs-dur) var(--tabs-ease),
+    width     var(--tabs-dur) var(--tabs-ease),
+    height    var(--tabs-dur) var(--tabs-ease);
+}
+
+@media (max-width: 639px) {
+  .registrants-tabs {
+    align-self: stretch;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .registrants-tabs .t-tab {
+    padding: 6px 10px;
+  }
 }
 
 /* Form Styles */

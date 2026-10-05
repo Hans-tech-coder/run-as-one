@@ -18,6 +18,65 @@ import type { RegistrantRow } from './RegistrantsTable';
 /** The Province filter's choice for rows with no home address on file. */
 export const NO_PROVINCE = 'NOT ON FILE';
 
+/**
+ * A column's own padding, on top of the tables' tight `px-2.5`. The
+ * registrants table has eleven columns to fit beside the open sidebar on a
+ * 1366px laptop without a sideways scroll, so every column is kept to what it
+ * needs: the checkbox column gives up its right side, and the reference keeps
+ * a wider left so it does not read as part of the No. beside it. The Unpaid
+ * checkouts table uses the same, so the two tabs line up.
+ */
+export function columnInset(columnId: string): string {
+  if (columnId === 'select') return 'pl-4 pr-0';
+  if (columnId === 'runnerRef' || columnId === 'order') return 'pl-5';
+  return '';
+}
+
+/**
+ * The mark / unmark column: a checkbox per row and one in the header for the
+ * page. Shared by the Registrants and Unpaid checkouts tables, so a row is
+ * marked the same way on both.
+ */
+export function selectionColumn<T>(): ColumnDef<T> {
+  return {
+    id: "select",
+    header: ({ table }) => {
+      const isChecked = table.getIsAllPageRowsSelected();
+      return (
+        <div className="flex items-center justify-center w-4">
+          <div className="relative flex items-center justify-center">
+            <input
+              type="checkbox"
+              checked={isChecked}
+              onChange={table.getToggleAllPageRowsSelectedHandler()}
+              className="appearance-none w-4 h-4 rounded border border-[var(--ink-20)] bg-transparent checked:bg-[var(--ink)] checked:border-[var(--ink)] cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ink-20)]"
+            />
+            {isChecked && <Check className="absolute text-[var(--dash-inverse-fg)] pointer-events-none" size={12} strokeWidth={3} />}
+          </div>
+        </div>
+      );
+    },
+    cell: ({ row }) => {
+      const isChecked = row.getIsSelected();
+      return (
+        <div className="flex items-center justify-center w-4">
+          <div className="relative flex items-center justify-center">
+            <input
+              type="checkbox"
+              checked={isChecked}
+              onChange={row.getToggleSelectedHandler()}
+              className="appearance-none w-4 h-4 rounded border border-[var(--ink-20)] bg-transparent checked:bg-[var(--ink)] checked:border-[var(--ink)] cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ink-20)]"
+            />
+            {isChecked && <Check className="absolute text-[var(--dash-inverse-fg)] pointer-events-none" size={12} strokeWidth={3} />}
+          </div>
+        </div>
+      );
+    },
+    enableSorting: false,
+    enableHiding: false,
+  };
+}
+
 export function buildRegistrantColumns({
   onView,
   renderActions,
@@ -26,43 +85,7 @@ export function buildRegistrantColumns({
   renderActions: (runner: RegistrantRow) => React.ReactNode;
 }): ColumnDef<RegistrantRow>[] {
   return [
-    {
-      id: "select",
-      header: ({ table }) => {
-        const isChecked = table.getIsAllPageRowsSelected();
-        return (
-          <div className="flex items-center justify-center px-1 w-8">
-            <div className="relative flex items-center justify-center">
-              <input
-                type="checkbox"
-                checked={isChecked}
-                onChange={table.getToggleAllPageRowsSelectedHandler()}
-                className="appearance-none w-4 h-4 rounded border border-[var(--ink-20)] bg-transparent checked:bg-[var(--ink)] checked:border-[var(--ink)] cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ink-20)]"
-              />
-              {isChecked && <Check className="absolute text-[var(--dash-inverse-fg)] pointer-events-none" size={12} strokeWidth={3} />}
-            </div>
-          </div>
-        );
-      },
-      cell: ({ row }) => {
-        const isChecked = row.getIsSelected();
-        return (
-          <div className="flex items-center justify-center px-1 w-8">
-            <div className="relative flex items-center justify-center">
-              <input
-                type="checkbox"
-                checked={isChecked}
-                onChange={row.getToggleSelectedHandler()}
-                className="appearance-none w-4 h-4 rounded border border-[var(--ink-20)] bg-transparent checked:bg-[var(--ink)] checked:border-[var(--ink)] cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ink-20)]"
-              />
-              {isChecked && <Check className="absolute text-[var(--dash-inverse-fg)] pointer-events-none" size={12} strokeWidth={3} />}
-            </div>
-          </div>
-        );
-      },
-      enableSorting: false,
-      enableHiding: false,
-    },
+    selectionColumn<RegistrantRow>(),
     {
       // The registrant's own number, assigned on the server from the
       // registration order (see regNo in page.tsx) — not this row's position
@@ -89,16 +112,24 @@ export function buildRegistrantColumns({
       // group in their own order instead of an arbitrary one.
       accessorKey: "runnerRef",
       header: "Reference",
+      // The line under the reference is when the order was placed (page.tsx,
+      // registeredAtLabel), worded as the Unpaid checkouts tab words its own.
+      // The eye sits beside the reference only and the date runs under both,
+      // so the column is as wide as the wider of the two lines rather than
+      // their sum: the table has eleven columns to fit beside the sidebar.
       cell: ({ row }) => (
-        <div className="flex items-center gap-2 text-secondary">
-          {row.original.runnerRef}
-          <button
-            onClick={() => onView(row.original)}
-            className="icon-btn"
-            title="View Details"
-          >
-            <Eye size={16} />
-          </button>
+        <div className="text-secondary">
+          <div className="flex items-center gap-2">
+            <span className="whitespace-nowrap">{row.original.runnerRef}</span>
+            <button
+              onClick={() => onView(row.original)}
+              className="icon-btn"
+              title="View Details"
+            >
+              <Eye size={16} />
+            </button>
+          </div>
+          <span className="block whitespace-nowrap text-xs text-[var(--text-muted)]">{row.original.registeredAtLabel}</span>
         </div>
       ),
     },
@@ -111,7 +142,10 @@ export function buildRegistrantColumns({
             {row.original.name}
             {row.original.isMinor && <MinorBadge />}
           </div>
-          <div className="text-xs text-secondary font-normal">{row.original.email}</div>
+          {/* Allowed to break anywhere: an email is one long word, and left
+              whole it set the column's narrowest width and pushed the table
+              into a sideways scroll. */}
+          <div className="text-xs text-secondary font-normal [overflow-wrap:anywhere]">{row.original.email}</div>
         </div>
       ),
       filterFn: (row, id, value) => {

@@ -512,10 +512,13 @@ Known open threads:
   never in it. The events table, the overview's live rows and the client
   viewer all count through `heldPlacesByCategory` in `pending-expiry.ts`, and
   the overview's awaiting-verification queue skips an order with no live
-  runner. Slot capacity is unchanged. Still to come in that plan: the
-  "Unpaid checkouts" tab on the registrants screen (which "+N unpaid" will
-  link to), "Check with PayMongo", and cancelling an order when its last
-  runner is removed.
+  runner. Slot capacity is unchanged.
+- **Unpaid checkouts tab** on the registrants screen (`UNPAID_ORDERS_PLAN.md`
+  Batch 3, 2026-10-05): the online orders never paid, one row per order, with
+  the contact to copy and when each expires, for staff on every event role to
+  follow up by hand. "+N unpaid" on the events table and the overview link to
+  it (`?tab=unpaid`). Still to come in that plan: "Check with PayMongo", and
+  cancelling an order when its last runner is removed.
 - A **Prisma schema change needs the dev server restarted** before it takes
   effect: `next dev` bundles the generated client, so a running server keeps
   the pre-migration data model and rejects a write to a brand-new column with

@@ -142,7 +142,9 @@ checkouts (`heldPlacesByCategory`; only the first two are registrants), a fill
 bar with unpaid as a lighter neutral segment, and *N of M slots* (all three
 hold a slot) when every option is
 capped (else *No slot cap*, the same reading `fullEventIds` gives), and the
-date; each opens its registrants. Hidden when nothing is live. Last, the five
+date; each opens its registrants, and its *N unpaid checkouts* is its own link
+to `?tab=unpaid` (the title's link stretches over the row,
+`.overview-row.has-links`, since a link cannot hold another). Hidden when nothing is live. Last, the five
 most recent PAID registrations, each reference opening its order the same way
 (*View Order* on a phone's card); empty, it offers *Create Event* (or *Go to
 Events* without `event:create`). **Everything is counted by the database** — an
@@ -212,8 +214,9 @@ screen**; hovering or focusing it opens a tooltip (`.reg-count-tip`, the rail
 tooltip's `--tt-*` tokens) splitting it into *Paid / Validated* and *Awaiting
 verification*. **Unpaid online checkouts are never in the count**
 (`UNPAID_ORDERS_PLAN.md`): a dashed **"+N unpaid"** chip sits beside it, whose
-tap, hover or focus explains *Online checkout not paid yet. Expires
-automatically.* It is not a link yet. **One
+hover or focus explains *Online checkout not paid yet. Expires
+automatically.* It links to the registrants screen's **Unpaid checkouts** tab
+(`?tab=unpaid`). **One
 *Filters* chip at every width** (`FiltersMenu`, §9 — the pattern every table
 filter copies) opens a popover (a bottom sheet on a phone) holding **Client** (only
 for `platform:manage`, built from the listed races' clients plus *No client
@@ -240,7 +243,32 @@ purpose — one screen owns promotions, and a second place to edit them is a
 second place for them to drift) · `/admin/events/[id]/registrants` (**an online
 order appears only once PayMongo has confirmed it** — an unpaid or expired card /
 QRPh / GCash / Maya order is filtered out by `listedRegistrationWhere()` in
-`lib/pending-expiry.ts`; bank transfers are always listed. **The list is
+`lib/pending-expiry.ts`; bank transfers are always listed. **Two tabs**
+(`RegistrantsTabs`, the `.t-tabs` sliding tabs, chosen in the URL as
+`?tab=unpaid`, switched with `history.replaceState` and both panels kept
+mounted): *Registrants (n)* is everything below (its Reference cell carries,
+under the reference, when the order was placed: `registeredAtLabel`, the
+order's `createdAt` in Manila, shared by every runner of a group; the CSV
+export carries it as *Registered At*, spelled `2026-10-03 08:46` so Excel
+sorts it as a date), and **Unpaid checkouts (n)**
+(`UnpaidCheckoutsList`, `UNPAID_ORDERS_PLAN.md` Batch 3) lists the online
+orders that list leaves out, from its own query (`unpaidFollowUpWhere`) so they
+never reach the registrants count, selection or CSV. Built like the
+registrants table (owner, 2026-10-05): search (reference, any runner's name,
+email, phone), a Filters chip (Status, Payment), the View chip
+(`ColumnsViewMenu`, shared with the registrants toolbar), mark / unmark
+checkboxes (`selectionColumn`, shared), a **No.** fixed per order oldest first
+(`listNo`), sortable headers, Sort below `lg`, **Export to CSV** (its own file,
+`buildUnpaidCheckoutCsv`: one line per order with *Submitted At*, the marked
+rows or every filtered row), and `AdminTablePager`, all off one TanStack
+table. One row per order:
+reference and created time, runners, the first runner's email and phone,
+method and amount, and *Awaiting payment · Expires by …* (`expiresBy`, the real
+sweep schedule) or *Expired …*. Expired ones stay until race day. n counts
+runners still awaiting payment, the same number as "+N unpaid". Read-only; its
+one action is **Copy contact** (name, email, phone, reference), with no reminder
+email because of Resend's quota. Every event role sees it (`registration:view`).
+**The list is
 in registration order, oldest first, and nothing an organizer does to a row ever
 moves it.** Both levels of the fetch say so — `orderBy: { createdAt: 'asc' }` on
 the registrations and `orderBy: { runnerNo: 'asc' }` on the runners inside each
@@ -596,7 +624,7 @@ settle both read *Event not found.* with a way back to Remittances.
 | Route | Methods | Notes |
 | --- | --- | --- |
 | `auth/login`, `auth/logout`, `auth/register` | POST | Sets / clears `admin_token`. **The account email is lowercased at the door** on both `login` and `register` (`normalizeAccountEmail`, §5) — and on `admin/profile` PATCH, which is the third place one can be written. Postgres compares text exactly, so until this landed a single capital from a browser autofill found no row and the login answered "Invalid credentials" for a password that was perfectly correct; `register` had the matching gap, where two accounts could exist for one address differing only in case and the unique index would not have stopped them. All three normalise through one helper, because this is precisely a rule two screens must never disagree about. **`login` looks the address up in both account tables** through `findAccountByEmail` (§5): **only Run As One's Organizer row signs in as the owner** (`organizerOwnerCanSignIn`, §5) — any other Organizer row is answered *Invalid credentials* before its password is checked and is not logged, exactly like an address with no account, and Run As One's row in any status but `APPROVED` is refused as `NOT_APPROVED` — a `StaffAccount` signs in to its earliest-accepted membership of an active organizer (an invitation not yet accepted has no password and is answered like a wrong one). Every sign-in and every failed or refused one is written to the audit trail, except an address that matches no account; `register` and `admin/profile` refuse an address either table already holds. **`register` is the organizer application, and since `ADMIN_MERGE_PLAN.md` Batch 3 it writes a `Client` (`NEW`) and nothing else** — no Organizer row, no password, no session, no email: the gate is staff pressing Send invite on `/admin/clients`. It validates the whole body through `readOrganizerApplication` (§5) — the same module the form runs, so a tab left open cannot post past a rule the form enforces — and writes the fifteen application columns, empty strings stored as null so a screen reading them back has one absent value to test for. It refuses, under `errors.email`, an address either account table holds and an address a client submission already holds (the unique index backs that for two presses at once). A refusal carries `errors` keyed by field beside the catch-all `error` string |
-| `admin/events/[id]/registrants/export` | POST | **The audit entry for a CSV export**, which is built in the browser from rows already on screen. The registrants table calls it fire-and-forget (with `keepalive`) before building the file, so a failed log never costs the organizer their download. Records the row count and whether it was a selection — never who was in it. Answers 204 |
+| `admin/events/[id]/registrants/export` | POST | **The audit entry for a CSV export**, which is built in the browser from rows already on screen. The registrants table calls it fire-and-forget (with `keepalive`) before building the file, so a failed log never costs the organizer their download. Records the row count and whether it was a selection — never who was in it. The Unpaid checkouts tab's export calls it too with `list: 'unpaid'`, recorded as its own action, `unpaid_checkouts.exported` (*Exported unpaid checkouts*), so the trail never counts those orders as registrants. Answers 204 |
 | `checkout` | POST | PayMongo checkout session. Re-derives every amount from the database. The **admin fee is checked after the promo code is resolved**, not before, because a pacer code can waive it (`platformFeeAfterDiscount`) — a client posting a waiver it had not earned would be handing itself Run As One's commission. When the recomputed chargeable total is **0** the order takes the free path (`lib/free-checkout.ts`): the transaction fee must be 0 too, `FREE_ORDER_COLUMNS` writes it `PAID`/`COMPLIMENTARY` at ₱0, the confirmation email goes out instead of the acknowledgement, and the route **returns the success URL without ever calling PayMongo**, which rejects a zero-amount charge. The PayMongo key check moved down to cover only orders that will actually be charged — still before the write, so a misconfigured key cannot leave an unpayable registration behind, but no longer in the way of an order PayMongo will never see. **Online orders (not bank transfer, not free) are sent no email here** — the PayMongo webhook sends the one receipt once paid — **and are discarded if PayMongo rejects the request or anything throws** before a checkout URL is returned (`discardFailedCheckout` in a `finally`), so a failed attempt leaves no registrant, no email and no held slot or promo. GCash and Maya (`MAYA` or legacy `PAYMAYA`) use a Payment Intent; card and QRPh a Checkout Session. The transaction fee is priced from the **stored** (uppercased) method, and a chargeable order whose method is neither a currently offered PayMongo one (`isPayMongoMethod`, which reads `OFFERED_PAYMONGO_METHODS` — QR Ph only for now) nor a bank transfer is refused with a 400 — otherwise `"gcash"` or an unknown method would reach PayMongo carrying no fee. |
 | `checkout/manual` | POST | Bank transfer: multipart, proof file → private blob. The file is validated by `uploadPrivateProof` under the `proof` kind — JPG, PNG, WEBP, GIF or PDF, 4 MB — which is the same list the wizard's picker offers. The same free path as `checkout`, and the **proof is required a little later than it used to be**: an order that costs nothing has no deposit slip to show, and whether it costs nothing is only knowable once the event and the promo code have been read. A free order stores no proof and no reference number — there is nothing either could be evidence of — and a file attached to one is ignored rather than kept. **The payment method is always `BANK_TRANSFER`** (a free order is rewritten `COMPLIMENTARY`), whatever the form posts: a posted `GCASH` would write an order the registrants list hides and the 24h sweep expires despite its slip |
 | `webhooks/paymongo` | POST | HMAC-verified when `PAYMONGO_WEBHOOK_SECRET` is set (an unsigned or malformed header is rejected, not waved through); reads the event name from `data.attributes.type` (`data.type` is always `"event"`). `checkout_session.payment.paid` matches the stored `cs_` id or `reference_number`→`orderRef` (card, QRPh); `payment.paid` matches `attributes.payment_intent_id` against the stored `pi_` (GCash, Maya). Marks the registration `PAID` and sends the receipt once — a retried delivery for an already-PAID row is acknowledged and skipped. **Only a `PENDING` row is flipped**, with a conditional update so racing deliveries cannot both send a receipt: a payment that lands on an `EXPIRED` (slot and promo already released), `CANCELLED` or `REFUNDED` order is acknowledged with 200, left as it is, and logged as needing a manual reinstate or refund. Test and live mode each need their own PayMongo webhook with its own `whsk_` secret: Preview → `run-as-one.vercel.app` (dev), Production → the production domain |

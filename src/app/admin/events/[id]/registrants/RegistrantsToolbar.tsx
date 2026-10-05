@@ -12,10 +12,11 @@
  * rows it feeds the table come out of it.
  */
 
-import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Search, Download, X, Trash2, Columns, MailWarning, Hourglass } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Search, Download, X, Trash2, MailWarning, Hourglass } from 'lucide-react';
 import type { Table } from '@tanstack/react-table';
 import MobileSortMenu from '../../../MobileSortMenu';
+import ColumnsViewMenu from './ColumnsViewMenu';
 import FiltersMenu, { type FilterGroup } from '../../../FiltersMenu';
 import { GUARDIAN_CONSENT_MAX_AGE } from '@/lib/minor-consent';
 import { needsValidation } from './registrant-display';
@@ -108,17 +109,6 @@ export default function RegistrantsToolbar({
     showOnlyMinors, setShowOnlyMinors,
     showOnlyPacers, setShowOnlyPacers,
   } = queues;
-
-  const [isViewOpen, setIsViewOpen] = useState(false);
-  const viewRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (viewRef.current && !viewRef.current.contains(event.target as Node)) setIsViewOpen(false);
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   const unsentEmailCount = useMemo(() => runners.filter(r => r.emailPending).length, [runners]);
 
@@ -305,34 +295,7 @@ export default function RegistrantsToolbar({
 
         {/* Which columns the table shows. Cards have no columns to hide, so
             below `lg` the chip goes and Sort (which the headers did) comes. */}
-        <div ref={viewRef} className="relative view-dropdown-container dash-desktop-only">
-          <button
-            onClick={() => setIsViewOpen(!isViewOpen)}
-            className="btn-filter"
-          >
-            <Columns size={16} /> View
-          </button>
-          {isViewOpen && (
-            <div className="toolbar-popover absolute right-0 mt-2 bg-[var(--dash-popover)] border border-[var(--dash-border)] rounded-md p-2 min-w-[150px] z-50 shadow-2xl">
-              {table.getAllLeafColumns().filter(col => col.getCanHide()).map(column => {
-                return (
-                  <label key={column.id} className="flex items-center gap-2 px-2 py-1.5 hover:bg-[var(--ink-05)] cursor-pointer rounded-md text-sm text-primary">
-                    <div className={`w-4 h-4 border border-[var(--dash-border)] rounded-sm flex items-center justify-center ${column.getIsVisible() ? 'bg-[var(--ink-10)]' : ''}`}>
-                      <input
-                        type="checkbox"
-                        checked={column.getIsVisible()}
-                        onChange={column.getToggleVisibilityHandler()}
-                        className="opacity-0 absolute w-0 h-0"
-                      />
-                      {column.getIsVisible() && <div className="w-2 h-2 bg-[var(--ink)] rounded-sm" />}
-                    </div>
-                    <span className="capitalize">{column.id === 'runnerRef' ? 'Reference' : column.id}</span>
-                  </label>
-                );
-              })}
-            </div>
-          )}
-        </div>
+        <ColumnsViewMenu table={table} />
 
         <MobileSortMenu table={table} />
       </div>

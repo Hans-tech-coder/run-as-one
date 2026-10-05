@@ -15,20 +15,12 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { Download, X, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
+import { Download, X, Trash2 } from 'lucide-react';
 import ProofLightbox from './ProofLightbox';
 import AdminCardList from '../../../AdminCardList';
 import AdminTablePager from '../../../AdminTablePager';
+import RegistrantsDataTable from './RegistrantsDataTable';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  flexRender,
   getCoreRowModel,
   getSortedRowModel,
   getFilteredRowModel,
@@ -356,54 +348,8 @@ export default function RegistrantsTable({
         onExport={handleExportCSV}
       />
 
-      {/* Table Area — from `lg` up; the cards below take its place under it. */}
-      <div className="dash-desktop-only border border-[var(--dash-border)] rounded-lg overflow-hidden bg-transparent">
-        <Table>
-          <TableHeader className="bg-transparent">
-            {table.getHeaderGroups().map(headerGroup => (
-              <TableRow key={headerGroup.id} className="border-b border-[var(--dash-border)] hover:bg-transparent">
-                {headerGroup.headers.map(header => (
-                  <TableHead
-                    key={header.id}
-                    onClick={header.column.getToggleSortingHandler()}
-                    className={`py-4 px-4 text-secondary font-medium h-auto ${header.column.getCanSort() ? 'cursor-pointer select-none' : ''} ${header.column.id === 'runnerRef' ? 'pl-8' : ''}`}
-                  >
-                    <div className="flex items-center gap-2">
-                      {flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )}
-                      {{
-                        asc: <ChevronUp className="w-3.5 h-3.5" />,
-                        desc: <ChevronDown className="w-3.5 h-3.5" />,
-                      }[header.column.getIsSorted() as string] ?? null}
-                    </div>
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows.length > 0 ? (
-              table.getRowModel().rows.map(row => (
-                <TableRow key={row.id} className="border-b border-[var(--dash-hairline)] hover:bg-[var(--ink-05)] transition-colors">
-                  {row.getVisibleCells().map(cell => (
-                    <TableCell key={cell.id} className={`py-4 px-4 text-primary ${cell.column.id === 'runnerRef' ? 'pl-8' : ''}`}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="py-16 text-center text-[var(--text-muted)]">
-                  No registrants found.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      {/* From `lg` up; the cards below take its place under it. */}
+      <RegistrantsDataTable table={table} empty="No registrants found." />
 
       {/*
         The same rows as the table above, below `lg` (AdminCardList): search,
@@ -441,7 +387,12 @@ export default function RegistrantsTable({
           // The reference alone. The table's eye beside it was left off the
           // card at the owner's request; View Details in the card's ⋯ menu
           // opens the same modal.
-          subtitle={row => row.original.runnerRef}
+          subtitle={row => (
+            <>
+              <span className="block">{row.original.runnerRef}</span>
+              <span className="block text-xs">{row.original.registeredAtLabel}</span>
+            </>
+          )}
           badges={row => (
             <>
               {row.original.isMinor && <MinorBadge />}

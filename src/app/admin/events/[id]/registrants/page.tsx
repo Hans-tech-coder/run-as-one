@@ -2,6 +2,8 @@ import React from 'react';
 import prisma from '@/lib/db';
 import { can, requireTeamActor } from '@/lib/actor';
 import RegistrantsTable, { type RegistrantPermissions } from './RegistrantsTable';
+import RegistrantsTabs, { type RegistrantsTab } from './RegistrantsTabs';
+import UnpaidCheckoutsList, { type UnpaidCheckout } from './UnpaidCheckoutsList';
 import { latestStatusChanges } from '@/lib/activity-store';
 import AdminNotFound from '../../../AdminNotFound';
 import { EVENT_NOT_FOUND } from '../../event-not-found';
@@ -25,8 +27,14 @@ import {
   guardianLine,
   needsGuardianConsent,
 } from '@/lib/minor-consent';
-import { formatEventInstant } from '@/lib/event-schedule';
-import { listedRegistrationWhere } from '@/lib/pending-expiry';
+import {
+  eventInstantParts,
+  formatEventInstant,
+  formatEventTime,
+  formatInstantDay,
+  today,
+} from '@/lib/event-schedule';
+import { expiresBy, listedRegistrationWhere, unpaidFollowUpWhere } from '@/lib/pending-expiry';
 import { formatRunnerAddress } from '@/lib/runner-address';
 import { shipmentsFor } from '@/app/events/[slug]/register/delivery-split';
 import DashboardHeader from '@/app/admin/DashboardHeader';
@@ -39,10 +47,13 @@ export default async function RegistrantsPage({
   // `?search=` prefills the table's search box. The marketing screen's
   // redemptions panel links here with an order reference in it, so tracing a
   // discount back to the people who used it is one click.
-  searchParams: Promise<{ search?: string }>;
+  // `?tab=unpaid` opens the Unpaid checkouts tab: the "+N unpaid" on the
+  // events table and the overview link straight to it.
+  searchParams: Promise<{ search?: string; tab?: string }>;
 }) {
   const { id } = await params;
-  const { search } = await searchParams;
+  const { search, tab } = await searchParams;
+  const initialTab: RegistrantsTab = tab === 'unpaid' ? 'unpaid' : 'registrants';
 
   // Scoped to the signed-in organizer's own events, the way every admin route
   // is. This screen carries the most sensitive data in the app — every
@@ -120,6 +131,17 @@ export default async function RegistrantsPage({
   // "Validated by Ana Cruz" line. One query for the whole screen.
   const statusRecords = await latestStatusChanges(actor.orgId, id);
 
+  // "Oct 7, 2026, 3:00 AM", in Manila, so every staff member's machine reads
+  // the same instant the same way. Used on both tabs.
+  const shortInstant = (value: Date) =>
+    `${formatInstantDay(value)}, ${formatEventTime(eventInstantParts(value).time)}`;
+  // "2026-10-03 08:46", in Manila, for the CSV exports: the spelling Excel
+  // reads as a date and time, so the column sorts in time order.
+  const csvInstant = (value: Date) => {
+    const { day, time } = eventInstantParts(value);
+    return `${day} ${time}`;
+  };
+
   // Flatten the runners from all registrations
   const runners: any[] = [];
   event.registrations.forEach(reg => {
@@ -152,6 +174,12 @@ export default async function RegistrantsPage({
         // that would need a column of its own.
         regNo: runners.length + 1,
         orderRef: reg.orderRef,
+        // When the order was placed: the moment the registration form was
+        // submitted, which for an online payment is when the runner went to
+        // checkout, not when the money arrived. Every runner of a group shares
+        // it, since they were registered in one submission.
+        registeredAtLabel: shortInstant(reg.createdAt),
+        registeredAt: csvInstant(reg.createdAt),
         runnerNo: runner.runnerNo,
         // One orderRef covers the whole order, so on a screen with one row per
         // runner it cannot say which of them this is — unless the order holds
@@ -297,17 +325,88 @@ export default async function RegistrantsPage({
     });
   });
 
+  // The Unpaid checkouts tab (UNPAID_ORDERS_PLAN.md Batch 3): online orders
+  // never paid, which the list above leaves out by the owner's rule. A
+  // separate query with its own filter, so these rows can never reach the
+  // registrants table, its count or its CSV export. Gated by the same
+  // registration:view as the screen, which every event role holds: staff do
+  // this follow-up, so it does not fall on the admins.
+  const unpaidOrders = await prisma.registration.findMany({
+    where: { eventId: id, ...unpaidFollowUpWhere(event.date, today()) },
+    // Oldest first, as the registrants tab lists, so No. 1 is at the top.
+    orderBy: { createdAt: 'asc' },
+    select: {
+      id: true,
+      orderRef: true,
+      status: true,
+      paymentMethod: true,
+      totalAmount: true,
+      createdAt: true,
+      expiredAt: true,
+      runners: {
+        where: { deletedAt: null },
+        orderBy: { runnerNo: 'asc' },
+        select: { firstName: true, lastName: true, email: true, phone: true },
+      },
+    },
+  });
+  const now = new Date();
+  const unpaidCheckouts: UnpaidCheckout[] = unpaidOrders
+    .map((order, index) => {
+      // The first runner filled in the form, so their email and phone are the
+      // order's contact, the same person the receipt would have gone to.
+      const contact = order.runners[0];
+      const expired = order.status === 'EXPIRED';
+      const deadline = expiresBy(order.createdAt);
+      return {
+        id: order.id,
+        // The order's place in this list, oldest first, fixed here for the
+        // registrants tab's reason (regNo above): filtering or sorting never
+        // renumbers it.
+        listNo: index + 1,
+        orderRef: order.orderRef,
+        runnerNames: order.runners.map(r => `${r.firstName} ${r.lastName}`),
+        contactName: `${contact.firstName} ${contact.lastName}`,
+        contactEmail: contact.email,
+        contactPhone: contact.phone,
+        paymentMethod: paymentMethodLabel(order.paymentMethod).toUpperCase(),
+        totalAmount: order.totalAmount,
+        createdAt: order.createdAt.toISOString(),
+        createdLabel: shortInstant(order.createdAt),
+        submittedAt: csvInstant(order.createdAt),
+        expired,
+        // Read beside the Awaiting payment / Expired badge.
+        statusDetail: expired
+          ? order.expiredAt ? shortInstant(order.expiredAt) : ''
+          : deadline > now
+            ? `Expires by ${shortInstant(deadline)}`
+            // The sweep is late or was cut short (MAX_SWEEP); the next run takes it.
+            : 'Expires at the next sweep',
+      };
+    });
+  const unpaidRunners = unpaidCheckouts
+    .filter(order => !order.expired)
+    .reduce((sum, order) => sum + order.runnerNames.length, 0);
+
   return (
     <>
       <DashboardHeader title="Registrants" crumbs={[{ label: 'Events', href: '/admin/events' }, { label: event.title }]} />
 
       <div className="admin-content">
-        <RegistrantsTable
-          runners={runners}
-          eventId={id}
-          raceDay={event.date}
-          initialSearch={search ?? ''}
-          permissions={permissions}
+        <RegistrantsTabs
+          initialTab={initialTab}
+          registrantCount={runners.length}
+          unpaidCount={unpaidRunners}
+          registrants={
+            <RegistrantsTable
+              runners={runners}
+              eventId={id}
+              raceDay={event.date}
+              initialSearch={search ?? ''}
+              permissions={permissions}
+            />
+          }
+          unpaid={<UnpaidCheckoutsList orders={unpaidCheckouts} eventId={id} />}
         />
       </div>
     </>

@@ -319,14 +319,23 @@ export default async function AdminDashboard() {
                   const pct = (n: number) => (event.capacity ? `${Math.min(100, (n / event.capacity) * 100)}%` : '0%');
                   return (
                     <li key={event.id}>
-                      <Link href={`/admin/events/${event.id}/registrants`} className="overview-row">
+                      {/* The row opens the registrants screen and its unpaid
+                          count opens the Unpaid checkouts tab. A link cannot
+                          hold another link, so the title's link stretches over
+                          the row (.overview-row.has-links) and the count sits
+                          above it. */}
+                      <div className="overview-row has-links">
                         <span className="overview-row-main">
-                          <span className="overview-row-title">{event.title}</span>
+                          <Link href={`/admin/events/${event.id}/registrants`} className="overview-row-title overview-row-link">
+                            {event.title}
+                          </Link>
                           <span className="viewer-split-legend">
                             <span className="is-paid">{event.paid.toLocaleString('en-US')} paid</span>
                             <span className="is-pending">{event.awaiting.toLocaleString('en-US')} awaiting verification</span>
                             {event.unpaid > 0 && (
-                              <span className="is-unpaid">{event.unpaid.toLocaleString('en-US')} unpaid checkout{event.unpaid === 1 ? '' : 's'}</span>
+                              <Link href={`/admin/events/${event.id}/registrants?tab=unpaid`} className="is-unpaid overview-row-sublink">
+                                {event.unpaid.toLocaleString('en-US')} unpaid checkout{event.unpaid === 1 ? '' : 's'}
+                              </Link>
                             )}
                           </span>
                           {event.capacity !== null && (
@@ -346,7 +355,7 @@ export default async function AdminDashboard() {
                           </span>
                         </span>
                         <ChevronRight size={16} className="overview-row-go" aria-hidden="true" />
-                      </Link>
+                      </div>
                     </li>
                   );
                 })}

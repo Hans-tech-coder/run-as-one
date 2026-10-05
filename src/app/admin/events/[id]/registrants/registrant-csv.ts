@@ -26,6 +26,7 @@
  */
 
 import { formatPesos } from '@/lib/money';
+import type { UnpaidCheckout } from './UnpaidCheckoutsList';
 
 const csvField = (value: unknown): string =>
   `"${String(value ?? '').replace(/"/g, '""')}"`;
@@ -36,7 +37,7 @@ const csvPhone = (value: unknown): string => {
 };
 
 export const REGISTRANT_CSV_HEADERS = [
-  'Runner Ref', 'Order Ref', 'First Name', 'Last Name', 'Email', 'Phone', 'Gender', 'Birthdate',
+  'Runner Ref', 'Order Ref', 'Registered At', 'First Name', 'Last Name', 'Email', 'Phone', 'Gender', 'Birthdate',
   'Guardian Name', 'Guardian Relationship', 'Guardian Consent At',
   'Category', 'Distance', 'Shirt Size', 'Emergency Contact', 'Emergency Phone',
   'Running Community', 'Medical Conditions', 'Home Address', 'Province', 'Logistics Method', 'Delivery Area', 'Delivery Address',
@@ -48,6 +49,11 @@ function registrantCsvRow(runner: any): string {
   return [
     csvField(runner.runnerRef),
     csvField(runner.orderRef),
+    // When the form was submitted, in Manila, as "2026-10-03 08:46" rather
+    // than the screen's "Oct 3, 2026, 8:46 AM": Excel reads this spelling as
+    // a date and time, so the column sorts in time order instead of
+    // alphabetically by month name.
+    csvField(runner.registeredAt),
     csvField(runner.firstName),
     csvField(runner.lastName),
     csvField(runner.email),
@@ -104,8 +110,52 @@ export function buildRegistrantCsv(runners: any[]): string {
   ].join('\r\n');
 }
 
+/**
+ * The Unpaid checkouts export (UNPAID_ORDERS_PLAN.md Batch 3): one line per
+ * order, as the tab lists them, for staff working the follow-up from a
+ * spreadsheet. A file of its own, never rows in the registrants export:
+ * these orders are not registrants, and a race-day list that mixed them in
+ * would hand out kits to people who never paid.
+ */
+export const UNPAID_CHECKOUT_CSV_HEADERS = [
+  'No.', 'Order Ref', 'Submitted At', 'Status', 'Status Detail', 'Runners', 'Runner Names',
+  'Contact Name', 'Email', 'Phone', 'Payment Method', 'Order Total',
+];
+
+export function buildUnpaidCheckoutCsv(orders: UnpaidCheckout[]): string {
+  return [
+    UNPAID_CHECKOUT_CSV_HEADERS.map(csvField).join(','),
+    ...orders.map(order =>
+      [
+        csvField(order.listNo),
+        csvField(order.orderRef),
+        // The same sortable spelling as the registrants file's Registered At.
+        csvField(order.submittedAt),
+        csvField(order.expired ? 'EXPIRED' : 'AWAITING PAYMENT'),
+        csvField(order.statusDetail),
+        csvField(order.runnerNames.length),
+        csvField(order.runnerNames.join(', ')),
+        csvField(order.contactName),
+        csvField(order.contactEmail),
+        csvPhone(order.contactPhone),
+        csvField(order.paymentMethod),
+        csvField(formatPesos(order.totalAmount)),
+      ].join(','),
+    ),
+  ].join('\r\n');
+}
+
 /** Hands the built file to the browser as a download. */
 export function downloadRegistrantCsv(csv: string, eventId: string): void {
+  downloadCsv(csv, `registrants_event_${eventId}.csv`);
+}
+
+/** The Unpaid checkouts file, named apart so the two are never confused. */
+export function downloadUnpaidCheckoutCsv(csv: string, eventId: string): void {
+  downloadCsv(csv, `unpaid_checkouts_event_${eventId}.csv`);
+}
+
+function downloadCsv(csv: string, filename: string): void {
   // U+FEFF, the byte order mark, spelled out rather than pasted in as the
   // invisible character it is. It has to be the very first thing in the file
   // or Excel reads the rest as the system codepage instead of UTF-8.
@@ -115,7 +165,7 @@ export function downloadRegistrantCsv(csv: string, eventId: string): void {
 
   const link = document.createElement('a');
   link.href = url;
-  link.setAttribute('download', `registrants_event_${eventId}.csv`);
+  link.setAttribute('download', filename);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
