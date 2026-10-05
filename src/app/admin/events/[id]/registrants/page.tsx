@@ -406,7 +406,9 @@ export default async function RegistrantsPage({
               permissions={permissions}
             />
           }
-          unpaid={<UnpaidCheckoutsList orders={unpaidCheckouts} eventId={id} />}
+          unpaid={
+            <UnpaidCheckoutsList orders={unpaidCheckouts} eventId={id} canCheckPayment={permissions.validate} />
+          }
         />
       </div>
     </>

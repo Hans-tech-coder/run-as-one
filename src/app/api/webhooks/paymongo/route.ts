@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import crypto from 'crypto';
-import { deliverConfirmationEmail } from '@/lib/email-delivery';
+import { settleOnlinePayment } from '@/lib/online-payment';
 
 export async function POST(request: Request) {
   try {
@@ -74,48 +74,20 @@ export async function POST(request: Request) {
         });
       }
 
-      if (registration?.status === 'PAID') {
-        // PayMongo retries deliveries; the receipt went out on the first one.
-        return NextResponse.json({ received: true });
-      }
-
-      if (registration && registration.status !== 'PENDING') {
-        // Only a PENDING order is waiting for this payment. An EXPIRED one has
-        // already handed its slot and promo back (lib/pending-expiry.ts), and a
-        // CANCELLED / REFUNDED one was closed by a person — flipping either to
-        // PAID would oversell the category or reopen a closed order. Left as it
-        // is for the organizer to reinstate or refund; answered 200 so PayMongo
-        // stops retrying.
-        console.error(
-          `PayMongo Webhook: payment for ${registration.orderRef} arrived while it was ${registration.status}; not marked PAID — needs a manual reinstate or refund`
-        );
-        return NextResponse.json({ received: true });
-      }
-
       if (registration) {
-        // Update the registration status to PAID
-        // Conditional on PENDING, so two deliveries racing each other (or the
-        // sweep expiring it in between) cannot both flip it and send two
-        // receipts.
-        const flipped = await prisma.registration.updateMany({
-          where: { id: registration.id, status: 'PENDING' },
-          data: { status: 'PAID' }
-        });
-        if (flipped.count === 0) {
-          return NextResponse.json({ received: true });
+        // The same path the admin's "Check with PayMongo" takes
+        // (lib/online-payment.ts): only a PENDING order flips, and the receipt
+        // goes out on the flip alone. A retried delivery finds it PAID and
+        // does nothing. Every outcome is answered 200 so PayMongo stops
+        // retrying.
+        const settled = await settleOnlinePayment(registration.id);
+        if (settled.outcome === 'marked_paid') {
+          console.log(`Successfully updated registration ${registration.orderRef} to PAID`);
+        } else if (settled.outcome === 'not_pending') {
+          console.error(
+            `PayMongo Webhook: payment for ${registration.orderRef} arrived while it was ${settled.status}; not marked PAID — needs a manual reinstate or refund`
+          );
         }
-
-        console.log(`Successfully updated registration ${registration.orderRef} to PAID`);
-
-        const full = await prisma.registration.findUnique({
-          where: { id: registration.id },
-          include: {
-            event: true,
-            // A runner removed from the order is not on the receipt.
-            runners: { where: { deletedAt: null }, include: { category: true } },
-          },
-        });
-        if (full) await deliverConfirmationEmail(full);
       } else {
         console.warn(`PayMongo Webhook: Registration not found for reference ${referenceNumber} or PI ${paymentIntentId}`);
       }

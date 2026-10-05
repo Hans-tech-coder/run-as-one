@@ -22,14 +22,22 @@
  * (`unpaid_checkouts.exported`). A busy race can collect dozens of these, and a staff member
  * working through them should not meet a second way of navigating a list.
  *
- * **Copy contact is the only action.** There is no "send reminder" email:
+ * **Copy contact is the follow-up.** There is no "send reminder" email:
  * Resend's free tier stops at 100 a day, and a PayMongo link expires, so a
  * reminder would need a new checkout as well. Staff paste the contact into
  * their own message instead.
+ *
+ * **Check with PayMongo comes first** (Batch 4): a QRPh payment can land while
+ * its webhook never does, so staff confirm the runner really did not pay
+ * before contacting them. A payment found on a pending order marks it PAID
+ * (the route goes through the webhook's own path) and the page reloads, which
+ * moves the order to the Registrants tab. Shown only to the roles that may
+ * settle a payment (`registration:validate`); the route refuses the rest.
  */
 
 import React, { useMemo, useState } from 'react';
-import { Check, Copy, Download, Search, X } from 'lucide-react';
+import { Check, Copy, Download, Search, SearchCheck, X } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import {
   getCoreRowModel,
   getFilteredRowModel,
@@ -49,6 +57,7 @@ import { selectionColumn } from './registrant-columns';
 import RegistrantsDataTable from './RegistrantsDataTable';
 import { buildUnpaidCheckoutCsv, downloadUnpaidCheckoutCsv } from './registrant-csv';
 import { useAlert } from '@/components/ui/AlertProvider';
+import BusyLabel from '@/components/ui/BusyLabel';
 import { formatPesos } from '@/lib/money';
 
 /** One unpaid order, worded on the server (page.tsx) in Manila time. */
@@ -84,8 +93,19 @@ const COPIED_MS = 1600;
 const STATUS_AWAITING = 'AWAITING';
 const STATUS_EXPIRED = 'EXPIRED';
 
-export default function UnpaidCheckoutsList({ orders, eventId }: { orders: UnpaidCheckout[]; eventId: string }) {
+export default function UnpaidCheckoutsList({
+  orders,
+  eventId,
+  canCheckPayment,
+}: {
+  orders: UnpaidCheckout[];
+  eventId: string;
+  /** `registration:validate`: a check that finds the money settles the order. */
+  canCheckPayment: boolean;
+}) {
   const { alert } = useAlert();
+  const router = useRouter();
+  const [checkingId, setCheckingId] = useState<string | null>(null);
   const [rowSelection, setRowSelection] = useState({});
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -123,6 +143,61 @@ export default function UnpaidCheckoutsList({ orders, eventId }: { orders: Unpai
       </button>
     );
   };
+
+  const checkPayment = async (order: UnpaidCheckout) => {
+    setCheckingId(order.id);
+    try {
+      const res = await fetch(`/api/admin/registrations/${order.id}/payment-check`, { method: 'POST' });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        await alert({ variant: 'error', title: 'Could not check', message: body.error ?? 'The check could not be finished. Try again.' });
+        return;
+      }
+      const settled = body.result === 'marked_paid' || body.result === 'already_paid';
+      await alert({
+        variant: settled ? 'success' : body.result === 'paid_after_expiry' ? 'error' : 'info',
+        title: settled
+          ? 'Payment found'
+          : body.result === 'paid_after_expiry'
+            ? 'Paid after it expired'
+            : 'No payment found',
+        message: body.message,
+      });
+      // A paid order leaves this tab for the Registrants tab, and both counts
+      // move, so the page is read again rather than patched here.
+      if (settled) router.refresh();
+    } catch {
+      await alert({ variant: 'error', title: 'Could not check', message: 'PayMongo could not be reached. Try again in a minute.' });
+    } finally {
+      setCheckingId(null);
+    }
+  };
+
+  const checkButton = (order: UnpaidCheckout) => {
+    const checking = checkingId === order.id;
+    return (
+      <button
+        type="button"
+        className="btn-filter is-compact whitespace-nowrap"
+        onClick={() => checkPayment(order)}
+        disabled={checkingId !== null}
+        aria-label={`Check ${order.orderRef} with PayMongo`}
+        title="Ask PayMongo whether this order was paid"
+      >
+        <SearchCheck size={14} aria-hidden="true" />
+        {/* "Check payment", not "Check with PayMongo": the longer label alone
+            pushed the table past its frame at 1345px. */}
+        {checking ? <BusyLabel>Checking</BusyLabel> : 'Check payment'}
+      </button>
+    );
+  };
+
+  const actions = (order: UnpaidCheckout) => (
+    <div className="flex flex-wrap items-center gap-2">
+      {canCheckPayment && checkButton(order)}
+      {copyButton(order)}
+    </div>
+  );
 
   const status = (order: UnpaidCheckout) => (
     <span className="flex flex-col items-start gap-1">
@@ -254,12 +329,13 @@ export default function UnpaidCheckoutsList({ orders, eventId }: { orders: Unpai
         header: 'Actions',
         enableSorting: false,
         enableHiding: false,
-        cell: ({ row }) => copyButton(row.original),
+        cell: ({ row }) => actions(row.original),
       },
     ],
-    // copyButton reads copiedId, so the cells are rebuilt when it changes.
+    // The action buttons read copiedId and checkingId, so the cells are
+    // rebuilt when either changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [copiedId],
+    [copiedId, checkingId, canCheckPayment],
   );
 
   const table = useReactTable({
@@ -398,7 +474,7 @@ export default function UnpaidCheckoutsList({ orders, eventId }: { orders: Unpai
             { label: 'Payment', value: row.original.paymentMethod },
             { label: 'Amount', value: `₱${formatPesos(row.original.totalAmount)}` },
           ]}
-          actions={row => copyButton(row.original)}
+          actions={row => actions(row.original)}
           empty={empty}
         />
       </div>

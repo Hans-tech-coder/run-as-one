@@ -517,8 +517,12 @@ Known open threads:
   Batch 3, 2026-10-05): the online orders never paid, one row per order, with
   the contact to copy and when each expires, for staff on every event role to
   follow up by hand. "+N unpaid" on the events table and the overview link to
-  it (`?tab=unpaid`). Still to come in that plan: "Check with PayMongo", and
-  cancelling an order when its last runner is removed.
+  it (`?tab=unpaid`). **Check payment** (Batch 4) on each row asks PayMongo
+  whether the order was in fact paid, and a missed webhook is recovered by it:
+  the order goes PAID through the webhook's own path (`lib/online-payment.ts`)
+  with its receipt and a trail row. Tested against PayMongo test mode for both
+  stored shapes (`cs_` checkout session, `pi_` GCash intent). Still to come in
+  that plan: cancelling an order when its last runner is removed.
 - A **Prisma schema change needs the dev server restarted** before it takes
   effect: `next dev` bundles the generated client, so a running server keeps
   the pre-migration data model and rejects a write to a brand-new column with

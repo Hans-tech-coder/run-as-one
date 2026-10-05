@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-36 pages · 48 API routes · 71 modules in `src/lib` · 338 files · 71,684 lines
+36 pages · 49 API routes · 72 modules in `src/lib` · 340 files · 72,017 lines
 
 ---
 
@@ -92,6 +92,7 @@ The route, the server component behind it, and the client components beside it.
 | `/api/admin/promos/[id]/redemptions` | GET | [`/admin/promos/[id]/redemptions/route.ts`](../src/app/api/admin/promos/[id]/redemptions/route.ts) |
 | `/api/admin/proof/[id]` | GET | [`/admin/proof/[id]/route.ts`](../src/app/api/admin/proof/[id]/route.ts) |
 | `/api/admin/registrations/[id]/email` | GET POST | [`/admin/registrations/[id]/email/route.ts`](../src/app/api/admin/registrations/[id]/email/route.ts) |
+| `/api/admin/registrations/[id]/payment-check` | POST | [`/admin/registrations/[id]/payment-check/route.ts`](../src/app/api/admin/registrations/[id]/payment-check/route.ts) |
 | `/api/admin/registrations/[id]/status` | PATCH | [`/admin/registrations/[id]/status/route.ts`](../src/app/api/admin/registrations/[id]/status/route.ts) |
 | `/api/admin/remittances` | POST | [`/admin/remittances/route.ts`](../src/app/api/admin/remittances/route.ts) |
 | `/api/admin/remittances/[id]` | PATCH | [`/admin/remittances/[id]/route.ts`](../src/app/api/admin/remittances/[id]/route.ts) |
@@ -161,6 +162,7 @@ the file itself.
 | [`money.ts`](../src/lib/money.ts) | All money in this app is stored and passed around as INTEGER CENTAVOS. |
 | [`notification-store.ts`](../src/lib/notification-store.ts) | The notification queries, server-only — see `notifications.ts` for what a notification is and why none is stored. |
 | [`notifications.ts`](../src/lib/notifications.ts) | The dashboard's notifications — what the bell counts and its modal lists. |
+| [`online-payment.ts`](../src/lib/online-payment.ts) | How an online order becomes PAID: one path, whether PayMongo tells us (the webhook) or a staff member asks PayMongo (the Unpaid checkouts tab's "Ch… |
 | [`order-ref.ts`](../src/lib/order-ref.ts) | The reference a runner quotes back at us. |
 | [`organizer-application.ts`](../src/lib/organizer-application.ts) | What an organizer application is, and what the app will accept as one. |
 | [`organizer-status.ts`](../src/lib/organizer-status.ts) | Which `Organizer` row is Run As One, and whether it — and so its team — may be signed in to. |
@@ -237,6 +239,7 @@ when a task touches one, split it before editing rather than after.
 | 502 | [`src/app/api/checkout/manual/route.ts`](../src/app/api/checkout/manual/route.ts) |
 | 491 | [`src/app/admin/AdminRouteLoading.tsx`](../src/app/admin/AdminRouteLoading.tsx) |
 | 491 | [`src/lib/registration-gate.ts`](../src/lib/registration-gate.ts) |
+| 486 | [`src/app/admin/events/[id]/registrants/UnpaidCheckoutsList.tsx`](../src/app/admin/events/[id]/registrants/UnpaidCheckoutsList.tsx) |
 | 473 | [`src/lib/pending-expiry.ts`](../src/lib/pending-expiry.ts) |
 | 472 | [`src/app/admin/communities/CommunitiesClient.tsx`](../src/app/admin/communities/CommunitiesClient.tsx) |
 | 472 | [`src/app/events/[slug]/register/BirthdatePicker.tsx`](../src/app/events/[slug]/register/BirthdatePicker.tsx) |
@@ -247,6 +250,5 @@ when a task touches one, split it before editing rather than after.
 | 451 | [`src/app/admin/events/[id]/registrants/RunnerEditModal.tsx`](../src/app/admin/events/[id]/registrants/RunnerEditModal.tsx) |
 | 449 | [`src/app/admin/page.tsx`](../src/app/admin/page.tsx) |
 | 438 | [`src/lib/actor.ts`](../src/lib/actor.ts) |
+| 417 | [`src/app/admin/events/[id]/registrants/page.tsx`](../src/app/admin/events/[id]/registrants/page.tsx) |
 | 416 | [`src/app/admin/events/[id]/results/ResultsTableClient.tsx`](../src/app/admin/events/[id]/results/ResultsTableClient.tsx) |
-| 415 | [`src/app/admin/events/[id]/registrants/page.tsx`](../src/app/admin/events/[id]/registrants/page.tsx) |
-| 410 | [`src/app/admin/events/[id]/registrants/UnpaidCheckoutsList.tsx`](../src/app/admin/events/[id]/registrants/UnpaidCheckoutsList.tsx) |
