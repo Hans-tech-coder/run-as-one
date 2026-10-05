@@ -11,7 +11,9 @@
  * VIEWER included, because staff doing follow-up is the point of the tab.
  * Scoped to the order's own race, as the status route is, and only for an
  * order the tab would list (`unpaidFollowUpWhere`): a paid order needs no
- * chasing, and a request naming one is refused rather than logged.
+ * chasing, and a request naming one is refused rather than logged. A
+ * cancelled order is refused too, though the tab can show it: it was closed
+ * on purpose, so there is no one left to chase (Batch 2).
  */
 
 import { NextResponse } from 'next/server';
@@ -75,7 +77,11 @@ export async function POST(
 
     const ref = registration.orderRef;
     const listed = await prisma.registration.count({
-      where: { id, ...unpaidFollowUpWhere(registration.event.date, today()) },
+      where: {
+        id,
+        ...unpaidFollowUpWhere(registration.event.date, today()),
+        AND: [{ status: { not: 'CANCELLED' } }],
+      },
     });
     if (listed === 0) {
       return NextResponse.json(

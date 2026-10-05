@@ -131,7 +131,7 @@ export function buildUnpaidCheckoutCsv(orders: UnpaidCheckout[]): string {
         csvField(order.orderRef),
         // The same sortable spelling as the registrants file's Registered At.
         csvField(order.submittedAt),
-        csvField(order.expired ? 'EXPIRED' : 'AWAITING PAYMENT'),
+        csvField(order.status === 'PENDING' ? 'AWAITING PAYMENT' : order.status),
         csvField(order.statusDetail),
         csvField(order.runnerNames.length),
         csvField(order.runnerNames.join(', ')),

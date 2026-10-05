@@ -29,6 +29,13 @@
  * server, and the Filters sheet can narrow to "Not contacted yet" or any one
  * outcome so two staff members can split the list without calling the same
  * runner.
+ *
+ * **Cancel order… closes an order the runner has said no to**
+ * (UNPAID_FOLLOWUP_PLAN.md Batch 2, `CancelOrderModal.tsx`), so its slot and
+ * promo go back now rather than at the next sweep. A cancelled order leaves
+ * the default view but stays under Filters → Status → Cancelled until race
+ * day (decision D6), so a mistaken cancel can be found. The tab's count is
+ * the orders still awaiting payment only.
  */
 
 import React, { useMemo, useState } from 'react';
@@ -53,6 +60,7 @@ import RegistrantsDataTable from './RegistrantsDataTable';
 import { buildUnpaidCheckoutCsv, downloadUnpaidCheckoutCsv } from './registrant-csv';
 import FollowUpModal, { FollowUpSummary } from './FollowUpModal';
 import UnpaidCheckoutActions from './UnpaidCheckoutActions';
+import CancelOrderModal from './CancelOrderModal';
 import { formatPesos } from '@/lib/money';
 import {
   FOLLOW_UP_LABELS,
@@ -82,26 +90,37 @@ export type UnpaidCheckout = {
   createdLabel: string;
   /** "2026-10-03 08:46", Manila, for the CSV. */
   submittedAt: string;
-  /** EXPIRED by the sweep; otherwise still PENDING. */
-  expired: boolean;
-  /** "Expires by …" while pending, the moment it expired once it has. */
+  /** PENDING until paid; EXPIRED by the sweep; CANCELLED by staff while unpaid. */
+  status: 'PENDING' | 'EXPIRED' | 'CANCELLED';
+  /**
+   * "Expires by …" while pending, the moment it expired once it has, and who
+   * cancelled it and when once someone has.
+   */
   statusDetail: string;
+  /** Why it was cancelled, as Cancel order… recorded it; null otherwise. */
+  cancelReason: string | null;
   /** The latest follow-up logged, with "2h ago" worded on the server; null if none. */
   followUp: (FollowUpRecord & { ago: string }) | null;
 };
 
-const STATUS_AWAITING = 'AWAITING';
-const STATUS_EXPIRED = 'EXPIRED';
+const STATUS_OPTIONS: { value: UnpaidCheckout['status']; label: string }[] = [
+  { value: 'PENDING', label: 'Awaiting payment' },
+  { value: 'EXPIRED', label: 'Expired' },
+  { value: 'CANCELLED', label: 'Cancelled' },
+];
 
 export default function UnpaidCheckoutsList({
   orders,
   eventId,
-  canCheckPayment,
+  canValidate,
 }: {
   orders: UnpaidCheckout[];
   eventId: string;
-  /** `registration:validate`: a check that finds the money settles the order. */
-  canCheckPayment: boolean;
+  /**
+   * `registration:validate`: both a payment check that finds the money and a
+   * cancel settle the order's status.
+   */
+  canValidate: boolean;
 }) {
   const router = useRouter();
   const [rowSelection, setRowSelection] = useState({});
@@ -114,12 +133,14 @@ export default function UnpaidCheckoutsList({
   // One modal for the list, not one per row: the table and the cards are
   // both mounted, and each would otherwise carry its own.
   const [followUpOrder, setFollowUpOrder] = useState<UnpaidCheckout | null>(null);
+  const [cancelOrder, setCancelOrder] = useState<UnpaidCheckout | null>(null);
 
   const actions = (order: UnpaidCheckout, className?: string) => (
     <UnpaidCheckoutActions
       order={order}
-      canCheckPayment={canCheckPayment}
+      canValidate={canValidate}
       onLogFollowUp={setFollowUpOrder}
+      onCancel={setCancelOrder}
       className={className}
     />
   );
@@ -130,20 +151,17 @@ export default function UnpaidCheckoutsList({
     () => [...new Set(orders.map(order => order.paymentMethod))].sort(),
     [orders],
   );
-  const hasExpired = orders.some(order => order.expired);
+  const statusesPresent = STATUS_OPTIONS.filter(option => orders.some(order => order.status === option.value));
+  const cancelledCount = orders.filter(order => order.status === 'CANCELLED').length;
   const toggle = (list: string[], value: string) =>
     list.includes(value) ? list.filter(v => v !== value) : [...list, value];
   const filterGroups: FilterGroup[] = [
     {
       label: 'Status',
-      // Offered only when both kinds are on the list; one kind alone could
-      // only empty the table.
-      options: hasExpired && orders.some(order => !order.expired)
-        ? [
-            { value: STATUS_AWAITING, label: 'Awaiting payment' },
-            { value: STATUS_EXPIRED, label: 'Expired' },
-          ]
-        : [],
+      // Each kind on the list, when there is more than one; one kind alone
+      // could only empty the table. Cancelled is always offered when there
+      // is one, because the default view hides it and this is the way in.
+      options: statusesPresent.length > 1 || cancelledCount > 0 ? statusesPresent : [],
       selected: selectedStatuses,
       onToggle: value => setSelectedStatuses(list => toggle(list, value)),
       capitalize: false,
@@ -174,8 +192,10 @@ export default function UnpaidCheckoutsList({
     () =>
       orders.filter(
         order =>
-          (selectedStatuses.length === 0 ||
-            selectedStatuses.includes(order.expired ? STATUS_EXPIRED : STATUS_AWAITING)) &&
+          // Cancelled orders only when asked for (decision D6).
+          (selectedStatuses.length === 0
+            ? order.status !== 'CANCELLED'
+            : selectedStatuses.includes(order.status)) &&
           (selectedPayments.length === 0 || selectedPayments.includes(order.paymentMethod)) &&
           (selectedFollowUps.length === 0 ||
             selectedFollowUps.includes(order.followUp?.outcome ?? NOT_CONTACTED)),
@@ -185,9 +205,9 @@ export default function UnpaidCheckoutsList({
 
   const columns = useMemo(
     () => unpaidColumns(order => actions(order)),
-    // `actions` reads only canCheckPayment and a state setter.
+    // `actions` reads only canValidate and state setters.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [canCheckPayment],
+    [canValidate],
   );
 
   const table = useReactTable({
@@ -234,7 +254,9 @@ export default function UnpaidCheckoutsList({
 
   const emptyMessage = orders.length === 0
     ? 'No unpaid checkouts. Every online checkout on this race has been paid.'
-    : 'No unpaid checkouts match.';
+    : cancelledCount === orders.length && selectedStatuses.length === 0
+      ? `No unpaid checkouts left. ${cancelledCount} cancelled ${cancelledCount === 1 ? 'order is' : 'orders are'} under Filters → Status → Cancelled.`
+      : 'No unpaid checkouts match.';
   const empty = <p className="m-0 py-16 text-center text-[var(--text-muted)]">{emptyMessage}</p>;
 
   return (
@@ -244,8 +266,8 @@ export default function UnpaidCheckoutsList({
     <div className="unpaid-list flex flex-col gap-4 w-full text-primary">
       <p className="m-0 text-sm text-secondary">
         Online checkouts that were opened and not paid. They are not registrants and are not in
-        the registrants export. Each one holds its slot until it expires; expired ones stay here
-        until race day.
+        the registrants export. Each one holds its slot until it expires or is cancelled; expired
+        and cancelled ones stay here until race day, cancelled ones under Filters → Status.
       </p>
 
       <div className="admin-toolbar" style={{ padding: '0 0 16px 0', borderBottom: 'none' }}>
@@ -347,6 +369,17 @@ export default function UnpaidCheckoutsList({
           // Read the page again, so the row shows the line as the server
           // has it and both tabs' counts stay true.
           onSaved={() => router.refresh()}
+        />
+      )}
+
+      {cancelOrder && (
+        <CancelOrderModal
+          key={cancelOrder.id}
+          order={cancelOrder}
+          onClose={() => setCancelOrder(null)}
+          // The order leaves the default view and the tab's count drops, so
+          // the page is read again rather than patched here.
+          onCancelled={() => router.refresh()}
         />
       )}
     </div>

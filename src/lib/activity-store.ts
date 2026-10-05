@@ -221,10 +221,18 @@ export async function latestStatusChanges(
   const latest = new Map<string, StatusRecord>();
   for (const entry of entries) {
     if (!entry.entityId || latest.has(entry.entityId)) continue;
-    const moved = (entry.changes as { status?: unknown } | null)?.status;
-    const to = Array.isArray(moved) && typeof moved[1] === 'string' ? moved[1] : null;
+    const changes = entry.changes as { status?: unknown; reason?: unknown } | null;
+    const moved = changes?.status;
+    if (!Array.isArray(moved)) continue;
+    const to = typeof moved[1] === 'string' ? moved[1] : null;
     if (!to) continue;
-    latest.set(entry.entityId, { by: entry.actorName, at: entry.createdAt.toISOString(), to });
+    latest.set(entry.entityId, {
+      by: entry.actorName,
+      at: entry.createdAt.toISOString(),
+      from: typeof moved[0] === 'string' ? moved[0] : null,
+      to,
+      reason: typeof changes?.reason === 'string' && changes.reason ? changes.reason : null,
+    });
   }
   return latest;
 }

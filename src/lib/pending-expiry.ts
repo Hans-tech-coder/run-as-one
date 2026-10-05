@@ -1,6 +1,6 @@
 import type { Prisma } from '@prisma/client';
 import prisma from '@/lib/db';
-import { PAYMENT_METHODS } from '@/lib/registration-codes';
+import { PAYMENT_METHODS, isBankTransfer } from '@/lib/registration-codes';
 import type { AuditEntry } from '@/lib/audit';
 
 /**
@@ -387,14 +387,46 @@ export function expiresBy(createdAt: Date): Date {
  *
  * An order with no live runner is left out, as it is from the overview's
  * queue. There is nobody on it to contact.
+ *
+ * **CANCELLED online orders come too, until race day** (UNPAID_FOLLOWUP_PLAN.md
+ * Batch 2, decision D6), so a mistaken Cancel order… can be found under
+ * Filters → Status → Cancelled. The tab hides them by default and keeps only
+ * those `isCancelledCheckout` says were cancelled while unpaid: this filter
+ * cannot read the trail, and an online order paid and then cancelled is a
+ * registrant, not an unpaid checkout.
  */
 export function unpaidFollowUpWhere(raceDay: string, today: string): Prisma.RegistrationWhereInput {
   return {
     deletedAt: null,
-    status: today <= raceDay ? { in: ['PENDING', 'EXPIRED'] } : 'PENDING',
+    status: today <= raceDay ? { in: ['PENDING', 'EXPIRED', 'CANCELLED'] } : 'PENDING',
     NOT: { paymentMethod: { equals: PAYMENT_METHODS.BANK_TRANSFER, mode: 'insensitive' } },
     runners: { some: { deletedAt: null } },
   };
+}
+
+/**
+ * Whether a CANCELLED order was an online checkout closed before it was ever
+ * paid (Cancel order… on the Unpaid checkouts tab, UNPAID_FOLLOWUP_PLAN.md
+ * Batch 2). Such an order was **never a registrant** — the owner's rule above
+ * `unpaidCheckoutWhere` — so it stays on the Unpaid checkouts tab and off the
+ * registrants list, where `listedRegistrationWhere` would otherwise show every
+ * CANCELLED order.
+ *
+ * The schema keeps no "was paid" mark, so the trail is what tells the two
+ * apart: the order's latest status change (`latestStatusChanges`) moved it to
+ * CANCELLED from PENDING or EXPIRED. A cancelled order with no such line was
+ * paid first, or predates the trail, and stays a registrant as it always was.
+ */
+export function isCancelledCheckout(
+  order: { status: string; paymentMethod: string },
+  lastMove: { from: string | null; to: string } | null | undefined,
+): boolean {
+  return (
+    order.status === 'CANCELLED' &&
+    !isBankTransfer(order.paymentMethod) &&
+    lastMove?.to === 'CANCELLED' &&
+    (lastMove.from === 'PENDING' || lastMove.from === 'EXPIRED')
+  );
 }
 
 /**

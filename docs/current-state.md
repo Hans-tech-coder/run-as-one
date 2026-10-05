@@ -526,8 +526,12 @@ Known open threads:
   2026-10-05): the row's buttons became a ⋮ menu — Check payment, Call, Text
   (SMS), Email, Copy contact, Log follow-up… — and each logged follow-up is an
   audit row (`registration.followed_up`) shown in a Follow-up column and
-  filter, open to every event role. Cancelling from the tab and the
-  resume-payment link are the plan's later batches.
+  filter, open to every event role. **Cancel order…** (Batch 2,
+  2026-10-05) closes a pending order with a required reason through the
+  status route, freeing the slot and handing the promo back at once; the
+  order stays on the tab under Filters → Status → Cancelled until race day
+  and never becomes a registrant. The resume-payment link is the plan's
+  later batches.
 - **No more empty orders** (`UNPAID_ORDERS_PLAN.md` Batch 5, 2026-10-05).
   Removing the last live runner of a PENDING order — one at a time or in bulk —
   cancels the order in the same transaction and hands its promo back

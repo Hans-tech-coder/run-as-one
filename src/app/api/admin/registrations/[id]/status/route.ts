@@ -19,6 +19,15 @@
  * status change names the order and what it moved from, and a remark records
  * what it said. This is the route an argument about a payment is traced back
  * through, so it is the one that most needs to say who.
+ *
+ * **Cancel order… on the Unpaid checkouts tab comes through here too**
+ * (UNPAID_FOLLOWUP_PLAN.md Batch 2), with two extra fields. `reason` is why,
+ * written into the status change's trail line, so the trail says why an order
+ * was closed and not only that it was. `expectedStatus` is the status the
+ * screen showed: a QRPh payment can land between the tab loading and the
+ * button being pressed, and cancelling an order that has just been paid would
+ * take a runner's money and drop their entry. When the order has moved, the
+ * request is refused and nothing changes.
  */
 
 import { NextResponse } from 'next/server';
@@ -49,6 +58,12 @@ import { releaseRedemption } from '@/lib/pending-expiry';
  */
 const ALLOWED_STATUSES = ['PAID', 'PENDING', 'CANCELLED', 'REFUNDED', 'EXPIRED'] as const;
 
+/** Long enough for "Other" in a staff member's own words; one trail line. */
+const REASON_MAX = 200;
+
+/** The order moved before the cancel landed (`expectedStatus`). */
+class StatusMoved extends Error {}
+
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -61,7 +76,7 @@ export async function PATCH(
 
     const { id } = await params;
     const body = await request.json();
-    const { status, remarks } = body;
+    const { status, remarks, reason: rawReason, expectedStatus } = body;
 
     // Two independent edits down one route: a status change, a remark, or
     // both. Requiring one of them means an empty body cannot silently stamp a
@@ -78,6 +93,17 @@ export async function PATCH(
     if (wantsStatus && !ALLOWED_STATUSES.includes(status)) {
       return NextResponse.json(
         { error: `Unknown status "${status}".` },
+        { status: 400 }
+      );
+    }
+
+    if (rawReason !== undefined && rawReason !== null && typeof rawReason !== 'string') {
+      return NextResponse.json({ error: 'The reason must be text.' }, { status: 400 });
+    }
+    const reason = (rawReason ?? '').trim();
+    if (reason.length > REASON_MAX) {
+      return NextResponse.json(
+        { error: `Keep the reason to ${REASON_MAX} characters. It is ${reason.length} now.` },
         { status: 400 }
       );
     }
@@ -102,6 +128,15 @@ export async function PATCH(
       (wantsRemarks && !can(actor, 'registration:remark', reach))
     ) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (wantsStatus && expectedStatus !== undefined && existing.status !== expectedStatus) {
+      return NextResponse.json(
+        {
+          error: `${existing.orderRef} is ${existing.status.toLowerCase()} now, not ${String(expectedStatus).toLowerCase()}, so nothing was changed. Reload the page to see where it stands.`,
+        },
+        { status: 409 }
+      );
     }
 
     const data: {
@@ -140,6 +175,11 @@ export async function PATCH(
           where: { id, status: 'PENDING' },
           data: { status: 'CANCELLED' },
         });
+        // Paid or swept in the moment since the read above. Without an
+        // expected status this keeps the old behaviour and the update below
+        // writes CANCELLED anyway; with one, the screen was wrong and the
+        // cancel stops here.
+        if (claim.count === 0 && expectedStatus !== undefined) throw new StatusMoved();
         if (claim.count === 1) {
           promoReleased = await releaseRedemption(tx, {
             id,
@@ -172,9 +212,11 @@ export async function PATCH(
           ...trail,
           action: 'registration.status.changed',
           summary: `Marked ${existing.orderRef} as ${updated.status} (was ${existing.status}).${
-            promoReleased ? ` Promo ${existing.promoCode} handed back.` : ''
-          }`,
-          changes: { status: [existing.status, updated.status] },
+            reason ? ` Reason: ${reason.replace(/[.!?]+$/, '')}.` : ''
+          }${promoReleased ? ` Promo ${existing.promoCode} handed back.` : ''}`,
+          changes: reason
+            ? { status: [existing.status, updated.status], reason }
+            : { status: [existing.status, updated.status] },
         });
       }
 
@@ -220,11 +262,23 @@ export async function PATCH(
     // and the trail cannot disagree about who did it.
     const statusChange =
       wantsStatus && existing.status !== updatedRegistration.status
-        ? { by: actor.name, at: new Date().toISOString(), to: updatedRegistration.status }
+        ? {
+            by: actor.name,
+            at: new Date().toISOString(),
+            from: existing.status,
+            to: updatedRegistration.status,
+            reason: reason || null,
+          }
         : null;
 
     return NextResponse.json({ success: true, registration: updatedRegistration, statusChange });
   } catch (error: any) {
+    if (error instanceof StatusMoved) {
+      return NextResponse.json(
+        { error: 'The order changed while you were cancelling it, so nothing was changed. Reload the page to see where it stands.' },
+        { status: 409 }
+      );
+    }
     console.error('Error updating registration:', error);
     return NextResponse.json(
       { error: 'Internal server error', details: error.message },

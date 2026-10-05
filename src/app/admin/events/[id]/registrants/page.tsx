@@ -35,7 +35,7 @@ import {
   formatInstantDay,
   today,
 } from '@/lib/event-schedule';
-import { expiresBy, listedRegistrationWhere, unpaidFollowUpWhere } from '@/lib/pending-expiry';
+import { expiresBy, isCancelledCheckout, listedRegistrationWhere, unpaidFollowUpWhere } from '@/lib/pending-expiry';
 import { formatRunnerAddress } from '@/lib/runner-address';
 import { shipmentsFor } from '@/app/events/[slug]/register/delivery-split';
 import DashboardHeader from '@/app/admin/DashboardHeader';
@@ -146,6 +146,9 @@ export default async function RegistrantsPage({
   // Flatten the runners from all registrations
   const runners: any[] = [];
   event.registrations.forEach(reg => {
+    // An online checkout cancelled before it was paid was never a registrant;
+    // it stays on the Unpaid checkouts tab (UNPAID_FOLLOWUP_PLAN.md Batch 2).
+    if (isCancelledCheckout(reg, statusRecords.get(reg.id))) return;
     // Which transactional email this order still owes, decided once here from
     // the rule in lib/email-delivery.ts rather than re-derived in the table:
     // the same answer drives the row's mark, the backlog filter and the
@@ -356,11 +359,15 @@ export default async function RegistrantsPage({
   const followUps = await latestFollowUps(actor.orgId, id);
   const now = new Date();
   const unpaidCheckouts: UnpaidCheckout[] = unpaidOrders
+    // A cancelled order belongs here only if it was cancelled unpaid; one
+    // paid first is a registrant (Batch 2).
+    .filter(order => order.status !== 'CANCELLED' || isCancelledCheckout(order, statusRecords.get(order.id)))
     .map((order, index) => {
       // The first runner filled in the form, so their email and phone are the
       // order's contact, the same person the receipt would have gone to.
       const contact = order.runners[0];
-      const expired = order.status === 'EXPIRED';
+      const status = order.status as UnpaidCheckout['status'];
+      const cancel = status === 'CANCELLED' ? statusRecords.get(order.id) : undefined;
       const deadline = expiresBy(order.createdAt);
       const followUp = followUps.get(order.id);
       return {
@@ -379,19 +386,24 @@ export default async function RegistrantsPage({
         createdAt: order.createdAt.toISOString(),
         createdLabel: shortInstant(order.createdAt),
         submittedAt: csvInstant(order.createdAt),
-        expired,
-        // Read beside the Awaiting payment / Expired badge.
-        statusDetail: expired
-          ? order.expiredAt ? shortInstant(order.expiredAt) : ''
-          : deadline > now
-            ? `Expires by ${shortInstant(deadline)}`
-            // The sweep is late or was cut short (MAX_SWEEP); the next run takes it.
-            : 'Expires at the next sweep',
+        status,
+        // Read beside the Awaiting payment / Expired / Cancelled badge.
+        statusDetail: cancel
+          ? `By ${cancel.by} · ${shortInstant(new Date(cancel.at))}`
+          : status === 'EXPIRED'
+            ? order.expiredAt ? shortInstant(order.expiredAt) : ''
+            : deadline > now
+              ? `Expires by ${shortInstant(deadline)}`
+              // The sweep is late or was cut short (MAX_SWEEP); the next run takes it.
+              : 'Expires at the next sweep',
         followUp: followUp ? { ...followUp, ago: followUpAgo(followUp.at, now) } : null,
+        cancelReason: cancel?.reason ?? null,
       };
     });
+  // The tab's count is the orders still awaiting payment, never the expired
+  // or cancelled ones it can also show.
   const unpaidRunners = unpaidCheckouts
-    .filter(order => !order.expired)
+    .filter(order => order.status === 'PENDING')
     .reduce((sum, order) => sum + order.runnerNames.length, 0);
 
   return (
@@ -413,7 +425,7 @@ export default async function RegistrantsPage({
             />
           }
           unpaid={
-            <UnpaidCheckoutsList orders={unpaidCheckouts} eventId={id} canCheckPayment={permissions.validate} />
+            <UnpaidCheckoutsList orders={unpaidCheckouts} eventId={id} canValidate={permissions.validate} />
           }
         />
       </div>

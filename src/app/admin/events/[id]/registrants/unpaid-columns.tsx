@@ -13,14 +13,23 @@ import { FollowUpSummary } from './FollowUpModal';
 import { formatPesos } from '@/lib/money';
 import type { UnpaidCheckout } from './UnpaidCheckoutsList';
 
+const STATUS_BADGES: Record<UnpaidCheckout['status'], { label: string; tone: string }> = {
+  PENDING: { label: 'Awaiting payment', tone: 'pending' },
+  EXPIRED: { label: 'Expired', tone: 'neutral' },
+  CANCELLED: { label: 'Cancelled', tone: 'danger' },
+};
+
 export function UnpaidStatus({ order }: { order: UnpaidCheckout }) {
+  const badge = STATUS_BADGES[order.status];
   return (
     <span className="flex flex-col items-start gap-1">
-      <span className={`status-badge whitespace-nowrap ${order.expired ? 'neutral' : 'pending'}`}>
-        {order.expired ? 'Expired' : 'Awaiting payment'}
-      </span>
+      <span className={`status-badge whitespace-nowrap ${badge.tone}`}>{badge.label}</span>
       {order.statusDetail && (
         <span className="text-xs text-[var(--text-muted)]">{order.statusDetail}</span>
+      )}
+      {/* Why it was closed, from the trail line Cancel order… wrote. */}
+      {order.cancelReason && (
+        <span className="block max-w-[14rem] text-xs text-secondary [overflow-wrap:anywhere]">{order.cancelReason}</span>
       )}
     </span>
   );
@@ -95,9 +104,9 @@ export function unpaidColumns(
       ),
     },
     {
-      // Awaiting payment before expired, ascending.
+      // Awaiting payment, then expired, then cancelled, ascending.
       id: 'status',
-      accessorFn: order => (order.expired ? 1 : 0),
+      accessorFn: order => ['PENDING', 'EXPIRED', 'CANCELLED'].indexOf(order.status),
       header: 'Status',
       cell: ({ row }) => <UnpaidStatus order={row.original} />,
     },

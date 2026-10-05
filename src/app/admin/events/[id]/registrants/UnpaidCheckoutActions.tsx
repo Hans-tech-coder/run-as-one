@@ -20,10 +20,18 @@
  * (`registration:validate`), since a check that finds the money marks the
  * order PAID; the route refuses the rest. A found payment reloads the page,
  * which moves the order to the Registrants tab.
+ *
+ * **Cancel order… comes last, in the danger tone** (UNPAID_FOLLOWUP_PLAN.md
+ * Batch 2), for the same roles, since the status route asks
+ * `registration:validate` for any status change (decision D3). It is offered
+ * only while the order is awaiting payment: an expired one already gave its
+ * slot and promo back. A cancelled order keeps only the ways to reach the
+ * runner, for the day a cancel turns out to be a mistake; there is nothing
+ * left on it to check or follow up.
  */
 
 import React, { useState } from 'react';
-import { Copy, Mail, MessageSquareText, NotebookPen, Phone, SearchCheck } from 'lucide-react';
+import { Ban, Copy, Mail, MessageSquareText, NotebookPen, Phone, SearchCheck } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import RowActionsMenu, { type RowAction } from '../../../RowActionsMenu';
 import { useAlert } from '@/components/ui/AlertProvider';
@@ -37,14 +45,16 @@ function dialable(phone: string): string {
 
 export default function UnpaidCheckoutActions({
   order,
-  canCheckPayment,
+  canValidate,
   onLogFollowUp,
+  onCancel,
   className,
 }: {
   order: UnpaidCheckout;
-  /** `registration:validate`: a check that finds the money settles the order. */
-  canCheckPayment: boolean;
+  /** `registration:validate`: checking the payment and cancelling both settle the order. */
+  canValidate: boolean;
   onLogFollowUp: (order: UnpaidCheckout) => void;
+  onCancel: (order: UnpaidCheckout) => void;
   className?: string;
 }) {
   const { alert, toast } = useAlert();
@@ -95,8 +105,9 @@ export default function UnpaidCheckoutActions({
   };
 
   const phone = dialable(order.contactPhone);
+  const open = order.status !== 'CANCELLED';
   const actions: RowAction[] = [
-    ...(canCheckPayment
+    ...(canValidate && open
       ? [{
           key: 'check',
           label: checking ? 'Checking payment…' : 'Check payment',
@@ -120,7 +131,18 @@ export default function UnpaidCheckoutActions({
       sameTab: true,
     },
     { key: 'copy', label: 'Copy contact', icon: <Copy size={16} aria-hidden="true" />, onSelect: copyContact },
-    { key: 'follow-up', label: 'Log follow-up…', icon: <NotebookPen size={16} aria-hidden="true" />, onSelect: () => onLogFollowUp(order) },
+    ...(open
+      ? [{ key: 'follow-up', label: 'Log follow-up…', icon: <NotebookPen size={16} aria-hidden="true" />, onSelect: () => onLogFollowUp(order) }]
+      : []),
+    ...(canValidate && order.status === 'PENDING'
+      ? [{
+          key: 'cancel',
+          label: 'Cancel order…',
+          icon: <Ban size={16} aria-hidden="true" />,
+          onSelect: () => onCancel(order),
+          danger: true,
+        }]
+      : []),
   ];
 
   return (

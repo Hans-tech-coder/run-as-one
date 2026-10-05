@@ -568,8 +568,13 @@ export function describeDevice(userAgent: string | null): string | null {
 
 // ── Provenance on an order ──────────────────────────────────────────────────
 
-/** The latest recorded change to an order's status: who, when, and to what. */
-export type StatusRecord = { by: string; at: string; to: string };
+/**
+ * The latest recorded change to an order's status: who, when, from what and
+ * to what, and the reason given when one was (Cancel order… on the Unpaid
+ * checkouts tab asks for one). `from` is what tells an order cancelled while
+ * unpaid from a paid one cancelled later (`isCancelledCheckout`).
+ */
+export type StatusRecord = { by: string; at: string; from: string | null; to: string; reason: string | null };
 
 const STATUS_VERBS: Record<string, string> = {
   PAID: 'Validated',
