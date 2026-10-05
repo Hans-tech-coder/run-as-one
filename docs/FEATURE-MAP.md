@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-36 pages · 49 API routes · 72 modules in `src/lib` · 340 files · 72,017 lines
+36 pages · 49 API routes · 72 modules in `src/lib` · 340 files · 72,247 lines
 
 ---
 
@@ -227,6 +227,7 @@ when a task touches one, split it before editing rather than after.
 | 624 | [`src/lib/activity.ts`](../src/lib/activity.ts) |
 | 621 | [`src/app/api/admin/events/[id]/route.ts`](../src/app/api/admin/events/[id]/route.ts) |
 | 603 | [`src/app/admin/feedback/FeedbackClient.tsx`](../src/app/admin/feedback/FeedbackClient.tsx) |
+| 583 | [`src/lib/pending-expiry.ts`](../src/lib/pending-expiry.ts) |
 | 573 | [`src/app/admin/events/[id]/results/ResultsUploaderClient.tsx`](../src/app/admin/events/[id]/results/ResultsUploaderClient.tsx) |
 | 561 | [`src/app/admin/events/new/NewEventForm.tsx`](../src/app/admin/events/new/NewEventForm.tsx) |
 | 548 | [`src/app/admin/NotificationsCenter.tsx`](../src/app/admin/NotificationsCenter.tsx) |
@@ -234,13 +235,12 @@ when a task touches one, split it before editing rather than after.
 | 539 | [`src/app/admin/clients/ClientsClient.tsx`](../src/app/admin/clients/ClientsClient.tsx) |
 | 532 | [`src/app/admin/events/[id]/registrants/RegistrantDetailModal.tsx`](../src/app/admin/events/[id]/registrants/RegistrantDetailModal.tsx) |
 | 524 | [`src/app/admin/DashboardShell.tsx`](../src/app/admin/DashboardShell.tsx) |
-| 514 | [`src/app/admin/events/[id]/registrants/RegistrantsTable.tsx`](../src/app/admin/events/[id]/registrants/RegistrantsTable.tsx) |
+| 515 | [`src/app/admin/events/[id]/registrants/RegistrantsTable.tsx`](../src/app/admin/events/[id]/registrants/RegistrantsTable.tsx) |
 | 503 | [`src/lib/promo-input.ts`](../src/lib/promo-input.ts) |
 | 502 | [`src/app/api/checkout/manual/route.ts`](../src/app/api/checkout/manual/route.ts) |
 | 491 | [`src/app/admin/AdminRouteLoading.tsx`](../src/app/admin/AdminRouteLoading.tsx) |
 | 491 | [`src/lib/registration-gate.ts`](../src/lib/registration-gate.ts) |
 | 486 | [`src/app/admin/events/[id]/registrants/UnpaidCheckoutsList.tsx`](../src/app/admin/events/[id]/registrants/UnpaidCheckoutsList.tsx) |
-| 473 | [`src/lib/pending-expiry.ts`](../src/lib/pending-expiry.ts) |
 | 472 | [`src/app/admin/communities/CommunitiesClient.tsx`](../src/app/admin/communities/CommunitiesClient.tsx) |
 | 472 | [`src/app/events/[slug]/register/BirthdatePicker.tsx`](../src/app/events/[slug]/register/BirthdatePicker.tsx) |
 | 472 | [`src/app/feedback/FeedbackForm.tsx`](../src/app/feedback/FeedbackForm.tsx) |

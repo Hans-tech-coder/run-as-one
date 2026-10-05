@@ -90,3 +90,25 @@ scan (`run-as-one-scan_97fc`) completed with no findings. Read it with
 - **Two transitive advisories still open:** `deepmerge-ts` < 8 and `mysql2`
   ≤ 3.23.0. Fixing them needs `npm audit fix --force` (a breaking major), so
   leave them unless a later scan shows they can be reached.
+
+## 7. Leftovers from the unpaid-orders plan
+
+*Source: `UNPAID_ORDERS_PLAN.md` (gitignored, never committed), closed
+2026-10-05. What it built is in `docs/current-state.md`. The resume-payment
+link, the unpaid tab's row menu and the hold length moved to
+`docs/plans/UNPAID_FOLLOWUP_PLAN.md`.*
+
+- **Checks never run.** A VIEWER-role (and ENCODER) staff login was never on
+  hand, so nobody confirmed they see the Unpaid checkouts tab and can copy a
+  contact but do not see **Check payment**. The PayMongo webhook was not run
+  end to end after it moved onto `settleOnlinePayment` (PayMongo cannot reach
+  localhost). The "1 registrant · 0 unpaid after the sweep" reading on 32KM
+  BEYOND 21 was not taken. The PAID-order warning in the delete confirmation
+  was not opened in the browser.
+- **The overview's all-time "Total Registrants" tile** still counts PAID
+  runners only, not PAID plus awaiting verification like every other count.
+  The owner's call.
+- **Two layout faults seen in passing.** On a registrants table with two rows,
+  the row menu's lower items are clipped by the table's `overflow-auto` and
+  can only be reached by keyboard. At 1024px the Unpaid checkouts table is
+  wider than its frame (970px in 663px).
