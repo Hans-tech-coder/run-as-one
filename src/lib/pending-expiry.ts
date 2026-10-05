@@ -1,6 +1,7 @@
 import type { Prisma } from '@prisma/client';
 import prisma from '@/lib/db';
 import { PAYMENT_METHODS } from '@/lib/registration-codes';
+import type { AuditEntry } from '@/lib/audit';
 
 /**
  * When an unpaid online checkout stops holding what it took, and what handing
@@ -227,8 +228,15 @@ export async function expirePendingRegistrations(
  *
  * Returns whether anything was actually handed back — a promotion since
  * deleted, or an order that used no code at all, is not a failure.
+ *
+ * Exported for the other ways a PENDING order ends without being paid — an
+ * organizer cancelling it on the status route, or its last runner being
+ * removed (`cancelEmptiedOrders` below). They hand back exactly what the sweep
+ * would, so there is one copy of this to keep right. The caller must already
+ * have claimed the status change in the same transaction, or a redemption can
+ * be handed back twice.
  */
-async function releaseRedemption(tx: any, registration: Sweepable): Promise<boolean> {
+export async function releaseRedemption(tx: any, registration: Sweepable): Promise<boolean> {
   const code = registration.promoCode;
   if (!code) return false;
 
@@ -432,6 +440,108 @@ export async function heldPlacesByCategory(
   add(awaiting, 'awaiting');
   add(unpaid, 'unpaid');
   return byCategory;
+}
+
+/** A runner just removed in the caller's transaction: its order, and the seat it held. */
+export type RemovedRunner = {
+  registrationId: string;
+  categoryId: string;
+  promoPrice: number | null;
+};
+
+/** An order `cancelEmptiedOrders` cancelled, for the caller's trail. */
+export type CancelledEmptyOrder = {
+  registrationId: string;
+  orderRef: string;
+  promoCode: string | null;
+  promoReleased: boolean;
+};
+
+/**
+ * Cancel every PENDING order that the runners just removed left with no live
+ * runner (UNPAID_ORDERS_PLAN.md Batch 5).
+ *
+ * An order with nobody on it is not a registration, yet it still held its slot
+ * and its promo and sat in the "awaiting verification" queue — the empty
+ * RM-721849AE that made a client think they had four runners. So removing the
+ * last runner of a PENDING order ends the order in the same transaction:
+ * CANCELLED, and the promo handed back exactly as the sweep does.
+ *
+ * **A PAID order is left alone.** Somebody paid for it, and whether that money
+ * goes back is a person's call, not this function's; the delete confirmation
+ * tells the admin to settle it separately.
+ *
+ * Call it **after** the runners are marked removed, inside the same
+ * transaction. Each order row is locked first, so two removals racing for the
+ * last two runners of one order cannot both see the other runner still live:
+ * whichever takes the lock second re-counts after the first has committed. The
+ * cancel is then the same conditional claim the sweep makes, so an order the
+ * sweep or a payment got to first is not touched and nothing is handed back
+ * twice.
+ *
+ * The promo seats handed back are the removed runners' own. A runner removed
+ * earlier kept its seat spent, as it always has, so counting it now would
+ * hand back a seat the promotion has already written off.
+ */
+export async function cancelEmptiedOrders(
+  tx: Prisma.TransactionClient,
+  removed: RemovedRunner[],
+): Promise<CancelledEmptyOrder[]> {
+  const byOrder = new Map<string, RemovedRunner[]>();
+  for (const runner of removed) {
+    byOrder.set(runner.registrationId, [...(byOrder.get(runner.registrationId) ?? []), runner]);
+  }
+
+  const cancelled: CancelledEmptyOrder[] = [];
+  // Sorted, so two transactions locking the same orders take them in one order.
+  for (const registrationId of [...byOrder.keys()].sort()) {
+    await tx.$queryRaw`SELECT "id" FROM "Registration" WHERE "id" = ${registrationId} FOR UPDATE`;
+
+    const live = await tx.runner.count({ where: { registrationId, deletedAt: null } });
+    if (live > 0) continue;
+
+    const claim = await tx.registration.updateMany({
+      where: { id: registrationId, status: 'PENDING' },
+      data: { status: 'CANCELLED' },
+    });
+    if (claim.count === 0) continue;
+
+    const registration = await tx.registration.findUnique({
+      where: { id: registrationId },
+      select: { id: true, orderRef: true, promoCode: true, event: { select: { organizerId: true } } },
+    });
+    if (!registration) continue;
+    const promoReleased = await releaseRedemption(tx, {
+      ...registration,
+      runners: (byOrder.get(registrationId) ?? []).map(({ categoryId, promoPrice }) => ({
+        categoryId,
+        promoPrice,
+      })),
+    });
+    cancelled.push({
+      registrationId,
+      orderRef: registration.orderRef,
+      promoCode: registration.promoCode,
+      promoReleased,
+    });
+  }
+  return cancelled;
+}
+
+/** The trail row for an order `cancelEmptiedOrders` cancelled, one per order. */
+export function emptiedOrderAudit(
+  order: CancelledEmptyOrder,
+  scope: { eventId: string; organizerId: string },
+): AuditEntry {
+  const promo = order.promoReleased ? ` Promo ${order.promoCode} handed back.` : '';
+  return {
+    action: 'registration.status.changed',
+    entityType: 'Registration',
+    entityId: order.registrationId,
+    ...scope,
+    summary: `Cancelled ${order.orderRef} (was PENDING): its last runner was removed.${promo}`,
+    changes: { status: ['PENDING', 'CANCELLED'] },
+  };
 }
 
 /**

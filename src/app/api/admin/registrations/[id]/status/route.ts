@@ -27,6 +27,7 @@ import { can, getActor } from '@/lib/actor';
 import { changedFields, recordAudit, type AuditEntry } from '@/lib/audit';
 import { getSignedInUser } from '@/lib/signed-in-user';
 import { deliverConfirmationEmail } from '@/lib/email-delivery';
+import { releaseRedemption } from '@/lib/pending-expiry';
 
 /**
  * The statuses an organizer may set from the admin. Guarded rather than
@@ -39,8 +40,12 @@ import { deliverConfirmationEmail } from '@/lib/email-delivery';
  * put a row back the way they found it. It is normally written by the sweep in
  * lib/pending-expiry.ts rather than by hand — and setting it here is not the
  * same act: the sweep also hands back the promo redemption that order took,
- * which nothing on this route does. Cancelling an order an organizer decided
- * about is what CANCELLED is for.
+ * which setting EXPIRED here does not. Cancelling an order an organizer
+ * decided about is what CANCELLED is for, and **PENDING → CANCELLED hands the
+ * promo back** the same way the sweep does (`releaseRedemption`,
+ * UNPAID_ORDERS_PLAN.md Batch 5). Cancelling from any other status hands
+ * nothing back: a PAID order's refund is settled by a person, and an EXPIRED
+ * one already gave its promo back when it expired.
  */
 const ALLOWED_STATUSES = ['PAID', 'PENDING', 'CANCELLED', 'REFUNDED', 'EXPIRED'] as const;
 
@@ -127,6 +132,28 @@ export async function PATCH(
     }
 
     const updatedRegistration = await prisma.$transaction(async tx => {
+      // Claimed with the same conditional write the sweep uses, so an order
+      // the sweep or a payment moved first is not handed back twice.
+      let promoReleased = false;
+      if (wantsStatus && status === 'CANCELLED' && existing.status === 'PENDING') {
+        const claim = await tx.registration.updateMany({
+          where: { id, status: 'PENDING' },
+          data: { status: 'CANCELLED' },
+        });
+        if (claim.count === 1) {
+          promoReleased = await releaseRedemption(tx, {
+            id,
+            orderRef: existing.orderRef,
+            promoCode: existing.promoCode,
+            event: existing.event,
+            runners: await tx.runner.findMany({
+              where: { registrationId: id, deletedAt: null },
+              select: { categoryId: true, promoPrice: true },
+            }),
+          });
+        }
+      }
+
       const updated = await tx.registration.update({
         where: { id },
         data,
@@ -144,7 +171,9 @@ export async function PATCH(
         entries.push({
           ...trail,
           action: 'registration.status.changed',
-          summary: `Marked ${existing.orderRef} as ${updated.status} (was ${existing.status}).`,
+          summary: `Marked ${existing.orderRef} as ${updated.status} (was ${existing.status}).${
+            promoReleased ? ` Promo ${existing.promoCode} handed back.` : ''
+          }`,
           changes: { status: [existing.status, updated.status] },
         });
       }

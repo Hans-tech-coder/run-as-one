@@ -16,6 +16,52 @@ import BusyLabel from '@/components/ui/BusyLabel';
 import { useAlert } from '@/components/ui/AlertProvider';
 import type { RegistrantRow } from './RegistrantsTable';
 
+/**
+ * The orders a removal would leave with no runner, split the way the delete
+ * routes treat them (`cancelEmptiedOrders`, UNPAID_ORDERS_PLAN.md Batch 5): a
+ * PENDING order is cancelled with its last runner, a PAID one is left for a
+ * person to settle. `runners` is every live runner on the screen, so an order's
+ * runners are all here — the registrants list never shows part of an order.
+ */
+function ordersEmptiedBy(runners: RegistrantRow[], removedIds: string[]) {
+  const removed = new Set(removedIds);
+  const left = new Map<string, { orderRef: string; status: string; live: number }>();
+  for (const r of runners) {
+    const order = left.get(r.registrationId) ?? { orderRef: r.orderRef, status: r.status, live: 0 };
+    if (!removed.has(r.id)) order.live++;
+    left.set(r.registrationId, order);
+  }
+  const touched = new Set(runners.filter(r => removed.has(r.id)).map(r => r.registrationId));
+  const emptied = [...touched].map(id => left.get(id)!).filter(order => order.live === 0);
+  return {
+    pending: emptied.filter(order => order.status === 'PENDING').map(order => order.orderRef),
+    paid: emptied.filter(order => order.status === 'PAID').map(order => order.orderRef),
+  };
+}
+
+/** What the confirmation says about the orders a removal empties. */
+function EmptiedOrdersNote({ pending, paid, single }: ReturnType<typeof ordersEmptiedBy> & { single: boolean }) {
+  if (pending.length === 0 && paid.length === 0) return null;
+  return (
+    <div className="flex flex-col gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm leading-relaxed text-primary [overflow-wrap:anywhere]">
+      {pending.length > 0 && (
+        <p>
+          {single
+            ? 'This is the last runner on this order. The order will be cancelled too.'
+            : `This removes the last runner on ${pending.join(', ')}. ${pending.length === 1 ? 'That order' : 'Those orders'} will be cancelled too.`}
+        </p>
+      )}
+      {paid.length > 0 && (
+        <p>
+          {single
+            ? `This is the last runner on ${paid[0]}, which is paid. The order stays PAID — settle any refund separately.`
+            : `${paid.join(', ')} ${paid.length === 1 ? 'is a paid order' : 'are paid orders'} left with no runner. ${paid.length === 1 ? 'It stays' : 'They stay'} PAID — settle any refund separately.`}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function useDeleteRegistrantModal({
   runners,
   onDeleted,
@@ -74,6 +120,7 @@ export function useDeleteRegistrantModal({
     open: openDeleteModal,
     modalProps: {
       runner: deletingRunner,
+      emptied: deletingRunner ? ordersEmptiedBy(runners, [deletingRunner.id]) : { pending: [], paid: [] },
       isOpen: isDeleteOpen,
       isClosing: isDeleteClosing,
       isDeleting,
@@ -85,6 +132,7 @@ export function useDeleteRegistrantModal({
 
 export function DeleteRegistrantModal({
   runner: deletingRunner,
+  emptied,
   isOpen: isDeleteOpen,
   isClosing: isDeleteClosing,
   isDeleting,
@@ -108,6 +156,7 @@ export function DeleteRegistrantModal({
           <p className="text-secondary text-sm leading-relaxed [overflow-wrap:anywhere]">
             Are you sure you want to delete {deletingRunner?.name}? This action cannot be undone and will permanently remove them from the database.
           </p>
+          <EmptiedOrdersNote {...emptied} single />
         </div>
 
         <div className="admin-modal-footer flex justify-end gap-3 pt-2 border-t border-[var(--dash-hairline)]">
@@ -135,9 +184,11 @@ export function DeleteRegistrantModal({
 /** Reads the selection off the table at confirm time, as the toolbar shows it. */
 export function useBulkDeleteModal({
   table,
+  runners,
   onDeleted,
 }: {
   table: Table<RegistrantRow>;
+  runners: RegistrantRow[];
   onDeleted: (runnerIds: string[]) => void;
 }) {
   // Shadows window.alert on purpose — see AlertProvider.
@@ -186,6 +237,9 @@ export function useBulkDeleteModal({
     open: () => setIsBulkDeleteOpen(true),
     modalProps: {
       count: table.getSelectedRowModel().rows.length,
+      emptied: isBulkDeleteOpen
+        ? ordersEmptiedBy(runners, table.getSelectedRowModel().rows.map(row => row.original.id))
+        : { pending: [], paid: [] },
       isOpen: isBulkDeleteOpen,
       isClosing: isBulkDeleteClosing,
       isDeleting: isBulkDeleting,
@@ -197,6 +251,7 @@ export function useBulkDeleteModal({
 
 export function BulkDeleteModal({
   count,
+  emptied,
   isOpen: isBulkDeleteOpen,
   isClosing: isBulkDeleteClosing,
   isDeleting: isBulkDeleting,
@@ -220,6 +275,7 @@ export function BulkDeleteModal({
           <p className="text-secondary text-sm leading-relaxed">
             Are you sure you want to delete the {count} selected registrants? This action cannot be undone and will permanently remove them from the database.
           </p>
+          <EmptiedOrdersNote {...emptied} single={false} />
         </div>
 
         <div className="admin-modal-footer flex justify-end gap-3 pt-2 border-t border-[var(--dash-hairline)]">

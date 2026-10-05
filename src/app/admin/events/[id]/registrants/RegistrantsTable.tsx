@@ -294,6 +294,7 @@ export default function RegistrantsTable({
 
   const bulkDelete = useBulkDeleteModal({
     table,
+    runners,
     onDeleted: runnerIds => {
       setRunners(runners.filter(r => !runnerIds.includes(r.id)));
       setRowSelection({});

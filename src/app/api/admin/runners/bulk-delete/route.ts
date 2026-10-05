@@ -3,6 +3,7 @@ import db from '@/lib/db';
 import { can, getActor } from '@/lib/actor';
 import { recordAudit } from '@/lib/audit';
 import { runnerRef } from '@/lib/order-ref';
+import { cancelEmptiedOrders, emptiedOrderAudit } from '@/lib/pending-expiry';
 
 /**
  * Removing several runners at once from the registrants table.
@@ -11,6 +12,10 @@ import { runnerRef } from '@/lib/order-ref';
  * `deletedAt` set, and the trail gets **one row per runner**, each naming the
  * person and their reference — "somebody deleted three runners" is not a line
  * anyone can act on, and it would give the activity screen no runner to link.
+ *
+ * A PENDING order left with no live runner is cancelled in the same
+ * transaction, with its promo handed back, exactly as the single delete does
+ * (`cancelEmptiedOrders`, UNPAID_ORDERS_PLAN.md Batch 5).
  */
 export async function POST(request: Request) {
   try {
@@ -60,15 +65,22 @@ export async function POST(request: Request) {
     }
 
     const removedAt = new Date();
-    await db.$transaction(async tx => {
+    const cancelled = await db.$transaction(async tx => {
       await tx.runner.updateMany({
         where: { id: { in: runners.map(runner => runner.id) }, deletedAt: null },
         data: { deletedAt: removedAt, deletedById: actor.id },
       });
-      await recordAudit(
+      const emptied = await cancelEmptiedOrders(
         tx,
-        actor,
         runners.map(runner => ({
+          registrationId: runner.registrationId,
+          categoryId: runner.categoryId,
+          promoPrice: runner.promoPrice,
+        })),
+      );
+      const orderOf = new Map(runners.map(runner => [runner.registrationId, runner.registration]));
+      await recordAudit(tx, actor, [
+        ...runners.map(runner => ({
           action: 'runner.deleted' as const,
           entityType: 'Runner' as const,
           entityId: runner.id,
@@ -81,10 +93,19 @@ export async function POST(request: Request) {
           )}) from order ${runner.registration.orderRef}.`,
           changes: { bulk: true },
         })),
-      );
+        ...emptied.map(order => {
+          const { eventId, event } = orderOf.get(order.registrationId)!;
+          return emptiedOrderAudit(order, { eventId, organizerId: event.organizerId });
+        }),
+      ]);
+      return emptied;
     });
 
-    return NextResponse.json({ success: true, deletedCount: runners.length });
+    return NextResponse.json({
+      success: true,
+      deletedCount: runners.length,
+      cancelledOrders: cancelled.map(order => order.orderRef),
+    });
   } catch (error: any) {
     console.error('Bulk delete runner error:', error);
     return NextResponse.json({ error: 'Failed to delete runners', details: error.message }, { status: 500 });

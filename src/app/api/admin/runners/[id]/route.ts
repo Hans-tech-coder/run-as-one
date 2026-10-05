@@ -22,6 +22,7 @@ import {
   storedRunnerAddress,
   type RunnerAddress,
 } from '@/lib/runner-address';
+import { cancelEmptiedOrders, emptiedOrderAudit } from '@/lib/pending-expiry';
 
 /**
  * Editing and removing one runner on an order.
@@ -30,6 +31,11 @@ import {
  * audit row saying a runner was deleted, with nothing left to look at. The row
  * now keeps its data and gains `deletedAt` / `deletedById`, and every read a
  * person sees filters it out — see Runner.deletedAt in the schema.
+ *
+ * **Removing the last runner of a PENDING order cancels the order** in the
+ * same transaction and hands back its promo (`cancelEmptiedOrders`), so an
+ * empty order never sits in the queue holding a slot. A PAID order is left for
+ * a person to settle (UNPAID_ORDERS_PLAN.md Batch 5).
  */
 
 /** The columns an organizer can edit, in the order the trail lists them. */
@@ -296,22 +302,29 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
       runner.registration._count.runners,
     );
 
-    await db.$transaction(async tx => {
+    const cancelled = await db.$transaction(async tx => {
       await tx.runner.update({
         where: { id },
         data: { deletedAt: new Date(), deletedById: actor.id },
       });
-      await recordAudit(tx, actor, {
-        action: 'runner.deleted',
-        entityType: 'Runner',
-        entityId: id,
-        eventId: runner.registration.eventId,
-        organizerId: runner.registration.event.organizerId,
-        summary: `Deleted runner ${runner.firstName} ${runner.lastName} (${ref}) from order ${runner.registration.orderRef}.`,
-      });
+      const emptied = await cancelEmptiedOrders(tx, [
+        { registrationId: runner.registrationId, categoryId: runner.categoryId, promoPrice: runner.promoPrice },
+      ]);
+      await recordAudit(tx, actor, [
+        {
+          action: 'runner.deleted',
+          entityType: 'Runner',
+          entityId: id,
+          eventId: runner.registration.eventId,
+          organizerId: runner.registration.event.organizerId,
+          summary: `Deleted runner ${runner.firstName} ${runner.lastName} (${ref}) from order ${runner.registration.orderRef}.`,
+        },
+        ...emptied.map(order => emptiedOrderAudit(order, reach)),
+      ]);
+      return emptied;
     });
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, cancelledOrders: cancelled.map(order => order.orderRef) });
   } catch (error: any) {
     console.error('Delete runner error:', error);
     return NextResponse.json({ error: 'Failed to delete runner', details: error.message }, { status: 500 });

@@ -521,8 +521,15 @@ Known open threads:
   whether the order was in fact paid, and a missed webhook is recovered by it:
   the order goes PAID through the webhook's own path (`lib/online-payment.ts`)
   with its receipt and a trail row. Tested against PayMongo test mode for both
-  stored shapes (`cs_` checkout session, `pi_` GCash intent). Still to come in
-  that plan: cancelling an order when its last runner is removed.
+  stored shapes (`cs_` checkout session, `pi_` GCash intent).
+- **No more empty orders** (`UNPAID_ORDERS_PLAN.md` Batch 5, 2026-10-05).
+  Removing the last live runner of a PENDING order — one at a time or in bulk —
+  cancels the order in the same transaction and hands its promo back
+  (`cancelEmptiedOrders` in `pending-expiry.ts`), with a trail row for the
+  runner and one for the order; the delete confirmation says so first. A PAID
+  order is never cancelled this way: the confirmation tells the admin to
+  settle any refund separately. Cancelling a PENDING order on the status route
+  now hands its promo back too, through the sweep's own `releaseRedemption`.
 - A **Prisma schema change needs the dev server restarted** before it takes
   effect: `next dev` bundles the generated client, so a running server keeps
   the pre-migration data model and rejects a write to a brand-new column with
