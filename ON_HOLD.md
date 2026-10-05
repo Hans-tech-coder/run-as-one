@@ -98,17 +98,25 @@ scan (`run-as-one-scan_97fc`) completed with no findings. Read it with
 link, the unpaid tab's row menu and the hold length moved to
 `docs/plans/UNPAID_FOLLOWUP_PLAN.md`.*
 
-- **Checks never run.** A VIEWER-role (and ENCODER) staff login was never on
-  hand, so nobody confirmed they see the Unpaid checkouts tab and can copy a
-  contact but do not see **Check payment**. The PayMongo webhook was not run
-  end to end after it moved onto `settleOnlinePayment` (PayMongo cannot reach
-  localhost). The "1 registrant · 0 unpaid after the sweep" reading on 32KM
-  BEYOND 21 was not taken. The PAID-order warning in the delete confirmation
-  was not opened in the browser.
+Checked on staging (`run-as-one.vercel.app`, the `dev` branch on `local-dev`)
+on 2026-10-05 and passed: VIEWER/ENCODER see the tab and Copy contact but not
+Check payment; a QRPh test payment was marked PAID by the webhook alone, with
+its receipt and no trail row; the PAID-order delete warning, the order staying
+PAID; the sweep moving an order to "Expired" and every screen dropping it from
+the count together. What is left:
+
 - **The overview's all-time "Total Registrants" tile** still counts PAID
   runners only, not PAID plus awaiting verification like every other count.
   The owner's call.
-- **Two layout faults seen in passing.** On a registrants table with two rows,
-  the row menu's lower items are clipped by the table's `overflow-auto` and
-  can only be reached by keyboard. At 1024px the Unpaid checkouts table is
-  wider than its frame (970px in 663px).
+- **The "Registrants (n)" tab counts every listed row**, so a CANCELLED or
+  REFUNDED order that kept its runner adds to it while the overview and the
+  events table do not (Pink Run on `local-dev`: 185 against 184). None on
+  production yet. The owner's call.
+- **The delete confirmation says the runner is "permanently removed from the
+  database"**, but removal is soft (`deletedAt`). Copy only.
+- **At 1024px the Unpaid checkouts table is wider than its frame** (986px in
+  663px); Status and Check payment are off-screen until the table is scrolled
+  sideways.
+- **Not checked:** the webhook's GCash/Maya path (`pi_`, `payment.paid`); only
+  QRPh's `checkout_session.payment.paid` ran. The client viewer's counts
+  after the sweep (no client login was used).
