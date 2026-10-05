@@ -308,8 +308,8 @@ from the promo code, which staff may since have paused or deleted — and
 `isComplimentary` from its payment method. A pacer's order wears a blue *Pacer*
 chip **under the status rather than beside the name**, because it explains the
 status: the row reads PAID with nothing collected, which without the chip looks
-like a payment somebody forgot to record. It is drawn in `renderStatusBadges`,
-so the table cell and the card's badge row carry it alike. The *Filters* sheet
+like a payment somebody forgot to record. It is drawn in `RegistrantStatusBadges`
+(`registrant-display.tsx`), so the table cell and the card's badge row carry it alike. The *Filters* sheet
 gains a **Type → Pacers** option, offered only when the race has one and applied
 to the data like Age and the two queues; the CSV gains a **Pacer** column
 (`YES` or blank) between *Payment Method* and *Promo Code*, so the race-day
@@ -325,7 +325,16 @@ of its own; every way onward calls back to a modal the table owns),
 `registrant-display.tsx` the tones and chips the table, the cards and the modal
 must agree on, and `registrant-csv.ts` the export's columns and its
 Excel-proofing. `RegistrantsTable.tsx` keeps the toolbar, the table, the cards
-and the four write modals. ·
+and the four write modals. **Split again** for `UNPAID_ORDERS_PLAN.md` Batch 2,
+when it had grown back to 1,737 lines, with no change in behaviour: the columns
+are `registrant-columns.tsx`, a row's Remarks/Email buttons and menu
+`RegistrantRowActions.tsx`, the toolbar and its filters `RegistrantsToolbar.tsx`
+(`useRegistrantQueues` holds the four filters that narrow the data rather than
+a column), and the remarks, manual-email and delete/bulk-delete modals
+`RemarksModal.tsx`, `ManualEmailModal.tsx` and `DeleteRegistrantModals.tsx`,
+each with a `use…Modal` hook that owns its state and hands the result back.
+`RegistrantsTable.tsx` keeps the runners, the one table instance, the desktop
+table, the cards, the bulk bar and the edit modal's state. ·
 `/admin/events/[id]/registrants/[runnerId]/consent`
 (**the printable guardian consent**, Batch 4): the dashboard frame with a back
 link and a *Print* button (`window.print()`, **no PDF library**) over a

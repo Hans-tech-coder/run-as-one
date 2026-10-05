@@ -1,18 +1,24 @@
 "use client";
 
-import React, { useState, useMemo, useEffect, useRef } from 'react';
-import {
-  Search, Download, Eye, X, Trash2,
-  Columns, ChevronUp, ChevronDown, Check,
-  MessageSquare, MessageSquareText, Mail, MailWarning, Copy, ExternalLink,
-  Hourglass
-} from 'lucide-react';
-import RegistrantActionsMenu from './RegistrantActionsMenu';
+/**
+ * The registrants screen's client half: the runners it holds, the one TanStack
+ * table instance the desktop table, the cards, the pager and the bulk bar all
+ * read, and where each modal is mounted.
+ *
+ * It was the largest file in the repository, and the parts that grew it live
+ * beside it now (UNPAID_ORDERS_PLAN.md Batch 2): the columns in
+ * `registrant-columns.tsx`, a row's buttons in `RegistrantRowActions.tsx`, the
+ * toolbar and its filters in `RegistrantsToolbar.tsx`, and the remarks, email
+ * and delete modals each in their own file with their state. This file keeps
+ * the runners, so every modal hands its result back here rather than editing
+ * a copy of the list.
+ */
+
+import React, { useState, useMemo } from 'react';
+import { Download, X, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
 import ProofLightbox from './ProofLightbox';
 import AdminCardList from '../../../AdminCardList';
 import AdminTablePager from '../../../AdminTablePager';
-import MobileSortMenu from '../../../MobileSortMenu';
-import { useAlert } from '@/components/ui/AlertProvider';
 import {
   Table,
   TableBody,
@@ -22,7 +28,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  ColumnDef,
   flexRender,
   getCoreRowModel,
   getSortedRowModel,
@@ -32,18 +37,21 @@ import {
   SortingState,
   VisibilityState,
 } from '@tanstack/react-table';
-import BusyLabel from '@/components/ui/BusyLabel';
-import FiltersMenu, { type FilterGroup } from '../../../FiltersMenu';
-import { GUARDIAN_CONSENT_MAX_AGE } from '@/lib/minor-consent';
 import RegistrantDetailModal from './RegistrantDetailModal';
 import RunnerEditModal, { mergeSavedRunner } from './RunnerEditModal';
-import {
-  MinorBadge,
-  PacerBadge,
-  needsValidation,
-  statusTone,
-} from './registrant-display';
+import { MinorBadge, RegistrantStatusBadges } from './registrant-display';
 import { buildRegistrantCsv, downloadRegistrantCsv } from './registrant-csv';
+import { buildRegistrantColumns } from './registrant-columns';
+import RegistrantRowActions, { type RegistrantRowActionHandlers } from './RegistrantRowActions';
+import RegistrantsToolbar, { useRegistrantQueues } from './RegistrantsToolbar';
+import RemarksModal, { useRemarksModal } from './RemarksModal';
+import ManualEmailModal, { useManualEmailModal } from './ManualEmailModal';
+import {
+  BulkDeleteModal,
+  DeleteRegistrantModal,
+  useBulkDeleteModal,
+  useDeleteRegistrantModal,
+} from './DeleteRegistrantModals';
 
 /**
  * What the signed-in person may do on this event, decided by page.tsx with the
@@ -84,27 +92,8 @@ interface RegistrantsTableProps {
   initialSearch?: string;
 }
 
-/** The Province filter's choice for rows with no home address on file. */
-const NO_PROVINCE = 'NOT ON FILE';
-
-/** One row as page.tsx builds it; named so the render helpers below can say so. */
-type RegistrantRow = RegistrantsTableProps['runners'][number];
-
-/**
- * The email preview's own small stylesheet, added to the copy shown in the
- * iframe and never to what is copied or sent. A long link in the email is one
- * unbroken word, and inside a phone-width preview it pushed the document wider
- * than its frame.
- */
-const EMAIL_PREVIEW_STYLE =
-  '<style>body{overflow-wrap:anywhere;word-break:break-word}a{word-break:break-all}img{max-width:100%;height:auto}</style>';
-
-/** Into the head, so the email's doctype still leads and standards mode holds. */
-function previewEmailHtml(html: string): string {
-  return html.includes('</head>')
-    ? html.replace('</head>', `${EMAIL_PREVIEW_STYLE}</head>`)
-    : `${html}${EMAIL_PREVIEW_STYLE}`;
-}
+/** One row as page.tsx builds it; named so the files split from this one can say so. */
+export type RegistrantRow = RegistrantsTableProps['runners'][number];
 
 export default function RegistrantsTable({
   eventId,
@@ -113,8 +102,6 @@ export default function RegistrantsTable({
   initialSearch = '',
   permissions,
 }: RegistrantsTableProps) {
-  // Shadows window.alert on purpose — see AlertProvider.
-  const { alert } = useAlert();
   const [runners, setRunners] = useState(initialRunners);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [viewingRunner, setViewingRunner] = useState<any | null>(null);
@@ -130,81 +117,65 @@ export default function RegistrantsTable({
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isEditClosing, setIsEditClosing] = useState(false);
 
-  // Delete Modal State
-  const [deletingRunner, setDeletingRunner] = useState<any | null>(null);
-  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const [isDeleteClosing, setIsDeleteClosing] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const deleteModal = useDeleteRegistrantModal({
+    runners,
+    onDeleted: runnerId => setRunners(runners.filter(r => r.id !== runnerId)),
+  });
 
-  // Remarks Modal State. The note belongs to the registration, not the
-  // runner, so the row is only how the organizer reached it — a group of five
-  // shares one note, and the modal says so.
-  const [remarkingRunner, setRemarkingRunner] = useState<any | null>(null);
-  const [remarksDraft, setRemarksDraft] = useState('');
-  const [isRemarksOpen, setIsRemarksOpen] = useState(false);
-  const [isRemarksClosing, setIsRemarksClosing] = useState(false);
-  const [isSavingRemarks, setIsSavingRemarks] = useState(false);
+  const remarks = useRemarksModal({
+    runners,
+    onSaved: (registrationId, registration) => {
+      // Every runner on the order carries the same note, so all of their
+      // rows are updated — otherwise the icon would light up on one member
+      // of a group and stay grey on the other four.
+      setRunners(runners.map(r => r.registrationId === registrationId ? {
+        ...r,
+        remarks: registration.remarks,
+        remarksBy: registration.remarksBy,
+        remarksAt: registration.remarksAt,
+      } : r));
+      // The detail modal, if it is the one open behind this, is holding a
+      // copy of the row rather than reading it back out of the list.
+      setViewingRunner((current: any) =>
+        current && current.registrationId === registrationId
+          ? {
+              ...current,
+              remarks: registration.remarks,
+              remarksBy: registration.remarksBy,
+              remarksAt: registration.remarksAt,
+            }
+          : current
+      );
+    },
+  });
 
-  // Manual Email Modal State. The email belongs to the order, like the
-  // remarks do, so the row is only how the staff member reached it.
-  const [emailRunner, setEmailRunner] = useState<any | null>(null);
-  const [emailMessage, setEmailMessage] = useState<any | null>(null);
-  const [isEmailOpen, setIsEmailOpen] = useState(false);
-  const [isEmailClosing, setIsEmailClosing] = useState(false);
-  const [isLoadingEmail, setIsLoadingEmail] = useState(false);
-  const [emailLoadError, setEmailLoadError] = useState('');
-  const [isMarkingSent, setIsMarkingSent] = useState(false);
-  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'text-only'>('idle');
+  const email = useManualEmailModal({
+    runners,
+    onMarkedSent: (registrationId, registration, outstanding) => {
+      // Every runner on the order carries the same mark, for the same reason
+      // the remarks do — otherwise one member of a group would look handled
+      // and the other four would not.
+      setRunners(runners.map(r => r.registrationId === registrationId ? {
+        ...r,
+        emailPending: outstanding !== null,
+        emailPendingKind: outstanding,
+        emailPendingLabel: outstanding === 'CONFIRMATION' ? 'Payment Receipt' : outstanding === 'RECEIVED' ? 'Registration Received' : null,
+        lastEmailError: registration?.lastEmailError ?? null,
+        receivedEmailSentAt: registration?.receivedEmailSentAt ?? r.receivedEmailSentAt,
+        confirmationEmailSentAt: registration?.confirmationEmailSentAt ?? r.confirmationEmailSentAt,
+        manualEmailSentAt: registration?.manualEmailSentAt ?? null,
+        manualEmailSentBy: registration?.manualEmailSentBy ?? null,
+      } : r));
+    },
+  });
 
-  // The backlog view: on a day the daily send quota runs out, the whole list
-  // of runners nobody has emailed has to be reachable in one click rather than
-  // hunted for row by row.
-  const [showOnlyUnsentEmail, setShowOnlyUnsentEmail] = useState(false);
-
-  // The payment queue, the same idea in the same shape: the rows a validator
-  // still owes a decision on, in one click.
-  //
-  // It is a filter and not a sort on purpose. Sorting the unpaid orders to the
-  // top would mean a row jumps out from under the cursor the moment it is
-  // validated, which costs the admin their place in the list and the sight of
-  // the green badge appearing where they clicked. The registration order below
-  // stays exactly as it is; this only narrows what is shown.
-  const [showOnlyNeedsValidation, setShowOnlyNeedsValidation] = useState(false);
-
-  // The *Minors* option in the Filters sheet. Like the two queues it narrows
-  // the data rather than a column, because being a minor is not a column: it
-  // is the birthdate read against the race day (lib/minor-consent.ts).
-  const [showOnlyMinors, setShowOnlyMinors] = useState(false);
-
-  // The *Pacers* option, for the same reason (PACER_DISCOUNT_PLAN.md Batch 3).
-  // It narrows the data rather than a column: what a pacer entry is lives in
-  // the order's discount snapshot, and the organizer reaches for this on race
-  // morning — "who are my pacers and have they all claimed a kit" is one
-  // question, not a scroll through everyone.
-  const [showOnlyPacers, setShowOnlyPacers] = useState(false);
-
-  // Bulk Delete Modal State
-  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
-  const [isBulkDeleteClosing, setIsBulkDeleteClosing] = useState(false);
-  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const queues = useRegistrantQueues(runners);
 
   // Table state
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState(initialSearch);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
-  const [isViewOpen, setIsViewOpen] = useState(false);
-
-
-  const viewRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (viewRef.current && !viewRef.current.contains(event.target as Node)) setIsViewOpen(false);
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   const handleStatusChange = async (registrationId: string, newStatus: string) => {
     setUpdatingId(registrationId);
@@ -252,231 +223,6 @@ export default function RegistrantsTable({
     setProofRunner(paid);
   };
 
-  const runnersOnOrder = (runner: any) =>
-    runners.filter(r => r.registrationId === runner.registrationId).length;
-
-  const openRemarksModal = (runnerId: string) => {
-    const runner = runners.find(r => r.id === runnerId);
-    if (!runner) return;
-    setRemarkingRunner(runner);
-    setRemarksDraft(runner.remarks || '');
-    setIsRemarksOpen(true);
-  };
-
-  const closeRemarksModal = () => {
-    setIsRemarksOpen(false);
-    setIsRemarksClosing(true);
-    setTimeout(() => {
-      setIsRemarksClosing(false);
-      setRemarkingRunner(null);
-      setRemarksDraft('');
-    }, 150);
-  };
-
-  const handleRemarksSave = async () => {
-    if (!remarkingRunner) return;
-    const registrationId = remarkingRunner.registrationId;
-    const text = remarksDraft.trim();
-
-    setIsSavingRemarks(true);
-    try {
-      const res = await fetch(`/api/admin/registrations/${registrationId}/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ remarks: text }),
-      });
-
-      if (res.ok) {
-        const { registration } = await res.json();
-        // Every runner on the order carries the same note, so all of their
-        // rows are updated — otherwise the icon would light up on one member
-        // of a group and stay grey on the other four.
-        setRunners(runners.map(r => r.registrationId === registrationId ? {
-          ...r,
-          remarks: registration.remarks,
-          remarksBy: registration.remarksBy,
-          remarksAt: registration.remarksAt,
-        } : r));
-        // The detail modal, if it is the one open behind this, is holding a
-        // copy of the row rather than reading it back out of the list.
-        setViewingRunner((current: any) =>
-          current && current.registrationId === registrationId
-            ? {
-                ...current,
-                remarks: registration.remarks,
-                remarksBy: registration.remarksBy,
-                remarksAt: registration.remarksAt,
-              }
-            : current
-        );
-        closeRemarksModal();
-      } else {
-        const { error } = await res.json().catch(() => ({ error: '' }));
-        alert({
-          variant: 'error',
-          title: 'Remarks Not Saved',
-          message: error || 'The remarks could not be saved. Please try again.',
-        });
-      }
-    } catch (e) {
-      console.error(e);
-      alert({
-        variant: 'error',
-        title: 'Remarks Not Saved',
-        message: 'Something went wrong while saving the remarks. Please try again.',
-      });
-    } finally {
-      setIsSavingRemarks(false);
-    }
-  };
-
-  /**
-   * The manual send.
-   *
-   * Resend's free tier stops at 100 recipients a day rather than billing, so a
-   * registration can be left with no email at all. The row is marked, and this
-   * modal hands the staff member the exact message the runner should have had,
-   * to send from their own mailbox.
-   *
-   * The rendering is fetched rather than built here: it comes from the same
-   * template the app itself sends (lib/email.ts), so what is pasted into Gmail
-   * cannot drift from what Resend would have delivered.
-   */
-  const openEmailModal = async (runnerId: string) => {
-    const runner = runners.find(r => r.id === runnerId);
-    if (!runner) return;
-    setEmailRunner(runner);
-    setEmailMessage(null);
-    setEmailLoadError('');
-    setCopyState('idle');
-    setIsEmailOpen(true);
-    setIsLoadingEmail(true);
-    try {
-      const res = await fetch(`/api/admin/registrations/${runner.registrationId}/email`);
-      if (res.ok) {
-        setEmailMessage(await res.json());
-      } else {
-        const { error } = await res.json().catch(() => ({ error: '' }));
-        setEmailLoadError(error || 'The email could not be prepared. Please try again.');
-      }
-    } catch (e) {
-      console.error(e);
-      setEmailLoadError('Something went wrong while preparing the email. Please try again.');
-    } finally {
-      setIsLoadingEmail(false);
-    }
-  };
-
-  const closeEmailModal = () => {
-    setIsEmailOpen(false);
-    setIsEmailClosing(true);
-    setTimeout(() => {
-      setIsEmailClosing(false);
-      setEmailRunner(null);
-      setEmailMessage(null);
-      setEmailLoadError('');
-      setCopyState('idle');
-    }, 150);
-  };
-
-  /**
-   * The design, on the clipboard.
-   *
-   * This is the half that actually preserves the email: pasting text/html into
-   * Gmail's compose window keeps the logo, the gradient bar and the status
-   * pill. A mailto: cannot — its body is plain text by definition — which is
-   * why both routes out of this modal exist and neither replaces the other.
-   */
-  const handleCopyFormattedEmail = async () => {
-    if (!emailMessage) return;
-    try {
-      const item = new ClipboardItem({
-        'text/html': new Blob([emailMessage.html], { type: 'text/html' }),
-        'text/plain': new Blob([emailMessage.text], { type: 'text/plain' }),
-      });
-      await navigator.clipboard.write([item]);
-      setCopyState('copied');
-    } catch (e) {
-      // Some browsers refuse the rich-text write. The plain-text rendering is
-      // still worth having, and saying which one landed is better than a
-      // silent half-success.
-      console.error(e);
-      try {
-        await navigator.clipboard.writeText(emailMessage.text);
-        setCopyState('text-only');
-      } catch (err) {
-        console.error(err);
-        alert({
-          variant: 'error',
-          title: 'Nothing Copied',
-          message: 'This browser blocked the clipboard. Select the preview text and copy it by hand.',
-        });
-      }
-    }
-  };
-
-  /**
-   * The addressing, in their own mail app: recipient and subject prefilled,
-   * the plain-text rendering as the body. Long emails can be truncated by the
-   * client's own URL limit, which the modal says out loud — the clipboard
-   * button above is the complete one.
-   */
-  const handleOpenInMailApp = () => {
-    if (!emailMessage) return;
-    const href = `mailto:${emailMessage.to}?subject=${encodeURIComponent(emailMessage.subject)}&body=${encodeURIComponent(emailMessage.text)}`;
-    window.location.href = href;
-  };
-
-  /** Sent by hand, so the order leaves the backlog. */
-  const handleMarkEmailSent = async () => {
-    if (!emailRunner || !emailMessage) return;
-    const registrationId = emailRunner.registrationId;
-
-    setIsMarkingSent(true);
-    try {
-      const res = await fetch(`/api/admin/registrations/${registrationId}/email`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ kind: emailMessage.kind }),
-      });
-
-      if (res.ok) {
-        const { registration, outstanding } = await res.json();
-        // Every runner on the order carries the same mark, for the same reason
-        // the remarks do — otherwise one member of a group would look handled
-        // and the other four would not.
-        setRunners(runners.map(r => r.registrationId === registrationId ? {
-          ...r,
-          emailPending: outstanding !== null,
-          emailPendingKind: outstanding,
-          emailPendingLabel: outstanding === 'CONFIRMATION' ? 'Payment Receipt' : outstanding === 'RECEIVED' ? 'Registration Received' : null,
-          lastEmailError: registration?.lastEmailError ?? null,
-          receivedEmailSentAt: registration?.receivedEmailSentAt ?? r.receivedEmailSentAt,
-          confirmationEmailSentAt: registration?.confirmationEmailSentAt ?? r.confirmationEmailSentAt,
-          manualEmailSentAt: registration?.manualEmailSentAt ?? null,
-          manualEmailSentBy: registration?.manualEmailSentBy ?? null,
-        } : r));
-        closeEmailModal();
-      } else {
-        const { error } = await res.json().catch(() => ({ error: '' }));
-        alert({
-          variant: 'error',
-          title: 'Not Marked As Sent',
-          message: error || 'The registration could not be marked. Please try again.',
-        });
-      }
-    } catch (e) {
-      console.error(e);
-      alert({
-        variant: 'error',
-        title: 'Not Marked As Sent',
-        message: 'Something went wrong while marking this email as sent. Please try again.',
-      });
-    } finally {
-      setIsMarkingSent(false);
-    }
-  };
-
   /**
    * Open the detail modal from a runner's id rather than from the row object.
    *
@@ -512,413 +258,30 @@ export default function RegistrantsTable({
     }, 150);
   };
 
-  const openDeleteModal = (runnerId: string) => {
-    const runner = runners.find(r => r.id === runnerId);
-    if (runner) {
-      setDeletingRunner(runner);
-      setIsDeleteOpen(true);
-    }
+  const rowActions: RegistrantRowActionHandlers = {
+    permissions,
+    updatingId,
+    onStatusChange: handleStatusChange,
+    onView: openViewModal,
+    onEdit: openEditModal,
+    onDelete: deleteModal.open,
+    onRemarks: remarks.open,
+    onEmail: email.open,
   };
 
-  const closeDeleteModal = () => {
-    setIsDeleteOpen(false);
-    setIsDeleteClosing(true);
-    setTimeout(() => {
-      setIsDeleteClosing(false);
-      setDeletingRunner(null);
-    }, 150);
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!deletingRunner) return;
-
-    setIsDeleting(true);
-    try {
-      const res = await fetch(`/api/admin/runners/${deletingRunner.id}`, {
-        method: 'DELETE',
-      });
-
-      if (res.ok) {
-        setRunners(runners.filter(r => r.id !== deletingRunner.id));
-        closeDeleteModal();
-      } else {
-        alert('Failed to delete runner');
-      }
-    } catch (e) {
-      console.error(e);
-      alert('An error occurred while deleting runner');
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  const closeBulkDeleteModal = () => {
-    setIsBulkDeleteOpen(false);
-    setIsBulkDeleteClosing(true);
-    setTimeout(() => {
-      setIsBulkDeleteClosing(false);
-    }, 150);
-  };
-
-  const handleBulkDeleteConfirm = async () => {
-    const selectedRows = table.getSelectedRowModel().rows;
-    if (selectedRows.length === 0) return;
-
-    const runnerIds = selectedRows.map(row => row.original.id);
-
-    setIsBulkDeleting(true);
-    try {
-      const res = await fetch('/api/admin/runners/bulk-delete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ runnerIds })
-      });
-
-      if (res.ok) {
-        setRunners(runners.filter(r => !runnerIds.includes(r.id)));
-        setRowSelection({});
-        closeBulkDeleteModal();
-      } else {
-        alert('Failed to delete selected runners');
-      }
-    } catch (e) {
-      console.error(e);
-      alert('An error occurred while deleting runners');
-    } finally {
-      setIsBulkDeleting(false);
-    }
-  };
-
-  /**
-   * The Status cell's badges: the payment status, and under it the one thing
-   * that can be wrong about this row without the payment being wrong — the
-   * email never went out. It sits in the Status cell rather than a column of
-   * its own because it is an exception, and a column that is empty for
-   * ninety-nine rows in a hundred costs width every organizer pays. Drawn once
-   * for the table cell and the card's badge row, so the two cannot disagree.
-   */
-  const renderStatusBadges = (runner: RegistrantRow) => (
-    <>
-      <span
-        className={`status-badge ${statusTone(runner.status)}`}
-        title={runner.status === 'EXPIRED'
-          ? 'This online checkout was never paid, so its slot and any promo code it used were released.'
-          : undefined}
-      >
-        {runner.status}
-      </span>
-      {/* Under the status rather than beside the name, because it explains
-          the status: a pacer's order reads PAID with nothing collected, and
-          without this chip that looks like a payment somebody forgot to
-          record (PACER_DISCOUNT_PLAN.md Batch 3). Drawn here, so the table
-          cell and the card's badge row carry it alike. */}
-      {runner.isPacer && <PacerBadge />}
-      {runner.emailPending && (
-        /* The project's own badge rather than a new one (standing rule
-           §8.2), in the danger tone: an unsent email is a failure, not a
-           waiting state, and amber would put it in the same voice as the
-           PENDING badge directly above it. */
-        <span
-          className="status-badge danger gap-1"
-          title={`The ${runner.emailPendingLabel} email has not gone out.`}
-        >
-          <MailWarning size={12} /> Email Unsent
-        </span>
-      )}
-    </>
-  );
-
-  /**
-   * A row's Remarks and Email buttons and its menu, for the table's Actions
-   * cell and the card's footer. Same conditions and the same accessible names
-   * in both. The table shows icons under the column label (PROJECT_GUIDE §8.6);
-   * a card has no column label to explain an icon, so it adds a visible word,
-   * one the accessible name contains.
-   */
-  const renderRowActions = (runner: RegistrantRow, layout: 'table' | 'card') => {
-    // A different icon, not just a different colour: colour alone is the one
-    // signal a colour-blind organizer cannot read.
-    const remarksIcon = runner.remarks
-      ? <MessageSquareText size={16} aria-hidden="true" />
-      : <MessageSquare size={16} aria-hidden="true" />;
-    const emailIcon = runner.emailPending
-      ? <MailWarning size={16} aria-hidden="true" />
-      : <Mail size={16} aria-hidden="true" />;
-    const remarksLabel = runner.remarks ? 'Edit remarks' : 'Add remarks';
-    const emailLabel = runner.emailPending ? 'Send email by hand' : 'View sent email';
-
-    const menu = (
-      <RegistrantActionsMenu
-        runnerId={runner.id}
-        registrationId={runner.registrationId}
-        label={runner.name}
-        status={runner.status}
-        isBankTransfer={runner.isBankTransfer}
-        updatingId={updatingId}
-        handleStatusChange={handleStatusChange}
-        onView={openViewModal}
-        onEdit={openEditModal}
-        onDelete={openDeleteModal}
-        canEdit={permissions.edit}
-        canDelete={permissions.remove}
-        canValidate={permissions.validate}
-      />
-    );
-
-    // Remarks and Email open modals whose routes need `registration:remark` and
-    // `registration:email`; a role without one is not shown its button. The
-    // remarks themselves stay readable in the detail modal for everyone.
-    if (layout === 'card') {
-      return (
-        <>
-          {/* One word each, so both and the menu share one line beside a
-              360px screen's menu rail. Which email it is rides the icon, the
-              red tone and the card's own Email Unsent badge, as it does in
-              the table; the accessible name says it in full. */}
-          {permissions.remark && (
-            <button
-              type="button"
-              onClick={() => openRemarksModal(runner.id)}
-              className={`btn-filter is-compact ${runner.remarks ? 'is-primary' : ''}`}
-              aria-label={remarksLabel}
-            >
-              {remarksIcon} Remarks
-            </button>
-          )}
-          {permissions.email && (
-            <button
-              type="button"
-              onClick={() => openEmailModal(runner.id)}
-              className={`btn-filter is-compact ${runner.emailPending ? 'is-danger' : ''}`}
-              aria-label={emailLabel}
-            >
-              {emailIcon} Email
-            </button>
-          )}
-          <div className="action-dropdown-container flex ml-auto">{menu}</div>
-        </>
-      );
-    }
-
-    return (
-      <div className="action-dropdown-container flex items-center gap-1">
-        {permissions.remark && (
-          <button
-            onClick={() => openRemarksModal(runner.id)}
-            className={`icon-btn ${runner.remarks ? 'primary' : ''}`}
-            title={runner.remarks ? 'Remarks on file' : 'Add remarks'}
-            aria-label={remarksLabel}
-          >
-            {remarksIcon}
-          </button>
-        )}
-        {permissions.email && (
-          <button
-            onClick={() => openEmailModal(runner.id)}
-            className={`icon-btn ${runner.emailPending ? 'danger' : ''}`}
-            title={runner.emailPending
-              ? `Send the ${runner.emailPendingLabel} email by hand`
-              : 'View the email this runner was sent'}
-            aria-label={emailLabel}
-          >
-            {emailIcon}
-          </button>
-        )}
-        {menu}
-      </div>
-    );
-  };
-
-  const columns = useMemo<ColumnDef<any>[]>(() => [
-    {
-      id: "select",
-      header: ({ table }) => {
-        const isChecked = table.getIsAllPageRowsSelected();
-        return (
-          <div className="flex items-center justify-center px-1 w-8">
-            <div className="relative flex items-center justify-center">
-              <input
-                type="checkbox"
-                checked={isChecked}
-                onChange={table.getToggleAllPageRowsSelectedHandler()}
-                className="appearance-none w-4 h-4 rounded border border-[var(--ink-20)] bg-transparent checked:bg-[var(--ink)] checked:border-[var(--ink)] cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ink-20)]"
-              />
-              {isChecked && <Check className="absolute text-[var(--dash-inverse-fg)] pointer-events-none" size={12} strokeWidth={3} />}
-            </div>
-          </div>
-        );
-      },
-      cell: ({ row }) => {
-        const isChecked = row.getIsSelected();
-        return (
-          <div className="flex items-center justify-center px-1 w-8">
-            <div className="relative flex items-center justify-center">
-              <input
-                type="checkbox"
-                checked={isChecked}
-                onChange={row.getToggleSelectedHandler()}
-                className="appearance-none w-4 h-4 rounded border border-[var(--ink-20)] bg-transparent checked:bg-[var(--ink)] checked:border-[var(--ink)] cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ink-20)]"
-              />
-              {isChecked && <Check className="absolute text-[var(--dash-inverse-fg)] pointer-events-none" size={12} strokeWidth={3} />}
-            </div>
-          </div>
-        );
-      },
-      enableSorting: false,
-      enableHiding: false,
-    },
-    {
-      // The registrant's own number, assigned on the server from the
-      // registration order (see regNo in page.tsx) — not this row's position
-      // on screen.
-      //
-      // It used to be the position, and that made it a number about the table
-      // rather than about the person: filtering to the unpaid orders renumbered
-      // everyone 1, 2, 3, so the figure could not be quoted on a phone call or
-      // written on a list. How many rows are in view is a question the footer
-      // already answers ("1-25 of 143").
-      id: "index",
-      header: "No.",
-      cell: ({ row }) => (
-        <span className="text-secondary font-mono">{row.original.regNo}</span>
-      ),
-      enableSorting: false,
-      enableHiding: false,
-    },
-    {
-      // The runner's own reference — the order reference plus their position
-      // on it (RM-D918005C-2). Sorting and searching run on this rather than
-      // on the bare order reference: it contains the order reference, so
-      // looking up a whole group still works, and it keeps the members of a
-      // group in their own order instead of an arbitrary one.
-      accessorKey: "runnerRef",
-      header: "Reference",
-      cell: ({ row }) => (
-        <div className="flex items-center gap-2 text-secondary">
-          {row.original.runnerRef}
-          <button
-            onClick={() => setViewingRunner(row.original)}
-            className="icon-btn"
-            title="View Details"
-          >
-            <Eye size={16} />
-          </button>
-        </div>
-      ),
-    },
-    {
-      accessorKey: "name",
-      header: "Name",
-      cell: ({ row }) => (
-        <div className="font-medium text-primary">
-          <div className="flex items-center gap-2 flex-wrap">
-            {row.original.name}
-            {row.original.isMinor && <MinorBadge />}
-          </div>
-          <div className="text-xs text-secondary font-normal">{row.original.email}</div>
-        </div>
-      ),
-      filterFn: (row, id, value) => {
-        const rowValue = `${row.original.name} ${row.original.email}`.toLowerCase();
-        return rowValue.includes((value as string).toLowerCase());
-      }
-    },
-    {
-      accessorKey: "category",
-      header: "Category",
-      cell: ({ row }) => row.original.category,
-      filterFn: (row, columnId, filterValue) => {
-        if (!filterValue || filterValue.length === 0) return true;
-        return filterValue.includes(row.getValue(columnId));
-      }
-    },
-    {
-      accessorKey: "size",
-      header: "Size",
-      cell: ({ row }) => row.original.size,
-    },
-    {
-      // The province of the runner's home address (RUNNER_ADDRESS_PLAN.md
-      // Batch 3), its own column so logistics can sort and filter by it; the
-      // whole address is in the detail modal and the CSV. A dash on rows
-      // from before addresses were collected.
-      id: "province",
-      accessorFn: row => row.addressProvince || '',
-      header: "Province",
-      cell: ({ row }) => row.original.addressProvince || <span className="text-[var(--text-muted)]">—</span>,
-      filterFn: (row, columnId, filterValue) => {
-        if (!filterValue || filterValue.length === 0) return true;
-        return filterValue.includes(row.getValue(columnId) || NO_PROVINCE);
-      }
-    },
-    {
-      accessorKey: "logisticsMethod",
-      header: "Logistics",
-      cell: ({ row }) => <span className="capitalize">{row.original.logisticsMethod}</span>,
-      filterFn: (row, columnId, filterValue) => {
-        if (!filterValue || filterValue.length === 0) return true;
-        return filterValue.includes(row.getValue(columnId));
-      }
-    },
-    {
-      accessorKey: "paymentMethod",
-      header: "Payment",
-      // Already the readable uppercase label; see registrants/page.tsx.
-      cell: ({ row }) => <span>{row.original.paymentMethod}</span>,
-      filterFn: (row, columnId, filterValue) => {
-        if (!filterValue || filterValue.length === 0) return true;
-        return filterValue.includes(row.getValue(columnId));
-      }
-    },
-    {
-      accessorKey: "status",
-      header: "Status",
-      cell: ({ row }) => (
-        <div className="flex flex-col items-start gap-1.5">
-          {renderStatusBadges(row.original)}
-        </div>
-      ),
-    },
-    {
-      id: "actions",
-      header: "Actions",
-      // Both controls sit at the start of the cell, under the column label,
-      // rather than pushed to the row's right edge (PROJECT_GUIDE §8.6).
-      cell: ({ row }) => renderRowActions(row.original, 'table'),
-      enableSorting: false,
-      enableHiding: false,
-    },
-    // The render helpers above are rebuilt every render; updatingId and
-    // runners are what they read that changes what a cell shows.
+  const columns = useMemo(
+    () => buildRegistrantColumns({
+      onView: setViewingRunner,
+      renderActions: runner => <RegistrantRowActions runner={runner} layout="table" {...rowActions} />,
+    }),
+    // The row actions are rebuilt every render; updatingId and runners are
+    // what they read that changes what a cell shows.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  ], [updatingId, runners]);
-
-  /**
-   * The backlog view, applied to the data rather than as a column filter: the
-   * mark it filters on is not a column, and every other filter here already
-   * narrows the same list the export and the pagination read.
-   */
-  const visibleRunners = useMemo(
-    () =>
-      runners.filter(
-        r =>
-          (!showOnlyUnsentEmail || r.emailPending) &&
-          (!showOnlyNeedsValidation || needsValidation(r)) &&
-          (!showOnlyMinors || r.isMinor) &&
-          (!showOnlyPacers || r.isPacer)
-      ),
-    [runners, showOnlyUnsentEmail, showOnlyNeedsValidation, showOnlyMinors, showOnlyPacers]
-  );
-
-  const unsentEmailCount = useMemo(() => runners.filter(r => r.emailPending).length, [runners]);
-
-  const needsValidationCount = useMemo(
-    () => runners.filter(needsValidation).length,
-    [runners]
+    [updatingId, runners]
   );
 
   const table = useReactTable({
-    data: visibleRunners,
+    data: queues.visibleRunners,
     columns,
     state: {
       sorting,
@@ -937,6 +300,14 @@ export default function RegistrantsTable({
     getPaginationRowModel: getPaginationRowModel(),
   });
 
+  const bulkDelete = useBulkDeleteModal({
+    table,
+    onDeleted: runnerIds => {
+      setRunners(runners.filter(r => !runnerIds.includes(r.id)));
+      setRowSelection({});
+    },
+  });
+
   const selectedCount = table.getSelectedRowModel().rows.length;
 
   // What the bulk bar last counted, so a bar on its way out still reads
@@ -946,103 +317,6 @@ export default function RegistrantsTable({
   if (selectedCount > 0 && selectedCount !== bulkBarCount) {
     setBulkBarCount(selectedCount);
   }
-
-  const hasMinors = useMemo(() => runners.some(r => r.isMinor), [runners]);
-
-  const hasPacers = useMemo(() => runners.some(r => r.isPacer), [runners]);
-
-  const uniqueCategories = useMemo(() => {
-    const cats = new Set(runners.map(r => r.category).filter(Boolean));
-    return Array.from(cats).sort();
-  }, [runners]);
-
-  // "Not on file" last, after the provinces, for the rows from before
-  // addresses were collected — offered only when there are some.
-  const uniqueProvinces = useMemo(() => {
-    const provinces = Array.from(new Set(runners.map(r => r.addressProvince).filter(Boolean))).sort();
-    if (provinces.length === 0) return [];
-    return runners.some(r => !r.addressProvince) ? [...provinces, NO_PROVINCE] : provinces;
-  }, [runners]);
-
-  const uniqueLogistics = useMemo(() => {
-    const logs = new Set(runners.map(r => r.logisticsMethod).filter(Boolean));
-    return Array.from(logs).sort();
-  }, [runners]);
-
-  const uniquePayment = useMemo(() => {
-    const pays = new Set(runners.map(r => r.paymentMethod).filter(Boolean));
-    return Array.from(pays).sort();
-  }, [runners]);
-
-  const selectedCategories = (table.getColumn('category')?.getFilterValue() as string[]) || [];
-  const selectedLogistics = (table.getColumn('logisticsMethod')?.getFilterValue() as string[]) || [];
-  const selectedProvinces = (table.getColumn('province')?.getFilterValue() as string[]) || [];
-  const selectedPayment = (table.getColumn('paymentMethod')?.getFilterValue() as string[]) || [];
-
-  const toggleCategory = (cat: string) => {
-    const newSelected = selectedCategories.includes(cat)
-      ? selectedCategories.filter(c => c !== cat)
-      : [...selectedCategories, cat];
-    table.getColumn('category')?.setFilterValue(newSelected.length ? newSelected : undefined);
-  };
-
-  const toggleLogistics = (log: string) => {
-    const newSelected = selectedLogistics.includes(log)
-      ? selectedLogistics.filter(l => l !== log)
-      : [...selectedLogistics, log];
-    table.getColumn('logisticsMethod')?.setFilterValue(newSelected.length ? newSelected : undefined);
-  };
-
-  const toggleProvince = (province: string) => {
-    const newSelected = selectedProvinces.includes(province)
-      ? selectedProvinces.filter(p => p !== province)
-      : [...selectedProvinces, province];
-    table.getColumn('province')?.setFilterValue(newSelected.length ? newSelected : undefined);
-  };
-
-  const togglePayment = (pay: string) => {
-    const newSelected = selectedPayment.includes(pay)
-      ? selectedPayment.filter(p => p !== pay)
-      : [...selectedPayment, pay];
-    table.getColumn('paymentMethod')?.setFilterValue(newSelected.length ? newSelected : undefined);
-  };
-
-  // The Filters chip's sheet: the three lists, each reading and writing its
-  // own column filter.
-  const filterGroups: FilterGroup[] = [
-    { label: 'Category', options: uniqueCategories, selected: selectedCategories, onToggle: toggleCategory, capitalize: false },
-    { label: 'Logistics', options: uniqueLogistics, selected: selectedLogistics, onToggle: toggleLogistics, capitalize: true },
-    { label: 'Payment', options: uniquePayment, selected: selectedPayment, onToggle: togglePayment, capitalize: true },
-    { label: 'Province', options: uniqueProvinces, selected: selectedProvinces, onToggle: toggleProvince, capitalize: false },
-    // Offered only on a race that has a minor, so the sheet never lists an
-    // option that could only ever empty the table.
-    {
-      label: 'Age',
-      options: hasMinors
-        ? [{ value: 'MINOR', label: `Minors (${GUARDIAN_CONSENT_MAX_AGE} and under)` }]
-        : [],
-      selected: showOnlyMinors ? ['MINOR'] : [],
-      onToggle: () => setShowOnlyMinors(on => !on),
-      capitalize: false,
-    },
-    // Offered only on a race that has one, on the same rule as Age above.
-    // *Type*, not *Pacer*, because this is the group that will hold whatever
-    // other kind of entry the app learns to give away.
-    {
-      label: 'Type',
-      options: hasPacers ? [{ value: 'PACER', label: 'Pacers' }] : [],
-      selected: showOnlyPacers ? ['PACER'] : [],
-      onToggle: () => setShowOnlyPacers(on => !on),
-      capitalize: false,
-    },
-  ];
-  const clearFilters = () => {
-    setShowOnlyMinors(false);
-    setShowOnlyPacers(false);
-    for (const id of ['category', 'province', 'logisticsMethod', 'paymentMethod']) {
-      table.getColumn(id)?.setFilterValue(undefined);
-    }
-  };
 
   /**
    * The export, as the table calls it: the columns and the Excel-proofing
@@ -1070,135 +344,17 @@ export default function RegistrantsTable({
 
   return (
     <div className="flex flex-col gap-4 w-full text-primary">
-      {/* Top Toolbar */}
-      <div className="admin-toolbar" style={{ padding: '0 0 16px 0', borderBottom: 'none' }}>
-        <div className="toolbar-actions" style={{ flex: 1 }}>
-          <div className="search-wrapper">
-            <Search className="search-icon" size={16} />
-            <input
-              value={globalFilter ?? ''}
-              onChange={e => setGlobalFilter(e.target.value)}
-              className="search-input"
-              placeholder="Search runners..."
-            />
-            {globalFilter && (
-              <button
-                type="button"
-                onClick={() => setGlobalFilter('')}
-                aria-label="Clear search"
-                className="absolute right-1 max-sm:right-0 top-1/2 -translate-y-1/2 flex items-center justify-center w-8 h-8 max-sm:w-11 max-sm:h-11 text-[var(--text-muted)] hover:text-[var(--ink-85)] bg-transparent border-none cursor-pointer"
-              >
-                <X size={14} />
-              </button>
-            )}
-          </div>
-
-          {/*
-            The Filters chip, at every width — the events list's filter. Its
-            sheet holds Category, Logistics and Payment; the two work-queue
-            chips beside it stay chips, because each is one question a
-            validator asks all day and wears the colour of what it collects.
-          */}
-          <FiltersMenu
-            groups={filterGroups}
-            onClear={clearFilters}
-            empty="Nothing to filter yet. The categories, logistics and payment methods appear here as runners register."
-          />
-
-          {/*
-            The payment queue, in one click.
-
-            Validating deposit slips is the job this screen is opened for most
-            days, and before this the only way to gather them was to search
-            "PENDING" and hope nothing else on the row said the same word. It
-            sits first among the chips because it is the first thing asked for,
-            and it wears the amber of the PENDING badge it collects so the
-            colour means the same thing in both places.
-          */}
-          <button
-            onClick={() => setShowOnlyNeedsValidation(!showOnlyNeedsValidation)}
-            disabled={needsValidationCount === 0 && !showOnlyNeedsValidation}
-            aria-pressed={showOnlyNeedsValidation}
-            className={`btn-filter ${showOnlyNeedsValidation ? 'is-pending' : ''} disabled:opacity-50 disabled:cursor-not-allowed`}
-            title={needsValidationCount === 0
-              ? 'No bank transfer here is waiting on a payment check'
-              : 'Show only the bank transfers waiting for their payment to be checked'}
-          >
-            <Hourglass size={16} /> Needs Validation
-            {needsValidationCount > 0 && <span className="ml-1 px-1 bg-[var(--ink-10)] rounded">{needsValidationCount}</span>}
-          </button>
-
-          {/*
-            The email backlog, in one click.
-
-            On a day the daily send quota runs out this is the difference
-            between a staff member working a list and hunting a table for the
-            rows nobody was emailed. It is a toggle rather than a dropdown
-            because there is exactly one thing to ask for.
-          */}
-          <button
-            onClick={() => setShowOnlyUnsentEmail(!showOnlyUnsentEmail)}
-            disabled={unsentEmailCount === 0 && !showOnlyUnsentEmail}
-            aria-pressed={showOnlyUnsentEmail}
-            className={`btn-filter ${showOnlyUnsentEmail ? 'is-danger is-active' : ''} disabled:opacity-50 disabled:cursor-not-allowed`}
-            title={unsentEmailCount === 0
-              ? 'Every registrant here has had their email'
-              : 'Show only the registrants whose email never went out'}
-          >
-            <MailWarning size={16} /> Unsent Email
-            {unsentEmailCount > 0 && <span className="ml-1 px-1 bg-[var(--ink-10)] rounded">{unsentEmailCount}</span>}
-          </button>
-
-          {/* Which columns the table shows. Cards have no columns to hide, so
-              below `lg` the chip goes and Sort (which the headers did) comes. */}
-          <div ref={viewRef} className="relative view-dropdown-container dash-desktop-only">
-            <button
-              onClick={() => setIsViewOpen(!isViewOpen)}
-              className="btn-filter"
-            >
-              <Columns size={16} /> View
-            </button>
-            {isViewOpen && (
-              <div className="toolbar-popover absolute right-0 mt-2 bg-[var(--dash-popover)] border border-[var(--dash-border)] rounded-md p-2 min-w-[150px] z-50 shadow-2xl">
-                {table.getAllLeafColumns().filter(col => col.getCanHide()).map(column => {
-                  return (
-                    <label key={column.id} className="flex items-center gap-2 px-2 py-1.5 hover:bg-[var(--ink-05)] cursor-pointer rounded-md text-sm text-primary">
-                      <div className={`w-4 h-4 border border-[var(--dash-border)] rounded-sm flex items-center justify-center ${column.getIsVisible() ? 'bg-[var(--ink-10)]' : ''}`}>
-                        <input
-                          type="checkbox"
-                          checked={column.getIsVisible()}
-                          onChange={column.getToggleVisibilityHandler()}
-                          className="opacity-0 absolute w-0 h-0"
-                        />
-                        {column.getIsVisible() && <div className="w-2 h-2 bg-[var(--ink)] rounded-sm" />}
-                      </div>
-                      <span className="capitalize">{column.id === 'runnerRef' ? 'Reference' : column.id}</span>
-                    </label>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          <MobileSortMenu table={table} />
-        </div>
-
-        <div className="toolbar-actions flex items-center gap-2">
-          {/* From `lg` up. Below it the bulk bar at the foot of the screen
-              offers Delete beside Export and Clear. */}
-          {permissions.remove && selectedCount > 0 && (
-            <button
-              onClick={() => setIsBulkDeleteOpen(true)}
-              className="btn-filter is-danger is-active dash-desktop-only"
-            >
-              <Trash2 size={16} /> Delete Selected ({selectedCount})
-            </button>
-          )}
-          <button onClick={handleExportCSV} className="btn-light">
-            <Download size={16} /> Export to CSV
-          </button>
-        </div>
-      </div>
+      <RegistrantsToolbar
+        table={table}
+        runners={runners}
+        queues={queues}
+        globalFilter={globalFilter}
+        setGlobalFilter={setGlobalFilter}
+        canRemove={permissions.remove}
+        selectedCount={selectedCount}
+        onBulkDelete={bulkDelete.open}
+        onExport={handleExportCSV}
+      />
 
       {/* Table Area — from `lg` up; the cards below take its place under it. */}
       <div className="dash-desktop-only border border-[var(--dash-border)] rounded-lg overflow-hidden bg-transparent">
@@ -1289,7 +445,7 @@ export default function RegistrantsTable({
           badges={row => (
             <>
               {row.original.isMinor && <MinorBadge />}
-              {renderStatusBadges(row.original)}
+              <RegistrantStatusBadges runner={row.original} />
               {/* What the table's badges say only on hover, said in words:
                   a phone has no hover. Allowed to wrap, unlike the chips. */}
               {row.original.status === 'EXPIRED' && (
@@ -1311,7 +467,7 @@ export default function RegistrantsTable({
             { label: 'Logistics', value: row.original.logisticsMethod },
             { label: 'Payment', value: row.original.paymentMethod },
           ]}
-          actions={row => renderRowActions(row.original, 'card')}
+          actions={row => <RegistrantRowActions runner={row.original} layout="card" {...rowActions} />}
           empty={
             <div className="border border-[var(--dash-border)] rounded-lg py-16 px-4 text-center text-[var(--text-muted)]">
               No registrants found.
@@ -1340,7 +496,7 @@ export default function RegistrantsTable({
             <Download size={16} aria-hidden="true" /> Export
           </button>
           {permissions.remove && (
-            <button type="button" onClick={() => setIsBulkDeleteOpen(true)} className="btn-filter is-danger bulk-bar-delete">
+            <button type="button" onClick={bulkDelete.open} className="btn-filter is-danger bulk-bar-delete">
               <Trash2 size={16} aria-hidden="true" /> Delete
             </button>
           )}
@@ -1360,8 +516,8 @@ export default function RegistrantsTable({
           onClose={() => setViewingRunner(null)}
           onValidate={validatePayment}
           onOpenProof={setProofRunner}
-          onOpenRemarks={openRemarksModal}
-          onOpenEmail={openEmailModal}
+          onOpenRemarks={remarks.open}
+          onOpenEmail={email.open}
         />
       )}
 
@@ -1397,340 +553,10 @@ export default function RegistrantsTable({
         }
       />
 
-      {/* Delete Confirmation Modal */}
-      <div
-        className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--dash-scrim)] backdrop-blur-sm transition-opacity duration-200 ${
-          isDeleteOpen && !isDeleteClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-        }`}
-      >
-        <div
-          role="alertdialog"
-          aria-modal="true"
-          aria-labelledby="delete-registrant-title"
-          className={`t-modal admin-modal-panel w-full max-w-md bg-[var(--dash-panel-solid)] border border-red-500/20 rounded-2xl shadow-2xl p-6 max-sm:p-4 flex flex-col gap-6 ${isDeleteOpen ? 'is-open' : ''} ${isDeleteClosing ? 'is-closing' : ''}`}
-        >
-          <div className="admin-modal-body flex flex-col gap-2">
-            <h3 id="delete-registrant-title" className="text-xl font-semibold text-primary">Delete Registrant</h3>
-            <p className="text-secondary text-sm leading-relaxed [overflow-wrap:anywhere]">
-              Are you sure you want to delete {deletingRunner?.name}? This action cannot be undone and will permanently remove them from the database.
-            </p>
-          </div>
-
-          <div className="admin-modal-footer flex justify-end gap-3 pt-2 border-t border-[var(--dash-hairline)]">
-            <button
-              type="button"
-              onClick={closeDeleteModal}
-              className="px-4 py-2 text-sm font-medium text-[var(--ink-85)] hover:text-primary transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleDeleteConfirm}
-              disabled={isDeleting}
-              className="px-5 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
-            >
-              {isDeleting ? <BusyLabel>Deleting</BusyLabel> : 'Delete'}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Bulk Delete Confirmation Modal */}
-      <div
-        className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--dash-scrim)] backdrop-blur-sm transition-opacity duration-200 ${
-          isBulkDeleteOpen && !isBulkDeleteClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-        }`}
-      >
-        <div
-          role="alertdialog"
-          aria-modal="true"
-          aria-labelledby="bulk-delete-registrants-title"
-          className={`t-modal admin-modal-panel w-full max-w-md bg-[var(--dash-panel-solid)] border border-red-500/20 rounded-2xl shadow-2xl p-6 max-sm:p-4 flex flex-col gap-6 ${isBulkDeleteOpen ? 'is-open' : ''} ${isBulkDeleteClosing ? 'is-closing' : ''}`}
-        >
-          <div className="admin-modal-body flex flex-col gap-2">
-            <h3 id="bulk-delete-registrants-title" className="text-xl font-semibold text-primary">Delete Selected Registrants</h3>
-            <p className="text-secondary text-sm leading-relaxed">
-              Are you sure you want to delete the {table.getSelectedRowModel().rows.length} selected registrants? This action cannot be undone and will permanently remove them from the database.
-            </p>
-          </div>
-
-          <div className="admin-modal-footer flex justify-end gap-3 pt-2 border-t border-[var(--dash-hairline)]">
-            <button
-              type="button"
-              onClick={closeBulkDeleteModal}
-              className="px-4 py-2 text-sm font-medium text-[var(--ink-85)] hover:text-primary transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleBulkDeleteConfirm}
-              disabled={isBulkDeleting}
-              className="px-5 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
-            >
-              {isBulkDeleting ? <BusyLabel>Deleting</BusyLabel> : 'Delete Selected'}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/*
-        Remarks Modal.
-
-        Built from the same panel the edit and delete modals use rather than a
-        browser prompt(): an OS dialog ignores the dark palette entirely and
-        blocks the thread, which is exactly why AlertProvider replaced
-        window.alert. It is not AlertModal itself because that dialog carries a
-        message, not an input - a textarea inside its ReactNode message would be
-        captured at enqueue time and go stale on the first keystroke.
-
-        Internal by design. Saving a note sends nothing to the runner; an
-        assigned staff member follows up by hand.
-      */}
-      <div
-        className={`fixed inset-0 z-50 flex items-center justify-center p-4 max-sm:p-3 max-sm:items-start bg-[var(--dash-scrim)] backdrop-blur-sm transition-opacity duration-200 ${
-          isRemarksOpen && !isRemarksClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-        }`}
-      >
-        <div
-          // Top-aligned on a phone rather than centred: the on-screen keyboard
-          // rises over the lower half of the screen, and a panel standing at
-          // the top keeps Save above it while the note is being typed.
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="remarks-modal-title"
-          className={`t-modal admin-modal-panel w-full max-w-lg bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-2xl shadow-2xl flex flex-col ${isRemarksOpen ? 'is-open' : ''} ${isRemarksClosing ? 'is-closing' : ''}`}
-        >
-          <div className="p-6 max-sm:px-4 max-sm:py-3 border-b border-[var(--dash-border)] flex justify-between items-start gap-4 shrink-0">
-            <div className="min-w-0">
-              <h3 id="remarks-modal-title" className="text-xl font-semibold text-primary m-0">Payment Remarks</h3>
-              {remarkingRunner && (
-                <p className="text-sm text-secondary mt-1 m-0 [overflow-wrap:anywhere]">
-                  Order {remarkingRunner.orderRef} &middot;{' '}
-                  {runnersOnOrder(remarkingRunner) > 1
-                    ? `${runnersOnOrder(remarkingRunner)} runners`
-                    : remarkingRunner.name}
-                </p>
-              )}
-            </div>
-            <button
-              onClick={closeRemarksModal}
-              aria-label="Close"
-              className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-full text-secondary hover:text-primary transition-colors bg-transparent border-none cursor-pointer p-0"
-            >
-              <X size={20} />
-            </button>
-          </div>
-
-          <div className="admin-modal-body p-6 max-sm:p-4 space-y-3">
-            <label htmlFor="registration-remarks" className="block text-sm text-secondary">
-              What did you find when you checked this payment?
-            </label>
-            <textarea
-              id="registration-remarks"
-              value={remarksDraft}
-              onChange={e => setRemarksDraft(e.target.value)}
-              rows={5}
-              placeholder="e.g. Deposit slip is for ₱1,200 but the order total is ₱1,500. Called the runner on 09/06."
-              className="w-full bg-[var(--dash-surface)] border border-[var(--dash-border)] rounded-lg px-4 py-3 text-base text-primary placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--ink-30)] resize-y"
-            />
-            <p className="text-xs text-[var(--text-muted)] m-0">
-              Internal only. The runner is never shown this and no email is sent
-              {remarkingRunner && runnersOnOrder(remarkingRunner) > 1
-                ? '. It applies to every runner on this order.'
-                : '.'}
-            </p>
-            {remarkingRunner?.remarksBy && remarkingRunner?.remarksAt && (
-              <p className="text-xs text-[var(--text-muted)] m-0">
-                Last written by {remarkingRunner.remarksBy} on{' '}
-                {new Date(remarkingRunner.remarksAt).toLocaleString()}.
-              </p>
-            )}
-          </div>
-
-          <div className="admin-modal-footer p-6 max-sm:p-4 border-t border-[var(--dash-border)] flex justify-end gap-3 bg-[var(--dash-sunken)] shrink-0">
-            <button
-              type="button"
-              onClick={closeRemarksModal}
-              className="px-4 py-2 text-sm font-medium text-[var(--ink-85)] hover:text-primary transition-colors bg-transparent border-none cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleRemarksSave}
-              disabled={isSavingRemarks || (!remarksDraft.trim() && !remarkingRunner?.remarks)}
-              className="px-6 py-2 bg-[var(--dash-inverse-bg)] text-[var(--dash-inverse-fg)] rounded-lg text-sm font-medium hover:bg-[var(--dash-inverse-hover)] transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
-            >
-              {isSavingRemarks
-                ? <BusyLabel>Saving</BusyLabel>
-                : !remarksDraft.trim() && remarkingRunner?.remarks
-                  ? 'Clear Remarks'
-                  : 'Save Remarks'}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/*
-        Manual Email Modal.
-
-        The app sends on Resend's free tier: 100 recipients a day, and it stops
-        rather than bills. When a send does not happen the registration is
-        marked (lib/email-delivery.ts) and a person sends the email themselves
-        — this is where they get it.
-
-        Two ways out, and both are needed:
-
-         - *Open in my email app* fills in the recipient and subject through a
-           mailto:, whose body is plain text by definition. It cannot carry the
-           design, and a long body can be cut short by the client's own URL
-           limit. The same constraint rules out a Gmail compose deep link.
-         - *Copy formatted email* puts the HTML on the clipboard, so pasting
-           into Gmail's compose window keeps the logo, the gradient bar and the
-           status pill.
-
-        The preview is an iframe rather than the markup dropped into this page:
-        the email is a whole document with its own dark palette, and inlining it
-        would leak its styles into the admin and inherit the admin's own.
-      */}
-      <div
-        className={`fixed inset-0 z-50 flex items-center justify-center p-4 max-sm:p-3 bg-[var(--dash-scrim)] backdrop-blur-sm transition-opacity duration-200 ${
-          isEmailOpen && !isEmailClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-        }`}
-      >
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="email-modal-title"
-          className={`t-modal admin-modal-panel w-full max-w-2xl bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-2xl shadow-2xl flex flex-col max-h-[90vh] ${isEmailOpen ? 'is-open' : ''} ${isEmailClosing ? 'is-closing' : ''}`}
-        >
-          <div className="p-6 max-sm:px-4 max-sm:py-3 border-b border-[var(--dash-border)] flex justify-between items-start gap-4 shrink-0">
-            <div className="min-w-0">
-              <h3 id="email-modal-title" className="text-xl font-semibold text-primary m-0">
-                {emailMessage && !emailMessage.outstanding ? 'Email Already Sent' : 'Send This Email By Hand'}
-              </h3>
-              {emailRunner && (
-                <p className="text-sm text-secondary mt-1 m-0 [overflow-wrap:anywhere]">
-                  Order {emailRunner.orderRef} &middot;{' '}
-                  {runnersOnOrder(emailRunner) > 1
-                    ? `${runnersOnOrder(emailRunner)} runners`
-                    : emailRunner.name}
-                  {emailMessage ? ` · ${emailMessage.label}` : ''}
-                </p>
-              )}
-            </div>
-            <button
-              onClick={closeEmailModal}
-              aria-label="Close"
-              className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-full text-secondary hover:text-primary transition-colors bg-transparent border-none cursor-pointer p-0"
-            >
-              <X size={20} />
-            </button>
-          </div>
-
-          <div className="admin-modal-body p-6 max-sm:p-4 overflow-y-auto flex-1 space-y-4">
-            {isLoadingEmail && <p className="text-sm text-secondary m-0">Preparing the email&hellip;</p>}
-
-            {!isLoadingEmail && emailLoadError && (
-              <p className="text-sm text-[var(--status-danger)] m-0">{emailLoadError}</p>
-            )}
-
-            {!isLoadingEmail && emailMessage && (
-              <>
-                <div className="rounded-lg border border-[var(--dash-border)] bg-[var(--dash-surface)] p-4 space-y-3 text-sm">
-                  <span className="flex flex-col">
-                    <span className="text-[var(--text-muted)]">To</span>
-                    <span className="text-primary font-medium break-all select-all">{emailMessage.to}</span>
-                  </span>
-                  <span className="flex flex-col">
-                    <span className="text-[var(--text-muted)]">Subject</span>
-                    <span className="text-primary font-medium select-all [overflow-wrap:anywhere]">{emailMessage.subject}</span>
-                  </span>
-                </div>
-
-                {/* Resend's own words, so a quota stop is not mistaken for a
-                    bad address — the two need opposite responses. */}
-                {emailMessage.lastEmailError && (
-                  <p className="text-xs text-[var(--status-danger)] m-0 [overflow-wrap:anywhere]">
-                    Last delivery attempt failed: {emailMessage.lastEmailError}
-                  </p>
-                )}
-
-                {!emailMessage.outstanding && (
-                  <p className="text-xs text-[var(--text-muted)] m-0">
-                    This one already went out
-                    {emailMessage.manualEmailSentAt && emailMessage.manualEmailSentBy
-                      ? `, sent by hand by ${emailMessage.manualEmailSentBy} on ${new Date(emailMessage.manualEmailSentAt).toLocaleString()}`
-                      : ''}
-                    . It is here so you can send it again if the runner asks.
-                  </p>
-                )}
-
-                <div className="rounded-lg overflow-hidden border border-[var(--dash-border)] bg-[var(--dash-sunken)]">
-                  <iframe
-                    srcDoc={previewEmailHtml(emailMessage.html)}
-                    sandbox=""
-                    title="Email preview"
-                    className="w-full h-[320px] border-none bg-transparent"
-                  />
-                </div>
-
-                <div className="flex flex-wrap gap-3">
-                  <button
-                    type="button"
-                    onClick={handleCopyFormattedEmail}
-                    className="flex items-center gap-2 px-4 py-2 bg-[var(--dash-inverse-bg)] text-[var(--dash-inverse-fg)] rounded-lg text-sm font-medium hover:bg-[var(--dash-inverse-hover)] transition-colors border-none cursor-pointer max-sm:flex-1 max-sm:basis-full max-sm:justify-center max-sm:min-h-11"
-                  >
-                    <Copy size={16} />
-                    {copyState === 'copied'
-                      ? 'Copied — paste into Gmail'
-                      : copyState === 'text-only'
-                        ? 'Copied as plain text only'
-                        : 'Copy Formatted Email'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleOpenInMailApp}
-                    className="flex items-center gap-2 px-4 py-2 border border-[var(--dash-border)] text-primary rounded-lg text-sm font-medium hover:bg-[var(--ink-05)] transition-colors bg-transparent cursor-pointer max-sm:flex-1 max-sm:basis-full max-sm:justify-center max-sm:min-h-11"
-                  >
-                    <ExternalLink size={16} /> Open In My Email App
-                  </button>
-                </div>
-
-                <p className="text-xs text-[var(--text-muted)] m-0">
-                  Copying keeps the design. Your email app opens with the recipient and subject
-                  filled in but a plain-text body, which a long email can have cut short. Send it
-                  from your own address, then mark it below so it leaves the list.
-                </p>
-              </>
-            )}
-          </div>
-
-          <div className="admin-modal-footer p-6 max-sm:p-4 border-t border-[var(--dash-border)] flex justify-end items-center gap-3 bg-[var(--dash-sunken)] shrink-0">
-            <button
-              type="button"
-              onClick={closeEmailModal}
-              className="px-4 py-2 text-sm font-medium text-[var(--ink-85)] hover:text-primary transition-colors bg-transparent border-none cursor-pointer"
-            >
-              Close
-            </button>
-            {emailMessage?.outstanding && (
-              <button
-                type="button"
-                onClick={handleMarkEmailSent}
-                disabled={isMarkingSent}
-                // .btn-light, not the orange gradient: no gradient buttons
-                // inside the admin (PROJECT_GUIDE §9).
-                className="btn-light"
-              >
-                {isMarkingSent ? <BusyLabel>Marking</BusyLabel> : 'Mark As Sent'}
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
+      <DeleteRegistrantModal {...deleteModal.modalProps} />
+      <BulkDeleteModal {...bulkDelete.modalProps} />
+      <RemarksModal {...remarks.modalProps} />
+      <ManualEmailModal {...email.modalProps} />
     </div>
   );
 }

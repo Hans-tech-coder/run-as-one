@@ -9,9 +9,11 @@
  */
 
 import React from 'react';
+import { MailWarning } from 'lucide-react';
 import { statusProvenance } from '@/lib/activity';
 import { GUARDIAN_CONSENT_MAX_AGE } from '@/lib/minor-consent';
 import { formatRunnerAddress, groupByAddress, type RunnerAddress } from '@/lib/runner-address';
+import type { RegistrantRow } from './RegistrantsTable';
 
 /**
  * The badge tone a payment status wears.
@@ -110,6 +112,47 @@ export function PacerBadge() {
     >
       Pacer
     </span>
+  );
+}
+
+/**
+ * The Status cell's badges: the payment status, and under it the one thing
+ * that can be wrong about this row without the payment being wrong — the
+ * email never went out. It sits in the Status cell rather than a column of
+ * its own because it is an exception, and a column that is empty for
+ * ninety-nine rows in a hundred costs width every organizer pays. Drawn once
+ * for the table cell and the card's badge row, so the two cannot disagree.
+ */
+export function RegistrantStatusBadges({ runner }: { runner: RegistrantRow }) {
+  return (
+    <>
+      <span
+        className={`status-badge ${statusTone(runner.status)}`}
+        title={runner.status === 'EXPIRED'
+          ? 'This online checkout was never paid, so its slot and any promo code it used were released.'
+          : undefined}
+      >
+        {runner.status}
+      </span>
+      {/* Under the status rather than beside the name, because it explains
+          the status: a pacer's order reads PAID with nothing collected, and
+          without this chip that looks like a payment somebody forgot to
+          record (PACER_DISCOUNT_PLAN.md Batch 3). Drawn here, so the table
+          cell and the card's badge row carry it alike. */}
+      {runner.isPacer && <PacerBadge />}
+      {runner.emailPending && (
+        /* The project's own badge rather than a new one (standing rule
+           §8.2), in the danger tone: an unsent email is a failure, not a
+           waiting state, and amber would put it in the same voice as the
+           PENDING badge directly above it. */
+        <span
+          className="status-badge danger gap-1"
+          title={`The ${runner.emailPendingLabel} email has not gone out.`}
+        >
+          <MailWarning size={12} /> Email Unsent
+        </span>
+      )}
+    </>
   );
 }
 
