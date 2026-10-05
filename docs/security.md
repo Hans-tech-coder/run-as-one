@@ -166,6 +166,18 @@
   transaction and locks the capped category rows first (`reserveSlots`), since a
   count taken before the write is a count two simultaneous orders both pass. A
   code's usage cap is spent the same way, by `redeemPromoCode`.
+- **The resume-payment link is a key to one order, and is built as one**
+  (`UNPAID_FOLLOWUP_PLAN.md` Batch 3, `lib/resume-payment.ts`). Handed out
+  only with `registration:email`, every copy on the trail. A signed token
+  with `purpose: 'resume-payment'` and the order id, expiring with the order;
+  it cannot pass for a session and a session cannot pass for it. Opening it
+  re-checks the order (`payableState`), which is its revocation: paid,
+  cancelled or expired, it only says so. `/pay/[token]` is `noindex` and
+  throttled, and shows the race, runner count, amount, method and
+  reference — **never a name, email, phone or birthdate**, because the link
+  is pasted into chats and forwarded. Pay now bills the stored order, never
+  the request, and closes the order's earlier PayMongo page first, so one
+  order can never be paid twice.
 - Payment proofs are **private** blobs, served only through
   `/api/admin/proof/[id]` with a roughly five-minute signed URL.
 - Passwords are bcrypt-hashed; the session cookie is httpOnly, `sameSite=lax`,

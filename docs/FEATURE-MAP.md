@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-36 pages · 50 API routes · 73 modules in `src/lib` · 346 files · 73,278 lines
+37 pages · 52 API routes · 75 modules in `src/lib` · 352 files · 74,243 lines
 
 ---
 
@@ -53,6 +53,7 @@ The route, the server component behind it, and the client components beside it.
 | `/events/[slug]` | [`/events/[slug]/page.tsx`](../src/app/events/[slug]/page.tsx) | — |
 | `/events/[slug]/register` | [`/events/[slug]/register/page.tsx`](../src/app/events/[slug]/register/page.tsx) | `AddressPlaceFields.tsx` `BankDetailsModal.tsx` `BankTransferWizardClient.tsx` `BirthdatePicker.tsx` `CategoryPicker.tsx` `Combobox.tsx` `CommunityPicker.tsx` `ConsentWaiver.tsx` `delivery-address.ts` `delivery-split.ts` `delivery.ts` `DeliveryAddressFields.tsx` `DeliveryAreaPanel.tsx` `DeliveryStep.tsx` `FreeSlotOffer.tsx` `GenderField.tsx` `GroupLimitNotice.tsx` `GuardianConsent.tsx` `PhoneField.tsx` `PosterLightbox.tsx` `PromoCodeField.tsx` `RegistrationWizardClient.tsx` `RunnerAddressFields.tsx` `SelectField.tsx` `ShirtSizeField.tsx` `SizeGuideModal.tsx` `useDeliveryPlan.ts` `useStepReveal.ts` `validation.ts` |
 | `/feedback` | [`/feedback/page.tsx`](../src/app/feedback/page.tsx) | `FeedbackForm.tsx` `FeedbackSent.tsx` `ScreenshotField.tsx` |
+| `/pay/[token]` | [`/pay/[token]/page.tsx`](../src/app/pay/[token]/page.tsx) | `PayNowButton.tsx` |
 | `/privacy` | [`/privacy/page.tsx`](../src/app/privacy/page.tsx) | — |
 | `/results` | [`/results/page.tsx`](../src/app/results/page.tsx) | — |
 | `/results/[slug]` | [`/results/[slug]/page.tsx`](../src/app/results/[slug]/page.tsx) | — |
@@ -94,6 +95,7 @@ The route, the server component behind it, and the client components beside it.
 | `/api/admin/registrations/[id]/email` | GET POST | [`/admin/registrations/[id]/email/route.ts`](../src/app/api/admin/registrations/[id]/email/route.ts) |
 | `/api/admin/registrations/[id]/follow-up` | POST | [`/admin/registrations/[id]/follow-up/route.ts`](../src/app/api/admin/registrations/[id]/follow-up/route.ts) |
 | `/api/admin/registrations/[id]/payment-check` | POST | [`/admin/registrations/[id]/payment-check/route.ts`](../src/app/api/admin/registrations/[id]/payment-check/route.ts) |
+| `/api/admin/registrations/[id]/payment-link` | POST | [`/admin/registrations/[id]/payment-link/route.ts`](../src/app/api/admin/registrations/[id]/payment-link/route.ts) |
 | `/api/admin/registrations/[id]/status` | PATCH | [`/admin/registrations/[id]/status/route.ts`](../src/app/api/admin/registrations/[id]/status/route.ts) |
 | `/api/admin/remittances` | POST | [`/admin/remittances/route.ts`](../src/app/api/admin/remittances/route.ts) |
 | `/api/admin/remittances/[id]` | PATCH | [`/admin/remittances/[id]/route.ts`](../src/app/api/admin/remittances/[id]/route.ts) |
@@ -113,6 +115,7 @@ The route, the server component behind it, and the client components beside it.
 | `/api/checkout/manual` | POST | [`/checkout/manual/route.ts`](../src/app/api/checkout/manual/route.ts) |
 | `/api/cron/expire-pending` | — | [`/cron/expire-pending/route.ts`](../src/app/api/cron/expire-pending/route.ts) |
 | `/api/feedback` | POST | [`/feedback/route.ts`](../src/app/api/feedback/route.ts) |
+| `/api/pay/[token]` | POST | [`/pay/[token]/route.ts`](../src/app/api/pay/[token]/route.ts) |
 | `/api/promos/lookup` | POST | [`/promos/lookup/route.ts`](../src/app/api/promos/lookup/route.ts) |
 | `/api/upload` | POST | [`/upload/route.ts`](../src/app/api/upload/route.ts) |
 | `/api/webhooks/paymongo` | POST | [`/webhooks/paymongo/route.ts`](../src/app/api/webhooks/paymongo/route.ts) |
@@ -170,6 +173,7 @@ the file itself.
 | [`organizer-status.ts`](../src/lib/organizer-status.ts) | Which `Organizer` row is Run As One, and whether it — and so its team — may be signed in to. |
 | [`pacer-store.ts`](../src/lib/pacer-store.ts) | Reading pacers out of the database, apart from `pacer.ts` for the reason `promo-store.ts` is apart from `discount.ts`: the Pacers screen is a clien… |
 | [`pacer.ts`](../src/lib/pacer.ts) | What a pacer code is, and when the dashboard has to nag about it (`PACER_DISCOUNT_PLAN.md`). |
+| [`paymongo-session.ts`](../src/lib/paymongo-session.ts) | The PayMongo payment page an order is sent to, built in one place (`UNPAID_FOLLOWUP_PLAN.md` Batch 3, moved out of `api/checkout` unchanged). |
 | [`pending-expiry.ts`](../src/lib/pending-expiry.ts) | When an unpaid online checkout stops holding what it took. |
 | [`permissions.ts`](../src/lib/permissions.ts) | Who may do what inside an organizer's admin — the whole matrix, in one file. |
 | [`ph-address.ts`](../src/lib/ph-address.ts) | Where in the Philippines a place is. |
@@ -185,6 +189,7 @@ the file itself.
 | [`registration-form.ts`](../src/lib/registration-form.ts) | Which checkout an event shows its runners. |
 | [`registration-gate.ts`](../src/lib/registration-gate.ts) | Whether an event is taking sign-ups, and why not. |
 | [`request-country.ts`](../src/lib/request-country.ts) | — |
+| [`resume-payment.ts`](../src/lib/resume-payment.ts) | The resume-payment link (`UNPAID_FOLLOWUP_PLAN.md` Batch 3). |
 | [`rich-text.ts`](../src/lib/rich-text.ts) | The formatting an organizer may give "About This Event", and how it is read. |
 | [`runner-address.ts`](../src/lib/runner-address.ts) | Every runner's home address (`RUNNER_ADDRESS_PLAN.md` Batch 1). |
 | [`running-community-store.ts`](../src/lib/running-community-store.ts) | — |
@@ -221,15 +226,15 @@ when a task touches one, split it before editing rather than after.
 | 1015 | [`src/app/admin/register/page.tsx`](../src/app/admin/register/page.tsx) |
 | 888 | [`src/app/admin/events/[id]/edit/page.tsx`](../src/app/admin/events/[id]/edit/page.tsx) |
 | 873 | [`src/app/admin/events/EventsTableClient.tsx`](../src/app/admin/events/EventsTableClient.tsx) |
-| 777 | [`src/app/api/checkout/route.ts`](../src/app/api/checkout/route.ts) |
 | 775 | [`src/app/admin/events/[id]/pacers/PacersClient.tsx`](../src/app/admin/events/[id]/pacers/PacersClient.tsx) |
 | 750 | [`src/app/results/[slug]/full/FullResultsClient.tsx`](../src/app/results/[slug]/full/FullResultsClient.tsx) |
 | 693 | [`src/app/admin/AdminDatePicker.tsx`](../src/app/admin/AdminDatePicker.tsx) |
 | 663 | [`src/app/admin/activity/ActivityClient.tsx`](../src/app/admin/activity/ActivityClient.tsx) |
-| 631 | [`src/lib/activity.ts`](../src/lib/activity.ts) |
+| 663 | [`src/lib/pending-expiry.ts`](../src/lib/pending-expiry.ts) |
+| 633 | [`src/lib/activity.ts`](../src/lib/activity.ts) |
 | 621 | [`src/app/api/admin/events/[id]/route.ts`](../src/app/api/admin/events/[id]/route.ts) |
-| 615 | [`src/lib/pending-expiry.ts`](../src/lib/pending-expiry.ts) |
 | 603 | [`src/app/admin/feedback/FeedbackClient.tsx`](../src/app/admin/feedback/FeedbackClient.tsx) |
+| 593 | [`src/app/api/checkout/route.ts`](../src/app/api/checkout/route.ts) |
 | 573 | [`src/app/admin/events/[id]/results/ResultsUploaderClient.tsx`](../src/app/admin/events/[id]/results/ResultsUploaderClient.tsx) |
 | 561 | [`src/app/admin/events/new/NewEventForm.tsx`](../src/app/admin/events/new/NewEventForm.tsx) |
 | 548 | [`src/app/admin/NotificationsCenter.tsx`](../src/app/admin/NotificationsCenter.tsx) |
@@ -250,6 +255,6 @@ when a task touches one, split it before editing rather than after.
 | 469 | [`src/app/events/[slug]/page.tsx`](../src/app/events/[slug]/page.tsx) |
 | 451 | [`src/app/admin/events/[id]/registrants/RunnerEditModal.tsx`](../src/app/admin/events/[id]/registrants/RunnerEditModal.tsx) |
 | 449 | [`src/app/admin/page.tsx`](../src/app/admin/page.tsx) |
+| 443 | [`src/app/admin/events/[id]/registrants/page.tsx`](../src/app/admin/events/[id]/registrants/page.tsx) |
 | 438 | [`src/lib/actor.ts`](../src/lib/actor.ts) |
-| 435 | [`src/app/admin/events/[id]/registrants/page.tsx`](../src/app/admin/events/[id]/registrants/page.tsx) |
 | 416 | [`src/app/admin/events/[id]/results/ResultsTableClient.tsx`](../src/app/admin/events/[id]/results/ResultsTableClient.tsx) |

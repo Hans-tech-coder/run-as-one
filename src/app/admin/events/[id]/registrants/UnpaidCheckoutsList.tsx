@@ -112,15 +112,20 @@ const STATUS_OPTIONS: { value: UnpaidCheckout['status']; label: string }[] = [
 export default function UnpaidCheckoutsList({
   orders,
   eventId,
+  eventSlug,
   canValidate,
+  canEmail,
 }: {
   orders: UnpaidCheckout[];
   eventId: string;
+  eventSlug: string;
   /**
    * `registration:validate`: both a payment check that finds the money and a
    * cancel settle the order's status.
    */
   canValidate: boolean;
+  /** `registration:email`: the payment and registration links. */
+  canEmail: boolean;
 }) {
   const router = useRouter();
   const [rowSelection, setRowSelection] = useState({});
@@ -138,7 +143,9 @@ export default function UnpaidCheckoutsList({
   const actions = (order: UnpaidCheckout, className?: string) => (
     <UnpaidCheckoutActions
       order={order}
+      eventSlug={eventSlug}
       canValidate={canValidate}
+      canEmail={canEmail}
       onLogFollowUp={setFollowUpOrder}
       onCancel={setCancelOrder}
       className={className}
@@ -205,9 +212,9 @@ export default function UnpaidCheckoutsList({
 
   const columns = useMemo(
     () => unpaidColumns(order => actions(order)),
-    // `actions` reads only canValidate and state setters.
+    // `actions` reads only these props and state setters.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [canValidate],
+    [canValidate, canEmail, eventSlug],
   );
 
   const table = useReactTable({

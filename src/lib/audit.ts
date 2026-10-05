@@ -80,6 +80,9 @@ export const AUDIT_ACTIONS = [
   // (UNPAID_FOLLOWUP_PLAN.md Batch 1, lib/follow-up.ts): the trail is the log,
   // so every attempt and who made it is kept.
   'registration.followed_up',
+  // A payment link handed out for an unpaid order (UNPAID_FOLLOWUP_PLAN.md
+  // Batch 3): it lets whoever holds it pay, and the first one moves the hold.
+  'registration.payment_link.copied',
   'runner.updated',
   'runner.deleted',
   'proof.viewed',

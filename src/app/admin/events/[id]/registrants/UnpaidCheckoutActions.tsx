@@ -31,7 +31,7 @@
  */
 
 import React, { useState } from 'react';
-import { Ban, Copy, Mail, MessageSquareText, NotebookPen, Phone, SearchCheck } from 'lucide-react';
+import { Ban, Copy, Link2, Mail, MessageSquareText, NotebookPen, Phone, SearchCheck } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import RowActionsMenu, { type RowAction } from '../../../RowActionsMenu';
 import { useAlert } from '@/components/ui/AlertProvider';
@@ -45,14 +45,20 @@ function dialable(phone: string): string {
 
 export default function UnpaidCheckoutActions({
   order,
+  eventSlug,
   canValidate,
+  canEmail,
   onLogFollowUp,
   onCancel,
   className,
 }: {
   order: UnpaidCheckout;
+  /** For an expired order's registration link. */
+  eventSlug: string;
   /** `registration:validate`: checking the payment and cancelling both settle the order. */
   canValidate: boolean;
+  /** `registration:email`: a payment link goes to the runner like any message. */
+  canEmail: boolean;
   onLogFollowUp: (order: UnpaidCheckout) => void;
   onCancel: (order: UnpaidCheckout) => void;
   className?: string;
@@ -74,6 +80,40 @@ export default function UnpaidCheckoutActions({
       );
     }
   };
+
+  // Browsers may refuse the clipboard; the link is then shown to copy by hand.
+  const copyLink = async (url: string, done: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      toast(done);
+    } catch {
+      await alert({ title: 'Copy this link', message: url });
+    }
+  };
+
+  const copyPaymentLink = async () => {
+    try {
+      const res = await fetch(`/api/admin/registrations/${order.id}/payment-link`, { method: 'POST' });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        await alert({ variant: 'error', title: 'No payment link', message: body.error ?? 'The payment link could not be made. Try again.' });
+        // A paid or expired order belongs elsewhere now.
+        if (res.status === 409) router.refresh();
+        return;
+      }
+      await copyLink(body.url, `Copied the payment link for ${order.orderRef}. It works until ${body.untilLabel}.`);
+      // The first link moves the hold, and the row's "Expires by" with it.
+      router.refresh();
+    } catch {
+      await alert({ variant: 'error', title: 'No payment link', message: 'The server could not be reached. Try again.' });
+    }
+  };
+
+  const copyRegistrationLink = () =>
+    copyLink(
+      `${window.location.origin}/events/${eventSlug}/register`,
+      'Copied the registration link. The runner registers again from it.',
+    );
 
   const checkPayment = async () => {
     setChecking(true);
@@ -131,6 +171,12 @@ export default function UnpaidCheckoutActions({
       sameTab: true,
     },
     { key: 'copy', label: 'Copy contact', icon: <Copy size={16} aria-hidden="true" />, onSelect: copyContact },
+    ...(canEmail && order.status === 'PENDING'
+      ? [{ key: 'pay-link', label: 'Copy payment link', icon: <Link2 size={16} aria-hidden="true" />, onSelect: copyPaymentLink }]
+      : []),
+    ...(canEmail && order.status === 'EXPIRED'
+      ? [{ key: 'register-link', label: 'Copy registration link', icon: <Link2 size={16} aria-hidden="true" />, onSelect: copyRegistrationLink }]
+      : []),
     ...(open
       ? [{ key: 'follow-up', label: 'Log follow-up…', icon: <NotebookPen size={16} aria-hidden="true" />, onSelect: () => onLogFollowUp(order) }]
       : []),

@@ -52,6 +52,17 @@ export const PROMO_LOOKUP_RULE: RateLimitRule = { limit: 20, windowMs: 60_000 };
 export const FEEDBACK_RULE: RateLimitRule = { limit: 5, windowMs: 10 * 60_000 };
 
 /**
+ * The resume-payment link (`/pay/[token]` and its Pay now): 20 a minute from
+ * one address.
+ *
+ * A runner opens their link, maybe reloads it, and presses Pay now once or
+ * twice. The token is signed, so there is nothing to guess; what this stops is
+ * a script making PayMongo pages in a loop — each Pay now closes the last page
+ * and opens a new one, which costs a PayMongo call apiece.
+ */
+export const PAY_LINK_RULE: RateLimitRule = { limit: 20, windowMs: 60_000 };
+
+/**
  * How many callers we will remember at once.
  *
  * A map keyed by address grows with every new address, and a serverless

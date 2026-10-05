@@ -347,6 +347,8 @@ export default async function RegistrantsPage({
       totalAmount: true,
       createdAt: true,
       expiredAt: true,
+      // A payment link moves the deadline (decision D4).
+      holdUntil: true,
       runners: {
         where: { deletedAt: null },
         orderBy: { runnerNo: 'asc' },
@@ -368,7 +370,7 @@ export default async function RegistrantsPage({
       const contact = order.runners[0];
       const status = order.status as UnpaidCheckout['status'];
       const cancel = status === 'CANCELLED' ? statusRecords.get(order.id) : undefined;
-      const deadline = expiresBy(order.createdAt);
+      const deadline = expiresBy(order.createdAt, order.holdUntil);
       const followUp = followUps.get(order.id);
       return {
         id: order.id,
@@ -425,7 +427,13 @@ export default async function RegistrantsPage({
             />
           }
           unpaid={
-            <UnpaidCheckoutsList orders={unpaidCheckouts} eventId={id} canValidate={permissions.validate} />
+            <UnpaidCheckoutsList
+              orders={unpaidCheckouts}
+              eventId={id}
+              eventSlug={event.slug}
+              canValidate={permissions.validate}
+              canEmail={permissions.email}
+            />
           }
         />
       </div>

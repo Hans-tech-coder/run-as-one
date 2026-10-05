@@ -10,7 +10,13 @@ if (!secret) {
   );
 }
 
-const SECRET_KEY = new TextEncoder().encode(secret);
+/**
+ * Exported for the other signed tokens the app hands out (the resume-payment
+ * link, lib/resume-payment.ts). Each carries its own `purpose` claim and checks
+ * it, and none carries a session's `kind`, so `verifyToken` below refuses
+ * them and they refuse a session cookie.
+ */
+export const SECRET_KEY = new TextEncoder().encode(secret);
 
 /**
  * Whose session this is.

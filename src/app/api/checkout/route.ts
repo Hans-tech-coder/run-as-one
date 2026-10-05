@@ -8,7 +8,6 @@ import {
   asLogisticsMethod,
   asPaymentMethod,
   paymentMethodLabel,
-  paymongoPaymentType,
 } from '@/lib/registration-codes';
 import {
   runnerCategories,
@@ -59,6 +58,7 @@ import {
   runnersDiscounted,
 } from '@/lib/discount';
 import { resolveDiscount } from '@/lib/promo-store';
+import { openPaymongoPage } from '@/lib/paymongo-session';
 
 export async function POST(request: Request) {
   // Set once an online order is written and cleared once PayMongo accepts it.
@@ -514,232 +514,48 @@ export async function POST(request: Request) {
     }
 
     // Checked above, and a free order has already returned — so from here on
-    // there is a key, and the two PayMongo calls below can say so.
+    // there is a key, and the PayMongo calls below can say so.
     const paymongoKey = secretKey as string;
 
-    // Every amount below is already in centavos, which is also the unit
-    // PayMongo expects — so no conversion happens here.
-    const lineItems: any[] = [];
-
-    // Add runners.
-    //
-    // A discounted order is billed as one collapsed goods line instead.
-    // PayMongo totals a checkout session from its line items and will not take
-    // a negative one, so a discount cannot be shown as its own subtracted row
-    // — and per-runner prices that still added up to the full subtotal would
-    // charge the runner more than the summary promised. The itemisation the
-    // runner needs is in the wizard's summary and in both emails; what this
-    // list has to be is exactly the amount being charged.
-    if (discountAmount > 0) {
-      // A code that covers the goods entirely leaves nothing to bill for them,
-      // and PayMongo rejects a zero-amount line — the fees below are then the
-      // whole charge.
-      const goodsAfterDiscount = expectedSubtotal - discountAmount;
-      if (goodsAfterDiscount > 0) {
-        lineItems.push({
-          currency: 'PHP',
-          amount: goodsAfterDiscount,
-          name: `Registration — ${participants.length} runner${participants.length === 1 ? '' : 's'} (${discount.applied?.code} applied)`,
-          quantity: 1
-        });
-      }
-    } else {
-      participants.forEach((p: any, index: number) => {
-        const category = event.categories.find((c: any) => c.id === p.categoryId);
-        if (category) {
-          lineItems.push({
-            currency: 'PHP',
-            amount: category.price,
-            name: `Runner ${index + 1} (${category.name})`,
-            quantity: 1
-          });
-        }
-      });
-    }
-
-    // Add Delivery Fee if any
-    if (deliveryFeeCents > 0) {
-      lineItems.push({
-        currency: 'PHP',
-        amount: deliveryFeeCents,
-        name: 'Delivery Fee',
-        quantity: 1
-      });
-    }
-
-    // Add Admin/Platform Fee
-    if (platformFeeCents > 0) {
-      lineItems.push({
-        currency: 'PHP',
-        amount: platformFeeCents,
-        name: 'Admin Fee',
-        quantity: 1
-      });
-    }
-
-    // Add Transaction Fee
-    if (transactionFeeCents > 0) {
-      lineItems.push({
-        currency: 'PHP',
-        amount: transactionFeeCents,
-        name: 'Transaction Fee',
-        quantity: 1
-      });
-    }
-
-    // Fallback if lineItems is empty somehow (shouldn't happen)
-    if (lineItems.length === 0) {
-      lineItems.push({
-        currency: 'PHP',
-        amount: amountCents,
-        name: 'Registration Fee',
-        quantity: 1
-      });
-    }
-
-    // Branch logic: Use Payment Intents API for direct e-wallets redirect, otherwise use Checkout Session
-    if (storedPaymentMethod === 'GCASH' || storedPaymentMethod === 'MAYA' || storedPaymentMethod === 'PAYMAYA') {
-      const auth = `Basic ${Buffer.from(paymongoKey).toString('base64')}`;
-
-      // 1. Create Payment Intent
-      const piRes = await fetch('https://api.paymongo.com/v1/payment_intents', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': auth
-        },
-        body: JSON.stringify({
-          data: {
-            attributes: {
-              amount: amountCents,
-              payment_method_allowed: [paymongoPaymentType(storedPaymentMethod)],
-              currency: 'PHP',
-              description: description
-            }
-          }
-        })
-      });
-      const piData = await piRes.json();
-      if (!piRes.ok) {
-        return NextResponse.json({ error: 'Failed to create payment intent', details: piData }, { status: piRes.status });
-      }
-      const piId = piData.data.id;
-
-      // 2. Create Payment Method
-      const pmRes = await fetch('https://api.paymongo.com/v1/payment_methods', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': auth
-        },
-        body: JSON.stringify({
-          data: {
-            attributes: {
-              type: paymongoPaymentType(storedPaymentMethod),
-              billing: {
-                name: storedCustomerName,
-                email: storedCustomerEmail
-              }
-            }
-          }
-        })
-      });
-      const pmData = await pmRes.json();
-      if (!pmRes.ok) {
-        return NextResponse.json({ error: 'Failed to create payment method', details: pmData }, { status: pmRes.status });
-      }
-      const pmId = pmData.data.id;
-
-      // 3. Attach Payment Method to Payment Intent
-      const attachRes = await fetch(`https://api.paymongo.com/v1/payment_intents/${piId}/attach`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': auth
-        },
-        body: JSON.stringify({
-          data: {
-            attributes: {
-              payment_method: pmId,
-              return_url: finalSuccessUrl
-            }
-          }
-        })
-      });
-      const attachData = await attachRes.json();
-      if (!attachRes.ok) {
-        return NextResponse.json({ error: 'Failed to attach payment method', details: attachData }, { status: attachRes.status });
-      }
-
-      const redirectUrl = attachData.data?.attributes?.next_action?.redirect?.url;
-      if (!redirectUrl) {
-        return NextResponse.json({ error: 'Failed to get redirect URL from PayMongo', details: attachData }, { status: 500 });
-      }
-
-      // Update registration with intent ID instead of checkout session
-      await prisma.registration.update({
-        where: { id: registration.id },
-        data: { checkoutSessionId: piId } // Repurposing field for tracking
-      });
-
-      unconfirmedOnlineOrderId = null;
-      return NextResponse.json({
-        checkout_url: redirectUrl
-      });
-    }
-
-    // Default to Checkout Session for card and qrph
-    const options = {
-      method: 'POST',
-      headers: {
-        accept: 'application/json',
-        'content-type': 'application/json',
-        authorization: `Basic ${Buffer.from(paymongoKey).toString('base64')}`
+    // The line items and the PayMongo calls live in lib/paymongo-session.ts,
+    // shared with the resume-payment link, which rebuilds the same page from
+    // the stored order. Everything handed over here is what was just checked.
+    const page = await openPaymongoPage(
+      paymongoKey,
+      {
+        orderRef,
+        amountCents,
+        paymentMethod: storedPaymentMethod,
+        description,
+        customerName: storedCustomerName,
+        customerEmail: storedCustomerEmail,
+        runners: participants.flatMap((p: any) => {
+          const category = event.categories.find((c: any) => c.id === p.categoryId);
+          return category ? [{ categoryName: category.name, categoryPrice: category.price }] : [];
+        }),
+        subtotalCents: expectedSubtotal,
+        discountAmount,
+        promoCode: discount.applied?.code ?? null,
+        deliveryFeeCents,
+        platformFeeCents,
+        transactionFeeCents,
       },
-      body: JSON.stringify({
-        data: {
-          attributes: {
-            send_email_receipt: true,
-            show_description: true,
-            show_line_items: true,
-            description: description,
-            reference_number: orderRef,
-            line_items: lineItems,
-            payment_method_types: [
-              paymongoPaymentType(storedPaymentMethod)
-            ],
-            success_url: finalSuccessUrl,
-            cancel_url: finalCancelUrl,
-            customer_email: storedCustomerEmail,
-            billing: {
-              name: storedCustomerName,
-              email: storedCustomerEmail
-            }
-          }
-        }
-      })
-    };
-
-    const response = await fetch('https://api.paymongo.com/v1/checkout_sessions', options);
-    const data = await response.json();
-
-    if (!response.ok) {
-      console.error('PayMongo API Error:', data);
-      return NextResponse.json(
-        { error: 'Failed to create checkout session', details: data },
-        { status: response.status }
-      );
+      { successUrl: finalSuccessUrl, cancelUrl: finalCancelUrl },
+    );
+    if (!page.ok) {
+      return NextResponse.json({ error: page.error, details: page.details }, { status: page.status });
     }
 
-    // Update registration with checkout session ID
+    // A Checkout Session id for card and QRPh; a Payment Intent id for GCash
+    // and Maya, repurposing the field for tracking.
     await prisma.registration.update({
       where: { id: registration.id },
-      data: { checkoutSessionId: data.data.id }
+      data: { checkoutSessionId: page.id }
     });
 
     unconfirmedOnlineOrderId = null;
     return NextResponse.json({
-      checkout_url: data.data.attributes.checkout_url
+      checkout_url: page.checkoutUrl
     });
 
   } catch (error: any) {

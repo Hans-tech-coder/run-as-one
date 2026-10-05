@@ -108,7 +108,12 @@ shape:
   not a synonym for `CANCELLED` — one is a decision somebody made, the other is
   an online checkout nobody came back to finish — and `expiredAt` records when
   the sweep in `pending-expiry.ts` released it, which is also the mark that
-  stops a row being expired twice. Owns `Runner[]`.
+  stops a row being expired twice. **`holdUntil`** (nullable,
+  `UNPAID_FOLLOWUP_PLAN.md` Batch 3) is when an unpaid online order stops
+  holding its slot once staff have handed the runner a payment link: set once,
+  24 hours from the first link and never past race day (`extendedHold`). Null
+  on every other order, which the sweep still times from `createdAt`. Owns
+  `Runner[]`.
 - **Runner** — one participant on an order: `runnerNo` (their 1..n position on
   the order, and the tail of the reference they quote — see `order-ref.ts`;
   unique per registration), name, contact, gender, birthdate, `singletSize`,

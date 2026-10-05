@@ -10,6 +10,13 @@ before writing any code. When an item is picked up, give it its own plan file in
 
 The release steps come first because they block production, not a feature.
 
+**Pending for the next release (2026-10-05):** migration
+`20261005090000_registration_hold_until` (one nullable column,
+`Registration.holdUntil`, `UNPAID_FOLLOWUP_PLAN.md` Batch 3). Run
+`npx prisma migrate deploy` with `DIRECT_URL` on the production endpoint
+**before** the new code goes live: the code reads the column, and the old code
+ignores it, so migrating first is safe in both directions.
+
 ---
 
 ## 1. After the 2026-09-30 release: retired test accounts
@@ -111,3 +118,29 @@ count is noted in `docs/routes.md`). One thing waits on a business change:
   QRPh's `checkout_session.payment.paid` has run end to end. GCash and Maya
   store a `pi_` id and are settled by `payment.paid`; run one test payment of
   each on staging before enabling them in production.
+
+---
+
+## 8. Our own QR Ph payment page (instead of PayMongo's hosted checkout)
+
+*Source: owner's question on 2026-10-05, during `UNPAID_FOLLOWUP_PLAN.md`
+Batch 3. Not planned; the owner chose to keep PayMongo's hosted checkout.*
+
+PayMongo's hosted page shows QR Ph as a choice, and the QR only after the
+runner presses **Continue**. The owner suspects some runners abandon there.
+If it is picked up, in this order:
+
+1. **Check the suspicion first**, with the live key: for abandoned orders, a
+   checkout session whose payment intent is still `awaiting_payment_method`
+   never reached the QR; `awaiting_next_action` saw it and did not pay.
+2. A cheap step either way: a line in the wizard before the redirect telling
+   the runner to choose QR Ph and press Continue.
+3. Only if the data agrees: render the QR ourselves through PayMongo's
+   [QR Ph API](https://developers.paymongo.com/docs/payment-acceptance-qr-ph-api)
+   (Payment Intent → attach → `next_action.code.image_url`, single-use,
+   30-minute expiry), on `/pay/[token]` so the first checkout and the
+   resume link share one page. QR Ph only; other methods keep the hosted page,
+   and cards stay there regardless (PCI). Needs a countdown and a new-QR
+   button, a prominent "save the QR" for phones (a runner cannot scan their
+   own screen), status polling, and the webhook's `payment.paid` path for the
+   QR intent.

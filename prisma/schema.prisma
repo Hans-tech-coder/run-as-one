@@ -287,6 +287,17 @@ model Registration {
   /// because expiring also hands a promo redemption back and a second pass
   /// would hand back a redemption that was never spent.
   expiredAt               DateTime?
+  /// When an unpaid online order stops holding its slot, once staff have
+  /// handed the runner a payment link (UNPAID_FOLLOWUP_PLAN.md Batch 3,
+  /// decision D4). Null on every order nobody sent a link for, which the
+  /// sweep still times from `createdAt`.
+  ///
+  /// A column rather than a later `createdAt`: the order's age is its own
+  /// fact (the tab sorts and numbers by it), while the hold is a promise made
+  /// to the runner afterwards. Set once per order, never past race day — see
+  /// `extendedHold` in lib/pending-expiry.ts. 8 bytes, only on the rows that
+  /// use it.
+  holdUntil               DateTime?
   paymentMethod           String    @default("online")
   checkoutSessionId       String?
   createdAt               DateTime  @default(now())

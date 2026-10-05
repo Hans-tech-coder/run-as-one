@@ -2,6 +2,7 @@ import type { Prisma } from '@prisma/client';
 import prisma from '@/lib/db';
 import { PAYMENT_METHODS, isBankTransfer } from '@/lib/registration-codes';
 import type { AuditEntry } from '@/lib/audit';
+import { eventInstant } from '@/lib/event-schedule';
 
 /**
  * When an unpaid online checkout stops holding what it took, and what handing
@@ -114,7 +115,13 @@ export function sweepableWhere(now: Date = new Date()) {
   return {
     status: 'PENDING',
     expiredAt: null,
-    createdAt: { lt: expiryCutoff(now) },
+    // A payment link moves the hold (`holdUntil`, decision D4 of
+    // UNPAID_FOLLOWUP_PLAN.md): such an order is timed from it alone, so a
+    // link sent at hour 20 is not swept out from under the runner at hour 24.
+    OR: [
+      { holdUntil: { lt: now } },
+      { holdUntil: null, createdAt: { lt: expiryCutoff(now) } },
+    ],
     NOT: {
       paymentMethod: {
         equals: PAYMENT_METHODS.BANK_TRANSFER,
@@ -354,24 +361,65 @@ export function unpaidCheckoutWhere() {
 export const SWEEP_HOUR_UTC = 18;
 
 /**
- * The latest time an unpaid online checkout created at `createdAt` can still
- * be PENDING. It is the first sweep that finds the order past the window, plus
- * one hour, because Vercel's Hobby plan runs a daily cron at some point within
- * the hour, not on the minute.
+ * The latest time an unpaid online checkout can still be PENDING. It is the
+ * first sweep that finds the order past its hold, plus one hour, because
+ * Vercel's Hobby plan runs a daily cron at some point within the hour, not on
+ * the minute. The hold ends `PENDING_EXPIRY_HOURS` after `createdAt`, or at
+ * `holdUntil` once staff have sent a payment link.
  *
  * Shown on the Unpaid checkouts tab as "expires by". Computed from the real
- * schedule rather than `createdAt + PENDING_EXPIRY_HOURS`, because the sweep
- * runs once a day: an order opened at 03:00 Manila holds its slot for almost
- * two days, and staff following it up need that true answer.
+ * schedule rather than the hold alone, because the sweep runs once a day: an
+ * order opened at 03:00 Manila holds its slot for almost two days, and staff
+ * following it up need that true answer.
  */
-export function expiresBy(createdAt: Date): Date {
-  const eligibleAfter = createdAt.getTime() + PENDING_EXPIRY_HOURS * 60 * 60 * 1000;
+export function expiresBy(createdAt: Date, holdUntil: Date | null = null): Date {
+  const eligibleAfter = holdEnds({ createdAt, holdUntil }).getTime();
   const sweep = new Date(eligibleAfter);
   sweep.setUTCHours(SWEEP_HOUR_UTC, 0, 0, 0);
-  // The sweep only takes orders created strictly before its own cutoff, so a
-  // run at the exact moment the window closes does not take this one yet.
+  // The sweep only takes orders whose hold ended strictly before it runs, so a
+  // run at the exact moment the hold closes does not take this one yet.
   if (sweep.getTime() <= eligibleAfter) sweep.setUTCDate(sweep.getUTCDate() + 1);
   return new Date(sweep.getTime() + 60 * 60 * 1000);
+}
+
+/**
+ * When an order's hold ends: `holdUntil` once a payment link moved it,
+ * otherwise `PENDING_EXPIRY_HOURS` after it was placed. Past this the sweep
+ * may take it, and a payment link for it is refused (lib/resume-payment.ts),
+ * even if the once-a-day sweep has not come round yet.
+ */
+export function holdEnds(order: { createdAt: Date; holdUntil: Date | null }): Date {
+  return order.holdUntil ?? new Date(order.createdAt.getTime() + PENDING_EXPIRY_HOURS * 60 * 60 * 1000);
+}
+
+/**
+ * How long a payment link gives the runner (decision D4): a full window from
+ * the moment staff hand it over, because a link sent at hour 20 would
+ * otherwise die with the order a few hours later.
+ */
+export const PAYMENT_LINK_HOLD_HOURS = 24;
+
+/**
+ * The hold a payment link sets, or null when the order keeps the one it has.
+ *
+ * **Once per order.** An order whose hold was already moved keeps it, so a
+ * slot cannot be held indefinitely by copying the link again every day; the
+ * runner has had their extra day. **Never past race day** (the end of it,
+ * Manila, the same moment the Unpaid checkouts tab lets the order go): there
+ * is no race left to hold a slot in. It also never shortens a hold, though
+ * `now + 24h` is always later than `createdAt + 24h` anyway.
+ */
+export function extendedHold(
+  order: { createdAt: Date; holdUntil: Date | null },
+  raceDay: string,
+  now: Date = new Date(),
+): Date | null {
+  if (order.holdUntil) return null;
+  const wanted = now.getTime() + PAYMENT_LINK_HOLD_HOURS * 60 * 60 * 1000;
+  const raceDayStart = eventInstant(raceDay, '00:00');
+  const raceDayOver = raceDayStart ? raceDayStart.getTime() + 24 * 60 * 60 * 1000 : wanted;
+  const until = Math.min(wanted, raceDayOver);
+  return until > holdEnds(order).getTime() ? new Date(until) : null;
 }
 
 /**
