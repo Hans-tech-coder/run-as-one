@@ -22,21 +22,17 @@
  * (`unpaid_checkouts.exported`). A busy race can collect dozens of these, and a staff member
  * working through them should not meet a second way of navigating a list.
  *
- * **Copy contact is the follow-up.** There is no "send reminder" email:
- * Resend's free tier stops at 100 a day, and a PayMongo link expires, so a
- * reminder would need a new checkout as well. Staff paste the contact into
- * their own message instead.
- *
- * **Check with PayMongo comes first** (Batch 4): a QRPh payment can land while
- * its webhook never does, so staff confirm the runner really did not pay
- * before contacting them. A payment found on a pending order marks it PAID
- * (the route goes through the webhook's own path) and the page reloads, which
- * moves the order to the Registrants tab. Shown only to the roles that may
- * settle a payment (`registration:validate`); the route refuses the rest.
+ * **Each row has a ⋮ menu** (UNPAID_FOLLOWUP_PLAN.md Batch 1,
+ * `UnpaidCheckoutActions.tsx`): check the payment with PayMongo first, then
+ * call, text, email or copy the contact, then log how it went. The latest
+ * follow-up is the Follow-up column, read from the activity trail on the
+ * server, and the Filters sheet can narrow to "Not contacted yet" or any one
+ * outcome so two staff members can split the list without calling the same
+ * runner.
  */
 
 import React, { useMemo, useState } from 'react';
-import { Check, Copy, Download, Search, SearchCheck, X } from 'lucide-react';
+import { Download, Search, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import {
   getCoreRowModel,
@@ -44,7 +40,6 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-  type ColumnDef,
   type SortingState,
   type VisibilityState,
 } from '@tanstack/react-table';
@@ -53,12 +48,18 @@ import AdminTablePager from '../../../AdminTablePager';
 import FiltersMenu, { type FilterGroup } from '../../../FiltersMenu';
 import MobileSortMenu from '../../../MobileSortMenu';
 import ColumnsViewMenu from './ColumnsViewMenu';
-import { selectionColumn } from './registrant-columns';
+import { UnpaidStatus, runnerCount, unpaidColumns } from './unpaid-columns';
 import RegistrantsDataTable from './RegistrantsDataTable';
 import { buildUnpaidCheckoutCsv, downloadUnpaidCheckoutCsv } from './registrant-csv';
-import { useAlert } from '@/components/ui/AlertProvider';
-import BusyLabel from '@/components/ui/BusyLabel';
+import FollowUpModal, { FollowUpSummary } from './FollowUpModal';
+import UnpaidCheckoutActions from './UnpaidCheckoutActions';
 import { formatPesos } from '@/lib/money';
+import {
+  FOLLOW_UP_LABELS,
+  FOLLOW_UP_OUTCOMES,
+  NOT_CONTACTED,
+  type FollowUpRecord,
+} from '@/lib/follow-up';
 
 /** One unpaid order, worded on the server (page.tsx) in Manila time. */
 export type UnpaidCheckout = {
@@ -85,10 +86,9 @@ export type UnpaidCheckout = {
   expired: boolean;
   /** "Expires by …" while pending, the moment it expired once it has. */
   statusDetail: string;
+  /** The latest follow-up logged, with "2h ago" worded on the server; null if none. */
+  followUp: (FollowUpRecord & { ago: string }) | null;
 };
-
-/** How long the button reads "Copied" after a copy. */
-const COPIED_MS = 1600;
 
 const STATUS_AWAITING = 'AWAITING';
 const STATUS_EXPIRED = 'EXPIRED';
@@ -103,115 +103,26 @@ export default function UnpaidCheckoutsList({
   /** `registration:validate`: a check that finds the money settles the order. */
   canCheckPayment: boolean;
 }) {
-  const { alert } = useAlert();
   const router = useRouter();
-  const [checkingId, setCheckingId] = useState<string | null>(null);
   const [rowSelection, setRowSelection] = useState({});
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
-  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [globalFilter, setGlobalFilter] = useState('');
   const [sorting, setSorting] = useState<SortingState>([]);
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [selectedPayments, setSelectedPayments] = useState<string[]>([]);
+  const [selectedFollowUps, setSelectedFollowUps] = useState<string[]>([]);
+  // One modal for the list, not one per row: the table and the cards are
+  // both mounted, and each would otherwise carry its own.
+  const [followUpOrder, setFollowUpOrder] = useState<UnpaidCheckout | null>(null);
 
-  const copyContact = async (order: UnpaidCheckout) => {
-    // Name, email and phone on their own lines, with the order reference, so
-    // a paste into a chat or a note says who this is and which order.
-    const text = [order.contactName, order.contactEmail, order.contactPhone, order.orderRef].join('\n');
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopiedId(order.id);
-      setTimeout(() => setCopiedId(current => (current === order.id ? null : current)), COPIED_MS);
-    } catch {
-      await alert(
-        'Your browser would not let us reach the clipboard. Select the email and phone and copy them by hand.',
-      );
-    }
-  };
-
-  const copyButton = (order: UnpaidCheckout) => {
-    const copied = copiedId === order.id;
-    return (
-      <button
-        type="button"
-        className="btn-filter is-compact whitespace-nowrap"
-        onClick={() => copyContact(order)}
-        aria-label={copied ? `Copied ${order.contactName}'s contact` : `Copy ${order.contactName}'s contact`}
-      >
-        {copied ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
-        {copied ? 'Copied' : 'Copy contact'}
-      </button>
-    );
-  };
-
-  const checkPayment = async (order: UnpaidCheckout) => {
-    setCheckingId(order.id);
-    try {
-      const res = await fetch(`/api/admin/registrations/${order.id}/payment-check`, { method: 'POST' });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        await alert({ variant: 'error', title: 'Could not check', message: body.error ?? 'The check could not be finished. Try again.' });
-        return;
-      }
-      const settled = body.result === 'marked_paid' || body.result === 'already_paid';
-      await alert({
-        variant: settled ? 'success' : body.result === 'paid_after_expiry' ? 'error' : 'info',
-        title: settled
-          ? 'Payment found'
-          : body.result === 'paid_after_expiry'
-            ? 'Paid after it expired'
-            : 'No payment found',
-        message: body.message,
-      });
-      // A paid order leaves this tab for the Registrants tab, and both counts
-      // move, so the page is read again rather than patched here.
-      if (settled) router.refresh();
-    } catch {
-      await alert({ variant: 'error', title: 'Could not check', message: 'PayMongo could not be reached. Try again in a minute.' });
-    } finally {
-      setCheckingId(null);
-    }
-  };
-
-  const checkButton = (order: UnpaidCheckout) => {
-    const checking = checkingId === order.id;
-    return (
-      <button
-        type="button"
-        className="btn-filter is-compact whitespace-nowrap"
-        onClick={() => checkPayment(order)}
-        disabled={checkingId !== null}
-        aria-label={`Check ${order.orderRef} with PayMongo`}
-        title="Ask PayMongo whether this order was paid"
-      >
-        <SearchCheck size={14} aria-hidden="true" />
-        {/* "Check payment", not "Check with PayMongo": the longer label alone
-            pushed the table past its frame at 1345px. */}
-        {checking ? <BusyLabel>Checking</BusyLabel> : 'Check payment'}
-      </button>
-    );
-  };
-
-  const actions = (order: UnpaidCheckout) => (
-    <div className="flex flex-wrap items-center gap-2">
-      {canCheckPayment && checkButton(order)}
-      {copyButton(order)}
-    </div>
+  const actions = (order: UnpaidCheckout, className?: string) => (
+    <UnpaidCheckoutActions
+      order={order}
+      canCheckPayment={canCheckPayment}
+      onLogFollowUp={setFollowUpOrder}
+      className={className}
+    />
   );
-
-  const status = (order: UnpaidCheckout) => (
-    <span className="flex flex-col items-start gap-1">
-      <span className={`status-badge whitespace-nowrap ${order.expired ? 'neutral' : 'pending'}`}>
-        {order.expired ? 'Expired' : 'Awaiting payment'}
-      </span>
-      {order.statusDetail && (
-        <span className="text-xs text-[var(--text-muted)]">{order.statusDetail}</span>
-      )}
-    </span>
-  );
-
-  const runnerCount = (order: UnpaidCheckout) =>
-    `${order.runnerNames.length} ${order.runnerNames.length === 1 ? 'runner' : 'runners'}`;
 
   // The Filters sheet narrows the data before the table, as on the registrants
   // tab, so search, sort and the pager all work inside the result.
@@ -244,6 +155,20 @@ export default function UnpaidCheckoutsList({
       onToggle: value => setSelectedPayments(list => toggle(list, value)),
       capitalize: true,
     },
+    {
+      // Every outcome is offered, not only those on the list: "who still
+      // has not been called?" is asked before anyone has been.
+      label: 'Follow-up',
+      options: orders.length > 0
+        ? [
+            { value: NOT_CONTACTED, label: 'Not contacted yet' },
+            ...FOLLOW_UP_OUTCOMES.map(value => ({ value, label: FOLLOW_UP_LABELS[value] })),
+          ]
+        : [],
+      selected: selectedFollowUps,
+      onToggle: value => setSelectedFollowUps(list => toggle(list, value)),
+      capitalize: false,
+    },
   ];
   const filtered = useMemo(
     () =>
@@ -251,93 +176,18 @@ export default function UnpaidCheckoutsList({
         order =>
           (selectedStatuses.length === 0 ||
             selectedStatuses.includes(order.expired ? STATUS_EXPIRED : STATUS_AWAITING)) &&
-          (selectedPayments.length === 0 || selectedPayments.includes(order.paymentMethod)),
+          (selectedPayments.length === 0 || selectedPayments.includes(order.paymentMethod)) &&
+          (selectedFollowUps.length === 0 ||
+            selectedFollowUps.includes(order.followUp?.outcome ?? NOT_CONTACTED)),
       ),
-    [orders, selectedStatuses, selectedPayments],
+    [orders, selectedStatuses, selectedPayments, selectedFollowUps],
   );
 
-  const columns = useMemo<ColumnDef<UnpaidCheckout>[]>(
-    () => [
-      selectionColumn<UnpaidCheckout>(),
-      {
-        id: 'index',
-        header: 'No.',
-        enableSorting: false,
-        enableHiding: false,
-        cell: ({ row }) => <span className="text-secondary font-mono">{row.original.listNo}</span>,
-      },
-      {
-        // Sorted by when the order was made, the line under the reference.
-        id: 'order',
-        accessorFn: order => order.createdAt,
-        header: 'Order',
-        cell: ({ row }) => (
-          <>
-            <span className="block whitespace-nowrap font-mono">{row.original.orderRef}</span>
-            <span className="block whitespace-nowrap text-xs text-[var(--text-muted)]">{row.original.createdLabel}</span>
-          </>
-        ),
-      },
-      {
-        id: 'runners',
-        accessorFn: order => order.runnerNames.length,
-        header: 'Runners',
-        cell: ({ row }) => (
-          <div className="min-w-[8rem] max-w-[16rem]">
-            <span className="block text-xs text-[var(--text-muted)]">{runnerCount(row.original)}</span>
-            {/* Wrapped, not truncated: a truncated name sets the column's
-                narrowest width to the whole name. */}
-            {row.original.runnerNames.map((name, i) => (
-              <span key={i} className="block [overflow-wrap:anywhere]">{name}</span>
-            ))}
-          </div>
-        ),
-      },
-      {
-        id: 'contact',
-        accessorFn: order => order.contactEmail,
-        header: 'Contact',
-        cell: ({ row }) => (
-          <div className="max-w-[16rem]">
-            {/* Allowed to break anywhere, as the registrants table's email is:
-                left whole, a long address set the column's narrowest width
-                and pushed the table into a sideways scroll. */}
-            <span className="block [overflow-wrap:anywhere]">{row.original.contactEmail}</span>
-            <span className="block text-secondary">{row.original.contactPhone}</span>
-          </div>
-        ),
-      },
-      {
-        // Sorted by the amount, the figure staff compare.
-        id: 'payment',
-        accessorFn: order => order.totalAmount,
-        header: 'Payment',
-        cell: ({ row }) => (
-          <>
-            <span className="block">{row.original.paymentMethod}</span>
-            <span className="block text-secondary tabular-nums">₱{formatPesos(row.original.totalAmount)}</span>
-          </>
-        ),
-      },
-      {
-        // Awaiting payment before expired, ascending.
-        id: 'status',
-        accessorFn: order => (order.expired ? 1 : 0),
-        header: 'Status',
-        cell: ({ row }) => status(row.original),
-      },
-      {
-        id: 'actions',
-        header: 'Actions',
-        enableSorting: false,
-        enableHiding: false,
-        cell: ({ row }) => actions(row.original),
-      },
-    ],
-    // The action buttons read copiedId and checkingId, so the cells are
-    // rebuilt when either changes.
+  const columns = useMemo(
+    () => unpaidColumns(order => actions(order)),
+    // `actions` reads only canCheckPayment and a state setter.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [copiedId, checkingId, canCheckPayment],
+    [canCheckPayment],
   );
 
   const table = useReactTable({
@@ -426,6 +276,7 @@ export default function UnpaidCheckoutsList({
             onClear={() => {
               setSelectedStatuses([]);
               setSelectedPayments([]);
+              setSelectedFollowUps([]);
             }}
             empty="Nothing to filter yet. Status and payment choices appear here once the list has more than one kind."
           />
@@ -472,20 +323,32 @@ export default function UnpaidCheckoutsList({
               <span className="block text-xs">{row.original.createdLabel}</span>
             </>
           )}
-          badges={row => status(row.original)}
+          badges={row => <UnpaidStatus order={row.original} />}
           fields={row => [
             { label: 'Runners', value: `${runnerCount(row.original)}: ${row.original.runnerNames.join(', ')}`, full: true },
             { label: 'Email', value: <span className="break-all">{row.original.contactEmail}</span>, full: true },
             { label: 'Phone', value: row.original.contactPhone },
             { label: 'Payment', value: row.original.paymentMethod },
             { label: 'Amount', value: `₱${formatPesos(row.original.totalAmount)}` },
+            { label: 'Follow-up', value: <FollowUpSummary followUp={row.original.followUp} />, full: true },
           ]}
-          actions={row => actions(row.original)}
+          actions={row => actions(row.original, 'ml-auto')}
           empty={empty}
         />
       </div>
 
       <AdminTablePager table={table} />
+
+      {followUpOrder && (
+        <FollowUpModal
+          key={followUpOrder.id}
+          order={followUpOrder}
+          onClose={() => setFollowUpOrder(null)}
+          // Read the page again, so the row shows the line as the server
+          // has it and both tabs' counts stay true.
+          onSaved={() => router.refresh()}
+        />
+      )}
     </div>
   );
 }

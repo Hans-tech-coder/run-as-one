@@ -23,6 +23,7 @@ import {
   type ActivityFilters,
   type StatusRecord,
 } from './activity';
+import { asFollowUpOutcome, type FollowUpRecord } from './follow-up';
 
 /** One line of the trail as both activity screens hand it to `ActivityClient`. */
 export type ActivityEntry = {
@@ -224,6 +225,39 @@ export async function latestStatusChanges(
     const to = Array.isArray(moved) && typeof moved[1] === 'string' ? moved[1] : null;
     if (!to) continue;
     latest.set(entry.entityId, { by: entry.actorName, at: entry.createdAt.toISOString(), to });
+  }
+  return latest;
+}
+
+/**
+ * The latest follow-up logged on every order of one event, by registration id
+ * — the Unpaid checkouts tab's Follow-up column (UNPAID_FOLLOWUP_PLAN.md Batch
+ * 1). One query for the page, read the way `latestStatusChanges` is: newest
+ * first, keeping the first entry seen per order. An entry whose outcome is not
+ * a known code is skipped rather than shown as a blank.
+ */
+export async function latestFollowUps(
+  organizerId: string,
+  eventId: string,
+): Promise<Map<string, FollowUpRecord>> {
+  const entries = await prisma.auditLog.findMany({
+    where: { organizerId, eventId, action: 'registration.followed_up' },
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    select: { entityId: true, actorName: true, createdAt: true, changes: true },
+  });
+
+  const latest = new Map<string, FollowUpRecord>();
+  for (const entry of entries) {
+    if (!entry.entityId || latest.has(entry.entityId)) continue;
+    const changes = entry.changes as { outcome?: unknown; note?: unknown } | null;
+    const outcome = asFollowUpOutcome(changes?.outcome);
+    if (!outcome) continue;
+    latest.set(entry.entityId, {
+      outcome,
+      note: typeof changes?.note === 'string' && changes.note ? changes.note : null,
+      by: entry.actorName,
+      at: entry.createdAt.toISOString(),
+    });
   }
   return latest;
 }

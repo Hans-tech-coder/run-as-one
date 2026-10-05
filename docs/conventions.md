@@ -530,7 +530,8 @@
   events menu's pending navigation, the team menu's *Saving*) keeps its own
   `*ActionsMenu`; a plain list of items passes them to
   **`admin/RowActionsMenu`** (`RowAction`: label, icon, `onSelect` or `href`
-  for a new-tab file, `danger`, `disabled`), which swallows the row's click and
+  for a new-tab file — `sameTab` for a `tel:` / `sms:` / `mailto:` link, which
+  a new tab would leave blank — `danger`, `disabled`), which swallows the row's click and
   keys and renders nothing for an empty list. A single action stays a labelled
   chip (*View Details* on the Remittances list).
 - **A row's action menu is portalled to `<body>`.** Every card and table in the

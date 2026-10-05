@@ -76,6 +76,10 @@ export const AUDIT_ACTIONS = [
   'registration.status.changed',
   'registration.remarks.changed',
   'registration.email.sent_by_hand',
+  // A staff member's attempt to reach a runner who did not pay
+  // (UNPAID_FOLLOWUP_PLAN.md Batch 1, lib/follow-up.ts): the trail is the log,
+  // so every attempt and who made it is kept.
+  'registration.followed_up',
   'runner.updated',
   'runner.deleted',
   'proof.viewed',

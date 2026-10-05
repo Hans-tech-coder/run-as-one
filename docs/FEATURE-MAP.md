@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-36 pages · 49 API routes · 72 modules in `src/lib` · 340 files · 72,247 lines
+36 pages · 50 API routes · 73 modules in `src/lib` · 345 files · 72,854 lines
 
 ---
 
@@ -32,7 +32,7 @@ The route, the server component behind it, and the client components beside it.
 | `/admin/events` | [`/admin/events/page.tsx`](../src/app/admin/events/page.tsx) | `bank-account-draft.ts` `BankAccountsPanel.tsx` `category-draft.ts` `ConsentWaiverField.tsx` `DescriptionEditor.tsx` `event-not-found.ts` `EventActionsMenu.tsx` `EventClientField.tsx` `EventOptionsPanel.tsx` `EventPromotionsPanel.tsx` `EventProvinceField.tsx` `EventsTableClient.tsx` `HighlightsField.tsx` `HighlightsModal.tsx` `InclusionsField.tsx` `LogisticsPanel.tsx` `PosterField.tsx` `registration-opening.ts` `registration-state-badge.ts` `RegistrationFormPicker.tsx` `RegistrationOpeningPicker.tsx` `RegistrationScheduleModal.tsx` |
 | `/admin/events/[id]/edit` | [`/admin/events/[id]/edit/page.tsx`](../src/app/admin/events/[id]/edit/page.tsx) | — |
 | `/admin/events/[id]/pacers` | [`/admin/events/[id]/pacers/page.tsx`](../src/app/admin/events/[id]/pacers/page.tsx) | `PacerActionsMenu.tsx` `PacersClient.tsx` |
-| `/admin/events/[id]/registrants` | [`/admin/events/[id]/registrants/page.tsx`](../src/app/admin/events/[id]/registrants/page.tsx) | `ColumnsViewMenu.tsx` `DeleteRegistrantModals.tsx` `ManualEmailModal.tsx` `ProofLightbox.tsx` `registrant-columns.tsx` `registrant-csv.ts` `registrant-display.tsx` `RegistrantActionsMenu.tsx` `RegistrantDetailModal.tsx` `RegistrantRowActions.tsx` `RegistrantsDataTable.tsx` `RegistrantsTable.tsx` `RegistrantsTabs.tsx` `RegistrantsToolbar.tsx` `RemarksModal.tsx` `RunnerAddressEditor.tsx` `RunnerEditModal.tsx` `UnpaidCheckoutsList.tsx` |
+| `/admin/events/[id]/registrants` | [`/admin/events/[id]/registrants/page.tsx`](../src/app/admin/events/[id]/registrants/page.tsx) | `ColumnsViewMenu.tsx` `DeleteRegistrantModals.tsx` `FollowUpModal.tsx` `ManualEmailModal.tsx` `ProofLightbox.tsx` `registrant-columns.tsx` `registrant-csv.ts` `registrant-display.tsx` `RegistrantActionsMenu.tsx` `RegistrantDetailModal.tsx` `RegistrantRowActions.tsx` `RegistrantsDataTable.tsx` `RegistrantsTable.tsx` `RegistrantsTabs.tsx` `RegistrantsToolbar.tsx` `RemarksModal.tsx` `RunnerAddressEditor.tsx` `RunnerEditModal.tsx` `unpaid-columns.tsx` `UnpaidCheckoutActions.tsx` `UnpaidCheckoutsList.tsx` |
 | `/admin/events/[id]/registrants/[runnerId]/consent` | [`/admin/events/[id]/registrants/[runnerId]/consent/page.tsx`](../src/app/admin/events/[id]/registrants/[runnerId]/consent/page.tsx) | `PrintableSheet.tsx` |
 | `/admin/events/[id]/results` | [`/admin/events/[id]/results/page.tsx`](../src/app/admin/events/[id]/results/page.tsx) | `ResultsTableClient.tsx` `ResultsUploaderClient.tsx` |
 | `/admin/events/new` | [`/admin/events/new/page.tsx`](../src/app/admin/events/new/page.tsx) | `NewEventForm.tsx` |
@@ -92,6 +92,7 @@ The route, the server component behind it, and the client components beside it.
 | `/api/admin/promos/[id]/redemptions` | GET | [`/admin/promos/[id]/redemptions/route.ts`](../src/app/api/admin/promos/[id]/redemptions/route.ts) |
 | `/api/admin/proof/[id]` | GET | [`/admin/proof/[id]/route.ts`](../src/app/api/admin/proof/[id]/route.ts) |
 | `/api/admin/registrations/[id]/email` | GET POST | [`/admin/registrations/[id]/email/route.ts`](../src/app/api/admin/registrations/[id]/email/route.ts) |
+| `/api/admin/registrations/[id]/follow-up` | POST | [`/admin/registrations/[id]/follow-up/route.ts`](../src/app/api/admin/registrations/[id]/follow-up/route.ts) |
 | `/api/admin/registrations/[id]/payment-check` | POST | [`/admin/registrations/[id]/payment-check/route.ts`](../src/app/api/admin/registrations/[id]/payment-check/route.ts) |
 | `/api/admin/registrations/[id]/status` | PATCH | [`/admin/registrations/[id]/status/route.ts`](../src/app/api/admin/registrations/[id]/status/route.ts) |
 | `/api/admin/remittances` | POST | [`/admin/remittances/route.ts`](../src/app/api/admin/remittances/route.ts) |
@@ -154,6 +155,7 @@ the file itself.
 | [`event-slug.ts`](../src/lib/event-slug.ts) | The piece of an event's URL a runner actually reads. |
 | [`event-type.ts`](../src/lib/event-type.ts) | What an event sells to its runners. |
 | [`feedback.ts`](../src/lib/feedback.ts) | What a piece of feedback is, and what the app will accept as one. |
+| [`follow-up.ts`](../src/lib/follow-up.ts) | Following up an unpaid checkout (UNPAID_FOLLOWUP_PLAN.md Batch 1): what a staff member records after trying to reach the runner, and how the latest… |
 | [`free-checkout.ts`](../src/lib/free-checkout.ts) | The ₱0 order: when one is real, and what it is written as (`PACER_DISCOUNT_PLAN.md` Batch 2). |
 | [`inclusion-icon.ts`](../src/lib/inclusion-icon.ts) | Which icon stands for a line of "What's Included". |
 | [`inclusions.ts`](../src/lib/inclusions.ts) | What a category or package gets you, as a list. |
@@ -224,7 +226,7 @@ when a task touches one, split it before editing rather than after.
 | 750 | [`src/app/results/[slug]/full/FullResultsClient.tsx`](../src/app/results/[slug]/full/FullResultsClient.tsx) |
 | 693 | [`src/app/admin/AdminDatePicker.tsx`](../src/app/admin/AdminDatePicker.tsx) |
 | 663 | [`src/app/admin/activity/ActivityClient.tsx`](../src/app/admin/activity/ActivityClient.tsx) |
-| 624 | [`src/lib/activity.ts`](../src/lib/activity.ts) |
+| 626 | [`src/lib/activity.ts`](../src/lib/activity.ts) |
 | 621 | [`src/app/api/admin/events/[id]/route.ts`](../src/app/api/admin/events/[id]/route.ts) |
 | 603 | [`src/app/admin/feedback/FeedbackClient.tsx`](../src/app/admin/feedback/FeedbackClient.tsx) |
 | 583 | [`src/lib/pending-expiry.ts`](../src/lib/pending-expiry.ts) |
@@ -240,7 +242,6 @@ when a task touches one, split it before editing rather than after.
 | 502 | [`src/app/api/checkout/manual/route.ts`](../src/app/api/checkout/manual/route.ts) |
 | 491 | [`src/app/admin/AdminRouteLoading.tsx`](../src/app/admin/AdminRouteLoading.tsx) |
 | 491 | [`src/lib/registration-gate.ts`](../src/lib/registration-gate.ts) |
-| 486 | [`src/app/admin/events/[id]/registrants/UnpaidCheckoutsList.tsx`](../src/app/admin/events/[id]/registrants/UnpaidCheckoutsList.tsx) |
 | 472 | [`src/app/admin/communities/CommunitiesClient.tsx`](../src/app/admin/communities/CommunitiesClient.tsx) |
 | 472 | [`src/app/events/[slug]/register/BirthdatePicker.tsx`](../src/app/events/[slug]/register/BirthdatePicker.tsx) |
 | 472 | [`src/app/feedback/FeedbackForm.tsx`](../src/app/feedback/FeedbackForm.tsx) |
@@ -250,5 +251,5 @@ when a task touches one, split it before editing rather than after.
 | 451 | [`src/app/admin/events/[id]/registrants/RunnerEditModal.tsx`](../src/app/admin/events/[id]/registrants/RunnerEditModal.tsx) |
 | 449 | [`src/app/admin/page.tsx`](../src/app/admin/page.tsx) |
 | 438 | [`src/lib/actor.ts`](../src/lib/actor.ts) |
-| 417 | [`src/app/admin/events/[id]/registrants/page.tsx`](../src/app/admin/events/[id]/registrants/page.tsx) |
+| 423 | [`src/app/admin/events/[id]/registrants/page.tsx`](../src/app/admin/events/[id]/registrants/page.tsx) |
 | 416 | [`src/app/admin/events/[id]/results/ResultsTableClient.tsx`](../src/app/admin/events/[id]/results/ResultsTableClient.tsx) |

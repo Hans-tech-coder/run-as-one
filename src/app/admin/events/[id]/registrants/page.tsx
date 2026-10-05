@@ -4,7 +4,8 @@ import { can, requireTeamActor } from '@/lib/actor';
 import RegistrantsTable, { type RegistrantPermissions } from './RegistrantsTable';
 import RegistrantsTabs, { type RegistrantsTab } from './RegistrantsTabs';
 import UnpaidCheckoutsList, { type UnpaidCheckout } from './UnpaidCheckoutsList';
-import { latestStatusChanges } from '@/lib/activity-store';
+import { latestFollowUps, latestStatusChanges } from '@/lib/activity-store';
+import { followUpAgo } from '@/lib/follow-up';
 import AdminNotFound from '../../../AdminNotFound';
 import { EVENT_NOT_FOUND } from '../../event-not-found';
 import { runnerRef } from '@/lib/order-ref';
@@ -350,6 +351,9 @@ export default async function RegistrantsPage({
       },
     },
   });
+  // The latest follow-up per order (UNPAID_FOLLOWUP_PLAN.md Batch 1), from
+  // the trail in one query, as the status records above are.
+  const followUps = await latestFollowUps(actor.orgId, id);
   const now = new Date();
   const unpaidCheckouts: UnpaidCheckout[] = unpaidOrders
     .map((order, index) => {
@@ -358,6 +362,7 @@ export default async function RegistrantsPage({
       const contact = order.runners[0];
       const expired = order.status === 'EXPIRED';
       const deadline = expiresBy(order.createdAt);
+      const followUp = followUps.get(order.id);
       return {
         id: order.id,
         // The order's place in this list, oldest first, fixed here for the
@@ -382,6 +387,7 @@ export default async function RegistrantsPage({
             ? `Expires by ${shortInstant(deadline)}`
             // The sweep is late or was cut short (MAX_SWEEP); the next run takes it.
             : 'Expires at the next sweep',
+        followUp: followUp ? { ...followUp, ago: followUpAgo(followUp.at, now) } : null,
       };
     });
   const unpaidRunners = unpaidCheckouts

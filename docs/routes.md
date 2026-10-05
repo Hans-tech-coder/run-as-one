@@ -269,14 +269,24 @@ reference and created time, runners, the first runner's email and phone,
 method and amount, and *Awaiting payment · Expires by …* (`expiresBy`, the real
 sweep schedule) or *Expired …*. Expired ones stay until race day. n counts
 runners still awaiting payment, the same number as "+N unpaid". Nothing on a
-row is editable. Two actions: **Copy contact** (name, email, phone, reference),
-with no reminder email because of Resend's quota, and **Check payment**
-(Batch 4; aria-label *Check RM-… with PayMongo*), which asks PayMongo whether
-the order was paid before anyone chases the runner — a QRPh payment can land
-while its webhook never does. A found payment on a PENDING order marks it PAID
-and the page refreshes, moving it to the Registrants tab; on an EXPIRED order
-it says *Paid after it expired* and changes nothing; otherwise *No payment
-found*. Every event role sees the tab (`registration:view`); the button only
+row is editable. **Each row has a ⋮ menu** (`UnpaidCheckoutActions`,
+`UNPAID_FOLLOWUP_PLAN.md` Batch 1), icon and label on every item, in the order
+staff need it: **Check payment** first (`UNPAID_ORDERS_PLAN.md` Batch 4), which
+asks PayMongo whether the order was paid before anyone chases the runner — a
+QRPh payment can land while its webhook never does. A found payment on a
+PENDING order marks it PAID and the page refreshes, moving it to the
+Registrants tab; on an EXPIRED order it says *Paid after it expired* and
+changes nothing; otherwise *No payment found*. Then **Call**, **Text (SMS)**
+and **Email** (`tel:`, `sms:`, `mailto:` with the reference in the subject,
+opened in place so a phone hands them to its dialer or apps), **Copy contact**
+(name, email, phone, reference; a toast confirms) and **Log follow-up…**
+(`FollowUpModal`: one of *Contacted*, *No answer*, *Will pay*, *Not
+interested*, *Wrong number*, and an optional note up to 300 characters). The
+**Follow-up** column (and a line on the card) shows the latest one — outcome,
+who, "2h ago", the note — or *Not contacted yet*, read with
+`latestFollowUps` in one query; Filters gains **Follow-up** (Not contacted yet
+and each outcome). Every event role sees the tab and may use the contact items
+and log a follow-up (`registration:view`); Check payment only
 `registration:validate` (OWNER, ADMIN, EVENT_MANAGER, VALIDATOR).
 **The list is
 in registration order, oldest first, and nothing an organizer does to a row ever
@@ -643,6 +653,7 @@ settle both read *Event not found.* with a way back to Remittances.
 | `admin/events/[id]/results/upload` | POST | CSV/XLSX results import; dedupes by bib, computes seconds and the three ranks |
 | `admin/events/[id]/pacers` | GET, POST | This race's pacers, and adding one (`PACER_DISCOUNT_PLAN.md` Batch 1). `promo:manage`, scoped to the signed-in organizer's own event — without the `organizerId` any admin handed another's event id could mint free entries in their race. POST writes the code, `discountType: 'PACER'`, `usageLimit: 1`, `automatic: false` and **exactly one `PromoCategory` row in the same statement**, since a pacer code with no category would be a free entry to whichever distance the pacer chose. Uniqueness is the `[organizerId, code]` index: the route retries a fresh `pacerCodeFor` on `P2002` five times rather than checking first, because a check before a write is one two simultaneous requests both pass, and answers 409 if it somehow loses every time. `waiveAdminFee` is refused **403 with the field** without `promo:waive-fee`, never silently dropped. Creating with the waiver on writes **two** trail entries: `pacer.created` and `pacer.fee_waived`. GET is the same scope and permission as the write; the screen itself is server-rendered and re-reads through `router.refresh()` |
 | `admin/events/[id]/pacers/[pacerId]` | PATCH, DELETE | Changing or removing one pacer. PATCH takes any subset of `assigneeName` (a rename — **the code never changes**, or a pacer already holding it would find it dead), `paused`, `codeSent` (whose timestamp is taken on the server: a client that could name it could name yesterday) and `waiveAdminFee` (`promo:waive-fee`, else 403 with the field). A body that changes nothing answers the row unchanged rather than writing a trail entry saying so. The **category is not editable** — it is in the code's own text and it is the slot the organizer set aside, so moving it would silently move a held place between distances; deleting and re-adding is the honest way. DELETE answers **409 once the code has been used**, saying to pause it instead: the registration survives on its snapshot either way, but removing the code would leave a runner in the race whose free entry nothing on the screen can account for. `discountType` is in the `where` alongside `organizerId` and `eventId`, so this is not a second way to pause or delete ordinary promotions |
+| `admin/registrations/[id]/follow-up` | POST | **"Log follow-up…" on the Unpaid checkouts tab** (`UNPAID_FOLLOWUP_PLAN.md` Batch 1). Body `{ outcome, note? }`, the outcome one of `FOLLOW_UP_OUTCOMES` (`lib/follow-up.ts`), the note trimmed and at most 300 characters (400 otherwise, saying which). Gated by `registration:view` and scoped to the order's race — every event role, VIEWER included, since staff doing follow-up is the tab's point — and only for an order `unpaidFollowUpWhere` would list (409 for a paid or cancelled one). Writes one `registration.followed_up` audit row (`changes: { outcome, note }`) and nothing on the order. Answers `{ followUp: { outcome, note, by, at } }` |
 | `admin/registrations/[id]/payment-check` | POST | **"Check payment" on the Unpaid checkouts tab** (`UNPAID_ORDERS_PLAN.md` Batch 4). Gated by `registration:validate` and scoped to the order's race, like the status route; refuses a bank transfer or complimentary order (400) and a CANCELLED / REFUNDED one (409). Looks the stored `checkoutSessionId` up through `lookUpPaymongoPayment` (`lib/online-payment.ts`: `cs_` → `GET /v1/checkout_sessions/{id}`, `pi_` → `GET /v1/payment_intents/{id}`). Answers `{ result, message }`: `marked_paid` (a PENDING order PayMongo has paid — flipped through `settleOnlinePayment`, the webhook's own path, which sends the receipt and writes one `registration.status.changed` row in the same transaction), `already_paid`, `paid_after_expiry` (EXPIRED but paid — never flipped, needs a reinstate or refund) or `not_paid`. Only a check that changes the status writes to the trail. PayMongo unreachable or answering badly is a 502 with the reason |
 | `admin/registrations/[id]/status` | PATCH | Confirm or reject a manual payment, and write the validator's internal `remarks`. Takes either or both; the status is guarded against a fixed list and the receipt email fires only on the *transition* into `PAID`, so a later remarks-only PATCH cannot send a second receipt. Auth-checked and scoped to the signed-in organizer's own events — **this route had none at all until Batch E**, which made it the one way for anyone on the internet to mark a registration `PAID`. When the status moved, the answer carries `statusChange` (`by`, `at`, `to` — the same name the trail entry snapshotted), which the registrant modal's *Validated by* line reads. **PENDING → CANCELLED hands the order's promo back** (`releaseRedemption`, `pending-expiry.ts`) and the trail row says so; cancelling from any other status hands nothing back |
 | `admin/registrations/[id]/email` | GET, POST | The email a registration is owed, rendered for a person to send by hand — `GET` returns the recipient, subject and **both** renderings (HTML for the clipboard, plain text for a `mailto:`), `POST` records that a staff member sent it. Auth-checked and scoped like the status route, which matters more here than most: the rendered email carries every runner's contact details, birthdate and emergency contact |

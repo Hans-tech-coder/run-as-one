@@ -16,6 +16,11 @@ export interface RowAction {
   onSelect?: () => void;
   /** A plain link instead of a button — a receipt file, opened in a new tab. */
   href?: string;
+  /**
+   * Open `href` in place. For a link the device hands to an app — `tel:`,
+   * `sms:`, `mailto:` — where a new tab would only be left blank behind it.
+   */
+  sameTab?: boolean;
   /** Destructive: drawn red, below a divider, after every other item. */
   danger?: boolean;
   disabled?: boolean;
@@ -133,8 +138,7 @@ export default function RowActionsMenu({
         <a
           key={action.key}
           href={action.href}
-          target="_blank"
-          rel="noopener noreferrer"
+          {...(action.sameTab ? {} : { target: '_blank', rel: 'noopener noreferrer' })}
           className={className}
           role="menuitem"
           onClick={closeMenu}

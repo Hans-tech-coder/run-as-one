@@ -59,6 +59,7 @@ export const ACTION_LABELS: Record<AuditAction, string> = {
   'registration.status.changed': 'Changed payment status',
   'registration.remarks.changed': 'Changed remarks',
   'registration.email.sent_by_hand': 'Sent an email by hand',
+  'registration.followed_up': 'Followed up an unpaid checkout',
   'runner.updated': 'Edited a runner',
   'runner.deleted': 'Removed a runner',
   'proof.viewed': 'Opened a payment proof',
@@ -96,7 +97,7 @@ export function isWarningAction(action: string): boolean {
  * changing, which is exactly what a Data Privacy Act review asks for first.
  */
 export const ACTIVITY_GROUPS = [
-  { key: 'payments', label: 'Payments', hint: 'Status changes, remarks and emails sent by hand' },
+  { key: 'payments', label: 'Payments', hint: 'Status changes, remarks, emails sent by hand and unpaid checkouts followed up' },
   { key: 'runners', label: 'Runners', hint: 'Runner edits and removals' },
   { key: 'data', label: 'Personal data', hint: 'Payment proofs opened and registrant lists exported' },
   { key: 'events', label: 'Events', hint: 'Events created, edited, paused, scheduled or deleted, and results uploaded' },
@@ -149,6 +150,7 @@ export const ACTION_GROUP: Record<AuditAction, ActivityGroupKey> = {
   'registration.status.changed': 'payments',
   'registration.remarks.changed': 'payments',
   'registration.email.sent_by_hand': 'payments',
+  'registration.followed_up': 'payments',
   'runner.updated': 'runners',
   'runner.deleted': 'runners',
   'proof.viewed': 'data',
