@@ -103,15 +103,11 @@ on 2026-10-05 and passed: VIEWER/ENCODER see the tab and Copy contact but not
 Check payment; a QRPh test payment was marked PAID by the webhook alone, with
 its receipt and no trail row; the PAID-order delete warning, the order staying
 PAID; the sweep moving an order to "Expired" and every screen dropping it from
-the count together. What is left:
+the count together. The owner accepted the rest as is (the Registrants tab's
+count is noted in `docs/routes.md`). One thing waits on a business change:
 
-- **The overview's all-time "Total Registrants" tile** still counts PAID
-  runners only, not PAID plus awaiting verification like every other count.
-  The owner's call.
-- **The "Registrants (n)" tab counts every listed row**, so a CANCELLED or
-  REFUNDED order that kept its runner adds to it while the overview and the
-  events table do not (Pink Run on `local-dev`: 185 against 184). None on
-  production yet. The owner's call.
-- **Not checked:** the webhook's GCash/Maya path (`pi_`, `payment.paid`); only
-  QRPh's `checkout_session.payment.paid` ran. The client viewer's counts
-  after the sweep (no client login was used).
+- **Test the webhook's GCash/Maya path when those methods are switched on.**
+  Production takes QRPh only until the owner has a business TIN, so only
+  QRPh's `checkout_session.payment.paid` has run end to end. GCash and Maya
+  store a `pi_` id and are settled by `payment.paid`; run one test payment of
+  each on staging before enabling them in production.

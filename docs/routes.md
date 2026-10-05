@@ -246,7 +246,10 @@ QRPh / GCash / Maya order is filtered out by `listedRegistrationWhere()` in
 `lib/pending-expiry.ts`; bank transfers are always listed. **Two tabs**
 (`RegistrantsTabs`, the `.t-tabs` sliding tabs, chosen in the URL as
 `?tab=unpaid`, switched with `history.replaceState` and both panels kept
-mounted): *Registrants (n)* is everything below (its Reference cell carries,
+mounted): *Registrants (n)* is everything below, so it counts every listed
+row, a CANCELLED or REFUNDED order that kept its runner included, and can
+read higher than the overview and the events table (kept by the owner,
+2026-10-05) (its Reference cell carries,
 under the reference, when the order was placed: `registeredAtLabel`, the
 order's `createdAt` in Manila, shared by every runner of a group; the CSV
 export carries it as *Registered At*, spelled `2026-10-03 08:46` so Excel
