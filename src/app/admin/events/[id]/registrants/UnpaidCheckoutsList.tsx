@@ -13,7 +13,7 @@
  *
  * **Built like the registrants table beside it** (owner, 2026-10-05): the same
  * search box, Filters chip, View chip, mark / unmark checkboxes, No. column,
- * sortable headers, Sort chip below `lg`, Export to CSV, and rows per page
+ * sortable headers, Sort chip with the cards, Export to CSV, and rows per page
  * and pager, read from one TanStack table by both the desktop table and the
  * cards.
  *
@@ -283,10 +283,12 @@ export default function UnpaidCheckoutsList({
         accessorFn: order => order.runnerNames.length,
         header: 'Runners',
         cell: ({ row }) => (
-          <div className="max-w-[16rem]">
+          <div className="min-w-[8rem] max-w-[16rem]">
             <span className="block text-xs text-[var(--text-muted)]">{runnerCount(row.original)}</span>
+            {/* Wrapped, not truncated: a truncated name sets the column's
+                narrowest width to the whole name. */}
             {row.original.runnerNames.map((name, i) => (
-              <span key={i} className="block truncate">{name}</span>
+              <span key={i} className="block [overflow-wrap:anywhere]">{name}</span>
             ))}
           </div>
         ),
@@ -386,7 +388,10 @@ export default function UnpaidCheckoutsList({
   const empty = <p className="m-0 py-16 text-center text-[var(--text-muted)]">{emptyMessage}</p>;
 
   return (
-    <div className="flex flex-col gap-4 w-full text-primary">
+    // `unpaid-list` makes the table/card switch follow this list's own width
+    // (Admin.css), not the window's: beside the sidebar a 1024px window
+    // leaves it about 660px, and the table needs about 950.
+    <div className="unpaid-list flex flex-col gap-4 w-full text-primary">
       <p className="m-0 text-sm text-secondary">
         Online checkouts that were opened and not paid. They are not registrants and are not in
         the registrants export. Each one holds its slot until it expires; expired ones stay here
@@ -437,10 +442,11 @@ export default function UnpaidCheckoutsList({
         </div>
       </div>
 
-      {/* From `lg` up; the cards below take its place under it. */}
+      {/* While the list is at least 60rem wide; the cards below take its
+          place under that. */}
       <RegistrantsDataTable table={table} empty={emptyMessage} />
 
-      {/* The same rows as the table above, below `lg`: search, filters, sort
+      {/* The same rows as the table above, under 60rem: search, filters, sort
           and the page all come from the one table instance. */}
       <div className="dash-mobile-only">
         <AdminCardList

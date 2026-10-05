@@ -198,6 +198,10 @@
   - **Both layouts render and CSS picks one**, through `.dash-desktop-only` /
     `.dash-mobile-only` in `Admin.css`. That is the only place the switch is
     decided; a `matchMedia` hook would render the wrong layout on the server.
+    One exception, also in `Admin.css`: the Unpaid checkouts tab
+    (`.unpaid-list`) switches on its own width with a container query, below
+    60rem of list, because beside the sidebar a 1024px window leaves its
+    ~950px table about 660px.
     A TanStack screen passes `table.getRowModel().rows` to the cards, so
     search, filters, sort, selection and pager are shared. Nothing in a card
     carries an `id`, and per-row open state lives in the parent.

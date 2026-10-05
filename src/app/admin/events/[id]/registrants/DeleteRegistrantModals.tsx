@@ -154,7 +154,7 @@ export function DeleteRegistrantModal({
         <div className="admin-modal-body flex flex-col gap-2">
           <h3 id="delete-registrant-title" className="text-xl font-semibold text-primary">Delete Registrant</h3>
           <p className="text-secondary text-sm leading-relaxed [overflow-wrap:anywhere]">
-            Are you sure you want to delete {deletingRunner?.name}? This action cannot be undone and will permanently remove them from the database.
+            Are you sure you want to delete {deletingRunner?.name}? They will be removed from the registrants list, the counts and exports. This cannot be undone from the dashboard.
           </p>
           <EmptiedOrdersNote {...emptied} single />
         </div>
@@ -273,7 +273,7 @@ export function BulkDeleteModal({
         <div className="admin-modal-body flex flex-col gap-2">
           <h3 id="bulk-delete-registrants-title" className="text-xl font-semibold text-primary">Delete Selected Registrants</h3>
           <p className="text-secondary text-sm leading-relaxed">
-            Are you sure you want to delete the {count} selected registrants? This action cannot be undone and will permanently remove them from the database.
+            Are you sure you want to delete the {count} selected registrants? They will be removed from the registrants list, the counts and exports. This cannot be undone from the dashboard.
           </p>
           <EmptiedOrdersNote {...emptied} single={false} />
         </div>

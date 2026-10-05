@@ -2657,6 +2657,26 @@ textarea.form-input {
   }
 }
 
+/* The one exception: the Unpaid checkouts tab switches on the room the list
+   has, because the window is the wrong measure there. Beside the sidebar a
+   1024px window leaves the list about 660px, and its table needs about 950,
+   so `lg` alone showed a table with Status and Check payment scrolled out of
+   sight. Below 60rem of list it shows the cards and their Sort chip instead.
+   No rule is needed the other way: 60rem of list only exists past `lg`. */
+.unpaid-list {
+  container-type: inline-size;
+}
+
+@container (width < 60rem) {
+  .unpaid-list .dash-desktop-only {
+    display: none !important;
+  }
+
+  .unpaid-list .dash-mobile-only {
+    display: block !important;
+  }
+}
+
 /* Only below `sm`: a control that exists for a phone alone, such as the
    detail modal's footer copies of links its body already holds. A class
    rather than `sm:hidden`, because on a `.btn-filter` that utility loses to

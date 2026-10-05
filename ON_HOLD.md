@@ -112,11 +112,6 @@ the count together. What is left:
   REFUNDED order that kept its runner adds to it while the overview and the
   events table do not (Pink Run on `local-dev`: 185 against 184). None on
   production yet. The owner's call.
-- **The delete confirmation says the runner is "permanently removed from the
-  database"**, but removal is soft (`deletedAt`). Copy only.
-- **At 1024px the Unpaid checkouts table is wider than its frame** (986px in
-  663px); Status and Check payment are off-screen until the table is scrolled
-  sideways.
 - **Not checked:** the webhook's GCash/Maya path (`pi_`, `payment.paid`); only
   QRPh's `checkout_session.payment.paid` ran. The client viewer's counts
   after the sweep (no client login was used).
