@@ -81,6 +81,6 @@ the Strix scan clone uses as its diff base.)
 ## 4. After
 
 - Vercel dashboard → project `run-as-one` → the new Production deployment reaches **Ready**.
-- Open `https://run-as-one.cresendorunningcommunity.com`: home, one event page, and its
+- Open `https://runasone.ph`: home, one event page, and its
   register page load. Do not finish a registration there; it would be a real order.
 - Tell Claude "na-deploy na" (and whether the migration ran).

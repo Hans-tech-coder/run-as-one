@@ -43,7 +43,7 @@ export const SITE_NAME = 'Run As One';
  */
 export const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ??
-  'https://run-as-one.cresendorunningcommunity.com';
+  'https://runasone.ph';
 
 /**
  * The inbox a runner or an organizer reaches until somebody saves a different
@@ -51,7 +51,7 @@ export const SITE_URL =
  * `getContactEmail()` in lib/site-settings.ts (server) or `useContactEmail()`
  * in components/SiteContactProvider.tsx (client), which return the saved one.
  */
-export const DEFAULT_CONTACT_EMAIL = 'info@cresendorunningcommunity.com';
+export const DEFAULT_CONTACT_EMAIL = 'info@runasone.ph';
 
 /**
  * The one domain Resend is verified to send from.
@@ -65,7 +65,7 @@ export const DEFAULT_CONTACT_EMAIL = 'info@cresendorunningcommunity.com';
  * The API key is send-only, so the app cannot ask Resend which domains are
  * verified and has to be told here.
  */
-export const EMAIL_SENDING_DOMAIN = 'cresendorunningcommunity.com';
+export const EMAIL_SENDING_DOMAIN = 'runasone.ph';
 
 /** Whether mail can go out *from* this address, not only reply to it. */
 export function canSendFrom(email: string): boolean {

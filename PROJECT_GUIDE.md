@@ -108,11 +108,13 @@ event on `/admin/remittances` (`ADMIN_MERGE_PLAN.md` Batch 6, §5
 - Other notable deps: `jose` (JWT), `bcryptjs`, `pdf-lib` (e-certificates),
   `xlsx` (results import / registrant export; installed from the SheetJS CDN tarball, since npm has no patched release), `@tanstack/react-table`,
   `framer-motion`, `lucide-react`.
-- **Production is live** at `https://run-as-one.cresendorunningcommunity.com`
+- **Production is live** at `https://runasone.ph`
   — Vercel project `run-as-one`, linked to `Hans-tech-coder/run-as-one`. Every
   push to `main` deploys to production; there is no manual deploy step. That
-  custom domain is the *only* public hostname the project answers on, and it is
-  what `SITE_URL` in `lib/site-contact.ts` must name.
+  custom domain is the *only* public hostname the project serves pages on, and
+  it is what `SITE_URL` in `lib/site-contact.ts` must name. The old domain,
+  `run-as-one.cresendorunningcommunity.com`, stays on the Vercel project only as
+  a 308 redirect to it, so links in emails already sent keep working.
 - **Work lands on `dev`, not `main`.** Because a push to `main` ships to
   production, day-to-day commits go to the long-lived `dev` branch, and every
   push to `dev` gets its own Vercel preview deployment. `main` is only advanced
@@ -158,7 +160,7 @@ is not there and fails.
 | `BLOB_READ_WRITE_TOKEN` | **Public** blob store: event banners, race-kit posters, certificate templates |
 | `PROOFS_BLOB_READ_WRITE_TOKEN` | **Private** blob store: payment receipts |
 | `PAYMONGO_SECRET_KEY`, `NEXT_PUBLIC_PAYMONGO_PUBLIC_KEY`, `PAYMONGO_WEBHOOK_SECRET` | PayMongo |
-| `RESEND_API_KEY` | Resend — sends every email in the app (registration emails, team and client invitations) from the **admin email** set at `/admin/settings` when it is on `@cresendorunningcommunity.com`, otherwise from `info@cresendorunningcommunity.com` with the admin email as reply-to (the key is **send-only**, so the app cannot ask Resend which domains are verified — see `EMAIL_SENDING_DOMAIN` in `site-contact.ts`). Unset in dev just skips the send and reports it as not sent (see `lib/email.ts`). **Set in the local `.env` too, so an invitation sent on localhost reaches the real inbox** |
+| `RESEND_API_KEY` | Resend — sends every email in the app (registration emails, team and client invitations) from the **admin email** set at `/admin/settings` when it is on `@runasone.ph`, otherwise from `info@runasone.ph` with the admin email as reply-to (the key is **send-only**, so the app cannot ask Resend which domains are verified — see `EMAIL_SENDING_DOMAIN` in `site-contact.ts`). Unset in dev just skips the send and reports it as not sent (see `lib/email.ts`). **Set in the local `.env` too, so an invitation sent on localhost reaches the real inbox** |
 | `CRON_SECRET` | Guards `/api/cron/expire-pending`, the daily abandoned-checkout sweep. Vercel Cron sends it as `Authorization: Bearer …`; **unset, the route refuses to run rather than running unguarded** |
 
 ### Databases: production and development are separate Neon branches

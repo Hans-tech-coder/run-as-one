@@ -12,7 +12,7 @@ in step 6.
 
 ## Hard rules
 
-- **Never against production.** Not the URL `run-as-one.cresendorunningcommunity.com`,
+- **Never against production.** Not the URL `runasone.ph`,
   not the Neon endpoint `ep-still-pine-b3n210bs`. Everything runs on `localhost:3000`
   with the `local-dev` branch (`ep-shiny-sunset-b3gzfro9`).
 - **Never print `.env`.** Check the endpoint with a count only (step 1).

@@ -31,6 +31,6 @@ Run As One staff use `/admin`.
 
 ## Rules
 
-- Never target `run-as-one.cresendorunningcommunity.com`. Only `localhost` / `host.docker.internal`.
+- Never target `runasone.ph`. Only `localhost` / `host.docker.internal`.
 - Do not delete data or blobs. Create new test registrations instead of changing existing rows.
 - Do not send email or trigger real payments.

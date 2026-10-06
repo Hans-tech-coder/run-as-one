@@ -67,4 +67,4 @@ The report is in `C:\Users\user\Web Projects\Claude Scratch\run-as-one-scan\stri
 Tell Claude "tapos na ang Strix" and it reads `penetration_test_report.md` and
 `vulnerabilities\` from there.
 
-Never point `-t` at `https://run-as-one.cresendorunningcommunity.com`.
+Never point `-t` at `https://runasone.ph`.

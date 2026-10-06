@@ -400,9 +400,11 @@ Known open threads:
   `20260918120000_organizer_sessions`, before the code reaches `main`.
 - PayMongo runs in **test mode**.
 - Registration emails send via **Resend** from the admin email when it is on
-  `@cresendorunningcommunity.com`, else from
-  `info@cresendorunningcommunity.com` (a Hostinger Titan mailbox; Resend only
-  handles outbound sending, not the inbox) — a "received" email at submission
+  `@runasone.ph`, else from
+  `info@runasone.ph` (Resend only handles outbound sending, not the inbox;
+  the domain moved from `cresendorunningcommunity.com` in October 2026, and
+  `runasone.ph` must be verified in Resend before `EMAIL_SENDING_DOMAIN`
+  names it, or every email stops) — a "received" email at submission
   plus a "receipt" email once PAID (see `email.ts`). No results-ready or
   reminder emails yet. The app stays on Resend's **free tier in production** —
   100 recipients a day, and it stops rather than bills — which is a decision,
