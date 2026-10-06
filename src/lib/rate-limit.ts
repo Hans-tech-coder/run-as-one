@@ -63,6 +63,26 @@ export const FEEDBACK_RULE: RateLimitRule = { limit: 5, windowMs: 10 * 60_000 };
 export const PAY_LINK_RULE: RateLimitRule = { limit: 20, windowMs: 60_000 };
 
 /**
+ * Placing an order (`/api/checkout` and `/api/checkout/manual`, one shared
+ * window): 10 a minute from one address.
+ *
+ * A group registers in one order — every runner rides in the same request — so
+ * the person at the keyboard places one, and maybe two or three more if a
+ * price changed under them or a category filled. Ten leaves room for that and
+ * for a running club or a phone carrier's shared address placing several orders
+ * at once on the morning registration opens; a refusal costs a real person a
+ * minute's wait, and their order was not written, so nothing is lost by it.
+ *
+ * What this stops is a script placing orders it never pays for. Each one holds
+ * its category slots and any promo use until it is paid or swept
+ * (lib/pending-expiry.ts, a day or more), so an unthrottled loop can make a race
+ * look sold out for free. The window is shared between the two routes because
+ * they spend the same slots: a script must not get twice the allowance by
+ * alternating between them.
+ */
+export const CHECKOUT_RULE: RateLimitRule = { limit: 10, windowMs: 60_000 };
+
+/**
  * How many callers we will remember at once.
  *
  * A map keyed by address grows with every new address, and a serverless

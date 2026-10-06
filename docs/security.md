@@ -166,6 +166,19 @@
   transaction and locks the capped category rows first (`reserveSlots`), since a
   count taken before the write is a count two simultaneous orders both pass. A
   code's usage cap is spent the same way, by `redeemPromoCode`.
+- **Placing an order is throttled, and the throttle is a speed bump, not a
+  cap.** An unpaid order holds its slots and promo uses until it is paid or
+  the daily sweep expires it (`lib/pending-expiry.ts`, a day or more), so an
+  unthrottled `POST /api/checkout` let a script make a race look sold out
+  without paying (Strix vuln-0002). Both checkout routes now share
+  `CHECKOUT_RULE` in `lib/rate-limit.ts` — 10 orders a minute per address,
+  checked before the body is read, answered 429 with a sentence the wizard
+  shows. **That limiter lives in one instance's memory.** Vercel's instances
+  share nothing and the caller is keyed on a client-supplied
+  `x-forwarded-for`, so it stops a naive loop from one address and does not
+  stop a distributed or header-rotating one; nor does it bound how many
+  runners one order carries. A real cap needs a shared counter (Redis) or a
+  shorter hold on unpaid online orders — neither exists yet.
 - **The resume-payment link is a key to one order, and is built as one**
   (`UNPAID_FOLLOWUP_PLAN.md` Batch 3, `lib/resume-payment.ts`). Handed out
   only with `registration:email`, every copy on the trail. A signed token

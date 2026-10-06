@@ -59,8 +59,19 @@ import {
 } from '@/lib/discount';
 import { resolveDiscount } from '@/lib/promo-store';
 import { openPaymongoPage } from '@/lib/paymongo-session';
+import { CHECKOUT_RULE, allowRequest, callerKey } from '@/lib/rate-limit';
 
 export async function POST(request: Request) {
+  // Before the body is read or a slot is touched: every order placed here holds
+  // its slots until it is paid or swept, so a script looping this would sell a
+  // race out for free. Said plainly — the wizard shows `error` as it stands.
+  if (!allowRequest('checkout', callerKey(request), CHECKOUT_RULE)) {
+    return NextResponse.json(
+      { error: 'Too many orders from this connection in a short time. Wait a minute, then try again.' },
+      { status: 429 }
+    );
+  }
+
   // Set once an online order is written and cleared once PayMongo accepts it.
   // Anything that ends the request while it is still set — a PayMongo
   // rejection or a thrown error — discards the order (discardFailedCheckout).

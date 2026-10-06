@@ -53,8 +53,19 @@ import {
   runnersDiscounted,
 } from '@/lib/discount';
 import { resolveDiscount } from '@/lib/promo-store';
+import { CHECKOUT_RULE, allowRequest, callerKey } from '@/lib/rate-limit';
 
 export async function POST(request: Request) {
+  // Same window as /api/checkout ('checkout' bucket): both spend the same
+  // slots, so alternating between them must not double a script's allowance.
+  // Checked before the proof upload, so a refusal costs no blob write.
+  if (!allowRequest('checkout', callerKey(request), CHECKOUT_RULE)) {
+    return NextResponse.json(
+      { error: 'Too many orders from this connection in a short time. Wait a minute, then try again.' },
+      { status: 429 }
+    );
+  }
+
   try {
     // A body that is not a form (JSON, empty, malformed) is a bad request from
     // the caller, not a server failure, so it is refused before anything else.

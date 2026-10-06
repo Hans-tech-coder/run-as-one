@@ -5,33 +5,45 @@ import { settleOnlinePayment } from '@/lib/online-payment';
 
 export async function POST(request: Request) {
   try {
+    // Fail closed: without the secret nothing can be verified, and an
+    // unverified event could mark any PENDING order PAID. A 500 makes PayMongo
+    // retry, so events sent while it is missing land once it is set.
+    const webhookSecret = process.env.PAYMONGO_WEBHOOK_SECRET;
+    if (!webhookSecret) {
+      console.error('PayMongo Webhook: PAYMONGO_WEBHOOK_SECRET is not set; refusing the event');
+      return NextResponse.json({ error: 'Webhook not configured' }, { status: 500 });
+    }
+
     const rawBody = await request.text();
     const signatureHeader = request.headers.get('paymongo-signature');
 
-    // PayMongo webhook secret logic (Optional but recommended in production)
-    const webhookSecret = process.env.PAYMONGO_WEBHOOK_SECRET;
+    // Header format: t=<timestamp>,te=<test-mode sig>,li=<live-mode sig>.
+    // Only the current mode's slot is filled. A request that is unsigned or
+    // unparseable is rejected — otherwise anyone could mark an order PAID.
+    const timestampMatch = signatureHeader?.match(/t=([^,]+)/);
+    const signatureMatch = signatureHeader?.match(/te=([^,]+)/) || signatureHeader?.match(/li=([^,]+)/);
 
-    if (webhookSecret) {
-      // Header format: t=<timestamp>,te=<test-mode sig>,li=<live-mode sig>.
-      // Only the current mode's slot is filled. A request that is unsigned or
-      // unparseable is rejected — otherwise anyone could mark an order PAID.
-      const timestampMatch = signatureHeader?.match(/t=([^,]+)/);
-      const signatureMatch = signatureHeader?.match(/te=([^,]+)/) || signatureHeader?.match(/li=([^,]+)/);
+    if (!timestampMatch || !signatureMatch) {
+      console.error('PayMongo Webhook: missing or malformed signature header');
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
+    }
 
-      if (!timestampMatch || !signatureMatch) {
-        console.error('PayMongo Webhook: missing or malformed signature header');
-        return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
-      }
-
-      const computedSignature = crypto
+    const computedSignature = Buffer.from(
+      crypto
         .createHmac('sha256', webhookSecret)
         .update(`${timestampMatch[1]}.${rawBody}`)
-        .digest('hex');
+        .digest('hex')
+    );
+    const receivedSignature = Buffer.from(signatureMatch[1]);
 
-      if (computedSignature !== signatureMatch[1]) {
-        console.error('PayMongo Webhook signature verification failed');
-        return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
-      }
+    // timingSafeEqual throws on unequal lengths, so a short or long signature
+    // is rejected before it is compared.
+    if (
+      computedSignature.length !== receivedSignature.length ||
+      !crypto.timingSafeEqual(computedSignature, receivedSignature)
+    ) {
+      console.error('PayMongo Webhook signature verification failed');
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
     }
 
     // Envelope: { data: { type: 'event', attributes: { type: '<event name>', data: <resource> } } }.
