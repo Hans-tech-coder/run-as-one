@@ -21,7 +21,7 @@ import { useAlert } from '@/components/ui/AlertProvider';
 import {
   FOLLOW_UP_LABELS,
   FOLLOW_UP_NOTE_MAX,
-  FOLLOW_UP_OUTCOMES,
+  LOGGABLE_OUTCOMES,
   type FollowUpOutcome,
 } from '@/lib/follow-up';
 import type { UnpaidCheckout } from './UnpaidCheckoutsList';
@@ -160,7 +160,7 @@ export default function FollowUpModal({
           <fieldset className="p-0 border-none">
             <legend className="block text-sm text-secondary mb-2 p-0">How did it go?</legend>
             <div className="grid grid-cols-2 gap-2">
-              {FOLLOW_UP_OUTCOMES.map(value => {
+              {LOGGABLE_OUTCOMES.map(value => {
                 const selected = outcome === value;
                 return (
                   <label

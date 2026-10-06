@@ -25,7 +25,8 @@
 
 import { createHash, randomBytes } from 'node:crypto';
 import prisma from './db';
-import { sendClientInvitationEmail, sendStaffInvitationEmail, type EmailOutcome } from './email';
+import { sendClientInvitationEmail, sendStaffInvitationEmail } from './email-invitations';
+import type { EmailOutcome } from './email-document';
 import { ROLE_LABELS, asEventRole, asTeamRole } from './permissions';
 import { SITE_URL } from './site-contact';
 import { INVITE_TTL_DAYS } from './team';

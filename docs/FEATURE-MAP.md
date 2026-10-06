@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-37 pages · 52 API routes · 75 modules in `src/lib` · 352 files · 74,243 lines
+37 pages · 52 API routes · 78 modules in `src/lib` · 359 files · 74,914 lines
 
 ---
 
@@ -32,7 +32,7 @@ The route, the server component behind it, and the client components beside it.
 | `/admin/events` | [`/admin/events/page.tsx`](../src/app/admin/events/page.tsx) | `bank-account-draft.ts` `BankAccountsPanel.tsx` `category-draft.ts` `ConsentWaiverField.tsx` `DescriptionEditor.tsx` `event-not-found.ts` `EventActionsMenu.tsx` `EventClientField.tsx` `EventOptionsPanel.tsx` `EventPromotionsPanel.tsx` `EventProvinceField.tsx` `EventsTableClient.tsx` `HighlightsField.tsx` `HighlightsModal.tsx` `InclusionsField.tsx` `LogisticsPanel.tsx` `PosterField.tsx` `registration-opening.ts` `registration-state-badge.ts` `RegistrationFormPicker.tsx` `RegistrationOpeningPicker.tsx` `RegistrationScheduleModal.tsx` |
 | `/admin/events/[id]/edit` | [`/admin/events/[id]/edit/page.tsx`](../src/app/admin/events/[id]/edit/page.tsx) | — |
 | `/admin/events/[id]/pacers` | [`/admin/events/[id]/pacers/page.tsx`](../src/app/admin/events/[id]/pacers/page.tsx) | `PacerActionsMenu.tsx` `PacersClient.tsx` |
-| `/admin/events/[id]/registrants` | [`/admin/events/[id]/registrants/page.tsx`](../src/app/admin/events/[id]/registrants/page.tsx) | `CancelOrderModal.tsx` `ColumnsViewMenu.tsx` `DeleteRegistrantModals.tsx` `FollowUpModal.tsx` `ManualEmailModal.tsx` `ProofLightbox.tsx` `registrant-columns.tsx` `registrant-csv.ts` `registrant-display.tsx` `RegistrantActionsMenu.tsx` `RegistrantDetailModal.tsx` `RegistrantRowActions.tsx` `RegistrantsDataTable.tsx` `RegistrantsTable.tsx` `RegistrantsTabs.tsx` `RegistrantsToolbar.tsx` `RemarksModal.tsx` `RunnerAddressEditor.tsx` `RunnerEditModal.tsx` `unpaid-columns.tsx` `UnpaidCheckoutActions.tsx` `UnpaidCheckoutsList.tsx` |
+| `/admin/events/[id]/registrants` | [`/admin/events/[id]/registrants/page.tsx`](../src/app/admin/events/[id]/registrants/page.tsx) | `CancelOrderModal.tsx` `ColumnsViewMenu.tsx` `DeleteRegistrantModals.tsx` `email-handoff.ts` `FollowUpModal.tsx` `ManualEmailModal.tsx` `PaymentLinkEmailModal.tsx` `ProofLightbox.tsx` `registrant-columns.tsx` `registrant-csv.ts` `registrant-display.tsx` `RegistrantActionsMenu.tsx` `RegistrantDetailModal.tsx` `RegistrantRowActions.tsx` `RegistrantsDataTable.tsx` `RegistrantsTable.tsx` `RegistrantsTabs.tsx` `RegistrantsToolbar.tsx` `RemarksModal.tsx` `RunnerAddressEditor.tsx` `RunnerEditModal.tsx` `SendLinksButton.tsx` `unpaid-columns.tsx` `UnpaidCheckoutActions.tsx` `UnpaidCheckoutCards.tsx` `UnpaidCheckoutsList.tsx` |
 | `/admin/events/[id]/registrants/[runnerId]/consent` | [`/admin/events/[id]/registrants/[runnerId]/consent/page.tsx`](../src/app/admin/events/[id]/registrants/[runnerId]/consent/page.tsx) | `PrintableSheet.tsx` |
 | `/admin/events/[id]/results` | [`/admin/events/[id]/results/page.tsx`](../src/app/admin/events/[id]/results/page.tsx) | `ResultsTableClient.tsx` `ResultsUploaderClient.tsx` |
 | `/admin/events/new` | [`/admin/events/new/page.tsx`](../src/app/admin/events/new/page.tsx) | `NewEventForm.tsx` |
@@ -152,6 +152,8 @@ the file itself.
 | [`e-certificate.ts`](../src/lib/e-certificate.ts) | — |
 | [`email-address.ts`](../src/lib/email-address.ts) | What counts as an email address, in one place. |
 | [`email-delivery.ts`](../src/lib/email-delivery.ts) | Whether the runner actually got their email, and what happens when they did not. |
+| [`email-document.ts`](../src/lib/email-document.ts) | How every email is built and sent, split out of `email.ts` (`UNPAID_FOLLOWUP_PLAN.md` Batch 4): the block document model, `renderHtml` / `renderTex… |
+| [`email-invitations.ts`](../src/lib/email-invitations.ts) | The emails that invite somebody to sign in rather than tell a runner about an order: `staffInvitationEmail` (team) and `clientInvitationEmail` (a c… |
 | [`email.ts`](../src/lib/email.ts) | Transactional email via Resend, sent from `CONTACT_EMAIL`. |
 | [`event-highlights.ts`](../src/lib/event-highlights.ts) | Event highlights: the posters an organizer shows off on the event page — the race kit, the trophies, a tourist spot near the venue, the after party. |
 | [`event-schedule.ts`](../src/lib/event-schedule.ts) | The line between upcoming and finished. |
@@ -173,6 +175,7 @@ the file itself.
 | [`organizer-status.ts`](../src/lib/organizer-status.ts) | Which `Organizer` row is Run As One, and whether it — and so its team — may be signed in to. |
 | [`pacer-store.ts`](../src/lib/pacer-store.ts) | Reading pacers out of the database, apart from `pacer.ts` for the reason `promo-store.ts` is apart from `discount.ts`: the Pacers screen is a clien… |
 | [`pacer.ts`](../src/lib/pacer.ts) | What a pacer code is, and when the dashboard has to nag about it (`PACER_DISCOUNT_PLAN.md`). |
+| [`payment-link.ts`](../src/lib/payment-link.ts) | Handing a payment link to staff, one path for every way it goes out (`UNPAID_FOLLOWUP_PLAN.md` Batches 3–4): `issuePaymentLink` checks `registratio… |
 | [`paymongo-session.ts`](../src/lib/paymongo-session.ts) | The PayMongo payment page an order is sent to, built in one place (`UNPAID_FOLLOWUP_PLAN.md` Batch 3, moved out of `api/checkout` unchanged). |
 | [`pending-expiry.ts`](../src/lib/pending-expiry.ts) | When an unpaid online checkout stops holding what it took. |
 | [`permissions.ts`](../src/lib/permissions.ts) | Who may do what inside an organizer's admin — the whole matrix, in one file. |
@@ -221,7 +224,6 @@ when a task touches one, split it before editing rather than after.
 | 1922 | [`src/app/events/[slug]/register/BankTransferWizardClient.tsx`](../src/app/events/[slug]/register/BankTransferWizardClient.tsx) |
 | 1519 | [`src/lib/discount.ts`](../src/lib/discount.ts) |
 | 1179 | [`src/app/admin/settings/SettingsPanels.tsx`](../src/app/admin/settings/SettingsPanels.tsx) |
-| 1132 | [`src/lib/email.ts`](../src/lib/email.ts) |
 | 1093 | [`src/app/admin/team/TeamClient.tsx`](../src/app/admin/team/TeamClient.tsx) |
 | 1015 | [`src/app/admin/register/page.tsx`](../src/app/admin/register/page.tsx) |
 | 888 | [`src/app/admin/events/[id]/edit/page.tsx`](../src/app/admin/events/[id]/edit/page.tsx) |
@@ -231,10 +233,11 @@ when a task touches one, split it before editing rather than after.
 | 693 | [`src/app/admin/AdminDatePicker.tsx`](../src/app/admin/AdminDatePicker.tsx) |
 | 663 | [`src/app/admin/activity/ActivityClient.tsx`](../src/app/admin/activity/ActivityClient.tsx) |
 | 663 | [`src/lib/pending-expiry.ts`](../src/lib/pending-expiry.ts) |
-| 633 | [`src/lib/activity.ts`](../src/lib/activity.ts) |
+| 636 | [`src/lib/activity.ts`](../src/lib/activity.ts) |
 | 621 | [`src/app/api/admin/events/[id]/route.ts`](../src/app/api/admin/events/[id]/route.ts) |
 | 603 | [`src/app/admin/feedback/FeedbackClient.tsx`](../src/app/admin/feedback/FeedbackClient.tsx) |
-| 593 | [`src/app/api/checkout/route.ts`](../src/app/api/checkout/route.ts) |
+| 595 | [`src/app/api/checkout/route.ts`](../src/app/api/checkout/route.ts) |
+| 578 | [`src/lib/email-document.ts`](../src/lib/email-document.ts) |
 | 573 | [`src/app/admin/events/[id]/results/ResultsUploaderClient.tsx`](../src/app/admin/events/[id]/results/ResultsUploaderClient.tsx) |
 | 561 | [`src/app/admin/events/new/NewEventForm.tsx`](../src/app/admin/events/new/NewEventForm.tsx) |
 | 548 | [`src/app/admin/NotificationsCenter.tsx`](../src/app/admin/NotificationsCenter.tsx) |
@@ -247,6 +250,7 @@ when a task touches one, split it before editing rather than after.
 | 502 | [`src/app/api/checkout/manual/route.ts`](../src/app/api/checkout/manual/route.ts) |
 | 491 | [`src/app/admin/AdminRouteLoading.tsx`](../src/app/admin/AdminRouteLoading.tsx) |
 | 491 | [`src/lib/registration-gate.ts`](../src/lib/registration-gate.ts) |
+| 485 | [`src/lib/email.ts`](../src/lib/email.ts) |
 | 472 | [`src/app/admin/communities/CommunitiesClient.tsx`](../src/app/admin/communities/CommunitiesClient.tsx) |
 | 472 | [`src/app/events/[slug]/register/BirthdatePicker.tsx`](../src/app/events/[slug]/register/BirthdatePicker.tsx) |
 | 472 | [`src/app/feedback/FeedbackForm.tsx`](../src/app/feedback/FeedbackForm.tsx) |

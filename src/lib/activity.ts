@@ -60,7 +60,10 @@ export const ACTION_LABELS: Record<AuditAction, string> = {
   'registration.remarks.changed': 'Changed remarks',
   'registration.email.sent_by_hand': 'Sent an email by hand',
   'registration.followed_up': 'Followed up an unpaid checkout',
-  'registration.payment_link.copied': 'Copied a payment link',
+  // "copied" in the code, which the trail keeps; the label covers every
+  // way a link is made — copied, or an email prepared to send by hand or
+  // refused by Resend (Batch 4). An email that went out is a follow-up.
+  'registration.payment_link.copied': 'Made a payment link',
   'runner.updated': 'Edited a runner',
   'runner.deleted': 'Removed a runner',
   'proof.viewed': 'Opened a payment proof',

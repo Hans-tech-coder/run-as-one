@@ -14,6 +14,12 @@
  * chasing, and a request naming one is refused rather than logged. A
  * cancelled order is refused too, though the tab can show it: it was closed
  * on purpose, so there is no one left to chase (Batch 2).
+ *
+ * **"Link sent" comes here from Send by hand** (Batch 4): the staff member
+ * sent the payment link email from their own mailbox and marks it, so the
+ * Follow-up column shows it as it does for one Resend sent. It needs
+ * `registration:email`, the permission that made the link, since the line
+ * says a link reached the runner.
  */
 
 import { NextResponse } from 'next/server';
@@ -27,6 +33,7 @@ import {
   FOLLOW_UP_NOTE_MAX,
   asFollowUpOutcome,
   type FollowUpRecord,
+  type LinkSentVia,
 } from '@/lib/follow-up';
 
 export async function POST(
@@ -63,6 +70,9 @@ export async function POST(
     if (!outcome) {
       return NextResponse.json({ error: 'Choose how the follow-up went.' }, { status: 400 });
     }
+    if (outcome === 'LINK_SENT' && !can(actor, 'registration:email', reach)) {
+      return NextResponse.json({ error: 'Only staff who may email runners can mark a payment link sent.' }, { status: 403 });
+    }
     const rawNote = body?.note;
     if (rawNote !== undefined && rawNote !== null && typeof rawNote !== 'string') {
       return NextResponse.json({ error: 'The note must be text.' }, { status: 400 });
@@ -97,8 +107,14 @@ export async function POST(
       entityId: registration.id,
       eventId: registration.eventId,
       organizerId: registration.event.organizerId,
-      summary: note ? `Followed up ${ref}: ${label}. "${note}"` : `Followed up ${ref}: ${label}.`,
-      changes: note ? { outcome, note } : { outcome },
+      summary: outcome === 'LINK_SENT'
+        ? `Sent a payment link for ${ref} by hand.`
+        : note ? `Followed up ${ref}: ${label}. "${note}"` : `Followed up ${ref}: ${label}.`,
+      changes: {
+        outcome,
+        ...(note ? { note } : {}),
+        ...(outcome === 'LINK_SENT' ? { via: 'hand' satisfies LinkSentVia } : {}),
+      },
     });
 
     const followUp: FollowUpRecord = {

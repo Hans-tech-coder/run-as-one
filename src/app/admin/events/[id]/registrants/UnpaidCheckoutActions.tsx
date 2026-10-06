@@ -28,15 +28,52 @@
  * slot and promo back. A cancelled order keeps only the ways to reach the
  * runner, for the day a cancel turns out to be a mistake; there is nothing
  * left on it to check or follow up.
+ *
+ * **Send payment link and Send by hand…** (Batch 4, `registration:email`, a
+ * pending order only) sit beside Copy payment link. The first emails the link
+ * through Resend after a confirm naming the quota it spends (decision D7); a
+ * send Resend refuses opens Send by hand with the email ready, so the runner
+ * still gets it. Send by hand… opens the email for the staff member's own
+ * mailbox. Either way the Follow-up column then reads "Link sent".
  */
 
 import React, { useState } from 'react';
-import { Ban, Copy, Link2, Mail, MessageSquareText, NotebookPen, Phone, SearchCheck } from 'lucide-react';
+import { Ban, Copy, Link2, Mail, MailOpen, MessageSquareText, NotebookPen, Phone, SearchCheck, Send } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import RowActionsMenu, { type RowAction } from '../../../RowActionsMenu';
 import { useAlert } from '@/components/ui/AlertProvider';
 import BusyLabel from '@/components/ui/BusyLabel';
 import type { UnpaidCheckout } from './UnpaidCheckoutsList';
+import type { PreparedLinkEmail } from './PaymentLinkEmailModal';
+
+/** The payment-link route's answer for an email, sent or prepared by hand. */
+export type PaymentLinkReply =
+  | { ok: true; sent: true; to: string; untilLabel: string }
+  | { ok: true; sent: false; message: PreparedLinkEmail['message']; error: string | null; untilLabel: string }
+  | { ok: false; status: number; error: string };
+
+/**
+ * Ask for a payment link email: `email` sends it through Resend, `manual`
+ * renders it to send by hand. Shared with the toolbar's bulk send, so one
+ * order and twenty read the route's answer the same way.
+ */
+export async function requestPaymentLinkEmail(orderId: string, via: 'email' | 'manual'): Promise<PaymentLinkReply> {
+  try {
+    const res = await fetch(`/api/admin/registrations/${orderId}/payment-link`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ via }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { ok: false, status: res.status, error: body.error ?? 'The payment link could not be made. Try again.' };
+    }
+    if (body.sent === true) return { ok: true, sent: true, to: body.to, untilLabel: body.untilLabel };
+    return { ok: true, sent: false, message: body.message, error: body.error ?? null, untilLabel: body.untilLabel };
+  } catch {
+    return { ok: false, status: 0, error: 'The server could not be reached. Try again.' };
+  }
+}
 
 /** A phone number as a `tel:` / `sms:` link reads it: digits and a leading +. */
 function dialable(phone: string): string {
@@ -50,6 +87,7 @@ export default function UnpaidCheckoutActions({
   canEmail,
   onLogFollowUp,
   onCancel,
+  onSendByHand,
   className,
 }: {
   order: UnpaidCheckout;
@@ -61,11 +99,15 @@ export default function UnpaidCheckoutActions({
   canEmail: boolean;
   onLogFollowUp: (order: UnpaidCheckout) => void;
   onCancel: (order: UnpaidCheckout) => void;
+  /** Opens the by-hand panel with the email ready. */
+  onSendByHand: (prepared: PreparedLinkEmail) => void;
   className?: string;
 }) {
-  const { alert, toast } = useAlert();
+  const { alert, confirm, toast } = useAlert();
   const router = useRouter();
   const [checking, setChecking] = useState(false);
+  // The wait beside the ⋮ while a link email is sent or prepared.
+  const [preparing, setPreparing] = useState<'Sending' | 'Preparing' | null>(null);
 
   const copyContact = async () => {
     // Name, email and phone on their own lines, with the order reference, so
@@ -107,6 +149,43 @@ export default function UnpaidCheckoutActions({
     } catch {
       await alert({ variant: 'error', title: 'No payment link', message: 'The server could not be reached. Try again.' });
     }
+  };
+
+  /** A refusal (paid, expired meanwhile) is said, and the page read again. */
+  const refused = async (reply: Extract<PaymentLinkReply, { ok: false }>) => {
+    await alert({ variant: 'error', title: 'No payment link', message: reply.error });
+    if (reply.status === 409) router.refresh();
+  };
+
+  const sendPaymentLink = async () => {
+    const go = await confirm({
+      variant: 'info',
+      title: 'Email the payment link?',
+      message: `${order.contactName} gets an email with a link to finish paying ${order.orderRef}. It uses 1 of the 100 emails the site can send a day.`,
+      confirmLabel: 'Send Email',
+    });
+    if (!go) return;
+    setPreparing('Sending');
+    const reply = await requestPaymentLinkEmail(order.id, 'email');
+    setPreparing(null);
+    if (!reply.ok) return refused(reply);
+    // The first link moves the hold, and "Link sent" or the fallback's trail
+    // row lands either way, so the row is read again.
+    router.refresh();
+    if (reply.sent) {
+      toast(`Emailed the payment link to ${reply.to}. It works until ${reply.untilLabel}.`);
+      return;
+    }
+    onSendByHand({ order, message: reply.message, error: reply.error, untilLabel: reply.untilLabel });
+  };
+
+  const sendByHand = async () => {
+    setPreparing('Preparing');
+    const reply = await requestPaymentLinkEmail(order.id, 'manual');
+    setPreparing(null);
+    if (!reply.ok) return refused(reply);
+    router.refresh();
+    if (!reply.sent) onSendByHand({ order, message: reply.message, error: null, untilLabel: reply.untilLabel });
   };
 
   const copyRegistrationLink = () =>
@@ -172,7 +251,11 @@ export default function UnpaidCheckoutActions({
     },
     { key: 'copy', label: 'Copy contact', icon: <Copy size={16} aria-hidden="true" />, onSelect: copyContact },
     ...(canEmail && order.status === 'PENDING'
-      ? [{ key: 'pay-link', label: 'Copy payment link', icon: <Link2 size={16} aria-hidden="true" />, onSelect: copyPaymentLink }]
+      ? [
+          { key: 'pay-link', label: 'Copy payment link', icon: <Link2 size={16} aria-hidden="true" />, onSelect: copyPaymentLink },
+          { key: 'send-link', label: 'Send payment link', icon: <Send size={16} aria-hidden="true" />, onSelect: sendPaymentLink, disabled: preparing !== null },
+          { key: 'send-by-hand', label: 'Send by hand…', icon: <MailOpen size={16} aria-hidden="true" />, onSelect: sendByHand, disabled: preparing !== null },
+        ]
       : []),
     ...(canEmail && order.status === 'EXPIRED'
       ? [{ key: 'register-link', label: 'Copy registration link', icon: <Link2 size={16} aria-hidden="true" />, onSelect: copyRegistrationLink }]
@@ -197,9 +280,9 @@ export default function UnpaidCheckoutActions({
       {/* The menu closes when Check payment is pressed, so the wait shows
           beside it until PayMongo answers. After the ⋮, so the ⋮ stays under
           its column header. */}
-      {checking && (
+      {(checking || preparing) && (
         <span className="text-xs text-secondary whitespace-nowrap">
-          <BusyLabel>Checking</BusyLabel>
+          <BusyLabel>{checking ? 'Checking' : preparing}</BusyLabel>
         </span>
       )}
     </div>

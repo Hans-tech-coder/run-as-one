@@ -1,9 +1,8 @@
 import type { Prisma } from '@prisma/client';
 import prisma from './db';
 import { isBankTransfer } from './registration-codes';
+import type { EmailMessage, EmailOutcome } from './email-document';
 import {
-  type EmailMessage,
-  type EmailOutcome,
   type RegistrationWithDetails,
   registrationConfirmationEmail,
   registrationReceivedEmail,

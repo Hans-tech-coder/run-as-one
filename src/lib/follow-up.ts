@@ -15,6 +15,13 @@
  * said goes in the note. Codes are never renamed once written, since the trail
  * keeps them; a new outcome is added to the end of the list.
  *
+ * **"Link sent" is written by the app, never picked** (Batch 4). Sending the
+ * payment link — through Resend, or by hand and then marked sent — logs it,
+ * so the Follow-up column says a link went out and two staff members do not
+ * both send one. It is not one of the tiles in Log follow-up…, because a
+ * staff member who merely says so has not sent anything; the follow-up route
+ * takes it only from someone allowed to send the link (`registration:email`).
+ *
  * Free of Prisma and of `next/headers`, because the tab imports it. The query
  * is `latestFollowUps` in `activity-store.ts`.
  */
@@ -25,6 +32,7 @@ export const FOLLOW_UP_OUTCOMES = [
   'WILL_PAY',
   'NOT_INTERESTED',
   'WRONG_NUMBER',
+  'LINK_SENT',
 ] as const;
 
 export type FollowUpOutcome = (typeof FOLLOW_UP_OUTCOMES)[number];
@@ -35,7 +43,16 @@ export const FOLLOW_UP_LABELS: Record<FollowUpOutcome, string> = {
   WILL_PAY: 'Will pay',
   NOT_INTERESTED: 'Not interested',
   WRONG_NUMBER: 'Wrong number',
+  LINK_SENT: 'Link sent',
 };
+
+/** The outcomes a staff member picks in Log follow-up…: every one but "Link sent". */
+export const LOGGABLE_OUTCOMES = FOLLOW_UP_OUTCOMES.filter(
+  (outcome): outcome is Exclude<FollowUpOutcome, 'LINK_SENT'> => outcome !== 'LINK_SENT',
+);
+
+/** How a payment link reached the runner, as the "Link sent" line records it. */
+export type LinkSentVia = 'email' | 'hand';
 
 /** The Follow-up filter's value for an order nobody has logged yet. */
 export const NOT_CONTACTED = 'NOT_CONTACTED';

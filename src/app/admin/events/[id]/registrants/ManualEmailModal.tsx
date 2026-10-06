@@ -26,6 +26,11 @@
  * state: `useManualEmailModal` fetches the email and marks it sent, and hands
  * the result back through `onMarkedSent` so the table can update every row on
  * the order.
+ *
+ * The panel and the two ways out (`email-handoff.ts`) are
+ * shared with the Unpaid checkouts tab's Send by hand
+ * (`PaymentLinkEmailModal.tsx`, UNPAID_FOLLOWUP_PLAN.md Batch 4), so the
+ * payment link email is sent by hand exactly the way a registration email is.
  */
 
 import React, { useState } from 'react';
@@ -33,6 +38,7 @@ import { X, Copy, ExternalLink } from 'lucide-react';
 import BusyLabel from '@/components/ui/BusyLabel';
 import { useAlert } from '@/components/ui/AlertProvider';
 import type { RegistrantRow } from './RegistrantsTable';
+import { CLIPBOARD_BLOCKED, copyFormattedEmail, openInMailApp } from './email-handoff';
 
 /**
  * The email preview's own small stylesheet, added to the copy shown in the
@@ -130,52 +136,18 @@ export function useManualEmailModal({
     }, 150);
   };
 
-  /**
-   * The design, on the clipboard.
-   *
-   * This is the half that actually preserves the email: pasting text/html into
-   * Gmail's compose window keeps the logo, the gradient bar and the status
-   * pill. A mailto: cannot — its body is plain text by definition — which is
-   * why both routes out of this modal exist and neither replaces the other.
-   */
   const handleCopyFormattedEmail = async () => {
     if (!emailMessage) return;
-    try {
-      const item = new ClipboardItem({
-        'text/html': new Blob([emailMessage.html], { type: 'text/html' }),
-        'text/plain': new Blob([emailMessage.text], { type: 'text/plain' }),
-      });
-      await navigator.clipboard.write([item]);
-      setCopyState('copied');
-    } catch (e) {
-      // Some browsers refuse the rich-text write. The plain-text rendering is
-      // still worth having, and saying which one landed is better than a
-      // silent half-success.
-      console.error(e);
-      try {
-        await navigator.clipboard.writeText(emailMessage.text);
-        setCopyState('text-only');
-      } catch (err) {
-        console.error(err);
-        alert({
-          variant: 'error',
-          title: 'Nothing Copied',
-          message: 'This browser blocked the clipboard. Select the preview text and copy it by hand.',
-        });
-      }
+    const result = await copyFormattedEmail(emailMessage);
+    if (result === 'blocked') {
+      alert({ variant: 'error', title: 'Nothing Copied', message: CLIPBOARD_BLOCKED });
+      return;
     }
+    setCopyState(result);
   };
 
-  /**
-   * The addressing, in their own mail app: recipient and subject prefilled,
-   * the plain-text rendering as the body. Long emails can be truncated by the
-   * client's own URL limit, which the modal says out loud — the clipboard
-   * button above is the complete one.
-   */
   const handleOpenInMailApp = () => {
-    if (!emailMessage) return;
-    const href = `mailto:${emailMessage.to}?subject=${encodeURIComponent(emailMessage.subject)}&body=${encodeURIComponent(emailMessage.text)}`;
-    window.location.href = href;
+    if (emailMessage) openInMailApp(emailMessage);
   };
 
   /** Sent by hand, so the order leaves the backlog. */
@@ -253,7 +225,11 @@ export default function ManualEmailModal({
   onCopy: handleCopyFormattedEmail,
   onOpenInMailApp: handleOpenInMailApp,
   onMarkSent: handleMarkEmailSent,
-}: ReturnType<typeof useManualEmailModal>['modalProps']) {
+  footnote = 'Send it from your own address, then mark it below so it leaves the list.',
+}: ReturnType<typeof useManualEmailModal>['modalProps'] & {
+  /** What marking it sent does, which differs by where the modal is opened. */
+  footnote?: string;
+}) {
   return (
     <div
       className={`fixed inset-0 z-50 flex items-center justify-center p-4 max-sm:p-3 bg-[var(--dash-scrim)] backdrop-blur-sm transition-opacity duration-200 ${
@@ -361,8 +337,8 @@ export default function ManualEmailModal({
 
               <p className="text-xs text-[var(--text-muted)] m-0">
                 Copying keeps the design. Your email app opens with the recipient and subject
-                filled in but a plain-text body, which a long email can have cut short. Send it
-                from your own address, then mark it below so it leaves the list.
+                filled in but a plain-text body, which a long email can have cut short.{' '}
+                {footnote}
               </p>
             </>
           )}

@@ -1,46 +1,43 @@
 /**
- * "Copy payment link" on the Unpaid checkouts tab (UNPAID_FOLLOWUP_PLAN.md
- * Batch 3): a link the runner opens to finish paying an order they abandoned,
- * without registering again. The link itself is a signed token
- * (lib/resume-payment.ts); this route only hands it out.
+ * A payment link for an unpaid order on the Unpaid checkouts tab: a link the
+ * runner opens to finish paying an order they abandoned, without registering
+ * again (UNPAID_FOLLOWUP_PLAN.md Batches 3 and 4). The link itself is a signed
+ * token (lib/resume-payment.ts); who may have one, for which order, and the
+ * hold it moves are lib/payment-link.ts. This route decides only where the
+ * link goes, from `via` in the body:
  *
- * **It moves the hold, once** (decision D4). A link given at hour 20 would die
- * with the order a few hours later, so the first link for an order holds its
- * slot for `PAYMENT_LINK_HOLD_HOURS` from now, never past race day
- * (`extendedHold`, lib/pending-expiry.ts). A second copy keeps that hold and
- * gets a link expiring with it. The claim is conditional on `holdUntil` still
- * being null, so two staff members copying at once move it once.
+ * - **`copy`** (the default, Batch 3): the link, for a chat app.
+ * - **`email`** — *Send payment link*: the email (lib/email.ts) through
+ *   Resend, one of the 100 a day the free tier allows (decision D7). A send
+ *   Resend refuses comes back with the rendered message, so the staff member
+ *   lands in the by-hand modal with it, the way a registration email that
+ *   failed is sent by hand (lib/email-delivery.ts).
+ * - **`manual`** — *Send by hand*: the same email rendered, for the staff
+ *   member to send from their own mailbox at no quota. Marking it sent is the
+ *   follow-up route's "Link sent".
  *
- * **`registration:email`** (decision D3): a link lets whoever holds it pay,
- * so it goes out on the same permission as any other message to the runner.
- * Scoped to the order's own race, as the status route is, and only for an
- * order the tab lists and that can still be paid (`payableState`). An expired
- * order is refused; its row offers the event's registration link instead
- * (decision D5).
- *
- * Every copy is recorded on the trail: the link is a key to the order, and
- * the person who handed it out is who a question about it goes to.
+ * **One trail row per call.** A link is a key to the order, so every one made
+ * is recorded with who made it. An email that went out is recorded as the
+ * follow-up "Link sent" (lib/follow-up.ts), so the Follow-up column shows it
+ * and the next staff member does not send another; every other outcome is a
+ * `registration.payment_link.copied` row saying what became of the link. The
+ * row of the call that moved the hold carries the move.
  */
 
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
-import { can, getActor } from '@/lib/actor';
-import { recordAudit } from '@/lib/audit';
-import { formatEventInstant, today } from '@/lib/event-schedule';
-import { expiresBy, extendedHold, unpaidFollowUpWhere } from '@/lib/pending-expiry';
-import {
-  createResumePaymentToken,
-  payableState,
-  resumePaymentUrl,
-  type PayableState,
-} from '@/lib/resume-payment';
+import { getActor } from '@/lib/actor';
+import { recordAudit, type AuditChanges } from '@/lib/audit';
+import { paymentLinkEmail, sendPaymentLinkEmail } from '@/lib/email';
+import type { LinkSentVia } from '@/lib/follow-up';
+import { issuePaymentLink } from '@/lib/payment-link';
 
-const REFUSALS: Record<Exclude<PayableState, 'payable'>, string> = {
-  paid: 'is already paid, so there is nothing left to pay. Reload the page.',
-  cancelled: 'was cancelled, so it can no longer be paid.',
-  expired: 'has expired: its slot was released. Copy the registration link instead, so the runner registers again.',
-  unavailable: 'cannot be paid online any more. Its payment method is no longer offered, or no runner is left on it.',
-};
+type Via = 'copy' | 'email' | 'manual';
+
+function asVia(value: unknown): Via | null {
+  if (value === undefined || value === null) return 'copy';
+  return value === 'copy' || value === 'email' || value === 'manual' ? value : null;
+}
 
 export async function POST(
   request: Request,
@@ -52,78 +49,64 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const body = await request.json().catch(() => null);
+    const via = asVia(body?.via);
+    if (!via) {
+      return NextResponse.json({ error: 'Say how the link goes out: copy, email or manual.' }, { status: 400 });
+    }
+
     const { id } = await params;
-    const registration = await prisma.registration.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        orderRef: true,
-        eventId: true,
-        status: true,
-        paymentMethod: true,
-        createdAt: true,
-        holdUntil: true,
-        deletedAt: true,
-        event: { select: { organizerId: true, date: true } },
-        _count: { select: { runners: { where: { deletedAt: null } } } },
-      },
-    });
-    if (!registration) {
-      return NextResponse.json({ error: 'Registration not found' }, { status: 404 });
+    const link = await issuePaymentLink(id, actor, new URL(request.url).origin);
+    if (!link.ok) {
+      return NextResponse.json({ error: link.error }, { status: link.status });
     }
-
-    const reach = { organizerId: registration.event.organizerId, eventId: registration.eventId };
-    if (!can(actor, 'registration:email', reach)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
+    const { registration, url, until, untilLabel, moved } = link;
     const ref = registration.orderRef;
-    const listed = await prisma.registration.count({
-      where: { id, ...unpaidFollowUpWhere(registration.event.date, today()) },
-    });
-    const now = new Date();
-    const state = listed === 0
-      ? 'unavailable'
-      : payableState({ ...registration, liveRunners: registration._count.runners }, now);
-    if (state !== 'payable') {
-      return NextResponse.json({ error: `${ref} ${REFUSALS[state]}` }, { status: 409 });
-    }
 
-    // The first link moves the hold. Conditional, so a second copy landing at
-    // the same moment finds it already moved and leaves it.
-    let holdUntil = registration.holdUntil;
-    const extended = extendedHold(registration, registration.event.date, now);
-    if (extended) {
-      const claim = await prisma.registration.updateMany({
-        where: { id, status: 'PENDING', holdUntil: null },
-        data: { holdUntil: extended },
+    const record = (
+      action: 'registration.followed_up' | 'registration.payment_link.copied',
+      summary: string,
+      changes: AuditChanges = {},
+    ) => {
+      const all: AuditChanges = moved ? { ...changes, holdUntil: [null, moved.toISOString()] } : changes;
+      return recordAudit(prisma, actor, {
+        action,
+        entityType: 'Registration',
+        entityId: id,
+        eventId: registration.eventId,
+        organizerId: registration.event.organizerId,
+        summary: moved ? `${summary} Its slot is held until ${untilLabel}.` : summary,
+        changes: Object.keys(all).length > 0 ? all : undefined,
       });
-      holdUntil = claim.count > 0
-        ? extended
-        : (await prisma.registration.findUnique({ where: { id }, select: { holdUntil: true } }))?.holdUntil ?? null;
+    };
+    const expiry = { expiresBy: until.toISOString(), untilLabel };
+
+    if (via === 'copy') {
+      await record('registration.payment_link.copied', moved
+        ? `Copied a payment link for ${ref}.`
+        : `Copied a payment link for ${ref}, valid until ${untilLabel}.`);
+      return NextResponse.json({ url, ...expiry });
     }
-    // The link lives exactly as long as the tab's "Expires by" says the order does.
-    const until = expiresBy(registration.createdAt, holdUntil);
 
-    const token = await createResumePaymentToken(id, until);
-    const url = resumePaymentUrl(new URL(request.url).origin, token);
+    const message = await paymentLinkEmail(registration, url, until);
+    const sent = { to: message.to, subject: message.subject, html: message.html, text: message.text };
 
-    const untilLabel = formatEventInstant(until);
-    // Only the copy whose claim moved the hold records the move.
-    const moved = extended !== null && holdUntil?.getTime() === extended.getTime();
-    await recordAudit(prisma, actor, {
-      action: 'registration.payment_link.copied',
-      entityType: 'Registration',
-      entityId: id,
-      eventId: registration.eventId,
-      organizerId: registration.event.organizerId,
-      summary: moved
-        ? `Copied a payment link for ${ref}. Its slot is held until ${untilLabel}.`
-        : `Copied a payment link for ${ref}, valid until ${untilLabel}.`,
-      changes: moved ? { holdUntil: [null, extended.toISOString()] } : undefined,
-    });
+    if (via === 'manual') {
+      await record('registration.payment_link.copied', `Prepared a payment link email for ${ref} to send by hand.`);
+      return NextResponse.json({ message: sent, ...expiry });
+    }
 
-    return NextResponse.json({ url, expiresBy: until.toISOString(), untilLabel });
+    const outcome = await sendPaymentLinkEmail(message);
+    if (outcome.sent) {
+      await record('registration.followed_up', `Emailed a payment link for ${ref} to ${message.to}.`, {
+        outcome: 'LINK_SENT',
+        via: 'email' satisfies LinkSentVia,
+      });
+      return NextResponse.json({ sent: true, to: message.to, ...expiry });
+    }
+    // Resend's own words, so a quota stop is not mistaken for a bad address.
+    await record('registration.payment_link.copied', `Could not email a payment link for ${ref} (${outcome.error}). Prepared it to send by hand.`);
+    return NextResponse.json({ sent: false, error: outcome.error, message: sent, ...expiry });
   } catch (error) {
     console.error('Payment link failed:', error);
     return NextResponse.json({ error: 'The payment link could not be made. Try again.' }, { status: 500 });

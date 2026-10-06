@@ -36,6 +36,13 @@
  * the default view but stays under Filters → Status → Cancelled until race
  * day (decision D6), so a mistaken cancel can be found. The tab's count is
  * the orders still awaiting payment only.
+ *
+ * **The payment link goes out from here** (UNPAID_FOLLOWUP_PLAN.md Batch 4):
+ * each pending row's menu can email it or open it to send by hand
+ * (`PaymentLinkEmailModal.tsx`), and with rows marked the toolbar offers
+ * **Send payment link to N** (`SendLinksButton.tsx`). Rows are keyed by
+ * order id, so a mark stays on its order when a filter or search changes the
+ * list under it.
  */
 
 import React, { useMemo, useState } from 'react';
@@ -47,21 +54,23 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
+  type RowSelectionState,
   type SortingState,
   type VisibilityState,
 } from '@tanstack/react-table';
-import AdminCardList from '../../../AdminCardList';
 import AdminTablePager from '../../../AdminTablePager';
 import FiltersMenu, { type FilterGroup } from '../../../FiltersMenu';
 import MobileSortMenu from '../../../MobileSortMenu';
 import ColumnsViewMenu from './ColumnsViewMenu';
-import { UnpaidStatus, runnerCount, unpaidColumns } from './unpaid-columns';
+import { unpaidColumns } from './unpaid-columns';
+import UnpaidCheckoutCards from './UnpaidCheckoutCards';
 import RegistrantsDataTable from './RegistrantsDataTable';
 import { buildUnpaidCheckoutCsv, downloadUnpaidCheckoutCsv } from './registrant-csv';
-import FollowUpModal, { FollowUpSummary } from './FollowUpModal';
+import FollowUpModal from './FollowUpModal';
 import UnpaidCheckoutActions from './UnpaidCheckoutActions';
+import SendLinksButton from './SendLinksButton';
 import CancelOrderModal from './CancelOrderModal';
-import { formatPesos } from '@/lib/money';
+import PaymentLinkEmailModal, { type PreparedLinkEmail } from './PaymentLinkEmailModal';
 import {
   FOLLOW_UP_LABELS,
   FOLLOW_UP_OUTCOMES,
@@ -128,7 +137,7 @@ export default function UnpaidCheckoutsList({
   canEmail: boolean;
 }) {
   const router = useRouter();
-  const [rowSelection, setRowSelection] = useState({});
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [globalFilter, setGlobalFilter] = useState('');
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -139,6 +148,7 @@ export default function UnpaidCheckoutsList({
   // both mounted, and each would otherwise carry its own.
   const [followUpOrder, setFollowUpOrder] = useState<UnpaidCheckout | null>(null);
   const [cancelOrder, setCancelOrder] = useState<UnpaidCheckout | null>(null);
+  const [preparedEmail, setPreparedEmail] = useState<PreparedLinkEmail | null>(null);
 
   const actions = (order: UnpaidCheckout, className?: string) => (
     <UnpaidCheckoutActions
@@ -148,6 +158,7 @@ export default function UnpaidCheckoutsList({
       canEmail={canEmail}
       onLogFollowUp={setFollowUpOrder}
       onCancel={setCancelOrder}
+      onSendByHand={setPreparedEmail}
       className={className}
     />
   );
@@ -221,6 +232,9 @@ export default function UnpaidCheckoutsList({
     data: filtered,
     columns,
     state: { sorting, globalFilter, rowSelection, columnVisibility },
+    // Keyed by order, so a mark stays on its order when the filters change
+    // the rows under it: the bulk send must reach exactly who was marked.
+    getRowId: order => order.id,
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
@@ -258,6 +272,12 @@ export default function UnpaidCheckoutsList({
     }).catch(() => {});
     downloadUnpaidCheckoutCsv(buildUnpaidCheckoutCsv(rowsToExport.map(r => r.original)), eventId);
   };
+
+  // The marked orders, read from the marks themselves (keyed by order id)
+  // rather than from `table.getSelectedRowModel()`: asking the table for a row
+  // model during this component's own first render queues TanStack's page
+  // reset, which then sets state on the list before it has mounted.
+  const markedOrders = filtered.filter(order => rowSelection[order.id]);
 
   const emptyMessage = orders.length === 0
     ? 'No unpaid checkouts. Every online checkout on this race has been paid.'
@@ -316,6 +336,15 @@ export default function UnpaidCheckoutsList({
         </div>
 
         <div className="toolbar-actions flex items-center gap-2">
+          {canEmail && (
+            <SendLinksButton
+              selected={markedOrders}
+              onDone={() => {
+                setRowSelection({});
+                router.refresh();
+              }}
+            />
+          )}
           <button onClick={handleExportCSV} className="btn-light" disabled={orders.length === 0}>
             <Download size={16} /> Export to CSV
           </button>
@@ -329,41 +358,7 @@ export default function UnpaidCheckoutsList({
       {/* The same rows as the table above, under 60rem: search, filters, sort
           and the page all come from the one table instance. */}
       <div className="dash-mobile-only">
-        <AdminCardList
-          items={table.getRowModel().rows}
-          getKey={row => row.id}
-          label="Unpaid checkouts"
-          className="is-flush"
-          selection={{
-            isSelected: row => row.getIsSelected(),
-            toggle: row => row.toggleSelected(),
-            label: row => `Select ${row.original.orderRef}`,
-          }}
-          selectAll={{
-            checked: table.getIsAllPageRowsSelected(),
-            toggle: () => table.toggleAllPageRowsSelected(!table.getIsAllPageRowsSelected()),
-            label: `Select all ${table.getRowModel().rows.length} on this page`,
-          }}
-          leading={row => <span className="font-mono">{row.original.listNo}</span>}
-          title={row => <span className="block truncate">{row.original.contactName}</span>}
-          subtitle={row => (
-            <>
-              <span className="block font-mono">{row.original.orderRef}</span>
-              <span className="block text-xs">{row.original.createdLabel}</span>
-            </>
-          )}
-          badges={row => <UnpaidStatus order={row.original} />}
-          fields={row => [
-            { label: 'Runners', value: `${runnerCount(row.original)}: ${row.original.runnerNames.join(', ')}`, full: true },
-            { label: 'Email', value: <span className="break-all">{row.original.contactEmail}</span>, full: true },
-            { label: 'Phone', value: row.original.contactPhone },
-            { label: 'Payment', value: row.original.paymentMethod },
-            { label: 'Amount', value: `₱${formatPesos(row.original.totalAmount)}` },
-            { label: 'Follow-up', value: <FollowUpSummary followUp={row.original.followUp} />, full: true },
-          ]}
-          actions={row => actions(row.original, 'ml-auto')}
-          empty={empty}
-        />
+        <UnpaidCheckoutCards table={table} actions={order => actions(order, 'ml-auto')} empty={empty} />
       </div>
 
       <AdminTablePager table={table} />
@@ -376,6 +371,16 @@ export default function UnpaidCheckoutsList({
           // Read the page again, so the row shows the line as the server
           // has it and both tabs' counts stay true.
           onSaved={() => router.refresh()}
+        />
+      )}
+
+      {preparedEmail && (
+        <PaymentLinkEmailModal
+          key={preparedEmail.order.id}
+          prepared={preparedEmail}
+          onClose={() => setPreparedEmail(null)}
+          // "Link sent" lands on the row, as the server has it.
+          onMarked={() => router.refresh()}
         />
       )}
 
