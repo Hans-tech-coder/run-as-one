@@ -35,6 +35,8 @@ split order shows each runner's own parcel and the order's parcel list (§6). No
 migration. The plan's "manual entry at `/admin/register`" was not built: that
 route is the organizer application, and no screen adds a runner by hand.
 
+**One order carries at most 20 runners** (2026-10-06, on `dev`, not released): both checkout routes refuse a longer list with a 400 and both wizards stop adding runners at 20 (§5 `order-size.ts`), so one throttled request can no longer hold a whole category. No migration.
+
 **The Overview answers the morning question** (2026-09-23, `OVERVIEW_PLAN.md`
 Batch 1, on `dev`, uncommitted): pending bank transfers as an oldest-first
 queue with their age, one row per live race with its fill, the tiles and

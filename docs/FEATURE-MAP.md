@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-37 pages · 52 API routes · 78 modules in `src/lib` · 359 files · 74,921 lines
+37 pages · 52 API routes · 79 modules in `src/lib` · 360 files · 75,131 lines
 
 ---
 
@@ -171,6 +171,7 @@ the file itself.
 | [`notifications.ts`](../src/lib/notifications.ts) | The dashboard's notifications — what the bell counts and its modal lists. |
 | [`online-payment.ts`](../src/lib/online-payment.ts) | How an online order becomes PAID: one path, whether PayMongo tells us (the webhook) or a staff member asks PayMongo (the Unpaid checkouts tab's "Ch… |
 | [`order-ref.ts`](../src/lib/order-ref.ts) | The reference a runner quotes back at us. |
+| [`order-size.ts`](../src/lib/order-size.ts) | **How many runners one order may carry.** Every runner on an order reserves a slot in their category the moment the order is written (`reserveSlots… |
 | [`organizer-application.ts`](../src/lib/organizer-application.ts) | What an organizer application is, and what the app will accept as one. |
 | [`organizer-status.ts`](../src/lib/organizer-status.ts) | Which `Organizer` row is Run As One, and whether it — and so its team — may be signed in to. |
 | [`pacer-store.ts`](../src/lib/pacer-store.ts) | Reading pacers out of the database, apart from `pacer.ts` for the reason `promo-store.ts` is apart from `discount.ts`: the Pacers screen is a clien… |
@@ -220,8 +221,8 @@ when a task touches one, split it before editing rather than after.
 | Lines | File |
 | --- | --- |
 | 2342 | [`src/app/admin/marketing/PromoCodesClient.tsx`](../src/app/admin/marketing/PromoCodesClient.tsx) |
-| 2210 | [`src/app/events/[slug]/register/RegistrationWizardClient.tsx`](../src/app/events/[slug]/register/RegistrationWizardClient.tsx) |
-| 1922 | [`src/app/events/[slug]/register/BankTransferWizardClient.tsx`](../src/app/events/[slug]/register/BankTransferWizardClient.tsx) |
+| 2233 | [`src/app/events/[slug]/register/RegistrationWizardClient.tsx`](../src/app/events/[slug]/register/RegistrationWizardClient.tsx) |
+| 1945 | [`src/app/events/[slug]/register/BankTransferWizardClient.tsx`](../src/app/events/[slug]/register/BankTransferWizardClient.tsx) |
 | 1519 | [`src/lib/discount.ts`](../src/lib/discount.ts) |
 | 1179 | [`src/app/admin/settings/SettingsPanels.tsx`](../src/app/admin/settings/SettingsPanels.tsx) |
 | 1093 | [`src/app/admin/team/TeamClient.tsx`](../src/app/admin/team/TeamClient.tsx) |
@@ -235,8 +236,8 @@ when a task touches one, split it before editing rather than after.
 | 663 | [`src/lib/pending-expiry.ts`](../src/lib/pending-expiry.ts) |
 | 636 | [`src/lib/activity.ts`](../src/lib/activity.ts) |
 | 621 | [`src/app/api/admin/events/[id]/route.ts`](../src/app/api/admin/events/[id]/route.ts) |
+| 615 | [`src/app/api/checkout/route.ts`](../src/app/api/checkout/route.ts) |
 | 603 | [`src/app/admin/feedback/FeedbackClient.tsx`](../src/app/admin/feedback/FeedbackClient.tsx) |
-| 595 | [`src/app/api/checkout/route.ts`](../src/app/api/checkout/route.ts) |
 | 578 | [`src/lib/email-document.ts`](../src/lib/email-document.ts) |
 | 573 | [`src/app/admin/events/[id]/results/ResultsUploaderClient.tsx`](../src/app/admin/events/[id]/results/ResultsUploaderClient.tsx) |
 | 561 | [`src/app/admin/events/new/NewEventForm.tsx`](../src/app/admin/events/new/NewEventForm.tsx) |
@@ -245,9 +246,9 @@ when a task touches one, split it before editing rather than after.
 | 539 | [`src/app/admin/clients/ClientsClient.tsx`](../src/app/admin/clients/ClientsClient.tsx) |
 | 532 | [`src/app/admin/events/[id]/registrants/RegistrantDetailModal.tsx`](../src/app/admin/events/[id]/registrants/RegistrantDetailModal.tsx) |
 | 524 | [`src/app/admin/DashboardShell.tsx`](../src/app/admin/DashboardShell.tsx) |
+| 522 | [`src/app/api/checkout/manual/route.ts`](../src/app/api/checkout/manual/route.ts) |
 | 515 | [`src/app/admin/events/[id]/registrants/RegistrantsTable.tsx`](../src/app/admin/events/[id]/registrants/RegistrantsTable.tsx) |
 | 503 | [`src/lib/promo-input.ts`](../src/lib/promo-input.ts) |
-| 502 | [`src/app/api/checkout/manual/route.ts`](../src/app/api/checkout/manual/route.ts) |
 | 491 | [`src/app/admin/AdminRouteLoading.tsx`](../src/app/admin/AdminRouteLoading.tsx) |
 | 491 | [`src/lib/registration-gate.ts`](../src/lib/registration-gate.ts) |
 | 485 | [`src/lib/email.ts`](../src/lib/email.ts) |

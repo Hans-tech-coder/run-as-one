@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { participantCountError } from '@/lib/order-size';
 import prisma from '@/lib/db';
 import { newOrderRef } from '@/lib/order-ref';
 import { recordWriteInCommunities, runnerCommunity } from '@/lib/running-community-store';
@@ -120,6 +121,14 @@ export async function POST(request: Request) {
     const signatureProblem = consentSignatureError(storedConsentSignature);
     if (signatureProblem) {
       return NextResponse.json({ error: signatureProblem }, { status: 400 });
+    }
+
+    // One order reserves one slot per runner and an unpaid one holds them for
+    // a day, so its size is capped here as well as in the wizard: otherwise a
+    // single POST could hold a whole category. See lib/order-size.ts.
+    const sizeProblem = participantCountError(participants);
+    if (sizeProblem) {
+      return NextResponse.json({ error: sizeProblem }, { status: 400 });
     }
 
     // Every email this order will ever produce goes to the address below: the

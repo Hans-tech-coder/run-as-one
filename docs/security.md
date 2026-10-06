@@ -175,13 +175,24 @@
   checked before the body is read, answered 429 with a sentence the wizard
   shows. **That limiter lives in one instance's memory.** Vercel's instances
   share nothing, so it stops a loop from one address and does not stop a
-  distributed one; nor does it bound how many runners one order carries. The
+  distributed one; the size of each order is the next bullet. The
   caller is keyed on the first hop of `x-forwarded-for`, which Vercel
   overwrites with the address it saw, so a client cannot rotate it in
   production (only under `next dev`, or behind a proxy Vercel is told to
   trust). An over-full map forgets the callers seen longest ago rather than
   everyone, so a flood of addresses cannot reset a throttled one. A real cap needs a shared counter (Redis) or a
   shorter hold on unpaid online orders — neither exists yet.
+- **One order carries at most 20 runners.** Each runner reserves a category
+  slot when the order is written (`reserveSlots`), so before the cap a single
+  throttled request could still post hundreds of runners and hold a whole
+  category until the sweep. Both checkout routes refuse a longer
+  `participants` list with a 400 and a plain `error` the wizard alerts
+  (`participantCountError`, `MAX_RUNNERS_PER_ORDER` in `lib/order-size.ts`),
+  and both wizards stop the *Add Another Runner* button at the same number
+  with a note saying why. Twenty fits a family, a barkada or a club entering
+  together, and every group promotion; a bigger club splits into two orders.
+  Together with `CHECKOUT_RULE` that bounds one address to 200 held slots a
+  minute — still per instance, so the shared counter above is the real fix.
 - **The resume-payment link is a key to one order, and is built as one**
   (`UNPAID_FOLLOWUP_PLAN.md` Batch 3, `lib/resume-payment.ts`). Handed out
   only with `registration:email`, every copy on the trail. A signed token

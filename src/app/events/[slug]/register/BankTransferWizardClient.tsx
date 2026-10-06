@@ -80,6 +80,7 @@ import {
 import PromoCodeField from "./PromoCodeField";
 import FreeSlotOffer from "./FreeSlotOffer";
 import GroupLimitNotice from "./GroupLimitNotice";
+import { MAX_RUNNERS_PER_ORDER, ORDER_SIZE_LIMIT_MESSAGE } from "@/lib/order-size";
 import { communitySlug } from "@/lib/running-community";
 import {
   isUppercasedRunnerField,
@@ -410,10 +411,14 @@ export default function BankTransferWizardClient({
    * is declared further down the render but read here at click time. The
    * button is disabled at the ceiling; this is the same rule again where the
    * array is actually written, so no path can slip a runner past it.
+   *
+   * **And to `MAX_RUNNERS_PER_ORDER`** (lib/order-size.ts), the size the
+   * checkout routes refuse an order above, promotion or not.
    */
   const addParticipants = (count: number) => {
     setParticipants((prev) => {
-      const room = groupLimit === null ? Infinity : groupLimit - prev.length;
+      const ceiling = Math.min(groupLimit ?? Infinity, MAX_RUNNERS_PER_ORDER);
+      const room = ceiling - prev.length;
       const adding = Math.min(Math.max(1, count), room);
       if (adding < 1) return prev;
 
@@ -572,6 +577,10 @@ export default function BankTransferWizardClient({
   // checkout pays out on.
   const groupLimit = promoGroupSize(groupPromo);
   const atGroupLimit = groupLimit !== null && participants.length >= groupLimit;
+  // The ceiling every order has, promotion or not (lib/order-size.ts). Kept
+  // apart from the group limit so one notice, not two, explains the button.
+  const atOrderLimit =
+    !atGroupLimit && participants.length >= MAX_RUNNERS_PER_ORDER;
 
   const totalAmount = subtotal + deliveryFee + platformFee - discountAmount;
 
@@ -1483,12 +1492,26 @@ export default function BankTransferWizardClient({
                   />
                 )}
 
+                {atOrderLimit && (
+                  <p
+                    id="order-limit-notice"
+                    role="status"
+                    className="mt-4 m-0 rounded-[16px] border border-white/10 bg-white/5 p-5 text-sm leading-relaxed text-secondary"
+                  >
+                    {ORDER_SIZE_LIMIT_MESSAGE}
+                  </p>
+                )}
+
                 <button
                   className="w-full mt-4 flex items-center justify-center gap-2 border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/30 text-white font-bold py-4 rounded-[16px] transition-all disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-white/10 disabled:hover:bg-white/5"
                   onClick={addParticipant}
-                  disabled={atGroupLimit}
+                  disabled={atGroupLimit || atOrderLimit}
                   aria-describedby={
-                    atGroupLimit ? "group-limit-notice" : undefined
+                    atGroupLimit
+                      ? "group-limit-notice"
+                      : atOrderLimit
+                        ? "order-limit-notice"
+                        : undefined
                   }
                 >
                   <Plus size={20} /> Add Another Runner
