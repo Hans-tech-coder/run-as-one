@@ -20,17 +20,15 @@ Status table" or describes a batch as still to come, `ON_HOLD.md` has the
 current answer.
 
 **Every runner gives a home address on Step 1** (2026-10-01,
-`RUNNER_ADDRESS_PLAN.md` Batch 1, on `dev`, uncommitted): four parts per
+`RUNNER_ADDRESS_PLAN.md`, all three batches **live on production** since
+2026-10-01, `main` at `e64266e`, both migrations applied): four parts per
 runner in both wizards, Runner 2 onward defaulting to "Same address as Runner
 1", validated and stored on each `Runner` row by both checkout routes (§5
-`runner-address.ts`). **Carries migration `runner_home_address`**, so the
-release needs `npx prisma migrate deploy` against production. **Batch 2**
-(2026-10-01, uncommitted): Step 2 delivers to Runner 1's home address with
+`runner-address.ts`; migration `runner_home_address`). **Batch 2**: Step 2 delivers to Runner 1's home address with
 *Change*, and a group whose addresses differ may ship each kit to its runner's
 own address at one fee per distinct address (§5 `delivery-split.ts`); both
 wizards' delivery state moved into `useDeliveryPlan.ts` / `DeliveryStep.tsx`.
-**Carries migration `delivery_split`** (`Registration.deliverySplit`). **Batch 3**
-(2026-10-01, uncommitted): the registrants screen shows the address (Province
+Migration `delivery_split` (`Registration.deliverySplit`). **Batch 3**: the registrants screen shows the address (Province
 column and filter, detail modal), staff edit it in the edit modal (now
 `RunnerEditModal.tsx`), the CSV exports *Home Address* and *Province*, and a
 split order shows each runner's own parcel and the order's parcel list (§6). No
