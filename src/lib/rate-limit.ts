@@ -88,14 +88,25 @@ export const CHECKOUT_RULE: RateLimitRule = { limit: 10, windowMs: 60_000 };
  * A map keyed by address grows with every new address, and a serverless
  * instance that lives for hours under a scan would otherwise hold one entry
  * per attacker IP for ever. Past this ceiling the map is swept and, failing
- * that, dropped: forgetting who has been asking makes the throttle useless for
- * a moment, which is the safe direction — the alternative is a route that
- * refuses everyone because its own bookkeeping filled up.
+ * that, the callers seen longest ago are forgotten down to `EVICT_TO_KEYS`.
+ * Not the whole map: dropping everyone would hand anyone with 5,000 addresses
+ * a switch that resets every caller on every route (Strix, after vuln-0002).
+ * Forgetting a quiet caller is the safe direction — the alternative is a route
+ * that refuses everyone because its own bookkeeping filled up.
  */
 const MAX_TRACKED_KEYS = 5_000;
 
 /**
+ * How far an over-full map is cut back. Below the ceiling, so a live flood
+ * pays for one full sweep per thousand new callers rather than one per request.
+ */
+const EVICT_TO_KEYS = 4_000;
+
+/**
  * The hit times, newest last, per `bucket:key`.
+ *
+ * Kept in order of when each caller was last seen, oldest first (`remember`
+ * re-inserts on every request), so eviction can take from the front.
  *
  * On `globalThis` for the same reason the Prisma client is (lib/db.ts): `next
  * dev` re-evaluates a module on every edit, and a window that reset itself
@@ -127,16 +138,24 @@ export function allowRequest(bucket: string, key: string, rule: RateLimitRule): 
 
   if (recent.length >= rule.limit) {
     // Kept, not extended: a caller who keeps knocking while refused would
-    // otherwise push their own window forward for ever.
-    hits.set(id, recent);
+    // otherwise push their own window forward for ever. Still counted as seen,
+    // so a refused script stays at the back of the eviction queue rather than
+    // being forgotten — and let back in — by a flood of other addresses.
+    remember(id, recent);
     return false;
   }
 
   recent.push(now);
-  hits.set(id, recent);
+  remember(id, recent);
 
   if (hits.size > MAX_TRACKED_KEYS) sweep(now, rule.windowMs);
   return true;
+}
+
+/** Store a caller's hits as the most recently seen entry in the map. */
+function remember(id: string, times: number[]) {
+  hits.delete(id);
+  hits.set(id, times);
 }
 
 /** Forget every caller whose last request is older than the window. */
@@ -145,21 +164,30 @@ function sweep(now: number, windowMs: number) {
     const last = times[times.length - 1];
     if (last === undefined || now - last >= windowMs) hits.delete(id);
   }
-  // Still full means the flood is live rather than historical. Start over: a
-  // throttle that has forgotten everything is weak for one window, and one
-  // that cannot record a new caller is broken until the instance dies.
-  if (hits.size > MAX_TRACKED_KEYS) hits.clear();
+  // Still full means the flood is live rather than historical. Forget the
+  // callers seen longest ago: one that cannot record a new caller is broken
+  // until the instance dies, but the callers active right now — a throttled
+  // script among them — keep their windows.
+  if (hits.size <= MAX_TRACKED_KEYS) return;
+  for (const id of hits.keys()) {
+    if (hits.size <= EVICT_TO_KEYS) break;
+    hits.delete(id);
+  }
 }
 
 /**
  * Who is asking, as well as we can tell.
  *
  * Vercel sits behind a proxy, so the socket address is Vercel's; the caller is
- * the first hop of `x-forwarded-for`. That header is client-supplied and a
- * determined caller can rotate it freely — one more reason this module claims
- * only to stop the naive case. Everything unidentifiable shares a single
- * bucket, which is fine while the limit is generous: it is a shared allowance
- * for callers we cannot tell apart, not a block.
+ * the first hop of `x-forwarded-for`. Vercel overwrites that header with the
+ * address it saw and does not pass on one the client sent, so in production a
+ * caller cannot pick their own key (docs: vercel.com/docs/headers/request-headers).
+ * Under `next dev` there is no proxy and the header is whatever the client
+ * sends; and if this ever sits behind another proxy, or Vercel's trusted-proxy
+ * setting is turned on, the first hop is the client's to choose again —
+ * revisit this then. Everything unidentifiable shares a single bucket, which is
+ * fine while the limit is generous: it is a shared allowance for callers we
+ * cannot tell apart, not a block.
  */
 export function callerKey(request: Request): string {
   const forwarded = request.headers.get('x-forwarded-for');

@@ -174,10 +174,13 @@
   `CHECKOUT_RULE` in `lib/rate-limit.ts` — 10 orders a minute per address,
   checked before the body is read, answered 429 with a sentence the wizard
   shows. **That limiter lives in one instance's memory.** Vercel's instances
-  share nothing and the caller is keyed on a client-supplied
-  `x-forwarded-for`, so it stops a naive loop from one address and does not
-  stop a distributed or header-rotating one; nor does it bound how many
-  runners one order carries. A real cap needs a shared counter (Redis) or a
+  share nothing, so it stops a loop from one address and does not stop a
+  distributed one; nor does it bound how many runners one order carries. The
+  caller is keyed on the first hop of `x-forwarded-for`, which Vercel
+  overwrites with the address it saw, so a client cannot rotate it in
+  production (only under `next dev`, or behind a proxy Vercel is told to
+  trust). An over-full map forgets the callers seen longest ago rather than
+  everyone, so a flood of addresses cannot reset a throttled one. A real cap needs a shared counter (Redis) or a
   shorter hold on unpaid online orders — neither exists yet.
 - **The resume-payment link is a key to one order, and is built as one**
   (`UNPAID_FOLLOWUP_PLAN.md` Batch 3, `lib/resume-payment.ts`). Handed out
