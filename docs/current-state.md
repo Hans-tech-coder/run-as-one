@@ -530,8 +530,25 @@ Known open threads:
   2026-10-05) closes a pending order with a required reason through the
   status route, freeing the slot and handing the promo back at once; the
   order stays on the tab under Filters → Status → Cancelled until race day
-  and never becomes a registrant. The resume-payment link is the plan's
-  later batches.
+  and never becomes a registrant. **The resume-payment link** (Batch 3,
+  2026-10-05): *Copy payment link* hands staff a signed `/pay/[token]` link
+  (`lib/resume-payment.ts`) that lets the runner finish paying the same order
+  without registering again; the public page shows no name, email or phone,
+  and *Pay now* closes the order's earlier PayMongo page before opening a new
+  one with the same reference, so the order cannot be paid twice. The first
+  link moves the hold 24 hours from that moment (`Registration.holdUntil`,
+  never past race day), and the sweep leaves the order alone until then. An
+  expired order gets *Copy registration link* instead. **Sending it** (Batch
+  4, 2026-10-05): *Send payment link* emails it through Resend (one of the 100
+  a day, confirmed first), *Send by hand…* prepares the same email to send
+  from staff's own mailbox at no quota, and both log the follow-up *Link
+  sent*; marked rows can be sent in bulk behind a confirm naming the count. A
+  send Resend refuses opens the by-hand path with the reason. Walked end to
+  end in PayMongo test mode (QRPh) on 2026-10-05/06, the whole flow again on
+  2026-10-06 at desktop and 360px (Batch 5). **Carries migration
+  `registration_hold_until`**, still to run on production (`ON_HOLD.md`'s
+  release steps). Not done, by choice: reinstating an expired order,
+  reminder emails on a timer, SMS from the app (`ON_HOLD.md` §9).
 - **No more empty orders** (`UNPAID_ORDERS_PLAN.md` Batch 5, 2026-10-05).
   Removing the last live runner of a PENDING order — one at a time or in bulk —
   cancels the order in the same transaction and hands its promo back

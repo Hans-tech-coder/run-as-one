@@ -103,7 +103,7 @@ scan (`run-as-one-scan_97fc`) completed with no findings. Read it with
 *Source: `UNPAID_ORDERS_PLAN.md` (gitignored, never committed), closed
 2026-10-05. What it built is in `docs/current-state.md`. The resume-payment
 link, the unpaid tab's row menu and the hold length moved to
-`docs/plans/UNPAID_FOLLOWUP_PLAN.md`.*
+`UNPAID_FOLLOWUP_PLAN.md`, now finished (§9).*
 
 Checked on staging (`run-as-one.vercel.app`, the `dev` branch on `local-dev`)
 on 2026-10-05 and passed: VIEWER/ENCODER see the tab and Copy contact but not
@@ -144,3 +144,44 @@ If it is picked up, in this order:
    button, a prominent "save the QR" for phones (a runner cannot scan their
    own screen), status polling, and the webhook's `payment.paid` path for the
    QR intent.
+
+---
+
+## 9. Leftovers from the unpaid follow-up plan
+
+*Source: `UNPAID_FOLLOWUP_PLAN.md` (gitignored, never committed), closed
+2026-10-06. What it built — the Unpaid checkouts row menu, the follow-up log,
+Cancel order…, the resume-payment link and sending it — is in
+`docs/current-state.md` and `docs/routes.md`. Its migration is in the release
+steps at the top of this file.*
+
+Left out by the owner's decisions (2026-10-05), to start only when asked:
+
+- **Reinstating an EXPIRED order** (decision D5). Its slot and promo are
+  already released, so reopening it means re-checking capacity and
+  re-spending the promo, which may be gone or full. Today an expired row
+  offers *Copy registration link* and the runner registers fresh.
+- **Reminder emails on a timer** before a hold ends. Each one spends Resend
+  quota (free tier: 100 a day) without a person deciding to.
+- **SMS sent from the app.** Needs a paid SMS provider; staff use the row's
+  *Text (SMS)* link from their own phone instead.
+- **Running the sweep more often than daily.** Vercel Hobby allows one cron a
+  day.
+
+Not walked, and why:
+
+- **A GCash or Maya resume payment.** Only QRPh is offered
+  (`OFFERED_PAYMONGO_METHODS`), so no such order can be placed. The
+  resume path's GCash/Maya branch is the old checkout code moved unchanged
+  into `lib/paymongo-session.ts`; test one on staging alongside §7's webhook
+  check before enabling either method.
+- **A VIEWER-role staff member logging a follow-up.** Every role holds
+  `registration:view`, so the route lets them; it was walked as the owner
+  only. Worth one try on staging with a VIEWER account.
+- **The registration wizard's own checkout after the PayMongo code moved
+  out of `api/checkout`.** Typechecked, and the resume path drives the same
+  `openPaymongoPage`; run one wizard checkout on staging before release.
+
+Test data left in `local-dev` (the `br-dry-grass-b3ubrfhy` branch, never
+production): `RM-B2TEST1` (CANCELLED), `RM-B4TEST1` (PAID), `RM-B4TEST2`
+(PENDING, email deliberately invalid, so PayMongo refuses to bill it).
