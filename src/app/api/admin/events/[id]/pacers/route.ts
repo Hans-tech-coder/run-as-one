@@ -3,8 +3,8 @@ import prisma from '@/lib/db';
 import { can, getActor } from '@/lib/actor';
 import { recordAudit } from '@/lib/audit';
 import { CATEGORY_ORDER } from '@/lib/category-order';
-import { PACER_DISCOUNT_TYPE, pacerCodeFor, pacerFromInput } from '@/lib/pacer';
-import { PACER_SELECT, pacersForEvent } from '@/lib/pacer-store';
+import { DUPLICATE_BIB_REFUSAL, PACER_DISCOUNT_TYPE, pacerCodeFor, pacerFromInput } from '@/lib/pacer';
+import { PACER_SELECT, pacerBibTaken, pacersForEvent } from '@/lib/pacer-store';
 
 /**
  * One event's pacers: the list, and adding one.
@@ -113,6 +113,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       return NextResponse.json(input.problem, { status });
     }
 
+    // The bib is optional; when one is given it has to be this pacer's alone,
+    // since the public results use it to keep a pacer off the podium.
+    if (input.data.bibNumber && (await pacerBibTaken(actor.orgId, event.id, input.data.bibNumber))) {
+      return NextResponse.json({ ...DUPLICATE_BIB_REFUSAL }, { status: 409 });
+    }
+
     const category = event.categories.find(row => row.id === input.data.categoryId)!;
 
     const created = await withFreshCode(async code => {
@@ -134,6 +140,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             eventId: event.id,
             organizerId: actor.orgId,
             assigneeName: input.data.assigneeName,
+            bibNumber: input.data.bibNumber,
             waiveAdminFee: input.data.waiveAdminFee,
             // **Exactly one category**, written in the same statement as the
             // code: a pacer code with no category would be a free entry to
@@ -153,6 +160,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
           changes: {
             code: row.code,
             category: category.name,
+            bibNumber: input.data.bibNumber,
             waiveAdminFee: input.data.waiveAdminFee,
           },
         });

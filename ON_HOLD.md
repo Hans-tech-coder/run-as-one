@@ -10,9 +10,12 @@ before writing any code. When an item is picked up, give it its own plan file in
 
 The release steps come first because they block production, not a feature.
 
-**Pending for the next release (2026-10-05):** migration
+**Pending for the next release (2026-10-05):** migrations
 `20261005090000_registration_hold_until` (one nullable column,
-`Registration.holdUntil`, `UNPAID_FOLLOWUP_PLAN.md` Batch 3). Run
+`Registration.holdUntil`, `UNPAID_FOLLOWUP_PLAN.md` Batch 3) and
+`20261006090000_pacer_bib_number` (one nullable column, `PromoCode.bibNumber`,
+the pacer's bib that keeps them off the results podium; applied to the dev
+database). Run
 `npx prisma migrate deploy` with `DIRECT_URL` on the production endpoint
 **before** the new code goes live: the code reads the column, and the old code
 ignores it, so migrating first is safe in both directions.

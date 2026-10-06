@@ -32,6 +32,20 @@ interface Result {
   gunTime?: string | null;
   categoryRank?: number;
   genderRank?: number;
+  /** Whether this finisher is one of the race's pacers (see pacerResultMatcher). */
+  isPacer?: boolean;
+}
+
+/**
+ * The tag beside a pacer's bib. Their rank is real and stays; the tag says why
+ * they are not on the Race Winners podium.
+ */
+function PacerTag() {
+  return (
+    <span className="shrink-0 whitespace-nowrap bg-accent-orange/10 text-accent-orange px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border border-accent-orange/30">
+      Pacer
+    </span>
+  );
 }
 
 interface Props {
@@ -357,6 +371,7 @@ export default function FullResultsClient({ results, event }: Props) {
           <div className="text-xs text-secondary mt-1 flex items-center gap-3">
             <span className="flex items-center gap-1"><Hash size={12} /> {row.original.bibNumber}</span>
             <span className="flex items-center gap-1"><User size={12} /> {row.original.gender}</span>
+            {row.original.isPacer && <PacerTag />}
           </div>
         </div>
       ),
@@ -646,6 +661,7 @@ export default function FullResultsClient({ results, event }: Props) {
                       <div className="flex items-center gap-2.5 mt-1.5 text-xs text-secondary min-w-0">
                         <span className="flex items-center gap-1 whitespace-nowrap tabular-nums shrink-0"><Hash size={12} className="text-accent-blue/70 shrink-0" /> {r.bibNumber}</span>
                         <span className="flex items-center gap-1 whitespace-nowrap shrink-0"><User size={12} className="text-accent-blue/70 shrink-0" /> {r.gender}</span>
+                        {r.isPacer && <PacerTag />}
                         <span className="min-w-0 truncate whitespace-nowrap bg-accent-blue/10 text-accent-blue px-2 py-0.5 rounded-md text-[10px] font-bold border border-accent-blue/30" title={r.category.name}>
                           {r.category.name}
                         </span>

@@ -7,6 +7,7 @@ import LinkPendingIcon from '@/components/ui/LinkPendingIcon';
 import { canonicalResultsPath, eventByParam, runnerResultPath } from '@/lib/event-slug';
 import { toWholeSeconds } from '@/lib/race-time';
 import { CATEGORY_ORDER } from '@/lib/category-order';
+import { pacerResultMatcherForEvent } from '@/lib/pacer-store';
 
 type Winner = { id: string; name: string; bibNumber: string; chipTime: string };
 
@@ -127,9 +128,15 @@ export default async function WinnersOverviewPage({
     }
   });
 
+  // Pacers are not eligible for the podium (see pacerResultMatcher): the next
+  // finisher moves up into their place here. Their rank on the full
+  // leaderboard is untouched, where they carry a Pacer tag instead.
+  const isPacer = await pacerResultMatcherForEvent(event.id);
+
   const winnersByCategory = categories.map(cat => {
-    const maleResults = cat.raceResults.filter(r => r.gender.toLowerCase() === 'male' || r.gender === 'M').slice(0, 3);
-    const femaleResults = cat.raceResults.filter(r => r.gender.toLowerCase() === 'female' || r.gender === 'F').slice(0, 3);
+    const contenders = cat.raceResults.filter(r => !isPacer(r));
+    const maleResults = contenders.filter(r => r.gender.toLowerCase() === 'male' || r.gender === 'M').slice(0, 3);
+    const femaleResults = contenders.filter(r => r.gender.toLowerCase() === 'female' || r.gender === 'F').slice(0, 3);
 
     return {
       ...cat,

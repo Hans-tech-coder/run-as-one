@@ -7,6 +7,7 @@ import ECertificateGenerator from './ECertificateGenerator';
 import EventHeroBanner from '@/components/EventHeroBanner';
 import { canonicalResultsPath, eventByParam, resultsPath, runnerResultPath } from '@/lib/event-slug';
 import { toWholeSeconds } from '@/lib/race-time';
+import { pacerResultMatcherForEvent } from '@/lib/pacer-store';
 
 /**
  * One runner's result, addressed by the number they wore: /results/[slug]/1042.
@@ -60,6 +61,10 @@ export default async function RunnerAnalyticsPage({
   // slug and the runner as their bib.
   const canonical = canonicalResultsPath(event, slug, `/${encodeURIComponent(result.bibNumber.trim() || result.id)}`);
   if (canonical) redirect(canonical);
+
+  // A pacer keeps their real rank here, as on the full leaderboard, and wears a
+  // Pacer pill that says why they are not on the Race Winners podium.
+  const isPacer = (await pacerResultMatcherForEvent(event.id))(result);
 
   // Fetch total runners in this category to show "X out of Y"
   const totalInCategory = await prisma.raceResult.count({
@@ -172,6 +177,11 @@ export default async function RunnerAnalyticsPage({
                   <span className="bg-accent-blue/10 text-accent-blue border border-accent-blue/20 px-3 py-1.5 rounded-[12px] text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap">
                     <CheckCircle2 size={14} className="shrink-0" /> FINISHER
                   </span>
+                  {isPacer && (
+                    <span className="bg-accent-orange/10 text-accent-orange border border-accent-orange/30 px-3 py-1.5 rounded-[12px] text-xs font-bold uppercase tracking-wider whitespace-nowrap">
+                      Pacer
+                    </span>
+                  )}
                   {/* An organizer names their own categories, so this one is the
                       unpredictable label: it keeps to a single line and truncates
                       rather than wrapping inside its pill — the full name is spelled

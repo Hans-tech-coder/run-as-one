@@ -206,7 +206,14 @@ shape:
   One's own money (`settlement.ts`) rather than the organizer's to give away.
   **`assigneeName`** — the pacer's name, uppercase like every other stored name,
   shown only in the dashboard: a pacer code is given to a person, so the screen
-  has to be able to say whose it is. **`codeSentAt`** — when staff marked the
+  has to be able to say whose it is. **`bibNumber`** — the pacer's race bib,
+  trimmed and uppercase, **optional** because bibs are often handed out after
+  the code (set or changed later through *Edit*; migration
+  `20261006090000_pacer_bib_number`). The public results read it, with the
+  name as a fallback, to keep a pacer off the Race Winners podium and tag them
+  on the full leaderboard (`pacerResultMatcher`, §5). Unique among one event's
+  pacers, enforced by the routes (`pacerBibTaken`) rather than an index, since
+  every other kind leaves it null. **`codeSentAt`** — when staff marked the
   code as sent, null until they do. The app **emails no pacer** (staff copy the
   code and send it by hand, the owner's decision), so this column is the only
   evidence the dashboard has that somebody was actually told, and it is what the

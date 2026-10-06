@@ -1,5 +1,5 @@
 import prisma from '@/lib/db';
-import { PACER_DISCOUNT_TYPE } from '@/lib/pacer';
+import { PACER_DISCOUNT_TYPE, pacerResultMatcher } from '@/lib/pacer';
 
 /**
  * Reading pacers out of the database.
@@ -28,6 +28,7 @@ export const PACER_SELECT = {
   id: true,
   code: true,
   assigneeName: true,
+  bibNumber: true,
   waiveAdminFee: true,
   codeSentAt: true,
   paused: true,
@@ -136,4 +137,53 @@ export async function pacerOrdersByCode(
     }
   }
   return orders;
+}
+
+/**
+ * Which of this event's finishers are pacers, for the public results pages.
+ *
+ * Scoped by event and kind only — not organizer — because the results pages
+ * are public and already know the event. Nothing about a pacer leaves here but
+ * a yes or no per finisher; the pacer's name and bib are never sent to the page.
+ * Every pacer counts, paused or not and registered or not: a pacer the
+ * organizer handed a bib by hand is still a pacer on the course.
+ */
+export async function pacerResultMatcherForEvent(eventId: string) {
+  const pacers = await prisma.promoCode.findMany({
+    where: { eventId, discountType: PACER_DISCOUNT_TYPE },
+    select: { assigneeName: true, bibNumber: true, categories: { select: { categoryId: true } } },
+  });
+  return pacerResultMatcher(
+    pacers.map(pacer => ({
+      assigneeName: pacer.assigneeName,
+      bibNumber: pacer.bibNumber,
+      categoryId: pacer.categories[0]?.categoryId ?? null,
+    })),
+  );
+}
+
+/**
+ * Whether another pacer in this event already holds this bib.
+ *
+ * Checked by the add and edit routes rather than enforced by an index, because
+ * the column belongs to `PromoCode` and every other kind leaves it null.
+ * Compared normalized, which is how it is stored.
+ */
+export async function pacerBibTaken(
+  organizerId: string,
+  eventId: string,
+  bibNumber: string,
+  exceptId?: string,
+): Promise<boolean> {
+  const clash = await prisma.promoCode.findFirst({
+    where: {
+      organizerId,
+      eventId,
+      discountType: PACER_DISCOUNT_TYPE,
+      bibNumber,
+      ...(exceptId ? { id: { not: exceptId } } : {}),
+    },
+    select: { id: true },
+  });
+  return clash !== null;
 }

@@ -42,7 +42,7 @@ export default function PacerActionsMenu({
   copied = false,
   onCopyCode,
   onToggleCodeSent,
-  onRename,
+  onEdit,
   onTogglePause,
   onToggleFeeWaiver,
   onDelete,
@@ -67,7 +67,8 @@ export default function PacerActionsMenu({
   copied?: boolean;
   onCopyCode: () => void;
   onToggleCodeSent: () => void;
-  onRename: () => void;
+  /** Opens the Edit modal: the pacer's name and bib. */
+  onEdit: () => void;
   onTogglePause: () => void;
   /**
    * Turning Run As One's admin fee waiver on or off. **Undefined for anyone but
@@ -213,13 +214,13 @@ export default function PacerActionsMenu({
         <button
           onClick={() => {
             closeMenu();
-            onRename();
+            onEdit();
           }}
           className="action-dropdown-item w-full flex items-center gap-3 px-4 py-2 text-sm text-left"
           role="menuitem"
         >
           <PencilLine size={16} />
-          Rename
+          Edit name &amp; bib
         </button>
         {/* The reversible answer to "stop this", between the edits and the
             deletion — and the only answer once a pacer has registered. */}

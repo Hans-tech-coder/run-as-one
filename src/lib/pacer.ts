@@ -2,8 +2,9 @@ import { DISCOUNT_TYPES } from '@/lib/discount';
 import { randomCodeBlock } from '@/lib/voucher-codes';
 
 /**
- * Pacer codes: what one is, what makes one valid, and when the dashboard has to
- * nag about it.
+ * Pacer codes: what one is, what makes one valid, when the dashboard has to
+ * nag about it, and which finishers on the public results are pacers (kept off
+ * the podium — `pacerResultMatcher`).
  *
  * A pacer code is a **free entry for one named pacer, in one category of one
  * race** — the person an organizer asks to run a steady 21K so the field has
@@ -39,6 +40,26 @@ export const PACER_DISCOUNT_TYPE = DISCOUNT_TYPES.PACER;
  * a document into.
  */
 export const MAX_PACER_NAME_LENGTH = 80;
+
+/**
+ * The most a pacer's bib may be. A bib is a short label off a race number —
+ * `1234`, `P-07` — so this is generous rather than tight.
+ */
+export const MAX_PACER_BIB_LENGTH = 20;
+
+/**
+ * A bib as it is stored and compared: trimmed, uppercase, inner spaces gone.
+ *
+ * Both sides of the results match go through this — the bib staff typed here
+ * and the bib on an uploaded `RaceResult` — so `p-07 ` and `P-07` are one bib.
+ * Empty means "no bib yet", which is allowed.
+ */
+export function normalizeBibNumber(value: unknown): string {
+  return String(value ?? '')
+    .trim()
+    .replace(/\s+/g, '')
+    .toUpperCase();
+}
 
 /** Characters of randomness on the end of a pacer code. */
 const PACER_CODE_RANDOM = 4;
@@ -198,6 +219,8 @@ export interface PacerInputData {
   assigneeName: string;
   categoryId: string;
   waiveAdminFee: boolean;
+  /** Null when staff do not know the bib yet. */
+  bibNumber: string | null;
 }
 
 /** What the Pacers screen can say about a pacer. */
@@ -205,6 +228,7 @@ export interface PacerInput {
   assigneeName?: unknown;
   categoryId?: unknown;
   waiveAdminFee?: unknown;
+  bibNumber?: unknown;
 }
 
 /** What the caller knows that this module cannot work out for itself. */
@@ -279,7 +303,10 @@ export function pacerFromInput(
     return { problem: { ...WAIVE_REFUSAL } };
   }
 
-  return { data: { assigneeName: name.name, categoryId, waiveAdminFee } };
+  const bib = pacerBibFromInput(input.bibNumber);
+  if ('problem' in bib) return bib;
+
+  return { data: { assigneeName: name.name, categoryId, waiveAdminFee, bibNumber: bib.bibNumber } };
 }
 
 /**
@@ -310,4 +337,87 @@ export function pacerNameFromInput(
     };
   }
   return { name };
+}
+
+/**
+ * A pacer's bib on its own, for the add form and the Edit path.
+ *
+ * **Optional**: bibs are often handed out after the code is sent, so a blank
+ * box is "not known yet" (null), never a refusal. Whether the bib is already
+ * another pacer's in this race is the route's question — it needs the database.
+ */
+export function pacerBibFromInput(
+  value: unknown,
+): { bibNumber: string | null } | { problem: PacerInputError } {
+  const bib = normalizeBibNumber(value);
+  if (!bib) return { bibNumber: null };
+  if (bib.length > MAX_PACER_BIB_LENGTH) {
+    return {
+      problem: {
+        error: `A bib number can be at most ${MAX_PACER_BIB_LENGTH} characters.`,
+        field: 'bibNumber',
+      },
+    };
+  }
+  return { bibNumber: bib };
+}
+
+/** The refusal for a bib another pacer in this race already has. */
+export const DUPLICATE_BIB_REFUSAL = {
+  error: 'Another pacer in this race already has that bib number.',
+  field: 'bibNumber',
+} as const;
+
+/** What the results matcher needs to know about one pacer. */
+export interface PacerIdentity {
+  assigneeName: string | null;
+  bibNumber: string | null;
+  /** The category the pacer's code is locked to, or null if it was deleted. */
+  categoryId: string | null;
+}
+
+/** What the results matcher needs to know about one finisher. */
+export interface ResultIdentity {
+  bibNumber: string;
+  name: string;
+  categoryId: string;
+}
+
+/**
+ * Which finishers on the public results are pacers.
+ *
+ * **A pacer is not eligible for the podium.** They run to a set pace for the
+ * field, so a pacer finishing third would take an award from a runner who
+ * actually raced for it. The Race Winners board leaves them out and the full
+ * leaderboard tags them; their rank is untouched, because the rank is the
+ * timing company's fact about who crossed when.
+ *
+ * A finisher is a pacer when either holds:
+ *
+ *  - **Their bib is a pacer's bib**, anywhere in the event. Bibs are unique per
+ *    race, so this is the reliable match, and it is why staff can set the bib
+ *    late through *Edit*.
+ *  - **Their name is a pacer's name, in that pacer's category.** The fallback
+ *    for a pacer whose bib was never entered or changed on race day. Limited to
+ *    the pacer's own category so a namesake running another distance is not
+ *    pulled off their podium.
+ *
+ * Names go through `normalizePacerName` and bibs through `normalizeBibNumber`
+ * on both sides, since an uploaded sheet is whatever casing the timer used.
+ */
+export function pacerResultMatcher(
+  pacers: readonly PacerIdentity[],
+): (result: ResultIdentity) => boolean {
+  const bibs = new Set<string>();
+  const namesByCategory = new Set<string>();
+  for (const pacer of pacers) {
+    const bib = normalizeBibNumber(pacer.bibNumber);
+    if (bib) bibs.add(bib);
+    const name = normalizePacerName(pacer.assigneeName);
+    if (name && pacer.categoryId) namesByCategory.add(`${pacer.categoryId}|${name}`);
+  }
+
+  return result =>
+    bibs.has(normalizeBibNumber(result.bibNumber)) ||
+    namesByCategory.has(`${result.categoryId}|${normalizePacerName(result.name)}`);
 }

@@ -565,6 +565,13 @@ model PromoCode {
   /// named person, so the dashboard has to be able to say whose it is; it is
   /// never shown to a runner. See src/lib/pacer.ts.
   assigneeName   String?
+  /// PACER only: the pacer's race bib, uppercase and trimmed, or null until
+  /// staff know it -- bibs are often handed out after the code is. The public
+  /// results read it to keep a pacer off the Race Winners podium and to tag
+  /// them on the full leaderboard (see pacerResultMatcher in
+  /// src/lib/pacer.ts). Unique among one event's pacers, enforced by the
+  /// pacer routes rather than an index, since every other kind leaves it null.
+  bibNumber      String?
   /// PACER only: when staff marked this code as sent to its pacer, or null
   /// until they do. **The app sends no email to a pacer** -- staff copy the
   /// code and send it themselves -- so the only way the dashboard can warn

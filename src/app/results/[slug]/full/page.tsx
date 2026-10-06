@@ -6,6 +6,7 @@ import { Suspense } from 'react';
 import FullResultsClient from './FullResultsClient';
 import EventHeroBanner from '@/components/EventHeroBanner';
 import { canonicalResultsPath, eventByParam } from '@/lib/event-slug';
+import { pacerResultMatcherForEvent } from '@/lib/pacer-store';
 
 export default async function FullResultsPage({ 
   params 
@@ -39,6 +40,11 @@ export default async function FullResultsPage({
     ]
   });
 
+  // A yes/no per finisher, so the table can tag pacers. Only the flag goes to
+  // the client — never the pacer list itself.
+  const isPacer = await pacerResultMatcherForEvent(event.id);
+  const tagged = results.map(result => ({ ...result, isPacer: isPacer(result) }));
+
   return (
     <div className="relative w-full">
       <EventHeroBanner event={event as any} />
@@ -62,7 +68,7 @@ export default async function FullResultsPage({
           </div>
 
           <Suspense fallback={<div className="text-center text-white py-12">Loading results...</div>}>
-            <FullResultsClient results={results} event={event} />
+            <FullResultsClient results={tagged} event={event} />
           </Suspense>
         </div>
       </div>

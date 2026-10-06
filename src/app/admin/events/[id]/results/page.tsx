@@ -5,6 +5,7 @@ import ResultsTableClient from './ResultsTableClient';
 import AdminNotFound from '../../../AdminNotFound';
 import { EVENT_NOT_FOUND } from '../../event-not-found';
 import { CATEGORY_ORDER } from '@/lib/category-order';
+import { pacerResultMatcherForEvent } from '@/lib/pacer-store';
 import DashboardHeader from '@/app/admin/DashboardHeader';
 
 export default async function AdminResultsPage({ params }: { params: Promise<{ id: string }> }) {
@@ -37,12 +38,17 @@ export default async function AdminResultsPage({ params }: { params: Promise<{ i
     orderBy: { overallRank: 'asc' }
   });
 
+  // The same pacer match the public results use, so staff see here exactly who
+  // the Race Winners board leaves off the podium.
+  const isPacer = await pacerResultMatcherForEvent(id);
+  const tagged = results.map(result => ({ ...result, isPacer: isPacer(result) }));
+
   return (
     <>
       <DashboardHeader title="Race Results" crumbs={[{ label: 'Events', href: '/admin/events' }, { label: event.title }]} />
 
       <div className="admin-content">
-        <ResultsTableClient results={results} event={event} />
+        <ResultsTableClient results={tagged} event={event} />
       </div>
     </>
   );

@@ -2,18 +2,27 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { can, getActor } from '@/lib/actor';
 import { AuditChanges, recordAudit } from '@/lib/audit';
-import { PACER_DISCOUNT_TYPE, isPacerRegistered, pacerNameFromInput } from '@/lib/pacer';
-import { PACER_SELECT } from '@/lib/pacer-store';
+import {
+  DUPLICATE_BIB_REFUSAL,
+  PACER_DISCOUNT_TYPE,
+  isPacerRegistered,
+  pacerBibFromInput,
+  pacerNameFromInput,
+} from '@/lib/pacer';
+import { PACER_SELECT, pacerBibTaken } from '@/lib/pacer-store';
 
 /**
  * Changing or removing one pacer.
  *
- * Four things a PATCH may carry, each independent and each audited:
+ * Five things a PATCH may carry, each independent and each audited:
  *
  *  - **`assigneeName`** — a rename. The code itself never changes: a pacer
  *    already holding it would otherwise find it dead, and the point of a
  *    rename is usually that the wrong name was typed, not that a different
  *    person is running.
+ *  - **`bibNumber`** — set, changed or cleared (blank). Bibs are often handed
+ *    out after the code, or swapped on race day; the public results read it to
+ *    keep this pacer off the podium. Refused when another pacer here has it.
  *  - **`paused`** — the hold, exactly as it is on a promotion. It is what staff
  *    reach for instead of deleting a code somebody may already be holding.
  *  - **`codeSent`** — *Mark as sent* and *Mark as not sent*. The app emails no
@@ -53,6 +62,7 @@ export async function PATCH(
     const body = await request.json();
     const data: {
       assigneeName?: string;
+      bibNumber?: string | null;
       paused?: boolean;
       codeSentAt?: Date | null;
       waiveAdminFee?: boolean;
@@ -69,6 +79,21 @@ export async function PATCH(
         data.assigneeName = name.name;
         changes.assigneeName = [pacer.assigneeName, name.name];
         summaries.push(`renamed to ${name.name}`);
+      }
+    }
+
+    if (body?.bibNumber !== undefined) {
+      const bib = pacerBibFromInput(body.bibNumber);
+      if ('problem' in bib) {
+        return NextResponse.json(bib.problem, { status: 400 });
+      }
+      if (bib.bibNumber !== pacer.bibNumber) {
+        if (bib.bibNumber && (await pacerBibTaken(actor.orgId, id, bib.bibNumber, pacer.id))) {
+          return NextResponse.json({ ...DUPLICATE_BIB_REFUSAL }, { status: 409 });
+        }
+        data.bibNumber = bib.bibNumber;
+        changes.bibNumber = [pacer.bibNumber, bib.bibNumber];
+        summaries.push(bib.bibNumber ? `bib set to ${bib.bibNumber}` : 'bib cleared');
       }
     }
 

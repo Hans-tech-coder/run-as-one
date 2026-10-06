@@ -3,11 +3,11 @@
 import React, { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { AlertTriangle, Check, Copy, MailX, Plus, Users, X } from 'lucide-react';
-import AdminSelect from '../../../AdminSelect';
+import { AlertTriangle, Check, Copy, MailX, Plus } from 'lucide-react';
 import PacerActionsMenu from './PacerActionsMenu';
+import AddPacerModal from './AddPacerModal';
+import EditPacerModal from './EditPacerModal';
 import AdminCardList from '../../../AdminCardList';
-import FieldError from '@/components/ui/FieldError';
 import { useAlert } from '@/components/ui/AlertProvider';
 import {
   Table,
@@ -17,16 +17,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  MAX_PACER_NAME_LENGTH,
-  WAIVE_REFUSAL,
-  isPacerRegistered,
-  needsCodeSent,
-  normalizePacerName,
-} from '@/lib/pacer';
+import { isPacerRegistered, needsCodeSent } from '@/lib/pacer';
 
 /**
- * One race's pacers, and the form that adds another.
+ * One race's pacers. The Add and Edit forms are their own files
+ * (`AddPacerModal.tsx`, `EditPacerModal.tsx`); this screen owns only whether
+ * one is open.
  *
  * **Grouped by category**, because a pacer code is locked to one and the
  * question this screen is opened with is "who is pacing the 21K?". The groups
@@ -51,6 +47,8 @@ export type PacerRow = {
   id: string;
   code: string;
   assigneeName: string | null;
+  /** The pacer's race bib, or null until staff enter it. */
+  bibNumber: string | null;
   waiveAdminFee: boolean;
   /** ISO, or null while staff have not marked the code as sent. */
   codeSentAt: string | null;
@@ -67,11 +65,6 @@ export type PacerRow = {
 };
 
 export type PacerCategory = { id: string; name: string; distance: string | null };
-
-/** The Add Pacer form, and what a rename holds. */
-type AddForm = { categoryId: string; assigneeName: string; waiveAdminFee: boolean };
-
-const EMPTY_FORM: AddForm = { categoryId: '', assigneeName: '', waiveAdminFee: false };
 
 /** How long the Copy button says "Copied" before going back to itself. */
 const COPIED_MS = 1600;
@@ -96,12 +89,7 @@ export default function PacersClient({
   const { alert, confirm, toast } = useAlert();
 
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const [form, setForm] = useState<AddForm>(EMPTY_FORM);
-  const [problem, setProblem] = useState<{ field: string; error: string } | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const [renaming, setRenaming] = useState<PacerRow | null>(null);
-  const [renameValue, setRenameValue] = useState('');
+  const [editing, setEditing] = useState<PacerRow | null>(null);
 
   /** Which row has a request in flight, so only that row's items go quiet. */
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -147,17 +135,6 @@ export default function PacersClient({
 
     return byCategory.filter(group => group.rows.length > 0);
   }, [categories, pacers]);
-
-  const openAdd = () => {
-    setProblem(null);
-    setForm({
-      ...EMPTY_FORM,
-      // One category means one answer, so it is chosen already rather than
-      // making somebody open a picker with a single option in it.
-      categoryId: categories.length === 1 ? categories[0].id : '',
-    });
-    setIsAddOpen(true);
-  };
 
   const copyCode = async (pacer: PacerRow) => {
     try {
@@ -257,90 +234,16 @@ export default function PacersClient({
     }
   };
 
-  const openRename = (pacer: PacerRow) => {
-    setProblem(null);
-    setRenaming(pacer);
-    setRenameValue(pacer.assigneeName ?? '');
-  };
-
-  const submitRename = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!renaming) return;
-
-    // Checked here with the same rule the route enforces, so the form says what
-    // is wrong before a round trip rather than after one.
-    if (!normalizePacerName(renameValue)) {
-      setProblem({
-        field: 'renameName',
-        error: 'Enter the pacer’s name, so this code can be told whose it is.',
-      });
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const res = await fetch(`/api/admin/events/${eventId}/pacers/${renaming.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ assigneeName: renameValue }),
-      });
-      const payload = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setProblem({ field: 'renameName', error: payload.error ?? 'That name could not be saved.' });
-        return;
-      }
-      setRenaming(null);
-      toast('The pacer was renamed.');
-      router.refresh();
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const submitAdd = async (event: React.FormEvent) => {
-    event.preventDefault();
-    setProblem(null);
-
-    // Both checks are the route's own, run here first so each names its own box
-    // instead of the form showing one catch-all sentence.
-    if (!form.categoryId) {
-      setProblem({ field: 'categoryId', error: 'Choose the category this pacer will run.' });
-      return;
-    }
-    if (!normalizePacerName(form.assigneeName)) {
-      setProblem({
-        field: 'assigneeName',
-        error: 'Enter the pacer’s name, so this code can be told whose it is.',
-      });
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const res = await fetch(`/api/admin/events/${eventId}/pacers`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      });
-      const payload = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setProblem({
-          field: payload.field ?? 'assigneeName',
-          error: payload.error ?? 'That pacer could not be added. Please try again.',
-        });
-        return;
-      }
-      setIsAddOpen(false);
-      setForm(EMPTY_FORM);
-      toast({
-        title: 'Pacer added',
-        message: `${payload.pacer?.code ?? 'Their code'} is ready to send.`,
-      });
-      router.refresh();
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  /**
+   * The bib, or a quiet "Not set" — a blank is normal (bibs often come after
+   * the code) and is filled in through *Edit*.
+   */
+  const renderBib = (pacer: PacerRow) =>
+    pacer.bibNumber ? (
+      <span className="font-mono tabular-nums">{pacer.bibNumber}</span>
+    ) : (
+      <span className="text-secondary">Not set</span>
+    );
 
   /** The code, with the button that puts it on the clipboard. */
   const renderCode = (pacer: PacerRow) => (
@@ -439,7 +342,7 @@ export default function PacersClient({
         isFeeWaived={pacer.waiveAdminFee}
         onCopyCode={() => copyCode(pacer)}
         onToggleCodeSent={() => handleToggleCodeSent(pacer)}
-        onRename={() => openRename(pacer)}
+        onEdit={() => setEditing(pacer)}
         onTogglePause={() => handleTogglePause(pacer)}
         // Offered only to the Super Admin, the same `can()` the route asks, so
         // nobody else is shown an item that would come back 403. The waiver is
@@ -451,13 +354,6 @@ export default function PacersClient({
       </div>
     </div>
   );
-
-  const categoryOptions = categories.map(category => ({
-    value: category.id,
-    // The distance stays beside the name: "10K" and "10 km Fun Run" are the
-    // organizer's own two labels for two different things.
-    label: category.distance ? `${category.name} · ${category.distance}` : category.name,
-  }));
 
   return (
     <>
@@ -490,7 +386,7 @@ export default function PacersClient({
 
       <div className="admin-toolbar">
         <div className="toolbar-actions">
-          <button type="button" onClick={openAdd} className="btn-light" disabled={categories.length === 0}>
+          <button type="button" onClick={() => setIsAddOpen(true)} className="btn-light" disabled={categories.length === 0}>
             <Plus size={16} /> Add Pacer
           </button>
         </div>
@@ -525,6 +421,7 @@ export default function PacersClient({
                     <TableHead className="py-4 px-4 pl-8 text-secondary font-medium h-auto">
                       Pacer
                     </TableHead>
+                    <TableHead className="py-4 px-4 text-secondary font-medium h-auto">Bib</TableHead>
                     <TableHead className="py-4 px-4 text-secondary font-medium h-auto">Code</TableHead>
                     <TableHead className="py-4 px-4 text-secondary font-medium h-auto">
                       Status
@@ -546,6 +443,7 @@ export default function PacersClient({
                       <TableCell className="py-4 px-4 pl-8 text-primary font-semibold">
                         {nameOf(pacer)}
                       </TableCell>
+                      <TableCell className="py-4 px-4 text-primary">{renderBib(pacer)}</TableCell>
                       <TableCell className="py-4 px-4 text-primary">{renderCode(pacer)}</TableCell>
                       <TableCell className="py-4 px-4 text-primary">{renderStatus(pacer)}</TableCell>
                       <TableCell className="py-4 px-4 text-primary">{renderActions(pacer)}</TableCell>
@@ -565,7 +463,10 @@ export default function PacersClient({
                 className="is-flush"
                 title={pacer => <span className="font-bold">{nameOf(pacer)}</span>}
                 badges={pacer => renderStatus(pacer)}
-                fields={pacer => [{ label: 'Code', value: renderCode(pacer), full: true }]}
+                fields={pacer => [
+                  { label: 'Bib', value: renderBib(pacer) },
+                  { label: 'Code', value: renderCode(pacer), full: true },
+                ]}
                 actions={pacer => renderActions(pacer, 'card')}
               />
             </div>
@@ -573,190 +474,17 @@ export default function PacersClient({
         ))
       )}
 
-      {/* ── Add Pacer ────────────────────────────────────────────────────── */}
       {isAddOpen && (
-        <div className="fixed inset-0 bg-[var(--dash-scrim)] backdrop-blur-sm z-50 flex items-center justify-center p-4 max-sm:p-3">
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="pacer-form-title"
-            className="admin-modal-panel bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-xl w-full max-w-lg overflow-clip"
-          >
-            <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-2 max-sm:px-4 max-sm:pt-3 shrink-0">
-              <h2
-                id="pacer-form-title"
-                className="text-xl font-bold m-0 flex items-center gap-2 min-w-0"
-              >
-                <Users size={20} className="text-accent-orange-ink shrink-0" />
-                Add Pacer
-              </h2>
-              <button
-                type="button"
-                onClick={() => setIsAddOpen(false)}
-                className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-full text-secondary hover:text-primary"
-                aria-label="Close"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="admin-modal-body px-6 pt-2 pb-6 max-sm:px-4">
-              <form id="pacer-form" onSubmit={submitAdd} className="flex flex-col gap-5">
-                <AdminSelect
-                  label={
-                    <>
-                      Category <span className="text-[var(--status-danger)]">*</span>
-                    </>
-                  }
-                  value={form.categoryId}
-                  options={categoryOptions}
-                  placeholder="Which distance will they pace?"
-                  listboxLabel="Category"
-                  onChange={next => setForm({ ...form, categoryId: next })}
-                  error={problem?.field === 'categoryId' ? problem.error : undefined}
-                  hint="The code is locked to this category, and it cannot be changed afterwards."
-                />
-
-                <div className="form-group">
-                  <label className="form-label" htmlFor="pacer-name">
-                    Pacer name <span className="text-[var(--status-danger)]">*</span>
-                  </label>
-                  <input
-                    id="pacer-name"
-                    type="text"
-                    className="form-input"
-                    value={form.assigneeName}
-                    maxLength={MAX_PACER_NAME_LENGTH}
-                    // Uppercase, because that is how the name is stored and how
-                    // it will be shown — a sample in sentence case would promise
-                    // something the row does not deliver.
-                    placeholder="JUAN DELA CRUZ"
-                    onChange={event => setForm({ ...form, assigneeName: event.target.value })}
-                    aria-invalid={problem?.field === 'assigneeName' ? true : undefined}
-                    aria-describedby={
-                      problem?.field === 'assigneeName' ? 'pacer-name-error' : undefined
-                    }
-                  />
-                  <FieldError
-                    id="pacer-name-error"
-                    message={problem?.field === 'assigneeName' ? problem.error : undefined}
-                  />
-                </div>
-
-                {/* The money decision. Off means the pacer still goes through
-                    checkout and pays the admin fee; on means the order is ₱0 and
-                    there is no payment step at all. */}
-                <div className="form-group">
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={form.waiveAdminFee}
-                    disabled={!canWaiveAdminFee}
-                    onClick={() => setForm({ ...form, waiveAdminFee: !form.waiveAdminFee })}
-                    className="admin-switch-row"
-                  >
-                    <span className="admin-switch-label">
-                      <span>Include admin fee in discount</span>
-                      <span className="admin-switch-hint">
-                        {canWaiveAdminFee
-                          ? 'On, the pacer pays nothing at all and skips the payment step. Off, they still pay the admin fee.'
-                          : WAIVE_REFUSAL.error}
-                      </span>
-                    </span>
-                    <span
-                      className="t-toggle admin-switch"
-                      data-on={form.waiveAdminFee}
-                      aria-hidden="true"
-                    >
-                      <span className="t-toggle-thumb" />
-                    </span>
-                  </button>
-                  <FieldError
-                    id="pacer-waiver-error"
-                    message={problem?.field === 'waiveAdminFee' ? problem.error : undefined}
-                  />
-                </div>
-              </form>
-            </div>
-
-            {/* Outside the scrolling body, so it is always in reach; `form` ties
-                it back to the form it submits. */}
-            <div className="admin-modal-footer px-6 pt-4 pb-6 max-sm:p-4 border-t border-[var(--dash-border)] shrink-0">
-              <button type="submit" form="pacer-form" className="btn-light w-full" disabled={isSubmitting}>
-                <Plus size={16} />
-                {isSubmitting ? 'Saving' : 'Add Pacer'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <AddPacerModal
+          eventId={eventId}
+          categories={categories}
+          canWaiveAdminFee={canWaiveAdminFee}
+          onClose={() => setIsAddOpen(false)}
+        />
       )}
 
-      {/* ── Rename ───────────────────────────────────────────────────────── */}
-      {renaming && (
-        <div className="fixed inset-0 bg-[var(--dash-scrim)] backdrop-blur-sm z-50 flex items-center justify-center p-4 max-sm:p-3">
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="pacer-rename-title"
-            className="admin-modal-panel bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-xl w-full max-w-md overflow-clip"
-          >
-            <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-2 max-sm:px-4 max-sm:pt-3 shrink-0">
-              <h2 id="pacer-rename-title" className="text-xl font-bold m-0 min-w-0">
-                Rename pacer
-              </h2>
-              <button
-                type="button"
-                onClick={() => setRenaming(null)}
-                className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-full text-secondary hover:text-primary"
-                aria-label="Close"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="admin-modal-body px-6 pt-2 pb-6 max-sm:px-4">
-              <form id="pacer-rename-form" onSubmit={submitRename}>
-                <p className="mb-4 text-sm text-secondary">
-                  The code <strong>{renaming.code}</strong> stays as it is, so a pacer already
-                  holding it can still use it.
-                </p>
-                <div className="form-group">
-                  <label className="form-label" htmlFor="pacer-rename">
-                    Pacer name <span className="text-[var(--status-danger)]">*</span>
-                  </label>
-                  <input
-                    id="pacer-rename"
-                    type="text"
-                    className="form-input"
-                    value={renameValue}
-                    maxLength={MAX_PACER_NAME_LENGTH}
-                    placeholder="JUAN DELA CRUZ"
-                    onChange={event => setRenameValue(event.target.value)}
-                    aria-invalid={problem?.field === 'renameName' ? true : undefined}
-                    aria-describedby={
-                      problem?.field === 'renameName' ? 'pacer-rename-error' : undefined
-                    }
-                  />
-                  <FieldError
-                    id="pacer-rename-error"
-                    message={problem?.field === 'renameName' ? problem.error : undefined}
-                  />
-                </div>
-              </form>
-            </div>
-
-            <div className="admin-modal-footer px-6 pt-4 pb-6 max-sm:p-4 border-t border-[var(--dash-border)] shrink-0">
-              <button
-                type="submit"
-                form="pacer-rename-form"
-                className="btn-light w-full"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? 'Saving' : 'Save name'}
-              </button>
-            </div>
-          </div>
-        </div>
+      {editing && (
+        <EditPacerModal eventId={eventId} pacer={editing} onClose={() => setEditing(null)} />
       )}
     </>
   );

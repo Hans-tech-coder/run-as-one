@@ -41,6 +41,8 @@ interface Result {
   category: { name: string };
   chipTime: string;
   gunTime: string | null;
+  /** One of the race's pacers (`pacerResultMatcher`): kept off the public podium. */
+  isPacer?: boolean;
 }
 
 interface ResultsTableClientProps {
@@ -149,7 +151,12 @@ export default function ResultsTableClient({ results, event }: ResultsTableClien
     {
       accessorKey: "name",
       header: "Name",
-      cell: ({ row }) => <span className="font-medium text-primary">{row.original.name}</span>,
+      cell: ({ row }) => (
+        <span className="inline-flex items-center gap-2">
+          <span className="font-medium text-primary">{row.original.name}</span>
+          {row.original.isPacer && <span className="status-badge info">Pacer</span>}
+        </span>
+      ),
     },
     {
       accessorKey: "bibNumber",
@@ -384,8 +391,13 @@ export default function ResultsTableClient({ results, event }: ResultsTableClien
           leading={row => <span className="font-mono">{rowPosition(sortedRows, row)}</span>}
           title={row => <span className="block truncate">{row.original.name}</span>}
           badges={row =>
-            row.original.bibNumber ? (
-              <span className="status-badge neutral">Bib {row.original.bibNumber}</span>
+            row.original.bibNumber || row.original.isPacer ? (
+              <>
+                {row.original.bibNumber && (
+                  <span className="status-badge neutral">Bib {row.original.bibNumber}</span>
+                )}
+                {row.original.isPacer && <span className="status-badge info">Pacer</span>}
+              </>
             ) : null
           }
           fields={row => [
