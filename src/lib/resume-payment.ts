@@ -69,7 +69,9 @@ export type PayableState = 'payable' | 'paid' | 'cancelled' | 'expired' | 'unava
  *   link copied then moves its hold, which is the case decision D4 is for.
  * - **unavailable** — PENDING but not an online order this app can still take
  *   through PayMongo: a bank transfer, a method no longer offered (production
- *   takes QRPh only), or an order with no runner left on it.
+ *   takes QRPh only), or an order with no runner left on it. Also an order
+ *   that had a runner removed: removing one never lowers the stored total, so
+ *   a link would charge for a place nobody holds.
  */
 export function payableState(
   order: {
@@ -79,6 +81,7 @@ export function payableState(
     holdUntil: Date | null;
     deletedAt: Date | null;
     liveRunners: number;
+    removedRunners: number;
   },
   now: Date = new Date(),
 ): PayableState {
@@ -87,6 +90,8 @@ export function payableState(
   if (order.status === 'EXPIRED') return 'expired';
   if (order.status !== 'PENDING') return 'unavailable';
   if (expiresBy(order.createdAt, order.holdUntil) <= now) return 'expired';
-  if (!isPayMongoMethod(order.paymentMethod) || order.liveRunners === 0) return 'unavailable';
+  if (!isPayMongoMethod(order.paymentMethod) || order.liveRunners === 0 || order.removedRunners > 0) {
+    return 'unavailable';
+  }
   return 'payable';
 }

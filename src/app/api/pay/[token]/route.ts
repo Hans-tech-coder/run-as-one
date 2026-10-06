@@ -64,13 +64,18 @@ export async function POST(
       include: {
         event: { select: { title: true, slug: true, shirtSizeUpcharge: true } },
         runners: { where: { deletedAt: null }, orderBy: { runnerNo: 'asc' }, include: { category: true } },
+        _count: { select: { runners: { where: { deletedAt: { not: null } } } } },
       },
     });
     if (!order) {
       return NextResponse.json({ state: 'invalid', error: 'This payment link is not valid any more.' }, { status: 404 });
     }
 
-    const state = payableState({ ...order, liveRunners: order.runners.length });
+    const state = payableState({
+      ...order,
+      liveRunners: order.runners.length,
+      removedRunners: order._count.runners,
+    });
     if (state !== 'payable') {
       return NextResponse.json({ state, error: 'This order can no longer be paid here.' }, { status: 409 });
     }

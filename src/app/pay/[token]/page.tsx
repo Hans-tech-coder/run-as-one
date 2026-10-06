@@ -70,7 +70,7 @@ export default async function PayPage({ params }: { params: Promise<{ token: str
           holdUntil: true,
           deletedAt: true,
           event: { select: { title: true, slug: true, date: true } },
-          _count: { select: { runners: { where: { deletedAt: null } } } },
+          runners: { select: { deletedAt: true } },
         },
       })
     : null;
@@ -95,8 +95,12 @@ export default async function PayPage({ params }: { params: Promise<{ token: str
     );
   }
 
-  const runners = order._count.runners;
-  const state = payableState({ ...order, liveRunners: runners });
+  const runners = order.runners.filter(runner => !runner.deletedAt).length;
+  const state = payableState({
+    ...order,
+    liveRunners: runners,
+    removedRunners: order.runners.length - runners,
+  });
   const eventLink = `/events/${order.event.slug}`;
 
   if (state !== 'payable') {

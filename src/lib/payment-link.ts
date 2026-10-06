@@ -39,7 +39,7 @@ const REFUSALS: Record<Exclude<PayableState, 'payable'>, string> = {
   paid: 'is already paid, so there is nothing left to pay. Reload the page.',
   cancelled: 'was cancelled, so it can no longer be paid.',
   expired: 'has expired: its slot was released. Copy the registration link instead, so the runner registers again.',
-  unavailable: 'cannot be paid online any more. Its payment method is no longer offered, or no runner is left on it.',
+  unavailable: 'cannot be paid online any more. Its payment method is no longer offered, or a runner was removed from it.',
 };
 
 export type IssuedPaymentLink = {
@@ -68,6 +68,7 @@ export async function issuePaymentLink(
       event: true,
       // A runner removed from the order is not in the email, nor counted.
       runners: { where: { deletedAt: null }, include: { category: true } },
+      _count: { select: { runners: { where: { deletedAt: { not: null } } } } },
     },
   });
   if (!registration) return { ok: false, status: 404, error: 'Registration not found' };
@@ -80,7 +81,14 @@ export async function issuePaymentLink(
   });
   const state = listed === 0
     ? 'unavailable'
-    : payableState({ ...registration, liveRunners: registration.runners.length }, now);
+    : payableState(
+        {
+          ...registration,
+          liveRunners: registration.runners.length,
+          removedRunners: registration._count.runners,
+        },
+        now,
+      );
   if (state !== 'payable') {
     return { ok: false, status: 409, error: `${registration.orderRef} ${REFUSALS[state]}` };
   }
