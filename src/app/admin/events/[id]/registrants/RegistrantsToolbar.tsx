@@ -19,6 +19,7 @@ import MobileSortMenu from '../../../MobileSortMenu';
 import ColumnsViewMenu from './ColumnsViewMenu';
 import FiltersMenu, { type FilterGroup } from '../../../FiltersMenu';
 import { GUARDIAN_CONSENT_MAX_AGE } from '@/lib/minor-consent';
+import { compareCategoryNames } from '@/lib/category-distance';
 import { needsValidation } from './registrant-display';
 import { NO_PROVINCE } from './registrant-columns';
 import type { RegistrantRow } from './RegistrantsTable';
@@ -123,7 +124,7 @@ export default function RegistrantsToolbar({
 
   const uniqueCategories = useMemo(() => {
     const cats = new Set(runners.map(r => r.category).filter(Boolean));
-    return Array.from(cats).sort();
+    return Array.from(cats).sort(compareCategoryNames);
   }, [runners]);
 
   // "Not on file" last, after the provinces, for the rows from before

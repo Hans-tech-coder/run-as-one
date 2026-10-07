@@ -29,6 +29,7 @@ import AdminCardList from '../../../AdminCardList';
 import AdminTablePager from '../../../AdminTablePager';
 import MobileSortMenu from '../../../MobileSortMenu';
 import { toWholeSeconds } from '@/lib/race-time';
+import { compareCategoryNames } from '@/lib/category-distance';
 
 interface Result {
   id: string;
@@ -232,7 +233,7 @@ export default function ResultsTableClient({ results, event }: ResultsTableClien
 
   const uniqueCategories = useMemo(() => {
     const cats = new Set(results.map(r => r.category.name));
-    return Array.from(cats).sort();
+    return Array.from(cats).sort(compareCategoryNames);
   }, [results]);
 
   const uniqueGenders = useMemo(() => {

@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-37 pages · 52 API routes · 84 modules in `src/lib` · 368 files · 76,562 lines
+37 pages · 52 API routes · 85 modules in `src/lib` · 369 files · 76,642 lines
 
 ---
 
@@ -140,6 +140,7 @@ the file itself.
 | [`blob.ts`](../src/lib/blob.ts) | Every upload. |
 | [`brand-mark.ts`](../src/lib/brand-mark.ts) | The geometry of the Run As One mark, in one place. |
 | [`calendar-day.ts`](../src/lib/calendar-day.ts) | Arithmetic on calendar days, the `YYYY-MM-DD` strings every date field in this app holds (`Event.date`, `Runner.birthdate`, the promo windows). |
+| [`category-distance.ts`](../src/lib/category-distance.ts) | A category filter lists races shortest first: 1K, 3K, 5K, 10K, Half Marathon, 32K, Full Marathon. |
 | [`category-order.ts`](../src/lib/category-order.ts) | The order an event's categories are listed in, everywhere. |
 | [`certificate-settings.ts`](../src/lib/certificate-settings.ts) | What an event's certificate settings mean, and which of the two layouts an organizer's template is drawn in. |
 | [`client-store.ts`](../src/lib/client-store.ts) | Reading clients out of the database, and the one write every event form makes about one: which client a race is for. |
@@ -233,7 +234,7 @@ when a task touches one, split it before editing rather than after.
 | 1093 | [`src/app/admin/team/TeamClient.tsx`](../src/app/admin/team/TeamClient.tsx) |
 | 1015 | [`src/app/admin/register/page.tsx`](../src/app/admin/register/page.tsx) |
 | 873 | [`src/app/admin/events/EventsTableClient.tsx`](../src/app/admin/events/EventsTableClient.tsx) |
-| 766 | [`src/app/results/[slug]/full/FullResultsClient.tsx`](../src/app/results/[slug]/full/FullResultsClient.tsx) |
+| 767 | [`src/app/results/[slug]/full/FullResultsClient.tsx`](../src/app/results/[slug]/full/FullResultsClient.tsx) |
 | 750 | [`src/app/admin/events/[id]/edit/page.tsx`](../src/app/admin/events/[id]/edit/page.tsx) |
 | 693 | [`src/app/admin/AdminDatePicker.tsx`](../src/app/admin/AdminDatePicker.tsx) |
 | 663 | [`src/app/admin/activity/ActivityClient.tsx`](../src/app/admin/activity/ActivityClient.tsx) |
@@ -267,5 +268,5 @@ when a task touches one, split it before editing rather than after.
 | 449 | [`src/app/admin/page.tsx`](../src/app/admin/page.tsx) |
 | 443 | [`src/app/admin/events/[id]/registrants/page.tsx`](../src/app/admin/events/[id]/registrants/page.tsx) |
 | 438 | [`src/lib/actor.ts`](../src/lib/actor.ts) |
-| 428 | [`src/app/admin/events/[id]/results/ResultsTableClient.tsx`](../src/app/admin/events/[id]/results/ResultsTableClient.tsx) |
+| 429 | [`src/app/admin/events/[id]/results/ResultsTableClient.tsx`](../src/app/admin/events/[id]/results/ResultsTableClient.tsx) |
 | 424 | [`src/lib/pacer.ts`](../src/lib/pacer.ts) |

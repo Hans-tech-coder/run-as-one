@@ -7,6 +7,7 @@ import FullResultsClient from './FullResultsClient';
 import EventHeroBanner from '@/components/EventHeroBanner';
 import { canonicalResultsPath, eventByParam } from '@/lib/event-slug';
 import { pacerResultMatcherForEvent } from '@/lib/pacer-store';
+import { genderDivision } from '@/lib/gender-division';
 
 export default async function FullResultsPage({ 
   params 
@@ -43,7 +44,8 @@ export default async function FullResultsPage({
   // A yes/no per finisher, so the table can tag pacers. Only the flag goes to
   // the client — never the pacer list itself.
   const isPacer = await pacerResultMatcherForEvent(event.id);
-  const tagged = results.map(result => ({ ...result, isPacer: isPacer(result) }));
+  // The sheet's "M"/"F" reach the table, the cards and the Gender filter as words.
+  const tagged = results.map(result => ({ ...result, gender: genderDivision(result.gender), isPacer: isPacer(result) }));
 
   return (
     <div className="relative w-full">

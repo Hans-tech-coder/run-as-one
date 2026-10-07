@@ -188,7 +188,7 @@ export default async function RunnerAnalyticsPage({
                     {result.category.name}
                   </span>
                   <span className="flex items-center gap-1.5 text-sm bg-black/40 px-3 py-1.5 rounded-[12px] border border-white/5 whitespace-nowrap"><Hash size={14} className="text-secondary shrink-0" /> {result.bibNumber}</span>
-                  <span className="flex items-center gap-1.5 text-sm bg-black/40 px-3 py-1.5 rounded-[12px] border border-white/5 whitespace-nowrap"><User size={14} className="text-secondary shrink-0" /> {result.gender}</span>
+                  <span className="flex items-center gap-1.5 text-sm bg-black/40 px-3 py-1.5 rounded-[12px] border border-white/5 whitespace-nowrap"><User size={14} className="text-secondary shrink-0" /> {genderWord}</span>
                 </div>
                 
                 <h1 className={`${nameScale} font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-gray-200 to-gray-500 uppercase tracking-tighter leading-[1.05] text-balance break-words t-reveal t-delay-1 drop-shadow-[0_4px_24px_rgba(255,255,255,0.1)]`}>

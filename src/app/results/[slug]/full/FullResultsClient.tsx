@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Search, User, Hash, ChevronDown, Check, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, X } from 'lucide-react';
 import { toWholeSeconds } from '@/lib/race-time';
 import { runnerResultPath } from '@/lib/event-slug';
+import { compareCategoryNames } from '@/lib/category-distance';
 import RunnerLoader from '@/components/ui/RunnerLoader';
 import { ECertificateModal, useECertificate } from '@/components/ECertificate';
 import BusyLabel from '@/components/ui/BusyLabel';
@@ -457,7 +458,7 @@ export default function FullResultsClient({ results, event }: Props) {
     }
   });
 
-  const uniqueCategories = useMemo(() => Array.from(new Set(results.map(r => r.category.name))).sort(), [results]);
+  const uniqueCategories = useMemo(() => Array.from(new Set(results.map(r => r.category.name))).sort(compareCategoryNames), [results]);
   const uniqueGenders = useMemo(() => Array.from(new Set(results.map(r => r.gender).filter(Boolean))).sort(), [results]);
 
   const selectedCategories = (table.getColumn('category')?.getFilterValue() as string[]) || [];
