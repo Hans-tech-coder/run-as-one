@@ -3,8 +3,9 @@ import { randomCodeBlock } from '@/lib/voucher-codes';
 
 /**
  * Pacer codes: what one is, what makes one valid, when the dashboard has to
- * nag about it, and which finishers on the public results are pacers (kept off
- * the podium — `pacerResultMatcher`).
+ * nag about it, which finishers on the results are pacers (kept off the
+ * podium — `pacerResultMatcher`), and the ranks once pacers are left out
+ * (`ranksWithoutPacers`).
  *
  * A pacer code is a **free entry for one named pacer, in one category of one
  * race** — the person an organizer asks to run a steady 21K so the field has
@@ -420,4 +421,103 @@ export function pacerResultMatcher(
   return result =>
     bibs.has(normalizeBibNumber(result.bibNumber)) ||
     namesByCategory.has(`${result.categoryId}|${normalizePacerName(result.name)}`);
+}
+
+/** What the ranking needs to know about one finisher, on top of who they are. */
+export interface RankedResult extends ResultIdentity {
+  id: string;
+  gender: string;
+  /** As uploaded; 0 for anyone who did not finish. */
+  categoryRank: number;
+  /** As uploaded, within the category; 0 for anyone who did not finish. */
+  genderRank: number;
+}
+
+/** A finisher's place once pacers are left out. Null ranks print as "-". */
+export interface PacerAwareRanks {
+  isPacer: boolean;
+  categoryRank: number | null;
+  genderRank: number | null;
+}
+
+/** The division a gender rank is counted in, the way the upload route groups it. */
+function genderKey(gender: string): string | null {
+  const g = gender.trim().toLowerCase();
+  if (g === 'male' || g === 'm') return 'M';
+  if (g === 'female' || g === 'f') return 'F';
+  return null;
+}
+
+/**
+ * Category and gender ranks **without the pacers** (owner, 2026-10-07).
+ *
+ * A pacer is not racing, so they hold no place: their ranks are null ("-")
+ * and everyone behind them moves up one for each pacer ahead of them in the
+ * same group — the category for Category Rank, the category's gender
+ * division for Gender Rank. The row itself stays where its time puts it.
+ *
+ * **Subtracted, not re-sorted.** The uploaded rank is the timer's ordering,
+ * ties included, and taking away the pacers ahead keeps that ordering exactly
+ * rather than inventing a second one from chip times.
+ *
+ * Worked out on read, never written back: the upload stays the timing
+ * company's raw sheet, and a bib entered or changed later moves every rank at
+ * once without a re-upload. Every page that prints a rank — the full
+ * leaderboard, a runner's page and certificate, the admin Race Results — reads
+ * it from here, so a runner is never #1 in one place and 2nd in another.
+ *
+ * `results` must hold **every** result of each category it ranks (the pacers
+ * ahead are what is counted). A rank of 0 means "did not finish" and is left
+ * as it is.
+ */
+export function ranksWithoutPacers(
+  results: readonly RankedResult[],
+  isPacer: (result: ResultIdentity) => boolean,
+): Map<string, PacerAwareRanks> {
+  const pacerFlags = new Map(results.map(result => [result.id, isPacer(result)]));
+
+  // The uploaded ranks the pacers hold, per group.
+  const pacerCategoryRanks = new Map<string, number[]>();
+  const pacerGenderRanks = new Map<string, number[]>();
+  for (const result of results) {
+    if (!pacerFlags.get(result.id)) continue;
+    if (result.categoryRank > 0) push(pacerCategoryRanks, result.categoryId, result.categoryRank);
+    const gender = genderKey(result.gender);
+    if (gender && result.genderRank > 0) {
+      push(pacerGenderRanks, `${result.categoryId}|${gender}`, result.genderRank);
+    }
+  }
+
+  const ranks = new Map<string, PacerAwareRanks>();
+  for (const result of results) {
+    if (pacerFlags.get(result.id)) {
+      ranks.set(result.id, { isPacer: true, categoryRank: null, genderRank: null });
+      continue;
+    }
+    const gender = genderKey(result.gender);
+    ranks.set(result.id, {
+      isPacer: false,
+      categoryRank: lessPacersAhead(
+        result.categoryRank,
+        pacerCategoryRanks.get(result.categoryId),
+      ),
+      genderRank: lessPacersAhead(
+        result.genderRank,
+        gender ? pacerGenderRanks.get(`${result.categoryId}|${gender}`) : undefined,
+      ),
+    });
+  }
+  return ranks;
+}
+
+function push(groups: Map<string, number[]>, key: string, rank: number) {
+  const list = groups.get(key);
+  if (list) list.push(rank);
+  else groups.set(key, [rank]);
+}
+
+/** This rank, less one for each pacer ranked ahead of it. 0 stays 0. */
+function lessPacersAhead(rank: number, pacerRanks: number[] | undefined): number {
+  if (rank <= 0 || !pacerRanks) return rank;
+  return rank - pacerRanks.filter(pacerRank => pacerRank < rank).length;
 }

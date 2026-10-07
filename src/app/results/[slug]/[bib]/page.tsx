@@ -8,7 +8,7 @@ import { genderDivision } from '@/lib/gender-division';
 import EventHeroBanner from '@/components/EventHeroBanner';
 import { canonicalResultsPath, eventByParam, resultsPath, runnerResultPath } from '@/lib/event-slug';
 import { toWholeSeconds } from '@/lib/race-time';
-import { pacerResultMatcherForEvent } from '@/lib/pacer-store';
+import { withPacerRanks } from '@/lib/pacer-store';
 
 /**
  * One runner's result, addressed by the number they wore: /results/[slug]/1042.
@@ -63,29 +63,33 @@ export default async function RunnerAnalyticsPage({
   const canonical = canonicalResultsPath(event, slug, `/${encodeURIComponent(result.bibNumber.trim() || result.id)}`);
   if (canonical) redirect(canonical);
 
-  // A pacer keeps their real rank here, as on the full leaderboard, and wears a
-  // Pacer pill that says why they are not on the Race Winners podium.
-  const isPacer = (await pacerResultMatcherForEvent(event.id))(result);
+  // The whole category, because a rank without pacers counts the pacers ahead
+  // (`ranksWithoutPacers`) — the same numbers the full leaderboard and the
+  // admin table print, so a runner is never #1 there and 2nd here. A pacer's
+  // ranks are null: "-" here, and no rank tile on their certificate.
+  const categoryResults = await withPacerRanks(
+    event.id,
+    await prisma.raceResult.findMany({
+      where: { categoryId: result.categoryId },
+      select: {
+        id: true, bibNumber: true, name: true, categoryId: true, gender: true,
+        categoryRank: true, genderRank: true, status: true,
+      },
+    }),
+  );
+  const ranks = categoryResults.find(row => row.id === result.id)!;
+  const isPacer = ranks.isPacer;
 
-  // Fetch total runners in this category to show "X out of Y"
-  const totalInCategory = await prisma.raceResult.count({
-    where: {
-      categoryId: result.categoryId,
-      status: 'FINISHED'
-    }
-  });
-
-  const totalInGender = await prisma.raceResult.count({
-    where: {
-      categoryId: result.categoryId,
-      gender: result.gender,
-      status: 'FINISHED'
-    }
-  });
+  // "X out of Y", where Y leaves the pacers out, as the ranks do.
+  const racing = categoryResults.filter(row => row.status === 'FINISHED' && !row.isPacer);
+  const totalInCategory = racing.length;
+  const totalInGender = racing.filter(
+    row => genderDivision(row.gender) === genderDivision(result.gender),
+  ).length;
 
   // Helper to format rank (1st, 2nd, 3rd, 4th)
-  const formatRank = (rank: number) => {
-    if (rank === 0) return '-';
+  const formatRank = (rank: number | null) => {
+    if (!rank) return '-';
     const j = rank % 10, k = rank % 100;
     if (j == 1 && k != 11) return rank + "st";
     if (j == 2 && k != 12) return rank + "nd";
@@ -225,8 +229,10 @@ export default async function RunnerAnalyticsPage({
                   <Trophy size={14} className="text-yellow-500 drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]" /> Overall Rank
                 </div>
                 <div className="text-2xl sm:text-3xl font-bold text-white mb-1 flex items-baseline gap-2">
-                  {formatRank(result.categoryRank)}
-                  <span className="text-sm font-normal text-secondary/50 font-mono">/ {totalInCategory}</span>
+                  {formatRank(ranks.categoryRank)}
+                  {ranks.categoryRank != null && (
+                    <span className="text-sm font-normal text-secondary/50 font-mono">/ {totalInCategory}</span>
+                  )}
                 </div>
                 <div className="text-xs text-secondary/60 break-words">in {result.category.name}</div>
               </div>
@@ -237,8 +243,10 @@ export default async function RunnerAnalyticsPage({
                   <Medal size={14} className="text-accent-blue drop-shadow-[0_0_10px_rgba(59,130,246,0.5)]" /> Gender Rank
                 </div>
                 <div className="text-2xl sm:text-3xl font-bold text-white mb-1 flex items-baseline gap-2">
-                  {formatRank(result.genderRank)}
-                  <span className="text-sm font-normal text-secondary/50 font-mono">/ {totalInGender}</span>
+                  {formatRank(ranks.genderRank)}
+                  {ranks.genderRank != null && (
+                    <span className="text-sm font-normal text-secondary/50 font-mono">/ {totalInGender}</span>
+                  )}
                 </div>
                 <div className="text-xs text-secondary/60">in {genderWord} division</div>
               </div>
@@ -271,7 +279,10 @@ export default async function RunnerAnalyticsPage({
 
           {/* Certificate Generator */}
           <React.Suspense fallback={<div className="p-8 text-center text-secondary">Loading certificate...</div>}>
-            <ECertificateGenerator result={result} event={result.event} />
+            <ECertificateGenerator
+              result={{ ...result, categoryRank: ranks.categoryRank, genderRank: ranks.genderRank }}
+              event={result.event}
+            />
           </React.Suspense>
 
         </div>

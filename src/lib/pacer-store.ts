@@ -1,5 +1,10 @@
 import prisma from '@/lib/db';
-import { PACER_DISCOUNT_TYPE, pacerResultMatcher } from '@/lib/pacer';
+import {
+  PACER_DISCOUNT_TYPE,
+  pacerResultMatcher,
+  ranksWithoutPacers,
+  type RankedResult,
+} from '@/lib/pacer';
 
 /**
  * Reading pacers out of the database.
@@ -160,6 +165,30 @@ export async function pacerResultMatcherForEvent(eventId: string) {
       categoryId: pacer.categories[0]?.categoryId ?? null,
     })),
   );
+}
+
+/**
+ * These results with each one's pacer flag and its ranks **without the
+ * pacers** (`ranksWithoutPacers`): a pacer's ranks come back null, everyone
+ * else's move up past them.
+ *
+ * `results` must hold every result of each category being shown — the full
+ * leaderboard and the admin table pass the whole event; a runner's page passes
+ * their category. Only the flag and the adjusted numbers reach the page, never
+ * the pacer list.
+ */
+export async function withPacerRanks<T extends RankedResult>(eventId: string, results: T[]) {
+  const isPacer = await pacerResultMatcherForEvent(eventId);
+  const ranks = ranksWithoutPacers(results, isPacer);
+  return results.map(result => {
+    const adjusted = ranks.get(result.id)!;
+    return {
+      ...result,
+      isPacer: adjusted.isPacer,
+      categoryRank: adjusted.categoryRank,
+      genderRank: adjusted.genderRank,
+    };
+  });
 }
 
 /**

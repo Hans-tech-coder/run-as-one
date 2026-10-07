@@ -6,7 +6,7 @@ import { Suspense } from 'react';
 import FullResultsClient from './FullResultsClient';
 import EventHeroBanner from '@/components/EventHeroBanner';
 import { canonicalResultsPath, eventByParam } from '@/lib/event-slug';
-import { pacerResultMatcherForEvent } from '@/lib/pacer-store';
+import { withPacerRanks } from '@/lib/pacer-store';
 import { genderDivision } from '@/lib/gender-division';
 
 export default async function FullResultsPage({ 
@@ -41,11 +41,13 @@ export default async function FullResultsPage({
     ]
   });
 
-  // A yes/no per finisher, so the table can tag pacers. Only the flag goes to
-  // the client — never the pacer list itself.
-  const isPacer = await pacerResultMatcherForEvent(event.id);
+  // Each finisher's pacer flag and their ranks without the pacers: a pacer's
+  // ranks read "-", everyone behind them moves up. The rows keep their order,
+  // so a pacer still sits where their time puts them. Only the flag and the
+  // numbers go to the client — never the pacer list itself.
+  const ranked = await withPacerRanks(event.id, results);
   // The sheet's "M"/"F" reach the table, the cards and the Gender filter as words.
-  const tagged = results.map(result => ({ ...result, gender: genderDivision(result.gender), isPacer: isPacer(result) }));
+  const tagged = ranked.map(result => ({ ...result, gender: genderDivision(result.gender) }));
 
   return (
     <div className="relative w-full">

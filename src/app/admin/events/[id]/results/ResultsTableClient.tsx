@@ -34,8 +34,9 @@ import { compareCategoryNames } from '@/lib/category-distance';
 interface Result {
   id: string;
   overallRank: number;
-  categoryRank: number;
-  genderRank: number;
+  /** Without pacers (`ranksWithoutPacers`); null for a pacer, shown as "-". */
+  categoryRank: number | null;
+  genderRank: number | null;
   bibNumber: string;
   name: string;
   gender: string;
@@ -44,6 +45,11 @@ interface Result {
   gunTime: string | null;
   /** One of the race's pacers (`pacerResultMatcher`): kept off the public podium. */
   isPacer?: boolean;
+}
+
+/** A rank as printed: "#3", or "-" for a pacer, who holds no place. */
+function rankLabel(rank: number | null): string {
+  return rank == null ? '-' : `#${rank}`;
 }
 
 interface ResultsTableClientProps {
@@ -184,14 +190,18 @@ export default function ResultsTableClient({ results, event }: ResultsTableClien
       }
     },
     {
-      accessorKey: "categoryRank",
+      // A pacer has no rank; sorted as the largest, so they sit after every
+      // ranked finisher rather than wherever a null happens to land.
+      id: "categoryRank",
+      accessorFn: (row) => row.categoryRank ?? Number.MAX_SAFE_INTEGER,
       header: "Category Rank",
-      cell: ({ row }) => <span className="text-secondary">#{row.original.categoryRank}</span>,
+      cell: ({ row }) => <span className="text-secondary">{rankLabel(row.original.categoryRank)}</span>,
     },
     {
-      accessorKey: "genderRank",
+      id: "genderRank",
+      accessorFn: (row) => row.genderRank ?? Number.MAX_SAFE_INTEGER,
       header: "Gender Rank",
-      cell: ({ row }) => <span className="text-secondary">#{row.original.genderRank}</span>,
+      cell: ({ row }) => <span className="text-secondary">{rankLabel(row.original.genderRank)}</span>,
     },
     {
       accessorKey: "chipTime",
@@ -404,8 +414,8 @@ export default function ResultsTableClient({ results, event }: ResultsTableClien
           fields={row => [
             { label: 'Category', value: row.original.category.name },
             { label: 'Gender', value: row.original.gender || '-' },
-            { label: 'Category Rank', value: `#${row.original.categoryRank}` },
-            { label: 'Gender Rank', value: `#${row.original.genderRank}` },
+            { label: 'Category Rank', value: rankLabel(row.original.categoryRank) },
+            { label: 'Gender Rank', value: rankLabel(row.original.genderRank) },
             { label: 'Chip Time', value: <span className="tabular-nums">{toWholeSeconds(row.original.chipTime)}</span> },
             {
               label: 'Gun Time',

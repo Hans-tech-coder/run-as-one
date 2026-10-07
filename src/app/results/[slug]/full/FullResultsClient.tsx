@@ -31,8 +31,9 @@ interface Result {
   category: { id: string, name: string };
   chipTime: string;
   gunTime?: string | null;
-  categoryRank?: number;
-  genderRank?: number;
+  /** Without pacers (`ranksWithoutPacers`); null for a pacer, shown as "-". */
+  categoryRank?: number | null;
+  genderRank?: number | null;
   /** Whether this finisher is one of the race's pacers (see pacerResultMatcher). */
   isPacer?: boolean;
 }
@@ -41,6 +42,11 @@ interface Result {
  * The tag beside a pacer's bib. Their rank is real and stays; the tag says why
  * they are not on the Race Winners podium.
  */
+/** A rank as printed: "#3", or "-" for a pacer, who holds no place. */
+function rankLabel(rank: number | null | undefined): string {
+  return rank == null ? '-' : `#${rank}`;
+}
+
 function PacerTag() {
   return (
     <span className="shrink-0 whitespace-nowrap bg-accent-orange/10 text-accent-orange px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border border-accent-orange/30">
@@ -394,12 +400,12 @@ export default function FullResultsClient({ results, event }: Props) {
     {
       accessorKey: "categoryRank",
       header: "Category Rank",
-      cell: ({ row }) => <span className="font-mono text-white">#{row.original.categoryRank}</span>,
+      cell: ({ row }) => <span className="font-mono text-white">{rankLabel(row.original.categoryRank)}</span>,
     },
     {
       accessorKey: "genderRank",
       header: "Gender Rank",
-      cell: ({ row }) => <span className="font-mono text-white">#{row.original.genderRank}</span>,
+      cell: ({ row }) => <span className="font-mono text-white">{rankLabel(row.original.genderRank)}</span>,
     },
     {
       accessorKey: "gender",
@@ -685,11 +691,11 @@ export default function FullResultsClient({ results, event }: Props) {
                     </div>
                     <div className="min-w-0">
                       <span className="text-[10px] uppercase tracking-wider text-secondary block mb-1 whitespace-nowrap">Cat. Rank</span>
-                      <span className="font-mono font-bold text-base leading-none text-white tabular-nums">#{r.categoryRank}</span>
+                      <span className="font-mono font-bold text-base leading-none text-white tabular-nums">{rankLabel(r.categoryRank)}</span>
                     </div>
                     <div className="min-w-0">
                       <span className="text-[10px] uppercase tracking-wider text-secondary block mb-1 whitespace-nowrap">Gender Rank</span>
-                      <span className="font-mono font-bold text-base leading-none text-white tabular-nums">#{r.genderRank}</span>
+                      <span className="font-mono font-bold text-base leading-none text-white tabular-nums">{rankLabel(r.genderRank)}</span>
                     </div>
                   </div>
                 </div>
