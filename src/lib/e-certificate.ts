@@ -1,16 +1,25 @@
+/**
+ * A runner's e-certificate as a PDF: the organizer's template when there is
+ * one, otherwise Run As One's own design, which alone carries the small
+ * "e-certificate by Run As One" byline.
+ */
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { drawDefaultCertificate } from '@/lib/e-certificate-default';
 import { toWholeSeconds } from '@/lib/race-time';
 
 /** What the certificate prints about the runner. */
 export interface CertificateResult {
   name: string;
   chipTime: string;
+  bibNumber?: string | null;
   category: { name: string };
 }
 
 /** What the certificate takes from the event: its title and the organizer's template. */
 export interface CertificateEvent {
   title?: string | null;
+  date?: string | null;
+  location?: string | null;
   certificateTemplate?: string | null;
   certificateCoordinates?: string | null;
 }
@@ -18,9 +27,9 @@ export interface CertificateEvent {
 /**
  * Draws one runner's e-certificate and returns the PDF's bytes. The organizer's
  * uploaded template is the page when there is one (a PDF, or a PNG/JPG laid on
- * an A4 landscape page); without one — or when it cannot be read — a plain
- * bordered certificate is drawn instead. The name, time and category go at the
- * heights the organizer set in the event form.
+ * an A4 landscape page), and the name, time and category go at the heights the
+ * organizer set in the event form. Without one — or when it cannot be read —
+ * Run As One's own certificate is drawn instead (`e-certificate-default.ts`).
  *
  * Browser-only: it fetches the template. Callers load it with `import()` so a
  * page does not carry pdf-lib until someone actually asks for a certificate.
@@ -59,37 +68,7 @@ export async function buildCertificatePdf(result: CertificateResult, event: Cert
     }
   }
 
-  let isFallback = false;
-  if (!pdfDoc) {
-    isFallback = true;
-    pdfDoc = await PDFDocument.create();
-    const page = pdfDoc.addPage([842, 595]); // A4 Landscape
-
-    page.drawRectangle({
-      x: 20, y: 20, width: 802, height: 555,
-      borderColor: rgb(1, 0.42, 0), // accent-orange
-      borderWidth: 4,
-    });
-
-    const titleFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-    const title = "CERTIFICATE OF COMPLETION";
-    page.drawText(title, {
-      x: (842 - titleFont.widthOfTextAtSize(title, 42)) / 2,
-      y: 450,
-      size: 42,
-      font: titleFont,
-      color: rgb(0, 0, 0),
-    });
-
-    const evTitle = event.title?.toUpperCase() || "RUNNING EVENT";
-    page.drawText(evTitle, {
-      x: (842 - titleFont.widthOfTextAtSize(evTitle, 24)) / 2,
-      y: 390,
-      size: 24,
-      font: titleFont,
-      color: rgb(0.2, 0.2, 0.2),
-    });
-  }
+  if (!pdfDoc) return drawDefaultCertificate(result, event);
 
   const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -100,11 +79,11 @@ export async function buildCertificatePdf(result: CertificateResult, event: Cert
 
   const getY = (percentage: number) => height * (1 - (percentage / 100));
 
-  let nameY = isFallback ? 280 : getY(50);
-  let timeY = isFallback ? 220 : getY(60);
-  let catY = isFallback ? 180 : getY(70);
+  let nameY = getY(50);
+  let timeY = getY(60);
+  let catY = getY(70);
 
-  if (event.certificateCoordinates && !isFallback) {
+  if (event.certificateCoordinates) {
     try {
       const coords = JSON.parse(event.certificateCoordinates);
       if (coords.nameY !== undefined) nameY = getY(Number(coords.nameY));

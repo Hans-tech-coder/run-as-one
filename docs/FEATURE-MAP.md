@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-37 pages · 52 API routes · 79 modules in `src/lib` · 362 files · 75,508 lines
+37 pages · 52 API routes · 80 modules in `src/lib` · 363 files · 75,811 lines
 
 ---
 
@@ -149,7 +149,8 @@ the file itself.
 | [`css-duration.ts`](../src/lib/css-duration.ts) | A motion token's length in milliseconds, read from `:root` — client only. |
 | [`db.ts`](../src/lib/db.ts) | — |
 | [`discount.ts`](../src/lib/discount.ts) | What a promo code is worth, and why it cannot be used. |
-| [`e-certificate.ts`](../src/lib/e-certificate.ts) | — |
+| [`e-certificate-default.ts`](../src/lib/e-certificate-default.ts) | Run As One's own e-certificate, drawn when an event has no organizer template: the site's dark look, the orange→blue gradient, and the small "e-cer… |
+| [`e-certificate.ts`](../src/lib/e-certificate.ts) | A runner's e-certificate as a PDF: the organizer's template when there is one, otherwise Run As One's own design, which alone carries the small "e-… |
 | [`email-address.ts`](../src/lib/email-address.ts) | What counts as an email address, in one place. |
 | [`email-delivery.ts`](../src/lib/email-delivery.ts) | Whether the runner actually got their email, and what happens when they did not. |
 | [`email-document.ts`](../src/lib/email-document.ts) | How every email is built and sent, split out of `email.ts` (`UNPAID_FOLLOWUP_PLAN.md` Batch 4): the block document model, `renderHtml` / `renderTex… |
@@ -262,5 +263,5 @@ when a task touches one, split it before editing rather than after.
 | 449 | [`src/app/admin/page.tsx`](../src/app/admin/page.tsx) |
 | 443 | [`src/app/admin/events/[id]/registrants/page.tsx`](../src/app/admin/events/[id]/registrants/page.tsx) |
 | 438 | [`src/lib/actor.ts`](../src/lib/actor.ts) |
+| 428 | [`src/app/admin/events/[id]/results/ResultsTableClient.tsx`](../src/app/admin/events/[id]/results/ResultsTableClient.tsx) |
 | 424 | [`src/lib/pacer.ts`](../src/lib/pacer.ts) |
-| 416 | [`src/app/admin/events/[id]/results/ResultsTableClient.tsx`](../src/app/admin/events/[id]/results/ResultsTableClient.tsx) |
