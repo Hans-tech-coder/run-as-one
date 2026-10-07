@@ -1,5 +1,6 @@
 import React from 'react';
-import { BadgeCheck, CalendarDays, Hourglass, MapPin, ShoppingCart, Users } from 'lucide-react';
+import Link from 'next/link';
+import { ArrowRight, BadgeCheck, BookOpen, CalendarDays, Hourglass, MapPin, ShoppingCart, Users } from 'lucide-react';
 import EventImage from '@/components/EventImage';
 import { formatEventDayShort, formatEventInstant } from '@/lib/event-schedule';
 import type { RegistrantCounts, ViewerEventSummary } from '@/lib/client-summary';
@@ -28,6 +29,11 @@ import DashboardHeader from './DashboardHeader';
  * apart, with one line saying what they are, because a viewer has no list to
  * open and look for itself.
  *
+ * Under the tiles, one link to the e-certificate template guide: the one
+ * team page a viewer may open, since a client preparing a race is the person
+ * who has to brief its designer. It says what it opens in words, never as a
+ * bare chevron.
+ *
  * Server-rendered, no client state. The route's wait draws the same tiles and
  * cards (`route-loading-shape.ts`, `VIEWER_OVERVIEW_SHAPE`).
  */
@@ -50,6 +56,23 @@ export default function ViewerDashboard({
           <Tile title="Paid" value={totals.paid} icon={<BadgeCheck size={20} />} />
           <Tile title="Awaiting Verification" value={totals.awaiting} icon={<Hourglass size={20} />} />
           <Tile title="Unpaid Checkouts" value={totals.unpaid} icon={<ShoppingCart size={20} />} />
+        </div>
+
+        <div className="admin-panel viewer-guide-card">
+          <Link href="/admin/certificate-guide" className="overview-row">
+            <span className="viewer-guide-icon" aria-hidden="true">
+              <BookOpen size={20} />
+            </span>
+            <span className="overview-row-main">
+              <span className="overview-row-title">Preparing your e-certificate?</span>
+              <span className="overview-row-meta">
+                Where things go on the page, the file specs and a checklist to hand your designer.
+              </span>
+            </span>
+            <span className="viewer-guide-go">
+              Read the template guide <ArrowRight size={16} aria-hidden="true" />
+            </span>
+          </Link>
         </div>
 
         {events.length === 0 ? (

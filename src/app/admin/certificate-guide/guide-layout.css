@@ -1,0 +1,134 @@
+/*
+ * The guide page's two columns and its "On this page" list (GuideToc). Split
+ * from certificate-guide.css, which holds the article itself.
+ */
+
+/* ── The page: the article, and from `xl` up the contents beside it ──
+   The article used to stop at 1040px and leave the rest of a wide screen
+   empty. Now it takes the width and the contents list takes the right-hand
+   column; past 1440px (a very wide monitor) the pair is centred instead of
+   stretching, so the panels never grow into banners. Prose inside keeps its
+   own ~70-character measure either way. */
+.cert-guide-layout {
+  display: grid;
+  gap: 48px;
+  max-width: 1440px;
+  margin-inline: auto;
+  min-width: 0;
+}
+
+/* The aside (Save as PDF over the contents) is the right-hand column from
+   `xl` up; below it the aside is not drawn and the same action closes the
+   page instead (`.cert-guide-save-end`). One of the two is ever on screen. */
+.cert-guide-aside { display: none; }
+
+@media (min-width: 1280px) {
+  .cert-guide-layout { grid-template-columns: minmax(0, 1fr) 240px; }
+
+  .cert-guide-aside {
+    display: grid;
+    gap: 28px;
+    position: sticky;
+    /* Under the 80px sticky header, with the same air the content has. */
+    top: 112px;
+    align-self: start;
+  }
+}
+
+.cert-guide-save {
+  display: grid;
+  gap: 10px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--dash-hairline);
+}
+
+.cert-guide-save .btn-light,
+.cert-guide-save-end .btn-light { width: 100%; }
+
+.cert-guide-save-hint {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+/* Below `xl`: the action at the foot of the page, a quiet panel of its own. */
+.cert-guide-save-end {
+  display: grid;
+  gap: 12px;
+  padding: var(--space-lg);
+  border: 1px solid var(--dash-hairline);
+  border-radius: var(--radius-xl);
+  background: var(--dash-surface);
+}
+
+.cert-guide-save-end h2 {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.cert-guide-save-end .cert-guide-save-hint { font-size: 0.875rem; }
+
+@media (min-width: 640px) {
+  /* A tablet has the width for the button to sit at its own size. */
+  .cert-guide-save-end .btn-light { width: auto; justify-self: start; }
+}
+
+/* From `xl` up the aside carries the button, so the foot of the page does
+   not repeat it. This must stay after the panel's own `display: grid`
+   above: an earlier copy of it sat before that rule and lost to it, and the
+   button showed twice on a desktop. */
+@media (min-width: 1280px) {
+  .cert-guide-save-end { display: none; }
+}
+
+.cert-guide-toc-title {
+  margin: 0 0 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.cert-guide-toc ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-left: 1px solid var(--dash-border);
+}
+
+.cert-guide-toc a {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  margin-left: -1px;
+  padding: 6px 14px;
+  border-left: 2px solid transparent;
+  font-size: 0.875rem;
+  line-height: 1.35;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: color 150ms ease, border-color 150ms ease;
+}
+
+.cert-guide-toc a:hover { color: var(--text-primary); }
+
+.cert-guide-toc a[aria-current='location'] {
+  border-left-color: var(--accent-orange);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.cert-guide-toc a:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cert-guide-toc a { transition: none; }
+}

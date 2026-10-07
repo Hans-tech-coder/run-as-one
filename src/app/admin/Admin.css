@@ -3889,6 +3889,45 @@ textarea.form-input {
    the min(100%, …) keeps a 360px phone from being handed a column wider than
    itself, as .metrics-grid does. Paid and pending wear the status badges'
    green and amber, so the colours mean here what they mean everywhere else. */
+/* The client viewer's link to the e-certificate template guide, between the
+   tiles and the race cards: one overview row, its action said in words. On a
+   phone the action wraps under the text rather than squeezing it. */
+.viewer-guide-card {
+  margin-bottom: 32px;
+}
+
+.viewer-guide-card .overview-row {
+  flex-wrap: wrap;
+  padding-block: 16px;
+}
+
+.viewer-guide-card .overview-row-main {
+  flex-basis: 220px;
+}
+
+.viewer-guide-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--accent-blue) 12%, transparent);
+  color: var(--accent-blue-text);
+}
+
+.viewer-guide-go {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--accent-blue-text);
+  white-space: nowrap;
+}
+
 .viewer-event-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));

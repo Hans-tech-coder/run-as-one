@@ -1,0 +1,201 @@
+/*
+ * The e-certificate guide on paper: the copy `PrintableGuide` portals onto
+ * `<body>`, and the print rules that show it alone. Split from
+ * certificate-guide.css, which holds the screen.
+ *
+ * Every print rule is gated on `body:has(> .cert-guide-print-copy)`, so
+ * printing any other dashboard screen is untouched. The copy carries
+ * `data-theme="light"`, which is what turns the tokens light; the few
+ * literals here are the paper itself, white whatever the theme.
+ *
+ * **Paper is a document, not the dashboard.** The screen's boxed panels would
+ * spend a third of each sheet on borders and padding, so on paper a section
+ * is a heading over a hairline, and the type is set in points. The first
+ * version kept whole sections from breaking, and each one, being taller than
+ * what was left of its page, started a new sheet: six pages, mostly white.
+ * Now only the small units are kept whole (the diagram, a table row, a tile, a
+ * list item) and a heading is kept with what follows it, which lays the guide
+ * out on three A4 pages.
+ */
+
+/* It exists only for the printer, so it is never drawn on screen. */
+.cert-guide-print-copy { display: none; }
+
+.cert-guide-print-head { display: grid; gap: 4px; }
+
+.cert-guide-print-head h1 {
+  margin: 6px 0 0;
+  font-family: var(--font-sans);
+  font-size: 20pt;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.cert-guide-print-head p {
+  margin: 0;
+  font-size: 9pt;
+  color: var(--text-secondary);
+}
+
+.cert-guide-print-logo { --rao-logo-size: 26px; }
+
+@media print {
+  /* No page margin, so the browser has nowhere to print its own header and
+     footer; the frame's repeated rows below put the margin back. */
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  html:has(> body > .cert-guide-print-copy),
+  body:has(> .cert-guide-print-copy) {
+    background: #fff !important;
+  }
+
+  body:has(> .cert-guide-print-copy) > *:not(.cert-guide-print-copy) {
+    display: none !important;
+  }
+
+  body:has(> .cert-guide-print-copy) > .cert-guide-print-copy {
+    display: block;
+    padding: 0 14mm;
+    background: #fff;
+    /* The tints carry meaning (which zone is which), so keep them even when
+       the dialog's "Background graphics" is off. */
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .cert-guide-print-frame {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .cert-guide-print-frame td { padding: 0; }
+
+  /* The top and bottom margin of every sheet. */
+  .cert-guide-print-gap { height: 12mm; }
+
+  .cert-guide-print-copy .cert-guide {
+    --cg-paper: #fff;
+    display: block;
+    max-width: none;
+    font-size: 10pt;
+  }
+
+  .cert-guide-print-copy .cert-guide > * + * { margin-top: 6mm; }
+
+  .cert-guide-print-copy .cert-guide-intro { gap: 4px; }
+
+  .cert-guide-print-copy .cert-guide-lede {
+    max-width: none;
+    font-size: 10.5pt;
+    line-height: 1.5;
+  }
+
+  /* A section: its heading over a hairline, then its content, unboxed. */
+  .cert-guide-print-copy .admin-panel {
+    overflow: visible;
+    border: 0;
+    border-top: 1px solid var(--ink-15);
+    border-radius: 0;
+    background: none;
+  }
+
+  .cert-guide-print-copy .admin-panel-header {
+    padding: 3mm 0 2.5mm;
+    border: 0;
+    break-after: avoid;
+  }
+
+  .cert-guide-print-copy .admin-panel-title { font-size: 13pt; }
+
+  .cert-guide-print-copy .cert-guide-eyebrow {
+    margin-bottom: 1px;
+    font-size: 7.5pt;
+  }
+
+  .cert-guide-print-copy .admin-panel-content {
+    display: block;
+    padding: 0;
+  }
+
+  .cert-guide-print-copy .cert-guide-body > * + * { margin-top: 3mm; }
+
+  .cert-guide-print-copy .cert-guide-note,
+  .cert-guide-print-copy .cert-guide-specs,
+  .cert-guide-print-copy .cert-guide-col ul,
+  .cert-guide-print-copy .cert-guide-send li,
+  .cert-guide-print-copy .cert-guide-check {
+    max-width: none;
+    font-size: 9.5pt;
+    line-height: 1.45;
+  }
+
+  .cert-guide-print-copy .cert-guide-diagram { min-width: 0; }
+
+  .cert-guide-print-copy .cert-guide-legend {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2mm 6mm;
+  }
+
+  .cert-guide-print-copy .cert-guide-legend li { font-size: 9pt; line-height: 1.4; }
+
+  .cert-guide-print-copy .cert-guide-specs th,
+  .cert-guide-print-copy .cert-guide-specs td { padding: 1.8mm 0; }
+
+  .cert-guide-print-copy .cert-guide-specs th { width: 24%; }
+
+  /* Two to a row: at four, a label and its tag shared 40mm and "Rank:
+     division, with overall under it" ran to four lines. */
+  .cert-guide-print-copy .cert-guide-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2mm;
+  }
+
+  .cert-guide-print-copy .cert-guide-field {
+    min-height: 0;
+    padding: 1.6mm 3mm;
+    font-size: 9pt;
+  }
+
+  .cert-guide-print-copy .cert-guide-tag { padding: 2px 4px; font-size: 6pt; }
+
+  .cert-guide-print-copy .cert-guide-dodont {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4mm;
+  }
+
+  .cert-guide-print-copy .cert-guide-col { gap: 2mm; padding: 3.5mm 4mm; }
+  .cert-guide-print-copy .cert-guide-col h3 { font-size: 11pt; }
+  .cert-guide-print-copy .cert-guide-col ul { gap: 1.2mm; }
+
+  .cert-guide-print-copy .cert-guide-send li { padding: 2mm 0; }
+
+  .cert-guide-print-copy .cert-guide-check {
+    min-height: 0;
+    padding: 1.8mm 0;
+    cursor: auto;
+  }
+
+  .cert-guide-print-copy .cert-guide-box { width: 4.5mm; height: 4.5mm; }
+
+  .cert-guide-print-copy .cert-guide-footer {
+    max-width: none;
+    padding-top: 0;
+    font-size: 8.5pt;
+  }
+
+  /* The units that must never be cut in two. */
+  .cert-guide-print-copy .cert-guide-print-head,
+  .cert-guide-print-copy .cert-guide-diagram-scroll,
+  .cert-guide-print-copy .cert-guide-legend li,
+  .cert-guide-print-copy .cert-guide-specs tr,
+  .cert-guide-print-copy .cert-guide-field,
+  .cert-guide-print-copy .cert-guide-col,
+  .cert-guide-print-copy .cert-guide-send li,
+  .cert-guide-print-copy .cert-guide-check,
+  .cert-guide-print-copy .cert-guide-note {
+    break-inside: avoid;
+  }
+}

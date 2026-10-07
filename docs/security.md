@@ -104,7 +104,12 @@
 - **A client viewer reaches registrant counts of its own client's events and
   nothing else**, enforced on the server rather than by hidden links. Its one
   screen is the Overview (`client-summary.ts`, which asks `event:view-summary`
-  with each event's `clientId`) plus its own Settings. **Every other dashboard
+  with each event's `clientId`) plus its own Settings and the
+  **E-Certificate Guide** (`/admin/certificate-guide`). The guide is the one
+  team-side page a viewer may open, and it gates on `requireActor()` alone
+  because it holds no data: the same static text for every reader, with no
+  query behind it, so there is nothing for a viewer to see that another
+  client could not. **Every other dashboard
   page calls `requireTeamActor()`** (`actor.ts`), which answers a viewer with
   `forbidden()` **before reading anything** — so the answer is identical for
   every id in the URL — and `admin/forbidden.tsx` draws *Not Part of Your View*

@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import {
+  BookOpen,
   Building2,
   Calendar,
   Flag,
@@ -83,15 +84,16 @@ export default function AdminShell({
   // screens, then the people work — but nine rows under one MENU label showed
   // none of it. They are handed over grouped now (DASHBOARD_SHELL_PLAN.md,
   // Batch 1); the shell drops a group nobody's role fills, and only draws the
-  // headings when more than one of them survives, so a validator's two rows
-  // and a client viewer's one are not labelled at all.
+  // headings when more than one of them survives, so a validator's rows and
+  // a client viewer's two are not labelled at all.
   const navGroups: DashboardNavGroup[] = [
     { label: null, items: [{ name: 'Dashboard', path: '/admin', icon: <LayoutDashboard size={20} /> }] },
     {
       label: 'Races',
       items: [
         // Everyone on Run As One's team; never a client viewer, whose sidebar
-        // is Dashboard and Settings alone (ADMIN_MERGE_PLAN.md, Batch 4).
+        // is Dashboard and the E-Certificate Guide (ADMIN_MERGE_PLAN.md,
+        // Batch 4; ECERT_GUIDE_PAGE_PLAN.md), with Settings in the account menu.
         ...((user?.nav.events ?? true)
           ? [{ name: 'Events', path: '/admin/events', icon: <Calendar size={20} /> }]
           : []),
@@ -126,6 +128,16 @@ export default function AdminShell({
         ...(user?.nav.activity
           ? [{ name: 'Activity', path: '/admin/activity', icon: <History size={20} /> }]
           : []),
+      ],
+    },
+    {
+      // Everyone signed in, client viewers included: the guide is static text
+      // with no data in it (certificate-guide/page.tsx). Its own trailing
+      // group, so the team's groups keep their meaning; alone with Dashboard
+      // in a viewer's sidebar, it goes unlabelled like the rest.
+      label: 'Help',
+      items: [
+        { name: 'E-Certificate Guide', path: '/admin/certificate-guide', icon: <BookOpen size={20} /> },
       ],
     },
   ];

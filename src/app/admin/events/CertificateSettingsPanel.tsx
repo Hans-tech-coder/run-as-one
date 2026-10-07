@@ -103,6 +103,17 @@ export default function CertificateSettingsPanel({
               </div>
             </div>
           </div>
+          {/* A new tab, because this sits inside the event form and leaving
+              would drop an unsaved template or settings change. */}
+          <a
+            href="/admin/certificate-guide"
+            target="_blank"
+            rel="noopener"
+            className="mt-2 inline-flex min-h-11 items-center gap-2 text-sm text-accent-blue-ink"
+          >
+            <ExternalLink size={16} aria-hidden="true" /> Template guide
+            <span className="sr-only">(opens in a new tab)</span>
+          </a>
         </div>
 
         {template && (

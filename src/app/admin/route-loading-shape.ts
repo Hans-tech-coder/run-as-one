@@ -249,6 +249,14 @@ const EXACT: Record<string, RouteShape> = {
     panels: [{ fields: [220] }, { fields: [543] }],
     lg: { panels: [{ rows: [80] }, { rows: [195] }] },
   },
+  // The e-certificate guide, a document: its intro (drawn as a panel), the
+  // layout panel, whose diagram is the tall part, and the file specifications
+  // under it; the rest is below the fold. A client viewer reaches this page
+  // too, and gets the same shape.
+  '/admin/certificate-guide': {
+    panels: [{ fields: [171] }, { fields: [986] }, { fields: [712] }],
+    lg: { panels: [{ rows: [16] }, { rows: [930] }, { rows: [313] }] },
+  },
   // Search, then the status chips and Sort over two rows of 44px. A client's
   // row carries its email under the name: 73px, as on the three below.
   '/admin/clients': {

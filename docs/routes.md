@@ -115,10 +115,45 @@ race is the viewer's to open. The grid is one column on a phone and ~340px
 columns after; a category's counts drop under its name when they cannot share
 the line. With no linked race the tiles read 0 over *No events linked yet*,
 naming the client. The wait draws four tiles over three event cards
-(`VIEWER_OVERVIEW_SHAPE`). A viewer's sidebar is **Dashboard and Settings
-only**, and **every other `/admin` screen answers it with *Not Part of Your
-View*** (`admin/forbidden.tsx`, §7) — Settings stays, name, email and password
-as for anyone. Everyone else's `/admin` is the
+(`VIEWER_OVERVIEW_SHAPE`). Between the tiles and the cards, one link row —
+*Preparing your e-certificate?* … **Read the template guide →** — opens
+`/admin/certificate-guide`. A viewer's sidebar is **Dashboard and the
+E-Certificate Guide**, Settings in the account menu, and **every other
+`/admin` screen answers it with *Not Part of Your View*** (`admin/forbidden.tsx`,
+§7) — Settings stays, name, email and password as for anyone.
+
+**`/admin/certificate-guide` is the e-certificate template guide**
+(`ECERT_GUIDE_PAGE_PLAN.md`, `admin/certificate-guide/`), for **everyone signed
+in, client viewers included** — `requireActor()`, not `requireTeamActor()`,
+because it is static text with no data in it (§7). It tells an organizer's
+designer how to make artwork the app can print on: the layout diagram
+(`GuideDiagram`, its content-area band drawn from `CONTENT_AREA_PRESETS`), the
+file specs (the size limit read from `MAX_UPLOAD_MB`), what is printed for each
+runner (Always / Optional tiles, and a line on the pacer edition), do and
+don't, what to send with the file, and a 7-item checklist that is not saved
+(`GuideChecklist`). Every number that is a constant in code is read from it, so
+the guide cannot drift from the certificate (`GuideDocument`'s header lists
+which rule lives where). **Save as PDF** is `window.print()`
+over a light copy portalled onto `<body>` (`PrintableGuide`, the consent
+sheet's pattern; the copy sets `data-theme="light"`, so the tokens turn light),
+because the designer usually has no account. On paper (`guide-print.css`) a
+section is a heading over a hairline rather than a boxed panel, only small
+units are kept whole, and the page margin is 0 with the copy inside a
+one-cell table whose empty header and footer rows repeat as the margin, so
+the browser has nowhere to stamp its date and URL: three A4 pages. **The
+button is not in the page header** (no other dashboard screen puts an action
+there on a phone): from `xl` up it heads an aside to the right of the
+article, sticky under the header, over an **On this page** list (`GuideToc`)
+that marks the section being read; a link scrolls to it (instantly under
+reduced motion) and replaces the hash, so Back still leaves the page. Below
+`xl` the aside is not drawn and the button closes the page in its own
+*Sending this to a designer?* panel. Either way its one-line hint says the
+print dialog opens with "Save as PDF" as a destination. It is reached from
+the sidebar's **Help** group (its own trailing group; unlabelled in a viewer's
+two-row sidebar), the quick jump, the viewer's Overview, and a **Template
+guide** link under the template upload in E-Certificate Settings, which opens
+in a new tab so an unsaved edit is not lost. `robots: noindex`. Its wait is a
+document shape (`route-loading-shape.ts`). Everyone else's `/admin` is the
 dashboard's **Overview** (`OVERVIEW_PLAN.md` Batch 1), four blocks and no more
 — the owner wants the work queue and the numbers, but not a long page:
 **tiles** — **Total Revenue (Net)** (`subtotal + deliveryFee − discountAmount`
@@ -238,7 +273,7 @@ below `sm` both keep Cancel and Save in a bar
 stuck to the foot of the screen, below `lg` an uploaded image's Remove is a bar
 under it rather than a hover overlay, and the certificate preview comes above
 its controls. **E-Certificate Settings** (edit screen only) is `events/CertificateSettingsPanel.tsx`: the
-template upload, then — once there is a template — the designed layout's controls (content area top/bottom with *With sponsors* / *Clean template* presets,
+template upload with a **Template guide** link under it (`/admin/certificate-guide`, new tab), then — once there is a template — the designed layout's controls (content area top/bottom with *With sponsors* / *Clean template* presets,
 text color, accent, which fields show, byline position and height) or, for a legacy event, its three sliders and a
 *Switch to designed layout* button; beside them the **real PDF** drawn by `buildCertificatePdf` on a sample
 runner (with a *Long name* sample), regenerated 500ms after the last change and always a link away for a

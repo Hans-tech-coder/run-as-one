@@ -1,0 +1,362 @@
+/*
+ * The e-certificate template guide (ECERT_GUIDE_PAGE_PLAN.md) on screen. The
+ * paper copy and its print rules are guide-print.css.
+ *
+ * A stylesheet imported anywhere under /admin reaches every dashboard page, so
+ * every rule is scoped to the guide's own classes.
+ *
+ * **Tokens, never literals.** The page follows the Dark Mode switch like the
+ * rest of the dashboard; the print copy carries `data-theme="light"`, so the
+ * very same rules resolve to the light palette there. That is how the PDF
+ * comes out white with no second set of colours to keep in step.
+ */
+
+.cert-guide {
+  --cg-orange: var(--accent-orange-text);
+  --cg-blue: var(--accent-blue-text);
+  --cg-orange-tint: color-mix(in srgb, var(--accent-orange) 12%, transparent);
+  --cg-blue-tint: color-mix(in srgb, var(--accent-blue) 12%, transparent);
+  --cg-paper: var(--dash-panel-solid);
+  --cg-ink: var(--text-primary);
+  --cg-faint: var(--text-muted);
+
+  display: grid;
+  gap: 32px;
+  min-width: 0;
+}
+
+.cert-guide strong { color: var(--text-primary); font-weight: 600; }
+
+.cert-guide-intro {
+  display: grid;
+  gap: 12px;
+}
+
+.cert-guide-eyebrow {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--cg-orange);
+}
+
+.cert-guide-lede {
+  margin: 0;
+  max-width: 68ch;
+  font-size: 1.0625rem;
+  line-height: 1.65;
+  color: var(--text-secondary);
+}
+
+.cert-guide-section {
+  min-width: 0;
+  /* A jump from the contents lands below the sticky header, not under it. */
+  scroll-margin-top: 104px;
+}
+
+.cert-guide-body {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+
+.cert-guide-note {
+  margin: 0;
+  max-width: 72ch;
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: var(--text-secondary);
+}
+
+/* ── The diagram ──────────────────────────────────────────────
+   It may scroll sideways inside its own box on a phone; the page never does.
+   Below ~560px its labels would be too small to read, so it holds that
+   width and the box scrolls. */
+.cert-guide-diagram-scroll {
+  overflow-x: auto;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--dash-hairline);
+}
+
+.cert-guide-diagram {
+  display: block;
+  width: 100%;
+  min-width: 560px;
+  height: auto;
+}
+
+.cert-guide-diagram text { font-family: var(--font-body); }
+
+.cert-guide-diagram .cg-paper { fill: var(--cg-paper); }
+.cert-guide-diagram .cg-margin { fill: none; stroke: var(--cg-faint); stroke-dasharray: 4 5; stroke-width: 1; }
+.cert-guide-diagram .cg-faint-text { fill: var(--cg-faint); }
+.cert-guide-diagram .cg-brand { fill: var(--cg-orange-tint); stroke: var(--cg-orange); stroke-width: 1.2; }
+.cert-guide-diagram .cg-content { fill: var(--cg-blue-tint); stroke: var(--cg-blue); stroke-width: 1.6; stroke-dasharray: 7 6; }
+.cert-guide-diagram .cg-content-label { fill: var(--cg-blue); }
+.cert-guide-diagram .cg-ink { fill: var(--cg-ink); }
+.cert-guide-diagram .cg-soft { opacity: 0.7; }
+.cert-guide-diagram .cg-faint { opacity: 0.45; }
+.cert-guide-diagram .cg-ghost { opacity: 0.55; }
+.cert-guide-diagram .cg-accent { fill: var(--cg-orange); }
+.cert-guide-diagram .cg-tile-accent { fill: none; stroke: var(--cg-orange); opacity: 0.8; }
+.cert-guide-diagram .cg-tile { fill: none; stroke: var(--cg-ink); opacity: 0.35; }
+.cert-guide-diagram .cg-sponsor { fill: none; stroke: var(--cg-faint); stroke-width: 1.2; stroke-dasharray: 6 5; }
+.cert-guide-diagram .cg-logos { fill: var(--cg-faint); opacity: 0.35; }
+.cert-guide-diagram .cg-byline { fill: var(--ink-08); stroke: var(--ink-40); }
+.cert-guide-diagram .cg-byline-alt { fill: none; stroke: var(--ink-30); stroke-dasharray: 3 4; }
+
+.cert-guide-legend {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 12px 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cert-guide-legend li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.cert-guide-swatch {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  margin-top: 3px;
+  border-radius: 4px;
+}
+
+.cert-guide-swatch.is-brand { background: var(--cg-orange-tint); border: 1px solid var(--cg-orange); }
+.cert-guide-swatch.is-content { background: var(--cg-blue-tint); border: 1px dashed var(--cg-blue); }
+.cert-guide-swatch.is-sponsor { border: 1px dashed var(--cg-faint); }
+.cert-guide-swatch.is-byline { background: var(--text-primary); }
+
+/* ── File specifications ────────────────────────────────────── */
+.cert-guide-specs {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+}
+
+.cert-guide-specs th,
+.cert-guide-specs td {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--dash-hairline);
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+.cert-guide-specs tr:last-child th,
+.cert-guide-specs tr:last-child td { border-bottom: 0; }
+
+.cert-guide-specs th {
+  width: 30%;
+  padding-right: 16px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.cert-guide-specs td { color: var(--text-secondary); }
+
+/* ── What we print ──────────────────────────────────────────── */
+.cert-guide-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cert-guide-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  min-height: 48px;
+  padding: 10px 14px;
+  border: 1px solid var(--dash-hairline);
+  border-radius: var(--radius-md);
+  background: var(--dash-sunken);
+  font-size: 0.9375rem;
+  color: var(--text-primary);
+}
+
+.cert-guide-tag {
+  flex-shrink: 0;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.cert-guide-tag.is-always { color: var(--cg-orange); background: var(--cg-orange-tint); }
+.cert-guide-tag.is-optional { color: var(--text-secondary); border: 1px solid var(--dash-border); }
+
+/* ── Do and don't ───────────────────────────────────────────── */
+.cert-guide-dodont {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: 16px;
+}
+
+.cert-guide-col {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 20px;
+  border: 1px solid var(--dash-hairline);
+  border-radius: var(--radius-lg);
+  background: var(--dash-sunken);
+}
+
+.cert-guide-col h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+
+.cert-guide-col.is-do h3 { color: var(--cg-blue); }
+.cert-guide-col.is-dont h3 { color: var(--cg-orange); }
+
+.cert-guide-col ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 1.1em;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.cert-guide-col li::marker { color: var(--text-muted); }
+
+/* ── Send with your file ────────────────────────────────────── */
+.cert-guide-send {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: cert-guide-send;
+}
+
+.cert-guide-send li {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr);
+  gap: 8px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--dash-hairline);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  counter-increment: cert-guide-send;
+}
+
+.cert-guide-send li:first-child { padding-top: 0; }
+.cert-guide-send li:last-child { border-bottom: 0; padding-bottom: 0; }
+
+.cert-guide-send li::before {
+  content: counter(cert-guide-send);
+  font-family: var(--font-sans);
+  font-weight: 700;
+  color: var(--cg-orange);
+}
+
+/* ── Checklist ──────────────────────────────────────────────── */
+.cert-guide-checklist {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cert-guide-checklist > li + li { border-top: 1px solid var(--dash-hairline); }
+
+.cert-guide-check {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-height: 44px;
+  padding: 10px 0;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+/* The real checkbox, invisible over the drawn box: the browser still owns
+   focus, the keyboard and what a screen reader hears. */
+.cert-guide-check input {
+  position: absolute;
+  top: 10px;
+  left: 0;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.cert-guide-box {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
+  border: 1.5px solid var(--ink-40);
+  border-radius: 6px;
+  color: transparent;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.cert-guide-check:hover .cert-guide-box { border-color: var(--ink-65); }
+
+.cert-guide-check input:checked + .cert-guide-box {
+  border-color: var(--accent-orange);
+  background: var(--accent-orange);
+  /* Words on a solid fill: the one literal the conventions allow. */
+  color: #fff;
+}
+
+.cert-guide-check input:focus-visible + .cert-guide-box {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cert-guide-box { transition: none; }
+}
+
+.cert-guide-progress {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.cert-guide-footer {
+  margin: 0;
+  max-width: 72ch;
+  padding-top: 8px;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
