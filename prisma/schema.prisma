@@ -572,6 +572,12 @@ model PromoCode {
   /// src/lib/pacer.ts). Unique among one event's pacers, enforced by the
   /// pacer routes rather than an index, since every other kind leaves it null.
   bibNumber      String?
+  /// PACER only: the pace group this pacer leads -- the target the field runs
+  /// with them, as staff wrote it ("SUB1", "1:00", "2:30"), uppercase and
+  /// trimmed, or null when it is not set. Printed on the pacer's own
+  /// e-certificate (see src/lib/pacer.ts, normalizePaceGroup). Free text
+  /// rather than a duration because races name groups both ways.
+  paceGroup      String?
   /// PACER only: when staff marked this code as sent to its pacer, or null
   /// until they do. **The app sends no email to a pacer** -- staff copy the
   /// code and send it themselves -- so the only way the dashboard can warn

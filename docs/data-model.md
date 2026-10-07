@@ -213,7 +213,12 @@ shape:
   name as a fallback, to keep a pacer off the Race Winners podium and tag them
   on the full leaderboard (`pacerResultMatcher`, §5). Unique among one event's
   pacers, enforced by the routes (`pacerBibTaken`) rather than an index, since
-  every other kind leaves it null. **`codeSentAt`** — when staff marked the
+  every other kind leaves it null. **`paceGroup`** — the group the pacer
+  leads ("SUB1", "1:00"), optional, uppercase with a trailing "pace group" /
+  "pacer" dropped (`normalizePaceGroup`, §5; migration
+  `20261007090000_pacer_pace_group`). Printed on that pacer's e-certificate,
+  and the only thing about a pacer the public results pass on beyond the
+  yes-or-no (`withPacerRanks`). **`codeSentAt`** — when staff marked the
   code as sent, null until they do. The app **emails no pacer** (staff copy the
   code and send it by hand, the owner's decision), so this column is the only
   evidence the dashboard has that somebody was actually told, and it is what the

@@ -7,6 +7,7 @@ import AdminSelect from '../../../AdminSelect';
 import FieldError from '@/components/ui/FieldError';
 import { useAlert } from '@/components/ui/AlertProvider';
 import {
+  MAX_PACE_GROUP_LENGTH,
   MAX_PACER_BIB_LENGTH,
   MAX_PACER_NAME_LENGTH,
   WAIVE_REFUSAL,
@@ -22,7 +23,13 @@ import type { PacerCategory } from './PacersClient';
  * first so each names its own box instead of one catch-all sentence.
  */
 
-type AddForm = { categoryId: string; assigneeName: string; bibNumber: string; waiveAdminFee: boolean };
+type AddForm = {
+  categoryId: string;
+  assigneeName: string;
+  bibNumber: string;
+  paceGroup: string;
+  waiveAdminFee: boolean;
+};
 
 export default function AddPacerModal({
   eventId,
@@ -46,6 +53,7 @@ export default function AddPacerModal({
     categoryId: categories.length === 1 ? categories[0].id : '',
     assigneeName: '',
     bibNumber: '',
+    paceGroup: '',
     waiveAdminFee: false,
   });
   const [problem, setProblem] = useState<{ field: string; error: string } | null>(null);
@@ -197,6 +205,36 @@ export default function AddPacerModal({
               <FieldError
                 id="pacer-bib-error"
                 message={problem?.field === 'bibNumber' ? problem.error : undefined}
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label" htmlFor="pacer-pace-group">
+                Pace group <span className="text-secondary font-normal">(optional)</span>
+              </label>
+              <input
+                id="pacer-pace-group"
+                type="text"
+                className="form-input"
+                value={form.paceGroup}
+                maxLength={MAX_PACE_GROUP_LENGTH}
+                placeholder="SUB1 or 1:00"
+                autoComplete="off"
+                onChange={event => setForm({ ...form, paceGroup: event.target.value })}
+                aria-invalid={problem?.field === 'paceGroup' ? true : undefined}
+                aria-describedby={
+                  problem?.field === 'paceGroup'
+                    ? 'pacer-pace-group-error pacer-pace-group-hint'
+                    : 'pacer-pace-group-hint'
+                }
+              />
+              <p id="pacer-pace-group-hint" className="text-xs text-secondary">
+                The group this pacer leads, printed on their e-certificate. Leave it blank if the
+                groups are not set yet.
+              </p>
+              <FieldError
+                id="pacer-pace-group-error"
+                message={problem?.field === 'paceGroup' ? problem.error : undefined}
               />
             </div>
 

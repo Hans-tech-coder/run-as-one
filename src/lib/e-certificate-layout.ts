@@ -110,6 +110,12 @@ export interface CertificateContent {
   genderRank: number;
   /** The gender as the timing sheet gave it ("M", "Female", …). */
   gender: string;
+  /**
+   * Set for one of the race's pacers, who hold no rank: their certificate
+   * says so (the OFFICIAL PACER pill, "has successfully paced") and shows
+   * their pace group in the rank tile's place. Either value may be empty.
+   */
+  pacer?: { paceGroup: string; averagePace: string } | null;
   eventTitle: string;
   /** Day and place, each already formatted; empty ones are dropped. */
   eventDetails: string[];
@@ -131,6 +137,7 @@ const ordinal = (n: number) => {
  * when the runner has neither.
  */
 function rankFigure(content: CertificateContent) {
+  if (content.pacer) return pacerFigure(content.pacer);
   const division = genderDivision(content.gender);
   const known = division === 'Male' || division === 'Female';
   if (content.genderRank > 0) {
@@ -142,6 +149,19 @@ function rankFigure(content: CertificateContent) {
     };
   }
   if (content.overallRank > 0) return { label: 'OVERALL RANK', value: ordinal(content.overallRank), accent: false };
+  return null;
+}
+
+/**
+ * A pacer's tile, in the rank tile's place: their pace group as the figure,
+ * with their average pace under it; the average pace alone when no group was
+ * set; nothing when neither is known.
+ */
+function pacerFigure({ paceGroup, averagePace }: { paceGroup: string; averagePace: string }) {
+  if (paceGroup) {
+    return { label: 'PACE GROUP', value: paceGroup.toUpperCase(), sub: averagePace ? `${averagePace} /KM AVG` : undefined, accent: false };
+  }
+  if (averagePace) return { label: 'AVG PACE', value: `${averagePace} /KM`, accent: false };
   return null;
 }
 
@@ -191,6 +211,23 @@ export function drawContentBlock(
     }),
   });
 
+  if (content.pacer) {
+    rows.push({
+      h: 24,
+      draw: (t, s) => {
+        // The pacer's mark, in the accent: the orange Pacer pill of the result page.
+        const label = 'OFFICIAL PACER';
+        const style: TextStyle = { font: sansBold, size: 7.5 * s, tracking: 2.5 * s, color: theme.accent };
+        const w = trackedWidth(label, style.font, style.size, style.tracking) + 26 * s;
+        const h = 16 * s;
+        const pill = roundedRectPath(w, h, h / 2);
+        page.drawSvgPath(pill, { x: cx - w / 2, y: t, color: theme.accent, opacity: 0.1 });
+        page.drawSvgPath(pill, { x: cx - w / 2, y: t, borderColor: theme.accent, borderWidth: 0.8 * s, borderOpacity: 0.55 });
+        drawCentered(page, label, t - h / 2 - style.size * 0.35, style);
+      },
+    });
+  }
+
   rows.push({
     h: 69.2,
     draw: (t, s) => {
@@ -208,7 +245,7 @@ export function drawContentBlock(
   rows.push({
     // With no event lines under it, it keeps the gap the tiles would have had.
     h: eventTitle || details.length ? 19.4 : 53,
-    draw: (t, s) => drawCentered(page, 'HAS SUCCESSFULLY FINISHED', t - 6.5 * s, {
+    draw: (t, s) => drawCentered(page, content.pacer ? 'HAS SUCCESSFULLY PACED' : 'HAS SUCCESSFULLY FINISHED', t - 6.5 * s, {
       font: sans, size: 9 * s, tracking: 3.5 * s, color: theme.secondary,
     }),
   });
@@ -252,7 +289,9 @@ export function drawContentBlock(
     ...(fields.category && content.category ? [{ label: 'CATEGORY', value: content.category.toUpperCase(), accent: false }] : []),
     ...(fields.bib && bib ? [{ label: 'BIB', value: bib, accent: false }] : []),
   ];
-  const rank = fields.rank ? rankFigure(content) : null;
+  // A pacer's tile is their pace group, shown whatever the rank checkbox says:
+  // it is what their certificate is for. Everyone else's is the rank tile.
+  const rank = content.pacer || fields.rank ? rankFigure(content) : null;
   if (rank) figures.push(rank);
   // A tile with a sub-line makes the whole row taller, so every tile keeps
   // the same label and value lines.

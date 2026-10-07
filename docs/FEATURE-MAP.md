@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-37 pages · 52 API routes · 85 modules in `src/lib` · 369 files · 76,800 lines
+37 pages · 52 API routes · 86 modules in `src/lib` · 372 files · 77,086 lines
 
 ---
 
@@ -31,7 +31,7 @@ The route, the server component behind it, and the client components beside it.
 | `/admin/communities` | [`/admin/communities/page.tsx`](../src/app/admin/communities/page.tsx) | `CommunitiesClient.tsx` |
 | `/admin/events` | [`/admin/events/page.tsx`](../src/app/admin/events/page.tsx) | `bank-account-draft.ts` `BankAccountsPanel.tsx` `category-draft.ts` `CertificateSettingsPanel.tsx` `ConsentWaiverField.tsx` `DescriptionEditor.tsx` `event-not-found.ts` `EventActionsMenu.tsx` `EventClientField.tsx` `EventOptionsPanel.tsx` `EventPromotionsPanel.tsx` `EventProvinceField.tsx` `EventsTableClient.tsx` `HighlightsField.tsx` `HighlightsModal.tsx` `InclusionsField.tsx` `LogisticsPanel.tsx` `PosterField.tsx` `registration-opening.ts` `registration-state-badge.ts` `RegistrationFormPicker.tsx` `RegistrationOpeningPicker.tsx` `RegistrationScheduleModal.tsx` |
 | `/admin/events/[id]/edit` | [`/admin/events/[id]/edit/page.tsx`](../src/app/admin/events/[id]/edit/page.tsx) | — |
-| `/admin/events/[id]/pacers` | [`/admin/events/[id]/pacers/page.tsx`](../src/app/admin/events/[id]/pacers/page.tsx) | `AddPacerModal.tsx` `EditPacerModal.tsx` `PacerActionsMenu.tsx` `PacersClient.tsx` |
+| `/admin/events/[id]/pacers` | [`/admin/events/[id]/pacers/page.tsx`](../src/app/admin/events/[id]/pacers/page.tsx) | `AddPacerModal.tsx` `EditPacerModal.tsx` `pacer-row.ts` `PacerActionsMenu.tsx` `PacersClient.tsx` `use-pacer-actions.tsx` |
 | `/admin/events/[id]/registrants` | [`/admin/events/[id]/registrants/page.tsx`](../src/app/admin/events/[id]/registrants/page.tsx) | `CancelOrderModal.tsx` `ColumnsViewMenu.tsx` `DeleteRegistrantModals.tsx` `email-handoff.ts` `FollowUpModal.tsx` `ManualEmailModal.tsx` `PaymentLinkEmailModal.tsx` `ProofLightbox.tsx` `registrant-columns.tsx` `registrant-csv.ts` `registrant-display.tsx` `RegistrantActionsMenu.tsx` `RegistrantDetailModal.tsx` `RegistrantRowActions.tsx` `RegistrantsDataTable.tsx` `RegistrantsTable.tsx` `RegistrantsTabs.tsx` `RegistrantsToolbar.tsx` `RemarksModal.tsx` `RunnerAddressEditor.tsx` `RunnerEditModal.tsx` `SendLinksButton.tsx` `unpaid-columns.tsx` `UnpaidCheckoutActions.tsx` `UnpaidCheckoutCards.tsx` `UnpaidCheckoutsList.tsx` |
 | `/admin/events/[id]/registrants/[runnerId]/consent` | [`/admin/events/[id]/registrants/[runnerId]/consent/page.tsx`](../src/app/admin/events/[id]/registrants/[runnerId]/consent/page.tsx) | `PrintableSheet.tsx` |
 | `/admin/events/[id]/results` | [`/admin/events/[id]/results/page.tsx`](../src/app/admin/events/[id]/results/page.tsx) | `ResultsTableClient.tsx` `ResultsUploaderClient.tsx` |
@@ -180,6 +180,7 @@ the file itself.
 | [`order-size.ts`](../src/lib/order-size.ts) | **How many runners one order may carry.** Every runner on an order reserves a slot in their category the moment the order is written (`reserveSlots… |
 | [`organizer-application.ts`](../src/lib/organizer-application.ts) | What an organizer application is, and what the app will accept as one. |
 | [`organizer-status.ts`](../src/lib/organizer-status.ts) | Which `Organizer` row is Run As One, and whether it — and so its team — may be signed in to. |
+| [`pacer-results.ts`](../src/lib/pacer-results.ts) | Which finishers on a race's results are its pacers, and the ranks once they are left out — a pacer runs to a set pace for the field, so they are ke… |
 | [`pacer-store.ts`](../src/lib/pacer-store.ts) | Reading pacers out of the database, apart from `pacer.ts` for the reason `promo-store.ts` is apart from `discount.ts`: the Pacers screen is a clien… |
 | [`pacer.ts`](../src/lib/pacer.ts) | What a pacer code is, and when the dashboard has to nag about it (`PACER_DISCOUNT_PLAN.md`). |
 | [`payment-link.ts`](../src/lib/payment-link.ts) | Handing a payment link to staff, one path for every way it goes out (`UNPAID_FOLLOWUP_PLAN.md` Batches 3–4): `issuePaymentLink` checks `registratio… |
@@ -234,7 +235,7 @@ when a task touches one, split it before editing rather than after.
 | 1093 | [`src/app/admin/team/TeamClient.tsx`](../src/app/admin/team/TeamClient.tsx) |
 | 1015 | [`src/app/admin/register/page.tsx`](../src/app/admin/register/page.tsx) |
 | 873 | [`src/app/admin/events/EventsTableClient.tsx`](../src/app/admin/events/EventsTableClient.tsx) |
-| 773 | [`src/app/results/[slug]/full/FullResultsClient.tsx`](../src/app/results/[slug]/full/FullResultsClient.tsx) |
+| 785 | [`src/app/results/[slug]/full/FullResultsClient.tsx`](../src/app/results/[slug]/full/FullResultsClient.tsx) |
 | 750 | [`src/app/admin/events/[id]/edit/page.tsx`](../src/app/admin/events/[id]/edit/page.tsx) |
 | 693 | [`src/app/admin/AdminDatePicker.tsx`](../src/app/admin/AdminDatePicker.tsx) |
 | 663 | [`src/app/admin/activity/ActivityClient.tsx`](../src/app/admin/activity/ActivityClient.tsx) |
@@ -251,10 +252,8 @@ when a task touches one, split it before editing rather than after.
 | 539 | [`src/app/admin/clients/ClientsClient.tsx`](../src/app/admin/clients/ClientsClient.tsx) |
 | 532 | [`src/app/admin/events/[id]/registrants/RegistrantDetailModal.tsx`](../src/app/admin/events/[id]/registrants/RegistrantDetailModal.tsx) |
 | 524 | [`src/app/admin/DashboardShell.tsx`](../src/app/admin/DashboardShell.tsx) |
-| 524 | [`src/lib/pacer.ts`](../src/lib/pacer.ts) |
 | 522 | [`src/app/api/checkout/manual/route.ts`](../src/app/api/checkout/manual/route.ts) |
 | 515 | [`src/app/admin/events/[id]/registrants/RegistrantsTable.tsx`](../src/app/admin/events/[id]/registrants/RegistrantsTable.tsx) |
-| 503 | [`src/app/admin/events/[id]/pacers/PacersClient.tsx`](../src/app/admin/events/[id]/pacers/PacersClient.tsx) |
 | 503 | [`src/lib/promo-input.ts`](../src/lib/promo-input.ts) |
 | 491 | [`src/app/admin/AdminRouteLoading.tsx`](../src/app/admin/AdminRouteLoading.tsx) |
 | 491 | [`src/lib/registration-gate.ts`](../src/lib/registration-gate.ts) |
@@ -270,3 +269,4 @@ when a task touches one, split it before editing rather than after.
 | 443 | [`src/app/admin/events/[id]/registrants/page.tsx`](../src/app/admin/events/[id]/registrants/page.tsx) |
 | 439 | [`src/app/admin/events/[id]/results/ResultsTableClient.tsx`](../src/app/admin/events/[id]/results/ResultsTableClient.tsx) |
 | 438 | [`src/lib/actor.ts`](../src/lib/actor.ts) |
+| 422 | [`src/lib/pacer.ts`](../src/lib/pacer.ts) |

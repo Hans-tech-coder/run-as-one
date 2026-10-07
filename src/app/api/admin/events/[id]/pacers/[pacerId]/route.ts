@@ -8,13 +8,14 @@ import {
   isPacerRegistered,
   pacerBibFromInput,
   pacerNameFromInput,
+  paceGroupFromInput,
 } from '@/lib/pacer';
 import { PACER_SELECT, pacerBibTaken } from '@/lib/pacer-store';
 
 /**
  * Changing or removing one pacer.
  *
- * Five things a PATCH may carry, each independent and each audited:
+ * Six things a PATCH may carry, each independent and each audited:
  *
  *  - **`assigneeName`** — a rename. The code itself never changes: a pacer
  *    already holding it would otherwise find it dead, and the point of a
@@ -23,6 +24,8 @@ import { PACER_SELECT, pacerBibTaken } from '@/lib/pacer-store';
  *  - **`bibNumber`** — set, changed or cleared (blank). Bibs are often handed
  *    out after the code, or swapped on race day; the public results read it to
  *    keep this pacer off the podium. Refused when another pacer here has it.
+ *  - **`paceGroup`** — set, changed or cleared (blank): the group this pacer
+ *    leads ("SUB1", "1:00"), printed on their e-certificate.
  *  - **`paused`** — the hold, exactly as it is on a promotion. It is what staff
  *    reach for instead of deleting a code somebody may already be holding.
  *  - **`codeSent`** — *Mark as sent* and *Mark as not sent*. The app emails no
@@ -63,6 +66,7 @@ export async function PATCH(
     const data: {
       assigneeName?: string;
       bibNumber?: string | null;
+      paceGroup?: string | null;
       paused?: boolean;
       codeSentAt?: Date | null;
       waiveAdminFee?: boolean;
@@ -94,6 +98,18 @@ export async function PATCH(
         data.bibNumber = bib.bibNumber;
         changes.bibNumber = [pacer.bibNumber, bib.bibNumber];
         summaries.push(bib.bibNumber ? `bib set to ${bib.bibNumber}` : 'bib cleared');
+      }
+    }
+
+    if (body?.paceGroup !== undefined) {
+      const group = paceGroupFromInput(body.paceGroup);
+      if ('problem' in group) {
+        return NextResponse.json(group.problem, { status: 400 });
+      }
+      if (group.paceGroup !== pacer.paceGroup) {
+        data.paceGroup = group.paceGroup;
+        changes.paceGroup = [pacer.paceGroup, group.paceGroup];
+        summaries.push(group.paceGroup ? `pace group set to ${group.paceGroup}` : 'pace group cleared');
       }
     }
 

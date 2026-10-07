@@ -280,7 +280,7 @@ export default async function RunnerAnalyticsPage({
           {/* Certificate Generator */}
           <React.Suspense fallback={<div className="p-8 text-center text-secondary">Loading certificate...</div>}>
             <ECertificateGenerator
-              result={{ ...result, categoryRank: ranks.categoryRank, genderRank: ranks.genderRank }}
+              result={{ ...result, categoryRank: ranks.categoryRank, genderRank: ranks.genderRank, isPacer, paceGroup: ranks.paceGroup }}
               event={result.event}
             />
           </React.Suspense>

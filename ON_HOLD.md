@@ -15,7 +15,9 @@ The release steps come first because they block production, not a feature.
 `Registration.holdUntil`, `UNPAID_FOLLOWUP_PLAN.md` Batch 3) and
 `20261006090000_pacer_bib_number` (one nullable column, `PromoCode.bibNumber`,
 the pacer's bib that keeps them off the results podium; applied to the dev
-database). Run
+database) and `20261007090000_pacer_pace_group` (one nullable column,
+`PromoCode.paceGroup`, the group a pacer leads, printed on their e-certificate;
+applied to the dev database). Run
 `npx prisma migrate deploy` with `DIRECT_URL` on the production endpoint
 **before** the new code goes live: the code reads the column, and the old code
 ignores it, so migrating first is safe in both directions.

@@ -72,6 +72,7 @@ export default async function PacersPage({ params }: { params: Promise<{ id: str
       code: pacer.code,
       assigneeName: pacer.assigneeName,
       bibNumber: pacer.bibNumber,
+      paceGroup: pacer.paceGroup,
       waiveAdminFee: pacer.waiveAdminFee,
       codeSentAt: pacer.codeSentAt ? pacer.codeSentAt.toISOString() : null,
       paused: pacer.paused,

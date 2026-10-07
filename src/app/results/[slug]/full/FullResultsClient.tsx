@@ -36,6 +36,8 @@ interface Result {
   genderRank?: number | null;
   /** Whether this finisher is one of the race's pacers (see pacerResultMatcher). */
   isPacer?: boolean;
+  /** A pacer's pace group, for their certificate; null for everyone else. */
+  paceGroup?: string | null;
 }
 
 /**

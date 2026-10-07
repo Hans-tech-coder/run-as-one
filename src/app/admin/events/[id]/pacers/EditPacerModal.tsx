@@ -5,11 +5,11 @@ import { useRouter } from 'next/navigation';
 import { X } from 'lucide-react';
 import FieldError from '@/components/ui/FieldError';
 import { useAlert } from '@/components/ui/AlertProvider';
-import { MAX_PACER_BIB_LENGTH, MAX_PACER_NAME_LENGTH, normalizePacerName } from '@/lib/pacer';
+import { MAX_PACE_GROUP_LENGTH, MAX_PACER_BIB_LENGTH, MAX_PACER_NAME_LENGTH, normalizePacerName } from '@/lib/pacer';
 import type { PacerRow } from './PacersClient';
 
 /**
- * The Edit modal on a pacer row: their name and their bib.
+ * The Edit modal on a pacer row: their name, their bib and their pace group.
  *
  * It replaced *Rename* when the bib arrived, because the two are the same
  * kind of correction — the wrong name typed, or a bib handed out late or
@@ -17,7 +17,7 @@ import type { PacerRow } from './PacersClient';
  * The code and the category are not here: the code must keep working for a
  * pacer already holding it, and the category is what it is locked to.
  *
- * Both fields go in one PATCH; the route ignores whichever did not change, so
+ * All three go in one PATCH; the route ignores whichever did not change, so
  * saving an untouched form writes nothing to the audit trail.
  */
 export default function EditPacerModal({
@@ -34,6 +34,7 @@ export default function EditPacerModal({
 
   const [name, setName] = useState(pacer.assigneeName ?? '');
   const [bib, setBib] = useState(pacer.bibNumber ?? '');
+  const [paceGroup, setPaceGroup] = useState(pacer.paceGroup ?? '');
   const [problem, setProblem] = useState<{ field: string; error: string } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -56,7 +57,7 @@ export default function EditPacerModal({
       const res = await fetch(`/api/admin/events/${eventId}/pacers/${pacer.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ assigneeName: name, bibNumber: bib }),
+        body: JSON.stringify({ assigneeName: name, bibNumber: bib, paceGroup }),
       });
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -152,6 +153,35 @@ export default function EditPacerModal({
               <FieldError
                 id="pacer-edit-bib-error"
                 message={problem?.field === 'bibNumber' ? problem.error : undefined}
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label" htmlFor="pacer-edit-pace-group">
+                Pace group <span className="text-secondary font-normal">(optional)</span>
+              </label>
+              <input
+                id="pacer-edit-pace-group"
+                type="text"
+                className="form-input"
+                value={paceGroup}
+                maxLength={MAX_PACE_GROUP_LENGTH}
+                placeholder="SUB1 or 1:00"
+                autoComplete="off"
+                onChange={event => setPaceGroup(event.target.value)}
+                aria-invalid={problem?.field === 'paceGroup' ? true : undefined}
+                aria-describedby={
+                  problem?.field === 'paceGroup'
+                    ? 'pacer-edit-pace-group-error pacer-edit-pace-group-hint'
+                    : 'pacer-edit-pace-group-hint'
+                }
+              />
+              <p id="pacer-edit-pace-group-hint" className="text-xs text-secondary">
+                The group this pacer leads, printed on their e-certificate. Clear it to remove it.
+              </p>
+              <FieldError
+                id="pacer-edit-pace-group-error"
+                message={problem?.field === 'paceGroup' ? problem.error : undefined}
               />
             </div>
           </form>

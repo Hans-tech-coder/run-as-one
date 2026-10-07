@@ -1,14 +1,12 @@
 "use client";
 
 import React, { useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { AlertTriangle, Check, Copy, MailX, Plus } from 'lucide-react';
 import PacerActionsMenu from './PacerActionsMenu';
 import AddPacerModal from './AddPacerModal';
 import EditPacerModal from './EditPacerModal';
 import AdminCardList from '../../../AdminCardList';
-import { useAlert } from '@/components/ui/AlertProvider';
 import {
   Table,
   TableBody,
@@ -18,6 +16,10 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { isPacerRegistered, needsCodeSent } from '@/lib/pacer';
+import { nameOf, type PacerCategory, type PacerRow } from './pacer-row';
+import { usePacerActions } from './use-pacer-actions';
+
+export type { PacerCategory, PacerRow } from './pacer-row';
 
 /**
  * One race's pacers. The Add and Edit forms are their own files
@@ -42,32 +44,6 @@ import { isPacerRegistered, needsCodeSent } from '@/lib/pacer';
  * a different answer from the one it will be given.
  */
 
-/** One pacer, as `pacers/page.tsx` hands it over. */
-export type PacerRow = {
-  id: string;
-  code: string;
-  assigneeName: string | null;
-  /** The pacer's race bib, or null until staff enter it. */
-  bibNumber: string | null;
-  waiveAdminFee: boolean;
-  /** ISO, or null while staff have not marked the code as sent. */
-  codeSentAt: string | null;
-  paused: boolean;
-  usageCount: number;
-  /**
-   * The category this code is locked to. The name and distance are not repeated
-   * here: the screen groups by this id against the `categories` it is given, so
-   * a second copy could only ever disagree with the heading above the row.
-   */
-  categoryId: string | null;
-  /** The order this pacer registered with, or null while the code is unclaimed. */
-  order: { orderRef: string; status: string } | null;
-};
-
-export type PacerCategory = { id: string; name: string; distance: string | null };
-
-/** How long the Copy button says "Copied" before going back to itself. */
-const COPIED_MS = 1600;
 
 export default function PacersClient({
   eventId,
@@ -85,15 +61,8 @@ export default function PacersClient({
   /** Whether this person holds `promo:waive-fee` — the Super Admin alone. */
   canWaiveAdminFee: boolean;
 }) {
-  const router = useRouter();
-  const { alert, confirm, toast } = useAlert();
-
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editing, setEditing] = useState<PacerRow | null>(null);
-
-  /** Which row has a request in flight, so only that row's items go quiet. */
-  const [busyId, setBusyId] = useState<string | null>(null);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   /**
    * The pacers of each category, in the event's category order, with anything
@@ -136,103 +105,8 @@ export default function PacersClient({
     return byCategory.filter(group => group.rows.length > 0);
   }, [categories, pacers]);
 
-  const copyCode = async (pacer: PacerRow) => {
-    try {
-      await navigator.clipboard.writeText(pacer.code);
-      setCopiedId(pacer.id);
-      setTimeout(() => setCopiedId(current => (current === pacer.id ? null : current)), COPIED_MS);
-    } catch {
-      await alert(
-        'Your browser would not let us reach the clipboard. Select the code and copy it by hand.',
-      );
-    }
-  };
-
-  /** One PATCH, for every row action that is a single field. */
-  const patchPacer = async (pacer: PacerRow, body: Record<string, unknown>, done: string) => {
-    setBusyId(pacer.id);
-    try {
-      const res = await fetch(`/api/admin/events/${eventId}/pacers/${pacer.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) {
-        const payload = await res.json().catch(() => ({}));
-        await alert({
-          variant: 'danger',
-          message: payload.error ?? 'That change could not be saved. Please try again.',
-        });
-        return;
-      }
-      toast(done);
-      router.refresh();
-    } finally {
-      setBusyId(null);
-    }
-  };
-
-  const handleToggleCodeSent = (pacer: PacerRow) => {
-    const sent = pacer.codeSentAt === null;
-    return patchPacer(
-      pacer,
-      { codeSent: sent },
-      sent
-        ? `${nameOf(pacer)} is marked as sent.`
-        : `${nameOf(pacer)} is back on the not-sent list.`,
-    );
-  };
-
-  const handleTogglePause = (pacer: PacerRow) =>
-    patchPacer(
-      pacer,
-      { paused: !pacer.paused },
-      pacer.paused ? `${nameOf(pacer)}'s code works again.` : `${nameOf(pacer)}'s code is paused.`,
-    );
-
-  const handleToggleWaiver = (pacer: PacerRow) =>
-    patchPacer(
-      pacer,
-      { waiveAdminFee: !pacer.waiveAdminFee },
-      pacer.waiveAdminFee
-        ? `${nameOf(pacer)} now pays the admin fee.`
-        : `${nameOf(pacer)}'s admin fee is waived.`,
-    );
-
-  const handleDelete = async (pacer: PacerRow) => {
-    const ok = await confirm({
-      variant: 'danger',
-      title: 'Remove this pacer?',
-      message: (
-        <>
-          <strong>{nameOf(pacer)}</strong>&rsquo;s code <strong>{pacer.code}</strong> will stop
-          working and the slot it was holding goes back to the category. If you only want to stop
-          the code for now, pause it instead.
-        </>
-      ),
-      confirmLabel: 'Remove pacer',
-    });
-    if (!ok) return;
-
-    setBusyId(pacer.id);
-    try {
-      const res = await fetch(`/api/admin/events/${eventId}/pacers/${pacer.id}`, {
-        method: 'DELETE',
-      });
-      if (!res.ok) {
-        const payload = await res.json().catch(() => ({}));
-        await alert({
-          variant: 'danger',
-          message: payload.error ?? 'That pacer could not be removed. Please try again.',
-        });
-        return;
-      }
-      toast(`${nameOf(pacer)} was removed.`);
-      router.refresh();
-    } finally {
-      setBusyId(null);
-    }
-  };
+  const { busyId, copiedId, copyCode, handleToggleCodeSent, handleTogglePause, handleToggleWaiver, handleDelete } =
+    usePacerActions(eventId);
 
   /**
    * The bib, or a quiet "Not set" — a blank is normal (bibs often come after
@@ -241,6 +115,14 @@ export default function PacersClient({
   const renderBib = (pacer: PacerRow) =>
     pacer.bibNumber ? (
       <span className="font-mono tabular-nums">{pacer.bibNumber}</span>
+    ) : (
+      <span className="text-secondary">Not set</span>
+    );
+
+  /** The pace group, or "Not set" — like the bib, it is often decided late. */
+  const renderPaceGroup = (pacer: PacerRow) =>
+    pacer.paceGroup ? (
+      <span className="font-mono tabular-nums">{pacer.paceGroup}</span>
     ) : (
       <span className="text-secondary">Not set</span>
     );
@@ -422,6 +304,7 @@ export default function PacersClient({
                       Pacer
                     </TableHead>
                     <TableHead className="py-4 px-4 text-secondary font-medium h-auto">Bib</TableHead>
+                    <TableHead className="py-4 px-4 text-secondary font-medium h-auto">Pace group</TableHead>
                     <TableHead className="py-4 px-4 text-secondary font-medium h-auto">Code</TableHead>
                     <TableHead className="py-4 px-4 text-secondary font-medium h-auto">
                       Status
@@ -444,6 +327,7 @@ export default function PacersClient({
                         {nameOf(pacer)}
                       </TableCell>
                       <TableCell className="py-4 px-4 text-primary">{renderBib(pacer)}</TableCell>
+                      <TableCell className="py-4 px-4 text-primary">{renderPaceGroup(pacer)}</TableCell>
                       <TableCell className="py-4 px-4 text-primary">{renderCode(pacer)}</TableCell>
                       <TableCell className="py-4 px-4 text-primary">{renderStatus(pacer)}</TableCell>
                       <TableCell className="py-4 px-4 text-primary">{renderActions(pacer)}</TableCell>
@@ -465,6 +349,7 @@ export default function PacersClient({
                 badges={pacer => renderStatus(pacer)}
                 fields={pacer => [
                   { label: 'Bib', value: renderBib(pacer) },
+                  { label: 'Pace group', value: renderPaceGroup(pacer) },
                   { label: 'Code', value: renderCode(pacer), full: true },
                 ]}
                 actions={pacer => renderActions(pacer, 'card')}
@@ -497,6 +382,3 @@ export default function PacersClient({
  * `assigneeName` existed cannot happen (the column arrived with the kind), but a
  * screen that printed "null" would be worse than one that prints the code.
  */
-function nameOf(pacer: PacerRow): string {
-  return pacer.assigneeName || pacer.code;
-}

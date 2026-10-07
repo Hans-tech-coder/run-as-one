@@ -141,6 +141,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             organizerId: actor.orgId,
             assigneeName: input.data.assigneeName,
             bibNumber: input.data.bibNumber,
+            paceGroup: input.data.paceGroup,
             waiveAdminFee: input.data.waiveAdminFee,
             // **Exactly one category**, written in the same statement as the
             // code: a pacer code with no category would be a free entry to
@@ -161,6 +162,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             code: row.code,
             category: category.name,
             bibNumber: input.data.bibNumber,
+            paceGroup: input.data.paceGroup,
             waiveAdminFee: input.data.waiveAdminFee,
           },
         });

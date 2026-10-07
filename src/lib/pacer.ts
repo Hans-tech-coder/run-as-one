@@ -62,6 +62,28 @@ export function normalizeBibNumber(value: unknown): string {
     .toUpperCase();
 }
 
+/**
+ * The most a pace group may be. A group is a short label — `SUB1`, `1:00`,
+ * `2:30` — so this is generous rather than tight.
+ */
+export const MAX_PACE_GROUP_LENGTH = 20;
+
+/**
+ * A pace group as it is stored and printed: trimmed, uppercase, one space
+ * between words, and without a trailing "pace group" / "pacer" / "group", since
+ * the certificate's tile already says PACE GROUP — so `1:00 pace group`,
+ * ` sub1 ` and `1:00 Pacer` become `1:00`, `SUB1` and `1:00`. Empty means "not
+ * set", which is allowed.
+ */
+export function normalizePaceGroup(value: unknown): string {
+  return String(value ?? '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toUpperCase()
+    .replace(/\s*(PACE\s+GROUP|PACE\s+TEAM|PACER|GROUP)$/, '')
+    .trim();
+}
+
 /** Characters of randomness on the end of a pacer code. */
 const PACER_CODE_RANDOM = 4;
 
@@ -222,6 +244,8 @@ export interface PacerInputData {
   waiveAdminFee: boolean;
   /** Null when staff do not know the bib yet. */
   bibNumber: string | null;
+  /** Null when the pacer's group is not set. */
+  paceGroup: string | null;
 }
 
 /** What the Pacers screen can say about a pacer. */
@@ -230,6 +254,7 @@ export interface PacerInput {
   categoryId?: unknown;
   waiveAdminFee?: unknown;
   bibNumber?: unknown;
+  paceGroup?: unknown;
 }
 
 /** What the caller knows that this module cannot work out for itself. */
@@ -307,7 +332,12 @@ export function pacerFromInput(
   const bib = pacerBibFromInput(input.bibNumber);
   if ('problem' in bib) return bib;
 
-  return { data: { assigneeName: name.name, categoryId, waiveAdminFee, bibNumber: bib.bibNumber } };
+  const group = paceGroupFromInput(input.paceGroup);
+  if ('problem' in group) return group;
+
+  return {
+    data: { assigneeName: name.name, categoryId, waiveAdminFee, bibNumber: bib.bibNumber, paceGroup: group.paceGroup },
+  };
 }
 
 /**
@@ -363,161 +393,29 @@ export function pacerBibFromInput(
   return { bibNumber: bib };
 }
 
+/**
+ * A pacer's pace group on its own, for the add form and the Edit path.
+ * **Optional**, like the bib: groups are often settled after the codes go out,
+ * so a blank box is "not set" (null), never a refusal.
+ */
+export function paceGroupFromInput(
+  value: unknown,
+): { paceGroup: string | null } | { problem: PacerInputError } {
+  const group = normalizePaceGroup(value);
+  if (!group) return { paceGroup: null };
+  if (group.length > MAX_PACE_GROUP_LENGTH) {
+    return {
+      problem: {
+        error: `A pace group can be at most ${MAX_PACE_GROUP_LENGTH} characters, like SUB1 or 1:00.`,
+        field: 'paceGroup',
+      },
+    };
+  }
+  return { paceGroup: group };
+}
+
 /** The refusal for a bib another pacer in this race already has. */
 export const DUPLICATE_BIB_REFUSAL = {
   error: 'Another pacer in this race already has that bib number.',
   field: 'bibNumber',
 } as const;
-
-/** What the results matcher needs to know about one pacer. */
-export interface PacerIdentity {
-  assigneeName: string | null;
-  bibNumber: string | null;
-  /** The category the pacer's code is locked to, or null if it was deleted. */
-  categoryId: string | null;
-}
-
-/** What the results matcher needs to know about one finisher. */
-export interface ResultIdentity {
-  bibNumber: string;
-  name: string;
-  categoryId: string;
-}
-
-/**
- * Which finishers on the public results are pacers.
- *
- * **A pacer is not eligible for the podium.** They run to a set pace for the
- * field, so a pacer finishing third would take an award from a runner who
- * actually raced for it. The Race Winners board leaves them out and the full
- * leaderboard tags them; their rank is untouched, because the rank is the
- * timing company's fact about who crossed when.
- *
- * A finisher is a pacer when either holds:
- *
- *  - **Their bib is a pacer's bib**, anywhere in the event. Bibs are unique per
- *    race, so this is the reliable match, and it is why staff can set the bib
- *    late through *Edit*.
- *  - **Their name is a pacer's name, in that pacer's category.** The fallback
- *    for a pacer whose bib was never entered or changed on race day. Limited to
- *    the pacer's own category so a namesake running another distance is not
- *    pulled off their podium.
- *
- * Names go through `normalizePacerName` and bibs through `normalizeBibNumber`
- * on both sides, since an uploaded sheet is whatever casing the timer used.
- */
-export function pacerResultMatcher(
-  pacers: readonly PacerIdentity[],
-): (result: ResultIdentity) => boolean {
-  const bibs = new Set<string>();
-  const namesByCategory = new Set<string>();
-  for (const pacer of pacers) {
-    const bib = normalizeBibNumber(pacer.bibNumber);
-    if (bib) bibs.add(bib);
-    const name = normalizePacerName(pacer.assigneeName);
-    if (name && pacer.categoryId) namesByCategory.add(`${pacer.categoryId}|${name}`);
-  }
-
-  return result =>
-    bibs.has(normalizeBibNumber(result.bibNumber)) ||
-    namesByCategory.has(`${result.categoryId}|${normalizePacerName(result.name)}`);
-}
-
-/** What the ranking needs to know about one finisher, on top of who they are. */
-export interface RankedResult extends ResultIdentity {
-  id: string;
-  gender: string;
-  /** As uploaded; 0 for anyone who did not finish. */
-  categoryRank: number;
-  /** As uploaded, within the category; 0 for anyone who did not finish. */
-  genderRank: number;
-}
-
-/** A finisher's place once pacers are left out. Null ranks print as "-". */
-export interface PacerAwareRanks {
-  isPacer: boolean;
-  categoryRank: number | null;
-  genderRank: number | null;
-}
-
-/** The division a gender rank is counted in, the way the upload route groups it. */
-function genderKey(gender: string): string | null {
-  const g = gender.trim().toLowerCase();
-  if (g === 'male' || g === 'm') return 'M';
-  if (g === 'female' || g === 'f') return 'F';
-  return null;
-}
-
-/**
- * Category and gender ranks **without the pacers** (owner, 2026-10-07).
- *
- * A pacer is not racing, so they hold no place: their ranks are null ("-")
- * and everyone behind them moves up one for each pacer ahead of them in the
- * same group — the category for Category Rank, the category's gender
- * division for Gender Rank. The row itself stays where its time puts it.
- *
- * **Subtracted, not re-sorted.** The uploaded rank is the timer's ordering,
- * ties included, and taking away the pacers ahead keeps that ordering exactly
- * rather than inventing a second one from chip times.
- *
- * Worked out on read, never written back: the upload stays the timing
- * company's raw sheet, and a bib entered or changed later moves every rank at
- * once without a re-upload. Every page that prints a rank — the full
- * leaderboard, a runner's page and certificate, the admin Race Results — reads
- * it from here, so a runner is never #1 in one place and 2nd in another.
- *
- * `results` must hold **every** result of each category it ranks (the pacers
- * ahead are what is counted). A rank of 0 means "did not finish" and is left
- * as it is.
- */
-export function ranksWithoutPacers(
-  results: readonly RankedResult[],
-  isPacer: (result: ResultIdentity) => boolean,
-): Map<string, PacerAwareRanks> {
-  const pacerFlags = new Map(results.map(result => [result.id, isPacer(result)]));
-
-  // The uploaded ranks the pacers hold, per group.
-  const pacerCategoryRanks = new Map<string, number[]>();
-  const pacerGenderRanks = new Map<string, number[]>();
-  for (const result of results) {
-    if (!pacerFlags.get(result.id)) continue;
-    if (result.categoryRank > 0) push(pacerCategoryRanks, result.categoryId, result.categoryRank);
-    const gender = genderKey(result.gender);
-    if (gender && result.genderRank > 0) {
-      push(pacerGenderRanks, `${result.categoryId}|${gender}`, result.genderRank);
-    }
-  }
-
-  const ranks = new Map<string, PacerAwareRanks>();
-  for (const result of results) {
-    if (pacerFlags.get(result.id)) {
-      ranks.set(result.id, { isPacer: true, categoryRank: null, genderRank: null });
-      continue;
-    }
-    const gender = genderKey(result.gender);
-    ranks.set(result.id, {
-      isPacer: false,
-      categoryRank: lessPacersAhead(
-        result.categoryRank,
-        pacerCategoryRanks.get(result.categoryId),
-      ),
-      genderRank: lessPacersAhead(
-        result.genderRank,
-        gender ? pacerGenderRanks.get(`${result.categoryId}|${gender}`) : undefined,
-      ),
-    });
-  }
-  return ranks;
-}
-
-function push(groups: Map<string, number[]>, key: string, rank: number) {
-  const list = groups.get(key);
-  if (list) list.push(rank);
-  else groups.set(key, [rank]);
-}
-
-/** This rank, less one for each pacer ranked ahead of it. 0 stays 0. */
-function lessPacersAhead(rank: number, pacerRanks: number[] | undefined): number {
-  if (rank <= 0 || !pacerRanks) return rank;
-  return rank - pacerRanks.filter(pacerRank => pacerRank < rank).length;
-}

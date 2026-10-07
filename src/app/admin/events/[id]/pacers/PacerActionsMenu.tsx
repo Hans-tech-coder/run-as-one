@@ -67,7 +67,7 @@ export default function PacerActionsMenu({
   copied?: boolean;
   onCopyCode: () => void;
   onToggleCodeSent: () => void;
-  /** Opens the Edit modal: the pacer's name and bib. */
+  /** Opens the Edit modal: the pacer's name, bib and pace group. */
   onEdit: () => void;
   onTogglePause: () => void;
   /**
@@ -220,7 +220,7 @@ export default function PacerActionsMenu({
           role="menuitem"
         >
           <PencilLine size={16} />
-          Edit name &amp; bib
+          Edit details
         </button>
         {/* The reversible answer to "stop this", between the edits and the
             deletion — and the only answer once a pacer has registered. */}

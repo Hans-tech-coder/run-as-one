@@ -9,6 +9,7 @@ import { drawDefaultCertificate } from '@/lib/e-certificate-default';
 import {
   drawByline, drawContentBlock, embedCertificateFonts, hexColor, inkTheme, type CertificateContent,
 } from '@/lib/e-certificate-layout';
+import { categoryDistanceKm } from '@/lib/category-distance';
 import { formatEventDay } from '@/lib/event-schedule';
 import { toWholeSeconds } from '@/lib/race-time';
 import { SITE_NAME } from '@/lib/site-contact';
@@ -21,7 +22,11 @@ export interface CertificateResult {
   categoryRank?: number | null;
   genderRank?: number | null;
   gender?: string | null;
-  category: { name: string };
+  /** One of the race's pacers (`withPacerRanks`): their certificate is the pacer edition. */
+  isPacer?: boolean;
+  /** The group a pacer led ("SUB1", "1:00"), when staff set one. */
+  paceGroup?: string | null;
+  category: { name: string; distance?: string | null };
 }
 
 /** What the certificate takes from the event: its details and the organizer's template. */
@@ -36,6 +41,21 @@ export interface CertificateEvent {
 /** The long side of an image template's page, in points — A4's, so type sizes match the default. */
 const PAGE_LONG_SIDE = 842;
 
+/**
+ * Minutes and seconds per kilometre, "5:41", from a chip time and the
+ * category's distance (`categoryDistanceKm`, read from its distance and then its
+ * name). Empty when either is missing, so no pace is guessed.
+ */
+function averagePace(chipTime: string, category: CertificateResult['category']): string {
+  const km = categoryDistanceKm(category.distance ?? '') ?? categoryDistanceKm(category.name);
+  const parts = chipTime.split(':').map(Number);
+  if (!km || parts.length < 2 || parts.some((n) => !Number.isFinite(n))) return '';
+  const seconds = parts.reduce((total, n) => total * 60 + n, 0);
+  if (seconds <= 0) return '';
+  const per = Math.floor(seconds / km);
+  return `${Math.floor(per / 60)}:${String(per % 60).padStart(2, '0')}`;
+}
+
 function contentFor(result: CertificateResult, event: CertificateEvent): CertificateContent {
   return {
     name: result.name,
@@ -45,6 +65,9 @@ function contentFor(result: CertificateResult, event: CertificateEvent): Certifi
     overallRank: result.categoryRank ?? 0,
     genderRank: result.genderRank ?? 0,
     gender: result.gender ?? '',
+    pacer: result.isPacer
+      ? { paceGroup: result.paceGroup?.trim() ?? '', averagePace: averagePace(result.chipTime, result.category) }
+      : null,
     eventTitle: event.title?.trim() || 'Running Event',
     eventDetails: [event.date ? formatEventDay(event.date) : '', event.location?.trim() ?? ''],
   };

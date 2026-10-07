@@ -1,10 +1,6 @@
 import prisma from '@/lib/db';
-import {
-  PACER_DISCOUNT_TYPE,
-  pacerResultMatcher,
-  ranksWithoutPacers,
-  type RankedResult,
-} from '@/lib/pacer';
+import { PACER_DISCOUNT_TYPE } from '@/lib/pacer';
+import { pacerForResult, ranksWithoutPacers, type RankedResult } from '@/lib/pacer-results';
 
 /**
  * Reading pacers out of the database.
@@ -34,6 +30,7 @@ export const PACER_SELECT = {
   code: true,
   assigneeName: true,
   bibNumber: true,
+  paceGroup: true,
   waiveAdminFee: true,
   codeSentAt: true,
   paused: true,
@@ -154,14 +151,24 @@ export async function pacerOrdersByCode(
  * organizer handed a bib by hand is still a pacer on the course.
  */
 export async function pacerResultMatcherForEvent(eventId: string) {
+  const pacerFor = await pacerLookupForEvent(eventId);
+  return (result: Parameters<typeof pacerFor>[0]) => pacerFor(result) !== null;
+}
+
+/**
+ * The same match, handing back the pacer itself — for `withPacerRanks`, which
+ * passes on a pacer's pace group (and only that) for their certificate.
+ */
+async function pacerLookupForEvent(eventId: string) {
   const pacers = await prisma.promoCode.findMany({
     where: { eventId, discountType: PACER_DISCOUNT_TYPE },
-    select: { assigneeName: true, bibNumber: true, categories: { select: { categoryId: true } } },
+    select: { assigneeName: true, bibNumber: true, paceGroup: true, categories: { select: { categoryId: true } } },
   });
-  return pacerResultMatcher(
+  return pacerForResult(
     pacers.map(pacer => ({
       assigneeName: pacer.assigneeName,
       bibNumber: pacer.bibNumber,
+      paceGroup: pacer.paceGroup,
       categoryId: pacer.categories[0]?.categoryId ?? null,
     })),
   );
@@ -174,17 +181,18 @@ export async function pacerResultMatcherForEvent(eventId: string) {
  *
  * `results` must hold every result of each category being shown — the full
  * leaderboard and the admin table pass the whole event; a runner's page passes
- * their category. Only the flag and the adjusted numbers reach the page, never
- * the pacer list.
+ * their category. Only the flag, a pacer's own pace group (printed on their
+ * certificate) and the adjusted numbers reach the page, never the pacer list.
  */
 export async function withPacerRanks<T extends RankedResult>(eventId: string, results: T[]) {
-  const isPacer = await pacerResultMatcherForEvent(eventId);
-  const ranks = ranksWithoutPacers(results, isPacer);
+  const pacerFor = await pacerLookupForEvent(eventId);
+  const ranks = ranksWithoutPacers(results, result => pacerFor(result) !== null);
   return results.map(result => {
     const adjusted = ranks.get(result.id)!;
     return {
       ...result,
       isPacer: adjusted.isPacer,
+      paceGroup: adjusted.isPacer ? (pacerFor(result)?.paceGroup ?? null) : null,
       categoryRank: adjusted.categoryRank,
       genderRank: adjusted.genderRank,
     };
