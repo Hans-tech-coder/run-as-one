@@ -336,8 +336,8 @@ export default function FullResultsClient({ results, event }: Props) {
   // A row opens its runner's result. It used to do that with
   // `window.location.href` — a full page reload, with nothing on screen to
   // say the tap was taken until the new document painted. A router push in a
-  // transition keeps the page alive meanwhile, so the row's number can turn
-  // into the running figure until results/[slug]/loading.tsx takes over;
+  // transition keeps the page alive meanwhile, so the row's Actions button can
+  // turn into the running figure until results/[slug]/loading.tsx takes over;
   // desktop rows prefetch on hover so there is usually nothing to wait for.
   const router = useRouter();
   const [isOpening, startOpening] = useTransition();
@@ -351,7 +351,11 @@ export default function FullResultsClient({ results, event }: Props) {
   // A certificate opens over the list, and Share Result on it points at the
   // runner's own page rather than at this leaderboard.
   const cert = useECertificate<Result>(event);
-  const actionsFor = (r: Result, path: string) => (
+  const actionsFor = (r: Result, path: string) => opening(path) ? (
+    <div className="w-10 h-10 flex items-center justify-center">
+      <RunnerLoader size="sm" label="Opening this result" />
+    </div>
+  ) : (
     <ActionMenu
       path={path}
       onViewCert={() => cert.show(r, path)}
@@ -360,13 +364,6 @@ export default function FullResultsClient({ results, event }: Props) {
   );
 
   const columns = useMemo<ColumnDef<Result>[]>(() => [
-    {
-      // Rendered by the row loop, which knows the row's place on the page —
-      // see `positionOf` below.
-      id: "index",
-      header: "No.",
-      cell: () => null,
-    },
     {
       accessorKey: "name",
       header: "Runner",
@@ -480,17 +477,24 @@ export default function FullResultsClient({ results, event }: Props) {
     table.getColumn('gender')?.setFilterValue(newSelected.length ? newSelected : undefined);
   };
 
+  // One press undoes the search and both filters — including a category that
+  // arrived in the link. `resetColumnFilters()` would put that one back: it
+  // resets to the initial state, which is where the link's category lives.
+  // Focus lands on the count, which now reads the whole field again; the
+  // search box would have raised the keyboard on a phone.
+  const isFiltered = globalFilter !== '' || selectedCategories.length > 0 || selectedGenders.length > 0;
+  const countRef = useRef<HTMLParagraphElement>(null);
+  const clearFilters = () => {
+    setGlobalFilter('');
+    table.setColumnFilters([]);
+    countRef.current?.focus({ preventScroll: true });
+  };
+
   const pageSizeMenu = useDismissableMenu();
 
   const { pageIndex, pageSize } = table.getState().pagination;
   const rows = table.getRowModel().rows;
   const matching = table.getFilteredRowModel().rows.length;
-
-  // A row's number is its place in the list being looked at, so it is counted
-  // from where this page starts. The phone cards used to add the page offset
-  // to `row.index` — which is already the row's place in the *whole* sheet —
-  // so page 3 of ten began at 41, and a filtered list skipped numbers.
-  const positionOf = (i: number) => pageIndex * pageSize + i + 1;
 
   // Changing page from the pager under a long list left the reader at the
   // bottom of the new page, looking at its last row. Bring the top of the list
@@ -558,13 +562,31 @@ export default function FullResultsClient({ results, event }: Props) {
         </div>
       </div>
 
-      <p className="text-sm text-secondary mb-5 md:mb-6" aria-live="polite">
-        {matching === results.length
-          ? <><span className="font-medium text-white">{results.length.toLocaleString()}</span> finishers</>
-          : <><span className="font-medium text-white">{matching.toLocaleString()}</span> of {results.length.toLocaleString()} finishers</>}
-      </p>
+      {/* Clear filters shares the count's line, so it costs no row of its own
+          on a phone. It is always laid out and only faded in, so the line
+          never changes height; the negative margins give it a 44px target
+          without making the line taller. Its hover has no fill — the label turns
+          white and the X gives a quarter turn. The blue is spelled as the variable,
+          not `text-accent-blue`: EventDetails.css (loaded here by the hero
+          banner) declares that class outside Tailwind's layers, and an
+          unlayered rule outranks every `hover:` utility. */}
+      <div className="flex items-center justify-between gap-3 mb-5 md:mb-6">
+        <p ref={countRef} tabIndex={-1} className="text-sm text-secondary focus:outline-none" aria-live="polite">
+          {matching === results.length
+            ? <><span className="font-medium text-white">{results.length.toLocaleString()}</span> finishers</>
+            : <><span className="font-medium text-white">{matching.toLocaleString()}</span> of {results.length.toLocaleString()} finishers</>}
+        </p>
+        <button
+          type="button"
+          onClick={clearFilters}
+          className={`group -my-2.5 -mr-3 h-11 shrink-0 inline-flex items-center gap-1.5 px-3 rounded-xl text-sm font-medium text-[var(--accent-blue)] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue/60 transition-[opacity,visibility,color] duration-200 motion-reduce:transition-none ${isFiltered ? 'opacity-100 visible' : 'opacity-0 invisible'}`}
+        >
+          <X size={14} aria-hidden="true" className="transition-transform duration-200 group-hover:rotate-90 motion-reduce:transition-none" />
+          Clear filters
+        </button>
+      </div>
 
-        {/* Desktop Table View. From lg only: eight columns need about 850px,
+        {/* Desktop Table View. From lg only: seven columns need about 800px,
             and between md and lg the table overflowed its card behind a
             hidden scrollbar, cutting the Actions column off with nothing to
             say it was there. The cards cover those widths instead. */}
@@ -593,7 +615,7 @@ export default function FullResultsClient({ results, event }: Props) {
                     </td>
                   </tr>
                 ) : (
-                  rows.map((row, i) => {
+                  rows.map((row) => {
                     const path = runnerResultPath(event, row.original);
                     const isThisOpening = opening(path);
                     return (
@@ -611,13 +633,9 @@ export default function FullResultsClient({ results, event }: Props) {
                           if (cell.column.id === 'gender') return null;
                           return (
                             <td key={cell.id} className="px-4 xl:px-5 py-4 align-middle">
-                              {cell.column.id === 'index'
-                                ? (isThisOpening
-                                    ? <RunnerLoader size="sm" label="Opening this result" />
-                                    : <div className="text-secondary font-mono tabular-nums">{positionOf(i)}</div>)
-                                : cell.column.id === 'actions'
-                                  ? actionsFor(row.original, path)
-                                  : flexRender(cell.column.columnDef.cell, cell.getContext())}
+                              {cell.column.id === 'actions'
+                                ? actionsFor(row.original, path)
+                                : flexRender(cell.column.columnDef.cell, cell.getContext())}
                             </td>
                           );
                         })}
@@ -652,11 +670,6 @@ export default function FullResultsClient({ results, event }: Props) {
                   <div className="absolute top-0 right-0 w-[150px] h-[150px] bg-accent-blue/5 rounded-full blur-[50px] -mr-16 -mt-16 pointer-events-none"></div>
 
                   <div className="flex items-start gap-3 relative z-10">
-                    <div className="w-10 h-10 shrink-0 bg-white/5 rounded-full flex items-center justify-center border border-white/10 text-white font-bold text-sm tabular-nums shadow-[0_4px_10px_rgba(0,0,0,0.3)]">
-                      {opening(path)
-                        ? <RunnerLoader size="sm" label="Opening this result" />
-                        : positionOf(i)}
-                    </div>
                     {/* A runner's name is untrusted length: it truncates here
                         and is spelled out in full on their own result. */}
                     <div className="flex-1 min-w-0 pt-0.5">
