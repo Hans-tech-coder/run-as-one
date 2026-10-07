@@ -3,6 +3,25 @@ import prisma from '@/lib/db';
 import crypto from 'crypto';
 import { settleOnlinePayment } from '@/lib/online-payment';
 
+/**
+ * How old a signed event may be, in seconds, before it is refused as a replay.
+ *
+ * The `t=` in the signature header is signed with the body, so a copy of a real
+ * delivery stays valid forever unless its age is checked (Strix vuln-0001).
+ * PayMongo's docs do not say whether a retry gets a fresh `t=`, so this is wide
+ * enough for the worst case: every automatic retry carrying the original time.
+ * Those run up to 12 times over about 136.5 minutes, and "are not guaranteed to
+ * land at exact intervals", so three hours. Too tight a window is worse than a
+ * wide one — a refused retry counts as a failed delivery, and three events that
+ * fail every retry disable the webhook. A genuine event refused here (a manual
+ * Resend of an old one) is not lost: "Check with PayMongo" on the order
+ * settles it through the same `settleOnlinePayment`.
+ */
+const MAX_EVENT_AGE_SECONDS = 3 * 60 * 60;
+
+/** How far ahead of our clock a `t=` may be: clock skew, not a real delivery. */
+const MAX_CLOCK_SKEW_SECONDS = 5 * 60;
+
 export async function POST(request: Request) {
   try {
     // Fail closed: without the secret nothing can be verified, and an
@@ -44,6 +63,21 @@ export async function POST(request: Request) {
     ) {
       console.error('PayMongo Webhook signature verification failed');
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
+    }
+
+    // Checked after the signature, so only a genuine PayMongo event is ever
+    // refused for its age, and the log can say so.
+    const signedAt = Number(timestampMatch[1]);
+    const ageSeconds = Math.floor(Date.now() / 1000) - signedAt;
+    if (
+      !Number.isInteger(signedAt) ||
+      ageSeconds > MAX_EVENT_AGE_SECONDS ||
+      ageSeconds < -MAX_CLOCK_SKEW_SECONDS
+    ) {
+      console.error(
+        `PayMongo Webhook: signed event is ${ageSeconds}s old, outside the replay window; refused. If it is a real payment, use "Check with PayMongo" on the order.`
+      );
+      return NextResponse.json({ error: 'Event timestamp outside the allowed window' }, { status: 400 });
     }
 
     // Envelope: { data: { type: 'event', attributes: { type: '<event name>', data: <resource> } } }.

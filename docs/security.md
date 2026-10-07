@@ -193,6 +193,16 @@
   together, and every group promotion; a bigger club splits into two orders.
   Together with `CHECKOUT_RULE` that bounds one address to 200 held slots a
   minute — still per instance, so the shared counter above is the real fix.
+- **A captured PayMongo webhook cannot be replayed later.** The signature
+  covers `t=` and the body, so a copy of a real delivery used to stay valid
+  forever (Strix vuln-0001, 2026-10-07). After the HMAC check the route refuses
+  an event signed more than 3 hours ago or more than 5 minutes ahead. The
+  window is wide on purpose: PayMongo does not say whether a retry is
+  re-signed, its 12 retries run about 136.5 minutes, and three events that fail
+  every retry disable the webhook. Replay did little harm even before — only a
+  `PENDING` order is ever flipped — so the window is about shutting the door,
+  not a live exploit. A genuine late event (a dashboard *Resend*) is settled
+  with "Check payment" instead.
 - **The resume-payment link is a key to one order, and is built as one**
   (`UNPAID_FOLLOWUP_PLAN.md` Batch 3, `lib/resume-payment.ts`). Handed out
   only with `registration:email`, every copy on the trail. A signed token
