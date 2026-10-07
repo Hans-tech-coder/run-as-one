@@ -307,6 +307,18 @@ const PATTERNS: [RegExp, RouteShape][] = [
     /^\/admin\/remittances\/[^/]+$/,
     { metrics: 4, panels: [{ fields: [SETTLEMENT_BREAKDOWN] }], lg: { panels: [{ rows: [LG_SETTLEMENT_BREAKDOWN] }] } },
   ],
+  // A client viewer's race (CLIENT_RACE_PAGE_PLAN.md): four count tiles over
+  // Slots, Shirt Sizes and Race Kits. Their heights follow the race's
+  // categories and sizes, so these are a two-category race's, measured at 360
+  // and 1440.
+  [
+    /^\/admin\/your-events\/[^/]+$/,
+    {
+      metrics: 4,
+      panels: [{ fields: [300] }, { fields: [300] }, { fields: [260] }],
+      lg: { panels: [{ rows: [200] }, { rows: [190] }, { rows: [180] }] },
+    },
+  ],
   [
     /^\/admin\/events\/[^/]+\/results$/,
     {

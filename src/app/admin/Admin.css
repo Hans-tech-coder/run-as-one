@@ -3928,6 +3928,25 @@ textarea.form-input {
   white-space: nowrap;
 }
 
+/* The card's one way in to its race page, pushed to the foot so every card in
+   a row ends on the same line. 44px tall: it is a touch target. */
+.viewer-event-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  min-height: 44px;
+  margin-top: auto;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--accent-blue-text);
+  text-decoration: none;
+}
+
+.viewer-event-open:hover {
+  text-decoration: underline;
+}
+
 .viewer-event-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));

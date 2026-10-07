@@ -13,9 +13,9 @@ import DashboardHeader from './DashboardHeader';
  *
  * **Counts, never money, names or links into the team's screens.** Every
  * number here comes from `lib/client-summary.ts`, whose shape has no field for
- * anything more. The cards are not links: there is no page behind a race that
- * a viewer may open, and a card that looks pressable and goes nowhere is the
- * dead end §8 forbids.
+ * anything more. Each card ends in one labelled link, **View race details**,
+ * to the race's own viewer page (`your-events/[id]`, CLIENT_RACE_PAGE_PLAN.md);
+ * the card itself is not a link, so the counts stay selectable text.
  *
  * Four tiles total the races — registered, paid, awaiting verification and
  * unpaid checkouts — then one card per race: its poster, the same
@@ -103,7 +103,8 @@ export default function ViewerDashboard({
   );
 }
 
-function Tile({ title, value, icon }: { title: string; value: number; icon: React.ReactNode }) {
+/** One count tile; the race page reuses it so the two read alike. */
+export function Tile({ title, value, icon }: { title: string; value: number; icon: React.ReactNode }) {
   return (
     <div className="metric-card">
       <div className="metric-header">
@@ -198,6 +199,10 @@ function EventSummaryCard({ event }: { event: ViewerEventSummary }) {
             </ul>
           </div>
         )}
+
+        <Link href={`/admin/your-events/${event.id}`} className="viewer-event-open">
+          View race details <ArrowRight size={16} aria-hidden="true" />
+        </Link>
       </div>
     </article>
   );

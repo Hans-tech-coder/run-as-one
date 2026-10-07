@@ -109,9 +109,9 @@ never a registered runner**), a paid / awaiting / unpaid bar that is
 `aria-hidden` with the numbers written beside it in words (unpaid the lighter,
 neutral segment), a one-line explanation of unpaid checkouts when a race has
 any (the viewer has no list to open), and each category's total with
-`N paid · N awaiting` (`· N unpaid` when there are some). **No money, names,
-references or links** — the cards are not pressable, because nothing behind a
-race is the viewer's to open. The grid is one column on a phone and ~340px
+`N paid · N awaiting` (`· N unpaid` when there are some). **No money, names
+or references.** The card itself is not pressable; it ends in one labelled
+link, **View race details →**, to that race's page (below). The grid is one column on a phone and ~340px
 columns after; a category's counts drop under its name when they cannot share
 the line. With no linked race the tiles read 0 over *No events linked yet*,
 naming the client. The wait draws four tiles over three event cards
@@ -121,6 +121,25 @@ naming the client. The wait draws four tiles over three event cards
 E-Certificate Guide**, Settings in the account menu, and **every other
 `/admin` screen answers it with *Not Part of Your View*** (`admin/forbidden.tsx`,
 §7) — Settings stays, name, email and password as for anyone.
+
+**`/admin/your-events/[id]` is one of a client viewer's races**
+(`CLIENT_RACE_PAGE_PLAN.md` Batch 1, `admin/your-events/[id]/page.tsx`, reading
+`client-race-report.ts`). `requireActor()`, then the report decides: a race
+the person may not see — another client's, removed, or a made-up id — is the
+same *Race not found* panel. Breadcrumb *Your Events*, the race as title, and
+Dashboard stays lit in the sidebar (`isActivePath`). A wrapping line of the
+registration badge, date and place; the four count tiles; then three panels,
+each with one sentence saying what it counts: **Slots per Category** (registered,
+`N of M slots left` with a fill bar, *Almost full* at 90%, *Full* at the limit,
+*No slot limit* when unlimited — taken slots include unpaid checkouts, as on the
+public page), **Shirt Sizes** (registrants' sizes as wrapping tiles in chart
+order, all categories first, then per category when more than one has sizes;
+spelled-out sizes such as *Large* count as their code), and **Race Kits**
+(pickup, with the pickup place and schedule or a line saying none is set, and
+delivery, split *Inside / Outside Province* only where the race asked). Counts
+only; no tables, so nothing scrolls sideways on a phone. Left out on purpose
+after the owner's look at a competitor's portal: withdrawals, a per-order money
+ledger, promo-code tools, inventory allocation and courier stages.
 
 **`/admin/certificate-guide` is the e-certificate template guide**
 (`ECERT_GUIDE_PAGE_PLAN.md`, `admin/certificate-guide/`), for **everyone signed

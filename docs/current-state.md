@@ -35,6 +35,15 @@ split order shows each runner's own parcel and the order's parcel list (§6). No
 migration. The plan's "manual entry at `/admin/register`" was not built: that
 route is the organizer application, and no screen adds a runner by hand.
 
+**A client viewer has a page per race** (2026-10-07, on `dev`, not released,
+`CLIENT_RACE_PAGE_PLAN.md` — Batch 1 of 4): `/admin/your-events/[id]`, opened
+from **View race details →** on each Overview card — slots per category with
+*Almost full* / *Full*, shirt sizes per category, and race kits by pickup or
+delivery. Counts only (§5 `client-race-report.ts`); no migration. Still to
+come, owner-approved: registrations over time and Print (Batch 2), a simple
+payout summary (Batch 3, a new viewer permission) and a runner list without
+contact details (Batch 4, plus a Privacy page update).
+
 **The e-certificate template guide is a dashboard page** (2026-10-07, on
 `dev`, not released, `ECERT_GUIDE_PAGE_PLAN.md`): `/admin/certificate-guide`,
 for everyone signed in including client viewers, with **Save as PDF** for a

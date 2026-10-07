@@ -1,0 +1,256 @@
+/*
+ * A client viewer's race page (your-events/[id]). Its own file rather than
+ * more of Admin.css, which is on the split list.
+ *
+ * Nothing here scrolls sideways: categories and sizes are wrapping rows, not
+ * tables, so a 360px phone sees every number (§8, rule 12).
+ */
+
+.race-page {
+  display: grid;
+  gap: 24px;
+}
+
+/* The tiles' own bottom margin is the grid gap's job here. */
+.race-page > .metrics-grid {
+  margin-bottom: 0;
+}
+
+/* ── The race's state, date and place, one wrapping line over the tiles ── */
+.race-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.race-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.race-meta-item svg {
+  flex-shrink: 0;
+}
+
+/* ── A section: title, one plain sentence saying what is counted, body ──── */
+.race-panel-head {
+  display: grid;
+  gap: 4px;
+  padding: var(--space-lg);
+  border-bottom: 1px solid var(--dash-hairline);
+}
+
+.race-panel-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.race-panel-title > span {
+  display: inline-flex;
+  color: var(--accent-blue-text);
+}
+
+.race-panel-hint {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.race-panel-body {
+  padding: var(--space-lg);
+}
+
+.race-empty {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.race-sub {
+  margin: 0 0 10px;
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+/* ── Slots per category ─────────────────────────────────────────────────── */
+.race-slot-list {
+  display: grid;
+  gap: 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.race-slot {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.race-slot-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.race-slot-name {
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.race-slot-bar {
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--ink-06);
+}
+
+.race-slot-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent-blue);
+}
+
+.race-slot-bar.is-almost > span {
+  background: var(--status-warning);
+}
+
+.race-slot-bar.is-full > span {
+  background: var(--status-danger);
+}
+
+.race-slot-numbers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 16px;
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.race-slot-count {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* ── Shirt sizes ────────────────────────────────────────────────────────── */
+.race-size-group {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--dash-hairline);
+}
+
+.race-size-chips {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.race-size-chip {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 10px 6px;
+  border: 1px solid var(--dash-hairline);
+  border-radius: var(--radius-md);
+  background: var(--dash-panel-solid);
+}
+
+.race-size-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-secondary);
+}
+
+.race-size-count {
+  font-family: var(--font-sans);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Race kits ──────────────────────────────────────────────────────────── */
+.race-kit-list {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.race-kit {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.race-kit-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--accent-blue) 12%, transparent);
+  color: var(--accent-blue-text);
+}
+
+.race-kit-main {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+}
+
+.race-kit-label {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.race-kit-meta {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.race-kit-count {
+  font-family: var(--font-sans);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (width < 40rem) {
+  .race-page {
+    gap: 16px;
+  }
+
+  .race-panel-head,
+  .race-panel-body {
+    padding: var(--space-md);
+  }
+}

@@ -102,9 +102,12 @@
   `referrer: no-referrer`, since the token is in its URL. Outside production
   only, the link is printed to the server console for local testing.
 - **A client viewer reaches registrant counts of its own client's events and
-  nothing else**, enforced on the server rather than by hidden links. Its one
-  screen is the Overview (`client-summary.ts`, which asks `event:view-summary`
-  with each event's `clientId`) plus its own Settings and the
+  nothing else**, enforced on the server rather than by hidden links. Its
+  screens are the Overview (`client-summary.ts`, which asks `event:view-summary`
+  with each event's `clientId`), each race's own page `/admin/your-events/[id]`
+  (`client-race-report.ts`, the same read narrowed to one race, so another
+  client's race reads as not found — still counts only: sizes and kits are
+  counts of runners), plus its own Settings and the
   **E-Certificate Guide** (`/admin/certificate-guide`). The guide is the one
   team-side page a viewer may open, and it gates on `requireActor()` alone
   because it holds no data: the same static text for every reader, with no

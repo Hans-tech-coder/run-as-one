@@ -119,7 +119,9 @@ const isWideOnServer = () => true;
  * `/admin` is the dashboard's own page, not its root, so it is matched exactly.
  */
 export function isActivePath(pathname: string, path: string) {
-  if (path === '/admin') return pathname === '/admin';
+  // A client viewer's race pages open from its Dashboard and have no row of
+  // their own, so Dashboard stays lit on them.
+  if (path === '/admin') return pathname === '/admin' || pathname.startsWith('/admin/your-events/');
   return pathname === path || pathname.startsWith(`${path}/`);
 }
 

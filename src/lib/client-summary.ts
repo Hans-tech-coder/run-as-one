@@ -49,6 +49,8 @@ export type ViewerCategorySummary = {
   name: string;
   /** "10KM" for a race option, empty for a fun run package. */
   distance: string;
+  /** How many places the category has; null when it is unlimited. */
+  slotLimit: number | null;
 } & RegistrantCounts;
 
 export type ViewerEventSummary = {
@@ -70,10 +72,18 @@ const NONE: RegistrantCounts = { paid: 0, awaiting: 0, unpaid: 0, total: 0 };
 /**
  * The events this actor may see a summary of, soonest race first and finished
  * races after, each with its registrant counts.
+ *
+ * `eventId` narrows it to one race, for that race's own page
+ * (`client-race-report.ts`): the same read and the same two checks, so the
+ * page and the card it was opened from can never disagree about a count.
  */
-export async function viewerEventSummaries(actor: Actor): Promise<ViewerEventSummary[]> {
+export async function viewerEventSummaries(
+  actor: Actor,
+  eventId?: string,
+): Promise<ViewerEventSummary[]> {
+  const reachable = reachableEvents(actor, 'event:view-summary');
   const events = await prisma.event.findMany({
-    where: reachableEvents(actor, 'event:view-summary'),
+    where: eventId ? { AND: [reachable, { id: eventId }] } : reachable,
     select: {
       id: true,
       title: true,
@@ -114,6 +124,7 @@ export async function viewerEventSummaries(actor: Actor): Promise<ViewerEventSum
         id: category.id,
         name: category.name,
         distance: category.distance,
+        slotLimit: category.slotLimit,
         ...places,
         total: places.paid + places.awaiting,
       };
