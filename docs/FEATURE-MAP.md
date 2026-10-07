@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-37 pages · 52 API routes · 80 modules in `src/lib` · 363 files · 75,811 lines
+37 pages · 52 API routes · 84 modules in `src/lib` · 368 files · 76,562 lines
 
 ---
 
@@ -29,7 +29,7 @@ The route, the server component behind it, and the client components beside it.
 | `/admin/activity` | [`/admin/activity/page.tsx`](../src/app/admin/activity/page.tsx) | `ActivityClient.tsx` |
 | `/admin/clients` | [`/admin/clients/page.tsx`](../src/app/admin/clients/page.tsx) | `ApplicationPanel.tsx` `ClientsClient.tsx` `InviteDialog.tsx` |
 | `/admin/communities` | [`/admin/communities/page.tsx`](../src/app/admin/communities/page.tsx) | `CommunitiesClient.tsx` |
-| `/admin/events` | [`/admin/events/page.tsx`](../src/app/admin/events/page.tsx) | `bank-account-draft.ts` `BankAccountsPanel.tsx` `category-draft.ts` `ConsentWaiverField.tsx` `DescriptionEditor.tsx` `event-not-found.ts` `EventActionsMenu.tsx` `EventClientField.tsx` `EventOptionsPanel.tsx` `EventPromotionsPanel.tsx` `EventProvinceField.tsx` `EventsTableClient.tsx` `HighlightsField.tsx` `HighlightsModal.tsx` `InclusionsField.tsx` `LogisticsPanel.tsx` `PosterField.tsx` `registration-opening.ts` `registration-state-badge.ts` `RegistrationFormPicker.tsx` `RegistrationOpeningPicker.tsx` `RegistrationScheduleModal.tsx` |
+| `/admin/events` | [`/admin/events/page.tsx`](../src/app/admin/events/page.tsx) | `bank-account-draft.ts` `BankAccountsPanel.tsx` `category-draft.ts` `CertificateSettingsPanel.tsx` `ConsentWaiverField.tsx` `DescriptionEditor.tsx` `event-not-found.ts` `EventActionsMenu.tsx` `EventClientField.tsx` `EventOptionsPanel.tsx` `EventPromotionsPanel.tsx` `EventProvinceField.tsx` `EventsTableClient.tsx` `HighlightsField.tsx` `HighlightsModal.tsx` `InclusionsField.tsx` `LogisticsPanel.tsx` `PosterField.tsx` `registration-opening.ts` `registration-state-badge.ts` `RegistrationFormPicker.tsx` `RegistrationOpeningPicker.tsx` `RegistrationScheduleModal.tsx` |
 | `/admin/events/[id]/edit` | [`/admin/events/[id]/edit/page.tsx`](../src/app/admin/events/[id]/edit/page.tsx) | — |
 | `/admin/events/[id]/pacers` | [`/admin/events/[id]/pacers/page.tsx`](../src/app/admin/events/[id]/pacers/page.tsx) | `AddPacerModal.tsx` `EditPacerModal.tsx` `PacerActionsMenu.tsx` `PacersClient.tsx` |
 | `/admin/events/[id]/registrants` | [`/admin/events/[id]/registrants/page.tsx`](../src/app/admin/events/[id]/registrants/page.tsx) | `CancelOrderModal.tsx` `ColumnsViewMenu.tsx` `DeleteRegistrantModals.tsx` `email-handoff.ts` `FollowUpModal.tsx` `ManualEmailModal.tsx` `PaymentLinkEmailModal.tsx` `ProofLightbox.tsx` `registrant-columns.tsx` `registrant-csv.ts` `registrant-display.tsx` `RegistrantActionsMenu.tsx` `RegistrantDetailModal.tsx` `RegistrantRowActions.tsx` `RegistrantsDataTable.tsx` `RegistrantsTable.tsx` `RegistrantsTabs.tsx` `RegistrantsToolbar.tsx` `RemarksModal.tsx` `RunnerAddressEditor.tsx` `RunnerEditModal.tsx` `SendLinksButton.tsx` `unpaid-columns.tsx` `UnpaidCheckoutActions.tsx` `UnpaidCheckoutCards.tsx` `UnpaidCheckoutsList.tsx` |
@@ -141,6 +141,7 @@ the file itself.
 | [`brand-mark.ts`](../src/lib/brand-mark.ts) | The geometry of the Run As One mark, in one place. |
 | [`calendar-day.ts`](../src/lib/calendar-day.ts) | Arithmetic on calendar days, the `YYYY-MM-DD` strings every date field in this app holds (`Event.date`, `Runner.birthdate`, the promo windows). |
 | [`category-order.ts`](../src/lib/category-order.ts) | The order an event's categories are listed in, everywhere. |
+| [`certificate-settings.ts`](../src/lib/certificate-settings.ts) | What an event's certificate settings mean, and which of the two layouts an organizer's template is drawn in. |
 | [`client-store.ts`](../src/lib/client-store.ts) | Reading clients out of the database, and the one write every event form makes about one: which client a race is for. |
 | [`client-summary.ts`](../src/lib/client-summary.ts) | What a client viewer is shown about its own races (ADMIN_MERGE_PLAN.md, Batch 4) — and, by what this module leaves out, what it is not. |
 | [`client.ts`](../src/lib/client.ts) | Where a client stands, and which moves between standings are allowed. |
@@ -150,7 +151,9 @@ the file itself.
 | [`db.ts`](../src/lib/db.ts) | — |
 | [`discount.ts`](../src/lib/discount.ts) | What a promo code is worth, and why it cannot be used. |
 | [`e-certificate-default.ts`](../src/lib/e-certificate-default.ts) | Run As One's own e-certificate, drawn when an event has no organizer template: the site's dark look, the orange→blue gradient, and the small "e-cer… |
-| [`e-certificate.ts`](../src/lib/e-certificate.ts) | A runner's e-certificate as a PDF: the organizer's template when there is one, otherwise Run As One's own design, which alone carries the small "e-… |
+| [`e-certificate-draw.ts`](../src/lib/e-certificate-draw.ts) | The drawing primitives pdf-lib lacks, for the e-certificate: letter-spaced and fitted text, real gradients (shadings) and glows, rounded rectangles… |
+| [`e-certificate-layout.ts`](../src/lib/e-certificate-layout.ts) | The e-certificate's content block — one design for Run As One's default certificate and for an organizer's template in the designed layout, so a ce… |
+| [`e-certificate.ts`](../src/lib/e-certificate.ts) | A runner's e-certificate as a PDF: the organizer's template when there is one — in the designed layout or the legacy three lines, per `certificate-… |
 | [`email-address.ts`](../src/lib/email-address.ts) | What counts as an email address, in one place. |
 | [`email-delivery.ts`](../src/lib/email-delivery.ts) | Whether the runner actually got their email, and what happens when they did not. |
 | [`email-document.ts`](../src/lib/email-document.ts) | How every email is built and sent, split out of `email.ts` (`UNPAID_FOLLOWUP_PLAN.md` Batch 4): the block document model, `renderHtml` / `renderTex… |
@@ -163,6 +166,7 @@ the file itself.
 | [`feedback.ts`](../src/lib/feedback.ts) | What a piece of feedback is, and what the app will accept as one. |
 | [`follow-up.ts`](../src/lib/follow-up.ts) | Following up an unpaid checkout (UNPAID_FOLLOWUP_PLAN.md Batch 1): what a staff member records after trying to reach the runner, and how the latest… |
 | [`free-checkout.ts`](../src/lib/free-checkout.ts) | The ₱0 order: when one is real, and what it is written as (`PACER_DISCOUNT_PLAN.md` Batch 2). |
+| [`gender-division.ts`](../src/lib/gender-division.ts) | A timing sheet's gender as the division a runner reads: "M" and "male" are "Male", "F" and "female" are "Female", and anything else is passed throu… |
 | [`inclusion-icon.ts`](../src/lib/inclusion-icon.ts) | Which icon stands for a line of "What's Included". |
 | [`inclusions.ts`](../src/lib/inclusions.ts) | What a category or package gets you, as a list. |
 | [`jwt.ts`](../src/lib/jwt.ts) | — |
@@ -228,9 +232,9 @@ when a task touches one, split it before editing rather than after.
 | 1179 | [`src/app/admin/settings/SettingsPanels.tsx`](../src/app/admin/settings/SettingsPanels.tsx) |
 | 1093 | [`src/app/admin/team/TeamClient.tsx`](../src/app/admin/team/TeamClient.tsx) |
 | 1015 | [`src/app/admin/register/page.tsx`](../src/app/admin/register/page.tsx) |
-| 888 | [`src/app/admin/events/[id]/edit/page.tsx`](../src/app/admin/events/[id]/edit/page.tsx) |
 | 873 | [`src/app/admin/events/EventsTableClient.tsx`](../src/app/admin/events/EventsTableClient.tsx) |
 | 766 | [`src/app/results/[slug]/full/FullResultsClient.tsx`](../src/app/results/[slug]/full/FullResultsClient.tsx) |
+| 750 | [`src/app/admin/events/[id]/edit/page.tsx`](../src/app/admin/events/[id]/edit/page.tsx) |
 | 693 | [`src/app/admin/AdminDatePicker.tsx`](../src/app/admin/AdminDatePicker.tsx) |
 | 663 | [`src/app/admin/activity/ActivityClient.tsx`](../src/app/admin/activity/ActivityClient.tsx) |
 | 663 | [`src/lib/pending-expiry.ts`](../src/lib/pending-expiry.ts) |

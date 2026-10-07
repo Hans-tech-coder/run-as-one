@@ -5,7 +5,6 @@ import { Save, X, AlertCircle, CheckCircle, UploadCloud, Trash } from 'lucide-re
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toPesos } from '@/lib/money';
-import { acceptAttribute } from '@/lib/uploads';
 import { formatInclusions } from '@/lib/inclusions';
 import RegistrationFormPicker from '../../RegistrationFormPicker';
 import RegistrationOpeningPicker from '../../RegistrationOpeningPicker';
@@ -37,6 +36,8 @@ import DescriptionEditor from '../../DescriptionEditor';
 import HighlightsField from '@/app/admin/events/HighlightsField';
 import { cleanHighlights, type EventHighlight } from '@/lib/event-highlights';
 import LogisticsPanel, { deliveryFees, deliveryOffered, deliveryProblem } from '../../LogisticsPanel';
+import CertificateSettingsPanel from '../../CertificateSettingsPanel';
+import { defaultCertificateSettingsJson, parseCertificateSettings } from '@/lib/certificate-settings';
 
 // The premade templates that used to sit under /public/certificates are gone —
 // the only way to get a certificate background now is to upload one. An event
@@ -96,7 +97,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
     registrationPaused: false,
     registrationPauseNote: '',
     certificateTemplate: '',
-    certificateCoordinates: JSON.stringify({ nameY: 50, timeY: 60, catY: 70 }),
+    certificateCoordinates: defaultCertificateSettingsJson(),
   });
 
   // Not part of formData because EventOptionsPanel owns it rather than a plain
@@ -155,7 +156,15 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
           registrationPaused: Boolean(data.registrationPaused),
           registrationPauseNote: data.registrationPauseNote || '',
           certificateTemplate: uploadedTemplate(data.certificateTemplate),
-          certificateCoordinates: data.certificateCoordinates || JSON.stringify({ nameY: 50, timeY: 60, catY: 70 }),
+          // An event with a template keeps the layout its runners have been
+          // getting — legacy until an admin switches (an empty column reads as
+          // legacy; see certificate-settings.ts). One with no template has no
+          // runner relying on a layout, so its first template starts designed.
+          certificateCoordinates: uploadedTemplate(data.certificateTemplate)
+            ? data.certificateCoordinates || JSON.stringify({ nameY: 50, timeY: 60, catY: 70 })
+            : parseCertificateSettings(data.certificateCoordinates).v === 2
+              ? data.certificateCoordinates
+              : defaultCertificateSettingsJson(),
         });
 
         // Null on the row means the race was open from the moment it was
@@ -704,162 +713,15 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
             </div>
           </div>
 
-          {/* E-Certificate Settings */}
-          <div className="admin-panel">
-            <div className="admin-panel-header">
-              <h2 className="admin-panel-title">E-Certificate Settings</h2>
-            </div>
-            <div className="admin-panel-content">
-              
-              <div className="form-group mb-6">
-                <label className="form-label">Certificate Template</label>
-                <div className="file-upload-wrapper" style={{ opacity: uploadingField ? 0.6 : 1 }}>
-                  <input
-                    type="file"
-                    accept={acceptAttribute("template")}
-                    onChange={e => handleImageUpload(e, 'certificateTemplate', 'template')}
-                    className="file-upload-input"
-                    disabled={uploadingField !== null}
-                  />
-                  <div className="file-upload-content">
-                    <div className="file-upload-icon">
-                      <UploadCloud size={32} />
-                    </div>
-                    <div className="file-upload-title">
-                      {uploadingField === 'certificateTemplate' ? <BusyLabel>Uploading</BusyLabel> : 'Upload Certificate Template'}
-                    </div>
-                    <div className="file-upload-desc">PNG, JPG, or PDF (Landscape A4 recommended)</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Coordinates Preview */}
-              {formData.certificateTemplate && (
-                <div className="mt-8 border border-[var(--dash-border)] rounded-lg p-4 sm:p-6 bg-dark-card/50">
-                  <h3 className="text-lg font-bold text-primary mb-4">Visual Layout Preview</h3>
-                  <p className="text-secondary text-sm mb-6">Adjust the sliders to position the text exactly where you want it on your certificate.</p>
-                  
-                  <div className="flex flex-col lg:flex-row gap-8">
-                    {/* Sliders. Beside the preview from `lg` up; below it
-                        they come after it, so the certificate is read at the
-                        full width first and the positions are set under it,
-                        with the preview still in view above the thumb. */}
-                    <div className="w-full lg:w-1/3 flex flex-col gap-6 order-2 lg:order-none">
-                      {(() => {
-                        let coords = { nameY: 50, timeY: 60, catY: 70 };
-                        try {
-                          coords = JSON.parse(formData.certificateCoordinates || '{}');
-                        } catch(e) {}
-                        
-                        const updateCoord = (field: string, val: number) => {
-                          const newCoords = { ...coords, [field]: val };
-                          setFormData({ ...formData, certificateCoordinates: JSON.stringify(newCoords) });
-                        };
-
-                        return (
-                          <>
-                            <div>
-                              <label className="form-label flex justify-between">
-                                <span>Name Position (Y%)</span>
-                                <span className="text-accent-blue-ink">{coords.nameY || 50}%</span>
-                              </label>
-                              <input 
-                                type="range" min="0" max="100" 
-                                value={coords.nameY || 50} 
-                                onChange={(e) => updateCoord('nameY', Number(e.target.value))}
-                                className="w-full accent-accent-blue max-lg:h-11"
-                              />
-                            </div>
-                            <div>
-                              <label className="form-label flex justify-between">
-                                <span>Finish Time Position (Y%)</span>
-                                <span className="text-accent-blue-ink">{coords.timeY || 60}%</span>
-                              </label>
-                              <input 
-                                type="range" min="0" max="100" 
-                                value={coords.timeY || 60} 
-                                onChange={(e) => updateCoord('timeY', Number(e.target.value))}
-                                className="w-full accent-accent-blue max-lg:h-11"
-                              />
-                            </div>
-                            <div>
-                              <label className="form-label flex justify-between">
-                                <span>Category Position (Y%)</span>
-                                <span className="text-accent-blue-ink">{coords.catY || 70}%</span>
-                              </label>
-                              <input 
-                                type="range" min="0" max="100" 
-                                value={coords.catY || 70} 
-                                onChange={(e) => updateCoord('catY', Number(e.target.value))}
-                                className="w-full accent-accent-blue max-lg:h-11"
-                              />
-                            </div>
-                          </>
-                        );
-                      })()}
-                    </div>
-
-                    {/* Preview Box */}
-                    <div className="w-full lg:w-2/3">
-                      <div className="relative w-full aspect-[1.414] bg-dark-bg border border-[var(--dash-border)] rounded-md overflow-hidden shadow-xl">
-                        {/* Background Image */}
-                        {formData.certificateTemplate.startsWith('data:application/pdf') ? (
-                          <div className="absolute inset-0 flex items-center justify-center p-8 text-center text-secondary bg-dark-bg/80 z-0">
-                            PDF Template Uploaded (Preview uses blank background)
-                          </div>
-                        ) : (
-                          <img 
-                            src={formData.certificateTemplate} 
-                            alt="Certificate Background" 
-                            className="absolute inset-0 w-full h-full object-cover z-0"
-                          />
-                        )}
-                        
-                        {/* Text Overlay */}
-                        {(() => {
-                          let coords = { nameY: 50, timeY: 60, catY: 70 };
-                          try { coords = JSON.parse(formData.certificateCoordinates || '{}'); } catch(e) {}
-                          
-                          // Modern dark theme uses neon/white text, minimalist/dynamic use darker text.
-                          // Just use a strong black with white stroke for maximum visibility on preview.
-                          const textStyle = {
-                            textShadow: '0 0 4px white, 0 0 10px white',
-                            color: '#111'
-                          };
-
-                          return (
-                            <div className="absolute inset-0 z-10 pointer-events-none">
-                              {/* Name */}
-                              <div 
-                                className="absolute w-full text-center font-bold"
-                                style={{ top: `${coords.nameY || 50}%`, transform: 'translateY(-50%)', fontSize: 'clamp(1rem, 3vw, 2.5rem)', ...textStyle }}
-                              >
-                                JUAN DELA CRUZ
-                              </div>
-                              {/* Time */}
-                              <div 
-                                className="absolute w-full text-center font-medium"
-                                style={{ top: `${coords.timeY || 60}%`, transform: 'translateY(-50%)', fontSize: 'clamp(0.8rem, 1.5vw, 1.25rem)', ...textStyle }}
-                              >
-                                FINISH TIME: 04:32:15
-                              </div>
-                              {/* Category */}
-                              <div 
-                                className="absolute w-full text-center font-medium"
-                                style={{ top: `${coords.catY || 70}%`, transform: 'translateY(-50%)', fontSize: 'clamp(0.7rem, 1.2vw, 1rem)', ...textStyle }}
-                              >
-                                CATEGORY: 42K FULL MARATHON
-                              </div>
-                            </div>
-                          );
-                        })()}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+          <CertificateSettingsPanel
+            template={formData.certificateTemplate}
+            settings={formData.certificateCoordinates}
+            onSettingsChange={(certificateCoordinates) => setFormData((prev) => ({ ...prev, certificateCoordinates }))}
+            onTemplateFile={(e) => handleImageUpload(e, 'certificateTemplate', 'template')}
+            uploading={uploadingField === 'certificateTemplate'}
+            disabled={uploadingField !== null}
+            event={{ title: formData.title, date: formData.date, location: formData.location }}
+          />
 
           {/* Last, and read-only: what a runner can be given on this race,
               so a price set on this screen is not set without the discounts

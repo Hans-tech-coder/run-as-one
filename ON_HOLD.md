@@ -188,3 +188,17 @@ Not walked, and why:
 Test data left in `local-dev` (the `br-dry-grass-b3ubrfhy` branch, never
 production): `RM-B2TEST1` (CANCELLED), `RM-B4TEST1` (PAID), `RM-B4TEST2`
 (PENDING, email deliberately invalid, so PayMongo refuses to bill it).
+
+## 10. E-certificate on a template: phase 2
+
+*Source: `ECERT_TEMPLATE_PLAN.md`; phase 1 (the designed layout) shipped.*
+
+- **Embedded fonts.** Outfit for the sans, and a serif "Classic" preset, via
+  `@pdf-lib/fontkit`. Also lets names outside WinAnsi print (pdf-lib's standard
+  fonts throw on them).
+- **Readability backdrop.** None / soft / solid panel behind the content block,
+  for templates too busy for the text to sit on directly.
+- **Upload checks.** Warn on a wrong ratio or under 2480px wide; move template
+  uploads direct-to-Blob so a PDF over 4 MB can go through.
+- **PDF templates.** A thumbnail in the panel and `auto` ink sampling; today a
+  PDF template gets dark ink unless the admin picks light.

@@ -4,6 +4,7 @@ import { ArrowLeft, User, Trophy, Medal, Timer, Hash, Activity, Zap, CheckCircle
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import ECertificateGenerator from './ECertificateGenerator';
+import { genderDivision } from '@/lib/gender-division';
 import EventHeroBanner from '@/components/EventHeroBanner';
 import { canonicalResultsPath, eventByParam, resultsPath, runnerResultPath } from '@/lib/event-slug';
 import { toWholeSeconds } from '@/lib/race-time';
@@ -139,11 +140,8 @@ export default async function RunnerAnalyticsPage({
     nameLength > 14 ? 'text-[clamp(2rem,5.5vw,3.25rem)]' :
     'text-[clamp(2.25rem,7vw,3.75rem)]';
 
-  // Timing sheets carry the gender as a letter. "in M" under a rank reads as
-  // a typo, so the tile names the division in words.
-  const genderWord = /^m(ale)?$/i.test(result.gender.trim()) ? 'Male'
-    : /^f(emale)?$/i.test(result.gender.trim()) ? 'Female'
-    : result.gender;
+  // Timing sheets carry the gender as a letter; the tile names the division in words.
+  const genderWord = genderDivision(result.gender);
 
   return (
     <div className="relative pb-16 sm:pb-20 w-full">

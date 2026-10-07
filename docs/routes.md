@@ -237,7 +237,12 @@ nothing on a 403, and the form sends `clientId` only when it drew the picker;
 below `sm` both keep Cancel and Save in a bar
 stuck to the foot of the screen, below `lg` an uploaded image's Remove is a bar
 under it rather than a hover overlay, and the certificate preview comes above
-its sliders; the edit screen ends with a **read-only
+its controls. **E-Certificate Settings** (edit screen only) is `events/CertificateSettingsPanel.tsx`: the
+template upload, then — once there is a template — the designed layout's controls (content area top/bottom with *With sponsors* / *Clean template* presets,
+text color, accent, which fields show, byline position and height) or, for a legacy event, its three sliders and a
+*Switch to designed layout* button; beside them the **real PDF** drawn by `buildCertificatePdf` on a sample
+runner (with a *Long name* sample), regenerated 500ms after the last change and always a link away for a
+phone (§5 `e-certificate.ts`); the edit screen ends with a **read-only
 Promotions panel**: what a runner registering for this race can be given, its status and
 its conditions, with a link through to the marketing screen. Read-only on
 purpose — one screen owns promotions, and a second place to edit them is a
