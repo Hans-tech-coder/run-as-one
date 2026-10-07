@@ -978,7 +978,7 @@ export default function RegistrationWizardClient({
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-secondary text-sm">Total Paid</span>
-                  <span className="text-accent-orange font-bold text-xl">
+                  <span className="text-accent-orange font-bold text-2xl">
                     {/* `??`, not `||`: a free order's stored total is 0, and a
                         falsy-check would throw it away and print the wizard's
                         own recomputed figure instead — which, after the round
@@ -1086,7 +1086,7 @@ export default function RegistrationWizardClient({
                 iconSize={24}
               />
               <div>
-                <h3 className="text-lg sm:text-xl font-bold text-white mb-1">
+                <h3 className="text-lg sm:text-2xl font-bold text-white mb-1">
                   {event.title}
                 </h3>
                 <div className="text-sm text-secondary flex items-center gap-1">
@@ -1359,7 +1359,7 @@ export default function RegistrationWizardClient({
                     className="participant-form-block mb-10 p-6 rounded-[16px] bg-black/20 border border-white/5 relative"
                   >
                     <div className="flex justify-between items-center mb-6 pb-4 border-b border-white/10">
-                      <h3 className="text-xl font-bold text-white flex items-center gap-2 flex-wrap">
+                      <h3 className="text-2xl font-bold text-white flex items-center gap-2 flex-wrap">
                         <span className="bg-white/10 w-8 h-8 rounded-full flex items-center justify-center text-sm">
                           {idx + 1}
                         </span>
@@ -1700,7 +1700,7 @@ export default function RegistrationWizardClient({
                         ></div>
                       )}
                       <div className="relative z-10 flex justify-between items-start mb-3">
-                        <div className="font-bold text-xl text-white">
+                        <div className="font-bold text-2xl text-white">
                           On-site Pickup
                         </div>
                         {!onlyMethod && logisticsMethod === "PICKUP" && (
@@ -1766,7 +1766,7 @@ export default function RegistrationWizardClient({
                         ></div>
                       )}
                       <div className="relative z-10 flex justify-between items-start mb-3">
-                        <div className="font-bold text-xl text-white">
+                        <div className="font-bold text-2xl text-white">
                           Door-to-Door Delivery
                         </div>
                         {!onlyMethod && logisticsMethod === "DELIVERY" && (
@@ -2052,7 +2052,7 @@ export default function RegistrationWizardClient({
                       onClick={() => setSelectedBankModal(bank)}
                     >
                       <div className="absolute top-0 right-0 w-24 h-24 bg-accent-blue/10 rounded-full blur-2xl -mr-12 -mt-12 group-hover:bg-accent-blue/20 transition-colors"></div>
-                      <div className="relative z-10 font-bold text-lg sm:text-xl text-white mb-1">
+                      <div className="relative z-10 font-bold text-lg sm:text-2xl text-white mb-1">
                         {bank.bankName}
                       </div>
                       <div className="relative z-10 text-sm text-secondary">
@@ -2093,7 +2093,7 @@ export default function RegistrationWizardClient({
                     <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mb-2 border border-white/10">
                       <UploadCloud size={36} className="text-accent-blue" />
                     </div>
-                    <div className="text-xl font-bold text-white">
+                    <div className="text-2xl font-bold text-white">
                       Drag & Drop your receipt here
                     </div>
                     <div className="text-secondary mb-2">

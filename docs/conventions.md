@@ -806,6 +806,26 @@
   legal and registration-closed pages shared). A glow that should be seen goes
   inside the surface it lights, at a non-negative z-index, as the orbs inside
   `StatusPanel` and the winners-board panel do.
+- **Page CSS never declares a class named like a Tailwind utility.** Route
+  stylesheets (`EventDetails.css`, `RegistrationWizard.css`, `Admin.css`) are
+  unlayered, Tailwind v4 emits its utilities in `@layer utilities`, and
+  unlayered CSS beats layered CSS regardless of specificity or order. So a
+  `.text-accent-blue { … }` in a page file pins that colour and every
+  `hover:` / `group-hover:` / `focus:` utility on the same element is silently
+  ignored — and because Next keeps a route's stylesheet loaded after client
+  navigation, the damage reaches pages that never import the file.
+  `EventDetails.css` once did exactly that: the results back link and the
+  wizard's "Size Guide" / "View inclusions" links never turned white on hover,
+  and the results page's Clear filters had to spell its blue as
+  `text-[var(--accent-blue)]` to get its hover back. `RegistrationWizard.css`
+  did it too: its `.bg-dark` killed the full-results pager's `hover:bg-white/5`
+  after a runner came from the wizard, and its `.text-xl` (1.5rem) overrode every
+  `text-xl` and `md:text-2xl` beside it — the wizard now spells that size
+  `text-2xl`. A colour or spacing the
+  theme already has is the utility (add the token to `@theme` in `globals.css`
+  if it is missing); a page class gets a name of its own (`.event-meta-icon`,
+  not `.text-blue`). If a utility-named class truly has to live in CSS, put it
+  in `@layer components` so utilities still win.
 - Fonts: Outfit (`--font-sans`, headings), Inter (`--font-body`).
 - **The logo is a component, not an image** (`components/RunAsOneLogo.tsx`,
   `.rao-logo` in `globals.css`, geometry in `lib/brand-mark.ts` — the one copy

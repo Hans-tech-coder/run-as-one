@@ -32,7 +32,7 @@ export default function BankDetailsModal({
         >
           <X size={24} />
         </button>
-        <h3 className="text-xl mb-4">{bank.bankName} Details</h3>
+        <h3 className="text-2xl mb-4">{bank.bankName} Details</h3>
 
         <div className="bank-details-card mb-6">
           <div className="bank-detail-item">

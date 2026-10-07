@@ -144,10 +144,6 @@
   font-size: 1.1rem;
 }
 
-.text-accent-blue {
-  color: var(--accent-blue);
-}
-
 /* Sidebar */
 .sticky-sidebar {
   position: sticky;

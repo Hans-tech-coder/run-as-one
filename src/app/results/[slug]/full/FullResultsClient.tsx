@@ -566,10 +566,7 @@ export default function FullResultsClient({ results, event }: Props) {
           on a phone. It is always laid out and only faded in, so the line
           never changes height; the negative margins give it a 44px target
           without making the line taller. Its hover has no fill — the label turns
-          white and the X gives a quarter turn. The blue is spelled as the variable,
-          not `text-accent-blue`: EventDetails.css (loaded here by the hero
-          banner) declares that class outside Tailwind's layers, and an
-          unlayered rule outranks every `hover:` utility. */}
+          white and the X gives a quarter turn. */}
       <div className="flex items-center justify-between gap-3 mb-5 md:mb-6">
         <p ref={countRef} tabIndex={-1} className="text-sm text-secondary focus:outline-none" aria-live="polite">
           {matching === results.length
@@ -579,7 +576,7 @@ export default function FullResultsClient({ results, event }: Props) {
         <button
           type="button"
           onClick={clearFilters}
-          className={`group -my-2.5 -mr-3 h-11 shrink-0 inline-flex items-center gap-1.5 px-3 rounded-xl text-sm font-medium text-[var(--accent-blue)] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue/60 transition-[opacity,visibility,color] duration-200 motion-reduce:transition-none ${isFiltered ? 'opacity-100 visible' : 'opacity-0 invisible'}`}
+          className={`group -my-2.5 -mr-3 h-11 shrink-0 inline-flex items-center gap-1.5 px-3 rounded-xl text-sm font-medium text-accent-blue hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue/60 transition-[opacity,visibility,color] duration-200 motion-reduce:transition-none ${isFiltered ? 'opacity-100 visible' : 'opacity-0 invisible'}`}
         >
           <X size={14} aria-hidden="true" className="transition-transform duration-200 group-hover:rotate-90 motion-reduce:transition-none" />
           Clear filters
