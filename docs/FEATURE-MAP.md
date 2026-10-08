@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-39 pages · 52 API routes · 89 modules in `src/lib` · 401 files · 80,817 lines
+39 pages · 52 API routes · 89 modules in `src/lib` · 404 files · 80,927 lines
 
 ---
 
@@ -35,7 +35,7 @@ The route, the server component behind it, and the client components beside it.
 | `/admin/events/[id]/pacers` | [`/admin/events/[id]/pacers/page.tsx`](../src/app/admin/events/[id]/pacers/page.tsx) | `AddPacerModal.tsx` `EditPacerModal.tsx` `pacer-row.ts` `PacerActionsMenu.tsx` `PacersClient.tsx` `use-pacer-actions.tsx` |
 | `/admin/events/[id]/registrants` | [`/admin/events/[id]/registrants/page.tsx`](../src/app/admin/events/[id]/registrants/page.tsx) | `CancelOrderModal.tsx` `ColumnsViewMenu.tsx` `DeleteRegistrantModals.tsx` `email-handoff.ts` `FollowUpModal.tsx` `ManualEmailModal.tsx` `PaymentLinkEmailModal.tsx` `ProofLightbox.tsx` `registrant-columns.tsx` `registrant-csv.ts` `registrant-display.tsx` `RegistrantActionsMenu.tsx` `RegistrantDetailModal.tsx` `RegistrantRowActions.tsx` `RegistrantsDataTable.tsx` `RegistrantsTable.tsx` `RegistrantsTabs.tsx` `RegistrantsToolbar.tsx` `RemarksModal.tsx` `RunnerAddressEditor.tsx` `RunnerEditModal.tsx` `SendLinksButton.tsx` `unpaid-columns.tsx` `UnpaidCheckoutActions.tsx` `UnpaidCheckoutCards.tsx` `UnpaidCheckoutsList.tsx` |
 | `/admin/events/[id]/registrants/[runnerId]/consent` | [`/admin/events/[id]/registrants/[runnerId]/consent/page.tsx`](../src/app/admin/events/[id]/registrants/[runnerId]/consent/page.tsx) | `PrintableSheet.tsx` |
-| `/admin/events/[id]/results` | [`/admin/events/[id]/results/page.tsx`](../src/app/admin/events/[id]/results/page.tsx) | `ResultsTableClient.tsx` `ResultsUploaderClient.tsx` |
+| `/admin/events/[id]/results` | [`/admin/events/[id]/results/page.tsx`](../src/app/admin/events/[id]/results/page.tsx) | `results-sheet.ts` `ResultsTableClient.tsx` `ResultsUploaderClient.tsx` `SheetMappingPanel.tsx` `TargetCategoryPicker.tsx` |
 | `/admin/events/new` | [`/admin/events/new/page.tsx`](../src/app/admin/events/new/page.tsx) | `NewEventForm.tsx` |
 | `/admin/feedback` | [`/admin/feedback/page.tsx`](../src/app/admin/feedback/page.tsx) | `FeedbackClient.tsx` `MessageDetail.tsx` |
 | `/admin/invite/[token]` | [`/admin/invite/[token]/page.tsx`](../src/app/admin/invite/[token]/page.tsx) | `InviteAcceptClient.tsx` |
@@ -248,7 +248,6 @@ when a task touches one, split it before editing rather than after.
 | 632 | [`src/app/api/checkout/route.ts`](../src/app/api/checkout/route.ts) |
 | 614 | [`src/app/admin/feedback/FeedbackClient.tsx`](../src/app/admin/feedback/FeedbackClient.tsx) |
 | 578 | [`src/lib/email-document.ts`](../src/lib/email-document.ts) |
-| 573 | [`src/app/admin/events/[id]/results/ResultsUploaderClient.tsx`](../src/app/admin/events/[id]/results/ResultsUploaderClient.tsx) |
 | 548 | [`src/app/admin/NotificationsCenter.tsx`](../src/app/admin/NotificationsCenter.tsx) |
 | 546 | [`src/lib/organizer-application.ts`](../src/lib/organizer-application.ts) |
 | 543 | [`src/app/admin/clients/ClientsClient.tsx`](../src/app/admin/clients/ClientsClient.tsx) |
