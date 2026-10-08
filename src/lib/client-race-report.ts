@@ -5,7 +5,8 @@
  * came in day by day.
  *
  * **Still counts and nothing else**, the rule `client-summary.ts` exists to
- * force. A size is a count of runners per size; a kit is a count of runners
+ * force. A size is a count of runners per size; a garment is a count of
+ * pieces per size; a kit is a count of runners
  * per pickup or delivery; a day is a count of runners whose order was placed
  * on it. No name, contact, address, amount or order
  * reference leaves a query here, and the shapes returned have no field to
@@ -23,6 +24,15 @@
  * order. An unpaid checkout is not a registrant (UNPAID_ORDERS_PLAN.md), so it
  * orders no shirt and ships no kit here.
  *
+ * **Shirts are counted as garments, not runners** (SHIRT_COUNT_PLAN.md). A
+ * category's "What's Included" names what it hands out (`wearableItems`): a
+ * 10K with a Race Singlet and a Finisher's Shirt orders two pieces per runner,
+ * both in the runner's one size, and a 5K with the singlet alone orders one.
+ * Each garment is counted once per registrant of every category that includes
+ * it. A category whose inclusions are still empty asks a size anyway
+ * (`includesWearable`), so its sized runners count under one "not listed"
+ * item rather than dropping out of the order.
+ *
  * Server-only.
  */
 
@@ -34,10 +44,28 @@ import { eventInstantParts, isCalendarDay, today } from './event-schedule';
 import { awaitingVerificationWhere } from './pending-expiry';
 import { pickupDetails } from './pickup';
 import { asDeliveryZone, asLogisticsMethod, deliveryZoneLabelFor, LOGISTICS_METHODS } from './registration-codes';
-import { SHIRT_SIZES } from './shirt-size';
+import { SHIRT_SIZES, wearableItems, type GarmentType } from './shirt-size';
 
 /** One shirt size: registrants wearing it, per category id and in all. */
 export type SizeRow = { size: string; byCategory: Record<string, number>; total: number };
+
+/**
+ * One garment to order: its pieces per size, across every category that
+ * includes it. `type` is null for the "not listed" item, sized runners in a
+ * category whose "What's Included" is still empty.
+ */
+export type GarmentRow = {
+  name: string;
+  type: GarmentType | null;
+  /** In category order. */
+  categoryIds: string[];
+  /** Pieces per size, chart order; `byCategory` holds only `categoryIds`. */
+  sizes: SizeRow[];
+  total: number;
+};
+
+/** The item a category's sized runners count under when its inclusions are empty. */
+export const UNLISTED_GARMENT = "Shirt (not listed in What's Included)";
 
 export type KitSplit = {
   pickup: number;
@@ -63,10 +91,8 @@ export type RegistrationTrend = {
 
 export type ViewerRaceReport = {
   event: ViewerEventSummary;
-  /** Sizes in chart order, then any size a runner typed that the chart lacks. */
-  sizes: SizeRow[];
-  /** Per category id, how many registrants have a shirt size at all. */
-  sizedByCategory: Record<string, number>;
+  /** Pieces to order, singlets first, then T-shirts, then anything not listed. */
+  garments: GarmentRow[];
   kits: KitSplit;
   trend: RegistrationTrend;
 };
@@ -80,7 +106,7 @@ export async function viewerRaceReport(actor: Actor, eventId: string): Promise<V
   const [event] = await viewerEventSummaries(actor, eventId);
   if (!event) return null;
 
-  const [sizeGroups, orders, logistics] = await Promise.all([
+  const [sizeGroups, orders, logistics, inclusions] = await Promise.all([
     prisma.runner.groupBy({
       by: ['categoryId', 'singletSize'],
       where: { deletedAt: null, category: { eventId }, registration: registrantOrders() },
@@ -104,11 +130,15 @@ export async function viewerRaceReport(actor: Actor, eventId: string): Promise<V
         logisticsDeliveryFeeOutside: true,
       },
     }),
+    prisma.category.findMany({
+      where: { id: { in: event.categories.map(category => category.id) } },
+      select: { id: true, inclusions: true },
+    }),
   ]);
 
   return {
     event,
-    ...sizeTable(sizeGroups),
+    garments: garmentTable(sizeTable(sizeGroups), event.categories, new Map(inclusions.map(c => [c.id, c.inclusions]))),
     kits: kitSplit(orders, logistics),
     trend: registrationTrend(orders, event.date),
   };
@@ -138,6 +168,53 @@ function sizeTable(groups: { categoryId: string; singletSize: string; _count: { 
     (a, b) => rank(a.size) - rank(b.size) || a.size.localeCompare(b.size),
   );
   return { sizes, sizedByCategory };
+}
+
+const TYPE_ORDER: (GarmentType | null)[] = ['SINGLET', 'TSHIRT', null];
+
+/**
+ * The runner counts turned into pieces: every garment a category includes
+ * takes that category's sizes once. Garments are matched across categories by
+ * name (`WearableItem.key`), so a Race Singlet worn by every distance is one
+ * line to order, while an Event Shirt and a Finisher Shirt stay two prints.
+ */
+function garmentTable(
+  { sizes, sizedByCategory }: { sizes: SizeRow[]; sizedByCategory: Record<string, number> },
+  categories: { id: string }[],
+  inclusionsById: Map<string, string[]>,
+): GarmentRow[] {
+  const garments = new Map<string, Omit<GarmentRow, 'sizes' | 'total'>>();
+  for (const category of categories) {
+    if (!sizedByCategory[category.id]) continue;
+    const listed = (inclusionsById.get(category.id) ?? []).filter(item => item.trim());
+    const items =
+      listed.length === 0
+        ? [{ key: 'UNLISTED', name: UNLISTED_GARMENT, type: null }]
+        : wearableItems(listed);
+    for (const item of items) {
+      const garment = garments.get(item.key) ?? { name: item.name, type: item.type, categoryIds: [] };
+      garment.categoryIds.push(category.id);
+      garments.set(item.key, garment);
+    }
+  }
+
+  // Sorting is stable, so within a type the order is the order first met.
+  return [...garments.values()]
+    .sort((a, b) => TYPE_ORDER.indexOf(a.type) - TYPE_ORDER.indexOf(b.type))
+    .map(garment => {
+      const rows: SizeRow[] = [];
+      for (const row of sizes) {
+        const byCategory: Record<string, number> = {};
+        let total = 0;
+        for (const id of garment.categoryIds) {
+          if (!row.byCategory[id]) continue;
+          byCategory[id] = row.byCategory[id];
+          total += row.byCategory[id];
+        }
+        if (total > 0) rows.push({ size: row.size, byCategory, total });
+      }
+      return { ...garment, sizes: rows, total: rows.reduce((sum, row) => sum + row.total, 0) };
+    });
 }
 
 /**

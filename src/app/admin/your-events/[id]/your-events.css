@@ -238,10 +238,68 @@
 }
 
 /* ── Shirt sizes ────────────────────────────────────────────────────────── */
-.race-size-group {
-  margin-top: 24px;
+/* ── Garments to order: one block per singlet or shirt ──────────────────── */
+.race-garment-totals {
+  margin: 0 0 16px;
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.race-garment-list {
+  display: grid;
+  gap: 24px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.race-garment + .race-garment {
   padding-top: 20px;
   border-top: 1px solid var(--dash-hairline);
+}
+
+.race-garment-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-bottom: 4px;
+}
+
+.race-garment-name {
+  margin: 0;
+}
+
+/* The type in words, so it never rests on colour alone. */
+.race-garment-tag {
+  padding: 1px 8px;
+  border: 1px solid var(--dash-hairline);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.race-garment-count {
+  margin-left: auto;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.race-garment-with {
+  margin: 0 0 10px;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
 }
 
 .race-size-chips {

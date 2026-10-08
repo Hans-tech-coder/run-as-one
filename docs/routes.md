@@ -127,7 +127,11 @@ E-Certificate Guide**, Settings in the account menu, and **every other
 sections in `RaceReport.tsx`, reading `client-race-report.ts`). `requireActor()`, then the report decides: a race
 the person may not see — another client's, removed, or a made-up id — is the
 same *Race not found* panel. Breadcrumb *Your Events*, the race as title, and
-Dashboard stays lit in the sidebar (`isActivePath`). A wrapping line of the
+Dashboard stays lit in the sidebar (`isActivePath`). **Staff read the same
+page** (`SHIRT_COUNT_PLAN.md` D5; `event:view-summary` is every role's),
+reached from the Events table's row menu as **Race Report**, under
+Registrants; for staff the breadcrumb, and the not-found panel's way back,
+is *Events* (`/admin/events`), since their `/admin` is the team dashboard. A wrapping line of the
 registration badge, date and place; the four count tiles; then four panels,
 each with one sentence saying what it counts: **Slots per Category** (registered,
 `N of M slots left` with a fill bar, *Almost full* at 90%, *Full* at the limit,
@@ -136,9 +140,16 @@ public page), **Registrations over Time** (`RegistrationTrend.tsx`: *Last 7
 days* and *Busiest day* over a bar chart, a bar per day since the first order —
 per week past 62 days — one series and one axis, no library; hovering a bar's
 column shows its day and count, and *Show the numbers* opens the same counts as
-a table), **Shirt Sizes** (registrants' sizes as wrapping tiles in chart
-order, all categories first, then per category when more than one has sizes;
-spelled-out sizes such as *Large* count as their code), and **Race Kits**
+a table), **Shirt Sizes** (**pieces to order, not runners**,
+`SHIRT_COUNT_PLAN.md`: a totals line by type — *8 singlets · 5 T-shirts · 13
+pieces*, a type nobody gets left out, the pieces total only when there are two
+types — then one block per garment named in the categories' *What's
+Included*, singlets first: its name, a *Singlet* / *T-shirt* tag in words,
+its piece count, *With* the categories it comes with, and its sizes as
+wrapping tiles in chart order. No runners-per-size-by-category view (owner,
+2026-10-08): its runner counts read as wrong next to piece counts, and kits
+are packed from the Runners list. Spelled-out sizes such as *Large* count as
+their code), and **Race Kits**
 (pickup, with the pickup place and schedule or a line saying none is set, and
 delivery, split *Inside / Outside Province* only where the race asked). Counts
 only; no wide tables, so nothing scrolls sideways on a phone. **Save report as
@@ -322,7 +333,9 @@ filter copies) opens a popover (a bottom sheet on a phone) holding **Client** (o
 for `platform:manage`, built from the listed races' clients plus *No client
 yet*) and **Registration Status** (the `REGISTRATION_STATES` labels); the
 filters narrow the data before the table, so search, sort and the pager work
-inside the result. The row menu carries
+inside the result. The row menu carries **Race Report** under Registrants
+(the race's `/admin/your-events/[id]` page, which staff read as the client
+does), and
 **Schedule Sign-Ups**, which opens a modal holding the same
 `RegistrationOpeningPicker` the create and edit forms use: open registration
 now, or name the date and time it opens itself. Saving either answer also lifts

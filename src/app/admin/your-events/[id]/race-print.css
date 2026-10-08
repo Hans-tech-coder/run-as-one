@@ -60,15 +60,17 @@
   .race-print-copy .race-slot-numbers,
   .race-print-copy .race-kit-meta { font-size: 8.5pt; }
 
-  .race-print-copy .race-size-group {
-    margin-top: 4mm;
-    padding-top: 3mm;
-  }
-
   .race-print-copy .race-size-chips {
     grid-template-columns: repeat(auto-fill, minmax(17mm, 1fr));
     gap: 2mm;
   }
+
+  .race-print-copy .race-garment-totals { margin-bottom: 3mm; font-size: 11pt; }
+  .race-print-copy .race-garment-list { gap: 4mm; }
+  .race-print-copy .race-garment + .race-garment { padding-top: 3mm; }
+  .race-print-copy .race-garment-tag { font-size: 7.5pt; }
+  .race-print-copy .race-garment-count { font-size: 9pt; }
+  .race-print-copy .race-garment-with { margin-bottom: 2mm; font-size: 8.5pt; }
 
   .race-print-copy .race-size-chip { padding: 1.8mm 1mm; }
   .race-print-copy .race-size-label { font-size: 7.5pt; }
@@ -84,7 +86,7 @@
   .race-print-copy .metric-card,
   .race-print-copy .race-slot,
   .race-print-copy .race-trend,
-  .race-print-copy .race-size-group,
+  .race-print-copy .race-garment,
   .race-print-copy .race-size-chip,
   .race-print-copy .race-kit {
     break-inside: avoid;

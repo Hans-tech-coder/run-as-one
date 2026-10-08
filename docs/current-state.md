@@ -61,6 +61,17 @@ releases and ships the kits. The Privacy page's *Who sees your data* says what
 a client organization sees and that it can download it, and the legal date
 (shared with the Terms) moved to October 8, 2026. Still not seen
 signed in as a real client viewer (no seeded viewer account).
+**Shirt sizes count garments, not runners** (2026-10-08, on `dev`, not
+released, `SHIRT_COUNT_PLAN.md`): the Shirt Sizes panel, on screen and in the
+PDF, lists one block per singlet or shirt named in the categories' *What's
+Included*, with its pieces per size and the categories it comes with, under a
+totals line by type. The per-category runner breakdown the panel used to
+show is gone (owner, 2026-10-08): kits are packed from the Runners list. The
+registration form is unchanged (§5 `shirt-size.ts` `wearableItems`,
+`client-race-report.ts` `garments`). Staff reach the page from the Events row
+menu as **Race Report**, with an *Events* breadcrumb. No migration. Seen as
+Super Admin on local data; 32KM Beyond 21 has registrants in the 21K only, so
+its singlet-only 5K has not been seen with runners.
 
 **The e-certificate template guide is a dashboard page** (2026-10-07, on
 `dev`, not released, `ECERT_GUIDE_PAGE_PLAN.md`): `/admin/certificate-guide`,

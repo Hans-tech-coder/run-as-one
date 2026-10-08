@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
-import { MoreVertical, Users, Trophy, Edit, Trash2, CalendarClock, PauseCircle, PlayCircle, Footprints, Lock, LockOpen } from 'lucide-react';
+import { MoreVertical, Users, ClipboardList, Trophy, Edit, Trash2, CalendarClock, PauseCircle, PlayCircle, Footprints, Lock, LockOpen } from 'lucide-react';
 import LinkPending from '@/components/ui/LinkPending';
 import { placeRowMenu, type RowMenuPlacement } from '../row-menu-position';
 import { cssDurationMs } from '@/lib/css-duration';
@@ -201,6 +201,9 @@ export default function EventActionsMenu({
      up on some of them and not the rest. */
   const destinations = [
     { href: `/admin/events/${eventId}/registrants`, icon: <Users size={16} />, label: 'Registrants' },
+    // The client's race page, which staff read too: the counts, shirt pieces
+    // to order and kit split, and the PDF that goes to the shirt supplier.
+    { href: `/admin/your-events/${eventId}`, icon: <ClipboardList size={16} />, label: 'Race Report' },
     // Under Registrants, because a pacer is a registrant the organizer invited,
     // and above Results, which only matter once the race has been run. The
     // count rides in the label rather than in a badge of its own, so the item

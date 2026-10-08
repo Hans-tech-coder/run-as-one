@@ -1,6 +1,6 @@
 import React from 'react';
 import type { Metadata } from 'next';
-import { requireActor } from '@/lib/actor';
+import { isClientViewer, requireActor } from '@/lib/actor';
 import { clientPayout } from '@/lib/client-payout';
 import { clientRunners } from '@/lib/client-runners';
 import { viewerRaceReport } from '@/lib/client-race-report';
@@ -25,6 +25,15 @@ const RACE_NOT_FOUND = {
   homeHref: '/admin',
   homeLabel: 'Back to Your Events',
 };
+
+/**
+ * Where the page sits. A client reaches it from its own dashboard, "Your
+ * Events" at `/admin`; staff reach it from the Events table's row menu (Race
+ * Report), and their `/admin` is the team dashboard, so their way back is
+ * Events.
+ */
+const CLIENT_HOME = { label: 'Your Events', href: '/admin' };
+const STAFF_HOME = { label: 'Events', href: '/admin/events' };
 
 /**
  * One of a client viewer's races (CLIENT_RACE_PAGE_PLAN.md, Batches 1–4): what
@@ -57,6 +66,10 @@ const RACE_NOT_FOUND = {
  * the page, not the header: at the end of the race's status line, above the
  * tiles (`RaceReport`).
  *
+ * **Staff read the same page** (SHIRT_COUNT_PLAN.md D5): `event:view-summary`
+ * is every role's, and the Events row menu links here as Race Report. There
+ * is no separate staff screen for these counts.
+ *
  * Server-rendered; the only client code is the print portal and its button.
  */
 export default async function YourRacePage({ params }: { params: Promise<{ id: string }> }) {
@@ -67,11 +80,14 @@ export default async function YourRacePage({ params }: { params: Promise<{ id: s
     clientPayout(actor, id),
     clientRunners(actor, id),
   ]);
-  if (!report) return <AdminNotFound {...RACE_NOT_FOUND} />;
+  const home = isClientViewer(actor) ? CLIENT_HOME : STAFF_HOME;
+  if (!report) {
+    return <AdminNotFound {...RACE_NOT_FOUND} homeHref={home.href} homeLabel={`Back to ${home.label}`} />;
+  }
 
   return (
     <>
-      <DashboardHeader title={report.event.title} crumbs={[{ label: 'Your Events', href: '/admin' }]} />
+      <DashboardHeader title={report.event.title} crumbs={[home]} />
 
       <div className="admin-content">
         <PrintableCopy

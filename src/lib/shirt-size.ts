@@ -1,8 +1,8 @@
 import type { RunnerCategory } from '@/lib/discount';
 
 /**
- * Shirt sizing: the chart, when to ask for a size at all, and what the large
- * sizes cost extra.
+ * Shirt sizing: the chart, when to ask for a size at all, which garments a
+ * category hands out, and what the large sizes cost extra.
  *
  * "Shirt" rather than "singlet" throughout the interface. A package may include
  * either, or both, and when it includes both the runner wears the same size in
@@ -90,8 +90,96 @@ export interface SizableCategory {
   inclusions?: readonly string[] | null;
 }
 
-/** Words in an inclusions list that mean the runner is getting something to wear. */
-const WEARABLE = /\b(?:singlet|shirt|jersey)\b/i;
+/**
+ * The two kinds of garment a supplier makes. A singlet is the sleeveless
+ * sando; a T-shirt is the Finisher or Event Shirt. One runner wears the same
+ * size in both, but they are different pieces to order.
+ */
+export type GarmentType = 'SINGLET' | 'TSHIRT';
+
+/**
+ * The words in an inclusions list that mean the runner is getting something
+ * to wear, by the garment they name. Asking a size (`includesWearable`) and
+ * counting a garment (`wearableItems`) both read this one list, so the two can
+ * never disagree about whether a category has something to wear.
+ */
+const GARMENT_WORDS: Record<GarmentType, readonly string[]> = {
+  SINGLET: ['singlet'],
+  TSHIRT: ['shirt', 'jersey'],
+};
+
+const GARMENT_TYPES = Object.keys(GARMENT_WORDS) as GarmentType[];
+
+function wordPattern(words: readonly string[]): RegExp {
+  return new RegExp(`\\b(?:${words.join('|')})\\b`, 'i');
+}
+
+const GARMENT_PATTERN = Object.fromEntries(
+  GARMENT_TYPES.map(type => [type, wordPattern(GARMENT_WORDS[type])]),
+) as Record<GarmentType, RegExp>;
+
+/** Any garment word at all: `/\b(?:singlet|shirt|jersey)\b/i`. */
+const WEARABLE = wordPattern(GARMENT_TYPES.flatMap(type => GARMENT_WORDS[type]));
+
+/** One garment a category hands out, as the race report counts it. */
+export interface WearableItem {
+  /** As the organizer wrote it, e.g. "Finisher's Shirt". */
+  name: string;
+  /** The name folded for matching across categories; includes the type. */
+  key: string;
+  type: GarmentType;
+}
+
+/** Where one inclusion line naming two garments splits: "Singlet and Finisher Shirt". */
+const ITEM_JOINER = /\s*(?:,|\+|&|\/|\band\b|\bwith\b)\s*/i;
+
+/**
+ * "Finisher's Shirt", "finisher shirt" and "Finisher’s  Shirt" are one item;
+ * "RNR Singlet" and "Race Singlet" stay two, since they are different prints.
+ */
+function garmentKey(type: GarmentType, name: string): string {
+  const folded = name
+    .toLowerCase()
+    .replace(/['’‘`]s\b/g, '')
+    .replace(/['’‘`]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return `${type}:${folded}`;
+}
+
+/**
+ * The garments a category's inclusions promise, one per line that names one
+ * — the inclusions box asks for one item per line. A line naming both a
+ * singlet and a shirt ("Singlet and Finisher Shirt") is two items, one of
+ * each type, each named by its own part of the line where the line splits
+ * cleanly. Two shirts on one line count as one item: a known limit
+ * (SHIRT_COUNT_PLAN.md §4), visible because the report names every item.
+ *
+ * Only the words in `GARMENT_WORDS`: a "Sando" or a "Tee" is not counted here,
+ * and for the same reason the runner is not asked a size for it.
+ */
+export function wearableItems(inclusions: readonly string[] | null | undefined): WearableItem[] {
+  const items: WearableItem[] = [];
+  const seen = new Set<string>();
+  for (const raw of inclusions ?? []) {
+    if (typeof raw !== 'string') continue;
+    const line = raw.replace(/\s+/g, ' ').trim();
+    const types = GARMENT_TYPES.filter(type => GARMENT_PATTERN[type].test(line));
+    if (types.length === 0) continue;
+    const parts = types.length > 1 ? line.split(ITEM_JOINER).filter(Boolean) : [line];
+    for (const type of types) {
+      const own = parts.filter(part => GARMENT_PATTERN[type].test(part));
+      const name = own.length === 1 && types.every(other => other === type || !GARMENT_PATTERN[other].test(own[0]))
+        ? own[0]
+        : line;
+      const key = garmentKey(type, name);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      items.push({ name, key, type });
+    }
+  }
+  return items;
+}
 
 /**
  * Whether a category's inclusions promise something the runner needs to be

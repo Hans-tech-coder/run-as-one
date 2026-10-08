@@ -2,7 +2,8 @@ import React from 'react';
 import { BadgeCheck, CalendarDays, ClipboardList, EyeOff, Wallet, Hourglass, MapPin, Package, ShoppingCart, Shirt, TrendingUp, Truck, Users } from 'lucide-react';
 import type { ClientPayout } from '@/lib/client-payout';
 import type { ClientRunnerRow } from '@/lib/client-runners';
-import type { KitSplit, SizeRow, ViewerRaceReport } from '@/lib/client-race-report';
+import type { GarmentRow, KitSplit, ViewerRaceReport } from '@/lib/client-race-report';
+import type { GarmentType } from '@/lib/shirt-size';
 import type { ViewerCategorySummary } from '@/lib/client-summary';
 import { formatEventDayShort, formatEventInstant } from '@/lib/event-schedule';
 import { SITE_NAME } from '@/lib/site-contact';
@@ -51,7 +52,7 @@ export default function RaceReport({
   payout?: ClientPayout | null;
   runners?: ClientRunnerRow[] | null;
 }) {
-  const { event, sizes, sizedByCategory, kits, trend } = report;
+  const { event, garments, kits, trend } = report;
   const state = REGISTRATION_STATES[event.state];
   const printed = printedOn !== undefined;
   const panel = { idPrefix };
@@ -118,9 +119,9 @@ export default function RaceReport({
         {...panel}
         title="Shirt Sizes"
         icon={<Shirt size={18} />}
-        hint="Paid and awaiting-verification runners only, so the numbers are shirts you will need. Packages with nothing to wear are not counted."
+        hint="Pieces to order: one of every singlet or shirt a runner's category includes, for paid and awaiting-verification runners. Each runner gives one size for all of them. Packages with nothing to wear are not counted."
       >
-        <SizeSection sizes={sizes} categories={event.categories} sizedByCategory={sizedByCategory} />
+        <SizeSection garments={garments} categories={event.categories} />
       </Panel>
 
       <Panel {...panel} title="Race Kits" icon={<Package size={18} />} hint="One kit per registered runner, by how they chose to get it.">
@@ -251,42 +252,73 @@ function SlotRow({ category }: { category: ViewerCategorySummary }) {
   );
 }
 
+/** What a garment type is called on the tag, and counted as in the totals line. */
+const GARMENT_WORDS: Record<GarmentType | 'NONE', { tag: string; one: string; many: string }> = {
+  SINGLET: { tag: 'Singlet', one: 'singlet', many: 'singlets' },
+  TSHIRT: { tag: 'T-shirt', one: 'T-shirt', many: 'T-shirts' },
+  NONE: { tag: 'Type not listed', one: 'not listed', many: 'not listed' },
+};
+
+function count(n: number, one: string, many: string) {
+  return `${n.toLocaleString('en-US')} ${n === 1 ? one : many}`;
+}
+
+function categoryLabel(category: ViewerCategorySummary) {
+  return `${category.name}${category.distance ? ` (${category.distance})` : ''}`;
+}
+
+/**
+ * Pieces to order, one block per garment: the supplier's order and nothing
+ * else. There is no runners-per-size-per-category view (owner, 2026-10-08):
+ * its runner counts sat under piece counts that add up differently, and the
+ * people packing kits work from the Runners list, which names each runner.
+ */
 function SizeSection({
-  sizes,
+  garments,
   categories,
-  sizedByCategory,
 }: {
-  sizes: SizeRow[];
+  garments: GarmentRow[];
   categories: ViewerCategorySummary[];
-  sizedByCategory: Record<string, number>;
 }) {
-  if (sizes.length === 0) {
+  if (garments.length === 0) {
     return <p className="race-empty">No shirt sizes yet. They appear here as runners register.</p>;
   }
-  const total = sizes.reduce((sum, row) => sum + row.total, 0);
-  const sized = categories.filter(category => (sizedByCategory[category.id] ?? 0) > 0);
+  const byId = new Map(categories.map(category => [category.id, category]));
+
+  // The totals line, by type, leaving out a type nobody is getting.
+  const perType = new Map<GarmentType | 'NONE', number>();
+  for (const garment of garments) {
+    const type = garment.type ?? 'NONE';
+    perType.set(type, (perType.get(type) ?? 0) + garment.total);
+  }
+  const pieces = garments.reduce((sum, garment) => sum + garment.total, 0);
+  const totals = [...perType].map(([type, n]) => count(n, GARMENT_WORDS[type].one, GARMENT_WORDS[type].many));
+  if (perType.size > 1) totals.push(count(pieces, 'piece', 'pieces'));
 
   return (
     <>
-      <h3 className="race-sub">All categories · {total.toLocaleString('en-US')} shirts</h3>
-      <SizeChips counts={sizes.map(row => [row.size, row.total])} />
+      <p className="race-garment-totals">{totals.join(' · ')}</p>
 
-      {/* Per category only when there is more than one to tell apart. */}
-      {sized.length > 1 &&
-        sized.map(category => (
-          <div key={category.id} className="race-size-group">
-            <h3 className="race-sub">
-              {category.name}
-              {category.distance ? ` (${category.distance})` : ''} ·{' '}
-              {(sizedByCategory[category.id] ?? 0).toLocaleString('en-US')} shirts
-            </h3>
-            <SizeChips
-              counts={sizes
-                .filter(row => row.byCategory[category.id])
-                .map(row => [row.size, row.byCategory[category.id]])}
-            />
-          </div>
+      <ul className="race-garment-list">
+        {garments.map(garment => (
+          <li key={`${garment.type}-${garment.name}`} className="race-garment">
+            <div className="race-garment-head">
+              <h3 className="race-sub race-garment-name">{garment.name}</h3>
+              <span className="race-garment-tag">{GARMENT_WORDS[garment.type ?? 'NONE'].tag}</span>
+              <span className="race-garment-count">{count(garment.total, 'piece', 'pieces')}</span>
+            </div>
+            <p className="race-garment-with">
+              With{' '}
+              {garment.categoryIds
+                .map(id => byId.get(id))
+                .filter(category => category !== undefined)
+                .map(categoryLabel)
+                .join(', ')}
+            </p>
+            <SizeChips counts={garment.sizes.map(row => [row.size, row.total])} />
+          </li>
         ))}
+      </ul>
     </>
   );
 }
