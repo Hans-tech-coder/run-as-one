@@ -149,7 +149,9 @@ public page), **Registrations over Time** (`RegistrationTrend.tsx`: *Last 7
 days* and *Busiest day* over a bar chart, a bar per day since the first order —
 per week past 62 days — one series and one axis, no library; hovering a bar's
 column shows its day and count, and *Show the numbers* opens the same counts as
-a table), **Shirt Sizes** (**pieces to order, not runners**,
+a grid of day chips across the panel's width, only the days someone
+registered; the PDF prints those chips open under *Runners per day*, since a
+printed bar has no hover), **Shirt Sizes** (**pieces to order, not runners**,
 `SHIRT_COUNT_PLAN.md`: a totals line by type — *8 singlets · 5 T-shirts · 13
 pieces*, a type nobody gets left out, the pieces total only when there are two
 types — then one block per garment named in the categories' *What's

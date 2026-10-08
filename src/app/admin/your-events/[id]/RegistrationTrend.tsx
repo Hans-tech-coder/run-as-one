@@ -15,8 +15,11 @@ import './registration-trend.css';
  *
  * HTML and CSS, no chart library and no client state: a bar's column is its
  * hover target, taller than the bar, and shows the day and count. The numbers
- * are also a table under *Show the numbers*, so nothing is hover-only, and the
- * plot is one image to a screen reader with a sentence for its alt text.
+ * are also listed under *Show the numbers*, so nothing is hover-only, and the
+ * plot is one image to a screen reader with a sentence for its alt text. That
+ * list is a grid of day chips, not a one-row-per-day table: it fills the
+ * panel's width, so two months of days stay a few lines tall. On paper it is
+ * always open: a printed bar has no hover, so the chips are its numbers.
  */
 export default function RegistrationTrend({ trend, printed }: { trend: Trend; printed: boolean }) {
   const { bars, daysPerBar, lastSevenDays, busiest } = trend;
@@ -29,6 +32,18 @@ export default function RegistrationTrend({ trend, printed }: { trend: Trend; pr
   const weekly = daysPerBar === 7;
   const label = (bar: TrendBar) => (weekly ? `Week of ${shortDay(bar.day)}` : shortDay(bar.day));
   const runners = (count: number) => `${count.toLocaleString('en-US')} ${count === 1 ? 'runner' : 'runners'}`;
+  const days = (
+    <dl className="race-trend-days">
+      {bars
+        .filter(bar => bar.count > 0)
+        .map(bar => (
+          <div key={bar.day} className="race-trend-day">
+            <dt>{label(bar)}</dt>
+            <dd>{bar.count.toLocaleString('en-US')}</dd>
+          </div>
+        ))}
+    </dl>
+  );
 
   return (
     <div className="race-trend">
@@ -79,27 +94,15 @@ export default function RegistrationTrend({ trend, printed }: { trend: Trend; pr
       </p>
       {weekly && <p className="race-trend-note">Each bar is one week.</p>}
 
-      {!printed && (
+      {printed ? (
+        <div className="race-trend-table">
+          <p className="race-trend-days-title">Runners {weekly ? 'per week' : 'per day'}</p>
+          {days}
+        </div>
+      ) : (
         <details className="race-trend-table">
           <summary>Show the numbers</summary>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th scope="col">{weekly ? 'Week of' : 'Day'}</th>
-                <th scope="col">Runners</th>
-              </tr>
-            </thead>
-            <tbody>
-              {bars
-                .filter(bar => bar.count > 0)
-                .map(bar => (
-                  <tr key={bar.day}>
-                    <td>{formatEventDayShort(bar.day)}</td>
-                    <td>{bar.count.toLocaleString('en-US')}</td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
+          {days}
         </details>
       )}
     </div>

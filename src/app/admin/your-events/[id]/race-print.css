@@ -78,6 +78,13 @@
 
   .race-print-copy .race-trend-plot { height: 42mm; }
   .race-print-copy .race-trend-stats dd { font-size: 12pt; }
+  .race-print-copy .race-trend-days {
+    grid-template-columns: repeat(auto-fill, minmax(17mm, 1fr));
+    gap: 2mm;
+  }
+  .race-print-copy .race-trend-day { padding: 1.5mm 1mm; }
+  .race-print-copy .race-trend-day dt { font-size: 7.5pt; }
+  .race-print-copy .race-trend-day dd { font-size: 11pt; }
 
   .race-print-copy .race-kit-icon { width: 8mm; height: 8mm; }
   .race-print-copy .race-kit-count { font-size: 13pt; }
