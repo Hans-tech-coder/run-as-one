@@ -2989,6 +2989,46 @@ textarea.form-input {
     padding-inline: var(--space-md);
   }
 
+  /* On a phone the 12rem basis above plus the bell and account trigger is
+     wider than the row beside the 56px rail (~272px at 360), so the tools
+     wrapped to a line of their own under the title. A zero basis keeps them
+     on the title's row at any width — the title clamps to two lines instead —
+     and the page's own actions always take the next line, since there is no
+     room left beside them. */
+  .admin-header-lead {
+    flex-basis: 0;
+  }
+
+  .admin-header-actions {
+    flex-basis: 100%;
+  }
+
+  /* With a trail, the trail shares the tools' row and the title gets a row
+     of its own, the width of the screen — a phone's "large title". Beside
+     the tools it had ~134px, so a race named by its organizer ("Pangasinan
+     Provincial Marathon 2026: …") read as "Pangasinan Provincial…", and on
+     the race report the header is the only place that name is shown.
+     `display: contents` lets the trail and the title be ordered as the
+     header's own items; a page with no trail keeps its title beside the
+     tools, where a short title such as "Events" belongs. */
+  .admin-header-lead:has(> nav) {
+    display: contents;
+  }
+
+  .admin-header-lead:has(> nav) > nav {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .admin-header-lead:has(> nav) > .admin-header-title,
+  .admin-header-lead:has(> nav) > .t-skel-skeleton {
+    order: 2;
+    flex-basis: 100%;
+    margin-top: -8px;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+  }
+
   .admin-content {
     padding: var(--space-md);
   }
