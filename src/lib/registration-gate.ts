@@ -123,7 +123,23 @@ export type CategorySlots = {
 };
 
 /** Why registration is closed, or OPEN when it isn't. */
-export type RegistrationState = 'OPEN' | 'FINISHED' | 'CLOSED' | 'PAUSED' | 'SCHEDULED' | 'FULL';
+export type RegistrationState =
+  | 'OPEN'
+  | 'EXTERNAL'
+  | 'FINISHED'
+  | 'CLOSED'
+  | 'PAUSED'
+  | 'SCHEDULED'
+  | 'FULL';
+
+/**
+ * What a checkout route answers for a results-only event. The client took
+ * registrations somewhere else, so there is nothing here to enter or pay for —
+ * and a runner who reached this with an old tab or a crafted request must not
+ * be charged for a race Run As One is not handling.
+ */
+export const RESULTS_ONLY_MESSAGE =
+  'This race does not take registrations on Run As One. The organizer handles sign-ups elsewhere; this site only publishes its results.';
 
 /**
  * How many runners each of these categories has already taken.
@@ -260,17 +276,24 @@ export function soleOpenCategory<T extends CategorySlots>(
  * because nothing is lost by that: lifting the hold hands the event back to
  * its schedule rather than discarding it. A schedule in turn outranks a count,
  * since an event that has not opened yet cannot meaningfully be full.
+ *
+ * Before all of them: a results-only event (`resultsOnly`) is EXTERNAL. It
+ * never took registrations here, so "Race Over" or "Open" would both be
+ * untrue — and OPEN, the fallthrough, is the dangerous one: it would put a
+ * Register button on a race whose sign-ups the client runs elsewhere.
  */
 export function registrationState(
   event: {
     registrationClosedAt?: Date | string | null;
     registrationPaused?: boolean | null;
     registrationOpensAt?: Date | string | null;
+    resultsOnly?: boolean | null;
   },
   categories: CategorySlots[],
   finished: boolean,
   now: Date = new Date(),
 ): RegistrationState {
+  if (event.resultsOnly) return 'EXTERNAL';
   if (finished) return 'FINISHED';
   if (isClosed(event)) return 'CLOSED';
   if (event.registrationPaused) return 'PAUSED';

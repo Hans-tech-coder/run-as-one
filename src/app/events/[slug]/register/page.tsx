@@ -76,6 +76,15 @@ export default async function RegisterPage(props: {
     redirect(query ? `${canonical}?${query}` : canonical);
   }
 
+  // A results-only event never renders a wizard: its client takes sign-ups
+  // elsewhere. The event page decides what such a link shows instead — the
+  // results once they are up, a 404 until then. No orderRef exception, since
+  // no order can exist for one (both checkout routes refuse it, and the flag
+  // cannot be turned on over an existing registration).
+  if (event.resultsOnly) {
+    redirect(`/events/${event.slug}`);
+  }
+
   // A race that has already been run cannot be entered. The event page no
   // longer offers the button, but the URL is still typeable and still sitting
   // in someone's history, and that page is where the explanation lives.

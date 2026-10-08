@@ -19,7 +19,10 @@ database) and `20261007090000_pacer_pace_group` (one nullable column,
 `PromoCode.paceGroup`, the group a pacer leads, printed on their e-certificate;
 applied to the dev database) and `20261008090000_registration_closed` (one
 nullable column, `Event.registrationClosedAt`, the organizer's Close Sign-Ups;
-**not yet applied to the dev database**). Run
+applied to the dev database) and `20261008120000_event_results_only` (one
+boolean column, `Event.resultsOnly` defaulting to false,
+`RESULTS_ONLY_EVENT_PLAN.md` Batch 1; applied to the dev database — **do not
+promote until that plan's Batch 3 has landed**). Run
 `npx prisma migrate deploy` with `DIRECT_URL` on the production endpoint
 **before** the new code goes live: the code reads the column, and the old code
 ignores it, so migrating first is safe in both directions.

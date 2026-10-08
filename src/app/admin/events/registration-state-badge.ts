@@ -24,4 +24,7 @@ export const REGISTRATION_STATES = {
   SCHEDULED: { label: 'Scheduled', tone: 'pending' },
   FULL: { label: 'Full', tone: 'neutral' },
   FINISHED: { label: 'Race Over', tone: 'neutral' },
+  // Neutral too: registration runs elsewhere, which is neither good news nor a
+  // warning — Run As One only publishes this race's results.
+  EXTERNAL: { label: 'Results only', tone: 'neutral' },
 } as const;

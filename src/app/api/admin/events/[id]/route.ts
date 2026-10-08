@@ -53,6 +53,7 @@ const EVENT_FIELDS = [
   'registrationPaused',
   'registrationPauseNote',
   'registrationOpensAt',
+  'resultsOnly',
   'certificateTemplate',
   'certificateCoordinates',
   'clientId',
@@ -185,6 +186,28 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     }
 
+    // Results only (RESULTS_ONLY_EVENT_PLAN.md). A save that does not send the
+    // field keeps what the event has, so a form that predates the switch can
+    // never quietly turn an event registrable again.
+    //
+    // Flipping it either way is refused once anyone has registered (D3): on,
+    // it would strand runners who paid for a race the site then disowns; off,
+    // it cannot happen today, since no registration can reach such an event —
+    // but the rule is the same either way, so it is checked the same way.
+    const resultsOnly =
+      typeof data.resultsOnly === 'boolean' ? data.resultsOnly : current.resultsOnly;
+    if (resultsOnly !== current.resultsOnly) {
+      const registered = await db.registration.count({ where: { eventId: id } });
+      if (registered > 0) {
+        return NextResponse.json(
+          {
+            error: `This event already has ${registered} registration${registered === 1 ? '' : 's'}, so it cannot be switched ${resultsOnly ? 'to' : 'off'} results only. That switch is only for an event nobody has registered for.`,
+          },
+          { status: 400 },
+        );
+      }
+    }
+
     // Which client the race is for. Left alone unless the person may link one
     // (platform:manage) and sent it — an event manager's save never moves it.
     const clientLink = await readClientLink(actor, data.clientId, current.clientId);
@@ -278,6 +301,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
           // Null means the race is open as soon as it is published; an instant
           // in the future holds the button back until it passes.
           registrationOpensAt: registrationOpens,
+          resultsOnly,
           certificateTemplate: certificateTemplate || null,
           certificateCoordinates: certificateCoordinates || null,
           ...(clientLink.change ? { clientId: clientLink.clientId } : {}),
@@ -320,7 +344,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
               // A fun-run package has neither of these: no distance to run, and
               // a poster only if the organizer uploaded one.
               distance: cat.distance || '',
-              price: toCentavos(cat.price),
+              // Nothing is sold on a results-only race: no price, no cap.
+              price: resultsOnly ? 0 : toCentavos(cat.price),
               imageUrl: cat.imageUrl || null,
               // The form posts the textarea as typed; the list is what gets
               // stored, so blank lines and pasted bullets never reach the DB.
@@ -329,7 +354,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
               // below what the option already holds is allowed on purpose:
               // that is how an organizer closes an option early, and the
               // runners already in it keep their places.
-              slotLimit: asSlotLimit(cat.slotLimit),
+              slotLimit: resultsOnly ? null : asSlotLimit(cat.slotLimit),
             }
           });
         } else {
@@ -337,10 +362,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
             data: {
               name: upperCaseForStorage(cat.name),
               distance: cat.distance || '',
-              price: toCentavos(cat.price),
+              price: resultsOnly ? 0 : toCentavos(cat.price),
               imageUrl: cat.imageUrl || null,
               inclusions: asInclusions(cat.inclusions),
-              slotLimit: asSlotLimit(cat.slotLimit),
+              slotLimit: resultsOnly ? null : asSlotLimit(cat.slotLimit),
               sortOrder: nextSortOrder++,
               eventId: id,
             }

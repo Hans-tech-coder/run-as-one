@@ -76,7 +76,9 @@ export async function totalsByEvent(eventIds: string[]) {
 /** Every race this actor may settle, latest race first. */
 export async function eventSettlements(actor: Actor): Promise<EventSettlementRow[]> {
   const events = await prisma.event.findMany({
-    where: reachableEvents(actor, 'remittance:manage'),
+    // A results-only race took no money here, so it owes nobody anything and
+    // would only sit on the list at ₱0 (RESULTS_ONLY_EVENT_PLAN.md, D4).
+    where: { AND: [reachableEvents(actor, 'remittance:manage'), { resultsOnly: false }] },
     orderBy: mostRecentFirst,
     select: { id: true, title: true, date: true, client: { select: { name: true } } },
   });

@@ -16,6 +16,7 @@ import RegistrationScheduleModal from './RegistrationScheduleModal';
 import { openingInstantISO, type OpeningDraft } from './registration-opening';
 import { formatEventInstant } from '@/lib/event-schedule';
 import { REGISTRATION_STATES } from './registration-state-badge';
+import type { RegistrationState } from '@/lib/registration-gate';
 import { useAlert } from '@/components/ui/AlertProvider';
 import BusyLabel from '@/components/ui/BusyLabel';
 import {
@@ -57,7 +58,7 @@ type EventRow = {
   date: string;
   location: string;
   categories?: CategoryChip[];
-  registrationState?: 'OPEN' | 'FINISHED' | 'CLOSED' | 'PAUSED' | 'SCHEDULED' | 'FULL';
+  registrationState?: RegistrationState;
   registrationOpensAt?: string | Date | null;
   registrationPaused?: boolean | null;
   registrationClosedAt?: string | Date | null;

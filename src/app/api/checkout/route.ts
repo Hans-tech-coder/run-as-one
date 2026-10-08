@@ -24,6 +24,7 @@ import {
 } from '@/lib/minor-consent';
 import {
   REGISTRATION_CLOSED_MESSAGE,
+  RESULTS_ONLY_MESSAGE,
   SlotsUnavailableError,
   isClosed,
   openingNote,
@@ -185,6 +186,14 @@ export async function POST(request: Request) {
 
     if (!event) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
+    }
+
+    // A results-only event takes no registrations here at all: its client runs
+    // sign-ups elsewhere (RESULTS_ONLY_EVENT_PLAN.md). Refused before anything
+    // else is checked, because no answer about this order is worth giving —
+    // and never left to the event page hiding its button.
+    if (event.resultsOnly) {
+      return NextResponse.json({ error: RESULTS_ONLY_MESSAGE }, { status: 400 });
     }
 
     // Every runner must be entered into one of this event's own options: one

@@ -83,7 +83,11 @@ export async function viewerEventSummaries(
 ): Promise<ViewerEventSummary[]> {
   const reachable = reachableEvents(actor, 'event:view-summary');
   const events = await prisma.event.findMany({
-    where: eventId ? { AND: [reachable, { id: eventId }] } : reachable,
+    // A results-only race has no registrants and no payout to summarize —
+    // its client took the entries elsewhere (RESULTS_ONLY_EVENT_PLAN.md, D4).
+    where: {
+      AND: [reachable, { resultsOnly: false }, ...(eventId ? [{ id: eventId }] : [])],
+    },
     select: {
       id: true,
       title: true,

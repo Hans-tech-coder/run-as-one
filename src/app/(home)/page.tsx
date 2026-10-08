@@ -37,7 +37,9 @@ export default async function Home() {
   // Upcoming races only, soonest first: this section is headed "Open For
   // Registration", and a race that has already been run is neither. Finished
   // races move to /results — see src/lib/event-schedule.ts.
-  const upcoming = upcomingEvents();
+  // Results-only races are left out: their sign-ups run elsewhere, so they
+  // are not open for registration in any sense this section means.
+  const upcoming = { ...upcomingEvents(), resultsOnly: false };
   const [openForRegistration, totalEvents] = await Promise.all([
     db.event.findMany({
       where: upcoming,

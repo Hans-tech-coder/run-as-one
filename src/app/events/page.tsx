@@ -26,7 +26,9 @@ export default async function EventsPage() {
   // which one they are looking at.
   const [upcoming, totalEvents, eventsWithResults] = await Promise.all([
     db.event.findMany({
-      where: upcomingEvents(),
+      // A results-only race is never enterable here, so it is not upcoming in
+      // the sense this page means; it surfaces on /results once its times are.
+      where: { ...upcomingEvents(), resultsOnly: false },
       orderBy: soonestFirst,
       // The slot limits are what decide whether a card is badged FULL;
       // forListing counts against them and then drops them, so nothing about

@@ -80,8 +80,16 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ s
   // the link now wants is the ranking — so the event page hands them over to
   // /results rather than standing as a second, emptier address for the same
   // race. Old links keep working; they just arrive where the race now lives.
-  if (finished && resultsCount > 0) {
+  //
+  // A results-only event takes the same exit whatever its date, since there is
+  // nothing to register for, and has no page at all until its results are up
+  // (RESULTS_ONLY_EVENT_PLAN.md, D1): its client sells the entries elsewhere,
+  // and a page here would read as a second, wrong place to sign up.
+  if ((finished || event.resultsOnly) && resultsCount > 0) {
     redirect(resultsPath(event));
+  }
+  if (event.resultsOnly) {
+    notFound();
   }
 
   // Whether this race is taking entries at all, and why not — the organizer's

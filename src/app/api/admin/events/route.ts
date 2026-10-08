@@ -37,6 +37,12 @@ export async function POST(request: Request) {
     const data = await request.json();
     const { title, date, startTime, endTime, location, province, imageUrl, highlights, sizeChartImageUrl, description, logisticsPickup, pickupLocation, pickupSchedule, logisticsDeliveryFeeInside, logisticsDeliveryFeeOutside, adminFee, shirtSizeUpcharge, consentWaiver, registrationForm, eventType, registrationOpensAt, categories, bankAccounts } = data;
 
+    // A results-only race (RESULTS_ONLY_EVENT_PLAN.md): its client sells the
+    // entries elsewhere and Run As One only publishes the times. Only a strict
+    // `true` turns it on, so a missing or malformed field leaves the event
+    // registrable as it always was.
+    const resultsOnly = data.resultsOnly === true;
+
     if (!title || !date || !location) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
@@ -115,6 +121,7 @@ export async function POST(request: Request) {
           // Null is the usual answer: most races are registrable the moment
           // they are published, and only one listed early holds its button back.
           registrationOpensAt: registrationOpens,
+          resultsOnly,
           // The tenant, never the person: an event belongs to the organizer
           // whoever on its team created it, and the trail below names them.
           organizerId: actor.orgId,
@@ -136,13 +143,15 @@ export async function POST(request: Request) {
               // A fun-run package has neither of these: no distance to run, and a
               // poster only if the organizer uploaded one.
               distance: cat.distance || '',
-              price: toCentavos(cat.price),
+              // Nothing is sold on a results-only race, so whatever the form
+              // still holds in these two fields is not a price or a cap.
+              price: resultsOnly ? 0 : toCentavos(cat.price),
               imageUrl: cat.imageUrl || null,
               // The form posts the textarea as typed; the list is what gets
               // stored, so blank lines and pasted bullets never reach the DB.
               inclusions: asInclusions(cat.inclusions),
               // Blank, 0 and anything unparseable all mean uncapped.
-              slotLimit: asSlotLimit(cat.slotLimit),
+              slotLimit: resultsOnly ? null : asSlotLimit(cat.slotLimit),
             })),
           },
         },
@@ -159,6 +168,7 @@ export async function POST(request: Request) {
         summary: `Created event ${created.title} (${created.date}).`,
         changes: {
           categories: created.categories.length,
+          ...(created.resultsOnly ? { resultsOnly: true } : {}),
           ...(created.clientId ? { clientId: created.clientId } : {}),
         },
       });

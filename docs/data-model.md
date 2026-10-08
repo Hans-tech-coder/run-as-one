@@ -46,7 +46,12 @@ shape:
   case — means it is registrable the moment it is published),
   `registrationClosedAt` (when the organizer closed sign-ups for good; null
   while not closed — unlike a pause, runners are not told to check back, and
-  only Reopen clears it), `pickupLocation`
+  only Reopen clears it), `resultsOnly` (a **results-only** race: the client
+  runs registration elsewhere and Run As One only publishes the times —
+  `registrationState` answers `EXTERNAL`, both checkout routes refuse it, it is
+  off the upcoming listings, `/events/[slug]` is a 404 until results exist, and
+  settlement and client summaries skip it; `RESULTS_ONLY_EVENT_PLAN.md`),
+  `pickupLocation`
   + `pickupSchedule`
   (where and when a race kit is collected — `logisticsPickup` only ever said
   *that* pickup existed), `province` (the province the event is held in,

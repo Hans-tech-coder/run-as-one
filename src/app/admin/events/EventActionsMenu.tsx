@@ -8,6 +8,7 @@ import LinkPending from '@/components/ui/LinkPending';
 import { placeRowMenu, type RowMenuPlacement } from '../row-menu-position';
 import { cssDurationMs } from '@/lib/css-duration';
 import { pacerMenuLabel } from '@/lib/pacer';
+import type { RegistrationState } from '@/lib/registration-gate';
 
 export default function EventActionsMenu({
   eventId,
@@ -26,7 +27,7 @@ export default function EventActionsMenu({
   /** The event's title, so a screen reader hears whose menu this is. */
   label?: string;
   /** Why sign-ups are closed, or OPEN — see src/lib/registration-gate.ts. */
-  registrationState?: 'OPEN' | 'FINISHED' | 'CLOSED' | 'PAUSED' | 'SCHEDULED' | 'FULL';
+  registrationState?: RegistrationState;
   /** True while this row's pause or close request is in flight. */
   isPausing?: boolean;
   /**
