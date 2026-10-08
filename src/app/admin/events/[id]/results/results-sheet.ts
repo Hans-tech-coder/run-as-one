@@ -12,7 +12,11 @@ export type SheetRows = unknown[][];
 /** One sheet's import settings. A column is named by its real sheet index, as a
  *  string because that is what the pickers hold; '' is "not chosen". */
 export type SheetMapping = {
+  /** A category id, '' for "do not import", or NEW_CATEGORY. */
   categoryId: string;
+  /** The distance a category created from this sheet's name gets. Guessed
+   *  from the name ("5K Results" → "5K"), so usually already filled. */
+  newDistance: string;
   headerRow: number;
   columns: Column[];
   bibCol: string;
@@ -22,10 +26,27 @@ export type SheetMapping = {
   gunCol: string;
 };
 
-export type MappingField = 'categoryId' | 'bibCol' | 'nameCol' | 'genderCol' | 'chipCol' | 'gunCol';
+export type MappingField = 'categoryId' | 'newDistance' | 'bibCol' | 'nameCol' | 'genderCol' | 'chipCol' | 'gunCol';
+
+/* The Target Category value that means "create one named after this sheet".
+   Only a results-only event offers it: its categories exist to group results,
+   so the sheet the timing company already split by distance can found them.
+   Never a real id — cuids do not start with an underscore. */
+export const NEW_CATEGORY = '__new__';
+
+/** "5K Results", "10KM", "21.1 km" → "5K", "10K", "21.1K"; '' when the name
+ *  names no distance, so the staff member types it instead. */
+export const guessDistance = (sheetName: string) => {
+  const hit = sheetName.match(/(\d+(?:\.\d+)?)\s*K(?:MS?)?(?![A-Z])/i);
+  return hit ? `${hit[1]}K` : '';
+};
 
 export type ResultRow = {
+  /** '' when the row goes to a category created by the upload; see newCategory. */
   categoryId: string;
+  /** The name of the category this upload creates for the row, as declared in
+   *  the request's newCategories. */
+  newCategory?: string;
   bibNumber: string;
   name: string;
   gender: string;
@@ -85,7 +106,12 @@ const findColumn = (columns: Column[], needles: string[], exclude: string[] = []
   return hit ? String(hit.index) : '';
 };
 
-export const buildMapping = (rows: SheetRows, headerRow: number, categoryId = ''): SheetMapping => {
+export const buildMapping = (
+  rows: SheetRows,
+  headerRow: number,
+  categoryId = '',
+  newDistance = '',
+): SheetMapping => {
   const columns = buildColumns(rows, headerRow);
 
   // A sheet with one unlabelled time column means chip time, so it is claimed
@@ -101,6 +127,7 @@ export const buildMapping = (rows: SheetRows, headerRow: number, categoryId = ''
 
   return {
     categoryId,
+    newDistance,
     headerRow,
     columns,
     bibCol: findColumn(columns, ['bib']),
@@ -138,7 +165,7 @@ export const readWorkbook = (binary: string | ArrayBuffer | null | undefined) =>
     sheetsData[name] = rows;
 
     if (rows.length > 0) {
-      mappings[name] = buildMapping(rows, detectHeaderRow(rows));
+      mappings[name] = buildMapping(rows, detectHeaderRow(rows), '', guessDistance(name));
     }
   });
 

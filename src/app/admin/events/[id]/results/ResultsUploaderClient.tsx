@@ -5,11 +5,13 @@ import { createPortal } from 'react-dom';
 import { UploadCloud, CheckCircle2, AlertCircle, Play, X, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import BusyLabel from '@/components/ui/BusyLabel';
+import { upperCaseForStorage } from '@/lib/text-case';
 import SheetMappingPanel from './SheetMappingPanel';
 import type { UploadCategory } from './TargetCategoryPicker';
 import {
   buildMapping,
   listPhrase,
+  NEW_CATEGORY,
   readWorkbook,
   REQUIRED_FIELDS,
   sheetResults,
@@ -22,7 +24,11 @@ import {
 /* The upload modal: the file, each sheet's mapping, and the one POST that
    replaces the mapped categories' results. Reading the sheet lives in
    results-sheet.ts and each sheet's form in SheetMappingPanel. */
-export default function ResultsUploaderClient({ event }: { event: { id: string; categories: UploadCategory[] } }) {
+export default function ResultsUploaderClient({
+  event,
+}: {
+  event: { id: string; categories: UploadCategory[]; resultsOnly: boolean };
+}) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -88,7 +94,12 @@ export default function ResultsUploaderClient({ event }: { event: { id: string; 
   const handleHeaderRowChange = (sheetName: string, headerRow: number) => {
     setMappings(prev => ({
       ...prev,
-      [sheetName]: buildMapping(sheetsData[sheetName] || [], headerRow, prev[sheetName]?.categoryId || '')
+      [sheetName]: buildMapping(
+        sheetsData[sheetName] || [],
+        headerRow,
+        prev[sheetName]?.categoryId || '',
+        prev[sheetName]?.newDistance || '',
+      )
     }));
     setInvalidFields(prev => {
       if (!prev[sheetName]) return prev;
@@ -114,28 +125,55 @@ export default function ResultsUploaderClient({ event }: { event: { id: string; 
       // Name every unmapped field on every sheet in one go, and mark them, so the
       // organizer never has to guess which dropdown the complaint is about.
       const missingBySheet: Record<string, string[]> = {};
+      const complaints: string[] = [];
+      const existingNames = new Set(event.categories.map(cat => upperCaseForStorage(cat.name)));
       importedSheets.forEach(name => {
-        const missing = Object.keys(REQUIRED_FIELDS).filter(field => !mappings[name][field as MappingField]);
-        if (missing.length) missingBySheet[name] = missing;
+        const mapping = mappings[name];
+        const missing: string[] = [];
+        const said: string[] = [];
+        if (mapping.categoryId === NEW_CATEGORY) {
+          // The server refuses both too; saying so here marks the field.
+          if (existingNames.has(upperCaseForStorage(name))) {
+            missing.push('categoryId');
+            said.push(`the event already has a ${upperCaseForStorage(name)} category, so choose it as the Target Category`);
+          }
+          if (!mapping.newDistance.trim()) {
+            missing.push('newDistance');
+            said.push('type the distance for the new category');
+          }
+        }
+        const columns = Object.keys(REQUIRED_FIELDS).filter(field => !mapping[field as MappingField]);
+        if (columns.length) said.push(`choose a column for ${listPhrase(columns.map(f => REQUIRED_FIELDS[f]))}`);
+        missing.push(...columns);
+        if (missing.length) {
+          missingBySheet[name] = missing;
+          complaints.push(`${name}: ${said.join('; ')}.`);
+        }
       });
 
-      if (Object.keys(missingBySheet).length > 0) {
+      if (complaints.length > 0) {
         setInvalidFields(missingBySheet);
-        throw new Error(
-          Object.entries(missingBySheet)
-            .map(([name, fields]) =>
-              `${name}: choose a column for ${listPhrase(fields.map(f => REQUIRED_FIELDS[f]))}.`)
-            .join(' ')
-        );
+        throw new Error(complaints.join(' '));
       }
       setInvalidFields({});
 
       const emptySheets: string[] = [];
+      // Only a sheet that yields rows founds its category, so a sheet that
+      // turns out empty never leaves an empty category on the event.
+      const newCategories: { name: string; distance: string }[] = [];
 
       for (const sheetName of importedSheets) {
-        const rows = sheetResults(sheetsData[sheetName] || [], mappings[sheetName]);
+        const mapping = mappings[sheetName];
+        let rows = sheetResults(sheetsData[sheetName] || [], mapping);
+        if (rows.length === 0) {
+          emptySheets.push(sheetName);
+          continue;
+        }
+        if (mapping.categoryId === NEW_CATEGORY) {
+          newCategories.push({ name: sheetName, distance: mapping.newDistance.trim() });
+          rows = rows.map(row => ({ ...row, categoryId: '', newCategory: sheetName }));
+        }
         finalResults.push(...rows);
-        if (rows.length === 0) emptySheets.push(sheetName);
       }
 
       if (finalResults.length === 0) {
@@ -147,7 +185,7 @@ export default function ResultsUploaderClient({ event }: { event: { id: string; 
       const res = await fetch(`/api/admin/events/${event.id}/results/upload`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ results: finalResults })
+        body: JSON.stringify({ results: finalResults, newCategories })
       });
 
       const resultData = await res.json();
@@ -157,7 +195,10 @@ export default function ResultsUploaderClient({ event }: { event: { id: string; 
       const skipped = emptySheets.length
         ? ` No usable rows were found in ${listPhrase(emptySheets)}, so ${emptySheets.length > 1 ? 'those sheets were' : 'that sheet was'} skipped.`
         : '';
-      setSuccess(`Successfully processed and uploaded ${resultData.count} records. Overall and Gender ranks have been automatically computed!${skipped}`);
+      const created = newCategories.length
+        ? ` Created ${newCategories.length === 1 ? 'the category' : 'the categories'} ${listPhrase(newCategories.map(cat => upperCaseForStorage(cat.name)))}.`
+        : '';
+      setSuccess(`Successfully processed and uploaded ${resultData.count} records. Overall and Gender ranks have been automatically computed!${created}${skipped}`);
       setTimeout(() => {
         setIsOpen(false);
         router.refresh();
@@ -260,6 +301,7 @@ export default function ResultsUploaderClient({ event }: { event: { id: string; 
                   mapping={mapping}
                   missing={invalidFields[sheetName] || []}
                   categories={event.categories}
+                  canCreateCategory={event.resultsOnly}
                   onFieldChange={(field, value) => handleMappingChange(sheetName, field, value)}
                   onHeaderRowChange={headerRow => handleHeaderRowChange(sheetName, headerRow)}
                 />

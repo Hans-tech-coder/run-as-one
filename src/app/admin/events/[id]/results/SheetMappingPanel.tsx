@@ -2,6 +2,7 @@
 
 import { FileSpreadsheet } from 'lucide-react';
 import AdminSelect from '../../../AdminSelect';
+import { upperCaseForStorage } from '@/lib/text-case';
 import TargetCategoryPicker, { type UploadCategory } from './TargetCategoryPicker';
 import {
   dataRows,
@@ -34,6 +35,7 @@ export default function SheetMappingPanel({
   mapping,
   missing,
   categories,
+  canCreateCategory,
   onFieldChange,
   onHeaderRowChange,
 }: {
@@ -43,6 +45,8 @@ export default function SheetMappingPanel({
   /** Required fields the last attempt found unmapped on this sheet. */
   missing: string[];
   categories: UploadCategory[];
+  /** The event is results-only, so this sheet may found its own category. */
+  canCreateCategory: boolean;
   onFieldChange: (field: MappingField, value: string) => void;
   onHeaderRowChange: (headerRow: number) => void;
 }) {
@@ -64,6 +68,15 @@ export default function SheetMappingPanel({
     missing.includes(field)
       ? `Choose the column that holds the ${REQUIRED_FIELDS[field].toLowerCase()}.`
       : undefined;
+
+  // The one way the picker itself can be wrong: a new category named after a
+  // sheet the event already has a category for, which it should go into instead.
+  const categoryError = missing.includes('categoryId')
+    ? `This event already has a ${upperCaseForStorage(sheetName)} category. Choose it here instead.`
+    : undefined;
+  const distanceError = missing.includes('newDistance')
+    ? 'Type the distance the new category is for.'
+    : undefined;
 
   return (
     // Visible overflow, not the panel's usual hidden: the column
@@ -89,6 +102,11 @@ export default function SheetMappingPanel({
             categories={categories}
             value={mapping.categoryId}
             onChange={value => onFieldChange('categoryId', value)}
+            canCreate={canCreateCategory}
+            newDistance={mapping.newDistance}
+            onNewDistanceChange={value => onFieldChange('newDistance', value)}
+            categoryError={categoryError}
+            distanceError={distanceError}
           />
         </div>
       </div>
