@@ -1,17 +1,16 @@
 import React from 'react';
 import { CircleCheck, CircleX } from 'lucide-react';
-import { RunAsOneLogo } from '@/components/RunAsOneLogo';
 import { CONTENT_AREA_PRESETS, DEFAULT_DESIGNED_SETTINGS } from '@/lib/certificate-settings';
 import { MAX_UPLOAD_MB } from '@/lib/uploads';
 import { SITE_NAME } from '@/lib/site-contact';
 import GuideDiagram from './GuideDiagram';
 import GuideChecklist from './GuideChecklist';
 import GuideToc from './GuideToc';
-import { SaveGuideButton } from './PrintableGuide';
+import { PrintHead, SavePdfAside, SavePdfPanel } from '../PrintableCopy';
 
 /**
  * The guide's text, once for the screen and once for the printer
- * (`PrintableGuide`). `printedOn` marks the print render: it adds a title
+ * (`PrintableCopy`). `printedOn` marks the print render: it adds a title
  * block, so a forwarded PDF explains itself, and draws the checklist as plain
  * boxes to tick by hand. `idPrefix` keeps the two renders' ids apart.
  *
@@ -67,11 +66,7 @@ export default function GuideDocument({ idPrefix, printedOn }: { idPrefix: strin
   const article = (
     <article className="cert-guide" aria-labelledby={printed ? id('doc-title') : undefined}>
       {printed && (
-        <header className="cert-guide-print-head">
-          <RunAsOneLogo className="cert-guide-print-logo" />
-          <h1 id={id('doc-title')}>E-Certificate Template Guide</h1>
-          <p>{`${SITE_NAME} · ${printedOn}`}</p>
-        </header>
+        <PrintHead id={id('doc-title')} title="E-Certificate Template Guide" line={`${SITE_NAME} · ${printedOn}`} />
       )}
 
       <section className="cert-guide-intro">
@@ -203,28 +198,11 @@ export default function GuideDocument({ idPrefix, printedOn }: { idPrefix: strin
     <div className="cert-guide-layout">
       {article}
       <aside className="cert-guide-aside">
-        <div className="cert-guide-save">
-          <SaveGuideButton />
-          <SaveHint />
-        </div>
+        <SavePdfAside />
         <GuideToc items={CONTENTS.map(({ key, label }) => ({ id: id(key), label }))} />
       </aside>
-      <section className="cert-guide-save-end" aria-labelledby="guide-save-title">
-        <h2 id="guide-save-title">Sending this to a designer?</h2>
-        <SaveHint />
-        <SaveGuideButton />
-      </section>
+      <SavePdfPanel id="guide-save-title" title="Sending this to a designer?" />
     </div>
-  );
-}
-
-/** What the button does, said once wherever the button is. */
-function SaveHint() {
-  return (
-    <p className="cert-guide-save-hint">
-      Opens the print dialog. Choose &ldquo;Save as PDF&rdquo; as the destination, then send the
-      file on.
-    </p>
   );
 }
 

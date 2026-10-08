@@ -1,11 +1,13 @@
 /**
  * What a client viewer is shown about one of its races, on that race's own
- * page (CLIENT_RACE_PAGE_PLAN.md, Batch 1): how full each category is, the
- * shirt sizes to order, and how the race kits go out.
+ * page (CLIENT_RACE_PAGE_PLAN.md, Batches 1–2): how full each category is,
+ * the shirt sizes to order, how the race kits go out, and how registrations
+ * came in day by day.
  *
  * **Still counts and nothing else**, the rule `client-summary.ts` exists to
  * force. A size is a count of runners per size; a kit is a count of runners
- * per pickup or delivery. No name, contact, address, amount or order
+ * per pickup or delivery; a day is a count of runners whose order was placed
+ * on it. No name, contact, address, amount or order
  * reference leaves a query here, and the shapes returned have no field to
  * carry one.
  *
@@ -28,6 +30,7 @@ import prisma from './db';
 import type { Prisma } from '@prisma/client';
 import type { Actor } from './actor';
 import { viewerEventSummaries, type ViewerEventSummary } from './client-summary';
+import { eventInstantParts, isCalendarDay, today } from './event-schedule';
 import { awaitingVerificationWhere } from './pending-expiry';
 import { pickupDetails } from './pickup';
 import { asDeliveryZone, asLogisticsMethod, deliveryZoneLabelFor, LOGISTICS_METHODS } from './registration-codes';
@@ -44,6 +47,20 @@ export type KitSplit = {
   pickupWhere: string;
 };
 
+/** Registrants whose order was placed in one bar's span: a day, or a week from `day`. */
+export type TrendBar = { day: string; count: number };
+
+export type RegistrationTrend = {
+  /** Oldest first, every span from the first order to today (or race day) present, zeros included. */
+  bars: TrendBar[];
+  /** 1 for a bar a day; 7 when the span is long enough that daily bars would be slivers. */
+  daysPerBar: 1 | 7;
+  /** Registrants in the last seven days, today included. */
+  lastSevenDays: number;
+  /** The single busiest day, or null before anyone registered. */
+  busiest: TrendBar | null;
+};
+
 export type ViewerRaceReport = {
   event: ViewerEventSummary;
   /** Sizes in chart order, then any size a runner typed that the chart lacks. */
@@ -51,6 +68,7 @@ export type ViewerRaceReport = {
   /** Per category id, how many registrants have a shirt size at all. */
   sizedByCategory: Record<string, number>;
   kits: KitSplit;
+  trend: RegistrationTrend;
 };
 
 /** The registrants: paid, or a bank transfer awaiting verification. */
@@ -73,6 +91,7 @@ export async function viewerRaceReport(actor: Actor, eventId: string): Promise<V
       select: {
         logisticsMethod: true,
         deliveryZone: true,
+        createdAt: true,
         _count: { select: { runners: { where: { deletedAt: null } } } },
       },
     }),
@@ -91,6 +110,7 @@ export async function viewerRaceReport(actor: Actor, eventId: string): Promise<V
     event,
     ...sizeTable(sizeGroups),
     kits: kitSplit(orders, logistics),
+    trend: registrationTrend(orders, event.date),
   };
 }
 
@@ -183,4 +203,69 @@ function pickupWhere(event: { pickupLocation: string | null; pickupSchedule: str
   const { location, schedule } = pickupDetails(event);
   if (location && schedule) return `${location} — ${schedule}`;
   return location ?? schedule ?? 'No pickup place or schedule set yet. Ask Run As One to add it.';
+}
+
+/** Past this many days, a bar a day is a sliver on a phone, so the bars become weeks. */
+const DAILY_BARS_UP_TO = 62;
+
+/**
+ * Registrants per Manila day, from the day of the first order to today — or to
+ * race day, once it has passed, so a finished race's chart stops there rather
+ * than trailing weeks of zeros. A day nobody registered is a zero bar, not a
+ * gap, or a quiet week would read as no time passing at all.
+ *
+ * Counted by the day the **order** was placed (`createdAt`), with every runner
+ * on it: a bank transfer verified three days later still registered the day it
+ * was sent. The same registrants as every other count on the page, so the bars
+ * add up to the Registered tile.
+ */
+function registrationTrend(
+  orders: { createdAt: Date; _count: { runners: number } }[],
+  raceDay: string,
+): RegistrationTrend {
+  const perDay = new Map<string, number>();
+  for (const order of orders) {
+    if (order._count.runners === 0) continue;
+    const { day } = eventInstantParts(order.createdAt);
+    perDay.set(day, (perDay.get(day) ?? 0) + order._count.runners);
+  }
+  const days = [...perDay.keys()].sort();
+  if (days.length === 0) return { bars: [], daysPerBar: 1, lastSevenDays: 0, busiest: null };
+
+  const now = today();
+  const first = days[0];
+  const lastOrder = days[days.length - 1];
+  const raceEnd = isCalendarDay(raceDay) && raceDay < now ? raceDay : now;
+  const last = lastOrder > raceEnd ? lastOrder : raceEnd;
+
+  const span = daysBetween(first, last) + 1;
+  const daysPerBar = span > DAILY_BARS_UP_TO ? 7 : 1;
+  const bars: TrendBar[] = [];
+  for (let offset = 0; offset < span; offset += daysPerBar) {
+    const day = addDays(first, offset);
+    let count = 0;
+    for (let inBar = 0; inBar < daysPerBar && offset + inBar < span; inBar++) {
+      count += perDay.get(addDays(first, offset + inBar)) ?? 0;
+    }
+    bars.push({ day, count });
+  }
+
+  const weekAgo = addDays(now, -6);
+  let lastSevenDays = 0;
+  let busiest: TrendBar = { day: first, count: 0 };
+  for (const [day, count] of perDay) {
+    if (day >= weekAgo && day <= now) lastSevenDays += count;
+    if (count > busiest.count || (count === busiest.count && day < busiest.day)) busiest = { day, count };
+  }
+  return { bars, daysPerBar, lastSevenDays, busiest };
+}
+
+/** Calendar-day arithmetic in UTC, where a day is always 24 hours. */
+function addDays(day: string, days: number): string {
+  const [year, month, date] = day.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, date + days)).toISOString().slice(0, 10);
+}
+
+function daysBetween(from: string, to: string): number {
+  return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
 }

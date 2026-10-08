@@ -1,12 +1,8 @@
 /*
- * The e-certificate guide on paper: the copy `PrintableGuide` portals onto
- * `<body>`, and the print rules that show it alone. Split from
- * certificate-guide.css, which holds the screen.
- *
- * Every print rule is gated on `body:has(> .cert-guide-print-copy)`, so
- * printing any other dashboard screen is untouched. The copy carries
- * `data-theme="light"`, which is what turns the tokens light; the few
- * literals here are the paper itself, white whatever the theme.
+ * The e-certificate guide on paper: the layout of the copy `PrintableCopy`
+ * portals onto `<body>` (class `cert-guide-print-copy`). The rules that show
+ * that copy alone, and the title block, are the shared ../print-copy.css;
+ * certificate-guide.css holds the screen.
  *
  * **Paper is a document, not the dashboard.** The screen's boxed panels would
  * spend a third of each sheet on borders and padding, so on paper a section
@@ -18,64 +14,7 @@
  * out on three A4 pages.
  */
 
-/* It exists only for the printer, so it is never drawn on screen. */
-.cert-guide-print-copy { display: none; }
-
-.cert-guide-print-head { display: grid; gap: 4px; }
-
-.cert-guide-print-head h1 {
-  margin: 6px 0 0;
-  font-family: var(--font-sans);
-  font-size: 20pt;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.cert-guide-print-head p {
-  margin: 0;
-  font-size: 9pt;
-  color: var(--text-secondary);
-}
-
-.cert-guide-print-logo { --rao-logo-size: 26px; }
-
 @media print {
-  /* No page margin, so the browser has nowhere to print its own header and
-     footer; the frame's repeated rows below put the margin back. */
-  @page {
-    size: A4;
-    margin: 0;
-  }
-
-  html:has(> body > .cert-guide-print-copy),
-  body:has(> .cert-guide-print-copy) {
-    background: #fff !important;
-  }
-
-  body:has(> .cert-guide-print-copy) > *:not(.cert-guide-print-copy) {
-    display: none !important;
-  }
-
-  body:has(> .cert-guide-print-copy) > .cert-guide-print-copy {
-    display: block;
-    padding: 0 14mm;
-    background: #fff;
-    /* The tints carry meaning (which zone is which), so keep them even when
-       the dialog's "Background graphics" is off. */
-    print-color-adjust: exact;
-    -webkit-print-color-adjust: exact;
-  }
-
-  .cert-guide-print-frame {
-    width: 100%;
-    border-collapse: collapse;
-  }
-
-  .cert-guide-print-frame td { padding: 0; }
-
-  /* The top and bottom margin of every sheet. */
-  .cert-guide-print-gap { height: 12mm; }
-
   .cert-guide-print-copy .cert-guide {
     --cg-paper: #fff;
     display: block;
@@ -187,7 +126,6 @@
   }
 
   /* The units that must never be cut in two. */
-  .cert-guide-print-copy .cert-guide-print-head,
   .cert-guide-print-copy .cert-guide-diagram-scroll,
   .cert-guide-print-copy .cert-guide-legend li,
   .cert-guide-print-copy .cert-guide-specs tr,

@@ -1,0 +1,92 @@
+/*
+ * A client's race page on paper: the layout of the copy `PrintableCopy`
+ * portals onto `<body>` (class `race-print-copy`). The rules that show that
+ * copy alone, and its title block, are the shared ../../print-copy.css;
+ * your-events.css holds the screen.
+ *
+ * The same idea as the certificate guide's paper (guide-print.css): a section
+ * is a heading over a hairline, not a boxed panel, the type is set in points,
+ * and only the small units — a tile, a category, a size, a kit line, the
+ * chart — are kept from breaking across sheets, so the report does not leave
+ * half-empty pages behind every section.
+ */
+
+@media print {
+  .race-print-copy .race-page {
+    display: block;
+    font-size: 10pt;
+  }
+
+  .race-print-copy .race-page > * + * { margin-top: 6mm; }
+
+  .race-print-copy .metrics-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 3mm;
+  }
+
+  .race-print-copy .metric-card {
+    gap: 1.5mm;
+    padding: 3mm 4mm;
+    border-radius: 2mm;
+  }
+
+  .race-print-copy .metric-title { font-size: 8pt; }
+  .race-print-copy .metric-value { font-size: 16pt; }
+  .race-print-copy .metric-icon { display: none; }
+
+  /* A section: its heading over a hairline, then its content, unboxed. */
+  .race-print-copy .admin-panel {
+    overflow: visible;
+    border: 0;
+    border-top: 1px solid var(--ink-15);
+    border-radius: 0;
+    background: none;
+  }
+
+  .race-print-copy .race-panel-head {
+    padding: 3mm 0 2.5mm;
+    border: 0;
+    break-after: avoid;
+  }
+
+  .race-print-copy .admin-panel-title { font-size: 13pt; }
+
+  .race-print-copy .race-panel-hint { font-size: 8.5pt; }
+
+  .race-print-copy .race-panel-body { padding: 0; }
+
+  .race-print-copy .race-slot-list { gap: 4mm; }
+
+  .race-print-copy .race-slot-numbers,
+  .race-print-copy .race-kit-meta { font-size: 8.5pt; }
+
+  .race-print-copy .race-size-group {
+    margin-top: 4mm;
+    padding-top: 3mm;
+  }
+
+  .race-print-copy .race-size-chips {
+    grid-template-columns: repeat(auto-fill, minmax(17mm, 1fr));
+    gap: 2mm;
+  }
+
+  .race-print-copy .race-size-chip { padding: 1.8mm 1mm; }
+  .race-print-copy .race-size-label { font-size: 7.5pt; }
+  .race-print-copy .race-size-count { font-size: 13pt; }
+
+  .race-print-copy .race-trend-plot { height: 42mm; }
+  .race-print-copy .race-trend-stats dd { font-size: 12pt; }
+
+  .race-print-copy .race-kit-icon { width: 8mm; height: 8mm; }
+  .race-print-copy .race-kit-count { font-size: 13pt; }
+
+  /* The units that must never be cut in two. */
+  .race-print-copy .metric-card,
+  .race-print-copy .race-slot,
+  .race-print-copy .race-trend,
+  .race-print-copy .race-size-group,
+  .race-print-copy .race-size-chip,
+  .race-print-copy .race-kit {
+    break-inside: avoid;
+  }
+}

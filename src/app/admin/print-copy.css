@@ -1,0 +1,123 @@
+/*
+ * The paper copy `PrintableCopy` portals onto `<body>`, and the print rules
+ * that show it alone. A page's own paper layout (type in points, sections
+ * unboxed) lives beside that page, scoped to the class it gives the copy:
+ * certificate-guide/guide-print.css, your-events/[id]/race-print.css.
+ *
+ * Every print rule is gated on `body:has(> .print-copy)`, so printing any
+ * other dashboard screen is untouched. The copy carries `data-theme="light"`,
+ * which is what turns the tokens light; the few literals here are the paper
+ * itself, white whatever the theme.
+ */
+
+/* It exists only for the printer, so it is never drawn on screen. */
+.print-copy { display: none; }
+
+.print-head { display: grid; gap: 4px; }
+
+.print-head h1 {
+  margin: 6px 0 0;
+  font-family: var(--font-sans);
+  font-size: 20pt;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.print-head p {
+  margin: 0;
+  font-size: 9pt;
+  color: var(--text-secondary);
+}
+
+.print-head-logo { --rao-logo-size: 26px; }
+
+/* ── Save as PDF, in the page (`SavePdfAside`, `SavePdfPanel`) ──────────── */
+.print-save {
+  display: grid;
+  gap: 10px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--dash-hairline);
+}
+
+.print-save .btn-light,
+.print-save-end .btn-light { width: 100%; }
+
+.print-save-hint {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+/* Below `xl`: the action at the foot of the page, a quiet panel of its own. */
+.print-save-end {
+  display: grid;
+  gap: 12px;
+  padding: var(--space-lg);
+  border: 1px solid var(--dash-hairline);
+  border-radius: var(--radius-xl);
+  background: var(--dash-surface);
+}
+
+.print-save-end h2 {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.print-save-end .print-save-hint { font-size: 0.875rem; }
+
+@media (min-width: 640px) {
+  /* A tablet has the width for the button to sit at its own size. */
+  .print-save-end .btn-light { width: auto; justify-self: start; }
+}
+
+/* From `xl` up the page's aside carries the button, so the foot of the page
+   does not repeat it. This must stay after the panel's own `display: grid`
+   above: an earlier copy of it sat before that rule and lost to it, and the
+   button showed twice on a desktop. */
+@media (min-width: 1280px) {
+  .print-save-end { display: none; }
+}
+
+@media print {
+  /* No page margin, so the browser has nowhere to print its own header and
+     footer; the frame's repeated rows below put the margin back. */
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  html:has(> body > .print-copy),
+  body:has(> .print-copy) {
+    background: #fff !important;
+  }
+
+  body:has(> .print-copy) > *:not(.print-copy) {
+    display: none !important;
+  }
+
+  body:has(> .print-copy) > .print-copy {
+    display: block;
+    padding: 0 14mm;
+    background: #fff;
+    /* Tints and bars carry meaning, so keep them even when the dialog's
+       "Background graphics" is off. */
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .print-copy-frame {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .print-copy-frame td { padding: 0; }
+
+  /* The top and bottom margin of every sheet. */
+  .print-copy-gap { height: 12mm; }
+
+  .print-copy .print-head { break-inside: avoid; }
+}

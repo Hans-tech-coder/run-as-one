@@ -123,21 +123,33 @@ E-Certificate Guide**, Settings in the account menu, and **every other
 §7) — Settings stays, name, email and password as for anyone.
 
 **`/admin/your-events/[id]` is one of a client viewer's races**
-(`CLIENT_RACE_PAGE_PLAN.md` Batch 1, `admin/your-events/[id]/page.tsx`, reading
-`client-race-report.ts`). `requireActor()`, then the report decides: a race
+(`CLIENT_RACE_PAGE_PLAN.md` Batches 1–2, `admin/your-events/[id]/page.tsx`, its
+sections in `RaceReport.tsx`, reading `client-race-report.ts`). `requireActor()`, then the report decides: a race
 the person may not see — another client's, removed, or a made-up id — is the
 same *Race not found* panel. Breadcrumb *Your Events*, the race as title, and
 Dashboard stays lit in the sidebar (`isActivePath`). A wrapping line of the
-registration badge, date and place; the four count tiles; then three panels,
+registration badge, date and place; the four count tiles; then four panels,
 each with one sentence saying what it counts: **Slots per Category** (registered,
 `N of M slots left` with a fill bar, *Almost full* at 90%, *Full* at the limit,
 *No slot limit* when unlimited — taken slots include unpaid checkouts, as on the
-public page), **Shirt Sizes** (registrants' sizes as wrapping tiles in chart
+public page), **Registrations over Time** (`RegistrationTrend.tsx`: *Last 7
+days* and *Busiest day* over a bar chart, a bar per day since the first order —
+per week past 62 days — one series and one axis, no library; hovering a bar's
+column shows its day and count, and *Show the numbers* opens the same counts as
+a table), **Shirt Sizes** (registrants' sizes as wrapping tiles in chart
 order, all categories first, then per category when more than one has sizes;
 spelled-out sizes such as *Large* count as their code), and **Race Kits**
 (pickup, with the pickup place and schedule or a line saying none is set, and
 delivery, split *Inside / Outside Province* only where the race asked). Counts
-only; no tables, so nothing scrolls sideways on a phone. Left out on purpose
+only; no wide tables, so nothing scrolls sideways on a phone. **Save as PDF**
+prints a light copy of the same sections with a title block (`PrintableCopy`,
+below; paper layout in `race-print.css`) — the sizes are what goes to the shirt
+supplier. The button is in the page, never the header, and not in a column of
+its own: from 640px up it sits at the end of the race's status line
+(`.race-toolbar`), above the tiles; on a phone it closes the page instead, in
+the guide's *Sending this to your supplier or team?* panel (`SavePdfPanel`). The four tiles sit four, two
+or one to a row by the report's own width (a container query), never three
+and an orphan. Left out on purpose
 after the owner's look at a competitor's portal: withdrawals, a per-order money
 ledger, promo-code tools, inventory allocation and courier stages.
 
@@ -153,7 +165,8 @@ don't, what to send with the file, and a 7-item checklist that is not saved
 (`GuideChecklist`). Every number that is a constant in code is read from it, so
 the guide cannot drift from the certificate (`GuideDocument`'s header lists
 which rule lives where). **Save as PDF** is `window.print()`
-over a light copy portalled onto `<body>` (`PrintableGuide`, the consent
+over a light copy portalled onto `<body>` (`admin/PrintableCopy.tsx` with
+`admin/print-copy.css`, shared with the client race page; the consent
 sheet's pattern; the copy sets `data-theme="light"`, so the tokens turn light),
 because the designer usually has no account. On paper (`guide-print.css`) a
 section is a heading over a hairline rather than a boxed panel, only small

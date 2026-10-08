@@ -1,0 +1,169 @@
+/*
+ * The race page's registrations chart (`RegistrationTrend.tsx`), split from
+ * your-events.css. CSS bars sharing whatever width there is, so a phone never
+ * scrolls sideways; the paper sizes are in race-print.css.
+ */
+
+/* ── Registrations over time ────────────────────────────────────────────
+   One series, so one colour and no legend: the panel title names it. The
+   axis and gridlines are hairlines; the bars carry the ink. */
+.race-trend {
+  --trend-axis: 2.25rem;
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.race-trend-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 32px;
+  margin: 0 0 8px;
+}
+
+.race-trend-stats > div {
+  display: grid;
+  gap: 2px;
+}
+
+.race-trend-stats dt {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.race-trend-stats dd {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.race-trend-plot {
+  display: grid;
+  grid-template-columns: var(--trend-axis) minmax(0, 1fr);
+  gap: 8px;
+  height: 180px;
+}
+
+/* Top, middle and zero, each centred on its gridline. */
+.race-trend-y {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-size: 0.6875rem;
+  line-height: 1;
+  text-align: right;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.race-trend-y > :first-child { transform: translateY(-50%); }
+.race-trend-y > :last-child { transform: translateY(50%); }
+
+.race-trend-bars {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-bottom: 1px solid var(--ink-15);
+  /* Gridlines at the top and the middle; the baseline is the border. */
+  background: linear-gradient(to bottom, var(--dash-hairline) 1px, transparent 1px) top / 100% 50% repeat-y;
+}
+
+/* The whole column is the hover target, taller than the bar in it. */
+.race-trend-bar {
+  display: flex;
+  flex: 1 1 0;
+  align-items: flex-end;
+  min-width: 0;
+}
+
+.race-trend-fill {
+  width: 100%;
+  max-width: 28px;
+  height: var(--bar);
+  margin-inline: auto;
+  border-radius: 4px 4px 0 0;
+  background: var(--accent-blue);
+  transition: opacity 120ms ease;
+}
+
+.race-trend-bars:hover .race-trend-fill { opacity: 0.45; }
+.race-trend-bar:hover .race-trend-fill { opacity: 1; }
+
+/* Pinned to the plot's far corner from the bar, so it never covers the bar
+   it describes and never runs past the panel's edge on a phone. */
+.race-trend-tip {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1;
+  display: none;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--text-primary);
+  color: var(--dash-panel-solid);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.race-trend-bar.is-late .race-trend-tip {
+  right: auto;
+  left: 0;
+}
+
+.race-trend-bar:hover .race-trend-tip { display: block; }
+
+.race-trend-x {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: -4px 0 0;
+  padding-left: calc(var(--trend-axis) + 8px);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.race-trend-note {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.race-trend-table summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--accent-blue-text);
+  cursor: pointer;
+}
+
+.race-trend-table .data-table {
+  max-width: 22rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.race-trend-table .data-table th,
+.race-trend-table .data-table td {
+  padding: 8px 12px;
+}
+
+.race-trend-table .data-table :is(th, td):last-child {
+  text-align: right;
+}
+
+@media (width < 40rem) {
+  .race-trend-plot {
+    height: 150px;
+  }
+}

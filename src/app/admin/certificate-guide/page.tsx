@@ -5,7 +5,9 @@ import { formatEventDay, today } from '@/lib/event-schedule';
 import { SITE_NAME } from '@/lib/site-contact';
 import DashboardHeader from '../DashboardHeader';
 import GuideDocument from './GuideDocument';
-import PrintableGuide from './PrintableGuide';
+import PrintableCopy from '../PrintableCopy';
+import './certificate-guide.css';
+import './guide-print.css';
 
 export const metadata: Metadata = {
   title: `E-Certificate Guide | ${SITE_NAME} Admin`,
@@ -29,7 +31,7 @@ export const metadata: Metadata = {
  * current, and so a client reads it signed in rather than at a public link.
  * The person who designs the template usually has no account, which is what
  * **Save as PDF** is for: the browser's own print dialog, over a light copy of
- * the guide portalled onto `<body>` (`PrintableGuide`), so the PDF reads the
+ * the guide portalled onto `<body>` (`PrintableCopy`), so the PDF reads the
  * same whatever the dashboard theme.
  */
 export default async function CertificateGuidePage() {
@@ -40,9 +42,12 @@ export default async function CertificateGuidePage() {
     <>
       <DashboardHeader title="E-Certificate Guide" />
       <div className="admin-content">
-        <PrintableGuide print={<GuideDocument idPrefix="print-" printedOn={printedOn} />}>
+        <PrintableCopy
+          className="cert-guide-print-copy"
+          print={<GuideDocument idPrefix="print-" printedOn={printedOn} />}
+        >
           <GuideDocument idPrefix="" />
-        </PrintableGuide>
+        </PrintableCopy>
       </div>
     </>
   );

@@ -3,7 +3,9 @@
  * more of Admin.css, which is on the split list.
  *
  * Nothing here scrolls sideways: categories and sizes are wrapping rows, not
- * tables, so a 360px phone sees every number (§8, rule 12).
+ * tables, and the registrations chart's bars share whatever width there is,
+ * so a 360px phone sees every number (§8, rule 12). The chart is
+ * registration-trend.css; the paper copy's layout is race-print.css.
  */
 
 .race-page {
@@ -16,7 +18,54 @@
   margin-bottom: 0;
 }
 
-/* ── The race's state, date and place, one wrapping line over the tiles ── */
+/* Four tiles as one row, two pairs, or a column — never three and an orphan,
+   which the dashboard's auto-fit gives at in-between widths. Sized by the
+   report's own width, not the screen's. */
+.race-page {
+  container-type: inline-size;
+}
+
+@container (min-width: 400px) {
+  .race-page > .metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container (min-width: 760px) {
+  .race-page > .metrics-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* ── The race's state, date and place, and Save as PDF at the end ─────── */
+.race-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+}
+
+.race-toolbar > .race-meta {
+  flex: 1 1 20rem;
+  min-width: 0;
+}
+
+.race-toolbar > .btn-light {
+  flex-shrink: 0;
+  min-height: 44px;
+}
+
+/* A phone gets the action at the foot of the page instead, in the guide's
+   panel (`SavePdfPanel`), so the tiles stay at the top. One of the two is
+   ever on screen. */
+.race-save-end { display: none; }
+
+@media (width < 40rem) {
+  .race-toolbar > .btn-light { display: none; }
+  .race-save-end { display: block; }
+}
+
 .race-meta {
   display: flex;
   flex-wrap: wrap;

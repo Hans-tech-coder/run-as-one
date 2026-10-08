@@ -19,7 +19,8 @@
 
 /* The aside (Save as PDF over the contents) is the right-hand column from
    `xl` up; below it the aside is not drawn and the same action closes the
-   page instead (`.cert-guide-save-end`). One of the two is ever on screen. */
+   page instead (`SavePdfPanel`; both pieces are styled in ../print-copy.css).
+   One of the two is ever on screen. */
 .cert-guide-aside { display: none; }
 
 @media (min-width: 1280px) {
@@ -33,56 +34,6 @@
     top: 112px;
     align-self: start;
   }
-}
-
-.cert-guide-save {
-  display: grid;
-  gap: 10px;
-  padding-bottom: 24px;
-  border-bottom: 1px solid var(--dash-hairline);
-}
-
-.cert-guide-save .btn-light,
-.cert-guide-save-end .btn-light { width: 100%; }
-
-.cert-guide-save-hint {
-  margin: 0;
-  font-size: 0.8125rem;
-  line-height: 1.5;
-  color: var(--text-secondary);
-}
-
-/* Below `xl`: the action at the foot of the page, a quiet panel of its own. */
-.cert-guide-save-end {
-  display: grid;
-  gap: 12px;
-  padding: var(--space-lg);
-  border: 1px solid var(--dash-hairline);
-  border-radius: var(--radius-xl);
-  background: var(--dash-surface);
-}
-
-.cert-guide-save-end h2 {
-  margin: 0;
-  font-family: var(--font-sans);
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.cert-guide-save-end .cert-guide-save-hint { font-size: 0.875rem; }
-
-@media (min-width: 640px) {
-  /* A tablet has the width for the button to sit at its own size. */
-  .cert-guide-save-end .btn-light { width: auto; justify-self: start; }
-}
-
-/* From `xl` up the aside carries the button, so the foot of the page does
-   not repeat it. This must stay after the panel's own `display: grid`
-   above: an earlier copy of it sat before that rule and lost to it, and the
-   button showed twice on a desktop. */
-@media (min-width: 1280px) {
-  .cert-guide-save-end { display: none; }
 }
 
 .cert-guide-toc-title {

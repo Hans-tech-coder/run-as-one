@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-39 pages · 52 API routes · 87 modules in `src/lib` · 380 files · 78,285 lines
+39 pages · 52 API routes · 87 modules in `src/lib` · 382 files · 79,006 lines
 
 ---
 
@@ -24,10 +24,10 @@ The route, the server component behind it, and the client components beside it.
 | Route | Page | Beside it |
 | --- | --- | --- |
 | `/` | [`/(home)/page.tsx`](../src/app/%28home%29/page.tsx) | — |
-| `/admin` | [`/admin/page.tsx`](../src/app/admin/page.tsx) | `AccountMenu.tsx` `AdminCardEdit.tsx` `AdminCardList.tsx` `AdminDataTable.tsx` `AdminDatePicker.tsx` `AdminNotFound.tsx` `AdminRouteLoading.tsx` `AdminSelect.tsx` `AdminShell.tsx` `AdminTablePager.tsx` `AuthHomeLink.tsx` `AuthRouteLoading.tsx` `bare-paths.ts` `dashboard-nav.tsx` `dashboard-sidebar.ts` `dashboard-theme.ts` `DashboardHeader.tsx` `DashboardQuickJump.tsx` `DashboardShell.tsx` `FilterOptions.tsx` `FiltersMenu.tsx` `forbidden.tsx` `MobileSortMenu.tsx` `NotificationsCenter.tsx` `route-loading-shape.ts` `row-menu-position.ts` `RowActionsMenu.tsx` `SmoothModalBody.tsx` `ViewerDashboard.tsx` |
+| `/admin` | [`/admin/page.tsx`](../src/app/admin/page.tsx) | `AccountMenu.tsx` `AdminCardEdit.tsx` `AdminCardList.tsx` `AdminDataTable.tsx` `AdminDatePicker.tsx` `AdminNotFound.tsx` `AdminRouteLoading.tsx` `AdminSelect.tsx` `AdminShell.tsx` `AdminTablePager.tsx` `AuthHomeLink.tsx` `AuthRouteLoading.tsx` `bare-paths.ts` `dashboard-nav.tsx` `dashboard-sidebar.ts` `dashboard-theme.ts` `DashboardHeader.tsx` `DashboardQuickJump.tsx` `DashboardShell.tsx` `FilterOptions.tsx` `FiltersMenu.tsx` `forbidden.tsx` `MobileSortMenu.tsx` `NotificationsCenter.tsx` `PrintableCopy.tsx` `route-loading-shape.ts` `row-menu-position.ts` `RowActionsMenu.tsx` `SmoothModalBody.tsx` `ViewerDashboard.tsx` |
 | `/admin/[...missing]` | [`/admin/[...missing]/page.tsx`](../src/app/admin/[...missing]/page.tsx) | — |
 | `/admin/activity` | [`/admin/activity/page.tsx`](../src/app/admin/activity/page.tsx) | `ActivityClient.tsx` |
-| `/admin/certificate-guide` | [`/admin/certificate-guide/page.tsx`](../src/app/admin/certificate-guide/page.tsx) | `GuideChecklist.tsx` `GuideDiagram.tsx` `GuideDocument.tsx` `GuideToc.tsx` `PrintableGuide.tsx` |
+| `/admin/certificate-guide` | [`/admin/certificate-guide/page.tsx`](../src/app/admin/certificate-guide/page.tsx) | `GuideChecklist.tsx` `GuideDiagram.tsx` `GuideDocument.tsx` `GuideToc.tsx` |
 | `/admin/clients` | [`/admin/clients/page.tsx`](../src/app/admin/clients/page.tsx) | `ApplicationPanel.tsx` `ClientsClient.tsx` `InviteDialog.tsx` |
 | `/admin/communities` | [`/admin/communities/page.tsx`](../src/app/admin/communities/page.tsx) | `CommunitiesClient.tsx` |
 | `/admin/events` | [`/admin/events/page.tsx`](../src/app/admin/events/page.tsx) | `bank-account-draft.ts` `BankAccountsPanel.tsx` `category-draft.ts` `CertificateSettingsPanel.tsx` `ConsentWaiverField.tsx` `DescriptionEditor.tsx` `event-not-found.ts` `EventActionsMenu.tsx` `EventClientField.tsx` `EventOptionsPanel.tsx` `EventPromotionsPanel.tsx` `EventProvinceField.tsx` `EventsTableClient.tsx` `HighlightsField.tsx` `HighlightsModal.tsx` `InclusionsField.tsx` `LogisticsPanel.tsx` `PosterField.tsx` `registration-opening.ts` `registration-state-badge.ts` `RegistrationFormPicker.tsx` `RegistrationOpeningPicker.tsx` `RegistrationScheduleModal.tsx` |
@@ -49,7 +49,7 @@ The route, the server component behind it, and the client components beside it.
 | `/admin/settings/security` | [`/admin/settings/security/page.tsx`](../src/app/admin/settings/security/page.tsx) | — |
 | `/admin/settings/site` | [`/admin/settings/site/page.tsx`](../src/app/admin/settings/site/page.tsx) | — |
 | `/admin/team` | [`/admin/team/page.tsx`](../src/app/admin/team/page.tsx) | `RolePicker.tsx` `RolesPanel.tsx` `TeamActionsMenu.tsx` `TeamClient.tsx` |
-| `/admin/your-events/[id]` | [`/admin/your-events/[id]/page.tsx`](../src/app/admin/your-events/[id]/page.tsx) | — |
+| `/admin/your-events/[id]` | [`/admin/your-events/[id]/page.tsx`](../src/app/admin/your-events/[id]/page.tsx) | `RaceReport.tsx` `RegistrationTrend.tsx` |
 | `/coming-soon` | [`/coming-soon/page.tsx`](../src/app/coming-soon/page.tsx) | — |
 | `/events` | [`/events/page.tsx`](../src/app/events/page.tsx) | — |
 | `/events/[slug]` | [`/events/[slug]/page.tsx`](../src/app/events/[slug]/page.tsx) | — |
@@ -145,7 +145,7 @@ the file itself.
 | [`category-distance.ts`](../src/lib/category-distance.ts) | A category filter lists races shortest first: 1K, 3K, 5K, 10K, Half Marathon, 32K, Full Marathon. |
 | [`category-order.ts`](../src/lib/category-order.ts) | The order an event's categories are listed in, everywhere. |
 | [`certificate-settings.ts`](../src/lib/certificate-settings.ts) | What an event's certificate settings mean, and which of the two layouts an organizer's template is drawn in. |
-| [`client-race-report.ts`](../src/lib/client-race-report.ts) | What a client viewer is shown about one of its races, on that race's own page (CLIENT_RACE_PAGE_PLAN.md, Batch 1): how full each category is, the s… |
+| [`client-race-report.ts`](../src/lib/client-race-report.ts) | What a client viewer is shown about one of its races, on that race's own page (CLIENT_RACE_PAGE_PLAN.md, Batches 1–2): how full each category is, t… |
 | [`client-store.ts`](../src/lib/client-store.ts) | Reading clients out of the database, and the one write every event form makes about one: which client a race is for. |
 | [`client-summary.ts`](../src/lib/client-summary.ts) | What a client viewer is shown about its own races (ADMIN_MERGE_PLAN.md, Batch 4) — and, by what this module leaves out, what it is not. |
 | [`client.ts`](../src/lib/client.ts) | Where a client stands, and which moves between standings are allowed. |
@@ -230,43 +230,43 @@ when a task touches one, split it before editing rather than after.
 
 | Lines | File |
 | --- | --- |
-| 2342 | [`src/app/admin/marketing/PromoCodesClient.tsx`](../src/app/admin/marketing/PromoCodesClient.tsx) |
+| 2349 | [`src/app/admin/marketing/PromoCodesClient.tsx`](../src/app/admin/marketing/PromoCodesClient.tsx) |
 | 2233 | [`src/app/events/[slug]/register/RegistrationWizardClient.tsx`](../src/app/events/[slug]/register/RegistrationWizardClient.tsx) |
 | 1945 | [`src/app/events/[slug]/register/BankTransferWizardClient.tsx`](../src/app/events/[slug]/register/BankTransferWizardClient.tsx) |
 | 1519 | [`src/lib/discount.ts`](../src/lib/discount.ts) |
 | 1179 | [`src/app/admin/settings/SettingsPanels.tsx`](../src/app/admin/settings/SettingsPanels.tsx) |
-| 1093 | [`src/app/admin/team/TeamClient.tsx`](../src/app/admin/team/TeamClient.tsx) |
+| 1104 | [`src/app/admin/team/TeamClient.tsx`](../src/app/admin/team/TeamClient.tsx) |
 | 1015 | [`src/app/admin/register/page.tsx`](../src/app/admin/register/page.tsx) |
-| 873 | [`src/app/admin/events/EventsTableClient.tsx`](../src/app/admin/events/EventsTableClient.tsx) |
+| 972 | [`src/app/admin/events/EventsTableClient.tsx`](../src/app/admin/events/EventsTableClient.tsx) |
 | 785 | [`src/app/results/[slug]/full/FullResultsClient.tsx`](../src/app/results/[slug]/full/FullResultsClient.tsx) |
 | 750 | [`src/app/admin/events/[id]/edit/page.tsx`](../src/app/admin/events/[id]/edit/page.tsx) |
 | 693 | [`src/app/admin/AdminDatePicker.tsx`](../src/app/admin/AdminDatePicker.tsx) |
 | 663 | [`src/app/admin/activity/ActivityClient.tsx`](../src/app/admin/activity/ActivityClient.tsx) |
 | 663 | [`src/lib/pending-expiry.ts`](../src/lib/pending-expiry.ts) |
-| 636 | [`src/lib/activity.ts`](../src/lib/activity.ts) |
-| 621 | [`src/app/api/admin/events/[id]/route.ts`](../src/app/api/admin/events/[id]/route.ts) |
-| 615 | [`src/app/api/checkout/route.ts`](../src/app/api/checkout/route.ts) |
-| 603 | [`src/app/admin/feedback/FeedbackClient.tsx`](../src/app/admin/feedback/FeedbackClient.tsx) |
+| 648 | [`src/app/api/admin/events/[id]/route.ts`](../src/app/api/admin/events/[id]/route.ts) |
+| 640 | [`src/lib/activity.ts`](../src/lib/activity.ts) |
+| 623 | [`src/app/api/checkout/route.ts`](../src/app/api/checkout/route.ts) |
+| 614 | [`src/app/admin/feedback/FeedbackClient.tsx`](../src/app/admin/feedback/FeedbackClient.tsx) |
 | 578 | [`src/lib/email-document.ts`](../src/lib/email-document.ts) |
 | 573 | [`src/app/admin/events/[id]/results/ResultsUploaderClient.tsx`](../src/app/admin/events/[id]/results/ResultsUploaderClient.tsx) |
 | 561 | [`src/app/admin/events/new/NewEventForm.tsx`](../src/app/admin/events/new/NewEventForm.tsx) |
 | 548 | [`src/app/admin/NotificationsCenter.tsx`](../src/app/admin/NotificationsCenter.tsx) |
 | 546 | [`src/lib/organizer-application.ts`](../src/lib/organizer-application.ts) |
-| 539 | [`src/app/admin/clients/ClientsClient.tsx`](../src/app/admin/clients/ClientsClient.tsx) |
+| 543 | [`src/app/admin/clients/ClientsClient.tsx`](../src/app/admin/clients/ClientsClient.tsx) |
+| 541 | [`src/app/admin/events/[id]/registrants/RegistrantsTable.tsx`](../src/app/admin/events/[id]/registrants/RegistrantsTable.tsx) |
 | 532 | [`src/app/admin/events/[id]/registrants/RegistrantDetailModal.tsx`](../src/app/admin/events/[id]/registrants/RegistrantDetailModal.tsx) |
+| 530 | [`src/app/api/checkout/manual/route.ts`](../src/app/api/checkout/manual/route.ts) |
 | 526 | [`src/app/admin/DashboardShell.tsx`](../src/app/admin/DashboardShell.tsx) |
-| 522 | [`src/app/api/checkout/manual/route.ts`](../src/app/api/checkout/manual/route.ts) |
-| 515 | [`src/app/admin/events/[id]/registrants/RegistrantsTable.tsx`](../src/app/admin/events/[id]/registrants/RegistrantsTable.tsx) |
+| 513 | [`src/lib/registration-gate.ts`](../src/lib/registration-gate.ts) |
+| 509 | [`src/app/admin/communities/CommunitiesClient.tsx`](../src/app/admin/communities/CommunitiesClient.tsx) |
 | 503 | [`src/lib/promo-input.ts`](../src/lib/promo-input.ts) |
 | 491 | [`src/app/admin/AdminRouteLoading.tsx`](../src/app/admin/AdminRouteLoading.tsx) |
-| 491 | [`src/lib/registration-gate.ts`](../src/lib/registration-gate.ts) |
 | 485 | [`src/lib/email.ts`](../src/lib/email.ts) |
-| 472 | [`src/app/admin/communities/CommunitiesClient.tsx`](../src/app/admin/communities/CommunitiesClient.tsx) |
+| 477 | [`src/app/events/[slug]/page.tsx`](../src/app/events/[slug]/page.tsx) |
 | 472 | [`src/app/events/[slug]/register/BirthdatePicker.tsx`](../src/app/events/[slug]/register/BirthdatePicker.tsx) |
 | 472 | [`src/app/feedback/FeedbackForm.tsx`](../src/app/feedback/FeedbackForm.tsx) |
 | 469 | [`src/app/admin/clients/ApplicationPanel.tsx`](../src/app/admin/clients/ApplicationPanel.tsx) |
 | 469 | [`src/app/admin/events/[id]/registrants/ProofLightbox.tsx`](../src/app/admin/events/[id]/registrants/ProofLightbox.tsx) |
-| 469 | [`src/app/events/[slug]/page.tsx`](../src/app/events/[slug]/page.tsx) |
 | 451 | [`src/app/admin/events/[id]/registrants/RunnerEditModal.tsx`](../src/app/admin/events/[id]/registrants/RunnerEditModal.tsx) |
 | 449 | [`src/app/admin/page.tsx`](../src/app/admin/page.tsx) |
 | 443 | [`src/app/admin/events/[id]/registrants/page.tsx`](../src/app/admin/events/[id]/registrants/page.tsx) |
