@@ -21,11 +21,17 @@ export default function EventProvinceField({
   value,
   location,
   onChange,
+  hint,
 }: {
   value: string;
   /** The event's location, so an unpicked province can show what it reads as. */
   location: string;
   onChange: (next: string) => void;
+  /**
+   * Replaces the delivery-fee explanation. A results-only event sells no kits,
+   * so telling its organizer who pays the inside fee would be noise.
+   */
+  hint?: string;
 }) {
   const detected = inferProvince(location)?.name;
   // The empty choice names what it will actually mean, so the closed field
@@ -46,11 +52,11 @@ export default function EventProvinceField({
         placeholder="Not set"
         onChange={onChange}
         hint={
-          value
+          hint ?? (value
             ? `Runners with an address in ${value} pay the inside fee; everywhere else pays the outside fee. They are no longer asked to choose.`
             : detected
               ? `Not picked yet, so ${detected} is read from the location and saved with the event. Pick another if that is wrong.`
-              : "The location does not name a province. Pick one so the delivery fee follows the runner's address instead of their own pick."
+              : "The location does not name a province. Pick one so the delivery fee follows the runner's address instead of their own pick.")
         }
       />
     </div>

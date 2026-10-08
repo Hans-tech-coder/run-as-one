@@ -321,7 +321,7 @@ These are the user's own standing preferences. Follow them without being asked.
    **`.admin-switch-row`** — the admin form's switch (`role="switch"`, the whole
    44px row is the target, `.t-toggle`'s motion from the account menu's Dark Mode
    row, generalised out of `.account-theme-switch` when the Pacers screen needed
-   one). A **disabled** switch keeps its hint at full contrast and dims only the
+   one; build it with **`admin/AdminSwitch`**, not by hand). A **disabled** switch keeps its hint at full contrast and dims only the
    track: the person who may not use a control is exactly the person who has to
    read why not.
 3. **Consult the project's `ui-ux-pro-max` skill for UI/UX work** rather than

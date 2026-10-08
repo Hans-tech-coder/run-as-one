@@ -26,6 +26,11 @@ import { upperCaseAsTyped } from '@/lib/text-case';
  * Each row also carries its own slot limit. It belongs to the option rather
  * than the event because filling the 10K is not the same as closing the race —
  * see src/lib/registration-gate.ts, which owns the counting.
+ *
+ * A results-only event (`resultsOnly`) sells nothing, so it is always
+ * distances and each row is only a name and a distance: the type picker, the
+ * price, the slot limit, the inclusions and the poster are hidden, and the
+ * API saves price 0 and no limit whatever the draft holds.
  */
 
 const TYPE_OPTIONS: {
@@ -74,6 +79,7 @@ export default function EventOptionsPanel({
   onChange,
   onError,
   onBusyChange,
+  resultsOnly = false,
 }: {
   eventType: EventType;
   onEventTypeChange: (next: EventType) => void;
@@ -86,6 +92,7 @@ export default function EventOptionsPanel({
   onChange: (next: CategoryDraft[]) => void;
   onError: (message: string) => void;
   onBusyChange: (busy: boolean) => void;
+  resultsOnly?: boolean;
 }) {
   const words = wording(eventType);
   const locked = Boolean(lockedReason);
@@ -114,56 +121,58 @@ export default function EventOptionsPanel({
         <h2 className="admin-panel-title">{words.panelTitle}</h2>
       </div>
       <div className="admin-panel-content">
-        <div className="form-group form-group-full mb-6">
-          <label className="form-label">
-            What do runners choose between?
-          </label>
-          <div className="grid gap-4 md:grid-cols-2">
-            {TYPE_OPTIONS.map(option => {
-              const Icon = option.icon;
-              const isSelected = eventType === option.value;
-              return (
-                <label
-                  key={option.value}
-                  className={`relative flex flex-col gap-3 rounded-xl border p-4 sm:p-5 transition-colors ${
-                    locked ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
-                  } ${
-                    isSelected
-                      ? 'border-accent-blue bg-accent-blue/10'
-                      : `border-[var(--dash-border)] bg-[var(--ink-02)] ${locked ? '' : 'hover:border-[var(--ink-20)]'}`
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="eventOptionType"
-                    value={option.value}
-                    checked={isSelected}
-                    disabled={locked}
-                    onChange={() => onEventTypeChange(option.value)}
-                    className="sr-only"
-                  />
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={`rounded-lg p-2 ${
-                        isSelected ? 'bg-accent-blue/20 text-accent-blue-ink' : 'bg-[var(--ink-05)] text-secondary'
-                      }`}
-                    >
-                      <Icon size={20} />
-                    </span>
-                    <span className="font-medium text-primary">{option.title}</span>
-                  </div>
-                  <p className="text-sm leading-relaxed text-secondary">{option.description}</p>
-                </label>
-              );
-            })}
+        {!resultsOnly && (
+          <div className="form-group form-group-full mb-6">
+            <label className="form-label">
+              What do runners choose between?
+            </label>
+            <div className="grid gap-4 md:grid-cols-2">
+              {TYPE_OPTIONS.map(option => {
+                const Icon = option.icon;
+                const isSelected = eventType === option.value;
+                return (
+                  <label
+                    key={option.value}
+                    className={`relative flex flex-col gap-3 rounded-xl border p-4 sm:p-5 transition-colors ${
+                      locked ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
+                    } ${
+                      isSelected
+                        ? 'border-accent-blue bg-accent-blue/10'
+                        : `border-[var(--dash-border)] bg-[var(--ink-02)] ${locked ? '' : 'hover:border-[var(--ink-20)]'}`
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="eventOptionType"
+                      value={option.value}
+                      checked={isSelected}
+                      disabled={locked}
+                      onChange={() => onEventTypeChange(option.value)}
+                      className="sr-only"
+                    />
+                    <div className="flex items-center gap-3">
+                      <span
+                        className={`rounded-lg p-2 ${
+                          isSelected ? 'bg-accent-blue/20 text-accent-blue-ink' : 'bg-[var(--ink-05)] text-secondary'
+                        }`}
+                      >
+                        <Icon size={20} />
+                      </span>
+                      <span className="font-medium text-primary">{option.title}</span>
+                    </div>
+                    <p className="text-sm leading-relaxed text-secondary">{option.description}</p>
+                  </label>
+                );
+              })}
+            </div>
+            {lockedReason && (
+              <p className="flex items-start gap-2 text-xs opacity-70 mt-3 m-0">
+                <Lock size={14} className="shrink-0 mt-0.5" />
+                {lockedReason}
+              </p>
+            )}
           </div>
-          {lockedReason && (
-            <p className="flex items-start gap-2 text-xs opacity-70 mt-3 m-0">
-              <Lock size={14} className="shrink-0 mt-0.5" />
-              {lockedReason}
-            </p>
-          )}
-        </div>
+        )}
 
         <div className="flex flex-col gap-6">
           {options.map((row, idx) => (
@@ -223,63 +232,67 @@ export default function EventOptionsPanel({
                   </div>
                 )}
 
-                <div className="form-group">
-                  <label className="form-label">Price (₱)</label>
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    value={row.price}
-                    onChange={e => update(idx, 'price', Number(e.target.value))}
-                    className="form-input"
-                    required
-                    min={0}
-                  />
-                </div>
+                {!resultsOnly && (
+                  <>
+                    <div className="form-group">
+                      <label className="form-label">Price (₱)</label>
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        value={row.price}
+                        onChange={e => update(idx, 'price', Number(e.target.value))}
+                        className="form-input"
+                        required
+                        min={0}
+                      />
+                    </div>
 
-                {/* The cap is per option, not per event: 500 singlets in the
-                    10K says nothing about the 5K, and when the 10K fills the
-                    5K stays open. Blank rather than 0 for "no limit" — 0 would
-                    read as an option nobody can enter. */}
-                <div className="form-group">
-                  <label className="form-label">
-                    Slot Limit{' '}
-                    <span className="text-xs opacity-70">- leave blank for no limit</span>
-                  </label>
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    value={row.slotLimit ?? ''}
-                    onChange={e =>
-                      update(
-                        idx,
-                        'slotLimit',
-                        e.target.value === '' ? '' : Number(e.target.value),
-                      )
-                    }
-                    className="form-input"
-                    min={1}
-                    placeholder="e.g. 500"
-                  />
-                  <p className="text-xs opacity-70 mt-1">
-                    {typeof row.slotsTaken === 'number' && row.slotsTaken > 0
-                      ? `${row.slotsTaken} runner${row.slotsTaken === 1 ? ' is' : 's are'} already in this ${words.rowLabel.toLowerCase()}. Paid and pending registrations both hold a slot.`
-                      : 'Paid and pending registrations both hold a slot — a bank transfer takes its place the moment it is submitted, not when you verify it.'}
-                  </p>
-                </div>
+                    {/* The cap is per option, not per event: 500 singlets in the
+                        10K says nothing about the 5K, and when the 10K fills the
+                        5K stays open. Blank rather than 0 for "no limit" — 0 would
+                        read as an option nobody can enter. */}
+                    <div className="form-group">
+                      <label className="form-label">
+                        Slot Limit{' '}
+                        <span className="text-xs opacity-70">- leave blank for no limit</span>
+                      </label>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        value={row.slotLimit ?? ''}
+                        onChange={e =>
+                          update(
+                            idx,
+                            'slotLimit',
+                            e.target.value === '' ? '' : Number(e.target.value),
+                          )
+                        }
+                        className="form-input"
+                        min={1}
+                        placeholder="e.g. 500"
+                      />
+                      <p className="text-xs opacity-70 mt-1">
+                        {typeof row.slotsTaken === 'number' && row.slotsTaken > 0
+                          ? `${row.slotsTaken} runner${row.slotsTaken === 1 ? ' is' : 's are'} already in this ${words.rowLabel.toLowerCase()}. Paid and pending registrations both hold a slot.`
+                          : 'Paid and pending registrations both hold a slot — a bank transfer takes its place the moment it is submitted, not when you verify it.'}
+                      </p>
+                    </div>
 
-                <InclusionsField
-                  value={row.inclusions || ''}
-                  onChange={text => update(idx, 'inclusions', text)}
-                  placeholder={words.inclusionsPlaceholder}
-                />
+                    <InclusionsField
+                      value={row.inclusions || ''}
+                      onChange={text => update(idx, 'inclusions', text)}
+                      placeholder={words.inclusionsPlaceholder}
+                    />
 
-                <PosterField
-                  value={row.imageUrl || ''}
-                  onChange={url => update(idx, 'imageUrl', url)}
-                  onError={onError}
-                  onBusyChange={onBusyChange}
-                  alt={`${row.name || words.rowLabel} Preview`}
-                />
+                    <PosterField
+                      value={row.imageUrl || ''}
+                      onChange={url => update(idx, 'imageUrl', url)}
+                      onError={onError}
+                      onBusyChange={onBusyChange}
+                      alt={`${row.name || words.rowLabel} Preview`}
+                    />
+                  </>
+                )}
               </div>
             </div>
           ))}

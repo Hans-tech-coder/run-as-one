@@ -80,6 +80,7 @@ type EventResponse = {
   certificateCoordinates?: Maybe<string>;
   registrationOpensAt?: Maybe<string>;
   clientId?: Maybe<string>;
+  resultsOnly?: Maybe<boolean>;
   _count?: { registrations?: number };
   promotions?: EventPromotion[];
   bankAccounts?: {
@@ -107,6 +108,7 @@ export function editStateFromEvent(data: EventResponse): {
   deliveryOn: boolean;
   bankAccounts: BankAccountDraft[];
   eventType: EventType;
+  resultsOnly: boolean;
   clientId: string;
   registrationCount: number;
   promotions: EventPromotion[];
@@ -166,6 +168,7 @@ export function editStateFromEvent(data: EventResponse): {
     })),
 
     eventType: asEventType(data.eventType),
+    resultsOnly: data.resultsOnly === true,
     clientId: data.clientId ?? '',
     registrationCount: data._count?.registrations ?? 0,
     promotions: data.promotions ?? [],

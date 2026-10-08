@@ -11,7 +11,7 @@ import {
 } from '../registration-opening';
 import EventOptionsPanel from '../EventOptionsPanel';
 import { blankCategory, type CategoryDraft } from '../category-draft';
-import { DEFAULT_EVENT_TYPE, type EventType } from '@/lib/event-type';
+import { DEFAULT_EVENT_TYPE, EVENT_TYPES, type EventType } from '@/lib/event-type';
 import BankAccountsPanel from '@/app/admin/events/BankAccountsPanel';
 import { cleanBankAccounts, type BankAccountDraft } from '@/app/admin/events/bank-account-draft';
 import { offersBankTransfer } from '@/lib/registration-form';
@@ -19,6 +19,7 @@ import BusyLabel from '@/components/ui/BusyLabel';
 import DashboardHeader from '@/app/admin/DashboardHeader';
 import LogisticsPanel, { deliveryFees, deliveryProblem } from '../LogisticsPanel';
 import BasicInfoPanel from '../BasicInfoPanel';
+import ResultsOnlyPanel from '../ResultsOnlyPanel';
 import RegistrationFeesPanel from '../RegistrationFeesPanel';
 import EventFormResultModals from '../EventFormResultModals';
 import { blankEventDraft } from '../event-form-draft';
@@ -62,6 +63,16 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
 
   const [categories, setCategories] = useState<CategoryDraft[]>([blankCategory()]);
 
+  // The client runs registration elsewhere and we only post results
+  // (ResultsOnlyPanel). Outside formData because it decides which panels exist
+  // rather than filling one. Turning it on also makes the event distances: a
+  // results table is grouped by distance, and a package has none.
+  const [resultsOnly, setResultsOnly] = useState(false);
+  const changeResultsOnly = (on: boolean) => {
+    setResultsOnly(on);
+    if (on) setEventType(EVENT_TYPES.RACE);
+  };
+
   // When this race starts taking sign-ups. Kept beside the form rather than in
   // it because it is two fields standing for one nullable column — see
   // registration-opening.ts. Most races open immediately, so that is where it
@@ -89,7 +100,10 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
     // An organizer who chose to schedule the opening and left the date empty
     // gets told which field is missing, beside that field. Saving anyway would
     // publish the race open, which is the one thing they said not to do.
-    const openingFault = openingProblem(opening);
+    // Neither check applies to a results-only event: it never opens, and it
+    // ships no kits. Their panels are hidden, so a stale value in either would
+    // be a message about a field the organizer cannot see.
+    const openingFault = resultsOnly ? null : openingProblem(opening);
     setOpeningError(openingFault);
     if (openingFault) {
       setIsLoading(false);
@@ -98,7 +112,7 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
 
     // Delivery switched on with both zones at 0 would quietly save as pickup
     // only; the message sits under the two fee fields that need a number.
-    const deliveryFault = deliveryProblem(deliveryOn, formData);
+    const deliveryFault = resultsOnly ? null : deliveryProblem(deliveryOn, formData);
     setDeliveryError(deliveryFault);
     if (deliveryFault) {
       setIsLoading(false);
@@ -113,6 +127,7 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
           ...formData,
           ...deliveryFees(deliveryOn, formData),
           eventType,
+          resultsOnly,
           registrationOpensAt: openingInstantISO(opening),
           categories,
           bankAccounts: cleanBankAccounts(bankAccounts),
@@ -152,6 +167,11 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
         />
 
         <form onSubmit={handleSubmit} className="admin-form">
+          <ResultsOnlyPanel
+            on={resultsOnly}
+            onChange={changeResultsOnly}
+          />
+
           <BasicInfoPanel
             draft={formData}
             setDraft={setFormData}
@@ -166,6 +186,7 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
             clientError={clientError}
             onError={setError}
             onBusyChange={posterBusy}
+            resultsOnly={resultsOnly}
           />
 
           <EventOptionsPanel
@@ -175,45 +196,53 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
             onChange={setCategories}
             onError={setError}
             onBusyChange={posterBusy}
+            resultsOnly={resultsOnly}
           />
 
-          <BankAccountsPanel
-            accounts={bankAccounts}
-            offersBankTransfer={offersBankTransfer(formData.registrationForm)}
-            onChange={setBankAccounts}
-            onError={setError}
-            onBusyChange={posterBusy}
-          />
+          {/* Everything about selling an entry. A results-only event sells
+              none, so these panels are not shown at all; what they hold stays
+              in state, so switching back restores it. */}
+          {!resultsOnly && (
+            <>
+              <BankAccountsPanel
+                accounts={bankAccounts}
+                offersBankTransfer={offersBankTransfer(formData.registrationForm)}
+                onChange={setBankAccounts}
+                onError={setError}
+                onBusyChange={posterBusy}
+              />
 
-          {/* Logistics Options */}
-          <LogisticsPanel
-            draft={formData}
-            onChange={patchForm}
-            deliveryOn={deliveryOn}
-            onDeliveryChange={on => { setDeliveryOn(on); setDeliveryError(null); }}
-            deliveryError={deliveryError}
-          />
+              {/* Logistics Options */}
+              <LogisticsPanel
+                draft={formData}
+                onChange={patchForm}
+                deliveryOn={deliveryOn}
+                onDeliveryChange={on => { setDeliveryOn(on); setDeliveryError(null); }}
+                deliveryError={deliveryError}
+              />
 
-          <RegistrationFeesPanel
-            draft={formData}
-            onChange={patchForm}
-            opening={opening}
-            onOpeningChange={next => {
-              setOpening(next);
-              // The message goes the moment the organizer starts
-              // fixing it; leaving it up while they type reads as a
-              // field that is still wrong.
-              if (openingError) setOpeningError(null);
-            }}
-            openingError={openingError}
-            openingIdPrefix="newEventOpening"
-            adminFeeHint={
-              <>
-                Starts at the default platform fee set in Settings. A change here
-                applies to this event only.
-              </>
-            }
-          />
+              <RegistrationFeesPanel
+                draft={formData}
+                onChange={patchForm}
+                opening={opening}
+                onOpeningChange={next => {
+                  setOpening(next);
+                  // The message goes the moment the organizer starts
+                  // fixing it; leaving it up while they type reads as a
+                  // field that is still wrong.
+                  if (openingError) setOpeningError(null);
+                }}
+                openingError={openingError}
+                openingIdPrefix="newEventOpening"
+                adminFeeHint={
+                  <>
+                    Starts at the default platform fee set in Settings. A change here
+                    applies to this event only.
+                  </>
+                }
+              />
+            </>
+          )}
 
           <div className="form-actions">
             <Link href="/admin/events" className="btn-cancel">

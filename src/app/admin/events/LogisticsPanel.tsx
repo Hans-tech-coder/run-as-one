@@ -1,5 +1,6 @@
 'use client';
 
+import AdminSwitch from '../AdminSwitch';
 import EventProvinceField from './EventProvinceField';
 import { inferProvince } from '@/lib/ph-address';
 
@@ -45,20 +46,6 @@ export function deliveryProblem(on: boolean, fees: FeeDraft): string | null {
     : null;
 }
 
-function Switch({ on, label, hint, onToggle }: { on: boolean; label: string; hint: string; onToggle: () => void }) {
-  return (
-    <button type="button" role="switch" aria-checked={on} onClick={onToggle} className="admin-switch-row">
-      <span className="admin-switch-label">
-        <span>{label}</span>
-        <span className="admin-switch-hint">{hint}</span>
-      </span>
-      <span className="t-toggle admin-switch" data-on={on} aria-hidden="true">
-        <span className="t-toggle-thumb" />
-      </span>
-    </button>
-  );
-}
-
 export default function LogisticsPanel({
   draft,
   onChange,
@@ -83,7 +70,7 @@ export default function LogisticsPanel({
       <div className="admin-panel-content">
         <div className="form-grid">
           <div className="form-group form-group-full">
-            <Switch
+            <AdminSwitch
               on={draft.logisticsPickup}
               label="On-site pickup"
               hint="Runners collect their race kit for free."
@@ -123,7 +110,7 @@ export default function LogisticsPanel({
           )}
 
           <div className="form-group form-group-full">
-            <Switch
+            <AdminSwitch
               on={deliveryOn}
               label="Delivery"
               hint={deliveryOn ? 'Race kits are shipped to the runner for a fee.' : 'Off — runners can only pick up their kit.'}

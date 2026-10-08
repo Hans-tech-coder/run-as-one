@@ -6,6 +6,7 @@ import BusyLabel from '@/components/ui/BusyLabel';
 import AdminDatePicker from '../AdminDatePicker';
 import DescriptionEditor from './DescriptionEditor';
 import EventClientField from './EventClientField';
+import EventProvinceField from './EventProvinceField';
 import HighlightsField from './HighlightsField';
 import type { EventFormDraft } from './event-form-draft';
 
@@ -23,6 +24,13 @@ type ImageField = 'imageUrl' | 'sizeChartImageUrl';
  * The cover and size-chart uploads run through the page's
  * `useEventImageUpload`, so their in-flight state is the same `uploadingField`
  * that holds the page's Save button.
+ *
+ * For a results-only event (`resultsOnly`) it keeps what a results card and
+ * certificate need — client, title, date, place, province and an optional
+ * cover — and hides what only a runner deciding to sign up reads: the
+ * description, the times, the highlights and the size chart. The hidden
+ * values stay in the draft, so switching back does not lose them. Province
+ * lives in LogisticsPanel otherwise, which a results-only form does not show.
  */
 export default function BasicInfoPanel<D extends EventFormDraft>({
   draft,
@@ -35,6 +43,7 @@ export default function BasicInfoPanel<D extends EventFormDraft>({
   clientError,
   onError,
   onBusyChange,
+  resultsOnly = false,
 }: {
   draft: D;
   setDraft: React.Dispatch<React.SetStateAction<D>>;
@@ -46,6 +55,7 @@ export default function BasicInfoPanel<D extends EventFormDraft>({
   clientError?: string;
   onError: (message: string) => void;
   onBusyChange: (busy: boolean) => void;
+  resultsOnly?: boolean;
 }) {
   const patch = (fields: Partial<EventFormDraft>) => setDraft(prev => ({ ...prev, ...fields }));
 
@@ -73,16 +83,18 @@ export default function BasicInfoPanel<D extends EventFormDraft>({
               required
             />
           </div>
-          <div className="form-group form-group-full">
-            <label className="form-label">
-              About This Event <span className="text-xs opacity-70">- optional</span>
-            </label>
-            <DescriptionEditor
-              value={draft.description}
-              onChange={description => patch({ description })}
-              placeholder="Route, assembly time, cut-off, what runners should bring — anything they'd ask about before signing up."
-            />
-          </div>
+          {!resultsOnly && (
+            <div className="form-group form-group-full">
+              <label className="form-label">
+                About This Event <span className="text-xs opacity-70">- optional</span>
+              </label>
+              <DescriptionEditor
+                value={draft.description}
+                onChange={description => patch({ description })}
+                placeholder="Route, assembly time, cut-off, what runners should bring — anything they'd ask about before signing up."
+              />
+            </div>
+          )}
           <AdminDatePicker
             id="event-date"
             label="Date"
@@ -101,63 +113,82 @@ export default function BasicInfoPanel<D extends EventFormDraft>({
               required
             />
           </div>
-          <div className="form-group">
-            <label className="form-label">Start Time</label>
-            <input
-              type="time"
-              value={draft.startTime}
-              onChange={e => patch({ startTime: e.target.value })}
-              className="form-input"
+          {resultsOnly ? (
+            <EventProvinceField
+              value={draft.province}
+              location={draft.location}
+              onChange={province => patch({ province })}
+              hint="Optional. Left unset, the province the location names is saved."
             />
-          </div>
-          <div className="form-group">
-            <label className="form-label">End Time</label>
-            <input
-              type="time"
-              value={draft.endTime}
-              onChange={e => patch({ endTime: e.target.value })}
-              className="form-input"
-            />
-          </div>
+          ) : (
+            <>
+              <div className="form-group">
+                <label className="form-label">Start Time</label>
+                <input
+                  type="time"
+                  value={draft.startTime}
+                  onChange={e => patch({ startTime: e.target.value })}
+                  className="form-input"
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">End Time</label>
+                <input
+                  type="time"
+                  value={draft.endTime}
+                  onChange={e => patch({ endTime: e.target.value })}
+                  className="form-input"
+                />
+              </div>
+            </>
+          )}
           <ImageUploadTile
             className="form-group form-group-full"
             tileClassName=""
-            label="Cover Image"
+            label={resultsOnly ? 'Cover Image (Optional)' : 'Cover Image'}
             value={draft.imageUrl}
             uploading={uploadingField === 'imageUrl'}
             anyUploading={uploadingField !== null}
             onFile={e => onImageFile(e, 'imageUrl')}
             onRemove={() => patch({ imageUrl: '' })}
             prompt="Click to upload cover image"
-            hint="SVG, PNG, JPG or GIF (max. 800x400px)"
+            hint={
+              resultsOnly
+                ? 'Optional • PNG, JPG. Leave empty and the Results card shows the default image.'
+                : 'SVG, PNG, JPG or GIF (max. 800x400px)'
+            }
             alt="Cover Preview"
             removeLabel="Remove Image"
           />
 
-          <HighlightsField
-            value={draft.highlights}
-            onChange={update => setDraft(prev => ({ ...prev, highlights: update(prev.highlights) }))}
-            onError={onError}
-            onBusyChange={onBusyChange}
-          />
+          {!resultsOnly && (
+            <>
+              <HighlightsField
+                value={draft.highlights}
+                onChange={update => setDraft(prev => ({ ...prev, highlights: update(prev.highlights) }))}
+                onError={onError}
+                onBusyChange={onBusyChange}
+              />
 
-          {/* Optional: an organizer whose shirts run to their own measurements
-              uploads their chart; without one the register page shows the
-              default chart from lib/shirt-size.ts. */}
-          <ImageUploadTile
-            className="form-group"
-            tileClassName="media-tile"
-            label="Size Chart (Optional)"
-            value={draft.sizeChartImageUrl}
-            uploading={uploadingField === 'sizeChartImageUrl'}
-            anyUploading={uploadingField !== null}
-            onFile={e => onImageFile(e, 'sizeChartImageUrl')}
-            onRemove={() => patch({ sizeChartImageUrl: '' })}
-            prompt="Click to upload size chart"
-            hint="Optional • PNG, JPG. Leave empty to use the default size chart."
-            alt="Size Chart Preview"
-            removeLabel="Remove Size Chart"
-          />
+              {/* Optional: an organizer whose shirts run to their own measurements
+                  uploads their chart; without one the register page shows the
+                  default chart from lib/shirt-size.ts. */}
+              <ImageUploadTile
+                className="form-group"
+                tileClassName="media-tile"
+                label="Size Chart (Optional)"
+                value={draft.sizeChartImageUrl}
+                uploading={uploadingField === 'sizeChartImageUrl'}
+                anyUploading={uploadingField !== null}
+                onFile={e => onImageFile(e, 'sizeChartImageUrl')}
+                onRemove={() => patch({ sizeChartImageUrl: '' })}
+                prompt="Click to upload size chart"
+                hint="Optional • PNG, JPG. Leave empty to use the default size chart."
+                alt="Size Chart Preview"
+                removeLabel="Remove Size Chart"
+              />
+            </>
+          )}
         </div>
       </div>
     </div>
