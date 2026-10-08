@@ -57,9 +57,9 @@
   min-height: 44px;
 }
 
-/* A phone gets the action at the foot of the page instead, in the guide's
-   panel (`SavePdfPanel`), so the tiles stay at the top. One of the two is
-   ever on screen. */
+/* A phone gets the action where the printed sections end instead, in the
+   guide's panel (`SavePdfPanel`), so the tiles stay at the top. One of the
+   two is ever on screen. */
 .race-save-end { display: none; }
 
 @media (width < 40rem) {
@@ -87,6 +87,44 @@
 
 .race-meta-item svg {
   flex-shrink: 0;
+}
+
+/* ── The screen-only panels: payouts and runners, under one heading ──────
+   A dashed rule and an eye-off heading mark where the PDF stops, so the
+   panels under it are not read as part of "Save report as PDF". */
+.race-screen-only {
+  display: grid;
+  gap: 24px;
+}
+
+.race-screen-only-head {
+  display: grid;
+  gap: 4px;
+  padding-top: 24px;
+  border-top: 1px dashed var(--dash-hairline);
+}
+
+.race-screen-only-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.race-screen-only-title svg {
+  flex-shrink: 0;
+}
+
+.race-screen-only-hint {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
 }
 
 /* ── A section: title, one plain sentence saying what is counted, body ──── */

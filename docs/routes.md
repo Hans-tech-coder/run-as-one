@@ -141,16 +141,20 @@ order, all categories first, then per category when more than one has sizes;
 spelled-out sizes such as *Large* count as their code), and **Race Kits**
 (pickup, with the pickup place and schedule or a line saying none is set, and
 delivery, split *Inside / Outside Province* only where the race asked). Counts
-only; no wide tables, so nothing scrolls sideways on a phone. **Save as PDF**
-prints a light copy of the same sections with a title block (`PrintableCopy`,
+only; no wide tables, so nothing scrolls sideways on a phone. **Save report as
+PDF** prints a light copy of the same sections with a title block (`PrintableCopy`,
 below; paper layout in `race-print.css`) — the sizes are what goes to the shirt
 supplier. The button is in the page, never the header, and not in a column of
 its own: from 640px up it sits at the end of the race's status line
-(`.race-toolbar`), above the tiles; on a phone it closes the page instead, in
-the guide's *Sending this to your supplier or team?* panel (`SavePdfPanel`). The four tiles sit four, two
+(`.race-toolbar`), above the tiles; on a phone it comes right after Race Kits,
+the last printed section, in the guide's *Sending this to your supplier or
+team?* panel (`SavePdfPanel`) with a line naming what the PDF holds. The
+button says "report", not "Save as PDF", and the screen-only panels below sit
+under a dashed rule and a **Not in the PDF** heading (`.race-screen-only`), so
+an organizer does not read the six panels as one export. The four tiles sit four, two
 or one to a row by the report's own width (a container query), never three
 and an orphan. **Payout Summary** (Batch 3, `PayoutSummary.tsx`, reading
-`client-payout.ts`) closes the page, **on screen only** — the printed copy is
+`client-payout.ts`) opens the *Not in the PDF* group, **on screen only** — the printed copy is
 for a shirt supplier and never carries money, whatever is passed. It is drawn
 only for someone holding `event:view-payout` on the race (the race's client
 viewer, an owner or an admin; a per-event staff member sees the page without
@@ -158,8 +162,7 @@ it): four figures that add up — *Collected*, *Run As One fees*, *Paid out to
 you*, *Still owed* (read *Overpaid* when negative) — in the tiles' four / two
 / one layout, one plain sentence on where the race stands, then the payouts
 latest first as day, method and amount, a return listed as a negative amount
-*Returned to Run As One*. Its hint says confirmed payments only and that it is
-not in Save as PDF. **Runners** (Batch 4, `RunnerList.tsx`, reading
+*Returned to Run As One*. Its hint says confirmed payments only. **Runners** (Batch 4, `RunnerList.tsx`, reading
 `client-runners.ts`) follows it, also **screen only** and only for someone
 holding `event:view-runners` on the race: the list a client releases and
 ships race kits from, built like the staff Registrants table. Columns: mark

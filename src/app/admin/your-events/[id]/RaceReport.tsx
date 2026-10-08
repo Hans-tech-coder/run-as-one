@@ -1,5 +1,5 @@
 import React from 'react';
-import { BadgeCheck, CalendarDays, ClipboardList, Wallet, Hourglass, MapPin, Package, ShoppingCart, Shirt, TrendingUp, Truck, Users } from 'lucide-react';
+import { BadgeCheck, CalendarDays, ClipboardList, EyeOff, Wallet, Hourglass, MapPin, Package, ShoppingCart, Shirt, TrendingUp, Truck, Users } from 'lucide-react';
 import type { ClientPayout } from '@/lib/client-payout';
 import type { ClientRunnerRow } from '@/lib/client-runners';
 import type { KitSplit, SizeRow, ViewerRaceReport } from '@/lib/client-race-report';
@@ -16,6 +16,9 @@ import RunnerList from './RunnerList';
 /** A category this full or fuller is flagged, so the organizer can ask for more slots in time. */
 const ALMOST_FULL = 0.9;
 
+/** Names the report, not the page: the page also shows payouts and runners, which never print. */
+const SAVE_LABEL = 'Save report as PDF';
+
 /**
  * The race page's sections, once for the screen and once for the printer
  * (`PrintableCopy`). `printedOn` marks the print render: it adds a title
@@ -28,6 +31,12 @@ const ALMOST_FULL = 0.9;
  * money never prints, whatever is passed. `runners` is the same: screen only,
  * when the viewer may see it (`client-runners.ts`), since a supplier has no
  * business with runners' names, phones or addresses.
+ *
+ * **The page says which part is the PDF.** An organizer looking at six panels
+ * and one Save button reads it as "save all this", so the action is named for
+ * the report ("Save report as PDF"), the phone's copy of it sits where the
+ * printed sections end rather than at the foot under the runners, and the
+ * two screen-only panels sit under their own "Not in the PDF" heading.
  */
 export default function RaceReport({
   report,
@@ -55,8 +64,8 @@ export default function RaceReport({
 
       {/* The page's one action, never in the dashboard header: from a tablet
           up at the end of the race's own line, secondary to the numbers; on a
-          phone, where it would push the tiles down, it closes the page
-          instead, as on the certificate guide (`.race-save-end`). */}
+          phone, where it would push the tiles down, it closes the printed
+          sections instead (`.race-save-end`). */}
       <div className="race-toolbar">
         <p className="race-meta">
           <span className={`status-badge ${state.tone} whitespace-nowrap`}>{state.label}</span>
@@ -74,7 +83,7 @@ export default function RaceReport({
             </span>
           )}
         </p>
-        {!printed && <SavePdfButton />}
+        {!printed && <SavePdfButton label={SAVE_LABEL} />}
       </div>
 
       <div className="metrics-grid">
@@ -118,32 +127,57 @@ export default function RaceReport({
         <KitSection kits={kits} />
       </Panel>
 
-      {!printed && payout && (
-        <Panel
-          {...panel}
-          title="Payout Summary"
-          icon={<Wallet size={18} />}
-          hint="Confirmed payments only: a bank transfer counts once it is verified. Not included in Save as PDF."
-        >
-          <PayoutSummary payout={payout} />
-        </Panel>
-      )}
-
-      {!printed && runners && (
-        <Panel
-          {...panel}
-          title="Runners"
-          icon={<ClipboardList size={18} />}
-          hint="Paid and awaiting-verification runners, with what you need to release and ship their kits. Mark runners to export only those. Not included in Save as PDF."
-        >
-          <RunnerList rows={runners} eventId={event.id} raceTitle={event.title} />
-        </Panel>
-      )}
-
+      {/* On a phone the action comes right after the last printed section, so
+          what it saves is what the organizer has just scrolled past. */}
       {!printed && (
         <div className="race-save-end">
-          <SavePdfPanel id={`${idPrefix}race-save-title`} title="Sending this to your supplier or team?" />
+          <SavePdfPanel
+            id={`${idPrefix}race-save-title`}
+            title="Sending this to your supplier or team?"
+            note="The PDF has the race report above: the runner counts, slots per category, registrations over time, shirt sizes and race kits."
+            label={SAVE_LABEL}
+          />
         </div>
+      )}
+
+      {!printed && (payout || runners) && (
+        <section className="race-screen-only" aria-labelledby={`${idPrefix}race-screen-only`}>
+          <div className="race-screen-only-head">
+            <h2 id={`${idPrefix}race-screen-only`} className="race-screen-only-title">
+              <EyeOff size={16} aria-hidden="true" />
+              Not in the PDF
+            </h2>
+            <p className="race-screen-only-hint">
+              {payout && runners
+                ? 'Your payouts and runner list stay on this screen. To share runners, use Export to CSV in the Runners panel.'
+                : payout
+                  ? 'Your payouts stay on this screen.'
+                  : 'Your runner list stays on this screen. To share it, use Export to CSV in the Runners panel.'}
+            </p>
+          </div>
+
+          {payout && (
+            <Panel
+              {...panel}
+              title="Payout Summary"
+              icon={<Wallet size={18} />}
+              hint="Confirmed payments only: a bank transfer counts once it is verified."
+            >
+              <PayoutSummary payout={payout} />
+            </Panel>
+          )}
+
+          {runners && (
+            <Panel
+              {...panel}
+              title="Runners"
+              icon={<ClipboardList size={18} />}
+              hint="Paid and awaiting-verification runners, with what you need to release and ship their kits. Mark runners to export only those."
+            >
+              <RunnerList rows={runners} eventId={event.id} raceTitle={event.title} />
+            </Panel>
+          )}
+        </section>
       )}
     </div>
   );

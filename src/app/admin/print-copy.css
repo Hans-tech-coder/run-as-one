@@ -69,6 +69,14 @@
 
 .print-save-end .print-save-hint { font-size: 0.875rem; }
 
+/* What the PDF holds, read before how to save it: primary text, not a hint. */
+.print-save-note {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+
 @media (min-width: 640px) {
   /* A tablet has the width for the button to sit at its own size. */
   .print-save-end .btn-light { width: auto; justify-self: start; }

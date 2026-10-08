@@ -96,13 +96,17 @@ export function PrintHead({ id, title, line }: { id: string; title: string; line
  * puts it there (`SavePdfAside`) and closes the page with `SavePdfPanel`
  * below `xl` (print-copy.css hides the panel from `xl` up); the race page,
  * a report with no column to spare, puts the bare button at the end of the
- * race's status line from a tablet up and `SavePdfPanel` at its foot on a
- * phone.
+ * race's status line from a tablet up and `SavePdfPanel` on a phone, where
+ * the printed sections end.
+ *
+ * `label` lets a page name what is saved when the screen holds more than the
+ * paper does: the race page says "Save report as PDF", because its payouts
+ * and runners are on screen but never printed.
  */
-export function SavePdfButton() {
+export function SavePdfButton({ label = 'Save as PDF' }: { label?: string }) {
   return (
     <button type="button" onClick={() => window.print()} className="btn-light">
-      <FileDown size={16} aria-hidden="true" /> Save as PDF
+      <FileDown size={16} aria-hidden="true" /> {label}
     </button>
   );
 }
@@ -127,13 +131,28 @@ export function SavePdfAside() {
   );
 }
 
-/** The same action as a quiet panel of its own, at the foot of the page below `xl`. */
-export function SavePdfPanel({ id, title }: { id: string; title: string }) {
+/**
+ * The same action as a quiet panel of its own, at the foot of the page below
+ * `xl`. `note`, when given, says what the PDF holds, for a page that shows
+ * more than it prints.
+ */
+export function SavePdfPanel({
+  id,
+  title,
+  note,
+  label,
+}: {
+  id: string;
+  title: string;
+  note?: string;
+  label?: string;
+}) {
   return (
     <section className="print-save-end" aria-labelledby={id}>
       <h2 id={id}>{title}</h2>
+      {note && <p className="print-save-note">{note}</p>}
       <SavePdfHint />
-      <SavePdfButton />
+      <SavePdfButton label={label} />
     </section>
   );
 }
