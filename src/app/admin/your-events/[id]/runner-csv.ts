@@ -2,8 +2,10 @@
  * The client's runner list as a spreadsheet (CLIENT_RACE_PAGE_PLAN.md, Batch
  * 4): the race-kit release and shipping sheet. Exactly the columns the screen
  * holds (`client-runners.ts`), so nothing leaves in the file that the page
- * did not already show. Quoting, phone-as-text and the BOM are the staff
- * export's (`registrant-csv.ts`), so the file survives Excel the same way.
+ * did not already show. Quoting, formula neutralizing, phone-as-text and the
+ * BOM are the staff export's (`registrant-csv.ts`), so the file survives Excel
+ * the same way — and a runner's name cannot run as a formula on the client's
+ * machine any more than on staff's.
  */
 
 import type { ClientRunnerRow } from '@/lib/client-runners';

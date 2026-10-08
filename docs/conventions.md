@@ -27,6 +27,13 @@
   check — a browser only enforces it on a form submit, and the wizards advance
   through click handlers — and an address that is not one is not a cosmetic
   fault: it is a runner who never hears from us again.
+- **Every CSV cell goes through `csvField` or `csvPhone`**
+  (`admin/events/[id]/registrants/registrant-csv.ts`) — the staff registrants,
+  unpaid checkouts and client runner exports all do. Beyond RFC 4180 quoting,
+  `csvField` prefixes a `'` to any value opening with `=`, `+`, `-`, `@`, tab
+  or CR, because runner-typed text is only trimmed and uppercased and a
+  spreadsheet would otherwise run it as a formula (a lone `-` passes bare).
+  Never build a CSV cell by hand.
 - Money is centavos everywhere (§5). Dates are `YYYY-MM-DD` strings against a
   Manila "today". Phones are E.164.
 - A finishing time is never shown with tenths — every display runs through
