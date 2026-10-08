@@ -29,8 +29,9 @@ export interface ResultIdentity {
  * **A pacer is not eligible for the podium.** They run to a set pace for the
  * field, so a pacer finishing third would take an award from a runner who
  * actually raced for it. The Race Winners board leaves them out and the full
- * leaderboard tags them; their rank is untouched, because the rank is the
- * timing company's fact about who crossed when.
+ * leaderboard tags them. They hold no place either: every page that prints a
+ * rank reads it from `ranksWithoutPacers`, which prints a pacer's ranks as "-"
+ * and moves the runners behind them up.
  *
  * A finisher is a pacer when either holds:
  *
@@ -122,6 +123,12 @@ function genderKey(gender: string): string | null {
  * `results` must hold **every** result of each category it ranks (the pacers
  * ahead are what is counted). A rank of 0 means "did not finish" and is left
  * as it is.
+ *
+ * **Only a pacer who finished moves anyone up.** The rank is the test, not the
+ * status: the upload route ranks FINISHED rows only and gives every DNF, DNS or
+ * DQ row a 0, and a pacer's 0 is never counted as ahead. So a caller may pass
+ * its rows with or without a status filter (the admin table passes them all,
+ * the full leaderboard passes finishers only) and the ranks still agree.
  */
 export function ranksWithoutPacers(
   results: readonly RankedResult[],
