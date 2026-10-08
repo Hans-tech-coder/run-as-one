@@ -249,7 +249,7 @@ export default function PacersClient({
         </p>
       )}
 
-      <p className="mb-6 text-sm text-secondary max-w-prose">
+      <p className="mb-6 text-sm text-secondary">
         A pacer code is a free entry for one named pacer in one category of this race. It covers
         their entry and their singlet, it takes a slot like any other runner, and the pacer
         registers with it themselves so they still give consent, the waiver and an emergency
@@ -266,7 +266,7 @@ export default function PacersClient({
         </p>
       )}
 
-      <div className="admin-toolbar">
+      <div className="admin-toolbar" style={{ padding: '0 0 16px 0', borderBottom: 'none' }}>
         <div className="toolbar-actions">
           <button type="button" onClick={() => setIsAddOpen(true)} className="btn-light" disabled={categories.length === 0}>
             <Plus size={16} /> Add Pacer
