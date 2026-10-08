@@ -359,6 +359,14 @@ reads *Closed*, Schedule and Pause leave the menu, and the item becomes
 **Reopen Sign-Ups**, which hands the row back to its hold, schedule or counts.
 Runners see *Registration Closed* on the event page, a *Closed* chip on listing
 cards, and both checkout routes refuse with 409.
+**A results-only row** (`registrationState` `EXTERNAL`, RESULTS_ONLY_EVENT_PLAN
+Batch 4) wears the *Results only* badge, shows a muted **—** for Registrants
+and no Registrants chip on its card, and its row menu keeps only **Manage
+Results, Edit Event and Delete**: Registrants, Race Report, Pacers, Schedule,
+Pause and Close are withheld, since no sign-ups happen here. The table is
+`EventsTableClient` (toolbar, table, cards) over `event-columns.tsx`,
+`EventRowCells.tsx` (the cells the table and card share), `DeleteEventModal`
+and `useEventRowActions` (the pause, close, schedule and delete requests).
 Plus `/new` and `/[id]/edit` — both open on an optional **Client** picker
 (`events/EventClientField.tsx`, `AdminSelect`: *No client yet* plus every live
 client, and an archived one only when the race is already linked to it), drawn

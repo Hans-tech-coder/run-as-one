@@ -12,8 +12,11 @@ offers **QR Ph only** (`OFFERED_PAYMONGO_METHODS` in `lib/free-checkout.ts`)
 until it is. Where an entry below says something is "not released" or
 "production is N migrations behind", it predates this release.
 
-**Results-only events, Batches 1–3 of 6 (2026-10-08, on `dev`, not released).**
-Batch 3 put a *Results only* switch at the top of the create and edit forms
+**Results-only events, Batches 1–4 of 6 (2026-10-08, on `dev`, not released).**
+Batch 4 split `EventsTableClient.tsx` (972 lines → table, `event-columns`,
+`EventRowCells`, `DeleteEventModal`, `useEventRowActions`) and gave a
+results-only row a menu of only Manage Results, Edit Event and Delete, a muted
+"—" for Registrants and no Registrants chip on its card. Batch 3 put a *Results only* switch at the top of the create and edit forms
 (`ResultsOnlyPanel`): on, they keep only client, title, date, location,
 province, an optional cover and each category's name and distance, and hide
 every panel about selling an entry; on edit it is disabled once the event has
@@ -32,8 +35,8 @@ routes refuse it (400), `/` and `/events` leave it out, `/events/[slug]` is a
 404 until results exist and then redirects to `/results/[slug]`, `/register`
 renders no wizard, and `/admin/remittances` and client summaries skip it. The
 admin API accepts the flag (PUT refuses to flip it once anyone has
-registered). Still to come: the admin events table's row menu (Batch 4) and
-categories created from the spreadsheet (Batches 5–6). The working plan is `docs/plans/RESULTS_ONLY_EVENT_PLAN.md`.
+registered). Still to come: categories created from the spreadsheet
+(Batches 5–6). The working plan is `docs/plans/RESULTS_ONLY_EVENT_PLAN.md`.
 
 **What is still open lives in `ON_HOLD.md`** at the repo root: the clean-up of
 the retired test accounts and the features

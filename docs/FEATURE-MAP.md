@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-39 pages · 52 API routes · 89 modules in `src/lib` · 396 files · 80,669 lines
+39 pages · 52 API routes · 89 modules in `src/lib` · 401 files · 80,817 lines
 
 ---
 
@@ -30,7 +30,7 @@ The route, the server component behind it, and the client components beside it.
 | `/admin/certificate-guide` | [`/admin/certificate-guide/page.tsx`](../src/app/admin/certificate-guide/page.tsx) | `GuideChecklist.tsx` `GuideDiagram.tsx` `GuideDocument.tsx` `GuideToc.tsx` |
 | `/admin/clients` | [`/admin/clients/page.tsx`](../src/app/admin/clients/page.tsx) | `ApplicationPanel.tsx` `ClientsClient.tsx` `InviteDialog.tsx` |
 | `/admin/communities` | [`/admin/communities/page.tsx`](../src/app/admin/communities/page.tsx) | `CommunitiesClient.tsx` |
-| `/admin/events` | [`/admin/events/page.tsx`](../src/app/admin/events/page.tsx) | `bank-account-draft.ts` `BankAccountsPanel.tsx` `BasicInfoPanel.tsx` `category-draft.ts` `CertificateSettingsPanel.tsx` `ConsentWaiverField.tsx` `DescriptionEditor.tsx` `event-form-draft.ts` `event-not-found.ts` `EventActionsMenu.tsx` `EventClientField.tsx` `EventFormResultModals.tsx` `EventOptionsPanel.tsx` `EventPromotionsPanel.tsx` `EventProvinceField.tsx` `EventsTableClient.tsx` `HighlightsField.tsx` `HighlightsModal.tsx` `InclusionsField.tsx` `LogisticsPanel.tsx` `PosterField.tsx` `registration-opening.ts` `registration-state-badge.ts` `RegistrationFeesPanel.tsx` `RegistrationFormPicker.tsx` `RegistrationOpeningPicker.tsx` `RegistrationScheduleModal.tsx` `ResultsOnlyPanel.tsx` `useEventImageUpload.ts` |
+| `/admin/events` | [`/admin/events/page.tsx`](../src/app/admin/events/page.tsx) | `bank-account-draft.ts` `BankAccountsPanel.tsx` `BasicInfoPanel.tsx` `category-draft.ts` `CertificateSettingsPanel.tsx` `ConsentWaiverField.tsx` `DeleteEventModal.tsx` `DescriptionEditor.tsx` `event-columns.tsx` `event-form-draft.ts` `event-not-found.ts` `event-row.ts` `EventActionsMenu.tsx` `EventClientField.tsx` `EventFormResultModals.tsx` `EventOptionsPanel.tsx` `EventPromotionsPanel.tsx` `EventProvinceField.tsx` `EventRowCells.tsx` `EventsTableClient.tsx` `HighlightsField.tsx` `HighlightsModal.tsx` `InclusionsField.tsx` `LogisticsPanel.tsx` `PosterField.tsx` `registration-opening.ts` `registration-state-badge.ts` `RegistrationFeesPanel.tsx` `RegistrationFormPicker.tsx` `RegistrationOpeningPicker.tsx` `RegistrationScheduleModal.tsx` `ResultsOnlyPanel.tsx` `useEventImageUpload.ts` `useEventRowActions.ts` |
 | `/admin/events/[id]/edit` | [`/admin/events/[id]/edit/page.tsx`](../src/app/admin/events/[id]/edit/page.tsx) | `event-edit-draft.ts` |
 | `/admin/events/[id]/pacers` | [`/admin/events/[id]/pacers/page.tsx`](../src/app/admin/events/[id]/pacers/page.tsx) | `AddPacerModal.tsx` `EditPacerModal.tsx` `pacer-row.ts` `PacerActionsMenu.tsx` `PacersClient.tsx` `use-pacer-actions.tsx` |
 | `/admin/events/[id]/registrants` | [`/admin/events/[id]/registrants/page.tsx`](../src/app/admin/events/[id]/registrants/page.tsx) | `CancelOrderModal.tsx` `ColumnsViewMenu.tsx` `DeleteRegistrantModals.tsx` `email-handoff.ts` `FollowUpModal.tsx` `ManualEmailModal.tsx` `PaymentLinkEmailModal.tsx` `ProofLightbox.tsx` `registrant-columns.tsx` `registrant-csv.ts` `registrant-display.tsx` `RegistrantActionsMenu.tsx` `RegistrantDetailModal.tsx` `RegistrantRowActions.tsx` `RegistrantsDataTable.tsx` `RegistrantsTable.tsx` `RegistrantsTabs.tsx` `RegistrantsToolbar.tsx` `RemarksModal.tsx` `RunnerAddressEditor.tsx` `RunnerEditModal.tsx` `SendLinksButton.tsx` `unpaid-columns.tsx` `UnpaidCheckoutActions.tsx` `UnpaidCheckoutCards.tsx` `UnpaidCheckoutsList.tsx` |
@@ -239,7 +239,6 @@ when a task touches one, split it before editing rather than after.
 | 1179 | [`src/app/admin/settings/SettingsPanels.tsx`](../src/app/admin/settings/SettingsPanels.tsx) |
 | 1104 | [`src/app/admin/team/TeamClient.tsx`](../src/app/admin/team/TeamClient.tsx) |
 | 1015 | [`src/app/admin/register/page.tsx`](../src/app/admin/register/page.tsx) |
-| 973 | [`src/app/admin/events/EventsTableClient.tsx`](../src/app/admin/events/EventsTableClient.tsx) |
 | 785 | [`src/app/results/[slug]/full/FullResultsClient.tsx`](../src/app/results/[slug]/full/FullResultsClient.tsx) |
 | 693 | [`src/app/admin/AdminDatePicker.tsx`](../src/app/admin/AdminDatePicker.tsx) |
 | 673 | [`src/app/api/admin/events/[id]/route.ts`](../src/app/api/admin/events/[id]/route.ts) |

@@ -2,23 +2,22 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
-  Search, X, Columns, Plus, ChevronUp, ChevronDown, Check, AlertCircle, Users
+  Search, X, Columns, Plus, ChevronUp, ChevronDown, Users
 } from 'lucide-react';
 import FiltersMenu, { type FilterGroup } from '../FiltersMenu';
 import LinkPending from '@/components/ui/LinkPending';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import EventActionsMenu from './EventActionsMenu';
 import AdminCardList from '../AdminCardList';
 import AdminTablePager from '../AdminTablePager';
 import MobileSortMenu from '../MobileSortMenu';
 import RegistrationScheduleModal from './RegistrationScheduleModal';
-import { openingInstantISO, type OpeningDraft } from './registration-opening';
-import { formatEventInstant } from '@/lib/event-schedule';
+import DeleteEventModal from './DeleteEventModal';
 import { REGISTRATION_STATES } from './registration-state-badge';
-import type { RegistrationState } from '@/lib/registration-gate';
-import { useAlert } from '@/components/ui/AlertProvider';
-import BusyLabel from '@/components/ui/BusyLabel';
+import { CategoryChips, RegisteredCount, RegistrationStatus, rowPosition } from './EventRowCells';
+import { eventColumns } from './event-columns';
+import { useEventRowActions } from './useEventRowActions';
+import { isResultsOnlyRow, type EventRow } from './event-row';
 import {
   Table,
   TableBody,
@@ -28,7 +27,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  ColumnDef,
   flexRender,
   getCoreRowModel,
   getSortedRowModel,
@@ -37,39 +35,13 @@ import {
   useReactTable,
   SortingState,
   VisibilityState,
-  Row,
 } from '@tanstack/react-table';
 
-type CategoryChip = { id: string; name: string; distance?: string | null };
-
 /**
- * One row as /admin/events hands it over: the Prisma event plus the counts and
- * the registration state worked out on the server. Only the pieces this table
- * reads are named; the page passes the whole event, and the rest rides along.
+ * The /admin/events list: a table from `lg` up, cards below it, both drawn
+ * from one TanStack table instance. The row's cells live in EventRowCells, the
+ * columns in event-columns, and what the row menu does in useEventRowActions.
  */
-type EventRow = {
-  id: string;
-  /** Its place in the list's order, fixed on the server (events/page.tsx), so filtering never renumbers. */
-  listNo?: number;
-  /** Runners holding a place: paid, a bank transfer awaiting verification, an unpaid online checkout (heldPlacesByCategory). */
-  registered?: { paid: number; awaiting: number; unpaid: number };
-  client?: { id: string; name: string } | null;
-  title: string;
-  date: string;
-  location: string;
-  categories?: CategoryChip[];
-  registrationState?: RegistrationState;
-  registrationOpensAt?: string | Date | null;
-  registrationPaused?: boolean | null;
-  registrationClosedAt?: string | Date | null;
-  /** Every option has filled (events/page.tsx) — what a reopened row falls back to. */
-  soldOut?: boolean;
-  /** What this person may do from the row's menu (events/page.tsx). Absent means an owner. */
-  access?: { edit: boolean; delete: boolean; pacers?: boolean };
-  /** How many of this race's pacers have not been sent their code (events/page.tsx). */
-  pacersNotSent?: number;
-  _count?: { registrations: number };
-};
 
 interface EventsTableClientProps {
   events: EventRow[];
@@ -81,128 +53,6 @@ interface EventsTableClientProps {
 
 /** The Filters sheet's value for a race not linked to any client yet. */
 const NO_CLIENT = '__none__';
-
-/**
- * The Registrants cell: how many registrants the race has — paid, and bank
- * transfers awaiting verification, the same people the registrants screen
- * lists — and the way to that screen. The split is behind a tooltip on hover
- * or keyboard focus rather than in the cell, because the total is what a row
- * is scanned for; the split is the follow-up question.
- *
- * Unpaid online checkouts sit beside the count as "+N unpaid", never in it
- * (UNPAID_ORDERS_PLAN.md): a client once read four registrants here where the
- * registrants screen listed one. They still hold a slot until the sweep
- * expires them, which is why they are shown at all.
- */
-function RegisteredCount({ event, alignEnd = false }: { event: EventRow; /** Open the tip leftwards, for a count at the right of a card. */ alignEnd?: boolean }) {
-  const { paid, awaiting, unpaid } = event.registered ?? { paid: 0, awaiting: 0, unpaid: 0 };
-  const total = paid + awaiting;
-
-  return (
-    <span className="reg-count-group">
-      <span className={`reg-count ${alignEnd ? 'is-end' : ''}`}>
-        <Link
-          href={`/admin/events/${event.id}/registrants`}
-          className="reg-count-trigger"
-          aria-label={`${total} ${total === 1 ? 'registrant' : 'registrants'} for ${event.title}: ${paid} paid, ${awaiting} awaiting verification. Open registrants.`}
-        >
-          <Users size={14} aria-hidden="true" />
-          <span className="tabular-nums">{total}</span>
-        </Link>
-        <span className="reg-count-tip" aria-hidden="true">
-          <span className="reg-count-tip-row">
-            <span className="reg-count-dot is-paid" />Paid / Validated<b>{paid}</b>
-          </span>
-          <span className="reg-count-tip-row">
-            <span className="reg-count-dot is-pending" />Awaiting verification<b>{awaiting}</b>
-          </span>
-        </span>
-      </span>
-      {unpaid > 0 && <UnpaidCount count={unpaid} eventId={event.id} title={event.title} alignEnd={alignEnd} />}
-    </span>
-  );
-}
-
-/**
- * "+N unpaid" beside a race's registrant count: a link to the registrants
- * screen's Unpaid checkouts tab (UNPAID_ORDERS_PLAN.md Batch 3), where staff
- * follow these orders up. Hover or keyboard focus shows what it means; on a
- * phone, which has no hover, the tab it opens says the same at the top.
- */
-function UnpaidCount({ count, eventId, title, alignEnd }: { count: number; eventId: string; title: string; alignEnd: boolean }) {
-  return (
-    <span className={`reg-count ${alignEnd ? 'is-end' : ''}`}>
-      <Link
-        href={`/admin/events/${eventId}/registrants?tab=unpaid`}
-        className="reg-count-trigger is-unpaid"
-        aria-label={`${count} unpaid ${count === 1 ? 'checkout' : 'checkouts'} for ${title}: online checkout not paid yet, expires automatically. Open unpaid checkouts.`}
-      >
-        <span className="tabular-nums">+{count}</span> unpaid
-      </Link>
-      <span className="reg-count-tip is-note" aria-hidden="true">
-        Online checkout not paid yet. Expires automatically.
-      </span>
-    </span>
-  );
-}
-
-/**
- * A row's place in the sorted list, for the No. column and the card beside it.
- * Counted by id rather than object identity, for the reason PROJECT_GUIDE §9
- * gives: sorting rebuilds the rows, and an `indexOf` on them finds nothing.
- */
-function rowPosition<T>(sortedRows: Row<T>[], row: Row<T>) {
-  return sortedRows.findIndex(sorted => sorted.id === row.id) + 1;
-}
-
-/**
- * The Registration column's badge and the line under it. Drawn once for the
- * table cell and the card's badge row, so the two cannot say different things.
- */
-function RegistrationStatus({ event }: { event: EventRow }) {
-  const key = (event.registrationState ?? 'OPEN') as keyof typeof REGISTRATION_STATES;
-  const state = REGISTRATION_STATES[key];
-  return (
-    <div>
-      <span className={`status-badge ${state.tone} whitespace-nowrap`}>{state.label}</span>
-      {/* The date the badge is standing in for. A quiet line rather than
-          a second pill: two pills in one cell read as two states, and
-          this event has only one. */}
-      {key === 'SCHEDULED' && event.registrationOpensAt && (
-        <span className="status-note neutral whitespace-nowrap">
-          Opens {formatEventInstant(event.registrationOpensAt)}
-        </span>
-      )}
-    </div>
-  );
-}
-
-/**
- * An event's options on its card. The table has room only for a count; a card
- * has room to name them, which is what an organizer scanning their races on a
- * phone is looking for. A race option keeps its distance beside its name,
- * unless the name already says it ("10K" beside "10K" is noise, not detail).
- */
-function CategoryChips({ categories }: { categories?: CategoryChip[] }) {
-  if (!categories?.length) return <span className="text-secondary">No categories</span>;
-  return (
-    <ul className="m-0 p-0 list-none flex flex-wrap gap-1.5">
-      {categories.map(category => {
-        const distance = category.distance?.trim();
-        const showDistance = Boolean(distance) && !category.name.toUpperCase().includes(distance!.toUpperCase());
-        return (
-          <li
-            key={category.id}
-            className="max-w-full truncate whitespace-nowrap rounded-full border border-[var(--dash-border)] bg-[var(--ink-05)] px-2.5 py-0.5 text-xs text-primary"
-          >
-            {category.name}
-            {showDistance && <span className="text-secondary">{` · ${distance}`}</span>}
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
 
 export default function EventsTableClient({ events, canCreate = true, canFilterByClient = false }: EventsTableClientProps) {
   // Table state
@@ -219,29 +69,8 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
   const [selectedClients, setSelectedClients] = useState<string[]>([]);
   const [selectedStates, setSelectedStates] = useState<string[]>([]);
 
-  const router = useRouter();
-  // Shadows window.alert on purpose — see AlertProvider.
-  const { alert, confirm, toast, progress } = useAlert();
-
-  // Which event's pause or close toggle is mid-flight, so its menu items can
-  // say so and refuse a second press. One id rather than a boolean: the menu
-  // is per row. Shared by both toggles, since either one changes the same
-  // answer and a second request racing the first would only confuse it.
-  const [pausingId, setPausingId] = useState<string | null>(null);
-
-  // Which event's opening is being set, and the modal's own open/closing
-  // animation flags — the same three-piece shape the delete modal below uses,
-  // so both fade in and out the same way.
-  const [schedulingEvent, setSchedulingEvent] = useState<EventRow | null>(null);
-  const [isScheduleOpen, setIsScheduleOpen] = useState(false);
-  const [isScheduleClosing, setIsScheduleClosing] = useState(false);
-  const [isScheduling, setIsScheduling] = useState(false);
-
-  // Delete Modal State
-  const [deletingEvent, setDeletingEvent] = useState<EventRow | null>(null);
-  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const [isDeleteClosing, setIsDeleteClosing] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const actions = useEventRowActions(setTableEvents);
+  const { pausingId } = actions;
 
   const viewRef = useRef<HTMLDivElement>(null);
 
@@ -254,269 +83,6 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  const closeScheduleModal = () => {
-    setIsScheduleOpen(false);
-    setIsScheduleClosing(true);
-    setTimeout(() => {
-      setIsScheduleClosing(false);
-      setSchedulingEvent(null);
-    }, 150);
-  };
-
-  /**
-   * Saves when this event starts taking sign-ups.
-   *
-   * A PATCH carrying only the opening, for the same reason the pause toggle
-   * sends only the hold: this table never rendered the rest of the event, and
-   * posting fields it does not hold is how they get silently overwritten.
-   *
-   * The route also lifts a manual hold when it is sent an opening on its own,
-   * so the row has to drop its PAUSED badge here too — a table still saying
-   * "Paused" about an event whose sign-ups just opened is worse than no badge.
-   */
-  const handleScheduleSave = async (draft: OpeningDraft) => {
-    if (!schedulingEvent) return;
-    const registrationOpensAt = openingInstantISO(draft);
-    const scheduled = registrationOpensAt !== null;
-    setIsScheduling(true);
-    try {
-      const res = await fetch(`/api/admin/events/${schedulingEvent.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ registrationOpensAt }),
-      });
-
-      if (!res.ok) {
-        const body = await res.json().catch(() => null);
-        throw new Error(body?.error || `The server rejected the request (HTTP ${res.status}).`);
-      }
-
-      const saved = await res.json();
-
-      setTableEvents(prev =>
-        prev.map((row): EventRow =>
-          row.id === schedulingEvent.id
-            ? {
-                ...row,
-                registrationOpensAt: saved.registrationOpensAt ?? null,
-                registrationPaused: false,
-                // An opening still ahead is what the row now says. Clearing one
-                // hands the row back to whatever was true underneath, and the
-                // only thing this table can rule out is the two states it just
-                // replaced — a row that was FULL stays FULL.
-                registrationState: scheduled
-                  ? 'SCHEDULED'
-                  : row.registrationState === 'SCHEDULED' || row.registrationState === 'PAUSED'
-                    ? 'OPEN'
-                    : row.registrationState,
-              }
-            : row,
-        ),
-      );
-
-      closeScheduleModal();
-      toast(
-        scheduled
-          ? `Sign-ups on ${schedulingEvent.title} scheduled.`
-          : `Sign-ups on ${schedulingEvent.title} are open.`,
-      );
-      // The public pages read this on the server, so the change only reaches
-      // them on the next request — which is what this refresh causes.
-      router.refresh();
-    } catch (error) {
-      await alert({
-        title: 'Registration opening not saved',
-        message: `${schedulingEvent.title} is unchanged. ${
-          error instanceof Error ? error.message : 'The request did not reach the server.'
-        }`,
-      });
-    } finally {
-      setIsScheduling(false);
-    }
-  };
-
-  const closeDeleteModal = () => {
-    setIsDeleteOpen(false);
-    setIsDeleteClosing(true);
-    setTimeout(() => {
-      setIsDeleteClosing(false);
-      setDeletingEvent(null);
-    }, 150);
-  };
-
-  /**
-   * Flips the organizer's manual hold on sign-ups.
-   *
-   * A PATCH rather than a re-save of the whole event: this table does not hold
-   * the other fields, and posting a form it never rendered would be the way to
-   * silently overwrite them. The row updates from the server's answer rather
-   * than optimistically — a hold that looks on but is not would be the worst of
-   * the three possible outcomes.
-   */
-  const handleTogglePause = async (event: EventRow) => {
-    const nextPaused = event.registrationState !== 'PAUSED';
-    setPausingId(event.id);
-    // The menu closes on the press, so this is the only sign the request is
-    // running until the badge changes.
-    const working = progress(
-      `${nextPaused ? 'Pausing' : 'Resuming'} sign-ups on ${event.title}`,
-    );
-    try {
-      const res = await fetch(`/api/admin/events/${event.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ registrationPaused: nextPaused }),
-      });
-
-      if (!res.ok) {
-        const body = await res.json().catch(() => null);
-        throw new Error(body?.error || `The server rejected the request (HTTP ${res.status}).`);
-      }
-
-      setTableEvents(prev =>
-        prev.map((row): EventRow =>
-          row.id === event.id
-            ? {
-                ...row,
-                registrationPaused: nextPaused,
-                // Resuming hands the row back to whatever the counts say, and a
-                // resumed event whose options are all full is FULL, not open.
-                registrationState: nextPaused
-                  ? 'PAUSED'
-                  : row.registrationState === 'PAUSED'
-                    ? 'OPEN'
-                    : row.registrationState,
-              }
-            : row,
-        ),
-      );
-
-      working.done(`Sign-ups on ${event.title} ${nextPaused ? 'paused' : 'resumed'}.`);
-      // The public pages read this on the server, so the change only reaches
-      // them on the next request — which is what this refresh causes.
-      router.refresh();
-    } catch (error) {
-      working.clear();
-      await alert({
-        title: nextPaused ? 'Registration not paused' : 'Registration not resumed',
-        message: `${event.title} is unchanged. ${
-          error instanceof Error ? error.message : 'The request did not reach the server.'
-        }`,
-      });
-    } finally {
-      setPausingId(null);
-    }
-  };
-
-  /**
-   * Closes sign-ups for good, or reopens a closed event.
-   *
-   * Closing asks first, because unlike a pause it tells runners the race is
-   * not coming back. Reopening does not: it only undoes that. The row is then
-   * rebuilt from what it already knows — the hold, the opening, the counts —
-   * in the same order registrationState uses.
-   */
-  const handleToggleClose = async (event: EventRow) => {
-    const nextClosed = event.registrationState !== 'CLOSED';
-    if (
-      nextClosed &&
-      !(await confirm({
-        variant: 'danger',
-        title: 'Close sign-ups?',
-        message: `Runners will see that registration for ${event.title} is closed. Orders already placed are not affected. You can reopen it later from this menu.`,
-        confirmLabel: 'Close Sign-Ups',
-      }))
-    ) {
-      return;
-    }
-
-    setPausingId(event.id);
-    const working = progress(
-      `${nextClosed ? 'Closing' : 'Reopening'} sign-ups on ${event.title}`,
-    );
-    try {
-      const res = await fetch(`/api/admin/events/${event.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ registrationClosed: nextClosed }),
-      });
-
-      if (!res.ok) {
-        const body = await res.json().catch(() => null);
-        throw new Error(body?.error || `The server rejected the request (HTTP ${res.status}).`);
-      }
-
-      const saved = await res.json();
-      const opensLater =
-        (row: EventRow) => row.registrationOpensAt != null && new Date(row.registrationOpensAt).getTime() > Date.now();
-
-      setTableEvents(prev =>
-        prev.map((row): EventRow =>
-          row.id === event.id
-            ? {
-                ...row,
-                registrationClosedAt: saved.registrationClosedAt ?? null,
-                registrationState: nextClosed
-                  ? 'CLOSED'
-                  : row.registrationPaused
-                    ? 'PAUSED'
-                    : opensLater(row)
-                      ? 'SCHEDULED'
-                      : row.soldOut
-                        ? 'FULL'
-                        : 'OPEN',
-              }
-            : row,
-        ),
-      );
-
-      working.done(`Sign-ups on ${event.title} ${nextClosed ? 'closed' : 'reopened'}.`);
-      router.refresh();
-    } catch (error) {
-      working.clear();
-      await alert({
-        title: nextClosed ? 'Registration not closed' : 'Registration not reopened',
-        message: `${event.title} is unchanged. ${
-          error instanceof Error ? error.message : 'The request did not reach the server.'
-        }`,
-      });
-    } finally {
-      setPausingId(null);
-    }
-  };
-
-  const handleEventDeleteConfirm = async () => {
-    if (!deletingEvent) return;
-    setIsDeleting(true);
-    try {
-      const res = await fetch(`/api/admin/events/${deletingEvent.id}`, {
-        method: 'DELETE',
-      });
-
-      if (!res.ok) {
-        // The route answers with a reason; show that rather than a blank
-        // failure, so the organizer knows whether to retry or to fix something.
-        const body = await res.json().catch(() => null);
-        throw new Error(body?.error || `The server rejected the request (HTTP ${res.status}).`);
-      }
-
-      setTableEvents(tableEvents.filter(e => e.id !== deletingEvent.id));
-      closeDeleteModal();
-    } catch (error) {
-      console.error(error);
-      // The confirmation modal stays open underneath: the event is still
-      // there, and the organizer can read the reason and try again.
-      await alert({
-        title: 'Event not deleted',
-        message: `${deletingEvent.title} is still here. ${
-          error instanceof Error ? error.message : 'The request did not reach the server.'
-        }`,
-      });
-    } finally {
-      setIsDeleting(false);
-    }
-  };
 
   /**
    * A row's menu, for the table's Actions cell and the card's footer alike, so
@@ -536,123 +102,32 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
         pacersNotSent={event.pacersNotSent ?? 0}
         onTogglePause={
           (event.access?.edit ?? true)
-            ? () => handleTogglePause(event)
+            ? () => actions.togglePause(event)
             : undefined
         }
         onToggleClose={
           (event.access?.edit ?? true)
-            ? () => handleToggleClose(event)
+            ? () => actions.toggleClose(event)
             : undefined
         }
         onSchedule={
           (event.access?.edit ?? true)
-            ? () => {
-                setSchedulingEvent(event);
-                requestAnimationFrame(() => setIsScheduleOpen(true));
-              }
+            ? () => actions.openSchedule(event)
             : undefined
         }
         onDelete={
           (event.access?.delete ?? true)
-            ? () => {
-                setDeletingEvent(event);
-                requestAnimationFrame(() => setIsDeleteOpen(true));
-              }
+            ? () => actions.openDelete(event)
             : undefined
         }
       />
     </div>
   );
 
-  const columns = useMemo<ColumnDef<EventRow>[]>(() => [
-    {
-      id: "select",
-      header: ({ table }) => {
-        const isChecked = table.getIsAllPageRowsSelected();
-        return (
-          <div className="flex items-center justify-center px-1 w-8">
-            <div className="relative flex items-center justify-center">
-              <input
-                type="checkbox"
-                checked={isChecked}
-                onChange={table.getToggleAllPageRowsSelectedHandler()}
-                className="appearance-none w-4 h-4 rounded border border-[var(--ink-20)] bg-transparent checked:bg-[var(--ink)] checked:border-[var(--ink)] cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ink-20)]"
-              />
-              {isChecked && <Check className="absolute text-[var(--dash-inverse-fg)] pointer-events-none" size={12} strokeWidth={3} />}
-            </div>
-          </div>
-        );
-      },
-      cell: ({ row }) => {
-        const isChecked = row.getIsSelected();
-        return (
-          <div className="flex items-center justify-center px-1 w-8">
-            <div className="relative flex items-center justify-center">
-              <input
-                type="checkbox"
-                checked={isChecked}
-                onChange={row.getToggleSelectedHandler()}
-                className="appearance-none w-4 h-4 rounded border border-[var(--ink-20)] bg-transparent checked:bg-[var(--ink)] checked:border-[var(--ink)] cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ink-20)]"
-              />
-              {isChecked && <Check className="absolute text-[var(--dash-inverse-fg)] pointer-events-none" size={12} strokeWidth={3} />}
-            </div>
-          </div>
-        );
-      },
-      enableSorting: false,
-      enableHiding: false,
-    },
-    {
-      id: "index",
-      header: "No.",
-      cell: ({ row, table }) => (
-        <span className="text-secondary font-mono">{row.original.listNo ?? rowPosition(table.getSortedRowModel().flatRows, row)}</span>
-      ),
-      enableSorting: false,
-      enableHiding: false,
-    },
-    {
-      accessorKey: "title",
-      header: "Event Name",
-      cell: ({ row }) => <span className="font-medium text-primary">{row.original.title}</span>,
-    },
-    {
-      accessorKey: "date",
-      header: "Date",
-      cell: ({ row }) => <span className="whitespace-nowrap">{row.original.date}</span>,
-    },
-    {
-      id: "registered",
-      header: "Registrants",
-      accessorFn: (row) => (row.registered?.paid ?? 0) + (row.registered?.awaiting ?? 0),
-      cell: ({ row }) => <RegisteredCount event={row.original} />,
-    },
-    {
-      id: "categories",
-      header: "Categories",
-      accessorFn: (row) => row.categories?.length || 0,
-      cell: ({ row }) => `${row.original.categories?.length || 0} categories`,
-    },
-    {
-      accessorKey: "location",
-      header: "Location",
-      cell: ({ row }) => row.original.location,
-    },
-    {
-      id: "registration",
-      header: "Registration",
-      accessorFn: (row) => row.registrationState ?? 'OPEN',
-      cell: ({ row }) => <RegistrationStatus event={row.original} />,
-    },
-    {
-      id: "actions",
-      header: "Actions",
-      cell: ({ row }) => renderActions(row.original),
-    },
-    // renderActions is rebuilt every render; pausingId is the one thing it
-    // reads that changes what a cell shows, as before it was pulled out.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  ], [pausingId]);
+  // renderActions is rebuilt every render; pausingId is the one thing it
+  // reads that changes what a cell shows, as before it was pulled out.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const columns = useMemo(() => eventColumns(event => renderActions(event)), [pausingId]);
 
   const filteredEvents = useMemo(
     () =>
@@ -719,9 +194,6 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
   const emptyMessage = tableEvents.length > 0
     ? 'No events match your search or filters.'
     : 'No events found. Create one to get started.';
-
-  // How many orders go with the event being deleted, which the confirm names.
-  const deletingRegistrations = deletingEvent?._count?.registrations ?? 0;
 
   return (
     <div className="flex flex-col gap-4 w-full text-primary">
@@ -875,9 +347,10 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
           // organizer goes from this list again and again. It stays in the
           // menu too, so the menu matches the table's. A quiet chip, not
           // .btn-light: one light pill per card would shout down the list.
+          // A results-only race has no registrants here, so no chip.
           actions={row => (
             <>
-              <Link
+              {!isResultsOnlyRow(row.original) && <Link
                 href={`/admin/events/${row.original.id}/registrants`}
                 className="btn-filter no-underline"
                 aria-label={`Registrants for ${row.original.title}`}
@@ -885,7 +358,7 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
                 <Users size={16} aria-hidden="true" />
                 Registrants
                 <LinkPending />
-              </Link>
+              </Link>}
               {renderActions(row.original, 'ml-auto')}
             </>
           )}
@@ -904,69 +377,23 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
           from what this event actually holds — including the second time it is
           opened on a row whose opening was just changed. */}
       <RegistrationScheduleModal
-        key={`${schedulingEvent?.id ?? 'none'}-${schedulingEvent?.registrationOpensAt ?? ''}`}
-        event={schedulingEvent}
-        isOpen={isScheduleOpen}
-        isClosing={isScheduleClosing}
-        isSaving={isScheduling}
-        onClose={closeScheduleModal}
-        onSave={handleScheduleSave}
+        key={`${actions.schedule.event?.id ?? 'none'}-${actions.schedule.event?.registrationOpensAt ?? ''}`}
+        event={actions.schedule.event}
+        isOpen={actions.schedule.isOpen}
+        isClosing={actions.schedule.isClosing}
+        isSaving={actions.schedule.isSaving}
+        onClose={actions.schedule.close}
+        onSave={actions.schedule.save}
       />
 
-      {/* Delete Confirmation Modal */}
-      <div 
-        className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--dash-scrim)] backdrop-blur-sm transition-opacity duration-200 ${
-          isDeleteOpen && !isDeleteClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-        }`}
-      >
-        <div
-          role="alertdialog"
-          aria-modal="true"
-          aria-labelledby="delete-event-title"
-          className={`t-modal admin-modal-panel w-full max-w-md bg-[var(--dash-panel-solid)] border border-red-500/20 rounded-2xl shadow-2xl p-6 flex flex-col gap-6 ${isDeleteOpen ? 'is-open' : ''} ${isDeleteClosing ? 'is-closing' : ''}`}
-        >
-          <div className="admin-modal-body flex flex-col gap-6">
-            <div className="flex items-start gap-4">
-              <div className="p-3 bg-red-500/10 rounded-full text-[var(--status-danger)] shrink-0 mt-1">
-                <AlertCircle size={24} strokeWidth={2} />
-              </div>
-              <div className="flex flex-col gap-2 min-w-0">
-                <h3 id="delete-event-title" className="text-xl font-semibold text-primary">Delete Event</h3>
-                <p className="text-secondary text-sm leading-relaxed [overflow-wrap:anywhere]">
-                  Are you sure you want to delete <span className="font-semibold text-primary">{deletingEvent?.title}</span>? This action cannot be undone and will permanently remove the event from the database.
-                </p>
-              </div>
-            </div>
-
-            {deletingRegistrations > 0 && (
-              <div className="bg-red-500/10 border border-red-500/50 p-4 rounded-lg flex items-center gap-3 text-[var(--status-danger)]">
-                <AlertCircle size={20} className="shrink-0" />
-                <p className="text-sm">
-                  This event has {deletingRegistrations} registration{deletingRegistrations === 1 ? '' : 's'}. Deleting it also erases those registrations, their runners, and any uploaded race results.
-                </p>
-              </div>
-            )}
-          </div>
-
-          <div className="admin-modal-footer flex justify-end gap-3 pt-2 border-t border-[var(--dash-hairline)]">
-            <button 
-              type="button" 
-              onClick={closeDeleteModal} 
-              className="px-4 py-2 text-sm font-medium text-[var(--ink-85)] hover:text-primary transition-colors"
-            >
-              Cancel
-            </button>
-            <button 
-              type="button" 
-              onClick={handleEventDeleteConfirm}
-              disabled={isDeleting}
-              className="px-5 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
-            >
-              {isDeleting ? <BusyLabel>Deleting</BusyLabel> : 'Delete Event'}
-            </button>
-          </div>
-        </div>
-      </div>
+      <DeleteEventModal
+        event={actions.remove.event}
+        isOpen={actions.remove.isOpen}
+        isClosing={actions.remove.isClosing}
+        isDeleting={actions.remove.isDeleting}
+        onClose={actions.remove.close}
+        onConfirm={actions.remove.confirm}
+      />
     </div>
   );
 }
