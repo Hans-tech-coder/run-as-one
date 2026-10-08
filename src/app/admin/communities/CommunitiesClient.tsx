@@ -12,6 +12,7 @@ import {
   type VisibilityState,
 } from '@tanstack/react-table';
 import { useAlert } from '@/components/ui/AlertProvider';
+import BusyLabel from '@/components/ui/BusyLabel';
 import AdminCardList, { AdminCardListSkeleton } from '@/app/admin/AdminCardList';
 import AdminCardEdit from '@/app/admin/AdminCardEdit';
 import AdminDataTable, { AdminColumnsMenu, rowPosition } from '@/app/admin/AdminDataTable';
@@ -59,7 +60,7 @@ interface Community {
 
 export default function CommunitiesClient() {
   // Shadows window.alert / window.confirm on purpose — see AlertProvider.
-  const { alert, confirm } = useAlert();
+  const { alert, confirm, toast, progress } = useAlert();
   const [communities, setCommunities] = useState<Community[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -69,6 +70,8 @@ export default function CommunitiesClient() {
   const [editName, setEditName] = useState('');
   const [newName, setNewName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  // Only the Add button's own wait, so approving a club never reads "Adding".
+  const [isAdding, setIsAdding] = useState(false);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
 
@@ -90,19 +93,33 @@ export default function CommunitiesClient() {
     fetchCommunities();
   }, []);
 
-  const send = async (url: string, init: RequestInit) => {
+  /**
+   * One request and a reload of the list, announced with `done` once it lands.
+   *
+   * `working` raises a progress toast for the wait, and is passed only by the
+   * actions whose control does not stay on screen — the row menu closes on the
+   * press, and Approve on a card has no busy state of its own. Rename and Add
+   * leave it out: their own buttons show the wait (§9). Failures clear the
+   * toast and answer with a dialog instead.
+   */
+  const send = async (url: string, init: RequestInit, done: string, working?: string) => {
     setIsSaving(true);
+    const status = working ? progress(working) : null;
     try {
       const res = await fetch(url, init);
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
+        status?.clear();
         alert(data.error || 'Something went wrong.');
         return false;
       }
       await fetchCommunities();
+      if (status) status.done(done);
+      else toast(done);
       return true;
     } catch (error) {
       console.error(error);
+      status?.clear();
       alert('An error occurred');
       return false;
     } finally {
@@ -111,11 +128,16 @@ export default function CommunitiesClient() {
   };
 
   const approve = (c: Community) =>
-    send(`/api/admin/communities/${c.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'APPROVED' }),
-    });
+    send(
+      `/api/admin/communities/${c.id}`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'APPROVED' }),
+      },
+      `${c.name} approved.`,
+      `Approving ${c.name}`,
+    );
 
   const reject = async (c: Community) => {
     const warning =
@@ -129,7 +151,12 @@ export default function CommunitiesClient() {
       confirmLabel: 'Remove',
     });
     if (!confirmed) return;
-    await send(`/api/admin/communities/${c.id}`, { method: 'DELETE' });
+    await send(
+      `/api/admin/communities/${c.id}`,
+      { method: 'DELETE' },
+      `${c.name} removed from the suggestions.`,
+      `Removing ${c.name}`,
+    );
   };
 
   const startRename = (c: Community) => {
@@ -138,22 +165,32 @@ export default function CommunitiesClient() {
   };
 
   const saveName = async (c: Community) => {
-    const ok = await send(`/api/admin/communities/${c.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: editName }),
-    });
+    const ok = await send(
+      `/api/admin/communities/${c.id}`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: editName }),
+      },
+      `${c.name} renamed.`,
+    );
     if (ok) setEditingId(null);
   };
 
   const addCommunity = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName.trim()) return;
-    const ok = await send('/api/admin/communities', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: newName }),
-    });
+    setIsAdding(true);
+    const ok = await send(
+      '/api/admin/communities',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newName }),
+      },
+      'Club added to the list.',
+    );
+    setIsAdding(false);
     if (ok) setNewName('');
   };
 
@@ -253,7 +290,7 @@ export default function CommunitiesClient() {
                 style={{ minHeight: '40px', minWidth: '200px' }}
               />
               <button type="submit" className="btn-filter" disabled={isSaving}>
-                <Plus size={16} /> Add
+                <Plus size={16} /> {isAdding ? <BusyLabel>Adding</BusyLabel> : 'Add'}
               </button>
             </form>
           </div>

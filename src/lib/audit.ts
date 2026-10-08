@@ -70,6 +70,8 @@ export const AUDIT_ACTIONS = [
   'event.updated',
   'event.registration.paused',
   'event.registration.resumed',
+  'event.registration.closed',
+  'event.registration.reopened',
   'event.registration.scheduled',
   'event.deleted',
   'results.uploaded',

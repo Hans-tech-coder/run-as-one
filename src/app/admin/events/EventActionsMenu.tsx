@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
-import { MoreVertical, Users, Trophy, Edit, Trash2, CalendarClock, PauseCircle, PlayCircle, Footprints } from 'lucide-react';
+import { MoreVertical, Users, Trophy, Edit, Trash2, CalendarClock, PauseCircle, PlayCircle, Footprints, Lock, LockOpen } from 'lucide-react';
 import LinkPending from '@/components/ui/LinkPending';
 import { placeRowMenu, type RowMenuPlacement } from '../row-menu-position';
 import { cssDurationMs } from '@/lib/css-duration';
@@ -18,6 +18,7 @@ export default function EventActionsMenu({
   canManagePacers = false,
   pacersNotSent = 0,
   onTogglePause,
+  onToggleClose,
   onSchedule,
   onDelete
 }: {
@@ -25,8 +26,8 @@ export default function EventActionsMenu({
   /** The event's title, so a screen reader hears whose menu this is. */
   label?: string;
   /** Why sign-ups are closed, or OPEN — see src/lib/registration-gate.ts. */
-  registrationState?: 'OPEN' | 'FINISHED' | 'PAUSED' | 'SCHEDULED' | 'FULL';
-  /** True while this row's pause request is in flight. */
+  registrationState?: 'OPEN' | 'FINISHED' | 'CLOSED' | 'PAUSED' | 'SCHEDULED' | 'FULL';
+  /** True while this row's pause or close request is in flight. */
   isPausing?: boolean;
   /**
    * Whether this person's role on the event includes `event:edit`. Without it
@@ -49,6 +50,8 @@ export default function EventActionsMenu({
    */
   pacersNotSent?: number;
   onTogglePause?: () => void;
+  /** Closes sign-ups for good, or reopens a closed event. */
+  onToggleClose?: () => void;
   /** Opens the modal that decides when sign-ups start. */
   onSchedule?: () => void;
   onDelete?: () => void;
@@ -156,16 +159,28 @@ export default function EventActionsMenu({
   const isPaused = registrationState === 'PAUSED';
   // A race that has been run cannot be paused — it is already closed, and
   // offering a hold on it would suggest sign-ups could come back.
-  const canPause = registrationState !== 'FINISHED' && Boolean(onTogglePause);
+  // A closed race offers neither a hold nor a schedule: both would read as
+  // ways back in, and the only way back from a closure is Reopen.
+  const isClosed = registrationState === 'CLOSED';
+  const canPause = registrationState !== 'FINISHED' && !isClosed && Boolean(onTogglePause);
 
   // A race that has been run has no opening left to schedule either — the same
   // line the pause item is drawn on, for the same reason.
-  const canSchedule = registrationState !== 'FINISHED' && Boolean(onSchedule);
+  const canSchedule = registrationState !== 'FINISHED' && !isClosed && Boolean(onSchedule);
+
+  // Closing is the same line again: a race that has been run is already over.
+  const canClose = registrationState !== 'FINISHED' && Boolean(onToggleClose);
 
   const handleTogglePause = (e: React.MouseEvent) => {
     e.preventDefault();
     closeMenu();
     onTogglePause?.();
+  };
+
+  const handleToggleClose = (e: React.MouseEvent) => {
+    e.preventDefault();
+    closeMenu();
+    onToggleClose?.();
   };
 
   const handleSchedule = (e: React.MouseEvent) => {
@@ -266,6 +281,17 @@ export default function EventActionsMenu({
               : isPaused
                 ? 'Resume Sign-Ups'
                 : 'Pause Sign-Ups'}
+          </button>
+        )}
+        {canClose && (
+          <button
+            onClick={handleToggleClose}
+            disabled={isPausing}
+            className={`action-dropdown-item w-full flex items-center gap-3 px-4 py-2 text-sm text-left ${isPausing ? 'opacity-50 cursor-not-allowed' : ''}`}
+            role="menuitem"
+          >
+            {isClosed ? <LockOpen size={16} /> : <Lock size={16} />}
+            {isPausing ? 'Saving' : isClosed ? 'Reopen Sign-Ups' : 'Close Sign-Ups'}
           </button>
         )}
         {onDelete && (

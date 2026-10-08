@@ -91,7 +91,7 @@ function receivedOn(iso: string): string {
 
 export default function FeedbackClient() {
   // Shadows window.alert / window.confirm on purpose — see AlertProvider.
-  const { alert, confirm, toast } = useAlert();
+  const { alert, confirm, progress } = useAlert();
 
   const [rows, setRows] = useState<FeedbackRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -122,19 +122,29 @@ export default function FeedbackClient() {
     fetchFeedback();
   }, []);
 
-  const send = async (url: string, init: RequestInit) => {
+  /**
+   * One request and a reload of the list. `working` and `done` are the
+   * progress toast's two sentences: the row menu or card button that started
+   * this has nothing on it to show the wait, so the toast does (§9). Failures
+   * clear it and answer with a dialog instead.
+   */
+  const send = async (url: string, init: RequestInit, working: string, done: string) => {
     setIsSaving(true);
+    const status = progress(working);
     try {
       const res = await fetch(url, init);
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
+        status.clear();
         alert(data.error || 'Something went wrong.');
         return false;
       }
       await fetchFeedback();
+      status.done(done);
       return true;
     } catch (error) {
       console.error(error);
+      status.clear();
       alert('An error occurred');
       return false;
     } finally {
@@ -143,18 +153,17 @@ export default function FeedbackClient() {
   };
 
   const setStatus = async (row: FeedbackRow, status: 'NEW' | 'REVIEWED') => {
-    const ok = await send(`/api/admin/feedback/${row.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status }),
-    });
     // A success is announced, never made to be dismissed (§9).
-    if (ok) {
-      toast({
-        variant: 'success',
-        message: status === 'REVIEWED' ? 'Marked as reviewed.' : 'Moved back to new.',
-      });
-    }
+    await send(
+      `/api/admin/feedback/${row.id}`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      },
+      status === 'REVIEWED' ? 'Marking as reviewed' : 'Moving back to new',
+      status === 'REVIEWED' ? 'Marked as reviewed.' : 'Moved back to new.',
+    );
   };
 
   const remove = async (row: FeedbackRow) => {
@@ -166,11 +175,13 @@ export default function FeedbackClient() {
       confirmLabel: 'Delete',
     });
     if (!confirmed) return;
-    const ok = await send(`/api/admin/feedback/${row.id}`, { method: 'DELETE' });
-    if (ok) {
-      setOpenId(current => (current === row.id ? null : current));
-      toast({ variant: 'success', message: 'Message deleted.' });
-    }
+    const ok = await send(
+      `/api/admin/feedback/${row.id}`,
+      { method: 'DELETE' },
+      'Deleting the message',
+      'Message deleted.',
+    );
+    if (ok) setOpenId(current => (current === row.id ? null : current));
   };
 
   const newCount = useMemo(() => rows.filter(r => r.status === 'NEW').length, [rows]);

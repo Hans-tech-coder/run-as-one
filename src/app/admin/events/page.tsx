@@ -3,6 +3,7 @@ import db from '@/lib/db';
 import { can, reachableEvents, requireTeamActor } from '@/lib/actor';
 import { hasFinished, today } from '@/lib/event-schedule';
 import {
+  everyOptionIsFull,
   registrationState,
   takenSlotsByCategory,
   withSlotCounts,
@@ -82,30 +83,32 @@ export default async function AdminEventsPage() {
     ordered.map(event => event.id),
   );
 
-  const rows = ordered.map((event, index) => ({
-    ...event,
-    // The No. column: the event's place in the order above, fixed here so a
-    // search, a filter or a column sort never renumbers the list.
-    listNo: index + 1,
-    registered: registered.get(event.id) ?? { paid: 0, awaiting: 0, unpaid: 0 },
-    registrationState: registrationState(
-      event,
-      withSlotCounts(event.categories, taken),
-      hasFinished(event, day),
-    ),
-    // What this person may do from the row's menu, asked with the same can()
-    // the route behind each item asks — so a validator is never offered
-    // Delete Event only to be refused by it. Registrants and Manage Results
-    // stay for everyone: every role may read both.
-    access: {
-      edit: can(actor, 'event:edit', { organizerId: actor.orgId, eventId: event.id }),
-      delete: can(actor, 'event:delete', { organizerId: actor.orgId, eventId: event.id }),
-      // The same verb the Pacers screen and its routes ask, so nobody is
-      // offered a page that would answer "Event not found."
-      pacers: can(actor, 'promo:manage', { organizerId: actor.orgId, eventId: event.id }),
-    },
-    pacersNotSent: pacersNotSent.get(event.id) ?? 0,
-  }));
+  const rows = ordered.map((event, index) => {
+    const slots = withSlotCounts(event.categories, taken);
+    return {
+      ...event,
+      // The No. column: the event's place in the order above, fixed here so a
+      // search, a filter or a column sort never renumbers the list.
+      listNo: index + 1,
+      registered: registered.get(event.id) ?? { paid: 0, awaiting: 0, unpaid: 0 },
+      registrationState: registrationState(event, slots, hasFinished(event, day)),
+      // What a closed row turns back into on Reopen without a reload: the table
+      // knows the hold and the opening, but not the counts.
+      soldOut: everyOptionIsFull(slots),
+      // What this person may do from the row's menu, asked with the same can()
+      // the route behind each item asks — so a validator is never offered
+      // Delete Event only to be refused by it. Registrants and Manage Results
+      // stay for everyone: every role may read both.
+      access: {
+        edit: can(actor, 'event:edit', { organizerId: actor.orgId, eventId: event.id }),
+        delete: can(actor, 'event:delete', { organizerId: actor.orgId, eventId: event.id }),
+        // The same verb the Pacers screen and its routes ask, so nobody is
+        // offered a page that would answer "Event not found."
+        pacers: can(actor, 'promo:manage', { organizerId: actor.orgId, eventId: event.id }),
+      },
+      pacersNotSent: pacersNotSent.get(event.id) ?? 0,
+    };
+  });
 
   return (
     <>

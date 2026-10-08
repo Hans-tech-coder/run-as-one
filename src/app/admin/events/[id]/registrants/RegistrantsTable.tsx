@@ -17,6 +17,7 @@
 import React, { useState, useMemo } from 'react';
 import { Download, X, Trash2 } from 'lucide-react';
 import ProofLightbox from './ProofLightbox';
+import { useAlert } from '@/components/ui/AlertProvider';
 import AdminCardList from '../../../AdminCardList';
 import AdminTablePager from '../../../AdminTablePager';
 import RegistrantsDataTable from './RegistrantsDataTable';
@@ -96,6 +97,7 @@ export default function RegistrantsTable({
 }: RegistrantsTableProps) {
   const [runners, setRunners] = useState(initialRunners);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const { alert, toast, progress } = useAlert();
   const [viewingRunner, setViewingRunner] = useState<any | null>(null);
 
   // The proof of payment, full-screen. It is the runner whose receipt is
@@ -169,8 +171,24 @@ export default function RegistrantsTable({
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
 
-  const handleStatusChange = async (registrationId: string, newStatus: string) => {
+  /**
+   * `announce` says who shows the wait. From the row menu — the default — the
+   * menu has closed on the press, so a progress toast carries it (§9). From the
+   * detail modal or the receipt lightbox, their own Validate button already
+   * reads "Updating", so only the result is toasted.
+   */
+  const handleStatusChange = async (
+    registrationId: string,
+    newStatus: string,
+    announce: 'progress' | 'result' = 'progress',
+  ) => {
     setUpdatingId(registrationId);
+    const paid = newStatus === 'PAID';
+    const done = paid ? 'Payment validated.' : 'Payment status updated.';
+    const status =
+      announce === 'progress'
+        ? progress(paid ? 'Validating payment' : 'Updating payment status')
+        : null;
     try {
       const res = await fetch(`/api/admin/registrations/${registrationId}/status`, {
         method: 'PATCH',
@@ -189,11 +207,19 @@ export default function RegistrantsTable({
         setRunners(current => current.map(settle));
         setViewingRunner(settle);
         setProofRunner(settle);
+        if (status) status.done(done);
+        else toast(done);
       } else {
-        console.error('Failed to update status');
+        // Used to fail silently (a console line nobody reads) while the row
+        // kept saying PENDING — the organizer had no way to know to retry.
+        const data = await res.json().catch(() => ({}));
+        status?.clear();
+        alert(data?.error || 'The payment status could not be changed. Please try again.');
       }
     } catch (e) {
       console.error(e);
+      status?.clear();
+      alert('Could not reach the server. Check your connection and try again.');
     } finally {
       setUpdatingId(null);
     }
@@ -206,7 +232,7 @@ export default function RegistrantsTable({
    * saying PENDING.
    */
   const validatePayment = (runner: any) => {
-    handleStatusChange(runner.registrationId, 'PAID');
+    handleStatusChange(runner.registrationId, 'PAID', 'result');
     const paid = (current: any) =>
       current && current.registrationId === runner.registrationId
         ? { ...current, status: 'PAID' }

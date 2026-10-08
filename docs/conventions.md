@@ -565,7 +565,22 @@
   demote a failure to a toast that can time out unread. Toasts stack (dialogs
   queue) and wear the same four variants as the dialog, so a success is the
   same green check in both. Marketing is the screen that uses them; every other
-  silent `router.refresh()` in the admin is a candidate.
+  silent `router.refresh()` in the admin is a candidate. **A change pressed
+  from a row menu also gets `progress`**: the menu closes on the press and
+  nothing else on screen moves until the server answers, so `progress("Pausing
+  sign-ups on …")` raises a toast carrying the `sm` running figure that stays
+  until the caller settles it — `done("Sign-ups … paused.")` turns that same
+  panel into an ordinary toast that leaves on the usual clock, `clear()` takes
+  it away before a failure's dialog. **The rule for which wait gets which:** a
+  control that stays on screen shows its own wait with `BusyLabel`, and a
+  control that disappears on the press (a row menu item, a confirm dialog's
+  button) gets `progress` — never both for the same press, so a modal's action
+  toasts only the result. On `progress` today: the events table's Pause / Close /
+  Reopen Sign-Ups, the registrants menu's Validate Payment (the modal and
+  lightbox doors toast only the result), every pacer row action, promotion
+  Pause / Delete, team Resend / Suspend / Reinstate / Remove, client Archive /
+  Restore, feedback Reviewed / Delete, and community Approve / Remove
+  (Rename and Add show `BusyLabel` and toast the result).
 - **A wait is the shape of the answer.** A panel that fetches shows
   `components/ui/Skeleton`'s `SkeletonSwap` — placeholder rows built from
   `SkeletonBar` at the widths the real rows have — and cross-fades them into

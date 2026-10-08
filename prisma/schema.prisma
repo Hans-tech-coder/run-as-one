@@ -117,6 +117,13 @@ model Event {
   /// day they happen on. Written and read in Asia/Manila — see
   /// src/lib/event-schedule.ts.
   registrationOpensAt         DateTime?
+  /// When the organizer closed sign-ups for good, or null while they are not
+  /// closed. Distinct from the pause above: a pause tells runners slots may
+  /// come back, a closure tells them this race is not taking entries any more
+  /// — though race day is still ahead and slots may remain. An instant rather
+  /// than a boolean so the team can read when it happened; clearing it
+  /// (Reopen) is the only way back. See src/lib/registration-gate.ts.
+  registrationClosedAt        DateTime?
   organizerId                 String
   /// Which client this race is run for (ADMIN_MERGE_PLAN.md). Null means it
   /// has not been linked yet — every event that existed before clients did,

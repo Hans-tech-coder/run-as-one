@@ -76,7 +76,7 @@ function waitingViewer(client: ClientRow) {
 
 export default function ClientsClient() {
   // Shadows window.alert / window.confirm on purpose — see AlertProvider.
-  const { alert, confirm, toast } = useAlert();
+  const { alert, confirm, toast, progress } = useAlert();
   const [clients, setClients] = useState<ClientRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -188,6 +188,8 @@ export default function ClientsClient() {
     );
     if (!confirmed) return;
 
+    // The row menu has closed by now; this is the sign the press landed (§9).
+    const status = progress(`${move === 'archive' ? 'Archiving' : 'Restoring'} ${client.name}`);
     try {
       const res = await fetch(`/api/admin/clients/${client.id}`, {
         method: 'PATCH',
@@ -197,15 +199,17 @@ export default function ClientsClient() {
       const data = await res.json().catch(() => ({}));
       fetchClients();
       if (res.ok) {
-        toast({
+        status.done({
           variant: 'success',
           message: `${client.name} ${move === 'archive' ? 'archived' : 'restored as New'}.`,
         });
       } else {
+        status.clear();
         alert(data?.error ?? 'The client could not be changed. Please try again.');
       }
     } catch (error) {
       console.error(error);
+      status.clear();
       alert('Could not reach the server. Check your connection and try again.');
     }
   };

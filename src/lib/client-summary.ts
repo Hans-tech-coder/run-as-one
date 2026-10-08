@@ -92,6 +92,7 @@ export async function viewerEventSummaries(
       imageUrl: true,
       organizerId: true,
       clientId: true,
+      registrationClosedAt: true,
       registrationPaused: true,
       registrationOpensAt: true,
       categories: {

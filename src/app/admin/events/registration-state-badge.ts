@@ -2,7 +2,7 @@
  * What an event's registration state is called on a badge, and in what tone.
  *
  * Green for open and amber for paused, matching the badges on the registrants
- * screen. Full and finished are neither: they are not warnings and not good
+ * screen. Full, closed and finished are neither: they are not warnings and not good
  * news, they are simply what is true, so they take the neutral badge added for
  * them in Admin.css.
  *
@@ -13,6 +13,8 @@
  */
 export const REGISTRATION_STATES = {
   OPEN: { label: 'Open', tone: 'success' },
+  // Neutral like Race Over: a closure is a settled fact, not a warning.
+  CLOSED: { label: 'Closed', tone: 'neutral' },
   PAUSED: { label: 'Paused', tone: 'pending' },
   // Amber like Paused, and for the same reason the badge tones give amber to
   // PENDING: this is a race waiting on a date, not one that needs anybody.

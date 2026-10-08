@@ -249,7 +249,7 @@ export default function TeamClient({
 }) {
   const router = useRouter();
   // Shadows window.alert on purpose — see AlertProvider.
-  const { alert, confirm, toast } = useAlert();
+  const { alert, confirm, toast, progress } = useAlert();
 
   // ── Table state, in the shape every admin table keeps it ───────────────────
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -460,17 +460,21 @@ export default function TeamClient({
   };
 
   // ── Row actions ────────────────────────────────────────────────────────────
+  // Each raises a progress toast once it starts: the row menu closes on the
+  // press, and until the server answers nothing else on screen moves (§9).
 
   const handleResend = async (member: TeamMemberRow) => {
     setBusy({ id: member.id, kind: 'resend' });
+    const status = progress(`Resending the invitation to ${member.email}`);
     try {
       const res = await fetch(`/api/admin/team/${member.id}/invite`, { method: 'POST' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'The invitation could not be resent.');
       router.refresh();
       if (data.emailSent) {
-        toast(`A new invitation is on its way to ${member.email}. The earlier link no longer works.`);
+        status.done(`A new invitation is on its way to ${member.email}. The earlier link no longer works.`);
       } else {
+        status.clear();
         await alert({
           variant: 'error',
           title: 'The email did not go out',
@@ -478,6 +482,7 @@ export default function TeamClient({
         });
       }
     } catch (err) {
+      status.clear();
       await alert(err instanceof Error ? err.message : 'The invitation could not be resent.');
     } finally {
       setBusy(null);
@@ -500,6 +505,7 @@ export default function TeamClient({
     }
 
     setBusy({ id: member.id, kind: 'suspend' });
+    const status = progress(`${suspend ? 'Suspending' : 'Reinstating'} ${member.name}`);
     try {
       const res = await fetch(`/api/admin/team/${member.id}`, {
         method: 'PATCH',
@@ -509,8 +515,9 @@ export default function TeamClient({
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'That could not be saved.');
       router.refresh();
-      toast(suspend ? `${member.name} is suspended.` : `${member.name} is reinstated.`);
+      status.done(suspend ? `${member.name} is suspended.` : `${member.name} is reinstated.`);
     } catch (err) {
+      status.clear();
       await alert(err instanceof Error ? err.message : 'That could not be saved.');
     } finally {
       setBusy(null);
@@ -535,13 +542,17 @@ export default function TeamClient({
     );
     if (!ok) return;
 
+    const status = progress(
+      member.accepted ? `Removing ${member.name}` : `Revoking the invitation to ${member.name}`,
+    );
     try {
       const res = await fetch(`/api/admin/team/${member.id}`, { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'That could not be removed.');
       router.refresh();
-      toast(member.accepted ? `${member.name} was removed from the team.` : `Invitation to ${member.name} revoked.`);
+      status.done(member.accepted ? `${member.name} was removed from the team.` : `Invitation to ${member.name} revoked.`);
     } catch (err) {
+      status.clear();
       await alert(err instanceof Error ? err.message : 'That could not be removed.');
     }
   };

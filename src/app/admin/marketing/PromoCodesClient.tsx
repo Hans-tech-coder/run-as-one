@@ -443,7 +443,7 @@ export default function PromoCodesClient({
 }) {
   const router = useRouter();
   // Shadows window.alert on purpose — see AlertProvider.
-  const { alert, confirm, toast } = useAlert();
+  const { alert, confirm, toast, progress } = useAlert();
   const [showModal, setShowModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -668,6 +668,10 @@ export default function PromoCodesClient({
   const handleTogglePause = async (group: Group) => {
     const next = !group.terms.paused;
     setPausingKey(group.key);
+    // The row menu has closed by now; this is the sign the press landed (§9).
+    const status = progress(
+      `${next ? 'Pausing' : 'Resuming'} ${group.batchLabel ?? group.terms.code}`,
+    );
     try {
       // Only the switch. The row menu has no form open, so it has no terms
       // to re-post — sending some would be inventing values it never
@@ -684,12 +688,13 @@ export default function PromoCodesClient({
       // Pausing is a decision with consequences off this screen — a code on a
       // poster stops working — so it says what it did rather than leaving the
       // organizer to read a badge in the row they just clicked away from.
-      toast(
+      status.done(
         next
           ? `${group.batchLabel ?? group.terms.code} paused. Runners can no longer use it.`
           : `${group.batchLabel ?? group.terms.code} is live again.`,
       );
     } catch (err: any) {
+      status.clear();
       alert(err.message);
     } finally {
       setPausingKey(null);
@@ -720,13 +725,15 @@ export default function PromoCodesClient({
     });
     if (!ok) return;
 
+    const status = progress(`Deleting ${name}`);
     try {
       const res = await fetch(`/api/admin/promos/${group.terms.id}`, { method: 'DELETE' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to delete');
       router.refresh();
-      toast(`${name} deleted.`);
+      status.done(`${name} deleted.`);
     } catch (err: any) {
+      status.clear();
       alert(err.message);
     }
   };

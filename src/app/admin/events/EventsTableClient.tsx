@@ -57,9 +57,12 @@ type EventRow = {
   date: string;
   location: string;
   categories?: CategoryChip[];
-  registrationState?: 'OPEN' | 'FINISHED' | 'PAUSED' | 'SCHEDULED' | 'FULL';
+  registrationState?: 'OPEN' | 'FINISHED' | 'CLOSED' | 'PAUSED' | 'SCHEDULED' | 'FULL';
   registrationOpensAt?: string | Date | null;
   registrationPaused?: boolean | null;
+  registrationClosedAt?: string | Date | null;
+  /** Every option has filled (events/page.tsx) — what a reopened row falls back to. */
+  soldOut?: boolean;
   /** What this person may do from the row's menu (events/page.tsx). Absent means an owner. */
   access?: { edit: boolean; delete: boolean; pacers?: boolean };
   /** How many of this race's pacers have not been sent their code (events/page.tsx). */
@@ -217,10 +220,12 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
 
   const router = useRouter();
   // Shadows window.alert on purpose — see AlertProvider.
-  const { alert } = useAlert();
+  const { alert, confirm, toast, progress } = useAlert();
 
-  // Which event's pause toggle is mid-flight, so its menu item can say so and
-  // refuse a second press. One id rather than a boolean: the menu is per row.
+  // Which event's pause or close toggle is mid-flight, so its menu items can
+  // say so and refuse a second press. One id rather than a boolean: the menu
+  // is per row. Shared by both toggles, since either one changes the same
+  // answer and a second request racing the first would only confuse it.
   const [pausingId, setPausingId] = useState<string | null>(null);
 
   // Which event's opening is being set, and the modal's own open/closing
@@ -310,6 +315,11 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
       );
 
       closeScheduleModal();
+      toast(
+        scheduled
+          ? `Sign-ups on ${schedulingEvent.title} scheduled.`
+          : `Sign-ups on ${schedulingEvent.title} are open.`,
+      );
       // The public pages read this on the server, so the change only reaches
       // them on the next request — which is what this refresh causes.
       router.refresh();
@@ -346,6 +356,11 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
   const handleTogglePause = async (event: EventRow) => {
     const nextPaused = event.registrationState !== 'PAUSED';
     setPausingId(event.id);
+    // The menu closes on the press, so this is the only sign the request is
+    // running until the badge changes.
+    const working = progress(
+      `${nextPaused ? 'Pausing' : 'Resuming'} sign-ups on ${event.title}`,
+    );
     try {
       const res = await fetch(`/api/admin/events/${event.id}`, {
         method: 'PATCH',
@@ -376,12 +391,91 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
         ),
       );
 
+      working.done(`Sign-ups on ${event.title} ${nextPaused ? 'paused' : 'resumed'}.`);
       // The public pages read this on the server, so the change only reaches
       // them on the next request — which is what this refresh causes.
       router.refresh();
     } catch (error) {
+      working.clear();
       await alert({
         title: nextPaused ? 'Registration not paused' : 'Registration not resumed',
+        message: `${event.title} is unchanged. ${
+          error instanceof Error ? error.message : 'The request did not reach the server.'
+        }`,
+      });
+    } finally {
+      setPausingId(null);
+    }
+  };
+
+  /**
+   * Closes sign-ups for good, or reopens a closed event.
+   *
+   * Closing asks first, because unlike a pause it tells runners the race is
+   * not coming back. Reopening does not: it only undoes that. The row is then
+   * rebuilt from what it already knows — the hold, the opening, the counts —
+   * in the same order registrationState uses.
+   */
+  const handleToggleClose = async (event: EventRow) => {
+    const nextClosed = event.registrationState !== 'CLOSED';
+    if (
+      nextClosed &&
+      !(await confirm({
+        variant: 'danger',
+        title: 'Close sign-ups?',
+        message: `Runners will see that registration for ${event.title} is closed. Orders already placed are not affected. You can reopen it later from this menu.`,
+        confirmLabel: 'Close Sign-Ups',
+      }))
+    ) {
+      return;
+    }
+
+    setPausingId(event.id);
+    const working = progress(
+      `${nextClosed ? 'Closing' : 'Reopening'} sign-ups on ${event.title}`,
+    );
+    try {
+      const res = await fetch(`/api/admin/events/${event.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ registrationClosed: nextClosed }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error || `The server rejected the request (HTTP ${res.status}).`);
+      }
+
+      const saved = await res.json();
+      const opensLater =
+        (row: EventRow) => row.registrationOpensAt != null && new Date(row.registrationOpensAt).getTime() > Date.now();
+
+      setTableEvents(prev =>
+        prev.map((row): EventRow =>
+          row.id === event.id
+            ? {
+                ...row,
+                registrationClosedAt: saved.registrationClosedAt ?? null,
+                registrationState: nextClosed
+                  ? 'CLOSED'
+                  : row.registrationPaused
+                    ? 'PAUSED'
+                    : opensLater(row)
+                      ? 'SCHEDULED'
+                      : row.soldOut
+                        ? 'FULL'
+                        : 'OPEN',
+              }
+            : row,
+        ),
+      );
+
+      working.done(`Sign-ups on ${event.title} ${nextClosed ? 'closed' : 'reopened'}.`);
+      router.refresh();
+    } catch (error) {
+      working.clear();
+      await alert({
+        title: nextClosed ? 'Registration not closed' : 'Registration not reopened',
         message: `${event.title} is unchanged. ${
           error instanceof Error ? error.message : 'The request did not reach the server.'
         }`,
@@ -442,6 +536,11 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
         onTogglePause={
           (event.access?.edit ?? true)
             ? () => handleTogglePause(event)
+            : undefined
+        }
+        onToggleClose={
+          (event.access?.edit ?? true)
+            ? () => handleToggleClose(event)
             : undefined
         }
         onSchedule={

@@ -23,7 +23,7 @@ type DBEvent = {
    * have not opened yet. Absent on /results, where every event is finished and
    * the card offers times instead.
    */
-  registrationClosed?: 'PAUSED' | 'SCHEDULED' | 'FULL' | null;
+  registrationClosed?: 'CLOSED' | 'PAUSED' | 'SCHEDULED' | 'FULL' | null;
   /**
    * When sign-ups start, for a SCHEDULED card. It is the one closure a runner
    * can act on — the other two leave them nothing to do but check back — so
@@ -48,6 +48,7 @@ const ACTIONS: Record<EventCardAction, { label: string; path: (slug: string) => 
 
 /** The corner chip, and the word the button uses instead of "Register Now". */
 const CLOSURES = {
+  CLOSED: { badge: 'Closed', label: 'View Event' },
   FULL: { badge: 'Full', label: 'View Event' },
   PAUSED: { badge: 'Paused', label: 'View Event' },
   // Overwritten with the date below when the card has one. The bare word is

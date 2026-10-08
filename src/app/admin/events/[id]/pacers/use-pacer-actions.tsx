@@ -15,7 +15,7 @@ const COPIED_MS = 1600;
  */
 export function usePacerActions(eventId: string) {
   const router = useRouter();
-  const { alert, confirm, toast } = useAlert();
+  const { alert, confirm, progress } = useAlert();
 
   /** Which row has a request in flight, so only that row's items go quiet. */
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -33,9 +33,19 @@ export function usePacerActions(eventId: string) {
     }
   };
 
-  /** One PATCH, for every row action that is a single field. */
-  const patchPacer = async (pacer: PacerRow, body: Record<string, unknown>, done: string) => {
+  /**
+   * One PATCH, for every row action that is a single field. `working` is what
+   * the progress toast says while it runs — the menu has closed by then, so
+   * that toast is the only sign the press landed (§9).
+   */
+  const patchPacer = async (
+    pacer: PacerRow,
+    body: Record<string, unknown>,
+    working: string,
+    done: string,
+  ) => {
     setBusyId(pacer.id);
+    const status = progress(working);
     try {
       const res = await fetch(`/api/admin/events/${eventId}/pacers/${pacer.id}`, {
         method: 'PATCH',
@@ -44,14 +54,18 @@ export function usePacerActions(eventId: string) {
       });
       if (!res.ok) {
         const payload = await res.json().catch(() => ({}));
+        status.clear();
         await alert({
           variant: 'danger',
           message: payload.error ?? 'That change could not be saved. Please try again.',
         });
         return;
       }
-      toast(done);
+      status.done(done);
       router.refresh();
+    } catch {
+      status.clear();
+      await alert({ variant: 'danger', message: 'Could not reach the server. Please try again.' });
     } finally {
       setBusyId(null);
     }
@@ -62,6 +76,7 @@ export function usePacerActions(eventId: string) {
     return patchPacer(
       pacer,
       { codeSent: sent },
+      sent ? `Marking ${nameOf(pacer)} as sent` : `Moving ${nameOf(pacer)} back to not sent`,
       sent
         ? `${nameOf(pacer)} is marked as sent.`
         : `${nameOf(pacer)} is back on the not-sent list.`,
@@ -72,6 +87,7 @@ export function usePacerActions(eventId: string) {
     patchPacer(
       pacer,
       { paused: !pacer.paused },
+      `${pacer.paused ? 'Resuming' : 'Pausing'} ${nameOf(pacer)}'s code`,
       pacer.paused ? `${nameOf(pacer)}'s code works again.` : `${nameOf(pacer)}'s code is paused.`,
     );
 
@@ -79,6 +95,9 @@ export function usePacerActions(eventId: string) {
     patchPacer(
       pacer,
       { waiveAdminFee: !pacer.waiveAdminFee },
+      pacer.waiveAdminFee
+        ? `Restoring ${nameOf(pacer)}'s admin fee`
+        : `Waiving ${nameOf(pacer)}'s admin fee`,
       pacer.waiveAdminFee
         ? `${nameOf(pacer)} now pays the admin fee.`
         : `${nameOf(pacer)}'s admin fee is waived.`,
@@ -100,20 +119,25 @@ export function usePacerActions(eventId: string) {
     if (!ok) return;
 
     setBusyId(pacer.id);
+    const status = progress(`Removing ${nameOf(pacer)}`);
     try {
       const res = await fetch(`/api/admin/events/${eventId}/pacers/${pacer.id}`, {
         method: 'DELETE',
       });
       if (!res.ok) {
         const payload = await res.json().catch(() => ({}));
+        status.clear();
         await alert({
           variant: 'danger',
           message: payload.error ?? 'That pacer could not be removed. Please try again.',
         });
         return;
       }
-      toast(`${nameOf(pacer)} was removed.`);
+      status.done(`${nameOf(pacer)} was removed.`);
       router.refresh();
+    } catch {
+      status.clear();
+      await alert({ variant: 'danger', message: 'Could not reach the server. Please try again.' });
     } finally {
       setBusyId(null);
     }

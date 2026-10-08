@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
-import { CalendarClock, ChevronRight, PauseCircle, Users } from 'lucide-react';
+import { CalendarClock, ChevronRight, Lock, PauseCircle, Users } from 'lucide-react';
 import db from '@/lib/db';
 import { IconBadge, StatusPanel } from '@/components/StatusPanel';
 import { REGISTRATION_FORMS, asRegistrationForm } from '@/lib/registration-form';
@@ -18,6 +18,7 @@ import {
 import { hasFinished } from '@/lib/event-schedule';
 import {
   EVENT_FULL_MESSAGE,
+  REGISTRATION_CLOSED_MESSAGE,
   openingNote,
   pauseNote,
   registrationState,
@@ -96,8 +97,8 @@ export default async function RegisterPage(props: {
   );
   const state = registrationState(event, categories, hasFinished(event));
 
-  // An organizer's hold, a race that has not opened yet, or every option sold
-  // out. All three stop the wizard here rather than letting a runner fill in
+  // An organizer's closure or hold, a race that has not opened yet, or every
+  // option sold out. All four stop the wizard here rather than letting a runner fill in
   // three steps and be refused by the checkout route — which would still
   // refuse them, because that route checks again inside its own write.
   //
@@ -105,10 +106,15 @@ export default async function RegisterPage(props: {
   // gateway with an orderRef is let through: they are looking at something they
   // already paid for, and a hold placed since then must not hide their receipt.
   //
-  // One table rather than three nested ternaries, because each stop needs its
+  // One table rather than four nested ternaries, because each stop needs its
   // own three things said about it and the heading, sentence and icon must not
   // be able to come from different rows.
   const CLOSED = {
+    CLOSED: {
+      heading: 'Registration Is Closed',
+      message: REGISTRATION_CLOSED_MESSAGE,
+      icon: <Lock size={30} />,
+    },
     PAUSED: {
       heading: 'Registration Is Paused',
       message: pauseNote(event),
@@ -126,7 +132,7 @@ export default async function RegisterPage(props: {
     },
   } as const;
 
-  if (!orderRef && (state === 'PAUSED' || state === 'SCHEDULED' || state === 'FULL')) {
+  if (!orderRef && (state === 'CLOSED' || state === 'PAUSED' || state === 'SCHEDULED' || state === 'FULL')) {
     const closed = CLOSED[state];
     return (
       <RegistrationClosed

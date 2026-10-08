@@ -5,6 +5,7 @@ import {
   CalendarClock,
   CheckCircle2,
   ChevronRight,
+  Lock,
   PauseCircle,
   Users,
 } from 'lucide-react';
@@ -22,6 +23,7 @@ import {
 } from '@/lib/event-slug';
 import {
   EVENT_FULL_MESSAGE,
+  REGISTRATION_CLOSED_MESSAGE,
   openingNote,
   pauseNote,
   registrationState,
@@ -286,6 +288,12 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ s
               <div className="flex flex-col gap-4">
                 {finished ? (
                   <RaceIsOver event={event} />
+                ) : state === 'CLOSED' ? (
+                  <RegistrationOnHold
+                    icon={<Lock size={20} />}
+                    heading="Registration Closed"
+                    message={REGISTRATION_CLOSED_MESSAGE}
+                  />
                 ) : state === 'PAUSED' ? (
                   <RegistrationOnHold
                     icon={<PauseCircle size={20} />}

@@ -31,13 +31,21 @@ export type ToastOptions = {
   duration?: number;
 };
 
+/** The handle `progress` returns: settle the toast it raised one way or the other. */
+export type ProgressToast = {
+  /** Turns the toast into a success (or the given variant) that leaves on its own. */
+  done: (options: string | ToastOptions) => void;
+  /** Takes the toast away — for a failure, which a dialog answers instead. */
+  clear: () => void;
+};
+
 type Dialog = ConfirmOptions & {
   id: number;
   mode: "alert" | "confirm";
   resolve: (value: boolean) => void;
 };
 
-type ToastItem = ToastOptions & { id: number; open: boolean };
+type ToastItem = ToastOptions & { id: number; open: boolean; pending?: boolean };
 
 type AlertContextValue = {
   /** Awaitable stand-in for window.alert. Resolves once dismissed. */
@@ -46,6 +54,11 @@ type AlertContextValue = {
   confirm: (options: string | ConfirmOptions) => Promise<boolean>;
   /** Says something worked and leaves. Nothing to await, nothing to click. */
   toast: (options: string | ToastOptions) => void;
+  /**
+   * A toast that stays up while work runs, with the running figure in it, until
+   * the caller says how it ended. See the note on AlertProvider.
+   */
+  progress: (options: string | ToastOptions) => ProgressToast;
 };
 
 const AlertContext = createContext<AlertContextValue | null>(null);
@@ -91,6 +104,18 @@ function normalize<T extends { message: React.ReactNode }>(
  * read at a time; three confirmations can be read at once, and holding the
  * second back until the first had timed out would land it after the organizer
  * had already moved on.
+ *
+ * `progress` is a toast raised before the outcome is known, for a change made
+ * from a row menu that closes on the press and leaves nothing on screen to say
+ * the request is running:
+ *
+ *     const working = progress("Pausing sign-ups");
+ *     try { await save(); working.done("Sign-ups paused."); }
+ *     catch (error) { working.clear(); await alert(…); }
+ *
+ * It does not leave on its own — a "Saving" that timed out mid-request would
+ * be the same silence it exists to end. `done` turns it into an ordinary toast
+ * in place, which then leaves on the usual clock.
  */
 export function AlertProvider({ children }: { children: React.ReactNode }) {
   const [queue, setQueue] = useState<Dialog[]>([]);
@@ -155,11 +180,11 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const raise = useCallback(
-    (options: ToastOptions) => {
+    (options: ToastOptions, pending = false) => {
       const id = nextId++;
       // Mounted closed and opened a frame later, for the same reason the
       // dialog is: there is nothing to transition from otherwise.
-      setToasts((t) => [...t, { ...options, id, open: false }]);
+      setToasts((t) => [...t, { ...options, id, open: false, pending }]);
       window.setTimeout(
         () =>
           setToasts((t) =>
@@ -167,12 +192,36 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
           ),
         16,
       );
-      window.setTimeout(
-        () => dismissToast(id),
-        (options.duration ?? TOAST_MS) + 16,
-      );
+      if (!pending) {
+        window.setTimeout(
+          () => dismissToast(id),
+          (options.duration ?? TOAST_MS) + 16,
+        );
+      }
+      return id;
     },
     [dismissToast],
+  );
+
+  const progress = useCallback(
+    (options: ToastOptions): ProgressToast => {
+      const id = raise(options, true);
+      return {
+        done: (settled) => {
+          const next = normalize(settled);
+          // Replaced in place rather than raised anew, so the panel the
+          // organizer is watching is the one that says how it ended.
+          setToasts((t) =>
+            t.map((x) =>
+              x.id === id ? { ...next, id, open: x.open, pending: false } : x,
+            ),
+          );
+          window.setTimeout(() => dismissToast(id), next.duration ?? TOAST_MS);
+        },
+        clear: () => dismissToast(id),
+      };
+    },
+    [raise, dismissToast],
   );
 
   const value = useMemo<AlertContextValue>(
@@ -180,9 +229,12 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
       alert: (options) =>
         enqueue("alert", normalize(options)).then(() => undefined),
       confirm: (options) => enqueue("confirm", normalize(options)),
-      toast: (options) => raise(normalize(options)),
+      toast: (options) => {
+        raise(normalize(options));
+      },
+      progress: (options) => progress(normalize(options)),
     }),
-    [enqueue, raise],
+    [enqueue, raise, progress],
   );
 
   return (
@@ -220,6 +272,7 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
               variant={t.variant}
               title={t.title}
               message={t.message}
+              pending={t.pending}
               onDismiss={() => dismissToast(t.id)}
             />
           ))}

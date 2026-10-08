@@ -43,7 +43,10 @@ shape:
   `registrationPaused` + `registrationPauseNote` (the organizer's manual hold on
   sign-ups and what runners are told), `registrationOpensAt` (the instant
   sign-ups start, for a race listed ahead of taking them; null — the normal
-  case — means it is registrable the moment it is published), `pickupLocation`
+  case — means it is registrable the moment it is published),
+  `registrationClosedAt` (when the organizer closed sign-ups for good; null
+  while not closed — unlike a pause, runners are not told to check back, and
+  only Reopen clears it), `pickupLocation`
   + `pickupSchedule`
   (where and when a race kit is collected — `logisticsPickup` only ever said
   *that* pickup existed), `province` (the province the event is held in,

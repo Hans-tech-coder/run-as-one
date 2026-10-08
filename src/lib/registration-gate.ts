@@ -6,7 +6,7 @@ import { formatEventInstant } from '@/lib/event-schedule';
  * Whether an event is taking registrations right now, and why not when it
  * isn't.
  *
- * Four separate things close sign-ups, and a runner turned away by one of
+ * Five separate things close sign-ups, and a runner turned away by one of
  * them needs to be told which:
  *
  * - **The race has already been run.** That line lives in event-schedule.ts,
@@ -15,6 +15,9 @@ import { formatEventInstant } from '@/lib/event-schedule';
  * - **Every option is full.** A cap is per `Category`, because 500 singlets in
  *   the 10K says nothing about the 5K standing beside it. The event closes
  *   only once every option it sells has filled.
+ * - **The organizer closed it.** Also a decision, but a final one: no note,
+ *   no "check back". Slots may remain and race day may be weeks away; the
+ *   race is simply not taking entries any more. Only Reopen undoes it.
  * - **The organizer paused it.** A decision rather than a fact — slots remain
  *   and race day is still ahead — so it carries the organizer's own words.
  * - **Sign-ups have not opened yet.** The organizer published the race ahead
@@ -48,6 +51,15 @@ export const SLOT_HOLDING_STATUSES = ['PAID', 'PENDING'] as const;
  * it is about to close.
  */
 export const LAST_CALL_SLOTS = 20;
+
+/** What a runner is told once the organizer has closed sign-ups. */
+export const REGISTRATION_CLOSED_MESSAGE =
+  'Registration for this race is closed. The organizer is no longer taking sign-ups. If you have already paid, your entry stands — contact the organizer with any questions.';
+
+/** Whether the organizer has closed sign-ups on this event. */
+export function isClosed(event: { registrationClosedAt?: Date | string | null }): boolean {
+  return Boolean(event.registrationClosedAt);
+}
 
 /** What runners are told while a hold is on and the organizer wrote nothing. */
 export const DEFAULT_PAUSE_NOTE =
@@ -111,7 +123,7 @@ export type CategorySlots = {
 };
 
 /** Why registration is closed, or OPEN when it isn't. */
-export type RegistrationState = 'OPEN' | 'FINISHED' | 'PAUSED' | 'SCHEDULED' | 'FULL';
+export type RegistrationState = 'OPEN' | 'FINISHED' | 'CLOSED' | 'PAUSED' | 'SCHEDULED' | 'FULL';
 
 /**
  * How many runners each of these categories has already taken.
@@ -241,19 +253,26 @@ export function soleOpenCategory<T extends CategorySlots>(
  *
  * Order matters, and it runs from the most deliberate answer to the most
  * arithmetical. A race that has been run is over whether or not its organizer
- * also paused it. A hold outranks a schedule, because pausing is something the
+ * also paused it. A closure outranks a hold, because it is the final word —
+ * a runner told "slots may open again" about a closed race would be misled.
+ * A hold outranks a schedule, because pausing is something the
  * organizer did after setting the date and it is the more recent word — and
  * because nothing is lost by that: lifting the hold hands the event back to
  * its schedule rather than discarding it. A schedule in turn outranks a count,
  * since an event that has not opened yet cannot meaningfully be full.
  */
 export function registrationState(
-  event: { registrationPaused?: boolean | null; registrationOpensAt?: Date | string | null },
+  event: {
+    registrationClosedAt?: Date | string | null;
+    registrationPaused?: boolean | null;
+    registrationOpensAt?: Date | string | null;
+  },
   categories: CategorySlots[],
   finished: boolean,
   now: Date = new Date(),
 ): RegistrationState {
   if (finished) return 'FINISHED';
+  if (isClosed(event)) return 'CLOSED';
   if (event.registrationPaused) return 'PAUSED';
   if (opensLater(event, now)) return 'SCHEDULED';
   if (everyOptionIsFull(categories)) return 'FULL';
@@ -447,7 +466,7 @@ export async function fullEventIds(
 }
 
 /** Why a listing card cannot be registered on, or null when it can. */
-export type ListingClosure = 'PAUSED' | 'SCHEDULED' | 'FULL' | null;
+export type ListingClosure = 'CLOSED' | 'PAUSED' | 'SCHEDULED' | 'FULL' | null;
 
 /**
  * Tags each event for a public listing card and drops the categories it needed
@@ -461,6 +480,7 @@ export type ListingClosure = 'PAUSED' | 'SCHEDULED' | 'FULL' | null;
 export async function forListing<
   T extends {
     id: string;
+    registrationClosedAt?: Date | string | null;
     registrationPaused?: boolean | null;
     registrationOpensAt?: Date | string | null;
     categories: SlotLimited[];
@@ -478,13 +498,15 @@ export async function forListing<
       ...card,
       // The same order registrationState uses, for the same reasons — a card
       // and the page it links to must never label the event differently.
-      registrationClosed: event.registrationPaused
-        ? 'PAUSED'
-        : opensLater(event, now)
-          ? 'SCHEDULED'
-          : full.has(event.id)
-            ? 'FULL'
-            : null,
+      registrationClosed: isClosed(event)
+        ? 'CLOSED'
+        : event.registrationPaused
+          ? 'PAUSED'
+          : opensLater(event, now)
+            ? 'SCHEDULED'
+            : full.has(event.id)
+              ? 'FULL'
+              : null,
     };
   });
 }

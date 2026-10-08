@@ -401,9 +401,12 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
  * re-posting — every field of a form it does not show, and any of those it got
  * subtly wrong would be silently written.
  *
- * Two fields, either or both: `{ registrationPaused }` from the menu's pause
- * item, `{ registrationOpensAt }` from its scheduling modal. A body carrying
- * neither is rejected rather than treated as a no-op save, because a request
+ * Three fields: `{ registrationPaused }` from the menu's pause item,
+ * `{ registrationOpensAt }` from its scheduling modal, and
+ * `{ registrationClosed }` from its close / reopen item. The last is a
+ * boolean on the wire and an instant in the column — the server stamps when,
+ * so the time on the trail is the server's and not the browser's. A body
+ * carrying none is rejected rather than treated as a no-op save, because a request
  * that changed nothing is a bug somewhere upstream, not an instruction.
  *
  * Setting an opening on its own also lifts a manual hold. Both answers the
@@ -427,10 +430,18 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     const body = await request.json();
     const pausing = Object.prototype.hasOwnProperty.call(body, 'registrationPaused');
     const scheduling = Object.prototype.hasOwnProperty.call(body, 'registrationOpensAt');
+    const closing = Object.prototype.hasOwnProperty.call(body, 'registrationClosed');
 
-    if (!pausing && !scheduling) {
+    if (!pausing && !scheduling && !closing) {
       return NextResponse.json(
-        { error: 'Send registrationPaused, registrationOpensAt, or both.' },
+        { error: 'Send registrationPaused, registrationOpensAt or registrationClosed.' },
+        { status: 400 }
+      );
+    }
+
+    if (closing && typeof body.registrationClosed !== 'boolean') {
+      return NextResponse.json(
+        { error: 'registrationClosed must be true or false.' },
         { status: 400 }
       );
     }
@@ -456,6 +467,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         registrationPaused: true,
         registrationPauseNote: true,
         registrationOpensAt: true,
+        registrationClosedAt: true,
       },
     });
 
@@ -490,12 +502,22 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
                 ...(pausing ? {} : { registrationPaused: false }),
               }
             : {}),
+          ...(closing
+            ? {
+                // Closing an already-closed event keeps the original instant,
+                // so a double-click cannot move the date on the trail.
+                registrationClosedAt: body.registrationClosed
+                  ? event.registrationClosedAt ?? new Date()
+                  : null,
+              }
+            : {}),
         },
         select: {
           id: true,
           registrationPaused: true,
           registrationPauseNote: true,
           registrationOpensAt: true,
+          registrationClosedAt: true,
         },
       });
 
@@ -503,9 +525,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         'registrationPaused',
         'registrationPauseNote',
         'registrationOpensAt',
+        'registrationClosedAt',
       ]);
       if (Object.keys(changes).length > 0) {
-        const entry: AuditEntry = scheduling
+        const entry: AuditEntry = 'registrationClosedAt' in changes
+          ? row.registrationClosedAt
+            ? { action: 'event.registration.closed', entityType: 'Event', summary: `Closed sign-ups on ${event.title}.` }
+            : { action: 'event.registration.reopened', entityType: 'Event', summary: `Reopened sign-ups on ${event.title}.` }
+          : scheduling
           ? {
               action: 'event.registration.scheduled',
               entityType: 'Event',
