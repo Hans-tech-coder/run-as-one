@@ -15,7 +15,7 @@ import { formatEventDayShort } from '@/lib/event-schedule';
  *
  * So the filtering happens here, behind the same gate the registrants screen
  * itself enforces — `reachableEvents(actor, 'registration:view')`. A client
- * viewer holds `event:view-summary` and nothing more, so that `where` comes
+ * viewer holds only its counts and payout verbs, so that `where` comes
  * back empty for one and the palette stays the menu it was in Batch 1. Nothing
  * here decides who may see what; it only asks `actor.ts` the same question the
  * page asks.

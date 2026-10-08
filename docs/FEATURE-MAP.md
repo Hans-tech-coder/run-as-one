@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-39 pages · 52 API routes · 87 modules in `src/lib` · 382 files · 79,006 lines
+39 pages · 52 API routes · 88 modules in `src/lib` · 384 files · 79,247 lines
 
 ---
 
@@ -49,7 +49,7 @@ The route, the server component behind it, and the client components beside it.
 | `/admin/settings/security` | [`/admin/settings/security/page.tsx`](../src/app/admin/settings/security/page.tsx) | — |
 | `/admin/settings/site` | [`/admin/settings/site/page.tsx`](../src/app/admin/settings/site/page.tsx) | — |
 | `/admin/team` | [`/admin/team/page.tsx`](../src/app/admin/team/page.tsx) | `RolePicker.tsx` `RolesPanel.tsx` `TeamActionsMenu.tsx` `TeamClient.tsx` |
-| `/admin/your-events/[id]` | [`/admin/your-events/[id]/page.tsx`](../src/app/admin/your-events/[id]/page.tsx) | `RaceReport.tsx` `RegistrationTrend.tsx` |
+| `/admin/your-events/[id]` | [`/admin/your-events/[id]/page.tsx`](../src/app/admin/your-events/[id]/page.tsx) | `PayoutSummary.tsx` `RaceReport.tsx` `RegistrationTrend.tsx` |
 | `/coming-soon` | [`/coming-soon/page.tsx`](../src/app/coming-soon/page.tsx) | — |
 | `/events` | [`/events/page.tsx`](../src/app/events/page.tsx) | — |
 | `/events/[slug]` | [`/events/[slug]/page.tsx`](../src/app/events/[slug]/page.tsx) | — |
@@ -145,6 +145,7 @@ the file itself.
 | [`category-distance.ts`](../src/lib/category-distance.ts) | A category filter lists races shortest first: 1K, 3K, 5K, 10K, Half Marathon, 32K, Full Marathon. |
 | [`category-order.ts`](../src/lib/category-order.ts) | The order an event's categories are listed in, everywhere. |
 | [`certificate-settings.ts`](../src/lib/certificate-settings.ts) | What an event's certificate settings mean, and which of the two layouts an organizer's template is drawn in. |
+| [`client-payout.ts`](../src/lib/client-payout.ts) | What a client viewer is shown about the money for one of its races (CLIENT_RACE_PAGE_PLAN.md, Batch 3, decision D1): **a payout summary and nothing… |
 | [`client-race-report.ts`](../src/lib/client-race-report.ts) | What a client viewer is shown about one of its races, on that race's own page (CLIENT_RACE_PAGE_PLAN.md, Batches 1–2): how full each category is, t… |
 | [`client-store.ts`](../src/lib/client-store.ts) | Reading clients out of the database, and the one write every event form makes about one: which client a race is for. |
 | [`client-summary.ts`](../src/lib/client-summary.ts) | What a client viewer is shown about its own races (ADMIN_MERGE_PLAN.md, Batch 4) — and, by what this module leaves out, what it is not. |

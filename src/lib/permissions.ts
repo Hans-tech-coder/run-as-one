@@ -36,6 +36,15 @@ export const PERMISSIONS = [
   'event:view',
   /** Registrant counts only — total, per category, paid vs pending. No money, no names. */
   'event:view-summary',
+  /**
+   * One race's payout summary, for its client (CLIENT_RACE_PAGE_PLAN.md,
+   * Batch 3): collected, Run As One's fees, paid out, still owed, and the
+   * payouts themselves (`client-payout.ts`). Read-only, and only the four
+   * figures and the dates, methods and amounts — never a reference number, a
+   * note, a voided row or who recorded it. Staff who hold it already see the
+   * whole settlement on Remittances (`remittance:manage`).
+   */
+  'event:view-payout',
   'event:create',
   'event:edit',
   'event:delete',
@@ -112,12 +121,14 @@ export const MEMBERSHIP_ROLES = [...TEAM_ROLES, 'VIEWER'] as const;
 export type MembershipRole = (typeof MEMBERSHIP_ROLES)[number];
 
 /**
- * Everything a client viewer may do. One verb, on purpose: the owner's answer
- * is that an organizer sees its races and their registrant counts, and nothing
- * that costs a runner privacy or Run As One its books. Anything not listed is
- * refused by `can()`, including a permission added to PERMISSIONS later.
+ * Everything a client viewer may do. Few verbs, on purpose: the owner's answer
+ * is that an organizer sees its races, their registrant counts and — since
+ * CLIENT_RACE_PAGE_PLAN.md Batch 3 — what Run As One has paid it for them, and
+ * nothing that costs a runner privacy or Run As One its books. Anything not
+ * listed is refused by `can()`, including a permission added to PERMISSIONS
+ * later.
  */
-export const VIEWER_PERMISSIONS: readonly Permission[] = ['event:view-summary'];
+export const VIEWER_PERMISSIONS: readonly Permission[] = ['event:view-summary', 'event:view-payout'];
 
 /**
  * Which membership roles each organizer-wide role may hand out, change or take
@@ -141,12 +152,15 @@ const ALL: readonly Role[] = ['OWNER', 'ADMIN', 'EVENT_MANAGER', 'VALIDATOR', 'E
 export const MATRIX_ROLES = ALL;
 
 /**
- * The matrix's rows as the team screen draws them. `event:view-summary` is
+ * The matrix's rows as the team screen draws them. The two client verbs are
  * left out: every role that sees an event already sees more than its counts,
- * so the row would be a column of ticks that says nothing about staff.
+ * and every role that sees a payout summary already settles the race under
+ * `remittance:manage`, so either row would repeat another and say nothing
+ * about staff.
  */
+const CLIENT_ONLY_ROWS: readonly Permission[] = ['event:view-summary', 'event:view-payout'];
 export const MATRIX_PERMISSIONS: readonly Permission[] = PERMISSIONS.filter(
-  permission => permission !== 'event:view-summary',
+  permission => !CLIENT_ONLY_ROWS.includes(permission),
 );
 
 /** What the team screen calls each role. */
@@ -184,12 +198,13 @@ export const ROLE_HINTS: Record<Role | MembershipRole, string> = {
  */
 export const CLIENT_VIEWER_LABEL = 'Client Viewer';
 export const CLIENT_VIEWER_HINT =
-  "Sees its own organization's events and how many runners have registered. Changes nothing.";
+  "Sees its own organization's events, how many runners have registered, and what Run As One has paid out for them. Changes nothing.";
 
 /** Each permission as the team screen's role table words it. */
 export const PERMISSION_LABELS: Record<Permission, string> = {
   'event:view': 'See the event',
   'event:view-summary': 'See registrant counts',
+  'event:view-payout': 'See the payout summary',
   'event:create': 'Create events',
   'event:edit': 'Edit the event',
   'event:delete': 'Delete an event',
@@ -215,6 +230,9 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
 const MATRIX: Record<Permission, readonly Role[]> = {
   'event:view': ALL,
   'event:view-summary': ALL,
+  // Whoever settles the race (`remittance:manage`) — and, through
+  // VIEWER_PERMISSIONS, the race's own client.
+  'event:view-payout': ['OWNER', 'ADMIN'],
   'event:create': ['OWNER', 'ADMIN'],
   'event:edit': ['OWNER', 'ADMIN', 'EVENT_MANAGER'],
   'event:delete': ['OWNER'],

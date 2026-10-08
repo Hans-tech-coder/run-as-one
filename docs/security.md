@@ -101,13 +101,20 @@
   cannot be used twice. The invite page is `noindex` with
   `referrer: no-referrer`, since the token is in its URL. Outside production
   only, the link is printed to the server console for local testing.
-- **A client viewer reaches registrant counts of its own client's events and
-  nothing else**, enforced on the server rather than by hidden links. Its
+- **A client viewer reaches registrant counts and the payout summary of its
+  own client's events and nothing else**, enforced on the server rather than
+  by hidden links. Its
   screens are the Overview (`client-summary.ts`, which asks `event:view-summary`
   with each event's `clientId`), each race's own page `/admin/your-events/[id]`
   (`client-race-report.ts`, the same read narrowed to one race, so another
   client's race reads as not found — still counts only: sizes and kits are
-  counts of runners), plus its own Settings and the
+  counts of runners) with, since `CLIENT_RACE_PAGE_PLAN.md` Batch 3, **its
+  race's settlement** (`client-payout.ts`, asking `event:view-payout` with the
+  race's `clientId`): collected, Run As One's fees, paid out, still owed, and
+  each recorded payout's day, method and amount. The query's `select` is the
+  whitelist — **no reference number, note, receipt, voided row or who
+  recorded it** leaves it — and the section is never in the printed copy,
+  which a client hands to its shirt supplier. Plus its own Settings and the
   **E-Certificate Guide** (`/admin/certificate-guide`). The guide is the one
   team-side page a viewer may open, and it gates on `requireActor()` alone
   because it holds no data: the same static text for every reader, with no

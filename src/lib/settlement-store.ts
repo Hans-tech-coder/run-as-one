@@ -13,7 +13,9 @@
  *
  * Every read is scoped to the actor's tenant and asks `remittance:manage`, so
  * a per-event staff member or a client viewer reaches nothing here whatever
- * id is in the URL.
+ * id is in the URL. The one exception is `totalsByEvent`, the bare sums, which
+ * `client-payout.ts` reuses behind its own `event:view-payout` check so a
+ * client's four figures are the very numbers staff settle by.
  */
 
 import prisma from './db';
@@ -29,8 +31,13 @@ export type EventSettlementRow = {
   settlement: Settlement;
 };
 
-/** Order totals and net remitted per event, for the given events only. */
-async function totalsByEvent(eventIds: string[]) {
+/**
+ * Order totals and net remitted per event, for the given events only. It
+ * checks nothing: every caller has already decided the actor may see these
+ * events — the two reads below through `remittance:manage`, a client's payout
+ * summary through `event:view-payout` (`client-payout.ts`).
+ */
+export async function totalsByEvent(eventIds: string[]) {
   const [orders, remittances] = await Promise.all([
     prisma.registration.groupBy({
       by: ['eventId'],

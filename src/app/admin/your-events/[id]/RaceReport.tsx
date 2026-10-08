@@ -1,5 +1,6 @@
 import React from 'react';
-import { BadgeCheck, CalendarDays, Hourglass, MapPin, Package, ShoppingCart, Shirt, TrendingUp, Truck, Users } from 'lucide-react';
+import { BadgeCheck, CalendarDays, Wallet, Hourglass, MapPin, Package, ShoppingCart, Shirt, TrendingUp, Truck, Users } from 'lucide-react';
+import type { ClientPayout } from '@/lib/client-payout';
 import type { KitSplit, SizeRow, ViewerRaceReport } from '@/lib/client-race-report';
 import type { ViewerCategorySummary } from '@/lib/client-summary';
 import { formatEventDayShort, formatEventInstant } from '@/lib/event-schedule';
@@ -7,6 +8,7 @@ import { SITE_NAME } from '@/lib/site-contact';
 import { REGISTRATION_STATES } from '../../events/registration-state-badge';
 import { PrintHead, SavePdfButton, SavePdfPanel } from '../../PrintableCopy';
 import { Tile } from '../../ViewerDashboard';
+import PayoutSummary from './PayoutSummary';
 import RegistrationTrend from './RegistrationTrend';
 
 /** A category this full or fuller is flagged, so the organizer can ask for more slots in time. */
@@ -18,15 +20,21 @@ const ALMOST_FULL = 0.9;
  * block naming the race, so a PDF sent to a shirt supplier explains itself,
  * and leaves out what only works on screen — Save as PDF itself among them. `idPrefix` keeps the two
  * renders' ids apart.
+ *
+ * `payout` is passed to the screen copy only, and only when the viewer may see
+ * it (`client-payout.ts`): the paper copy is for a shirt supplier, so the
+ * money never prints, whatever is passed.
  */
 export default function RaceReport({
   report,
   idPrefix,
   printedOn,
+  payout,
 }: {
   report: ViewerRaceReport;
   idPrefix: string;
   printedOn?: string;
+  payout?: ClientPayout | null;
 }) {
   const { event, sizes, sizedByCategory, kits, trend } = report;
   const state = REGISTRATION_STATES[event.state];
@@ -103,6 +111,17 @@ export default function RaceReport({
       <Panel {...panel} title="Race Kits" icon={<Package size={18} />} hint="One kit per registered runner, by how they chose to get it.">
         <KitSection kits={kits} />
       </Panel>
+
+      {!printed && payout && (
+        <Panel
+          {...panel}
+          title="Payout Summary"
+          icon={<Wallet size={18} />}
+          hint="Confirmed payments only: a bank transfer counts once it is verified. Not included in Save as PDF."
+        >
+          <PayoutSummary payout={payout} />
+        </Panel>
+      )}
 
       {!printed && (
         <div className="race-save-end">

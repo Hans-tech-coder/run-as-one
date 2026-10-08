@@ -1,0 +1,98 @@
+/*
+ * The race page's payout section (PayoutSummary.tsx). Screen only: the
+ * printed copy never carries it. Shares `.race-kit-icon` / `.race-kit-main`
+ * from your-events.css for a payout's icon and text column.
+ */
+
+/* Four figures in one row, two pairs or a column, like the tiles; sized by
+   the report's width (`.race-page` is the container). */
+.race-money-grid {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+}
+
+@container (min-width: 400px) {
+  .race-money-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container (min-width: 760px) {
+  .race-money-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.race-money {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--dash-hairline);
+  border-radius: var(--radius-md);
+}
+
+/* What is still owed is the figure a client opens the section for. */
+.race-money.is-strong {
+  border-color: color-mix(in srgb, var(--accent-blue) 40%, transparent);
+  background: color-mix(in srgb, var(--accent-blue) 6%, transparent);
+}
+
+.race-money-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.race-money-value {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.race-money-note {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.race-money-state {
+  margin: 14px 0 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+
+.race-sub.race-money-sub {
+  margin-top: 20px;
+}
+
+.race-payout-list {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A payout reuses a race kit's icon and text column (`.race-kit-*`). */
+.race-payout {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.race-payout-amount {
+  flex-shrink: 0;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}

@@ -5,7 +5,8 @@
  * Nothing here scrolls sideways: categories and sizes are wrapping rows, not
  * tables, and the registrations chart's bars share whatever width there is,
  * so a 360px phone sees every number (§8, rule 12). The chart is
- * registration-trend.css; the paper copy's layout is race-print.css.
+ * registration-trend.css; the payouts are payout-summary.css; the paper
+ * copy's layout is race-print.css.
  */
 
 .race-page {

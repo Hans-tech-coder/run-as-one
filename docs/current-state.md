@@ -36,17 +36,21 @@ migration. The plan's "manual entry at `/admin/register`" was not built: that
 route is the organizer application, and no screen adds a runner by hand.
 
 **A client viewer has a page per race** (2026-10-07, on `dev`, not released,
-`CLIENT_RACE_PAGE_PLAN.md` — Batches 1–2 of 4): `/admin/your-events/[id]`,
+`CLIENT_RACE_PAGE_PLAN.md` — Batches 1–3 of 4): `/admin/your-events/[id]`,
 opened from **View race details →** on each Overview card — slots per category
 with *Almost full* / *Full*, registrations over time (a bar per day, per week
 past 62 days, with the last 7 days and the busiest day), shirt sizes per
 category, and race kits by pickup or delivery, plus **Save as PDF** of the
 whole page (2026-10-08). Counts only (§5 `client-race-report.ts`); no
 migration. The print portal is now shared: `admin/PrintableCopy.tsx` and
-`admin/print-copy.css` serve both this page and the e-certificate guide. Still
-to come, owner-approved: a simple payout summary (Batch 3, a new viewer
-permission) and a runner list without contact details (Batch 4, plus a Privacy
-page update).
+`admin/print-copy.css` serve both this page and the e-certificate guide.
+**Batch 3 (2026-10-08)**: a **Payout Summary** at the foot of the page, screen
+only — collected, Run As One fees, paid out, still owed, and the payouts as
+day, method and amount — behind a new viewer permission `event:view-payout`
+(§5 `client-payout.ts`, §7); no migration. Seen as Super Admin on local data
+with no payouts recorded, so the list's rows and the *Overpaid* wording have
+not been seen on screen. Still to come, owner-approved: a runner list without
+contact details (Batch 4, plus a Privacy page update).
 
 **The e-certificate template guide is a dashboard page** (2026-10-07, on
 `dev`, not released, `ECERT_GUIDE_PAGE_PLAN.md`): `/admin/certificate-guide`,
