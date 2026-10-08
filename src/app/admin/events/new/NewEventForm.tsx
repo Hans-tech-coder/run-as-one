@@ -1,11 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { UploadCloud, Trash, AlertCircle, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
-import RegistrationFormPicker from '../RegistrationFormPicker';
-import RegistrationOpeningPicker from '../RegistrationOpeningPicker';
 import {
   OPENS_IMMEDIATELY,
   openingInstantISO,
@@ -14,69 +11,46 @@ import {
 } from '../registration-opening';
 import EventOptionsPanel from '../EventOptionsPanel';
 import { blankCategory, type CategoryDraft } from '../category-draft';
-import { DEFAULT_REGISTRATION_FORM, type RegistrationForm } from '@/lib/registration-form';
 import { DEFAULT_EVENT_TYPE, type EventType } from '@/lib/event-type';
-import ConsentWaiverField from '@/app/admin/events/ConsentWaiverField';
 import BankAccountsPanel from '@/app/admin/events/BankAccountsPanel';
 import { cleanBankAccounts, type BankAccountDraft } from '@/app/admin/events/bank-account-draft';
 import { offersBankTransfer } from '@/lib/registration-form';
 import BusyLabel from '@/components/ui/BusyLabel';
-import EventClientField from '@/app/admin/events/EventClientField';
-import AdminDatePicker from '../../AdminDatePicker';
 import DashboardHeader from '@/app/admin/DashboardHeader';
-import DescriptionEditor from '../DescriptionEditor';
-import HighlightsField from '@/app/admin/events/HighlightsField';
-import { type EventHighlight } from '@/lib/event-highlights';
 import LogisticsPanel, { deliveryFees, deliveryProblem } from '../LogisticsPanel';
+import BasicInfoPanel from '../BasicInfoPanel';
+import RegistrationFeesPanel from '../RegistrationFeesPanel';
+import EventFormResultModals from '../EventFormResultModals';
+import { blankEventDraft } from '../event-form-draft';
+import { useEventImageUpload } from '../useEventImageUpload';
 
 /**
  * The create-event form. `page.tsx` reads the default platform fee on the
  * server and hands it in, so the Admin Fee box starts at the Super Admin's
  * saved default (SETTINGS_PLAN.md Batch 4) without a flash of the old ₱60.
+ *
+ * The panels are shared with the edit form (BasicInfoPanel,
+ * RegistrationFeesPanel, LogisticsPanel…); this file owns only the draft, the
+ * validation before POST, and the POST itself.
  */
 export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: number }) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [isOpen, setIsOpen] = useState(false);
-  const [isClosing, setIsClosing] = useState(false);
-  
   const [successMsg, setSuccessMsg] = useState('');
-  const [isSuccessOpen, setIsSuccessOpen] = useState(false);
-  const [isSuccessClosing, setIsSuccessClosing] = useState(false);
 
-  const [formData, setFormData] = useState({
-    title: '',
-    date: '',
-    startTime: '',
-    endTime: '',
-    location: '',
-    imageUrl: '',
-    highlights: [] as EventHighlight[],
-    sizeChartImageUrl: '',
-    description: '',
-    logisticsPickup: true,
-    // Where and when a race kit is collected. Only meaningful while
-    // pickup is offered, and both are optional — see lib/pickup.ts.
-    pickupLocation: '',
-    pickupSchedule: '',
-    province: '',
-    logisticsDeliveryFeeInside: 0,
-    logisticsDeliveryFeeOutside: 0,
-    // Pesos on this form; the API converts to centavos. Starts at the default
-    // platform fee set on /admin/settings (Organizer.adminFee).
-    adminFee: defaultAdminFee,
-    shirtSizeUpcharge: 100,
-    consentWaiver: '',
-    registrationForm: DEFAULT_REGISTRATION_FORM as RegistrationForm,
-  });
+  // Pesos on this form; the API converts to centavos. The Admin Fee starts at
+  // the default platform fee set on /admin/settings (Organizer.adminFee).
+  const [formData, setFormData] = useState(() => blankEventDraft(defaultAdminFee));
+  const patchForm = (patch: Partial<typeof formData>) => setFormData(prev => ({ ...prev, ...patch }));
 
-  const [uploadingField, setUploadingField] = useState<string | null>(null);
+  const { uploadingField, upload } = useEventImageUpload(setFormData, setError);
   // How many category posters are uploading right now, for the same reason as
   // uploadingField: saving mid-upload would store a category without its
   // poster. A count rather than a boolean because two rows can upload at once,
   // and a latched flag would clear on the first one to finish.
   const [uploadingPosters, setUploadingPosters] = useState(0);
+  const posterBusy = (busy: boolean) => setUploadingPosters(n => (busy ? n + 1 : n - 1));
   const [bankAccounts, setBankAccounts] = useState<BankAccountDraft[]>([]);
   // Which client the race is for ('' for none), and whether this person may
   // set it at all — only then is it sent (EventClientField).
@@ -85,32 +59,6 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
   const [clientError, setClientError] = useState<string | undefined>();
   // Distances or packages. Freely switchable here — nothing is sold yet.
   const [eventType, setEventType] = useState<EventType>(DEFAULT_EVENT_TYPE);
-
-  // Uploads to blob storage and stores the returned URL. This used to inline the
-  // file as a base64 data URL, which meant every event row carried megabytes of
-  // text that each listing query then had to pull down.
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: string) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setUploadingField(field);
-    setError('');
-    try {
-      const body = new FormData();
-      body.append('file', file);
-
-      const res = await fetch('/api/upload', { method: 'POST', body });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Upload failed');
-
-      setFormData(prev => ({ ...prev, [field]: data.url }));
-    } catch (err: any) {
-      setError(err.message || 'Upload failed');
-      e.target.value = '';
-    } finally {
-      setUploadingField(null);
-    }
-  };
 
   const [categories, setCategories] = useState<CategoryDraft[]>([blankCategory()]);
 
@@ -188,265 +136,37 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
     }
   };
 
-  useEffect(() => {
-    if (error) {
-      requestAnimationFrame(() => setIsOpen(true));
-    }
-  }, [error]);
-
-  const closeErrorModal = () => {
-    setIsOpen(false);
-    setIsClosing(true);
-    setTimeout(() => {
-      setIsClosing(false);
-      setError('');
-    }, 150);
-  };
-
-  useEffect(() => {
-    if (successMsg) {
-      requestAnimationFrame(() => setIsSuccessOpen(true));
-    }
-  }, [successMsg]);
-
-  const closeSuccessModal = () => {
-    setIsSuccessOpen(false);
-    setIsSuccessClosing(true);
-    setTimeout(() => {
-      setIsSuccessClosing(false);
-      setSuccessMsg('');
-      router.push('/admin/events');
-    }, 150);
-  };
-
   return (
     <>
       <DashboardHeader title="Create New Event" crumbs={[{ label: 'Events', href: '/admin/events' }]} />
 
       <div className="admin-content max-w-4xl mx-auto">
-        <div 
-          className={`fixed inset-0 z-50 flex items-center justify-center p-4 max-sm:p-3 bg-[var(--dash-scrim)] backdrop-blur-sm transition-opacity duration-200 ${
-            error && !isClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-          }`}
-          style={{ zIndex: 100 }}
-        >
-          <div 
-            className={`t-modal admin-modal-panel w-full max-w-md bg-[var(--dash-panel-solid)] border border-red-500/20 rounded-2xl shadow-2xl p-6 flex flex-col gap-6 ${isOpen ? 'is-open' : ''} ${isClosing ? 'is-closing' : ''}`}
-            role="dialog"
-          >
-            <div className="admin-modal-body flex items-start gap-4">
-              <div className="p-3 bg-red-500/10 rounded-full text-[var(--status-danger)] shrink-0 mt-1">
-                <AlertCircle size={24} strokeWidth={2} />
-              </div>
-              <div className="flex min-w-0 flex-col gap-2">
-                <h3 className="text-xl font-semibold text-primary">Action Failed</h3>
-                <p className="text-secondary text-sm leading-relaxed [overflow-wrap:anywhere]">{error}</p>
-              </div>
-            </div>
-            <div className="admin-modal-footer flex justify-end pt-2 border-t border-[var(--dash-hairline)]">
-              <button 
-                type="button"
-                onClick={closeErrorModal} 
-                className="px-5 py-2 bg-[var(--ink-05)] hover:bg-[var(--ink-10)] border border-[var(--dash-border)] rounded-lg text-sm font-medium text-primary transition-colors"
-              >
-                Acknowledge
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Success Modal */}
-        <div 
-          className={`fixed inset-0 z-50 flex items-center justify-center p-4 max-sm:p-3 bg-[var(--dash-scrim)] backdrop-blur-sm transition-opacity duration-200 ${
-            successMsg && !isSuccessClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-          }`}
-          style={{ zIndex: 100 }}
-        >
-          <div 
-            className={`t-modal admin-modal-panel w-full max-w-md bg-[var(--dash-panel-solid)] border border-green-500/20 rounded-2xl shadow-2xl p-6 flex flex-col gap-6 ${isSuccessOpen ? 'is-open' : ''} ${isSuccessClosing ? 'is-closing' : ''}`}
-            role="dialog"
-          >
-            <div className="admin-modal-body flex items-start gap-4">
-              <div className="p-3 bg-green-500/10 rounded-full text-[var(--status-success)] shrink-0 mt-1">
-                <CheckCircle size={24} strokeWidth={2} />
-              </div>
-              <div className="flex min-w-0 flex-col gap-2">
-                <h3 className="text-xl font-semibold text-primary">Success</h3>
-                <p className="text-secondary text-sm leading-relaxed [overflow-wrap:anywhere]">{successMsg}</p>
-              </div>
-            </div>
-            <div className="admin-modal-footer flex justify-end pt-2 border-t border-[var(--dash-hairline)]">
-              <button 
-                type="button"
-                onClick={closeSuccessModal} 
-                className="px-5 py-2 bg-green-500 hover:bg-green-600 rounded-lg text-sm font-medium text-white transition-colors"
-              >
-                Continue
-              </button>
-            </div>
-          </div>
-        </div>
+        <EventFormResultModals
+          error={error}
+          onErrorDismissed={() => setError('')}
+          successMsg={successMsg}
+          onSuccessContinue={() => {
+            setSuccessMsg('');
+            router.push('/admin/events');
+          }}
+        />
 
         <form onSubmit={handleSubmit} className="admin-form">
-          {/* Basic Info */}
-          <div className="admin-panel">
-            <div className="admin-panel-header">
-              <h2 className="admin-panel-title">Basic Information</h2>
-            </div>
-            <div className="admin-panel-content">
-              <div className="form-grid">
-              <EventClientField
-                value={clientId}
-                onChange={next => {
-                  setClientId(next);
-                  setClientError(undefined);
-                }}
-                onAvailable={setCanLinkClient}
-                error={clientError}
-              />
-              <div className="form-group form-group-full">
-                <label className="form-label">Event Title</label>
-                <input 
-                  type="text" 
-                  value={formData.title}
-                  onChange={e => setFormData({...formData, title: e.target.value})}
-                  className="form-input"
-                  placeholder="e.g. Manila Midnight Marathon 2025"
-                  required
-                />
-              </div>
-              <div className="form-group form-group-full">
-                <label className="form-label">
-                  About This Event <span className="text-xs opacity-70">- optional</span>
-                </label>
-                <DescriptionEditor
-                  value={formData.description}
-                  onChange={description => setFormData({...formData, description})}
-                  placeholder="Route, assembly time, cut-off, what runners should bring — anything they'd ask about before signing up."
-                />
-              </div>
-              <AdminDatePicker
-                id="event-date"
-                label="Date"
-                value={formData.date}
-                dialogLabel="Choose the race date"
-                onChange={date => setFormData({...formData, date})}
-              />
-              <div className="form-group">
-                <label className="form-label">Location</label>
-                <input 
-                  type="text" 
-                  value={formData.location}
-                  onChange={e => setFormData({...formData, location: e.target.value})}
-                  className="form-input"
-                  placeholder="e.g. BGC, Taguig"
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Start Time</label>
-                <input 
-                  type="time" 
-                  value={formData.startTime}
-                  onChange={e => setFormData({...formData, startTime: e.target.value})}
-                  className="form-input"
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">End Time</label>
-                <input 
-                  type="time" 
-                  value={formData.endTime}
-                  onChange={e => setFormData({...formData, endTime: e.target.value})}
-                  className="form-input"
-                />
-              </div>
-              <div className="form-group form-group-full">
-                <label className="form-label">Cover Image</label>
-                {!formData.imageUrl ? (
-                  <div className="file-upload-wrapper" style={{ opacity: uploadingField ? 0.6 : 1 }}>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={e => handleImageUpload(e, 'imageUrl')}
-                      className="file-upload-input"
-                      disabled={uploadingField !== null}
-                    />
-                    <div className="file-upload-content">
-                      <div className="file-upload-icon">
-                        <UploadCloud size={32} />
-                      </div>
-                      <div className="file-upload-title">
-                        {uploadingField === 'imageUrl' ? <BusyLabel>Uploading</BusyLabel> : 'Click to upload cover image'}
-                      </div>
-                      <div className="file-upload-desc">SVG, PNG, JPG or GIF (max. 800x400px)</div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="file-preview">
-                    <img src={formData.imageUrl} alt="Cover Preview" />
-                    <div className="file-preview-overlay">
-                      <button 
-                        type="button" 
-                        onClick={() => setFormData(prev => ({ ...prev, imageUrl: '' }))}
-                        className="btn-remove-preview"
-                      >
-                        <Trash size={16} /> Remove Image
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-              
-              <HighlightsField
-                value={formData.highlights}
-                onChange={update => setFormData(prev => ({ ...prev, highlights: update(prev.highlights) }))}
-                onError={setError}
-                onBusyChange={busy => setUploadingPosters(n => (busy ? n + 1 : n - 1))}
-              />
-
-              {/* Optional: an organizer whose shirts run to their own measurements
-                  uploads their chart; without one the register page shows the
-                  default chart from lib/shirt-size.ts. */}
-              <div className="form-group">
-                <label className="form-label">Size Chart (Optional)</label>
-                {!formData.sizeChartImageUrl ? (
-                  <div className="file-upload-wrapper media-tile" style={{ opacity: uploadingField ? 0.6 : 1 }}>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={e => handleImageUpload(e, 'sizeChartImageUrl')}
-                      className="file-upload-input"
-                      disabled={uploadingField !== null}
-                    />
-                    <div className="file-upload-content">
-                      <div className="file-upload-icon">
-                        <UploadCloud size={32} />
-                      </div>
-                      <div className="file-upload-title">
-                        {uploadingField === 'sizeChartImageUrl' ? <BusyLabel>Uploading</BusyLabel> : 'Click to upload size chart'}
-                      </div>
-                      <div className="file-upload-desc">Optional • PNG, JPG. Leave empty to use the default size chart.</div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="file-preview media-tile">
-                    <img src={formData.sizeChartImageUrl} alt="Size Chart Preview" />
-                    <div className="file-preview-overlay">
-                      <button
-                        type="button"
-                        onClick={() => setFormData(prev => ({ ...prev, sizeChartImageUrl: '' }))}
-                        className="btn-remove-preview"
-                      >
-                        <Trash size={16} /> Remove Size Chart
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+          <BasicInfoPanel
+            draft={formData}
+            setDraft={setFormData}
+            uploadingField={uploadingField}
+            onImageFile={upload}
+            clientId={clientId}
+            onClientChange={next => {
+              setClientId(next);
+              setClientError(undefined);
+            }}
+            onClientAvailable={setCanLinkClient}
+            clientError={clientError}
+            onError={setError}
+            onBusyChange={posterBusy}
+          />
 
           <EventOptionsPanel
             eventType={eventType}
@@ -454,7 +174,7 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
             options={categories}
             onChange={setCategories}
             onError={setError}
-            onBusyChange={busy => setUploadingPosters(n => (busy ? n + 1 : n - 1))}
+            onBusyChange={posterBusy}
           />
 
           <BankAccountsPanel
@@ -462,83 +182,38 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
             offersBankTransfer={offersBankTransfer(formData.registrationForm)}
             onChange={setBankAccounts}
             onError={setError}
-            onBusyChange={busy => setUploadingPosters(n => (busy ? n + 1 : n - 1))}
+            onBusyChange={posterBusy}
           />
 
           {/* Logistics Options */}
           <LogisticsPanel
             draft={formData}
-            onChange={patch => setFormData({...formData, ...patch})}
+            onChange={patchForm}
             deliveryOn={deliveryOn}
             onDeliveryChange={on => { setDeliveryOn(on); setDeliveryError(null); }}
             deliveryError={deliveryError}
           />
 
-          {/* Registration & Fees */}
-          <div className="admin-panel">
-            <div className="admin-panel-header">
-              <h2 className="admin-panel-title">Registration & Fees</h2>
-            </div>
-            <div className="admin-panel-content">
-              <div className="flex flex-col gap-6">
-                <div className="form-group">
-                  <label className="form-label">Registration Opening</label>
-                  <RegistrationOpeningPicker
-                    value={opening}
-                    onChange={next => {
-                      setOpening(next);
-                      // The message goes the moment the organizer starts
-                      // fixing it; leaving it up while they type reads as a
-                      // field that is still wrong.
-                      if (openingError) setOpeningError(null);
-                    }}
-                    idPrefix="newEventOpening"
-                    error={openingError}
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Admin Fee (₱) <span className="text-xs opacity-70">- charged per runner</span></label>
-                  <input
-                    type="number" inputMode="decimal"
-                    value={formData.adminFee}
-                    onChange={e => setFormData({...formData, adminFee: Number(e.target.value)})}
-                    className="form-input"
-                    min={0}
-                  />
-                  <p className="text-xs opacity-70 mt-1">
-                    Starts at the default platform fee set in Settings. A change here
-                    applies to this event only.
-                  </p>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Large Size Surcharge (₱) <span className="text-xs opacity-70">- added once per runner in 4XL or above</span></label>
-                  <input
-                    type="number" inputMode="decimal"
-                    value={formData.shirtSizeUpcharge}
-                    onChange={e => setFormData({...formData, shirtSizeUpcharge: Number(e.target.value)})}
-                    className="form-input"
-                    min={0}
-                  />
-                  <p className="text-xs opacity-70 mt-1">
-                    Set to 0 if the larger sizes cost the same. Only charged to runners
-                    whose package actually includes a singlet or shirt.
-                  </p>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Registration Form</label>
-                  <RegistrationFormPicker
-                    value={formData.registrationForm}
-                    onChange={value => setFormData({...formData, registrationForm: value})}
-                  />
-                </div>
-                <ConsentWaiverField
-                  value={formData.consentWaiver}
-                  eventTitle={formData.title}
-                  onChange={next => setFormData({...formData, consentWaiver: next})}
-                />
-              </div>
-            </div>
-          </div>
+          <RegistrationFeesPanel
+            draft={formData}
+            onChange={patchForm}
+            opening={opening}
+            onOpeningChange={next => {
+              setOpening(next);
+              // The message goes the moment the organizer starts
+              // fixing it; leaving it up while they type reads as a
+              // field that is still wrong.
+              if (openingError) setOpeningError(null);
+            }}
+            openingError={openingError}
+            openingIdPrefix="newEventOpening"
+            adminFeeHint={
+              <>
+                Starts at the default platform fee set in Settings. A change here
+                applies to this event only.
+              </>
+            }
+          />
 
           <div className="form-actions">
             <Link href="/admin/events" className="btn-cancel">

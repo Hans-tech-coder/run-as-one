@@ -12,8 +12,13 @@ offers **QR Ph only** (`OFFERED_PAYMONGO_METHODS` in `lib/free-checkout.ts`)
 until it is. Where an entry below says something is "not released" or
 "production is N migrations behind", it predates this release.
 
-**Results-only events, Batch 1 of 6 (2026-10-08, on `dev`, not released —
-do not promote until Batch 3).** `Event.resultsOnly` (migration
+**Results-only events, Batches 1–2 of 6 (2026-10-08, on `dev`, not released —
+do not promote until Batch 3).** Batch 2 split the two event forms with no
+behavior change: both now build on shared panels in `admin/events/`
+(`BasicInfoPanel`, `RegistrationFeesPanel`, `EventFormResultModals`,
+`useEventImageUpload`, the `EventFormDraft` type in `event-form-draft.ts`),
+and the edit form's API-to-draft mapping is `[id]/edit/event-edit-draft.ts`.
+Batch 1: `Event.resultsOnly` (migration
 `event_results_only`) marks a race whose client runs registration elsewhere:
 `registrationState` answers `EXTERNAL` (badge *Results only*), both checkout
 routes refuse it (400), `/` and `/events` leave it out, `/events/[slug]` is a
