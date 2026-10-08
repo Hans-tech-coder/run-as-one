@@ -3,8 +3,10 @@
  * (CLIENT_RACE_PAGE_PLAN.md, Batch 3, decision D1): **a payout summary and
  * nothing more.**
  *
- * Four figures — what runners paid, Run As One's fees, what has been paid out
- * to the organizer, and what is still owed — and the payouts themselves, each
+ * Five figures — what runners paid, Run As One's fees, the payment processing
+ * fees (PayMongo's cut, never called Run As One's and never named to a client —
+ * *payment processing* is all a client needs), what has been paid out to the
+ * organizer, and what is still owed — and the payouts themselves, each
  * as a day, a method and an amount. The figures are `settlement-store.ts`'s
  * own sums (`totalsByEvent`), so a client reads the very numbers staff settle
  * by on Remittances and the two can never disagree.
@@ -48,8 +50,10 @@ export type ClientPayoutRow = {
 export type ClientPayout = {
   /** Everything runners paid on confirmed (PAID) orders. */
   collected: number;
-  /** Run As One's platform and transaction fees on those orders. */
+  /** Run As One's platform fees on those orders. */
   fees: number;
+  /** The payment processor's cut on those orders (the transaction fee). Not Run As One's. */
+  processingFees: number;
   /** Payouts less returns, voided rows left out. */
   paidOut: number;
   /** What is owed less what was paid out. Negative when overpaid. */
@@ -84,7 +88,8 @@ export async function clientPayout(actor: Actor, eventId: string): Promise<Clien
   const settlement = settlementOf(event.id);
   return {
     collected: settlement.collected,
-    fees: settlement.share,
+    fees: settlement.platformFees,
+    processingFees: settlement.transactionFees,
     paidOut: settlement.remitted,
     stillOwed: settlement.balance,
     state: settlement.state,

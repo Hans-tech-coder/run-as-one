@@ -4,8 +4,8 @@
  * from your-events.css for a payout's icon and text column.
  */
 
-/* Four figures in one row, two pairs or a column, like the tiles; sized by
-   the report's width (`.race-page` is the container). */
+/* Five figures in one row, or two pairs with *Still owed* across the bottom,
+   or a column; sized by the report's width (`.race-page` is the container). */
 .race-money-grid {
   display: grid;
   gap: 12px;
@@ -16,11 +16,19 @@
   .race-money-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .race-money-grid > .is-strong {
+    grid-column: 1 / -1;
+  }
 }
 
-@container (min-width: 760px) {
+@container (min-width: 900px) {
   .race-money-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .race-money-grid > .is-strong {
+    grid-column: auto;
   }
 }
 

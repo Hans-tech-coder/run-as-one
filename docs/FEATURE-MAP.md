@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-39 pages · 52 API routes · 89 modules in `src/lib` · 387 files · 79,889 lines
+39 pages · 52 API routes · 89 modules in `src/lib` · 387 files · 80,166 lines
 
 ---
 
@@ -212,7 +212,7 @@ the file itself.
 | [`running-community.ts`](../src/lib/running-community.ts) | The running club a runner represents, and the shared list they pick it from. |
 | [`settlement-store.ts`](../src/lib/settlement-store.ts) | Reading settlements out of the database (ADMIN_MERGE_PLAN.md, Batch 6). |
 | [`settlement.ts`](../src/lib/settlement.ts) | What Run As One owes the organizer of a race, and what it has paid (ADMIN_MERGE_PLAN.md, Batch 6). |
-| [`shirt-size.ts`](../src/lib/shirt-size.ts) | The size chart, whether a category needs a size at all, and the 4XL-and-up upcharge. |
+| [`shirt-size.ts`](../src/lib/shirt-size.ts) | The size chart, whether a category needs a size at all, which garments it hands out, and the 4XL-and-up upcharge. |
 | [`signed-in-user.ts`](../src/lib/signed-in-user.ts) | Who is signed into the admin, as the sidebar needs to show them. |
 | [`site-contact.ts`](../src/lib/site-contact.ts) | Who Run As One is, and how a runner reaches it. |
 | [`site-settings.ts`](../src/lib/site-settings.ts) | The saved site-wide settings (server-only; reads the `SiteSettings` row). |

@@ -5,10 +5,13 @@
  * Runners pay Run As One — through PayMongo or a bank transfer — and Run As One
  * settles with the organizer afterwards. The owner's answers, as rules:
  *
- * - **Run As One keeps the platform fee and the transaction fee** of every
- *   order. The platform fee is `Event.adminFee` per runner; the transaction fee
- *   is what the wizard added on top to cover PayMongo, so PayMongo's cut is the
- *   runner's and never comes out of the organizer's share.
+ * - **Run As One keeps the platform fee** of every order (`Event.adminFee` per
+ *   runner). That, and only that, is Run As One's share.
+ * - **The transaction fee is PayMongo's, not Run As One's.** The wizard adds it
+ *   on top so the runner pays PayMongo's cut, and PayMongo deducts it before the
+ *   money reaches Run As One — so it is taken off what the organizer is owed
+ *   (it never arrived), but it is never shown as Run As One's. Screens call it
+ *   *payment processing fees*.
  * - **The organizer is owed the rest**: the race entries after any discount,
  *   plus the delivery fee. A promotion is the organizer's own money given away,
  *   the same reading the Overview's *Total Revenue (Net)* tile makes.
@@ -19,7 +22,7 @@
  * - **A ₱0 complimentary order settles itself.** A pacer's free entry
  *   (`PACER_DISCOUNT_PLAN.md`) is written `PAID` with a total, a platform fee
  *   and a transaction fee all of zero, so it adds nothing to collected and
- *   nothing to Run As One's share — owed moves by zero, which is right: the
+ *   nothing to either fee — owed moves by zero, which is right: the
  *   organizer gave the entry away and nobody paid for it. It needs no clause
  *   of its own here, and deliberately has none: a special case for pacers
  *   would be a second way to compute the same zero. Where it *does* show is
@@ -29,11 +32,11 @@
  *   `platformFee` and so in Run As One's share, exactly as it should.
  * - **Per event**, because bank accounts are per event.
  *
- * Owed is computed as the order's total less Run As One's two fees, rather than
- * re-added from its parts. Checkout pins `total = subtotal + delivery + platform
- * + transaction − discount`, so the two are the same number — but reading it
- * this way means *collected = share + owed* holds on every row by construction,
- * and the screen's three figures can never fail to add up.
+ * Owed is computed as the order's total less the two fees, rather than re-added
+ * from its parts. Checkout pins `total = subtotal + delivery + platform +
+ * transaction − discount`, so the two are the same number — but reading it this
+ * way means *collected = platform + processing + owed* holds on every row by
+ * construction, and the screen's figures can never fail to add up.
  *
  * Integer centavos throughout (`money.ts`). Prisma-free, so the record dialog
  * can run the same field checks the route runs; the queries live in
@@ -52,11 +55,11 @@ export type Settlement = {
   paidOrders: number;
   /** Everything runners paid on those orders. */
   collected: number;
+  /** Run As One's share, and all of it. */
   platformFees: number;
+  /** PayMongo's cut, passed through to the runner: deducted, but not Run As One's. */
   transactionFees: number;
-  /** Run As One's share: the two fees. */
-  share: number;
-  /** The organizer's share: collected less Run As One's. */
+  /** The organizer's share: collected less both fees. */
   owed: number;
   /** Payouts less returns, voided rows left out. */
   remitted: number;
@@ -76,8 +79,7 @@ export type OrderTotals = {
 export const NO_ORDERS: OrderTotals = { paidOrders: 0, collected: 0, platformFees: 0, transactionFees: 0 };
 
 export function settle(orders: OrderTotals, remitted: number): Settlement {
-  const share = orders.platformFees + orders.transactionFees;
-  const owed = orders.collected - share;
+  const owed = orders.collected - orders.platformFees - orders.transactionFees;
   const balance = owed - remitted;
   const state: SettlementState =
     balance > 0
@@ -87,7 +89,7 @@ export function settle(orders: OrderTotals, remitted: number): Settlement {
         : orders.paidOrders === 0 && remitted === 0
           ? 'NOTHING'
           : 'SETTLED';
-  return { ...orders, share, owed, remitted, balance, state };
+  return { ...orders, owed, remitted, balance, state };
 }
 
 /**

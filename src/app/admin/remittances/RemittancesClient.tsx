@@ -84,7 +84,7 @@ const COLUMNS: ColumnDef<EventSettlementRow>[] = [
     cell: ({ row }) => (
       <div className="whitespace-nowrap">
         <div>{formatSignedPesos(row.original.settlement.collected)}</div>
-        <div className="text-xs text-secondary">{formatSignedPesos(row.original.settlement.share)} Run As One</div>
+        <div className="text-xs text-secondary">{formatSignedPesos(row.original.settlement.platformFees)} Run As One</div>
       </div>
     ),
   },

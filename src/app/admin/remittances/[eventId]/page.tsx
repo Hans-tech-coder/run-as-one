@@ -72,7 +72,7 @@ export default async function Page({ params }: { params: Promise<{ eventId: stri
             note={SETTLEMENT_STATE_COPY[settlement.state].hint}
             icon={<Scale size={20} />}
           />
-          <Metric title="Run As One's Share" value={formatSignedPesos(settlement.share)} icon={<Landmark size={20} />} />
+          <Metric title="Run As One's Share" value={formatSignedPesos(settlement.platformFees)} icon={<Landmark size={20} />} />
         </div>
 
         <div className="admin-panel mb-8">
@@ -87,7 +87,7 @@ export default async function Page({ params }: { params: Promise<{ eventId: stri
             <dl className="settlement-lines">
               <Line label="Collected from runners" value={settlement.collected} strong />
               <Line label="Platform fees (Run As One)" value={-settlement.platformFees} />
-              <Line label="Transaction fees (Run As One)" value={-settlement.transactionFees} />
+              <Line label="Payment processing fees (PayMongo)" value={-settlement.transactionFees} />
               <Line label="Owed to the organizer" value={settlement.owed} strong rule />
               <Line label="Race entries at list price" value={parts.entries} muted />
               <Line label="Less discounts from promotions" value={-parts.discounts} muted />

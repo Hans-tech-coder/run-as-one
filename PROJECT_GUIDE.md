@@ -84,8 +84,10 @@ Philippines**. Three groups use it:
 
 Runners pay **Run As One** through PayMongo or a direct bank transfer, and Run
 As One settles with the organizer afterwards: it keeps the platform fee (the
-per-runner `Event.adminFee`) and the transaction fee the runner paid on top for
-PayMongo, and owes the organizer the rest of every PAID order — tracked per
+per-runner `Event.adminFee`); the transaction fee the runner paid on top is
+PayMongo's cut, deducted before the money arrives, so it is taken off the
+organizer's side but never counted as Run As One's (screens call it *payment
+processing fees*); and it owes the organizer the rest of every PAID order — tracked per
 event on `/admin/remittances` (`ADMIN_MERGE_PLAN.md` Batch 6, §5
 `settlement.ts`).
 

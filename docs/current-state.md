@@ -45,7 +45,8 @@ whole page (2026-10-08). Counts only (§5 `client-race-report.ts`); no
 migration. The print portal is now shared: `admin/PrintableCopy.tsx` and
 `admin/print-copy.css` serve both this page and the e-certificate guide.
 **Batch 3 (2026-10-08)**: a **Payout Summary** at the foot of the page, screen
-only — collected, Run As One fees, paid out, still owed, and the payouts as
+only — collected, Run As One fees, payment processing fees, paid out, still
+owed, and the payouts as
 day, method and amount — behind a new viewer permission `event:view-payout`
 (§5 `client-payout.ts`, §7); no migration. Seen as Super Admin on local data
 with no payouts recorded, so the list's rows and the *Overpaid* wording have
@@ -338,8 +339,10 @@ tracking) is built on `dev`, ahead of that release at the owner's request:**
 **five** migrations), `settlement.ts` / `settlement-store.ts`, the
 `remittance:manage` permission, three API routes, three trail verbs on a
 *Remittances* Activity shelf, and an event DELETE that refuses a race with
-remittances. The owner's calls: Run As One keeps the platform and transaction
-fees, the organizer absorbs discounts, per event, a refund makes the balance
+remittances. The owner's calls: Run As One keeps the platform fee, the
+transaction fee is PayMongo's (deducted from the organizer's side but shown as
+*payment processing fees*, never as Run As One's — owner's correction,
+2026-10-08), the organizer absorbs discounts, per event, a refund makes the balance
 go negative, and a viewer sees no settlement. See the plan's Batch 6 notes for
 what was verified.
 

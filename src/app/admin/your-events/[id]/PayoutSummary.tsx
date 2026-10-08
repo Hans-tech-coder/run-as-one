@@ -6,9 +6,9 @@ import { formatSignedPesos } from '@/lib/settlement';
 import './payout-summary.css';
 
 /**
- * The race page's payout section (CLIENT_RACE_PAGE_PLAN.md, Batch 3): four
- * figures that add up — collected, less Run As One's fees, less paid out,
- * leaves still owed — then the payouts themselves. Screen only: the printed
+ * The race page's payout section (CLIENT_RACE_PAGE_PLAN.md, Batch 3): five
+ * figures that add up — collected, less Run As One's fees, less payment
+ * processing fees, less paid out, leaves still owed — then the payouts themselves. Screen only: the printed
  * copy goes to a shirt supplier, who has no business with the money
  * (`RaceReport`).
  */
@@ -19,7 +19,8 @@ export default function PayoutSummary({ payout }: { payout: ClientPayout }) {
     <>
       <dl className="race-money-grid">
         <Figure label="Collected" value={payout.collected} note="What runners paid" />
-        <Figure label="Run As One fees" value={payout.fees} note="Platform and payment fees" />
+        <Figure label="Run As One fees" value={payout.fees} note="Platform fees" />
+        <Figure label="Payment processing fees" value={payout.processingFees} note="Charged by the payment provider" />
         <Figure label="Paid out to you" value={payout.paidOut} note="Payouts sent so far" />
         <Figure
           label={overpaid ? 'Overpaid' : 'Still owed'}

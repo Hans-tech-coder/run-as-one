@@ -38,12 +38,12 @@ export default async function Page() {
   // overpayment against another's debt would hide both: the organizer of the
   // second race is still waiting, whatever the first one received.
   let collected = 0;
-  let share = 0;
+  let share = 0; // platform fees only: the transaction fee is PayMongo's
   let due = 0;
   let remitted = 0;
   for (const { settlement } of rows) {
     collected += settlement.collected;
-    share += settlement.share;
+    share += settlement.platformFees;
     remitted += settlement.remitted;
     if (settlement.balance > 0) due += settlement.balance;
   }

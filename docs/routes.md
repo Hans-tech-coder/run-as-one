@@ -169,9 +169,11 @@ and an orphan. **Payout Summary** (Batch 3, `PayoutSummary.tsx`, reading
 for a shirt supplier and never carries money, whatever is passed. It is drawn
 only for someone holding `event:view-payout` on the race (the race's client
 viewer, an owner or an admin; a per-event staff member sees the page without
-it): four figures that add up — *Collected*, *Run As One fees*, *Paid out to
-you*, *Still owed* (read *Overpaid* when negative) — in the tiles' four / two
-/ one layout, one plain sentence on where the race stands, then the payouts
+it): five figures that add up — *Collected*, *Run As One fees* (platform
+fees only), *Payment processing fees* (the transaction fee, never naming
+PayMongo to a client), *Paid out to you*, *Still owed* (read *Overpaid* when
+negative) — five across, or two pairs with *Still owed* across the bottom, or
+one column, one plain sentence on where the race stands, then the payouts
 latest first as day, method and amount, a return listed as a negative amount
 *Returned to Run As One*. Its hint says confirmed payments only. **Runners** (Batch 4, `RunnerList.tsx`, reading
 `client-runners.ts`) follows it, also **screen only** and only for someone
@@ -763,7 +765,8 @@ opens its message from a *Read message* button rather than a tap anywhere.
 **`/admin/remittances`** (`remittance:manage`, `ADMIN_MERGE_PLAN.md` Batch 6 —
 *Remittances* in the sidebar, first among Run As One's own screens; anyone else
 on the team gets the admin 404, a viewer the forbidden page). A **server page**:
-four tiles — *Collected (Paid Orders)*, *Run As One's Share*, *Balance Due to
+four tiles — *Collected (Paid Orders)*, *Run As One's Share* (platform fees
+only; the transaction fee is PayMongo's), *Balance Due to
 Organizers* (the sum of **positive** balances only, so one race's overpayment
 never hides another organizer still waiting) and *Remitted* — over every race,
 latest first, with Collected, Run As One, Owed, Remitted, Balance and a state
@@ -775,7 +778,8 @@ a real link; a bare chevron there confused staff) opens **`/admin/remittances/[e
 the state, date and client under the title, tiles for *Owed to Organizer*,
 *Remitted*, *Balance* (read *Balance (Overpaid)* when negative, with the state's
 sentence) and *Run As One's Share*; a **How the Balance Is Worked Out** ledger
-(`.settlement-lines`: collected, less the two fees, owed — with list-price
+(`.settlement-lines`: collected, less platform fees (Run As One) and payment
+processing fees (PayMongo), owed — with list-price
 entries, discounts and delivery inset under it as explanation — less remitted,
 balance); and the **Remittances** list (sent day, kind, amount — a return shown
 negative — method, reference and note, recorded by and when, Recorded / Voided
