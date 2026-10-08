@@ -110,12 +110,21 @@ never a registered runner**), a paid / awaiting / unpaid bar that is
 neutral segment), a one-line explanation of unpaid checkouts when a race has
 any (the viewer has no list to open), and each category's total with
 `N paid · N awaiting` (`· N unpaid` when there are some). **No money, names
-or references.** The card itself is not pressable; it ends in one labelled
-link, **View race details →**, to that race's page (below). The grid is one column on a phone and ~340px
-columns after; a category's counts drop under its name when they cannot share
+or references.** The whole card is pressable: its foot is a tinted bar,
+**View race details and report →**, whose link is stretched over the card, so
+the card lifts and its border turns blue under the pointer while staying one tab
+stop. Each card's **By category (N)** is a closed `<details>` above that link
+(opening it does not open the race), so cards in a row share one height with
+their bars aligned; while one is open, the grid's cards keep their own heights.
+Races still ahead sit under **Upcoming events (N)**; races already run fold
+under **Past events (N)**, closed unless nothing is ahead; opened, it shows six
+cards and a **Show N more past events · M left** button that adds six at a time
+in the browser (`PastEventsGrid.tsx`; no URL change, focus moves to the first
+new card). The grid is one
+column on a phone and ~340px columns after; a category's counts drop under its name when they cannot share
 the line. With no linked race the tiles read 0 over *No events linked yet*,
-naming the client. The wait draws four tiles over three event cards
-(`VIEWER_OVERVIEW_SHAPE`). Between the tiles and the cards, one link row —
+naming the client. The wait draws four tiles over a section title and three
+event cards (`VIEWER_OVERVIEW_SHAPE`). Between the tiles and the cards, one link row —
 *Preparing your e-certificate?* … **Read the template guide →** — opens
 `/admin/certificate-guide`. A viewer's sidebar is **Dashboard and the
 E-Certificate Guide**, Settings in the account menu, and **every other

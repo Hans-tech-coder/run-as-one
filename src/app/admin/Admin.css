@@ -3968,25 +3968,127 @@ textarea.form-input {
   white-space: nowrap;
 }
 
-/* The card's one way in to its race page, pushed to the foot so every card in
-   a row ends on the same line. 44px tall: it is a touch target. */
-.viewer-event-open {
+/* Upcoming, then the past fold, 32px apart. */
+.viewer-event-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.viewer-section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 16px;
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.viewer-section-count {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  align-self: flex-start;
+  justify-content: center;
+  min-width: 24px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--ink-06);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Races already run, folded: a bordered bar the width of the page, so it
+   reads as something to open rather than a heading with nothing under it. */
+.viewer-past-toggle {
+  min-height: 52px;
+  margin: 0;
+  padding: 0 var(--space-lg);
+  border: 1px solid var(--dash-hairline);
+  border-radius: var(--radius-lg);
+  background: var(--dash-surface);
+  cursor: pointer;
+  list-style: none;
+  transition: border-color 150ms var(--ease-out), background-color 150ms var(--ease-out);
+}
+
+.viewer-past-toggle::-webkit-details-marker {
+  display: none;
+}
+
+.viewer-past-toggle:hover {
+  border-color: var(--dash-border);
+  background: var(--dash-hover);
+}
+
+.viewer-past-toggle:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
+}
+
+.viewer-past-toggle .viewer-fold-chevron {
+  margin-left: auto;
+}
+
+.viewer-past[open] > .viewer-past-toggle {
+  margin-bottom: 16px;
+}
+
+/* Six more past races (PastEventsGrid): centred under the grid, saying how
+   many it adds and how many are left. 44px tall: a touch target. */
+.viewer-show-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   min-height: 44px;
-  margin-top: auto;
+  margin: 24px auto 0;
+  padding: 0 20px;
+  border: 1px solid var(--dash-hairline);
+  border-radius: 999px;
+  background: var(--dash-surface);
   font-size: 0.875rem;
   font-weight: 600;
   color: var(--accent-blue-text);
-  text-decoration: none;
+  cursor: pointer;
+  transition: border-color 150ms var(--ease-out), background-color 150ms var(--ease-out);
 }
 
-.viewer-event-open:hover {
-  text-decoration: underline;
+.viewer-show-more:hover {
+  border-color: var(--dash-border);
+  background: var(--dash-hover);
 }
 
+.viewer-show-more:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
+}
+
+.viewer-show-more-left {
+  font-weight: 500;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Closed, the chevron points down; open, up. */
+.viewer-fold-chevron {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  transition: transform 200ms var(--ease-smooth-out);
+}
+
+details[open] > summary .viewer-fold-chevron {
+  transform: rotate(180deg);
+}
+
+/* Cards in a row share its height, the action bar pinned to each foot, so a
+   row of races ends on one line — the category lists are folded, so what
+   differs between two cards is a line of title at most. While a card's
+   categories are open, every card keeps its own height instead: stretched,
+   its neighbours would show a tall blank gap above their bars. */
 .viewer-event-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
@@ -3996,11 +4098,16 @@ textarea.form-input {
   list-style: none;
 }
 
+.viewer-event-grid:has(.viewer-categories[open]) > li {
+  align-self: start;
+}
+
 .viewer-event-grid > li {
   min-width: 0;
 }
 
 .viewer-event-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -4008,6 +4115,28 @@ textarea.form-input {
   border: 1px solid var(--dash-hairline);
   border-radius: var(--radius-xl);
   overflow: hidden;
+  transition:
+    border-color 200ms var(--ease-out),
+    box-shadow 200ms var(--ease-out),
+    transform 200ms var(--ease-smooth-out);
+}
+
+/* The whole card is one pressable target (ViewerDashboard, the stretched
+   link). The border turns the accent colour and the card rises a little, so
+   the pointer finds out at once that the card opens something. */
+.viewer-event-card:has(.viewer-event-open:hover) {
+  border-color: color-mix(in srgb, var(--accent-blue) 55%, transparent);
+  box-shadow: 0 12px 32px -12px color-mix(in srgb, var(--accent-blue) 35%, transparent);
+  transform: translateY(-2px);
+}
+
+.viewer-event-card:has(.viewer-event-open:focus-visible) {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
+}
+
+.viewer-event-card:has(.viewer-event-open:active) {
+  transform: translateY(0);
 }
 
 /* A fixed ratio rather than the poster's own, so a portrait poster and a
@@ -4017,6 +4146,86 @@ textarea.form-input {
   width: 100%;
   overflow: hidden;
   background: var(--dash-panel-solid);
+}
+
+.viewer-event-poster img {
+  transition: transform 400ms var(--ease-smooth-out);
+}
+
+.viewer-event-card:has(.viewer-event-open:hover) .viewer-event-poster img {
+  transform: scale(1.03);
+}
+
+/* The card's one way in to its race page: a bar across its foot, tinted so it
+   reads as an action before any pointer reaches it (a phone has none). Its
+   `::after` covers the whole card, which makes the card the target. 52px
+   tall: a touch target. */
+.viewer-event-open {
+  position: static;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 52px;
+  padding: 0 var(--space-lg);
+  border-top: 1px solid var(--dash-hairline);
+  background: color-mix(in srgb, var(--accent-blue) 6%, transparent);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--accent-blue-text);
+  text-decoration: none;
+  transition: background-color 200ms var(--ease-out);
+}
+
+.viewer-event-open::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.viewer-event-open:focus-visible {
+  outline: none;
+}
+
+.viewer-event-card:has(.viewer-event-open:hover) .viewer-event-open {
+  background: color-mix(in srgb, var(--accent-blue) 12%, transparent);
+}
+
+.viewer-event-open-arrow {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-blue) 14%, transparent);
+  transition:
+    transform 200ms var(--ease-smooth-out),
+    background-color 200ms var(--ease-out),
+    color 200ms var(--ease-out);
+}
+
+.viewer-event-card:has(.viewer-event-open:hover) .viewer-event-open-arrow {
+  transform: translateX(3px);
+  background: var(--accent-blue);
+  color: #fff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .viewer-event-card,
+  .viewer-event-poster img,
+  .viewer-event-open-arrow,
+  .viewer-fold-chevron {
+    transition: none;
+  }
+
+  .viewer-event-card:has(.viewer-event-open:hover),
+  .viewer-event-card:has(.viewer-event-open:hover) .viewer-event-poster img,
+  .viewer-event-card:has(.viewer-event-open:hover) .viewer-event-open-arrow {
+    transform: none;
+  }
 }
 
 .viewer-event-body {
@@ -4145,24 +4354,58 @@ textarea.form-input {
   color: var(--text-secondary);
 }
 
+/* The per-category breakdown, folded. It sits above the card's stretched
+   link (z-index), so the toggle opens the list rather than the race, and the
+   counts inside stay selectable text. */
 .viewer-categories {
-  margin-top: 8px;
-  padding-top: 16px;
+  position: relative;
+  z-index: 2;
+  margin-top: 4px;
   border-top: 1px solid var(--dash-hairline);
 }
 
-.viewer-categories-title {
-  margin: 0 0 8px;
+.viewer-categories-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--text-secondary);
+  cursor: pointer;
+  list-style: none;
+  transition: color 150ms var(--ease-out);
+}
+
+.viewer-categories-toggle::-webkit-details-marker {
+  display: none;
+}
+
+.viewer-categories-toggle:hover {
+  color: var(--text-primary);
+}
+
+.viewer-categories-toggle:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.viewer-categories-count {
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--ink-06);
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
 }
 
 .viewer-categories > ul {
   margin: 0;
-  padding: 0;
+  padding: 0 0 4px;
   list-style: none;
 }
 
@@ -4218,6 +4461,11 @@ textarea.form-input {
 
   .viewer-event-body {
     padding: var(--space-md);
+  }
+
+  .viewer-event-open,
+  .viewer-past-toggle {
+    padding: 0 var(--space-md);
   }
 }
 

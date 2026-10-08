@@ -1,11 +1,12 @@
 import React from 'react';
 import Link from 'next/link';
-import { ArrowRight, BadgeCheck, BookOpen, CalendarDays, Hourglass, MapPin, ShoppingCart, Users } from 'lucide-react';
+import { ArrowRight, BadgeCheck, BookOpen, CalendarDays, ChevronDown, Hourglass, MapPin, ShoppingCart, Users } from 'lucide-react';
 import EventImage from '@/components/EventImage';
 import { formatEventDayShort, formatEventInstant } from '@/lib/event-schedule';
 import type { RegistrantCounts, ViewerEventSummary } from '@/lib/client-summary';
 import { REGISTRATION_STATES } from './events/registration-state-badge';
 import DashboardHeader from './DashboardHeader';
+import PastEventsGrid from './PastEventsGrid';
 
 /**
  * A client viewer's `/admin` (ADMIN_MERGE_PLAN.md, Batch 4): its own races,
@@ -13,9 +14,22 @@ import DashboardHeader from './DashboardHeader';
  *
  * **Counts, never money, names or links into the team's screens.** Every
  * number here comes from `lib/client-summary.ts`, whose shape has no field for
- * anything more. Each card ends in one labelled link, **View race details**,
- * to the race's own viewer page (`your-events/[id]`, CLIENT_RACE_PAGE_PLAN.md);
- * the card itself is not a link, so the counts stay selectable text.
+ * anything more. Each card ends in one labelled link, **View race details
+ * and report**, to the race's own viewer page (`your-events/[id]`,
+ * CLIENT_RACE_PAGE_PLAN.md). That link is stretched over the whole card, so
+ * the card answers the pointer as one target — clients missed the small link
+ * at its foot — while it stays a single tab stop with a name that says where
+ * it goes. The foot is drawn as a bar, so it reads as the card's action even
+ * on a phone, where there is no hover to hint at it.
+ *
+ * **Built for a client with many races.** The per-category breakdown is
+ * folded behind a native `<details>` (closed by default), so every card is
+ * the same height and a row of them ends on one line; it sits above the
+ * stretched link, so opening it does not open the race. Races already run are
+ * folded under **Past events**, closed while there is any race still ahead,
+ * so the page does not grow with every season; opened, it shows six at a
+ * time with **Show N more past events** (`PastEventsGrid`, the one client
+ * piece). Both folds are `<details>`.
  *
  * Four tiles total the races — registered, paid, awaiting verification and
  * unpaid checkouts — then one card per race: its poster, the same
@@ -90,13 +104,7 @@ export default function ViewerDashboard({
             </div>
           </div>
         ) : (
-          <ul className="viewer-event-grid" aria-label="Your events">
-            {events.map(event => (
-              <li key={event.id}>
-                <EventSummaryCard event={event} />
-              </li>
-            ))}
-          </ul>
+          <EventSections events={events} />
         )}
       </div>
     </>
@@ -113,6 +121,54 @@ export function Tile({ title, value, icon }: { title: string; value: number; ico
       </div>
       <div className="metric-value">{value.toLocaleString('en-US')}</div>
     </div>
+  );
+}
+
+/**
+ * Races still ahead, then races already run. `viewerEventSummaries` hands them
+ * over in that order (soonest first, then latest first), so this only splits
+ * the list. The past fold starts open only when there is nothing ahead, so a
+ * client between seasons is not shown an empty page.
+ */
+function EventSections({ events }: { events: ViewerEventSummary[] }) {
+  const upcoming = events.filter(event => event.state !== 'FINISHED');
+  const past = events.filter(event => event.state === 'FINISHED');
+
+  return (
+    <div className="viewer-event-sections">
+      {upcoming.length > 0 && (
+        <section aria-labelledby="viewer-upcoming-title">
+          <h2 id="viewer-upcoming-title" className="viewer-section-title">
+            Upcoming events <span className="viewer-section-count">{upcoming.length}</span>
+          </h2>
+          <EventGrid events={upcoming} label="Upcoming events" />
+        </section>
+      )}
+
+      {past.length > 0 && (
+        // `open` only when true: a `false` would be re-asserted at hydration
+        // over a fold the viewer opened before the page finished loading.
+        <details className="viewer-past" open={upcoming.length === 0 || undefined}>
+          <summary className="viewer-section-title viewer-past-toggle">
+            Past events <span className="viewer-section-count">{past.length}</span>
+            <ChevronDown size={18} className="viewer-fold-chevron" aria-hidden="true" />
+          </summary>
+          <PastEventsGrid cards={past.map(event => <EventSummaryCard key={event.id} event={event} />)} />
+        </details>
+      )}
+    </div>
+  );
+}
+
+function EventGrid({ events, label }: { events: ViewerEventSummary[]; label: string }) {
+  return (
+    <ul className="viewer-event-grid" aria-label={label}>
+      {events.map(event => (
+        <li key={event.id}>
+          <EventSummaryCard event={event} />
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -136,7 +192,7 @@ function EventSummaryCard({ event }: { event: ViewerEventSummary }) {
           )}
         </div>
 
-        <h2 id={headingId} className="viewer-event-title">{event.title}</h2>
+        <h3 id={headingId} className="viewer-event-title">{event.title}</h3>
 
         <p className="viewer-event-meta">
           <span>
@@ -176,8 +232,13 @@ function EventSummaryCard({ event }: { event: ViewerEventSummary }) {
         )}
 
         {event.categories.length > 0 && (
-          <div className="viewer-categories">
-            <h3 className="viewer-categories-title">By category</h3>
+          <details className="viewer-categories">
+            <summary className="viewer-categories-toggle">
+              <span>
+                By category <span className="viewer-categories-count">{event.categories.length}</span>
+              </span>
+              <ChevronDown size={16} className="viewer-fold-chevron" aria-hidden="true" />
+            </summary>
             <ul>
               {event.categories.map(category => (
                 <li key={category.id} className="viewer-category">
@@ -197,13 +258,21 @@ function EventSummaryCard({ event }: { event: ViewerEventSummary }) {
                 </li>
               ))}
             </ul>
-          </div>
+          </details>
         )}
 
-        <Link href={`/admin/your-events/${event.id}`} className="viewer-event-open">
-          View race details <ArrowRight size={16} aria-hidden="true" />
-        </Link>
       </div>
+
+      <Link
+        href={`/admin/your-events/${event.id}`}
+        className="viewer-event-open"
+        aria-describedby={headingId}
+      >
+        <span>View race details and report</span>
+        <span className="viewer-event-open-arrow" aria-hidden="true">
+          <ArrowRight size={16} />
+        </span>
+      </Link>
     </article>
   );
 }

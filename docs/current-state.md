@@ -37,7 +37,7 @@ route is the organizer application, and no screen adds a runner by hand.
 
 **A client viewer has a page per race** (2026-10-07, on `dev`, not released,
 `CLIENT_RACE_PAGE_PLAN.md` — Batches 1–4): `/admin/your-events/[id]`,
-opened from **View race details →** on each Overview card — slots per category
+opened by pressing its Overview card (**View race details and report →**) — slots per category
 with *Almost full* / *Full*, registrations over time (a bar per day, per week
 past 62 days, with the last 7 days and the busiest day), shirt sizes per
 category, and race kits by pickup or delivery, plus **Save as PDF** of the
