@@ -45,6 +45,16 @@ export const PERMISSIONS = [
    * whole settlement on Remittances (`remittance:manage`).
    */
   'event:view-payout',
+  /**
+   * One race's runner list, for its client (CLIENT_RACE_PAGE_PLAN.md, Batch
+   * 4): what the client needs to release and ship the kits — name, reference,
+   * category, shirt size, Paid or Awaiting verification, pickup or delivery,
+   * phone, email, home and delivery address — with marking and a CSV export
+   * the activity trail records (`client-runners.ts`). Never a birthdate, an
+   * emergency contact, a medical note or anything about the payment. Staff
+   * who see a race already read its registrants under `registration:view`.
+   */
+  'event:view-runners',
   'event:create',
   'event:edit',
   'event:delete',
@@ -124,11 +134,12 @@ export type MembershipRole = (typeof MEMBERSHIP_ROLES)[number];
  * Everything a client viewer may do. Few verbs, on purpose: the owner's answer
  * is that an organizer sees its races, their registrant counts and — since
  * CLIENT_RACE_PAGE_PLAN.md Batch 3 — what Run As One has paid it for them, and
- * nothing that costs a runner privacy or Run As One its books. Anything not
- * listed is refused by `can()`, including a permission added to PERMISSIONS
- * later.
+ * — since Batch 4 — who registered and how to get each kit to them (name,
+ * category, size, status, pickup or delivery, phone, email, address), and
+ * nothing that costs a runner more privacy than that or Run As One its books. Anything not listed is refused by `can()`,
+ * including a permission added to PERMISSIONS later.
  */
-export const VIEWER_PERMISSIONS: readonly Permission[] = ['event:view-summary', 'event:view-payout'];
+export const VIEWER_PERMISSIONS: readonly Permission[] = ['event:view-summary', 'event:view-payout', 'event:view-runners'];
 
 /**
  * Which membership roles each organizer-wide role may hand out, change or take
@@ -152,13 +163,13 @@ const ALL: readonly Role[] = ['OWNER', 'ADMIN', 'EVENT_MANAGER', 'VALIDATOR', 'E
 export const MATRIX_ROLES = ALL;
 
 /**
- * The matrix's rows as the team screen draws them. The two client verbs are
- * left out: every role that sees an event already sees more than its counts,
- * and every role that sees a payout summary already settles the race under
+ * The matrix's rows as the team screen draws them. The client verbs are
+ * left out: every role that sees an event already sees more than its counts
+ * and its runner list (`registration:view`), and every role that sees a payout summary already settles the race under
  * `remittance:manage`, so either row would repeat another and say nothing
  * about staff.
  */
-const CLIENT_ONLY_ROWS: readonly Permission[] = ['event:view-summary', 'event:view-payout'];
+const CLIENT_ONLY_ROWS: readonly Permission[] = ['event:view-summary', 'event:view-payout', 'event:view-runners'];
 export const MATRIX_PERMISSIONS: readonly Permission[] = PERMISSIONS.filter(
   permission => !CLIENT_ONLY_ROWS.includes(permission),
 );
@@ -198,13 +209,14 @@ export const ROLE_HINTS: Record<Role | MembershipRole, string> = {
  */
 export const CLIENT_VIEWER_LABEL = 'Client Viewer';
 export const CLIENT_VIEWER_HINT =
-  "Sees its own organization's events, how many runners have registered, and what Run As One has paid out for them. Changes nothing.";
+  "Sees its own organization's events, how many runners have registered, who they are and how to reach them to release and ship their kits, and what Run As One has paid out for them. Changes nothing.";
 
 /** Each permission as the team screen's role table words it. */
 export const PERMISSION_LABELS: Record<Permission, string> = {
   'event:view': 'See the event',
   'event:view-summary': 'See registrant counts',
   'event:view-payout': 'See the payout summary',
+  'event:view-runners': 'See and export the runner list for race kits',
   'event:create': 'Create events',
   'event:edit': 'Edit the event',
   'event:delete': 'Delete an event',
@@ -233,6 +245,8 @@ const MATRIX: Record<Permission, readonly Role[]> = {
   // Whoever settles the race (`remittance:manage`) — and, through
   // VIEWER_PERMISSIONS, the race's own client.
   'event:view-payout': ['OWNER', 'ADMIN'],
+  // Every role already reads the race's registrants under `registration:view`.
+  'event:view-runners': ALL,
   'event:create': ['OWNER', 'ADMIN'],
   'event:edit': ['OWNER', 'ADMIN', 'EVENT_MANAGER'],
   'event:delete': ['OWNER'],

@@ -71,8 +71,8 @@ export type ViewerRaceReport = {
   trend: RegistrationTrend;
 };
 
-/** The registrants: paid, or a bank transfer awaiting verification. */
-function registrantOrders(): Prisma.RegistrationWhereInput {
+/** The registrants: paid, or a bank transfer awaiting verification. Shared with `client-runners.ts`. */
+export function registrantOrders(): Prisma.RegistrationWhereInput {
   return { deletedAt: null, OR: [{ status: 'PAID' }, awaitingVerificationWhere()] };
 }
 
@@ -144,8 +144,9 @@ function sizeTable(groups: { categoryId: string; singletSize: string; _count: { 
  * Older orders stored a size as the runner typed it — "Large", "medium",
  * "XXL" — before the picker offered the chart's codes. Counted apart, an
  * organizer reads 52 L and 2 LARGE and orders two shirts short of the truth,
- * so the spelled-out names are folded into the code they mean. Only for the
- * count: the stored value is the runner's and is left as it is.
+ * so the spelled-out names are folded into the code they mean. Only for what
+ * is shown (this count, and `client-runners.ts`' list, so the two agree): the
+ * stored value is the runner's and is left as it is.
  */
 const SIZE_ALIASES: Record<string, string> = {
   'EXTRA SMALL': 'XS',
@@ -159,7 +160,7 @@ const SIZE_ALIASES: Record<string, string> = {
   XXXXL: '4XL',
 };
 
-function chartSize(stored: string): string {
+export function chartSize(stored: string): string {
   const size = stored.trim().toUpperCase().replace(/[\s_-]+/g, ' ');
   return SIZE_ALIASES[size] ?? size;
 }

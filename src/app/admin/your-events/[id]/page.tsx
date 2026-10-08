@@ -2,6 +2,7 @@ import React from 'react';
 import type { Metadata } from 'next';
 import { requireActor } from '@/lib/actor';
 import { clientPayout } from '@/lib/client-payout';
+import { clientRunners } from '@/lib/client-runners';
 import { viewerRaceReport } from '@/lib/client-race-report';
 import { formatEventDay, today } from '@/lib/event-schedule';
 import { SITE_NAME } from '@/lib/site-contact';
@@ -26,10 +27,10 @@ const RACE_NOT_FOUND = {
 };
 
 /**
- * One of a client viewer's races (CLIENT_RACE_PAGE_PLAN.md, Batches 1–3): what
+ * One of a client viewer's races (CLIENT_RACE_PAGE_PLAN.md, Batches 1–4): what
  * an organizer needs to run it — how full each category is, how registrations
- * came in, the shirt sizes to order, how the race kits go out, and what Run As
- * One has paid out for it.
+ * came in, the shirt sizes to order, how the race kits go out, what Run As
+ * One has paid out for it, and who registered.
  *
  * **Meant for viewers, so it gates on `requireActor()`** and lets
  * `viewerRaceReport` decide: it reads through `reachableEvents` and `can()`
@@ -38,7 +39,11 @@ const RACE_NOT_FOUND = {
  * above the payouts is a count (`client-race-report.ts`). The payout summary is
  * its own read and its own verb (`client-payout.ts`, `event:view-payout`), so
  * someone who may see the counts but not the money gets the page without it.
- * There is no runner on it.
+ * The runner list is a third read and verb (`client-runners.ts`,
+ * `event:view-runners`): what the client needs to release and ship the kits
+ * — names, categories, sizes, status, pickup or delivery, phone, email and
+ * address — with filters, marking and an export, never the runner's health,
+ * birthdate or emergency contact.
  *
  * Left out on purpose, after the owner's look at a competitor's portal:
  * withdrawals, a per-order money ledger, promo-code tools, inventory
@@ -48,7 +53,7 @@ const RACE_NOT_FOUND = {
  * **Save as PDF** prints a light copy of the same sections portalled onto
  * `<body>` (`PrintableCopy`, shared with the e-certificate guide): the sizes
  * are what goes to the shirt supplier, who has no account, so the payouts
- * are left off the paper. The button is in
+ * and the runners are left off the paper. The button is in
  * the page, not the header: at the end of the race's status line, above the
  * tiles (`RaceReport`).
  *
@@ -57,7 +62,11 @@ const RACE_NOT_FOUND = {
 export default async function YourRacePage({ params }: { params: Promise<{ id: string }> }) {
   const actor = await requireActor();
   const { id } = await params;
-  const [report, payout] = await Promise.all([viewerRaceReport(actor, id), clientPayout(actor, id)]);
+  const [report, payout, runners] = await Promise.all([
+    viewerRaceReport(actor, id),
+    clientPayout(actor, id),
+    clientRunners(actor, id),
+  ]);
   if (!report) return <AdminNotFound {...RACE_NOT_FOUND} />;
 
   return (
@@ -69,7 +78,7 @@ export default async function YourRacePage({ params }: { params: Promise<{ id: s
           className="race-print-copy"
           print={<RaceReport report={report} idPrefix="print-" printedOn={formatEventDay(today())} />}
         >
-          <RaceReport report={report} idPrefix="" payout={payout} />
+          <RaceReport report={report} idPrefix="" payout={payout} runners={runners} />
         </PrintableCopy>
       </div>
     </>

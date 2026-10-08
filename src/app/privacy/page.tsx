@@ -67,6 +67,7 @@ const sections = (contactEmail: string): LegalSection[] => [
     heading: 'Who sees your data',
     bullets: [
       'The organizer of the event you registered for. They receive the details of every runner in your registration, because they are the ones running the race.',
+      'When we run a race on behalf of another organization, that organization releases and ships the race kits, so its own account on this site shows it, for each registered runner, the name, registration reference, category, shirt size, whether the payment is confirmed or still being verified, whether the kit is picked up or delivered, and the phone number, email, home address and delivery address needed to hand it over. It can download that list for the same purpose. It does not see your birthdate, gender, emergency contact, medical notes or payment details.',
       'Our payment provider, which processes card and e-wallet payments and receives only what it needs to charge and confirm the transaction.',
       'Our hosting, database and file-storage providers, which hold the data on our behalf and are not permitted to use it for anything else.',
       'Anyone at all, but only for what a race is expected to publish: your name, bib number, category, gender and finishing time appear in public results. Your contact details, birthdate, address, emergency contact and medical notes never do.',

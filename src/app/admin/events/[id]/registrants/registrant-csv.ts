@@ -28,10 +28,12 @@
 import { formatPesos } from '@/lib/money';
 import type { UnpaidCheckout } from './UnpaidCheckoutsList';
 
-const csvField = (value: unknown): string =>
+/** One quoted field. Shared with the client's runner list (`your-events/[id]/runner-csv.ts`). */
+export const csvField = (value: unknown): string =>
   `"${String(value ?? '').replace(/"/g, '""')}"`;
 
-const csvPhone = (value: unknown): string => {
+/** A phone number Excel keeps as text, leading `+` and all. */
+export const csvPhone = (value: unknown): string => {
   const number = String(value ?? '').replace(/"/g, '');
   return number ? `"=""${number}"""` : csvField('');
 };
@@ -155,7 +157,7 @@ export function downloadUnpaidCheckoutCsv(csv: string, eventId: string): void {
   downloadCsv(csv, `unpaid_checkouts_event_${eventId}.csv`);
 }
 
-function downloadCsv(csv: string, filename: string): void {
+export function downloadCsv(csv: string, filename: string): void {
   // U+FEFF, the byte order mark, spelled out rather than pasted in as the
   // invisible character it is. It has to be the very first thing in the file
   // or Excel reads the rest as the system codepage instead of UTF-8.

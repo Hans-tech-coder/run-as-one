@@ -83,7 +83,7 @@ export function supportMailto(email: string): string {
  * Both pages show it, because a legal page with no date tells a reader nothing
  * about whether the terms they agreed to are the ones on screen.
  */
-export const LEGAL_LAST_UPDATED = 'September 5, 2026';
+export const LEGAL_LAST_UPDATED = 'October 8, 2026';
 
 export type SocialChannelKey = 'facebook' | 'instagram' | 'tiktok' | 'youtube';
 

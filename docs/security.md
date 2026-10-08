@@ -101,8 +101,8 @@
   cannot be used twice. The invite page is `noindex` with
   `referrer: no-referrer`, since the token is in its URL. Outside production
   only, the link is printed to the server console for local testing.
-- **A client viewer reaches registrant counts and the payout summary of its
-  own client's events and nothing else**, enforced on the server rather than
+- **A client viewer reaches registrant counts, the payout summary and the
+  race-kit runner list of its own client's events, and nothing else**, enforced on the server rather than
   by hidden links. Its
   screens are the Overview (`client-summary.ts`, which asks `event:view-summary`
   with each event's `clientId`), each race's own page `/admin/your-events/[id]`
@@ -114,7 +114,21 @@
   each recorded payout's day, method and amount. The query's `select` is the
   whitelist — **no reference number, note, receipt, voided row or who
   recorded it** leaves it — and the section is never in the printed copy,
-  which a client hands to its shirt supplier. Plus its own Settings and the
+  which a client hands to its shirt supplier. Since Batch 4, **its race's
+  runners** (`client-runners.ts`, asking `event:view-runners` with the race's
+  `clientId`): each paid or awaiting-verification runner's name, runner
+  reference, category, shirt size, *Paid* / *Awaiting verification*, pickup
+  or delivery, and — because the client releases and ships the kits (the
+  owner's call, 2026-10-08, reversing the first "no contact details" ruling)
+  — phone, email, home address with province, and a delivered kit's area and
+  ship-to address. The `select` is the whitelist: **no birthdate, gender,
+  emergency contact, medical note, guardian, club, payment method, proof,
+  amount or remark** leaves it. The client can filter, mark and **export to
+  CSV**; every export is recorded in the activity trail through the staff
+  export route (`api/admin/events/[id]/registrants/export`, which accepts
+  `event:view-runners` with the race's `clientId` beside `registration:view`,
+  and words the entry as the client runner list). The list is never in the
+  printed copy. The Privacy page says so (*Who sees your data*). Plus its own Settings and the
   **E-Certificate Guide** (`/admin/certificate-guide`). The guide is the one
   team-side page a viewer may open, and it gates on `requireActor()` alone
   because it holds no data: the same static text for every reader, with no

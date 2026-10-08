@@ -36,7 +36,7 @@ migration. The plan's "manual entry at `/admin/register`" was not built: that
 route is the organizer application, and no screen adds a runner by hand.
 
 **A client viewer has a page per race** (2026-10-07, on `dev`, not released,
-`CLIENT_RACE_PAGE_PLAN.md` — Batches 1–3 of 4): `/admin/your-events/[id]`,
+`CLIENT_RACE_PAGE_PLAN.md` — Batches 1–4): `/admin/your-events/[id]`,
 opened from **View race details →** on each Overview card — slots per category
 with *Almost full* / *Full*, registrations over time (a bar per day, per week
 past 62 days, with the last 7 days and the busiest day), shirt sizes per
@@ -49,8 +49,18 @@ only — collected, Run As One fees, paid out, still owed, and the payouts as
 day, method and amount — behind a new viewer permission `event:view-payout`
 (§5 `client-payout.ts`, §7); no migration. Seen as Super Admin on local data
 with no payouts recorded, so the list's rows and the *Overpaid* wording have
-not been seen on screen. Still to come, owner-approved: a runner list without
-contact details (Batch 4, plus a Privacy page update).
+not been seen on screen. **Batch 4 (2026-10-08)**: a **Runners** list after
+the payouts, screen only, for releasing and shipping kits — name, ref,
+category, shirt size, *Paid* / *Awaiting verification*, pickup or delivery,
+phone, email, home and ship-to address (no birthdate, emergency contact or
+medical notes) — with search, Filters, mark / unmark and an audited **Export
+to CSV**, behind a new viewer permission `event:view-runners` (§5
+`client-runners.ts`, §7); no migration. The owner first ruled the list should
+carry no contact details, then reversed it the same day because the client
+releases and ships the kits. The Privacy page's *Who sees your data* says what
+a client organization sees and that it can download it, and the legal date
+(shared with the Terms) moved to October 8, 2026. Still not seen
+signed in as a real client viewer (no seeded viewer account).
 
 **The e-certificate template guide is a dashboard page** (2026-10-07, on
 `dev`, not released, `ECERT_GUIDE_PAGE_PLAN.md`): `/admin/certificate-guide`,

@@ -1,6 +1,7 @@
 import React from 'react';
-import { BadgeCheck, CalendarDays, Wallet, Hourglass, MapPin, Package, ShoppingCart, Shirt, TrendingUp, Truck, Users } from 'lucide-react';
+import { BadgeCheck, CalendarDays, ClipboardList, Wallet, Hourglass, MapPin, Package, ShoppingCart, Shirt, TrendingUp, Truck, Users } from 'lucide-react';
 import type { ClientPayout } from '@/lib/client-payout';
+import type { ClientRunnerRow } from '@/lib/client-runners';
 import type { KitSplit, SizeRow, ViewerRaceReport } from '@/lib/client-race-report';
 import type { ViewerCategorySummary } from '@/lib/client-summary';
 import { formatEventDayShort, formatEventInstant } from '@/lib/event-schedule';
@@ -10,6 +11,7 @@ import { PrintHead, SavePdfButton, SavePdfPanel } from '../../PrintableCopy';
 import { Tile } from '../../ViewerDashboard';
 import PayoutSummary from './PayoutSummary';
 import RegistrationTrend from './RegistrationTrend';
+import RunnerList from './RunnerList';
 
 /** A category this full or fuller is flagged, so the organizer can ask for more slots in time. */
 const ALMOST_FULL = 0.9;
@@ -23,18 +25,22 @@ const ALMOST_FULL = 0.9;
  *
  * `payout` is passed to the screen copy only, and only when the viewer may see
  * it (`client-payout.ts`): the paper copy is for a shirt supplier, so the
- * money never prints, whatever is passed.
+ * money never prints, whatever is passed. `runners` is the same: screen only,
+ * when the viewer may see it (`client-runners.ts`), since a supplier has no
+ * business with runners' names, phones or addresses.
  */
 export default function RaceReport({
   report,
   idPrefix,
   printedOn,
   payout,
+  runners,
 }: {
   report: ViewerRaceReport;
   idPrefix: string;
   printedOn?: string;
   payout?: ClientPayout | null;
+  runners?: ClientRunnerRow[] | null;
 }) {
   const { event, sizes, sizedByCategory, kits, trend } = report;
   const state = REGISTRATION_STATES[event.state];
@@ -120,6 +126,17 @@ export default function RaceReport({
           hint="Confirmed payments only: a bank transfer counts once it is verified. Not included in Save as PDF."
         >
           <PayoutSummary payout={payout} />
+        </Panel>
+      )}
+
+      {!printed && runners && (
+        <Panel
+          {...panel}
+          title="Runners"
+          icon={<ClipboardList size={18} />}
+          hint="Paid and awaiting-verification runners, with what you need to release and ship their kits. Mark runners to export only those. Not included in Save as PDF."
+        >
+          <RunnerList rows={runners} eventId={event.id} raceTitle={event.title} />
         </Panel>
       )}
 
