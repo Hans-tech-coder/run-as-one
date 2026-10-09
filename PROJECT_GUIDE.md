@@ -45,7 +45,7 @@ module.
 ### Plans: `ON_HOLD.md` and `docs/plans/`
 
 **`ON_HOLD.md`** at the root lists everything that was planned and not built,
-plus the pending production release steps (12 migrations to run with
+plus the pending production release steps (the migrations to run with
 `npx prisma migrate deploy`, and the owner's post-release checklist). Every
 feature there is on hold by the owner's call: start one only when asked.
 
@@ -261,7 +261,10 @@ src/
                             #   two moved from /superadmin, clients/ replaced
                             #   its organizers screen, remittances/ — what
                             #   each race's organizer is owed and was paid
-                            #   (remittance:manage),
+                            #   (remittance:manage), results/ — the Results
+                            #   menu: races with results here, one race's
+                            #   workspace ([id]) and Add Results (new); a
+                            #   results-only race lives only there,
                             #   dashboard-sidebar.ts — the collapsed-rail cookie,
                             #   dashboard-theme.ts — the Dark Mode cookie,
                             #   AdminCardList — what every table becomes below lg,

@@ -157,26 +157,20 @@ export default function EventActionsMenu({
   };
 
 
-  // A results-only event takes no sign-ups here (RESULTS_ONLY_EVENT_PLAN.md
-  // Batch 4): it has no registrants, race report or pacers to open, and no
-  // sign-ups to schedule, pause or close. What is left is what it is for —
-  // its results — plus Edit and Delete.
-  const isExternal = registrationState === 'EXTERNAL';
-
   const isPaused = registrationState === 'PAUSED';
   // A race that has been run cannot be paused — it is already closed, and
   // offering a hold on it would suggest sign-ups could come back.
   // A closed race offers neither a hold nor a schedule: both would read as
   // ways back in, and the only way back from a closure is Reopen.
   const isClosed = registrationState === 'CLOSED';
-  const canPause = registrationState !== 'FINISHED' && !isClosed && !isExternal && Boolean(onTogglePause);
+  const canPause = registrationState !== 'FINISHED' && !isClosed && Boolean(onTogglePause);
 
   // A race that has been run has no opening left to schedule either — the same
   // line the pause item is drawn on, for the same reason.
-  const canSchedule = registrationState !== 'FINISHED' && !isClosed && !isExternal && Boolean(onSchedule);
+  const canSchedule = registrationState !== 'FINISHED' && !isClosed && Boolean(onSchedule);
 
   // Closing is the same line again: a race that has been run is already over.
-  const canClose = registrationState !== 'FINISHED' && !isExternal && Boolean(onToggleClose);
+  const canClose = registrationState !== 'FINISHED' && Boolean(onToggleClose);
 
   const handleTogglePause = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -207,19 +201,15 @@ export default function EventActionsMenu({
   /* The destinations, built from one shape so the pending treatment cannot end
      up on some of them and not the rest. */
   const destinations = [
-    ...(isExternal
-      ? []
-      : [
-          { href: `/admin/events/${eventId}/registrants`, icon: <Users size={16} />, label: 'Registrants' },
-          // The client's race page, which staff read too: the counts, shirt pieces
-          // to order and kit split, and the PDF that goes to the shirt supplier.
-          { href: `/admin/your-events/${eventId}`, icon: <ClipboardList size={16} />, label: 'Race Report' },
-        ]),
+    { href: `/admin/events/${eventId}/registrants`, icon: <Users size={16} />, label: 'Registrants' },
+    // The client's race page, which staff read too: the counts, shirt pieces
+    // to order and kit split, and the PDF that goes to the shirt supplier.
+    { href: `/admin/your-events/${eventId}`, icon: <ClipboardList size={16} />, label: 'Race Report' },
     // Under Registrants, because a pacer is a registrant the organizer invited,
     // and above Results, which only matter once the race has been run. The
     // count rides in the label rather than in a badge of its own, so the item
     // reads as one sentence: "Pacers · 3 not sent".
-    ...(canManagePacers && !isExternal
+    ...(canManagePacers
       ? [
           {
             href: `/admin/events/${eventId}/pacers`,

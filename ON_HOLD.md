@@ -21,11 +21,19 @@ applied to the dev database) and `20261008090000_registration_closed` (one
 nullable column, `Event.registrationClosedAt`, the organizer's Close Sign-Ups;
 applied to the dev database) and `20261008120000_event_results_only` (one
 boolean column, `Event.resultsOnly` defaulting to false,
-`RESULTS_ONLY_EVENT_PLAN.md` Batch 1; applied to the dev database — **do not
-promote until that plan's Batch 3 has landed**). Run
+`RESULTS_ONLY_EVENT_PLAN.md` Batch 1; applied to the dev database; that plan
+and `RESULTS_NAV_PLAN.md`, which needs no migration of its own, have both
+landed). Run
 `npx prisma migrate deploy` with `DIRECT_URL` on the production endpoint
 **before** the new code goes live: the code reads the column, and the old code
 ignores it, so migrating first is safe in both directions.
+
+**After that release goes live:** in admin, open each of the 3 existing
+results-only races in **Edit Event**, press **Move to Results**, and save. The
+column defaults to false, so until then they still sit in the Events table as
+ordinary races; the move takes them to the Results menu, and the save is
+refused for any race that has registrations (`RESULTS_ONLY_EVENT_PLAN.md`
+D3).
 
 ---
 

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import CertificateSettingsPanel from '@/app/admin/events/CertificateSettingsPanel';
+import CertificateSettingsPanel from './CertificateSettingsPanel';
 import { useEventImageUpload } from '@/app/admin/events/useEventImageUpload';
 import BusyLabel from '@/components/ui/BusyLabel';
 import { useAlert } from '@/components/ui/AlertProvider';

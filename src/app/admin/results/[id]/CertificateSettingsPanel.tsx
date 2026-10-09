@@ -19,9 +19,10 @@ import {
 
 /**
  * A race's E-Certificate Settings: the organizer's template, and how the
- * certificate is drawn on it (`lib/certificate-settings.ts`). Mounted only in
- * the results workspace, /admin/results/[id] (RESULTS_NAV_PLAN.md, Batch 2),
- * so two screens never edit the same setting.
+ * certificate is drawn on it (`lib/certificate-settings.ts`). Mounted only
+ * under Results — the workspace, /admin/results/[id] (RESULTS_NAV_PLAN.md,
+ * Batch 2), and step 3 of /admin/results/new — so the event form never edits
+ * the same setting.
  *
  * The preview is the real PDF — `buildCertificatePdf` run on a sample runner
  * with the settings as they stand — so what an admin lines up here is exactly

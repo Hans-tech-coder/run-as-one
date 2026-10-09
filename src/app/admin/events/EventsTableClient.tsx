@@ -17,7 +17,7 @@ import { REGISTRATION_STATES } from './registration-state-badge';
 import { CategoryChips, RegisteredCount, RegistrationStatus, rowPosition } from './EventRowCells';
 import { eventColumns } from './event-columns';
 import { useEventRowActions } from './useEventRowActions';
-import { isResultsOnlyRow, type EventRow } from './event-row';
+import type { EventRow } from './event-row';
 import {
   Table,
   TableBody,
@@ -347,10 +347,9 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
           // organizer goes from this list again and again. It stays in the
           // menu too, so the menu matches the table's. A quiet chip, not
           // .btn-light: one light pill per card would shout down the list.
-          // A results-only race has no registrants here, so no chip.
           actions={row => (
             <>
-              {!isResultsOnlyRow(row.original) && <Link
+              <Link
                 href={`/admin/events/${row.original.id}/registrants`}
                 className="btn-filter no-underline"
                 aria-label={`Registrants for ${row.original.title}`}
@@ -358,7 +357,7 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
                 <Users size={16} aria-hidden="true" />
                 Registrants
                 <LinkPending />
-              </Link>}
+              </Link>
               {renderActions(row.original, 'ml-auto')}
             </>
           )}

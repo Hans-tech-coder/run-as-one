@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { CheckCircle2, Lock, Trash2 } from 'lucide-react';
 import BusyLabel from '@/components/ui/BusyLabel';
-import CertificateSettingsPanel from '../../events/CertificateSettingsPanel';
+import CertificateSettingsPanel from '../[id]/CertificateSettingsPanel';
 import ResultsUploaderClient from '../[id]/ResultsUploaderClient';
 import type { UploadCategory } from '../[id]/TargetCategoryPicker';
 import type { CertificateDraft } from '../[id]/certificate-draft';

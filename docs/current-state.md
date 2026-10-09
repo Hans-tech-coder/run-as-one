@@ -12,7 +12,7 @@ offers **QR Ph only** (`OFFERED_PAYMONGO_METHODS` in `lib/free-checkout.ts`)
 until it is. Where an entry below says something is "not released" or
 "production is N migrations behind", it predates this release.
 
-**Results menu, Batches 1–3 of 4 (2026-10-09, on `dev`, not released).** The
+**Results menu, all 4 batches (2026-10-09, on `dev`, not released).** The
 sidebar has **Results** under Races, and `/admin/results` lists every
 results-only event and every normal event with results, with a *Registered
 here* / *Results only* badge, finishers, certificate (Custom/Default) and
@@ -36,9 +36,12 @@ Events table no longer lists results-only events, the create form lost its
 Results only switch, and the edit form's switch now reads **Move to Results**
 / **Move back to Events** (still locked once anyone registered) and lands the
 save where the race now lives — which is how the owner moves the 3 existing
-races over after release (R5).
-Still open (`docs/plans/RESULTS_NAV_PLAN.md`): Batch 4 removes the Events
-table's now-dead results-only row code. No migration.
+races over after release (R5; the step is in `ON_HOLD.md`'s release steps).
+**Batch 4:** the Events table's results-only row code went (`isResultsOnlyRow`
+and its branches in the row menu, the Registrants cell and the card), since no
+such row reaches it; the `EXTERNAL` state and its badge stay for the server
+gates. `CertificateSettingsPanel` moved to `admin/results/[id]/`, beside its
+only users. No behavior change, and no migration for the whole plan.
 
 **Results-only events, all 6 batches (2026-10-08, on `dev`, not released).**
 Batch 6: on a results-only event the uploader's Target Category offers
@@ -52,7 +55,8 @@ row pointing at another event's category. Batch 5 split
 Batch 4 split `EventsTableClient.tsx` (972 lines → table, `event-columns`,
 `EventRowCells`, `DeleteEventModal`, `useEventRowActions`) and gave a
 results-only row a menu of only Manage Results, Edit Event and Delete, a muted
-"—" for Registrants and no Registrants chip on its card. Batch 3 put a *Results only* switch at the top of the create and edit forms
+"—" for Registrants and no Registrants chip on its card (removed again by
+`RESULTS_NAV_PLAN.md` Batch 4, once those rows left the table). Batch 3 put a *Results only* switch at the top of the create and edit forms
 (`ResultsOnlyPanel`): on, they keep only client, title, date, location,
 province, an optional cover and each category's name and distance, and hide
 every panel about selling an entry; on edit it is disabled once the event has

@@ -6,7 +6,7 @@ import { Users } from 'lucide-react';
 import type { Row } from '@tanstack/react-table';
 import { formatEventInstant } from '@/lib/event-schedule';
 import { REGISTRATION_STATES } from './registration-state-badge';
-import { isResultsOnlyRow, type CategoryChip, type EventRow } from './event-row';
+import type { CategoryChip, EventRow } from './event-row';
 
 /**
  * The pieces of an events-table row that the table cell and the phone card
@@ -26,11 +26,6 @@ import { isResultsOnlyRow, type CategoryChip, type EventRow } from './event-row'
  * expires them, which is why they are shown at all.
  */
 export function RegisteredCount({ event, alignEnd = false }: { event: EventRow; /** Open the tip leftwards, for a count at the right of a card. */ alignEnd?: boolean }) {
-  // A results-only event takes its sign-ups elsewhere, so a "0" linking to an
-  // empty registrants screen would read as a race nobody joined.
-  if (isResultsOnlyRow(event)) {
-    return <span className="text-[var(--text-muted)]" aria-label="Registration handled outside Run As One">—</span>;
-  }
   const { paid, awaiting, unpaid } = event.registered ?? { paid: 0, awaiting: 0, unpaid: 0 };
   const total = paid + awaiting;
 

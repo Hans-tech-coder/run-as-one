@@ -32,13 +32,3 @@ export type EventRow = {
   /** raceResults is sent by the Results list only, for its delete confirmation. */
   _count?: { registrations: number; raceResults?: number };
 };
-
-/**
- * A results-only event: the client takes sign-ups elsewhere and this platform
- * only publishes the results (RESULTS_ONLY_EVENT_PLAN.md). Read off the state
- * the server worked out rather than off `resultsOnly`, so the badge, the menu
- * and the Registrants cell all follow the one answer registrationState() gave.
- */
-export function isResultsOnlyRow(event: EventRow) {
-  return event.registrationState === 'EXTERNAL';
-}
