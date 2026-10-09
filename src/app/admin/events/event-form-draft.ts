@@ -5,7 +5,7 @@ import { type EventHighlight } from '@/lib/event-highlights';
  * The fields the create and edit forms both hold in `formData`, in the shape
  * the forms work in: every money field is PESOS, and the API converts to
  * centavos on the way in. The edit form extends it with what only a saved
- * event has (the registration hold, the certificate).
+ * event has (the registration hold).
  *
  * One type rather than two copies so a field added to the event form is added
  * once, and the shared panels (BasicInfoPanel, RegistrationFeesPanel,

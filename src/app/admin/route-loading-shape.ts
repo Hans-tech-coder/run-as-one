@@ -326,7 +326,7 @@ const PATTERNS: [RegExp, RouteShape][] = [
     },
   ],
   [
-    /^\/admin\/events\/[^/]+\/results$/,
+    /^\/admin\/results\/[^/]+$/,
     {
       list: { frame: 'page', toolbar: 192 },
       lg: { toolbar: LG_TOOLBAR, table: { head: LG_TANSTACK_HEAD, row: 61, rows: 8 } },

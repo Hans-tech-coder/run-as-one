@@ -302,8 +302,12 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
           // in the future holds the button back until it passes.
           registrationOpensAt: registrationOpens,
           resultsOnly,
-          certificateTemplate: certificateTemplate || null,
-          certificateCoordinates: certificateCoordinates || null,
+          // The certificate has its own home now, the results workspace and
+          // its PUT …/certificate (RESULTS_NAV_PLAN.md, Batch 2). The edit
+          // form no longer sends these, and a body without them keeps what is
+          // stored — otherwise every Edit Event save would wipe the template.
+          ...(certificateTemplate !== undefined ? { certificateTemplate: certificateTemplate || null } : {}),
+          ...(certificateCoordinates !== undefined ? { certificateCoordinates: certificateCoordinates || null } : {}),
           ...(clientLink.change ? { clientId: clientLink.clientId } : {}),
         }
       });

@@ -60,9 +60,7 @@ export default function ResultsListClient({
     const canEdit = row.access?.edit ?? true;
     const canDelete = row.access?.delete ?? true;
     return [
-      // Batch 2 moves the workspace to /admin/results/[id]; until then it is
-      // the Events screen's results page.
-      { key: 'open', label: 'Open Results', icon: <Trophy size={16} />, to: `/admin/events/${row.id}/results` },
+      { key: 'open', label: 'Open Results', icon: <Trophy size={16} />, to: `/admin/results/${row.id}` },
       ...(row.finishers > 0
         ? [{ key: 'public', label: 'View Public Page', icon: <ExternalLink size={16} />, href: `/results/${row.slug}` }]
         : []),

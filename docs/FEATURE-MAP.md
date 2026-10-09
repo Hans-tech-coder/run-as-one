@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-40 pages · 52 API routes · 89 modules in `src/lib` · 408 files · 81,672 lines
+40 pages · 53 API routes · 89 modules in `src/lib` · 412 files · 82,046 lines
 
 ---
 
@@ -35,7 +35,6 @@ The route, the server component behind it, and the client components beside it.
 | `/admin/events/[id]/pacers` | [`/admin/events/[id]/pacers/page.tsx`](../src/app/admin/events/[id]/pacers/page.tsx) | `AddPacerModal.tsx` `EditPacerModal.tsx` `pacer-row.ts` `PacerActionsMenu.tsx` `PacersClient.tsx` `use-pacer-actions.tsx` |
 | `/admin/events/[id]/registrants` | [`/admin/events/[id]/registrants/page.tsx`](../src/app/admin/events/[id]/registrants/page.tsx) | `CancelOrderModal.tsx` `ColumnsViewMenu.tsx` `DeleteRegistrantModals.tsx` `email-handoff.ts` `FollowUpModal.tsx` `ManualEmailModal.tsx` `PaymentLinkEmailModal.tsx` `ProofLightbox.tsx` `registrant-columns.tsx` `registrant-csv.ts` `registrant-display.tsx` `RegistrantActionsMenu.tsx` `RegistrantDetailModal.tsx` `RegistrantRowActions.tsx` `RegistrantsDataTable.tsx` `RegistrantsTable.tsx` `RegistrantsTabs.tsx` `RegistrantsToolbar.tsx` `RemarksModal.tsx` `RunnerAddressEditor.tsx` `RunnerEditModal.tsx` `SendLinksButton.tsx` `unpaid-columns.tsx` `UnpaidCheckoutActions.tsx` `UnpaidCheckoutCards.tsx` `UnpaidCheckoutsList.tsx` |
 | `/admin/events/[id]/registrants/[runnerId]/consent` | [`/admin/events/[id]/registrants/[runnerId]/consent/page.tsx`](../src/app/admin/events/[id]/registrants/[runnerId]/consent/page.tsx) | `PrintableSheet.tsx` |
-| `/admin/events/[id]/results` | [`/admin/events/[id]/results/page.tsx`](../src/app/admin/events/[id]/results/page.tsx) | `results-sheet.ts` `ResultsTableClient.tsx` `ResultsUploaderClient.tsx` `SheetMappingPanel.tsx` `TargetCategoryPicker.tsx` |
 | `/admin/events/new` | [`/admin/events/new/page.tsx`](../src/app/admin/events/new/page.tsx) | `NewEventForm.tsx` |
 | `/admin/feedback` | [`/admin/feedback/page.tsx`](../src/app/admin/feedback/page.tsx) | `FeedbackClient.tsx` `MessageDetail.tsx` |
 | `/admin/invite/[token]` | [`/admin/invite/[token]/page.tsx`](../src/app/admin/invite/[token]/page.tsx) | `InviteAcceptClient.tsx` |
@@ -45,6 +44,7 @@ The route, the server component behind it, and the client components beside it.
 | `/admin/remittances` | [`/admin/remittances/page.tsx`](../src/app/admin/remittances/page.tsx) | `RemittancesClient.tsx` `SettlementBadge.tsx` |
 | `/admin/remittances/[eventId]` | [`/admin/remittances/[eventId]/page.tsx`](../src/app/admin/remittances/[eventId]/page.tsx) | `RecordRemittanceDialog.tsx` `SettlementClient.tsx` `VoidRemittanceDialog.tsx` |
 | `/admin/results` | [`/admin/results/page.tsx`](../src/app/admin/results/page.tsx) | `result-columns.tsx` `result-row.ts` `ResultsListClient.tsx` |
+| `/admin/results/[id]` | [`/admin/results/[id]/page.tsx`](../src/app/admin/results/[id]/page.tsx) | `certificate-draft.ts` `CertificateWorkspacePanel.tsx` `EventDetailsPanel.tsx` `results-sheet.ts` `ResultsTableClient.tsx` `ResultsUploaderClient.tsx` `SheetMappingPanel.tsx` `TargetCategoryPicker.tsx` |
 | `/admin/settings` | [`/admin/settings/page.tsx`](../src/app/admin/settings/page.tsx) | `AccessPanels.tsx` `account.ts` `PasswordField.tsx` `sections.ts` `SettingsPanels.tsx` |
 | `/admin/settings/access` | [`/admin/settings/access/page.tsx`](../src/app/admin/settings/access/page.tsx) | — |
 | `/admin/settings/security` | [`/admin/settings/security/page.tsx`](../src/app/admin/settings/security/page.tsx) | — |
@@ -78,6 +78,7 @@ The route, the server component behind it, and the client components beside it.
 | `/api/admin/communities/[id]` | PATCH DELETE | [`/admin/communities/[id]/route.ts`](../src/app/api/admin/communities/[id]/route.ts) |
 | `/api/admin/events` | POST | [`/admin/events/route.ts`](../src/app/api/admin/events/route.ts) |
 | `/api/admin/events/[id]` | GET PATCH PUT DELETE | [`/admin/events/[id]/route.ts`](../src/app/api/admin/events/[id]/route.ts) |
+| `/api/admin/events/[id]/certificate` | PUT | [`/admin/events/[id]/certificate/route.ts`](../src/app/api/admin/events/[id]/certificate/route.ts) |
 | `/api/admin/events/[id]/pacers` | GET POST | [`/admin/events/[id]/pacers/route.ts`](../src/app/api/admin/events/[id]/pacers/route.ts) |
 | `/api/admin/events/[id]/pacers/[pacerId]` | PATCH DELETE | [`/admin/events/[id]/pacers/[pacerId]/route.ts`](../src/app/api/admin/events/[id]/pacers/[pacerId]/route.ts) |
 | `/api/admin/events/[id]/registrants/export` | POST | [`/admin/events/[id]/registrants/export/route.ts`](../src/app/api/admin/events/[id]/registrants/export/route.ts) |
@@ -242,7 +243,7 @@ when a task touches one, split it before editing rather than after.
 | 1015 | [`src/app/admin/register/page.tsx`](../src/app/admin/register/page.tsx) |
 | 785 | [`src/app/results/[slug]/full/FullResultsClient.tsx`](../src/app/results/[slug]/full/FullResultsClient.tsx) |
 | 693 | [`src/app/admin/AdminDatePicker.tsx`](../src/app/admin/AdminDatePicker.tsx) |
-| 673 | [`src/app/api/admin/events/[id]/route.ts`](../src/app/api/admin/events/[id]/route.ts) |
+| 677 | [`src/app/api/admin/events/[id]/route.ts`](../src/app/api/admin/events/[id]/route.ts) |
 | 663 | [`src/app/admin/activity/ActivityClient.tsx`](../src/app/admin/activity/ActivityClient.tsx) |
 | 663 | [`src/lib/pending-expiry.ts`](../src/lib/pending-expiry.ts) |
 | 640 | [`src/lib/activity.ts`](../src/lib/activity.ts) |
@@ -269,6 +270,6 @@ when a task touches one, split it before editing rather than after.
 | 451 | [`src/app/admin/events/[id]/registrants/RunnerEditModal.tsx`](../src/app/admin/events/[id]/registrants/RunnerEditModal.tsx) |
 | 449 | [`src/app/admin/page.tsx`](../src/app/admin/page.tsx) |
 | 443 | [`src/app/admin/events/[id]/registrants/page.tsx`](../src/app/admin/events/[id]/registrants/page.tsx) |
-| 439 | [`src/app/admin/events/[id]/results/ResultsTableClient.tsx`](../src/app/admin/events/[id]/results/ResultsTableClient.tsx) |
+| 439 | [`src/app/admin/results/[id]/ResultsTableClient.tsx`](../src/app/admin/results/[id]/ResultsTableClient.tsx) |
 | 438 | [`src/lib/actor.ts`](../src/lib/actor.ts) |
 | 422 | [`src/lib/pacer.ts`](../src/lib/pacer.ts) |

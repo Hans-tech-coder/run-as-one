@@ -4,7 +4,6 @@ import { asRegistrationForm } from '@/lib/registration-form';
 import { asEventType, type EventType } from '@/lib/event-type';
 import { formatWaiverParagraphs } from '@/lib/consent-waiver';
 import { cleanHighlights } from '@/lib/event-highlights';
-import { defaultCertificateSettingsJson, parseCertificateSettings } from '@/lib/certificate-settings';
 import type { EventPromotion } from '@/lib/promo-store';
 import { blankEventDraft, type EventFormDraft } from '../../event-form-draft';
 import { openingDraft, type OpeningDraft } from '../../registration-opening';
@@ -28,8 +27,10 @@ export type EventEditDraft = EventFormDraft & {
   // src/lib/registration-gate.ts.
   registrationPaused: boolean;
   registrationPauseNote: string;
-  certificateTemplate: string;
-  certificateCoordinates: string;
+  // No certificate fields: the certificate is edited in the results workspace
+  // and saved through its own route (RESULTS_NAV_PLAN.md, Batch 2). Leaving
+  // them out of the draft keeps them out of this form's PUT, which then keeps
+  // what is stored.
 };
 
 /** The draft shown for the instant before the event has loaded. */
@@ -39,17 +40,8 @@ export function blankEditDraft(): EventEditDraft {
     ...blankEventDraft(60),
     registrationPaused: false,
     registrationPauseNote: '',
-    certificateTemplate: '',
-    certificateCoordinates: defaultCertificateSettingsJson(),
   };
 }
-
-// The premade templates that used to sit under /public/certificates are gone —
-// the only way to get a certificate background now is to upload one. An event
-// saved back when the picker existed still points at a deleted file, so drop
-// that path instead of previewing a 404.
-const uploadedTemplate = (value: unknown) =>
-  typeof value === 'string' && !value.startsWith('/certificates/template_') ? value : '';
 
 /**
  * The parts of the GET response this form reads, as they arrive over JSON
@@ -77,7 +69,6 @@ type EventResponse = {
   shirtSizeUpcharge?: Maybe<number>;
   consentWaiver?: Maybe<string[]>;
   registrationPauseNote?: Maybe<string>;
-  certificateCoordinates?: Maybe<string>;
   registrationOpensAt?: Maybe<string>;
   clientId?: Maybe<string>;
   resultsOnly?: Maybe<boolean>;
@@ -140,16 +131,6 @@ export function editStateFromEvent(data: EventResponse): {
       registrationForm: asRegistrationForm(data.registrationForm),
       registrationPaused: Boolean(data.registrationPaused),
       registrationPauseNote: data.registrationPauseNote || '',
-      certificateTemplate: uploadedTemplate(data.certificateTemplate),
-      // An event with a template keeps the layout its runners have been
-      // getting — legacy until an admin switches (an empty column reads as
-      // legacy; see certificate-settings.ts). One with no template has no
-      // runner relying on a layout, so its first template starts designed.
-      certificateCoordinates: uploadedTemplate(data.certificateTemplate)
-        ? data.certificateCoordinates || JSON.stringify({ nameY: 50, timeY: 60, catY: 70 })
-        : parseCertificateSettings(data.certificateCoordinates).v === 2
-          ? (data.certificateCoordinates ?? defaultCertificateSettingsJson())
-          : defaultCertificateSettingsJson(),
     },
 
     // Null on the row means the race was open from the moment it was

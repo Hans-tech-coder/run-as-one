@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { ArrowRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import {
   OPENS_IMMEDIATELY,
@@ -22,7 +23,6 @@ import { EVENT_FORM_SHAPE } from '@/app/admin/route-loading-shape';
 import BusyLabel from '@/components/ui/BusyLabel';
 import DashboardHeader from '@/app/admin/DashboardHeader';
 import LogisticsPanel, { deliveryFees, deliveryProblem } from '../../LogisticsPanel';
-import CertificateSettingsPanel from '../../CertificateSettingsPanel';
 import BasicInfoPanel from '../../BasicInfoPanel';
 import ResultsOnlyPanel from '../../ResultsOnlyPanel';
 import RegistrationFeesPanel from '../../RegistrationFeesPanel';
@@ -35,7 +35,8 @@ import { blankEditDraft, editStateFromEvent } from './event-edit-draft';
  * (BasicInfoPanel, RegistrationFeesPanel, LogisticsPanel…), and turning the
  * fetched event into form state is `event-edit-draft.ts`; this file owns the
  * fetch, the validation before PUT, the PUT itself, and what only a saved
- * event has: the registration hold, the certificate and the promotions.
+ * event has: the registration hold, the promotions, and the link to its
+ * certificate in the results workspace.
  */
 export default function EditEventPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -327,15 +328,23 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
             </>
           )}
 
-          <CertificateSettingsPanel
-            template={formData.certificateTemplate}
-            settings={formData.certificateCoordinates}
-            onSettingsChange={(certificateCoordinates) => setFormData((prev) => ({ ...prev, certificateCoordinates }))}
-            onTemplateFile={(e) => upload(e, 'certificateTemplate', 'template')}
-            uploading={uploadingField === 'certificateTemplate'}
-            disabled={uploadingField !== null}
-            event={{ title: formData.title, date: formData.date, location: formData.location }}
-          />
+          {/* The certificate has one home, the race's results workspace
+              (RESULTS_NAV_PLAN.md, Batch 2), so two screens never edit the
+              same setting. This form no longer sends it, and its PUT keeps
+              what is stored. */}
+          <div className="admin-panel">
+            <div className="admin-panel-header">
+              <h2 className="admin-panel-title">E-Certificate</h2>
+              <Link href={`/admin/results/${id}`} className="btn-filter no-underline max-sm:min-h-11">
+                Open in Results <ArrowRight size={14} aria-hidden="true" />
+              </Link>
+            </div>
+            <div className="admin-panel-content">
+              <p className="text-sm opacity-70 m-0">
+                The certificate template and layout are set in this race&apos;s results workspace, beside its results.
+              </p>
+            </div>
+          </div>
 
           {/* Last, and read-only: what a runner can be given on this race,
               so a price set on this screen is not set without the discounts

@@ -228,7 +228,7 @@ export default function EventActionsMenu({
           },
         ]
       : []),
-    { href: `/admin/events/${eventId}/results`, icon: <Trophy size={16} />, label: 'Manage Results' },
+    { href: `/admin/results/${eventId}`, icon: <Trophy size={16} />, label: 'Manage Results' },
     ...(canEdit
       ? [{ href: `/admin/events/${eventId}/edit`, icon: <Edit size={16} />, label: 'Edit Event' }]
       : []),

@@ -79,8 +79,10 @@
   (and answered 401 by every route) — there is no redirect loop, because the
   sign-in page is public. `registrants` and
   `results` both do this; the `edit` screen is a client component, so its scope
-  lives in `GET`/`PUT /api/admin/events/[id]`, and the results uploader's in
-  `POST /api/admin/events/[id]/results/upload`. **Never read an event by id
+  lives in `GET`/`PUT /api/admin/events/[id]`, the results uploader's in
+  `POST /api/admin/events/[id]/results/upload`, and the results workspace's
+  certificate save in `PUT /api/admin/events/[id]/certificate` (`event:edit`).
+  **Never read an event by id
   alone on an admin surface** — the registrants screen carries every runner's
   email, phone, birthdate, emergency contact and medical notes, and an id is not
   proof of ownership. There is no cross-tenant branch anywhere: `can()`

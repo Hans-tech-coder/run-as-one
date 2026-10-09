@@ -48,6 +48,17 @@ const nextConfig: NextConfig = {
         permanent: true,
       },
       /**
+       * A race's results workspace moved under the Results menu
+       * (RESULTS_NAV_PLAN.md, Batch 2). Staff bookmarked the old address from
+       * the Events row menu, so it keeps landing on the same race. The upload
+       * API stays at /api/admin/events/[id]/results/upload — only the page moved.
+       */
+      {
+        source: "/admin/events/:id/results",
+        destination: "/admin/results/:id",
+        permanent: true,
+      },
+      /**
        * There is one dashboard now (ADMIN_MERGE_PLAN.md, Batch 2). The super
        * admin's screens moved under /admin with the same names — organizers,
        * communities, feedback and activity — and its home is the Overview, so

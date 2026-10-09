@@ -1,7 +1,7 @@
 'use client';
 
 import { useId } from 'react';
-import AdminSelect from '../../../AdminSelect';
+import AdminSelect from '../../AdminSelect';
 import FieldError from '@/components/ui/FieldError';
 import { upperCaseForStorage } from '@/lib/text-case';
 import { NEW_CATEGORY } from './results-sheet';

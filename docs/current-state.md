@@ -12,15 +12,23 @@ offers **QR Ph only** (`OFFERED_PAYMONGO_METHODS` in `lib/free-checkout.ts`)
 until it is. Where an entry below says something is "not released" or
 "production is N migrations behind", it predates this release.
 
-**Results menu, Batch 1 of 4 (2026-10-09, on `dev`, not released).** The
+**Results menu, Batches 1–2 of 4 (2026-10-09, on `dev`, not released).** The
 sidebar has **Results** under Races, and `/admin/results` lists every
 results-only event and every normal event with results, with a *Registered
 here* / *Results only* badge, finishers, certificate (Custom/Default) and
 client; its row menu opens the results, the public page, the edit form, and
-deletes a results-only race. Still open (`docs/plans/RESULTS_NAV_PLAN.md`):
-Batch 2 moves the results workspace to `/admin/results/[id]` with the
-certificate in it, Batch 3 adds Create and takes results-only events off the
-Events table, Batch 4 cleans up. No migration.
+deletes a results-only race. **Batch 2:** one race's results live at
+`/admin/results/[id]` (the old `/admin/events/[id]/results` 308-redirects; the
+upload API stayed). With no results it is a three-step create layout —
+read-only Details, Upload, E-Certificate — and with results it is Details, the
+table and re-upload, and E-Certificate. **The certificate has one home**: it
+is saved from the workspace through the new `PUT
+/api/admin/events/[id]/certificate` (`event:edit`), the edit form shows a
+line linking there and no longer sends the certificate fields, and the full
+event PUT now keeps them when they are absent. Manage Results on the Events
+row menu opens the workspace either way. Still open
+(`docs/plans/RESULTS_NAV_PLAN.md`): Batch 3 adds Create and takes
+results-only events off the Events table, Batch 4 cleans up. No migration.
 
 **Results-only events, all 6 batches (2026-10-08, on `dev`, not released).**
 Batch 6: on a results-only event the uploader's Target Category offers

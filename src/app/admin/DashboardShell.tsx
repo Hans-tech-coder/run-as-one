@@ -115,7 +115,7 @@ const isWideOnServer = () => true;
 
 /**
  * Is this the row for the page on screen? Everything under a section belongs to
- * it — `/admin/events/new` and `/admin/events/12/results` are both Events — but
+ * it — `/admin/events/new` and `/admin/events/12/edit` are both Events — but
  * `/admin` is the dashboard's own page, not its root, so it is matched exactly.
  */
 export function isActivePath(pathname: string, path: string) {

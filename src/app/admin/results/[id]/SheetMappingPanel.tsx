@@ -1,7 +1,7 @@
 'use client';
 
 import { FileSpreadsheet } from 'lucide-react';
-import AdminSelect from '../../../AdminSelect';
+import AdminSelect from '../../AdminSelect';
 import { upperCaseForStorage } from '@/lib/text-case';
 import TargetCategoryPicker, { type UploadCategory } from './TargetCategoryPicker';
 import {

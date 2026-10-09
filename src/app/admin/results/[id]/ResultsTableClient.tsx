@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import FiltersMenu from '../../../FiltersMenu';
+import FiltersMenu from '../../FiltersMenu';
 import {
   ColumnDef,
   flexRender,
@@ -25,9 +25,9 @@ import {
   VisibilityState,
 } from '@tanstack/react-table';
 import ResultsUploaderClient from './ResultsUploaderClient';
-import AdminCardList from '../../../AdminCardList';
-import AdminTablePager from '../../../AdminTablePager';
-import MobileSortMenu from '../../../MobileSortMenu';
+import AdminCardList from '../../AdminCardList';
+import AdminTablePager from '../../AdminTablePager';
+import MobileSortMenu from '../../MobileSortMenu';
 import { toWholeSeconds } from '@/lib/race-time';
 import { compareCategoryNames } from '@/lib/category-distance';
 

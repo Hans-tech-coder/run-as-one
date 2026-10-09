@@ -18,8 +18,10 @@ import {
 } from '@/lib/certificate-settings';
 
 /**
- * The event form's E-Certificate Settings: the organizer's template, and how
- * the certificate is drawn on it (`lib/certificate-settings.ts`).
+ * A race's E-Certificate Settings: the organizer's template, and how the
+ * certificate is drawn on it (`lib/certificate-settings.ts`). Mounted only in
+ * the results workspace, /admin/results/[id] (RESULTS_NAV_PLAN.md, Batch 2),
+ * so two screens never edit the same setting.
  *
  * The preview is the real PDF — `buildCertificatePdf` run on a sample runner
  * with the settings as they stand — so what an admin lines up here is exactly
@@ -67,10 +69,15 @@ interface Props {
   disabled: boolean;
   /** The event as the form currently has it, for the preview. */
   event: { title: string; date: string; location: string };
+  /** The workspace numbers it as a step when the race has no results yet. */
+  title?: string;
+  /** Under the controls, inside the panel: the workspace's Save. */
+  footer?: React.ReactNode;
 }
 
 export default function CertificateSettingsPanel({
   template, settings, onSettingsChange, onTemplateFile, uploading, disabled, event,
+  title = 'E-Certificate Settings', footer,
 }: Props) {
   const parsed = useMemo(() => parseCertificateSettings(settings), [settings]);
   const update = (next: CertificateSettings) => onSettingsChange(serializeCertificateSettings(next));
@@ -78,7 +85,7 @@ export default function CertificateSettingsPanel({
   return (
     <div className="admin-panel">
       <div className="admin-panel-header">
-        <h2 className="admin-panel-title">E-Certificate Settings</h2>
+        <h2 className="admin-panel-title">{title}</h2>
       </div>
       <div className="admin-panel-content">
         <div className="form-group mb-6">
@@ -103,8 +110,8 @@ export default function CertificateSettingsPanel({
               </div>
             </div>
           </div>
-          {/* A new tab, because this sits inside the event form and leaving
-              would drop an unsaved template or settings change. */}
+          {/* A new tab, because leaving the workspace would drop an unsaved
+              template or settings change. */}
           <a
             href="/admin/certificate-guide"
             target="_blank"
@@ -136,6 +143,7 @@ export default function CertificateSettingsPanel({
             </div>
           </div>
         )}
+        {footer}
       </div>
     </div>
   );
