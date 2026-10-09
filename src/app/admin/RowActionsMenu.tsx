@@ -2,7 +2,9 @@
 
 import React, { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
+import Link from 'next/link';
 import { MoreVertical } from 'lucide-react';
+import LinkPending from '@/components/ui/LinkPending';
 import { placeRowMenu, type RowMenuPlacement } from './row-menu-position';
 import { cssDurationMs } from '@/lib/css-duration';
 
@@ -17,6 +19,12 @@ export interface RowAction {
   /** A plain link instead of a button — a receipt file, opened in a new tab. */
   href?: string;
   /**
+   * A page inside the dashboard, opened in place as a client-side navigation.
+   * The menu stays open on it with the running figure until the page arrives,
+   * as EventActionsMenu's links do, so the click never looks unheard.
+   */
+  to?: string;
+  /**
    * Open `href` in place. For a link the device hands to an app — `tel:`,
    * `sms:`, `mailto:` — where a new tab would only be left blank behind it.
    */
@@ -28,7 +36,8 @@ export interface RowAction {
 
 /**
  * The events table's ⋮ row menu (`events/EventActionsMenu`) for a table whose
- * items are a plain list: clients, clubs, feedback and a race's remittances.
+ * items are a plain list: clients, clubs, feedback, a race's remittances and
+ * the Results list.
  * The portal, the fixed placement by `row-menu-position` and the closing
  * animation are the same machinery, because a dropdown inside a table cell is
  * clipped by the table's own overflow. The table decides what each row offers
@@ -47,6 +56,7 @@ export default function RowActionsMenu({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [position, setPosition] = useState<RowMenuPlacement>({ top: 0, left: 0, origin: 'top-right' });
+  const [navigatingTo, setNavigatingTo] = useState<string | null>(null);
 
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -80,6 +90,9 @@ export default function RowActionsMenu({
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
+      // Waiting on a page: closing now would take away the only sign the
+      // click was heard (EventActionsMenu).
+      if (navigatingTo) return;
       if (
         dropdownRef.current &&
         !dropdownRef.current.contains(event.target as Node) &&
@@ -111,7 +124,7 @@ export default function RowActionsMenu({
       window.removeEventListener('scroll', handleScrollOrResize, true);
       window.removeEventListener('resize', handleScrollOrResize);
     };
-  }, [isOpen, updatePosition, closeMenu]);
+  }, [isOpen, updatePosition, navigatingTo, closeMenu]);
 
   if (actions.length === 0) return null;
 
@@ -132,7 +145,22 @@ export default function RowActionsMenu({
   const renderItem = (action: RowAction) => {
     const className = `action-dropdown-item ${action.danger ? 'danger' : ''} w-full flex items-center gap-3 px-4 py-2 text-sm text-left no-underline ${
       action.disabled ? 'opacity-50 cursor-not-allowed' : ''
-    }`;
+    } ${navigatingTo === action.to ? 'is-navigating' : ''}`;
+    if (action.to) {
+      return (
+        <Link
+          key={action.key}
+          href={action.to}
+          className={className}
+          role="menuitem"
+          onClick={() => setNavigatingTo(action.to!)}
+        >
+          {action.icon}
+          {action.label}
+          <LinkPending />
+        </Link>
+      );
+    }
     if (action.href) {
       return (
         <a
@@ -169,7 +197,7 @@ export default function RowActionsMenu({
   const dropdownContent = (
     <div
       ref={dropdownRef}
-      className="action-dropdown-menu t-dropdown"
+      className={`action-dropdown-menu t-dropdown ${navigatingTo ? 'is-navigating' : ''}`}
       data-origin={position.origin}
       style={{
         position: 'fixed',

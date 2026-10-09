@@ -26,6 +26,10 @@ export default function DeleteEventModal({
   onConfirm: () => void;
 }) {
   const registrations = event?._count?.registrations ?? 0;
+  // Only the Results list sends this. A results-only race has no
+  // registrations to warn about, but its uploaded results go with it all the
+  // same, and that is the loss to name.
+  const results = event?._count?.raceResults ?? 0;
 
   return (
     <div
@@ -57,6 +61,14 @@ export default function DeleteEventModal({
               <AlertCircle size={20} className="shrink-0" />
               <p className="text-sm">
                 This event has {registrations} registration{registrations === 1 ? '' : 's'}. Deleting it also erases those registrations, their runners, and any uploaded race results.
+              </p>
+            </div>
+          )}
+          {registrations === 0 && results > 0 && (
+            <div className="bg-red-500/10 border border-red-500/50 p-4 rounded-lg flex items-center gap-3 text-[var(--status-danger)]">
+              <AlertCircle size={20} className="shrink-0" />
+              <p className="text-sm">
+                This event has {results} uploaded result{results === 1 ? '' : 's'}. Deleting it also erases them, and its public results page goes with it.
               </p>
             </div>
           )}

@@ -29,7 +29,8 @@ export type EventRow = {
   access?: { edit: boolean; delete: boolean; pacers?: boolean };
   /** How many of this race's pacers have not been sent their code (events/page.tsx). */
   pacersNotSent?: number;
-  _count?: { registrations: number };
+  /** raceResults is sent by the Results list only, for its delete confirmation. */
+  _count?: { registrations: number; raceResults?: number };
 };
 
 /**

@@ -686,6 +686,31 @@ An unknown, used, expired or malformed link all get the same designed "This
 link has expired" page with the way back to sign-in) · `/admin/[...missing]` →
 the admin's own 404.
 
+**`/admin/results` is the Results menu** (`RESULTS_NAV_PLAN.md` Batch 1),
+under Races after Events, with the `Trophy` icon and the same `nav.events`
+check. It lists every race whose results live here: `reachableEvents(actor)`
+AND (`resultsOnly` OR at least one `RaceResult`), the most recent race first.
+Nothing is stored to mark a race as listed — a results-only event is on it
+from creation, a normal one from its first result, and a normal event without
+results is not. Columns: No., Event Name, Date, **Type** (*Registered here*,
+`info`, or *Results only*, `neutral` — `results/result-row.ts`), **Finishers**
+(`_count.raceResults`; *No results yet* instead of 0), **Certificate**
+(*Custom* when `certificateTemplate` is set, else *Default* — Run As One's own
+is always there) and **Client**; search also reads the hidden location. One
+*Filters* chip holds **Type** and, for `platform:manage`, **Client**. Below
+`lg` the rows are `AdminCardList` cards. The row menu is `RowActionsMenu`,
+icon and label on every item: **Open Results** (still
+`/admin/events/[id]/results` until Batch 2 moves the workspace), **View Public
+Page** (`/results/[slug]`, new tab, only with results), **Edit Details**
+(`/admin/events/[id]/edit`, `event:edit`) and **Delete** (results-only rows
+only, `event:delete`, through the Events table's `DeleteEventModal` and
+`useEventRowActions`; the modal names the uploaded results that go with it).
+**There is no Create button yet**: `/admin/results/new` arrives in Batch 3.
+`RowActionsMenu` items take **`to`** for an in-app page (a `next/link` that
+keeps the menu open on `LinkPending`, as `EventActionsMenu` does), beside
+`href` for a new tab. Files: `results/page.tsx`, `ResultsListClient.tsx`,
+`result-columns.tsx`, `result-row.ts`.
+
 **The sidebar and the events table follow the permission matrix.** Marketing
 Tools shows only with `promo:view` somewhere, **Clients, Communities and
 Feedback only with `platform:manage`** (between Marketing Tools and Team),

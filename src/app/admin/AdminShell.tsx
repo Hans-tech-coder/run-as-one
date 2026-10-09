@@ -13,6 +13,7 @@ import {
   Megaphone,
   MessageSquare,
   Settings,
+  Trophy,
   UsersRound,
 } from 'lucide-react';
 import { ROLE_LABELS } from '@/lib/permissions';
@@ -96,6 +97,11 @@ export default function AdminShell({
         // Batch 4; ECERT_GUIDE_PAGE_PLAN.md), with Settings in the account menu.
         ...((user?.nav.events ?? true)
           ? [{ name: 'Events', path: '/admin/events', icon: <Calendar size={20} /> }]
+          : []),
+        // Every race whose results live here (RESULTS_NAV_PLAN.md). Results are
+        // Events work, so the same people reach it.
+        ...((user?.nav.events ?? true)
+          ? [{ name: 'Results', path: '/admin/results', icon: <Trophy size={20} /> }]
           : []),
         ...((user?.nav.marketing ?? true)
           ? [{ name: 'Marketing Tools', path: '/admin/marketing', icon: <Megaphone size={20} /> }]

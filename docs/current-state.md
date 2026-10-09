@@ -12,6 +12,16 @@ offers **QR Ph only** (`OFFERED_PAYMONGO_METHODS` in `lib/free-checkout.ts`)
 until it is. Where an entry below says something is "not released" or
 "production is N migrations behind", it predates this release.
 
+**Results menu, Batch 1 of 4 (2026-10-09, on `dev`, not released).** The
+sidebar has **Results** under Races, and `/admin/results` lists every
+results-only event and every normal event with results, with a *Registered
+here* / *Results only* badge, finishers, certificate (Custom/Default) and
+client; its row menu opens the results, the public page, the edit form, and
+deletes a results-only race. Still open (`docs/plans/RESULTS_NAV_PLAN.md`):
+Batch 2 moves the results workspace to `/admin/results/[id]` with the
+certificate in it, Batch 3 adds Create and takes results-only events off the
+Events table, Batch 4 cleans up. No migration.
+
 **Results-only events, all 6 batches (2026-10-08, on `dev`, not released).**
 Batch 6: on a results-only event the uploader's Target Category offers
 *Create category from sheet name* (distance guessed from the name or typed),

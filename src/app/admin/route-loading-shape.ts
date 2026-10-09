@@ -189,6 +189,12 @@ const EXACT: Record<string, RouteShape> = {
     lg: { toolbar: LG_TOOLBAR, table: { head: LG_TANSTACK_HEAD, row: 61, rows: 8 } },
   },
   '/admin/events/new': EVENT_FORM_SHAPE,
+  // Search, then Filters and Sort under it: two rows, since there is no
+  // Create until Batch 3 of RESULTS_NAV_PLAN.md.
+  '/admin/results': {
+    list: { frame: 'page', toolbar: 88 },
+    lg: { toolbar: LG_TOOLBAR, table: { head: LG_TANSTACK_HEAD, row: 61, rows: 8 } },
+  },
   '/admin/marketing': {
     metrics: 3,
     list: { frame: 'page', toolbar: THREE_ROW_TOOLBAR },
