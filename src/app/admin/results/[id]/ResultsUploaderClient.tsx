@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import BusyLabel from '@/components/ui/BusyLabel';
 import { upperCaseForStorage } from '@/lib/text-case';
 import SheetMappingPanel from './SheetMappingPanel';
+import { postResults, type PreparedResults } from './results-upload';
 import type { UploadCategory } from './TargetCategoryPicker';
 import {
   buildMapping,
@@ -23,11 +24,22 @@ import {
 
 /* The upload modal: the file, each sheet's mapping, and the one POST that
    replaces the mapped categories' results. Reading the sheet lives in
-   results-sheet.ts and each sheet's form in SheetMappingPanel. */
+   results-sheet.ts and each sheet's form in SheetMappingPanel.
+
+   Given `onPrepared`, it stops short of the POST: the checked rows are handed
+   to the page and the modal closes. /admin/results/new uses that, because its
+   race may not exist until the page's one Save — the same checks, sent later
+   by results-upload.ts. Without it (the workspace) it uploads as it always
+   did. */
 export default function ResultsUploaderClient({
   event,
+  onPrepared,
+  triggerLabel = 'Upload results',
 }: {
-  event: { id: string; categories: UploadCategory[]; resultsOnly: boolean };
+  /** No id while the race is still unsaved; only `onPrepared` mode allows that. */
+  event: { id?: string; categories: UploadCategory[]; resultsOnly: boolean };
+  onPrepared?: (prepared: PreparedResults) => void;
+  triggerLabel?: string;
 }) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
@@ -182,15 +194,18 @@ export default function ResultsUploaderClient({
         );
       }
 
-      const res = await fetch(`/api/admin/events/${event.id}/results/upload`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ results: finalResults, newCategories })
-      });
+      if (onPrepared) {
+        onPrepared({
+          results: finalResults,
+          newCategories,
+          sheets: importedSheets.filter(name => !emptySheets.includes(name)),
+          skippedSheets: emptySheets,
+        });
+        setIsOpen(false);
+        return;
+      }
 
-      const resultData = await res.json();
-
-      if (!res.ok) throw new Error(resultData.error || 'Upload failed');
+      const count = await postResults(event.id!, { results: finalResults, newCategories });
 
       const skipped = emptySheets.length
         ? ` No usable rows were found in ${listPhrase(emptySheets)}, so ${emptySheets.length > 1 ? 'those sheets were' : 'that sheet was'} skipped.`
@@ -198,7 +213,7 @@ export default function ResultsUploaderClient({
       const created = newCategories.length
         ? ` Created ${newCategories.length === 1 ? 'the category' : 'the categories'} ${listPhrase(newCategories.map(cat => upperCaseForStorage(cat.name)))}.`
         : '';
-      setSuccess(`Successfully processed and uploaded ${resultData.count} records. Overall and Gender ranks have been automatically computed!${created}${skipped}`);
+      setSuccess(`Successfully processed and uploaded ${count} records. Overall and Gender ranks have been automatically computed!${created}${skipped}`);
       setTimeout(() => {
         setIsOpen(false);
         router.refresh();
@@ -213,12 +228,14 @@ export default function ResultsUploaderClient({
 
   return (
     <>
+      {/* type="button": on /admin/results/new this sits inside the page's form. */}
       <button
+        type="button"
         onClick={() => setIsOpen(true)}
         className="btn-light"
       >
         <Plus size={16} />
-        Upload results
+        {triggerLabel}
       </button>
 
       {mounted && isOpen && createPortal(
@@ -236,6 +253,7 @@ export default function ResultsUploaderClient({
             <div className="modal-header">
               <h2 id="upload-results-title" className="modal-title">Upload Race Results</h2>
               <button
+                type="button"
                 onClick={() => setIsOpen(false)}
                 className="modal-close"
                 aria-label="Close"
@@ -314,6 +332,7 @@ export default function ResultsUploaderClient({
               buries the button that finishes it. */}
           <div className="form-actions admin-modal-footer" style={{ marginTop: '24px' }}>
             <button
+              type="button"
               className="btn-light"
               onClick={processAndUpload}
               disabled={isProcessing}
@@ -321,6 +340,8 @@ export default function ResultsUploaderClient({
               <Play size={18} />
               {isProcessing ? (
                 <BusyLabel>Processing</BusyLabel>
+              ) : onPrepared ? (
+                'Use These Results'
               ) : (
                 'Process & Upload Results'
               )}

@@ -44,6 +44,7 @@ export default function BasicInfoPanel<D extends EventFormDraft>({
   onError,
   onBusyChange,
   resultsOnly = false,
+  title = 'Basic Information',
 }: {
   draft: D;
   setDraft: React.Dispatch<React.SetStateAction<D>>;
@@ -56,13 +57,15 @@ export default function BasicInfoPanel<D extends EventFormDraft>({
   onError: (message: string) => void;
   onBusyChange: (busy: boolean) => void;
   resultsOnly?: boolean;
+  /** /admin/results/new numbers it as the first of its three steps. */
+  title?: string;
 }) {
   const patch = (fields: Partial<EventFormDraft>) => setDraft(prev => ({ ...prev, ...fields }));
 
   return (
     <div className="admin-panel">
       <div className="admin-panel-header">
-        <h2 className="admin-panel-title">Basic Information</h2>
+        <h2 className="admin-panel-title">{title}</h2>
       </div>
       <div className="admin-panel-content">
         <div className="form-grid">

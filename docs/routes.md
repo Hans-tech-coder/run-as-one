@@ -359,6 +359,10 @@ reads *Closed*, Schedule and Pause leave the menu, and the item becomes
 **Reopen Sign-Ups**, which hands the row back to its hold, schedule or counts.
 Runners see *Registration Closed* on the event page, a *Closed* chip on listing
 cards, and both checkout routes refuse with 409.
+**The table lists only races that take sign-ups here**: `reachableEvents(actor)`
+AND `resultsOnly: false` (`RESULTS_NAV_PLAN.md` R5, Batch 3) — a results-only
+event lives under Results alone. The results-only row code below is now
+unreachable and is removed in that plan's Batch 4.
 **A results-only row** (`registrationState` `EXTERNAL`, RESULTS_ONLY_EVENT_PLAN
 Batch 4) wears the *Results only* badge, shows a muted **—** for Registrants
 and no Registrants chip on its card, and its row menu keeps only **Manage
@@ -636,7 +640,7 @@ reads the same `expanded` state as the table's second row, with a 44px
 are on `.admin-modal-panel`, with Save in a footer that stays in reach. Below
 `sm` the claim picker and every pair of boxes stack, and each category's price
 row becomes one block, with a visible caption on each box) ·
-`/admin/settings` (**grouped into four pages, reached from the account menu** — the owner's call, 2026-09-18, after the single page grew too long; there is **no section tab strip on the pages themselves**, the menu is the navigation. The groups live in `settings/sections.ts`; `settings/account.ts` `loadOwnAccount(actor)` is the one read of the person's own row, redirecting to sign-in when it is gone. **`/admin/settings` = Profile** — an optional **profile photo** (picked, centre-cropped and shrunk to a 256px JPEG in the browser, saved at once through `admin/profile/avatar`, shown in the account menu in place of the initial), then name, sign-in email and, for a StaffAccount only, an optional mobile number (`PhoneField`; the Organizer row has no phone column). **Changing the email opens a Current Password box** and the route requires it. **A client viewer's email is read-only** and names the admin email to write to — only Run As One's staff change it. **`/admin/settings/security`**: **Password** (a change signs out every other device, owner and staff alike); **Sign-in Activity** for everyone — the last sign-in (`lastLoginAt`, recorded on both account tables) and **Sign out other devices**, which asks first, posts to `admin/profile/sessions` and keeps this browser signed in. **`/admin/settings/site`** (Site Settings; `forbidden()` for anyone holding neither `platform:manage` nor `org:settings`, and hidden from their menu): for `platform:manage` (Super Admin *and* Admin, by the owner's call) the **Admin Email** panel — the one address the footer, the 404, feedback, coming-soon, Terms, Privacy and organizer sign-up pages and every email use; its hint warns when the address is off the Resend-verified domain, so mail keeps its default sender — and beside it the **Social Links** panel, one box per channel (brand glyph on the label, sample address as placeholder), each checked on blur and on Save with `socialLinkError`; an empty box hides that icon in the footer. The two save separately. Then, for `org:settings` only (the **Super Admin** — an Admin does not see it), the **Default Platform Fee** panel: one peso box (`readPlatformFee`), saving through `admin/platform-fee`, whose hint says plainly it **only affects new events** — existing events keep their own fee. **`/admin/events/new` is a server shell** (`page.tsx`, `requireTeamActor`) that reads `Organizer.adminFee` and hands the client form (`NewEventForm.tsx`) its starting Admin Fee, so there is no flash of a hardcoded ₱60. **The create and edit forms share their panels** (`admin/events/`: `BasicInfoPanel`, `EventOptionsPanel`, `BankAccountsPanel`, `LogisticsPanel`, `RegistrationFeesPanel` — whose `children` slot holds the edit form's registration hold — and `EventFormResultModals`), so a change to a section is made once; each form file keeps only its draft, validation and save. **Both open with a *Results only* switch** (`ResultsOnlyPanel`, the shared `admin/AdminSwitch`): on, the form shows only client, title, date, location, province (`EventProvinceField`, moved up from Logistics), an optional cover and each category's name and distance — the type picker, prices, slot limits, inclusions, posters, description, times, highlights, size chart and the Bank Accounts, Logistics, Registration & Fees and (on edit) Promotions panels are hidden, the opening and delivery checks are skipped, and the event is set to distances. Hidden values stay in state, so switching back restores them. E-Certificate Settings stays on the edit form. **On edit the switch is disabled once the event has registrations**, its hint naming the count; the PUT guard still decides. **`/admin/settings/access`** (Your Access), read-only (`settings/AccessPanels.tsx`): **Your Role** with its `ROLE_HINTS` sentence, for Super Admin / Admin the matrix's list of what the role may do, for Staff each assigned race with its event role and a link to its registrants, for a client viewer its organization) · `/admin/team` (**who can sign in to
+`/admin/settings` (**grouped into four pages, reached from the account menu** — the owner's call, 2026-09-18, after the single page grew too long; there is **no section tab strip on the pages themselves**, the menu is the navigation. The groups live in `settings/sections.ts`; `settings/account.ts` `loadOwnAccount(actor)` is the one read of the person's own row, redirecting to sign-in when it is gone. **`/admin/settings` = Profile** — an optional **profile photo** (picked, centre-cropped and shrunk to a 256px JPEG in the browser, saved at once through `admin/profile/avatar`, shown in the account menu in place of the initial), then name, sign-in email and, for a StaffAccount only, an optional mobile number (`PhoneField`; the Organizer row has no phone column). **Changing the email opens a Current Password box** and the route requires it. **A client viewer's email is read-only** and names the admin email to write to — only Run As One's staff change it. **`/admin/settings/security`**: **Password** (a change signs out every other device, owner and staff alike); **Sign-in Activity** for everyone — the last sign-in (`lastLoginAt`, recorded on both account tables) and **Sign out other devices**, which asks first, posts to `admin/profile/sessions` and keeps this browser signed in. **`/admin/settings/site`** (Site Settings; `forbidden()` for anyone holding neither `platform:manage` nor `org:settings`, and hidden from their menu): for `platform:manage` (Super Admin *and* Admin, by the owner's call) the **Admin Email** panel — the one address the footer, the 404, feedback, coming-soon, Terms, Privacy and organizer sign-up pages and every email use; its hint warns when the address is off the Resend-verified domain, so mail keeps its default sender — and beside it the **Social Links** panel, one box per channel (brand glyph on the label, sample address as placeholder), each checked on blur and on Save with `socialLinkError`; an empty box hides that icon in the footer. The two save separately. Then, for `org:settings` only (the **Super Admin** — an Admin does not see it), the **Default Platform Fee** panel: one peso box (`readPlatformFee`), saving through `admin/platform-fee`, whose hint says plainly it **only affects new events** — existing events keep their own fee. **`/admin/events/new` is a server shell** (`page.tsx`, `requireTeamActor`) that reads `Organizer.adminFee` and hands the client form (`NewEventForm.tsx`) its starting Admin Fee, so there is no flash of a hardcoded ₱60. **The create and edit forms share their panels** (`admin/events/`: `BasicInfoPanel`, `EventOptionsPanel`, `BankAccountsPanel`, `LogisticsPanel`, `RegistrationFeesPanel` — whose `children` slot holds the edit form's registration hold — and `EventFormResultModals`), so a change to a section is made once; each form file keeps only its draft, validation and save. **Only the edit form has the results-only switch** (`ResultsOnlyPanel`, the shared `admin/AdminSwitch`; `RESULTS_NAV_PLAN.md` R5, Batch 3): the create form makes races that take sign-ups, and a results-only race is made from `/admin/results/new`. The switch is worded as the move — **Move to Results** on a race under Events, **Move back to Events** on one under Results — and on means "move it when I save". A save that moves the race lands where it now lives (`/admin/results/[id]` or `/admin/events`), and a results-only race's edit form reads **Results › {title}** / *Edit Details* with Cancel back to its workspace. Results-only on, the form shows only client, title, date, location, province (`EventProvinceField`, moved up from Logistics), an optional cover and each category's name and distance — the type picker, prices, slot limits, inclusions, posters, description, times, highlights, size chart and the Bank Accounts, Logistics, Registration & Fees and (on edit) Promotions panels are hidden, the opening and delivery checks are skipped, and the event is set to distances. Hidden values stay in state, so switching back restores them. E-Certificate Settings stays on the edit form. **The switch is disabled once the event has registrations**, its hint naming the count (the D3 guard); the PUT guard still decides. **`/admin/settings/access`** (Your Access), read-only (`settings/AccessPanels.tsx`): **Your Role** with its `ROLE_HINTS` sentence, for Super Admin / Admin the matrix's list of what the role may do, for Staff each assigned race with its event role and a link to its registrants, for a client viewer its organization) · `/admin/team` (**who can sign in to
 this organizer, and to what** — `team:manage` only, anyone else gets the
 admin's 404. Three metric cards (Active Members, Invitations Waiting — expired
 ones included, since each needs a resend — and Suspended) over the admin's one
@@ -708,11 +712,48 @@ Page** (`/results/[slug]`, new tab, only with results), **Edit Details**
 (`/admin/events/[id]/edit`, `event:edit`) and **Delete** (results-only rows
 only, `event:delete`, through the Events table's `DeleteEventModal` and
 `useEventRowActions`; the modal names the uploaded results that go with it).
-**There is no Create button yet**: `/admin/results/new` arrives in Batch 3.
+**Add Results** (`event:create` only) opens `/admin/results/new`.
 `RowActionsMenu` items take **`to`** for an in-app page (a `next/link` that
 keeps the menu open on `LinkPending`, as `EventActionsMenu` does), beside
 `href` for a new tab. Files: `results/page.tsx`, `ResultsListClient.tsx`,
 `result-columns.tsx`, `result-row.ts`.
+
+**`/admin/results/new` starts a race's results, the whole job on one page**
+(`RESULTS_NAV_PLAN.md` Batch 3, R2). `event:create`, the verb its POST asks;
+without it the page is `AdminNotFound` with the way back to Results.
+Breadcrumb **Results › Add Results**. It first asks with two large radio cards,
+built like the create form's event type (`EventOptionsPanel`), then shows that
+choice's three numbered steps — **1** the race, **2. Upload results** and
+**3. E-Certificate**, both marked *- optional* — and **one Save at the foot**
+whose label names what it will save (*Save Race*, *Save Race and Results*,
+*Save Race, Results and Certificate*, *Save Results*…). The owner chose this
+over details-then-*Save and Continue*, which confused staff. Steps 2 and 3 only
+gather: the uploader runs in its **prepare mode** (`ResultsUploaderClient`
+`onPrepared`; its modal's button reads *Use These Results*), and the step holds
+a summary — finishers, sheets, the categories it will create, skipped sheets —
+with *Change file* (the modal reopens with its mapping) and *Remove*; the
+certificate step is the shared `CertificateSettingsPanel` on the page's draft
+(its template image uploads when picked, as everywhere; the setting waits).
+**Event is already in the system**: step 1 is a searchable picker (`EventPicker`)
+— loaded on the server as `reachableEvents(actor)` AND `resultsOnly: false` AND
+no `RaceResult` AND `date <= today()` (R6), most recent first, with each race's
+categories and current certificate, searched on the page by title or client;
+choosing one folds the list into the race with *Change race*, and steps 2 and 3
+show locked ("Choose the race first.") until then. With nothing to save, Save
+is disabled and the line above it says why. **Results only, registration was
+elsewhere**: step 1 is `BasicInfoPanel` with `resultsOnly` and the title
+*1. Details*; a missing title, date or location is named in the error.
+**Save** (`save-new-results.ts`) is up to three requests to existing routes in
+order — `POST /api/admin/events` (`resultsOnly: true`, `eventType` RACE,
+`categories: []`; results-only only), the upload route, the certificate PUT —
+then opens `/admin/results/[id]`. A failure before anything is stored keeps the
+page as it was and says why; one after opens the race's workspace anyway and
+names the part that did not save and where to redo it, so a second Save can
+never make a second race. The upload and certificate requests are
+`results-upload.ts` `postResults` and `certificate-draft.ts` `saveCertificate`,
+which the workspace uses too. Files: `results/new/page.tsx`,
+`NewResultsClient.tsx`, `EventPicker.tsx`, `ExistingRaceFlow.tsx`,
+`ResultsOnlyFlow.tsx`, `ResultsSteps.tsx`, `save-new-results.ts`.
 
 **`/admin/results/[id]` is one race's results workspace** (`RESULTS_NAV_PLAN.md`
 Batch 2). It moved from `/admin/events/[id]/results` with its uploader pieces

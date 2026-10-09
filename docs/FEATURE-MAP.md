@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-40 pages · 53 API routes · 89 modules in `src/lib` · 412 files · 82,046 lines
+41 pages · 53 API routes · 89 modules in `src/lib` · 420 files · 83,007 lines
 
 ---
 
@@ -44,7 +44,8 @@ The route, the server component behind it, and the client components beside it.
 | `/admin/remittances` | [`/admin/remittances/page.tsx`](../src/app/admin/remittances/page.tsx) | `RemittancesClient.tsx` `SettlementBadge.tsx` |
 | `/admin/remittances/[eventId]` | [`/admin/remittances/[eventId]/page.tsx`](../src/app/admin/remittances/[eventId]/page.tsx) | `RecordRemittanceDialog.tsx` `SettlementClient.tsx` `VoidRemittanceDialog.tsx` |
 | `/admin/results` | [`/admin/results/page.tsx`](../src/app/admin/results/page.tsx) | `result-columns.tsx` `result-row.ts` `ResultsListClient.tsx` |
-| `/admin/results/[id]` | [`/admin/results/[id]/page.tsx`](../src/app/admin/results/[id]/page.tsx) | `certificate-draft.ts` `CertificateWorkspacePanel.tsx` `EventDetailsPanel.tsx` `results-sheet.ts` `ResultsTableClient.tsx` `ResultsUploaderClient.tsx` `SheetMappingPanel.tsx` `TargetCategoryPicker.tsx` |
+| `/admin/results/[id]` | [`/admin/results/[id]/page.tsx`](../src/app/admin/results/[id]/page.tsx) | `certificate-draft.ts` `CertificateWorkspacePanel.tsx` `EventDetailsPanel.tsx` `results-sheet.ts` `results-upload.ts` `ResultsTableClient.tsx` `ResultsUploaderClient.tsx` `SheetMappingPanel.tsx` `TargetCategoryPicker.tsx` |
+| `/admin/results/new` | [`/admin/results/new/page.tsx`](../src/app/admin/results/new/page.tsx) | `EventPicker.tsx` `ExistingRaceFlow.tsx` `NewResultsClient.tsx` `ResultsOnlyFlow.tsx` `ResultsSteps.tsx` `save-new-results.ts` |
 | `/admin/settings` | [`/admin/settings/page.tsx`](../src/app/admin/settings/page.tsx) | `AccessPanels.tsx` `account.ts` `PasswordField.tsx` `sections.ts` `SettingsPanels.tsx` |
 | `/admin/settings/access` | [`/admin/settings/access/page.tsx`](../src/app/admin/settings/access/page.tsx) | — |
 | `/admin/settings/security` | [`/admin/settings/security/page.tsx`](../src/app/admin/settings/security/page.tsx) | — |

@@ -69,8 +69,8 @@ interface Props {
   disabled: boolean;
   /** The event as the form currently has it, for the preview. */
   event: { title: string; date: string; location: string };
-  /** The workspace numbers it as a step when the race has no results yet. */
-  title?: string;
+  /** The workspace and /admin/results/new number it as a step. */
+  title?: React.ReactNode;
   /** Under the controls, inside the panel: the workspace's Save. */
   footer?: React.ReactNode;
 }

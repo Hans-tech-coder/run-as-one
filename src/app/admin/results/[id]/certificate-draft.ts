@@ -32,3 +32,31 @@ export function certificateDraft(event: {
         : defaultCertificateSettingsJson(),
   };
 }
+
+/** Whether a draft differs from the one it started as — the only time it is worth a save. */
+export function certificateChanged(draft: CertificateDraft, from: CertificateDraft): boolean {
+  return (
+    draft.certificateTemplate !== from.certificateTemplate ||
+    draft.certificateCoordinates !== from.certificateCoordinates
+  );
+}
+
+/**
+ * Saves the two certificate columns through `PUT /api/admin/events/[id]/certificate`
+ * and returns what the route stored, so the next comparison is against the
+ * column. Throws with the route's own words when it refuses. Shared by the
+ * workspace's panel and /admin/results/new's single Save.
+ */
+export async function saveCertificate(eventId: string, draft: CertificateDraft): Promise<CertificateDraft> {
+  const res = await fetch(`/api/admin/events/${eventId}/certificate`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(draft),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'The certificate could not be saved. Please try again.');
+  return {
+    certificateTemplate: data.certificateTemplate ?? '',
+    certificateCoordinates: data.certificateCoordinates ?? draft.certificateCoordinates,
+  };
+}

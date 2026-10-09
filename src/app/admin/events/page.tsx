@@ -19,8 +19,11 @@ export default async function AdminEventsPage() {
 
   const events = await db.event.findMany({
     // Every event of the organizer for its owner; only the assigned races for
-    // a STAFF member (lib/actor.ts).
-    where: reachableEvents(actor),
+    // a STAFF member (lib/actor.ts). AND rather than a spread, so the staff
+    // scope is never overwritten by a key of the same name. Results-only races
+    // live under Results alone (RESULTS_NAV_PLAN.md R5): this table is for
+    // races that take sign-ups here.
+    where: { AND: [reachableEvents(actor), { resultsOnly: false }] },
     include: {
       categories: { orderBy: CATEGORY_ORDER },
       client: { select: { id: true, name: true } },

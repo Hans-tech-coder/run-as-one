@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useMemo, useState } from 'react';
-import { ChevronDown, ChevronUp, Edit, ExternalLink, Search, Trash2, Trophy, X } from 'lucide-react';
+import Link from 'next/link';
+import { ChevronDown, ChevronUp, Edit, ExternalLink, Plus, Search, Trash2, Trophy, X } from 'lucide-react';
 import {
   flexRender,
   getCoreRowModel,
@@ -27,9 +28,8 @@ import { RESULT_KINDS, resultKind, type ResultRow } from './result-row';
  * The /admin/results list, built the way the Events table is: one TanStack
  * table, drawn as a table from `lg` up and as cards below it.
  *
- * Create is not offered yet: `/admin/results/new` arrives with
- * RESULTS_NAV_PLAN.md Batch 3, and a button to a page that is not there
- * would be a dead link (PROJECT_GUIDE §8 rule 1).
+ * Add Results opens `/admin/results/new` (RESULTS_NAV_PLAN.md Batch 3), only
+ * for a role holding `event:create`, the verb that page and its POST ask.
  */
 
 /** The Filters sheet's value for a race not linked to any client yet. */
@@ -37,9 +37,12 @@ const NO_CLIENT = '__none__';
 
 export default function ResultsListClient({
   events,
+  canCreate = false,
   canFilterByClient = false,
 }: {
   events: ResultRow[];
+  /** Whether this person's role includes `event:create`. */
+  canCreate?: boolean;
   /** Whether this person holds `platform:manage`, as on the Events screen. */
   canFilterByClient?: boolean;
 }) {
@@ -172,6 +175,14 @@ export default function ResultsListClient({
           <FiltersMenu groups={filterGroups} onClear={clearFilters} />
           <MobileSortMenu table={table} />
         </div>
+
+        {canCreate && (
+          <div className="toolbar-actions">
+            <Link href="/admin/results/new" className="btn-light">
+              <Plus size={16} /> Add Results
+            </Link>
+          </div>
+        )}
       </div>
 
       <div className="dash-desktop-only border border-[var(--dash-border)] rounded-lg overflow-hidden bg-transparent">

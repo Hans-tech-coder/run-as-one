@@ -73,6 +73,11 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
   // rather than filling one. Turning it on also makes the event distances: a
   // results table is grouped by distance, and a package has none.
   const [resultsOnly, setResultsOnly] = useState(false);
+  // Which screen the saved race lives on, and its saved title: what the
+  // breadcrumb, Cancel and the Move switch's wording go by. A results-only race
+  // is listed under Results alone (RESULTS_NAV_PLAN.md R5), so its trail leads
+  // back there rather than to an Events table it is not in.
+  const [saved, setSaved] = useState({ resultsOnly: false, title: '' });
   const changeResultsOnly = (on: boolean) => {
     setResultsOnly(on);
     if (on) setEventType(EVENT_TYPES.RACE);
@@ -106,6 +111,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
         setBankAccounts(loaded.bankAccounts);
         setEventType(loaded.eventType);
         setResultsOnly(loaded.resultsOnly);
+        setSaved({ resultsOnly: loaded.resultsOnly, title: loaded.formData.title });
         setClientId(loaded.clientId);
         setRegistrationCount(loaded.registrationCount);
         setPromotions(loaded.promotions);
@@ -177,7 +183,13 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
         return;
       }
 
-      setSuccessMsg('Event updated successfully!');
+      setSuccessMsg(
+        resultsOnly === saved.resultsOnly
+          ? 'Event updated successfully!'
+          : resultsOnly
+            ? 'Event moved to Results.'
+            : 'Event moved back to Events.',
+      );
     } catch (err) {
       setError('An unexpected error occurred');
       setIsLoading(false);
@@ -193,7 +205,17 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
 
   return (
     <>
-      <DashboardHeader title="Edit Event" crumbs={[{ label: 'Events', href: '/admin/events' }]} />
+      {saved.resultsOnly ? (
+        <DashboardHeader
+          title="Edit Details"
+          crumbs={[
+            { label: 'Results', href: '/admin/results' },
+            { label: saved.title, href: `/admin/results/${id}` },
+          ]}
+        />
+      ) : (
+        <DashboardHeader title="Edit Event" crumbs={[{ label: 'Events', href: '/admin/events' }]} />
+      )}
 
       <div className="admin-content max-w-4xl mx-auto">
         <EventFormResultModals
@@ -202,12 +224,15 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
           successMsg={successMsg}
           onSuccessContinue={() => {
             setSuccessMsg('');
-            router.push('/admin/events');
+            // Where the race now lives: a results-only race is not on the
+            // Events table, so landing there would look like it vanished.
+            router.push(resultsOnly ? `/admin/results/${id}` : '/admin/events');
           }}
         />
 
         <form onSubmit={handleSubmit} className="admin-form">
           <ResultsOnlyPanel
+            savedOn={saved.resultsOnly}
             on={resultsOnly}
             onChange={changeResultsOnly}
             registrationCount={registrationCount}
@@ -353,7 +378,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
           {!resultsOnly && <EventPromotionsPanel promotions={promotions} />}
 
           <div className="form-actions">
-            <Link href="/admin/events" className="btn-cancel">
+            <Link href={saved.resultsOnly ? `/admin/results/${id}` : '/admin/events'} className="btn-cancel">
               Cancel
             </Link>
             {/* Saving mid-upload would store the event without its image URL. */}

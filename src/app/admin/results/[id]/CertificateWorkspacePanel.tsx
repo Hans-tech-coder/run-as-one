@@ -6,7 +6,7 @@ import CertificateSettingsPanel from '@/app/admin/events/CertificateSettingsPane
 import { useEventImageUpload } from '@/app/admin/events/useEventImageUpload';
 import BusyLabel from '@/components/ui/BusyLabel';
 import { useAlert } from '@/components/ui/AlertProvider';
-import type { CertificateDraft } from './certificate-draft';
+import { certificateChanged, saveCertificate, type CertificateDraft } from './certificate-draft';
 
 /**
  * The workspace's E-Certificate step: the shared settings panel, saved through
@@ -39,28 +39,12 @@ export default function CertificateWorkspacePanel({
     if (message) alert({ variant: 'error', message });
   });
 
-  const dirty =
-    draft.certificateTemplate !== saved.certificateTemplate ||
-    draft.certificateCoordinates !== saved.certificateCoordinates;
+  const dirty = certificateChanged(draft, saved);
 
   const save = async () => {
     setSaving(true);
     try {
-      const res = await fetch(`/api/admin/events/${eventId}/certificate`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(draft),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        alert({ variant: 'error', message: data.error || 'The certificate could not be saved. Please try again.' });
-        return;
-      }
-      // What the route stored, so the next comparison is against the column.
-      const next = {
-        certificateTemplate: data.certificateTemplate ?? '',
-        certificateCoordinates: data.certificateCoordinates ?? draft.certificateCoordinates,
-      };
+      const next = await saveCertificate(eventId, draft);
       setDraft(next);
       setSaved(next);
       toast(
@@ -69,8 +53,12 @@ export default function CertificateWorkspacePanel({
           : 'The certificate was saved. Runners get the Run As One certificate.',
       );
       router.refresh();
-    } catch {
-      alert({ variant: 'error', message: 'The certificate could not be saved. Check the connection and try again.' });
+    } catch (err) {
+      // A refusal carries the route's words; a dropped connection does not.
+      const message = err instanceof TypeError
+        ? 'The certificate could not be saved. Check the connection and try again.'
+        : err instanceof Error ? err.message : String(err);
+      alert({ variant: 'error', message });
     } finally {
       setSaving(false);
     }

@@ -12,7 +12,7 @@ offers **QR Ph only** (`OFFERED_PAYMONGO_METHODS` in `lib/free-checkout.ts`)
 until it is. Where an entry below says something is "not released" or
 "production is N migrations behind", it predates this release.
 
-**Results menu, Batches 1–2 of 4 (2026-10-09, on `dev`, not released).** The
+**Results menu, Batches 1–3 of 4 (2026-10-09, on `dev`, not released).** The
 sidebar has **Results** under Races, and `/admin/results` lists every
 results-only event and every normal event with results, with a *Registered
 here* / *Results only* badge, finishers, certificate (Custom/Default) and
@@ -26,9 +26,19 @@ is saved from the workspace through the new `PUT
 /api/admin/events/[id]/certificate` (`event:edit`), the edit form shows a
 line linking there and no longer sends the certificate fields, and the full
 event PUT now keeps them when they are absent. Manage Results on the Events
-row menu opens the workspace either way. Still open
-(`docs/plans/RESULTS_NAV_PLAN.md`): Batch 3 adds Create and takes
-results-only events off the Events table, Batch 4 cleans up. No migration.
+row menu opens the workspace either way. **Batch 3:** *Add Results*
+(`event:create`) opens `/admin/results/new`, which asks first whether the race
+is already in the system, then shows the whole job on one page — 1. pick a
+finished race without results, or fill a results-only race's short form;
+2. its results file and 3. its e-certificate, both optional — saved by one
+Save that names what it will save, then opens the race's workspace. The
+Events table no longer lists results-only events, the create form lost its
+Results only switch, and the edit form's switch now reads **Move to Results**
+/ **Move back to Events** (still locked once anyone registered) and lands the
+save where the race now lives — which is how the owner moves the 3 existing
+races over after release (R5).
+Still open (`docs/plans/RESULTS_NAV_PLAN.md`): Batch 4 removes the Events
+table's now-dead results-only row code. No migration.
 
 **Results-only events, all 6 batches (2026-10-08, on `dev`, not released).**
 Batch 6: on a results-only event the uploader's Target Category offers

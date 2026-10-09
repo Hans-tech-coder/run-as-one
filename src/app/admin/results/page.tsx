@@ -73,6 +73,7 @@ export default async function AdminResultsPage() {
       <div className="admin-content">
         <ResultsListClient
           events={rows}
+          canCreate={can(actor, 'event:create', { organizerId: actor.orgId })}
           // The same rule as the Events screen's Client filter: clients are Run
           // As One's own records.
           canFilterByClient={can(actor, 'platform:manage', { organizerId: actor.orgId })}

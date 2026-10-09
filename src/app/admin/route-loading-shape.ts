@@ -189,11 +189,18 @@ const EXACT: Record<string, RouteShape> = {
     lg: { toolbar: LG_TOOLBAR, table: { head: LG_TANSTACK_HEAD, row: 61, rows: 8 } },
   },
   '/admin/events/new': EVENT_FORM_SHAPE,
-  // Search, then Filters and Sort under it: two rows, since there is no
-  // Create until Batch 3 of RESULTS_NAV_PLAN.md.
+  // Search, then Filters and Sort, then Add Results: three rows, the Filters
+  // chip's 44px making it 148 rather than the Events table's 144.
   '/admin/results': {
-    list: { frame: 'page', toolbar: 88 },
+    list: { frame: 'page', toolbar: 148 },
     lg: { toolbar: LG_TOOLBAR, table: { head: LG_TANSTACK_HEAD, row: 61, rows: 8 } },
+  },
+  // Add Results before a choice is made: the one panel of its two large
+  // choices, stacked on a phone and side by side from `md` up. The step a
+  // choice opens is drawn by the page itself, below what it replaces.
+  '/admin/results/new': {
+    panels: [{ fields: [365] }],
+    lg: { panels: [{ rows: [148] }] },
   },
   '/admin/marketing': {
     metrics: 3,
@@ -325,11 +332,15 @@ const PATTERNS: [RegExp, RouteShape][] = [
       lg: { panels: [{ rows: [200] }, { rows: [190] }, { rows: [180] }] },
     },
   ],
+  // One race's results workspace (RESULTS_NAV_PLAN.md Batch 2): its Details,
+  // then Upload results, then the E-Certificate, as a race with no results yet
+  // lays them out. A race with results swaps the upload panel for its results
+  // table; the Details panel both start with is what the first screen shows.
   [
     /^\/admin\/results\/[^/]+$/,
     {
-      list: { frame: 'page', toolbar: 192 },
-      lg: { toolbar: LG_TOOLBAR, table: { head: LG_TANSTACK_HEAD, row: 61, rows: 8 } },
+      panels: [{ fields: [399] }, { fields: [164] }, { fields: [439] }],
+      lg: { panels: [{ rows: [135] }, { rows: [84] }, { rows: [398] }] },
     },
   ],
   // Pacers: the paragraph explaining what a pacer code is, the registered
