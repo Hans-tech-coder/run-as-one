@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-41 pages · 53 API routes · 89 modules in `src/lib` · 420 files · 82,982 lines
+41 pages · 53 API routes · 90 modules in `src/lib` · 424 files · 83,043 lines
 
 ---
 
@@ -44,7 +44,7 @@ The route, the server component behind it, and the client components beside it.
 | `/admin/remittances` | [`/admin/remittances/page.tsx`](../src/app/admin/remittances/page.tsx) | `RemittancesClient.tsx` `SettlementBadge.tsx` |
 | `/admin/remittances/[eventId]` | [`/admin/remittances/[eventId]/page.tsx`](../src/app/admin/remittances/[eventId]/page.tsx) | `RecordRemittanceDialog.tsx` `SettlementClient.tsx` `VoidRemittanceDialog.tsx` |
 | `/admin/results` | [`/admin/results/page.tsx`](../src/app/admin/results/page.tsx) | `result-columns.tsx` `result-row.ts` `ResultsListClient.tsx` |
-| `/admin/results/[id]` | [`/admin/results/[id]/page.tsx`](../src/app/admin/results/[id]/page.tsx) | `certificate-draft.ts` `CertificateSettingsPanel.tsx` `CertificateWorkspacePanel.tsx` `EventDetailsPanel.tsx` `results-sheet.ts` `results-upload.ts` `ResultsTableClient.tsx` `ResultsUploaderClient.tsx` `SheetMappingPanel.tsx` `TargetCategoryPicker.tsx` |
+| `/admin/results/[id]` | [`/admin/results/[id]/page.tsx`](../src/app/admin/results/[id]/page.tsx) | `certificate-draft.ts` `CertificateSettingsPanel.tsx` `CertificateWorkspacePanel.tsx` `EventDetailsPanel.tsx` `results-sheet.ts` `results-upload.ts` `ResultsTableClient.tsx` `ResultsUploaderClient.tsx` `runner-columns.tsx` `runner-row.ts` `RunnerCards.tsx` `SheetMappingPanel.tsx` `TargetCategoryPicker.tsx` |
 | `/admin/results/new` | [`/admin/results/new/page.tsx`](../src/app/admin/results/new/page.tsx) | `EventPicker.tsx` `ExistingRaceFlow.tsx` `NewResultsClient.tsx` `ResultsOnlyFlow.tsx` `ResultsSteps.tsx` `save-new-results.ts` |
 | `/admin/settings` | [`/admin/settings/page.tsx`](../src/app/admin/settings/page.tsx) | `AccessPanels.tsx` `account.ts` `PasswordField.tsx` `sections.ts` `SettingsPanels.tsx` |
 | `/admin/settings/access` | [`/admin/settings/access/page.tsx`](../src/app/admin/settings/access/page.tsx) | — |
@@ -208,6 +208,7 @@ the file itself.
 | [`registration-form.ts`](../src/lib/registration-form.ts) | Which checkout an event shows its runners. |
 | [`registration-gate.ts`](../src/lib/registration-gate.ts) | Whether an event is taking sign-ups, and why not. |
 | [`request-country.ts`](../src/lib/request-country.ts) | — |
+| [`results-ranking.ts`](../src/lib/results-ranking.ts) | How a race's stored ranks are worked out: the overall rank across the whole race, the category rank, and the gender rank within the category, each … |
 | [`resume-payment.ts`](../src/lib/resume-payment.ts) | The resume-payment link (`UNPAID_FOLLOWUP_PLAN.md` Batch 3). |
 | [`rich-text.ts`](../src/lib/rich-text.ts) | The formatting an organizer may give "About This Event", and how it is read. |
 | [`runner-address.ts`](../src/lib/runner-address.ts) | Every runner's home address (`RUNNER_ADDRESS_PLAN.md` Batch 1). |
@@ -271,6 +272,5 @@ when a task touches one, split it before editing rather than after.
 | 451 | [`src/app/admin/events/[id]/registrants/RunnerEditModal.tsx`](../src/app/admin/events/[id]/registrants/RunnerEditModal.tsx) |
 | 449 | [`src/app/admin/page.tsx`](../src/app/admin/page.tsx) |
 | 443 | [`src/app/admin/events/[id]/registrants/page.tsx`](../src/app/admin/events/[id]/registrants/page.tsx) |
-| 439 | [`src/app/admin/results/[id]/ResultsTableClient.tsx`](../src/app/admin/results/[id]/ResultsTableClient.tsx) |
 | 438 | [`src/lib/actor.ts`](../src/lib/actor.ts) |
 | 422 | [`src/lib/pacer.ts`](../src/lib/pacer.ts) |

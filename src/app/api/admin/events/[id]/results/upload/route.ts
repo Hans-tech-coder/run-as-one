@@ -3,18 +3,7 @@ import prisma from '@/lib/db';
 import { can, getActor } from '@/lib/actor';
 import { recordAudit } from '@/lib/audit';
 import { upperCaseForStorage } from '@/lib/text-case';
-
-// Helper to convert "HH:MM:SS" or "MM:SS" to seconds
-function parseTimeToSeconds(timeStr: string): number {
-  if (!timeStr) return 999999;
-  const parts = timeStr.split(':').map(Number);
-  if (parts.length === 3) {
-    return parts[0] * 3600 + parts[1] * 60 + parts[2];
-  } else if (parts.length === 2) {
-    return parts[0] * 60 + parts[1];
-  }
-  return 999999; // Fallback for invalid format
-}
+import { parseTimeToSeconds, rankResults } from '@/lib/results-ranking';
 
 export async function POST(
   req: Request,
@@ -133,47 +122,9 @@ export async function POST(
 
     const processedResults = Array.from(uniqueResultsMap.values());
 
-    // Compute Overall Rank (across entire event, ascending by chipTimeSecs)
-    processedResults.sort((a, b) => a.chipTimeSecs - b.chipTimeSecs);
-    processedResults.forEach((r, idx) => {
-      if (r.status === 'FINISHED') {
-        r.overallRank = idx + 1;
-      }
-    });
-
-    // Compute Category Rank
-    const categoryGroups: Record<string, typeof processedResults> = {};
-    processedResults.forEach(r => {
-      if (!categoryGroups[r.categoryId]) categoryGroups[r.categoryId] = [];
-      categoryGroups[r.categoryId].push(r);
-    });
-
-    for (const catId in categoryGroups) {
-      const group = categoryGroups[catId];
-      group.sort((a, b) => a.chipTimeSecs - b.chipTimeSecs);
-      group.forEach((r, idx) => {
-        if (r.status === 'FINISHED') r.categoryRank = idx + 1;
-      });
-    }
-
-    // Compute Gender Rank per Category
-    for (const catId in categoryGroups) {
-      const group = categoryGroups[catId];
-      
-      const maleGroup = group.filter(r => {
-        const g = r.gender.trim().toLowerCase();
-        return g === 'male' || g === 'm';
-      });
-      maleGroup.sort((a, b) => a.chipTimeSecs - b.chipTimeSecs);
-      maleGroup.forEach((r, idx) => { if (r.status === 'FINISHED') r.genderRank = idx + 1; });
-
-      const femaleGroup = group.filter(r => {
-        const g = r.gender.trim().toLowerCase();
-        return g === 'female' || g === 'f';
-      });
-      femaleGroup.sort((a, b) => a.chipTimeSecs - b.chipTimeSecs);
-      femaleGroup.forEach((r, idx) => { if (r.status === 'FINISHED') r.genderRank = idx + 1; });
-    }
+    // Overall, category and gender ranks (results-ranking.ts). Sorts the rows
+    // fastest first, which is the order they are inserted in below.
+    rankResults(processedResults);
 
     // A declared category every one of whose rows lost its bib to an earlier
     // sheet is not made: it would sit on the event with no results.
