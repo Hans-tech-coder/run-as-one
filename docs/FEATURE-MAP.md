@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-41 pages · 53 API routes · 90 modules in `src/lib` · 424 files · 83,043 lines
+41 pages · 55 API routes · 90 modules in `src/lib` · 429 files · 83,773 lines
 
 ---
 
@@ -44,7 +44,7 @@ The route, the server component behind it, and the client components beside it.
 | `/admin/remittances` | [`/admin/remittances/page.tsx`](../src/app/admin/remittances/page.tsx) | `RemittancesClient.tsx` `SettlementBadge.tsx` |
 | `/admin/remittances/[eventId]` | [`/admin/remittances/[eventId]/page.tsx`](../src/app/admin/remittances/[eventId]/page.tsx) | `RecordRemittanceDialog.tsx` `SettlementClient.tsx` `VoidRemittanceDialog.tsx` |
 | `/admin/results` | [`/admin/results/page.tsx`](../src/app/admin/results/page.tsx) | `result-columns.tsx` `result-row.ts` `ResultsListClient.tsx` |
-| `/admin/results/[id]` | [`/admin/results/[id]/page.tsx`](../src/app/admin/results/[id]/page.tsx) | `certificate-draft.ts` `CertificateSettingsPanel.tsx` `CertificateWorkspacePanel.tsx` `EventDetailsPanel.tsx` `results-sheet.ts` `results-upload.ts` `ResultsTableClient.tsx` `ResultsUploaderClient.tsx` `runner-columns.tsx` `runner-row.ts` `RunnerCards.tsx` `SheetMappingPanel.tsx` `TargetCategoryPicker.tsx` |
+| `/admin/results/[id]` | [`/admin/results/[id]/page.tsx`](../src/app/admin/results/[id]/page.tsx) | `certificate-draft.ts` `CertificateSettingsPanel.tsx` `CertificateWorkspacePanel.tsx` `EventDetailsPanel.tsx` `PacerTagModal.tsx` `results-sheet.ts` `results-upload.ts` `ResultsTableClient.tsx` `ResultsUploaderClient.tsx` `runner-columns.tsx` `runner-row.ts` `RunnerCards.tsx` `SheetMappingPanel.tsx` `TargetCategoryPicker.tsx` `use-runner-actions.tsx` |
 | `/admin/results/new` | [`/admin/results/new/page.tsx`](../src/app/admin/results/new/page.tsx) | `EventPicker.tsx` `ExistingRaceFlow.tsx` `NewResultsClient.tsx` `ResultsOnlyFlow.tsx` `ResultsSteps.tsx` `save-new-results.ts` |
 | `/admin/settings` | [`/admin/settings/page.tsx`](../src/app/admin/settings/page.tsx) | `AccessPanels.tsx` `account.ts` `PasswordField.tsx` `sections.ts` `SettingsPanels.tsx` |
 | `/admin/settings/access` | [`/admin/settings/access/page.tsx`](../src/app/admin/settings/access/page.tsx) | — |
@@ -83,6 +83,8 @@ The route, the server component behind it, and the client components beside it.
 | `/api/admin/events/[id]/pacers` | GET POST | [`/admin/events/[id]/pacers/route.ts`](../src/app/api/admin/events/[id]/pacers/route.ts) |
 | `/api/admin/events/[id]/pacers/[pacerId]` | PATCH DELETE | [`/admin/events/[id]/pacers/[pacerId]/route.ts`](../src/app/api/admin/events/[id]/pacers/[pacerId]/route.ts) |
 | `/api/admin/events/[id]/registrants/export` | POST | [`/admin/events/[id]/registrants/export/route.ts`](../src/app/api/admin/events/[id]/registrants/export/route.ts) |
+| `/api/admin/events/[id]/result-pacers` | POST | [`/admin/events/[id]/result-pacers/route.ts`](../src/app/api/admin/events/[id]/result-pacers/route.ts) |
+| `/api/admin/events/[id]/result-pacers/[pacerId]` | PATCH DELETE | [`/admin/events/[id]/result-pacers/[pacerId]/route.ts`](../src/app/api/admin/events/[id]/result-pacers/[pacerId]/route.ts) |
 | `/api/admin/events/[id]/results/upload` | POST | [`/admin/events/[id]/results/upload/route.ts`](../src/app/api/admin/events/[id]/results/upload/route.ts) |
 | `/api/admin/feedback` | GET | [`/admin/feedback/route.ts`](../src/app/api/admin/feedback/route.ts) |
 | `/api/admin/feedback/[id]` | PATCH DELETE | [`/admin/feedback/[id]/route.ts`](../src/app/api/admin/feedback/[id]/route.ts) |
@@ -189,7 +191,7 @@ the file itself.
 | [`organizer-application.ts`](../src/lib/organizer-application.ts) | What an organizer application is, and what the app will accept as one. |
 | [`organizer-status.ts`](../src/lib/organizer-status.ts) | Which `Organizer` row is Run As One, and whether it — and so its team — may be signed in to. |
 | [`pacer-results.ts`](../src/lib/pacer-results.ts) | Which finishers on a race's results are its pacers, and the ranks once they are left out — a pacer runs to a set pace for the field, so they are ke… |
-| [`pacer-store.ts`](../src/lib/pacer-store.ts) | Reading pacers out of the database, apart from `pacer.ts` for the reason `promo-store.ts` is apart from `discount.ts`: the Pacers screen is a clien… |
+| [`pacer-store.ts`](../src/lib/pacer-store.ts) | A race's pacers are its pacer codes plus the bibs tagged under Results (`RESULTS_ROW_ACTIONS_PLAN.md` Batch 2): a results-only race has no codes, s… |
 | [`pacer.ts`](../src/lib/pacer.ts) | What a pacer code is, and when the dashboard has to nag about it (`PACER_DISCOUNT_PLAN.md`). |
 | [`payment-link.ts`](../src/lib/payment-link.ts) | Handing a payment link to staff, one path for every way it goes out (`UNPAID_FOLLOWUP_PLAN.md` Batches 3–4): `issuePaymentLink` checks `registratio… |
 | [`paymongo-session.ts`](../src/lib/paymongo-session.ts) | The PayMongo payment page an order is sent to, built in one place (`UNPAID_FOLLOWUP_PLAN.md` Batch 3, moved out of `api/checkout` unchanged). |
@@ -248,7 +250,7 @@ when a task touches one, split it before editing rather than after.
 | 677 | [`src/app/api/admin/events/[id]/route.ts`](../src/app/api/admin/events/[id]/route.ts) |
 | 663 | [`src/app/admin/activity/ActivityClient.tsx`](../src/app/admin/activity/ActivityClient.tsx) |
 | 663 | [`src/lib/pending-expiry.ts`](../src/lib/pending-expiry.ts) |
-| 640 | [`src/lib/activity.ts`](../src/lib/activity.ts) |
+| 646 | [`src/lib/activity.ts`](../src/lib/activity.ts) |
 | 632 | [`src/app/api/checkout/route.ts`](../src/app/api/checkout/route.ts) |
 | 614 | [`src/app/admin/feedback/FeedbackClient.tsx`](../src/app/admin/feedback/FeedbackClient.tsx) |
 | 578 | [`src/lib/email-document.ts`](../src/lib/email-document.ts) |

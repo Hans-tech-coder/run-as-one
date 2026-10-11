@@ -5,7 +5,7 @@ import type { Row } from '@tanstack/react-table';
 import AdminCardList from '../../AdminCardList';
 import { rowPosition } from '../../events/EventRowCells';
 import { toWholeSeconds } from '@/lib/race-time';
-import { rankLabel, type RunnerRow } from './runner-row';
+import { pacerBadgeLabel, rankLabel, type RunnerRow } from './runner-row';
 
 /**
  * The race results below `lg`: the same TanStack rows as the table
@@ -13,7 +13,16 @@ import { rankLabel, type RunnerRow } from './runner-row';
  * its line rather than holding the card open; the bib is a chip beside
  * nothing, and the times go through toWholeSeconds exactly as the cells do.
  */
-export default function RunnerCards({ rows, sortedRows }: { rows: Row<RunnerRow>[]; sortedRows: Row<RunnerRow>[] }) {
+export default function RunnerCards({
+  rows,
+  sortedRows,
+  renderActions,
+}: {
+  rows: Row<RunnerRow>[];
+  sortedRows: Row<RunnerRow>[];
+  /** The row menu, in the card's footer; absent for someone who cannot manage results. */
+  renderActions?: (row: RunnerRow, className: string) => React.ReactNode;
+}) {
   return (
     <AdminCardList
       items={rows}
@@ -33,7 +42,7 @@ export default function RunnerCards({ rows, sortedRows }: { rows: Row<RunnerRow>
             {row.original.bibNumber && (
               <span className="status-badge neutral">Bib {row.original.bibNumber}</span>
             )}
-            {row.original.isPacer && <span className="status-badge info">Pacer</span>}
+            {row.original.isPacer && <span className="status-badge info">{pacerBadgeLabel(row.original)}</span>}
           </>
         ) : null
       }
@@ -50,6 +59,7 @@ export default function RunnerCards({ rows, sortedRows }: { rows: Row<RunnerRow>
             : '-',
         },
       ]}
+      actions={renderActions ? row => renderActions(row.original, 'ml-auto') : undefined}
       empty={
         <div className="border border-[var(--dash-border)] rounded-lg py-16 px-4 text-center text-[var(--text-muted)]">
           No results.

@@ -107,6 +107,11 @@ export const AUDIT_ACTIONS = [
   'pacer.updated',
   'pacer.fee_waived',
   'pacer.deleted',
+  // A finisher tagged as a pacer from a results-only race's results table
+  // (RESULTS_ROW_ACTIONS_PLAN.md Batch 2): no code, no fee, only a bib.
+  'result_pacer.added',
+  'result_pacer.updated',
+  'result_pacer.removed',
   // Money paid to a race's organizer, or handed back (ADMIN_MERGE_PLAN.md,
   // Batch 6). A remittance is never edited, so voiding is the only correction.
   'remittance.recorded',
@@ -127,6 +132,7 @@ export type AuditEntityType =
   | 'Runner'
   | 'PromoCode'
   | 'RaceResult'
+  | 'ResultPacer'
   | 'Organizer'
   | 'Client'
   | 'StaffAccount'

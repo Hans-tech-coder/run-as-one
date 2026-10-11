@@ -12,6 +12,19 @@ offers **QR Ph only** (`OFFERED_PAYMONGO_METHODS` in `lib/free-checkout.ts`)
 until it is. Where an entry below says something is "not released" or
 "production is N migrations behind", it predates this release.
 
+**Results row actions, Batches 1–2 of 3 (2026-10-11, on `dev`, not released;
+`RESULTS_ROW_ACTIONS_PLAN.md`).** Batch 1 (`9d842c3`) split the workspace's
+results table and moved the ranking into `results-ranking.ts`. **Batch 2
+(uncommitted): pacer tags.** On a
+results-only race, staff with `results:manage` mark a finisher as a pacer from
+their row (*Mark as pacer*, optional pace group), change the group, or remove
+the tag; a tag is a `ResultPacer` keyed by bib (migration
+`20261011062955_result_pacer`, applied to `local-dev` only), so it holds
+through a re-upload, and every page that prints a rank follows through
+`pacerLookupForEvent`. A pacer from a code reads *Pacer · from Events* with no
+tag item. Pacer setup under Events is unchanged. Batch 3 (*Edit details*) is
+next.
+
 **Results menu, all 4 batches (2026-10-09, on `dev`, not released).** The
 sidebar has **Results** under Races, and `/admin/results` lists every
 results-only event and every normal event with results, with a *Registered

@@ -28,10 +28,14 @@ import { compareCategoryNames } from '@/lib/category-distance';
 import RunnerCards from './RunnerCards';
 import { runnerColumns, runnerSearchFilter } from './runner-columns';
 import type { RunnerRow } from './runner-row';
+import RowActionsMenu from '../../RowActionsMenu';
+import { useRunnerActions } from './use-runner-actions';
 
 interface ResultsTableClientProps {
   results: RunnerRow[];
   event?: any;
+  /** `results:manage` on this race: the row menu (RESULTS_ROW_ACTIONS_PLAN.md). */
+  canManage?: boolean;
 }
 
 /**
@@ -40,7 +44,7 @@ interface ResultsTableClientProps {
  * search, the Filters chip, sort, selection and the page stay one
  * state across a resize.
  */
-export default function ResultsTableClient({ results, event }: ResultsTableClientProps) {
+export default function ResultsTableClient({ results, event, canManage = false }: ResultsTableClientProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
@@ -70,7 +74,23 @@ export default function ResultsTableClient({ results, event }: ResultsTableClien
     };
   }, []);
 
-  const columns = useMemo(runnerColumns, []);
+  const runnerActions = useRunnerActions(event?.id ?? '', Boolean(event?.resultsOnly));
+
+  // Null rather than an empty menu for a row with nothing to offer, so a
+  // card does not draw an empty footer for it.
+  const renderActions = (row: RunnerRow, className = '') => {
+    const actions = runnerActions.actionsFor(row);
+    return actions.length > 0 ? <RowActionsMenu label={row.name} actions={actions} className={className} /> : null;
+  };
+
+  // The column exists only where some row can offer something: a results-only
+  // race, or a tag left on one that is not (its Remove). A normal race's rows
+  // have no item yet, so no empty column.
+  const showActions = canManage && (Boolean(event?.resultsOnly) || results.some(r => r.pacerSource === 'RESULTS'));
+
+  // The menu reads nothing that changes between renders but the row itself.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const columns = useMemo(() => runnerColumns(showActions ? row => renderActions(row) : undefined), [showActions]);
 
   const table = useReactTable({
     data: results,
@@ -243,10 +263,16 @@ export default function ResultsTableClient({ results, event }: ResultsTableClien
 
       {/* The same rows as the table above, below `lg`. */}
       <div className="dash-mobile-only">
-        <RunnerCards rows={table.getRowModel().rows} sortedRows={sortedRows} />
+        <RunnerCards
+          rows={table.getRowModel().rows}
+          sortedRows={sortedRows}
+          renderActions={showActions ? renderActions : undefined}
+        />
       </div>
 
       <AdminTablePager table={table} />
+
+      {runnerActions.modal}
     </div>
   );
 }

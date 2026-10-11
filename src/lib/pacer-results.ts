@@ -56,14 +56,16 @@ export function pacerResultMatcher(
 /**
  * The pacer behind a finisher, by the same two rules as `pacerResultMatcher`
  * (bib first, then name within the pacer's category), or null for a runner who
- * is not one. For the one thing a result row needs beyond the yes or no: the
- * pace group printed on that pacer's own certificate.
+ * is not one. For what a result row needs beyond the yes or no: the pace
+ * group printed on that pacer's own certificate, and whatever else the caller
+ * put on the pacer (`pacer-store.ts` adds where the pacer came from). When two
+ * pacers hold one bib, the later in the list wins.
  */
-export function pacerForResult(
-  pacers: readonly PacerIdentity[],
-): (result: ResultIdentity) => PacerIdentity | null {
-  const byBib = new Map<string, PacerIdentity>();
-  const byName = new Map<string, PacerIdentity>();
+export function pacerForResult<P extends PacerIdentity>(
+  pacers: readonly P[],
+): (result: ResultIdentity) => P | null {
+  const byBib = new Map<string, P>();
+  const byName = new Map<string, P>();
   for (const pacer of pacers) {
     const bib = normalizeBibNumber(pacer.bibNumber);
     if (bib) byBib.set(bib, pacer);

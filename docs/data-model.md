@@ -266,6 +266,14 @@ shape:
   distance to another.
 - **RaceResult** — one finisher: bib (unique per event), name, gender, chip/gun
   time, `chipTimeSecs`, and the three ranks (overall, gender, category).
+- **ResultPacer** — a finisher marked as a pacer from a **results-only** race's
+  results table (`RESULTS_ROW_ACTIONS_PLAN.md` Batch 2): `eventId`, `bibNumber`
+  (`normalizeBibNumber`, unique per event) and an optional `paceGroup`.
+  **Keyed by bib, not a flag on `RaceResult`**, because an upload replaces
+  every result of the race and a flag would go with it — the pacer would
+  quietly start ranking again. Nothing is written onto the result: the tag is
+  matched on read beside the race's pacer codes (§5 `pacer-store.ts`).
+  Cascades with its event. Storage: a few rows per race.
 - **StaffAccount / StaffMembership / EventAssignment** — the people who work
   inside an organizer besides its owner (`STAFF_ACCESS_PLAN.md`). **`Organizer`
   stays the tenant and its own email and password stay the owner's login**; no

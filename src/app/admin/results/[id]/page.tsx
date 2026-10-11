@@ -8,7 +8,7 @@ import { certificateDraft } from './certificate-draft';
 import AdminNotFound from '../../AdminNotFound';
 import { EVENT_NOT_FOUND } from '../../events/event-not-found';
 import { CATEGORY_ORDER } from '@/lib/category-order';
-import { withPacerRanks } from '@/lib/pacer-store';
+import { withPacerRanksAndSources } from '@/lib/pacer-store';
 import { genderDivision } from '@/lib/gender-division';
 import DashboardHeader from '@/app/admin/DashboardHeader';
 
@@ -56,14 +56,17 @@ export default async function AdminResultsWorkspacePage({ params }: { params: Pr
 
   // The same pacer match and the same pacer-free ranks the public results
   // show, so staff see exactly what runners see: a pacer reads "-", everyone
-  // behind them has moved up. The stored upload itself is untouched.
-  const ranked = await withPacerRanks(id, results);
+  // behind them has moved up. The stored upload itself is untouched. With
+  // where each pacer came from, for the badge and the row menu (O5).
+  const ranked = await withPacerRanksAndSources(id, results);
   const tagged = ranked.map(result => ({ ...result, gender: genderDivision(result.gender) }));
 
   // Asked with the same can() as the routes behind them: Edit Event's PUT and
   // the certificate's own PUT both need event:edit.
   const canEdit = can(actor, 'event:edit', { organizerId: actor.orgId, eventId: id });
   const editHref = canEdit ? `/admin/events/${id}/edit` : null;
+  // The upload's own verb, which the pacer-tag routes ask as well.
+  const canManageResults = can(actor, 'results:manage', { organizerId: actor.orgId, eventId: id });
   const certificate = (
     <CertificateWorkspacePanel
       eventId={id}
@@ -102,7 +105,7 @@ export default async function AdminResultsWorkspacePage({ params }: { params: Pr
         ) : (
           <>
             <EventDetailsPanel event={event} editHref={editHref} />
-            <ResultsTableClient results={tagged} event={event} />
+            <ResultsTableClient results={tagged} event={event} canManage={canManageResults} />
             {certificate}
           </>
         )}

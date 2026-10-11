@@ -5,7 +5,7 @@ import { Check } from 'lucide-react';
 import type { ColumnDef, FilterFn } from '@tanstack/react-table';
 import { toWholeSeconds } from '@/lib/race-time';
 import { rowPosition } from '../../events/EventRowCells';
-import { rankLabel, type RunnerRow } from './runner-row';
+import { pacerBadgeLabel, rankLabel, type RunnerRow } from './runner-row';
 
 /**
  * The race results table's columns (lg and up) and its search. The phone cards
@@ -40,7 +40,11 @@ const inSelected: FilterFn<RunnerRow> = (row, columnId, filterValue) => {
   return filterValue.includes(row.getValue(columnId));
 };
 
-export function runnerColumns(): ColumnDef<RunnerRow>[] {
+/**
+ * `renderActions` adds the row menu's column, last; the table passes it only
+ * to someone who may manage the race's results.
+ */
+export function runnerColumns(renderActions?: (row: RunnerRow) => React.ReactNode): ColumnDef<RunnerRow>[] {
   return [
     {
       id: "select",
@@ -68,7 +72,7 @@ export function runnerColumns(): ColumnDef<RunnerRow>[] {
       cell: ({ row }) => (
         <span className="inline-flex items-center gap-2">
           <span className="font-medium text-primary">{row.original.name}</span>
-          {row.original.isPacer && <span className="status-badge info">Pacer</span>}
+          {row.original.isPacer && <span className="status-badge info">{pacerBadgeLabel(row.original)}</span>}
         </span>
       ),
     },
@@ -114,5 +118,15 @@ export function runnerColumns(): ColumnDef<RunnerRow>[] {
       header: "Gun Time",
       cell: ({ row }) => <span className="text-secondary">{row.original.gunTime ? toWholeSeconds(row.original.gunTime) : '-'}</span>,
     },
+    ...(renderActions
+      ? [{
+          // Left-aligned, under its own header label (§8 rule 6).
+          id: 'actions',
+          header: 'Actions',
+          cell: ({ row }) => renderActions(row.original),
+          enableSorting: false,
+          enableHiding: false,
+        } satisfies ColumnDef<RunnerRow>]
+      : []),
   ];
 }

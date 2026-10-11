@@ -167,6 +167,10 @@ model Event {
   /// (ADMIN_MERGE_PLAN.md, Batch 6). An event with any row here cannot be
   /// deleted: the payout record outlives nothing it describes.
   remittances                 Remittance[]
+  /// Finishers marked as pacers from a results-only race's results table
+  /// (RESULTS_ROW_ACTIONS_PLAN.md Batch 2). A normal race's pacers are its
+  /// pacer codes, under Events.
+  resultPacers                ResultPacer[]
 }
 
 /// One account a runner can transfer to for this event.
@@ -714,6 +718,27 @@ model RaceResult {
   updatedAt    DateTime @updatedAt
   category     Category @relation(fields: [categoryId], references: [id])
   event        Event    @relation(fields: [eventId], references: [id])
+
+  @@unique([eventId, bibNumber])
+}
+
+/// A finisher marked as a pacer from the Results workspace of a results-only
+/// race (RESULTS_ROW_ACTIONS_PLAN.md Batch 2). Keyed by bib, not a flag on
+/// RaceResult: an upload replaces every result of the race, and a tag on the
+/// row would go with it, so the pacer would quietly start ranking again. A
+/// bib outlives the upload, so the tag does too, and `pacerLookupForEvent`
+/// (lib/pacer-store.ts) reads these beside the race's pacer codes.
+///
+/// Storage: a few rows per race, at most one per finisher.
+model ResultPacer {
+  id        String   @id @default(cuid())
+  eventId   String
+  /// normalizeBibNumber, as a pacer code's bib is stored.
+  bibNumber String
+  /// "SUB1", "1:00": printed on their certificate. Null when not set.
+  paceGroup String?
+  createdAt DateTime @default(now())
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   @@unique([eventId, bibNumber])
 }

@@ -1,9 +1,25 @@
 import prisma from '@/lib/db';
 import { PACER_DISCOUNT_TYPE } from '@/lib/pacer';
-import { pacerForResult, ranksWithoutPacers, type RankedResult } from '@/lib/pacer-results';
+import {
+  pacerForResult,
+  ranksWithoutPacers,
+  type PacerIdentity,
+  type RankedResult,
+  type ResultIdentity,
+} from '@/lib/pacer-results';
 
 /**
  * Reading pacers out of the database.
+ *
+ * **A race's pacers are its pacer codes plus the bibs tagged under Results**
+ * (`RESULTS_ROW_ACTIONS_PLAN.md`). A code pacer is set up on the Events Pacers
+ * screen; a results-only race has no codes, so staff tag its pacers on the
+ * results table instead (`ResultPacer`). Both are matched to the results the
+ * same way, by `pacerForResult` — a tag carries a bib and no name, so it
+ * matches on the bib alone — and nothing is written onto a result, so either
+ * kind holds across a re-upload. When both claim one bib the code wins: it is
+ * the one staff manage under Events, and the tag routes refuse a bib a code
+ * already holds.
  *
  * Kept apart from `pacer.ts` for the reason `promo-store.ts` is kept apart from
  * `discount.ts`: the rules in `pacer.ts` are imported by the Pacers screen,
@@ -155,23 +171,46 @@ export async function pacerResultMatcherForEvent(eventId: string) {
   return (result: Parameters<typeof pacerFor>[0]) => pacerFor(result) !== null;
 }
 
+/** Where a pacer on the results comes from (`RESULTS_ROW_ACTIONS_PLAN.md` O5). */
+export type PacerSource = 'EVENTS' | 'RESULTS';
+
+type SourcedPacer = PacerIdentity & { source: PacerSource; tagId: string | null };
+
 /**
  * The same match, handing back the pacer itself — for `withPacerRanks`, which
  * passes on a pacer's pace group (and only that) for their certificate.
+ * Tags first and codes after, because `pacerForResult` lets the later of two
+ * pacers on one bib win, and the code is the authority (header above).
  */
 async function pacerLookupForEvent(eventId: string) {
-  const pacers = await prisma.promoCode.findMany({
-    where: { eventId, discountType: PACER_DISCOUNT_TYPE },
-    select: { assigneeName: true, bibNumber: true, paceGroup: true, categories: { select: { categoryId: true } } },
-  });
-  return pacerForResult(
-    pacers.map(pacer => ({
+  const [codes, tags] = await Promise.all([
+    prisma.promoCode.findMany({
+      where: { eventId, discountType: PACER_DISCOUNT_TYPE },
+      select: { assigneeName: true, bibNumber: true, paceGroup: true, categories: { select: { categoryId: true } } },
+    }),
+    prisma.resultPacer.findMany({
+      where: { eventId },
+      select: { id: true, bibNumber: true, paceGroup: true },
+    }),
+  ]);
+  return pacerForResult<SourcedPacer>([
+    ...tags.map(tag => ({
+      assigneeName: null,
+      bibNumber: tag.bibNumber,
+      paceGroup: tag.paceGroup,
+      categoryId: null,
+      source: 'RESULTS' as const,
+      tagId: tag.id,
+    })),
+    ...codes.map(pacer => ({
       assigneeName: pacer.assigneeName,
       bibNumber: pacer.bibNumber,
       paceGroup: pacer.paceGroup,
       categoryId: pacer.categories[0]?.categoryId ?? null,
+      source: 'EVENTS' as const,
+      tagId: null,
     })),
-  );
+  ]);
 }
 
 /**
@@ -186,17 +225,61 @@ async function pacerLookupForEvent(eventId: string) {
  */
 export async function withPacerRanks<T extends RankedResult>(eventId: string, results: T[]) {
   const pacerFor = await pacerLookupForEvent(eventId);
+  return rankedWith(pacerFor, results, () => ({}));
+}
+
+/**
+ * `withPacerRanks` plus where each pacer came from and, for a tag, its id —
+ * for the Results workspace's row menu alone, which offers *Remove pacer tag*
+ * on a tag and nothing on a code (O5). The public pages use `withPacerRanks`,
+ * so a tag's id never reaches them.
+ */
+export async function withPacerRanksAndSources<T extends RankedResult>(eventId: string, results: T[]) {
+  const pacerFor = await pacerLookupForEvent(eventId);
+  return rankedWith(pacerFor, results, pacer => ({
+    pacerSource: pacer?.source ?? null,
+    pacerTagId: pacer?.tagId ?? null,
+  }));
+}
+
+/** The shared half of the two above; `extra` is what each adds about the pacer. */
+function rankedWith<T extends RankedResult, E extends object>(
+  pacerFor: (result: ResultIdentity) => SourcedPacer | null,
+  results: T[],
+  extra: (pacer: SourcedPacer | null) => E,
+) {
   const ranks = ranksWithoutPacers(results, result => pacerFor(result) !== null);
   return results.map(result => {
     const adjusted = ranks.get(result.id)!;
+    const pacer = adjusted.isPacer ? pacerFor(result) : null;
     return {
       ...result,
       isPacer: adjusted.isPacer,
-      paceGroup: adjusted.isPacer ? (pacerFor(result)?.paceGroup ?? null) : null,
+      paceGroup: pacer?.paceGroup ?? null,
       categoryRank: adjusted.categoryRank,
       genderRank: adjusted.genderRank,
+      ...extra(pacer),
     };
   });
+}
+
+/**
+ * The race's pacer codes that would claim this finisher, by the same match the
+ * results use — for the tag routes, which refuse to tag a runner a code
+ * already makes a pacer (they are changed under Events, O5).
+ */
+export async function codePacerForResult(eventId: string, result: ResultIdentity) {
+  const codes = await prisma.promoCode.findMany({
+    where: { eventId, discountType: PACER_DISCOUNT_TYPE },
+    select: { assigneeName: true, bibNumber: true, categories: { select: { categoryId: true } } },
+  });
+  return pacerForResult(
+    codes.map(pacer => ({
+      assigneeName: pacer.assigneeName,
+      bibNumber: pacer.bibNumber,
+      categoryId: pacer.categories[0]?.categoryId ?? null,
+    })),
+  )(result);
 }
 
 /**
