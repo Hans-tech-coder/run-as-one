@@ -11,9 +11,10 @@ import PasswordField from '../PasswordField';
 /**
  * The sign-in form. `page.tsx` is the server half: it sends a person who is
  * already signed in on to the dashboard, and hands this form the page to
- * return to, already checked by `safeNextPath` (lib/next-path.ts).
+ * return to, already checked by `safeNextPath` (lib/next-path.ts), and
+ * whether the person just reset their password (the banner).
  */
-export default function LoginClient({ next }: { next: string }) {
+export default function LoginClient({ next, passwordReset = false }: { next: string; passwordReset?: boolean }) {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -74,11 +75,15 @@ export default function LoginClient({ next }: { next: string }) {
             <p className="auth-subtitle">For Run As One staff and client organizations.</p>
           </div>
 
-          {error && (
+          {error ? (
             <div className="auth-message auth-error">
               {error}
             </div>
-          )}
+          ) : passwordReset ? (
+            <div className="auth-message auth-success" role="status">
+              Password updated. Sign in with your new password.
+            </div>
+          ) : null}
 
           {/* No `name` on either box, on purpose: a press of Sign In before the
               page has hydrated submits the form natively, as a GET, and a
@@ -107,6 +112,12 @@ export default function LoginClient({ next }: { next: string }) {
               autoComplete="current-password"
               required
             />
+
+            <div className="-mt-2 text-right text-sm">
+              <Link href="/admin/forgot-password" className="auth-link">
+                Forgot password?
+              </Link>
+            </div>
 
             <button 
               type="submit" 

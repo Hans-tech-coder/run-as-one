@@ -373,4 +373,13 @@ shape:
   and drawn in the account menu; null draws the name's initial. Migration
   `20260918100000_account_avatar`, additive (one nullable text column each);
   the photo itself is a ~20 KB JPEG in the blob store, not in Postgres.
+- **PasswordReset** — a "forgot password" link (`LOGIN_UX_PLAN.md` Batch 2,
+  `lib/password-reset.ts`). `tokenHash` is the token's sha256 (unique; the
+  token itself is only in the email), `accountKind` (`ORGANIZER` | `STAFF`) and
+  `accountId` name the account — **no foreign key**, since it sits in one of
+  two tables — and `expiresAt` (60 minutes) and `usedAt` make it single-use.
+  A new request deletes the account's older rows and a used link deletes the
+  rest (keeping itself, so a second press reads "used"), so the table holds
+  about one row per person who ever asked. Migration
+  `20261011083751_password_reset`, additive (one new table).
 

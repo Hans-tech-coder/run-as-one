@@ -53,6 +53,10 @@ export const AUDIT_ACTIONS = [
   'profile.password.changed',
   // "Sign out other devices" on /admin/settings (SETTINGS_PLAN.md Batch 3).
   'profile.sessions.ended',
+  // "Forgot password?" on the sign-in page (LOGIN_UX_PLAN.md Batch 2): a link
+  // asked for, and a password set through one.
+  'auth.password_reset_requested',
+  'auth.password_reset',
   // Retired with the approve / reject screens (ADMIN_MERGE_PLAN.md, Batch 5);
   // kept so decisions recorded before then still carry a label.
   'organizer.approved',

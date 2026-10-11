@@ -20,6 +20,15 @@ sent the person there (`?next=`, `lib/next-path.ts`); a signed-in person who
 opens it goes on to the dashboard. `/api/auth/login` is throttled per address
 and per email and answers in even time (§7). No migration.
 
+**Login convenience, Batch 2 — forgot password (2026-10-11, on `dev`, not
+released; `LOGIN_UX_PLAN.md`).** *Forgot password?* on the sign-in page leads
+to `/admin/forgot-password`; the owner, staff and client viewers get a link
+(60 minutes, once) at `/admin/reset-password/[token]`, choose a new password,
+every session ends, and they sign in again under a "Password updated" banner;
+a "password changed" email follows. Every address gets the same answer
+(§7). Migration `20261011083751_password_reset` (one small table), applied to
+`local-dev` only.
+
 **Results row actions, all 5 batches (2026-10-11, on `dev`, not released;
 `RESULTS_ROW_ACTIONS_PLAN.md`).** Batch 1 (`9d842c3`) split the workspace's
 results table and moved the ranking into `results-ranking.ts`. **Batch 2

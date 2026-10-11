@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-41 pages · 57 API routes · 92 modules in `src/lib` · 438 files · 85,034 lines
+43 pages · 59 API routes · 95 modules in `src/lib` · 447 files · 85,943 lines
 
 ---
 
@@ -37,12 +37,14 @@ The route, the server component behind it, and the client components beside it.
 | `/admin/events/[id]/registrants/[runnerId]/consent` | [`/admin/events/[id]/registrants/[runnerId]/consent/page.tsx`](../src/app/admin/events/[id]/registrants/[runnerId]/consent/page.tsx) | `PrintableSheet.tsx` |
 | `/admin/events/new` | [`/admin/events/new/page.tsx`](../src/app/admin/events/new/page.tsx) | `NewEventForm.tsx` |
 | `/admin/feedback` | [`/admin/feedback/page.tsx`](../src/app/admin/feedback/page.tsx) | `FeedbackClient.tsx` `MessageDetail.tsx` |
+| `/admin/forgot-password` | [`/admin/forgot-password/page.tsx`](../src/app/admin/forgot-password/page.tsx) | `ForgotPasswordClient.tsx` |
 | `/admin/invite/[token]` | [`/admin/invite/[token]/page.tsx`](../src/app/admin/invite/[token]/page.tsx) | `InviteAcceptClient.tsx` |
 | `/admin/login` | [`/admin/login/page.tsx`](../src/app/admin/login/page.tsx) | `LoginClient.tsx` |
 | `/admin/marketing` | [`/admin/marketing/page.tsx`](../src/app/admin/marketing/page.tsx) | `PromoActionsMenu.tsx` `PromoCodesClient.tsx` |
 | `/admin/register` | [`/admin/register/page.tsx`](../src/app/admin/register/page.tsx) | — |
 | `/admin/remittances` | [`/admin/remittances/page.tsx`](../src/app/admin/remittances/page.tsx) | `RemittancesClient.tsx` `SettlementBadge.tsx` |
 | `/admin/remittances/[eventId]` | [`/admin/remittances/[eventId]/page.tsx`](../src/app/admin/remittances/[eventId]/page.tsx) | `RecordRemittanceDialog.tsx` `SettlementClient.tsx` `VoidRemittanceDialog.tsx` |
+| `/admin/reset-password/[token]` | [`/admin/reset-password/[token]/page.tsx`](../src/app/admin/reset-password/[token]/page.tsx) | `ResetPasswordClient.tsx` |
 | `/admin/results` | [`/admin/results/page.tsx`](../src/app/admin/results/page.tsx) | `result-columns.tsx` `result-row.ts` `ResultsListClient.tsx` |
 | `/admin/results/[id]` | [`/admin/results/[id]/page.tsx`](../src/app/admin/results/[id]/page.tsx) | `AddRunnerButton.tsx` `certificate-draft.ts` `CertificateSettingsPanel.tsx` `CertificateWorkspacePanel.tsx` `EventDetailsPanel.tsx` `PacerTagModal.tsx` `ResultFormModal.tsx` `results-sheet.ts` `results-upload.ts` `ResultsTableClient.tsx` `ResultsUploaderClient.tsx` `runner-columns.tsx` `runner-row.ts` `RunnerBadges.tsx` `RunnerCards.tsx` `SheetMappingPanel.tsx` `TargetCategoryPicker.tsx` `use-runner-actions.tsx` |
 | `/admin/results/new` | [`/admin/results/new/page.tsx`](../src/app/admin/results/new/page.tsx) | `EventPicker.tsx` `ExistingRaceFlow.tsx` `NewResultsClient.tsx` `ResultsOnlyFlow.tsx` `ResultsSteps.tsx` `save-new-results.ts` |
@@ -116,10 +118,12 @@ The route, the server component behind it, and the client components beside it.
 | `/api/admin/team` | POST | [`/admin/team/route.ts`](../src/app/api/admin/team/route.ts) |
 | `/api/admin/team/[id]` | PATCH DELETE | [`/admin/team/[id]/route.ts`](../src/app/api/admin/team/[id]/route.ts) |
 | `/api/admin/team/[id]/invite` | POST | [`/admin/team/[id]/invite/route.ts`](../src/app/api/admin/team/[id]/invite/route.ts) |
+| `/api/auth/forgot-password` | POST | [`/auth/forgot-password/route.ts`](../src/app/api/auth/forgot-password/route.ts) |
 | `/api/auth/invite/[token]` | POST | [`/auth/invite/[token]/route.ts`](../src/app/api/auth/invite/[token]/route.ts) |
 | `/api/auth/login` | POST | [`/auth/login/route.ts`](../src/app/api/auth/login/route.ts) |
 | `/api/auth/logout` | POST | [`/auth/logout/route.ts`](../src/app/api/auth/logout/route.ts) |
 | `/api/auth/register` | POST | [`/auth/register/route.ts`](../src/app/api/auth/register/route.ts) |
+| `/api/auth/reset-password/[token]` | POST | [`/auth/reset-password/[token]/route.ts`](../src/app/api/auth/reset-password/[token]/route.ts) |
 | `/api/checkout` | POST | [`/checkout/route.ts`](../src/app/api/checkout/route.ts) |
 | `/api/checkout/manual` | POST | [`/checkout/manual/route.ts`](../src/app/api/checkout/manual/route.ts) |
 | `/api/cron/expire-pending` | — | [`/cron/expire-pending/route.ts`](../src/app/api/cron/expire-pending/route.ts) |
@@ -171,6 +175,7 @@ the file itself.
 | [`email-delivery.ts`](../src/lib/email-delivery.ts) | Whether the runner actually got their email, and what happens when they did not. |
 | [`email-document.ts`](../src/lib/email-document.ts) | How every email is built and sent, split out of `email.ts` (`UNPAID_FOLLOWUP_PLAN.md` Batch 4): the block document model, `renderHtml` / `renderTex… |
 | [`email-invitations.ts`](../src/lib/email-invitations.ts) | The emails that invite somebody to sign in rather than tell a runner about an order: `staffInvitationEmail` (team) and `clientInvitationEmail` (a c… |
+| [`email-password.ts`](../src/lib/email-password.ts) | The two emails about an admin password (`LOGIN_UX_PLAN.md` Batch 2), sent by `password-reset.ts`: `passwordResetEmail` (*Choose a New Password* but… |
 | [`email.ts`](../src/lib/email.ts) | Transactional email via Resend, sent from `CONTACT_EMAIL`. |
 | [`event-highlights.ts`](../src/lib/event-highlights.ts) | Event highlights: the posters an organizer shows off on the event page — the race kit, the trophies, a tourist spot near the venue, the after party. |
 | [`event-schedule.ts`](../src/lib/event-schedule.ts) | The line between upcoming and finished. |
@@ -196,6 +201,7 @@ the file itself.
 | [`pacer-results.ts`](../src/lib/pacer-results.ts) | Which finishers on a race's results are its pacers, and the ranks once they are left out — a pacer runs to a set pace for the field, so they are ke… |
 | [`pacer-store.ts`](../src/lib/pacer-store.ts) | A race's pacers are its pacer codes plus the bibs tagged under Results (`RESULTS_ROW_ACTIONS_PLAN.md` Batch 2): a results-only race has no codes, s… |
 | [`pacer.ts`](../src/lib/pacer.ts) | What a pacer code is, and when the dashboard has to nag about it (`PACER_DISCOUNT_PLAN.md`). |
+| [`password-reset.ts`](../src/lib/password-reset.ts) | "Forgot password?" — who may reset their own password from the sign-in page, and the link that lets them (LOGIN_UX_PLAN.md Batch 2). |
 | [`payment-link.ts`](../src/lib/payment-link.ts) | Handing a payment link to staff, one path for every way it goes out (`UNPAID_FOLLOWUP_PLAN.md` Batches 3–4): `issuePaymentLink` checks `registratio… |
 | [`paymongo-session.ts`](../src/lib/paymongo-session.ts) | The PayMongo payment page an order is sent to, built in one place (`UNPAID_FOLLOWUP_PLAN.md` Batch 3, moved out of `api/checkout` unchanged). |
 | [`pending-expiry.ts`](../src/lib/pending-expiry.ts) | When an unpaid online checkout stops holding what it took. |
@@ -220,6 +226,7 @@ the file itself.
 | [`runner-address.ts`](../src/lib/runner-address.ts) | Every runner's home address (`RUNNER_ADDRESS_PLAN.md` Batch 1). |
 | [`running-community-store.ts`](../src/lib/running-community-store.ts) | — |
 | [`running-community.ts`](../src/lib/running-community.ts) | The running club a runner represents, and the shared list they pick it from. |
+| [`secret-token.ts`](../src/lib/secret-token.ts) | The secret in an emailed link — an invitation (lib/team-invite.ts) or a password reset (lib/password-reset.ts). |
 | [`settlement-store.ts`](../src/lib/settlement-store.ts) | Reading settlements out of the database (ADMIN_MERGE_PLAN.md, Batch 6). |
 | [`settlement.ts`](../src/lib/settlement.ts) | What Run As One owes the organizer of a race, and what it has paid (ADMIN_MERGE_PLAN.md, Batch 6). |
 | [`shirt-size.ts`](../src/lib/shirt-size.ts) | The size chart, whether a category needs a size at all, which garments it hands out, and the 4XL-and-up upcharge. |
@@ -254,7 +261,7 @@ when a task touches one, split it before editing rather than after.
 | 677 | [`src/app/api/admin/events/[id]/route.ts`](../src/app/api/admin/events/[id]/route.ts) |
 | 663 | [`src/app/admin/activity/ActivityClient.tsx`](../src/app/admin/activity/ActivityClient.tsx) |
 | 663 | [`src/lib/pending-expiry.ts`](../src/lib/pending-expiry.ts) |
-| 652 | [`src/lib/activity.ts`](../src/lib/activity.ts) |
+| 656 | [`src/lib/activity.ts`](../src/lib/activity.ts) |
 | 632 | [`src/app/api/checkout/route.ts`](../src/app/api/checkout/route.ts) |
 | 614 | [`src/app/admin/feedback/FeedbackClient.tsx`](../src/app/admin/feedback/FeedbackClient.tsx) |
 | 578 | [`src/lib/email-document.ts`](../src/lib/email-document.ts) |

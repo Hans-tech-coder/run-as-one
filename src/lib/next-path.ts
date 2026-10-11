@@ -7,7 +7,7 @@
  * path inside `/admin` on this site. `//evil.com` and `/\evil.com` are refused
  * because a browser reads both as another host; a full URL is refused because
  * it does not start with `/admin`; and the public admin pages (sign-in,
- * register, invite) are refused because landing back on the sign-in form after
+ * register, invite, forgot / reset password) are refused because landing back on the sign-in form after
  * signing in is a loop, not a destination. Anything refused becomes `/admin`.
  */
 
@@ -15,7 +15,13 @@
  * The admin pages somebody without a session has to reach. The proxy lets
  * them through, and a sign-in never returns to one.
  */
-export const PUBLIC_ADMIN_PATHS = ['/admin/login', '/admin/register', '/admin/invite'];
+export const PUBLIC_ADMIN_PATHS = [
+  '/admin/login',
+  '/admin/register',
+  '/admin/invite',
+  '/admin/forgot-password',
+  '/admin/reset-password',
+];
 
 /** Whether `pathname` is one of the public admin pages, or beneath one. */
 export function isPublicAdminPath(pathname: string): boolean {

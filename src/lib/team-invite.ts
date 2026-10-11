@@ -3,10 +3,8 @@
  * sending it.
  *
  * **The token is only ever in the link.** What the database keeps is its
- * sha256 (`StaffMembership.inviteTokenHash`), so a read of the table — a
- * backup, a support query, a leaked branch — hands nobody a way in. sha256
- * rather than bcrypt because the token is 256 random bits: there is nothing to
- * slow a guesser down *on*, and the lookup has to find the row by the hash.
+ * sha256 (`StaffMembership.inviteTokenHash`), made by lib/secret-token.ts —
+ * the helper the password-reset link shares.
  *
  * **One person, one credential** (STAFF_ACCESS_PLAN.md §1.5). The owner never
  * sets a password for anyone; the link lets the invitee choose their own, and
@@ -23,27 +21,20 @@
  * the browser, and that module's rules do.
  */
 
-import { createHash, randomBytes } from 'node:crypto';
 import prisma from './db';
 import { sendClientInvitationEmail, sendStaffInvitationEmail } from './email-invitations';
 import type { EmailOutcome } from './email-document';
 import { ROLE_LABELS, asEventRole, asTeamRole } from './permissions';
 import { SITE_URL } from './site-contact';
 import { INVITE_TTL_DAYS } from './team';
+import { hashSecretToken, isSecretToken, newSecretToken } from './secret-token';
 
-/** base64url of 32 bytes is 43 characters; anything else is not one of ours. */
-const TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
-
-export function hashInviteToken(token: string): string {
-  return createHash('sha256').update(token).digest('hex');
-}
+export const hashInviteToken = hashSecretToken;
 
 /** A fresh link's token, the hash to store, and when it stops working. */
 export function newInvitation(now = new Date()) {
-  const token = randomBytes(32).toString('base64url');
   return {
-    token,
-    tokenHash: hashInviteToken(token),
+    ...newSecretToken(),
     expiresAt: new Date(now.getTime() + INVITE_TTL_DAYS * 24 * 60 * 60 * 1000),
   };
 }
@@ -55,7 +46,7 @@ export function newInvitation(now = new Date()) {
  * learn.
  */
 export async function findOpenInvitation(token: unknown) {
-  if (typeof token !== 'string' || !TOKEN_PATTERN.test(token)) return null;
+  if (!isSecretToken(token)) return null;
 
   const membership = await prisma.staffMembership.findFirst({
     where: { inviteTokenHash: hashInviteToken(token), acceptedAt: null },

@@ -107,6 +107,19 @@ export const LOGIN_RULE: RateLimitRule = { limit: 10, windowMs: 60_000 };
 export const LOGIN_ACCOUNT_RULE: RateLimitRule = { limit: 5, windowMs: 60_000 };
 
 /**
+ * Asking for a password-reset link (`/api/auth/forgot-password`): 5 every 10
+ * minutes, counted twice like sign-in — once per address, once per account
+ * email.
+ *
+ * A person who forgot their password asks once, maybe twice when the first
+ * email is slow. What this stops is a script using the form to fill somebody's
+ * inbox, and spending the Resend free tier's 100 recipients a day that runner
+ * confirmations share. The refusal is the same whether or not the address has
+ * an account, so it tells a stranger nothing.
+ */
+export const PASSWORD_RESET_RULE: RateLimitRule = { limit: 5, windowMs: 10 * 60_000 };
+
+/**
  * How many callers we will remember at once.
  *
  * A map keyed by address grows with every new address, and a serverless

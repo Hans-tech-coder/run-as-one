@@ -1,6 +1,10 @@
+import { isPublicAdminPath } from '@/lib/next-path';
+
 /**
  * The pages under `/admin` that somebody reaches before they have a session:
- * sign in, register, and an invitation link.
+ * sign in, register, an invitation link, and forgot / reset password — the
+ * proxy's `PUBLIC_ADMIN_PATHS` (lib/next-path.ts), read from there so the two
+ * lists cannot drift.
  *
  * They sit under `/admin` for the URL's sake, but they are not dashboard
  * screens — they have no sidebar, no header and no content area, just the
@@ -10,9 +14,8 @@
  * frame either. A fallback that draws the dashboard's header bar over a
  * sign-in page is a skeleton for furniture that never arrives.
  */
-const BARE_PATHS = ['/admin/login', '/admin/register', '/admin/invite'];
 
 /** True for those pages and anything under them (an invitation's token). */
 export function isBarePath(pathname: string | null) {
-  return !!pathname && BARE_PATHS.some(path => pathname.startsWith(path));
+  return !!pathname && isPublicAdminPath(pathname);
 }

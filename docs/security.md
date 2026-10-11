@@ -273,6 +273,22 @@
   the signature, so a revoked session would loop between the two. The form's
   boxes carry no `name`, so a press of Sign In before hydration (a native
   GET) cannot put the password in the address bar.
+- **A forgotten password is reset by an emailed link, and the link is the
+  weak point, so it is narrow** (`LOGIN_UX_PLAN.md` Batch 2,
+  `lib/password-reset.ts`). Only the token's sha256 is stored; a link works
+  **once, for 60 minutes**, and a newer request kills the older one. Only an
+  account that could sign in gets one (the owner's row, or staff / a client
+  viewer with a password, not suspended, with an active membership), and that
+  is checked again when the link is used. `POST /api/auth/forgot-password`
+  answers **every** address with the same 200 body, sends the email in
+  `after()` so Resend's time is not on the clock, and holds the answer to a
+  1-second floor so a real account's DB writes do not show either; it is
+  throttled per address and per email (`PASSWORD_RESET_RULE`). A reset
+  **ends every session** (`sessionsValidFrom`), writes `auth.password_reset`,
+  sends a "password changed" email, and **does not sign the person in** — they
+  sign in on `/admin/login?reset=1`, so there stays one way in for 2FA to sit
+  on later. Both pages are public and `noindex`; the reset page also sets
+  `referrer: no-referrer`, since its token is in the address.
 - **An account is found by a lowercased email, and written as one.** `login`,
   `register` and `admin/profile` all run the address through
   `normalizeAccountEmail` (§5). The failure this prevents is quiet and reads

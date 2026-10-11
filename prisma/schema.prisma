@@ -1081,3 +1081,26 @@ model SiteSettings {
   youtubeUrl   String?
   updatedAt    DateTime @updatedAt
 }
+
+/// A "forgot password" link (LOGIN_UX_PLAN.md Batch 2, lib/password-reset.ts).
+/// Works once, for 60 minutes. **Only the token's sha256 is kept**; the token
+/// itself exists only in the email. No foreign key, because the account is in
+/// one of two tables (`Organizer` for the owner, `StaffAccount` for staff and
+/// client viewers).
+///
+/// Storage: a new request deletes the account's older rows and a used link
+/// deletes the rest, so the table holds about one row per person who ever
+/// asked — a few hundred bytes each.
+model PasswordReset {
+  id          String    @id @default(cuid())
+  /// sha256 of the token. The token itself is only ever in the email.
+  tokenHash   String    @unique
+  /// "ORGANIZER" | "STAFF"
+  accountKind String
+  accountId   String
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([accountKind, accountId])
+}
