@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-41 pages · 57 API routes · 91 modules in `src/lib` · 436 files · 84,866 lines
+41 pages · 57 API routes · 92 modules in `src/lib` · 438 files · 85,034 lines
 
 ---
 
@@ -24,7 +24,7 @@ The route, the server component behind it, and the client components beside it.
 | Route | Page | Beside it |
 | --- | --- | --- |
 | `/` | [`/(home)/page.tsx`](../src/app/%28home%29/page.tsx) | — |
-| `/admin` | [`/admin/page.tsx`](../src/app/admin/page.tsx) | `AccountMenu.tsx` `AdminCardEdit.tsx` `AdminCardList.tsx` `AdminDataTable.tsx` `AdminDatePicker.tsx` `AdminNotFound.tsx` `AdminRouteLoading.tsx` `AdminSelect.tsx` `AdminShell.tsx` `AdminSwitch.tsx` `AdminTablePager.tsx` `AuthHomeLink.tsx` `AuthRouteLoading.tsx` `bare-paths.ts` `dashboard-nav.tsx` `dashboard-sidebar.ts` `dashboard-theme.ts` `DashboardHeader.tsx` `DashboardQuickJump.tsx` `DashboardShell.tsx` `FilterOptions.tsx` `FiltersMenu.tsx` `forbidden.tsx` `MobileSortMenu.tsx` `NotificationsCenter.tsx` `PastEventsGrid.tsx` `PrintableCopy.tsx` `route-loading-shape.ts` `row-menu-position.ts` `RowActionsMenu.tsx` `SmoothModalBody.tsx` `ViewerDashboard.tsx` |
+| `/admin` | [`/admin/page.tsx`](../src/app/admin/page.tsx) | `AccountMenu.tsx` `AdminCardEdit.tsx` `AdminCardList.tsx` `AdminDataTable.tsx` `AdminDatePicker.tsx` `AdminNotFound.tsx` `AdminRouteLoading.tsx` `AdminSelect.tsx` `AdminShell.tsx` `AdminSwitch.tsx` `AdminTablePager.tsx` `AuthHomeLink.tsx` `AuthRouteLoading.tsx` `bare-paths.ts` `dashboard-nav.tsx` `dashboard-sidebar.ts` `dashboard-theme.ts` `DashboardHeader.tsx` `DashboardQuickJump.tsx` `DashboardShell.tsx` `FilterOptions.tsx` `FiltersMenu.tsx` `forbidden.tsx` `MobileSortMenu.tsx` `NotificationsCenter.tsx` `PasswordField.tsx` `PastEventsGrid.tsx` `PrintableCopy.tsx` `route-loading-shape.ts` `row-menu-position.ts` `RowActionsMenu.tsx` `SmoothModalBody.tsx` `ViewerDashboard.tsx` |
 | `/admin/[...missing]` | [`/admin/[...missing]/page.tsx`](../src/app/admin/[...missing]/page.tsx) | — |
 | `/admin/activity` | [`/admin/activity/page.tsx`](../src/app/admin/activity/page.tsx) | `ActivityClient.tsx` |
 | `/admin/certificate-guide` | [`/admin/certificate-guide/page.tsx`](../src/app/admin/certificate-guide/page.tsx) | `GuideChecklist.tsx` `GuideDiagram.tsx` `GuideDocument.tsx` `GuideToc.tsx` |
@@ -38,7 +38,7 @@ The route, the server component behind it, and the client components beside it.
 | `/admin/events/new` | [`/admin/events/new/page.tsx`](../src/app/admin/events/new/page.tsx) | `NewEventForm.tsx` |
 | `/admin/feedback` | [`/admin/feedback/page.tsx`](../src/app/admin/feedback/page.tsx) | `FeedbackClient.tsx` `MessageDetail.tsx` |
 | `/admin/invite/[token]` | [`/admin/invite/[token]/page.tsx`](../src/app/admin/invite/[token]/page.tsx) | `InviteAcceptClient.tsx` |
-| `/admin/login` | [`/admin/login/page.tsx`](../src/app/admin/login/page.tsx) | — |
+| `/admin/login` | [`/admin/login/page.tsx`](../src/app/admin/login/page.tsx) | `LoginClient.tsx` |
 | `/admin/marketing` | [`/admin/marketing/page.tsx`](../src/app/admin/marketing/page.tsx) | `PromoActionsMenu.tsx` `PromoCodesClient.tsx` |
 | `/admin/register` | [`/admin/register/page.tsx`](../src/app/admin/register/page.tsx) | — |
 | `/admin/remittances` | [`/admin/remittances/page.tsx`](../src/app/admin/remittances/page.tsx) | `RemittancesClient.tsx` `SettlementBadge.tsx` |
@@ -46,7 +46,7 @@ The route, the server component behind it, and the client components beside it.
 | `/admin/results` | [`/admin/results/page.tsx`](../src/app/admin/results/page.tsx) | `result-columns.tsx` `result-row.ts` `ResultsListClient.tsx` |
 | `/admin/results/[id]` | [`/admin/results/[id]/page.tsx`](../src/app/admin/results/[id]/page.tsx) | `AddRunnerButton.tsx` `certificate-draft.ts` `CertificateSettingsPanel.tsx` `CertificateWorkspacePanel.tsx` `EventDetailsPanel.tsx` `PacerTagModal.tsx` `ResultFormModal.tsx` `results-sheet.ts` `results-upload.ts` `ResultsTableClient.tsx` `ResultsUploaderClient.tsx` `runner-columns.tsx` `runner-row.ts` `RunnerBadges.tsx` `RunnerCards.tsx` `SheetMappingPanel.tsx` `TargetCategoryPicker.tsx` `use-runner-actions.tsx` |
 | `/admin/results/new` | [`/admin/results/new/page.tsx`](../src/app/admin/results/new/page.tsx) | `EventPicker.tsx` `ExistingRaceFlow.tsx` `NewResultsClient.tsx` `ResultsOnlyFlow.tsx` `ResultsSteps.tsx` `save-new-results.ts` |
-| `/admin/settings` | [`/admin/settings/page.tsx`](../src/app/admin/settings/page.tsx) | `AccessPanels.tsx` `account.ts` `PasswordField.tsx` `sections.ts` `SettingsPanels.tsx` |
+| `/admin/settings` | [`/admin/settings/page.tsx`](../src/app/admin/settings/page.tsx) | `AccessPanels.tsx` `account.ts` `sections.ts` `SettingsPanels.tsx` |
 | `/admin/settings/access` | [`/admin/settings/access/page.tsx`](../src/app/admin/settings/access/page.tsx) | — |
 | `/admin/settings/security` | [`/admin/settings/security/page.tsx`](../src/app/admin/settings/security/page.tsx) | — |
 | `/admin/settings/site` | [`/admin/settings/site/page.tsx`](../src/app/admin/settings/site/page.tsx) | — |
@@ -185,6 +185,7 @@ the file itself.
 | [`jwt.ts`](../src/lib/jwt.ts) | — |
 | [`minor-consent.ts`](../src/lib/minor-consent.ts) | Who counts as a minor, and what a birthdate may be (`GUARDIAN_CONSENT_PLAN.md`). |
 | [`money.ts`](../src/lib/money.ts) | All money in this app is stored and passed around as INTEGER CENTAVOS. |
+| [`next-path.ts`](../src/lib/next-path.ts) | Where a sign-in sends a person afterwards: back to the admin page they were trying to open, and nowhere else. |
 | [`notification-store.ts`](../src/lib/notification-store.ts) | The notification queries, server-only — see `notifications.ts` for what a notification is and why none is stored. |
 | [`notifications.ts`](../src/lib/notifications.ts) | The dashboard's notifications — what the bell counts and its modal lists. |
 | [`online-payment.ts`](../src/lib/online-payment.ts) | How an online order becomes PAID: one path, whether PayMongo tells us (the webhook) or a staff member asks PayMongo (the Unpaid checkouts tab's "Ch… |

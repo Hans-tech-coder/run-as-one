@@ -83,6 +83,30 @@ export const PAY_LINK_RULE: RateLimitRule = { limit: 20, windowMs: 60_000 };
 export const CHECKOUT_RULE: RateLimitRule = { limit: 10, windowMs: 60_000 };
 
 /**
+ * Signing in to the admin (`/api/auth/login`): 10 attempts a minute from one
+ * address, counted before the body is read.
+ *
+ * A person who mistypes a password tries again two or three times; ten leaves
+ * room for that and for a race-day tent of staff behind one address all
+ * signing in at once. What it stops is one machine running a password list.
+ * Like every rule here it lives in one instance's memory, so a distributed
+ * guesser is slowed, not stopped — bcrypt's cost per guess is the other half.
+ */
+export const LOGIN_RULE: RateLimitRule = { limit: 10, windowMs: 60_000 };
+
+/**
+ * Signing in to one account: 5 attempts a minute against the same email,
+ * from anywhere.
+ *
+ * `LOGIN_RULE` is per address, so a guesser with many addresses (or many tabs
+ * behind many proxies) would each get a fresh ten against the same account.
+ * This one is keyed on the normalized email instead. Its cost is that a
+ * stranger can make a known address wait a minute to sign in; a minute is a
+ * small price, and the owner of the account loses nothing else.
+ */
+export const LOGIN_ACCOUNT_RULE: RateLimitRule = { limit: 5, windowMs: 60_000 };
+
+/**
  * How many callers we will remember at once.
  *
  * A map keyed by address grows with every new address, and a serverless

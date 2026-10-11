@@ -280,7 +280,7 @@ queue and numbers cover only assigned races. Dates are the **Manila** day
 two live rows and the recent list (`route-loading-shape.ts`, `linkPanels`).
 There is no *Page Views* tile: it was a placeholder that only ever read `N/A`,
 and a metric card that never carries a number teaches an organizer to stop
-reading the row. Do not re-add a tile until something real counts behind it · `/admin/login` · **`/admin/register` — the organizer
+reading the row. Do not re-add a tile until something real counts behind it · **`/admin/login`** — a server `page.tsx` that sends a signed-in person (`getActor()`, so a revoked session gets the form, not a loop) on to `next`, and otherwise draws `LoginClient.tsx`, which returns there after sign-in; `next` is set by `src/proxy.ts` and always read through `safeNextPath` (`lib/next-path.ts`, §7). The password box is the shared `admin/PasswordField.tsx` (reveal button), and both boxes carry autocomplete tokens for password managers (`LOGIN_UX_PLAN.md` Batch 1) · **`/admin/register` — the organizer
 application, which since `ADMIN_MERGE_PLAN.md` Batch 3 creates a `Client`
 submission and no account** (both drawn without the sidebar, and both carrying
 `AuthHomeLink` back to the public site — §8). It is a **three-step form**, not

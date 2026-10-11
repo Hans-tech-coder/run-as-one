@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import db from '@/lib/db';
-import { verifyPassword, createToken, setAuthCookie } from '@/lib/auth';
+import { verifyPassword, verifyNoPassword, createToken, setAuthCookie } from '@/lib/auth';
 import { normalizeAccountEmail } from '@/lib/text-case';
 import {
   activeMembershipWhere,
@@ -10,6 +10,7 @@ import {
 } from '@/lib/actor';
 import { recordAudit, type AuditActor, type AuditEntityType } from '@/lib/audit';
 import { RUN_AS_ONE_ORGANIZER_ID, organizerOwnerCanSignIn } from '@/lib/organizer-status';
+import { LOGIN_ACCOUNT_RULE, LOGIN_RULE, allowRequest, callerKey } from '@/lib/rate-limit';
 
 /**
  * Signing in to the admin — as Run As One's own account (the owner, shown as
@@ -24,9 +25,23 @@ import { RUN_AS_ONE_ORGANIZER_ID, organizerOwnerCanSignIn } from '@/lib/organize
  * incident review asks about. An address that matches no account is not
  * logged: a row needs an organizer to belong to, and a stranger typing
  * addresses has none.
+ *
+ * **Throttled twice** (lib/rate-limit.ts): per address before the body is
+ * read, and per account email once it is. **Equal timing:** every
+ * "Invalid credentials" costs one bcrypt compare, against a dummy hash when
+ * there is no password to check (`verifyNoPassword`), so a known address and
+ * an unknown one take the same time.
  */
 
 const INVALID = () => NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
+
+// Said plainly — the sign-in page shows `error` as it stands. The same
+// sentence for both buckets, so it does not say whether the address exists.
+const THROTTLED = () =>
+  NextResponse.json(
+    { error: 'Too many sign-in attempts. Wait a minute, then try again.' },
+    { status: 429 }
+  );
 
 async function logAttempt(
   who: AuditActor,
@@ -54,6 +69,10 @@ async function logAttempt(
 }
 
 export async function POST(request: Request) {
+  if (!allowRequest('login', callerKey(request), LOGIN_RULE)) {
+    return THROTTLED();
+  }
+
   try {
     const { email, password } = await request.json();
 
@@ -71,9 +90,14 @@ export async function POST(request: Request) {
       );
     }
 
+    if (!allowRequest('login-account', signInEmail, LOGIN_ACCOUNT_RULE)) {
+      return THROTTLED();
+    }
+
     const account = await findAccountByEmail(signInEmail);
 
     if (!account) {
+      await verifyNoPassword(password);
       return INVALID();
     }
 
@@ -87,6 +111,7 @@ export async function POST(request: Request) {
       // never told the address exists — because an owner session on any of
       // them would hold platform:manage over an empty tenant of its own.
       if (organizer.id !== RUN_AS_ONE_ORGANIZER_ID) {
+        await verifyNoPassword(password);
         return INVALID();
       }
 
@@ -171,7 +196,10 @@ export async function POST(request: Request) {
 
     // An invitation not yet accepted has no password, and is answered exactly
     // like a wrong one: the address existing is not something to confirm.
-    if (!staff.password || !(await verifyPassword(password, staff.password))) {
+    const passwordOk = staff.password
+      ? await verifyPassword(password, staff.password)
+      : await verifyNoPassword(password);
+    if (!passwordOk) {
       if (who) await logAttempt(who, 'StaffAccount', 'WRONG_PASSWORD');
       return INVALID();
     }

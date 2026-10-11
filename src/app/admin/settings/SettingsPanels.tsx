@@ -21,7 +21,7 @@ import PhoneField from '@/app/events/[slug]/register/PhoneField';
 import { DEFAULT_COUNTRY } from '@/lib/phone';
 import { formatPesos } from '@/lib/money';
 import { readPlatformFee } from '@/lib/platform-fee';
-import PasswordField from './PasswordField';
+import PasswordField from '../PasswordField';
 
 // One constant for this form, the password route and the invitation page.
 import { MIN_PASSWORD_LENGTH } from '@/lib/team';

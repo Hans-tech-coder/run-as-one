@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { CalendarCheck } from 'lucide-react';
 import { RunAsOneLogo } from '@/components/RunAsOneLogo';
 import FieldError from '@/components/ui/FieldError';
-import PasswordField from '../../settings/PasswordField';
+import PasswordField from '../../PasswordField';
 import { ROLE_HINTS, type TeamRole } from '@/lib/permissions';
 import { SITE_NAME } from '@/lib/site-contact';
 import { MAX_NAME_LENGTH, MIN_PASSWORD_LENGTH, newPasswordErrors, type FieldErrors } from '@/lib/team';

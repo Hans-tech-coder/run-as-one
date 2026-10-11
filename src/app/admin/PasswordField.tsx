@@ -5,7 +5,8 @@ import { Eye, EyeOff } from 'lucide-react';
 import FieldError from '@/components/ui/FieldError';
 
 /**
- * A password box the organizer can read back.
+ * A password box the person typing can read back — on the sign-in page, the
+ * invitation page and Settings.
  *
  * It is the admin `.form-input` with room made on the right for a reveal
  * button, not a new control — the border, focus ring and invalid state all
@@ -25,6 +26,7 @@ export default function PasswordField({
   error,
   hint,
   disabled,
+  required,
 }: {
   label: string;
   value: string;
@@ -33,6 +35,7 @@ export default function PasswordField({
   error?: string;
   hint?: string;
   disabled?: boolean;
+  required?: boolean;
 }) {
   const id = useId();
   const [revealed, setRevealed] = useState(false);
@@ -60,6 +63,7 @@ export default function PasswordField({
           onChange={e => onChange(e.target.value)}
           autoComplete={autoComplete}
           disabled={disabled}
+          required={required}
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy || undefined}
         />

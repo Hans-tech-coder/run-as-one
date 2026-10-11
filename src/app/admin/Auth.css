@@ -232,7 +232,9 @@
   width: 100%;
   padding: 1rem 1.25rem;
   background: rgba(0, 0, 0, 0.4);
-  border: 1px solid var(--color-border);
+  /* The dashboard's field border (Admin.css `.form-input`). This read the
+     never-defined --color-border, so the boxes had no edge at all. */
+  border: 1px solid var(--dash-border);
   border-radius: 12px;
   color: var(--text-primary);
   font-family: var(--font-body);
@@ -243,13 +245,19 @@
 
 .auth-container .form-input:focus {
   background: rgba(0, 0, 0, 0.6);
-  border-color: var(--color-accent);
+  border-color: var(--accent-blue);
   box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.15);
 }
 
 .auth-container .form-input:focus + .form-label,
 .auth-container .form-input:hover + .form-label {
   color: var(--text-primary);
+}
+
+/* The reveal button (PasswordField, Admin.css) sits over the right of the box.
+   The padding above outranks Admin.css's room for it, so it is made again. */
+.auth-container .password-field .form-input {
+  padding-right: 3.25rem;
 }
 
 .auth-container .form-input::placeholder {
@@ -632,7 +640,7 @@
   min-height: 44px;
   padding: 0.875rem 1rem;
   border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--dash-border);
   background: rgba(0, 0, 0, 0.3);
   cursor: pointer;
   transition: border-color var(--duration-fast) var(--ease-smooth-out),

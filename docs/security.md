@@ -4,8 +4,9 @@
 ## 7. Security model
 
 - `src/proxy.ts` guards `/admin/**` (except `/login`, `/register` and
-  `/invite`, which a person with no session must reach — `PUBLIC_ADMIN_PATHS`):
-  no token, or one that does not verify → `/admin/login`. **It no longer sorts
+  `/invite`, which a person with no session must reach — `PUBLIC_ADMIN_PATHS`
+  in `lib/next-path.ts`): no token, or one that does not verify →
+  `/admin/login?next=<the page asked for>` (`LOGIN_UX_PLAN.md` Batch 1). **It no longer sorts
   sessions between two dashboards** (`ADMIN_MERGE_PLAN.md` Batch 2): every
   session lands on `/admin`, and what it may open there is each page's `can()`.
   A token for the retired super admin, or an OWNER token for any Organizer
@@ -250,6 +251,28 @@
   `/api/admin/proof/[id]` with a roughly five-minute signed URL.
 - Passwords are bcrypt-hashed; the session cookie is httpOnly, `sameSite=lax`,
   `secure` in production, with a one-day expiry.
+- **Sign-in is throttled, timed evenly, and only ever returns inside `/admin`**
+  (`LOGIN_UX_PLAN.md` Batch 1). `POST /api/auth/login` checks `LOGIN_RULE`
+  (10 a minute per address) before the body is read and `LOGIN_ACCOUNT_RULE`
+  (5 a minute per normalized email, from anywhere) once it is, so one account
+  cannot be guessed from many addresses either; both answer 429 with one
+  sentence that does not say whether the address exists. They are the same
+  per-instance limiter as `CHECKOUT_RULE` above — a speed bump, not a cap.
+  **Every "Invalid credentials" costs one bcrypt compare**: when there is no
+  password to check (no account, an Organizer row that is not Run As One's,
+  an invitation not yet accepted) the route compares against a dummy hash
+  (`verifyNoPassword`, `lib/auth.ts`), so a known address no longer answers
+  ~100 ms slower than an unknown one. What still differs is a DB read or two
+  and an audit write for a known account — milliseconds, not bcrypt's cost.
+  **`next`** is written by the proxy but readable from any link, so the
+  sign-in page passes it through `safeNextPath` (`lib/next-path.ts`): only a
+  path starting `/admin`, never `//` or `/\`, no control characters or
+  backslashes, never a public admin page; anything else becomes `/admin`. A
+  person already signed in who opens `/admin/login` is sent on by the page
+  itself through `getActor()`, **not by the proxy** — the proxy only checks
+  the signature, so a revoked session would loop between the two. The form's
+  boxes carry no `name`, so a press of Sign In before hydration (a native
+  GET) cannot put the password in the address bar.
 - **An account is found by a lowercased email, and written as one.** `login`,
   `register` and `admin/profile` all run the address through
   `normalizeAccountEmail` (§5). The failure this prevents is quiet and reads

@@ -10,6 +10,25 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
   return await bcrypt.compare(password, hash);
 }
 
+/**
+ * A bcrypt hash of a random string nobody kept, at the same cost as
+ * `hashPassword`. Comparing against it costs exactly what a real check costs
+ * and can never succeed.
+ */
+const DUMMY_PASSWORD_HASH = '$2b$10$Tjx8kVSm5hAhOODEgRXfDem8KnSW2II1fYxzQ.OiYMapn5MLu4/1C';
+
+/**
+ * Spend a real password check's time on a sign-in that has no password to
+ * check — no account, an Organizer row that is not Run As One's, or an
+ * invitation not yet accepted. Without it those answered "Invalid credentials"
+ * in a few milliseconds and a wrong password in ~100, so the clock told a
+ * stranger which addresses have an account.
+ */
+export async function verifyNoPassword(password: string): Promise<false> {
+  await bcrypt.compare(password, DUMMY_PASSWORD_HASH);
+  return false;
+}
+
 // Re-export for compatibility
 export { createToken, verifyToken };
 

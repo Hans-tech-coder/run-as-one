@@ -12,6 +12,14 @@ offers **QR Ph only** (`OFFERED_PAYMONGO_METHODS` in `lib/free-checkout.ts`)
 until it is. Where an entry below says something is "not released" or
 "production is N migrations behind", it predates this release.
 
+**Login convenience, Batch 1 (2026-10-11, on `dev`, not released;
+`LOGIN_UX_PLAN.md`).** The sign-in page has a reveal button (the shared
+`admin/PasswordField.tsx`), password-manager autocomplete, the new wording
+("Sign in", for staff and client organizations), and returns to the page that
+sent the person there (`?next=`, `lib/next-path.ts`); a signed-in person who
+opens it goes on to the dashboard. `/api/auth/login` is throttled per address
+and per email and answers in even time (§7). No migration.
+
 **Results row actions, all 5 batches (2026-10-11, on `dev`, not released;
 `RESULTS_ROW_ACTIONS_PLAN.md`).** Batch 1 (`9d842c3`) split the workspace's
 results table and moved the ranking into `results-ranking.ts`. **Batch 2

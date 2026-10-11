@@ -222,3 +222,13 @@ production): `RM-B2TEST1` (CANCELLED), `RM-B4TEST1` (PAID), `RM-B4TEST2`
   uploads direct-to-Blob so a PDF over 4 MB can go through.
 - **PDF templates.** A thumbnail in the panel and `auto` ink sampling; today a
   PDF template gets dark ink unless the admin picks light.
+
+## 11. Leftover from the results row actions plan
+
+*Source: `RESULTS_ROW_ACTIONS_PLAN.md`; all five batches shipped (pacer tags,
+Edit details, Add runner, delete one or many).*
+
+- **A Pacer column in the upload**, for a timer's sheet that marks its pacers
+  itself, so a results-only race's pacers are tagged on upload rather than
+  one by one with *Mark as pacer*. Worth building only once the owner sees
+  such sheets.

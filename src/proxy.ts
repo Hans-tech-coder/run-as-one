@@ -1,14 +1,24 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { verifyToken } from '@/lib/jwt';
+import { isPublicAdminPath } from '@/lib/next-path';
 
 /**
- * The admin pages somebody without a session has to reach. The invitation link
- * is one of them: the person opening it has no account yet — or has one but is
- * not signed in on this browser — and the page itself proves who they are with
- * the token in the link.
+ * The sign-in screen, remembering the page that was asked for. The sign-in
+ * page reads `next` back through `safeNextPath` (lib/next-path.ts), so what
+ * goes in here is only ever a suggestion.
+ *
+ * The public admin pages (lib/next-path.ts) are the ones somebody without a
+ * session has to reach. The invitation link is one of them: the person opening
+ * it has no account yet — or has one but is not signed in on this browser —
+ * and the page itself proves who they are with the token in the link.
  */
-const PUBLIC_ADMIN_PATHS = ['/admin/login', '/admin/register', '/admin/invite'];
+function toSignIn(request: NextRequest) {
+  const url = new URL('/admin/login', request.url);
+  const { pathname, search } = request.nextUrl;
+  if (pathname !== '/admin') url.searchParams.set('next', `${pathname}${search}`);
+  return NextResponse.redirect(url);
+}
 
 /**
  * Proves a session exists before any dashboard page renders; what the session
@@ -22,22 +32,22 @@ const PUBLIC_ADMIN_PATHS = ['/admin/login', '/admin/register', '/admin/invite'];
  */
 export default async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
-  if (PUBLIC_ADMIN_PATHS.some(path => pathname.startsWith(path))) {
+  if (isPublicAdminPath(pathname)) {
     return NextResponse.next();
   }
 
   const token = request.cookies.get('admin_token')?.value;
   if (!token) {
-    return NextResponse.redirect(new URL('/admin/login', request.url));
+    return toSignIn(request);
   }
 
   try {
     const payload = await verifyToken(token);
     if (!payload) {
-      return NextResponse.redirect(new URL('/admin/login', request.url));
+      return toSignIn(request);
     }
   } catch {
-    return NextResponse.redirect(new URL('/admin/login', request.url));
+    return toSignIn(request);
   }
 
   return NextResponse.next();
