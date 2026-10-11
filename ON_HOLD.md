@@ -25,7 +25,10 @@ boolean column, `Event.resultsOnly` defaulting to false,
 and `RESULTS_NAV_PLAN.md`, which needs no migration of its own, have both
 landed) and `20261011062955_result_pacer` (one new table, `ResultPacer`, a
 results-only race's pacer tags, `RESULTS_ROW_ACTIONS_PLAN.md` Batch 2; applied
-to the local-dev database; additive, so the old code ignores it). Run
+to the local-dev database; additive, so the old code ignores it) and
+`20261011064837_result_edited_at` (one nullable column, `RaceResult.editedAt`,
+a result corrected by hand, `RESULTS_ROW_ACTIONS_PLAN.md` Batch 3; applied to
+the local-dev database; additive). Run
 `npx prisma migrate deploy` with `DIRECT_URL` on the production endpoint
 **before** the new code goes live: the code reads the column, and the old code
 ignores it, so migrating first is safe in both directions.

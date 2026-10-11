@@ -2,11 +2,12 @@ import prisma from '@/lib/db';
 import { can, type Actor } from '@/lib/actor';
 
 /**
- * The race a pacer-tag route acts on, if this actor may manage its results.
+ * The race a pacer-tag route acts on, if this actor may manage its results;
+ * *Edit details* (`results/[resultId]`) asks the same.
  *
  * Scoped by `organizerId` in the query and asked with the upload's own verb,
- * `results:manage`, because a tag changes the ranks on the race's results as
- * surely as an upload does. A race the actor cannot reach answers null, and
+ * `results:manage`, because a tag or a corrected row changes the ranks on the
+ * race's results as surely as an upload does. A race the actor cannot reach answers null, and
  * the routes say "not found" either way so an id cannot be probed.
  */
 export async function resultPacerEvent(actor: Actor, eventId: string) {

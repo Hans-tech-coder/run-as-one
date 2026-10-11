@@ -35,13 +35,22 @@ export default function ResultsUploaderClient({
   event,
   onPrepared,
   triggerLabel = 'Upload results',
+  byHand = { added: 0, edited: 0 },
 }: {
   /** No id while the race is still unsaved; only `onPrepared` mode allows that. */
   event: { id?: string; categories: UploadCategory[]; resultsOnly: boolean };
   onPrepared?: (prepared: PreparedResults) => void;
   triggerLabel?: string;
+  /**
+   * The race's results made by hand — added with *Add runner*, corrected with
+   * *Edit details* (`editedAt`) — which an upload replaces: named before the
+   * button (RESULTS_ROW_ACTIONS_PLAN.md Batches 3 and 4). The prepare mode's
+   * race has no results, so never any.
+   */
+  byHand?: { added: number; edited: number };
 }) {
   const router = useRouter();
+  const handTotal = byHand.added + byHand.edited;
   const [isOpen, setIsOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [sheetsData, setSheetsData] = useState<Record<string, SheetRows>>({});
@@ -327,6 +336,12 @@ export default function ResultsUploaderClient({
             })}
           </div>
 
+          {handTotal > 0 && !onPrepared && (
+            <p className="m-0 text-sm text-[var(--status-warning)]" role="note" style={{ marginTop: '24px' }}>
+              {handWarning(byHand)} Uploading this file replaces {handTotal === 1 ? 'it' : 'them'}.
+            </p>
+          )}
+
           {/* Sticky at the foot of the scrolling body on a phone
               (.admin-modal-footer), so a mapping several sheets long never
               buries the button that finishes it. */}
@@ -356,4 +371,16 @@ export default function ResultsUploaderClient({
       )}
     </>
   );
+}
+
+/**
+ * "1 result was added and 2 were corrected by hand.": the hand-made rows a
+ * new upload replaces, each kind named only when there is one.
+ */
+function handWarning({ added, edited }: { added: number; edited: number }): string {
+  const was = (n: number) => (n === 1 ? 'was' : 'were');
+  const results = (n: number) => `${n} result${n === 1 ? '' : 's'}`;
+  if (added && edited) return `${results(added)} ${was(added)} added and ${edited} ${was(edited)} corrected by hand.`;
+  if (added) return `${results(added)} ${was(added)} added by hand.`;
+  return `${results(edited)} ${was(edited)} corrected by hand.`;
 }

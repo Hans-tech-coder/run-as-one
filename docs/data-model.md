@@ -266,6 +266,13 @@ shape:
   distance to another.
 - **RaceResult** — one finisher: bib (unique per event), name, gender, chip/gun
   time, `chipTimeSecs`, and the three ranks (overall, gender, category).
+  `status` is FINISHED, DNF, DNS or DQ (§5 `result-status.ts`): an upload
+  stores FINISHED, and only *Edit details* sets another. **`editedAt`**
+  (nullable, `RESULTS_ROW_ACTIONS_PLAN.md` Batch 3, migration
+  `20261011064837_result_edited_at`) is set when staff correct the row by hand;
+  the upload modal counts these to warn that a new sheet replaces them, and a
+  re-upload's new rows start null. Storage: one timestamp per row, null on
+  almost all.
 - **ResultPacer** — a finisher marked as a pacer from a **results-only** race's
   results table (`RESULTS_ROW_ACTIONS_PLAN.md` Batch 2): `eventId`, `bibNumber`
   (`normalizeBibNumber`, unique per event) and an optional `paceGroup`.

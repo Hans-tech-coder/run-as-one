@@ -713,7 +713,13 @@ model RaceResult {
   overallRank  Int
   genderRank   Int
   categoryRank Int
+  /// FINISHED, DNF, DNS or DQ (lib/result-status.ts). An upload stores
+  /// FINISHED; only *Edit details* sets another.
   status       String   @default("FINISHED")
+  /// When staff last corrected this row by hand from the Results workspace
+  /// (RESULTS_ROW_ACTIONS_PLAN.md Batch 3). Null on an uploaded row. The upload
+  /// counts these to warn that a new sheet replaces the corrections.
+  editedAt     DateTime?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   category     Category @relation(fields: [categoryId], references: [id])

@@ -5,7 +5,8 @@ import type { Row } from '@tanstack/react-table';
 import AdminCardList from '../../AdminCardList';
 import { rowPosition } from '../../events/EventRowCells';
 import { toWholeSeconds } from '@/lib/race-time';
-import { pacerBadgeLabel, rankLabel, type RunnerRow } from './runner-row';
+import { rankLabel, type RunnerRow } from './runner-row';
+import RunnerBadges, { hasRunnerBadges } from './RunnerBadges';
 
 /**
  * The race results below `lg`: the same TanStack rows as the table
@@ -17,11 +18,14 @@ export default function RunnerCards({
   rows,
   sortedRows,
   renderActions,
+  selectAll,
 }: {
   rows: Row<RunnerRow>[];
   sortedRows: Row<RunnerRow>[];
   /** The row menu, in the card's footer; absent for someone who cannot manage results. */
   renderActions?: (row: RunnerRow, className: string) => React.ReactNode;
+  /** The page's select-all, above the cards, for *Delete Selected*. */
+  selectAll?: React.ComponentProps<typeof AdminCardList<Row<RunnerRow>>>['selectAll'];
 }) {
   return (
     <AdminCardList
@@ -34,15 +38,16 @@ export default function RunnerCards({
         toggle: row => row.toggleSelected(),
         label: row => `Select ${row.original.name}`,
       }}
+      selectAll={selectAll}
       leading={row => <span className="font-mono">{rowPosition(sortedRows, row)}</span>}
       title={row => <span className="block truncate">{row.original.name}</span>}
       badges={row =>
-        row.original.bibNumber || row.original.isPacer ? (
+        row.original.bibNumber || hasRunnerBadges(row.original) ? (
           <>
             {row.original.bibNumber && (
               <span className="status-badge neutral">Bib {row.original.bibNumber}</span>
             )}
-            {row.original.isPacer && <span className="status-badge info">{pacerBadgeLabel(row.original)}</span>}
+            <RunnerBadges row={row.original} />
           </>
         ) : null
       }

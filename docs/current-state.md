@@ -12,18 +12,35 @@ offers **QR Ph only** (`OFFERED_PAYMONGO_METHODS` in `lib/free-checkout.ts`)
 until it is. Where an entry below says something is "not released" or
 "production is N migrations behind", it predates this release.
 
-**Results row actions, Batches 1–2 of 3 (2026-10-11, on `dev`, not released;
+**Results row actions, all 5 batches (2026-10-11, on `dev`, not released;
 `RESULTS_ROW_ACTIONS_PLAN.md`).** Batch 1 (`9d842c3`) split the workspace's
 results table and moved the ranking into `results-ranking.ts`. **Batch 2
-(uncommitted): pacer tags.** On a
+(`01d2b1e`): pacer tags.** On a
 results-only race, staff with `results:manage` mark a finisher as a pacer from
 their row (*Mark as pacer*, optional pace group), change the group, or remove
 the tag; a tag is a `ResultPacer` keyed by bib (migration
 `20261011062955_result_pacer`, applied to `local-dev` only), so it holds
 through a re-upload, and every page that prints a rank follows through
 `pacerLookupForEvent`. A pacer from a code reads *Pacer · from Events* with no
-tag item. Pacer setup under Events is unchanged. Batch 3 (*Edit details*) is
-next.
+tag item. Pacer setup under Events is unchanged. **Batch 3 (uncommitted):
+*Edit details*.** Every runner's row, on any race under Results, opens a form
+for name, bib, gender, category, status and chip / gun time
+(`PATCH results/[resultId]`); the whole race is re-ranked in the same
+transaction, a tag follows a changed bib, and the row is marked `editedAt`
+(migration `20261011064837_result_edited_at`, `local-dev` only), wears
+*Edited*, and is counted in the re-upload's warning. **Status (owner's Q1):**
+a DNF, DNS or DQ row keeps its row and time, reads "-", and the finishers
+behind move up (`rankResults` now counts finishers only); its public page
+shows the status instead of FINISHER and has no certificate. **Batch 4
+(uncommitted): *Add runner*.** Beside *Upload results*, staff with
+`results:manage` add one finisher the sheet left out (`POST results`), with
+the same form and checks as *Edit details*; the race is re-ranked, and the row
+is stamped `editedAt` (equal to its `createdAt`), so it wears *Added*
+(*Edited* once corrected) and the re-upload warns it will be replaced. No migration. **Batch 5 (uncommitted): delete.** Every row's menu
+ends with *Delete result*, and the table's checkboxes delete in bulk (*Delete
+Selected* from `lg` up, the bulk bar below), through `DELETE results`; asks
+first, removes any pacer tag on those bibs, re-ranks the race, and names each
+runner on the trail. No migration.
 
 **Results menu, all 4 batches (2026-10-09, on `dev`, not released).** The
 sidebar has **Results** under Races, and `/admin/results` lists every

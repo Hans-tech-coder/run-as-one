@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Search, Columns, ChevronUp, ChevronDown } from 'lucide-react';
+import { Search, Columns, ChevronUp, ChevronDown, Trash2, X } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -22,6 +22,7 @@ import {
   VisibilityState,
 } from '@tanstack/react-table';
 import ResultsUploaderClient from './ResultsUploaderClient';
+import AddRunnerButton from './AddRunnerButton';
 import AdminTablePager from '../../AdminTablePager';
 import MobileSortMenu from '../../MobileSortMenu';
 import { compareCategoryNames } from '@/lib/category-distance';
@@ -74,7 +75,12 @@ export default function ResultsTableClient({ results, event, canManage = false }
     };
   }, []);
 
-  const runnerActions = useRunnerActions(event?.id ?? '', Boolean(event?.resultsOnly));
+  const runnerActions = useRunnerActions({
+    id: event?.id ?? '',
+    slug: event?.slug ?? '',
+    resultsOnly: Boolean(event?.resultsOnly),
+    categories: event?.categories ?? [],
+  });
 
   // Null rather than an empty menu for a row with nothing to offer, so a
   // card does not draw an empty footer for it.
@@ -83,10 +89,9 @@ export default function ResultsTableClient({ results, event, canManage = false }
     return actions.length > 0 ? <RowActionsMenu label={row.name} actions={actions} className={className} /> : null;
   };
 
-  // The column exists only where some row can offer something: a results-only
-  // race, or a tag left on one that is not (its Remove). A normal race's rows
-  // have no item yet, so no empty column.
-  const showActions = canManage && (Boolean(event?.resultsOnly) || results.some(r => r.pacerSource === 'RESULTS'));
+  // Every row offers *Edit details* to someone who may manage the results
+  // (RESULTS_ROW_ACTIONS_PLAN.md Batch 3), on any race.
+  const showActions = canManage;
 
   // The menu reads nothing that changes between renders but the row itself.
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -101,6 +106,9 @@ export default function ResultsTableClient({ results, event, canManage = false }
       columnVisibility,
       rowSelection,
     },
+    // Selected by result id, not by position, so a refresh that adds or
+    // removes a row can never leave a different runner ticked.
+    getRowId: row => row.id,
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
@@ -146,6 +154,20 @@ export default function ResultsTableClient({ results, event, canManage = false }
   };
 
   const sortedRows = table.getSortedRowModel().flatRows;
+
+  // *Delete Selected* (RESULTS_ROW_ACTIONS_PLAN.md Batch 5): the red chip from
+  // `lg` up, the bulk bar below it, both only with `results:manage`.
+  const selectedRows = table.getSelectedRowModel().rows;
+  const selectedCount = canManage ? selectedRows.length : 0;
+  const deleteSelected = async () => {
+    if (await runnerActions.deleteResults(selectedRows.map(row => row.original))) setRowSelection({});
+  };
+  // What the bar last counted, so it still reads "3 selected" while it fades
+  // out rather than dropping to 0 (the registrants bar's own pattern).
+  const [bulkBarCount, setBulkBarCount] = useState(0);
+  if (selectedCount > 0 && selectedCount !== bulkBarCount) {
+    setBulkBarCount(selectedCount);
+  }
 
   return (
     <div className="flex flex-col gap-4 w-full text-primary">
@@ -211,7 +233,19 @@ export default function ResultsTableClient({ results, event, canManage = false }
         </div>
 
         <div className="toolbar-actions">
-          {event && <ResultsUploaderClient event={event} />}
+          {selectedCount > 0 && (
+            <button type="button" onClick={deleteSelected} className="btn-filter is-danger is-active dash-desktop-only">
+              <Trash2 size={16} /> Delete Selected ({selectedCount})
+            </button>
+          )}
+          {event && canManage && <AddRunnerButton event={event} />}
+          {event && <ResultsUploaderClient
+            event={event}
+            byHand={{
+              added: results.filter(r => r.byHand === 'ADDED').length,
+              edited: results.filter(r => r.byHand === 'EDITED').length,
+            }}
+          />}
         </div>
       </div>
 
@@ -267,10 +301,38 @@ export default function ResultsTableClient({ results, event, canManage = false }
           rows={table.getRowModel().rows}
           sortedRows={sortedRows}
           renderActions={showActions ? renderActions : undefined}
+          selectAll={{
+            checked: table.getIsAllPageRowsSelected(),
+            toggle: () => table.toggleAllPageRowsSelected(!table.getIsAllPageRowsSelected()),
+            label: `Select all ${table.getRowModel().rows.length} on this page`,
+          }}
         />
       </div>
 
       <AdminTablePager table={table} />
+
+      {/* The bulk bar, below `lg`, while rows are selected; from `lg` up the
+          red chip in the toolbar does this. No export here (`.is-no-export`). */}
+      {canManage && (
+        <>
+          <div className="bulk-bar-spacer dash-mobile-only" hidden={selectedCount === 0} aria-hidden="true" />
+          <div className="dash-mobile-only">
+            <div
+              role="region"
+              aria-label="Selected results"
+              className={`bulk-bar is-no-export t-toast ${selectedCount > 0 ? 'is-open' : ''}`}
+            >
+              <span className="bulk-bar-count" aria-live="polite">{bulkBarCount} selected</span>
+              <button type="button" onClick={deleteSelected} className="btn-filter is-danger bulk-bar-delete">
+                <Trash2 size={16} aria-hidden="true" /> Delete
+              </button>
+              <button type="button" onClick={() => setRowSelection({})} className="btn-filter bulk-bar-clear">
+                <X size={16} aria-hidden="true" /> Clear
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       {runnerActions.modal}
     </div>

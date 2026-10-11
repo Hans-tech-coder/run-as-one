@@ -1,6 +1,7 @@
 import prisma from '@/lib/db';
 import { can, requireTeamActor } from '@/lib/actor';
 import ResultsUploaderClient from './ResultsUploaderClient';
+import AddRunnerButton from './AddRunnerButton';
 import ResultsTableClient from './ResultsTableClient';
 import EventDetailsPanel from './EventDetailsPanel';
 import CertificateWorkspacePanel from './CertificateWorkspacePanel';
@@ -11,6 +12,7 @@ import { CATEGORY_ORDER } from '@/lib/category-order';
 import { withPacerRanksAndSources } from '@/lib/pacer-store';
 import { genderDivision } from '@/lib/gender-division';
 import DashboardHeader from '@/app/admin/DashboardHeader';
+import { handMade } from './runner-row';
 
 /**
  * One race's results workspace (RESULTS_NAV_PLAN.md, Batch 2). It moved here
@@ -53,19 +55,28 @@ export default async function AdminResultsWorkspacePage({ params }: { params: Pr
     include: { category: true },
     orderBy: { overallRank: 'asc' }
   });
+  // A DNF, DNS or DQ row holds rank 0 (RESULTS_ROW_ACTIONS_PLAN.md Batch 3):
+  // after every finisher, not ahead of first place.
+  results.sort((a, b) => (a.overallRank || Infinity) - (b.overallRank || Infinity));
 
   // The same pacer match and the same pacer-free ranks the public results
   // show, so staff see exactly what runners see: a pacer reads "-", everyone
   // behind them has moved up. The stored upload itself is untouched. With
   // where each pacer came from, for the badge and the row menu (O5).
   const ranked = await withPacerRanksAndSources(id, results);
-  const tagged = ranked.map(result => ({ ...result, gender: genderDivision(result.gender) }));
+  const tagged = ranked.map(({ editedAt, createdAt, ...result }) => ({
+    ...result,
+    gender: genderDivision(result.gender),
+    // The sheet's own word, for *Edit details* (RESULTS_ROW_ACTIONS_PLAN.md Batch 3).
+    storedGender: result.gender,
+    byHand: handMade(createdAt, editedAt),
+  }));
 
   // Asked with the same can() as the routes behind them: Edit Event's PUT and
   // the certificate's own PUT both need event:edit.
   const canEdit = can(actor, 'event:edit', { organizerId: actor.orgId, eventId: id });
   const editHref = canEdit ? `/admin/events/${id}/edit` : null;
-  // The upload's own verb, which the pacer-tag routes ask as well.
+  // The upload's own verb, which the pacer-tag and Edit details routes ask as well.
   const canManageResults = can(actor, 'results:manage', { organizerId: actor.orgId, eventId: id });
   const certificate = (
     <CertificateWorkspacePanel
@@ -96,7 +107,12 @@ export default async function AdminResultsWorkspacePage({ params }: { params: Pr
                   {event.resultsOnly ? ', or makes its own from the sheet name' : ' of this race'}. Runners
                   can look up their times on the public results once it is in.
                 </p>
-                <ResultsUploaderClient event={event} />
+                {/* A race with no categories yet makes them from the sheet's
+                    tabs, so there is nothing to add a runner to before it. */}
+                <div className="flex flex-wrap items-center gap-3">
+                  <ResultsUploaderClient event={event} />
+                  {canManageResults && event.categories.length > 0 && <AddRunnerButton event={event} />}
+                </div>
               </div>
             </section>
 

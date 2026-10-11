@@ -9,6 +9,7 @@ import EventHeroBanner from '@/components/EventHeroBanner';
 import { canonicalResultsPath, eventByParam, resultsPath, runnerResultPath } from '@/lib/event-slug';
 import { toWholeSeconds } from '@/lib/race-time';
 import { withPacerRanks } from '@/lib/pacer-store';
+import { RESULT_STATUS_LABELS, isResultStatus } from '@/lib/result-status';
 
 /**
  * One runner's result, addressed by the number they wore: /results/[slug]/1042.
@@ -79,6 +80,11 @@ export default async function RunnerAnalyticsPage({
   );
   const ranks = categoryResults.find(row => row.id === result.id)!;
   const isPacer = ranks.isPacer;
+  // A DNF, DNS or DQ set by staff (RESULTS_ROW_ACTIONS_PLAN.md Batch 3): the
+  // page still shows their row, but never calls them a finisher or offers the
+  // "has successfully finished" certificate.
+  const finished = result.status === 'FINISHED';
+  const statusWord = isResultStatus(result.status) ? RESULT_STATUS_LABELS[result.status] : result.status;
 
   // "X out of Y", where Y leaves the pacers out, as the ranks do.
   const racing = categoryResults.filter(row => row.status === 'FINISHED' && !row.isPacer);
@@ -176,9 +182,15 @@ export default async function RunnerAnalyticsPage({
                   half. */}
               <div className="w-full md:flex-1 md:min-w-0">
                 <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-secondary mb-4 sm:mb-5">
-                  <span className="bg-accent-blue/10 text-accent-blue border border-accent-blue/20 px-3 py-1.5 rounded-[12px] text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap">
-                    <CheckCircle2 size={14} className="shrink-0" /> FINISHER
-                  </span>
+                  {finished ? (
+                    <span className="bg-accent-blue/10 text-accent-blue border border-accent-blue/20 px-3 py-1.5 rounded-[12px] text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap">
+                      <CheckCircle2 size={14} className="shrink-0" /> FINISHER
+                    </span>
+                  ) : (
+                    <span className="bg-white/5 text-secondary border border-white/10 px-3 py-1.5 rounded-[12px] text-xs font-bold uppercase tracking-wider whitespace-nowrap">
+                      {statusWord}
+                    </span>
+                  )}
                   {isPacer && (
                     <span className="bg-accent-orange/10 text-accent-orange border border-accent-orange/30 px-3 py-1.5 rounded-[12px] text-xs font-bold uppercase tracking-wider whitespace-nowrap">
                       Pacer
@@ -230,7 +242,7 @@ export default async function RunnerAnalyticsPage({
                 </div>
                 <div className="text-2xl sm:text-3xl font-bold text-white mb-1 flex items-baseline gap-2">
                   {formatRank(ranks.categoryRank)}
-                  {ranks.categoryRank != null && (
+                  {(ranks.categoryRank ?? 0) > 0 && (
                     <span className="text-sm font-normal text-secondary/50 font-mono">/ {totalInCategory}</span>
                   )}
                 </div>
@@ -244,7 +256,7 @@ export default async function RunnerAnalyticsPage({
                 </div>
                 <div className="text-2xl sm:text-3xl font-bold text-white mb-1 flex items-baseline gap-2">
                   {formatRank(ranks.genderRank)}
-                  {ranks.genderRank != null && (
+                  {(ranks.genderRank ?? 0) > 0 && (
                     <span className="text-sm font-normal text-secondary/50 font-mono">/ {totalInGender}</span>
                   )}
                 </div>
@@ -277,13 +289,13 @@ export default async function RunnerAnalyticsPage({
             </div>
           </div>
 
-          {/* Certificate Generator */}
-          <React.Suspense fallback={<div className="p-8 text-center text-secondary">Loading certificate...</div>}>
+          {/* Certificate Generator, for a finisher only. */}
+          {finished && <React.Suspense fallback={<div className="p-8 text-center text-secondary">Loading certificate...</div>}>
             <ECertificateGenerator
               result={{ ...result, categoryRank: ranks.categoryRank, genderRank: ranks.genderRank, isPacer, paceGroup: ranks.paceGroup }}
               event={result.event}
             />
-          </React.Suspense>
+          </React.Suspense>}
 
         </div>
       </div>

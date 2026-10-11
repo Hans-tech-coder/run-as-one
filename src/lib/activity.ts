@@ -58,6 +58,9 @@ export const ACTION_LABELS: Record<AuditAction, string> = {
   'event.registration.scheduled': 'Scheduled sign-ups',
   'event.deleted': 'Deleted an event',
   'results.uploaded': 'Uploaded results',
+  'results.edited': "Corrected a runner's result",
+  'results.added': 'Added a runner to the results',
+  'results.deleted': 'Deleted results',
   'registration.status.changed': 'Changed payment status',
   'registration.remarks.changed': 'Changed remarks',
   'registration.email.sent_by_hand': 'Sent an email by hand',
@@ -109,7 +112,7 @@ export const ACTIVITY_GROUPS = [
   { key: 'payments', label: 'Payments', hint: 'Status changes, remarks, emails sent by hand and unpaid checkouts followed up' },
   { key: 'runners', label: 'Runners', hint: 'Runner edits and removals' },
   { key: 'data', label: 'Personal data', hint: 'Payment proofs opened and registrant lists exported' },
-  { key: 'events', label: 'Events', hint: 'Events created, edited, paused, scheduled or deleted, and results uploaded' },
+  { key: 'events', label: 'Events', hint: 'Events created, edited, paused, scheduled or deleted, and results uploaded or corrected' },
   { key: 'promotions', label: 'Promotions', hint: 'Promotions created, edited, paused or deleted' },
   // Its own shelf rather than a corner of Promotions, because a pacer code is
   // not a promotion — it is a free entry given to a named person — and because
@@ -158,6 +161,9 @@ export const ACTION_GROUP: Record<AuditAction, ActivityGroupKey> = {
   'event.registration.scheduled': 'events',
   'event.deleted': 'events',
   'results.uploaded': 'events',
+  'results.edited': 'events',
+  'results.added': 'events',
+  'results.deleted': 'events',
   'registration.status.changed': 'payments',
   'registration.remarks.changed': 'payments',
   'registration.email.sent_by_hand': 'payments',

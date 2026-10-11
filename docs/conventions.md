@@ -285,7 +285,9 @@
     floats over whichever card is at the foot of the screen, wherever the
     list is scrolled to. From `lg` up the red chip in the toolbar does the
     job. A card list with a bulk action passes `selectAll` to
-    `AdminCardList`, reading the table's page selection.
+    `AdminCardList`, reading the table's page selection. A bar with no
+    export (the race results) adds **`.is-no-export`**: one row from `sm` up,
+    and on a phone the count and Clear over a full-width Delete.
   - **A `.btn-filter` chip's tone is a class, never a Tailwind colour.**
     `Admin.css` is unlayered, so `.btn-filter` beats `text-orange-400` and
     friends: the registrants queue chips and Delete Selected drew grey for as

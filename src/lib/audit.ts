@@ -75,6 +75,16 @@ export const AUDIT_ACTIONS = [
   'event.registration.scheduled',
   'event.deleted',
   'results.uploaded',
+  // One runner's row corrected by hand from the Results workspace
+  // (RESULTS_ROW_ACTIONS_PLAN.md Batch 3), with the old and new value of each
+  // field; the race is re-ranked in the same change.
+  'results.edited',
+  // One runner added by hand from the Results workspace, for a finisher the
+  // timer's sheet left out; the race is re-ranked in the same change.
+  'results.added',
+  // Results deleted by hand from the Results workspace, one from a row's menu
+  // or many from a selection, naming each runner; the race is re-ranked.
+  'results.deleted',
   'registration.status.changed',
   'registration.remarks.changed',
   'registration.email.sent_by_hand',

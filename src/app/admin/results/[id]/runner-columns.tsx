@@ -5,7 +5,8 @@ import { Check } from 'lucide-react';
 import type { ColumnDef, FilterFn } from '@tanstack/react-table';
 import { toWholeSeconds } from '@/lib/race-time';
 import { rowPosition } from '../../events/EventRowCells';
-import { pacerBadgeLabel, rankLabel, type RunnerRow } from './runner-row';
+import { rankLabel, rankSortValue, type RunnerRow } from './runner-row';
+import RunnerBadges from './RunnerBadges';
 
 /**
  * The race results table's columns (lg and up) and its search. The phone cards
@@ -72,7 +73,7 @@ export function runnerColumns(renderActions?: (row: RunnerRow) => React.ReactNod
       cell: ({ row }) => (
         <span className="inline-flex items-center gap-2">
           <span className="font-medium text-primary">{row.original.name}</span>
-          {row.original.isPacer && <span className="status-badge info">{pacerBadgeLabel(row.original)}</span>}
+          <RunnerBadges row={row.original} />
         </span>
       ),
     },
@@ -95,16 +96,16 @@ export function runnerColumns(renderActions?: (row: RunnerRow) => React.ReactNod
       filterFn: inSelected,
     },
     {
-      // A pacer has no rank; sorted as the largest, so they sit after every
-      // ranked finisher rather than wherever a null happens to land.
+      // A pacer or a non-finisher has no rank; sorted as the largest, so they
+      // sit after every ranked finisher rather than wherever a null lands.
       id: "categoryRank",
-      accessorFn: (row) => row.categoryRank ?? Number.MAX_SAFE_INTEGER,
+      accessorFn: (row) => rankSortValue(row.categoryRank),
       header: "Category Rank",
       cell: ({ row }) => <span className="text-secondary">{rankLabel(row.original.categoryRank)}</span>,
     },
     {
       id: "genderRank",
-      accessorFn: (row) => row.genderRank ?? Number.MAX_SAFE_INTEGER,
+      accessorFn: (row) => rankSortValue(row.genderRank),
       header: "Gender Rank",
       cell: ({ row }) => <span className="text-secondary">{rankLabel(row.original.genderRank)}</span>,
     },

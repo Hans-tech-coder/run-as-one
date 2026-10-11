@@ -1814,6 +1814,25 @@ a.reg-count-trigger {
 .bulk-bar-delete { grid-area: delete; }
 .bulk-bar-clear  { grid-area: clear; }
 
+/* A bar with nothing to export (the race results' Delete and Clear): one row
+   from `sm` up, the count taking what Delete and Clear leave. Below `sm` it
+   is two rows, as the registrants bar is: a 360px screen leaves the count
+   too little room beside two labelled 44px buttons, so the count and Clear
+   share the top and Delete takes the row beneath. */
+.bulk-bar.is-no-export {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas: "count delete clear";
+}
+
+@media (width < 40rem) {
+  .bulk-bar.is-no-export {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      "count clear"
+      "delete delete";
+  }
+}
+
 /* The content column's left edge: the 80px rail when the tablet's sidebar is
    collapsed, the 56px rail below `md` (where the cookie means nothing), and
    the content's own 16px inset below `sm`. */
