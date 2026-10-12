@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { cookies } from 'next/headers';
-import { createToken, verifyToken } from './jwt';
+import { SESSION_SECONDS, createToken, verifyToken, type SessionClaims, type SessionLength } from './jwt';
 
 export async function hashPassword(password: string): Promise<string> {
   return await bcrypt.hash(password, 10);
@@ -32,15 +32,26 @@ export async function verifyNoPassword(password: string): Promise<false> {
 // Re-export for compatibility
 export { createToken, verifyToken };
 
-export async function setAuthCookie(token: string) {
+/** `length` must match the token's: a day, or 30 days kept (SESSION_SECONDS). */
+export async function setAuthCookie(token: string, length: SessionLength = 'day') {
   const cookieStore = await cookies();
   cookieStore.set('admin_token', token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge: 60 * 60 * 24, // 1 day
+    maxAge: SESSION_SECONDS[length],
     path: '/',
   });
+}
+
+/**
+ * Reissue the signed-in person's own cookie with fresh claims (a new name or
+ * email, or after ending their other sessions), keeping the length they chose
+ * at sign-in — a kept session is not cut to a day by a profile edit.
+ */
+export async function reissueAuthCookie(claims: SessionClaims) {
+  const length = (await getAuthCookie())?.length ?? 'day';
+  await setAuthCookie(await createToken(claims, length), length);
 }
 
 /**

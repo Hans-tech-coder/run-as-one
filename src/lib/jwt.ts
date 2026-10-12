@@ -51,19 +51,39 @@ export type SessionClaims = {
   email: string;
 };
 
+/**
+ * How long a session lives, in seconds: a day, or 30 days when the person
+ * ticked "Keep me signed in" (LOGIN_UX_PLAN.md D8). The token's `exp` and the
+ * cookie's `maxAge` both come from here. A long session is safe only because
+ * `getActor()` (lib/actor.ts) checks `sessionsValidFrom`, suspension and an
+ * active membership on every request, not just at sign-in.
+ */
+export const SESSION_SECONDS = {
+  day: 60 * 60 * 24,
+  keep: 60 * 60 * 24 * 30,
+} as const;
+
+export type SessionLength = keyof typeof SESSION_SECONDS;
+
 export type VerifiedSession = SessionClaims & {
   /** When the token was issued, in seconds. A staff session issued before the
    *  account's `sessionsValidFrom` is refused — see lib/actor.ts. */
   iat: number | null;
+  /** The length chosen at sign-in, read back from `exp - iat`, so a reissued
+   *  cookie (lib/auth.ts `reissueAuthCookie`) keeps it. */
+  length: SessionLength;
 };
 
-export async function createToken(claims: SessionClaims): Promise<string> {
+export async function createToken(
+  claims: SessionClaims,
+  length: SessionLength = 'day',
+): Promise<string> {
   const { sub, ...rest } = claims;
   return await new SignJWT(rest)
     .setProtectedHeader({ alg: 'HS256' })
     .setSubject(sub)
     .setIssuedAt()
-    .setExpirationTime('1d')
+    .setExpirationTime(`${SESSION_SECONDS[length]}s`)
     .sign(SECRET_KEY);
 }
 
@@ -82,6 +102,10 @@ function text(value: unknown): string {
 
 function readClaims(payload: JWTPayload): VerifiedSession | null {
   const iat = typeof payload.iat === 'number' ? payload.iat : null;
+  const length: SessionLength =
+    iat !== null && typeof payload.exp === 'number' && payload.exp - iat > SESSION_SECONDS.day
+      ? 'keep'
+      : 'day';
 
   // A token issued before staff accounts existed: `{ id, email, name, role }`
   // with no kind. Such a token lives for a day, so the deploy that introduces
@@ -98,6 +122,7 @@ function readClaims(payload: JWTPayload): VerifiedSession | null {
       name: text(payload.name),
       email: text(payload.email),
       iat,
+      length,
     };
   }
 
@@ -117,5 +142,6 @@ function readClaims(payload: JWTPayload): VerifiedSession | null {
     name: text(payload.name),
     email: text(payload.email),
     iat,
+    length,
   };
 }

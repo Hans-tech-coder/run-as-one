@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
-import { createToken, setAuthCookie, verifyPassword } from '@/lib/auth';
+import { reissueAuthCookie, verifyPassword } from '@/lib/auth';
 import {
   findAccountByEmail,
   getActor,
@@ -169,13 +169,12 @@ export async function PATCH(request: Request) {
     }
 
     // The token carries the name and email, so a stale one would keep showing
-    // the old details until it expired a day later. Reissue it here.
-    const token = await createToken(
+    // the old details until it expired. Reissue it here.
+    await reissueAuthCookie(
       isStaff
         ? staffSessionClaims(account, { organizerId: actor.orgId, role: actor.role })
         : organizerSessionClaims(account),
     );
-    await setAuthCookie(token);
 
     return NextResponse.json({
       success: true,

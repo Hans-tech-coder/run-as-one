@@ -157,16 +157,23 @@ export async function logSignInFailure(
 /**
  * Sign in to an account whose proof has already been checked: refuse it with
  * the code and sentence the sign-in page shows (lib/sign-in-errors.ts), or
- * record it and set the cookie.
+ * record it and set the cookie. `keep` is the "Keep me signed in" box: a
+ * 30-day session instead of a day (SESSION_SECONDS, lib/jwt.ts), noted in the
+ * trail row.
  */
 export async function completeSignIn(
   subject: SignInSubject,
-  { method }: { method: SignInMethod },
+  { method, keep = false }: { method: SignInMethod; keep?: boolean },
 ): Promise<SignInResult> {
+  const length = keep ? 'keep' : 'day';
+  const changes = {
+    ...(method === 'google' ? { method } : {}),
+    ...(keep ? { keepSignedIn: true } : {}),
+  };
   const signedIn = {
     action: 'auth.signed_in' as const,
     summary: method === 'google' ? 'Signed in with Google.' : 'Signed in.',
-    changes: method === 'google' ? { method } : undefined,
+    changes: Object.keys(changes).length ? changes : undefined,
   };
 
   // ── Run As One's own account, the owner ──────────────────────────────
@@ -188,7 +195,7 @@ export async function completeSignIn(
       await recordAudit(tx, who, { ...signedIn, entityType: 'Organizer', entityId: organizer.id });
     });
 
-    await setAuthCookie(await createToken(organizerSessionClaims(organizer)));
+    await setAuthCookie(await createToken(organizerSessionClaims(organizer), length), length);
     return { ok: true, role: 'OWNER' };
   }
 
@@ -216,6 +223,6 @@ export async function completeSignIn(
     await recordAudit(tx, who, { ...signedIn, entityType: 'StaffAccount', entityId: staff.id });
   });
 
-  await setAuthCookie(await createToken(staffSessionClaims(staff, membership)));
+  await setAuthCookie(await createToken(staffSessionClaims(staff, membership), length), length);
   return { ok: true, role: 'STAFF' };
 }

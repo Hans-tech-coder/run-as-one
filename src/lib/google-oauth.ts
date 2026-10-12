@@ -70,7 +70,8 @@ function clientSecret(): string {
 
 const random = () => randomBytes(32).toString('base64url');
 
-type PendingSignIn = { state: string; nonce: string; verifier: string; next: string };
+/** `keep` is the "Keep me signed in" box, carried through Google to the callback. */
+type PendingSignIn = { state: string; nonce: string; verifier: string; next: string; keep: boolean };
 
 /**
  * Where to send the browser to start a Google sign-in. Writes the pending
@@ -80,11 +81,13 @@ type PendingSignIn = { state: string; nonce: string; verifier: string; next: str
 export async function googleAuthUrl({
   redirectUri,
   next,
+  keep,
 }: {
   redirectUri: string;
   next: string;
+  keep: boolean;
 }): Promise<string> {
-  const pending: PendingSignIn = { state: random(), nonce: random(), verifier: random(), next };
+  const pending: PendingSignIn = { state: random(), nonce: random(), verifier: random(), next, keep };
 
   const cookieStore = await cookies();
   cookieStore.set(PENDING_COOKIE, Buffer.from(JSON.stringify(pending)).toString('base64url'), {
@@ -127,7 +130,7 @@ export async function takePendingSignIn(state: string | null): Promise<PendingSi
     const pending = JSON.parse(Buffer.from(raw, 'base64url').toString('utf8')) as PendingSignIn;
     if (typeof pending.state !== 'string' || pending.state !== state) return null;
     if (typeof pending.nonce !== 'string' || typeof pending.verifier !== 'string') return null;
-    return pending;
+    return { ...pending, keep: pending.keep === true };
   } catch {
     return null;
   }

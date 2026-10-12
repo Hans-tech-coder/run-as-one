@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { Check } from 'lucide-react';
 import { RunAsOneLogo } from '@/components/RunAsOneLogo';
 import BusyLabel from '@/components/ui/BusyLabel';
 import AuthHomeLink from '../AuthHomeLink';
@@ -16,6 +17,8 @@ import GoogleSignInButton from './GoogleSignInButton';
  * whether the person just reset their password (the banner). `initialError`
  * is a refused Google sign-in, already turned from its `?error=` code into
  * its sentence; `googleEnabled` is false until the OAuth client is set up.
+ * "Keep me signed in" serves both doors: the password form sends it, and the
+ * Google link carries it (LOGIN_UX_PLAN.md D8, 30 days instead of one).
  */
 export default function LoginClient({
   next,
@@ -31,6 +34,7 @@ export default function LoginClient({
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [keep, setKeep] = useState(false);
   const [error, setError] = useState(initialError ?? '');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -43,7 +47,7 @@ export default function LoginClient({
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, keep }),
       });
 
       const data = await res.json();
@@ -100,7 +104,7 @@ export default function LoginClient({
 
           {googleEnabled ? (
             <>
-              <GoogleSignInButton next={next} />
+              <GoogleSignInButton next={next} keep={keep} />
               <div className="auth-divider" aria-hidden="true">or</div>
             </>
           ) : null}
@@ -133,11 +137,37 @@ export default function LoginClient({
               required
             />
 
-            <div className="-mt-2 text-right text-sm">
-              <Link href="/admin/forgot-password" className="auth-link">
+            <div className="auth-keep-row">
+              {/* The registration waiver's checkbox (ConsentWaiver.tsx): a real
+                  input, visually hidden, and the box beside it carries the look;
+                  `peer` wires the focus ring back to the input. */}
+              <label className="auth-keep group">
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={keep}
+                  onChange={(e) => setKeep(e.target.checked)}
+                  aria-describedby="login-keep-hint"
+                />
+                <span
+                  aria-hidden="true"
+                  className={`shrink-0 w-5 h-5 rounded-[6px] border-2 flex items-center justify-center transition-all peer-focus-visible:ring-2 peer-focus-visible:ring-accent-orange peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-black ${
+                    keep
+                      ? 'border-accent-orange bg-accent-orange'
+                      : 'border-white/30 group-hover:border-white/50'
+                  }`}
+                >
+                  {keep && <Check size={14} strokeWidth={3} className="text-black" />}
+                </span>
+                <span>Keep me signed in</span>
+              </label>
+              <Link href="/admin/forgot-password" className="auth-link text-sm">
                 Forgot password?
               </Link>
             </div>
+            <p id="login-keep-hint" className="auth-keep-hint">
+              For 30 days on this device. Leave it off on a shared computer.
+            </p>
 
             <button 
               type="submit" 

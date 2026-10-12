@@ -42,6 +42,13 @@ Google was checked on localhost with a real client viewer's Gmail.
 Migration `20261011120000_staff_google_sub` (one nullable column), applied to
 `local-dev` only.
 
+**Login convenience, Batch 4 — "Keep me signed in" (2026-10-12, on `dev`, not
+released; `LOGIN_UX_PLAN.md`).** An opt-in box on the sign-in page makes the
+session 30 days instead of one, for the password form and the Google button
+alike; a profile edit or password change keeps the length chosen. Revocation
+is unchanged, since `getActor()` checks every request (§7). Built before 2FA
+by the owner's call. No migration.
+
 **Results row actions, all 5 batches (2026-10-11, on `dev`, not released;
 `RESULTS_ROW_ACTIONS_PLAN.md`).** Batch 1 (`9d842c3`) split the workspace's
 results table and moved the ranking into `results-ranking.ts`. **Batch 2

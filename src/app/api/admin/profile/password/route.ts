@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
-import { createToken, hashPassword, setAuthCookie, verifyPassword } from '@/lib/auth';
+import { hashPassword, reissueAuthCookie, verifyPassword } from '@/lib/auth';
 import { getActor, reissuedSessionClaims, sessionsCutoff } from '@/lib/actor';
 import { recordAudit } from '@/lib/audit';
 
@@ -92,7 +92,7 @@ export async function PATCH(request: Request) {
       });
     });
 
-    await setAuthCookie(await createToken(reissuedSessionClaims(actor)));
+    await reissueAuthCookie(reissuedSessionClaims(actor));
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
-import { createToken, setAuthCookie } from '@/lib/auth';
+import { reissueAuthCookie } from '@/lib/auth';
 import { getActor, reissuedSessionClaims, sessionsCutoff } from '@/lib/actor';
 import { recordAudit } from '@/lib/audit';
 
@@ -42,7 +42,7 @@ export async function POST() {
       });
     });
 
-    await setAuthCookie(await createToken(reissuedSessionClaims(actor)));
+    await reissueAuthCookie(reissuedSessionClaims(actor));
 
     return NextResponse.json({ success: true });
   } catch (error) {

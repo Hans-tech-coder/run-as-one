@@ -5,14 +5,19 @@ import { Roboto } from 'next/font/google';
  * full-colour "G" on its own, unaltered, Roboto Medium, and the dark theme's
  * colours (#131314 fill, #8E918F edge, #E3E3E3 text) because the sign-in card
  * is dark. A plain link, not a fetch: the flow is a chain of full-page
- * redirects through Google and back (`/api/auth/google`).
+ * redirects through Google and back (`/api/auth/google`), so the "Keep me
+ * signed in" box rides along as `?keep=1`.
  */
 
 // Only the one weight the button uses, self-hosted by next/font.
 const roboto = Roboto({ weight: '500', subsets: ['latin'], display: 'swap' });
 
-export default function GoogleSignInButton({ next }: { next: string }) {
-  const href = next === '/admin' ? '/api/auth/google' : `/api/auth/google?next=${encodeURIComponent(next)}`;
+export default function GoogleSignInButton({ next, keep }: { next: string; keep: boolean }) {
+  const params = new URLSearchParams();
+  if (next !== '/admin') params.set('next', next);
+  if (keep) params.set('keep', '1');
+  const query = params.toString();
+  const href = query ? `/api/auth/google?${query}` : '/api/auth/google';
 
   return (
     <a href={href} className={`google-sign-in ${roboto.className}`}>

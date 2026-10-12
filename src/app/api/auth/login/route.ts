@@ -44,7 +44,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { email, password } = await request.json();
+    const { email, password, keep } = await request.json();
 
     // Lowercased before the lookup, never as typed: Postgres compares text
     // exactly, so one capital from a browser autofill used to find no row and
@@ -84,7 +84,7 @@ export async function POST(request: Request) {
       return INVALID();
     }
 
-    const result = await completeSignIn(subject, { method: 'password' });
+    const result = await completeSignIn(subject, { method: 'password', keep: keep === true });
     if (!result.ok) {
       return NextResponse.json({ error: result.error }, { status: result.status });
     }

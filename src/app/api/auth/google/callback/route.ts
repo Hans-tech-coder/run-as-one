@@ -52,7 +52,7 @@ export async function GET(request: Request) {
     const subject = await signInSubject({ kind: 'STAFF', staff });
     if (!subject) return backToSignIn(request, 'google_no_account', next);
 
-    const result = await completeSignIn(subject, { method: 'google' });
+    const result = await completeSignIn(subject, { method: 'google', keep: pending.keep });
     if (!result.ok) return backToSignIn(request, result.code, next);
 
     if (link && subject.who) await linkGoogle(staff.id, identity.sub, subject.who);

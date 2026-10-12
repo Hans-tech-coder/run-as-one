@@ -11,7 +11,8 @@ import { backToSignIn } from './login-redirect';
  *
  * The redirect URI is built from this request's own origin, so production,
  * a preview and localhost each come back to themselves — every one of them
- * has to be listed on the Google OAuth client.
+ * has to be listed on the Google OAuth client. `?keep=1` is the sign-in
+ * page's "Keep me signed in" box, held in the pending cookie until the callback.
  */
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -24,6 +25,7 @@ export async function GET(request: Request) {
   const location = await googleAuthUrl({
     redirectUri: `${url.origin}${GOOGLE_CALLBACK_PATH}`,
     next,
+    keep: url.searchParams.get('keep') === '1',
   });
   return NextResponse.redirect(location);
 }

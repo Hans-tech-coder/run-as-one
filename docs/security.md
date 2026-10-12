@@ -250,7 +250,19 @@
 - Payment proofs are **private** blobs, served only through
   `/api/admin/proof/[id]` with a roughly five-minute signed URL.
 - Passwords are bcrypt-hashed; the session cookie is httpOnly, `sameSite=lax`,
-  `secure` in production, with a one-day expiry.
+  `secure` in production, with a one-day expiry — or **30 days when the person
+  ticks "Keep me signed in"** (`LOGIN_UX_PLAN.md` Batch 4, D8; opt-in, off by
+  default, on both the password form and the Google button, which carries it
+  through the pending cookie). The token's `exp` and the cookie's `maxAge` both
+  come from `SESSION_SECONDS` (`lib/jwt.ts`), and a reissued cookie (profile
+  edit, password change, *Sign out other devices*) keeps the length chosen at
+  sign-in (`reissueAuthCookie`, `lib/auth.ts`). **A long session is the reason
+  `getActor()` re-checks `sessionsValidFrom`, suspension and the membership on
+  every request** rather than trusting the token: a kept session is still
+  ended at once by any of them. The `auth.signed_in` row records
+  `keepSignedIn: true` when it was ticked. There is no 2FA yet
+  (`ON_HOLD.md` §2), so on a shared race-day laptop the box should stay off,
+  as the page says.
 - **Sign-in is throttled, timed evenly, and only ever returns inside `/admin`**
   (`LOGIN_UX_PLAN.md` Batch 1). `POST /api/auth/login` checks `LOGIN_RULE`
   (10 a minute per address) before the body is read and `LOGIN_ACCOUNT_RULE`
