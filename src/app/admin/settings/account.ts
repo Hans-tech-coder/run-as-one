@@ -1,6 +1,15 @@
 import { redirect } from 'next/navigation';
 import prisma from '@/lib/db';
 import type { Actor } from '@/lib/actor';
+import { twoFactorOn, type TwoFactorFields } from '@/lib/two-factor';
+
+const TWO_FACTOR_SELECT = { totpSecret: true, totpConfirmedAt: true, recoveryCodes: true, totpLastStep: true } as const;
+
+function twoFactorSummary(fields: TwoFactorFields) {
+  return twoFactorOn(fields)
+    ? { since: fields.totpConfirmedAt as Date, codesLeft: fields.recoveryCodes.length }
+    : null;
+}
 
 /**
  * The signed-in person's own record, for the settings pages. For an owner
@@ -13,6 +22,10 @@ import type { Actor } from '@/lib/actor';
  * `googleSub` (the owner signs in with a password only), so that is always
  * false for it too.
  *
+ * Two-step sign-in is summed up as `twoFactor`: since when it is on (null when
+ * off) and how many recovery codes are left. The secret and the hashes never
+ * leave this function.
+ *
  * A valid cookie whose account is gone — a deleted organizer holding a token
  * that has not expired yet — is sent back to the sign-in screen rather than
  * shown a form with nothing behind it.
@@ -23,19 +36,40 @@ export async function loadOwnAccount(actor: Actor) {
       ? await prisma.staffAccount
           .findUnique({
             where: { id: actor.id },
-            select: { name: true, email: true, phone: true, avatarUrl: true, lastLoginAt: true, googleSub: true },
+            select: {
+              name: true,
+              email: true,
+              phone: true,
+              avatarUrl: true,
+              lastLoginAt: true,
+              googleSub: true,
+              ...TWO_FACTOR_SELECT,
+            },
           })
           .then(row => {
             if (!row) return null;
-            const { googleSub, ...rest } = row;
-            return { ...rest, googleLinked: googleSub !== null };
+            const { googleSub, totpSecret, totpConfirmedAt, recoveryCodes, totpLastStep, ...rest } = row;
+            return {
+              ...rest,
+              googleLinked: googleSub !== null,
+              twoFactor: twoFactorSummary({ totpSecret, totpConfirmedAt, recoveryCodes, totpLastStep }),
+            };
           })
       : await prisma.organizer
           .findUnique({
             where: { id: actor.id },
-            select: { name: true, email: true, avatarUrl: true, lastLoginAt: true },
+            select: { name: true, email: true, avatarUrl: true, lastLoginAt: true, ...TWO_FACTOR_SELECT },
           })
-          .then(row => (row ? { ...row, phone: null, googleLinked: false } : null));
+          .then(row => {
+            if (!row) return null;
+            const { totpSecret, totpConfirmedAt, recoveryCodes, totpLastStep, ...rest } = row;
+            return {
+              ...rest,
+              phone: null,
+              googleLinked: false,
+              twoFactor: twoFactorSummary({ totpSecret, totpConfirmedAt, recoveryCodes, totpLastStep }),
+            };
+          });
 
   if (!account) redirect('/admin/login');
   return account;

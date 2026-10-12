@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-43 pages · 62 API routes · 101 modules in `src/lib` · 459 files · 87,112 lines
+43 pages · 66 API routes · 101 modules in `src/lib` · 465 files · 88,159 lines
 
 ---
 
@@ -48,7 +48,7 @@ The route, the server component behind it, and the client components beside it.
 | `/admin/results` | [`/admin/results/page.tsx`](../src/app/admin/results/page.tsx) | `result-columns.tsx` `result-row.ts` `ResultsListClient.tsx` |
 | `/admin/results/[id]` | [`/admin/results/[id]/page.tsx`](../src/app/admin/results/[id]/page.tsx) | `AddRunnerButton.tsx` `certificate-draft.ts` `CertificateSettingsPanel.tsx` `CertificateWorkspacePanel.tsx` `EventDetailsPanel.tsx` `PacerTagModal.tsx` `ResultFormModal.tsx` `results-sheet.ts` `results-upload.ts` `ResultsTableClient.tsx` `ResultsUploaderClient.tsx` `runner-columns.tsx` `runner-row.ts` `RunnerBadges.tsx` `RunnerCards.tsx` `SheetMappingPanel.tsx` `TargetCategoryPicker.tsx` `use-runner-actions.tsx` |
 | `/admin/results/new` | [`/admin/results/new/page.tsx`](../src/app/admin/results/new/page.tsx) | `EventPicker.tsx` `ExistingRaceFlow.tsx` `NewResultsClient.tsx` `ResultsOnlyFlow.tsx` `ResultsSteps.tsx` `save-new-results.ts` |
-| `/admin/settings` | [`/admin/settings/page.tsx`](../src/app/admin/settings/page.tsx) | `AccessPanels.tsx` `account.ts` `GooglePanel.tsx` `sections.ts` `SettingsPanels.tsx` |
+| `/admin/settings` | [`/admin/settings/page.tsx`](../src/app/admin/settings/page.tsx) | `AccessPanels.tsx` `account.ts` `GooglePanel.tsx` `sections.ts` `SettingsPanels.tsx` `TwoFactorPanel.tsx` |
 | `/admin/settings/access` | [`/admin/settings/access/page.tsx`](../src/app/admin/settings/access/page.tsx) | — |
 | `/admin/settings/security` | [`/admin/settings/security/page.tsx`](../src/app/admin/settings/security/page.tsx) | — |
 | `/admin/settings/site` | [`/admin/settings/site/page.tsx`](../src/app/admin/settings/site/page.tsx) | — |
@@ -100,6 +100,10 @@ The route, the server component behind it, and the client components beside it.
 | `/api/admin/profile/google` | PATCH | [`/admin/profile/google/route.ts`](../src/app/api/admin/profile/google/route.ts) |
 | `/api/admin/profile/password` | PATCH | [`/admin/profile/password/route.ts`](../src/app/api/admin/profile/password/route.ts) |
 | `/api/admin/profile/sessions` | POST | [`/admin/profile/sessions/route.ts`](../src/app/api/admin/profile/sessions/route.ts) |
+| `/api/admin/profile/two-factor/confirm` | POST | [`/admin/profile/two-factor/confirm/route.ts`](../src/app/api/admin/profile/two-factor/confirm/route.ts) |
+| `/api/admin/profile/two-factor/disable` | POST | [`/admin/profile/two-factor/disable/route.ts`](../src/app/api/admin/profile/two-factor/disable/route.ts) |
+| `/api/admin/profile/two-factor/recovery-codes` | POST | [`/admin/profile/two-factor/recovery-codes/route.ts`](../src/app/api/admin/profile/two-factor/recovery-codes/route.ts) |
+| `/api/admin/profile/two-factor/start` | POST | [`/admin/profile/two-factor/start/route.ts`](../src/app/api/admin/profile/two-factor/start/route.ts) |
 | `/api/admin/promos` | POST | [`/admin/promos/route.ts`](../src/app/api/admin/promos/route.ts) |
 | `/api/admin/promos/[id]` | PATCH DELETE | [`/admin/promos/[id]/route.ts`](../src/app/api/admin/promos/[id]/route.ts) |
 | `/api/admin/promos/[id]/redemptions` | GET | [`/admin/promos/[id]/redemptions/route.ts`](../src/app/api/admin/promos/[id]/redemptions/route.ts) |
@@ -287,6 +291,7 @@ when a task touches one, split it before editing rather than after.
 | 499 | [`src/app/admin/AdminRouteLoading.tsx`](../src/app/admin/AdminRouteLoading.tsx) |
 | 485 | [`src/app/events/[slug]/page.tsx`](../src/app/events/[slug]/page.tsx) |
 | 485 | [`src/lib/email.ts`](../src/lib/email.ts) |
+| 472 | [`src/app/admin/settings/TwoFactorPanel.tsx`](../src/app/admin/settings/TwoFactorPanel.tsx) |
 | 472 | [`src/app/events/[slug]/register/BirthdatePicker.tsx`](../src/app/events/[slug]/register/BirthdatePicker.tsx) |
 | 472 | [`src/app/feedback/FeedbackForm.tsx`](../src/app/feedback/FeedbackForm.tsx) |
 | 469 | [`src/app/admin/clients/ApplicationPanel.tsx`](../src/app/admin/clients/ApplicationPanel.tsx) |

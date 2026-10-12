@@ -318,6 +318,21 @@
   `lib/sign-in-errors.ts`, and the trail rows say `method: 'google'`. The link
   is written only after a sign-in passes (`auth.google_linked`); unlinking
   from Settings needs the current password (`auth.google_unlinked`).
+- **Two-step sign-in is optional, per account, and turned on only by proving
+  the app holds the secret** (`TWO_FACTOR_PLAN.md` Batch 2, D1;
+  `lib/two-factor.ts`). The secret is sealed at rest with AES-256-GCM under
+  `TOTP_ENCRYPTION_KEY` (`lib/secret-box.ts`) and is written **unconfirmed**
+  by *Turn On*; it counts only once the first code is accepted, so a setup
+  abandoned halfway changes nothing. Recovery codes exist in plain text once,
+  in the confirm (or renew) answer; only bcrypt hashes are stored. **Turning it
+  on or off ends every other session** (D9: `sessionsValidFrom`, this session
+  reissued), so a session stolen earlier does not outlive the change. **Off
+  takes the current password and a current code** (D6; a recovery code
+  counts), and emails the person (D10). Every route that takes a code is
+  throttled per account (`TWO_FACTOR_RULE`, 5 in 5 minutes, one window across
+  them) and a wrong code writes `auth.two_factor_failed`; an accepted code's
+  30-second step is stored (`totpLastStep`), so a code works once.
+  **Sign-in does not ask for the code until Batch 3.**
 - **An account is found by a lowercased email, and written as one.** `login`,
   `register` and `admin/profile` all run the address through
   `normalizeAccountEmail` (§5). The failure this prevents is quiet and reads

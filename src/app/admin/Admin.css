@@ -2332,6 +2332,136 @@ textarea.form-input {
   color: var(--status-success);
 }
 
+/* Two-step sign-in (settings/TwoFactorPanel.tsx). */
+.two-step-steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.two-step-step-title {
+  margin: 0 0 4px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* The QR beside its typed-in key; stacked below `sm`, QR first. */
+.two-step-setup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  margin-top: var(--space-md);
+}
+
+/* Always dark on white, in both themes: a scanner reads contrast, and some
+   apps refuse an inverted code. */
+.two-step-qr {
+  width: 176px;
+  flex-shrink: 0;
+  padding: 8px;
+  border-radius: var(--radius-md);
+  background: #fff;
+}
+
+.two-step-qr svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.two-step-key,
+.two-step-codes {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--text-primary);
+}
+
+.two-step-key {
+  margin: 4px 0 0;
+  font-size: 0.9375rem;
+  letter-spacing: 0.04em;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+.two-step-code-input {
+  max-width: 16rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: 0.12em;
+}
+
+/* Two columns even at 360px: a code is nine characters. */
+.two-step-codes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 16px;
+  margin: var(--space-md) 0 0;
+  padding: var(--space-md);
+  border: 1px solid var(--dash-border);
+  border-radius: var(--radius-lg);
+  list-style: none;
+  font-size: 1rem;
+  user-select: all;
+}
+
+@media (width >= 40rem) {
+  .two-step-codes {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+.two-step-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+/* The whole row is the checkbox's 44px target. */
+.two-step-saved {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  margin-top: var(--space-md);
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.two-step-warning {
+  margin: var(--space-md) 0 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--status-warning) 10%, transparent);
+  color: var(--status-warning);
+  font-size: 0.875rem;
+}
+
+.two-step-cancel {
+  min-height: 44px;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font-family: var(--font-body);
+}
+
+@media (width < 40rem) {
+  .two-step-setup {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .two-step-buttons {
+    flex: 1 1 100%;
+  }
+
+  .two-step-buttons > .btn-light {
+    flex: 1 1 100%;
+  }
+}
+
 /* Form Layouts */
 .admin-form {
   display: flex;

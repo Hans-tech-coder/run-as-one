@@ -120,6 +120,18 @@ export const LOGIN_ACCOUNT_RULE: RateLimitRule = { limit: 5, windowMs: 60_000 };
 export const PASSWORD_RESET_RULE: RateLimitRule = { limit: 5, windowMs: 10 * 60_000 };
 
 /**
+ * A two-step code typed by a signed-in person (Settings › Security: confirm,
+ * new recovery codes, turn off): 5 every 5 minutes per account, one window
+ * across those routes so a guesser cannot get five per route.
+ *
+ * A code is six digits, so a million guesses; five in five minutes makes the
+ * walk take years. A person who mistypes twice, or waits out a code that
+ * changed under them, is nowhere near it — and every try counts, right or
+ * wrong, because the person setting up does so once.
+ */
+export const TWO_FACTOR_RULE: RateLimitRule = { limit: 5, windowMs: 5 * 60_000 };
+
+/**
  * How many callers we will remember at once.
  *
  * A map keyed by address grows with every new address, and a serverless

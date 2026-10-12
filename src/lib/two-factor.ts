@@ -12,13 +12,15 @@
  * - **Recovery codes** (D3): ten, `xxxx-xxxx` from lowercase letters and digits
  *   without look-alikes (no 0/o, 1/l/i), shown once and stored only as bcrypt
  *   hashes. A code is checked without its dash, in any case.
+ * - **Turning it off clears all four columns** (`TWO_FACTOR_OFF`), whoever does
+ *   it, so an old secret can never come back to life by a later confirm.
  */
 
 import bcrypt from 'bcryptjs';
 import { randomInt } from 'node:crypto';
-import type { StaffAccount } from '@prisma/client';
+import type { Prisma, StaffAccount } from '@prisma/client';
 import db from './db';
-import type { AccountByEmail } from './actor';
+import type { AccountByEmail, Actor } from './actor';
 import { openSecret } from './secret-box';
 import { verifyTotp } from './totp';
 
@@ -62,8 +64,48 @@ export async function spendRecoveryCode(hashes: string[], code: string): Promise
   return null;
 }
 
-function fieldsOf(account: AccountByEmail): TwoFactorFields & { id: string } {
+/** What turning two-step sign-in off writes, for every way it is turned off. */
+export const TWO_FACTOR_OFF = {
+  totpSecret: null,
+  totpConfirmedAt: null,
+  recoveryCodes: [],
+  totpLastStep: null,
+} satisfies TwoFactorFields;
+
+export function fieldsOf(account: AccountByEmail): TwoFactorFields & { id: string } {
   return account.kind === 'ORGANIZER' ? account.organizer : account.staff;
+}
+
+/**
+ * The signed-in person's own row, in the shape sign-in reads it: the owner's
+ * Organizer row or the person's StaffAccount, never someone else's.
+ */
+export async function ownAccount(actor: Pick<Actor, 'kind' | 'id'>): Promise<AccountByEmail | null> {
+  if (actor.kind === 'OWNER') {
+    const organizer = await db.organizer.findUnique({ where: { id: actor.id } });
+    return organizer ? { kind: 'ORGANIZER', organizer } : null;
+  }
+  const staff = await db.staffAccount.findUnique({ where: { id: actor.id } });
+  return staff ? { kind: 'STAFF', staff } : null;
+}
+
+/** The audit trail's name for the account's table. */
+export function accountEntityType(account: AccountByEmail): 'Organizer' | 'StaffAccount' {
+  return account.kind === 'ORGANIZER' ? 'Organizer' : 'StaffAccount';
+}
+
+/** Writes two-step columns (and, when it ends sessions, `sessionsValidFrom`) on either table. */
+export async function writeAccount(
+  client: Pick<Prisma.TransactionClient, 'organizer' | 'staffAccount'>,
+  account: AccountByEmail,
+  data: Partial<TwoFactorFields> & { sessionsValidFrom?: Date },
+): Promise<void> {
+  const { id } = fieldsOf(account);
+  if (account.kind === 'ORGANIZER') {
+    await client.organizer.update({ where: { id }, data });
+  } else {
+    await client.staffAccount.update({ where: { id }, data });
+  }
 }
 
 /** What the row must still hold for a code to be spent. */

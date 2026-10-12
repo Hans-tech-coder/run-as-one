@@ -37,6 +37,19 @@ function key(): Buffer {
   return bytes;
 }
 
+/**
+ * Whether a usable key is set — so Settings can leave two-step sign-in out
+ * rather than offer a button that fails.
+ */
+export function sealingConfigured(): boolean {
+  try {
+    key();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function sealSecret(plain: string): string {
   const iv = randomBytes(12);
   const cipher = createCipheriv('aes-256-gcm', key(), iv);

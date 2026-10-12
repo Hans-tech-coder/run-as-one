@@ -3,10 +3,11 @@ import { formatEventInstant } from './event-schedule';
 import { type EmailMessage, type EmailOutcome, renderMessage, sendEmail } from './email-document';
 
 /**
- * The two emails about an admin sign-in's password (LOGIN_UX_PLAN.md Batch 2):
- * the "forgot password" link, and the notice that the password was changed
- * through one. Built and sent through email-document.ts like every other email;
- * lib/password-reset.ts decides when either goes out.
+ * The emails about how an admin signs in: the "forgot password" link and the
+ * notice that the password was changed through one (LOGIN_UX_PLAN.md Batch 2;
+ * lib/password-reset.ts decides when either goes out), and the notice that
+ * two-step sign-in was turned off (TWO_FACTOR_PLAN.md D10). Built and sent
+ * through email-document.ts like every other email.
  */
 
 function firstNameOf(name: string): string {
@@ -89,4 +90,42 @@ export function passwordChangedEmail(input: PasswordChangedEmailInput): Promise<
 
 export function sendPasswordChangedEmail(input: PasswordChangedEmailInput): Promise<EmailOutcome> {
   return passwordChangedEmail(input).then(sendEmail);
+}
+
+export interface TwoStepOffEmailInput {
+  to: string;
+  name: string;
+  turnedOffAt: Date;
+}
+
+/**
+ * The notice that two-step sign-in was turned off (D10). Only "off" sends one:
+ * it is the change that weakens the account, so it is the one a person who did
+ * not make it must hear about. Turning it on, or new recovery codes, does not.
+ */
+export function twoStepOffEmail(input: TwoStepOffEmailInput): Promise<EmailMessage> {
+  return renderMessage({
+    to: input.to,
+    subject: `Two-step sign-in was turned off on your ${SITE_NAME} account`,
+    status: { label: 'Two-Step Sign-in Off', tone: 'pending' },
+    footerTopic: 'two-step sign-in',
+    blocks: [
+      {
+        kind: 'paragraph',
+        segments: [
+          `Hi ${firstNameOf(input.name)}, two-step sign-in was turned off on your ${SITE_NAME} sign-in on ${formatEventInstant(input.turnedOffAt)}, Manila time. Your password alone now signs you in, and every other device that was signed in has been signed out.`,
+        ],
+      },
+      {
+        kind: 'note',
+        segments: [
+          'Was this you? Then there is nothing to do. If it was not, change your password and reply to this email right away so we can lock the account.',
+        ],
+      },
+    ],
+  });
+}
+
+export function sendTwoStepOffEmail(input: TwoStepOffEmailInput): Promise<EmailOutcome> {
+  return twoStepOffEmail(input).then(sendEmail);
 }

@@ -49,6 +49,19 @@ alike; a profile edit or password change keeps the length chosen. Revocation
 is unchanged, since `getActor()` checks every request (§7). Built before 2FA
 by the owner's call. No migration.
 
+**Two-step sign-in, Batches 1–2 (2026-10-12, on `dev`, not released;
+`TWO_FACTOR_PLAN.md`).** Batch 1 laid the ground: migration
+`20261012025827_two_factor` (applied to `local-dev` only), `secret-box.ts`,
+`totp.ts`, `two-factor.ts`, `qrcode`. Batch 2: Settings › Security has a
+**Two-step Sign-in** panel for everyone — turn on with an authenticator app
+(QR or typed key, then a code), ten recovery codes shown once, new recovery
+codes, and turn off with password and code (which emails the person). Turning
+it on or off signs out every other device. **Sign-in does not ask for the
+code yet** (Batch 3), so **do not promote `dev` to `main` between Batch 2 and
+Batch 3**: the panel would tell people their sign-in is protected when it is
+not. Needs `TOTP_ENCRYPTION_KEY` in Vercel (Production + Preview); without it
+the panel stays hidden.
+
 **Results row actions, all 5 batches (2026-10-11, on `dev`, not released;
 `RESULTS_ROW_ACTIONS_PLAN.md`).** Batch 1 (`9d842c3`) split the workspace's
 results table and moved the ranking into `results-ranking.ts`. **Batch 2
