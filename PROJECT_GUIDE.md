@@ -53,7 +53,10 @@ When new work needs a plan, write it as **`docs/plans/<NAME>_PLAN.md`**. That
 folder is gitignored on purpose: a plan is a working handoff between sessions,
 never committed, and **deleted once its work has landed**. Anything it leaves
 undone goes into `ON_HOLD.md` first. Because the folder is not in git, a plan
-exists only in the main checkout, not in a fresh worktree or clone.
+exists only in the main checkout, not in a fresh worktree or clone, and once
+deleted it cannot be read back. So before deleting one, record the decisions
+that code and docs cite by number ("D5") in its `docs/current-state.md` entry,
+as was done for `LOGIN_UX_PLAN.md` and `TWO_FACTOR_PLAN.md`.
 
 Finished plans are not kept. The old `docs/archive/` was deleted on 2026-10-01;
 code comments, the schema, migrations and `docs/` still cite those plans by bare

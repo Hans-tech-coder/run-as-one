@@ -3,7 +3,10 @@
 Everything that was planned and **not** built, gathered from the finished plan
 documents. Those plans were deleted on 2026-10-01; each item below names its
 source, which can still be read with
-`git show 3126357:docs/archive/<NAME>_PLAN.md`. Every item here is on hold by
+`git show 3126357:docs/archive/<NAME>_PLAN.md`. Plans written later in the
+gitignored `docs/plans/` were never committed and are gone once deleted;
+`docs/current-state.md` keeps what each one built and the decisions it
+settled. Every item here is on hold by
 the owner's choice. Start one only when the owner asks, and read its source plan
 before writing any code. When an item is picked up, give it its own plan file in
 `docs/plans/`, and delete it from this list once it has landed.
@@ -44,7 +47,10 @@ keep a copy in the password manager. Run
 **before** the new code goes live: the code reads the column, and the old code
 ignores it, so migrating first is safe in both directions.
 
-**After that release goes live:** in admin, open each of the 3 existing
+**After that release goes live:** on `https://runasone.ph/admin/login`,
+check that **Continue with Google** shows and completes one sign-in (the
+Google client's redirect URIs must list
+`https://runasone.ph/api/auth/google/callback`). Then, in admin, open each of the 3 existing
 results-only races in **Edit Event**, press **Move to Results**, and save. The
 column defaults to false, so until then they still sit in the Events table as
 ordinary races; the move takes them to the Results menu, and the save is
@@ -74,16 +80,26 @@ first.
 
 ## 2. Two-factor sign-in (TOTP)
 
-**Built:** `TWO_FACTOR_PLAN.md` Batches 1–4 landed on `dev` 2026-10-12.
-Two-step sign-in is **optional per account**. Left on hold:
+**Built:** `TWO_FACTOR_PLAN.md` Batches 1–4 landed on `dev` 2026-10-12; the
+plan is deleted (its decisions are in `docs/current-state.md`). Two-step
+sign-in is **optional per account**. Left on hold:
 
 - **Making it required** for roles holding `registration:validate`,
   `registration:delete` or `event:delete` (the rule this item used to carry,
   from `STAFF_ACCESS_PLAN.md` Batch 4; the plan's D7). Wait until a race season
   has run with it optional, so nobody is locked out on race day. The Team
   page's "Two-step on" marker shows who has not turned it on yet.
-- **Not proven live before promoting:** one Google sign-in on an account with
-  two-step on, and one owner sign-in with it on.
+- **Not proven live before promoting** (every route was proven on localhost,
+  with codes computed from the stored secret):
+  - one Google sign-in on an account with two-step on;
+  - one owner sign-in with it on;
+  - scanning the Settings › Security QR with a real authenticator app once;
+  - the **Reset Two-Step Sign-in** button on a viewer's line in the client
+    panel (`/admin/clients`), clicked in a browser. Its route is proven; the
+    Team page's button was clicked;
+  - the "turned off" and "reset" emails arriving. On localhost every email
+    then failed with Resend's `Invalid reply_to`, from a bad saved contact
+    address. `f29e7a6` fixed that, but neither email has been sent since.
 - Not planned: SMS codes, passkeys, "remember this device" (the plan's D5).
 
 ### Runbook: the owner lost their phone and their recovery codes
@@ -271,3 +287,24 @@ Edit details, Add runner, delete one or many).*
   itself, so a results-only race's pacers are tagged on upload rather than
   one by one with *Mark as pacer*. Worth building only once the owner sees
   such sheets.
+
+## 12. Leftovers from the login convenience plan
+
+*Source: `LOGIN_UX_PLAN.md` (gitignored, never committed), all four batches
+landed on `dev` 2026-10-11 and 2026-10-12, deleted 2026-10-12. What it built
+(show password, `?next=`, forgot password, Google sign-in, "Keep me signed
+in") and its decisions are in `docs/current-state.md`.*
+
+- **"Continue with Google" on the invite page** (the plan's D6), so a new
+  person accepts an invitation without choosing a password. Left out on
+  purpose; revisit after Google sign-in has run in production.
+
+Not walked in a browser, worth one try before or after release:
+
+- **Chrome's save-password prompt and autofill** on `/admin/login` (the
+  in-app browser has no password manager).
+- **A sign-in with "Keep me signed in" ticked.** The tokens were proven to
+  last 30 days; tick it, sign in, and check in DevTools that the
+  `admin_token` cookie expires in 30 days.
+- **Google refusing the owner's address and a suspended account.** Proven in
+  the matching test and the password matrix, not by a click-through. Optional.

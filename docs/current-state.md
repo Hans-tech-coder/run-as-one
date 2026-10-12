@@ -68,6 +68,32 @@ Nobody resets the owner's in the app (runbook in `ON_HOLD.md` §2). Making it
 required (D7) stays on hold. Needs `TOTP_ENCRYPTION_KEY` in Vercel (Production + Preview); without it
 the panel stays hidden.
 
+**`LOGIN_UX_PLAN.md` and `TWO_FACTOR_PLAN.md` are deleted** (2026-10-12, every
+batch landed). Both were gitignored and never committed, so neither can be
+read back from git. What they left undone is in `ON_HOLD.md` §2 and §12. The
+code and the other guide files still cite their decisions by number; this is
+what each number settled:
+
+- **`LOGIN_UX_PLAN.md`.** D1: the page reads "Sign in", for staff and client
+  organizations, with the apply link in its footer. D2: a reset link lasts 60
+  minutes, works once, and a newer request kills older ones. D3: a reset
+  signs nobody in; the person signs in again under a banner. D4: an invited
+  account that never chose a password gets no link and the same answer as
+  everyone. D5: **no Google sign-in for the owner**, so `Organizer` has no
+  `googleSub`. D6: Google on the invite page was left out (on hold). D7: Google
+  can be unlinked from Settings › Security, with the password. D8: "Keep me
+  signed in" is opt-in and lasts 30 days; the default stays one day.
+- **`TWO_FACTOR_PLAN.md`.** D1: optional, per account, for everyone. D2: both
+  doors (password and Google) ask the code. D3: ten one-use `xxxx-xxxx`
+  recovery codes, stored as bcrypt hashes, shown once. D4: owners and admins
+  (`team:manage`) reset a member's or a client viewer's; **nobody resets the
+  owner's in the app** (the runbook is in `ON_HOLD.md` §2). D5: no "remember
+  this device". D6: turning it off needs the password and a code. D7: making it
+  required waits a race season (on hold). D8: the `qrcode` package for the QR,
+  the TOTP maths on Node's `crypto`. D9: turning it on or off ends every other
+  session. D10: an email only when it is turned off or reset by an admin. D11:
+  the screens say "Two-step sign-in", never "2FA".
+
 **Results row actions, all 5 batches (2026-10-11, on `dev`, not released;
 `RESULTS_ROW_ACTIONS_PLAN.md`).** Batch 1 (`9d842c3`) split the workspace's
 results table and moved the ranking into `results-ranking.ts`. **Batch 2
@@ -515,8 +541,9 @@ what the role allows. **Batch 3 is in too:** `/admin/activity` (the trail with
 Person, Event, Activity and Dates filters, server-paged and pinned so it never
 shifts under a reader), a *Validated by* line and an activity link in the
 registrant detail modal, and a registrants screen that offers each role only
-the buttons its routes allow. No migration. **Batch 4 (TOTP) is next**, then the
-optional extras. **Read the plan before touching admin auth, the `Organizer`
+the buttons its routes allow. No migration. Its Batch 4 (TOTP) was later built as
+`TWO_FACTOR_PLAN.md` (2026-10-12); of its optional extras only the retention
+sweep is left (`ON_HOLD.md` §3). **Read the plan before touching admin auth, the `Organizer`
 model, or any `/api/admin/**` route's ownership check** — its "Batch 1" notes
 record the calls made in the batch, and the file records which decisions are
 closed (no unified account table; "no SSO" was reversed by the owner on
