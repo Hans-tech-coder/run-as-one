@@ -38,6 +38,16 @@ model Organizer {
   /// Nullable, unlike StaffAccount's, so adding it signed nobody out: null
   /// means no session has ever been ended.
   sessionsValidFrom DateTime?
+  /// Two-step sign-in (TWO_FACTOR_PLAN.md), the same four columns as
+  /// StaffAccount's and read by the same rules (lib/two-factor.ts). The TOTP
+  /// secret is sealed with TOTP_ENCRYPTION_KEY (lib/secret-box.ts); on only
+  /// when it is set **and** confirmed.
+  totpSecret        String?
+  totpConfirmedAt   DateTime?
+  /// bcrypt hashes, spent one at a time. Never the codes themselves.
+  recoveryCodes     String[]          @default([])
+  /// The 30-second step of the last code accepted, so a code is never taken twice.
+  totpLastStep      Int?
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
   events            Event[]
@@ -847,11 +857,16 @@ model StaffAccount {
   googleSub         String?           @unique
   /// "INVITED" | "ACTIVE" | "SUSPENDED"
   status            String            @default("INVITED")
-  /// Base32 TOTP secret, encrypted at rest. Null means 2FA is not set up.
+  /// Base32 TOTP secret, sealed with TOTP_ENCRYPTION_KEY (lib/secret-box.ts).
+  /// Null means two-step sign-in is not set up; set but with no
+  /// `totpConfirmedAt` is an enrolment never finished, and does not count
+  /// (lib/two-factor.ts).
   totpSecret        String?
   totpConfirmedAt   DateTime?
   /// bcrypt hashes, spent one at a time. Never the codes themselves.
   recoveryCodes     String[]          @default([])
+  /// The 30-second step of the last code accepted, so a code is never taken twice.
+  totpLastStep      Int?
   lastLoginAt       DateTime?
   /// Every session issued before this instant is dead. Bumped on password
   /// change, on suspension, and by "sign out everywhere" — the reason it is

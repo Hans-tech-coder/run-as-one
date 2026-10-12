@@ -61,6 +61,15 @@ export const AUDIT_ACTIONS = [
   // links a Google account, and an unlink from Settings.
   'auth.google_linked',
   'auth.google_unlinked',
+  // Two-step sign-in (TWO_FACTOR_PLAN.md): turned on or off by the person, reset
+  // by an admin, a wrong code, a recovery code spent at sign-in, and a fresh set
+  // of ten recovery codes.
+  'auth.two_factor_enabled',
+  'auth.two_factor_disabled',
+  'auth.two_factor_reset',
+  'auth.two_factor_failed',
+  'auth.recovery_code_used',
+  'auth.recovery_codes_renewed',
   // Retired with the approve / reject screens (ADMIN_MERGE_PLAN.md, Batch 5);
   // kept so decisions recorded before then still carry a label.
   'organizer.approved',

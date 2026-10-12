@@ -286,7 +286,7 @@ shape:
   stays the tenant and its own email and password stay the owner's login**; no
   foreign key was rewritten to add these. A `StaffAccount` is the person (email,
   password — null until an invitation is accepted — `status`
-  `INVITED`/`ACTIVE`/`SUSPENDED`, TOTP columns for Batch 4, and
+  `INVITED`/`ACTIVE`/`SUSPENDED`, the two-step sign-in columns (below), and
   `sessionsValidFrom`, the instant before which every session of theirs is dead).
   A `StaffMembership` joins that person to one organizer with a role (`ADMIN`
   reaches every event, `STAFF` only what is assigned), so one email serves a
@@ -373,6 +373,18 @@ shape:
   and drawn in the account menu; null draws the name's initial. Migration
   `20260918100000_account_avatar`, additive (one nullable text column each);
   the photo itself is a ~20 KB JPEG in the blob store, not in Postgres.
+- **Two-step sign-in** on **Organizer** and **StaffAccount**
+  (`TWO_FACTOR_PLAN.md`, read only through `two-factor.ts`, §5) —
+  `totpSecret` (the base32 TOTP secret **sealed** with `TOTP_ENCRYPTION_KEY`,
+  `secret-box.ts`, never stored plain), `totpConfirmedAt` (on only when this
+  **and** the secret are set; a secret with no confirmation is an enrolment
+  never finished), `recoveryCodes` (bcrypt hashes of the ten one-use codes,
+  struck one at a time) and `totpLastStep` (the 30-second step of the last
+  code accepted, so a code is never taken twice). StaffAccount had the first
+  three, unread, since staff accounts existed; migration
+  `20261012025827_two_factor` adds all four to Organizer and `totpLastStep`
+  to StaffAccount, additive (nullable or defaulted, so nobody is affected).
+  Storage: ~1 KB per account that turns it on (the hashes), nothing otherwise.
 - **PasswordReset** — a "forgot password" link (`LOGIN_UX_PLAN.md` Batch 2,
   `lib/password-reset.ts`). `tokenHash` is the token's sha256 (unique; the
   token itself is only in the email), `accountKind` (`ORGANIZER` | `STAFF`) and

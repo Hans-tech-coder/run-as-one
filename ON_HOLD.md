@@ -33,7 +33,13 @@ table, `PasswordReset`, the forgot-password links, `LOGIN_UX_PLAN.md` Batch 2;
 applied to the local-dev database; additive) and
 `20261011120000_staff_google_sub` (one nullable unique column,
 `StaffAccount.googleSub`, Google sign-in, `LOGIN_UX_PLAN.md` Batch 3; applied
-to the local-dev database; additive). Run
+to the local-dev database; additive) and `20261012025827_two_factor` (four
+nullable or defaulted columns on `Organizer` — `totpSecret`, `totpConfirmedAt`,
+`recoveryCodes`, `totpLastStep` — and `totpLastStep` on `StaffAccount`,
+two-step sign-in, `TWO_FACTOR_PLAN.md` Batch 1; applied to the local-dev
+database; additive). **Also set `TOTP_ENCRYPTION_KEY`** in Vercel (Production
+and Preview) before two-step sign-in ships (`TWO_FACTOR_PLAN.md` Batch 2 on);
+keep a copy in the password manager. Run
 `npx prisma migrate deploy` with `DIRECT_URL` on the production endpoint
 **before** the new code goes live: the code reads the column, and the old code
 ignores it, so migrating first is safe in both directions.
@@ -68,20 +74,12 @@ first.
 
 ## 2. Two-factor sign-in (TOTP)
 
-*Source: `STAFF_ACCESS_PLAN.md`, Batch 4. `SETTINGS_PLAN.md` also
-put it on hold with "owner's call, revisit only when asked".*
-
-- A security panel under Settings. The user enrols by scanning a QR code,
-  confirms with a code, and sees ten single-use recovery codes once.
-- **Required** for any membership that holds `registration:validate`,
-  `registration:delete` or `event:delete`. Optional for `VIEWER` and `ENCODER`.
-- Enforced at sign-in (`api/auth/login`), not only in the UI.
-- 2FA uses TOTP, not SMS. That is settled.
-- The settings page has one page of panels and no sub-routes, so this goes on
-  that page as a panel, not on its own route. See the standing decisions in
-  `SETTINGS_PLAN.md` (from git history).
-- Needs a migration for the TOTP secret and the recovery codes. Keep it small,
-  because the database is on Neon's free 0.5 GB tier.
+**Picked up:** now `docs/plans/TWO_FACTOR_PLAN.md` (Batch 1, the foundation,
+landed 2026-10-12). Two-step sign-in is **optional per account** there; making
+it *required* for roles holding `registration:validate`,
+`registration:delete` or `event:delete` (the rule this item used to carry,
+from `STAFF_ACCESS_PLAN.md` Batch 4) is that plan's D7, left for after a race
+season with it optional.
 
 ## 3. The sign-in retention sweep (optional)
 

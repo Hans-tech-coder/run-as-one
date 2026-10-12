@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-43 pages · 62 API routes · 98 modules in `src/lib` · 456 files · 86,777 lines
+43 pages · 62 API routes · 101 modules in `src/lib` · 459 files · 87,112 lines
 
 ---
 
@@ -230,6 +230,7 @@ the file itself.
 | [`runner-address.ts`](../src/lib/runner-address.ts) | Every runner's home address (`RUNNER_ADDRESS_PLAN.md` Batch 1). |
 | [`running-community-store.ts`](../src/lib/running-community-store.ts) | — |
 | [`running-community.ts`](../src/lib/running-community.ts) | The running club a runner represents, and the shared list they pick it from. |
+| [`secret-box.ts`](../src/lib/secret-box.ts) | The one reversible secret in the app: a secret the server must read back, which today means a TOTP secret (lib/two-factor.ts, TWO_FACTOR_PLAN.md). |
 | [`secret-token.ts`](../src/lib/secret-token.ts) | The secret in an emailed link — an invitation (lib/team-invite.ts) or a password reset (lib/password-reset.ts). |
 | [`settlement-store.ts`](../src/lib/settlement-store.ts) | Reading settlements out of the database (ADMIN_MERGE_PLAN.md, Batch 6). |
 | [`settlement.ts`](../src/lib/settlement.ts) | What Run As One owes the organizer of a race, and what it has paid (ADMIN_MERGE_PLAN.md, Batch 6). |
@@ -242,6 +243,8 @@ the file itself.
 | [`team-invite.ts`](../src/lib/team-invite.ts) | Invitation links: making one, finding the membership behind one, and sending it. |
 | [`team.ts`](../src/lib/team.ts) | The rules of an organizer's team: what state a member is in, and what makes an invitation or a change of access valid. |
 | [`text-case.ts`](../src/lib/text-case.ts) | Registrant text is stored UPPERCASE. |
+| [`totp.ts`](../src/lib/totp.ts) | The 6-digit code from an authenticator app (RFC 6238 TOTP, RFC 4226 HOTP), written on Node's crypto rather than a package (TWO_FACTOR_PLAN.md D8). |
+| [`two-factor.ts`](../src/lib/two-factor.ts) | Who has two-step sign-in on, and how a second-step code is checked (TWO_FACTOR_PLAN.md). |
 | [`uploads.ts`](../src/lib/uploads.ts) | What the app accepts from a file picker — the one list both sides read. |
 | [`utils.ts`](../src/lib/utils.ts) | — |
 | [`voucher-codes.ts`](../src/lib/voucher-codes.ts) | Generating a batch of single-use voucher codes. |
@@ -265,9 +268,9 @@ when a task touches one, split it before editing rather than after.
 | 785 | [`src/app/results/[slug]/full/FullResultsClient.tsx`](../src/app/results/[slug]/full/FullResultsClient.tsx) |
 | 693 | [`src/app/admin/AdminDatePicker.tsx`](../src/app/admin/AdminDatePicker.tsx) |
 | 677 | [`src/app/api/admin/events/[id]/route.ts`](../src/app/api/admin/events/[id]/route.ts) |
+| 672 | [`src/lib/activity.ts`](../src/lib/activity.ts) |
 | 663 | [`src/app/admin/activity/ActivityClient.tsx`](../src/app/admin/activity/ActivityClient.tsx) |
 | 663 | [`src/lib/pending-expiry.ts`](../src/lib/pending-expiry.ts) |
-| 660 | [`src/lib/activity.ts`](../src/lib/activity.ts) |
 | 632 | [`src/app/api/checkout/route.ts`](../src/app/api/checkout/route.ts) |
 | 614 | [`src/app/admin/feedback/FeedbackClient.tsx`](../src/app/admin/feedback/FeedbackClient.tsx) |
 | 578 | [`src/lib/email-document.ts`](../src/lib/email-document.ts) |
