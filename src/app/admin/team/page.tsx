@@ -6,6 +6,7 @@ import prisma from '@/lib/db';
 import { can, canManageMember, grantableRoles, requireTeamActor } from '@/lib/actor';
 import { TEAM_ROLES, asEventRole, asTeamRole } from '@/lib/permissions';
 import { memberState } from '@/lib/team';
+import { twoFactorOn } from '@/lib/two-factor';
 import { soonestFirst } from '@/lib/event-schedule';
 import { SITE_NAME } from '@/lib/site-contact';
 import TeamClient, { type TeamMemberRow } from './TeamClient';
@@ -34,6 +35,11 @@ export const metadata: Metadata = {
  *
  * What each row may do is decided here, with the same `canManageMember` the
  * routes enforce, so the menu is only offered where the route would agree.
+ *
+ * **Whether a person has two-step sign-in on is shown, not required**
+ * (TWO_FACTOR_PLAN.md 4.4): the marker lets an admin see who has not turned it
+ * on yet, and offers the reset (D4) only where there is something to reset.
+ * The secret itself stays on the server; the row carries a yes or no.
  */
 export default async function TeamPage() {
   const actor = await requireTeamActor();
@@ -45,7 +51,7 @@ export default async function TeamPage() {
   const [organizer, memberships, events] = await Promise.all([
     prisma.organizer.findUnique({
       where: { id: actor.orgId },
-      select: { name: true, email: true, lastLoginAt: true },
+      select: { name: true, email: true, lastLoginAt: true, totpSecret: true, totpConfirmedAt: true },
     }),
     prisma.staffMembership.findMany({
       // A client viewer holds a membership too, but is not on the team.
@@ -58,7 +64,16 @@ export default async function TeamPage() {
         acceptedAt: true,
         suspendedAt: true,
         inviteExpiresAt: true,
-        staff: { select: { name: true, email: true, status: true, lastLoginAt: true } },
+        staff: {
+          select: {
+            name: true,
+            email: true,
+            status: true,
+            lastLoginAt: true,
+            totpSecret: true,
+            totpConfirmedAt: true,
+          },
+        },
         assignments: {
           orderBy: { createdAt: 'asc' },
           select: { eventId: true, role: true, event: { select: { title: true } } },
@@ -108,6 +123,7 @@ export default async function TeamPage() {
       }),
       inviteExpiresAt: membership.inviteExpiresAt?.toISOString() ?? null,
       lastLoginAt: membership.staff.lastLoginAt?.toISOString() ?? null,
+      twoFactorOn: twoFactorOn(membership.staff),
     };
   });
 
@@ -125,6 +141,7 @@ export default async function TeamPage() {
       state: 'ACTIVE',
       inviteExpiresAt: null,
       lastLoginAt: organizer.lastLoginAt?.toISOString() ?? null,
+      twoFactorOn: twoFactorOn(organizer),
     },
     ...members,
   ];

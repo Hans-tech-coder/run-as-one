@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from 'react';
-import { ExternalLink, FileText, Mail, Phone, X } from 'lucide-react';
+import { ExternalLink, FileText, Mail, Phone, ShieldOff, X } from 'lucide-react';
+import TwoStepChip from '../TwoStepChip';
 import {
   expectedParticipantsLabel,
   hasApplicationDetails,
@@ -23,7 +24,9 @@ import { MEMBER_STATE_LABELS, MEMBER_STATE_TONES, memberState } from '@/lib/team
  * been invited to sign in for this client and where each invitation stands
  * (`memberState`, the team screen's own badge), because "did they ever set up
  * their sign-in?" is the question staff open this panel to answer after an
- * invite.
+ * invite. A viewer with two-step sign-in on is marked, and the reset for a
+ * lost phone sits on that person's line (TWO_FACTOR_PLAN.md D4), because a
+ * client may have more than one sign-in and the reset is about one of them.
  *
  * It is grouped the way the form asked — the organization, the person, what
  * they are planning — so staff read it in the order the applicant
@@ -51,6 +54,8 @@ export interface ClientViewerRow {
   suspendedAt: string | null;
   inviteExpiresAt: string | null;
   staff: { name: string; email: string; status: string };
+  /** Two-step sign-in is on — the marker, and the reset beside it. */
+  twoFactorOn: boolean;
 }
 
 export interface ClientApplicationRow {
@@ -127,6 +132,7 @@ export default function ApplicationPanel({
   client,
   statusBadge,
   actions,
+  onResetTwoFactor,
   onClose,
 }: {
   /** The submission being read. The panel is mounted only while there is one. */
@@ -134,6 +140,8 @@ export default function ApplicationPanel({
   statusBadge: React.ReactNode;
   /** Send invite and archive, so the panel and the row cannot offer different ones. */
   actions: React.ReactNode;
+  /** A viewer's lost phone (TWO_FACTOR_PLAN.md D4); offered only where it is on. */
+  onResetTwoFactor: (viewer: ClientViewerRow) => void;
   onClose: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -269,7 +277,10 @@ export default function ApplicationPanel({
                     className="min-w-0 sm:col-span-2 flex flex-wrap items-start justify-between gap-x-4 gap-y-1"
                   >
                     <div className="min-w-0">
-                      <div className="text-sm text-[var(--ink-85)] [overflow-wrap:anywhere]">{viewer.staff.name}</div>
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-[var(--ink-85)] [overflow-wrap:anywhere]">
+                        <span className="min-w-0">{viewer.staff.name}</span>
+                        {viewer.twoFactorOn && <TwoStepChip />}
+                      </div>
                       <div className="text-xs text-secondary [overflow-wrap:anywhere]">
                         {viewer.staff.email} · Invited {invitedOn(viewer.invitedAt)}
                       </div>
@@ -277,6 +288,17 @@ export default function ApplicationPanel({
                     <span className={`status-badge ${MEMBER_STATE_TONES[state]} shrink-0`}>
                       {MEMBER_STATE_LABELS[state]}
                     </span>
+                    {viewer.twoFactorOn && (
+                      <button
+                        type="button"
+                        className="btn-filter is-danger"
+                        onClick={() => onResetTwoFactor(viewer)}
+                        aria-label={`Reset two-step sign-in for ${viewer.staff.name}`}
+                      >
+                        <ShieldOff size={16} aria-hidden="true" />
+                        Reset Two-Step Sign-in
+                      </button>
+                    )}
                   </li>
                 );
               })}

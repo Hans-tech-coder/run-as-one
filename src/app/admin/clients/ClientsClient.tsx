@@ -18,7 +18,11 @@ import AdminTablePager from '@/app/admin/AdminTablePager';
 import FiltersMenu from '@/app/admin/FiltersMenu';
 import MobileSortMenu from '@/app/admin/MobileSortMenu';
 import RowActionsMenu, { type RowAction } from '@/app/admin/RowActionsMenu';
-import ApplicationPanel, { appliedOn, type ClientApplicationRow } from './ApplicationPanel';
+import ApplicationPanel, {
+  appliedOn,
+  type ClientApplicationRow,
+  type ClientViewerRow,
+} from './ApplicationPanel';
 import InviteDialog, { type InviteResult } from './InviteDialog';
 import {
   CLIENT_STATUSES,
@@ -167,6 +171,38 @@ export default function ClientsClient() {
     } catch (error) {
       console.error(error);
       return { ok: false, error: 'Could not reach the server. Check your connection and try again.' };
+    }
+  };
+
+  // A viewer's lost phone with no recovery codes left (TWO_FACTOR_PLAN.md D4).
+  // It asks first: it weakens somebody's account and signs them out.
+  const resetTwoFactor = async (client: ClientRow, viewer: ClientViewerRow) => {
+    const name = viewer.staff.name;
+    const confirmed = await confirm({
+      variant: 'danger',
+      title: `Reset two-step sign-in for ${name}?`,
+      message: `Do this only when you are sure it is ${name} asking — usually a lost phone with no recovery codes left. Two-step sign-in is turned off on their account, they are signed out everywhere, and they get an email saying you did it. Until they turn it on again in Settings › Security, their password alone signs them in.`,
+      confirmLabel: 'Reset',
+    });
+    if (!confirmed) return;
+
+    const status = progress(`Resetting two-step sign-in for ${name}`);
+    try {
+      const res = await fetch(`/api/admin/clients/${client.id}/viewers/${viewer.id}/two-factor`, {
+        method: 'DELETE',
+      });
+      const data = await res.json().catch(() => ({}));
+      fetchClients();
+      if (res.ok) {
+        status.done({ variant: 'success', message: `Two-step sign-in is reset for ${name}. They have been emailed.` });
+      } else {
+        status.clear();
+        alert(data?.error ?? 'Two-step sign-in could not be reset. Please try again.');
+      }
+    } catch (error) {
+      console.error(error);
+      status.clear();
+      alert('Could not reach the server. Check your connection and try again.');
     }
   };
 
@@ -451,6 +487,7 @@ export default function ClientsClient() {
           client={openClient}
           statusBadge={<ClientStatusBadge status={openClient.status} />}
           actions={<ClientActions client={openClient} {...handlersFor(openClient)} />}
+          onResetTwoFactor={viewer => resetTwoFactor(openClient, viewer)}
           onClose={() => setOpenId(null)}
         />
       )}

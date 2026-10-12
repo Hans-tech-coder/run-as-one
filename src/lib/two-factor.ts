@@ -14,13 +14,17 @@
  *   hashes. A code is checked without its dash, in any case.
  * - **Turning it off clears all four columns** (`TWO_FACTOR_OFF`), whoever does
  *   it, so an old secret can never come back to life by a later confirm.
+ * - **An admin may reset somebody else's** (`resetTwoFactor`, D4) — a staff
+ *   member or a client viewer, never the owner, whose Organizer row has nobody
+ *   above it (ON_HOLD.md keeps the hand-run step).
  */
 
 import bcrypt from 'bcryptjs';
 import { randomInt } from 'node:crypto';
 import type { Prisma, StaffAccount } from '@prisma/client';
 import db from './db';
-import type { AccountByEmail, Actor } from './actor';
+import { sessionsCutoff, type AccountByEmail, type Actor } from './actor';
+import { recordAudit } from './audit';
 import { openSecret } from './secret-box';
 import { verifyTotp } from './totp';
 
@@ -34,7 +38,7 @@ const RECOVERY_ALPHABET = 'abcdefghjkmnpqrstuvwxyz23456789';
 /** The cost `hashPassword` uses (lib/auth.ts). */
 const BCRYPT_COST = 10;
 
-export function twoFactorOn(account: TwoFactorFields): boolean {
+export function twoFactorOn(account: Pick<TwoFactorFields, 'totpSecret' | 'totpConfirmedAt'>): boolean {
   return Boolean(account.totpSecret && account.totpConfirmedAt);
 }
 
@@ -106,6 +110,37 @@ export async function writeAccount(
   } else {
     await client.staffAccount.update({ where: { id }, data });
   }
+}
+
+/**
+ * An admin clearing another person's two-step sign-in, for a lost phone with
+ * no recovery codes left (D4). Who may do it is the calling route's question;
+ * what it does is the same from the Team page and from a client's sign-ins:
+ * the four columns cleared, **every session of theirs ended** — whoever holds
+ * the phone or a stolen cookie is signed out with the protection — and a trail
+ * row on their account naming the admin.
+ *
+ * Conditional on it still being on, so two admins pressing at once write one
+ * row; false when there was nothing to reset.
+ */
+export async function resetTwoFactor(
+  actor: Actor,
+  staff: { id: string; name: string; email: string },
+): Promise<boolean> {
+  return db.$transaction(async tx => {
+    const { count } = await tx.staffAccount.updateMany({
+      where: { id: staff.id, totpSecret: { not: null }, totpConfirmedAt: { not: null } },
+      data: { ...TWO_FACTOR_OFF, sessionsValidFrom: sessionsCutoff() },
+    });
+    if (count === 0) return false;
+    await recordAudit(tx, actor, {
+      action: 'auth.two_factor_reset',
+      entityType: 'StaffAccount',
+      entityId: staff.id,
+      summary: `Reset two-step sign-in for ${staff.name} (${staff.email}). They sign in with their password alone until they turn it on again.`,
+    });
+    return true;
+  });
 }
 
 /** What the row must still hold for a code to be spent. */

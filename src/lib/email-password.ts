@@ -5,8 +5,9 @@ import { type EmailMessage, type EmailOutcome, renderMessage, sendEmail } from '
 /**
  * The emails about how an admin signs in: the "forgot password" link and the
  * notice that the password was changed through one (LOGIN_UX_PLAN.md Batch 2;
- * lib/password-reset.ts decides when either goes out), and the notice that
- * two-step sign-in was turned off (TWO_FACTOR_PLAN.md D10). Built and sent
+ * lib/password-reset.ts decides when either goes out), and the notices that
+ * two-step sign-in was turned off or reset by an admin (TWO_FACTOR_PLAN.md
+ * D10). Built and sent
  * through email-document.ts like every other email.
  */
 
@@ -128,4 +129,50 @@ export function twoStepOffEmail(input: TwoStepOffEmailInput): Promise<EmailMessa
 
 export function sendTwoStepOffEmail(input: TwoStepOffEmailInput): Promise<EmailOutcome> {
   return twoStepOffEmail(input).then(sendEmail);
+}
+
+export interface TwoStepResetEmailInput {
+  to: string;
+  name: string;
+  /** The admin who reset it, named so the person knows whom to ask. */
+  resetBy: string;
+  resetAt: Date;
+}
+
+/**
+ * The notice that an admin reset somebody's two-step sign-in (D4, D10). Most
+ * often the person asked for it after losing their phone; it is sent anyway,
+ * because the one time they did not ask is the one that matters.
+ */
+export function twoStepResetEmail(input: TwoStepResetEmailInput): Promise<EmailMessage> {
+  return renderMessage({
+    to: input.to,
+    subject: `Two-step sign-in was reset on your ${SITE_NAME} account`,
+    status: { label: 'Two-Step Sign-in Reset', tone: 'pending' },
+    footerTopic: 'two-step sign-in',
+    blocks: [
+      {
+        kind: 'paragraph',
+        segments: [
+          `Hi ${firstNameOf(input.name)}, ${input.resetBy} reset two-step sign-in on your ${SITE_NAME} sign-in on ${formatEventInstant(input.resetAt)}, Manila time. Every device that was signed in has been signed out, and your password alone now signs you in.`,
+        ],
+      },
+      {
+        kind: 'paragraph',
+        segments: [
+          'Once you are back in, turn it on again from Settings › Security with your new phone, and keep the recovery codes it gives you somewhere safe.',
+        ],
+      },
+      {
+        kind: 'note',
+        segments: [
+          'Did not ask for this? Change your password and reply to this email right away so we can lock the account.',
+        ],
+      },
+    ],
+  });
+}
+
+export function sendTwoStepResetEmail(input: TwoStepResetEmailInput): Promise<EmailOutcome> {
+  return twoStepResetEmail(input).then(sendEmail);
 }

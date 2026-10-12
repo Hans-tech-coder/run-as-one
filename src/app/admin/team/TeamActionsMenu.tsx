@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { MoreVertical, Send, Trash2, UserCheck, UserCog, UserX } from 'lucide-react';
+import { MoreVertical, Send, ShieldOff, Trash2, UserCheck, UserCog, UserX } from 'lucide-react';
 import { placeRowMenu, type RowMenuPlacement } from '../row-menu-position';
 import { cssDurationMs } from '@/lib/css-duration';
 
@@ -18,7 +18,8 @@ import { cssDurationMs } from '@/lib/css-duration';
  *
  * What it offers depends on where the person is: an invitation can be resent
  * or revoked but not suspended, a member can be suspended or removed but has
- * no invitation left to resend.
+ * no invitation left to resend. Reset Two-Step Sign-in shows only on a member
+ * who has it on (TWO_FACTOR_PLAN.md D4): there is nothing to reset otherwise.
  */
 export default function TeamActionsMenu({
   label,
@@ -29,6 +30,8 @@ export default function TeamActionsMenu({
   onResend,
   onToggleSuspend,
   onRemove,
+  twoFactorOn = false,
+  onResetTwoFactor,
 }: {
   /** Who this row is, for a screen reader. */
   label: string;
@@ -36,11 +39,14 @@ export default function TeamActionsMenu({
   accepted: boolean;
   suspended: boolean;
   /** The word to show on the item whose request is in flight, if any. */
-  busy?: 'resend' | 'suspend' | null;
+  busy?: 'resend' | 'suspend' | 'twoFactor' | null;
   onEdit: () => void;
   onResend: () => void;
   onToggleSuspend: () => void;
   onRemove: () => void;
+  /** The person has two-step sign-in on, so it can be reset. */
+  twoFactorOn?: boolean;
+  onResetTwoFactor?: () => void;
 }) {
   // No "mounted" flag, unlike the menus it was copied from: the menu opens only
   // on a click, which never happens during server rendering, so `isOpen` alone
@@ -175,6 +181,18 @@ export default function TeamActionsMenu({
           >
             <Send size={16} />
             {busy === 'resend' ? 'Sending' : 'Resend Invitation'}
+          </button>
+        )}
+
+        {twoFactorOn && onResetTwoFactor && (
+          <button
+            onClick={run(onResetTwoFactor)}
+            disabled={busy === 'twoFactor'}
+            className={itemClass(busy === 'twoFactor')}
+            role="menuitem"
+          >
+            <ShieldOff size={16} />
+            {busy === 'twoFactor' ? 'Resetting' : 'Reset Two-Step Sign-in'}
           </button>
         )}
 

@@ -25,7 +25,6 @@ import {
 } from '@/components/ui/table';
 import {
   ColumnDef,
-  FilterFn,
   SortingState,
   VisibilityState,
   flexRender,
@@ -42,6 +41,7 @@ import AdminCardList from '../AdminCardList';
 import AdminTablePager from '../AdminTablePager';
 import MobileSortMenu from '../MobileSortMenu';
 import TeamActionsMenu from './TeamActionsMenu';
+import TwoStepChip from '../TwoStepChip';
 import {
   EVENT_ROLES,
   ROLE_HINTS,
@@ -51,13 +51,23 @@ import {
 } from '@/lib/permissions';
 import {
   MEMBER_STATE_LABELS,
-  MEMBER_STATE_TONES,
   assignmentField,
   readAccess,
   readInvitee,
   type FieldErrors,
-  type MemberState,
 } from '@/lib/team';
+import {
+  LastSignIn,
+  MANILA,
+  MemberEvents,
+  MemberStatus,
+  YouChip,
+  manageReason,
+  searchMembers,
+  type TeamMemberRow,
+} from './team-cells';
+
+export type { TeamMemberRow };
 
 /**
  * The organizer's team: who can sign in, as what, to which races — and the
@@ -74,24 +84,6 @@ import {
  * run them again and answer in the same field keys, so a message always lands
  * under the control it is about (§8, rule 4).
  */
-
-export type TeamMemberRow = {
-  /** The membership id, or "owner" for the organizer's own row. */
-  id: string;
-  isOwner: boolean;
-  /** This row is the person looking at the screen. */
-  isSelf: boolean;
-  /** Decided on the server with the same canManageMember the routes enforce. */
-  canManage: boolean;
-  name: string;
-  email: string;
-  role: 'OWNER' | TeamRole;
-  assignments: { eventId: string; eventTitle: string; role: EventRole }[];
-  accepted: boolean;
-  state: MemberState;
-  inviteExpiresAt: string | null;
-  lastLoginAt: string | null;
-};
 
 type EventOption = { id: string; title: string; date: string };
 
@@ -114,29 +106,6 @@ const COLUMN_LABELS: Record<string, string> = {
   actions: 'Actions',
 };
 
-/** How many of a staff member's races the Events cell names before summarising. */
-const EVENTS_SHOWN = 3;
-
-const MANILA = 'Asia/Manila';
-
-/** "Sep 20" for an ISO instant, in the organizer's own time zone. */
-function shortDay(iso: string): string {
-  return new Intl.DateTimeFormat('en-PH', { timeZone: MANILA, month: 'short', day: 'numeric' }).format(
-    new Date(iso),
-  );
-}
-
-/** "Sep 13, 4:02 PM" — when somebody last signed in. */
-function shortInstant(iso: string): string {
-  return new Intl.DateTimeFormat('en-PH', {
-    timeZone: MANILA,
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(new Date(iso));
-}
-
 /** An event's `YYYY-MM-DD` as "Oct 5, 2026", for the hint under its name in the picker. */
 function eventDay(date: string): string {
   const instant = new Date(`${date}T00:00:00+08:00`);
@@ -147,93 +116,6 @@ function eventDay(date: string): string {
     day: 'numeric',
     year: 'numeric',
   }).format(instant);
-}
-
-/** Name, address, and every race a person is on — the questions this box is asked. */
-const searchMembers: FilterFn<TeamMemberRow> = (row, _columnId, filterValue) => {
-  const term = String(filterValue ?? '').trim().toLowerCase();
-  if (!term) return true;
-  const member = row.original;
-  return [
-    member.name,
-    member.email,
-    ROLE_LABELS[member.role],
-    ...member.assignments.map(assignment => assignment.eventTitle),
-  ]
-    .join(' ')
-    .toLowerCase()
-    .includes(term);
-};
-
-// ── What a row shows, drawn once for the table cell and the card ────────────
-// Both layouts are on the page at once and CSS picks one, so anything the two
-// both say is said by one function: they cannot drift apart.
-
-function YouChip() {
-  return (
-    <span className="shrink-0 whitespace-nowrap rounded-full bg-[var(--ink-10)] px-2 py-0.5 text-[11px] font-semibold text-secondary">
-      You
-    </span>
-  );
-}
-
-function MemberEvents({ member }: { member: TeamMemberRow }) {
-  if (member.role !== 'STAFF') {
-    return <span className="text-secondary">Every event</span>;
-  }
-  const shown = member.assignments.slice(0, EVENTS_SHOWN);
-  const more = member.assignments.length - shown.length;
-  return (
-    <ul className="m-0 p-0 list-none flex flex-col gap-1">
-      {shown.map(assignment => (
-        <li key={assignment.eventId} className="text-sm">
-          <span className="text-primary">{assignment.eventTitle}</span>
-          <span className="text-secondary whitespace-nowrap"> &middot; {ROLE_LABELS[assignment.role]}</span>
-        </li>
-      ))}
-      {more > 0 && (
-        <li className="text-xs text-secondary">{`+${more} more — open Edit Access to see them all`}</li>
-      )}
-    </ul>
-  );
-}
-
-function MemberStatus({ member }: { member: TeamMemberRow }) {
-  return (
-    <div>
-      <span className={`status-badge ${MEMBER_STATE_TONES[member.state]}`}>
-        {MEMBER_STATE_LABELS[member.state]}
-      </span>
-      {/* When a waiting invitation stops working — the one date an owner
-          needs before it quietly becomes Invite Expired. */}
-      {member.state === 'INVITED' && member.inviteExpiresAt && (
-        <span className="status-note pending">{`Link expires ${shortDay(member.inviteExpiresAt)}`}</span>
-      )}
-    </div>
-  );
-}
-
-function LastSignIn({ member }: { member: TeamMemberRow }) {
-  return member.lastLoginAt ? (
-    <span className="whitespace-nowrap">{shortInstant(member.lastLoginAt)}</span>
-  ) : member.isOwner ? (
-    // The Organizer row only began recording sign-ins in SETTINGS_PLAN.md
-    // Batch 3, so until its next sign-in a blank is honest where "Never"
-    // would be false.
-    <span className="text-secondary">&mdash;</span>
-  ) : (
-    <span className="text-secondary">Never</span>
-  );
-}
-
-/**
- * Why a row has no menu. The table gives it as a hover title on the dash; a
- * card says it in words, because a touch screen never hovers.
- */
-function manageReason(member: TeamMemberRow): string {
-  if (member.isOwner) return "The Super Admin is Run As One's own account";
-  if (member.isSelf) return 'You cannot change your own access';
-  return 'Only the Super Admin can change an Admin';
 }
 
 export default function TeamClient({
@@ -260,7 +142,7 @@ export default function TeamClient({
   const viewRef = useRef<HTMLDivElement>(null);
 
   // Which row's request is in flight, so its menu item can say so.
-  const [busy, setBusy] = useState<{ id: string; kind: 'resend' | 'suspend' } | null>(null);
+  const [busy, setBusy] = useState<{ id: string; kind: 'resend' | 'suspend' | 'twoFactor' } | null>(null);
 
   // ── The form ───────────────────────────────────────────────────────────────
   // Mounted, open and closing are three flags rather than one, so the panel
@@ -557,6 +439,33 @@ export default function TeamClient({
     }
   };
 
+  // A lost phone with no recovery codes left (TWO_FACTOR_PLAN.md D4). It asks
+  // first, because it weakens somebody else's account and signs them out.
+  const handleResetTwoFactor = async (member: TeamMemberRow) => {
+    const ok = await confirm({
+      title: `Reset two-step sign-in for ${member.name}?`,
+      message: `Do this only when you are sure it is ${member.name} asking — usually a lost phone with no recovery codes left. Two-step sign-in is turned off on their account, they are signed out everywhere, and they get an email saying you did it. Until they turn it on again in Settings › Security, their password alone signs them in.`,
+      confirmLabel: 'Reset',
+      variant: 'danger',
+    });
+    if (!ok) return;
+
+    setBusy({ id: member.id, kind: 'twoFactor' });
+    const status = progress(`Resetting two-step sign-in for ${member.name}`);
+    try {
+      const res = await fetch(`/api/admin/team/${member.id}/two-factor`, { method: 'DELETE' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Two-step sign-in could not be reset.');
+      router.refresh();
+      status.done(`Two-step sign-in is reset for ${member.name}. They have been emailed.`);
+    } catch (err) {
+      status.clear();
+      await alert(err instanceof Error ? err.message : 'Two-step sign-in could not be reset.');
+    } finally {
+      setBusy(null);
+    }
+  };
+
   /** A manageable row's menu, for the table's Actions cell and the card's footer. */
   const renderActions = (member: TeamMemberRow, className = '') => (
     <div className={`action-dropdown-container flex ${className}`}>
@@ -569,6 +478,8 @@ export default function TeamClient({
         onResend={() => handleResend(member)}
         onToggleSuspend={() => handleToggleSuspend(member)}
         onRemove={() => handleRemove(member)}
+        twoFactorOn={member.twoFactorOn}
+        onResetTwoFactor={() => handleResetTwoFactor(member)}
       />
     </div>
   );
@@ -636,6 +547,7 @@ export default function TeamClient({
           <span className="flex items-center gap-2 font-bold text-primary">
             <span className="truncate">{row.original.name}</span>
             {row.original.isSelf && <YouChip />}
+            {row.original.twoFactorOn && <TwoStepChip />}
           </span>
           <span className="block text-xs text-secondary truncate">{row.original.email}</span>
         </span>
@@ -848,6 +760,7 @@ export default function TeamClient({
               <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <span className="min-w-0">{row.original.name}</span>
                 {row.original.isSelf && <YouChip />}
+                {row.original.twoFactorOn && <TwoStepChip />}
               </span>
             )}
             subtitle={row => row.original.email}

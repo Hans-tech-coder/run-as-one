@@ -49,7 +49,7 @@ alike; a profile edit or password change keeps the length chosen. Revocation
 is unchanged, since `getActor()` checks every request (§7). Built before 2FA
 by the owner's call. No migration.
 
-**Two-step sign-in, Batches 1–3 (2026-10-12, on `dev`, not released;
+**Two-step sign-in, all 4 batches (2026-10-12, on `dev`, not released;
 `TWO_FACTOR_PLAN.md`).** Batch 1 laid the ground: migration
 `20261012025827_two_factor` (applied to `local-dev` only), `secret-box.ts`,
 `totp.ts`, `two-factor.ts`, `qrcode`. Batch 2: Settings › Security has a
@@ -60,8 +60,12 @@ it on or off signs out every other device. Batch 3: **sign-in asks for the
 code** — after the password and after Google (D2), on `/admin/two-factor`,
 with a recovery code as the fallback; the account is checked again when the
 code arrives, five wrong codes send the person back to sign in, and the
-sign-in row records `twoFactor`. Batch 4 (an admin resetting someone's
-two-step sign-in) is still to come. Needs `TOTP_ENCRYPTION_KEY` in Vercel (Production + Preview); without it
+sign-in row records `twoFactor`. Batch 4: an owner or admin **resets
+someone's two-step sign-in** for a lost phone — a team member from the Team
+page's row menu, a client viewer from the client's Sign-ins — which signs the
+person out everywhere and emails them; a *Two-step on* chip shows who has it.
+Nobody resets the owner's in the app (runbook in `ON_HOLD.md` §2). Making it
+required (D7) stays on hold. Needs `TOTP_ENCRYPTION_KEY` in Vercel (Production + Preview); without it
 the panel stays hidden.
 
 **Results row actions, all 5 batches (2026-10-11, on `dev`, not released;
@@ -371,7 +375,8 @@ on `SiteSettings`, and a footer that shows only the channels with a saved link
 (none saved → the whole "Follow the community" block is hidden). **Carries a
 migration, `20260918110000_site_social_links`; releasing it needs
 `npx prisma migrate deploy` against production.**
-**Two-factor sign-in is on hold** by the owner's call.
+**Two-factor sign-in** was on hold then; it was built in `TWO_FACTOR_PLAN.md`
+(2026-10-12).
 
 **Everyone can sign out their other devices** (2026-09-18, Settings Batch 3, on
 `dev`, uncommitted): Sign-in Activity on `/admin/settings` now shows for the

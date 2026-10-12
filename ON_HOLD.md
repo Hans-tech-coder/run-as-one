@@ -74,12 +74,49 @@ first.
 
 ## 2. Two-factor sign-in (TOTP)
 
-**Picked up:** now `docs/plans/TWO_FACTOR_PLAN.md` (Batch 1, the foundation,
-landed 2026-10-12). Two-step sign-in is **optional per account** there; making
-it *required* for roles holding `registration:validate`,
-`registration:delete` or `event:delete` (the rule this item used to carry,
-from `STAFF_ACCESS_PLAN.md` Batch 4) is that plan's D7, left for after a race
-season with it optional.
+**Built:** `TWO_FACTOR_PLAN.md` Batches 1–4 landed on `dev` 2026-10-12.
+Two-step sign-in is **optional per account**. Left on hold:
+
+- **Making it required** for roles holding `registration:validate`,
+  `registration:delete` or `event:delete` (the rule this item used to carry,
+  from `STAFF_ACCESS_PLAN.md` Batch 4; the plan's D7). Wait until a race season
+  has run with it optional, so nobody is locked out on race day. The Team
+  page's "Two-step on" marker shows who has not turned it on yet.
+- **Not proven live before promoting:** one Google sign-in on an account with
+  two-step on, and one owner sign-in with it on.
+- Not planned: SMS codes, passkeys, "remember this device" (the plan's D5).
+
+### Runbook: the owner lost their phone and their recovery codes
+
+Nobody can reset the owner's two-step sign-in in the app (the plan's D4): the
+owner is Run As One's `Organizer` row, and there is no admin above it. An admin
+or a staff member's reset is on the Team page; a client viewer's is in the
+client's Sign-ins.
+
+> **Do this only after proving who is asking** — in person, or on a call to a
+> number already known, never on the strength of an email or a chat message.
+> Clearing it leaves the owner's account behind the password alone, and the
+> owner's account can do everything.
+
+On the database the owner signs in to (production: endpoint
+`ep-still-pine-b3n210bs`), in the Neon SQL editor:
+
+```sql
+UPDATE "Organizer"
+SET "totpSecret" = NULL,
+    "totpConfirmedAt" = NULL,
+    "recoveryCodes" = ARRAY[]::TEXT[],
+    "totpLastStep" = NULL,
+    "sessionsValidFrom" = date_trunc('second', now() AT TIME ZONE 'UTC')
+WHERE id = 'seed-crc-organizer';
+```
+
+It must update exactly one row. Moving `sessionsValidFrom` signs out every
+owner session, including any on the lost phone. Then the owner signs in with
+the password alone, turns two-step sign-in on again in Settings › Security
+with the new phone, and keeps the new recovery codes in the password manager.
+Nothing writes a trail row for a hand-run step, so note it somewhere the owner
+will see.
 
 ## 3. The sign-in retention sweep (optional)
 

@@ -436,6 +436,9 @@
   — a small line under it in the badge tones' own colours, as the marketing
   table's *Ends in 3 days* does — never a second `.status-badge`, because two
   pills in one cell read as two states when there is only one.
+  A fact about a person rather than a state — *You*, *Two-step on* — is a quiet
+  grey pill beside the name (`admin/TwoStepChip` for the latter, used on the
+  Team page and in a client's Sign-ins), never a coloured badge.
 - **One public event card.** `components/EventGrid` renders every public event
   listing — `/`, `/events`, `/results` — so an event looks like itself wherever
   it appears. It differs only by its `action` prop (`'register'` → the event

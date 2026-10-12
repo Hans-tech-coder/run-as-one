@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
+import { twoFactorOn } from '@/lib/two-factor';
 import { platformActor } from '../platform-actor';
 
 /**
@@ -10,7 +11,9 @@ import { platformActor } from '../platform-actor';
  * behind a per-row request, as the organizer list did: tens of rows of short
  * text, and a panel that opens instantly instead of on a spinner. A viewer's
  * invitation token never leaves the server — only whether one is waiting and
- * when it expires, which is what the panel's state badge is derived from.
+ * when it expires, which is what the panel's state badge is derived from. Nor
+ * does a two-step secret: the screen gets only whether it is on, for the
+ * marker and the reset (TWO_FACTOR_PLAN.md D4).
  *
  * `platform:manage` only: this is Run As One's own queue, and it carries every
  * applicant's phone number.
@@ -54,13 +57,24 @@ export async function GET() {
             acceptedAt: true,
             suspendedAt: true,
             inviteExpiresAt: true,
-            staff: { select: { name: true, email: true, status: true } },
+            staff: {
+              select: { name: true, email: true, status: true, totpSecret: true, totpConfirmedAt: true },
+            },
           },
         },
       },
     });
 
-    return NextResponse.json({ clients });
+    return NextResponse.json({
+      clients: clients.map(client => ({
+        ...client,
+        viewers: client.viewers.map(({ staff: { totpSecret, totpConfirmedAt, ...staff }, ...viewer }) => ({
+          ...viewer,
+          staff,
+          twoFactorOn: twoFactorOn({ totpSecret, totpConfirmedAt }),
+        })),
+      })),
+    });
   } catch (error) {
     console.error('Failed to fetch clients:', error);
     return NextResponse.json({ error: 'The clients could not be loaded.' }, { status: 500 });

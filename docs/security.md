@@ -260,9 +260,9 @@
   `getActor()` re-checks `sessionsValidFrom`, suspension and the membership on
   every request** rather than trusting the token: a kept session is still
   ended at once by any of them. The `auth.signed_in` row records
-  `keepSignedIn: true` when it was ticked. There is no 2FA yet
-  (`ON_HOLD.md` §2), so on a shared race-day laptop the box should stay off,
-  as the page says.
+  `keepSignedIn: true` when it was ticked. Two-step sign-in is optional and
+  asked once per sign-in, not per request (see below), so on a shared race-day
+  laptop the box should stay off, as the page says.
 - **Sign-in is throttled, timed evenly, and only ever returns inside `/admin`**
   (`LOGIN_UX_PLAN.md` Batch 1). `POST /api/auth/login` checks `LOGIN_RULE`
   (10 a minute per address) before the body is read and `LOGIN_ACCOUNT_RULE`
@@ -348,6 +348,17 @@
   Settings › Security); five wrong codes on one pending cookie end it, and
   every wrong code writes `auth.two_factor_failed`. A password reset still
   signs nobody in, and leaves two-step on, so it is no way around the code.
+- **An admin may reset somebody else's two-step sign-in, never the owner's**
+  (`TWO_FACTOR_PLAN.md` D4; `resetTwoFactor` in `lib/two-factor.ts`). From the
+  Team page under `loadManagedMember`'s rules (`team:manage`, not one's own
+  row, an admin not another admin), and from a client's Sign-ins under
+  `platform:manage` (a VIEWER of that client, not one's own account) — the
+  same OWNER and ADMIN either way. A reset clears the four columns, ends every
+  session the person has (`sessionsValidFrom`), writes
+  `auth.two_factor_reset` naming the admin, and emails the person (D10). The
+  owner is an `Organizer` row with nobody above it: a lost phone without
+  recovery codes is a hand-run database step, done only after proving who is
+  asking (`ON_HOLD.md` §2).
 - **An account is found by a lowercased email, and written as one.** `login`,
   `register` and `admin/profile` all run the address through
   `normalizeAccountEmail` (§5). The failure this prevents is quiet and reads
