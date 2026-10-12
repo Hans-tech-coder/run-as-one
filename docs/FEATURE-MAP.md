@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-43 pages · 66 API routes · 101 modules in `src/lib` · 465 files · 88,159 lines
+44 pages · 67 API routes · 102 modules in `src/lib` · 469 files · 88,745 lines
 
 ---
 
@@ -53,6 +53,7 @@ The route, the server component behind it, and the client components beside it.
 | `/admin/settings/security` | [`/admin/settings/security/page.tsx`](../src/app/admin/settings/security/page.tsx) | — |
 | `/admin/settings/site` | [`/admin/settings/site/page.tsx`](../src/app/admin/settings/site/page.tsx) | — |
 | `/admin/team` | [`/admin/team/page.tsx`](../src/app/admin/team/page.tsx) | `RolePicker.tsx` `RolesPanel.tsx` `TeamActionsMenu.tsx` `TeamClient.tsx` |
+| `/admin/two-factor` | [`/admin/two-factor/page.tsx`](../src/app/admin/two-factor/page.tsx) | `TwoFactorClient.tsx` |
 | `/admin/your-events/[id]` | [`/admin/your-events/[id]/page.tsx`](../src/app/admin/your-events/[id]/page.tsx) | `PayoutSummary.tsx` `RaceReport.tsx` `RegistrationTrend.tsx` `runner-csv.ts` `RunnerList.tsx` |
 | `/coming-soon` | [`/coming-soon/page.tsx`](../src/app/coming-soon/page.tsx) | — |
 | `/events` | [`/events/page.tsx`](../src/app/events/page.tsx) | — |
@@ -131,6 +132,7 @@ The route, the server component behind it, and the client components beside it.
 | `/api/auth/logout` | POST | [`/auth/logout/route.ts`](../src/app/api/auth/logout/route.ts) |
 | `/api/auth/register` | POST | [`/auth/register/route.ts`](../src/app/api/auth/register/route.ts) |
 | `/api/auth/reset-password/[token]` | POST | [`/auth/reset-password/[token]/route.ts`](../src/app/api/auth/reset-password/[token]/route.ts) |
+| `/api/auth/two-factor` | POST | [`/auth/two-factor/route.ts`](../src/app/api/auth/two-factor/route.ts) |
 | `/api/checkout` | POST | [`/checkout/route.ts`](../src/app/api/checkout/route.ts) |
 | `/api/checkout/manual` | POST | [`/checkout/manual/route.ts`](../src/app/api/checkout/manual/route.ts) |
 | `/api/cron/expire-pending` | — | [`/cron/expire-pending/route.ts`](../src/app/api/cron/expire-pending/route.ts) |
@@ -248,6 +250,7 @@ the file itself.
 | [`team.ts`](../src/lib/team.ts) | The rules of an organizer's team: what state a member is in, and what makes an invitation or a change of access valid. |
 | [`text-case.ts`](../src/lib/text-case.ts) | Registrant text is stored UPPERCASE. |
 | [`totp.ts`](../src/lib/totp.ts) | The 6-digit code from an authenticator app (RFC 6238 TOTP, RFC 4226 HOTP), written on Node's crypto rather than a package (TWO_FACTOR_PLAN.md D8). |
+| [`two-factor-pending.ts`](../src/lib/two-factor-pending.ts) | The sign-in that waits for its second step (`TWO_FACTOR_PLAN.md` Batch 3). |
 | [`two-factor.ts`](../src/lib/two-factor.ts) | Who has two-step sign-in on, and how a second-step code is checked (TWO_FACTOR_PLAN.md). |
 | [`uploads.ts`](../src/lib/uploads.ts) | What the app accepts from a file picker — the one list both sides read. |
 | [`utils.ts`](../src/lib/utils.ts) | — |

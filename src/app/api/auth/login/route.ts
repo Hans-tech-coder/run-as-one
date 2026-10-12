@@ -2,7 +2,10 @@ import { NextResponse } from 'next/server';
 import { verifyPassword, verifyNoPassword } from '@/lib/auth';
 import { normalizeAccountEmail } from '@/lib/text-case';
 import { findAccountByEmail } from '@/lib/actor';
-import { completeSignIn, logSignInFailure, signInSubject } from '@/lib/sign-in';
+import { checkSignIn, finishSignIn, logSignInFailure, signInSubject } from '@/lib/sign-in';
+import { fieldsOf, twoFactorOn } from '@/lib/two-factor';
+import { startPendingTwoFactor } from '@/lib/two-factor-pending';
+import { safeNextPath } from '@/lib/next-path';
 import { SIGN_IN_ERRORS } from '@/lib/sign-in-errors';
 import { LOGIN_ACCOUNT_RULE, LOGIN_RULE, allowRequest, callerKey } from '@/lib/rate-limit';
 
@@ -12,8 +15,14 @@ import { LOGIN_ACCOUNT_RULE, LOGIN_RULE, allowRequest, callerKey } from '@/lib/r
  *
  * This route checks the password and nothing else. Who may sign in once it is
  * right — the owner's allowlist, suspension, an active membership — and the
- * trail rows, `lastLoginAt` and the cookie live in `completeSignIn`
- * (lib/sign-in.ts), which Google sign-in calls too.
+ * trail rows, `lastLoginAt` and the cookie live in `checkSignIn` and
+ * `finishSignIn` (lib/sign-in.ts), which Google sign-in calls too.
+ *
+ * **An account with two-step sign-in on gets no session here**
+ * (TWO_FACTOR_PLAN.md Batch 3): it gets the pending cookie
+ * (lib/two-factor-pending.ts), carrying `keep` and the page to land on
+ * (`next`, checked again by `safeNextPath`), and the answer
+ * `{ twoFactor: true }` sends the page to `/admin/two-factor`.
  *
  * The address is looked up through `findAccountByEmail`, the one helper the
  * register and profile routes use too, so the Organizer and StaffAccount
@@ -44,7 +53,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { email, password, keep } = await request.json();
+    const { email, password, keep, next } = await request.json();
 
     // Lowercased before the lookup, never as typed: Postgres compares text
     // exactly, so one capital from a browser autofill used to find no row and
@@ -84,10 +93,23 @@ export async function POST(request: Request) {
       return INVALID();
     }
 
-    const result = await completeSignIn(subject, { method: 'password', keep: keep === true });
-    if (!result.ok) {
-      return NextResponse.json({ error: result.error }, { status: result.status });
+    const check = await checkSignIn(subject, { method: 'password' });
+    if (!check.ok) {
+      return NextResponse.json({ error: check.error }, { status: check.status });
     }
+
+    if (account && twoFactorOn(fieldsOf(account))) {
+      await startPendingTwoFactor({
+        kind: subject.kind === 'ORGANIZER' ? 'OWNER' : 'STAFF',
+        id: fieldsOf(account).id,
+        method: 'password',
+        keep: keep === true,
+        next: safeNextPath(typeof next === 'string' ? next : null),
+      });
+      return NextResponse.json({ twoFactor: true }, { status: 200 });
+    }
+
+    const result = await finishSignIn(check.subject, { method: 'password', keep: keep === true });
     return NextResponse.json({ success: true, role: result.role }, { status: 200 });
   } catch (error) {
     console.error('Login error:', error);

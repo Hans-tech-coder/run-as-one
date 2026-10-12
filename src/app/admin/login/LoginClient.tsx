@@ -47,7 +47,7 @@ export default function LoginClient({
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, keep }),
+        body: JSON.stringify({ email, password, keep, next }),
       });
 
       const data = await res.json();
@@ -55,6 +55,13 @@ export default function LoginClient({
       if (!res.ok) {
         setError(data.error || 'Failed to login');
         setIsLoading(false);
+        return;
+      }
+
+      // Two-step sign-in is on (TWO_FACTOR_PLAN.md Batch 3): no session yet,
+      // only the pending cookie, which carries `next` to the code page.
+      if (data.twoFactor === true) {
+        router.push('/admin/two-factor');
         return;
       }
 

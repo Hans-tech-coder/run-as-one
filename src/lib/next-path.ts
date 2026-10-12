@@ -7,7 +7,7 @@
  * path inside `/admin` on this site. `//evil.com` and `/\evil.com` are refused
  * because a browser reads both as another host; a full URL is refused because
  * it does not start with `/admin`; and the public admin pages (sign-in,
- * register, invite, forgot / reset password) are refused because landing back on the sign-in form after
+ * register, invite, forgot / reset password, the code step) are refused because landing back on the sign-in form after
  * signing in is a loop, not a destination. Anything refused becomes `/admin`.
  */
 
@@ -21,6 +21,9 @@ export const PUBLIC_ADMIN_PATHS = [
   '/admin/invite',
   '/admin/forgot-password',
   '/admin/reset-password',
+  // The second sign-in step: the person has no session yet, only the
+  // pending cookie (lib/two-factor-pending.ts).
+  '/admin/two-factor',
 ];
 
 /** Whether `pathname` is one of the public admin pages, or beneath one. */

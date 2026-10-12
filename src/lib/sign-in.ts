@@ -19,6 +19,10 @@
  *   Google was the proof. A refused attempt is written into the earliest
  *   accepted membership's trail even when none is usable any more.
  * - A sign-in stamps `lastLoginAt` and sets the session cookie.
+ * - **An account with two-step sign-in on stops after `checkSignIn`**
+ *   (TWO_FACTOR_PLAN.md Batch 3): the door holds a pending sign-in
+ *   (lib/two-factor-pending.ts), and `api/auth/two-factor` runs `checkSignIn`
+ *   again, then `finishSignIn`, once the code is right.
  */
 
 import type { Organizer, StaffAccount } from '@prisma/client';
@@ -209,16 +213,21 @@ export async function checkSignIn(
  * Sign in to a subject `checkSignIn` let through: stamp `lastLoginAt`, write
  * `auth.signed_in`, and set the cookie. `keep` is the "Keep me signed in" box:
  * a 30-day session instead of a day (SESSION_SECONDS, lib/jwt.ts), noted in
- * the trail row.
+ * the trail row, as is the second step that was taken (`twoFactor`).
  */
 export async function finishSignIn(
   subject: CheckedSubject,
-  { method, keep = false }: { method: SignInMethod; keep?: boolean },
+  {
+    method,
+    keep = false,
+    twoFactor,
+  }: { method: SignInMethod; keep?: boolean; twoFactor?: 'totp' | 'recovery' },
 ): Promise<{ ok: true; role: 'OWNER' | 'STAFF' }> {
   const length = keep ? 'keep' : 'day';
   const changes = {
     ...(method === 'google' ? { method } : {}),
     ...(keep ? { keepSignedIn: true } : {}),
+    ...(twoFactor ? { twoFactor } : {}),
   };
   const signedIn = {
     action: 'auth.signed_in' as const,
@@ -253,7 +262,11 @@ export async function finishSignIn(
   return { ok: true, role: 'STAFF' };
 }
 
-/** `checkSignIn`, then `finishSignIn`: a sign-in with no second step. */
+/**
+ * `checkSignIn`, then `finishSignIn`: a sign-in with no second step. The two
+ * doors call the halves themselves, because an account with two-step sign-in
+ * on stops between them (lib/two-factor-pending.ts).
+ */
 export async function completeSignIn(
   subject: SignInSubject,
   { method, keep = false }: { method: SignInMethod; keep?: boolean },

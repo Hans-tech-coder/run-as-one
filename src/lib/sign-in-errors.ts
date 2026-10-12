@@ -18,6 +18,9 @@ export const SIGN_IN_ERRORS = {
   // A client's own sign-in whose client was archived: it has no organizer to ask.
   client_inactive: "Your organization's sign-in is not active right now. Please contact Run As One.",
   throttled: 'Too many sign-in attempts. Wait a minute, then try again.',
+  // The second step (TWO_FACTOR_PLAN.md Batch 3): the code page sends these back.
+  two_factor_expired: 'Your sign-in waited too long for its code. Sign in again.',
+  two_factor_tries: 'Too many wrong codes. Sign in again.',
   google_no_account:
     'No Run As One account uses this Google address. Ask Run As One for an invite.',
   google_other_account:

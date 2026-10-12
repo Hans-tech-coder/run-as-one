@@ -311,7 +311,7 @@
   (matched against an httpOnly cookie scoped to the callback, 10 minutes,
   deleted on first use), PKCE S256 and a `nonce` checked inside the ID token,
   which is verified against Google's keys for issuer, audience and expiry.
-  After the proof, `completeSignIn` (`lib/sign-in.ts`) applies the password
+  After the proof, `checkSignIn` (`lib/sign-in.ts`) applies the password
   route's own rules — suspension, active membership, archived client — so
   Google cannot let in anybody a password would not. The callback is
   throttled like sign-in, refusals reach the page only as a code from
@@ -332,7 +332,22 @@
   throttled per account (`TWO_FACTOR_RULE`, 5 in 5 minutes, one window across
   them) and a wrong code writes `auth.two_factor_failed`; an accepted code's
   30-second step is stored (`totpLastStep`), so a code works once.
-  **Sign-in does not ask for the code until Batch 3.**
+- **An account with two-step sign-in on is asked the code at both doors**
+  (`TWO_FACTOR_PLAN.md` Batch 3, D2 — otherwise Google would be a way
+  around it). Once the password or Google passes `checkSignIn`, the door sets
+  no session: it sets `two_factor_pending` (`lib/two-factor-pending.ts`), a
+  JWT under the app's secret with `purpose: 'two-factor'` and the account as
+  `sub`/`account` — never a session's `kind` or `id`, so `verifyToken`
+  refuses it, and a session has no `purpose`, so it is refused as one. It is
+  httpOnly, `sameSite=lax`, path `/`, five minutes, and carries `method`,
+  `keep`, `next` and a first Google sign-in's `sub` to link. **The code route
+  checks the account again** (`signInSubject` + `checkSignIn`) before the
+  code, so a suspension in those minutes holds; the session and the Google
+  link are written only after the code is right. Throttled per address
+  (`LOGIN_RULE`) and per account (`TWO_FACTOR_RULE`, the same window as
+  Settings › Security); five wrong codes on one pending cookie end it, and
+  every wrong code writes `auth.two_factor_failed`. A password reset still
+  signs nobody in, and leaves two-step on, so it is no way around the code.
 - **An account is found by a lowercased email, and written as one.** `login`,
   `register` and `admin/profile` all run the address through
   `normalizeAccountEmail` (§5). The failure this prevents is quiet and reads

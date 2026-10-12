@@ -49,17 +49,19 @@ alike; a profile edit or password change keeps the length chosen. Revocation
 is unchanged, since `getActor()` checks every request (§7). Built before 2FA
 by the owner's call. No migration.
 
-**Two-step sign-in, Batches 1–2 (2026-10-12, on `dev`, not released;
+**Two-step sign-in, Batches 1–3 (2026-10-12, on `dev`, not released;
 `TWO_FACTOR_PLAN.md`).** Batch 1 laid the ground: migration
 `20261012025827_two_factor` (applied to `local-dev` only), `secret-box.ts`,
 `totp.ts`, `two-factor.ts`, `qrcode`. Batch 2: Settings › Security has a
 **Two-step Sign-in** panel for everyone — turn on with an authenticator app
 (QR or typed key, then a code), ten recovery codes shown once, new recovery
 codes, and turn off with password and code (which emails the person). Turning
-it on or off signs out every other device. **Sign-in does not ask for the
-code yet** (Batch 3), so **do not promote `dev` to `main` between Batch 2 and
-Batch 3**: the panel would tell people their sign-in is protected when it is
-not. Needs `TOTP_ENCRYPTION_KEY` in Vercel (Production + Preview); without it
+it on or off signs out every other device. Batch 3: **sign-in asks for the
+code** — after the password and after Google (D2), on `/admin/two-factor`,
+with a recovery code as the fallback; the account is checked again when the
+code arrives, five wrong codes send the person back to sign in, and the
+sign-in row records `twoFactor`. Batch 4 (an admin resetting someone's
+two-step sign-in) is still to come. Needs `TOTP_ENCRYPTION_KEY` in Vercel (Production + Preview); without it
 the panel stays hidden.
 
 **Results row actions, all 5 batches (2026-10-11, on `dev`, not released;

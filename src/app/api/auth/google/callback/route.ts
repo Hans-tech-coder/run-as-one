@@ -8,7 +8,9 @@ import {
   takePendingSignIn,
   verifyIdToken,
 } from '@/lib/google-oauth';
-import { completeSignIn, signInSubject } from '@/lib/sign-in';
+import { checkSignIn, finishSignIn, signInSubject } from '@/lib/sign-in';
+import { twoFactorOn } from '@/lib/two-factor';
+import { startPendingTwoFactor } from '@/lib/two-factor-pending';
 import { safeNextPath } from '@/lib/next-path';
 import { LOGIN_RULE, allowRequest, callerKey } from '@/lib/rate-limit';
 import { backToSignIn } from '../login-redirect';
@@ -19,9 +21,15 @@ import { backToSignIn } from '../login-redirect';
  * In order: the `state` must match the cookie this browser was given (the
  * cookie is deleted either way); the code is exchanged and the ID token
  * verified; the account is found by its linked `sub` or, the first time, by
- * its verified email (`googleSignInAccount`); then `completeSignIn` decides,
+ * its verified email (`googleSignInAccount`); then `checkSignIn` decides,
  * exactly as it does for a password. A first sign-in that passes links the
  * `sub` to the account. Every refusal goes back to the sign-in page as a code.
+ *
+ * **Google asks for the code too** (TWO_FACTOR_PLAN.md D2): an account with
+ * two-step sign-in on gets the pending cookie and goes to `/admin/two-factor`
+ * instead of a session, so Google is no way around it. A first sign-in's
+ * `sub` rides in that cookie and is linked by the code route, only once the
+ * code is right.
  *
  * Throttled per address like the password route: each callback costs a call
  * to Google and a database read.
@@ -52,10 +60,23 @@ export async function GET(request: Request) {
     const subject = await signInSubject({ kind: 'STAFF', staff });
     if (!subject) return backToSignIn(request, 'google_no_account', next);
 
-    const result = await completeSignIn(subject, { method: 'google', keep: pending.keep });
-    if (!result.ok) return backToSignIn(request, result.code, next);
+    const check = await checkSignIn(subject, { method: 'google' });
+    if (!check.ok) return backToSignIn(request, check.code, next);
 
-    if (link && subject.who) await linkGoogle(staff.id, identity.sub, subject.who);
+    if (twoFactorOn(staff)) {
+      await startPendingTwoFactor({
+        kind: 'STAFF',
+        id: staff.id,
+        method: 'google',
+        keep: pending.keep,
+        next,
+        ...(link ? { linkSub: identity.sub } : {}),
+      });
+      return NextResponse.redirect(new URL('/admin/two-factor', request.url));
+    }
+
+    await finishSignIn(check.subject, { method: 'google', keep: pending.keep });
+    if (link) await linkGoogle(staff.id, identity.sub, check.subject.who);
 
     return NextResponse.redirect(new URL(next, request.url));
   } catch (error) {
