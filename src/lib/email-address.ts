@@ -32,10 +32,15 @@
  * actually reaches us — a missing `@`, or a domain with no dot, from a phone
  * keyboard that ate a character — and leaves the rest to the mail server,
  * which is the only thing that truly knows whether an address exists.
+ *
+ * **The last label is two characters or more.** No top-level domain is one
+ * letter, and Resend refuses the address outright ("Invalid `reply_to`
+ * field"). `info@runasone.p` — `.ph` with the `h` eaten — passed the old shape,
+ * was saved as the site's contact email, and stopped every email the app sent.
  */
 
-/** `something@something.something`, no whitespace anywhere. */
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+/** `something@something.xx`, no whitespace anywhere. */
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@.]{2,}$/;
 
 /** The address every message ends on, matching the wizards' own placeholder. */
 export const EMAIL_EXAMPLE = 'juan@example.com';

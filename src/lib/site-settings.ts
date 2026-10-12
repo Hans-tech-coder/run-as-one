@@ -1,5 +1,6 @@
 import { unstable_cache } from 'next/cache';
 import prisma from './db';
+import { looksLikeEmailAddress } from './email-address';
 import { DEFAULT_CONTACT_EMAIL, NO_SOCIAL_LINKS, type SocialLinks } from './site-contact';
 
 /**
@@ -65,7 +66,20 @@ const readSiteSettings = unstable_cache(
 
 export async function getSiteSettings(): Promise<SiteSettingsValues> {
   try {
-    return await readSiteSettings();
+    const settings = await readSiteSettings();
+    // Checked here, after the cache, not inside it: a cached entry is served
+    // without re-running the read, and the dev server's tag expiry lives only
+    // in memory, so a value fixed in the database can come back from disk
+    // after a restart. An address Resend refuses would stop every email —
+    // as reply-to it fails the send, not just the footer — so the default
+    // goes out instead until someone saves a good one.
+    if (!looksLikeEmailAddress(settings.contactEmail)) {
+      console.error(
+        `Site contact email ${JSON.stringify(settings.contactEmail)} is not a deliverable address; using ${DEFAULT_CONTACT_EMAIL}.`,
+      );
+      return { ...settings, contactEmail: DEFAULT_CONTACT_EMAIL };
+    }
+    return settings;
   } catch (error) {
     console.error('Could not read site settings; using the defaults:', error);
     return DEFAULTS;
