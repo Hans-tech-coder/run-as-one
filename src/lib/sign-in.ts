@@ -1,8 +1,10 @@
 /**
  * What happens once a person has proved who they are — by a password
  * (`api/auth/login`) or by Google (`api/auth/google/callback`). The proof
- * differs; **who may sign in does not**, so both doors call `completeSignIn`
- * and neither can drift into letting in somebody the other refuses.
+ * differs; **who may sign in does not**, so both doors call `checkSignIn`
+ * (the refusals) and `finishSignIn` (the trail row and the cookie) — together
+ * `completeSignIn` — and neither can drift into letting in somebody the other
+ * refuses.
  *
  * - **Only Run As One's Organizer row signs in as an owner**
  *   (`signInSubject` answers null for any other, and the caller treats that
@@ -56,11 +58,11 @@ export type SignInOutcome =
   | 'NOT_APPROVED'
   | 'NO_ACTIVE_ORGANIZER';
 
-export type SignInResult =
-  | { ok: true; role: 'OWNER' | 'STAFF' }
-  | { ok: false; status: number; code: SignInErrorCode; error: string };
+export type SignInRefusal = { ok: false; status: number; code: SignInErrorCode; error: string };
 
-const refused = (code: SignInErrorCode): SignInResult => ({
+export type SignInResult = { ok: true; role: 'OWNER' | 'STAFF' } | SignInRefusal;
+
+const refused = (code: SignInErrorCode): SignInRefusal => ({
   ok: false,
   status: 403,
   code,
@@ -154,49 +156,34 @@ export async function logSignInFailure(
   });
 }
 
-/**
- * Sign in to an account whose proof has already been checked: refuse it with
- * the code and sentence the sign-in page shows (lib/sign-in-errors.ts), or
- * record it and set the cookie. `keep` is the "Keep me signed in" box: a
- * 30-day session instead of a day (SESSION_SECONDS, lib/jwt.ts), noted in the
- * trail row.
- */
-export async function completeSignIn(
-  subject: SignInSubject,
-  { method, keep = false }: { method: SignInMethod; keep?: boolean },
-): Promise<SignInResult> {
-  const length = keep ? 'keep' : 'day';
-  const changes = {
-    ...(method === 'google' ? { method } : {}),
-    ...(keep ? { keepSignedIn: true } : {}),
-  };
-  const signedIn = {
-    action: 'auth.signed_in' as const,
-    summary: method === 'google' ? 'Signed in with Google.' : 'Signed in.',
-    changes: Object.keys(changes).length ? changes : undefined,
-  };
+/** A subject `checkSignIn` let through: for staff, with the membership it lands in. */
+export type CheckedSubject =
+  | Extract<SignInSubject, { kind: 'ORGANIZER' }>
+  | { kind: 'STAFF'; staff: StaffAccount; who: AuditActor; membership: MembershipPick };
 
+export type SignInCheck =
+  | { ok: true; subject: CheckedSubject }
+  | SignInRefusal;
+
+/**
+ * Whether an account whose proof has already been checked may sign in: refuse
+ * it with the code and sentence the sign-in page shows (lib/sign-in-errors.ts),
+ * writing the refusal in its trail, or hand back the subject `finishSignIn`
+ * takes. Writes nothing on success.
+ */
+export async function checkSignIn(
+  subject: SignInSubject,
+  { method }: { method: SignInMethod },
+): Promise<SignInCheck> {
   // ── Run As One's own account, the owner ──────────────────────────────
   if (subject.kind === 'ORGANIZER') {
-    const { organizer, who } = subject;
-
     // Still an allowlist (organizerOwnerCanSignIn): a status written by hand
     // is refused rather than let in.
-    if (!organizerOwnerCanSignIn(organizer)) {
+    if (!organizerOwnerCanSignIn(subject.organizer)) {
       await logSignInFailure(subject, 'NOT_APPROVED', method);
       return refused('not_approved');
     }
-
-    await db.$transaction(async tx => {
-      await tx.organizer.update({
-        where: { id: organizer.id },
-        data: { lastLoginAt: new Date() },
-      });
-      await recordAudit(tx, who, { ...signedIn, entityType: 'Organizer', entityId: organizer.id });
-    });
-
-    await setAuthCookie(await createToken(organizerSessionClaims(organizer), length), length);
-    return { ok: true, role: 'OWNER' };
+    return { ok: true, subject };
   }
 
   // ── A member of an organizer's staff ─────────────────────────────────
@@ -215,6 +202,45 @@ export async function completeSignIn(
     return refused(acceptedMembership?.role === 'VIEWER' ? 'client_inactive' : 'no_active_organizer');
   }
 
+  return { ok: true, subject: { kind: 'STAFF', staff, who, membership } };
+}
+
+/**
+ * Sign in to a subject `checkSignIn` let through: stamp `lastLoginAt`, write
+ * `auth.signed_in`, and set the cookie. `keep` is the "Keep me signed in" box:
+ * a 30-day session instead of a day (SESSION_SECONDS, lib/jwt.ts), noted in
+ * the trail row.
+ */
+export async function finishSignIn(
+  subject: CheckedSubject,
+  { method, keep = false }: { method: SignInMethod; keep?: boolean },
+): Promise<{ ok: true; role: 'OWNER' | 'STAFF' }> {
+  const length = keep ? 'keep' : 'day';
+  const changes = {
+    ...(method === 'google' ? { method } : {}),
+    ...(keep ? { keepSignedIn: true } : {}),
+  };
+  const signedIn = {
+    action: 'auth.signed_in' as const,
+    summary: method === 'google' ? 'Signed in with Google.' : 'Signed in.',
+    changes: Object.keys(changes).length ? changes : undefined,
+  };
+
+  if (subject.kind === 'ORGANIZER') {
+    const { organizer, who } = subject;
+    await db.$transaction(async tx => {
+      await tx.organizer.update({
+        where: { id: organizer.id },
+        data: { lastLoginAt: new Date() },
+      });
+      await recordAudit(tx, who, { ...signedIn, entityType: 'Organizer', entityId: organizer.id });
+    });
+
+    await setAuthCookie(await createToken(organizerSessionClaims(organizer), length), length);
+    return { ok: true, role: 'OWNER' };
+  }
+
+  const { staff, who, membership } = subject;
   await db.$transaction(async tx => {
     await tx.staffAccount.update({
       where: { id: staff.id },
@@ -225,4 +251,14 @@ export async function completeSignIn(
 
   await setAuthCookie(await createToken(staffSessionClaims(staff, membership), length), length);
   return { ok: true, role: 'STAFF' };
+}
+
+/** `checkSignIn`, then `finishSignIn`: a sign-in with no second step. */
+export async function completeSignIn(
+  subject: SignInSubject,
+  { method, keep = false }: { method: SignInMethod; keep?: boolean },
+): Promise<SignInResult> {
+  const check = await checkSignIn(subject, { method });
+  if (!check.ok) return check;
+  return finishSignIn(check.subject, { method, keep });
 }
