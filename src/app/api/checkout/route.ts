@@ -27,6 +27,7 @@ import {
   RESULTS_ONLY_MESSAGE,
   SlotsUnavailableError,
   isClosed,
+  lockEventForRegistration,
   openingNote,
   opensLater,
   participantCategoryError,
@@ -406,6 +407,7 @@ export async function POST(request: Request) {
     // before the create is a count two simultaneous orders can both pass. See
     // reserveSlots, which locks the capped options first.
     const registration = await prisma.$transaction(async (tx) => {
+      await lockEventForRegistration(tx, event.id);
       await reserveSlots(tx, event.categories, participants);
 
       // Spent when the order is placed, not when it is paid — the same moment

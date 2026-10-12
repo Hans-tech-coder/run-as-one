@@ -26,6 +26,7 @@ import {
   RESULTS_ONLY_MESSAGE,
   SlotsUnavailableError,
   isClosed,
+  lockEventForRegistration,
   openingNote,
   opensLater,
   participantCategoryError,
@@ -386,6 +387,7 @@ export async function POST(request: Request) {
     // orders can both pass. See reserveSlots, which locks the capped options
     // first.
     const registration = await prisma.$transaction(async (tx) => {
+      await lockEventForRegistration(tx, event.id);
       await reserveSlots(tx, event.categories, participants);
 
       // Spent when the order is placed, not when the transfer is verified — a

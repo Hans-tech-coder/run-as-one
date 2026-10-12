@@ -419,6 +419,20 @@ export class SlotsUnavailableError extends Error {
 }
 
 /**
+ * The last word on results only, taken first inside the transaction that
+ * writes a registration. The event row is locked `FOR SHARE`, which waits out
+ * an admin switching the event to results only (that save locks it
+ * `FOR UPDATE` and recounts), and the flag is read again under the lock — so
+ * an order and the switch can never both land, whichever starts first.
+ */
+export async function lockEventForRegistration(tx: any, eventId: string): Promise<void> {
+  const [row] = await tx.$queryRaw(
+    Prisma.sql`SELECT "resultsOnly" FROM "Event" WHERE "id" = ${eventId} FOR SHARE`,
+  );
+  if (row?.resultsOnly) throw new SlotsUnavailableError(RESULTS_ONLY_MESSAGE);
+}
+
+/**
  * The last word on slots, taken inside the transaction that writes the
  * registration.
  *

@@ -62,6 +62,15 @@ const EVENT_FIELDS = [
 /** Thrown inside the edit transaction when a category it removes is still in use. */
 class CategoryInUseError extends Error {}
 
+/** A results-only switch refused because the event has registrations (D3). */
+class ResultsOnlySwitchError extends Error {
+  constructor(registered: number, resultsOnly: boolean) {
+    super(
+      `This event already has ${registered} registration${registered === 1 ? '' : 's'}, so it cannot be switched ${resultsOnly ? 'to' : 'off'} results only. That switch is only for an event nobody has registered for.`,
+    );
+  }
+}
+
 /** A set of rows as one comparable string, so an edit can say whether it moved. */
 function listKey(rows: Record<string, unknown>[], fields: string[]) {
   return rows.map(row => JSON.stringify(fields.map(field => row[field] ?? null))).join('|');
@@ -200,9 +209,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       const registered = await db.registration.count({ where: { eventId: id } });
       if (registered > 0) {
         return NextResponse.json(
-          {
-            error: `This event already has ${registered} registration${registered === 1 ? '' : 's'}, so it cannot be switched ${resultsOnly ? 'to' : 'off'} results only. That switch is only for an event nobody has registered for.`,
-          },
+          { error: new ResultsOnlySwitchError(registered, resultsOnly).message },
           { status: 400 },
         );
       }
@@ -247,6 +254,15 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     const incomingIds = categories.filter((c: any) => c.id).map((c: any) => c.id);
 
     const updatedEvent = await db.$transaction(async (prisma) => {
+      // The count above, taken again under a lock: an order placed while this
+      // save was on its way would otherwise land beside the switch. Checkout
+      // locks the same row (lockEventForRegistration), so one waits for the other.
+      if (resultsOnly !== current.resultsOnly) {
+        await prisma.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${id} FOR UPDATE`;
+        const registered = await prisma.registration.count({ where: { eventId: id } });
+        if (registered > 0) throw new ResultsOnlySwitchError(registered, resultsOnly);
+      }
+
       // Handle category deletion carefully to avoid FK constraints
       try {
         await prisma.category.deleteMany({
@@ -415,6 +431,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   } catch (error: any) {
     if (error instanceof CategoryInUseError) {
       return NextResponse.json({ error: 'Cannot remove a category that already has registered runners or results.' }, { status: 400 });
+    }
+    if (error instanceof ResultsOnlySwitchError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
     }
     console.error('Update event error:', error);
     return NextResponse.json({ error: error.message || 'Failed to update event' }, { status: 500 });

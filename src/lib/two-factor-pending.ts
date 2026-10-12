@@ -22,8 +22,9 @@ import type { SignInMethod } from './sign-in';
  *   (`linkSub`) — never before.
  * - **Five wrong codes on one pending sign-in end it** (`tries`, re-signed
  *   with the same expiry on each wrong code). Replaying an older copy of the
- *   cookie wins nothing past the per-account TWO_FACTOR_RULE, which counts
- *   every try whatever cookie it came with.
+ *   cookie wins nothing past `tooManyWrongCodes` (lib/two-factor.ts), which
+ *   counts the account's wrong codes from the trail, whatever cookie or
+ *   serverless instance they came through.
  * - It proves only the first step. The code route checks the account again
  *   (`signInSubject` + `checkSignIn`), because it may have been suspended in
  *   the minutes in between.

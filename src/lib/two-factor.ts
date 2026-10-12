@@ -25,6 +25,7 @@ import type { Prisma, StaffAccount } from '@prisma/client';
 import db from './db';
 import { sessionsCutoff, type AccountByEmail, type Actor } from './actor';
 import { recordAudit } from './audit';
+import { TWO_FACTOR_RULE } from './rate-limit';
 import { openSecret } from './secret-box';
 import { verifyTotp } from './totp';
 
@@ -141,6 +142,23 @@ export async function resetTwoFactor(
     });
     return true;
   });
+}
+
+/**
+ * Whether this account has had TWO_FACTOR_RULE's worth of wrong codes inside
+ * its window. Counted from the `auth.two_factor_failed` trail rows rather than
+ * memory or the pending cookie, so neither a replayed cookie nor a request
+ * landing on a fresh serverless instance starts the count again.
+ */
+export async function tooManyWrongCodes(accountId: string, now = Date.now()): Promise<boolean> {
+  const wrong = await db.auditLog.count({
+    where: {
+      actorId: accountId,
+      action: 'auth.two_factor_failed',
+      createdAt: { gte: new Date(now - TWO_FACTOR_RULE.windowMs) },
+    },
+  });
+  return wrong >= TWO_FACTOR_RULE.limit;
 }
 
 /** What the row must still hold for a code to be spent. */

@@ -5,7 +5,14 @@ import { linkGoogle } from '@/lib/google-oauth';
 import { checkSignIn, finishSignIn, signInSubject } from '@/lib/sign-in';
 import { SIGN_IN_ERRORS, type SignInErrorCode } from '@/lib/sign-in-errors';
 import { LOGIN_RULE, TWO_FACTOR_RULE, allowRequest, callerKey } from '@/lib/rate-limit';
-import { accountEntityType, checkSecondStep, fieldsOf, ownAccount, twoFactorOn } from '@/lib/two-factor';
+import {
+  accountEntityType,
+  checkSecondStep,
+  fieldsOf,
+  ownAccount,
+  tooManyWrongCodes,
+  twoFactorOn,
+} from '@/lib/two-factor';
 import {
   clearPendingTwoFactor,
   countWrongCode,
@@ -26,10 +33,12 @@ import { typedCode, WRONG_CODE_OR_RECOVERY } from '@/app/api/admin/profile/two-f
  * and the answer is where to go. A first Google sign-in's link is written
  * only now, after the whole sign-in has passed.
  *
- * **Throttled three ways**: per address (`LOGIN_RULE`), per account across
+ * **Throttled four ways**: per address (`LOGIN_RULE`), per account across
  * every code-taking route (`TWO_FACTOR_RULE`, the bucket Settings › Security
- * uses), and five wrong codes on one pending sign-in send the person back to
- * sign in. Every wrong code is audited `auth.two_factor_failed`.
+ * uses), per account from the database (`tooManyWrongCodes`: TWO_FACTOR_RULE's
+ * count of wrong codes, read from the trail, so it holds across instances),
+ * and five wrong codes on one pending sign-in send the person back to sign in.
+ * Every wrong code is audited `auth.two_factor_failed`.
  *
  * A refusal the page must turn into a trip back to sign-in answers `code`, a
  * key of lib/sign-in-errors.ts; a wrong code answers `errors.code` and keeps
@@ -78,7 +87,10 @@ export async function POST(request: Request) {
       return backToSignIn('two_factor_expired', 401);
     }
 
-    if (!allowRequest('two-factor', `${pending.kind}:${pending.id}`, TWO_FACTOR_RULE)) {
+    if (
+      !allowRequest('two-factor', `${pending.kind}:${pending.id}`, TWO_FACTOR_RULE) ||
+      (await tooManyWrongCodes(pending.id))
+    ) {
       return NextResponse.json(
         { error: 'Too many codes in a few minutes. Wait five minutes, then try again.' },
         { status: 429 },
