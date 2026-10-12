@@ -874,3 +874,56 @@
     transition: none;
   }
 }
+
+/* ── "Continue with Google" (login/GoogleSignInButton.tsx) ──────────────
+   Google's dark-theme button: its colours are Google's, not ours, so they
+   are written here rather than drawn from the palette. Full width, like the
+   Sign In button below it, and as tall, so the two read as equal choices. */
+.google-sign-in {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 12px;
+  background: #131314;
+  border: 1px solid #8e918f;
+  border-radius: var(--radius-lg);
+  color: #e3e3e3;
+  font-size: 14px;
+  line-height: 20px;
+  text-decoration: none;
+  transition: background-color var(--duration-fast) var(--ease-smooth-out);
+}
+
+.google-sign-in:hover {
+  background: #1f1f20;
+}
+
+.google-sign-in:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
+}
+
+.google-sign-in svg {
+  flex: none;
+}
+
+/* "or" between Google and the email form: a rule either side of the word. */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin: var(--space-lg) 0;
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--dash-border);
+}

@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-43 pages · 59 API routes · 95 modules in `src/lib` · 447 files · 85,943 lines
+43 pages · 62 API routes · 98 modules in `src/lib` · 456 files · 86,709 lines
 
 ---
 
@@ -39,7 +39,7 @@ The route, the server component behind it, and the client components beside it.
 | `/admin/feedback` | [`/admin/feedback/page.tsx`](../src/app/admin/feedback/page.tsx) | `FeedbackClient.tsx` `MessageDetail.tsx` |
 | `/admin/forgot-password` | [`/admin/forgot-password/page.tsx`](../src/app/admin/forgot-password/page.tsx) | `ForgotPasswordClient.tsx` |
 | `/admin/invite/[token]` | [`/admin/invite/[token]/page.tsx`](../src/app/admin/invite/[token]/page.tsx) | `InviteAcceptClient.tsx` |
-| `/admin/login` | [`/admin/login/page.tsx`](../src/app/admin/login/page.tsx) | `LoginClient.tsx` |
+| `/admin/login` | [`/admin/login/page.tsx`](../src/app/admin/login/page.tsx) | `GoogleSignInButton.tsx` `LoginClient.tsx` |
 | `/admin/marketing` | [`/admin/marketing/page.tsx`](../src/app/admin/marketing/page.tsx) | `PromoActionsMenu.tsx` `PromoCodesClient.tsx` |
 | `/admin/register` | [`/admin/register/page.tsx`](../src/app/admin/register/page.tsx) | — |
 | `/admin/remittances` | [`/admin/remittances/page.tsx`](../src/app/admin/remittances/page.tsx) | `RemittancesClient.tsx` `SettlementBadge.tsx` |
@@ -48,7 +48,7 @@ The route, the server component behind it, and the client components beside it.
 | `/admin/results` | [`/admin/results/page.tsx`](../src/app/admin/results/page.tsx) | `result-columns.tsx` `result-row.ts` `ResultsListClient.tsx` |
 | `/admin/results/[id]` | [`/admin/results/[id]/page.tsx`](../src/app/admin/results/[id]/page.tsx) | `AddRunnerButton.tsx` `certificate-draft.ts` `CertificateSettingsPanel.tsx` `CertificateWorkspacePanel.tsx` `EventDetailsPanel.tsx` `PacerTagModal.tsx` `ResultFormModal.tsx` `results-sheet.ts` `results-upload.ts` `ResultsTableClient.tsx` `ResultsUploaderClient.tsx` `runner-columns.tsx` `runner-row.ts` `RunnerBadges.tsx` `RunnerCards.tsx` `SheetMappingPanel.tsx` `TargetCategoryPicker.tsx` `use-runner-actions.tsx` |
 | `/admin/results/new` | [`/admin/results/new/page.tsx`](../src/app/admin/results/new/page.tsx) | `EventPicker.tsx` `ExistingRaceFlow.tsx` `NewResultsClient.tsx` `ResultsOnlyFlow.tsx` `ResultsSteps.tsx` `save-new-results.ts` |
-| `/admin/settings` | [`/admin/settings/page.tsx`](../src/app/admin/settings/page.tsx) | `AccessPanels.tsx` `account.ts` `sections.ts` `SettingsPanels.tsx` |
+| `/admin/settings` | [`/admin/settings/page.tsx`](../src/app/admin/settings/page.tsx) | `AccessPanels.tsx` `account.ts` `GooglePanel.tsx` `sections.ts` `SettingsPanels.tsx` |
 | `/admin/settings/access` | [`/admin/settings/access/page.tsx`](../src/app/admin/settings/access/page.tsx) | — |
 | `/admin/settings/security` | [`/admin/settings/security/page.tsx`](../src/app/admin/settings/security/page.tsx) | — |
 | `/admin/settings/site` | [`/admin/settings/site/page.tsx`](../src/app/admin/settings/site/page.tsx) | — |
@@ -97,6 +97,7 @@ The route, the server component behind it, and the client components beside it.
 | `/api/admin/platform-fee` | PATCH | [`/admin/platform-fee/route.ts`](../src/app/api/admin/platform-fee/route.ts) |
 | `/api/admin/profile` | PATCH | [`/admin/profile/route.ts`](../src/app/api/admin/profile/route.ts) |
 | `/api/admin/profile/avatar` | POST DELETE | [`/admin/profile/avatar/route.ts`](../src/app/api/admin/profile/avatar/route.ts) |
+| `/api/admin/profile/google` | PATCH | [`/admin/profile/google/route.ts`](../src/app/api/admin/profile/google/route.ts) |
 | `/api/admin/profile/password` | PATCH | [`/admin/profile/password/route.ts`](../src/app/api/admin/profile/password/route.ts) |
 | `/api/admin/profile/sessions` | POST | [`/admin/profile/sessions/route.ts`](../src/app/api/admin/profile/sessions/route.ts) |
 | `/api/admin/promos` | POST | [`/admin/promos/route.ts`](../src/app/api/admin/promos/route.ts) |
@@ -119,6 +120,8 @@ The route, the server component behind it, and the client components beside it.
 | `/api/admin/team/[id]` | PATCH DELETE | [`/admin/team/[id]/route.ts`](../src/app/api/admin/team/[id]/route.ts) |
 | `/api/admin/team/[id]/invite` | POST | [`/admin/team/[id]/invite/route.ts`](../src/app/api/admin/team/[id]/invite/route.ts) |
 | `/api/auth/forgot-password` | POST | [`/auth/forgot-password/route.ts`](../src/app/api/auth/forgot-password/route.ts) |
+| `/api/auth/google` | GET | [`/auth/google/route.ts`](../src/app/api/auth/google/route.ts) |
+| `/api/auth/google/callback` | GET | [`/auth/google/callback/route.ts`](../src/app/api/auth/google/callback/route.ts) |
 | `/api/auth/invite/[token]` | POST | [`/auth/invite/[token]/route.ts`](../src/app/api/auth/invite/[token]/route.ts) |
 | `/api/auth/login` | POST | [`/auth/login/route.ts`](../src/app/api/auth/login/route.ts) |
 | `/api/auth/logout` | POST | [`/auth/logout/route.ts`](../src/app/api/auth/logout/route.ts) |
@@ -185,6 +188,7 @@ the file itself.
 | [`follow-up.ts`](../src/lib/follow-up.ts) | Following up an unpaid checkout (UNPAID_FOLLOWUP_PLAN.md Batch 1): what a staff member records after trying to reach the runner, and how the latest… |
 | [`free-checkout.ts`](../src/lib/free-checkout.ts) | The ₱0 order: when one is real, and what it is written as (`PACER_DISCOUNT_PLAN.md` Batch 2). |
 | [`gender-division.ts`](../src/lib/gender-division.ts) | A timing sheet's gender as the division a runner reads: "M" and "male" are "Male", "F" and "female" are "Female", and anything else is passed throu… |
+| [`google-oauth.ts`](../src/lib/google-oauth.ts) | "Continue with Google": proving who a person is through Google, for staff and client viewers (LOGIN_UX_PLAN.md Batch 3). |
 | [`inclusion-icon.ts`](../src/lib/inclusion-icon.ts) | Which icon stands for a line of "What's Included". |
 | [`inclusions.ts`](../src/lib/inclusions.ts) | What a category or package gets you, as a list. |
 | [`jwt.ts`](../src/lib/jwt.ts) | — |
@@ -230,6 +234,8 @@ the file itself.
 | [`settlement-store.ts`](../src/lib/settlement-store.ts) | Reading settlements out of the database (ADMIN_MERGE_PLAN.md, Batch 6). |
 | [`settlement.ts`](../src/lib/settlement.ts) | What Run As One owes the organizer of a race, and what it has paid (ADMIN_MERGE_PLAN.md, Batch 6). |
 | [`shirt-size.ts`](../src/lib/shirt-size.ts) | The size chart, whether a category needs a size at all, which garments it hands out, and the 4XL-and-up upcharge. |
+| [`sign-in-errors.ts`](../src/lib/sign-in-errors.ts) | Every sentence a refused sign-in can show, keyed by a short code. |
+| [`sign-in.ts`](../src/lib/sign-in.ts) | What happens once a person has proved who they are — by a password (`api/auth/login`) or by Google (`api/auth/google/callback`). |
 | [`signed-in-user.ts`](../src/lib/signed-in-user.ts) | Who is signed into the admin, as the sidebar needs to show them. |
 | [`site-contact.ts`](../src/lib/site-contact.ts) | Who Run As One is, and how a runner reaches it. |
 | [`site-settings.ts`](../src/lib/site-settings.ts) | The saved site-wide settings (server-only; reads the `SiteSettings` row). |
@@ -261,7 +267,7 @@ when a task touches one, split it before editing rather than after.
 | 677 | [`src/app/api/admin/events/[id]/route.ts`](../src/app/api/admin/events/[id]/route.ts) |
 | 663 | [`src/app/admin/activity/ActivityClient.tsx`](../src/app/admin/activity/ActivityClient.tsx) |
 | 663 | [`src/lib/pending-expiry.ts`](../src/lib/pending-expiry.ts) |
-| 656 | [`src/lib/activity.ts`](../src/lib/activity.ts) |
+| 660 | [`src/lib/activity.ts`](../src/lib/activity.ts) |
 | 632 | [`src/app/api/checkout/route.ts`](../src/app/api/checkout/route.ts) |
 | 614 | [`src/app/admin/feedback/FeedbackClient.tsx`](../src/app/admin/feedback/FeedbackClient.tsx) |
 | 578 | [`src/lib/email-document.ts`](../src/lib/email-document.ts) |

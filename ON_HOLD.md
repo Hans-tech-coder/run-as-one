@@ -30,7 +30,10 @@ to the local-dev database; additive, so the old code ignores it) and
 a result corrected by hand, `RESULTS_ROW_ACTIONS_PLAN.md` Batch 3; applied to
 the local-dev database; additive) and `20261011083751_password_reset` (one new
 table, `PasswordReset`, the forgot-password links, `LOGIN_UX_PLAN.md` Batch 2;
-applied to the local-dev database; additive). Run
+applied to the local-dev database; additive) and
+`20261011120000_staff_google_sub` (one nullable unique column,
+`StaffAccount.googleSub`, Google sign-in, `LOGIN_UX_PLAN.md` Batch 3; applied
+to the local-dev database; additive). Run
 `npx prisma migrate deploy` with `DIRECT_URL` on the production endpoint
 **before** the new code goes live: the code reads the column, and the old code
 ignores it, so migrating first is safe in both directions.
@@ -80,12 +83,11 @@ put it on hold with "owner's call, revisit only when asked".*
 - Needs a migration for the TOTP secret and the recovery codes. Keep it small,
   because the database is on Neon's free 0.5 GB tier.
 
-## 3. Google sign-in and the sign-in retention sweep (optional)
+## 3. The sign-in retention sweep (optional)
 
-*Source: `STAFF_ACCESS_PLAN.md`, Batch 5.*
+*Source: `STAFF_ACCESS_PLAN.md`, Batch 5. Its Google sign-in part landed in
+`LOGIN_UX_PLAN.md` Batch 3.*
 
-- **Google sign-in**, bound to an invited account's verified email. Nobody signs
-  up through Google. It only signs in an account that already exists.
 - **Retention sweep**: a scheduled job, like the ones in `vercel.json`, that
   trims old sign-in and audit rows. **The audit log is append-only**, so decide
   with the owner what may be swept before building this.

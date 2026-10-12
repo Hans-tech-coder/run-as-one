@@ -3,6 +3,7 @@ import { verifyPassword, verifyNoPassword } from '@/lib/auth';
 import { normalizeAccountEmail } from '@/lib/text-case';
 import { findAccountByEmail } from '@/lib/actor';
 import { completeSignIn, logSignInFailure, signInSubject } from '@/lib/sign-in';
+import { SIGN_IN_ERRORS } from '@/lib/sign-in-errors';
 import { LOGIN_ACCOUNT_RULE, LOGIN_RULE, allowRequest, callerKey } from '@/lib/rate-limit';
 
 /**
@@ -35,10 +36,7 @@ const INVALID = () => NextResponse.json({ error: 'Invalid credentials' }, { stat
 // Said plainly — the sign-in page shows `error` as it stands. The same
 // sentence for both buckets, so it does not say whether the address exists.
 const THROTTLED = () =>
-  NextResponse.json(
-    { error: 'Too many sign-in attempts. Wait a minute, then try again.' },
-    { status: 429 }
-  );
+  NextResponse.json({ error: SIGN_IN_ERRORS.throttled }, { status: 429 });
 
 export async function POST(request: Request) {
   if (!allowRequest('login', callerKey(request), LOGIN_RULE)) {

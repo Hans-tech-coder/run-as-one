@@ -7,18 +7,31 @@ import { RunAsOneLogo } from '@/components/RunAsOneLogo';
 import BusyLabel from '@/components/ui/BusyLabel';
 import AuthHomeLink from '../AuthHomeLink';
 import PasswordField from '../PasswordField';
+import GoogleSignInButton from './GoogleSignInButton';
 
 /**
  * The sign-in form. `page.tsx` is the server half: it sends a person who is
  * already signed in on to the dashboard, and hands this form the page to
  * return to, already checked by `safeNextPath` (lib/next-path.ts), and
- * whether the person just reset their password (the banner).
+ * whether the person just reset their password (the banner). `initialError`
+ * is a refused Google sign-in, already turned from its `?error=` code into
+ * its sentence; `googleEnabled` is false until the OAuth client is set up.
  */
-export default function LoginClient({ next, passwordReset = false }: { next: string; passwordReset?: boolean }) {
+export default function LoginClient({
+  next,
+  passwordReset = false,
+  initialError = null,
+  googleEnabled = false,
+}: {
+  next: string;
+  passwordReset?: boolean;
+  initialError?: string | null;
+  googleEnabled?: boolean;
+}) {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [error, setError] = useState(initialError ?? '');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -83,6 +96,13 @@ export default function LoginClient({ next, passwordReset = false }: { next: str
             <div className="auth-message auth-success" role="status">
               Password updated. Sign in with your new password.
             </div>
+          ) : null}
+
+          {googleEnabled ? (
+            <>
+              <GoogleSignInButton next={next} />
+              <div className="auth-divider" aria-hidden="true">or</div>
+            </>
           ) : null}
 
           {/* No `name` on either box, on purpose: a press of Sign In before the

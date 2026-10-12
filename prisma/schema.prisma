@@ -838,6 +838,13 @@ model StaffAccount {
   /// The person's profile photo, a public blob URL (avatars/ in the public
   /// store), set from /admin/settings. Null shows the name's initial instead.
   avatarUrl         String?
+  /// Google's `sub` for the Google account linked to this one, written on the
+  /// first "Continue with Google" whose verified email matches (lib/google-oauth.ts,
+  /// LOGIN_UX_PLAN.md Batch 3). Once set, sign-in finds the account by it, so
+  /// changing the email here later does not break Google sign-in. Null: never
+  /// linked, or unlinked from Settings. Not on Organizer — the owner signs in
+  /// with a password only.
+  googleSub         String?           @unique
   /// "INVITED" | "ACTIVE" | "SUSPENDED"
   status            String            @default("INVITED")
   /// Base32 TOTP secret, encrypted at rest. Null means 2FA is not set up.

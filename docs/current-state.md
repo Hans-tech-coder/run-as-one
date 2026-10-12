@@ -29,6 +29,19 @@ a "password changed" email follows. Every address gets the same answer
 (§7). Migration `20261011083751_password_reset` (one small table), applied to
 `local-dev` only.
 
+**Login convenience, Batch 3 — Google sign-in (2026-10-11, on `dev`, not
+released; `LOGIN_UX_PLAN.md`).** *Continue with Google* on the sign-in page
+signs in staff and client viewers whose account already exists, linking the
+Google account on first use (`StaffAccount.googleSub`); the owner keeps
+password-only sign-in (D5). Settings › Security shows the link and *Unlink
+Google*. Both doors share `lib/sign-in.ts`. **The owner asked for this on
+2026-10-11**, reversing the "no SSO" call of `STAFF_ACCESS_PLAN.md`. The
+button stays hidden until `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are
+set (they are, in the local `.env`, as of 2026-10-12); the round trip through
+Google was checked on localhost with a real client viewer's Gmail.
+Migration `20261011120000_staff_google_sub` (one nullable column), applied to
+`local-dev` only.
+
 **Results row actions, all 5 batches (2026-10-11, on `dev`, not released;
 `RESULTS_ROW_ACTIONS_PLAN.md`).** Batch 1 (`9d842c3`) split the workspace's
 results table and moved the ranking into `results-ranking.ts`. **Batch 2
@@ -479,7 +492,8 @@ the buttons its routes allow. No migration. **Batch 4 (TOTP) is next**, then the
 optional extras. **Read the plan before touching admin auth, the `Organizer`
 model, or any `/api/admin/**` route's ownership check** — its "Batch 1" notes
 record the calls made in the batch, and the file records which decisions are
-closed (no unified account table, no SSO).
+closed (no unified account table; "no SSO" was reversed by the owner on
+2026-10-11 — Google sign-in landed in `LOGIN_UX_PLAN.md` Batch 3).
 
 **`SUPERADMIN_APPLICATIONS_PLAN.md` is deleted** (`ADMIN_MERGE_PLAN.md` Batch
 3). Its four landed batches built the application panel, the `REJECTED` status

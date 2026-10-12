@@ -289,6 +289,23 @@
   sign in on `/admin/login?reset=1`, so there stays one way in for 2FA to sit
   on later. Both pages are public and `noindex`; the reset page also sets
   `referrer: no-referrer`, since its token is in the address.
+- **Google signs in to an existing staff or client-viewer account, never
+  creates one, and never signs in the owner** (`LOGIN_UX_PLAN.md` Batch 3,
+  `lib/google-oauth.ts`). An account is found by the Google `sub` linked to it
+  or, the first time, by an email Google marks `email_verified`; an account
+  already linked to a different `sub` is refused, and so is an invitation not
+  yet accepted (it has no password to fall back on). The owner's address is
+  answered like an address with no account (D5). The flow carries `state`
+  (matched against an httpOnly cookie scoped to the callback, 10 minutes,
+  deleted on first use), PKCE S256 and a `nonce` checked inside the ID token,
+  which is verified against Google's keys for issuer, audience and expiry.
+  After the proof, `completeSignIn` (`lib/sign-in.ts`) applies the password
+  route's own rules — suspension, active membership, archived client — so
+  Google cannot let in anybody a password would not. The callback is
+  throttled like sign-in, refusals reach the page only as a code from
+  `lib/sign-in-errors.ts`, and the trail rows say `method: 'google'`. The link
+  is written only after a sign-in passes (`auth.google_linked`); unlinking
+  from Settings needs the current password (`auth.google_unlinked`).
 - **An account is found by a lowercased email, and written as one.** `login`,
   `register` and `admin/profile` all run the address through
   `normalizeAccountEmail` (§5). The failure this prevents is quiet and reads

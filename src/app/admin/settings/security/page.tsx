@@ -5,6 +5,8 @@ import { formatEventInstant } from '@/lib/event-schedule';
 import { SITE_NAME } from '@/lib/site-contact';
 import { loadOwnAccount } from '../account';
 import { PasswordPanel, SignInActivityPanel } from '../SettingsPanels';
+import GooglePanel from '../GooglePanel';
+import { googleSignInConfigured } from '@/lib/google-oauth';
 import DashboardHeader from '@/app/admin/DashboardHeader';
 
 export const metadata: Metadata = {
@@ -13,7 +15,9 @@ export const metadata: Metadata = {
 
 /**
  * Settings › **Security**, for everyone: **Password** (a change signs out
- * every other device), then **Sign-in Activity** — the last sign-in
+ * every other device), then **Google Sign-in** for staff and client viewers
+ * (linked or not, and *Unlink*; shown once Google sign-in is set up, or while
+ * a link remains), then **Sign-in Activity** — the last sign-in
  * (`lastLoginAt`, on both account tables) and *Sign out other devices*.
  */
 export default async function SecuritySettingsPage() {
@@ -27,6 +31,9 @@ export default async function SecuritySettingsPage() {
       <div className="admin-content max-w-4xl mx-auto w-full">
         <div className="settings-stack">
           <PasswordPanel />
+          {actor.kind === 'STAFF' && (account.googleLinked || googleSignInConfigured()) ? (
+            <GooglePanel linked={account.googleLinked} email={account.email} />
+          ) : null}
           <SignInActivityPanel
             lastSignIn={account.lastLoginAt ? formatEventInstant(account.lastLoginAt) : null}
           />

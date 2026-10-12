@@ -163,6 +163,7 @@ is not there and fails.
 | `PROOFS_BLOB_READ_WRITE_TOKEN` | **Private** blob store: payment receipts |
 | `PAYMONGO_SECRET_KEY`, `NEXT_PUBLIC_PAYMONGO_PUBLIC_KEY`, `PAYMONGO_WEBHOOK_SECRET` | PayMongo |
 | `RESEND_API_KEY` | Resend — sends every email in the app (registration emails, team and client invitations) from the **admin email** set at `/admin/settings` when it is on `@runasone.ph`, otherwise from `info@runasone.ph` with the admin email as reply-to (the key is **send-only**, so the app cannot ask Resend which domains are verified — see `EMAIL_SENDING_DOMAIN` in `site-contact.ts`). Unset in dev just skips the send and reports it as not sent (see `lib/email.ts`). **Set in the local `.env` too, so an invitation sent on localhost reaches the real inbox** |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Google OAuth client for **Continue with Google** on `/admin/login` (`lib/google-oauth.ts`). Its redirect URIs must list `<origin>/api/auth/google/callback` for production, any preview used, and `http://localhost:3000`. **Unset hides the button**, so production stays password-only until they are set |
 | `CRON_SECRET` | Guards `/api/cron/expire-pending`, the daily abandoned-checkout sweep. Vercel Cron sends it as `Authorization: Bearer …`; **unset, the route refuses to run rather than running unguarded** |
 
 ### Databases: production and development are separate Neon branches

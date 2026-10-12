@@ -57,6 +57,10 @@ export const AUDIT_ACTIONS = [
   // asked for, and a password set through one.
   'auth.password_reset_requested',
   'auth.password_reset',
+  // "Continue with Google" (LOGIN_UX_PLAN.md Batch 3): the first sign-in that
+  // links a Google account, and an unlink from Settings.
+  'auth.google_linked',
+  'auth.google_unlinked',
   // Retired with the approve / reject screens (ADMIN_MERGE_PLAN.md, Batch 5);
   // kept so decisions recorded before then still carry a label.
   'organizer.approved',

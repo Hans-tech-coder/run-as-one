@@ -382,4 +382,12 @@ shape:
   rest (keeping itself, so a second press reads "used"), so the table holds
   about one row per person who ever asked. Migration
   `20261011083751_password_reset`, additive (one new table).
+- **`googleSub`** on **StaffAccount** — Google's `sub` for the Google account
+  linked to it (`LOGIN_UX_PLAN.md` Batch 3, `lib/google-oauth.ts`), unique and
+  nullable. Written on the first "Continue with Google" whose verified email
+  matches the account; from then on Google sign-in finds the account by it,
+  so a later email change does not break it. Cleared by *Unlink Google* in
+  Settings. **Not on Organizer** — the owner signs in with a password only
+  (D5). Migration `20261011120000_staff_google_sub`, additive (one nullable
+  text column and its unique index).
 

@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation';
 import { getActor } from '@/lib/actor';
 import { safeNextPath } from '@/lib/next-path';
+import { signInErrorMessage } from '@/lib/sign-in-errors';
+import { googleSignInConfigured } from '@/lib/google-oauth';
 import LoginClient from './LoginClient';
 
 import '../Auth.css';
@@ -18,6 +20,11 @@ import '../Auth.css';
  *
  * `?reset=1` is where a password reset lands (lib/password-reset.ts, D3 of
  * LOGIN_UX_PLAN.md): the form, with a "Password updated" banner.
+ *
+ * `?error=<code>` is where a refused Google sign-in lands (Batch 3). Only a
+ * code in lib/sign-in-errors.ts shows anything, so a link cannot make this
+ * page say words of its own. The Google button is shown only once
+ * GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are set.
  */
 export default async function AdminLoginPage({
   searchParams,
@@ -31,5 +38,12 @@ export default async function AdminLoginPage({
     redirect(next);
   }
 
-  return <LoginClient next={next} passwordReset={params.reset === '1'} />;
+  return (
+    <LoginClient
+      next={next}
+      passwordReset={params.reset === '1'}
+      initialError={signInErrorMessage(params.error)}
+      googleEnabled={googleSignInConfigured()}
+    />
+  );
 }

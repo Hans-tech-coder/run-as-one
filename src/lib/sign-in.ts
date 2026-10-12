@@ -30,6 +30,7 @@ import {
 } from './actor';
 import { recordAudit, type AuditActor } from './audit';
 import { RUN_AS_ONE_ORGANIZER_ID, organizerOwnerCanSignIn } from './organizer-status';
+import { SIGN_IN_ERRORS, type SignInErrorCode } from './sign-in-errors';
 
 export type SignInMethod = 'password' | 'google';
 
@@ -57,7 +58,14 @@ export type SignInOutcome =
 
 export type SignInResult =
   | { ok: true; role: 'OWNER' | 'STAFF' }
-  | { ok: false; status: number; error: string };
+  | { ok: false; status: number; code: SignInErrorCode; error: string };
+
+const refused = (code: SignInErrorCode): SignInResult => ({
+  ok: false,
+  status: 403,
+  code,
+  error: SIGN_IN_ERRORS[code],
+});
 
 /**
  * The account behind an address, ready to be signed in to — or null for an
@@ -148,7 +156,8 @@ export async function logSignInFailure(
 
 /**
  * Sign in to an account whose proof has already been checked: refuse it with
- * the sentence the sign-in page shows, or record it and set the cookie.
+ * the code and sentence the sign-in page shows (lib/sign-in-errors.ts), or
+ * record it and set the cookie.
  */
 export async function completeSignIn(
   subject: SignInSubject,
@@ -168,7 +177,7 @@ export async function completeSignIn(
     // is refused rather than let in.
     if (!organizerOwnerCanSignIn(organizer)) {
       await logSignInFailure(subject, 'NOT_APPROVED', method);
-      return { ok: false, status: 403, error: 'This account is not active. Please contact support.' };
+      return refused('not_approved');
     }
 
     await db.$transaction(async tx => {
@@ -188,11 +197,7 @@ export async function completeSignIn(
 
   if (staff.status === 'SUSPENDED') {
     await logSignInFailure(subject, 'SUSPENDED', method);
-    return {
-      ok: false,
-      status: 403,
-      error: 'Your account is suspended. Please contact the organizer you work with.',
-    };
+    return refused('suspended');
   }
 
   if (!membership || !who) {
@@ -200,11 +205,7 @@ export async function completeSignIn(
     // A client's own sign-in whose client was archived (ADMIN_MERGE_PLAN.md,
     // Batch 4). It has no organizer it works for, so the team's sentence
     // would send it to ask somebody who does not exist.
-    const error =
-      acceptedMembership?.role === 'VIEWER'
-        ? "Your organization's sign-in is not active right now. Please contact Run As One."
-        : 'Your account is not part of an active organizer. Please contact the organizer you work with.';
-    return { ok: false, status: 403, error };
+    return refused(acceptedMembership?.role === 'VIEWER' ? 'client_inactive' : 'no_active_organizer');
   }
 
   await db.$transaction(async tx => {
