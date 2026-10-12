@@ -182,7 +182,7 @@ export async function getActor(): Promise<Actor | null> {
 }
 
 /** Whether a token issued at `iat` (seconds; null on a very old token) predates `validFrom`. */
-function issuedBefore(iat: number | null, validFrom: Date): boolean {
+export function issuedBefore(iat: number | null, validFrom: Date): boolean {
   return iat === null || iat * 1000 < validFrom.getTime();
 }
 

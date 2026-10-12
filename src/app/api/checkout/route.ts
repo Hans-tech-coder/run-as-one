@@ -34,7 +34,7 @@ import {
   pauseNote,
   reserveSlots,
 } from '@/lib/registration-gate';
-import { deliverConfirmationEmail, deliverReceivedEmail } from '@/lib/email-delivery';
+import { deliverConfirmationEmail } from '@/lib/email-delivery';
 import { discardFailedCheckout } from '@/lib/pending-expiry';
 import {
   FREE_ORDER_COLUMNS,
@@ -358,11 +358,18 @@ export async function POST(request: Request) {
     // From the *stored* method, and only for one PayMongo actually charges a
     // fee on: the raw value would price "gcash" or "PAYMAYA" at no fee while
     // PayMongo still took its cut from the organizer.
-    if (
-      !free &&
-      storedPaymentMethod !== PAYMENT_METHODS.BANK_TRANSFER &&
-      !isPayMongoMethod(storedPaymentMethod)
-    ) {
+    //
+    // A bank transfer is never placed here: it goes through
+    // /api/checkout/manual, which requires the deposit slip. Taken here it
+    // held slots with no slip and, since bank transfers are never swept
+    // (lib/pending-expiry.ts), held them for good (Strix vuln-0003).
+    if (!free && storedPaymentMethod === PAYMENT_METHODS.BANK_TRANSFER) {
+      return NextResponse.json(
+        { error: 'A bank transfer is placed with its deposit slip. Go back and attach it to finish.' },
+        { status: 400 }
+      );
+    }
+    if (!free && !isPayMongoMethod(storedPaymentMethod)) {
       return NextResponse.json(
         {
           error: `Choose a payment method: ${[
@@ -520,16 +527,12 @@ export async function POST(request: Request) {
     //  - A free order is already PAID, so it gets the receipt: asking a pacer
     //    to wait for a payment that does not exist would be the one mail they
     //    cannot act on. See FREE_ORDER_EMAIL_NOTE in lib/free-checkout.ts.
-    //  - A bank transfer gets the "received" email, since it will sit PENDING
-    //    for days while an organizer checks the deposit slip.
     //  - An online payment gets nothing yet. It is not a registration until
     //    PayMongo confirms the money (owner's rule), so the webhook sends one
     //    receipt carrying every submitted detail — and a checkout that errors
     //    or is abandoned never emails the runner at all.
     if (free) {
       await deliverConfirmationEmail(registration);
-    } else if (storedPaymentMethod === PAYMENT_METHODS.BANK_TRANSFER) {
-      await deliverReceivedEmail(registration);
     } else {
       unconfirmedOnlineOrderId = registration.id;
     }
@@ -544,12 +547,6 @@ export async function POST(request: Request) {
     // way of reading a success.
     if (free) {
       return NextResponse.json({ checkout_url: finalSuccessUrl });
-    }
-
-    if (storedPaymentMethod === PAYMENT_METHODS.BANK_TRANSFER) {
-      return NextResponse.json({
-        checkout_url: finalSuccessUrl
-      });
     }
 
     // Checked above, and a free order has already returned — so from here on

@@ -46,14 +46,18 @@ export type PendingTwoFactor = {
   tries: number;
   /** Seconds since the epoch, kept across re-signs. */
   exp: number;
+  /** When the first step passed, in seconds, kept across re-signs: a sign-in
+   *  begun before `sessionsValidFrom` (a password reset, "Sign out other
+   *  devices") is refused by the code route (Strix vuln-0001). */
+  iat: number;
 };
 
 async function writeCookie(pending: PendingTwoFactor) {
-  const { id, exp, kind, ...claims } = pending;
+  const { id, exp, iat, kind, ...claims } = pending;
   const token = await new SignJWT({ purpose: PURPOSE, account: kind, ...claims })
     .setProtectedHeader({ alg: 'HS256' })
     .setSubject(id)
-    .setIssuedAt()
+    .setIssuedAt(iat)
     .setExpirationTime(exp)
     .sign(SECRET_KEY);
 
@@ -69,9 +73,10 @@ async function writeCookie(pending: PendingTwoFactor) {
 
 /** Hold the sign-in at its second step. */
 export async function startPendingTwoFactor(
-  pending: Omit<PendingTwoFactor, 'tries' | 'exp'>,
+  pending: Omit<PendingTwoFactor, 'tries' | 'exp' | 'iat'>,
 ): Promise<void> {
-  await writeCookie({ ...pending, tries: 0, exp: Math.floor(Date.now() / 1000) + MAX_AGE_SECONDS });
+  const now = Math.floor(Date.now() / 1000);
+  await writeCookie({ ...pending, tries: 0, iat: now, exp: now + MAX_AGE_SECONDS });
 }
 
 /** The pending sign-in this browser holds, or null for none, expired, forged or foreign. */
@@ -84,6 +89,7 @@ export async function readPendingTwoFactor(): Promise<PendingTwoFactor | null> {
     if (p.purpose !== PURPOSE) return null;
     if (p.account !== 'OWNER' && p.account !== 'STAFF') return null;
     if (typeof p.sub !== 'string' || !p.sub || typeof p.exp !== 'number') return null;
+    if (typeof p.iat !== 'number') return null;
     if (p.method !== 'password' && p.method !== 'google') return null;
     return {
       kind: p.account,
@@ -94,6 +100,7 @@ export async function readPendingTwoFactor(): Promise<PendingTwoFactor | null> {
       linkSub: typeof p.linkSub === 'string' ? p.linkSub : undefined,
       tries: typeof p.tries === 'number' ? p.tries : PENDING_MAX_TRIES,
       exp: p.exp,
+      iat: p.iat,
     };
   } catch {
     return null;

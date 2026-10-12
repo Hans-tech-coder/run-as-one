@@ -4,6 +4,7 @@ import { can, getActor } from '@/lib/actor';
 import { recordAudit } from '@/lib/audit';
 import { upperCaseForStorage } from '@/lib/text-case';
 import { parseTimeToSeconds, rankResults } from '@/lib/results-ranking';
+import { isResultStatus } from '@/lib/result-status';
 
 export async function POST(
   req: Request,
@@ -115,7 +116,9 @@ export async function POST(
           overallRank: 0,
           genderRank: 0,
           categoryRank: 0,
-          status: r.status || 'FINISHED'
+          // Only a status lib/result-status.ts knows; anything else, or none,
+          // is FINISHED (Strix vuln-0002).
+          status: isResultStatus(r.status) ? r.status : 'FINISHED'
         });
       }
     });

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import db from '@/lib/db';
+import { issuedBefore } from '@/lib/actor';
 import { recordAudit } from '@/lib/audit';
 import { linkGoogle } from '@/lib/google-oauth';
 import { checkSignIn, finishSignIn, signInSubject } from '@/lib/sign-in';
@@ -83,6 +84,16 @@ export async function POST(request: Request) {
     // Turned off or reset by an admin since the password was typed: the
     // pending sign-in no longer matches the account, so it starts over.
     if (!twoFactorOn(fieldsOf(account))) {
+      await clearPendingTwoFactor();
+      return backToSignIn('two_factor_expired', 401);
+    }
+
+    // Begun before every session was ended (a password reset, "Sign out other
+    // devices"): the first step it proved no longer counts, so it starts over
+    // with the new password (Strix vuln-0001).
+    const validFrom =
+      account.kind === 'ORGANIZER' ? account.organizer.sessionsValidFrom : account.staff.sessionsValidFrom;
+    if (validFrom && issuedBefore(pending.iat, validFrom)) {
       await clearPendingTwoFactor();
       return backToSignIn('two_factor_expired', 401);
     }
