@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-44 pages · 69 API routes · 106 modules in `src/lib` · 500 files · 91,661 lines
+44 pages · 69 API routes · 106 modules in `src/lib` · 500 files · 91,674 lines
 
 ---
 
@@ -283,7 +283,7 @@ when a task touches one, split it before editing rather than after.
 | 693 | [`src/app/admin/AdminDatePicker.tsx`](../src/app/admin/AdminDatePicker.tsx) |
 | 674 | [`src/lib/activity.ts`](../src/lib/activity.ts) |
 | 663 | [`src/app/admin/activity/ActivityClient.tsx`](../src/app/admin/activity/ActivityClient.tsx) |
-| 634 | [`src/app/api/checkout/route.ts`](../src/app/api/checkout/route.ts) |
+| 638 | [`src/app/api/checkout/route.ts`](../src/app/api/checkout/route.ts) |
 | 614 | [`src/app/admin/feedback/FeedbackClient.tsx`](../src/app/admin/feedback/FeedbackClient.tsx) |
 | 581 | [`src/app/api/checkout/manual/route.ts`](../src/app/api/checkout/manual/route.ts) |
 | 578 | [`src/lib/email-document.ts`](../src/lib/email-document.ts) |

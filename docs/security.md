@@ -211,7 +211,13 @@
   from the request origin and the event's slug, as `/api/pay/[token]` already
   did: `/events/[slug]/register?success=true&orderRef=…` and
   `/events/[slug]/register?orderRef=…&cancel=true`. The wizard no longer sends
-  them, and the route ignores them if an old tab does.
+  them, and the route ignores them if an old tab does. The origin is the
+  **event's own site** (`eventOrigin(event, request.url)`, `lib/site-host.ts`,
+  `CLIENT_SUBDOMAIN_PLAN.md` Batch 3), never the Host header as sent: the
+  request only picks the root outside production, and in production it is
+  `SITE_URL` or a subdomain of it, so a forged Host cannot pick the return
+  site either. `/api/pay/[token]` and the staff payment link
+  (`lib/payment-link.ts`) build theirs the same way.
 - **Server-side gates, not just UI ones.** Consent (`consentGiven !== true`),
   the finished-race check (`hasFinished`), the organizer's registration hold,
   the per-category slot limits and **every promo condition** are all enforced in

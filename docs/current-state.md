@@ -15,6 +15,21 @@ offers **QR Ph only** (`OFFERED_PAYMONGO_METHODS` in `lib/free-checkout.ts`)
 until it is. Where an entry below says something is "not released" or
 "production is N migrations behind", it predates this release.
 
+**Client subdomains, Batch 3 (2026-10-13, on `dev`, not released;
+`CLIENT_SUBDOMAIN_PLAN.md`), payment and links on the event's site.**
+`api/checkout`'s return URLs, `api/pay/[token]`'s success and cancel URLs and
+the staff payment link (`issuePaymentLink`, now given the request URL rather
+than an origin) are built on `eventOrigin(event, request.url)`, so a client's
+runner pays and comes back on the client's subdomain. The payment-link email
+is the only registration email with a link. Checked: `eventOrigin` for main,
+client, other-client, no-client, archived, preview and production hosts; and
+on `local-dev` (owner's go-ahead): a bank transfer on `crc` and a PayMongo
+test order on `racecore` both returned to their subdomain with the
+`orderRef`, PayMongo's cancel came back there too, the staff link and the
+email's *Finish Payment* asked for on `localhost` pointed at `racecore`, and
+that link opened on `crc` still opened a page returning to `racecore`.
+Next: Batch 4, rollout (§6 DNS first).
+
 **Client subdomains, Batch 2 (2026-10-13, on `dev`, not released;
 `CLIENT_SUBDOMAIN_PLAN.md`), the subdomain site.** A client's subdomain now
 wears its branding and lists only its races (§6, "Hosts"): the root layout

@@ -9,6 +9,8 @@ import {
   resumePaymentUrl,
   type PayableState,
 } from '@/lib/resume-payment';
+import { eventOrigin } from '@/lib/site-host';
+import { EVENT_SITE_CLIENT } from '@/lib/site-client';
 
 /**
  * Handing a payment link to staff (UNPAID_FOLLOWUP_PLAN.md Batches 3 and 4):
@@ -29,6 +31,10 @@ import {
  * (`extendedHold`). Every later link, by any of the three ways, keeps that
  * hold and expires with it. The claim is conditional on `holdUntil` still
  * being null, so two staff members at once move it once.
+ *
+ * **The link is on the event's own site** (CLIENT_SUBDOMAIN_PLAN.md D10):
+ * a client's race gets `crc.runasone.ph/pay/…`, though staff ask for it on the
+ * main host. `requestUrl` only picks the root (lib/site-host.ts).
  *
  * What is recorded on the trail is the caller's to write, because only the
  * caller knows what became of the link: copied, emailed, or prepared to send
@@ -59,13 +65,13 @@ export type RefusedPaymentLink = { ok: false; status: number; error: string };
 export async function issuePaymentLink(
   id: string,
   actor: Actor,
-  origin: string,
+  requestUrl: string,
   now: Date = new Date(),
 ): Promise<IssuedPaymentLink | RefusedPaymentLink> {
   const registration = await prisma.registration.findUnique({
     where: { id },
     include: {
-      event: true,
+      event: { include: { client: EVENT_SITE_CLIENT } },
       // A runner removed from the order is not in the email, nor counted.
       runners: { where: { deletedAt: null }, include: { category: true } },
       _count: { select: { runners: { where: { deletedAt: { not: null } } } } },
@@ -116,7 +122,7 @@ export async function issuePaymentLink(
   return {
     ok: true,
     registration: { ...registration, holdUntil },
-    url: resumePaymentUrl(origin, token),
+    url: resumePaymentUrl(eventOrigin(registration.event, requestUrl), token),
     until,
     untilLabel: formatEventInstant(until),
     moved,

@@ -56,7 +56,7 @@ export async function POST(
     }
 
     const { id } = await params;
-    const link = await issuePaymentLink(id, actor, new URL(request.url).origin);
+    const link = await issuePaymentLink(id, actor, request.url);
     if (!link.ok) {
       return NextResponse.json({ error: link.error }, { status: link.status });
     }

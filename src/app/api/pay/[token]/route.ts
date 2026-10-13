@@ -40,6 +40,8 @@ import {
   retirePaymongoPage,
 } from '@/lib/paymongo-session';
 import { payableState, readResumePaymentToken } from '@/lib/resume-payment';
+import { eventOrigin } from '@/lib/site-host';
+import { EVENT_SITE_CLIENT } from '@/lib/site-client';
 
 export async function POST(
   request: Request,
@@ -62,7 +64,7 @@ export async function POST(
     const order = await prisma.registration.findUnique({
       where: { id: registrationId },
       include: {
-        event: { select: { title: true, slug: true, shirtSizeUpcharge: true } },
+        event: { select: { title: true, slug: true, shirtSizeUpcharge: true, client: EVENT_SITE_CLIENT } },
         runners: { where: { deletedAt: null }, orderBy: { runnerNo: 'asc' }, include: { category: true } },
         _count: { select: { runners: { where: { deletedAt: { not: null } } } } },
       },
@@ -105,8 +107,9 @@ export async function POST(
 
     // Step 4. The success page is the wizard's own, so a runner who pays here
     // lands where a runner paying at checkout does; cancelling comes back to
-    // this link.
-    const origin = new URL(request.url).origin;
+    // this link. Both on the event's own site (lib/site-host.ts), so a link
+    // opened on the wrong host still comes back to the right one.
+    const origin = eventOrigin(order.event, request.url);
     const page = await openPaymongoPage(secretKey, paymongoOrderFromRegistration(order), {
       successUrl: `${origin}/events/${order.event.slug}/register?success=true&orderRef=${order.orderRef}`,
       cancelUrl: `${origin}/pay/${token}`,

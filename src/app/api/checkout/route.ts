@@ -17,6 +17,8 @@ import {
   subtotalWithUpcharge,
 } from '@/lib/shirt-size';
 import { hasFinished } from '@/lib/event-schedule';
+import { eventOrigin } from '@/lib/site-host';
+import { EVENT_SITE_CLIENT } from '@/lib/site-client';
 import {
   participantBirthdateError,
   participantGuardianError,
@@ -180,7 +182,7 @@ export async function POST(request: Request) {
     // prices must not reach PayMongo, let alone leave a registration behind.
     const event = await prisma.event.findUnique({
       where: { id: eventId },
-      include: { categories: true }
+      include: { categories: true, client: EVENT_SITE_CLIENT }
     });
 
     if (!event) {
@@ -538,7 +540,9 @@ export async function POST(request: Request) {
     // Built here, never taken from the body: a free order hands the success
     // URL straight back as `checkout_url` for the wizard to open, so a URL the
     // caller chose would be an open redirect. Same shape as /api/pay/[token].
-    const origin = new URL(request.url).origin;
+    // On the event's own site (lib/site-host.ts), so a client's runner comes
+    // back to the client's subdomain whichever host the wizard posted from.
+    const origin = eventOrigin(event, request.url);
     const registerUrl = `${origin}/events/${event.slug}/register`;
     const finalSuccessUrl = `${registerUrl}?success=true&orderRef=${orderRef}`;
     const finalCancelUrl = `${registerUrl}?orderRef=${orderRef}&cancel=true`;
