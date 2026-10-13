@@ -871,7 +871,7 @@ Columns: Client (name, email), Contact, Applied, Events, Status, Actions. **A
 row opens the application** in `clients/ApplicationPanel.tsx` — the old
 organizer panel, same frame, keyboard and full-height sheet below `sm`, the
 organization / the person / what they are planning grouped as the form asked,
-labels from `organizer-application.ts`, a blank answer reading *Not given*, a
+labels from `organizer-vocabulary.ts`, a blank answer reading *Not given*, a
 pre-form row saying so in one sentence — whose *The decision* section is gone
 and whose **Sign-ins** section (shown once anybody was invited) lists each
 viewer with the team screen's own state badge (Active / Invited / Invite

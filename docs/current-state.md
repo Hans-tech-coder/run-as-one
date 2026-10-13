@@ -15,6 +15,19 @@ offers **QR Ph only** (`OFFERED_PAYMONGO_METHODS` in `lib/free-checkout.ts`)
 until it is. Where an entry below says something is "not released" or
 "production is N migrations behind", it predates this release.
 
+**Service inquiry, Batch 1 (2026-10-13, on `dev`, not released;
+`SERVICE_INQUIRY_PLAN.md`).** A split with no behavior change, so Batches 2–4
+land in small files. `/admin/register` is now a frame (`page.tsx`) over
+`apply-steps.ts` (the steps, their fields, the form's shape),
+`useApplicationForm.ts` (the per-step checks and the post), one component per
+step (`OrganizationStep`, `ContactStep`, `EventStep`), `ServicesQuestion` and
+`ThankYouPanel`. The four vocabularies, their copy, `servicesOf` and the label
+helpers moved from `lib/organizer-application.ts` to
+`lib/organizer-vocabulary.ts`; the limits and `readOrganizerApplication` stayed.
+Checked on `local-dev`: the same application sent before and after the split
+gave the same request body and the same `Client` row, and each step's markup
+was unchanged. No migration.
+
 **Checkout return URLs (2026-10-13, on `dev`, not released;
 `CLIENT_SUBDOMAIN_PLAN.md` Batch 0).** `POST /api/checkout` builds PayMongo's
 success and cancel URLs itself, from the request origin and the event's slug,

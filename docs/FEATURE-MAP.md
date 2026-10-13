@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-44 pages · 69 API routes · 102 modules in `src/lib` · 473 files · 89,398 lines
+44 pages · 69 API routes · 103 modules in `src/lib` · 482 files · 89,619 lines
 
 ---
 
@@ -41,7 +41,7 @@ The route, the server component behind it, and the client components beside it.
 | `/admin/invite/[token]` | [`/admin/invite/[token]/page.tsx`](../src/app/admin/invite/[token]/page.tsx) | `InviteAcceptClient.tsx` |
 | `/admin/login` | [`/admin/login/page.tsx`](../src/app/admin/login/page.tsx) | `GoogleSignInButton.tsx` `LoginClient.tsx` |
 | `/admin/marketing` | [`/admin/marketing/page.tsx`](../src/app/admin/marketing/page.tsx) | `PromoActionsMenu.tsx` `PromoCodesClient.tsx` |
-| `/admin/register` | [`/admin/register/page.tsx`](../src/app/admin/register/page.tsx) | — |
+| `/admin/register` | [`/admin/register/page.tsx`](../src/app/admin/register/page.tsx) | `apply-steps.ts` `ContactStep.tsx` `EventStep.tsx` `Optional.tsx` `OrganizationStep.tsx` `ServicesQuestion.tsx` `ThankYouPanel.tsx` `useApplicationForm.ts` |
 | `/admin/remittances` | [`/admin/remittances/page.tsx`](../src/app/admin/remittances/page.tsx) | `RemittancesClient.tsx` `SettlementBadge.tsx` |
 | `/admin/remittances/[eventId]` | [`/admin/remittances/[eventId]/page.tsx`](../src/app/admin/remittances/[eventId]/page.tsx) | `RecordRemittanceDialog.tsx` `SettlementClient.tsx` `VoidRemittanceDialog.tsx` |
 | `/admin/reset-password/[token]` | [`/admin/reset-password/[token]/page.tsx`](../src/app/admin/reset-password/[token]/page.tsx) | `ResetPasswordClient.tsx` |
@@ -210,6 +210,7 @@ the file itself.
 | [`order-size.ts`](../src/lib/order-size.ts) | **How many runners one order may carry.** Every runner on an order reserves a slot in their category the moment the order is written (`reserveSlots… |
 | [`organizer-application.ts`](../src/lib/organizer-application.ts) | What an organizer application is, and what the app will accept as one. |
 | [`organizer-status.ts`](../src/lib/organizer-status.ts) | Which `Organizer` row is Run As One, and whether it — and so its team — may be signed in to. |
+| [`organizer-vocabulary.ts`](../src/lib/organizer-vocabulary.ts) | The closed answers an organizer application chooses from, and what each is called. |
 | [`pacer-results.ts`](../src/lib/pacer-results.ts) | Which finishers on a race's results are its pacers, and the ranks once they are left out — a pacer runs to a set pace for the field, so they are ke… |
 | [`pacer-store.ts`](../src/lib/pacer-store.ts) | A race's pacers are its pacer codes plus the bibs tagged under Results (`RESULTS_ROW_ACTIONS_PLAN.md` Batch 2): a results-only race has no codes, s… |
 | [`pacer.ts`](../src/lib/pacer.ts) | What a pacer code is, and when the dashboard has to nag about it (`PACER_DISCOUNT_PLAN.md`). |
@@ -268,27 +269,25 @@ when a task touches one, split it before editing rather than after.
 | Lines | File |
 | --- | --- |
 | 2349 | [`src/app/admin/marketing/PromoCodesClient.tsx`](../src/app/admin/marketing/PromoCodesClient.tsx) |
-| 2233 | [`src/app/events/[slug]/register/RegistrationWizardClient.tsx`](../src/app/events/[slug]/register/RegistrationWizardClient.tsx) |
+| 2230 | [`src/app/events/[slug]/register/RegistrationWizardClient.tsx`](../src/app/events/[slug]/register/RegistrationWizardClient.tsx) |
 | 1945 | [`src/app/events/[slug]/register/BankTransferWizardClient.tsx`](../src/app/events/[slug]/register/BankTransferWizardClient.tsx) |
 | 1519 | [`src/lib/discount.ts`](../src/lib/discount.ts) |
 | 1179 | [`src/app/admin/settings/SettingsPanels.tsx`](../src/app/admin/settings/SettingsPanels.tsx) |
 | 1017 | [`src/app/admin/team/TeamClient.tsx`](../src/app/admin/team/TeamClient.tsx) |
-| 1015 | [`src/app/admin/register/page.tsx`](../src/app/admin/register/page.tsx) |
 | 785 | [`src/app/results/[slug]/full/FullResultsClient.tsx`](../src/app/results/[slug]/full/FullResultsClient.tsx) |
 | 709 | [`src/lib/pending-expiry.ts`](../src/lib/pending-expiry.ts) |
 | 696 | [`src/app/api/admin/events/[id]/route.ts`](../src/app/api/admin/events/[id]/route.ts) |
 | 693 | [`src/app/admin/AdminDatePicker.tsx`](../src/app/admin/AdminDatePicker.tsx) |
 | 672 | [`src/lib/activity.ts`](../src/lib/activity.ts) |
 | 663 | [`src/app/admin/activity/ActivityClient.tsx`](../src/app/admin/activity/ActivityClient.tsx) |
-| 631 | [`src/app/api/checkout/route.ts`](../src/app/api/checkout/route.ts) |
+| 634 | [`src/app/api/checkout/route.ts`](../src/app/api/checkout/route.ts) |
 | 614 | [`src/app/admin/feedback/FeedbackClient.tsx`](../src/app/admin/feedback/FeedbackClient.tsx) |
 | 581 | [`src/app/api/checkout/manual/route.ts`](../src/app/api/checkout/manual/route.ts) |
 | 580 | [`src/app/admin/clients/ClientsClient.tsx`](../src/app/admin/clients/ClientsClient.tsx) |
 | 578 | [`src/lib/email-document.ts`](../src/lib/email-document.ts) |
 | 550 | [`src/lib/registration-gate.ts`](../src/lib/registration-gate.ts) |
 | 548 | [`src/app/admin/NotificationsCenter.tsx`](../src/app/admin/NotificationsCenter.tsx) |
-| 546 | [`src/app/admin/events/[id]/registrants/RegistrantsTable.tsx`](../src/app/admin/events/[id]/registrants/RegistrantsTable.tsx) |
-| 546 | [`src/lib/organizer-application.ts`](../src/lib/organizer-application.ts) |
+| 543 | [`src/app/admin/events/[id]/registrants/RegistrantsTable.tsx`](../src/app/admin/events/[id]/registrants/RegistrantsTable.tsx) |
 | 539 | [`src/app/admin/events/[id]/registrants/RegistrantDetailModal.tsx`](../src/app/admin/events/[id]/registrants/RegistrantDetailModal.tsx) |
 | 526 | [`src/app/admin/DashboardShell.tsx`](../src/app/admin/DashboardShell.tsx) |
 | 509 | [`src/app/admin/communities/CommunitiesClient.tsx`](../src/app/admin/communities/CommunitiesClient.tsx) |

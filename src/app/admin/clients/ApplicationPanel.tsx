@@ -3,13 +3,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ExternalLink, FileText, Mail, Phone, ShieldOff, X } from 'lucide-react';
 import TwoStepChip from '../TwoStepChip';
+import { hasApplicationDetails } from '@/lib/organizer-application';
 import {
   expectedParticipantsLabel,
-  hasApplicationDetails,
   organizerExperienceLabel,
   organizerServiceLabel,
   organizerTypeLabel,
-} from '@/lib/organizer-application';
+} from '@/lib/organizer-vocabulary';
 import { countryFor, parseE164 } from '@/lib/phone';
 import { formatEventDay } from '@/lib/event-schedule';
 import { MEMBER_STATE_LABELS, MEMBER_STATE_TONES, memberState } from '@/lib/team';
@@ -30,7 +30,7 @@ import { MEMBER_STATE_LABELS, MEMBER_STATE_TONES, memberState } from '@/lib/team
  *
  * It is grouped the way the form asked — the organization, the person, what
  * they are planning — so staff read it in the order the applicant
- * wrote it. Every label comes from `lib/organizer-application.ts`, never the
+ * wrote it. Every label comes from `lib/organizer-vocabulary.ts`, never the
  * stored code: a person reads "Running Club or Community", not `RUNNING_CLUB`,
  * and a value written before an option was renamed still reads as itself.
  *
