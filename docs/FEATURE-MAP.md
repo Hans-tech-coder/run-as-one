@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-44 pages · 69 API routes · 103 modules in `src/lib` · 482 files · 89,619 lines
+44 pages · 69 API routes · 103 modules in `src/lib` · 482 files · 89,719 lines
 
 ---
 

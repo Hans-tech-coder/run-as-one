@@ -15,6 +15,27 @@ offers **QR Ph only** (`OFFERED_PAYMONGO_METHODS` in `lib/free-checkout.ts`)
 until it is. Where an entry below says something is "not released" or
 "production is N migrations behind", it predates this release.
 
+**Service inquiry, Batch 2 (2026-10-13, on `dev`, not released;
+`SERVICE_INQUIRY_PLAN.md`).** The services question offers every service Run
+As One sells, in three groups. **Online**: Online Registration (`REGISTRATION`,
+relabelled from "Registration System") and Results and E-Certificates.
+**Race day**, fulfilled through suppliers: Race Timing, Race Bib Production,
+Race Kit Fulfilment (`TIMING`, `BIB_PRODUCTION`, `KIT_FULFILLMENT`). Not Sure
+Yet still clears the others. **Coming soon**: Custom Website, Kit Claiming
+System, Email Blast, Chip Check (`COMING_SOON_SERVICES`; Chip Check is a scan
+station where runners see their details from their bib chip, moved here by the
+owner until it is offered),
+shown greyed with a tag and not tickable; `servicesOf` drops them like any
+unknown code, so the route never stores one. Old codes are unchanged, so
+stored applications read as before. The page title, subtitle, step blurb and
+thank-you panel still speak to a registration client: that is Batch 3.
+Checked on `local-dev`: Timing + Bibs (by hand and posted) stored as those two
+codes, Not Sure Yet plus others stored as `NOT_SURE`, Coming soon and unknown
+codes dropped (Coming soon alone is refused as "choose at least one"), 375px
+with no horizontal scroll. `/admin/clients` was not opened (no staff sign-in
+in the browser); its `organizerServiceLabel` was checked directly. Test rows
+`batch2-*@example.test` were left in `local-dev`. No migration.
+
 **Service inquiry, Batch 1 (2026-10-13, on `dev`, not released;
 `SERVICE_INQUIRY_PLAN.md`).** A split with no behavior change, so Batches 2–4
 land in small files. `/admin/register` is now a frame (`page.tsx`) over

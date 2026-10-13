@@ -722,12 +722,75 @@
 /* An answer that is not one option among several — "Not sure yet", which
    cannot share the question with a service line — takes the whole row rather
    than sitting in a column beside them, so it reads as the alternative to the
-   pair above it rather than as a third member of the set. The consent line
+   services above it rather than as one more of them. The consent line
    below the form is the same shape for the same reason: it is a statement,
    not a choice. */
 .apply-choice--wide,
 .apply-consent {
   grid-column: 1 / -1;
+}
+
+/* Ten services read as three short groups, not as a wall: each group has a
+   small heading and its own grid, and the gap between groups is wider than the
+   gap between cards, so the eye counts groups before it counts cards. */
+.apply-choice-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 1.125rem;
+}
+
+.apply-choice-group__label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-family: var(--font-body);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+/* A Coming soon service is on show, not on offer (SERVICE_INQUIRY_PLAN O1):
+   greyed, a dashed edge where an offered card has a solid one, no hover, and
+   tighter, so the group stays shorter than the two above it. */
+.apply-choice--soon {
+  cursor: default;
+  opacity: 0.6;
+  padding-block: 0.625rem;
+  border-style: dashed;
+  background: transparent;
+}
+
+@media (hover: hover) {
+  .apply-choice--soon:hover {
+    border-color: var(--dash-border);
+    background: transparent;
+  }
+}
+
+.apply-choice--soon .apply-choice__box {
+  border-style: dashed;
+}
+
+/* The tag sits after the name, and drops under it cleanly when a long name
+   leaves no room at 375px, rather than starting the next line indented. */
+.apply-choice--soon .apply-choice__label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+}
+
+.apply-choice__tag {
+  display: inline-block;
+  padding: 0.0625rem 0.4375rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
 }
 
 /* ── The summary a failed step shows ────────────────────────────────────
