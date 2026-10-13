@@ -334,7 +334,16 @@ shape:
   the rest `NEW`. Batch 5 dropped the Organizer copies. **Since Batch 3
   every application writes one of these and nothing else** (`auth/register`):
   no Organizer row, no password. `invitedAt` is stamped by each Send invite.
-  Tens of rows of short text; not a storage decision.
+  **Its own site** (`CLIENT_SUBDOMAIN_PLAN.md` Batch 1, migration
+  `20261013090000_client_site_branding`, all nullable): `subdomain` (unique,
+  lowercase DNS label checked by `subdomainError` in `lib/site-host.ts`; null =
+  no site), `logoUrl` and `heroImageUrl` (public-blob uploads under `clients/`
+  only), `heroHeadline`, `heroTagline`, `publicEmail` (the footer's address —
+  separate from the private `email`), `publicPhone` (E.164) and
+  `facebookUrl` / `instagramUrl` / `tiktokUrl` / `youtubeUrl` (the
+  `SOCIAL_CHANNELS` rule); `website` is reused. Edited by staff on
+  `/admin/clients` (`lib/client-branding.ts`). An `ARCHIVED` client's site is
+  down (`siteLabelOf`). Tens of rows of short text; not a storage decision.
 - **AuditLog** — the append-only trail: who (`actorKind`, `actorId`, and a
   **snapshotted** `actorName`/`actorEmail`), in which organizer and event, did
   what (`action`, a dotted verb from `AUDIT_ACTIONS`), to what (`entityType`,

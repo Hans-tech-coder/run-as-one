@@ -983,6 +983,27 @@ model Client {
   /// Send invite (Batch 3).
   invitedAt          DateTime?
   updatedAt          DateTime          @updatedAt
+  /// The client's own site, `<subdomain>.runasone.ph` (CLIENT_SUBDOMAIN_PLAN.md).
+  /// Lowercase label, checked by `subdomainError` (lib/site-host.ts). Null
+  /// means the client has no site. Everything below it is that site's branding,
+  /// edited by staff on /admin/clients (lib/client-branding.ts).
+  subdomain          String?           @unique
+  /// Public blob, `clients/` prefix.
+  logoUrl            String?
+  /// Public blob; the hero above the subdomain's /events list.
+  heroImageUrl       String?
+  heroHeadline       String?
+  heroTagline        String?
+  /// Shown in the subdomain's footer. Separate from `email`, the private
+  /// sign-in / application address.
+  publicEmail        String?
+  /// E.164 (lib/phone.ts).
+  publicPhone        String?
+  /// Same channels and rule as SiteSettings (SOCIAL_CHANNELS, lib/site-contact.ts).
+  facebookUrl        String?
+  instagramUrl       String?
+  tiktokUrl          String?
+  youtubeUrl         String?
   events             Event[]
   viewers            StaffMembership[]
 }

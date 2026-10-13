@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-44 pages · 69 API routes · 103 modules in `src/lib` · 490 files · 90,132 lines
+44 pages · 69 API routes · 106 modules in `src/lib` · 496 files · 91,181 lines
 
 ---
 
@@ -28,7 +28,7 @@ The route, the server component behind it, and the client components beside it.
 | `/admin/[...missing]` | [`/admin/[...missing]/page.tsx`](../src/app/admin/[...missing]/page.tsx) | — |
 | `/admin/activity` | [`/admin/activity/page.tsx`](../src/app/admin/activity/page.tsx) | `ActivityClient.tsx` |
 | `/admin/certificate-guide` | [`/admin/certificate-guide/page.tsx`](../src/app/admin/certificate-guide/page.tsx) | `GuideChecklist.tsx` `GuideDiagram.tsx` `GuideDocument.tsx` `GuideToc.tsx` |
-| `/admin/clients` | [`/admin/clients/page.tsx`](../src/app/admin/clients/page.tsx) | `application-rows.ts` `ApplicationAnswers.tsx` `ApplicationPanel.tsx` `ApplicationSection.tsx` `client-actions.tsx` `ClientsClient.tsx` `InviteDialog.tsx` `SignInsSection.tsx` `useApplicationDialog.ts` |
+| `/admin/clients` | [`/admin/clients/page.tsx`](../src/app/admin/clients/page.tsx) | `application-rows.ts` `ApplicationAnswers.tsx` `ApplicationPanel.tsx` `ApplicationSection.tsx` `BrandImageField.tsx` `client-actions.tsx` `ClientsClient.tsx` `InviteDialog.tsx` `SignInsSection.tsx` `SiteBrandingSection.tsx` `useApplicationDialog.ts` `useClientActions.ts` |
 | `/admin/communities` | [`/admin/communities/page.tsx`](../src/app/admin/communities/page.tsx) | `CommunitiesClient.tsx` |
 | `/admin/events` | [`/admin/events/page.tsx`](../src/app/admin/events/page.tsx) | `bank-account-draft.ts` `BankAccountsPanel.tsx` `BasicInfoPanel.tsx` `category-draft.ts` `ConsentWaiverField.tsx` `DeleteEventModal.tsx` `DescriptionEditor.tsx` `event-columns.tsx` `event-form-draft.ts` `event-not-found.ts` `event-row.ts` `EventActionsMenu.tsx` `EventClientField.tsx` `EventFormResultModals.tsx` `EventOptionsPanel.tsx` `EventPromotionsPanel.tsx` `EventProvinceField.tsx` `EventRowCells.tsx` `EventsTableClient.tsx` `HighlightsField.tsx` `HighlightsModal.tsx` `InclusionsField.tsx` `LogisticsPanel.tsx` `PosterField.tsx` `registration-opening.ts` `registration-state-badge.ts` `RegistrationFeesPanel.tsx` `RegistrationFormPicker.tsx` `RegistrationOpeningPicker.tsx` `RegistrationScheduleModal.tsx` `ResultsOnlyPanel.tsx` `useEventImageUpload.ts` `useEventRowActions.ts` |
 | `/admin/events/[id]/edit` | [`/admin/events/[id]/edit/page.tsx`](../src/app/admin/events/[id]/edit/page.tsx) | `event-edit-draft.ts` |
@@ -167,6 +167,7 @@ the file itself.
 | [`category-distance.ts`](../src/lib/category-distance.ts) | A category filter lists races shortest first: 1K, 3K, 5K, 10K, Half Marathon, 32K, Full Marathon. |
 | [`category-order.ts`](../src/lib/category-order.ts) | The order an event's categories are listed in, everywhere. |
 | [`certificate-settings.ts`](../src/lib/certificate-settings.ts) | What an event's certificate settings mean, and which of the two layouts an organizer's template is drawn in. |
+| [`client-branding.ts`](../src/lib/client-branding.ts) | What a client's own site may hold — subdomain, logo, hero image / headline (80) / tagline (160), public email and phone, socials. |
 | [`client-payout.ts`](../src/lib/client-payout.ts) | What a client viewer is shown about the money for one of its races (CLIENT_RACE_PAGE_PLAN.md, Batch 3, decision D1): **a payout summary and nothing… |
 | [`client-race-report.ts`](../src/lib/client-race-report.ts) | What a client viewer is shown about one of its races, on that race's own page (CLIENT_RACE_PAGE_PLAN.md, Batches 1–2): how full each category is, t… |
 | [`client-runners.ts`](../src/lib/client-runners.ts) | Who registered for one of a client viewer's races, and how to get each kit to them (CLIENT_RACE_PAGE_PLAN.md, Batch 4, decision D2 as revised by th… |
@@ -247,7 +248,9 @@ the file itself.
 | [`sign-in-errors.ts`](../src/lib/sign-in-errors.ts) | Every sentence a refused sign-in can show, keyed by a short code. |
 | [`sign-in.ts`](../src/lib/sign-in.ts) | What happens once a person has proved who they are — by a password (`api/auth/login`) or by Google (`api/auth/google/callback`). |
 | [`signed-in-user.ts`](../src/lib/signed-in-user.ts) | Who is signed into the admin, as the sidebar needs to show them. |
+| [`site-client.ts`](../src/lib/site-client.ts) | Which client a public request is for (server-only). |
 | [`site-contact.ts`](../src/lib/site-contact.ts) | Who Run As One is, and how a runner reaches it. |
+| [`site-host.ts`](../src/lib/site-host.ts) | Which host is which (`CLIENT_SUBDOMAIN_PLAN.md` Batch 1). |
 | [`site-settings.ts`](../src/lib/site-settings.ts) | The saved site-wide settings (server-only; reads the `SiteSettings` row). |
 | [`team-invite.ts`](../src/lib/team-invite.ts) | Invitation links: making one, finding the membership behind one, and sending it. |
 | [`team.ts`](../src/lib/team.ts) | The rules of an organizer's team: what state a member is in, and what makes an invitation or a change of access valid. |
@@ -278,7 +281,7 @@ when a task touches one, split it before editing rather than after.
 | 709 | [`src/lib/pending-expiry.ts`](../src/lib/pending-expiry.ts) |
 | 696 | [`src/app/api/admin/events/[id]/route.ts`](../src/app/api/admin/events/[id]/route.ts) |
 | 693 | [`src/app/admin/AdminDatePicker.tsx`](../src/app/admin/AdminDatePicker.tsx) |
-| 672 | [`src/lib/activity.ts`](../src/lib/activity.ts) |
+| 674 | [`src/lib/activity.ts`](../src/lib/activity.ts) |
 | 663 | [`src/app/admin/activity/ActivityClient.tsx`](../src/app/admin/activity/ActivityClient.tsx) |
 | 634 | [`src/app/api/checkout/route.ts`](../src/app/api/checkout/route.ts) |
 | 614 | [`src/app/admin/feedback/FeedbackClient.tsx`](../src/app/admin/feedback/FeedbackClient.tsx) |
@@ -292,7 +295,6 @@ when a task touches one, split it before editing rather than after.
 | 509 | [`src/app/admin/communities/CommunitiesClient.tsx`](../src/app/admin/communities/CommunitiesClient.tsx) |
 | 503 | [`src/lib/promo-input.ts`](../src/lib/promo-input.ts) |
 | 499 | [`src/app/admin/AdminRouteLoading.tsx`](../src/app/admin/AdminRouteLoading.tsx) |
-| 498 | [`src/app/admin/clients/ClientsClient.tsx`](../src/app/admin/clients/ClientsClient.tsx) |
 | 485 | [`src/app/events/[slug]/page.tsx`](../src/app/events/[slug]/page.tsx) |
 | 485 | [`src/lib/email.ts`](../src/lib/email.ts) |
 | 472 | [`src/app/admin/settings/TwoFactorPanel.tsx`](../src/app/admin/settings/TwoFactorPanel.tsx) |

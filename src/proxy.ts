@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { verifyToken } from '@/lib/jwt';
 import { isPublicAdminPath } from '@/lib/next-path';
+import { SITE_LABEL_HEADER, SITE_URL_HEADER, mainOrigin, parseSiteLabel } from '@/lib/site-host';
 
 /**
  * The sign-in screen, remembering the page that was asked for. The sign-in
@@ -20,6 +21,11 @@ function toSignIn(request: NextRequest) {
   return NextResponse.redirect(url);
 }
 
+/** Whether `pathname` is the dashboard or anything beneath it. */
+function isAdminPath(pathname: string): boolean {
+  return pathname === '/admin' || pathname.startsWith('/admin/');
+}
+
 /**
  * Proves a session exists before any dashboard page renders; what the session
  * may open is each page's own `can()` check (lib/actor.ts).
@@ -30,10 +36,10 @@ function toSignIn(request: NextRequest) {
  * old `/superadmin` addresses are permanent redirects in next.config.ts, which
  * run before this, so they never reach it.
  */
-export default async function proxy(request: NextRequest) {
+async function guardAdmin(request: NextRequest, forward: Headers) {
   const pathname = request.nextUrl.pathname;
   if (isPublicAdminPath(pathname)) {
-    return NextResponse.next();
+    return NextResponse.next({ request: { headers: forward } });
   }
 
   const token = request.cookies.get('admin_token')?.value;
@@ -50,9 +56,91 @@ export default async function proxy(request: NextRequest) {
     return toSignIn(request);
   }
 
-  return NextResponse.next();
+  return NextResponse.next({ request: { headers: forward } });
 }
 
+/**
+ * The URL the browser asked for. `request.url` is not it everywhere: the dev
+ * server writes its own `localhost:3000` there whatever the host, so the host
+ * (and, behind Vercel's edge, the scheme) come from the request's headers.
+ */
+function publicUrl(request: NextRequest): URL {
+  const url = new URL(`${request.nextUrl.pathname}${request.nextUrl.search}`, request.url);
+  const host = request.headers.get('host');
+  if (host) url.host = host;
+  const proto = request.headers.get('x-forwarded-proto')?.split(',')[0].trim();
+  if (proto === 'http' || proto === 'https') url.protocol = `${proto}:`;
+  return url;
+}
+
+/**
+ * A 307 to another host. Next rewrites a redirect `Location` on the host it
+ * believes it is serving into a bare path, which the browser then resolves on
+ * the host it is actually on — so where the two differ (the dev server, which
+ * thinks every request is for `localhost:3000`), `crc.localhost:3000/admin`
+ * would be sent back to itself. There, and only there, the move is a refresh
+ * page instead.
+ */
+function redirectToHost(target: URL, request: NextRequest) {
+  if (target.host !== request.nextUrl.host) {
+    return NextResponse.redirect(target, 307);
+  }
+  const href = target.href.replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
+  return new NextResponse(
+    `<!doctype html><meta http-equiv="refresh" content="0;url=${href}"><a href="${href}">Continue</a>`,
+    { status: 200, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } },
+  );
+}
+
+/**
+ * Every page request, for two jobs (CLIENT_SUBDOMAIN_PLAN.md §2).
+ *
+ * **Which site this is.** The host's client label (lib/site-host.ts) goes to
+ * the app as `x-rao-site`, with the URL as `x-rao-url`. Both are deleted from
+ * what the browser sent first, so a visitor cannot pick a site by header.
+ *
+ * **The dashboard's session check**, unchanged, and reached only by `/admin`.
+ * A public page never gets near it, or every page would ask for a sign-in.
+ *
+ * On a client's site, `/admin/**` goes to the main host **before** the session
+ * check: `admin_token` is a host-only cookie, so there is never a session on a
+ * subdomain, and checking first would put the sign-in form on the wrong host.
+ * The public admin pages go too, because a reset or invite link has to finish
+ * where the dashboard's cookie is read. A site's `/` is its `/events`. Both
+ * redirects are 307 and keep the path and query.
+ */
+export default async function proxy(request: NextRequest) {
+  const { pathname, search } = request.nextUrl;
+  const here = publicUrl(request);
+  const label = parseSiteLabel(here.host);
+
+  if (label && isAdminPath(pathname)) {
+    return redirectToHost(new URL(`${pathname}${search}`, mainOrigin(here)), request);
+  }
+  if (label && pathname === '/') {
+    return NextResponse.redirect(new URL(`/events${search}`, request.url), 307);
+  }
+
+  const forward = new Headers(request.headers);
+  forward.delete(SITE_LABEL_HEADER);
+  forward.delete(SITE_URL_HEADER);
+  if (label) forward.set(SITE_LABEL_HEADER, label);
+  forward.set(SITE_URL_HEADER, here.href);
+
+  if (isAdminPath(pathname)) return guardAdmin(request, forward);
+  return NextResponse.next({ request: { headers: forward } });
+}
+
+/**
+ * `/admin/:path*` stays its own entry so the session check can never be lost
+ * to the second pattern's exclusions. The second is every other page: not
+ * `/api` (no page to brand; routes read their own host), not Next's own files,
+ * and not a static file by its extension. Only real file extensions are
+ * excluded, so a path with a dot in it (a slug, a bib) still gets its site.
+ */
 export const config = {
-  matcher: ['/admin/:path*'],
+  matcher: [
+    '/admin/:path*',
+    '/((?!api/|_next/|.*\\.(?:png|jpe?g|gif|svg|ico|webp|avif|json|txt|xml|webmanifest|css|js|map|woff2?|ttf|pdf)$).*)',
+  ],
 };

@@ -116,8 +116,12 @@ event on `/admin/remittances` (`ADMIN_MERGE_PLAN.md` Batch 6, §5
 - **Production is live** at `https://runasone.ph`
   — Vercel project `run-as-one`, linked to `Hans-tech-coder/run-as-one`. Every
   push to `main` deploys to production; there is no manual deploy step. That
-  custom domain is the *only* public hostname the project serves pages on, and
-  it is what `SITE_URL` in `lib/site-contact.ts` must name. The old domain,
+  custom domain is the main public hostname, and it is what `SITE_URL` in
+  `lib/site-contact.ts` must name. **Client subdomains** (`crc.runasone.ph`,
+  `CLIENT_SUBDOMAIN_PLAN.md`) are the only others: each one needs a CNAME to
+  `cname.vercel-dns.com` at the outside registrar, the domain added to the
+  Vercel project, and the subdomain set in `/admin/clients` › Site & branding.
+  `lib/site-host.ts` owns which host is which. The old domain,
   `run-as-one.cresendorunningcommunity.com`, stays on the Vercel project only as
   a 308 redirect to it, so links in emails already sent keep working.
 - **Work lands on `dev`, not `main`.** Because a push to `main` ships to

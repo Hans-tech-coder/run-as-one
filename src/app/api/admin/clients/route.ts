@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
+import { BRANDING_FIELDS } from '@/lib/client-branding';
 import { twoFactorOn } from '@/lib/two-factor';
 import { platformActor } from '../platform-actor';
 
@@ -18,6 +19,11 @@ import { platformActor } from '../platform-actor';
  * `platform:manage` only: this is Run As One's own queue, and it carries every
  * applicant's phone number.
  */
+const BRANDING_SELECT = Object.fromEntries(BRANDING_FIELDS.map(field => [field, true])) as Record<
+  (typeof BRANDING_FIELDS)[number],
+  true
+>;
+
 export async function GET() {
   try {
     const { actor, refusal } = await platformActor();
@@ -47,6 +53,8 @@ export async function GET() {
         firstEventLocation: true,
         expectedRunners: true,
         applicationNote: true,
+        // Its own site (CLIENT_SUBDOMAIN_PLAN.md), edited in the same panel.
+        ...BRANDING_SELECT,
         _count: { select: { events: true } },
         viewers: {
           where: { organizerId: actor.orgId, role: 'VIEWER' },

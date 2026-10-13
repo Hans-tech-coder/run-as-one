@@ -13,6 +13,14 @@ before writing any code. When an item is picked up, give it its own plan file in
 
 The release steps come first because they block production, not a feature.
 
+**Pending for the next release (2026-10-13):** migration
+`20261013090000_client_site_branding` (eleven nullable columns on `Client`,
+`subdomain` unique, `CLIENT_SUBDOMAIN_PLAN.md` Batch 1; applied to the
+local-dev database; additive, so the old code ignores it). Run
+`npx prisma migrate deploy` on the production endpoint before the new code
+goes live. The list below went out in the 2026-10-13 release
+(`docs/current-state.md`).
+
 **Pending for the next release (2026-10-05):** migrations
 `20261005090000_registration_hold_until` (one nullable column,
 `Registration.holdUntil`, `UNPAID_FOLLOWUP_PLAN.md` Batch 3) and

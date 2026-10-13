@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { canSomewhere, getActor } from '@/lib/actor';
+import { can, canSomewhere, getActor } from '@/lib/actor';
 import { uploadPublicFile, UploadError } from '@/lib/blob';
 
 /**
@@ -9,6 +9,10 @@ import { uploadPublicFile, UploadError } from '@/lib/blob';
  *
  * Both event forms share it, so it asks whether the actor may create or edit
  * an event anywhere rather than on one: the create form has no event id yet.
+ *
+ * `folder: clients` is a client site's logo and hero (/admin/clients,
+ * CLIENT_SUBDOMAIN_PLAN.md D7), and asks for `platform:manage` on top, the
+ * permission that saves them.
  */
 export async function POST(request: Request) {
   const actor = await getActor();
@@ -25,7 +29,12 @@ export async function POST(request: Request) {
     // Certificate templates may also be PDFs; everything else is images only.
     const kind = formData.get('kind') === 'template' ? 'template' : 'image';
 
-    const url = await uploadPublicFile(formData.get('file'), 'events', kind);
+    const folder = formData.get('folder') === 'clients' ? 'clients' : 'events';
+    if (folder === 'clients' && !can(actor, 'platform:manage', { organizerId: actor.orgId })) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const url = await uploadPublicFile(formData.get('file'), folder, kind);
     return NextResponse.json({ url });
   } catch (error) {
     if (error instanceof UploadError) {

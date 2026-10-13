@@ -12,6 +12,20 @@
   A token for the retired super admin, or an OWNER token for any Organizer
   row but Run As One's, does not verify (`jwt.ts`) and goes to sign-in. `/superadmin/**` never reaches the proxy — it is
   a permanent redirect in `next.config.ts`, which runs first.
+- **Client subdomains are a lens, never a permission** (`CLIENT_SUBDOMAIN_PLAN.md`).
+  The proxy's matcher now covers every page, but only `/admin/**` reaches the
+  session check, which is unchanged (`toSignIn`'s `?next=` included); a public
+  page never asks for a sign-in. The host's client label travels as
+  `x-rao-site` (and the URL as `x-rao-url`), and **the proxy deletes both from
+  what the browser sent before setting its own**, so a visitor cannot choose a
+  site by header. Nothing that decides who may do what reads either. On a
+  subdomain, `/admin/**` is sent to the main host *before* the session check
+  (the cookie is host-only, so a sign-in there would land on the wrong host).
+  `/admin/:path*` stays its own matcher entry so the page matcher's static-file
+  exclusions can never drop the session check. A client site's subdomain and
+  branding are staff-only (`platform:manage`, `PATCH /api/admin/clients/[id]`),
+  and its images must be uploads to the public blob store, never a third
+  party's address (`lib/client-branding.ts`).
 - **Waiving Run As One's admin fee is `promo:waive-fee`** (`OWNER` alone,
   `PACER_DISCOUNT_PLAN.md`). A pacer's free entry is the organizer's own money
   and `promo:manage` covers it; the admin fee on top is **Run As One's

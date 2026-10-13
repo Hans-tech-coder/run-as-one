@@ -15,6 +15,24 @@ offers **QR Ph only** (`OFFERED_PAYMONGO_METHODS` in `lib/free-checkout.ts`)
 until it is. Where an entry below says something is "not released" or
 "production is N migrations behind", it predates this release.
 
+**Client subdomains, Batch 1 (2026-10-13, on `dev`, not released;
+`CLIENT_SUBDOMAIN_PLAN.md`), data and plumbing, no public change.**
+Migration `20261013090000_client_site_branding` adds `Client.subdomain`
+(unique) and the site's branding columns (§4) — **production needs it before
+this ships**. New modules `site-host.ts` (which host is which, the subdomain
+rule, `eventOrigin`), `site-client.ts` (`getSiteClient`, `ensureEventHost`,
+not yet called by any page) and `client-branding.ts` (§5). `src/proxy.ts` now
+runs on every page: it forwards `x-rao-site` / `x-rao-url` (stripping the
+browser's), sends a subdomain's `/` to `/events` and its `/admin/**` to the
+main host before the session check; the admin check itself is unchanged (§7).
+`/admin/clients`' panel gained **Site & branding** (subdomain with the live
+link and the DNS note, logo and hero uploads through `/api/upload`
+`folder: clients`, headline, tagline, public email / phone, socials), saved by
+`PATCH /api/admin/clients/[id]` `{ branding }` and audit-logged as
+`client.branding.changed`. `ClientsClient.tsx` gave its invite / reset /
+archive handlers to `useClientActions.ts` first. Next: Batch 2, the
+subdomain site itself.
+
 **Service inquiry, Batch 4 (2026-10-13, on `dev`, not released;
 `SERVICE_INQUIRY_PLAN.md`), the staff side.** `clients/ApplicationPanel.tsx`
 was split first with no behavior change (`application-rows.ts`,

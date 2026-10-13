@@ -1,3 +1,4 @@
+import type { ClientBranding } from '@/lib/client-branding';
 import { countryFor, parseE164 } from '@/lib/phone';
 
 /**
@@ -19,7 +20,8 @@ export interface ClientViewerRow {
   twoFactorOn: boolean;
 }
 
-export interface ClientApplicationRow {
+/** The application, and the client's own site (SiteBrandingSection). */
+export interface ClientApplicationRow extends ClientBranding {
   id: string;
   name: string;
   email: string;

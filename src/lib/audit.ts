@@ -83,6 +83,8 @@ export const AUDIT_ACTIONS = [
   'client.invitation.accepted',
   'client.archived',
   'client.restored',
+  // Its own site's subdomain and branding (CLIENT_SUBDOMAIN_PLAN.md Batch 1).
+  'client.branding.changed',
   'event.created',
   'event.updated',
   'event.registration.paused',

@@ -6,6 +6,7 @@ import { hasApplicationDetails } from '@/lib/organizer-application';
 import { appliedOn, type ClientApplicationRow, type ClientViewerRow } from './application-rows';
 import ApplicationAnswers from './ApplicationAnswers';
 import SignInsSection from './SignInsSection';
+import SiteBrandingSection from './SiteBrandingSection';
 import { useApplicationDialog } from './useApplicationDialog';
 
 /**
@@ -17,7 +18,8 @@ import { useApplicationDialog } from './useApplicationDialog';
  * with the flow it described; what took its place is **Sign-ins**
  * (SignInsSection), because "did they ever set up their sign-in?" is the
  * question staff open this panel to answer after an invite. Below it, the
- * application itself (ApplicationAnswers).
+ * application itself (ApplicationAnswers), and last the client's own site
+ * (SiteBrandingSection, CLIENT_SUBDOMAIN_PLAN.md), the one part staff edit.
  *
  * A panel over the list rather than a route of its own: the invite needs the
  * list behind it, and a second page is a second thing to keep responsive.
@@ -30,6 +32,7 @@ export default function ApplicationPanel({
   statusBadge,
   actions,
   onResetTwoFactor,
+  onBrandingSaved,
   onClose,
 }: {
   /** The submission being read. The panel is mounted only while there is one. */
@@ -39,6 +42,8 @@ export default function ApplicationPanel({
   actions: React.ReactNode;
   /** A viewer's lost phone (TWO_FACTOR_PLAN.md D4); offered only where it is on. */
   onResetTwoFactor: (viewer: ClientViewerRow) => void;
+  /** After Site & branding saves, so the list holds what was saved. */
+  onBrandingSaved: () => void;
   onClose: () => void;
 }) {
   const { open, closing, panelRef, closeRef, requestClose } = useApplicationDialog(onClose);
@@ -114,6 +119,13 @@ export default function ApplicationPanel({
           )}
 
           <ApplicationAnswers client={client} hasDetails={hasDetails} />
+
+          <SiteBrandingSection
+            clientId={client.id}
+            clientName={client.name}
+            branding={client}
+            onSaved={onBrandingSaved}
+          />
         </div>
 
         <div className="admin-modal-footer p-6 max-sm:p-4 border-t border-[var(--dash-border)] flex flex-wrap justify-end gap-3 shrink-0">
