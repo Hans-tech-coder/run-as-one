@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { Archive, ArchiveRestore, FileText, Search, Send, X } from 'lucide-react';
+import { FileText, Search, X } from 'lucide-react';
 import {
   getCoreRowModel,
   getPaginationRowModel,
@@ -17,17 +17,14 @@ import AdminDataTable, { AdminColumnsMenu, rowPosition } from '@/app/admin/Admin
 import AdminTablePager from '@/app/admin/AdminTablePager';
 import FiltersMenu from '@/app/admin/FiltersMenu';
 import MobileSortMenu from '@/app/admin/MobileSortMenu';
-import RowActionsMenu, { type RowAction } from '@/app/admin/RowActionsMenu';
-import ApplicationPanel, {
-  appliedOn,
-  type ClientApplicationRow,
-  type ClientViewerRow,
-} from './ApplicationPanel';
+import RowActionsMenu from '@/app/admin/RowActionsMenu';
+import ApplicationPanel from './ApplicationPanel';
+import { appliedOn, type ClientRow, type ClientViewerRow } from './application-rows';
+import { ClientActions, ClientStatusBadge, clientMoves, inviteDefaults } from './client-actions';
 import InviteDialog, { type InviteResult } from './InviteDialog';
 import {
   CLIENT_STATUSES,
   CLIENT_STATUS_COPY,
-  canMoveClient,
   clientContactName,
   clientStatusLabel,
 } from '@/lib/client';
@@ -68,15 +65,6 @@ import DashboardHeader from '@/app/admin/DashboardHeader';
  * an alert naming the reason, the same call `/admin/team` makes, because the
  * person is waiting on a link that never left.
  */
-
-interface ClientRow extends ClientApplicationRow {
-  _count: { events: number };
-}
-
-/** The invitation this client is waiting on, if one has not been accepted. */
-function waitingViewer(client: ClientRow) {
-  return client.viewers.find(viewer => !viewer.acceptedAt) ?? null;
-}
 
 export default function ClientsClient() {
   // Shadows window.alert / window.confirm on purpose — see AlertProvider.
@@ -504,76 +492,6 @@ export default function ClientsClient() {
           }}
         />
       )}
-    </>
-  );
-}
-
-/**
- * Who the invite dialog opens on. A waiting invitation is resent to the person
- * it was for; otherwise the contact the application named, unless that address
- * already signs in — then the boxes start empty, because this press is for a
- * second person.
- */
-function inviteDefaults(client: ClientRow) {
-  const waiting = waitingViewer(client);
-  if (waiting) {
-    return { resend: true, initialName: waiting.staff.name, initialEmail: waiting.staff.email };
-  }
-  const contactTaken = client.viewers.some(viewer => viewer.staff.email === client.email);
-  return {
-    resend: false,
-    initialName: contactTaken ? '' : clientContactName(client),
-    initialEmail: contactTaken ? '' : client.email,
-  };
-}
-
-/** One badge for the table's cell, the card and the panel, so they cannot drift. */
-function ClientStatusBadge({ status }: { status: string }) {
-  const known = CLIENT_STATUSES.find(code => code === status);
-  const tone = known ? CLIENT_STATUS_COPY[known].badge : 'neutral';
-  return <span className={`status-badge ${tone}`}>{clientStatusLabel(status)}</span>;
-}
-
-type ClientHandlers = { onInvite: () => void; onMove: (move: 'archive' | 'restore') => void };
-
-/**
- * The moves this client's status allows (`canMoveClient`), as ⋮ menu items for
- * the table and the card. Archive is the menu's red item, below its divider.
- */
-function clientMoves(client: ClientRow, { onInvite, onMove }: ClientHandlers): RowAction[] {
-  const inviteLabel = waitingViewer(client) ? 'Resend Invite' : 'Send Invite';
-  return [
-    ...(canMoveClient(client.status, 'invite')
-      ? [{ key: 'invite', label: inviteLabel, icon: <Send size={16} />, onSelect: onInvite }]
-      : []),
-    ...(canMoveClient(client.status, 'restore')
-      ? [{ key: 'restore', label: 'Restore', icon: <ArchiveRestore size={16} />, onSelect: () => onMove('restore') }]
-      : []),
-    ...(canMoveClient(client.status, 'archive')
-      ? [{ key: 'archive', label: 'Archive', icon: <Archive size={16} />, onSelect: () => onMove('archive'), danger: true }]
-      : []),
-  ];
-}
-
-/**
- * The same moves as labelled chips, for the application panel's footer, where
- * there is room to spell them out. Tones are the chip classes in Admin.css.
- */
-function ClientActions({ client, ...handlers }: { client: ClientRow } & ClientHandlers) {
-  const tones: Record<string, string> = { invite: 'is-primary', archive: 'is-danger' };
-  return (
-    <>
-      {clientMoves(client, handlers).map(action => (
-        <button
-          key={action.key}
-          type="button"
-          onClick={action.onSelect}
-          className={`btn-filter ${tones[action.key] ?? ''}`}
-        >
-          {action.icon}
-          {action.label}
-        </button>
-      ))}
     </>
   );
 }

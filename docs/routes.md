@@ -764,7 +764,15 @@ page as it was and says why; one after opens the race's workspace anyway and
 names the part that did not save and where to redo it, so a second Save can
 never make a second race. The upload and certificate requests are
 `results-upload.ts` `postResults` and `certificate-draft.ts` `saveCertificate`,
-which the workspace uses too. Files: `results/new/page.tsx`,
+which the workspace uses too. **`?client=<id>`** is *Add Results* on a
+client's application (`SERVICE_INQUIRY_PLAN.md` Batch 4): the page reads the
+client on the server and opens with **Results only** already chosen (the
+question stays, so staff can switch), the client linked and its first event's
+name, date and location filled in, all editable. The date is kept only when it
+is today or past (R6); a future one is left blank. The parameter is honoured
+only for `platform:manage` and a client that is not archived; anyone else, or
+an unknown id, gets the page as if it had none, and the form still sends
+`clientId` only once its picker says the actor may link one. Files: `results/new/page.tsx`,
 `NewResultsClient.tsx`, `EventPicker.tsx`, `ExistingRaceFlow.tsx`,
 `ResultsOnlyFlow.tsx`, `ResultsSteps.tsx`, `save-new-results.ts`.
 
@@ -886,9 +894,23 @@ and whose **Sign-ins** section (shown once anybody was invited) lists each
 viewer with the team screen's own state badge (Active / Invited / Invite
 Expired / Suspended, `memberState`), a *Two-step on* chip for a viewer who has
 it on, and beside that viewer a labelled **Reset Two-Step Sign-in** button (a
-`confirm`, D4). The row's ⋮ menu offers **Read
+`confirm`, D4). **The services read in their groups** (`servicesByGroup`,
+§5): an *Online* line and a *Race day* line of chips, Not Sure Yet on its own,
+so a registration client, a race-day job or both shows at a glance
+(`SERVICE_INQUIRY_PLAN.md` Batch 4). The panel is split along its seams:
+`application-rows.ts` (the row types and date / phone / website formatting,
+which the list shares), `useApplicationDialog.ts` (open, close, focus, Escape,
+Tab), `SignInsSection.tsx`, `ApplicationAnswers.tsx` and `ApplicationSection.tsx`
+(`Section`, `Detail`); the moves, the status badge and the invite dialog's
+opening values left `ClientsClient.tsx` for `client-actions.tsx`, which the
+menu, the card and the footer share. The row's ⋮ menu offers **Read
 Application** and the moves; the panel's footer spells the moves out as
-labelled chips. The moves come from `canMoveClient`, the
+labelled chips, and adds two things only it carries: **Add Results** (an
+application that chose Results and E-Certificates, not archived) linking to
+`/admin/results/new?client=<id>`, and **No sign-in needed** beside Send invite
+when the application did not choose Online Registration (`signInComing`, the
+rule its thank-you panel used; a pre-form row gets no note). Send invite still
+works either way. The moves come from `canMoveClient`, the
 routes' rule: **Send invite** (worded *Resend invite* while an invitation is
 waiting) from New, Invited or Active, **Archive** from anything live (a
 `confirm` — it signs the client's viewers out; nothing is deleted), **Restore**

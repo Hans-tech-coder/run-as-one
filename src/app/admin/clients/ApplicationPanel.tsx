@@ -1,18 +1,12 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from 'react';
-import { ExternalLink, FileText, Mail, Phone, ShieldOff, X } from 'lucide-react';
-import TwoStepChip from '../TwoStepChip';
+import React from 'react';
+import { FileText, X } from 'lucide-react';
 import { hasApplicationDetails } from '@/lib/organizer-application';
-import {
-  expectedParticipantsLabel,
-  organizerExperienceLabel,
-  organizerServiceLabel,
-  organizerTypeLabel,
-} from '@/lib/organizer-vocabulary';
-import { countryFor, parseE164 } from '@/lib/phone';
-import { formatEventDay } from '@/lib/event-schedule';
-import { MEMBER_STATE_LABELS, MEMBER_STATE_TONES, memberState } from '@/lib/team';
+import { appliedOn, type ClientApplicationRow, type ClientViewerRow } from './application-rows';
+import ApplicationAnswers from './ApplicationAnswers';
+import SignInsSection from './SignInsSection';
+import { useApplicationDialog } from './useApplicationDialog';
 
 /**
  * Everything a client submission said, read in one place before Run As One
@@ -20,114 +14,17 @@ import { MEMBER_STATE_LABELS, MEMBER_STATE_TONES, memberState } from '@/lib/team
  *
  * It was the organizer application panel, read before an approval. Nobody
  * approves or rejects a submission any more, so *The decision* section went
- * with the flow it described; what took its place is **Sign-ins** — who has
- * been invited to sign in for this client and where each invitation stands
- * (`memberState`, the team screen's own badge), because "did they ever set up
- * their sign-in?" is the question staff open this panel to answer after an
- * invite. A viewer with two-step sign-in on is marked, and the reset for a
- * lost phone sits on that person's line (TWO_FACTOR_PLAN.md D4), because a
- * client may have more than one sign-in and the reset is about one of them.
- *
- * It is grouped the way the form asked — the organization, the person, what
- * they are planning — so staff read it in the order the applicant
- * wrote it. Every label comes from `lib/organizer-vocabulary.ts`, never the
- * stored code: a person reads "Running Club or Community", not `RUNNING_CLUB`,
- * and a value written before an option was renamed still reads as itself.
- *
- * The contact details are links, because the reason to open a submission is
- * usually to get hold of the human behind it: the phone dials, the address
- * opens a mail, the website opens in a new tab.
+ * with the flow it described; what took its place is **Sign-ins**
+ * (SignInsSection), because "did they ever set up their sign-in?" is the
+ * question staff open this panel to answer after an invite. Below it, the
+ * application itself (ApplicationAnswers).
  *
  * A panel over the list rather than a route of its own: the invite needs the
  * list behind it, and a second page is a second thing to keep responsive.
  * Below `sm` it is a full-height sheet (`.admin-modal-sheet`), the registrant
  * detail modal's frame, because it is a thing a person reads rather than
- * answers. Escape and the backdrop close it, Tab stays inside it (yielding to
- * a dialog raised above it), and focus goes back to whatever opened it.
+ * answers. How it opens, closes and keeps focus is `useApplicationDialog`.
  */
-
-/** One person invited to sign in for a client — a VIEWER membership. */
-export interface ClientViewerRow {
-  id: string;
-  invitedAt: string;
-  acceptedAt: string | null;
-  suspendedAt: string | null;
-  inviteExpiresAt: string | null;
-  staff: { name: string; email: string; status: string };
-  /** Two-step sign-in is on — the marker, and the reset beside it. */
-  twoFactorOn: boolean;
-}
-
-export interface ClientApplicationRow {
-  id: string;
-  name: string;
-  email: string;
-  status: string;
-  createdAt: string;
-  /** When the latest invitation went out; null until Send invite is pressed. */
-  invitedAt: string | null;
-  orgType: string | null;
-  contactFirstName: string | null;
-  contactLastName: string | null;
-  contactRole: string | null;
-  phone: string | null;
-  city: string | null;
-  province: string | null;
-  website: string | null;
-  experience: string | null;
-  services: string[];
-  firstEventName: string | null;
-  firstEventDate: string | null;
-  firstEventLocation: string | null;
-  expectedRunners: string | null;
-  applicationNote: string | null;
-  viewers: ClientViewerRow[];
-}
-
-/** The close animation's length — the t-modal exit the other admin modals use. */
-const CLOSE_MS = 150;
-
-const FOCUSABLE =
-  'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
-/** Manila, like every other date on this site, so a late-night application
- *  does not land on the wrong day. */
-export function appliedOn(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-PH', {
-    timeZone: 'Asia/Manila',
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-}
-
-/** "Sep 16, 2026, 3:04 PM", in Manila — an invitation is worth the time of
- *  day, because a resend the same afternoon is otherwise indistinguishable. */
-function invitedOn(iso: string): string {
-  return new Date(iso).toLocaleString('en-PH', {
-    timeZone: 'Asia/Manila',
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
-}
-
-/** "+63 9171234567" — the dial code split off so the number reads at a glance.
- *  A number stored before E.164 comes back as its own digits. */
-function displayPhone(value: string): string {
-  const { iso2, national } = parseE164(value);
-  if (!iso2) return value;
-  return `+${countryFor(iso2).dial} ${national}`;
-}
-
-/** Only a web link is ever an href here — the column is written with a scheme
- *  by `normalizeLink`, and this keeps it that way for any older row. */
-function safeWebsite(value: string): string | null {
-  return /^https?:\/\//i.test(value) ? value : null;
-}
-
 export default function ApplicationPanel({
   client,
   statusBadge,
@@ -144,68 +41,8 @@ export default function ApplicationPanel({
   onResetTwoFactor: (viewer: ClientViewerRow) => void;
   onClose: () => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const [closing, setClosing] = useState(false);
-  const panelRef = useRef<HTMLDivElement>(null);
-  const closeRef = useRef<HTMLButtonElement>(null);
-
-  // One frame after mount, so the scale-in has a state to travel from. Focus
-  // goes to the close button, and back to the opener when the panel goes.
-  useEffect(() => {
-    const opener = document.activeElement as HTMLElement | null;
-    const frame = requestAnimationFrame(() => setOpen(true));
-    closeRef.current?.focus({ preventScroll: true });
-    return () => {
-      cancelAnimationFrame(frame);
-      opener?.focus?.({ preventScroll: true });
-    };
-  }, []);
-
-  const requestClose = () => {
-    if (closing) return;
-    setOpen(false);
-    setClosing(true);
-    setTimeout(onClose, CLOSE_MS);
-  };
-
-  // Escape closes; Tab and Shift+Tab wrap inside the panel rather than walking
-  // out into the list behind it, which a screen reader user cannot see.
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      // A confirm raised from the footer (AlertProvider) sits above this panel
-      // and owns the keyboard while it is up: its Escape cancels it, not both.
-      const dialogs = document.querySelectorAll('[aria-modal="true"]');
-      if (dialogs[dialogs.length - 1] !== panelRef.current) return;
-      if (event.key === 'Escape') {
-        requestClose();
-        return;
-      }
-      if (event.key !== 'Tab' || !panelRef.current) return;
-      const focusable = Array.from(
-        panelRef.current.querySelectorAll<HTMLElement>(FOCUSABLE),
-      ).filter(el => el.offsetParent !== null);
-      if (focusable.length === 0) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      const active = document.activeElement;
-      if (event.shiftKey && (active === first || !panelRef.current.contains(active))) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && (active === last || !panelRef.current.contains(active))) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  });
-
+  const { open, closing, panelRef, closeRef, requestClose } = useApplicationDialog(onClose);
   const hasDetails = hasApplicationDetails(client);
-  const contactName = [client.contactFirstName, client.contactLastName]
-    .filter(Boolean)
-    .join(' ');
-  const basedIn = [client.city, client.province].filter(Boolean).join(', ');
-  const website = client.website ? safeWebsite(client.website) : null;
 
   return (
     <div
@@ -263,46 +100,7 @@ export default function ApplicationPanel({
           {/* Only once somebody has been invited: before that the footer's
               Send invite says everything an empty section would. */}
           {client.viewers.length > 0 && (
-            <Section title="Sign-ins" list>
-              {client.viewers.map(viewer => {
-                const state = memberState({
-                  acceptedAt: viewer.acceptedAt,
-                  suspendedAt: viewer.suspendedAt,
-                  inviteExpiresAt: viewer.inviteExpiresAt,
-                  accountStatus: viewer.staff.status,
-                });
-                return (
-                  <li
-                    key={viewer.id}
-                    className="min-w-0 sm:col-span-2 flex flex-wrap items-start justify-between gap-x-4 gap-y-1"
-                  >
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-[var(--ink-85)] [overflow-wrap:anywhere]">
-                        <span className="min-w-0">{viewer.staff.name}</span>
-                        {viewer.twoFactorOn && <TwoStepChip />}
-                      </div>
-                      <div className="text-xs text-secondary [overflow-wrap:anywhere]">
-                        {viewer.staff.email} · Invited {invitedOn(viewer.invitedAt)}
-                      </div>
-                    </div>
-                    <span className={`status-badge ${MEMBER_STATE_TONES[state]} shrink-0`}>
-                      {MEMBER_STATE_LABELS[state]}
-                    </span>
-                    {viewer.twoFactorOn && (
-                      <button
-                        type="button"
-                        className="btn-filter is-danger"
-                        onClick={() => onResetTwoFactor(viewer)}
-                        aria-label={`Reset two-step sign-in for ${viewer.staff.name}`}
-                      >
-                        <ShieldOff size={16} aria-hidden="true" />
-                        Reset Two-Step Sign-in
-                      </button>
-                    )}
-                  </li>
-                );
-              })}
-            </Section>
+            <SignInsSection viewers={client.viewers} onResetTwoFactor={onResetTwoFactor} />
           )}
 
           {!hasDetails && (
@@ -315,115 +113,7 @@ export default function ApplicationPanel({
             </p>
           )}
 
-          {hasDetails && (
-            <Section title="The organization">
-              <Detail label="Organizer type" value={organizerTypeLabel(client.orgType)} />
-              <Detail label="Based in" value={basedIn} />
-              <Detail
-                label="Website or page"
-                value={
-                  website ? (
-                    <a
-                      href={website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-start gap-1.5 text-accent-blue-ink hover:underline break-all"
-                    >
-                      {website.replace(/^https?:\/\//i, '')}
-                      <ExternalLink size={14} className="shrink-0 mt-0.5" aria-hidden="true" />
-                      <span className="sr-only">(opens in a new tab)</span>
-                    </a>
-                  ) : (
-                    client.website
-                  )
-                }
-              />
-              <Detail
-                label="Events organized before"
-                value={organizerExperienceLabel(client.experience)}
-              />
-            </Section>
-          )}
-
-          <Section title={hasDetails ? 'The person' : 'The contact'}>
-            {hasDetails && <Detail label="Name" value={contactName} />}
-            {hasDetails && <Detail label="Role" value={client.contactRole} />}
-            <Detail
-              label="Email"
-              // The whole width when it is the only answer, so a long address
-              // is not folded into half a card.
-              full={!hasDetails}
-              value={
-                <a
-                  href={`mailto:${client.email}`}
-                  className="inline-flex items-start gap-1.5 text-accent-blue-ink hover:underline [overflow-wrap:anywhere] min-w-0"
-                >
-                  <Mail size={14} className="shrink-0 mt-0.5" aria-hidden="true" />
-                  {client.email}
-                </a>
-              }
-            />
-            {hasDetails && (
-              <Detail
-                label="Mobile number"
-                value={
-                  client.phone && (
-                    <a
-                      href={`tel:${client.phone}`}
-                      className="inline-flex items-start gap-1.5 text-accent-blue-ink hover:underline"
-                    >
-                      <Phone size={14} className="shrink-0 mt-0.5" aria-hidden="true" />
-                      {displayPhone(client.phone)}
-                    </a>
-                  )
-                }
-              />
-            )}
-          </Section>
-
-          {hasDetails && (
-            <Section title="What they are planning">
-              <Detail
-                label="Needs Run As One for"
-                full
-                value={
-                  client.services.length > 0 && (
-                    <ul className="m-0 p-0 list-none flex flex-wrap gap-2">
-                      {client.services.map(service => (
-                        <li
-                          key={service}
-                          className="rounded-full border border-[var(--dash-border)] bg-[var(--ink-05)] px-3 py-1 text-xs text-[var(--ink-85)]"
-                        >
-                          {organizerServiceLabel(service)}
-                        </li>
-                      ))}
-                    </ul>
-                  )
-                }
-              />
-              <Detail label="First event" value={client.firstEventName} />
-              <Detail
-                label="Date"
-                value={client.firstEventDate && formatEventDay(client.firstEventDate)}
-              />
-              <Detail label="Location" value={client.firstEventLocation} />
-              <Detail
-                label="Expected runners"
-                value={expectedParticipantsLabel(client.expectedRunners)}
-              />
-              <Detail
-                label="Anything else they told us"
-                full
-                value={
-                  client.applicationNote && (
-                    <span className="whitespace-pre-wrap [overflow-wrap:anywhere]">
-                      {client.applicationNote}
-                    </span>
-                  )
-                }
-              />
-            </Section>
-          )}
+          <ApplicationAnswers client={client} hasDetails={hasDetails} />
         </div>
 
         <div className="admin-modal-footer p-6 max-sm:p-4 border-t border-[var(--dash-border)] flex flex-wrap justify-end gap-3 shrink-0">
@@ -437,54 +127,6 @@ export default function ApplicationPanel({
           {actions}
         </div>
       </div>
-    </div>
-  );
-}
-
-/** One group of answers. `list` draws a `<ul>` rather than a `<dl>`, for the
- *  Sign-ins, which are people rather than question-and-answer pairs. */
-function Section({
-  title,
-  list = false,
-  children,
-}: {
-  title: string;
-  list?: boolean;
-  children: React.ReactNode;
-}) {
-  const frame = 'm-0 grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 rounded-[12px] border border-[var(--dash-border)] bg-[var(--dash-surface)] p-4';
-  return (
-    <section className="min-w-0">
-      <h4 className="m-0 mb-3 text-xs font-bold uppercase tracking-wider text-secondary">
-        {title}
-      </h4>
-      {list ? (
-        <ul className={`${frame} list-none`}>{children}</ul>
-      ) : (
-        <dl className={frame}>{children}</dl>
-      )}
-    </section>
-  );
-}
-
-/** One answer. An optional question left blank says so, rather than showing
- *  an empty line that reads like a rendering fault. */
-function Detail({
-  label,
-  value,
-  full = false,
-}: {
-  label: string;
-  value: React.ReactNode;
-  full?: boolean;
-}) {
-  const blank = value === null || value === undefined || value === '' || value === false;
-  return (
-    <div className={`min-w-0 ${full ? 'sm:col-span-2' : ''}`}>
-      <dt className="mb-1 text-xs text-secondary">{label}</dt>
-      <dd className={`m-0 text-sm ${blank ? 'text-secondary italic' : 'text-[var(--ink-85)]'} [overflow-wrap:anywhere]`}>
-        {blank ? 'Not given' : value}
-      </dd>
     </div>
   );
 }

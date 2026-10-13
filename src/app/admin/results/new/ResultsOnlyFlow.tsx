@@ -15,6 +15,16 @@ import { saveLabel, useSaveNewResults } from './save-new-results';
 /** A new race's certificate before anyone touches it: no template, the designed layout. */
 const BLANK_CERTIFICATE = certificateDraft({ certificateTemplate: null, certificateCoordinates: null });
 
+/** What the page read from `?client=` (page.tsx): the client to link and its
+ *  first event's details, each still editable. */
+export interface ResultsOnlyPrefill {
+  clientId: string;
+  title: string;
+  /** '' when the application's date is still to come or was never given. */
+  date: string;
+  location: string;
+}
+
 /**
  * "Results only, registration was elsewhere": 1. the race's details, 2. its
  * results and 3. its certificate, the last two optional, all saved by the one
@@ -23,14 +33,27 @@ const BLANK_CERTIFICATE = certificateDraft({ certificateTemplate: null, certific
  * keyed on `resultsOnly` (refused checkouts, the D1 visibility) holds from the
  * start — and the upload then makes its categories from the sheet names.
  */
-export default function ResultsOnlyFlow({ defaultAdminFee }: { defaultAdminFee: number }) {
+export default function ResultsOnlyFlow({
+  defaultAdminFee,
+  prefill = null,
+}: {
+  defaultAdminFee: number;
+  prefill?: ResultsOnlyPrefill | null;
+}) {
   const { alert } = useAlert();
   const showError = (message: string) => {
     if (message) alert({ variant: 'error', message });
   };
-  const [draft, setDraft] = useState(() => blankEventDraft(defaultAdminFee));
+  const [draft, setDraft] = useState(() => {
+    const blank = blankEventDraft(defaultAdminFee);
+    return prefill
+      ? { ...blank, title: prefill.title, date: prefill.date, location: prefill.location }
+      : blank;
+  });
   const cover = useEventImageUpload(setDraft, showError);
-  const [clientId, setClientId] = useState('');
+  // Sent only once the picker says this person may link a client
+  // (`canLinkClient`), so a prefilled id never outruns that gate.
+  const [clientId, setClientId] = useState(prefill?.clientId ?? '');
   const [canLinkClient, setCanLinkClient] = useState(false);
   const [clientError, setClientError] = useState<string | undefined>();
 

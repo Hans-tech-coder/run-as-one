@@ -213,6 +213,27 @@ export function servicesInGroup(group: ServiceGroup): readonly (OrganizerService
 }
 
 /**
+ * Stored services read back in their groups, Online then Race day, for the
+ * staff panel on `/admin/clients`: whether an application is a registration
+ * client, a race-day job or both should show at a glance, not be worked out
+ * from a row of chips. Anything without a group (Not Sure Yet, a code from
+ * before a rename) comes last under `group: null`, so nothing stored is
+ * dropped from view. Empty groups are left out.
+ */
+export function servicesByGroup(
+  services: readonly string[],
+): { group: ServiceGroup | null; services: string[] }[] {
+  const groupOf = (service: string): ServiceGroup | null => {
+    const known = oneOf(service, ORGANIZER_SERVICES) || oneOf(service, COMING_SOON_SERVICES);
+    return known ? ORGANIZER_SERVICE_COPY[known].group : null;
+  };
+  const order: (ServiceGroup | null)[] = ['ONLINE', 'RACE_DAY', 'COMING_SOON', null];
+  return order
+    .map((group) => ({ group, services: services.filter((service) => groupOf(service) === group) }))
+    .filter((entry) => entry.services.length > 0);
+}
+
+/**
  * The answer that cannot share the question with another.
  *
  * "Not sure yet" beside a ticked service says two opposite things, so

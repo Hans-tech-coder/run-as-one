@@ -15,6 +15,25 @@ offers **QR Ph only** (`OFFERED_PAYMONGO_METHODS` in `lib/free-checkout.ts`)
 until it is. Where an entry below says something is "not released" or
 "production is N migrations behind", it predates this release.
 
+**Service inquiry, Batch 4 (2026-10-13, on `dev`, not released;
+`SERVICE_INQUIRY_PLAN.md`), the staff side.** `clients/ApplicationPanel.tsx`
+was split first with no behavior change (`application-rows.ts`,
+`useApplicationDialog.ts`, `SignInsSection.tsx`, `ApplicationAnswers.tsx`,
+`ApplicationSection.tsx`), and `ClientsClient.tsx` gave its moves to
+`client-actions.tsx`. **The services read in their groups**, an Online line
+and a Race day line (`servicesByGroup`, §5). The panel's footer says **No
+sign-in needed** beside Send invite when the application did not choose
+Online Registration (`signInComing`, the thank-you panel's rule; Send invite
+still works), and offers **Add Results** for a Results application, opening
+`/admin/results/new?client=<id>` on Results only with the client linked and
+its first event's name, location and (if today or past, R6) date filled in.
+The page honours `?client=` only for `platform:manage` and a live client;
+otherwise it opens as before. Verified on `local-dev` with the owner signed
+in, including 375px; the refusal for an actor without `platform:manage` was
+not exercised (no such account there), nor was Save. Test row
+`batch4-results@example.test` left in `local-dev`. With this, every batch of
+the plan has landed.
+
 **Service inquiry, Batch 3 (2026-10-13, on `dev`, not released;
 `SERVICE_INQUIRY_PLAN.md`).** The form is titled **"Inquire About Our
 Services"** (heading and metadata title: `register/page.tsx` is now a server
@@ -181,6 +200,46 @@ what each number settled:
   the TOTP maths on Node's `crypto`. D9: turning it on or off ends every other
   session. D10: an email only when it is turned off or reset by an admin. D11:
   the screens say "Two-step sign-in", never "2FA".
+
+**`SERVICE_INQUIRY_PLAN.md` is deleted** (2026-10-13, all four batches
+landed, entries above). It was gitignored and never committed. Nothing was
+left undone, so nothing went to `ON_HOLD.md`. The code and guide cite it by
+batch and by number; this is what each number settled:
+
+- **S1.** The services offered, modelled on myrunti.me/services plus what the
+  app does. **Online:** Online Registration (`REGISTRATION`), Results and
+  E-Certificates (`RESULTS`). **Race day:** Race Timing (`TIMING`), Race Bib
+  Production (`BIB_PRODUCTION`), Race Kit Fulfilment (`KIT_FULFILLMENT`).
+  **Coming soon:** Custom Website (`WEBSITE`), Kit Claiming System
+  (`KIT_CLAIMING`), Email Blast (`EMAIL_BLAST`). **Not Sure Yet**
+  (`NOT_SURE`) clears the others. Existing codes kept their values, so stored
+  applications read the same; `Client.services` is a `String[]`, so no
+  migration. **Chip Check** (`CHIP_CHECK`) was first offered under Race day
+  and moved to Coming soon after Batch 2 by the owner's call: it is a scan
+  station (a runner scans their bib chip and their details show on a screen,
+  a photo moment and a check that each bib went to the right runner), not a
+  U-turn mat, and it does not depend on Race Timing.
+- **S2.** Race-day services are fulfilled through suppliers, so the form is an
+  inquiry, not an order: it promises a reply, never a price or a date.
+- **S3.** One application per email stays. The refusal sends the applicant to
+  Run As One's contact email and social links from the settings, never a
+  hard-coded address.
+- **S4.** The same three steps (Organization → Contact → Your event); only the
+  services question and the copy changed.
+- **S5.** No sign-in for a client who did not choose Online Registration. The
+  thank-you panel says so, and `/admin/clients` shows *No sign-in needed*
+  beside Send invite. **Send invite stays available and keeps its primary
+  tone** (the owner confirmed this after Batch 4, rather than hiding or
+  demoting it), because a client may later want registration.
+- **O1.** A Coming soon service cannot be ticked: greyed, with a "Coming soon"
+  tag.
+- **O2.** The form is titled **"Inquire About Our Services"**; the Footer and
+  sign-in links read **"Our Services"**; the URL stays `/admin/register`.
+  "Work with Run As One" was rejected because a client **hires** Run As One and
+  only views its dashboard (*Client Viewer*), so every line reads as an
+  inquiry for a service, never a partnership or a self-serve tool.
+- **Batch 4's link is named "Add Results"**, after the page it opens, not the
+  plan's "Create Results".
 
 **Results row actions, all 5 batches (2026-10-11, on `dev`, not released;
 `RESULTS_ROW_ACTIONS_PLAN.md`).** Batch 1 (`9d842c3`) split the workspace's

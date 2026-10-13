@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { CalendarCheck, FileSpreadsheet } from 'lucide-react';
 import type { PickableEvent } from './EventPicker';
 import ExistingRaceFlow from './ExistingRaceFlow';
-import ResultsOnlyFlow from './ResultsOnlyFlow';
+import ResultsOnlyFlow, { type ResultsOnlyPrefill } from './ResultsOnlyFlow';
 
 type Choice = 'existing' | 'results-only';
 
@@ -31,15 +31,21 @@ const CHOICES: { value: Choice; title: string; description: string; icon: typeof
  * the first cut (details, then Save and Continue to the workspace) confused
  * staff: a page that moves you on before the job is done reads as a page that
  * lost it. Only a finished Save opens the race's workspace.
+ *
+ * Opened from a client's application (`prefill`), the question is already
+ * answered Results only, the one that fits a client who took sign-ups
+ * elsewhere; it stays on screen so staff can still switch.
  */
 export default function NewResultsClient({
   events,
   defaultAdminFee,
+  prefill,
 }: {
   events: PickableEvent[];
   defaultAdminFee: number;
+  prefill: ResultsOnlyPrefill | null;
 }) {
-  const [choice, setChoice] = useState<Choice | null>(null);
+  const [choice, setChoice] = useState<Choice | null>(prefill ? 'results-only' : null);
 
   return (
     <div className="admin-form">
@@ -88,7 +94,7 @@ export default function NewResultsClient({
       </div>
 
       {choice === 'existing' && <ExistingRaceFlow events={events} />}
-      {choice === 'results-only' && <ResultsOnlyFlow defaultAdminFee={defaultAdminFee} />}
+      {choice === 'results-only' && <ResultsOnlyFlow defaultAdminFee={defaultAdminFee} prefill={prefill} />}
     </div>
   );
 }
