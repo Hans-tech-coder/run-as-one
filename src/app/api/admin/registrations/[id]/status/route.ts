@@ -57,11 +57,13 @@ import { SLOT_HOLDING_STATUSES, SlotsUnavailableError, reserveSlots } from '@/li
  * nothing back: a PAID order's refund is settled by a person, and an EXPIRED
  * one already gave its promo back when it expired.
  *
- * **Out of EXPIRED takes the slot again.** The sweep released it, so moving an
- * EXPIRED order back to PAID or PENDING — validating a bank transfer whose
- * seven days ran out (`BANK_TRANSFER_EXPIRY_DAYS`), or reinstating an online
- * order PayMongo turned out to have paid — goes through `reserveSlots` under
- * the same lock checkout takes, and is refused when the race has refilled.
+ * **Back into PAID or PENDING takes the slot again.** An order that holds none
+ * (EXPIRED, CANCELLED, REFUNDED — anything outside SLOT_HOLDING_STATUSES)
+ * gave its slot back, so moving it back — validating a bank transfer whose
+ * seven days ran out (`BANK_TRANSFER_EXPIRY_DAYS`), reinstating an online
+ * order PayMongo turned out to have paid, or undoing a cancellation — goes
+ * through `reserveSlots` under the same lock checkout takes, and is refused
+ * when the race has refilled (Strix vuln-0001, run 9cda).
  * The promo is **not** spent again: the runner already paid the discounted
  * price, and refusing them because the code has since run out would be worse
  * than one voucher counting once less than it was used.
@@ -204,14 +206,11 @@ export async function PATCH(
         }
       }
 
-      // The sweep gave this order's slot back when it expired it. Taking it
-      // again is the same locked count checkout makes, so validating a late
-      // slip cannot oversell a race that has refilled since.
-      if (
-        wantsStatus &&
-        existing.status === 'EXPIRED' &&
-        (SLOT_HOLDING_STATUSES as readonly string[]).includes(status)
-      ) {
+      // This order gave its slot back (expired, cancelled or refunded). Taking
+      // it again is the same locked count checkout makes, so validating a late
+      // slip or undoing a cancellation cannot oversell a race that has refilled.
+      const holdsSlot = (s: string) => (SLOT_HOLDING_STATUSES as readonly string[]).includes(s);
+      if (wantsStatus && !holdsSlot(existing.status) && holdsSlot(status)) {
         const categories = await tx.category.findMany({
           where: { eventId: existing.eventId },
           select: { id: true, name: true, slotLimit: true },
@@ -314,7 +313,7 @@ export async function PATCH(
       return NextResponse.json(
         {
           error:
-            'This order gave its slot back when it expired, and the race has no room to take it again, so nothing was changed. Raise the slot limit to make room, or refund the runner.',
+            'This order gave its slot back when it expired or was cancelled, and the race has no room to take it again, so nothing was changed. Raise the slot limit to make room, or refund the runner.',
         },
         { status: 409 }
       );

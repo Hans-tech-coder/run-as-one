@@ -76,8 +76,10 @@ with junk slips through `/api/checkout/manual` for good. It stays on the
 registrants screen as `EXPIRED`, with no email to anyone; the detail modal
 gives a pending transfer's *verify by* date, and **Validate Payment is still
 offered on an expired transfer**, taking a slot back only if the race has room
-(the status route now runs `reserveSlots` on any move out of `EXPIRED`, online
-orders included). The promo is not spent again on such a reinstate. And a slip
+(the status route now runs `reserveSlots` on any move into PAID or PENDING
+from a status that holds no slot — `EXPIRED`, `CANCELLED` or `REFUNDED`, online
+orders included; Strix vuln-0001 of run 9cda found CANCELLED/REFUNDED → PAID
+skipping the count). The promo is not spent again on such a reinstate. And a slip
 whose order then fails to save (slots ran out, promo used up, results only, a
 database error) is **deleted on a Vercel deployment and kept, logged, on a
 developer's machine**, because the private store is production's. No
