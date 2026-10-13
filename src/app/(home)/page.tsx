@@ -4,6 +4,7 @@ import HomeEventBrowser from '@/components/HomeEventBrowser';
 import db from '@/lib/db';
 import { soonestFirst, upcomingEvents } from '@/lib/event-schedule';
 import { forListing } from '@/lib/registration-gate';
+import { EVENT_SITE_CLIENT, eventLinkOrigin } from '@/lib/site-client';
 
 const HOME_EVENT_LIMIT = 6;
 
@@ -48,14 +49,23 @@ export default async function Home() {
       // The slot limits are what decide whether a card is badged FULL;
       // forListing counts against them and then drops them, so nothing about
       // capacity is shipped to the browser.
-      include: { categories: { select: { id: true, slotLimit: true } } },
+      // The client only says which host a card links to (lib/site-client.ts).
+      include: {
+        categories: { select: { id: true, slotLimit: true } },
+        client: EVENT_SITE_CLIENT,
+      },
     }),
     db.event.count({ where: upcoming }),
   ]);
+  const linkOrigin = await eventLinkOrigin();
 
   // A race that is full or paused keeps its place here — it is still upcoming,
   // and this section is the site's front door to it.
-  const events = await forListing(openForRegistration);
+  // A client's race links straight to its own site (CLIENT_SUBDOMAIN_PLAN.md).
+  const events = (await forListing(openForRegistration)).map(({ client, ...event }) => ({
+    ...event,
+    siteOrigin: linkOrigin({ client }),
+  }));
 
   return (
     // No overflow-hidden here: the hero's dot arch is full-bleed and runs up

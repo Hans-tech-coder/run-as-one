@@ -3,13 +3,11 @@
 import React from 'react';
 import Link from 'next/link';
 import { Mail } from 'lucide-react';
-import { BrandGlyph } from './BrandIcons';
 import { RunAsOneLogo } from './RunAsOneLogo';
-import {
-  SITE_NAME,
-  SOCIAL_CHANNELS,
-  supportMailto,
-} from '@/lib/site-contact';
+import ClientSiteFooter from './ClientSiteFooter';
+import { FooterContactChip, FooterNav, FooterShell, FooterSocials, type FooterColumn } from './FooterParts';
+import { SITE_NAME, supportMailto } from '@/lib/site-contact';
+import type { SiteClient } from '@/lib/site-client';
 import { useContactEmail, useSocialLinks } from './SiteContactProvider';
 
 /**
@@ -22,11 +20,13 @@ import { useContactEmail, useSocialLinks } from './SiteContactProvider';
  * or a real mail client. A social channel appears only once its link is saved
  * at /admin/settings; one without a link is left out, not sent to a
  * placeholder.
+ *
+ * On a client's site (`site` set) the footer is the client's instead
+ * (ClientSiteFooter.tsx, CLIENT_SUBDOMAIN_PLAN.md D9).
  */
-type FooterLink = { label: string; href: string; external?: boolean };
 
 /** Built per render: Contact Us follows the saved contact address. */
-const columns = (contactEmail: string): { heading: string; links: FooterLink[] }[] => [
+const columns = (contactEmail: string): FooterColumn[] => [
   {
     heading: 'Explore',
     links: [
@@ -56,57 +56,17 @@ const columns = (contactEmail: string): { heading: string; links: FooterLink[] }
   },
 ];
 
-/** One row in a link column. 44px tall so a thumb can hit it. */
-function FooterLinkRow({ link }: { link: FooterLink }) {
-  const className =
-    'group inline-flex min-h-[44px] w-fit items-center text-[0.95rem] text-secondary no-underline transition-colors duration-200 hover:text-white';
-
-  const label = (
-    <span className="transition-transform duration-200 group-hover:translate-x-0.5">
-      {link.label}
-    </span>
-  );
-
-  if (link.external) {
-    return (
-      <a href={link.href} className={className}>
-        {label}
-      </a>
-    );
-  }
-
-  return (
-    <Link href={link.href} className={className}>
-      {label}
-    </Link>
-  );
-}
-
-export default function Footer() {
+export default function Footer({ site }: { site: SiteClient | null }) {
   const year = new Date().getFullYear();
   const contactEmail = useContactEmail();
   const socialLinks = useSocialLinks();
-  const channels = SOCIAL_CHANNELS.flatMap(channel => {
-    const href = socialLinks[channel.key];
-    return href ? [{ ...channel, href }] : [];
-  });
+
+  if (site) return <ClientSiteFooter site={site} />;
 
   return (
-    <footer className="relative mt-20 sm:mt-32 overflow-hidden rounded-t-[40px] border-t border-white/[0.06] bg-[#0a0a0c]/70 backdrop-blur-xl">
-      {/* The brand gradient as a hairline along the top edge, and one soft orb
-          behind the columns — the same two devices the pages above use, so the
-          footer reads as the end of this site rather than a slab under it. */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent-orange/50 to-transparent"
-      />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -top-48 left-1/2 h-[420px] w-[760px] -translate-x-1/2 rounded-full bg-accent-blue/10 blur-[150px]"
-      />
-
-      <div className="relative grid w-full max-w-7xl grid-cols-1 gap-10 px-4 pt-12 pb-10 sm:px-6 sm:pt-16 lg:grid-cols-[1.4fr_2fr] lg:gap-16 lg:px-8 mx-auto">
-        <div className="flex flex-col gap-6">
+    <FooterShell
+      brand={
+        <>
           <Link href="/" className="w-fit no-underline" aria-label={`${SITE_NAME} home`}>
             <RunAsOneLogo className="[--rao-logo-size:40px] sm:[--rao-logo-size:48px]" decorative />
           </Link>
@@ -118,68 +78,16 @@ export default function Footer() {
             them.
           </p>
 
-          <a
-            href={supportMailto(contactEmail)}
-            className="inline-flex w-fit max-w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white no-underline transition-colors duration-200 hover:border-accent-orange/40 hover:bg-white/[0.08] sm:text-base"
-          >
-            <Mail size={18} aria-hidden="true" className="shrink-0 text-accent-orange" />
-            <span className="break-words">{contactEmail}</span>
-          </a>
+          <FooterContactChip href={supportMailto(contactEmail)} icon={<Mail size={18} />}>
+            {contactEmail}
+          </FooterContactChip>
 
-          {/* No saved link at all: no heading over an empty row. */}
-          {channels.length > 0 && (
-            <div>
-              <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-secondary">
-                Follow the community
-              </h2>
-              <ul className="m-0 flex list-none flex-wrap gap-3 p-0">
-                {channels.map(channel => (
-                  <li key={channel.key}>
-                    <a
-                      href={channel.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label={`${SITE_NAME} on ${channel.name} (opens in a new tab)`}
-                      title={channel.name}
-                      className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-secondary transition-all duration-300 hover:-translate-y-0.5 hover:border-transparent hover:bg-gradient-to-r hover:from-accent-orange hover:to-accent-blue hover:text-white"
-                    >
-                      <BrandGlyph channel={channel.key} size={18} />
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-
-        <nav aria-label="Footer" className="grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-3">
-          {columns(contactEmail).map(column => (
-            <div key={column.heading} className="flex flex-col">
-              <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-white/90">
-                {column.heading}
-              </h2>
-              <ul className="m-0 flex list-none flex-col p-0">
-                {column.links.map(link => (
-                  <li key={link.label}>
-                    <FooterLinkRow link={link} />
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </nav>
-      </div>
-
-      <div className="relative border-t border-white/[0.06]">
-        <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-between gap-2 px-4 py-6 text-center sm:flex-row sm:px-6 sm:text-left lg:px-8">
-          <p className="m-0 text-sm text-secondary">
-            &copy; {year} {SITE_NAME}. All rights reserved.
-          </p>
-          <p className="m-0 text-xs text-secondary/70 sm:text-sm">
-            Built for runners, organizers, and the communities behind them.
-          </p>
-        </div>
-      </div>
-    </footer>
+          <FooterSocials links={socialLinks} owner={SITE_NAME} heading="Follow the community" />
+        </>
+      }
+      nav={<FooterNav columns={columns(contactEmail)} />}
+      bottomLeft={<>&copy; {year} {SITE_NAME}. All rights reserved.</>}
+      bottomRight="Built for runners, organizers, and the communities behind them."
+    />
   );
 }

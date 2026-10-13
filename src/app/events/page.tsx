@@ -4,6 +4,8 @@ import EventGrid from '@/components/EventGrid';
 import db from '@/lib/db';
 import { soonestFirst, upcomingEvents } from '@/lib/event-schedule';
 import { forListing } from '@/lib/registration-gate';
+import { EVENT_SITE_CLIENT, eventLinkOrigin, getSiteClient } from '@/lib/site-client';
+import ClientSiteHero, { hasClientHero } from '@/components/ClientSiteHero';
 import { Calendar, CalendarCheck2, ChevronRight, Trophy } from 'lucide-react';
 
 /**
@@ -24,53 +26,74 @@ export default async function EventsPage() {
   // something different when the platform has never had a race than when every
   // race it has had is already finished, and the runner deserves to be told
   // which one they are looking at.
+  //
+  // On a client's site (CLIENT_SUBDOMAIN_PLAN.md D1) this is that client's
+  // front page: its races only, counted the same way, under its hero.
+  const [site, linkOrigin] = await Promise.all([getSiteClient(), eventLinkOrigin()]);
+  const scope = site ? { clientId: site.id } : {};
   const [upcoming, totalEvents, eventsWithResults] = await Promise.all([
     db.event.findMany({
       // A results-only race is never enterable here, so it is not upcoming in
       // the sense this page means; it surfaces on /results once its times are.
-      where: { ...upcomingEvents(), resultsOnly: false },
+      where: { ...upcomingEvents(), resultsOnly: false, ...scope },
       orderBy: soonestFirst,
       // The slot limits are what decide whether a card is badged FULL;
       // forListing counts against them and then drops them, so nothing about
       // capacity is shipped to the browser.
-      include: { categories: { select: { id: true, slotLimit: true } } },
+      // The client only says which host a card links to (lib/site-client.ts).
+      include: {
+        categories: { select: { id: true, slotLimit: true } },
+        client: EVENT_SITE_CLIENT,
+      },
     }),
-    db.event.count(),
-    db.event.count({ where: { raceResults: { some: {} } } }),
+    db.event.count({ where: scope }),
+    db.event.count({ where: { raceResults: { some: {} }, ...scope } }),
   ]);
 
   // A race that is full or on hold stays in this listing rather than
   // disappearing from it: it is still upcoming, and a runner who heard about it
   // deserves to find it and read why they cannot enter.
-  const events = await forListing(upcoming);
+  const events = (await forListing(upcoming)).map(({ client, ...event }) => ({
+    ...event,
+    siteOrigin: linkOrigin({ client }),
+  }));
+  const hero = site && hasClientHero(site) ? site : null;
 
   return (
-    <div className="relative overflow-hidden w-full flex flex-col items-center">
-      <div className="w-full relative z-10 flex flex-col items-center gap-8 sm:gap-12">
+    <>
+      {/* Outside the clipping wrapper below: the banner is full-bleed. */}
+      {hero && <ClientSiteHero site={hero} />}
+      <div className="relative overflow-hidden w-full flex flex-col items-center">
+        <div className="w-full relative z-10 flex flex-col items-center gap-8 sm:gap-12">
         
-        <div className="text-center w-full max-w-3xl mb-0 sm:mb-4 t-stagger is-shown">
-          <div className="flex flex-row w-fit mx-auto items-center justify-center gap-2 mb-4 t-stagger-line t-stagger-line--1">
-            <Calendar size={20} className="text-accent-blue" />
-            <span className="text-sm font-bold tracking-widest uppercase text-accent-orange">Upcoming Events</span>
+          {!hero && (
+          <div className="text-center w-full max-w-3xl mb-0 sm:mb-4 t-stagger is-shown">
+            <div className="flex flex-row w-fit mx-auto items-center justify-center gap-2 mb-4 t-stagger-line t-stagger-line--1">
+              <Calendar size={20} className="text-accent-blue" />
+              <span className="text-sm font-bold tracking-widest uppercase text-accent-orange">Upcoming Events</span>
+            </div>
+            <h1 className="text-3xl sm:text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 uppercase tracking-tighter leading-tight mb-4 sm:mb-6 t-stagger-line t-stagger-line--2">
+              Find Your Next Race
+            </h1>
+            <p className="text-base sm:text-lg text-secondary leading-relaxed t-stagger-line t-stagger-line--3">
+              {site
+                ? `Every upcoming race from ${site.name}. Register today and join the community.`
+                : 'Browse through all our official marathons, fun runs, and virtual races. Register today and join the community.'}
+            </p>
           </div>
-          <h1 className="text-3xl sm:text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 uppercase tracking-tighter leading-tight mb-4 sm:mb-6 t-stagger-line t-stagger-line--2">
-            Find Your Next Race
-          </h1>
-          <p className="text-base sm:text-lg text-secondary leading-relaxed t-stagger-line t-stagger-line--3">
-            Browse through all our official marathons, fun runs, and virtual races. Register today and join the community.
-          </p>
-        </div>
+          )}
 
-        {events.length > 0 ? (
-          <EventGrid events={events} />
-        ) : (
-          <NothingUpcoming
-            everHadEvents={totalEvents > 0}
-            hasPublishedResults={eventsWithResults > 0}
-          />
-        )}
+          {events.length > 0 ? (
+            <EventGrid events={events} />
+          ) : (
+            <NothingUpcoming
+              everHadEvents={totalEvents > 0}
+              hasPublishedResults={eventsWithResults > 0}
+            />
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 

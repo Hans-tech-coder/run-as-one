@@ -16,6 +16,7 @@ type DBEvent = {
   /** Passed straight through to the card — see EventGrid. */
   registrationClosed?: 'CLOSED' | 'PAUSED' | 'SCHEDULED' | 'FULL' | null;
   registrationOpensAt?: string | Date | null;
+  siteOrigin?: string;
 };
 
 /**

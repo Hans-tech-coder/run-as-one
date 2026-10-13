@@ -26,8 +26,15 @@ import {
   takenSlotsByCategory,
   withSlotCounts,
 } from '@/lib/registration-gate';
+import { EVENT_SITE_CLIENT, ensureEventHost, eventPageMetadata } from '@/lib/site-client';
 import { acceptsPromoCodes, automaticPromosFor, promoTerms } from '@/lib/promo-store';
 import { CATEGORY_ORDER } from '@/lib/category-order';
+
+/** One URL per event, on the site it belongs to (CLIENT_SUBDOMAIN_PLAN.md). */
+export async function generateMetadata(props: { params: Promise<{ slug: string }> }) {
+  const { slug } = await props.params;
+  return eventPageMetadata(slug, eventSlug => `/events/${eventSlug}/register`);
+}
 
 export default async function RegisterPage(props: { 
   params: Promise<{ slug: string }>;
@@ -48,6 +55,7 @@ export default async function RegisterPage(props: {
       include: {
         categories: { orderBy: CATEGORY_ORDER },
         bankAccounts: { orderBy: { sortOrder: 'asc' } },
+        client: EVENT_SITE_CLIENT,
       }
     }),
     approvedCommunityNames(),
@@ -59,6 +67,11 @@ export default async function RegisterPage(props: {
   if (!event) {
     notFound();
   }
+
+  // The whole flow stays on the event's own site (CLIENT_SUBDOMAIN_PLAN.md
+  // D3), and the query — PayMongo's success flag and order reference — goes
+  // with it (lib/site-client.ts).
+  await ensureEventHost(event);
 
   // Send an old cuid link on to the readable URL, keeping whatever the runner
   // came back with — the success flag and order reference PayMongo appends.

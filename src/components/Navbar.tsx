@@ -5,8 +5,15 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
 import { RunAsOneLogo } from './RunAsOneLogo';
+import { ClientSiteLogo } from './ClientSiteLogo';
+import type { SiteClient } from '@/lib/site-client';
 
-export default function Navbar() {
+/**
+ * On a client's site (`site` set, CLIENT_SUBDOMAIN_PLAN.md D2) the logo is the
+ * client's and links to `/events`, which is that site's front page; the links
+ * are the same two.
+ */
+export default function Navbar({ site }: { site: SiteClient | null }) {
   const pathname = usePathname();
 
   // Highlight exact match for home, startsWith for others to catch sub-routes
@@ -68,8 +75,12 @@ export default function Navbar() {
       <div className="w-full max-w-7xl relative pointer-events-auto" ref={menuRef}>
         <header className="w-full h-[70px] flex items-center rounded-full bg-white/5 backdrop-blur-xl border border-white/5 shadow-[0_8px_30px_rgba(0,0,0,0.12)]">
           <div className="flex justify-between items-center w-full px-5 sm:px-12">
-            <Link href="/" className="flex items-center gap-3 no-underline">
-              <RunAsOneLogo className="[--rao-logo-size:32px] sm:[--rao-logo-size:38px]" />
+            <Link href={site ? '/events' : '/'} className="flex min-w-0 items-center gap-3 no-underline">
+              {site ? (
+                <ClientSiteLogo site={site} />
+              ) : (
+                <RunAsOneLogo className="[--rao-logo-size:32px] sm:[--rao-logo-size:38px]" />
+              )}
             </Link>
 
             <nav className="hidden md:flex gap-8 lg:gap-10">

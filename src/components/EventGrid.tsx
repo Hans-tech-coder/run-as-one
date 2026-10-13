@@ -30,6 +30,13 @@ type DBEvent = {
    * the chip spends its width on the date rather than on the word "scheduled".
    */
   registrationOpensAt?: string | Date | null;
+  /**
+   * The origin of the site this event's pages live on, when that is not the
+   * host showing the card; '' or absent keeps the link relative. Set by
+   * `eventLinkOrigin` (lib/site-client.ts), so a client's race opens straight
+   * on the client's subdomain instead of through a redirect.
+   */
+  siteOrigin?: string;
 }
 
 /**
@@ -59,6 +66,7 @@ const CLOSURES = {
 
 function EventCard({ event, action }: { event: DBEvent; action: EventCardAction }) {
   const { label, path } = ACTIONS[action];
+  const href = `${event.siteOrigin ?? ''}${path(event.slug)}`;
   // A race nobody can enter still links to its own page: that page is where
   // the reason lives, and the categories, inclusions and race kit are all
   // still worth reading. What changes is that the card stops promising a
@@ -104,14 +112,14 @@ function EventCard({ event, action }: { event: DBEvent; action: EventCardAction 
           </div>
         </div>
         {closure ? (
-          <Link href={path(event.slug)} className="w-full flex items-center justify-center gap-2 py-4 text-base sm:text-lg rounded-[16px] border border-white/15 bg-white/[0.06] font-bold uppercase tracking-wider text-white no-underline transition-colors hover:border-white/30 hover:bg-white/10 group">
+          <Link href={href} className="w-full flex items-center justify-center gap-2 py-4 text-base sm:text-lg rounded-[16px] border border-white/15 bg-white/[0.06] font-bold uppercase tracking-wider text-white no-underline transition-colors hover:border-white/30 hover:bg-white/10 group">
             {closure.label}{' '}
             <LinkPendingIcon>
               <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform inline-block" />
             </LinkPendingIcon>
           </Link>
         ) : (
-          <Link href={path(event.slug)} className="btn-gradient w-full py-4 text-base sm:text-lg rounded-[16px] group shadow-xl shadow-accent-orange/20 no-underline">
+          <Link href={href} className="btn-gradient w-full py-4 text-base sm:text-lg rounded-[16px] group shadow-xl shadow-accent-orange/20 no-underline">
             {label}{' '}
             <LinkPendingIcon className="ml-1">
               <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform inline-block" />

@@ -2,10 +2,13 @@ import 'server-only';
 import { cache } from 'react';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
+import type { Metadata } from 'next';
 import prisma from './db';
+import { eventByParam } from './event-slug';
 import {
   SITE_LABEL_HEADER,
   SITE_URL_HEADER,
+  clientOrigin,
   eventOrigin,
   mainOrigin,
   type SiteClientRef,
@@ -100,3 +103,50 @@ export async function ensureEventHost(event: { client: SiteClientRef | null }): 
   const origin = eventOrigin(event, here);
   if (origin !== here.origin) redirect(`${origin}${here.pathname}${here.search}`);
 }
+
+/**
+ * This site's own origin: the client's site on a subdomain, otherwise the
+ * main one, by `site-host.ts`'s production-only use of `SITE_URL`. What
+ * `metadataBase` is built on, so a link preview of a client's page names the
+ * client's host.
+ */
+export async function siteOrigin(): Promise<string> {
+  const [site, here] = await Promise.all([getSiteClient(), requestUrl()]);
+  return site?.subdomain ? clientOrigin(site.subdomain, here) : mainOrigin(here);
+}
+
+/**
+ * Where a link to an event's page is built from, seen from this host: the
+ * origin of the site the event belongs to when that is not this one, else ''
+ * so the link stays relative. A card on the main site then opens a client's
+ * race straight on the client's site, without a redirect hop.
+ */
+export async function eventLinkOrigin(): Promise<(event: { client: SiteClientRef | null }) => string> {
+  const here = await requestUrl();
+  return event => {
+    if (!here) return '';
+    const origin = eventOrigin(event, here);
+    return origin === here.origin ? '' : origin;
+  };
+}
+
+/**
+ * An event page's `alternates.canonical`: `path(slug)` on the site the event
+ * belongs to, so a search engine sees one URL per page however many hosts
+ * could reach it. Nothing for an event that does not exist; the page itself
+ * answers that.
+ */
+export async function eventPageMetadata(
+  param: string,
+  path: (slug: string) => string,
+): Promise<Metadata> {
+  const event = await prisma.event.findFirst({
+    where: eventByParam(param),
+    select: { slug: true, client: EVENT_SITE_CLIENT },
+  });
+  if (!event) return {};
+  return { alternates: { canonical: `${eventOrigin(event, await requestUrl())}${path(event.slug)}` } };
+}
+
+/** The two client columns `eventOrigin` reads, for a Prisma `select`/`include`. */
+export const EVENT_SITE_CLIENT = { select: { subdomain: true, status: true } } as const;

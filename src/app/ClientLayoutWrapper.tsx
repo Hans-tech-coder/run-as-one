@@ -3,8 +3,20 @@
 import { usePathname } from 'next/navigation';
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import type { SiteClient } from "@/lib/site-client";
 
-export default function ClientLayoutWrapper({ children }: { children: React.ReactNode }) {
+/**
+ * `site` is the client whose subdomain this is, or null on the main site
+ * (lib/site-client.ts). The root layout reads it on the server; the navbar and
+ * footer only wear it.
+ */
+export default function ClientLayoutWrapper({
+  site,
+  children,
+}: {
+  site: SiteClient | null;
+  children: React.ReactNode;
+}) {
   const pathname = usePathname();
   const isAdmin = pathname?.startsWith('/admin');
 
@@ -16,7 +28,7 @@ export default function ClientLayoutWrapper({ children }: { children: React.Reac
     <>
       {/* The navbar is fixed, so it sits outside the column and contributes no
           height — the clearance under it comes from --nav-offset below. */}
-      <Navbar />
+      <Navbar site={site} />
 
       {/* A page shorter than the viewport used to be padded out by a
           min-h-screen on <main>, which pushed the footer to the very bottom of
@@ -34,7 +46,7 @@ export default function ClientLayoutWrapper({ children }: { children: React.Reac
         <main className="public-main container grow" style={{ paddingTop: 'var(--nav-offset)' }}>
           {children}
         </main>
-        <Footer />
+        <Footer site={site} />
       </div>
     </>
   );

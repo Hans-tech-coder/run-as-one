@@ -15,6 +15,20 @@ offers **QR Ph only** (`OFFERED_PAYMONGO_METHODS` in `lib/free-checkout.ts`)
 until it is. Where an entry below says something is "not released" or
 "production is N migrations behind", it predates this release.
 
+**Client subdomains, Batch 2 (2026-10-13, on `dev`, not released;
+`CLIENT_SUBDOMAIN_PLAN.md`), the subdomain site.** A client's subdomain now
+wears its branding and lists only its races (§6, "Hosts"): the root layout
+reads `getSiteClient()` and passes it to `Navbar` (client logo → `/events`)
+and `Footer`, which renders `ClientSiteFooter.tsx` there (D9); `Footer` was
+split into `FooterParts.tsx` first. `/events` filters by client under
+`ClientSiteHero.tsx` (D8); `/results` filters by client, results-only races
+included. The five event and result pages call `ensureEventHost` and set
+`alternates.canonical` on the event's own site; main-site cards link client
+races straight to their subdomain. Layout metadata is host-aware (client
+name in the title, `metadataBase` on the client's origin). On `local-dev`,
+CRC is `crc` and RaceCore `racecore`. Next: Batch 3 (checkout return URLs,
+pay links and emails on `eventOrigin`).
+
 **Client subdomains, Batch 1 (2026-10-13, on `dev`, not released;
 `CLIENT_SUBDOMAIN_PLAN.md`), data and plumbing, no public change.**
 Migration `20261013090000_client_site_branding` adds `Client.subdomain`

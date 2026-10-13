@@ -8,6 +8,13 @@ import EventHeroBanner from '@/components/EventHeroBanner';
 import { canonicalResultsPath, eventByParam } from '@/lib/event-slug';
 import { withPacerRanks } from '@/lib/pacer-store';
 import { genderDivision } from '@/lib/gender-division';
+import { EVENT_SITE_CLIENT, ensureEventHost, eventPageMetadata } from '@/lib/site-client';
+
+/** One URL per event, on the site it belongs to (CLIENT_SUBDOMAIN_PLAN.md). */
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  return eventPageMetadata(slug, eventSlug => `/results/${eventSlug}/full`);
+}
 
 export default async function FullResultsPage({ 
   params 
@@ -19,9 +26,14 @@ export default async function FullResultsPage({
   // Slug or cuid — the old id links stay alive; see eventByParam.
   const event = await prisma.event.findFirst({
     where: eventByParam(slug),
+    include: { client: EVENT_SITE_CLIENT },
   });
 
   if (!event) redirect('/');
+
+  // On its own site first: a client's race opened on another host goes there,
+  // path kept (lib/site-client.ts).
+  await ensureEventHost(event);
 
   const canonical = canonicalResultsPath(event, slug, '/full');
   if (canonical) redirect(canonical);

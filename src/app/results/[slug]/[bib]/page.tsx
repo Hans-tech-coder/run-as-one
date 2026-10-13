@@ -10,6 +10,7 @@ import { canonicalResultsPath, eventByParam, resultsPath, runnerResultPath } fro
 import { toWholeSeconds } from '@/lib/race-time';
 import { withPacerRanks } from '@/lib/pacer-store';
 import { RESULT_STATUS_LABELS, isResultStatus } from '@/lib/result-status';
+import { EVENT_SITE_CLIENT, ensureEventHost, eventPageMetadata } from '@/lib/site-client';
 
 /**
  * One runner's result, addressed by the number they wore: /results/[slug]/1042.
@@ -24,6 +25,12 @@ import { RESULT_STATUS_LABELS, isResultStatus } from '@/lib/result-status';
  * still read as the bib — the runner's own number wins over a collision that
  * would show them somebody else.
  */
+/** One URL per runner, on the site the race belongs to (CLIENT_SUBDOMAIN_PLAN.md). */
+export async function generateMetadata({ params }: { params: Promise<{ slug: string; bib: string }> }) {
+  const { slug, bib } = await params;
+  return eventPageMetadata(slug, eventSlug => `/results/${eventSlug}/${encodeURIComponent(bib)}`);
+}
+
 export default async function RunnerAnalyticsPage({ 
   params 
 }: { 
@@ -34,8 +41,15 @@ export default async function RunnerAnalyticsPage({
   // The event comes first here, unlike the old cuid lookup: a bib only means
   // something inside one race, so there is nothing to look up until we know
   // which race the URL is naming.
-  const event = await prisma.event.findFirst({ where: eventByParam(slug) });
+  const event = await prisma.event.findFirst({
+    where: eventByParam(slug),
+    include: { client: EVENT_SITE_CLIENT },
+  });
   if (!event) redirect('/results');
+
+  // On its own site first: a client's race opened on another host goes there,
+  // path kept (lib/site-client.ts).
+  await ensureEventHost(event);
 
   const include = { category: true, event: true } as const;
 

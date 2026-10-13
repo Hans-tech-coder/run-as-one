@@ -5,6 +5,7 @@ import db from '@/lib/db';
 import ResultsClientOrchestrator from '@/components/ResultsClientOrchestrator';
 import EventGrid from '@/components/EventGrid';
 import { mostRecentFirst } from '@/lib/event-schedule';
+import { EVENT_SITE_CLIENT, eventLinkOrigin, getSiteClient } from '@/lib/site-client';
 
 /**
  * Rendered on every request, for the same reason as the two event listings
@@ -24,14 +25,23 @@ export default async function GlobalResultsPage() {
   //
   // Ordered most recent first, so the race people have just come home from is
   // the one at the top. See src/lib/event-schedule.ts.
-  const events = await db.event.findMany({
+  //
+  // On a client's site (CLIENT_SUBDOMAIN_PLAN.md D5) only that client's races,
+  // results-only ones included — they never show on /events, but their times
+  // belong here like any other. A plain heading, no hero (D8).
+  const [site, linkOrigin] = await Promise.all([getSiteClient(), eventLinkOrigin()]);
+  const rows = await db.event.findMany({
     where: {
       raceResults: {
         some: {}
-      }
+      },
+      ...(site ? { clientId: site.id } : {}),
     },
     orderBy: mostRecentFirst,
+    // The client only says which host a card links to (lib/site-client.ts).
+    include: { client: EVENT_SITE_CLIENT },
   });
+  const events = rows.map(({ client, ...event }) => ({ ...event, siteOrigin: linkOrigin({ client }) }));
 
   return (
     <div className="relative overflow-hidden w-full flex flex-col items-center">
@@ -46,7 +56,9 @@ export default async function GlobalResultsPage() {
             Race Results
           </h1>
           <p className="text-base sm:text-lg text-secondary leading-relaxed t-stagger-line t-stagger-line--3">
-            Select an event to view the official race results and your runner analytics.
+            {site
+              ? `Official results from every ${site.name} race. Select an event to view the rankings and your runner analytics.`
+              : 'Select an event to view the official race results and your runner analytics.'}
           </p>
         </div>
 

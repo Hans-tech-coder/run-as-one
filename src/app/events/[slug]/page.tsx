@@ -30,6 +30,7 @@ import {
   takenSlotsByCategory,
   withSlotCounts,
 } from '@/lib/registration-gate';
+import { EVENT_SITE_CLIENT, ensureEventHost, eventPageMetadata } from '@/lib/site-client';
 import './EventDetails.css';
 
 import EventHeroBanner from '@/components/EventHeroBanner';
@@ -43,6 +44,12 @@ import RichText from '@/components/RichText';
 import { cleanHighlights } from '@/lib/event-highlights';
 import EventHighlightsGallery from '@/components/EventHighlightsGallery';
 
+/** One URL per event, on the site it belongs to (CLIENT_SUBDOMAIN_PLAN.md). */
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  return eventPageMetadata(slug, eventSlug => `/events/${eventSlug}`);
+}
+
 export default async function EventDetailsPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
 
@@ -50,12 +57,16 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ s
   // are still out there on posters and in group chats.
   const event = await db.event.findFirst({
     where: eventByParam(slug),
-    include: { categories: { orderBy: CATEGORY_ORDER } }
+    include: { categories: { orderBy: CATEGORY_ORDER }, client: EVENT_SITE_CLIENT }
   });
 
   if (!event) {
     notFound();
   }
+
+  // On its own site first: a client's race opened on another host goes there,
+  // path kept (lib/site-client.ts).
+  await ensureEventHost(event);
 
   // One canonical address per event: an old cuid link lands here and is sent on
   // to the readable URL rather than quietly serving the page under both.

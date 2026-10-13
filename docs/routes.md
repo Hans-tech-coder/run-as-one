@@ -51,10 +51,38 @@ the browser sent. **On a client's site** (`crc.runasone.ph`, `crc.localhost:3000
 307 to the same path and query on the main host, **before** the session check,
 because `admin_token` is host-only. (Under `next dev` that second move is a
 refresh page, since Next rewrites a `Location` on the host it thinks it serves
-into a bare path.) Public pages are not filtered or branded yet: that, and the
-wrong-host redirects for event and result pages (`ensureEventHost`), are
-Batch 2. Staff set a client's subdomain and branding in the client panel's
-**Site & branding** section on `/admin/clients`.
+into a bare path.) Staff set a client's subdomain and branding in the client
+panel's **Site & branding** section on `/admin/clients`.
+
+**What a client's site shows** (Batch 2). The root layout reads
+`getSiteClient()` (`lib/site-client.ts`) and hands it to the navbar and
+footer: the **client's logo** (its name as a wordmark when none is uploaded)
+linking to `/events`, and the client footer (`components/ClientSiteFooter.tsx`,
+D9: logo, name, public email / phone, website, socials, Run As One's address
+for payment concerns, Privacy / Terms / Feedback, "Powered by Run As One"; no
+Organizers column). `/events` lists only that client's upcoming races
+(`clientId`, still `resultsOnly: false`) under its **hero**
+(`components/ClientSiteHero.tsx`, the event page's `.event-hero` banner: hero
+image, headline — the client's name when only an image is set — and tagline;
+none when neither image nor headline is saved, and the usual heading instead).
+`/results` lists only its races with results, **results-only races
+included**, under the plain heading. The page title is "*Client* | Events &
+Results" and `metadataBase` is the client's origin. `/privacy`, `/terms`,
+`/feedback` and `/pay/[token]` work there unchanged. An unknown or archived
+label is sent to the main site from the layout.
+
+**Wrong host.** `/events/[slug]`, `/events/[slug]/register`,
+`/results/[slug]`, `/results/[slug]/full` and `/results/[slug]/[bib]` call
+`ensureEventHost(event)` first: a client's event opened anywhere but its
+client's site goes there, a no-client event goes to the main site, path and
+query kept (PayMongo's `?success=true&orderRef=…` included). Those pages stream
+under `loading.tsx`, so the move arrives as Next's in-stream redirect (the
+client router, with a meta-refresh fallback) rather than a header 307; same as
+the canonical-slug redirects they already made. Each sets
+`alternates.canonical` to the page on `eventOrigin(event)`
+(`eventPageMetadata`). **On the main site, event and result cards** (home,
+`/events`, `/results`) link a client's race straight to its subdomain
+(`EventGrid`'s `siteOrigin`, from `eventLinkOrigin()`), with no redirect hop.
 
 ### The dashboard (`/admin`, gated by `src/proxy.ts`)
 **Every dashboard page carries the notification bell** at the right end of its
