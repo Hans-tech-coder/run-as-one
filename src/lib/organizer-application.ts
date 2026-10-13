@@ -34,6 +34,7 @@ import {
   ORGANIZER_TYPES,
   oneOf,
   servicesOf,
+  type OrganizerService,
 } from './organizer-vocabulary';
 
 /* ──────────────────────────────── Limits ──────────────────────────────── */
@@ -254,7 +255,7 @@ export function readOrganizerApplication(input: ApplicationInput): {
   }
 
   if (!email) {
-    errors.email = 'Enter the email address you will sign in with.';
+    errors.email = 'Enter the email address we should reply to.';
   } else if (email.length > MAX_EMAIL) {
     errors.email = `That address is longer than ${MAX_EMAIL} characters.`;
   } else if (!looksLikeEmailAddress(email)) {
@@ -275,7 +276,7 @@ export function readOrganizerApplication(input: ApplicationInput): {
   /* Step 3 — what they want to run. */
 
   if (services.length === 0) {
-    errors.services = 'Choose at least one thing you need Run As One for.';
+    errors.services = 'Choose at least one service, or Not Sure Yet.';
   }
 
   if (firstEventName.length > MAX_EVENT_NAME) {
@@ -344,3 +345,33 @@ export function hasApplicationDetails(row: {
     row.orgType || row.contactFirstName || row.phone || (row.services?.length ?? 0) > 0,
   );
 }
+
+/* ───────────────────────── After it is sent ───────────────────────────── */
+
+/**
+ * Whether an application leads to a sign-in (SERVICE_INQUIRY_PLAN.md S5).
+ *
+ * A sign-in is a *Client Viewer*: a view of the race's registrations and
+ * results, which only exists once Run As One runs the race's registration. So
+ * it follows Online Registration and nothing else; an inquiry for timing,
+ * bibs or results alone needs none. The thank-you panel reads this to say
+ * what happens next, and `/admin/clients` reads it beside Send invite, so the
+ * applicant and staff are told the same thing. Send invite still works either
+ * way: this says what is needed, not what is allowed.
+ */
+export function signInComing(services: readonly string[] | null | undefined): boolean {
+  return (services ?? []).includes(SIGN_IN_SERVICE);
+}
+
+const SIGN_IN_SERVICE: OrganizerService = 'REGISTRATION';
+
+/**
+ * The refusal for a second application from the same address (S3).
+ *
+ * One application per email stays; the way to add to it is to reach Run As
+ * One directly. The route sends this exact text under `email`, and the form
+ * recognizes it by that text to draw the contact address and the social links
+ * beneath it (they are settings, so the words cannot carry them).
+ */
+export const ALREADY_APPLIED_MESSAGE =
+  'We already have your application from this address, so there is no need to send another. For anything new, email or message Run As One instead.';

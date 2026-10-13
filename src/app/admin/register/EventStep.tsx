@@ -47,7 +47,7 @@ export default function EventStep({
 
       <div className="form-group">
         <label className="form-label" htmlFor={FIELD_ID.firstEventName}>
-          Your First Event on Run As One
+          The Event It Is For
           <Optional />
         </label>
         <input
@@ -135,7 +135,7 @@ export default function EventStep({
           onChange={(e) => set('applicationNote', e.target.value)}
           maxLength={MAX_APPLICATION_NOTE}
           className="form-input form-textarea"
-          placeholder="Tell us about the races you have run before, who your sponsors are, or anything you need the platform to do that you have not seen here."
+          placeholder="Tell us about the races you have run before, who your sponsors are, or anything you need from us that you have not seen here."
           aria-invalid={Boolean(errors.applicationNote)}
           aria-describedby={`${FIELD_ID.applicationNote}-error ${FIELD_ID.applicationNote}-count`}
         />
@@ -168,11 +168,11 @@ export default function EventStep({
           </span>
           <span>
             <span className="apply-choice__label">
-              Everything above is true and I am authorised to apply on
+              Everything above is true and I am authorised to inquire on
               behalf of this organization.
             </span>
             <span className="apply-choice__hint">
-              We use these details to review your application and to
+              We use these details to reply to your inquiry and to
               contact you about it. See our{' '}
               <Link href="/privacy" className="auth-link">
                 Privacy Policy

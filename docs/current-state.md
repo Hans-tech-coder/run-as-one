@@ -15,6 +15,33 @@ offers **QR Ph only** (`OFFERED_PAYMONGO_METHODS` in `lib/free-checkout.ts`)
 until it is. Where an entry below says something is "not released" or
 "production is N migrations behind", it predates this release.
 
+**Service inquiry, Batch 3 (2026-10-13, on `dev`, not released;
+`SERVICE_INQUIRY_PLAN.md`).** The form is titled **"Inquire About Our
+Services"** (heading and metadata title: `register/page.tsx` is now a server
+half over `RegisterClient.tsx`), and the Footer and sign-in links read **"Our
+Services"**; the URL is unchanged. The subtitle, step blurbs, services
+question, event label, consent line and two refusal messages read as an
+inquiry for any service, with no price or date promised. **The thank-you panel
+follows the services** (`signInComing` in `lib/organizer-application.ts`):
+with Online Registration its third step is the sign-in, described as a view
+of the race's registrations and results that our team runs; without it, "No
+sign-in needed". **A duplicate address** is refused under Email with
+`ALREADY_APPLIED_MESSAGE` (route and form share it) and the form draws
+`ReachUs.tsx` under it: the saved contact email and any saved social links.
+**`POST /api/auth/register` is throttled**: `APPLICATION_RULE`, 5 every 10
+minutes per address, 429 with a plain `error` the form shows in its banner.
+Checked on `local-dev` (by hand through the form): a registration
+application's panel and a results-and-timing one's; the duplicate refusal
+returning to step 2 with the email link (no social links are saved on
+`local-dev`, so that branch was not seen rendered); the new labels in the
+Footer and on login; a burst of posts refused on the sixth with the banner
+shown, after hand submissions went through; the form at 375px with no
+horizontal scroll (the thank-you panel was not re-checked at 375px, since the
+throttle was then closed). Build clean; lint adds nothing. Test rows
+`batch3-registration@example.test` and `batch3-timing@example.test` were left
+in `local-dev`. No migration. `/admin/clients` does not read `signInComing`
+yet: that is Batch 4.
+
 **Service inquiry, Batch 2 (2026-10-13, on `dev`, not released;
 `SERVICE_INQUIRY_PLAN.md`).** The services question offers every service Run
 As One sells, in three groups. **Online**: Online Registration (`REGISTRATION`,
@@ -28,7 +55,7 @@ owner until it is offered),
 shown greyed with a tag and not tickable; `servicesOf` drops them like any
 unknown code, so the route never stores one. Old codes are unchanged, so
 stored applications read as before. The page title, subtitle, step blurb and
-thank-you panel still speak to a registration client: that is Batch 3.
+thank-you panel were left to Batch 3 (above).
 Checked on `local-dev`: Timing + Bibs (by hand and posted) stored as those two
 codes, Not Sure Yet plus others stored as `NOT_SURE`, Coming soon and unknown
 codes dropped (Coming soon alone is refused as "choose at least one"), 375px

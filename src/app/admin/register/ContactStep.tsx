@@ -7,10 +7,12 @@ import FieldError from '@/components/ui/FieldError';
 // wrapped in a `.form-group` like the fields around it.
 import PhoneField from '@/app/events/[slug]/register/PhoneField';
 import {
+  ALREADY_APPLIED_MESSAGE,
   APPLICATION_PHONE_COUNTRY,
   type ApplicationErrors,
 } from '@/lib/organizer-application';
 import { FIELD_ID, type FormState, type SetField } from './apply-steps';
+import ReachUs from './ReachUs';
 
 /** Step 2: the person Run As One talks to, and how to reach them. */
 export default function ContactStep({
@@ -107,10 +109,10 @@ export default function ContactStep({
           aria-describedby={`${FIELD_ID.email}-error ${FIELD_ID.email}-hint`}
         />
         <p id={`${FIELD_ID.email}-hint`} className="form-hint">
-          Every reply about your application goes here, and so
-          will the link to set up your sign-in.
+          Every reply about your inquiry goes here.
         </p>
         <FieldError id={`${FIELD_ID.email}-error`} message={errors.email} />
+        {errors.email === ALREADY_APPLIED_MESSAGE && <ReachUs />}
       </div>
 
       <PhoneField

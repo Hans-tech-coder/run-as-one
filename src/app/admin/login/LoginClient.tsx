@@ -186,9 +186,9 @@ export default function LoginClient({
           </form>
 
           <div className="auth-footer">
-            Running a race with us?{' '}
+            Need race services?{' '}
             <Link href="/admin/register" className="auth-link">
-              Apply as an organizer
+              Our Services
             </Link>
           </div>
         </div>

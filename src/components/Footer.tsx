@@ -38,7 +38,7 @@ const columns = (contactEmail: string): { heading: string; links: FooterLink[] }
   {
     heading: 'Organizers',
     links: [
-      { label: 'Host an Event', href: '/admin/register' },
+      { label: 'Our Services', href: '/admin/register' },
       { label: 'Organizer Login', href: '/admin/login' },
     ],
   },

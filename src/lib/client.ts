@@ -2,7 +2,7 @@
  * Where a client stands, and which moves between standings are allowed.
  *
  * A client is an organization Run As One runs races for (ADMIN_MERGE_PLAN.md).
- * It arrives through the *Apply as an Organizer* form, waits in the
+ * It arrives through the *Inquire About Our Services* form, waits in the
  * submissions list, and is let in only when a staff member presses **Send
  * invite** — nothing is sent on submit, and nothing is approved or rejected.
  *

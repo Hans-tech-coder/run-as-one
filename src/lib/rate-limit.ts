@@ -52,6 +52,19 @@ export const PROMO_LOOKUP_RULE: RateLimitRule = { limit: 20, windowMs: 60_000 };
 export const FEEDBACK_RULE: RateLimitRule = { limit: 5, windowMs: 10 * 60_000 };
 
 /**
+ * The service inquiry (`/api/auth/register`): 5 every 10 minutes from one
+ * address.
+ *
+ * It writes the only row a stranger can create, and since the form speaks to
+ * every kind of organizer (SERVICE_INQUIRY_PLAN.md Batch 3) it is linked from
+ * every page's footer. A person sends one, maybe a second after a refusal
+ * (an address already used, a typo the form could not catch); the form checks
+ * each step before it posts, so a person by hand rarely posts twice. Like
+ * feedback, the refusal says what it is.
+ */
+export const APPLICATION_RULE: RateLimitRule = { limit: 5, windowMs: 10 * 60_000 };
+
+/**
  * The resume-payment link (`/pay/[token]` and its Pay now): 20 a minute from
  * one address.
  *

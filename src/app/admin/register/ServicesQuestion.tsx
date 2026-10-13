@@ -81,11 +81,11 @@ export default function ServicesQuestion({
   return (
     <div className="form-group">
       <span className="form-label" id={`${FIELD_ID.services}-label`}>
-        What do you need Run As One for?
+        Which services do you need?
       </span>
       <p className="form-hint">
-        Pick as many as you need. Nothing here is locked in — we will go
-        through the details with you.
+        Pick as many as you need. This is an inquiry, not an order: we reply
+        to go through the details and the price with you.
       </p>
       <div
         className="apply-choice-groups mt-1"

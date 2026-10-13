@@ -3,10 +3,12 @@ import { Prisma } from '@prisma/client';
 import db from '@/lib/db';
 import { normalizeAccountEmail } from '@/lib/text-case';
 import { findAccountByEmail } from '@/lib/actor';
-import { readOrganizerApplication } from '@/lib/organizer-application';
+import { ALREADY_APPLIED_MESSAGE, readOrganizerApplication } from '@/lib/organizer-application';
+import { APPLICATION_RULE, allowRequest, callerKey } from '@/lib/rate-limit';
 
 /**
- * An organization applying to have Run As One run its races.
+ * An organizer inquiring about Run As One's services: the online ones this
+ * app runs and the race-day ones staff fulfil through suppliers.
  *
  * This route writes the only row on the platform that a stranger can create,
  * which is why it does two jobs rather than one: it validates the whole
@@ -26,8 +28,22 @@ import { readOrganizerApplication } from '@/lib/organizer-application';
  * email: nobody approves or rejects an application any more. It waits on
  * `/admin/clients` until Run As One staff press Send invite, and that
  * invitation is where the applicant chooses a password.
+ *
+ * Throttled per address (`APPLICATION_RULE`), like every other route a
+ * stranger can call. The refusal is a plain `error`, which the form shows in
+ * its banner.
  */
 export async function POST(request: Request) {
+  if (!allowRequest('register', callerKey(request), APPLICATION_RULE)) {
+    return NextResponse.json(
+      {
+        error:
+          'That is a few applications in a short time. This one was not sent. Wait a few minutes, then try again.',
+      },
+      { status: 429 },
+    );
+  }
+
   try {
     const body = await request.json().catch(() => null);
     if (!body || typeof body !== 'object') {
@@ -114,8 +130,7 @@ function alreadyApplied() {
     {
       error: 'We already have an application from that email address.',
       errors: {
-        email:
-          'We already have an application from this address, so there is no need to send another. To add something, write to us instead.',
+        email: ALREADY_APPLIED_MESSAGE,
       },
     },
     { status: 400 },

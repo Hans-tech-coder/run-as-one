@@ -9,6 +9,15 @@ import type { ApplicationField } from '@/lib/organizer-application';
  * sends the applicant back to.
  */
 
+/* ───────────────────────────── The heading ────────────────────────────── */
+
+/** The form's title (SERVICE_INQUIRY_PLAN.md O2), read by the page heading and
+ *  by `page.tsx`'s metadata. An inquiry for a service, never a partnership. */
+export const FORM_TITLE = 'Inquire About Our Services';
+
+export const FORM_SUBTITLE =
+  'Online registration, results and e-certificates, race timing, bibs and race kits. Tell us what your race needs and we will get back to you.';
+
 /* ───────────────────────────── The steps ──────────────────────────────── */
 
 export const STEPS = [
@@ -17,19 +26,19 @@ export const STEPS = [
     rail: 'Organization',
     title: 'Your organization',
     blurb:
-      'The name your races are run under, and where to find you. This is what the Run As One team checks first.',
+      'The name your races are run under, and where to find you. This is what the Run As One team reads first.',
   },
   {
     rail: 'Contact',
     title: 'You and how to reach you',
     blurb:
-      'Who we talk to, and where. There is no password to choose yet — we set up your sign-in later, by email.',
+      'Who we talk to, and where. There is no password to choose: we reply by email or phone.',
   },
   {
     rail: 'Your events',
-    title: 'What you are planning',
+    title: 'What you need',
     blurb:
-      'What you need the platform for, and the race you have in mind. Everything here is optional except the first question.',
+      'The services you need from us, and the event they are for. Everything here is optional except the first question.',
   },
 ] as const;
 
