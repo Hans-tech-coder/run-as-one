@@ -5,7 +5,8 @@ import type { AuditEntry } from '@/lib/audit';
 import { eventInstant } from '@/lib/event-schedule';
 
 /**
- * When an unpaid online checkout stops holding what it took, and what handing
+ * When an unpaid order — an online checkout, or a bank transfer nobody
+ * verified — stops holding what it took, and what handing
  * it back involves.
  *
  * A runner who opens PayMongo and closes the tab leaves a `PENDING`
@@ -30,12 +31,19 @@ import { eventInstant } from '@/lib/event-schedule';
  * sweep, a script, a test) must not be able to disagree with the first about
  * any of them.
  *
- * **A bank transfer is never swept.** It is *supposed* to sit PENDING while an
- * organizer looks at a deposit slip, and that can easily outlast any window
- * worth setting for an online checkout. Expiring one would cancel a
- * registration somebody has already paid for.
+ * **A bank transfer gets its own, longer window** (`BANK_TRANSFER_EXPIRY_DAYS`).
+ * It is *supposed* to sit PENDING while an organizer looks at a deposit slip,
+ * which can easily outlast a day, so it is never held to the online window.
+ * It used to be held to no window at all, and that let anybody with a junk
+ * image fill a capped event's slots for good (Strix vuln-0003, run a8b3): the
+ * public form takes any picture as a slip. The owner's ruling (2026-10-13):
+ * an organizer has seven days to verify a slip; after that the order expires
+ * like an online one and its slot and promo go back. It stays on the
+ * registrants screen, marked expired, and if the money really did arrive the
+ * organizer can still validate it — that move takes the slot back only if one
+ * is free (api/admin/registrations/[id]/status).
  *
- * **The runner is not emailed.** Resend's free tier stops at 100 recipients a
+ * **Nobody is emailed**, the runner or the organizer. Resend's free tier stops at 100 recipients a
  * day, and spending one to tell somebody that the checkout they walked away
  * from has been tidied up is the worst trade available. The organizer sees it
  * on the registrants screen instead.
@@ -54,6 +62,17 @@ import { eventInstant } from '@/lib/event-schedule';
  * one edit and the reasoning above stays attached to it.
  */
 export const PENDING_EXPIRY_HOURS = 24;
+
+/**
+ * How long a bank transfer waits for an organizer to check its deposit slip
+ * before it stops holding a slot (owner's ruling, 2026-10-13).
+ *
+ * Seven days covers a weekend and a slow week of an organizer who checks slips
+ * in batches, while junk slips submitted to block a sold-out race hold their
+ * seats for a week at most rather than forever. Timed from `createdAt` alone:
+ * a payment link (`holdUntil`) is an online-checkout tool and never moves it.
+ */
+export const BANK_TRANSFER_EXPIRY_DAYS = 7;
 
 /**
  * The most registrations one sweep will expire.
@@ -98,36 +117,45 @@ export function expiryCutoff(now: Date = new Date()): Date {
   return new Date(now.getTime() - PENDING_EXPIRY_HOURS * 60 * 60 * 1000);
 }
 
+const BANK_TRANSFER_HOLD_MS = BANK_TRANSFER_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
+
+/** The moment before which an unverified bank transfer has waited long enough. */
+export function bankTransferExpiryCutoff(now: Date = new Date()): Date {
+  return new Date(now.getTime() - BANK_TRANSFER_HOLD_MS);
+}
+
 /**
- * The rows a sweep may touch: unpaid, not a bank transfer, and old enough.
+ * The rows a sweep may touch: unpaid and old enough — an online checkout past
+ * its hold, or a bank transfer past `BANK_TRANSFER_EXPIRY_DAYS`.
  *
  * `paymentMethod` is matched case-insensitively because registrations written
  * before `registration-codes.ts` uppercased the coded columns still hold
  * `bank_transfer` in lowercase, and those guards accept either casing on read
- * rather than demanding a backfill. A case-sensitive exclusion here would sweep
- * exactly the old bank transfers it is meant to protect.
+ * rather than demanding a backfill. A case-sensitive match here would hold
+ * exactly the old bank transfers to the one-day online window.
  *
  * `expiredAt: null` is belt as well as braces: nothing already EXPIRED is still
  * PENDING, but the two conditions together are what make a second pass over the
  * same row impossible even if a status were later hand-edited back.
  */
 export function sweepableWhere(now: Date = new Date()) {
+  const bankTransfer = { equals: PAYMENT_METHODS.BANK_TRANSFER, mode: 'insensitive' as const };
   return {
     status: 'PENDING',
     expiredAt: null,
-    // A payment link moves the hold (`holdUntil`, decision D4 of
-    // UNPAID_FOLLOWUP_PLAN.md): such an order is timed from it alone, so a
-    // link sent at hour 20 is not swept out from under the runner at hour 24.
     OR: [
-      { holdUntil: { lt: now } },
-      { holdUntil: null, createdAt: { lt: expiryCutoff(now) } },
-    ],
-    NOT: {
-      paymentMethod: {
-        equals: PAYMENT_METHODS.BANK_TRANSFER,
-        mode: 'insensitive' as const,
+      {
+        NOT: { paymentMethod: bankTransfer },
+        // A payment link moves the hold (`holdUntil`, decision D4 of
+        // UNPAID_FOLLOWUP_PLAN.md): such an order is timed from it alone, so a
+        // link sent at hour 20 is not swept out from under the runner at hour 24.
+        OR: [
+          { holdUntil: { lt: now } },
+          { holdUntil: null, createdAt: { lt: expiryCutoff(now) } },
+        ],
       },
-    },
+      { paymentMethod: bankTransfer, createdAt: { lt: bankTransferExpiryCutoff(now) } },
+    ],
   };
 }
 
@@ -310,7 +338,9 @@ export async function releaseRedemption(tx: any, registration: Sweepable): Promi
  * holds its slot in the background (SLOT_HOLDING_STATUSES) — hiding it changes
  * what an organizer sees, not what the capacity count believes.
  *
- * A bank transfer is always listed: its PENDING is the organizer's to-do list.
+ * A bank transfer is always listed: its PENDING is the organizer's to-do list,
+ * and an EXPIRED one stays so a slip that turns out to be real can still be
+ * validated (see `BANK_TRANSFER_EXPIRY_DAYS`).
  */
 export function listedRegistrationWhere() {
   return {
@@ -344,7 +374,9 @@ export function awaitingVerificationWhere() {
  * filters and `PAID`, so the count and the list cannot drift apart again.
  *
  * It still holds its slot until the sweep expires it — the capacity count
- * (`SLOT_HOLDING_STATUSES`) is unchanged; only the word on the screen is.
+ * (`SLOT_HOLDING_STATUSES`) is unchanged; only the word on the screen is. (A
+ * bank transfer is swept too, on its own window, but it is a registrant while
+ * it waits and never counted here.)
  */
 export function unpaidCheckoutWhere() {
   return {
@@ -373,7 +405,21 @@ export const SWEEP_HOUR_UTC = 18;
  * following it up need that true answer.
  */
 export function expiresBy(createdAt: Date, holdUntil: Date | null = null): Date {
-  const eligibleAfter = holdEnds({ createdAt, holdUntil }).getTime();
+  return firstSweepAfter(holdEnds({ createdAt, holdUntil }));
+}
+
+/**
+ * The latest time a bank transfer can still be PENDING: the first sweep after
+ * its `BANK_TRANSFER_EXPIRY_DAYS` run out, plus the cron's hour of slack, the
+ * same arithmetic as `expiresBy`. Shown to the organizer as "verify by".
+ */
+export function bankTransferExpiresBy(createdAt: Date): Date {
+  return firstSweepAfter(new Date(createdAt.getTime() + BANK_TRANSFER_HOLD_MS));
+}
+
+/** The first daily sweep that finds a hold ending at `holdEnd` over, plus an hour. */
+function firstSweepAfter(holdEnd: Date): Date {
+  const eligibleAfter = holdEnd.getTime();
   const sweep = new Date(eligibleAfter);
   sweep.setUTCHours(SWEEP_HOUR_UTC, 0, 0, 0);
   // The sweep only takes orders whose hold ended strictly before it runs, so a

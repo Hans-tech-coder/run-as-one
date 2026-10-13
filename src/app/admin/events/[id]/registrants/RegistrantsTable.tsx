@@ -32,7 +32,12 @@ import {
 } from '@tanstack/react-table';
 import RegistrantDetailModal from './RegistrantDetailModal';
 import RunnerEditModal, { mergeSavedRunner } from './RunnerEditModal';
-import { MinorBadge, RegistrantStatusBadges } from './registrant-display';
+import {
+  MinorBadge,
+  RegistrantStatusBadges,
+  canValidatePayment,
+  expiredExplanation,
+} from './registrant-display';
 import { buildRegistrantCsv, downloadRegistrantCsv } from './registrant-csv';
 import { buildRegistrantColumns } from './registrant-columns';
 import RegistrantRowActions, { type RegistrantRowActionHandlers } from './RegistrantRowActions';
@@ -227,18 +232,15 @@ export default function RegistrantsTable({
 
   /**
    * Marks a bank transfer paid from either door — the detail modal's footer
-   * or the receipt lightbox — and moves whichever panel is open with it, so
-   * a validated order is never left sitting in front of somebody still
-   * saying PENDING.
+   * or the receipt lightbox. Whichever panel is open moves to PAID with the
+   * table, in handleStatusChange, once the route has said yes — never before:
+   * validating an expired transfer is refused when the race has refilled
+   * (api/admin/registrations/[id]/status), and a panel already reading PAID
+   * behind that refusal would tell the organizer the opposite of what
+   * happened.
    */
   const validatePayment = (runner: any) => {
     handleStatusChange(runner.registrationId, 'PAID', 'result');
-    const paid = (current: any) =>
-      current && current.registrationId === runner.registrationId
-        ? { ...current, status: 'PAID' }
-        : current;
-    setViewingRunner(paid);
-    setProofRunner(paid);
   };
 
   /**
@@ -428,7 +430,7 @@ export default function RegistrantsTable({
                   a phone has no hover. Allowed to wrap, unlike the chips. */}
               {row.original.status === 'EXPIRED' && (
                 <span className="status-note neutral" style={{ flexBasis: '100%', marginTop: 0, whiteSpace: 'normal' }}>
-                  Never paid, so its slot and any promo code it used were released.
+                  {expiredExplanation(row.original)}
                 </span>
               )}
               {row.original.emailPending && (
@@ -510,7 +512,7 @@ export default function RegistrantsTable({
           totalAmount={proofRunner.totalAmount}
           status={proofRunner.status}
           isPdf={proofRunner.proofIsPdf}
-          canValidate={permissions.validate && proofRunner.status === 'PENDING' && proofRunner.isBankTransfer}
+          canValidate={permissions.validate && canValidatePayment(proofRunner)}
           isValidating={updatingId === proofRunner.registrationId}
           onValidate={() => validatePayment(proofRunner)}
           onClose={() => setProofRunner(null)}

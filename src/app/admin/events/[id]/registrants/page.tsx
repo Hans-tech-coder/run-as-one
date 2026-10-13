@@ -35,7 +35,7 @@ import {
   formatInstantDay,
   today,
 } from '@/lib/event-schedule';
-import { expiresBy, isCancelledCheckout, listedRegistrationWhere, unpaidFollowUpWhere } from '@/lib/pending-expiry';
+import { bankTransferExpiresBy, expiresBy, isCancelledCheckout, listedRegistrationWhere, unpaidFollowUpWhere } from '@/lib/pending-expiry';
 import { formatRunnerAddress } from '@/lib/runner-address';
 import { shipmentsFor } from '@/app/events/[slug]/register/delivery-split';
 import DashboardHeader from '@/app/admin/DashboardHeader';
@@ -234,6 +234,13 @@ export default async function RegistrantsPage({
         // detail modal can say *when* rather than leaving EXPIRED unexplained
         // — see lib/pending-expiry.ts.
         expiredAt: reg.expiredAt ? reg.expiredAt.toISOString() : null,
+        // The latest a bank transfer waiting on its slip can still hold its
+        // slot (BANK_TRANSFER_EXPIRY_DAYS). Shown in the detail modal so the
+        // expiry has a date the organizer saw coming; null on everything else.
+        verifyBy:
+          reg.status === 'PENDING' && isBankTransfer(reg.paymentMethod)
+            ? shortInstant(bankTransferExpiresBy(reg.createdAt))
+            : null,
         emergencyContactName: runner.emergencyContactName,
         emergencyContactPhone: runner.emergencyContactPhone,
         // The runner's home address (RUNNER_ADDRESS_PLAN.md). The four parts

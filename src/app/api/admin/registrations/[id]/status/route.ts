@@ -37,6 +37,7 @@ import { changedFields, recordAudit, type AuditEntry } from '@/lib/audit';
 import { getSignedInUser } from '@/lib/signed-in-user';
 import { deliverConfirmationEmail } from '@/lib/email-delivery';
 import { releaseRedemption } from '@/lib/pending-expiry';
+import { SLOT_HOLDING_STATUSES, SlotsUnavailableError, reserveSlots } from '@/lib/registration-gate';
 
 /**
  * The statuses an organizer may set from the admin. Guarded rather than
@@ -55,6 +56,15 @@ import { releaseRedemption } from '@/lib/pending-expiry';
  * UNPAID_ORDERS_PLAN.md Batch 5). Cancelling from any other status hands
  * nothing back: a PAID order's refund is settled by a person, and an EXPIRED
  * one already gave its promo back when it expired.
+ *
+ * **Out of EXPIRED takes the slot again.** The sweep released it, so moving an
+ * EXPIRED order back to PAID or PENDING — validating a bank transfer whose
+ * seven days ran out (`BANK_TRANSFER_EXPIRY_DAYS`), or reinstating an online
+ * order PayMongo turned out to have paid — goes through `reserveSlots` under
+ * the same lock checkout takes, and is refused when the race has refilled.
+ * The promo is **not** spent again: the runner already paid the discounted
+ * price, and refusing them because the code has since run out would be worse
+ * than one voucher counting once less than it was used.
  */
 const ALLOWED_STATUSES = ['PAID', 'PENDING', 'CANCELLED', 'REFUNDED', 'EXPIRED'] as const;
 
@@ -194,6 +204,25 @@ export async function PATCH(
         }
       }
 
+      // The sweep gave this order's slot back when it expired it. Taking it
+      // again is the same locked count checkout makes, so validating a late
+      // slip cannot oversell a race that has refilled since.
+      if (
+        wantsStatus &&
+        existing.status === 'EXPIRED' &&
+        (SLOT_HOLDING_STATUSES as readonly string[]).includes(status)
+      ) {
+        const categories = await tx.category.findMany({
+          where: { eventId: existing.eventId },
+          select: { id: true, name: true, slotLimit: true },
+        });
+        const runners = await tx.runner.findMany({
+          where: { registrationId: id, deletedAt: null },
+          select: { categoryId: true },
+        });
+        await reserveSlots(tx, categories, runners);
+      }
+
       const updated = await tx.registration.update({
         where: { id },
         data,
@@ -276,6 +305,17 @@ export async function PATCH(
     if (error instanceof StatusMoved) {
       return NextResponse.json(
         { error: 'The order changed while you were cancelling it, so nothing was changed. Reload the page to see where it stands.' },
+        { status: 409 }
+      );
+    }
+    // The runner-facing wording in the error ("go back to step 1") is for a
+    // checkout, so the organizer gets their own.
+    if (error instanceof SlotsUnavailableError) {
+      return NextResponse.json(
+        {
+          error:
+            'This order gave its slot back when it expired, and the race has no room to take it again, so nothing was changed. Raise the slot limit to make room, or refund the runner.',
+        },
         { status: 409 }
       );
     }

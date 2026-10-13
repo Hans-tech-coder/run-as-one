@@ -19,7 +19,8 @@ import type { RegistrantRow } from './RegistrantsTable';
  * The badge tone a payment status wears.
  *
  * EXPIRED is **neutral**, not amber and not red. It is an online checkout
- * nobody came back to finish, swept by lib/pending-expiry.ts so its slot and
+ * nobody came back to finish, or a bank transfer whose slip nobody verified in
+ * seven days, swept by lib/pending-expiry.ts so its slot and
  * its promo redemption go back into circulation — a fact that simply is, in
  * the same voice as a race that has been run. Amber would put it beside
  * PENDING, which is a payment still expected; red would call the organizer to
@@ -58,6 +59,34 @@ export function statusPillClass(status: string): string {
  */
 export function needsValidation(runner: { status: string; isBankTransfer: boolean }): boolean {
   return runner.status === 'PENDING' && runner.isBankTransfer;
+}
+
+/**
+ * Whether the Validate Payment button is offered: the queue above, plus a bank
+ * transfer the sweep expired because nobody checked its slip within
+ * `BANK_TRANSFER_EXPIRY_DAYS` (lib/pending-expiry.ts). The money may still
+ * have arrived, so the organizer can still validate it; the status route takes
+ * the slot back only if the race has room. An expired transfer is left out of
+ * the queue on purpose — junk slips are what the window exists to clear.
+ */
+export function canValidatePayment(runner: { status: string; isBankTransfer: boolean }): boolean {
+  return runner.isBankTransfer && (runner.status === 'PENDING' || runner.status === 'EXPIRED');
+}
+
+/**
+ * Why an EXPIRED order is expired, in one sentence. The two kinds expire for
+ * different reasons, and an expired bank transfer has a slip attached, so
+ * "never paid" would be a claim this app cannot make about it.
+ *
+ * The "7 days" is `BANK_TRANSFER_EXPIRY_DAYS`, written out because that module
+ * reaches the database and cannot be bundled into this client screen. Change
+ * the two together.
+ */
+export function expiredExplanation(runner: { isBankTransfer: boolean; promoCode?: string | null }): string {
+  const released = runner.promoCode ? 'its slot and promo code were released' : 'its slot was released';
+  return runner.isBankTransfer
+    ? `Nobody verified the deposit slip within 7 days, so ${released}. If the money arrived, validate it; that takes a slot back if the race has room.`
+    : `This online checkout was never paid, so ${released}.`;
 }
 
 /**
@@ -128,9 +157,7 @@ export function RegistrantStatusBadges({ runner }: { runner: RegistrantRow }) {
     <>
       <span
         className={`status-badge ${statusTone(runner.status)}`}
-        title={runner.status === 'EXPIRED'
-          ? 'This online checkout was never paid, so its slot and any promo code it used were released.'
-          : undefined}
+        title={runner.status === 'EXPIRED' ? expiredExplanation(runner) : undefined}
       >
         {runner.status}
       </span>

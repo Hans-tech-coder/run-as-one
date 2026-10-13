@@ -225,6 +225,17 @@
   together, and every group promotion; a bigger club splits into two orders.
   Together with `CHECKOUT_RULE` that bounds one address to 200 held slots a
   minute — still per instance, so the shared counter above is the real fix.
+- **An unverified bank transfer holds its slots for seven days, not
+  forever.** `/api/checkout/manual` takes any image under 4 MB as a slip, and
+  bank transfers used to be exempt from the sweep, so junk slips could hold a
+  capped race shut until an organizer cancelled them by hand (Strix vuln-0003,
+  run a8b3). `BANK_TRANSFER_EXPIRY_DAYS` in `lib/pending-expiry.ts` bounds
+  that to a week; validating an expired transfer re-checks capacity.
+- **A failed bank-transfer order leaves no slip behind** (Strix vuln-0001, run
+  fca9). The slip is uploaded before the order transaction, so a failure there
+  used to leave a private blob nothing pointed at. The route now deletes the
+  one it just uploaded, but **only when `VERCEL` is set**: the private store is
+  shared with production, and nothing run locally deletes from it.
 - **A captured PayMongo webhook cannot be replayed later.** The signature
   covers `t=` and the body, so a copy of a real delivery used to stay valid
   forever (Strix vuln-0001, 2026-10-07). After the HMAC check the route refuses

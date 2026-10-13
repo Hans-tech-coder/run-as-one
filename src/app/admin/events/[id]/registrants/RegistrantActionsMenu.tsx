@@ -6,6 +6,7 @@ import { MoreVertical, CheckCircle, Trash2, Edit, Eye } from 'lucide-react';
 import { placeRowMenu, type RowMenuPlacement } from '../../../row-menu-position';
 import BusyLabel from '@/components/ui/BusyLabel';
 import { cssDurationMs } from '@/lib/css-duration';
+import { canValidatePayment } from './registrant-display';
 
 interface RegistrantActionsMenuProps {
   runnerId: string;
@@ -187,7 +188,7 @@ export default function RegistrantActionsMenu({
           </button>
         )}
 
-        {canValidate && status === 'PENDING' && isBankTransfer && (
+        {canValidate && canValidatePayment({ status, isBankTransfer }) && (
           <button
             onClick={() => onStatusChange('PAID')}
             disabled={updatingId === registrationId}

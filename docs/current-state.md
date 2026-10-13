@@ -68,6 +68,21 @@ Nobody resets the owner's in the app (runbook in `ON_HOLD.md` §2). Making it
 required (D7) stays on hold. Needs `TOTP_ENCRYPTION_KEY` in Vercel (Production + Preview); without it
 the panel stays hidden.
 
+**Bank transfers expire, failed orders keep no slip (2026-10-13, on `dev`, not
+released; owner's rulings on Strix vuln-0003 of run a8b3 and vuln-0001 of run
+fca9).** An unverified bank transfer now stops holding its slot after
+`BANK_TRANSFER_EXPIRY_DAYS` (7) — before, a script could fill a capped race
+with junk slips through `/api/checkout/manual` for good. It stays on the
+registrants screen as `EXPIRED`, with no email to anyone; the detail modal
+gives a pending transfer's *verify by* date, and **Validate Payment is still
+offered on an expired transfer**, taking a slot back only if the race has room
+(the status route now runs `reserveSlots` on any move out of `EXPIRED`, online
+orders included). The promo is not spent again on such a reinstate. And a slip
+whose order then fails to save (slots ran out, promo used up, results only, a
+database error) is **deleted on a Vercel deployment and kept, logged, on a
+developer's machine**, because the private store is production's. No
+migration.
+
 **`LOGIN_UX_PLAN.md` and `TWO_FACTOR_PLAN.md` are deleted** (2026-10-12, every
 batch landed). Both were gitignored and never committed, so neither can be
 read back from git. What they left undone is in `ON_HOLD.md` §2 and §12. The
@@ -725,8 +740,9 @@ Known open threads:
 - **Abandoned online checkouts are swept daily** (Promotions Batch B). An
   unpaid online order older than 24 hours becomes `EXPIRED`, gets an
   `expiredAt` stamp, gives its promo redemption back and — by the act of
-  leaving `PENDING` — its category slot too. A **bank transfer is never
-  swept**; it is supposed to sit pending while a person looks at the proof. The
+  leaving `PENDING` — its category slot too. A **bank transfer gets seven
+  days** for a person to look at the proof (it was never swept until
+  2026-10-13; see the entry at the top). The
   rule is `lib/pending-expiry.ts`, the trigger is `/api/cron/expire-pending`
   behind `CRON_SECRET`, and the schedule is the single entry in `vercel.json`.
   The runner is not emailed; the organizer sees the neutral `EXPIRED` badge on

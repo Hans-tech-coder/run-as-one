@@ -30,8 +30,9 @@ import {
   MinorBadge,
   PacerBadge,
   StatusProvenanceNote,
+  canValidatePayment,
   consentSheetPath,
-  needsValidation,
+  expiredExplanation,
   statusPillClass,
 } from './registrant-display';
 
@@ -231,11 +232,17 @@ export default function RegistrantDetailModal({
                       looking at an order that changed on its own. */}
                   {runner.status === 'EXPIRED' && (
                     <span className="text-xs text-[var(--text-muted)] mt-1.5">
-                      Unpaid online checkout, released
                       {runner.expiredAt
-                        ? ` on ${new Date(runner.expiredAt).toLocaleString()}`
+                        ? `Expired on ${new Date(runner.expiredAt).toLocaleString()}. `
                         : ''}
-                      . The slot{runner.promoCode ? ' and the promo code' : ''} went back.
+                      {expiredExplanation(runner)}
+                    </span>
+                  )}
+                  {/* Status checked too: validating moves the open modal's
+                      copy to PAID without reloading verifyBy. */}
+                  {runner.status === 'PENDING' && runner.verifyBy && (
+                    <span className="text-xs text-[var(--text-muted)] mt-1.5">
+                      Verify the slip by {runner.verifyBy}, or the slot is released.
                     </span>
                   )}
                   <StatusProvenanceNote runner={runner} />
@@ -457,7 +464,7 @@ export default function RegistrantDetailModal({
               with none of them (an encoder, a viewer) gets no empty bar. */}
           <div
             className={`admin-modal-footer p-6 max-sm:p-4 border-t border-[var(--dash-border)] flex justify-between items-center bg-[var(--dash-sunken)] shrink-0 ${
-              (permissions.validate && needsValidation(runner)) ||
+              (permissions.validate && canValidatePayment(runner)) ||
               (permissions.proof && runner.isBankTransfer && runner.proofOfPayment) ||
               permissions.remark ||
               permissions.email
@@ -469,7 +476,7 @@ export default function RegistrantDetailModal({
               {/* The dashboard's own action button, not the public site's
                   gradient — and the one in the receipt lightbox is now its
                   peer, so the two have to read alike. */}
-              {permissions.validate && runner.status === 'PENDING' && runner.isBankTransfer && (
+              {permissions.validate && canValidatePayment(runner) && (
                 <button
                   onClick={() => onValidate(runner)}
                   disabled={updatingId === runner.registrationId}

@@ -114,7 +114,8 @@ shape:
   `status` vocabulary is `PAID`, `PENDING`, `CANCELLED`, `REFUNDED` and
   **`EXPIRED`**, guarded against that list wherever it is written. `EXPIRED` is
   not a synonym for `CANCELLED` — one is a decision somebody made, the other is
-  an online checkout nobody came back to finish — and `expiredAt` records when
+  an online checkout nobody came back to finish, or a bank transfer whose slip
+  nobody verified within seven days — and `expiredAt` records when
   the sweep in `pending-expiry.ts` released it, which is also the mark that
   stops a row being expired twice. **`holdUntil`** (nullable,
   `UNPAID_FOLLOWUP_PLAN.md` Batch 3) is when an unpaid online order stops

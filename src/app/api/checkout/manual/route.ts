@@ -3,7 +3,7 @@ import { participantCountError } from '@/lib/order-size';
 import prisma from '@/lib/db';
 import { newOrderRef } from '@/lib/order-ref';
 import { recordWriteInCommunities, runnerCommunity } from '@/lib/running-community-store';
-import { uploadPrivateProof, UploadError } from '@/lib/blob';
+import { deletePrivateFile, uploadPrivateProof, UploadError } from '@/lib/blob';
 import { checkoutDelivery } from '@/app/events/[slug]/register/delivery-split';
 import {
   asLogisticsMethod,
@@ -70,6 +70,11 @@ export async function POST(request: Request) {
       { status: 429 }
     );
   }
+
+  // The slip this request uploaded, until an order points at it. Set after the
+  // upload and cleared once the order is written, so the catch below can tell
+  // a slip nothing references from one a saved order already does.
+  let unclaimedProof: string | null = null;
 
   try {
     // A body that is not a form (JSON, empty, malformed) is a bad request from
@@ -370,6 +375,7 @@ export async function POST(request: Request) {
     // A free order stores none: there is nothing it could be proof of, and a
     // file attached to one is ignored rather than kept.
     const proofPathname = free || !proofFile ? null : await uploadPrivateProof(proofFile);
+    unclaimedProof = proofPathname;
 
     // Registrant text is stored uppercase (lib/text-case.ts). The wizard
     // already uppercases as the runner types, but this request did not have to
@@ -490,6 +496,8 @@ export async function POST(request: Request) {
         include: { event: true, runners: { include: { category: true } } },
       });
     });
+    // The order points at the slip now; nothing after this may delete it.
+    unclaimedProof = null;
 
     // Clubs nobody has approved yet go to the Communities review queue. This is
     // the only way a row enters that queue, so the list cannot be written to
@@ -513,15 +521,13 @@ export async function POST(request: Request) {
     });
 
   } catch (error: any) {
+    await discardUnclaimedProof(unclaimedProof);
     // A rejected file is the runner's mistake, not ours — tell them what to fix.
     if (error instanceof UploadError) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
     // The order no longer fits — which option and by how much is already in
     // the message, so it goes back as it is rather than as a generic failure.
-    // The proof is already in blob storage at this point and is left there:
-    // the runner is about to resubmit, and deleting a receipt they may have
-    // paid against is the worse mistake.
     if (error instanceof SlotsUnavailableError) {
       return NextResponse.json({ error: error.message }, { status: 409 });
     }
@@ -536,5 +542,39 @@ export async function POST(request: Request) {
       { error: 'Internal Server Error', message: error.message },
       { status: 500 }
     );
+  }
+}
+
+/**
+ * Delete the slip a failed order left behind (Strix vuln-0001, run fca9).
+ *
+ * The slip is uploaded before the order transaction, so slots running out, a
+ * promo used up, the race switched to results only or a database error each
+ * left a private blob no order pointed at — up to 4 MB a try, for as long as
+ * the store lives. It used to be kept on the theory that a receipt the runner
+ * may have paid against must not be deleted, but nothing can reach a slip with
+ * no order behind it (an admin opens one only through its registration), and
+ * the runner who retries uploads it again. The owner's ruling (2026-10-13):
+ * delete it.
+ *
+ * **Only on a deployment, never on a developer's machine.** The private store
+ * is shared with production, and the rule for this project is that nothing
+ * local deletes a blob from it. A local failure keeps its slip and logs the
+ * pathname instead. `VERCEL` is set on every Vercel deployment and on none of
+ * the local `.env` files.
+ *
+ * Best effort: a delete that fails is logged, never allowed to replace the
+ * error the runner needs to see.
+ */
+async function discardUnclaimedProof(pathname: string | null): Promise<void> {
+  if (!pathname) return;
+  if (process.env.VERCEL !== '1') {
+    console.warn(`Manual checkout failed; kept unclaimed slip ${pathname} (not deleted off Vercel).`);
+    return;
+  }
+  try {
+    await deletePrivateFile(pathname);
+  } catch (error) {
+    console.error(`Manual checkout failed; could not delete unclaimed slip ${pathname}:`, error);
   }
 }
