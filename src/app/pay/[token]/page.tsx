@@ -13,6 +13,7 @@ import { paymentMethodLabel } from '@/lib/registration-codes';
 import { expiresBy } from '@/lib/pending-expiry';
 import { PAY_LINK_RULE, allowRequest } from '@/lib/rate-limit';
 import { payableState, readResumePaymentToken, type PayableState } from '@/lib/resume-payment';
+import { EVENT_SITE_CLIENT, ensureEventHost } from '@/lib/site-client';
 import PayNowButton from './PayNowButton';
 
 export const metadata: Metadata = {
@@ -69,7 +70,7 @@ export default async function PayPage({ params }: { params: Promise<{ token: str
           createdAt: true,
           holdUntil: true,
           deletedAt: true,
-          event: { select: { title: true, slug: true, date: true } },
+          event: { select: { title: true, slug: true, date: true, client: EVENT_SITE_CLIENT } },
           runners: { select: { deletedAt: true } },
         },
       })
@@ -94,6 +95,10 @@ export default async function PayPage({ params }: { params: Promise<{ token: str
       />
     );
   }
+
+  // On the order's own site, so the page wears the organizer's branding and
+  // not that of whichever subdomain the link was opened on.
+  await ensureEventHost(order.event);
 
   const runners = order.runners.filter(runner => !runner.deletedAt).length;
   const state = payableState({

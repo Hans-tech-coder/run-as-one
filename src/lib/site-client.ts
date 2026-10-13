@@ -88,7 +88,11 @@ export const getSiteClient = cache(async (): Promise<SiteClient | null> => {
     where: { subdomain: label, status: { not: 'ARCHIVED' } },
     select: SITE_CLIENT_SELECT,
   });
-  if (!client) redirect(mainOrigin(await requestUrl()));
+  if (!client) {
+    // Path and query kept: an archived client's races now live on the main site.
+    const here = await requestUrl();
+    redirect(`${mainOrigin(here)}${here?.pathname ?? '/'}${here?.search ?? ''}`);
+  }
   return client;
 });
 

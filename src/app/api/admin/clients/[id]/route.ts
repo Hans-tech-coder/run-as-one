@@ -5,6 +5,7 @@ import type { Actor } from '@/lib/actor';
 import { changedFields, listFields, recordAudit } from '@/lib/audit';
 import { clientStatusAfter, clientStatusLabel } from '@/lib/client';
 import { BRANDING_FIELDS, readBranding, type BrandingField } from '@/lib/client-branding';
+import { clientOrigin } from '@/lib/site-host';
 import { platformActor } from '../../platform-actor';
 
 /**
@@ -118,6 +119,32 @@ const FIELD_NAMES: Record<BrandingField, string> = {
 
 const TAKEN = (label: string) => `Another client already uses ${label}. Choose a different subdomain.`;
 
+const NOT_LIVE = (origin: string) =>
+  `${origin} does not answer yet. Add its DNS record and the domain on Vercel first, then save the subdomain.`;
+
+/**
+ * Whether a client site's address already reaches this app. Saving a subdomain
+ * moves the client's event pages and cards to it at once, so one saved before
+ * its DNS record and Vercel domain work would take those races offline. The
+ * proxy answers a site's `/` with a 307 to `/events` before reading anything,
+ * so that answer proves DNS, certificate and domain alike. Production only:
+ * elsewhere `*.localhost` needs no setup and a preview has no subdomains.
+ */
+async function siteAnswers(origin: string): Promise<boolean> {
+  if (process.env.VERCEL_ENV !== 'production') return true;
+  try {
+    const res = await fetch(`${origin}/`, {
+      method: 'HEAD',
+      redirect: 'manual',
+      cache: 'no-store',
+      signal: AbortSignal.timeout(5000),
+    });
+    return res.status === 307 && (res.headers.get('location') ?? '').includes('/events');
+  } catch {
+    return false;
+  }
+}
+
 /**
  * The **Site & branding** save. The whole section arrives each time; only the
  * fields that moved are written to the trail. A subdomain is unique, so one
@@ -146,6 +173,10 @@ async function saveBranding(actor: Actor, id: string, input: unknown) {
     });
     if (holder) {
       return NextResponse.json({ errors: { subdomain: TAKEN(branding.subdomain) } }, { status: 409 });
+    }
+    const origin = clientOrigin(branding.subdomain);
+    if (!(await siteAnswers(origin))) {
+      return NextResponse.json({ errors: { subdomain: NOT_LIVE(origin) } }, { status: 409 });
     }
   }
 
