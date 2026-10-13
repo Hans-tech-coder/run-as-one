@@ -86,8 +86,6 @@ export async function POST(request: Request) {
     const { 
       amount, 
       description, 
-      successUrl, 
-      cancelUrl, 
       customerEmail, 
       customerName, 
       eventId,
@@ -537,8 +535,13 @@ export async function POST(request: Request) {
       unconfirmedOnlineOrderId = registration.id;
     }
 
-    const finalSuccessUrl = successUrl.includes('?') ? `${successUrl}&orderRef=${orderRef}` : `${successUrl}?orderRef=${orderRef}`;
-    const finalCancelUrl = cancelUrl.includes('?') ? `${cancelUrl}&orderRef=${orderRef}&cancel=true` : `${cancelUrl}?orderRef=${orderRef}&cancel=true`;
+    // Built here, never taken from the body: a free order hands the success
+    // URL straight back as `checkout_url` for the wizard to open, so a URL the
+    // caller chose would be an open redirect. Same shape as /api/pay/[token].
+    const origin = new URL(request.url).origin;
+    const registerUrl = `${origin}/events/${event.slug}/register`;
+    const finalSuccessUrl = `${registerUrl}?success=true&orderRef=${orderRef}`;
+    const finalCancelUrl = `${registerUrl}?orderRef=${orderRef}&cancel=true`;
 
     // **Never PayMongo.** There is nothing to charge, and a zero-amount
     // checkout session is rejected outright — so the runner goes straight to

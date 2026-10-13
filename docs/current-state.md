@@ -15,6 +15,13 @@ offers **QR Ph only** (`OFFERED_PAYMONGO_METHODS` in `lib/free-checkout.ts`)
 until it is. Where an entry below says something is "not released" or
 "production is N migrations behind", it predates this release.
 
+**Checkout return URLs (2026-10-13, on `dev`, not released;
+`CLIENT_SUBDOMAIN_PLAN.md` Batch 0).** `POST /api/checkout` builds PayMongo's
+success and cancel URLs itself, from the request origin and the event's slug,
+and ignores any `successUrl`/`cancelUrl` in the body. Before, a free order
+returned the posted `successUrl` as its `checkout_url`: an open redirect (§7).
+No migration.
+
 **Login convenience, Batch 1 (2026-10-11, on `dev`, not released;
 `LOGIN_UX_PLAN.md`).** The sign-in page has a reveal button (the shared
 `admin/PasswordField.tsx`), password-manager autocomplete, the new wording

@@ -781,15 +781,12 @@ export default function RegistrationWizardClient({
 
     setIsProcessing(true);
     try {
-      const baseUrl = window.location.origin;
       const response = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           amount: totalAmount,
           description: `Registration for ${event.title}`,
-          successUrl: `${baseUrl}/events/${event.slug}/register?success=true`,
-          cancelUrl: `${baseUrl}/events/${event.slug}/register`,
           customerEmail: participants[0].email,
           customerName: `${participants[0].firstName} ${participants[0].lastName}`,
           eventId: eventId,

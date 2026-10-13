@@ -189,6 +189,15 @@
   a wizard that is wrong about it simply gets the 409. See
   `lib/free-checkout.ts`, and note that such an order is written `PAID` with its
   three chargeable amounts forced to zero rather than copied from the request.
+- **Checkout builds its own return URLs.** `POST /api/checkout` used to take
+  `successUrl` and `cancelUrl` from the body and hand them to PayMongo — and a
+  free order got `successUrl` straight back as its `checkout_url`, which the
+  wizard opens. A scripted checkout could therefore send a runner from a real
+  Run As One order to any site (an open redirect). The route now builds both
+  from the request origin and the event's slug, as `/api/pay/[token]` already
+  did: `/events/[slug]/register?success=true&orderRef=…` and
+  `/events/[slug]/register?orderRef=…&cancel=true`. The wizard no longer sends
+  them, and the route ignores them if an old tab does.
 - **Server-side gates, not just UI ones.** Consent (`consentGiven !== true`),
   the finished-race check (`hasFinished`), the organizer's registration hold,
   the per-category slot limits and **every promo condition** are all enforced in
