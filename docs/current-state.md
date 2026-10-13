@@ -3,10 +3,13 @@
 
 ## 10. Current state
 
-**Production is current as of 2026-09-30.** Everything on `dev` up to
-`974adf5` — the admin merge, remittances, settings, guardian consent, pacer
-codes, promo categories, highlights and the rest — is live, with all 15
-migrations applied (`retire_super_admin` last, after the code was live). The
+**Production is current as of 2026-10-13.** `main` equals `dev` at
+`ae19542`: everything below is live, including login convenience, two-step
+sign-in, results row actions, results-only races and bank-transfer expiry.
+Every migration in `prisma/migrations` is applied, through
+`20261012025827_two_factor`. `TOTP_ENCRYPTION_KEY` and the Google sign-in
+credentials are set in Vercel. The owner confirmed the release works. The
+previous release was 2026-09-30, at `974adf5`. The
 live PayMongo account is not yet a business account, so the online wizard
 offers **QR Ph only** (`OFFERED_PAYMONGO_METHODS` in `lib/free-checkout.ts`)
 until it is. Where an entry below says something is "not released" or
