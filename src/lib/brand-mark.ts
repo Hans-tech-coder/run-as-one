@@ -9,7 +9,7 @@
  * `.ico` and the Apple touch icon. Holding the path data here is what keeps a
  * tweak to the arcs from landing on the navbar and missing the browser tab.
  *
- * `app/icon.svg` is the fourth copy and the one exception: it is a static file
+ * `public/icon.svg` is the fourth copy and the one exception: it is a static file
  * Next serves before any JavaScript runs, so it cannot import anything. **If
  * these paths change, change that file in the same edit.**
  */

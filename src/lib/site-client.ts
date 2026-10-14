@@ -37,6 +37,7 @@ const SITE_CLIENT_SELECT = {
   subdomain: true,
   website: true,
   logoUrl: true,
+  faviconUrl: true,
   heroImageUrl: true,
   heroHeadline: true,
   heroTagline: true,
@@ -54,6 +55,7 @@ export interface SiteClient {
   subdomain: string | null;
   website: string | null;
   logoUrl: string | null;
+  faviconUrl: string | null;
   heroImageUrl: string | null;
   heroHeadline: string | null;
   heroTagline: string | null;

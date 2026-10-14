@@ -106,6 +106,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 const FIELD_NAMES: Record<BrandingField, string> = {
   subdomain: 'subdomain',
   logoUrl: 'logo',
+  faviconUrl: 'site icon',
   heroImageUrl: 'hero image',
   heroHeadline: 'headline',
   heroTagline: 'tagline',

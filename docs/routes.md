@@ -67,7 +67,9 @@ image, headline — the client's name when only an image is set — and tagline;
 none when neither image nor headline is saved, and the usual heading instead).
 `/results` lists only its races with results, **results-only races
 included**, under the plain heading. The page title is "*Client* | Events &
-Results" and `metadataBase` is the client's origin. `/privacy`, `/terms` and
+Results", `metadataBase` is the client's origin, and the **tab icon is the
+client's site icon** (`faviconUrl`, a square upload; Run As One's mark when
+none is saved — never the logo, which would be stretched). `/privacy`, `/terms` and
 `/feedback` work there unchanged; `/pay/[token]` is moved to its order's own
 site by `ensureEventHost`, so it wears that organizer's branding. An unknown
 or archived label is sent to the main site from the layout, path and query

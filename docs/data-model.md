@@ -338,7 +338,9 @@ shape:
   `20261013090000_client_site_branding`, all nullable): `subdomain` (unique,
   lowercase DNS label checked by `subdomainError` in `lib/site-host.ts`; null =
   no site), `logoUrl` and `heroImageUrl` (public-blob uploads under `clients/`
-  only), `heroHeadline`, `heroTagline`, `publicEmail` (the footer's address —
+  only), `faviconUrl` (migration `20261014014104_client_site_icon`: the same
+  kind of upload, **square**, the site's tab and home-screen icon; null keeps
+  Run As One's mark, and the logo is never used for it), `heroHeadline`, `heroTagline`, `publicEmail` (the footer's address —
   separate from the private `email`), `publicPhone` (E.164) and
   `facebookUrl` / `instagramUrl` / `tiktokUrl` / `youtubeUrl` (the
   `SOCIAL_CHANNELS` rule); `website` is reused. Edited by staff on

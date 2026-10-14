@@ -6,7 +6,10 @@ import BusyLabel from '@/components/ui/BusyLabel';
 import { acceptAttribute, listUploadTypes } from '@/lib/uploads';
 
 /**
- * One image of a client's site — the logo or the hero — in SiteBrandingSection.
+ * One image of a client's site — the logo, the site icon or the hero — in
+ * SiteBrandingSection. `square` refuses a picture whose sides differ before it
+ * is uploaded: the site icon is drawn into a square tab icon, and anything else
+ * would be stretched.
  *
  * It uploads to the public blob store under `clients/` (`/api/upload`, which
  * asks for `platform:manage` for that folder) and hands the URL up; nothing is
@@ -23,6 +26,7 @@ export default function BrandImageField({
   onError,
   onBusyChange,
   disabled = false,
+  square = false,
 }: {
   label: string;
   hint: string;
@@ -32,6 +36,7 @@ export default function BrandImageField({
   onError: (message: string) => void;
   onBusyChange: (busy: boolean) => void;
   disabled?: boolean;
+  square?: boolean;
 }) {
   const id = useId();
   const [uploading, setUploading] = useState(false);
@@ -39,6 +44,12 @@ export default function BrandImageField({
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (square && !(await isSquareImage(file))) {
+      e.target.value = '';
+      onError(`The ${label.toLowerCase()} must be square, the same width and height, like 512 × 512.`);
+      return;
+    }
 
     setUploading(true);
     onBusyChange(true);
@@ -107,4 +118,19 @@ export default function BrandImageField({
       )}
     </div>
   );
+}
+
+/** Whether an image file is exactly as wide as it is tall. Unreadable is not. */
+async function isSquareImage(file: File): Promise<boolean> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    return img.naturalWidth > 0 && img.naturalWidth === img.naturalHeight;
+  } catch {
+    return false;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }

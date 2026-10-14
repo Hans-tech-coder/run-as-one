@@ -990,6 +990,9 @@ model Client {
   subdomain          String?           @unique
   /// Public blob, `clients/` prefix.
   logoUrl            String?
+  /// Public blob, square: the site's tab and home-screen icon. Null keeps
+  /// Run As One's mark there; the logo is never used, since it is rarely square.
+  faviconUrl         String?
   /// Public blob; the hero above the subdomain's /events list.
   heroImageUrl       String?
   heroHeadline       String?

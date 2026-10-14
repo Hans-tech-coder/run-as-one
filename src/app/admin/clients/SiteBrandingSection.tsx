@@ -207,7 +207,21 @@ export default function SiteBrandingSection({
             onBusyChange={busy => setUploads(n => n + (busy ? 1 : -1))}
           />
           <BrandImageFieldFor
+            field="faviconUrl"
+            label="Site Icon"
+            hint="square, at least 180 × 180; the browser tab icon"
+            alt={`${clientName} site icon`}
+            draft={draft}
+            error={errors.faviconUrl}
+            disabled={isSaving}
+            square
+            onChange={url => set('faviconUrl', url)}
+            onError={message => alert(message)}
+            onBusyChange={busy => setUploads(n => n + (busy ? 1 : -1))}
+          />
+          <BrandImageFieldFor
             field="heroImageUrl"
+            className="sm:col-span-2"
             label="Hero Image"
             hint="wide, above the events list"
             alt={`${clientName} hero`}
@@ -286,15 +300,18 @@ function BrandImageFieldFor({
   field,
   draft,
   error,
+  className = '',
   ...props
 }: {
-  field: 'logoUrl' | 'heroImageUrl';
+  field: 'logoUrl' | 'faviconUrl' | 'heroImageUrl';
   draft: BrandingDraft;
   error?: string;
+  /** For the hero, which spans the whole row: it is a wide banner. */
+  className?: string;
 } & Omit<React.ComponentProps<typeof BrandImageField>, 'value'>) {
   const errorId = useId();
   return (
-    <div className="min-w-0">
+    <div className={`min-w-0 ${className}`}>
       <BrandImageField value={draft[field]} {...props} />
       <FieldError id={errorId} message={error} />
     </div>

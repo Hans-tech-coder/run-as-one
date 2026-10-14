@@ -6,7 +6,7 @@ import { subdomainError } from './site-host';
 
 /**
  * What a client's own site may hold (CLIENT_SUBDOMAIN_PLAN.md D7, D8): its
- * subdomain, logo, the hero on its /events page, and the public contacts and
+ * subdomain, logo, tab icon, the hero on its /events page, and the public contacts and
  * socials its footer shows. One rule, read by the **Site & branding** section
  * on /admin/clients as a person types and by `PATCH /api/admin/clients/[id]`
  * before it writes, so the two can never disagree.
@@ -21,6 +21,7 @@ import { subdomainError } from './site-host';
 export interface ClientBranding {
   subdomain: string | null;
   logoUrl: string | null;
+  faviconUrl: string | null;
   heroImageUrl: string | null;
   heroHeadline: string | null;
   heroTagline: string | null;
@@ -37,6 +38,7 @@ export type BrandingField = keyof ClientBranding;
 export const BRANDING_FIELDS: readonly BrandingField[] = [
   'subdomain',
   'logoUrl',
+  'faviconUrl',
   'heroImageUrl',
   'heroHeadline',
   'heroTagline',
@@ -86,6 +88,7 @@ export function brandingFieldError(field: BrandingField, value: string): string 
     case 'subdomain':
       return subdomainError(raw);
     case 'logoUrl':
+    case 'faviconUrl':
     case 'heroImageUrl':
       return raw.length <= MAX_IMAGE_URL && isPublicBlobUrl(raw)
         ? null

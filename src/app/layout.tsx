@@ -24,7 +24,21 @@ const DESCRIPTION =
  * On a client's site (CLIENT_SUBDOMAIN_PLAN.md) the base is the client's own
  * host and the title carries the client's name, so a shared link reads as
  * that client's page (lib/site-client.ts).
+ *
+ * The tab icon is declared here rather than by files in `app/`, because a file
+ * there outranks anything `generateMetadata` says, and a client's site wears
+ * its own square **site icon** (never its logo, which is rarely square and
+ * would be stretched). Run As One's mark lives in `public/`; a client's site
+ * with no site icon keeps it.
  */
+const RAO_ICONS: Metadata["icons"] = {
+  icon: [
+    { url: "/favicon.ico", sizes: "32x32", type: "image/x-icon" },
+    { url: "/icon.svg", sizes: "any", type: "image/svg+xml" },
+  ],
+  apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
+};
+
 export async function generateMetadata(): Promise<Metadata> {
   const [site, origin] = await Promise.all([getSiteClient(), siteOrigin()]);
   const title = site ? `${site.name} | Events & Results` : TITLE;
@@ -34,6 +48,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
   return {
     metadataBase: new URL(origin),
+    icons: site?.faviconUrl ? { icon: site.faviconUrl, apple: site.faviconUrl } : RAO_ICONS,
     title,
     description,
     openGraph: {
@@ -77,7 +92,8 @@ export default async function RootLayout({
         {/* Outside ClientLayoutWrapper: that component returns early for
             /admin, so a provider mounted inside it would
             cover only half the app. */}
-        <ThemedFavicon />
+        {/* A client's site icon replaces the mark, so it is not swapped in. */}
+        {!site?.faviconUrl && <ThemedFavicon />}
         <SiteContactProvider contactEmail={contactEmail} socialLinks={socialLinks}>
           <AlertProvider>
             <ClientLayoutWrapper site={site}>

@@ -857,7 +857,7 @@
 - **The logo is a component, not an image** (`components/RunAsOneLogo.tsx`,
   `.rao-logo` in `globals.css`, geometry in `lib/brand-mark.ts` — the one copy
   of the path data, which the component, the themed favicon and the icon
-  raster scripts all draw from; `app/icon.svg` is the sole exception, a static
+  raster scripts all draw from; `public/icon.svg` is the sole exception, a static
   file that can import nothing, so change it in the same edit). It replaced `public/run-as-one-logo.png` (the old
   artwork, since deleted)
   everywhere a person sees the app: the public navbar and footer, both
@@ -952,13 +952,19 @@
   values.
 - **The three brand assets outside the component, and why each is a different
   file.** They are not interchangeable and the favicon is not any of the others:
-  - **`app/icon.svg`, `app/favicon.ico`, `app/apple-icon.png` — the mark alone,
+  - **`public/icon.svg`, `public/favicon.ico`, `public/apple-icon.png` — the mark alone,
     no wordmark**, since a tab icon is ~16px. The SVG carries literal colours and
     its own `prefers-color-scheme` rule (a favicon is fetched as a standalone
     document and never sees the page's stylesheet) and wins in every modern
     browser; the `.ico` is the old-browser and crawler fallback and the Apple
     icon is what iOS puts on a home screen. Both are regenerated from the mark
     with `sharp` — pure geometry, so they rasterise without needing a font.
+    They sit in `public/`, declared by the root layout's `generateMetadata`,
+    not in `app/`: a file there outranks `generateMetadata`, and **a client's
+    site (`CLIENT_SUBDOMAIN_PLAN.md`) uses its own square site icon
+    (`Client.faviconUrl`) as the tab and Apple icon instead**, with
+    `ThemedFavicon` left out. Never the logo, which is rarely square and gets
+    stretched. A client with no site icon keeps the mark.
   - **`app/opengraph-image.png` — the 1200x630 card a shared link shows.** This
     is what Messenger, Viber, Facebook, X and Slack scrape, and **it has nothing
     to do with the favicon**: before it existed a shared link showed no image at
@@ -1000,7 +1006,7 @@
   `data-theme` first and the system `prefers-color-scheme` otherwise — the same
   precedence `globals.css` uses, so the light/dark switch will not have to
   remember to tell the favicon about itself. It swaps the `href` rather than
-  leaning on the `prefers-color-scheme` rule inside `app/icon.svg`, because
+  leaning on the `prefers-color-scheme` rule inside `public/icon.svg`, because
   whether a browser *evaluates* a media query inside a favicon differs between
   Firefox, Chrome and Safari and has changed more than once; the static file
   stays as the pre-hydration and no-JavaScript default. **The Open Graph card

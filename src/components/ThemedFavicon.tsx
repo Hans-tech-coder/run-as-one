@@ -10,7 +10,7 @@ import {
 /**
  * Makes the browser-tab icon follow the system light/dark setting.
  *
- * `app/icon.svg` already carries its own `prefers-color-scheme` rule, and that
+ * `public/icon.svg` already carries its own `prefers-color-scheme` rule, and that
  * is what a crawler and a JavaScript-less visitor get — but whether a browser
  * *evaluates* a media query inside a favicon is not something to rely on:
  * support differs between Firefox, Chrome and Safari and has changed more than
