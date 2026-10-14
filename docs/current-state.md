@@ -3,13 +3,17 @@
 
 ## 10. Current state
 
-**Production is current as of 2026-10-13.** `main` equals `dev` at
-`ae19542`: everything below is live, including login convenience, two-step
-sign-in, results row actions, results-only races and bank-transfer expiry.
+**Production is current as of 2026-10-14.** `main` equals `dev` at
+`763171e`: everything below is live, including client subdomains and their
+branding, the service inquiry form and the server-built checkout return URLs.
 Every migration in `prisma/migrations` is applied, through
-`20261012025827_two_factor`. `TOTP_ENCRYPTION_KEY` and the Google sign-in
-credentials are set in Vercel. The owner confirmed the release works. The
-previous release was 2026-09-30, at `974adf5`. The
+`20261014014104_client_site_icon`. Pre-deploy QA passed on 2026-10-14 (Strix
+`run-as-one-scan_390c`: one CSV-injection finding, not reproducible because
+every typed field is trimmed before storage). **No client has a subdomain in
+production yet**: each needs its DNS record and Vercel domain first
+(`ON_HOLD.md`, top). `TOTP_ENCRYPTION_KEY` and the Google sign-in
+credentials are set in Vercel. The previous release was 2026-10-13, at
+`ae19542`. The
 live PayMongo account is not yet a business account, so the online wizard
 offers **QR Ph only** (`OFFERED_PAYMONGO_METHODS` in `lib/free-checkout.ts`)
 until it is. Where an entry below says something is "not released" or

@@ -13,17 +13,15 @@ before writing any code. When an item is picked up, give it its own plan file in
 
 The release steps come first because they block production, not a feature.
 
-**Pending for the next release (client subdomains, 2026-10-14):** run the
-`pre-deploy-qa` Strix scan first, then, in this order:
+**Client subdomains: released 2026-10-14, setup still pending.** Steps 1–2
+are done: both migrations (`20261013090000_client_site_branding`,
+`20261014014104_client_site_icon`) are on production and `main` is at
+`763171e`. Still to do, in this order:
 
-1. Migrations `20261013090000_client_site_branding` (eleven nullable columns
-   on `Client`, `subdomain` unique) and `20261014014104_client_site_icon`
-   (`Client.faviconUrl`), both applied to local-dev and additive, so the old
-   code ignores them. Run `npx prisma migrate deploy` on the production
-   endpoint **before** promoting (`deploy-commands.md` step 2).
-2. Promote `dev` to `main`. Nothing visible changes: no client has a
-   subdomain yet.
-3. At the outside registrar, a CNAME per client to `cname.vercel-dns.com`
+1. ~~Migrations~~ (done 2026-10-14).
+2. ~~Promote `dev` to `main`~~ (done 2026-10-14).
+3. At the outside registrar (GoDaddy: `ns67`/`ns68.domaincontrol.com`), a
+   CNAME per client to `cname.vercel-dns.com`
    (`crc`, `racecore`); then add `crc.runasone.ph` and
    `racecore.runasone.ph` to the Vercel project `run-as-one` (Production).
    Vercel issues the certificates. Wait until `https://crc.runasone.ph`
