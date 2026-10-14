@@ -165,7 +165,10 @@ owner until it is offered),
 shown greyed with a tag and not tickable; `servicesOf` drops them like any
 unknown code, so the route never stores one. Old codes are unchanged, so
 stored applications read as before. The page title, subtitle, step blurb and
-thank-you panel were left to Batch 3 (above).
+thank-you panel were left to Batch 3 (above). **Custom Website** (`WEBSITE`)
+went on offer on 2026-10-14 by the owner's call: it moved out of
+`COMING_SOON_SERVICES` into `ORGANIZER_SERVICES` under **Online**, after
+Results, so it is now tickable and stored.
 Checked on `local-dev`: Timing + Bibs (by hand and posted) stored as those two
 codes, Not Sure Yet plus others stored as `NOT_SURE`, Coming soon and unknown
 codes dropped (Coming soon alone is refused as "choose at least one"), 375px
@@ -309,7 +312,9 @@ batch and by number; this is what each number settled:
   and moved to Coming soon after Batch 2 by the owner's call: it is a scan
   station (a runner scans their bib chip and their details show on a screen,
   a photo moment and a check that each bib went to the right runner), not a
-  U-turn mat, and it does not depend on Race Timing.
+  U-turn mat, and it does not depend on Race Timing. **Custom Website**
+  (`WEBSITE`) went the other way on 2026-10-14, by the owner's call: out of
+  Coming soon and on offer under Online, after Results.
 - **S2.** Race-day services are fulfilled through suppliers, so the form is an
   inquiry, not an order: it promises a reply, never a price or a date.
 - **S3.** One application per email stays. The refusal sends the applicant to

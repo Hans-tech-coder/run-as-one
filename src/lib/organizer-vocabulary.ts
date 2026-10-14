@@ -120,6 +120,7 @@ export const ORGANIZER_EXPERIENCE_LABEL: Record<OrganizerExperience, string> = {
 export const ORGANIZER_SERVICES = [
   'REGISTRATION',
   'RESULTS',
+  'WEBSITE',
   'TIMING',
   'BIB_PRODUCTION',
   'KIT_FULFILLMENT',
@@ -131,7 +132,6 @@ export type OrganizerService = (typeof ORGANIZER_SERVICES)[number];
 /** Services shown on the form as Coming soon. Labelled for display, never
  *  accepted: the route drops them like any unknown value. */
 export const COMING_SOON_SERVICES = [
-  'WEBSITE',
   'KIT_CLAIMING',
   'EMAIL_BLAST',
   'CHIP_CHECK',
@@ -163,6 +163,11 @@ export const ORGANIZER_SERVICE_COPY: Record<
     hint: 'Finishing times, a leaderboard per category, and certificates runners download.',
     group: 'ONLINE',
   },
+  WEBSITE: {
+    label: 'Custom Website',
+    hint: 'A website of your own for your race.',
+    group: 'ONLINE',
+  },
   TIMING: {
     label: 'Race Timing',
     hint: 'Chip timing at the start and finish on race day.',
@@ -187,11 +192,6 @@ export const ORGANIZER_SERVICE_COPY: Record<
     label: 'Not Sure Yet',
     hint: 'Tell us about your event below and we will walk you through what fits.',
     group: null,
-  },
-  WEBSITE: {
-    label: 'Custom Website',
-    hint: 'A website of your own for your race.',
-    group: 'COMING_SOON',
   },
   KIT_CLAIMING: {
     label: 'Kit Claiming System',

@@ -360,7 +360,7 @@ print lands *above* the error rather than under it (a hint below a red line
 reads as part of the complaint). The wizards pass none and are unchanged. "Which
 services do you need?" (`ServicesQuestion.tsx`, Batch 2) offers every service
 Run As One sells in groups: **Online** (Online Registration, whose hint carries
-the payments and promo codes; Results and E-Certificates), **Race day**,
+the payments and promo codes; Results and E-Certificates; Custom Website), **Race day**,
 fulfilled through suppliers (Race Timing, Race Bib Production, Race Kit
 Fulfilment), *Not Sure Yet* — which cannot share the answer with any other, a
 rule `servicesOf` enforces on the route too — and **Coming soon**, greyed,
