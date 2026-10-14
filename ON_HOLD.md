@@ -13,13 +13,33 @@ before writing any code. When an item is picked up, give it its own plan file in
 
 The release steps come first because they block production, not a feature.
 
-**Pending for the next release (2026-10-13):** migration
-`20261013090000_client_site_branding` (eleven nullable columns on `Client`,
-`subdomain` unique, `CLIENT_SUBDOMAIN_PLAN.md` Batch 1; applied to the
-local-dev database; additive, so the old code ignores it). Run
-`npx prisma migrate deploy` on the production endpoint before the new code
-goes live. The list below went out in the 2026-10-13 release
-(`docs/current-state.md`).
+**Pending for the next release (client subdomains, 2026-10-14):** run the
+`pre-deploy-qa` Strix scan first, then, in this order:
+
+1. Migrations `20261013090000_client_site_branding` (eleven nullable columns
+   on `Client`, `subdomain` unique) and `20261014014104_client_site_icon`
+   (`Client.faviconUrl`), both applied to local-dev and additive, so the old
+   code ignores them. Run `npx prisma migrate deploy` on the production
+   endpoint **before** promoting (`deploy-commands.md` step 2).
+2. Promote `dev` to `main`. Nothing visible changes: no client has a
+   subdomain yet.
+3. At the outside registrar, a CNAME per client to `cname.vercel-dns.com`
+   (`crc`, `racecore`); then add `crc.runasone.ph` and
+   `racecore.runasone.ph` to the Vercel project `run-as-one` (Production).
+   Vercel issues the certificates. Wait until `https://crc.runasone.ph`
+   answers.
+4. Only then, on `/admin/clients` › Site & branding, set each subdomain and
+   upload the logo and the square site icon (CRC's is the "CRC" letters
+   cropped from its logo). A subdomain whose address does not answer yet is
+   refused on save.
+5. Link every RaceCore and CRC event to its client; a null `clientId` stays
+   on the main site.
+
+A **new client later** needs steps 3 and 4 only. Moving `runasone.ph` to
+Vercel's nameservers with one `*.runasone.ph` would skip step 3 for good, but
+it touches the Resend DNS records: optional, and done carefully if ever.
+
+The list below went out in the 2026-10-13 release (`docs/current-state.md`).
 
 **Pending for the next release (2026-10-05):** migrations
 `20261005090000_registration_hold_until` (one nullable column,
@@ -316,3 +336,36 @@ Not walked in a browser, worth one try before or after release:
   `admin_token` cookie expires in 30 days.
 - **Google refusing the owner's address and a suspended account.** Proven in
   the matching test and the password matrix, not by a click-through. Optional.
+
+## 13. Leftovers from the client subdomain plan
+
+*Source: `CLIENT_SUBDOMAIN_PLAN.md` (gitignored, never committed), all five
+batches landed on `dev` 2026-10-13 and 2026-10-14, deleted 2026-10-14. What
+it built and its decisions D1–D11 are in `docs/current-state.md`.*
+
+Left out on purpose (the plan's out-of-scope list):
+
+- A designed home page per subdomain (D1 says the subdomain's `/` is its
+  `/events`).
+- Per-client brand colours and themes.
+- Client-branded emails and e-certificates (sender and design stay Run As
+  One's, D10).
+- Client viewers editing their own branding (D7: staff only).
+- Custom domains a client owns outright (`crcrunning.com`).
+- A sitemap or `robots` per host. The app has neither; the canonical URLs
+  on event pages are enough until one is added.
+
+Known and not done:
+
+- **A no-client event opened on a subdomain going to the main site** was
+  never walked: every `local-dev` event has a client. `eventOrigin` returns
+  the main origin for it (checked in code); try it once after release.
+- **Every page renders per request.** The root layout reads the host for
+  the client's branding, so pages that used to be prerendered (`/privacy`,
+  `/terms`) no longer are. Avoiding it means routing each host to its own
+  segment, which is a restructure.
+- **The theme-following tab icon on the main site may not win.** The static
+  `/icon.svg` link can land after the one `ThemedFavicon` adds, so the
+  browser may keep the static file (which carries its own light/dark rule).
+  Believed to date from Batch 2's move to `generateMetadata`; not proven.
+

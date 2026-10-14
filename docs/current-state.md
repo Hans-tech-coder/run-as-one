@@ -15,6 +15,50 @@ offers **QR Ph only** (`OFFERED_PAYMONGO_METHODS` in `lib/free-checkout.ts`)
 until it is. Where an entry below says something is "not released" or
 "production is N migrations behind", it predates this release.
 
+**Client subdomains, Batch 4 and the site icon (2026-10-14, on `dev`, not
+released; `CLIENT_SUBDOMAIN_PLAN.md`, deleted 2026-10-14, all five batches
+landed).** Pre-deploy QA passed on 2026-10-13: build, a review of
+`origin/main..dev`, and the plan's whole checklist on `local-dev` (root
+redirect; filtering on both lists, results-only races on `/results` only;
+cross-host moves on every event and result page, `[bib]` included, query
+kept; main cards opening on the subdomain; `/admin`, login, reset, invite,
+two-factor and forgot-password sent to the main host; unknown labels to main;
+a forged `x-rao-site` ignored; no horizontal scroll at 375px). **A no-client
+event moving to main was never walked**: every `local-dev` event has a
+client (`ON_HOLD.md` §13). The review's fixes: in production a new subdomain
+is refused on save until `https://<label>.runasone.ph/` answers with the
+proxy's 307 (so a subdomain saved before its DNS cannot take a client's races
+offline); an unknown or archived label keeps its path and query on the way to
+main; `/pay/[token]` calls `ensureEventHost`, so it wears its own order's
+branding. **Site icon** (owner, 2026-10-14, after the logo stretched as a
+favicon): migration `20261014014104_client_site_icon` adds
+`Client.faviconUrl`, a square upload (Site & branding refuses a non-square
+picture before uploading) used as a client site's tab and Apple icon; null
+keeps Run As One's mark, and the logo is never used. To make that possible
+`icon.svg`, `favicon.ico` and `apple-icon.png` moved from `app/` to `public/`
+and are declared by the root layout's `generateMetadata` (§9). CRC's site
+icon is the "CRC" letters cropped from its own logo. The Hero Image field
+spans the panel's full width. Release and DNS steps: `ON_HOLD.md`, top.
+
+The plan's decisions (owner, 2026-10-06), which code and docs cite by number:
+
+| # | Decision |
+| --- | --- |
+| D1 | No home page of its own: a subdomain's `/` redirects to its `/events`, filtered to the client. |
+| D2 | Same navbar (Events, Results); the logo is the client's and links to `/events`. |
+| D3 | Registration and payment stay on the subdomain: register, pay, confirmation. |
+| D4 | A client event opened on `runasone.ph` goes to the client's subdomain; a no-client event stays on main. |
+| D5 | Results likewise: the subdomain's `/results` lists only the client's; a client's `runasone.ph/results/[slug]` redirects to its subdomain; main `/results` lists everything. |
+| D6 | Wrong host goes where it belongs: another client's event to that client, a no-client event to main, `/admin/**` to main, an unknown or archived subdomain to main. `/privacy`, `/terms`, `/feedback` and `/pay/[token]` work on a subdomain. |
+| D7 | Branding is edited by staff only (`platform:manage`) on `/admin/clients`. |
+| D8 | Phase 1 branding: logo, a square site icon (added 2026-10-14), footer contacts and socials, and a hero (image, headline, tagline) on the subdomain's `/events`; `/results` gets a plain heading. |
+| D9 | Subdomain footer: client logo, name, email/phone, socials; Run As One stays the contact for payment concerns; Privacy/Terms and "Powered by Run As One"; no Organizers column. |
+| D10 | A client event's email links point to the client's subdomain; sender and design stay Run As One's. |
+| D11 | `runasone.ph` DNS is at an outside registrar: no wildcard, each subdomain added by hand. |
+
+How it works (the plan's §2) is in §6 "Hosts", §7 (security: the host is a
+lens, never a permission) and the `site-host.ts` / `site-client.ts` rows of §5.
+
 **Client subdomains, Batch 3 (2026-10-13, on `dev`, not released;
 `CLIENT_SUBDOMAIN_PLAN.md`), payment and links on the event's site.**
 `api/checkout`'s return URLs, `api/pay/[token]`'s success and cancel URLs and
@@ -28,7 +72,7 @@ test order on `racecore` both returned to their subdomain with the
 `orderRef`, PayMongo's cancel came back there too, the staff link and the
 email's *Finish Payment* asked for on `localhost` pointed at `racecore`, and
 that link opened on `crc` still opened a page returning to `racecore`.
-Next: Batch 4, rollout (§6 DNS first).
+Batch 4: the entry above.
 
 **Client subdomains, Batch 2 (2026-10-13, on `dev`, not released;
 `CLIENT_SUBDOMAIN_PLAN.md`), the subdomain site.** A client's subdomain now
