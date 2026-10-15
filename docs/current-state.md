@@ -3,17 +3,25 @@
 
 ## 10. Current state
 
-**Production is current as of 2026-10-14.** `main` equals `dev` at
-`763171e`: everything below is live, including client subdomains and their
-branding, the service inquiry form and the server-built checkout return URLs.
-Every migration in `prisma/migrations` is applied, through
-`20261014014104_client_site_icon`. Pre-deploy QA passed on 2026-10-14 (Strix
-`run-as-one-scan_390c`: one CSV-injection finding, not reproducible because
-every typed field is trimmed before storage). **No client has a subdomain in
-production yet**: each needs its DNS record and Vercel domain first
-(`ON_HOLD.md`, top). `TOTP_ENCRYPTION_KEY` and the Google sign-in
-credentials are set in Vercel. The previous release was 2026-10-13, at
-`ae19542`. The
+**Production is current as of 2026-10-15.** `main` equals `dev` at
+`ae513ac`: everything below is live, including combinable promotions, the
+removal of the Move to Results switch, the stricter PayMongo webhook signature
+check, and admin API routes answering a refusal with the same 404 as a miss
+(`docs/security.md`). Every migration in `prisma/migrations` is applied,
+through `20261015090000_combinable_promos`. The 3 results-only races (PHM 2026,
+BizRun V2.0, CIM 2026) were moved to Results before the switch went away.
+Pre-deploy QA passed on 2026-10-15: on `local-dev`, a 6-runner bank transfer
+combining EARLY BIRD RATES EXTENDED with 5+1 FREE (`RM-1AA55AC3`, ₱6,985 in
+the wizard, the stored row and the email alike) and a QR Ph order to PayMongo
+(`RM-ABEC3EFB`). **A real QR Ph payment turning `PAID` is still to be seen**:
+the webhook cannot reach localhost. Strix `run-as-one-scan_8c32` found one
+issue (vuln-0001, admin routes telling "not yours" from "does not exist"),
+fixed in `ae513ac`; the re-scan `run-as-one-scan_4931` found nothing, though
+its budget cut the review short. **`crc.runasone.ph` answers in production;
+`racecore.runasone.ph` does not resolve yet** (its DNS record and Vercel
+domain, `ON_HOLD.md`, top). `TOTP_ENCRYPTION_KEY` and the Google sign-in
+credentials are set in Vercel. The previous release was 2026-10-14, at
+`763171e`. The
 live PayMongo account is not yet a business account, so the online wizard
 offers **QR Ph only** (`OFFERED_PAYMONGO_METHODS` in `lib/free-checkout.ts`)
 until it is. Where an entry below says something is "not released" or

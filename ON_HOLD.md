@@ -25,7 +25,8 @@ are done: both migrations (`20261013090000_client_site_branding`,
    (`crc`, `racecore`); then add `crc.runasone.ph` and
    `racecore.runasone.ph` to the Vercel project `run-as-one` (Production).
    Vercel issues the certificates. Wait until `https://crc.runasone.ph`
-   answers.
+   answers. **CRC is done** (`crc.runasone.ph` answers with its branding,
+   2026-10-15); **RaceCore is not** (`racecore.runasone.ph` does not resolve).
 4. Only then, on `/admin/clients` › Site & branding, set each subdomain and
    upload the logo and the square site icon (CRC's is the "CRC" letters
    cropped from its logo). A subdomain whose address does not answer yet is
@@ -37,15 +38,12 @@ A **new client later** needs steps 3 and 4 only. Moving `runasone.ph` to
 Vercel's nameservers with one `*.runasone.ph` would skip step 3 for good, but
 it touches the Resend DNS records: optional, and done carefully if ever.
 
-**Pending for the next release (combinable promotions, 2026-10-15):**
-migration `20261015090000_combinable_promos` (`PromoCode.combinable`, a
-boolean defaulting to false, and `Registration.combinedPromoCode` /
-`combinedDiscountAmount`, nullable and 0; applied to `local-dev`; additive, so
-the old code ignores them). Run `npx prisma migrate deploy` with `DIRECT_URL`
-on the production endpoint **before** the new code goes live: the new code
-selects `combinable`. Saving a promotion with the switch, a placed order and
-the receipt email were not walked (`docs/current-state.md`, top), so QA them before
-promoting.
+**Combinable promotions: released 2026-10-15.** Migration
+`20261015090000_combinable_promos` is on production and `main` is at
+`ae513ac`. A combined order, its stored row and its receipt email were walked
+in pre-deploy QA (`docs/current-state.md`, top). **Still to see:** the first
+real QR Ph payment turning `PAID`, since the webhook signature check changed
+in this release and cannot be exercised from localhost.
 
 The list below went out in the 2026-10-13 release (`docs/current-state.md`).
 
@@ -86,14 +84,10 @@ ignores it, so migrating first is safe in both directions.
 **After that release goes live:** on `https://runasone.ph/admin/login`,
 check that **Continue with Google** shows and completes one sign-in (the
 Google client's redirect URIs must list
-`https://runasone.ph/api/auth/google/callback`). Then, in admin, open each of the 3 existing
-results-only races in **Edit Event**, press **Move to Results**, and save. The
-column defaults to false, so until then they still sit in the Events table as
-ordinary races; the move takes them to the Results menu, and the save is
-refused for any race that has registrations (`RESULTS_ONLY_EVENT_PLAN.md`
-D3). **Do this before the next promotion of `dev`:** the switch is removed on
-`dev` (2026-10-15, `docs/current-state.md`, top), so once that ships a race
-can no longer move and one left behind has to be recreated under Results.
+`https://runasone.ph/api/auth/google/callback`). ~~Move the 3 existing
+results-only races to Results~~ (done before the 2026-10-15 release, which
+removed the switch: PHM 2026, BizRun V2.0 and CIM 2026 are under Results). A
+race made in the wrong place from now on is recreated in the right one.
 
 ---
 
