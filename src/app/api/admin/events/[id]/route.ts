@@ -62,15 +62,6 @@ const EVENT_FIELDS = [
 /** Thrown inside the edit transaction when a category it removes is still in use. */
 class CategoryInUseError extends Error {}
 
-/** A results-only switch refused because the event has registrations (D3). */
-class ResultsOnlySwitchError extends Error {
-  constructor(registered: number, resultsOnly: boolean) {
-    super(
-      `This event already has ${registered} registration${registered === 1 ? '' : 's'}, so it cannot be switched ${resultsOnly ? 'to' : 'off'} results only. That switch is only for an event nobody has registered for.`,
-    );
-  }
-}
-
 /** A set of rows as one comparable string, so an edit can say whether it moved. */
 function listKey(rows: Record<string, unknown>[], fields: string[]) {
   return rows.map(row => JSON.stringify(fields.map(field => row[field] ?? null))).join('|');
@@ -195,25 +186,13 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     }
 
-    // Results only (RESULTS_ONLY_EVENT_PLAN.md). A save that does not send the
-    // field keeps what the event has, so a form that predates the switch can
-    // never quietly turn an event registrable again.
-    //
-    // Flipping it either way is refused once anyone has registered (D3): on,
-    // it would strand runners who paid for a race the site then disowns; off,
-    // it cannot happen today, since no registration can reach such an event —
-    // but the rule is the same either way, so it is checked the same way.
-    const resultsOnly =
-      typeof data.resultsOnly === 'boolean' ? data.resultsOnly : current.resultsOnly;
-    if (resultsOnly !== current.resultsOnly) {
-      const registered = await db.registration.count({ where: { eventId: id } });
-      if (registered > 0) {
-        return NextResponse.json(
-          { error: new ResultsOnlySwitchError(registered, resultsOnly).message },
-          { status: 400 },
-        );
-      }
-    }
+    // Results only (RESULTS_ONLY_EVENT_PLAN.md) is fixed when the race is
+    // created: /admin/events/new makes one that takes registration,
+    // /admin/results/new one that only posts results. A save never moves a race
+    // between the two — the owner's call, 2026-10-15, so staff follow one flow;
+    // a race made in the wrong place is recreated in the right one. Whatever
+    // the body says is ignored.
+    const resultsOnly = current.resultsOnly;
 
     // Which client the race is for. Left alone unless the person may link one
     // (platform:manage) and sent it — an event manager's save never moves it.
@@ -254,15 +233,6 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     const incomingIds = categories.filter((c: any) => c.id).map((c: any) => c.id);
 
     const updatedEvent = await db.$transaction(async (prisma) => {
-      // The count above, taken again under a lock: an order placed while this
-      // save was on its way would otherwise land beside the switch. Checkout
-      // locks the same row (lockEventForRegistration), so one waits for the other.
-      if (resultsOnly !== current.resultsOnly) {
-        await prisma.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${id} FOR UPDATE`;
-        const registered = await prisma.registration.count({ where: { eventId: id } });
-        if (registered > 0) throw new ResultsOnlySwitchError(registered, resultsOnly);
-      }
-
       // Handle category deletion carefully to avoid FK constraints
       try {
         await prisma.category.deleteMany({
@@ -317,7 +287,6 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
           // Null means the race is open as soon as it is published; an instant
           // in the future holds the button back until it passes.
           registrationOpensAt: registrationOpens,
-          resultsOnly,
           // The certificate has its own home now, the results workspace and
           // its PUT …/certificate (RESULTS_NAV_PLAN.md, Batch 2). The edit
           // form no longer sends these, and a body without them keeps what is
@@ -431,9 +400,6 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   } catch (error: any) {
     if (error instanceof CategoryInUseError) {
       return NextResponse.json({ error: 'Cannot remove a category that already has registered runners or results.' }, { status: 400 });
-    }
-    if (error instanceof ResultsOnlySwitchError) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
     }
     console.error('Update event error:', error);
     return NextResponse.json({ error: error.message || 'Failed to update event' }, { status: 500 });

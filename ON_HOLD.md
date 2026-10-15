@@ -43,8 +43,8 @@ boolean defaulting to false, and `Registration.combinedPromoCode` /
 `combinedDiscountAmount`, nullable and 0; applied to `local-dev`; additive, so
 the old code ignores them). Run `npx prisma migrate deploy` with `DIRECT_URL`
 on the production endpoint **before** the new code goes live: the new code
-selects `combinable`. The admin checkbox, a placed order and the receipt
-email were not walked (`docs/current-state.md`, top), so QA them before
+selects `combinable`. Saving a promotion with the switch, a placed order and
+the receipt email were not walked (`docs/current-state.md`, top), so QA them before
 promoting.
 
 The list below went out in the 2026-10-13 release (`docs/current-state.md`).
@@ -91,7 +91,9 @@ results-only races in **Edit Event**, press **Move to Results**, and save. The
 column defaults to false, so until then they still sit in the Events table as
 ordinary races; the move takes them to the Results menu, and the save is
 refused for any race that has registrations (`RESULTS_ONLY_EVENT_PLAN.md`
-D3).
+D3). **Do this before the next promotion of `dev`:** the switch is removed on
+`dev` (2026-10-15, `docs/current-state.md`, top), so once that ships a race
+can no longer move and one left behind has to be recreated under Results.
 
 ---
 

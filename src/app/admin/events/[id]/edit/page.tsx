@@ -12,7 +12,7 @@ import {
 } from '../../registration-opening';
 import EventOptionsPanel from '../../EventOptionsPanel';
 import { blankCategory, type CategoryDraft } from '../../category-draft';
-import { DEFAULT_EVENT_TYPE, EVENT_TYPES, type EventType } from '@/lib/event-type';
+import { DEFAULT_EVENT_TYPE, type EventType } from '@/lib/event-type';
 import BankAccountsPanel from '@/app/admin/events/BankAccountsPanel';
 import EventPromotionsPanel from '@/app/admin/events/EventPromotionsPanel';
 import type { EventPromotion } from '@/lib/promo-store';
@@ -24,7 +24,6 @@ import BusyLabel from '@/components/ui/BusyLabel';
 import DashboardHeader from '@/app/admin/DashboardHeader';
 import LogisticsPanel, { deliveryFees, deliveryProblem } from '../../LogisticsPanel';
 import BasicInfoPanel from '../../BasicInfoPanel';
-import ResultsOnlyPanel from '../../ResultsOnlyPanel';
 import RegistrationFeesPanel from '../../RegistrationFeesPanel';
 import EventFormResultModals from '../../EventFormResultModals';
 import { useEventImageUpload } from '../../useEventImageUpload';
@@ -68,20 +67,15 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
 
   const [categories, setCategories] = useState<CategoryDraft[]>([blankCategory()]);
 
-  // The client runs registration elsewhere and we only post results
-  // (ResultsOnlyPanel). Outside formData because it decides which panels exist
-  // rather than filling one. Turning it on also makes the event distances: a
-  // results table is grouped by distance, and a package has none.
+  // The client runs registration elsewhere and we only post results. Set when
+  // the race is created (/admin/results/new) and never changed here — the
+  // route ignores it on save. Outside formData because it decides which panels
+  // exist rather than filling one.
   const [resultsOnly, setResultsOnly] = useState(false);
-  // Which screen the saved race lives on, and its saved title: what the
-  // breadcrumb, Cancel and the Move switch's wording go by. A results-only race
-  // is listed under Results alone (RESULTS_NAV_PLAN.md R5), so its trail leads
-  // back there rather than to an Events table it is not in.
-  const [saved, setSaved] = useState({ resultsOnly: false, title: '' });
-  const changeResultsOnly = (on: boolean) => {
-    setResultsOnly(on);
-    if (on) setEventType(EVENT_TYPES.RACE);
-  };
+  // The saved title: what the breadcrumb of a results-only race goes by. Such a
+  // race is listed under Results alone (RESULTS_NAV_PLAN.md R5), so its trail
+  // leads back there rather than to an Events table it is not in.
+  const [savedTitle, setSavedTitle] = useState('');
   // How many category/package posters are uploading right now, for the same
   // reason as uploadingField: saving mid-upload would store a row without its
   // poster. A count rather than a boolean because two rows can upload at once,
@@ -111,7 +105,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
         setBankAccounts(loaded.bankAccounts);
         setEventType(loaded.eventType);
         setResultsOnly(loaded.resultsOnly);
-        setSaved({ resultsOnly: loaded.resultsOnly, title: loaded.formData.title });
+        setSavedTitle(loaded.formData.title);
         setClientId(loaded.clientId);
         setRegistrationCount(loaded.registrationCount);
         setPromotions(loaded.promotions);
@@ -166,7 +160,6 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
           ...formData,
           ...deliveryFees(deliveryOn, formData),
           eventType,
-          resultsOnly,
           registrationOpensAt: openingInstantISO(opening),
           categories,
           bankAccounts: cleanBankAccounts(bankAccounts),
@@ -183,13 +176,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
         return;
       }
 
-      setSuccessMsg(
-        resultsOnly === saved.resultsOnly
-          ? 'Event updated successfully!'
-          : resultsOnly
-            ? 'Event moved to Results.'
-            : 'Event moved back to Events.',
-      );
+      setSuccessMsg('Event updated successfully!');
     } catch (err) {
       setError('An unexpected error occurred');
       setIsLoading(false);
@@ -205,12 +192,12 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
 
   return (
     <>
-      {saved.resultsOnly ? (
+      {resultsOnly ? (
         <DashboardHeader
           title="Edit Details"
           crumbs={[
             { label: 'Results', href: '/admin/results' },
-            { label: saved.title, href: `/admin/results/${id}` },
+            { label: savedTitle, href: `/admin/results/${id}` },
           ]}
         />
       ) : (
@@ -224,20 +211,13 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
           successMsg={successMsg}
           onSuccessContinue={() => {
             setSuccessMsg('');
-            // Where the race now lives: a results-only race is not on the
-            // Events table, so landing there would look like it vanished.
+            // Where the race lives: a results-only race is not on the Events
+            // table, so landing there would look like it vanished.
             router.push(resultsOnly ? `/admin/results/${id}` : '/admin/events');
           }}
         />
 
         <form onSubmit={handleSubmit} className="admin-form">
-          <ResultsOnlyPanel
-            savedOn={saved.resultsOnly}
-            on={resultsOnly}
-            onChange={changeResultsOnly}
-            registrationCount={registrationCount}
-          />
-
           <BasicInfoPanel
             draft={formData}
             setDraft={setFormData}
@@ -378,7 +358,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
           {!resultsOnly && <EventPromotionsPanel promotions={promotions} />}
 
           <div className="form-actions">
-            <Link href={saved.resultsOnly ? `/admin/results/${id}` : '/admin/events'} className="btn-cancel">
+            <Link href={resultsOnly ? `/admin/results/${id}` : '/admin/events'} className="btn-cancel">
               Cancel
             </Link>
             {/* Saving mid-upload would store the event without its image URL. */}

@@ -46,6 +46,7 @@ import { useAlert } from '@/components/ui/AlertProvider';
 import FieldError from '@/components/ui/FieldError';
 import SkeletonSwap, { SkeletonBar } from '@/components/ui/Skeleton';
 import AdminSelect from '../AdminSelect';
+import AdminSwitch from '../AdminSwitch';
 import {
   DISCOUNT_TYPES,
   DISCOUNT_TYPE_LABELS,
@@ -2015,26 +2016,20 @@ export default function PromoCodesClient({
               {/* Combining. Off by default, and it takes two: a price
                   promotion and a group deal both marked combinable — the
                   only pairing lib/promo-winner.ts gives. Said in the hint,
-                  because ticking one alone and seeing nothing change would
-                  read as a broken checkbox. */}
+                  because switching one on alone and seeing nothing change
+                  would read as a broken control. The admin form's own
+                  switch, like the event form's settings. */}
               <div className="form-group">
-                <div className="checkbox-group">
-                  <input
-                    type="checkbox"
-                    id="promoCombinable"
-                    checked={form.combinable}
-                    onChange={e => set({ combinable: e.target.checked })}
-                    className="w-5 h-5 accent-accent-blue"
-                  />
-                  <label htmlFor="promoCombinable" className="text-primary font-medium">
-                    Combine with other promotions
-                  </label>
-                </div>
-                <p className="text-xs text-secondary mt-1">
-                  {type === DISCOUNT_TYPES.BUY_X_GET_Y
-                    ? 'Applies on top of a discounted price, percentage or fixed amount that is also set to combine. The free runners are taken at their discounted price.'
-                    : 'A group deal (Buy X Get Y) that is also set to combine applies on top of this, taking its free runners at this price. Two price discounts never combine.'}
-                </p>
+                <AdminSwitch
+                  on={form.combinable}
+                  label="Combine with other promotions"
+                  hint={
+                    type === DISCOUNT_TYPES.BUY_X_GET_Y
+                      ? 'Applies on top of a discounted price, percentage or fixed amount that is also set to combine. The free runners are taken at their discounted price.'
+                      : 'A group deal (Buy X Get Y) that is also set to combine applies on top of this, taking its free runners at this price. Two price discounts never combine.'
+                  }
+                  onToggle={() => set({ combinable: !form.combinable })}
+                />
               </div>
 
               {/* How many runners a shared per-runner code can reach. Counted

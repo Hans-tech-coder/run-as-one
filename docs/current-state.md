@@ -19,9 +19,19 @@ offers **QR Ph only** (`OFFERED_PAYMONGO_METHODS` in `lib/free-checkout.ts`)
 until it is. Where an entry below says something is "not released" or
 "production is N migrations behind", it predates this release.
 
+**Move to Results switch removed (2026-10-15, on `dev`, not released).** The
+owner's call, so staff follow one flow: a race is Events or Results from the
+form that created it (`/admin/events/new` or `/admin/results/new`) and never
+moves. The edit form lost `ResultsOnlyPanel`, and the event PUT ignores
+`resultsOnly` in the body and keeps the stored value (the D3 registration
+guard went with it, since nothing can flip the column now). A race made in
+the wrong place is recreated in the right one. Production still has the
+switch until this is promoted, so the 3 existing races must be moved there
+first (`ON_HOLD.md`). No migration.
+
 **Combinable promotions (2026-10-15, on `dev`, not released; migration
 `20261015090000_combinable_promos`, applied to `local-dev`).** The marketing
-form has a **Combine with other promotions** checkbox (`PromoCode.combinable`,
+form has a **Combine with other promotions** switch (`AdminSwitch`, `PromoCode.combinable`,
 off by default; the table and cards say "Combines with other promotions").
 When a price promotion (`CATEGORY_PRICE`, `PERCENTAGE`, `FIXED`) and a
 `BUY_X_GET_Y` deal are **both** ticked and both qualify, one order gets both:
@@ -39,10 +49,11 @@ typecheck, `resolveDiscount` against `local-dev` (₱2,249 off six 10K runners:
 ₱900 early bird + ₱1,349 free runner) and the bank-transfer wizard on
 `local-dev` `run-and-reachout-2026` (five runners: early bird only, ₱6,945;
 six: both lines, "Free: Runner 6", ₱6,985; Add Another Runner stops at six).
-There, 🐦 EARLY BIRD RATES EXTENDED and 5+1 FREE are left combinable. **Not
-walked**: the admin checkbox (the seeded organizer password does not work on
-`local-dev`; `promoTermsFromInput` was checked by script instead), a placed
-order, and the receipt email.
+There, 🐦 EARLY BIRD RATES EXTENDED and 5+1 FREE are left combinable. The
+marketing table's "Combines with other promotions" line and the form's switch
+were seen on `local-dev` (toggled, not saved; `promoTermsFromInput` was checked
+by script). **Not walked**: saving a promotion with it, a placed order, and the
+receipt email.
 
 **Client subdomains, Batch 4 and the site icon (2026-10-14, on `dev`, not
 released; `CLIENT_SUBDOMAIN_PLAN.md`, deleted 2026-10-14, all five batches
