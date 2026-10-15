@@ -39,21 +39,50 @@ export async function POST(request: Request) {
     // Header format: t=<timestamp>,te=<test-mode sig>,li=<live-mode sig>.
     // Only the current mode's slot is filled. A request that is unsigned or
     // unparseable is rejected — otherwise anyone could mark an order PAID.
-    const timestampMatch = signatureHeader?.match(/t=([^,]+)/);
-    const signatureMatch = signatureHeader?.match(/te=([^,]+)/) || signatureHeader?.match(/li=([^,]+)/);
+    const signatureFields = new Map<string, string>();
+    for (const part of (signatureHeader ?? '').split(',')) {
+      const eq = part.indexOf('=');
+      if (eq > 0) signatureFields.set(part.slice(0, eq).trim(), part.slice(eq + 1).trim());
+    }
+    const timestamp = signatureFields.get('t');
 
-    if (!timestampMatch || !signatureMatch) {
+    if (!timestamp) {
       console.error('PayMongo Webhook: missing or malformed signature header');
-      return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+    }
+
+    // Envelope: { data: { type: 'event', attributes: { type: '<event name>', livemode, data: <resource> } } }.
+    // `data.type` is always "event"; the event name is one level down. Parsed
+    // before the signature check only to read `livemode`: the HMAC covers the
+    // body, so a flipped flag fails verification like any other edit.
+    let body;
+    try {
+      body = JSON.parse(rawBody);
+    } catch {
+      return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+    }
+    const livemode = body?.data?.attributes?.livemode;
+    if (typeof livemode !== 'boolean') {
+      return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+    }
+
+    // The slot is chosen by the event's own mode, never by whichever happens
+    // to be filled, so a live event is only ever accepted on its `li=`.
+    const signature = signatureFields.get(livemode ? 'li' : 'te');
+    if (!signature) {
+      console.error(
+        `PayMongo Webhook: no ${livemode ? 'li=' : 'te='} signature for a ${livemode ? 'live' : 'test'}-mode event`
+      );
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
 
     const computedSignature = Buffer.from(
       crypto
         .createHmac('sha256', webhookSecret)
-        .update(`${timestampMatch[1]}.${rawBody}`)
+        .update(`${timestamp}.${rawBody}`)
         .digest('hex')
     );
-    const receivedSignature = Buffer.from(signatureMatch[1]);
+    const receivedSignature = Buffer.from(signature);
 
     // timingSafeEqual throws on unequal lengths, so a short or long signature
     // is rejected before it is compared.
@@ -62,12 +91,12 @@ export async function POST(request: Request) {
       !crypto.timingSafeEqual(computedSignature, receivedSignature)
     ) {
       console.error('PayMongo Webhook signature verification failed');
-      return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
 
     // Checked after the signature, so only a genuine PayMongo event is ever
     // refused for its age, and the log can say so.
-    const signedAt = Number(timestampMatch[1]);
+    const signedAt = Number(timestamp);
     const ageSeconds = Math.floor(Date.now() / 1000) - signedAt;
     if (
       !Number.isInteger(signedAt) ||
@@ -80,9 +109,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Event timestamp outside the allowed window' }, { status: 400 });
     }
 
-    // Envelope: { data: { type: 'event', attributes: { type: '<event name>', data: <resource> } } }.
-    // `data.type` is always "event"; the event name is one level down.
-    const body = JSON.parse(rawBody);
     const eventType: string | undefined = body.data?.attributes?.type;
     const resource = body.data?.attributes?.data;
 

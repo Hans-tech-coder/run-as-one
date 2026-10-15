@@ -265,6 +265,16 @@
   used to leave a private blob nothing pointed at. The route now deletes the
   one it just uploaded, but **only when `VERCEL` is set**: the private store is
   shared with production, and nothing run locally deletes from it.
+- **Only PayMongo can mark an online order PAID through the webhook.**
+  `/api/webhooks/paymongo` fails closed: with `PAYMONGO_WEBHOOK_SECRET` unset
+  it logs an error and answers 500 without reading the event, and a missing or
+  malformed `paymongo-signature` header is refused 401. The HMAC-SHA256 of
+  `${t}.${rawBody}` is compared with `crypto.timingSafeEqual` against the slot
+  the event's own `livemode` names — `li=` for live, `te=` for test — never
+  whichever slot happens to be filled (hardened 2026-10-15); a missing slot or
+  a mismatch is 401. The body is parsed before that check only to read
+  `livemode`, which the signature covers. Each Vercel environment needs its
+  own secret: Production the live webhook's `whsk_`, Preview the test one's.
 - **A captured PayMongo webhook cannot be replayed later.** The signature
   covers `t=` and the body, so a copy of a real delivery used to stay valid
   forever (Strix vuln-0001, 2026-10-07). After the HMAC check the route refuses
