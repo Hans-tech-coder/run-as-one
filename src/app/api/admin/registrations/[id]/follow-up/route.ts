@@ -60,9 +60,10 @@ export async function POST(
       return NextResponse.json({ error: 'Registration not found' }, { status: 404 });
     }
 
+    // A refusal reads exactly like a missing order, so an id cannot be confirmed.
     const reach = { organizerId: registration.event.organizerId, eventId: registration.eventId };
     if (!can(actor, 'registration:view', reach)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Registration not found' }, { status: 404 });
     }
 
     const body = await request.json().catch(() => null);

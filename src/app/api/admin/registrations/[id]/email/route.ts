@@ -67,10 +67,14 @@ async function loadRegistration(id: string): Promise<Loaded> {
   }
 
   // Scoped by the registration's own organizer, so nobody outside it reaches
-  // it; a STAFF member also needs a role on this race that sends emails.
+  // it; a STAFF member also needs a role on this race that sends emails. A
+  // refusal reads exactly like a missing order, so an id cannot be confirmed.
   const reach = { organizerId: registration.event.organizerId, eventId: registration.eventId };
   if (!can(actor, 'registration:email', reach)) {
-    return { ok: false, response: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
+    return {
+      ok: false,
+      response: NextResponse.json({ error: 'Registration not found' }, { status: 404 }),
+    };
   }
 
   return { ok: true, actor, registration };

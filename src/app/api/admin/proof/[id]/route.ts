@@ -42,10 +42,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   }
 
   // An organizer's people see only their own events' registrations, and a
-  // STAFF member only the races where their role includes proofs.
+  // STAFF member only the races where their role includes proofs. A refusal
+  // reads exactly like an order with no proof, so an id cannot be confirmed by
+  // probing.
   const reach = { organizerId: registration.event.organizerId, eventId: registration.eventId };
   if (!can(actor, 'proof:view', reach)) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return NextResponse.json({ error: 'No proof of payment on file' }, { status: 404 });
   }
 
   try {

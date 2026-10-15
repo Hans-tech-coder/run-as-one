@@ -73,6 +73,18 @@
   `admin/events/event-not-found.ts` — the same page for a genuinely missing
   event and one this person may not open, so the screen cannot be used to
   probe which ids exist. List pages read through `reachableEvents(actor, …)`.
+- **Admin API routes answer a refusal with the same 404 as a miss.** A route
+  under `/api/admin/**/[id]` that loads a record and then asks `can()` returns
+  the record's own *not found* (status and body) when `can()` says no, never a
+  401/403 — otherwise "exists but not yours" and "does not exist" differ, and a
+  signed-in client viewer or event-scoped staff member can confirm another
+  client's or race's ids by probing (Strix vuln-0001, 2026-10-15: event
+  PATCH/DELETE, registration status / email / follow-up / payment-check, proof,
+  runner PATCH/DELETE). 401 stays for a request with no session at all, and a
+  403 is fine *after* the actor has passed a view check on the record (e.g. the
+  pacer fee waiver), since they can already see it exists. Scoping the lookup
+  by `organizerId` alone is not enough: the boundary that matters is inside the
+  organizer, per client and per race.
 - **Every admin write leaves an audit row in the same transaction**
   (`audit.ts`, §5), and so do the two reads that let personal data leave —
   opening a proof and exporting registrants. A new admin write passes its

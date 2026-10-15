@@ -131,15 +131,15 @@ export async function PATCH(
 
     // Scoped to the actor's own organizer, and for a STAFF member to a race
     // where their role covers what was sent: settling an order and writing a
-    // note about it are separate permissions (lib/permissions.ts). A super
-    // admin is the one account that legitimately reaches every organizer's
-    // registrations.
+    // note about it are separate permissions (lib/permissions.ts). A refusal
+    // reads exactly like a missing order, so an id cannot be confirmed by
+    // probing (Strix vuln-0001, 2026-10-15).
     const reach = { organizerId: existing.event.organizerId, eventId: existing.eventId };
     if (
       (wantsStatus && !can(actor, 'registration:validate', reach)) ||
       (wantsRemarks && !can(actor, 'registration:remark', reach))
     ) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Registration not found' }, { status: 404 });
     }
 
     if (wantsStatus && expectedStatus !== undefined && existing.status !== expectedStatus) {

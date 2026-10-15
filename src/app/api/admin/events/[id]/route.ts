@@ -485,12 +485,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       },
     });
 
-    if (!event) {
+    // A race the actor may not edit reads exactly like one that does not exist,
+    // as on GET and PUT above, so its id cannot be confirmed by probing.
+    if (!event || !can(actor, 'event:edit', { organizerId: event.organizerId, eventId: id })) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
-    }
-
-    if (!can(actor, 'event:edit', { organizerId: event.organizerId, eventId: id })) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const updated = await db.$transaction(async (tx) => {
@@ -594,13 +592,14 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
       select: { id: true, organizerId: true, title: true, date: true },
     });
 
-    if (!existingEvent) {
+    // Deleting a race is the owner's alone (lib/permissions.ts). Anyone else is
+    // told it does not exist, so a probe cannot tell the two apart; the events
+    // table offers Delete only to those who may.
+    if (
+      !existingEvent ||
+      !can(actor, 'event:delete', { organizerId: existingEvent.organizerId, eventId: id })
+    ) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
-    }
-
-    // Deleting a race is the owner's alone (lib/permissions.ts).
-    if (!can(actor, 'event:delete', { organizerId: existingEvent.organizerId, eventId: id })) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     // A race Run As One has already paid out on is part of the company's

@@ -98,8 +98,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       organizerId: runner.registration.event.organizerId,
       eventId: runner.registration.eventId,
     };
+    // A refusal reads exactly like a missing runner, so an id cannot be confirmed.
     if (!can(actor, 'registration:edit', reach)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Runner not found' }, { status: 404 });
     }
 
     const {
@@ -292,8 +293,9 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
       organizerId: runner.registration.event.organizerId,
       eventId: runner.registration.eventId,
     };
+    // A refusal reads exactly like a missing runner, so an id cannot be confirmed.
     if (!can(actor, 'registration:delete', reach)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Runner not found' }, { status: 404 });
     }
 
     const ref = runnerRef(
