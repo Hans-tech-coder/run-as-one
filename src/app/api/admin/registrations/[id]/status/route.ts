@@ -197,6 +197,7 @@ export async function PATCH(
             id,
             orderRef: existing.orderRef,
             promoCode: existing.promoCode,
+            combinedPromoCode: existing.combinedPromoCode,
             event: existing.event,
             runners: await tx.runner.findMany({
               where: { registrationId: id, deletedAt: null },
@@ -241,7 +242,11 @@ export async function PATCH(
           action: 'registration.status.changed',
           summary: `Marked ${existing.orderRef} as ${updated.status} (was ${existing.status}).${
             reason ? ` Reason: ${reason.replace(/[.!?]+$/, '')}.` : ''
-          }${promoReleased ? ` Promo ${existing.promoCode} handed back.` : ''}`,
+          }${
+            promoReleased
+              ? ` Promo ${[existing.promoCode, existing.combinedPromoCode].filter(Boolean).join(' + ')} handed back.`
+              : ''
+          }`,
           changes: reason
             ? { status: [existing.status, updated.status], reason }
             : { status: [existing.status, updated.status] },

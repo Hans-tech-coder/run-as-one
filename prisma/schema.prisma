@@ -294,6 +294,19 @@ model Registration {
   /// Null on the orders that carry no discount, and on every order written
   /// before this column existed.
   discountType            String?
+  /// The second promotion on an order that combined two (PromoCode.combinable):
+  /// always the BUY_X_GET_Y group deal, while promoCode/discountType above hold
+  /// the price promotion it was combined with. A snapshot of the name for the
+  /// same reasons promoCode is one.
+  ///
+  /// **discountAmount above stays the whole discount**, both promotions
+  /// together, so every reader of the money (revenue, settlement, the
+  /// chargeable total) is unchanged. combinedDiscountAmount is the part of it
+  /// that this second promotion gave -- the free runners at their sale prices
+  /// -- so the receipt can show it as its own line and each promotion's
+  /// *Given* column counts only its own share. Null and 0 on every other order.
+  combinedPromoCode       String?
+  combinedDiscountAmount  Int       @default(0)
   /// PAID, PENDING, CANCELLED, REFUNDED or EXPIRED -- guarded against that
   /// list wherever it is written (see api/admin/registrations/[id]/status).
   ///
@@ -568,8 +581,16 @@ model PromoCode {
   /// deliberately not offered in the promo box either, since a runner typing
   /// "EARLY BIRD" is not how it is meant to be claimed and it is already on
   /// their order. Where two promotions both apply, only the larger one does --
-  /// see bestDiscount in src/lib/discount.ts.
+  /// unless both are `combinable` -- see bestDiscount in src/lib/promo-winner.ts.
   automatic      Boolean              @default(false)
+  /// The organizer allows this promotion on the same order as another
+  /// combinable one. Only one pairing exists: a price promotion
+  /// (CATEGORY_PRICE, PERCENTAGE or FIXED) with a BUY_X_GET_Y group deal, the
+  /// deal reading the runners at their sale prices -- "Early Bird" plus
+  /// "5+1 FREE". **Both** promotions must have it on; off by default, so every
+  /// promotion made before it still never stacks. Never set on a PACER code.
+  /// See src/lib/promo-winner.ts.
+  combinable     Boolean              @default(false)
   /// The organizer's hand on the switch, exactly like Event.registrationPaused
   /// and for the same reason: a promotion that has run out, expired or not
   /// started yet is a fact the app works out for itself, and this one is a

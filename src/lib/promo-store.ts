@@ -3,12 +3,11 @@ import {
   AppliedDiscount,
   OrderBasis,
   PromoTerms,
-  bestDiscount,
   normalizePromoCode,
-  outshoneByMessage,
   promoCodeError,
   promoStatus,
 } from '@/lib/discount';
+import { bestDiscount, discountIncludesCode, outshoneByMessage } from '@/lib/promo-winner';
 
 /**
  * Reading promo codes out of the database, kept apart from the rule that
@@ -32,6 +31,10 @@ export const PROMO_TERMS_SELECT = {
   buyQuantity: true,
   getQuantity: true,
   automatic: true,
+  // Whether it may share an order with another combinable promotion. Here for
+  // the reason the waiver below is: a query that forgot it would leave the
+  // wizard combining two promotions the checkout then refuses to.
+  combinable: true,
   paused: true,
   // Only ever set on a pacer code, and selected here rather than at each call
   // site for the same reason the price list below is: a query that forgot to
@@ -261,6 +264,12 @@ export function promoTerms(promo: StoredPromo): PromoTerms {
 export interface ResolvedDiscount {
   /** The row, so the write can spend a redemption against it. */
   promo: StoredPromo | null;
+  /**
+   * The group deal's row when two promotions were combined
+   * (`applied.combined`), so the write spends a redemption on it too. Null
+   * otherwise.
+   */
+  combinedPromo: StoredPromo | null;
   /** What it takes off, or null when no usable code was sent. */
   applied: AppliedDiscount | null;
   /** The sentence to hand back with a 400, or null when the code is fine. */
@@ -304,17 +313,24 @@ export async function resolveDiscount(
   // merely *smaller* than the automatic discount is not an error — see below.
   if (cleaned) {
     const problem = promoCodeError(typed, order, cleaned);
-    if (problem) return { promo: null, applied: null, error: problem };
+    if (problem) return { promo: null, combinedPromo: null, applied: null, error: problem };
   }
 
   const winner = bestDiscount([...automatic, typed], order);
-  if (!winner) return { promo: null, applied: null, error: null };
+  if (!winner) return { promo: null, combinedPromo: null, applied: null, error: null };
 
-  // Which row won, so the write can spend a redemption against the right one.
-  const promo =
-    [...automatic, typed].find(candidate => candidate?.code === winner.code) ?? null;
+  // Which rows won, so the write can spend a redemption against each.
+  const rowFor = (code: string | undefined) =>
+    code === undefined
+      ? null
+      : ([...automatic, typed].find(candidate => candidate?.code === code) ?? null);
 
-  return { promo, applied: winner, error: null };
+  return {
+    promo: rowFor(winner.code),
+    combinedPromo: rowFor(winner.combined?.code),
+    applied: winner,
+    error: null,
+  };
 }
 
 /**
@@ -329,6 +345,6 @@ export function outshoneCode(
   winner: AppliedDiscount | null,
 ): string | null {
   const cleaned = normalizePromoCode(typedCode);
-  if (!cleaned || !winner || winner.code === cleaned) return null;
+  if (!cleaned || !winner || discountIncludesCode(winner, cleaned)) return null;
   return outshoneByMessage(cleaned, winner);
 }

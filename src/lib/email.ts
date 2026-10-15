@@ -214,9 +214,17 @@ function runnerDetailRows(registration: RegistrationWithDetails): Row[] {
  * The stored row is untouched by any of this: `subtotal` is the list total and
  * `discountAmount` what came off it, whichever way they are printed, so the
  * organizer's revenue and the *Given* column keep counting the same money.
+ *
+ * **A combined order has two promotions** (`Registration.combinedPromoCode`):
+ * the price promotion is printed exactly as above with its own share, and the
+ * group deal it was combined with is a line off the order with its own —
+ * the two shares together are `discountAmount`.
  */
 function summaryRows(registration: RegistrationWithDetails, totalLabel: string): Row[] {
-  const discounted = registration.discountAmount > 0;
+  const combinedOff = registration.combinedPromoCode ? registration.combinedDiscountAmount : 0;
+  // The price promotion's own share: the whole discount on every other order.
+  const ownOff = registration.discountAmount - combinedOff;
+  const discounted = ownOff > 0;
   const pricedIn = discounted && isPricedIn(registration.discountType);
   const promoName = registration.promoCode ?? 'Promotion';
 
@@ -225,7 +233,7 @@ function summaryRows(registration: RegistrationWithDetails, totalLabel: string):
       kind: 'amount',
       label: pricedIn ? `Subtotal (${promoName} price)` : 'Subtotal',
       centavos: pricedIn
-        ? registration.subtotal - registration.discountAmount
+        ? registration.subtotal - ownOff
         : registration.subtotal,
     },
     ...(registration.deliveryFee > 0
@@ -247,7 +255,16 @@ function summaryRows(registration: RegistrationWithDetails, totalLabel: string):
             label: registration.promoCode
               ? `Discount (${registration.promoCode})`
               : 'Discount',
-            centavos: -registration.discountAmount,
+            centavos: -ownOff,
+          },
+        ]
+      : []),
+    ...(combinedOff > 0
+      ? [
+          {
+            kind: 'amount' as const,
+            label: `Discount (${registration.combinedPromoCode})`,
+            centavos: -combinedOff,
           },
         ]
       : []),
@@ -259,7 +276,7 @@ function summaryRows(registration: RegistrationWithDetails, totalLabel: string):
           {
             kind: 'info' as const,
             label: 'You saved',
-            value: `${PESO_SIGN}${formatPesos(registration.discountAmount)} on ${promoName}`,
+            value: `${PESO_SIGN}${formatPesos(ownOff)} on ${promoName}`,
           },
         ]
       : []),

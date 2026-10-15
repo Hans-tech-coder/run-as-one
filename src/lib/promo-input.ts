@@ -41,6 +41,8 @@ export interface PromoInput {
   buyQuantity?: unknown;
   getQuantity?: unknown;
   automatic?: unknown;
+  /** Whether it may share an order with another combinable promotion. */
+  combinable?: unknown;
   /** CATEGORY_PRICE only: `{ [categoryId]: pesos }`, as the form posts it. */
   categoryPrices?: unknown;
   /**
@@ -77,6 +79,7 @@ export interface PromoTermsData {
   buyQuantity: number | null;
   getQuantity: number | null;
   automatic: boolean;
+  combinable: boolean;
 }
 
 /** A refusal the route hands straight back, field and all. */
@@ -204,6 +207,11 @@ export async function promoTermsFromInput(
     return problem('The end is before the start.', 'validUntil');
   }
 
+  // Every marketing kind may be marked; a pacer's free entry never stacks, and
+  // a kind with nothing to pair with (see lib/promo-winner.ts) simply never
+  // finds a partner, which needs no refusal here.
+  const combinable = input.combinable === true && type !== DISCOUNT_TYPES.PACER;
+
   return {
     data: {
       discountType: type,
@@ -221,6 +229,7 @@ export async function promoTermsFromInput(
       buyQuantity: buy,
       getQuantity: get,
       automatic,
+      combinable,
     },
     categoryPrices,
     categoryIds,

@@ -128,6 +128,8 @@ type StoredOrder = {
   subtotal: number;
   discountAmount: number;
   promoCode: string | null;
+  /** The group deal combined with `promoCode`, or null. */
+  combinedPromoCode: string | null;
   deliveryFee: number;
   platformFee: number;
   transactionFee: number;
@@ -159,7 +161,8 @@ export function paymongoOrderFromRegistration(order: StoredOrder): PaymongoOrder
     runners: order.runners.map((r, i) => ({ categoryName: r.category.name, price: prices[i] })),
     subtotalCents: order.subtotal,
     discountAmount: order.discountAmount,
-    promoCode: order.promoCode,
+    // Both names when two promotions were combined, as the first page said.
+    promoCode: [order.promoCode, order.combinedPromoCode].filter(Boolean).join(' + ') || null,
     deliveryFeeCents: order.deliveryFee,
     platformFeeCents: order.platformFee,
     transactionFeeCents: order.transactionFee,

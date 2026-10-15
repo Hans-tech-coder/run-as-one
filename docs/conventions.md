@@ -67,6 +67,14 @@
   accept either casing so rows written before that rule still read correctly.
   PayMongo is the one consumer that needs lowercase, and
   `paymongoPaymentType()` is the only place that converts.
+- **One step progress bar.** Every multi-step form — the organizer
+  application (`/admin/register`) and both runner registration wizards — draws
+  its progress with `components/ui/StepRail` (styles in `StepRail.css`):
+  numbered dots joined by a line that fills orange as steps are finished, a
+  check on each finished step, and a short label under each dot from `sm` up.
+  It is a progress indicator, not tabs, so the dots are not buttons. A new
+  multi-step form uses it rather than drawing its own; the caller only adds
+  spacing through `className`.
 - **One admin table.** Every table in the dashboard — events, registrants,
   results, marketing, team, activity, clients, communities, feedback,
   remittances and a race's settlement — is `components/ui/table` driven by

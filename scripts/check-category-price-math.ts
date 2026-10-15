@@ -1,7 +1,6 @@
 import {
   DISCOUNT_TYPES,
   applyPromo,
-  bestDiscount,
   categoryPriceRemaining,
   categorySalePrices,
   categorySeatsClaimed,
@@ -10,6 +9,7 @@ import {
   isPricedIn,
   type PromoTerms,
 } from '../src/lib/discount';
+import { bestDiscount } from '../src/lib/promo-winner';
 
 /**
  * A check of the invariants a category-price promotion can break silently.

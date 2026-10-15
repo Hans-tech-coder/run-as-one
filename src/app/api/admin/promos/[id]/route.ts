@@ -43,6 +43,7 @@ const EDITABLE_TERMS = [
   'validFrom',
   'validUntil',
   'usageLimit',
+  'combinable',
 ] as const;
 
 /** A price list as one comparable string, so an edit can say whether it moved. */
@@ -69,6 +70,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         batchLabel: true,
         automatic: true,
         paused: true,
+        combinable: true,
         discountType: true,
         discountValue: true,
         eventId: true,

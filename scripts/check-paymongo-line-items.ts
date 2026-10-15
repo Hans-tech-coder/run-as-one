@@ -90,6 +90,7 @@ const stored = {
   subtotal,
   discountAmount: 0,
   promoCode: null,
+  combinedPromoCode: null,
   deliveryFee: 0,
   platformFee,
   transactionFee,

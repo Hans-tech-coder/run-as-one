@@ -329,7 +329,9 @@ export default async function RegistrantsPage({
         // the remarks are: it belongs to the order, not to one member. Only
         // what a person reconciling a payment needs — the discount explains why
         // a transfer came in short, and the total is what it should have been.
-        promoCode: reg.promoCode,
+        // Both names on an order that combined two promotions, so the CSV and
+        // the detail modal say "EARLY BIRD + 5+1 FREE" beside the whole discount.
+        promoCode: [reg.promoCode, reg.combinedPromoCode].filter(Boolean).join(' + ') || null,
         discountAmount: reg.discountAmount,
         totalAmount: reg.totalAmount
       });

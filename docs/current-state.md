@@ -19,6 +19,31 @@ offers **QR Ph only** (`OFFERED_PAYMONGO_METHODS` in `lib/free-checkout.ts`)
 until it is. Where an entry below says something is "not released" or
 "production is N migrations behind", it predates this release.
 
+**Combinable promotions (2026-10-15, on `dev`, not released; migration
+`20261015090000_combinable_promos`, applied to `local-dev`).** The marketing
+form has a **Combine with other promotions** checkbox (`PromoCode.combinable`,
+off by default; the table and cards say "Combines with other promotions").
+When a price promotion (`CATEGORY_PRICE`, `PERCENTAGE`, `FIXED`) and a
+`BUY_X_GET_Y` deal are **both** ticked and both qualify, one order gets both:
+the early bird prices every runner, then the deal frees the cheapest at their
+sale price — six on a ₱1,200 10K with a ₱900 early bird and "5+1 FREE" pay
+5 × ₱900 (owner's example, Run and Reachout 2026). Only that pairing exists
+(owner's call); two price promotions still never stack. Rules in
+`promo-winner.ts` (§5); stored as `Registration.combinedPromoCode` /
+`combinedDiscountAmount` beside `promoCode`, with `discountAmount` still the
+whole discount. Both wizards print a line per promotion; the receipt email
+prints the deal as its own `Discount (…)` row; expiry, cancel and failed
+checkouts hand both redemptions back; each promotion's *Given* counts its own
+share. **Verified** by `scripts/check-combined-promos.ts` (31 checks), the
+typecheck, `resolveDiscount` against `local-dev` (₱2,249 off six 10K runners:
+₱900 early bird + ₱1,349 free runner) and the bank-transfer wizard on
+`local-dev` `run-and-reachout-2026` (five runners: early bird only, ₱6,945;
+six: both lines, "Free: Runner 6", ₱6,985; Add Another Runner stops at six).
+There, 🐦 EARLY BIRD RATES EXTENDED and 5+1 FREE are left combinable. **Not
+walked**: the admin checkbox (the seeded organizer password does not work on
+`local-dev`; `promoTermsFromInput` was checked by script instead), a placed
+order, and the receipt email.
+
 **Client subdomains, Batch 4 and the site icon (2026-10-14, on `dev`, not
 released; `CLIENT_SUBDOMAIN_PLAN.md`, deleted 2026-10-14, all five batches
 landed).** Pre-deploy QA passed on 2026-10-13: build, a review of
@@ -902,8 +927,8 @@ Known open threads:
   race running only automatic promotions, or none, never shows registrants a
   box that makes them think they are missing a discount; an automatic promotion is on their order
   from the first render and named on the event page before they start. Both
-  checkout routes recompute whichever applies, and only one discount is ever
-  given.
+  checkout routes recompute whichever applies, and only one discount is
+  given — unless two are combinable (see the 2026-10-15 entry at the top).
 - **A promotion can reprice a race's own options** (Category Prices). The
   organizer picks the event, and the form lists its categories with each one's
   own price beside a box for the promotion's — blank leaves that option alone,

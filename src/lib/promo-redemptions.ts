@@ -22,6 +22,12 @@ import { PACER_DISCOUNT_TYPE } from '@/lib/pacer';
  *  - An automatic promotion is attributed exactly the same way, because
  *    checkout snapshots its *name* into the same column.
  *
+ * **A combined order counts for both promotions, each with its own share.**
+ * The group deal is attributed by `Registration.combinedPromoCode` and given
+ * `combinedDiscountAmount`; the price promotion beside it is given the rest of
+ * `discountAmount`. The two shares add up to the order's whole discount, so
+ * the marketing table's total is still the money that actually came off.
+ *
  * **Money is counted on `PAID` rows only, redemptions on placement.** A code is
  * spent the moment the order is created, the same instant a slot is taken, so
  * an abandoned online checkout leaves a redemption with no money behind it.
@@ -87,26 +93,50 @@ export const MAX_REDEMPTIONS_LISTED = 500;
  * a promotion that no longer exists belongs in its total.
  */
 export async function spendByCode(organizerId: string): Promise<Map<string, PromoSpend>> {
-  const rows = await prisma.registration.groupBy({
-    by: ['promoCode'],
-    where: {
-      promoCode: { not: null },
-      // Not a pacer's free entry — see the note at the top of this file.
-      discountType: { not: PACER_DISCOUNT_TYPE },
-      status: MONEY_MOVED_STATUS,
-      event: { organizerId },
-    },
-    _sum: { discountAmount: true },
-    _count: { _all: true },
-  });
+  const [rows, combinedRows] = await Promise.all([
+    prisma.registration.groupBy({
+      by: ['promoCode'],
+      where: {
+        promoCode: { not: null },
+        // Not a pacer's free entry — see the note at the top of this file.
+        discountType: { not: PACER_DISCOUNT_TYPE },
+        status: MONEY_MOVED_STATUS,
+        event: { organizerId },
+      },
+      _sum: { discountAmount: true, combinedDiscountAmount: true },
+      _count: { _all: true },
+    }),
+    // The group deals that rode along on a combined order.
+    prisma.registration.groupBy({
+      by: ['combinedPromoCode'],
+      where: {
+        combinedPromoCode: { not: null },
+        status: MONEY_MOVED_STATUS,
+        event: { organizerId },
+      },
+      _sum: { combinedDiscountAmount: true },
+      _count: { _all: true },
+    }),
+  ]);
 
   const spend = new Map<string, PromoSpend>();
+  const add = (code: string, paid: number, given: number) => {
+    const existing = spend.get(code) ?? NO_SPEND;
+    spend.set(code, { paid: existing.paid + paid, given: existing.given + given });
+  };
   for (const row of rows) {
     if (!row.promoCode) continue;
-    spend.set(row.promoCode, {
-      paid: row._count._all,
-      given: row._sum.discountAmount ?? 0,
-    });
+    // The price promotion's own share: the deal it was combined with, if any,
+    // is counted under its own code below.
+    add(
+      row.promoCode,
+      row._count._all,
+      (row._sum.discountAmount ?? 0) - (row._sum.combinedDiscountAmount ?? 0),
+    );
+  }
+  for (const row of combinedRows) {
+    if (!row.combinedPromoCode) continue;
+    add(row.combinedPromoCode, row._count._all, row._sum.combinedDiscountAmount ?? 0);
   }
   return spend;
 }
@@ -121,7 +151,7 @@ export type PromoRedemption = {
   eventTitle: string;
   runners: number;
   status: string;
-  /** Centavos taken off this order. */
+  /** Centavos this promotion took off this order — its own share on a combined one. */
   discountAmount: number;
   createdAt: string;
 };
@@ -146,7 +176,8 @@ export async function redemptionsFor(
 
   const rows = await prisma.registration.findMany({
     where: {
-      promoCode: { in: codes },
+      // As the price promotion, or as the group deal combined with one.
+      OR: [{ promoCode: { in: codes } }, { combinedPromoCode: { in: codes } }],
       discountType: { not: PACER_DISCOUNT_TYPE },
       event: { organizerId },
     },
@@ -158,8 +189,10 @@ export async function redemptionsFor(
       id: true,
       orderRef: true,
       promoCode: true,
+      combinedPromoCode: true,
       status: true,
       discountAmount: true,
+      combinedDiscountAmount: true,
       createdAt: true,
       event: { select: { id: true, title: true } },
       // Removed runners are kept for the audit trail, not for this count.
@@ -170,16 +203,21 @@ export async function redemptionsFor(
   const truncated = rows.length > MAX_REDEMPTIONS_LISTED;
   return {
     truncated,
-    redemptions: rows.slice(0, MAX_REDEMPTIONS_LISTED).map(row => ({
-      id: row.id,
-      orderRef: row.orderRef,
-      code: row.promoCode,
-      eventId: row.event.id,
-      eventTitle: row.event.title,
-      runners: row._count.runners,
-      status: row.status,
-      discountAmount: row.discountAmount,
-      createdAt: row.createdAt.toISOString(),
-    })),
+    redemptions: rows.slice(0, MAX_REDEMPTIONS_LISTED).map(row => {
+      const asDeal = !codes.includes(row.promoCode ?? '');
+      return {
+        id: row.id,
+        orderRef: row.orderRef,
+        code: asDeal ? row.combinedPromoCode : row.promoCode,
+        eventId: row.event.id,
+        eventTitle: row.event.title,
+        runners: row._count.runners,
+        status: row.status,
+        discountAmount: asDeal
+          ? row.combinedDiscountAmount
+          : row.discountAmount - row.combinedDiscountAmount,
+        createdAt: row.createdAt.toISOString(),
+      };
+    }),
   };
 }

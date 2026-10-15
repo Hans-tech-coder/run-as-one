@@ -37,6 +37,16 @@ A **new client later** needs steps 3 and 4 only. Moving `runasone.ph` to
 Vercel's nameservers with one `*.runasone.ph` would skip step 3 for good, but
 it touches the Resend DNS records: optional, and done carefully if ever.
 
+**Pending for the next release (combinable promotions, 2026-10-15):**
+migration `20261015090000_combinable_promos` (`PromoCode.combinable`, a
+boolean defaulting to false, and `Registration.combinedPromoCode` /
+`combinedDiscountAmount`, nullable and 0; applied to `local-dev`; additive, so
+the old code ignores them). Run `npx prisma migrate deploy` with `DIRECT_URL`
+on the production endpoint **before** the new code goes live: the new code
+selects `combinable`. The admin checkbox, a placed order and the receipt
+email were not walked (`docs/current-state.md`, top), so QA them before
+promoting.
+
 The list below went out in the 2026-10-13 release (`docs/current-state.md`).
 
 **Pending for the next release (2026-10-05):** migrations

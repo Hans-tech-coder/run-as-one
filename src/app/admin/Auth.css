@@ -420,102 +420,10 @@
 }
 
 /* ── The step rail ──────────────────────────────────────────────────────
-   A progress indicator rather than a set of tabs: the steps are not
-   independent, and nobody can skip into step 3 without answering step 1, so
-   the dots are not buttons. Going back is what the Back button is for. */
+   Drawn by components/ui/StepRail.tsx, the one step bar in the app; this
+   page only spaces it from the form below. */
 .apply-steps {
-  display: flex;
-  align-items: flex-start;
   margin-bottom: var(--space-lg);
-}
-
-.apply-step {
-  flex: 1 1 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  position: relative;
-  min-width: 0;
-}
-
-/* The connector, drawn from each step back towards the one before it, so the
-   first step has none and nothing overhangs the rail's ends. */
-.apply-step + .apply-step::before {
-  content: '';
-  position: absolute;
-  top: 0.9375rem; /* Half the 30px dot. */
-  right: 50%;
-  left: -50%;
-  height: 2px;
-  background: rgba(255, 255, 255, 0.12);
-  transition: background-color 0.3s var(--ease-smooth-out);
-}
-
-/* A step's connector reaches back towards the step before it, so it fills in
-   as the rail is walked rather than running ahead of it: the line left of the
-   current dot is orange, the line right of it is not. */
-.apply-step + .apply-step[data-state='done']::before,
-.apply-step + .apply-step[data-state='current']::before {
-  background: var(--accent-orange);
-}
-
-.apply-step__dot {
-  position: relative;
-  z-index: 1;
-  width: 1.875rem; /* 30px */
-  height: 1.875rem;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-sans);
-  font-size: 0.8125rem;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.45);
-  background: var(--bg-primary);
-  border: 2px solid rgba(255, 255, 255, 0.18);
-  transition: background-color var(--duration-fast) var(--ease-smooth-out),
-    border-color var(--duration-fast) var(--ease-smooth-out),
-    color var(--duration-fast) var(--ease-smooth-out),
-    box-shadow var(--duration-fast) var(--ease-smooth-out);
-}
-
-.apply-step[data-state='current'] .apply-step__dot {
-  color: #fff;
-  background: var(--accent-orange);
-  border-color: var(--accent-orange);
-  box-shadow: 0 0 0 4px rgba(255, 107, 43, 0.18);
-}
-
-.apply-step[data-state='done'] .apply-step__dot {
-  color: #fff;
-  background: var(--accent-orange);
-  border-color: var(--accent-orange);
-}
-
-.apply-step__label {
-  font-family: var(--font-body);
-  font-size: 0.75rem;
-  font-weight: 600;
-  line-height: 1.3;
-  text-align: center;
-  color: rgba(255, 255, 255, 0.45);
-  /* The three labels are the only thing on this page that cannot shrink to fit
-     360px without wrapping into a mess, so below `sm` they are not drawn at
-     all — the step's own heading, right below the rail, says the same thing in
-     full. */
-  display: none;
-}
-
-.apply-step[data-state='current'] .apply-step__label {
-  color: var(--text-primary);
-}
-
-@media (width >= 40rem) {
-  .apply-step__label {
-    display: block;
-  }
 }
 
 /* ── One step's heading ─────────────────────────────────────────────────
@@ -930,8 +838,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .apply-step__dot,
-  .apply-step + .apply-step::before,
   .apply-choice,
   .apply-choice__box {
     transition: none;

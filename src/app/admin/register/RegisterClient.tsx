@@ -1,7 +1,7 @@
 "use client";
 
 import Link from 'next/link';
-import { AlertCircle, ArrowLeft, ArrowRight, Check, Send } from 'lucide-react';
+import { AlertCircle, ArrowLeft, ArrowRight, Send } from 'lucide-react';
 import { RunAsOneLogo } from '@/components/RunAsOneLogo';
 import BusyLabel from '@/components/ui/BusyLabel';
 import AuthHomeLink from '../AuthHomeLink';
@@ -13,6 +13,7 @@ import EventStep from './EventStep';
 import ThankYouPanel from './ThankYouPanel';
 
 import './../Auth.css';
+import StepRail from '@/components/ui/StepRail';
 
 /**
  * The service inquiry, client half (`page.tsx` is the server half, for its
@@ -98,25 +99,12 @@ export default function RegisterClient() {
             <ThankYouPanel form={form} headingRef={headingRef} />
           ) : (
             <>
-              <ol className="apply-steps" aria-label="Application progress">
-                {STEPS.map((entry, index) => {
-                  const state =
-                    index < step ? 'done' : index === step ? 'current' : 'todo';
-                  return (
-                    <li
-                      key={entry.rail}
-                      className="apply-step"
-                      data-state={state}
-                      aria-current={state === 'current' ? 'step' : undefined}
-                    >
-                      <span className="apply-step__dot" aria-hidden="true">
-                        {state === 'done' ? <Check size={15} strokeWidth={3} /> : index + 1}
-                      </span>
-                      <span className="apply-step__label">{entry.rail}</span>
-                    </li>
-                  );
-                })}
-              </ol>
+              <StepRail
+                className="apply-steps"
+                labels={STEPS.map((entry) => entry.rail)}
+                current={step}
+                ariaLabel="Application progress"
+              />
 
               <form onSubmit={handleSubmit} className="auth-form" noValidate>
                 <div className="apply-step-head">

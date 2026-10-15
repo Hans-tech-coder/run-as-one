@@ -65,6 +65,7 @@ import {
   runnersDiscounted,
 } from '@/lib/discount';
 import { resolveDiscount } from '@/lib/promo-store';
+import { discountParts } from '@/lib/promo-winner';
 import { openPaymongoPage } from '@/lib/paymongo-session';
 import { CHECKOUT_RULE, allowRequest, callerKey } from '@/lib/rate-limit';
 
@@ -433,6 +434,18 @@ export async function POST(request: Request) {
             runnersDiscounted(discount.promo, promoOrder)
           );
       }
+      // The group deal it was combined with, spent as the one order it always
+      // counts. Always after the price promotion, so two combined orders lock
+      // the two rows in the same order (lib/promo-winner.ts).
+      if (discount.combinedPromo && discount.applied?.combined) {
+        await redeemPromoCode(
+          tx,
+          discount.combinedPromo.id,
+          discount.combinedPromo.code,
+          new Map(),
+          discount.combinedPromo.automatic,
+        );
+      }
 
       return tx.registration.create({
         data: {
@@ -462,6 +475,11 @@ export async function POST(request: Request) {
           // discount was a price the goods were sold at or a deduction from
           // them. See isPricedIn in lib/discount.ts.
           discountType: discountAmount > 0 ? discount.applied?.type ?? null : null,
+          // The group deal it was combined with, and its share of
+          // discountAmount — which stays the whole discount. See
+          // Registration.combinedPromoCode.
+          combinedPromoCode: discount.applied?.combined?.code ?? null,
+          combinedDiscountAmount: discount.applied?.combined?.amount ?? 0,
           paymentMethod: storedPaymentMethod,
           status: 'PENDING', // All payments start as PENDING until verified by webhook or admin
           // Nothing to collect, so nothing to wait for. Spread *after* the two
@@ -580,7 +598,8 @@ export async function POST(request: Request) {
         }),
         subtotalCents: expectedSubtotal,
         discountAmount,
-        promoCode: discount.applied?.code ?? null,
+        // Both names when two promotions were combined: "EARLY BIRD + 5+1 FREE".
+        promoCode: discount.applied ? discountParts(discount.applied).map(part => part.code).join(' + ') : null,
         deliveryFeeCents,
         platformFeeCents,
         transactionFeeCents,

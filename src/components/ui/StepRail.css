@@ -1,0 +1,103 @@
+/* ── The step rail (components/ui/StepRail.tsx) ─────────────────────────
+   The one step progress bar in the app. No outer margin: each caller spaces
+   it for its own layout. */
+.step-rail {
+  display: flex;
+  align-items: flex-start;
+  list-style: none;
+}
+
+.step-rail__step {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  position: relative;
+  min-width: 0;
+}
+
+/* The connector, drawn from each step back towards the one before it, so the
+   first step has none and nothing overhangs the rail's ends. */
+.step-rail__step + .step-rail__step::before {
+  content: '';
+  position: absolute;
+  top: 0.9375rem; /* Half the 30px dot. */
+  right: 50%;
+  left: -50%;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.12);
+  transition: background-color 0.3s var(--ease-smooth-out);
+}
+
+/* A step's connector reaches back towards the step before it, so it fills in
+   as the rail is walked rather than running ahead of it: the line left of the
+   current dot is orange, the line right of it is not. */
+.step-rail__step + .step-rail__step[data-state='done']::before,
+.step-rail__step + .step-rail__step[data-state='current']::before {
+  background: var(--accent-orange);
+}
+
+.step-rail__dot {
+  position: relative;
+  z-index: 1;
+  width: 1.875rem; /* 30px */
+  height: 1.875rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.45);
+  background: var(--bg-primary);
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  transition: background-color var(--duration-fast) var(--ease-smooth-out),
+    border-color var(--duration-fast) var(--ease-smooth-out),
+    color var(--duration-fast) var(--ease-smooth-out),
+    box-shadow var(--duration-fast) var(--ease-smooth-out);
+}
+
+.step-rail__step[data-state='current'] .step-rail__dot {
+  color: #fff;
+  background: var(--accent-orange);
+  border-color: var(--accent-orange);
+  box-shadow: 0 0 0 4px rgba(255, 107, 43, 0.18);
+}
+
+.step-rail__step[data-state='done'] .step-rail__dot {
+  color: #fff;
+  background: var(--accent-orange);
+  border-color: var(--accent-orange);
+}
+
+.step-rail__label {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.3;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.45);
+  /* Below `sm` the labels are not drawn: they cannot shrink to fit 360px
+     without wrapping into a mess, and each form's own step heading says the
+     same thing in full. */
+  display: none;
+}
+
+.step-rail__step[data-state='current'] .step-rail__label {
+  color: var(--text-primary);
+}
+
+@media (width >= 40rem) {
+  .step-rail__label {
+    display: block;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .step-rail__dot,
+  .step-rail__step + .step-rail__step::before {
+    transition: none;
+  }
+}

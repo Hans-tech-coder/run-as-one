@@ -90,6 +90,8 @@ type Sweepable = {
   id: string;
   orderRef: string;
   promoCode: string | null;
+  /** The group deal combined with `promoCode`, handed back alongside it. */
+  combinedPromoCode: string | null;
   event: { organizerId: string };
   /**
    * Only what a released seat needs: which category each runner entered, and
@@ -195,6 +197,7 @@ export async function expirePendingRegistrations(
       id: true,
       orderRef: true,
       promoCode: true,
+      combinedPromoCode: true,
       event: { select: { organizerId: true } },
       // Only what a released seat needs. A repricing promotion is capped in
       // runners, so the sweep has to know how many of this order's runners
@@ -264,6 +267,11 @@ export async function expirePendingRegistrations(
  * Returns whether anything was actually handed back — a promotion since
  * deleted, or an order that used no code at all, is not a failure.
  *
+ * **A combined order hands back both promotions**: the price promotion first,
+ * then the group deal (`combinedPromoCode`), the order checkout took them in,
+ * so the two row locks are always taken the same way round. The deal has no
+ * seats and counts orders, so it gives back exactly one.
+ *
  * Exported for the other ways a PENDING order ends without being paid — an
  * organizer cancelling it on the status route, or its last runner being
  * removed (`cancelEmptiedOrders` below). They hand back exactly what the sweep
@@ -272,7 +280,17 @@ export async function expirePendingRegistrations(
  * be handed back twice.
  */
 export async function releaseRedemption(tx: any, registration: Sweepable): Promise<boolean> {
-  const code = registration.promoCode;
+  const released = await releaseOne(tx, registration.promoCode, registration);
+  const combined = await releaseOne(tx, registration.combinedPromoCode, registration);
+  return released || combined;
+}
+
+/** Hand one promotion's redemption (and seats) back, by its snapshotted code. */
+async function releaseOne(
+  tx: Prisma.TransactionClient,
+  code: string | null,
+  registration: Sweepable,
+): Promise<boolean> {
   if (!code) return false;
 
   const promo = await tx.promoCode.findFirst({
@@ -634,7 +652,13 @@ export async function cancelEmptiedOrders(
 
     const registration = await tx.registration.findUnique({
       where: { id: registrationId },
-      select: { id: true, orderRef: true, promoCode: true, event: { select: { organizerId: true } } },
+      select: {
+        id: true,
+        orderRef: true,
+        promoCode: true,
+        combinedPromoCode: true,
+        event: { select: { organizerId: true } },
+      },
     });
     if (!registration) continue;
     const promoReleased = await releaseRedemption(tx, {
@@ -647,7 +671,7 @@ export async function cancelEmptiedOrders(
     cancelled.push({
       registrationId,
       orderRef: registration.orderRef,
-      promoCode: registration.promoCode,
+      promoCode: [registration.promoCode, registration.combinedPromoCode].filter(Boolean).join(' + ') || null,
       promoReleased,
     });
   }
@@ -695,6 +719,7 @@ export async function discardFailedCheckout(registrationId: string): Promise<voi
         id: true,
         orderRef: true,
         promoCode: true,
+        combinedPromoCode: true,
         event: { select: { organizerId: true } },
         runners: { where: { deletedAt: null }, select: { categoryId: true, promoPrice: true } },
       },

@@ -108,6 +108,8 @@ type PromoRow = {
   categoryNames: string[];
   batchLabel: string | null;
   automatic: boolean;
+  /** May share an order with another combinable promotion (lib/promo-winner.ts). */
+  combinable: boolean;
   paused: boolean;
   eventId: string | null;
   event: { id: string; title: string } | null;
@@ -184,6 +186,8 @@ const BLANK_FORM = {
   batchLabel: '',
   batchPrefix: '',
   batchCount: '',
+  /** Off, so a new promotion never stacks unless the organizer says so. */
+  combinable: false,
 };
 
 /** What `GET /api/admin/promos/[id]/redemptions` answers with. */
@@ -873,6 +877,9 @@ export default function PromoCodesClient({
                 Automatic &middot; no code to give out
               </span>
             )}
+            {group.terms.combinable && (
+              <span className="text-xs text-secondary block">Combines with other promotions</span>
+            )}
           </span>
         );
       },
@@ -1251,11 +1258,16 @@ export default function PromoCodesClient({
               </span>
             )}
             subtitle={row =>
-              row.original.codes.length > 1
-                ? `${row.original.codes.length} single-use vouchers`
-                : row.original.terms.automatic
-                  ? 'Automatic · no code to give out'
-                  : null
+              [
+                row.original.codes.length > 1
+                  ? `${row.original.codes.length} single-use vouchers`
+                  : row.original.terms.automatic
+                    ? 'Automatic · no code to give out'
+                    : null,
+                row.original.terms.combinable ? 'Combines with other promotions' : null,
+              ]
+                .filter(Boolean)
+                .join(' · ') || null
             }
             badges={row => (
               <div>
@@ -2000,6 +2012,31 @@ export default function PromoCodesClient({
                 </p>
               </div>
 
+              {/* Combining. Off by default, and it takes two: a price
+                  promotion and a group deal both marked combinable — the
+                  only pairing lib/promo-winner.ts gives. Said in the hint,
+                  because ticking one alone and seeing nothing change would
+                  read as a broken checkbox. */}
+              <div className="form-group">
+                <div className="checkbox-group">
+                  <input
+                    type="checkbox"
+                    id="promoCombinable"
+                    checked={form.combinable}
+                    onChange={e => set({ combinable: e.target.checked })}
+                    className="w-5 h-5 accent-accent-blue"
+                  />
+                  <label htmlFor="promoCombinable" className="text-primary font-medium">
+                    Combine with other promotions
+                  </label>
+                </div>
+                <p className="text-xs text-secondary mt-1">
+                  {type === DISCOUNT_TYPES.BUY_X_GET_Y
+                    ? 'Applies on top of a discounted price, percentage or fixed amount that is also set to combine. The free runners are taken at their discounted price.'
+                    : 'A group deal (Buy X Get Y) that is also set to combine applies on top of this, taking its free runners at this price. Two price discounts never combine.'}
+                </p>
+              </div>
+
               {/* How many runners a shared per-runner code can reach. Counted
                   in runners, like the seat caps on a category price, so a
                   group of five uses five. */}
@@ -2322,6 +2359,7 @@ function formFrom(group: Group): typeof BLANK_FORM {
     validFrom: manilaDateTime(promo.validFrom),
     validUntil: manilaDateTime(promo.validUntil),
     batchLabel: group.batchLabel ?? '',
+    combinable: promo.combinable === true,
   };
 }
 

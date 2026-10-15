@@ -108,7 +108,12 @@ shape:
   runner because a capped promotion can run out halfway through one order) and
   **`discountType`** — snapshotted for the same reason and needed for one
   `promoCode` cannot serve: the receipt has to know whether the discount was a
-  *price* or a *deduction*. **`subtotal` is always the list total** whichever
+  *price* or a *deduction*. An order that combined two promotions
+  (`PromoCode.combinable`) also carries **`combinedPromoCode`** (the group
+  deal's name) and **`combinedDiscountAmount`** (its share);
+  `discountAmount` stays the **whole** discount, so revenue and settlement
+  read it unchanged, while `promoCode`/`discountType` hold the price
+  promotion. **`subtotal` is always the list total** whichever
   it was, so what a promotion cost stays one subtraction away and the revenue
   tile keeps working. The
   `status` vocabulary is `PAID`, `PENDING`, `CANCELLED`, `REFUNDED` and
@@ -203,8 +208,11 @@ shape:
   that used them. **`automatic`** is the promotion nobody
   types: it applies on its own to any qualifying order, and `code` then holds
   its *name* ("EARLY BIRD"), which is what the event page and the receipt
-  show. Only one discount is ever given — where several qualify, the largest
-  wins. **`paused`** is the organizer's hand on the switch, the same idea as
+  show. Only one discount is given — where several qualify, the largest
+  wins — unless both are **`combinable`** (2026-10-15, off by default): a
+  price promotion (`CATEGORY_PRICE`, `PERCENTAGE`, `FIXED`) and a
+  `BUY_X_GET_Y` deal may then share one order, the deal freeing runners at
+  their sale price (`promo-winner.ts`). **`paused`** is the organizer's hand on the switch, the same idea as
   `Event.registrationPaused`: expired, scheduled and fully claimed are facts the
   app works out for itself, and this one is a decision.
 - **PromoCode, the three pacer columns** (`PACER_DISCOUNT_PLAN.md`, Batch 1).

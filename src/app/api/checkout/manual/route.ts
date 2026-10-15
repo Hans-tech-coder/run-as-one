@@ -413,6 +413,18 @@ export async function POST(request: Request) {
             runnersDiscounted(discount.promo, promoOrder)
           );
       }
+      // The group deal it was combined with, spent as the one order it always
+      // counts. Always after the price promotion, so two combined orders lock
+      // the two rows in the same order (lib/promo-winner.ts).
+      if (discount.combinedPromo && discount.applied?.combined) {
+        await redeemPromoCode(
+          tx,
+          discount.combinedPromo.id,
+          discount.combinedPromo.code,
+          new Map(),
+          discount.combinedPromo.automatic,
+        );
+      }
 
       return tx.registration.create({
         data: {
@@ -442,6 +454,11 @@ export async function POST(request: Request) {
           // discount was a price the goods were sold at or a deduction from
           // them. See isPricedIn in lib/discount.ts.
           discountType: discountAmount > 0 ? discount.applied?.type ?? null : null,
+          // The group deal it was combined with, and its share of
+          // discountAmount — which stays the whole discount. See
+          // Registration.combinedPromoCode.
+          combinedPromoCode: discount.applied?.combined?.code ?? null,
+          combinedDiscountAmount: discount.applied?.combined?.amount ?? 0,
           paymentMethod: storedPaymentMethod,
           proofOfPayment: proofPathname,
           transactionNumber: free ? null : transactionNumber,

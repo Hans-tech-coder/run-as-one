@@ -59,17 +59,19 @@ import {
 } from "@/lib/shirt-size";
 import {
   applyPromo,
-  bestDiscount,
   categorySalePrices,
-  chargedRunnerPrice,
   describePromo,
   freeSlotOffer,
-  outshoneByMessage,
   promoCodeError,
   promoGroupSize,
   promoStatus,
   type PromoTerms,
 } from "@/lib/discount";
+import {
+  bestDiscount,
+  discountIncludesCode,
+  outshoneByMessage,
+} from "@/lib/promo-winner";
 import {
   FREE_ORDER_SUBMIT_LABEL,
   FREE_ORDER_TOTAL_LABEL,
@@ -78,6 +80,8 @@ import {
   platformFeeAfterDiscount,
 } from "@/lib/free-checkout";
 import PromoCodeField from "./PromoCodeField";
+import OrderSummary from "./OrderSummary";
+import StepRail from "@/components/ui/StepRail";
 import FreeSlotOffer from "./FreeSlotOffer";
 import GroupLimitNotice from "./GroupLimitNotice";
 import { MAX_RUNNERS_PER_ORDER, ORDER_SIZE_LIMIT_MESSAGE } from "@/lib/order-size";
@@ -161,8 +165,6 @@ const NO_GUARDIAN = {
   guardianRelationship: "",
   guardianConsent: false,
 } as const;
-
-const TOTAL_STEPS = 3;
 
 export default function BankTransferWizardClient({
   event,
@@ -426,10 +428,14 @@ export default function BankTransferWizardClient({
         ...prev,
         ...Array.from({ length: adding }, (_unused, offset) => ({
           id: Date.now() + offset,
-          categoryId: prev[0].categoryId || "",
-          // Carried over for the same reason as the category: a second runner
-          // added to one order is usually a club-mate or family member. It is a
-          // starting value, not a lock — the picker is editable per runner.
+          // Never copied from runner 1: the category sets the price, the bib
+          // and the singlet, and a family's runners often run different
+          // distances. Left blank, the picker's required check makes each
+          // runner choose instead of inheriting a wrong one unnoticed.
+          categoryId: "",
+          // Carried over: a second runner added to one order is usually a
+          // club-mate. It is a starting value, not a lock — the picker is
+          // editable per runner, and a wrong club costs nothing.
           runningCommunity: prev[0].runningCommunity || "",
           firstName: "",
           lastName: "",
@@ -514,9 +520,11 @@ export default function BankTransferWizardClient({
   };
   const promoProblem = promo ? promoCodeError(promo, promoOrder, promo.code) : null;
 
-  // Only one discount is ever given. The automatic promotions and the typed
-  // code are weighed together and the largest wins — an early bird stacking
-  // on top of a voucher is a number the organizer never agreed to.
+  // One discount, unless the organizer marked a price promotion and a group
+  // deal as combinable (lib/promo-winner.ts). The automatic promotions and the
+  // typed code are weighed together and the largest wins — an early bird
+  // stacking on top of a voucher nobody allowed is a number the organizer
+  // never agreed to.
   const discount = bestDiscount(
     [...automaticPromos, promoProblem ? null : promo],
     promoOrder,
@@ -548,7 +556,7 @@ export default function BankTransferWizardClient({
   // it stays unspent — but saying nothing would look like the box was broken.
   const typedApplied = promoProblem ? null : applyPromo(promo, promoOrder);
   const promoOutshone =
-    promo && !promoProblem && discount && discount.code !== promo.code
+    promo && !promoProblem && discount && !discountIncludesCode(discount, promo.code)
       ? outshoneByMessage(promo.code, discount)
       : null;
 
@@ -977,199 +985,34 @@ export default function BankTransferWizardClient({
               </div>
             </div>
 
-            <div className="order-summary mt-6 bg-black/40 rounded-[16px] p-4 sm:p-6 border border-white/5">
-              <h4 className="mb-4 text-white font-bold tracking-wide uppercase text-sm">
-                Order Summary
-              </h4>
-              <div className="flex flex-col gap-3">
-                {participants.map((p, idx) => {
-                  const cat = event.categories.find(
-                    (c: any) => c.id === p.categoryId,
-                  );
-                  return (
-                    <div
-                      key={p.id}
-                      className="flex justify-between items-center text-sm"
-                    >
-                      <span className="text-secondary">
-                        Runner {idx + 1}{" "}
-                        {cat ? (
-                          <span className="text-white">({cat.name})</span>
-                        ) : (
-                          ""
-                        )}
-                      </span>
-                      {/* A sale is a price, not a deduction: when the
-                          category is on promotion this line says the promotion
-                          price and no discount row follows it, exactly the way
-                          a sale reads anywhere else. Every other kind leaves
-                          the goods at list and shows itself below. The total
-                          is the same either way — see AppliedDiscount.pricedIn
-                          in lib/discount.ts. */}
-                      <span className="font-bold text-white">
-                        ₱
-                        {cat ? (discount?.pricedIn && discount.salePriceByRunner[idx] !== null && discount.salePriceByRunner[idx]! < cat.price ? <><span className="line-through text-secondary mr-2 font-normal">₱{formatPesos(cat.price)}</span>{formatPesos(discount.salePriceByRunner[idx]!)}</> : formatPesos(chargedRunnerPrice(discount, idx, cat.price))) : "0.00"}
-                      </span>
-                    </div>
-                  );
-                })}
-
-                {sizeUpcharge > 0 && (
-                  <div className="flex justify-between items-center text-sm mt-2 pt-2 border-t border-white/5">
-                    <span className="text-secondary">
-                      Large size surcharge (4XL+)
-                    </span>
-                    <span className="text-white">
-                      ₱{formatPesos(sizeUpcharge)}
-                    </span>
-                  </div>
-                )}
-
-                {logisticsMethod === "DELIVERY" && (
-                  <div className="flex justify-between items-center text-sm mt-2 pt-2 border-t border-white/5">
-                    <span className="text-secondary">
-                      Delivery Fee
-                      {delivery.feeLabel ? ` (${delivery.feeLabel})` : ""}
-                    </span>
-                    <span className="text-white">
-                      ₱{formatPesos(deliveryFee)}
-                    </span>
-                  </div>
-                )}
-
-                {discount && (
-                  <div className="flex justify-between items-start gap-3 text-sm mt-2 pt-2 border-t border-white/5">
-                    <span className="text-secondary">
-                      <span className="text-white">{discount.code}</span>
-                      {" — "}
-                      {discount.label}
-                      {/* Which person the free entry belongs to. A group has
-                          to be able to see that the promotion landed on a real
-                          runner rather than on an unexplained line. */}
-                      {discount.freeRunners.length > 0 && (
-                        <span className="block text-xs mt-0.5">
-                          Free:{" "}
-                          {discount.freeRunners
-                            .map((index) => `Runner ${index + 1}`)
-                            .join(", ")}
-                        </span>
-                      )}
-                      {(discount.type === 'PERCENTAGE' || discount.type === 'FIXED') && (() => {
-  const discountedIdxs = discount.salePriceByRunner.map((p, i) => (p !== null ? i : -1)).filter((i) => i !== -1);
-  if (discountedIdxs.length === 0) return null;
-  if (discount.usageLimit === 1) {
-    const idx = discountedIdxs[0];
-    const cat = event.categories.find((c: any) => c.id === participants[idx].categoryId);
-    return <span className="block text-xs mt-0.5 text-white">Applied to Runner {idx + 1} {cat ? '(' + cat.name + ')' : ''}</span>;
-  } else if (discountedIdxs.length < participants.length) {
-    return <span className="block text-xs mt-0.5 text-white">Applied to {discountedIdxs.length} of your {participants.length} runners. Only {discountedIdxs.length} discounted places were left.</span>;
-  }
-  return null;
-})()}
-{discount.pricedIn && discount.type === 'CATEGORY_PRICE' && (
-  <span className="block text-xs mt-0.5">Already in the prices above — you save ₱{formatPesos(discount.amount)}</span>
-)}
-                    </span>
-                    {/* Named but not subtracted again when the prices
-                        above are already the promotion's. Saying nothing at
-                        all would leave a runner unable to see which promotion
-                        gave them the price, and a second −₱ would read as a
-                        discount they are not getting twice. */}
-                    <span className="font-bold text-emerald-400 whitespace-nowrap">
-                      {(() => {
-  if (!discount.pricedIn) return '−₱' + formatPesos(discount.amount);
-  const catSavings = participants.reduce((sum, p, idx) => {
-    const cat = event.categories.find((c: any) => c.id === p.categoryId);
-    const sale = discount.salePriceByRunner[idx];
-    return cat && sale !== null ? sum + (cat.price - sale) : sum;
-  }, 0);
-  return discount.amount > catSavings ? '−₱' + formatPesos(discount.amount - catSavings) : "Applied";
-})()}
-                    </span>
-                  </div>
-                )}
-
-                <div className="flex justify-between items-center text-sm mt-2 pt-2 border-t border-white/5">
-                  <span className="text-secondary">Platform Fee</span>
-                  {/* A waived fee is shown struck through rather than simply
-                      absent: the pacer was told the fee was covered, so the
-                      line that says so has to be visible — a row that vanished
-                      would look like the fee was never charged to anyone. */}
-                  {adminFeeWaived ? (
-                    <span className="whitespace-nowrap">
-                      <span className="text-secondary/60 line-through">
-                        ₱{formatPesos(adminFeePerRunner * participants.length)}
-                      </span>{" "}
-                      <span className="font-bold text-emerald-400">₱0.00</span>
-                    </span>
-                  ) : (
-                    <span className="text-white">
-                      ₱{formatPesos(platformFee)}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex justify-between items-center mt-6 pt-4 border-t border-white/10">
-                <strong className="text-white uppercase tracking-wider text-sm">
-                  Total
-                </strong>
-                <strong className="text-accent-orange text-2xl font-bold">
-                  ₱{formatPesos(totalAmount)}
-                </strong>
-              </div>
-
+            <OrderSummary
+              categories={event.categories}
+              participants={participants}
+              discount={discount}
+              sizeUpcharge={sizeUpcharge}
+              deliveryFee={
+                logisticsMethod === "DELIVERY"
+                  ? { amount: deliveryFee, label: delivery.feeLabel }
+                  : null
+              }
+              platformFee={platformFee}
+              waivedPlatformFee={
+                adminFeeWaived ? adminFeePerRunner * participants.length : null
+              }
+              transactionFee={null}
+              totalAmount={totalAmount}
+            >
               <div className="mt-3 text-xs text-secondary">
                 No transaction fee — payment is by bank transfer.
               </div>
-            </div>
+            </OrderSummary>
 
-            {/* Step Progress Indicators */}
-            <div className="steps-indicator mt-10 relative flex justify-between items-center">
-              {/* Background Line */}
-              <div className="absolute top-1/2 left-0 w-full h-[3px] bg-white/10 -translate-y-1/2 z-0 rounded-full"></div>
-
-              {/* Active Progress Line */}
-              <div
-                className="absolute top-1/2 left-0 h-[3px] bg-accent-orange -translate-y-1/2 z-0 transition-all duration-700 ease-in-out rounded-full shadow-[0_0_12px_rgba(255,107,43,0.8)]"
-                style={{
-                  width: `${((step - 1) / (TOTAL_STEPS - 1)) * 100}%`,
-                }}
-              ></div>
-
-              {[1, 2, 3].map((s) => {
-                const isActive = step === s;
-                const isPast = step > s;
-
-                return (
-                  <div
-                    key={s}
-                    className={`relative z-10 w-12 h-12 rounded-full flex items-center justify-center font-bold text-base transition-all duration-500 ease-out ${
-                      isActive
-                        ? "bg-accent-orange text-white border-4 border-[#121212] shadow-[0_0_0_2px_rgba(255,107,43,1),_0_0_20px_rgba(255,107,43,0.6)] scale-110"
-                        : isPast
-                          ? "bg-accent-orange text-white border-4 border-[#121212] shadow-[0_0_0_2px_rgba(255,107,43,1)]"
-                          : "bg-[#1a1a1a] border-2 border-white/20 text-white/40"
-                    }`}
-                  >
-                    {isPast ? (
-                      <CheckCircle2
-                        size={20}
-                        className="animate-in zoom-in duration-300"
-                      />
-                    ) : (
-                      <span
-                        className={
-                          isActive ? "animate-in zoom-in duration-300" : ""
-                        }
-                      >
-                        {s}
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+            <StepRail
+              className="mt-10"
+              ariaLabel="Registration progress"
+              current={step - 1}
+              labels={["Runners", "Logistics", isFree ? "Review" : "Payment"]}
+            />
           </div>
         </aside>
 

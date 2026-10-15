@@ -228,6 +228,13 @@ export interface PromoTerms {
    */
   automatic: boolean;
   /**
+   * The organizer allows it on the same order as another combinable
+   * promotion — a price promotion with a group deal. Optional because only
+   * the rows read for a runner's order need it; absent reads as "never
+   * stacks". See `bestDiscount` in promo-winner.ts.
+   */
+  combinable?: boolean;
+  /**
    * The organizer has switched it off. Distinct from every other reason a
    * promotion is not running: those are facts about dates and counts, this
    * is a decision, and it is the one that can be undone with one click.
@@ -335,6 +342,19 @@ export interface AppliedDiscount {
    * `platformFeeAfterDiscount` is the one place that spends this.
    */
   waivesAdminFee: boolean;
+  /**
+   * The group deal combined with this price promotion, or null — which it is
+   * on every discount `applyPromo` returns, and on every order whose two
+   * promotions were not both combinable.
+   *
+   * When set, the fields above describe **the order**, not just this
+   * promotion: `amount` is both promotions together (so every total,
+   * fee and stored `discountAmount` is right without knowing about combining)
+   * and `freeRunners` are the deal's. The deal's own share is
+   * `combined.amount`. Read the two halves apart with `discountParts` in
+   * promo-winner.ts rather than by hand.
+   */
+  combined: AppliedDiscount | null;
 }
 
 /**
@@ -787,68 +807,6 @@ export function freeSlotOffer(
 }
 
 /**
- * The best of several promotions on this order, or null when none applies.
- *
- * Only one discount is ever given. Two stacking promotions is a number the
- * organizer never agreed to — an early bird at 10% on top of a ₱200 code is a
- * giveaway nobody planned — so where more than one qualifies, the one that
- * takes off the most wins and the runner is told which.
- *
- * Ties go to the automatic one, because it is the promotion the organizer set
- * running rather than one a runner happened to be handed, and because leaving
- * a typed code unspent keeps it available for the next order.
- *
- * **A pacer code wins outright**, whatever the arithmetic says. It already
- * takes off the whole entry, so nothing can beat it on amount — but it may
- * also waive the admin fee, and that is worth money this comparison cannot
- * see. An automatic promotion that happened to tie would otherwise leave the
- * pacer paying a fee they were told was covered, and leave their single-use
- * code unspent besides. A pacer on somebody else's race is not a shopper
- * looking for the best deal; they were handed one specific thing.
- */
-export function bestDiscount(
-  promos: (PromoTerms | null | undefined)[],
-  order: OrderBasis,
-): AppliedDiscount | null {
-  let best: AppliedDiscount | null = null;
-
-  for (const promo of promos) {
-    if (!promo) continue;
-    // The same gate the wizard shows and the checkout route enforces, so a
-    // promotion that fails a condition is simply not a candidate here.
-    if (promoCodeError(promo, order, promo.code)) continue;
-
-    const applied = applyPromo(promo, order);
-    if (!applied) continue;
-
-    if (best?.type === DISCOUNT_TYPES.PACER) continue;
-
-    if (
-      applied.type === DISCOUNT_TYPES.PACER ||
-      !best ||
-      applied.amount > best.amount ||
-      (applied.amount === best.amount && applied.automatic && !best.automatic)
-    ) {
-      best = applied;
-    }
-  }
-
-  return best;
-}
-
-/**
- * What a runner is told when their code is real but worth less than the
- * discount already sitting on their order.
- *
- * Not an error and not silence. Refusing the code outright would be wrong —
- * there is nothing wrong with it — and applying nothing without a word would
- * look like the box was broken.
- */
-export function outshoneByMessage(typedCode: string, winner: AppliedDiscount): string {
-  return `${normalizePromoCode(typedCode)} is worth less than the ${winner.code} discount already on your order, so we kept the bigger one. Your code has not been used.`;
-}
-
-/**
  * The code applied to this order, or null when it does not apply.
  *
  * Returns the same shape the summary line and the stored columns both need, so
@@ -895,6 +853,7 @@ export function applyPromo(
           savings[index] > 0 ? Math.max(0, runner.listPrice - savings[index]) : null,
         )
       : order.runnerCategories.map(() => null),
+    combined: null,
   };
 }
 
@@ -1106,7 +1065,7 @@ export interface CategorySalePrice {
  * promotion can be.
  *
  * Where two promotions reprice the same category, the **cheaper** wins, which
- * matches `bestDiscount` giving the order the largest discount it qualifies
+ * matches `bestDiscount` (promo-winner.ts) giving the order the largest discount it qualifies
  * for. A promotion quoting a price at or above the category's own is ignored
  * outright: there is nothing to slash, and drawing a line through ₱1,200 to
  * show ₱1,200 is worse than showing nothing.
