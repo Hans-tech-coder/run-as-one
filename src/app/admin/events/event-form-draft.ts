@@ -1,5 +1,6 @@
 import { DEFAULT_REGISTRATION_FORM, type RegistrationForm } from '@/lib/registration-form';
 import { type EventHighlight } from '@/lib/event-highlights';
+import { DEFAULT_EVENT_FORMAT, isVirtual, runWindowError, type EventFormat } from '@/lib/event-format';
 
 /**
  * The fields the create and edit forms both hold in `formData`, in the shape
@@ -13,7 +14,11 @@ import { type EventHighlight } from '@/lib/event-highlights';
  */
 export type EventFormDraft = {
   title: string;
+  // On-site or virtual (lib/event-format.ts). For a virtual run `date` is the
+  // first day of its window and `virtualEndDate` the last; on-site ignores it.
+  format: EventFormat;
   date: string;
+  virtualEndDate: string;
   startTime: string;
   endTime: string;
   location: string;
@@ -39,7 +44,9 @@ export type EventFormDraft = {
 export function blankEventDraft(adminFee: number): EventFormDraft {
   return {
     title: '',
+    format: DEFAULT_EVENT_FORMAT,
     date: '',
+    virtualEndDate: '',
     startTime: '',
     endTime: '',
     location: '',
@@ -58,4 +65,28 @@ export function blankEventDraft(adminFee: number): EventFormDraft {
     consentWaiver: '',
     registrationForm: DEFAULT_REGISTRATION_FORM,
   };
+}
+
+/**
+ * What is missing from Basic Information before a save, said specifically:
+ * the message for the form's error modal, and for a virtual run the reason
+ * under whichever window day is wrong. Null when it can be saved. Shared by
+ * the create and edit forms so both refuse the same drafts the API would.
+ */
+export type BasicInfoFault = { message: string; dateError?: string; windowError?: string };
+
+export function basicInfoProblem(draft: EventFormDraft): BasicInfoFault | null {
+  if (!isVirtual(draft)) {
+    if (!draft.title || !draft.date || !draft.location) {
+      return { message: 'Title, date, and location are required.' };
+    }
+    return null;
+  }
+  const dateError = draft.date ? undefined : 'Choose the first day of the run window.';
+  const windowError = (draft.date && runWindowError(draft.date, draft.virtualEndDate)) || undefined;
+  if (!draft.title) return { message: 'Event title is required.', dateError, windowError };
+  if (dateError || windowError) {
+    return { message: dateError ?? windowError ?? '', dateError, windowError };
+  }
+  return null;
 }

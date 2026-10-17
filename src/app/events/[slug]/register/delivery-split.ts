@@ -5,6 +5,7 @@ import {
   type DeliveryZone,
 } from "@/lib/registration-codes";
 import { groupByAddress, type RunnerAddress } from "@/lib/runner-address";
+import { pickupLabel } from "@/lib/pickup";
 import {
   deliveryFeeFor,
   deliveryProvinceOf,
@@ -32,6 +33,7 @@ import {
 type DeliveryEvent = {
   province?: string | null;
   location?: string | null;
+  format?: string | null;
   logisticsDeliveryFeeInside: number;
   logisticsDeliveryFeeOutside: number;
 };
@@ -104,7 +106,7 @@ export function splitDeliveryError(
   const who = runnersLabel(blocked.runners);
   return `${notDeliveredNote(event, blocked.zone)}, where ${who} ${
     blocked.runners.length === 1 ? "lives" : "live"
-  }. Ship all kits to one address, or choose On-site Pickup.`;
+  }. Ship all kits to one address, or choose ${pickupLabel(event)}.`;
 }
 
 /**
@@ -141,7 +143,7 @@ export function checkoutDelivery(
 
   const zone = resolveDeliveryZone(event, input.deliveryZone, input.deliveryAddress);
   if (!offersZone(event, zone)) {
-    return { error: "Delivery is not available to that address. Choose on-site pickup, or check the province." };
+    return { error: `Delivery is not available to that address. Choose ${pickupLabel(event).toLowerCase()}, or check the province.` };
   }
   return { zone, fee: deliveryFeeFor(event, zone), split: false };
 }

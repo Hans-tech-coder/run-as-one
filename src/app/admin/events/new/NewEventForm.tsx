@@ -21,7 +21,8 @@ import LogisticsPanel, { deliveryFees, deliveryProblem } from '../LogisticsPanel
 import BasicInfoPanel from '../BasicInfoPanel';
 import RegistrationFeesPanel from '../RegistrationFeesPanel';
 import EventFormResultModals from '../EventFormResultModals';
-import { blankEventDraft } from '../event-form-draft';
+import { basicInfoProblem, blankEventDraft } from '../event-form-draft';
+import EventFormatPanel from '../EventFormatPanel';
 import { useEventImageUpload } from '../useEventImageUpload';
 import PublishingPanel from '../PublishingPanel';
 import {
@@ -89,6 +90,9 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
   // effect of saving.
   const [publish, setPublish] = useState<PublishDraft>(KEEP_AS_DRAFT);
   const [publishError, setPublishError] = useState<string | null>(null);
+  // Why a virtual run's window cannot be saved, under the day that is wrong.
+  const [dateError, setDateError] = useState<string | undefined>();
+  const [windowError, setWindowError] = useState<string | undefined>();
   const [deliveryOn, setDeliveryOn] = useState(false);
   const [deliveryError, setDeliveryError] = useState<string | null>(null);
 
@@ -97,9 +101,13 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
     setIsLoading(true);
     setError('');
 
-    // Basic Validation
-    if (!formData.title || !formData.date || !formData.location) {
-      setError('Title, date, and location are required.');
+    // On-site needs a title, day and venue; a virtual run a title and a
+    // window whose end is not before its start (event-form-draft.ts).
+    const basicFault = basicInfoProblem(formData);
+    setDateError(basicFault?.dateError);
+    setWindowError(basicFault?.windowError);
+    if (basicFault) {
+      setError(basicFault.message);
       setIsLoading(false);
       return;
     }
@@ -184,6 +192,17 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
         />
 
         <form onSubmit={handleSubmit} className="admin-form">
+          {/* The first question, because it decides what Basic Information
+              asks for: a venue and race day, or a run window. */}
+          <EventFormatPanel
+            format={formData.format}
+            onChange={format => {
+              patchForm({ format });
+              setDateError(undefined);
+              setWindowError(undefined);
+            }}
+          />
+
           <BasicInfoPanel
             draft={formData}
             setDraft={setFormData}
@@ -198,6 +217,8 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
             clientError={clientError}
             onError={setError}
             onBusyChange={posterBusy}
+            dateError={dateError}
+            windowError={windowError}
           />
 
           <EventOptionsPanel

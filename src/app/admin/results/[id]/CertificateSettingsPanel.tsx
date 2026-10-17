@@ -69,7 +69,7 @@ interface Props {
   uploading: boolean;
   disabled: boolean;
   /** The event as the form currently has it, for the preview. */
-  event: { title: string; date: string; location: string };
+  event: { title: string; date: string; location: string; format?: string | null; virtualEndDate?: string | null };
   /** The workspace and /admin/results/new number it as a step. */
   title?: React.ReactNode;
   /** Under the controls, inside the panel: the workspace's Save. */
@@ -314,7 +314,7 @@ function CertificatePreview({ template, settings, event }: {
   const [failed, setFailed] = useState(false);
   // Read field by field: the form hands over a fresh object on every render,
   // and keying the effect on it would redraw the PDF at each keystroke.
-  const { title, date, location } = event;
+  const { title, date, location, format, virtualEndDate } = event;
 
   useEffect(() => {
     let cancelled = false;
@@ -324,7 +324,7 @@ function CertificatePreview({ template, settings, event }: {
       try {
         const { buildCertificatePdf } = await import('@/lib/e-certificate');
         const bytes = await buildCertificatePdf(SAMPLE_RUNNERS[sample], {
-          title, date, location, certificateTemplate: template, certificateCoordinates: settings,
+          title, date, location, format, virtualEndDate, certificateTemplate: template, certificateCoordinates: settings,
         });
         if (cancelled) return;
         url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: 'application/pdf' }));
@@ -341,7 +341,7 @@ function CertificatePreview({ template, settings, event }: {
       clearTimeout(timer);
       if (url) URL.revokeObjectURL(url);
     };
-  }, [template, settings, title, date, location, sample]);
+  }, [template, settings, title, date, location, format, virtualEndDate, sample]);
 
   return (
     <div className="flex flex-col gap-3">

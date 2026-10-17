@@ -45,6 +45,7 @@ import { CATEGORY_ORDER } from '@/lib/category-order';
 import RichText from '@/components/RichText';
 import { cleanHighlights } from '@/lib/event-highlights';
 import EventHighlightsGallery from '@/components/EventHighlightsGallery';
+import { pickupLabel } from '@/lib/pickup';
 
 /** One URL per event, on the site it belongs to (CLIENT_SUBDOMAIN_PLAN.md). */
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
@@ -317,7 +318,7 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ s
                 </div>
                 
                 <div className="mt-6 pt-6 border-t border-white/10 text-sm text-secondary flex flex-col gap-2">
-                  {event.logisticsPickup && <div className="flex items-center gap-2"><CheckCircle2 size={16} className="text-accent-blue" /> On-site Pickup Available</div>}
+                  {event.logisticsPickup && <div className="flex items-center gap-2"><CheckCircle2 size={16} className="text-accent-blue" /> {pickupLabel(event)} Available</div>}
                   {event.logisticsDeliveryFeeInside > 0 && <div className="flex items-center gap-2"><CheckCircle2 size={16} className="text-accent-blue" /> Delivery, inside province (+₱{formatPesos(event.logisticsDeliveryFeeInside)})</div>}
                   {event.logisticsDeliveryFeeOutside > 0 && <div className="flex items-center gap-2"><CheckCircle2 size={16} className="text-accent-blue" /> Delivery, outside province (+₱{formatPesos(event.logisticsDeliveryFeeOutside)})</div>}
                 </div>
@@ -395,7 +396,7 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ s
  * page redirects to /results and this panel is never reached. A race is either
  * still waiting for its times, which is what this says, or it has moved.
  */
-function RaceIsOver({ event }: { event: { slug: string; date: string } }) {
+function RaceIsOver({ event }: { event: { slug: string; date: string; virtualEndDate: string | null } }) {
   return (
     <div className="rounded-3xl border border-white/10 bg-gradient-to-b from-white/5 to-transparent p-5 sm:p-6">
       <div className="flex items-center gap-3 mb-3">
@@ -406,7 +407,9 @@ function RaceIsOver({ event }: { event: { slug: string; date: string } }) {
       </div>
 
       <p className="text-sm sm:text-base text-secondary leading-relaxed m-0">
-        {`This race was held on ${formatEventDay(event.date)}. Official times appear on the results page once the organizer uploads them.`}
+        {event.virtualEndDate
+          ? `This virtual run ended on ${formatEventDay(event.virtualEndDate)}. Official times appear on the results page once the organizer uploads them.`
+          : `This race was held on ${formatEventDay(event.date)}. Official times appear on the results page once the organizer uploads them.`}
       </p>
 
       <Link

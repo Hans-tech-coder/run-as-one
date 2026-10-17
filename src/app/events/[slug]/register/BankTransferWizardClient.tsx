@@ -13,7 +13,6 @@ import {
   FileImage,
   FileText,
   X,
-  Calendar,
   MapPin,
   Clock,
   MessageSquareHeart,
@@ -27,7 +26,7 @@ import {
   acceptAttribute,
   describeUploadTypes,
 } from "@/lib/uploads";
-import { PICKUP_FALLBACK, pickupDetails } from "@/lib/pickup";
+import { PICKUP_FALLBACK, pickupDetails, pickupLabel, pickupOnlyLine } from "@/lib/pickup";
 import { deliveryTiers, offersDelivery, needsDeliveryZoneChoice } from "./delivery";
 import DeliveryStep from "./DeliveryStep";
 import { useDeliveryPlan } from "./useDeliveryPlan";
@@ -91,7 +90,7 @@ import {
   upperCaseAsTyped,
 } from "@/lib/text-case";
 import { sellsPackages } from "@/lib/event-type";
-import EventImage from "@/components/EventImage";
+import WizardEventHeader from "./WizardEventHeader";
 import { useAlert } from "@/components/ui/AlertProvider";
 import FieldError from "@/components/ui/FieldError";
 import RunnerOverlay from "@/components/ui/RunnerOverlay";
@@ -104,7 +103,6 @@ import {
   validateRunners,
   type RunnerField,
 } from "./validation";
-import { formatEventDayShort } from "@/lib/event-schedule";
 import { useStepReveal } from "./useStepReveal";
 import RunnerAddressFields, {
   startingAddress,
@@ -968,22 +966,7 @@ export default function BankTransferWizardClient({
         {/* Sidebar Summary */}
         <aside className="wizard-sidebar t-stagger-line t-stagger-line--1">
           <div className="glass-panel sticky-sidebar p-5 sm:p-8 border border-white/10 bg-gradient-to-b from-white/5 to-transparent rounded-3xl">
-            <div className="event-mini-info border-b border-white/10 pb-6 mb-6">
-              <EventImage
-                src={event.imageUrl}
-                alt={event.title}
-                className="mini-image w-20 h-20 rounded-[16px] object-cover shadow-lg"
-                iconSize={24}
-              />
-              <div>
-                <h3 className="text-lg sm:text-2xl font-bold text-white mb-1">
-                  {event.title}
-                </h3>
-                <div className="text-sm text-secondary flex items-center gap-1">
-                  <Calendar size={14} /> {formatEventDayShort(event.date)}
-                </div>
-              </div>
-            </div>
+            <WizardEventHeader event={event} />
 
             <OrderSummary
               categories={event.categories}
@@ -1386,7 +1369,7 @@ export default function BankTransferWizardClient({
                     ? "How would you like to receive your race kits?"
                     : onlyMethod === "DELIVERY"
                       ? "Race kits for this race are delivered to your address."
-                      : "Race kits for this race are claimed on-site."}
+                      : pickupOnlyLine(event)}
                 </p>
 
                 <div className={`grid grid-cols-1 gap-4 mb-8 ${onlyMethod ? "" : "sm:grid-cols-2"}`}>
@@ -1408,7 +1391,7 @@ export default function BankTransferWizardClient({
                       )}
                       <div className="relative z-10 flex justify-between items-start mb-3">
                         <div className="font-bold text-2xl text-white">
-                          On-site Pickup
+                          {pickupLabel(event)}
                         </div>
                         {!onlyMethod && logisticsMethod === "PICKUP" && (
                           <CheckCircle2

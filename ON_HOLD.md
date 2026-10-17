@@ -21,6 +21,27 @@ published. If any event is created on production between the migration and the
 deploy, run the migration's `UPDATE` again afterwards (it touches null rows
 only), or that event will show as a draft.
 
+The same release carries **virtual runs** (Phase A): the same `migrate deploy`
+also applies `20261017120000_event_format`, which the new code needs before
+it can read any event (`Event.format`, `Event.virtualEndDate`). Additive; every
+existing event stays on-site.
+
+**Virtual runs, Phase B (on hold).** Runners submit a GPS screenshot and their
+time for a virtual run, staff validate them in a queue, and an approved one
+becomes a `RaceResult` (`VIRTUAL_RUN_PLAN.md` D8, recorded in
+`docs/current-state.md`). Needs the private blob store, so weigh storage cost
+first. Phase A takes results through the existing xlsx upload.
+
+**Event publishing leftovers (on hold).** From `EVENT_PUBLISH_PLAN.md`
+(decisions D1–D9 recorded in `docs/current-state.md`): (1) the edit form only
+*shows* whether an event is public — changing it is the events list's
+**Publish Event** item; publishing from the edit form itself was not built.
+(2) The server checks "publish no later than sign-ups open" (D8) on create and
+on `admin/events/[id]/publish` only; the edit PUT and the opening PATCH from
+**Schedule Sign-Ups** rely on the browser check. (3) Hiding drafts from
+client viewers (D7, `reachableEvents`) was never exercised with a viewer
+session signed in.
+
 **Client subdomains: released 2026-10-14, setup still pending.** Steps 1–2
 are done: both migrations (`20261013090000_client_site_branding`,
 `20261014014104_client_site_icon`) are on production and `main` is at

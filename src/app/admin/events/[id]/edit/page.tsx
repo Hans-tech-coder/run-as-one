@@ -24,6 +24,8 @@ import BusyLabel from '@/components/ui/BusyLabel';
 import DashboardHeader from '@/app/admin/DashboardHeader';
 import LogisticsPanel, { deliveryFees, deliveryProblem } from '../../LogisticsPanel';
 import BasicInfoPanel from '../../BasicInfoPanel';
+import EventFormatPanel from '../../EventFormatPanel';
+import { basicInfoProblem } from '../../event-form-draft';
 import RegistrationFeesPanel from '../../RegistrationFeesPanel';
 import PublishingPanel from '../../PublishingPanel';
 import AdminSwitch from '../../../AdminSwitch';
@@ -58,6 +60,9 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
   // events list's Publish item, never by saving this form.
   const [publishAt, setPublishAt] = useState<string | null>(null);
   const [deliveryOn, setDeliveryOn] = useState(false);
+  // Why a virtual run's window cannot be saved, under the day that is wrong.
+  const [dateError, setDateError] = useState<string | undefined>();
+  const [windowError, setWindowError] = useState<string | undefined>();
   const [deliveryError, setDeliveryError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState(blankEditDraft);
@@ -133,8 +138,13 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
     setIsLoading(true);
     setError('');
 
-    if (!formData.title || !formData.date || !formData.location) {
-      setError('Title, date, and location are required.');
+    // On-site needs a title, day and venue; a virtual run a title and a
+    // window whose end is not before its start (event-form-draft.ts).
+    const basicFault = basicInfoProblem(formData);
+    setDateError(basicFault?.dateError);
+    setWindowError(basicFault?.windowError);
+    if (basicFault) {
+      setError(basicFault.message);
       setIsLoading(false);
       return;
     }
@@ -229,6 +239,25 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
         />
 
         <form onSubmit={handleSubmit} className="admin-form">
+          {/* On-site or virtual, first as on Create Event. Locked once anyone
+              has registered (VIRTUAL_RUN_PLAN.md D7); a results-only race has
+              no runners to run anywhere, so it is not asked. */}
+          {!resultsOnly && (
+            <EventFormatPanel
+              format={formData.format}
+              onChange={format => {
+                patchForm({ format });
+                setDateError(undefined);
+                setWindowError(undefined);
+              }}
+              lockedReason={
+                registrationCount > 0
+                  ? `Locked because ${registrationCount} registration${registrationCount === 1 ? ' has' : 's have'} already been taken. Those runners signed up for this format.`
+                  : null
+              }
+            />
+          )}
+
           <BasicInfoPanel
             draft={formData}
             setDraft={setFormData}
@@ -244,6 +273,8 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
             onError={setError}
             onBusyChange={posterBusy}
             resultsOnly={resultsOnly}
+            dateError={dateError}
+            windowError={windowError}
           />
 
           {/* What the event sells. Switchable while nothing has been sold; locked

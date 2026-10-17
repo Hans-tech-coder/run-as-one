@@ -3,10 +3,11 @@
 import React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Calendar, MapPin, ChevronRight } from 'lucide-react';
+import { Calendar, MapPin, ChevronRight, Globe } from 'lucide-react';
 import EventImage from './EventImage';
 import LinkPendingIcon from './ui/LinkPendingIcon';
-import { formatEventDayShort, formatEventInstantShort } from '@/lib/event-schedule';
+import { formatEventDayShort, formatEventInstantShort, formatEventRange } from '@/lib/event-schedule';
+import { VIRTUAL_RUN_WHERE, isVirtual } from '@/lib/event-format';
 
 // Using a type that matches the Prisma Event model payload
 type DBEvent = {
@@ -17,6 +18,9 @@ type DBEvent = {
   date: string;
   location: string;
   imageUrl: string;
+  /** ONSITE or VIRTUAL; a virtual run prints its window instead of a day and venue. */
+  format?: string;
+  virtualEndDate?: string | null;
   /**
    * Set by `forListing` in lib/registration-gate.ts when this race cannot be
    * signed up for: every option sold out, the organizer paused it, or sign-ups
@@ -104,12 +108,29 @@ function EventCard({ event, action }: { event: DBEvent; action: EventCardAction 
           {event.title}
         </h2>
         <div className="flex flex-col gap-2 mb-6">
-          <div className="flex items-center gap-3 text-white/80 font-body text-sm sm:text-base">
-            <Calendar size={18} /> <span>{formatEventDayShort(event.date)}</span>
-          </div>
-          <div className="flex items-center gap-3 text-white/80 font-body text-sm sm:text-base">
-            <MapPin size={18} /> <span>{event.location}</span>
-          </div>
+          {/* A virtual run keeps the on-site card's two rows — when, then
+              where — so its window gets the calendar icon like any race day,
+              and the globe stands for the place it is run instead of a venue. */}
+          {isVirtual(event) ? (
+            <>
+              <div className="flex items-center gap-3 text-white/80 font-body text-sm sm:text-base">
+                <Calendar size={18} className="shrink-0" />
+                <span className="whitespace-nowrap">{formatEventRange(event.date, event.virtualEndDate ?? null)}</span>
+              </div>
+              <div className="flex items-center gap-3 text-white/80 font-body text-sm sm:text-base">
+                <Globe size={18} className="shrink-0" /> <span>{VIRTUAL_RUN_WHERE}</span>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-3 text-white/80 font-body text-sm sm:text-base">
+                <Calendar size={18} /> <span>{formatEventDayShort(event.date)}</span>
+              </div>
+              <div className="flex items-center gap-3 text-white/80 font-body text-sm sm:text-base">
+                <MapPin size={18} /> <span>{event.location}</span>
+              </div>
+            </>
+          )}
         </div>
         {closure ? (
           <Link href={href} className="w-full flex items-center justify-center gap-2 py-4 text-base sm:text-lg rounded-[16px] border border-white/15 bg-white/[0.06] font-bold uppercase tracking-wider text-white no-underline transition-colors hover:border-white/30 hover:bg-white/10 group">

@@ -67,6 +67,8 @@ export default async function NewResultsPage({
         title: true,
         date: true,
         location: true,
+        format: true,
+        virtualEndDate: true,
         client: { select: { name: true } },
         categories: { select: { id: true, name: true, distance: true }, orderBy: CATEGORY_ORDER },
         certificateTemplate: true,

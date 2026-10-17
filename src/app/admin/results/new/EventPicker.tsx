@@ -13,6 +13,8 @@ export type PickableEvent = {
   title: string;
   date: string;
   location: string;
+  format: string;
+  virtualEndDate: string | null;
   client: string | null;
   categories: UploadCategory[];
   certificate: CertificateDraft;

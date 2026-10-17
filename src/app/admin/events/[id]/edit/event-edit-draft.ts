@@ -2,6 +2,7 @@ import { toPesos } from '@/lib/money';
 import { formatInclusions } from '@/lib/inclusions';
 import { asRegistrationForm } from '@/lib/registration-form';
 import { asEventType, type EventType } from '@/lib/event-type';
+import { asEventFormat, isVirtual } from '@/lib/event-format';
 import { formatWaiverParagraphs } from '@/lib/consent-waiver';
 import { cleanHighlights } from '@/lib/event-highlights';
 import type { EventPromotion } from '@/lib/promo-store';
@@ -53,6 +54,8 @@ type EventResponse = {
   [field: string]: unknown;
   title?: Maybe<string>;
   date?: Maybe<string>;
+  format?: Maybe<string>;
+  virtualEndDate?: Maybe<string>;
   startTime?: Maybe<string>;
   endTime?: Maybe<string>;
   location?: Maybe<string>;
@@ -109,10 +112,14 @@ export function editStateFromEvent(data: EventResponse): {
   return {
     formData: {
       title: data.title || '',
+      format: asEventFormat(data.format),
       date: data.date || '',
+      virtualEndDate: data.virtualEndDate || '',
       startTime: data.startTime || '',
       endTime: data.endTime || '',
-      location: data.location || '',
+      // A virtual run's location is the fixed word "Virtual", not a venue the
+      // organizer typed; switching it to on-site should ask for a real one.
+      location: isVirtual(data) ? '' : data.location || '',
       imageUrl: data.imageUrl || '',
       highlights: cleanHighlights(data.highlights),
       sizeChartImageUrl: data.sizeChartImageUrl || '',

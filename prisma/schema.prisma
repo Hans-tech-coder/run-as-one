@@ -105,6 +105,16 @@ model Event {
   /// What the event sells: "RACE" (distance categories) or "FUN_RUN"
   /// (inclusion packages, no distances).
   eventType                   String            @default("RACE")
+  /// Where the event is run: "ONSITE" (one race day at a venue) or "VIRTUAL"
+  /// (runners run anywhere inside a date window). A separate axis from
+  /// eventType, which is what the event sells — a virtual run can sell either.
+  /// Locked once the event has a registration. See src/lib/event-format.ts
+  /// (VIRTUAL_RUN_PLAN.md D2).
+  format                      String            @default("ONSITE")
+  /// The last day of a virtual run's window, YYYY-MM-DD like `date`, which is
+  /// its first day. Required when format is VIRTUAL and null otherwise; the
+  /// event stays upcoming and open through this day (src/lib/event-schedule.ts).
+  virtualEndDate              String?
   /// A manual hold on sign-ups, set by the organizer. Distinct from a race
   /// that is over and from an event whose every option has sold out: those
   /// two are facts the app works out for itself, this one is a decision — the

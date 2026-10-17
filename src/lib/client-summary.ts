@@ -92,6 +92,7 @@ export async function viewerEventSummaries(
       id: true,
       title: true,
       date: true,
+      virtualEndDate: true,
       location: true,
       imageUrl: true,
       organizerId: true,

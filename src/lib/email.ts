@@ -1,7 +1,8 @@
 import type { Prisma } from '@prisma/client';
 import { formatPesos } from './money';
 import { isPricedIn } from './discount';
-import { formatEventDay, formatEventInstant } from './event-schedule';
+import { formatEventDay, formatEventInstant, formatEventRange } from './event-schedule';
+import { VIRTUAL_RUN_WHERE, isVirtual } from './event-format';
 import { runnerRef } from './order-ref';
 import { guardianLine } from './minor-consent';
 import { PICKUP_FALLBACK, pickupDetails } from './pickup';
@@ -74,8 +75,17 @@ function orderRows(registration: RegistrationWithDetails, extraRows: Row[]): Row
   return [
     { kind: 'info', label: 'Order Reference', value: registration.orderRef },
     { kind: 'info', label: 'Event', value: event.title },
-    { kind: 'info', label: 'Date', value: formatEventDay(event.date) },
-    { kind: 'info', label: 'Location', value: event.location },
+    // A virtual run has no race day or venue (VIRTUAL_RUN_PLAN.md): the
+    // runner is told the window they may run in, and that it is anywhere.
+    ...(isVirtual(event)
+      ? ([
+          { kind: 'info', label: 'Run Window', value: formatEventRange(event.date, event.virtualEndDate) },
+          { kind: 'info', label: 'Where', value: VIRTUAL_RUN_WHERE },
+        ] as Row[])
+      : ([
+          { kind: 'info', label: 'Date', value: formatEventDay(event.date) },
+          { kind: 'info', label: 'Location', value: event.location },
+        ] as Row[])),
     { kind: 'info', label: 'Payment Method', value: paymentMethodLabel(registration.paymentMethod) },
     ...extraRows,
   ];

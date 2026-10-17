@@ -11,6 +11,7 @@ import { upperCaseForStorage } from '@/lib/text-case';
 import { asBankAccounts } from '@/lib/bank-accounts';
 import { uniqueEventSlug } from '@/lib/event-slug';
 import { isCalendarDay } from '@/lib/event-schedule';
+import { readFormatFields } from '@/lib/event-format';
 import { PUBLISH_INSTANT_ERROR, asPublishInstant, publishConflict } from '@/lib/event-visibility';
 import {
   OPENING_INSTANT_ERROR,
@@ -36,7 +37,7 @@ export async function POST(request: Request) {
     }
 
     const data = await request.json();
-    const { title, date, startTime, endTime, location, province, imageUrl, highlights, sizeChartImageUrl, description, logisticsPickup, pickupLocation, pickupSchedule, logisticsDeliveryFeeInside, logisticsDeliveryFeeOutside, adminFee, shirtSizeUpcharge, consentWaiver, registrationForm, eventType, registrationOpensAt, categories, bankAccounts } = data;
+    const { title, date, province, imageUrl, highlights, sizeChartImageUrl, description, logisticsPickup, pickupLocation, pickupSchedule, logisticsDeliveryFeeInside, logisticsDeliveryFeeOutside, adminFee, shirtSizeUpcharge, consentWaiver, registrationForm, eventType, registrationOpensAt, categories, bankAccounts } = data;
 
     // A results-only race (RESULTS_ONLY_EVENT_PLAN.md): its client sells the
     // entries elsewhere and Run As One only publishes the times. Only a strict
@@ -44,7 +45,7 @@ export async function POST(request: Request) {
     // registrable as it always was.
     const resultsOnly = data.resultsOnly === true;
 
-    if (!title || !date || !location) {
+    if (!title || !date) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -58,6 +59,17 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
+    // On-site or virtual (VIRTUAL_RUN_PLAN.md): which decides whether a venue
+    // and times are kept or a run window is — see lib/event-format.ts.
+    const formatFields = readFormatFields(data, date);
+    if (!formatFields.ok) {
+      return NextResponse.json(
+        { error: formatFields.error, errors: { [formatFields.field]: formatFields.error } },
+        { status: 400 },
+      );
+    }
+    const { format, virtualEndDate, location, startTime, endTime } = formatFields;
 
     // When sign-ups start, for a race published ahead of taking entries. The
     // form sends an instant it built from a Manila date and time, or nothing
@@ -105,9 +117,11 @@ export async function POST(request: Request) {
           title,
           slug,
           date,
-          startTime: startTime || null,
-          endTime: endTime || null,
+          startTime,
+          endTime,
           location,
+          format,
+          virtualEndDate,
           imageUrl: imageUrl || '',
           highlights: cleanHighlights(highlights),
           sizeChartImageUrl: sizeChartImageUrl || null,

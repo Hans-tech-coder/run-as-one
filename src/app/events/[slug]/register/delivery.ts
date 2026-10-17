@@ -7,6 +7,7 @@ import {
 import { formatPesos } from '@/lib/money';
 import { findProvince, inferProvince, samePlace } from '@/lib/ph-address';
 import { parseDeliveryAddress } from './delivery-address';
+import { pickupLabel } from '@/lib/pickup';
 
 /**
  * Delivery pricing, shared by both registration wizards.
@@ -111,7 +112,7 @@ export function defaultDeliveryZone(event: {
   return tiers.length > 0 && !needsDeliveryZoneChoice(event) ? tiers[0].zone : null;
 }
 
-type EventPlace = { province?: string | null; location?: string | null };
+type EventPlace = { province?: string | null; location?: string | null; format?: string | null };
 
 /**
  * The province the delivery tiers are measured from: the one the organizer
@@ -182,8 +183,8 @@ export function zoneNoteFor(
   if (!offersZone(event, zone)) {
     return {
       error: inside
-        ? `This event only delivers outside ${home}. Choose On-site Pickup instead.`
-        : `This event only delivers within ${home}. Choose On-site Pickup instead.`,
+        ? `This event only delivers outside ${home}. Choose ${pickupLabel(event)} instead.`
+        : `This event only delivers within ${home}. Choose ${pickupLabel(event)} instead.`,
     };
   }
   return {

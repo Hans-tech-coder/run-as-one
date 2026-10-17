@@ -82,7 +82,10 @@ export default async function AdminResultsWorkspacePage({ params }: { params: Pr
     <CertificateWorkspacePanel
       eventId={id}
       initial={certificateDraft(event)}
-      event={{ title: event.title, date: event.date, location: event.location }}
+      event={{
+        title: event.title, date: event.date, location: event.location,
+        format: event.format, virtualEndDate: event.virtualEndDate,
+      }}
       canEdit={canEdit}
       title={results.length === 0 ? '3. E-Certificate' : undefined}
     />

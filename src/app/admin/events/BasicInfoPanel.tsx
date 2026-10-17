@@ -9,6 +9,7 @@ import EventClientField from './EventClientField';
 import EventProvinceField from './EventProvinceField';
 import HighlightsField from './HighlightsField';
 import type { EventFormDraft } from './event-form-draft';
+import { isVirtual } from '@/lib/event-format';
 
 type ImageField = 'imageUrl' | 'sizeChartImageUrl';
 
@@ -31,6 +32,12 @@ type ImageField = 'imageUrl' | 'sizeChartImageUrl';
  * description, the times, the highlights and the size chart. The hidden
  * values stay in the draft, so switching back does not lose them. Province
  * lives in LogisticsPanel otherwise, which a results-only form does not show.
+ *
+ * For a virtual run (`draft.format`, VIRTUAL_RUN_PLAN.md D4, D6) the race day
+ * becomes a run window — first and last day — and the venue and times are
+ * hidden: the API saves the location as "Virtual" and no times. Like the
+ * results-only fields, the hidden values stay in the draft, so switching back
+ * to on-site finds them as they were.
  */
 export default function BasicInfoPanel<D extends EventFormDraft>({
   draft,
@@ -45,6 +52,8 @@ export default function BasicInfoPanel<D extends EventFormDraft>({
   onBusyChange,
   resultsOnly = false,
   title = 'Basic Information',
+  dateError,
+  windowError,
 }: {
   draft: D;
   setDraft: React.Dispatch<React.SetStateAction<D>>;
@@ -59,8 +68,13 @@ export default function BasicInfoPanel<D extends EventFormDraft>({
   resultsOnly?: boolean;
   /** /admin/results/new numbers it as the first of its three steps. */
   title?: string;
+  /** Why the (first) day cannot be saved, shown under it. */
+  dateError?: string;
+  /** Why a virtual run's last day cannot be saved, shown under it. */
+  windowError?: string;
 }) {
   const patch = (fields: Partial<EventFormDraft>) => setDraft(prev => ({ ...prev, ...fields }));
+  const virtual = !resultsOnly && isVirtual(draft);
 
   return (
     <div className="admin-panel">
@@ -98,25 +112,51 @@ export default function BasicInfoPanel<D extends EventFormDraft>({
               />
             </div>
           )}
-          <AdminDatePicker
-            id="event-date"
-            label="Date"
-            value={draft.date}
-            dialogLabel="Choose the race date"
-            onChange={date => patch({ date })}
-          />
-          <div className="form-group">
-            <label className="form-label">Location</label>
-            <input
-              type="text"
-              value={draft.location}
-              onChange={e => patch({ location: e.target.value })}
-              className="form-input"
-              placeholder="e.g. BGC, Taguig"
-              required
-            />
-          </div>
-          {resultsOnly ? (
+          {virtual ? (
+            <>
+              <AdminDatePicker
+                id="event-date"
+                label="Run Window Starts"
+                value={draft.date}
+                dialogLabel="Choose the first day runners may run"
+                onChange={date => patch({ date })}
+                error={dateError}
+              />
+              <AdminDatePicker
+                id="event-virtual-end"
+                label="Run Window Ends"
+                value={draft.virtualEndDate}
+                min={draft.date || undefined}
+                dialogLabel="Choose the last day runners may run"
+                onChange={virtualEndDate => patch({ virtualEndDate })}
+                error={windowError}
+                hint="Runners run any day in this window, anywhere. The event stays listed and open through the last day."
+              />
+            </>
+          ) : (
+            <>
+              <AdminDatePicker
+                id="event-date"
+                label="Date"
+                value={draft.date}
+                dialogLabel="Choose the race date"
+                onChange={date => patch({ date })}
+                error={dateError}
+              />
+              <div className="form-group">
+                <label className="form-label">Location</label>
+                <input
+                  type="text"
+                  value={draft.location}
+                  onChange={e => patch({ location: e.target.value })}
+                  className="form-input"
+                  placeholder="e.g. BGC, Taguig"
+                  required
+                />
+              </div>
+            </>
+          )}
+          {virtual ? null : resultsOnly ? (
             <EventProvinceField
               value={draft.province}
               location={draft.location}

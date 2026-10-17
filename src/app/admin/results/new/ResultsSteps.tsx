@@ -145,7 +145,7 @@ export function CertificateStep({
   onChange: (certificateCoordinates: string) => void;
   onTemplateFile: (e: React.ChangeEvent<HTMLInputElement>) => void;
   uploading: boolean;
-  event: { title: string; date: string; location: string };
+  event: { title: string; date: string; location: string; format?: string | null; virtualEndDate?: string | null };
 }) {
   return (
     <CertificateSettingsPanel

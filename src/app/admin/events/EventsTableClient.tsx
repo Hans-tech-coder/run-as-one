@@ -14,7 +14,8 @@ import MobileSortMenu from '../MobileSortMenu';
 import RegistrationScheduleModal from './RegistrationScheduleModal';
 import DeleteEventModal from './DeleteEventModal';
 import { REGISTRATION_STATES } from './registration-state-badge';
-import { CategoryChips, PublishStatus, RegisteredCount, RegistrationStatus, rowPosition } from './EventRowCells';
+import { CategoryChips, FormatBadge, PublishStatus, RegisteredCount, RegistrationStatus, eventDateLabel, rowPosition } from './EventRowCells';
+import { isVirtual } from '@/lib/event-format';
 import { eventColumns } from './event-columns';
 import { useEventRowActions } from './useEventRowActions';
 import { useEventPublishActions } from './useEventPublishActions';
@@ -102,7 +103,8 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
         // Decided on the server with the same can() each route asks
         // (events/page.tsx). A row without `access` is an owner's.
         canEdit={event.access?.edit ?? true}
-        canManagePacers={event.access?.pacers ?? true}
+        // A virtual run has no pacers to invite (VIRTUAL_RUN_PLAN.md D6).
+        canManagePacers={(event.access?.pacers ?? true) && !isVirtual(event)}
         pacersNotSent={event.pacersNotSent ?? 0}
         onTogglePause={
           (event.access?.edit ?? true)
@@ -347,12 +349,13 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
           title={row => <span className="line-clamp-2">{row.original.title}</span>}
           badges={row => (
             <div className="flex flex-wrap items-start gap-2">
+              <FormatBadge event={row.original} />
               <PublishStatus event={row.original} />
               <RegistrationStatus event={row.original} />
             </div>
           )}
           fields={row => [
-            { label: 'Date', value: row.original.date },
+            { label: 'Date', value: eventDateLabel(row.original) },
             { label: 'Registrants', value: <RegisteredCount event={row.original} alignEnd /> },
             { label: 'Location', value: row.original.location, full: true },
             { label: 'Categories', value: <CategoryChips categories={row.original.categories} />, full: true },

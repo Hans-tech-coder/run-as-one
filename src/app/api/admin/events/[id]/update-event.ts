@@ -1,0 +1,378 @@
+import { NextResponse } from 'next/server';
+import db from '@/lib/db';
+import { can, getActor } from '@/lib/actor';
+import { CHANGED, changedFields, listFields, recordAudit } from '@/lib/audit';
+import { toCentavos } from '@/lib/money';
+import { asWaiverParagraphs } from '@/lib/consent-waiver';
+import { asRegistrationForm } from '@/lib/registration-form';
+import { asEventType } from '@/lib/event-type';
+import { asInclusions } from '@/lib/inclusions';
+import { upperCaseForStorage } from '@/lib/text-case';
+import { asBankAccounts } from '@/lib/bank-accounts';
+import { uniqueEventSlug } from '@/lib/event-slug';
+import { isCalendarDay } from '@/lib/event-schedule';
+import { FORMAT_LOCKED_ERROR, asEventFormat, readFormatFields } from '@/lib/event-format';
+import { OPENING_INSTANT_ERROR, asOpeningInstant, asSlotLimit } from '@/lib/registration-gate';
+import { CATEGORY_ORDER } from '@/lib/category-order';
+import { readClientLink } from '@/lib/client-store';
+import { cleanHighlights } from '@/lib/event-highlights';
+import { findProvince, inferProvince } from '@/lib/ph-address';
+
+/**
+ * The Edit Event save: the whole form, categories and bank accounts with it,
+ * in one transaction. Split out of route.ts, which re-exports it as PUT, so
+ * the route file stays within reading distance.
+ */
+
+/**
+ * The event columns the edit form writes, in the order the trail lists them.
+ * Long text (the description, the waiver) is compared but recorded only as
+ * "changed" — see changedFields in lib/audit.ts.
+ */
+const EVENT_FIELDS = [
+  'title',
+  'slug',
+  'date',
+  'startTime',
+  'endTime',
+  'location',
+  'imageUrl',
+  'highlights',
+  'sizeChartImageUrl',
+  'description',
+  'logisticsPickup',
+  'pickupLocation',
+  'pickupSchedule',
+  'province',
+  'logisticsDeliveryFeeInside',
+  'logisticsDeliveryFeeOutside',
+  'adminFee',
+  'shirtSizeUpcharge',
+  'consentWaiver',
+  'registrationForm',
+  'eventType',
+  'format',
+  'virtualEndDate',
+  'registrationPaused',
+  'registrationPauseNote',
+  'registrationOpensAt',
+  'resultsOnly',
+  'certificateTemplate',
+  'certificateCoordinates',
+  'clientId',
+] as const;
+
+/** Thrown inside the edit transaction when a category it removes is still in use. */
+class CategoryInUseError extends Error {}
+
+/** A set of rows as one comparable string, so an edit can say whether it moved. */
+function listKey(rows: Record<string, unknown>[], fields: string[]) {
+  return rows.map(row => JSON.stringify(fields.map(field => row[field] ?? null))).join('|');
+}
+
+export async function updateEvent(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const actor = await getActor();
+    if (!actor) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { id } = await params;
+    const data = await request.json();
+    const { title, date, province, imageUrl, highlights, sizeChartImageUrl, description, logisticsPickup, pickupLocation, pickupSchedule, logisticsDeliveryFeeInside, logisticsDeliveryFeeOutside, adminFee, shirtSizeUpcharge, consentWaiver, registrationForm, eventType, registrationPaused, registrationPauseNote, registrationOpensAt, certificateTemplate, certificateCoordinates, categories, bankAccounts } = data;
+
+    if (!title || !date) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    // Which listing an event lands in is decided by comparing this string, so
+    // the column has to hold a calendar day and nothing else. The admin form's
+    // date picker only ever produces one; this is the guard for everything
+    // else, because a "April 12, 2026" in here would sit in Upcoming forever.
+    if (!isCalendarDay(date)) {
+      return NextResponse.json(
+        { error: 'Event date must be a calendar date in YYYY-MM-DD form.' },
+        { status: 400 }
+      );
+    }
+
+    // On-site or virtual (VIRTUAL_RUN_PLAN.md): which decides whether a venue
+    // and times are kept or a run window is — see lib/event-format.ts.
+    const formatFields = readFormatFields(data, date);
+    if (!formatFields.ok) {
+      return NextResponse.json(
+        { error: formatFields.error, errors: { [formatFields.field]: formatFields.error } },
+        { status: 400 },
+      );
+    }
+    const { format, virtualEndDate, location, startTime, endTime } = formatFields;
+
+    // When sign-ups start — see the same guard on POST. The edit form always
+    // sends this field, so an event whose opening has been cleared there is
+    // cleared here too, and a value that will not parse stops the whole save
+    // rather than silently opening the race.
+    const registrationOpens = asOpeningInstant(registrationOpensAt);
+    if (registrationOpens === undefined) {
+      return NextResponse.json({ error: OPENING_INSTANT_ERROR }, { status: 400 });
+    }
+
+    // The public URL follows the title, so renaming an event renames its link.
+    // The slug is only recomputed when the title actually changed: a save that
+    // leaves the title alone must never move the event's address, and an event
+    // that took a "-2" suffix keeps it rather than reshuffling on every save.
+    //
+    // Renaming does retire the old slug. Links shared under it stop resolving,
+    // though the /events/<cuid> form still redirects here, so a mid-campaign
+    // title fix costs whoever shared the slug URL.
+    //
+    // Scoped to the actor's organizer, like the GET above and the PATCH
+    // below: this is the write the edit form makes, and an unscoped one would
+    // let any approved organizer rewrite another's event — its prices, its
+    // bank accounts, its categories — from an id alone. The whole row is read
+    // because the trail records what the save changed.
+    const current = await db.event.findFirst({
+      where: { id, organizerId: actor.orgId },
+      include: {
+        categories: { orderBy: CATEGORY_ORDER },
+        bankAccounts: { orderBy: { sortOrder: 'asc' } },
+      },
+    });
+
+    if (!current || !can(actor, 'event:edit', { organizerId: actor.orgId, eventId: id })) {
+      return NextResponse.json({ error: 'Event not found' }, { status: 404 });
+    }
+
+    // Results only (RESULTS_ONLY_EVENT_PLAN.md) is fixed when the race is
+    // created: /admin/events/new makes one that takes registration,
+    // /admin/results/new one that only posts results. A save never moves a race
+    // between the two — the owner's call, 2026-10-15, so staff follow one flow;
+    // a race made in the wrong place is recreated in the right one. Whatever
+    // the body says is ignored.
+    const resultsOnly = current.resultsOnly;
+
+    // Format is locked once anyone has registered (VIRTUAL_RUN_PLAN.md D7):
+    // a runner who paid for a race at a venue did not sign up to run alone,
+    // nor the other way round. Counted only when the save would change it.
+    if (format !== asEventFormat(current.format)) {
+      const registered = await db.registration.count({ where: { eventId: id } });
+      if (registered > 0) {
+        return NextResponse.json(
+          { error: FORMAT_LOCKED_ERROR, errors: { format: FORMAT_LOCKED_ERROR } },
+          { status: 400 },
+        );
+      }
+    }
+
+    // Which client the race is for. Left alone unless the person may link one
+    // (platform:manage) and sent it — an event manager's save never moves it.
+    const clientLink = await readClientLink(actor, data.clientId, current.clientId);
+    if (!clientLink.ok) {
+      return NextResponse.json(
+        { error: clientLink.error, errors: { clientId: clientLink.error } },
+        { status: 400 },
+      );
+    }
+
+    // A category sent with an id must already be one of this event's: the
+    // permission above is for this event only, so an id from another race
+    // would let an event-scoped manager rename or reprice an option there.
+    const ownCategoryIds = new Set(current.categories.map((c) => c.id));
+    if (categories.some((c: any) => c.id && !ownCategoryIds.has(c.id))) {
+      return NextResponse.json(
+        { error: 'One of the categories does not belong to this event. Reload the page and try again.' },
+        { status: 400 },
+      );
+    }
+
+    const slug = current.title === title
+      ? current.slug
+      : await uniqueEventSlug(title, async (candidate) => {
+          const clash = await db.event.findUnique({
+            where: { slug: candidate },
+            select: { id: true },
+          });
+          // Its own row is not a clash — otherwise an event could never keep
+          // the slug it already holds.
+          return clash !== null && clash.id !== id;
+        });
+
+    // Update event and upsert categories — and remove the ones the form no
+    // longer sends — in one transaction, so a save either lands whole, trail
+    // row included, or not at all.
+    const incomingIds = categories.filter((c: any) => c.id).map((c: any) => c.id);
+
+    const updatedEvent = await db.$transaction(async (prisma) => {
+      // Handle category deletion carefully to avoid FK constraints
+      try {
+        await prisma.category.deleteMany({
+          where: {
+            eventId: id,
+            id: { notIn: incomingIds }
+          }
+        });
+      } catch (e: any) {
+        if (e.code === 'P2003') throw new CategoryInUseError();
+        throw e;
+      }
+
+      const ev = await prisma.event.update({
+        where: { id },
+        data: {
+          title,
+          slug,
+          date,
+          startTime,
+          endTime,
+          location,
+          format,
+          virtualEndDate,
+          imageUrl: imageUrl || '',
+          highlights: cleanHighlights(highlights),
+          sizeChartImageUrl: sizeChartImageUrl || null,
+          description: description || '',
+          logisticsPickup: Boolean(logisticsPickup),
+          // Where and when a kit is collected, in the organizer's own words.
+          // Blank stays null rather than becoming an empty string: the wizards
+          // fall back to standard wording on null (lib/pickup.ts), and an empty
+          // string would render as a blank line under the pickup option.
+          pickupLocation: pickupLocation?.trim() || null,
+          pickupSchedule: pickupSchedule?.trim() || null,
+          // The admin form collects pesos; storage is centavos.
+          // Only a province on the list: the wizard compares the runner's
+          // address against it to price delivery. Left unpicked, the one the
+          // location names is saved instead (lib/ph-address.ts).
+          province: findProvince(province)?.name ?? inferProvince(location)?.name ?? null,
+          logisticsDeliveryFeeInside: toCentavos(logisticsDeliveryFeeInside),
+          logisticsDeliveryFeeOutside: toCentavos(logisticsDeliveryFeeOutside),
+          adminFee: toCentavos(adminFee),
+          shirtSizeUpcharge: toCentavos(shirtSizeUpcharge),
+          // Empty means "use the standard wording" — see resolveConsentWaiver.
+          consentWaiver: asWaiverParagraphs(consentWaiver),
+          registrationForm: asRegistrationForm(registrationForm),
+          eventType: asEventType(eventType),
+          // The organizer's manual hold on sign-ups. The note is theirs to
+          // write and optional; blank falls back to the standard sentence in
+          // lib/registration-gate.ts rather than leaving a runner unexplained.
+          registrationPaused: Boolean(registrationPaused),
+          registrationPauseNote: registrationPauseNote?.trim() || null,
+          // Null means the race is open as soon as it is published; an instant
+          // in the future holds the button back until it passes.
+          registrationOpensAt: registrationOpens,
+          // The certificate has its own home now, the results workspace and
+          // its PUT …/certificate (RESULTS_NAV_PLAN.md, Batch 2). The edit
+          // form no longer sends these, and a body without them keeps what is
+          // stored — otherwise every Edit Event save would wipe the template.
+          ...(certificateTemplate !== undefined ? { certificateTemplate: certificateTemplate || null } : {}),
+          ...(certificateCoordinates !== undefined ? { certificateCoordinates: certificateCoordinates || null } : {}),
+          ...(clientLink.change ? { clientId: clientLink.clientId } : {}),
+        }
+      });
+
+      // Nothing in the schema references a bank account, so the simplest
+      // correct update is to replace the set outright.
+      await prisma.bankAccount.deleteMany({ where: { eventId: id } });
+      const cleanAccounts = asBankAccounts(bankAccounts);
+      if (cleanAccounts.length > 0) {
+        await prisma.bankAccount.createMany({
+          data: cleanAccounts.map((account, index) => ({
+            ...account,
+            sortOrder: index,
+            eventId: id,
+          })),
+        });
+      }
+
+      // An option's place is fixed at creation, so the ones already here keep
+      // theirs — `sortOrder` is deliberately absent from the update below — and
+      // one added in this edit goes after the last, in the order the form sent.
+      const { _max } = await prisma.category.aggregate({
+        where: { eventId: id },
+        _max: { sortOrder: true },
+      });
+      let nextSortOrder = (_max.sortOrder ?? -1) + 1;
+
+      for (const cat of categories) {
+        if (cat.id) {
+          await prisma.category.update({
+            // Scoped to this event as well, so the write itself can never
+            // land on another race's option.
+            where: { id: cat.id, eventId: id },
+            data: {
+              // Uppercased like the runner's own fields: this name is printed
+              // beside them in the registrants table, the export and the emails.
+              name: upperCaseForStorage(cat.name),
+              // A fun-run package has neither of these: no distance to run, and
+              // a poster only if the organizer uploaded one.
+              distance: cat.distance || '',
+              // Nothing is sold on a results-only race: no price, no cap.
+              price: resultsOnly ? 0 : toCentavos(cat.price),
+              imageUrl: cat.imageUrl || null,
+              // The form posts the textarea as typed; the list is what gets
+              // stored, so blank lines and pasted bullets never reach the DB.
+              inclusions: asInclusions(cat.inclusions),
+              // Blank, 0 and anything unparseable all mean uncapped. A limit
+              // below what the option already holds is allowed on purpose:
+              // that is how an organizer closes an option early, and the
+              // runners already in it keep their places.
+              slotLimit: resultsOnly ? null : asSlotLimit(cat.slotLimit),
+            }
+          });
+        } else {
+          await prisma.category.create({
+            data: {
+              name: upperCaseForStorage(cat.name),
+              distance: cat.distance || '',
+              price: resultsOnly ? 0 : toCentavos(cat.price),
+              imageUrl: cat.imageUrl || null,
+              inclusions: asInclusions(cat.inclusions),
+              slotLimit: resultsOnly ? null : asSlotLimit(cat.slotLimit),
+              sortOrder: nextSortOrder++,
+              eventId: id,
+            }
+          });
+        }
+      }
+
+      const saved = await prisma.event.findUnique({
+        where: { id },
+        include: {
+          categories: { orderBy: CATEGORY_ORDER },
+          bankAccounts: { orderBy: { sortOrder: 'asc' } },
+        }
+      });
+
+      // What this save changed. The option and bank-account lists are compared
+      // as wholes and recorded as "changed" — the summary says which, and the
+      // edit screen itself is where their contents are read.
+      const changes = changedFields(current, ev, EVENT_FIELDS);
+      const categoryFields = ['id', 'name', 'distance', 'price', 'imageUrl', 'inclusions', 'slotLimit'];
+      if (saved && listKey(current.categories, categoryFields) !== listKey(saved.categories, categoryFields)) {
+        changes.categories = CHANGED;
+      }
+      const accountFields = ['bankName', 'accountName', 'accountNumber', 'qrImageUrl'];
+      if (saved && listKey(current.bankAccounts, accountFields) !== listKey(saved.bankAccounts, accountFields)) {
+        changes.bankAccounts = CHANGED;
+      }
+      if (Object.keys(changes).length > 0) {
+        await recordAudit(prisma, actor, {
+          action: 'event.updated',
+          entityType: 'Event',
+          entityId: id,
+          eventId: id,
+          summary: `Edited event ${ev.title}: ${listFields(Object.keys(changes))}.`,
+          changes,
+        });
+      }
+
+      return saved;
+    });
+
+    return NextResponse.json(updatedEvent, { status: 200 });
+  } catch (error: any) {
+    if (error instanceof CategoryInUseError) {
+      return NextResponse.json({ error: 'Cannot remove a category that already has registered runners or results.' }, { status: 400 });
+    }
+    console.error('Update event error:', error);
+    return NextResponse.json({ error: error.message || 'Failed to update event' }, { status: 500 });
+  }
+}

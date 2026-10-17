@@ -3,7 +3,7 @@
 import React from 'react';
 import { Check } from 'lucide-react';
 import type { ColumnDef } from '@tanstack/react-table';
-import { PublishStatus, RegisteredCount, RegistrationStatus, rowPosition } from './EventRowCells';
+import { FormatBadge, PublishStatus, RegisteredCount, RegistrationStatus, eventDateLabel, rowPosition } from './EventRowCells';
 import type { EventRow } from './event-row';
 
 /**
@@ -65,6 +65,7 @@ export function eventColumns(renderActions: (event: EventRow) => React.ReactNode
       cell: ({ row }) => (
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-medium text-primary">{row.original.title}</span>
+          <FormatBadge event={row.original} />
           <PublishStatus event={row.original} />
         </div>
       ),
@@ -72,7 +73,7 @@ export function eventColumns(renderActions: (event: EventRow) => React.ReactNode
     {
       accessorKey: "date",
       header: "Date",
-      cell: ({ row }) => <span className="whitespace-nowrap">{row.original.date}</span>,
+      cell: ({ row }) => <span className="whitespace-nowrap">{eventDateLabel(row.original)}</span>,
     },
     {
       id: "registered",

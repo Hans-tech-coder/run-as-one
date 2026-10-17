@@ -6,6 +6,7 @@ import { codeSentReminder } from '@/lib/pacer';
 import { pacerOrdersByCode, pacersForEvent } from '@/lib/pacer-store';
 import AdminNotFound from '../../../AdminNotFound';
 import { EVENT_NOT_FOUND } from '../../event-not-found';
+import { isVirtual } from '@/lib/event-format';
 import PacersClient, { type PacerRow } from './PacersClient';
 import DashboardHeader from '@/app/admin/DashboardHeader';
 
@@ -33,6 +34,7 @@ export default async function PacersPage({ params }: { params: Promise<{ id: str
     select: {
       id: true,
       title: true,
+      format: true,
       categories: {
         orderBy: CATEGORY_ORDER,
         select: { id: true, name: true, distance: true },
@@ -49,6 +51,21 @@ export default async function PacersPage({ params }: { params: Promise<{ id: str
 
   if (!event) {
     return <AdminNotFound {...EVENT_NOT_FOUND} />;
+  }
+
+  // A virtual run has no pacers (VIRTUAL_RUN_PLAN.md D6): there is no field
+  // running together to pace. The menu hides the link; an old or typed URL
+  // gets a page that says why rather than a screen of codes nobody can use.
+  if (isVirtual(event)) {
+    return (
+      <AdminNotFound
+        title="No Pacers"
+        heading="Virtual runs have no pacers."
+        body={`${event.title} is a virtual run: runners run on their own, anywhere in the run window, so there is no field to pace.`}
+        homeHref="/admin/events"
+        homeLabel="Back to Events"
+      />
+    );
   }
 
   const pacers = await pacersForEvent(actor.orgId, id);

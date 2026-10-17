@@ -67,22 +67,42 @@ export function today(now: Date = new Date()): string {
 }
 
 /**
- * Races that have not happened yet, race day itself included: an event is
- * upcoming right up to the end of the day it is held on. A runner looking at
- * the listing on the morning of the race should still find it there.
+ * The last day an event is run on. For an on-site race that is its race day;
+ * for a virtual run it is the end of its window (`virtualEndDate`,
+ * VIRTUAL_RUN_PLAN.md D4), which the routes store only for a virtual run —
+ * so a non-null value is itself the sign the event runs over several days.
+ * Required in the type, not optional, so a caller that forgets to select it
+ * fails the typecheck instead of closing a virtual run on its first day.
  */
-export function upcomingEvents(day: string = today()): Prisma.EventWhereInput {
-  return { date: { gte: day } };
+type Scheduled = { date: string; virtualEndDate: string | null };
+
+function lastDay(event: Scheduled): string {
+  return event.virtualEndDate ?? event.date;
 }
 
-/** Races that are over — yesterday and earlier. */
+/**
+ * Races that have not happened yet, race day itself included: an event is
+ * upcoming right up to the end of the day it is held on. A runner looking at
+ * the listing on the morning of the race should still find it there. A
+ * virtual run stays upcoming until the last day of its window has passed.
+ *
+ * Returns an OR, so a caller spreading it must not spread another OR beside it.
+ */
+export function upcomingEvents(day: string = today()): Prisma.EventWhereInput {
+  return { OR: [{ date: { gte: day } }, { virtualEndDate: { gte: day } }] };
+}
+
+/** Races that are over — yesterday and earlier, the whole window for a virtual run. */
 export function finishedEvents(day: string = today()): Prisma.EventWhereInput {
-  return { date: { lt: day } };
+  return {
+    date: { lt: day },
+    OR: [{ virtualEndDate: null }, { virtualEndDate: { lt: day } }],
+  };
 }
 
 /** Whether this particular event is already over. */
-export function hasFinished(event: { date: string }, day: string = today()): boolean {
-  return event.date < day;
+export function hasFinished(event: Scheduled, day: string = today()): boolean {
+  return lastDay(event) < day;
 }
 
 /**
@@ -141,6 +161,27 @@ export function formatEventDayShort(date: string): string {
 /** "September 26, 2026" — for the event page and for prose about a race. */
 export function formatEventDay(date: string): string {
   return formatDay(date, 'long');
+}
+
+/**
+ * "Nov 1–30, 2026" — a virtual run's window as one short phrase. The month is
+ * said once when both ends share it, and the year once when both ends share
+ * that, because the range sits on the same narrow line a single race day does.
+ * A missing or malformed end falls back to the start day alone.
+ */
+export function formatEventRange(start: string, end: string | null): string {
+  if (!end || !isCalendarDay(end) || !isCalendarDay(start) || end === start) {
+    return formatEventDayShort(start);
+  }
+  const [sy, sm, sd] = start.split('-');
+  const [ey, em, ed] = end.split('-');
+  const month = (date: string) =>
+    new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'short' }).format(
+      new Date(`${date}T00:00:00Z`),
+    );
+  if (sy === ey && sm === em) return `${month(start)} ${Number(sd)}–${Number(ed)}, ${ey}`;
+  if (sy === ey) return `${month(start)} ${Number(sd)} – ${month(end)} ${Number(ed)}, ${ey}`;
+  return `${formatEventDayShort(start)} – ${formatEventDayShort(end)}`;
 }
 
 /**

@@ -10,7 +10,8 @@ import {
   drawByline, drawContentBlock, embedCertificateFonts, hexColor, inkTheme, type CertificateContent,
 } from '@/lib/e-certificate-layout';
 import { categoryDistanceKm } from '@/lib/category-distance';
-import { formatEventDay } from '@/lib/event-schedule';
+import { formatEventDay, formatEventRange } from '@/lib/event-schedule';
+import { isVirtual } from '@/lib/event-format';
 import { toWholeSeconds } from '@/lib/race-time';
 import { SITE_NAME } from '@/lib/site-contact';
 
@@ -34,6 +35,9 @@ export interface CertificateEvent {
   title?: string | null;
   date?: string | null;
   location?: string | null;
+  /** A virtual run prints its window, not its first day (lib/event-format.ts). */
+  format?: string | null;
+  virtualEndDate?: string | null;
   certificateTemplate?: string | null;
   certificateCoordinates?: string | null;
 }
@@ -69,8 +73,19 @@ function contentFor(result: CertificateResult, event: CertificateEvent): Certifi
       ? { paceGroup: result.paceGroup?.trim() ?? '', averagePace: averagePace(result.chipTime, result.category) }
       : null,
     eventTitle: event.title?.trim() || 'Running Event',
-    eventDetails: [event.date ? formatEventDay(event.date) : '', event.location?.trim() ?? ''],
+    eventDetails: [eventDay(event), event.location?.trim() ?? ''],
   };
+}
+
+/**
+ * "October 15, 2026" for a race at a venue; "Oct 15–31, 2026" for a virtual
+ * run, whose runners each ran on a day of their own inside the window.
+ */
+function eventDay(event: CertificateEvent): string {
+  if (!event.date) return '';
+  return isVirtual(event)
+    ? formatEventRange(event.date, event.virtualEndDate ?? null)
+    : formatEventDay(event.date);
 }
 
 interface Template {

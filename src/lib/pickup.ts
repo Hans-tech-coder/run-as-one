@@ -17,7 +17,26 @@
  * both wizards, on the confirmation screen and in the registration email — the
  * moment of choosing, the moment of finishing, and the thing the runner still
  * has on race week.
+ *
+ * It also owns what the option is called (pickupLabel): "On-site Pickup" at a
+ * race with a venue, "Kit Pickup" on a virtual run, which has no site to be
+ * on — the owner's wording, 2026-10-17. Logistics are otherwise the same for
+ * both formats (VIRTUAL_RUN_PLAN.md D5).
  */
+
+import { isVirtual } from './event-format';
+
+/** "On-site Pickup", or "Kit Pickup" for a virtual run. */
+export function pickupLabel(event: { format?: unknown }): string {
+  return isVirtual(event) ? 'Kit Pickup' : 'On-site Pickup';
+}
+
+/** The wizards' line when pick-up is the only way to get a kit. */
+export function pickupOnlyLine(event: { format?: unknown }): string {
+  return isVirtual(event)
+    ? 'Race kits for this run are claimed at kit pickup.'
+    : 'Race kits for this race are claimed on-site.';
+}
 
 export type PickupEvent = {
   pickupLocation?: string | null;

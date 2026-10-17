@@ -16,6 +16,9 @@ export type EventRow = {
   client?: { id: string; name: string } | null;
   title: string;
   date: string;
+  /** ONSITE or VIRTUAL (lib/event-format.ts); a virtual run's window ends on `virtualEndDate`. */
+  format?: string;
+  virtualEndDate?: string | null;
   location: string;
   categories?: CategoryChip[];
   /** EXTERNAL for a results-only event (registrationState() in lib/registration-gate.ts). */

@@ -27,6 +27,53 @@ offers **QR Ph only** (`OFFERED_PAYMONGO_METHODS` in `lib/free-checkout.ts`)
 until it is. Where an entry below says something is "not released" or
 "production is N migrations behind", it predates this release.
 
+**Virtual runs, Phase A (2026-10-17, on `dev`, not released).** An admin
+picks **Virtual Run** at the top of the normal Create Event form and fills a
+run window instead of a race day and venue; everything else — categories,
+price, logistics (pickup and delivery unchanged), payment, promos, results
+upload, certificates — is the same event. New `Event.format` and
+`Event.virtualEndDate` (`lib/event-format.ts`, §4, §5). A virtual run is
+upcoming and open through the last day of its window and finished after it
+(`lib/event-schedule.ts`). Decisions, from `VIRTUAL_RUN_PLAN.md`: **D1**
+revise the existing form, no separate flow; **D2** `format` is its own axis,
+not a third `eventType`; **D3** one Create Event button, format cards first,
+default On-site; **D4** `date` is the window's start, `virtualEndDate` its
+end, required when virtual; **D5** logistics unchanged, `LogisticsPanel`
+untouched; **D6** venue (saved as *Virtual*), times and pacers hidden; **D7**
+format locked once the event has a registration; **D8** Phase A only —
+**Phase B** (runner submission of a GPS screenshot and time, an admin
+validation queue, approved → `RaceResult`) is not started and needs the
+private blob store, so weigh storage first. Public card, event page and wizard heading show two rows like an on-site
+race — calendar icon with *Nov 1–30, 2026*, globe icon with *Virtual · Run
+anywhere* (the owner's call, 2026-10-17, after one combined line read badly); confirmation emails say *Run
+Window* and *Where* instead of Date and Location. Both registration
+wizards' sidebar heading (`WizardEventHeader`, split out of the two wizards
+on 2026-10-17) prints the same window line and no venue. The owner then
+chose (2026-10-17) that the e-certificate prints the window — *Oct 15–31,
+2026 · Virtual* — and that a virtual run calls kit pick-up *Kit Pickup*
+(`pickupLabel` in `lib/pickup.ts`: event page, both wizards' pick-up card and
+the delivery refusals); on-site events still say *On-site Pickup*.
+**Release:** migration `20261017120000_event_format` (additive, defaults
+every existing event to on-site) must run before the code ships; the local
+dev server must be restarted after it, because a running one keeps the old
+Prisma client and `/events` errors on the new `where`. Checked on `local-dev`
+2026-10-17 in the browser: a virtual run created from Create Event (window
+Oct 15–31) saved as a draft with location *Virtual* and no times, showed
+*Virtual* and *Oct 15–31, 2026* on the events table with no *Pacers* item,
+and once published listed on `/events` and its page as open although its
+first day had passed; shortening the window to end yesterday took it off
+`/events` and its page said the run had ended. A format change on an event
+with registrations answered 400 and the edit form showed the lock; on-site
+Create still asks for date, venue and times. The test event,
+`qa-virtual-run-test`, is still on `local-dev`, its window now Oct 15–31
+so its register page opens; both wizards were checked on it (the bank-transfer
+one by switching its form for the check and back), and the on-site
+`32km-beyond-21` and `run-and-reachout-2026` headings still show one day. Its
+event page reads *Kit Pickup Available*, `32km-beyond-21` still *On-site
+Pickup Available*; the two certificates were rendered with
+`buildCertificatePdf` and read back. The wizards' step-2 pick-up card was
+checked through `pickupLabel` only, not by filling step 1 in the browser.
+
 **Event publishing: draft, publish and scheduled publish (2026-10-17, on
 `dev`, not released).** Creating an event no longer puts it on the site: it
 starts as a **draft** unless the create form's new Publishing panel says

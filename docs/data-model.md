@@ -40,6 +40,16 @@ shape:
   size dropdown drops the default inches), logistics fees, `adminFee`, `shirtSizeUpcharge`,
   `consentWaiver` (string[] of paragraphs), `registrationForm`
   (`ONLINE` | `BANK_TRANSFER`), `eventType` (`RACE` | `FUN_RUN`),
+  `format` (**where it is run**: `ONSITE`, the default, one race day at a
+  venue, or `VIRTUAL`, run anywhere inside a window — a separate axis from
+  `eventType`, so a virtual run sells distances or packages alike;
+  `lib/event-format.ts`, `VIRTUAL_RUN_PLAN.md`) and `virtualEndDate`
+  (`YYYY-MM-DD`, the **last day of a virtual run's window**, whose first day
+  is `date`; stored only for `VIRTUAL` and null otherwise, so a non-null value
+  is what keeps the event upcoming past `date` in `lib/event-schedule.ts`. A
+  virtual run's `location` is the fixed word *Virtual* and it has no
+  `startTime`/`endTime`. Migration `20261017120000_event_format`, additive,
+  every existing row stays `ONSITE`),
   `registrationPaused` + `registrationPauseNote` (the organizer's manual hold on
   sign-ups and what runners are told), `registrationOpensAt` (the instant
   sign-ups start, for a race listed ahead of taking them; null — the normal

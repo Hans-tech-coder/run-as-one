@@ -26,7 +26,7 @@ export default function CertificateWorkspacePanel({
 }: {
   eventId: string;
   initial: CertificateDraft;
-  event: { title: string; date: string; location: string };
+  event: { title: string; date: string; location: string; format?: string | null; virtualEndDate?: string | null };
   canEdit: boolean;
   title?: string;
 }) {

@@ -4,7 +4,8 @@ import React from 'react';
 import Link from 'next/link';
 import { Users } from 'lucide-react';
 import type { Row } from '@tanstack/react-table';
-import { eventInstantParts, formatEventInstant, formatEventInstantShort, formatEventTime } from '@/lib/event-schedule';
+import { eventInstantParts, formatEventInstant, formatEventInstantShort, formatEventRange, formatEventTime } from '@/lib/event-schedule';
+import { isVirtual } from '@/lib/event-format';
 import { publishState } from '@/lib/event-visibility';
 import { REGISTRATION_STATES } from './registration-state-badge';
 import type { CategoryChip, EventRow } from './event-row';
@@ -107,6 +108,24 @@ export function RegistrationStatus({ event }: { event: EventRow }) {
       )}
     </div>
   );
+}
+
+/**
+ * Virtual, beside the title (VIRTUAL_RUN_PLAN.md). Nothing for an on-site
+ * race, which is the normal case. `info` rather than `neutral` so it never
+ * reads as the Draft badge that can sit next to it.
+ */
+export function FormatBadge({ event }: { event: EventRow }) {
+  return isVirtual(event) ? <span className="status-badge info whitespace-nowrap">Virtual</span> : null;
+}
+
+/**
+ * The Date cell: the race day as stored for an on-site race, and the whole
+ * run window ("Nov 1–30, 2026") for a virtual one, whose single `date` would
+ * otherwise look like a one-day race.
+ */
+export function eventDateLabel(event: EventRow): string {
+  return isVirtual(event) ? formatEventRange(event.date, event.virtualEndDate ?? null) : event.date;
 }
 
 /**
