@@ -3,7 +3,8 @@
 import React, { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
-import { MoreVertical, Users, ClipboardList, Trophy, Edit, Trash2, CalendarClock, PauseCircle, PlayCircle, Footprints, Lock, LockOpen } from 'lucide-react';
+import { MoreVertical, Users, ClipboardList, Trophy, Edit, Trash2, CalendarClock, PauseCircle, PlayCircle, Footprints, Lock, LockOpen, Globe } from 'lucide-react';
+import { publishState } from '@/lib/event-visibility';
 import LinkPending from '@/components/ui/LinkPending';
 import { placeRowMenu, type RowMenuPlacement } from '../row-menu-position';
 import { cssDurationMs } from '@/lib/css-duration';
@@ -14,6 +15,7 @@ export default function EventActionsMenu({
   eventId,
   label,
   registrationState = 'OPEN',
+  publishAt = null,
   isPausing = false,
   canEdit = true,
   canManagePacers = false,
@@ -21,6 +23,7 @@ export default function EventActionsMenu({
   onTogglePause,
   onToggleClose,
   onSchedule,
+  onPublish,
   onDelete
 }: {
   eventId: string;
@@ -28,6 +31,8 @@ export default function EventActionsMenu({
   label?: string;
   /** Why sign-ups are closed, or OPEN — see src/lib/registration-gate.ts. */
   registrationState?: RegistrationState;
+  /** When the public first sees it; null is a draft (lib/event-visibility.ts). */
+  publishAt?: string | Date | null;
   /** True while this row's pause or close request is in flight. */
   isPausing?: boolean;
   /**
@@ -55,6 +60,8 @@ export default function EventActionsMenu({
   onToggleClose?: () => void;
   /** Opens the modal that decides when sign-ups start. */
   onSchedule?: () => void;
+  /** Opens the modal that publishes, schedules or un-publishes the event. */
+  onPublish?: () => void;
   onDelete?: () => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -190,6 +197,13 @@ export default function EventActionsMenu({
     onSchedule?.();
   };
 
+  const isLive = publishState({ publishAt }) === 'PUBLISHED';
+  const handlePublish = (e: React.MouseEvent) => {
+    e.preventDefault();
+    closeMenu();
+    onPublish?.();
+  };
+
   const handleDelete = (e: React.MouseEvent) => {
     e.preventDefault();
     closeMenu();
@@ -256,6 +270,18 @@ export default function EventActionsMenu({
             <LinkPending />
           </Link>
         ))}
+        {onPublish && (
+          <button
+            onClick={handlePublish}
+            className="action-dropdown-item w-full flex items-center gap-3 px-4 py-2 text-sm text-left"
+            role="menuitem"
+          >
+            <Globe size={16} />
+            {/* "Publish Event" is what a draft or scheduled row is waiting on;
+                a live one can still be scheduled or taken back to draft. */}
+            {isLive ? 'Change Publishing' : 'Publish Event'}
+          </button>
+        )}
         {canSchedule && (
           <button
             onClick={handleSchedule}

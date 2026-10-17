@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import prisma from './db';
 import { eventByParam } from './event-slug';
+import { publishedEvents } from './event-visibility';
 import {
   SITE_LABEL_HEADER,
   SITE_URL_HEADER,
@@ -147,7 +148,8 @@ export async function eventPageMetadata(
   path: (slug: string) => string,
 ): Promise<Metadata> {
   const event = await prisma.event.findFirst({
-    where: eventByParam(param),
+    // An unpublished event has no public page to point search engines at.
+    where: { AND: [eventByParam(param), publishedEvents()] },
     select: { slug: true, client: EVENT_SITE_CLIENT },
   });
   if (!event) return {};

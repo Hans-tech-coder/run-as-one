@@ -23,6 +23,15 @@ import RegistrationFeesPanel from '../RegistrationFeesPanel';
 import EventFormResultModals from '../EventFormResultModals';
 import { blankEventDraft } from '../event-form-draft';
 import { useEventImageUpload } from '../useEventImageUpload';
+import PublishingPanel from '../PublishingPanel';
+import {
+  KEEP_AS_DRAFT,
+  openingBeforePublish,
+  publishProblem,
+  publishSubmitLabel,
+  publishValue,
+  type PublishDraft,
+} from '../publish-draft';
 
 /**
  * The create-event form. `page.tsx` reads the default platform fee on the
@@ -75,6 +84,11 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
   // rather than in the error modal: a validation message belongs beside the
   // box it is about.
   const [openingError, setOpeningError] = useState<string | null>(null);
+  // When the public first sees it (EVENT_PUBLISH_PLAN.md). A draft by default:
+  // a race goes public because someone chose to publish it, never as a side
+  // effect of saving.
+  const [publish, setPublish] = useState<PublishDraft>(KEEP_AS_DRAFT);
+  const [publishError, setPublishError] = useState<string | null>(null);
   const [deliveryOn, setDeliveryOn] = useState(false);
   const [deliveryError, setDeliveryError] = useState<string | null>(null);
 
@@ -93,9 +107,16 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
     // An organizer who chose to schedule the opening and left the date empty
     // gets told which field is missing, beside that field. Saving anyway would
     // publish the race open, which is the one thing they said not to do.
-    const openingFault = openingProblem(opening);
+    const openingFault = openingProblem(opening) ?? openingBeforePublish(publish, opening);
     setOpeningError(openingFault);
     if (openingFault) {
+      setIsLoading(false);
+      return;
+    }
+
+    const publishFault = publishProblem(publish);
+    setPublishError(publishFault);
+    if (publishFault) {
       setIsLoading(false);
       return;
     }
@@ -118,6 +139,7 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
           ...deliveryFees(deliveryOn, formData),
           eventType,
           registrationOpensAt: openingInstantISO(opening),
+          publishAt: publishValue(publish),
           categories,
           bankAccounts: cleanBankAccounts(bankAccounts),
           ...(canLinkClient ? { clientId } : {}),
@@ -133,7 +155,13 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
         return;
       }
 
-      setSuccessMsg('Event created successfully!');
+      setSuccessMsg(
+        publish.mode === 'DRAFT'
+          ? 'Event saved as a draft. Only your team can see it until you publish it from the events list.'
+          : publish.mode === 'NOW'
+            ? 'Event published. It is now listed on the site.'
+            : 'Event scheduled. It goes public by itself at the time you set.',
+      );
     } catch (err) {
       setError('An unexpected error occurred');
       setIsLoading(false);
@@ -201,6 +229,25 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
           <RegistrationFeesPanel
             draft={formData}
             onChange={patchForm}
+            adminFeeHint={
+              <>
+                Starts at the default platform fee set in Settings. A change here
+                applies to this event only.
+              </>
+            }
+          />
+
+          {/* Last, beside the button it changes: the event is filled in
+              first, then staff decide when runners see it and register. */}
+          <PublishingPanel
+            publish={publish}
+            onPublishChange={next => {
+              setPublish(next);
+              if (publishError) setPublishError(null);
+              // A new publish date can fix (or cause) the order message.
+              if (openingError) setOpeningError(null);
+            }}
+            publishError={publishError}
             opening={opening}
             onOpeningChange={next => {
               setOpening(next);
@@ -210,13 +257,7 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
               if (openingError) setOpeningError(null);
             }}
             openingError={openingError}
-            openingIdPrefix="newEventOpening"
-            adminFeeHint={
-              <>
-                Starts at the default platform fee set in Settings. A change here
-                applies to this event only.
-              </>
-            }
+            idPrefix="newEvent"
           />
 
           <div className="form-actions">
@@ -229,7 +270,7 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
               disabled={isLoading || uploadingField !== null || uploadingPosters > 0}
               className="btn-light"
             >
-              {isLoading ? <BusyLabel>Saving</BusyLabel> : 'Save Event'}
+              {isLoading ? <BusyLabel>Saving</BusyLabel> : publishSubmitLabel(publish)}
             </button>
           </div>
         </form>

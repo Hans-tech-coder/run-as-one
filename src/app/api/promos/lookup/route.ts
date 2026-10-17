@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { isPublished } from '@/lib/event-visibility';
 import prisma from '@/lib/db';
 import { MAX_PROMO_CODE_LENGTH, normalizePromoCode } from '@/lib/discount';
 import { findPromoCode, promoTerms } from '@/lib/promo-store';
@@ -48,9 +49,10 @@ export async function POST(request: Request) {
 
     const event = await prisma.event.findUnique({
       where: { id: String(eventId) },
-      select: { id: true, organizerId: true },
+      select: { id: true, organizerId: true, publishAt: true },
     });
-    if (!event) return NextResponse.json({ promo: null });
+    // An unpublished event has no codes to confirm (lib/event-visibility.ts).
+    if (!event || !isPublished(event)) return NextResponse.json({ promo: null });
 
     const promo = await findPromoCode(event, cleaned);
 

@@ -46,7 +46,13 @@ shape:
   case — means it is registrable the moment it is published),
   `registrationClosedAt` (when the organizer closed sign-ups for good; null
   while not closed — unlike a pause, runners are not told to check back, and
-  only Reopen clears it), `resultsOnly` (a **results-only** race: the client
+  only Reopen clears it), `publishAt` (**when the public first sees the
+  event**: null is a **draft** — staff only, a 404 to everyone else; a past
+  instant is published; a future one is **scheduled** and goes live by itself,
+  checked at request time, `lib/event-visibility.ts`. Migration
+  `20261017090000_event_publish_at` stamped every existing event with its
+  `createdAt`; new events start as drafts unless the create form says
+  otherwise, and a results-only one is published on creation), `resultsOnly` (a **results-only** race: the client
   runs registration elsewhere and Run As One only publishes the times —
   `registrationState` answers `EXTERNAL`, both checkout routes refuse it, it is
   off the upcoming listings, `/events/[slug]` is a 404 until results exist, and

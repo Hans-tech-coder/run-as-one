@@ -92,6 +92,9 @@ export const AUDIT_ACTIONS = [
   'event.registration.closed',
   'event.registration.reopened',
   'event.registration.scheduled',
+  'event.published',
+  'event.publish.scheduled',
+  'event.unpublished',
   'event.deleted',
   'results.uploaded',
   // One runner's row corrected by hand from the Results workspace

@@ -27,6 +27,39 @@ offers **QR Ph only** (`OFFERED_PAYMONGO_METHODS` in `lib/free-checkout.ts`)
 until it is. Where an entry below says something is "not released" or
 "production is N migrations behind", it predates this release.
 
+**Event publishing: draft, publish and scheduled publish (2026-10-17, on
+`dev`, not released).** Creating an event no longer puts it on the site: it
+starts as a **draft** unless the create form's new Publishing panel says
+*Publish Now* or schedules it. One column, `Event.publishAt`
+(`lib/event-visibility.ts`, §5). A scheduled event goes live by itself — the
+public reads compare against the clock, there is no cron. The events table
+gains *Draft* / *Scheduled · Goes live …* badges and a **Publish Event** row item with its
+modal; staff can preview an unpublished event page, nobody can register for
+one. Decisions, from `EVENT_PUBLISH_PLAN.md`: **D1** one nullable instant for
+all three states; **D2** read-time, not cron; **D3** the migration stamps
+every existing event published at its `createdAt`; **D4** a draft still needs
+every field a published event needs — Publish only changes visibility; **D5**
+back to draft only while the event has no registration (409 otherwise);
+**D6** a results-only race is published on creation; **D7** client viewers do
+not see drafts; **D8** a publish time after `registrationOpensAt` is refused
+(on create and the publish route only); **D9** staff preview on the event page
+only. Both event forms now end with one **Publishing & Sign-ups** panel asking
+the two "when" questions in order, with a plain sentence of what runners will
+see (§6); Registration Opening left *Registration & Fees* — kept, not removed,
+because it is the only way to list a race as a teaser before sign-ups open.
+**Not done:** the edit form only shows the publish state (changing it is the
+row menu's job), and the edit PUT / opening PATCH do not re-check D8 on the
+server (both forms check it in the browser). **Release:**
+migration `20261017090000_event_publish_at` must run before the code ships;
+its backfill only touches null rows, so re-running it after the deploy also
+publishes anything the old code created in between. Checked on `local-dev`
+2026-10-17 in the browser: a draft is the same 404 as a missing slug on its
+page and `/register`, absent from `/events`, refused by checkout (*Event not
+found*) and by promo lookup; staff see the preview line; a publish scheduled
+90 seconds ahead appeared on `/events` by itself; back-to-draft on a race with
+registrants answered 409; every change is on Activity. **Client viewer hiding
+(D7) was not exercised** — no viewer session was signed in.
+
 **Move to Results switch removed (2026-10-15, on `dev`, not released).** The
 owner's call, so staff follow one flow: a race is Events or Results from the
 form that created it (`/admin/events/new` or `/admin/results/new`) and never

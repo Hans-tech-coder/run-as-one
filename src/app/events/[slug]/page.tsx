@@ -15,6 +15,8 @@ import { formatPesos } from '@/lib/money';
 import { sellsPackages } from '@/lib/event-type';
 import { inclusionIcon } from '@/lib/inclusion-icon';
 import { formatEventDay, hasFinished } from '@/lib/event-schedule';
+import { canViewEventPage } from '@/lib/event-preview';
+import { describePublish } from '@/lib/event-visibility';
 import {
   canonicalEventPath,
   eventByParam,
@@ -61,6 +63,13 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ s
   });
 
   if (!event) {
+    notFound();
+  }
+
+  // A draft or scheduled event is a 404 to the public and a preview to the
+  // team that is still finishing it (lib/event-preview.ts).
+  const access = await canViewEventPage(event);
+  if (!access.visible) {
     notFound();
   }
 
@@ -148,6 +157,17 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ s
   return (
     <div className="event-details-page">
       <EventHeroBanner event={event as any} />
+
+      {/* Only the team ever sees this page unpublished, and they must not
+          mistake the preview for the live page. */}
+      {access.preview && (
+        <p
+          role="status"
+          className="mt-6 mb-0 rounded-2xl border border-amber-400/30 bg-amber-400/10 px-5 py-3 text-sm font-medium text-amber-200"
+        >
+          Preview. {describePublish(event)} Runners cannot open or register for it yet.
+        </p>
+      )}
 
       {/* Main Content */}
       <section className="mt-12 mb-20 t-stagger is-shown">

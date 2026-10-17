@@ -13,6 +13,14 @@ before writing any code. When an item is picked up, give it its own plan file in
 
 The release steps come first because they block production, not a feature.
 
+**Next release: event publishing (on `dev` since 2026-10-17).** Run
+`npx prisma migrate deploy` (migration `20261017090000_event_publish_at`) on
+the production endpoint **before** promoting `dev` to `main`: the new code
+queries `Event.publishAt`, and the backfill marks every existing event
+published. If any event is created on production between the migration and the
+deploy, run the migration's `UPDATE` again afterwards (it touches null rows
+only), or that event will show as a draft.
+
 **Client subdomains: released 2026-10-14, setup still pending.** Steps 1–2
 are done: both migrations (`20261013090000_client_site_branding`,
 `20261014014104_client_site_icon`) are on production and `main` is at

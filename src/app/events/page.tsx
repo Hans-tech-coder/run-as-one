@@ -3,6 +3,7 @@ import Link from 'next/link';
 import EventGrid from '@/components/EventGrid';
 import db from '@/lib/db';
 import { soonestFirst, upcomingEvents } from '@/lib/event-schedule';
+import { publishedEvents } from '@/lib/event-visibility';
 import { forListing } from '@/lib/registration-gate';
 import { EVENT_SITE_CLIENT, eventLinkOrigin, getSiteClient } from '@/lib/site-client';
 import ClientSiteHero, { hasClientHero } from '@/components/ClientSiteHero';
@@ -30,7 +31,9 @@ export default async function EventsPage() {
   // On a client's site (CLIENT_SUBDOMAIN_PLAN.md D1) this is that client's
   // front page: its races only, counted the same way, under its hero.
   const [site, linkOrigin] = await Promise.all([getSiteClient(), eventLinkOrigin()]);
-  const scope = site ? { clientId: site.id } : {};
+  // Published events only, counts included: a draft is not something a runner
+  // has "missed" (lib/event-visibility.ts).
+  const scope = { ...publishedEvents(), ...(site ? { clientId: site.id } : {}) };
   const [upcoming, totalEvents, eventsWithResults] = await Promise.all([
     db.event.findMany({
       // A results-only race is never enterable here, so it is not upcoming in

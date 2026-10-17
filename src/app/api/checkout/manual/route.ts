@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { isPublished } from '@/lib/event-visibility';
 import { participantCountError } from '@/lib/order-size';
 import prisma from '@/lib/db';
 import { newOrderRef } from '@/lib/order-ref';
@@ -183,7 +184,9 @@ export async function POST(request: Request) {
       where: { id: eventId },
       include: { categories: true }
     });
-    if (!event) {
+    // A draft or scheduled event reads as missing: nothing is sold on an
+    // event the public cannot see yet (lib/event-visibility.ts).
+    if (!event || !isPublished(event)) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     }
 

@@ -14,9 +14,11 @@ import MobileSortMenu from '../MobileSortMenu';
 import RegistrationScheduleModal from './RegistrationScheduleModal';
 import DeleteEventModal from './DeleteEventModal';
 import { REGISTRATION_STATES } from './registration-state-badge';
-import { CategoryChips, RegisteredCount, RegistrationStatus, rowPosition } from './EventRowCells';
+import { CategoryChips, PublishStatus, RegisteredCount, RegistrationStatus, rowPosition } from './EventRowCells';
 import { eventColumns } from './event-columns';
 import { useEventRowActions } from './useEventRowActions';
+import { useEventPublishActions } from './useEventPublishActions';
+import PublishModal from './PublishModal';
 import type { EventRow } from './event-row';
 import {
   Table,
@@ -70,6 +72,7 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
   const [selectedStates, setSelectedStates] = useState<string[]>([]);
 
   const actions = useEventRowActions(setTableEvents);
+  const publishing = useEventPublishActions(setTableEvents);
   const { pausingId } = actions;
 
   const viewRef = useRef<HTMLDivElement>(null);
@@ -94,6 +97,7 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
         eventId={event.id}
         label={event.title}
         registrationState={event.registrationState ?? 'OPEN'}
+        publishAt={event.publishAt ?? null}
         isPausing={pausingId === event.id}
         // Decided on the server with the same can() each route asks
         // (events/page.tsx). A row without `access` is an owner's.
@@ -113,6 +117,11 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
         onSchedule={
           (event.access?.edit ?? true)
             ? () => actions.openSchedule(event)
+            : undefined
+        }
+        onPublish={
+          (event.access?.edit ?? true)
+            ? () => publishing.open(event)
             : undefined
         }
         onDelete={
@@ -336,7 +345,12 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
             <span className="font-mono">{row.original.listNo ?? rowPosition(table.getSortedRowModel().flatRows, row)}</span>
           )}
           title={row => <span className="line-clamp-2">{row.original.title}</span>}
-          badges={row => <RegistrationStatus event={row.original} />}
+          badges={row => (
+            <div className="flex flex-wrap items-start gap-2">
+              <PublishStatus event={row.original} />
+              <RegistrationStatus event={row.original} />
+            </div>
+          )}
           fields={row => [
             { label: 'Date', value: row.original.date },
             { label: 'Registrants', value: <RegisteredCount event={row.original} alignEnd /> },
@@ -383,6 +397,16 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
         isSaving={actions.schedule.isSaving}
         onClose={actions.schedule.close}
         onSave={actions.schedule.save}
+      />
+
+      <PublishModal
+        key={`publish-${publishing.modal.event?.id ?? 'none'}-${publishing.modal.event?.publishAt ?? ''}`}
+        event={publishing.modal.event}
+        isOpen={publishing.modal.isOpen}
+        isClosing={publishing.modal.isClosing}
+        isSaving={publishing.modal.isSaving}
+        onClose={publishing.modal.close}
+        onSave={publishing.modal.save}
       />
 
       <DeleteEventModal

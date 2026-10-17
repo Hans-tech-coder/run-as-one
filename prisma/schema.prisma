@@ -134,6 +134,13 @@ model Event {
   /// than a boolean so the team can read when it happened; clearing it
   /// (Reopen) is the only way back. See src/lib/registration-gate.ts.
   registrationClosedAt        DateTime?
+  /// When the public may first see this event (EVENT_PUBLISH_PLAN.md). Null is
+  /// a draft: staff see it, the public pages, checkout and client viewers do
+  /// not. A past instant is published; a future one is scheduled and goes live
+  /// on its own when the clock passes it, read at request time, not by a cron.
+  /// Distinct from registrationOpensAt, which is when sign-ups open on an
+  /// event already visible. See src/lib/event-visibility.ts.
+  publishAt                   DateTime?
   /// The client runs registration elsewhere; Run As One only publishes this
   /// race's results. Never registrable: registrationState() returns EXTERNAL
   /// for it, and both checkout routes refuse it. Kept off the upcoming

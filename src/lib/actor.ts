@@ -46,6 +46,7 @@ import prisma from './db';
 import { getAuthCookie } from './auth';
 import type { SessionClaims, SessionKind } from './jwt';
 import { normalizeAccountEmail } from './text-case';
+import { publishedEvents } from './event-visibility';
 import {
   RUN_AS_ONE_ORGANIZER_ID,
   SIGN_IN_STATUSES,
@@ -363,8 +364,10 @@ export function reachableEvents(
   permission: Permission = 'event:view',
 ): Prisma.EventWhereInput {
   if (isClientViewer(actor)) {
+    // Published events only: a draft is the team's unfinished work, not
+    // something the client is shown yet (EVENT_PUBLISH_PLAN.md D7).
     return actor.clientId && VIEWER_PERMISSIONS.includes(permission)
-      ? { organizerId: actor.orgId, clientId: actor.clientId }
+      ? { organizerId: actor.orgId, clientId: actor.clientId, ...publishedEvents() }
       : { id: { in: [] } };
   }
   const wide = orgRole(actor);

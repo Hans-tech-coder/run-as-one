@@ -16,6 +16,7 @@ import {
   eventByParam,
 } from '@/lib/event-slug';
 import { hasFinished } from '@/lib/event-schedule';
+import { publishedEvents } from '@/lib/event-visibility';
 import {
   EVENT_FULL_MESSAGE,
   REGISTRATION_CLOSED_MESSAGE,
@@ -51,7 +52,9 @@ export default async function RegisterPage(props: {
     // Slug or cuid: links printed before slugs existed have to keep working,
     // and a half-finished registration is the worst place to hit a 404.
     db.event.findFirst({
-      where: eventByParam(slug),
+      // Published only, staff included: an order on a hidden event is a real
+      // order nobody meant to sell (lib/event-preview.ts).
+      where: { AND: [eventByParam(slug), publishedEvents()] },
       include: {
         categories: { orderBy: CATEGORY_ORDER },
         bankAccounts: { orderBy: { sortOrder: 'asc' } },

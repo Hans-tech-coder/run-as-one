@@ -1,4 +1,5 @@
 import React from 'react';
+import { publishedEvents } from '@/lib/event-visibility';
 import Link from 'next/link';
 import { ChevronRight, Trophy } from 'lucide-react';
 import db from '@/lib/db';
@@ -32,6 +33,7 @@ export default async function GlobalResultsPage() {
   const [site, linkOrigin] = await Promise.all([getSiteClient(), eventLinkOrigin()]);
   const rows = await db.event.findMany({
     where: {
+      ...publishedEvents(),
       raceResults: {
         some: {}
       },

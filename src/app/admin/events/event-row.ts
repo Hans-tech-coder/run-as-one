@@ -23,6 +23,8 @@ export type EventRow = {
   registrationOpensAt?: string | Date | null;
   registrationPaused?: boolean | null;
   registrationClosedAt?: string | Date | null;
+  /** When the public first sees it; null is a draft (lib/event-visibility.ts). */
+  publishAt?: string | Date | null;
   /** Every option has filled (events/page.tsx) — what a reopened row falls back to. */
   soldOut?: boolean;
   /** What this person may do from the row's menu (events/page.tsx). Absent means an owner. */

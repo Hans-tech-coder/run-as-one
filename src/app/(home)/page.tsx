@@ -3,6 +3,7 @@ import HeroSection from '@/components/HeroSection';
 import HomeEventBrowser from '@/components/HomeEventBrowser';
 import db from '@/lib/db';
 import { soonestFirst, upcomingEvents } from '@/lib/event-schedule';
+import { publishedEvents } from '@/lib/event-visibility';
 import { forListing } from '@/lib/registration-gate';
 import { EVENT_SITE_CLIENT, eventLinkOrigin } from '@/lib/site-client';
 
@@ -39,8 +40,9 @@ export default async function Home() {
   // Registration", and a race that has already been run is neither. Finished
   // races move to /results — see src/lib/event-schedule.ts.
   // Results-only races are left out: their sign-ups run elsewhere, so they
-  // are not open for registration in any sense this section means.
-  const upcoming = { ...upcomingEvents(), resultsOnly: false };
+  // are not open for registration in any sense this section means. Drafts and
+  // scheduled events are not public yet (lib/event-visibility.ts).
+  const upcoming = { ...upcomingEvents(), ...publishedEvents(), resultsOnly: false };
   const [openForRegistration, totalEvents] = await Promise.all([
     db.event.findMany({
       where: upcoming,

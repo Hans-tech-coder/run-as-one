@@ -25,6 +25,10 @@ import DashboardHeader from '@/app/admin/DashboardHeader';
 import LogisticsPanel, { deliveryFees, deliveryProblem } from '../../LogisticsPanel';
 import BasicInfoPanel from '../../BasicInfoPanel';
 import RegistrationFeesPanel from '../../RegistrationFeesPanel';
+import PublishingPanel from '../../PublishingPanel';
+import AdminSwitch from '../../../AdminSwitch';
+import { openingBeforePublish, publishDraft } from '../../publish-draft';
+import { describePublish } from '@/lib/event-visibility';
 import EventFormResultModals from '../../EventFormResultModals';
 import { useEventImageUpload } from '../../useEventImageUpload';
 import { blankEditDraft, editStateFromEvent } from './event-edit-draft';
@@ -50,6 +54,9 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
   // fields standing for one nullable column — see registration-opening.ts.
   const [opening, setOpening] = useState<OpeningDraft>(OPENS_IMMEDIATELY);
   const [openingError, setOpeningError] = useState<string | null>(null);
+  // When the event went (or goes) public. Read-only here: it changes from the
+  // events list's Publish item, never by saving this form.
+  const [publishAt, setPublishAt] = useState<string | null>(null);
   const [deliveryOn, setDeliveryOn] = useState(false);
   const [deliveryError, setDeliveryError] = useState<string | null>(null);
 
@@ -97,7 +104,9 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
       try {
         const res = await fetch(`/api/admin/events/${id}`);
         if (!res.ok) throw new Error('Failed to fetch event');
-        const loaded = editStateFromEvent(await res.json());
+        const raw = await res.json();
+        const loaded = editStateFromEvent(raw);
+        setPublishAt(raw.publishAt ?? null);
 
         setFormData(loaded.formData);
         setOpening(loaded.opening);
@@ -136,7 +145,9 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
     // Neither check applies to a results-only event: it never opens, and it
     // ships no kits. Their panels are hidden, so a stale value in either would
     // be a message about a field the organizer cannot see.
-    const openingFault = resultsOnly ? null : openingProblem(opening);
+    const openingFault = resultsOnly
+      ? null
+      : openingProblem(opening) ?? openingBeforePublish(publishDraft(publishAt), opening);
     setOpeningError(openingFault);
     if (openingFault) {
       setIsLoading(false);
@@ -274,41 +285,44 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
                 deliveryError={deliveryError}
               />
 
-              <RegistrationFeesPanel
-                draft={formData}
-                onChange={patchForm}
+              <RegistrationFeesPanel draft={formData} onChange={patchForm} />
+
+              <PublishingPanel
+                publish={publishDraft(publishAt)}
+                publishStatus={
+                  <p className="text-sm text-secondary m-0">
+                    {describePublish({ publishAt })} To change it, use{' '}
+                    <strong className="text-primary">Publish Event</strong> (or{' '}
+                    <strong className="text-primary">Change Publishing</strong>) in this event&apos;s
+                    menu on the{' '}
+                    <Link href="/admin/events" className="underline">
+                      Events list
+                    </Link>
+                    .
+                  </p>
+                }
                 opening={opening}
                 onOpeningChange={next => {
                   setOpening(next);
                   if (openingError) setOpeningError(null);
                 }}
                 openingError={openingError}
-                openingIdPrefix="editEventOpening"
+                idPrefix="editEvent"
+                paused={formData.registrationPaused}
               >
                 {/* A manual hold, distinct from an event whose options have all
                     sold out: the slots and the days both remain, and the
                     organizer has stopped anyway. It is enforced in both
                     checkout routes, not only here, because a tab opened before
                     the hold went on will still post. */}
-                <div className="form-group">
-                  <div className="checkbox-group">
-                    <input
-                      type="checkbox"
-                      id="registrationPaused"
-                      checked={formData.registrationPaused}
-                      onChange={e => patchForm({ registrationPaused: e.target.checked })}
-                      className="w-5 h-5 accent-accent-blue"
-                    />
-                    <label htmlFor="registrationPaused" className="text-primary font-medium">
-                      Pause Registration
-                    </label>
-                  </div>
-                  <p className="text-xs opacity-70 mt-1">
-                    Stops new sign-ups immediately. The event stays listed and its
-                    page stays readable — runners are told it is paused rather than
-                    finding a button that fails.
-                  </p>
-                </div>
+                {/* The dashboard's switch (AdminSwitch), like Logistics'
+                    delivery toggle, rather than a bare browser checkbox. */}
+                <AdminSwitch
+                  on={formData.registrationPaused}
+                  onToggle={() => patchForm({ registrationPaused: !formData.registrationPaused })}
+                  label="Pause Registration"
+                  hint="Stops new sign-ups immediately. The event stays listed and its page stays readable — runners are told it is paused rather than finding a button that fails."
+                />
 
                 {formData.registrationPaused && (
                   <div className="form-group">
@@ -329,7 +343,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
                     </p>
                   </div>
                 )}
-              </RegistrationFeesPanel>
+              </PublishingPanel>
             </>
           )}
 

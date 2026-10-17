@@ -54,16 +54,16 @@ export default function RegistrationOpeningPicker({
     {
       scheduled: false,
       icon: DoorOpen,
-      title: 'Open Immediately',
+      title: 'When It Goes Public',
       description:
-        'Runners can register the moment this event is published. This is how most races are run.',
+        'The Register button works as soon as runners can see the event. This is how most races are run.',
     },
     {
       scheduled: true,
       icon: CalendarClock,
-      title: 'Schedule The Opening',
+      title: 'On A Later Date',
       description:
-        'The race is listed publicly straight away so runners can plan for it, and the Register button turns on by itself at the date you set.',
+        'Runners can see the event and plan for it, but the Register button only turns on at the date you set. Good for announcing a launch.',
     },
   ];
 

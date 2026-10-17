@@ -4,7 +4,8 @@ import React from 'react';
 import Link from 'next/link';
 import { Users } from 'lucide-react';
 import type { Row } from '@tanstack/react-table';
-import { formatEventInstant } from '@/lib/event-schedule';
+import { eventInstantParts, formatEventInstant, formatEventInstantShort, formatEventTime } from '@/lib/event-schedule';
+import { publishState } from '@/lib/event-visibility';
 import { REGISTRATION_STATES } from './registration-state-badge';
 import type { CategoryChip, EventRow } from './event-row';
 
@@ -104,6 +105,28 @@ export function RegistrationStatus({ event }: { event: EventRow }) {
           Opens {formatEventInstant(event.registrationOpensAt)}
         </span>
       )}
+    </div>
+  );
+}
+
+/**
+ * Draft or scheduled, beside the title (EVENT_PUBLISH_PLAN.md). Nothing for a
+ * published event: that is the normal case, and a badge on every live row
+ * would teach staff to stop reading it.
+ */
+export function PublishStatus({ event }: { event: EventRow }) {
+  const state = publishState(event);
+  if (state === 'PUBLISHED') return null;
+  return state === 'DRAFT' ? (
+    <span className="status-badge neutral whitespace-nowrap">Draft</span>
+  ) : (
+    // The time sits under the badge like an opening date does: a schedule
+    // for today is only readable by its hour.
+    <div>
+      <span className="status-badge pending whitespace-nowrap">Scheduled</span>
+      <span className="status-note neutral whitespace-nowrap">
+        Goes live {formatEventInstantShort(event.publishAt!)}, {formatEventTime(eventInstantParts(event.publishAt!).time)}
+      </span>
     </div>
   );
 }
