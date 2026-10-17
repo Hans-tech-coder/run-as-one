@@ -73,7 +73,8 @@ export function openingBeforePublish(publish: PublishDraft, opening: OpeningDraf
   const visible = visibleFrom(publish);
   if (!(visible instanceof Date) || !opening.scheduled) return null;
   const opens = eventInstant(opening.day, opening.time);
-  if (!opens || opens.getTime() >= visible.getTime()) return null;
+  // An opening already gone just opens on publish, as on the server.
+  if (!opens || opens.getTime() <= Date.now() || opens.getTime() >= visible.getTime()) return null;
   return `Registration can't open before the event goes public (${formatEventInstant(visible)}). Pick a later date, or choose "When It Goes Public".`;
 }
 

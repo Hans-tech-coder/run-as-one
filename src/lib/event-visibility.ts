@@ -72,13 +72,19 @@ export const PUBLISH_INSTANT_ERROR =
  * Why this publish time cannot stand beside this registration opening, or
  * null when it can (D8). Sign-ups opening on an event nobody can see yet would
  * make the opening date a lie, so the event must go public first.
+ *
+ * An opening already in the past has nothing left to fire: sign-ups simply
+ * start the moment the event goes public, so it never conflicts. Without that,
+ * a draft whose opening date had passed could never be published.
  */
 export function publishConflict(
   publishAt: Date | null,
   registrationOpensAt: Date | string | null | undefined,
+  now: Date = new Date(),
 ): string | null {
   const opens = instant(registrationOpensAt);
   if (!publishAt || !opens) return null;
+  if (opens.getTime() <= now.getTime()) return null;
   if (publishAt.getTime() > opens.getTime()) {
     return `Publish the event on or before sign-ups open (${formatEventInstant(opens)}), or move the registration opening later.`;
   }

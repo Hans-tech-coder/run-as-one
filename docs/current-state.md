@@ -88,18 +88,24 @@ every existing event published at its `createdAt`; **D4** a draft still needs
 every field a published event needs — Publish only changes visibility; **D5**
 back to draft only while the event has no registration (409 otherwise);
 **D6** a results-only race is published on creation; **D7** client viewers do
-not see drafts; **D8** a publish time after `registrationOpensAt` is refused
-(on create and the publish route only); **D9** staff preview on the event page
+not see drafts; **D8** a publish time after a still-future `registrationOpensAt`
+is refused on create, the publish route, the edit PUT and the opening PATCH
+(an opening already past never conflicts: sign-ups start on publish), and
+checkout re-reads `publishAt` under its event lock so an order and a
+back-to-draft cannot both land; **D9** staff preview on the event page
 only. Both event forms now end with one **Publishing & Sign-ups** panel asking
 the two "when" questions in order, with a plain sentence of what runners will
 see (§6); Registration Opening left *Registration & Fees* — kept, not removed,
 because it is the only way to list a race as a teaser before sign-ups open.
 **Not done:** the edit form only shows the publish state (changing it is the
-row menu's job), and the edit PUT / opening PATCH do not re-check D8 on the
-server (both forms check it in the browser). **Release:**
-migration `20261017090000_event_publish_at` must run before the code ships;
-its backfill only touches null rows, so re-running it after the deploy also
-publishes anything the old code created in between. Checked on `local-dev`
+row menu's job). **Release:**
+migration `20261017090000_event_publish_at` must run before the code ships.
+`migrate deploy` runs its backfill once, so an event the old code creates
+between the migration and the deploy going Ready stays a hidden draft. Create
+no events in that window, or right after Ready run
+`UPDATE "Event" SET "publishAt" = "createdAt" WHERE "publishAt" IS NULL AND "createdAt" < '<Ready time, UTC>'`
+on production (`npx prisma db execute --stdin`); the bound keeps real drafts
+made by the new code as drafts. Checked on `local-dev`
 2026-10-17 in the browser: a draft is the same 404 as a missing slug on its
 page and `/register`, absent from `/events`, refused by checkout (*Event not
 found*) and by promo lookup; staff see the preview line; a publish scheduled

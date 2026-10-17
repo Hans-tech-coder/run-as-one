@@ -62,13 +62,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     }
 
     const next = publishState({ publishAt });
+    const stayPublic = `${event.title} already has registrations, so it has to stay public. Pause or close sign-ups instead.`;
     if (next !== 'PUBLISHED' && event._count.registrations > 0) {
-      return NextResponse.json(
-        {
-          error: `${event.title} already has registrations, so it has to stay public. Pause or close sign-ups instead.`,
-        },
-        { status: 409 },
-      );
+      return NextResponse.json({ error: stayPublic }, { status: 409 });
     }
 
     const conflict = publishConflict(publishAt, event.registrationOpensAt);
@@ -77,6 +73,15 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     }
 
     const updated = await db.$transaction(async (tx) => {
+      // Recounted under a lock before hiding the event: a checkout holds the
+      // row `FOR SHARE` while it writes (lockEventForRegistration), so an
+      // order already in flight lands first and is counted here, and one that
+      // starts after reads the event as unpublished and is refused.
+      if (next !== 'PUBLISHED') {
+        await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${id} FOR UPDATE`;
+        if ((await tx.registration.count({ where: { eventId: id } })) > 0) return null;
+      }
+
       const row = await tx.event.update({
         where: { id },
         data: { publishAt },
@@ -107,6 +112,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
       return row;
     });
+
+    if (!updated) {
+      return NextResponse.json({ error: stayPublic }, { status: 409 });
+    }
 
     return NextResponse.json({ ...updated, publishState: next });
   } catch (error) {

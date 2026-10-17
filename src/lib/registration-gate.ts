@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client';
 import db from '@/lib/db';
 import { formatEventInstant } from '@/lib/event-schedule';
+import { isPublished } from '@/lib/event-visibility';
 
 /**
  * Whether an event is taking registrations right now, and why not when it
@@ -424,12 +425,17 @@ export class SlotsUnavailableError extends Error {
  * an admin switching the event to results only (that save locks it
  * `FOR UPDATE` and recounts), and the flag is read again under the lock — so
  * an order and the switch can never both land, whichever starts first.
+ *
+ * Publishing is read under the same lock, for the same reason: the publish
+ * route locks the row `FOR UPDATE` and recounts before taking an event back
+ * to draft, so an order and an unpublish can never both land either.
  */
 export async function lockEventForRegistration(tx: any, eventId: string): Promise<void> {
   const [row] = await tx.$queryRaw(
-    Prisma.sql`SELECT "resultsOnly" FROM "Event" WHERE "id" = ${eventId} FOR SHARE`,
+    Prisma.sql`SELECT "resultsOnly", "publishAt" FROM "Event" WHERE "id" = ${eventId} FOR SHARE`,
   );
   if (row?.resultsOnly) throw new SlotsUnavailableError(RESULTS_ONLY_MESSAGE);
+  if (row && !isPublished(row)) throw new SlotsUnavailableError(REGISTRATION_CLOSED_MESSAGE);
 }
 
 /**

@@ -4,6 +4,7 @@ import { can, getActor } from '@/lib/actor';
 import { changedFields, recordAudit, type AuditEntry } from '@/lib/audit';
 import { formatEventInstant } from '@/lib/event-schedule';
 import { OPENING_INSTANT_ERROR, asOpeningInstant } from '@/lib/registration-gate';
+import { publishConflict } from '@/lib/event-visibility';
 
 // Split out of route.ts, which re-exports it as PATCH.
 
@@ -83,6 +84,7 @@ export async function updateRegistrationControls(request: Request, { params }: {
         registrationPauseNote: true,
         registrationOpensAt: true,
         registrationClosedAt: true,
+        publishAt: true,
       },
     });
 
@@ -90,6 +92,13 @@ export async function updateRegistrationControls(request: Request, { params }: {
     // as on GET and PUT above, so its id cannot be confirmed by probing.
     if (!event || !can(actor, 'event:edit', { organizerId: event.organizerId, eventId: id })) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
+    }
+
+    // Sign-ups may not be set to open while the event is still hidden (D8,
+    // lib/event-visibility.ts), the same rule create and publish hold.
+    const conflict = scheduling ? publishConflict(event.publishAt, registrationOpens) : null;
+    if (conflict) {
+      return NextResponse.json({ error: conflict }, { status: 400 });
     }
 
     const updated = await db.$transaction(async (tx) => {

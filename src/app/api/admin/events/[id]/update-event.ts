@@ -13,6 +13,7 @@ import { uniqueEventSlug } from '@/lib/event-slug';
 import { isCalendarDay } from '@/lib/event-schedule';
 import { FORMAT_LOCKED_ERROR, asEventFormat, readFormatFields } from '@/lib/event-format';
 import { OPENING_INSTANT_ERROR, asOpeningInstant, asSlotLimit } from '@/lib/registration-gate';
+import { publishConflict } from '@/lib/event-visibility';
 import { CATEGORY_ORDER } from '@/lib/category-order';
 import { readClientLink } from '@/lib/client-store';
 import { cleanHighlights } from '@/lib/event-highlights';
@@ -149,6 +150,19 @@ export async function updateEvent(request: Request, { params }: { params: Promis
     // a race made in the wrong place is recreated in the right one. Whatever
     // the body says is ignored.
     const resultsOnly = current.resultsOnly;
+
+    // Sign-ups may not be moved to open while the event is still hidden (D8,
+    // lib/event-visibility.ts). Checked only when the opening changes, so a
+    // save that leaves it alone is never blocked by it.
+    const openingChanged =
+      (registrationOpens?.getTime() ?? null) !== (current.registrationOpensAt?.getTime() ?? null);
+    const conflict = openingChanged ? publishConflict(current.publishAt, registrationOpens) : null;
+    if (conflict) {
+      return NextResponse.json(
+        { error: conflict, errors: { registrationOpensAt: conflict } },
+        { status: 400 },
+      );
+    }
 
     // Format is locked once anyone has registered (VIRTUAL_RUN_PLAN.md D7):
     // a runner who paid for a race at a venue did not sign up to run alone,
