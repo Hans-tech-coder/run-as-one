@@ -429,13 +429,23 @@ export class SlotsUnavailableError extends Error {
  * Publishing is read under the same lock, for the same reason: the publish
  * route locks the row `FOR UPDATE` and recounts before taking an event back
  * to draft, so an order and an unpublish can never both land either.
+ *
+ * So are the organizer's close, pause and opening date. The routes check them
+ * before the transaction, against a read that a Pause pressed in the same
+ * second can make stale; the registration-controls PATCH is a plain UPDATE,
+ * which waits on this lock, so the read here is the one that counts. Same
+ * order and wording as the routes' own checks.
  */
 export async function lockEventForRegistration(tx: any, eventId: string): Promise<void> {
   const [row] = await tx.$queryRaw(
-    Prisma.sql`SELECT "resultsOnly", "publishAt" FROM "Event" WHERE "id" = ${eventId} FOR SHARE`,
+    Prisma.sql`SELECT "resultsOnly", "publishAt", "registrationPaused", "registrationPauseNote", "registrationClosedAt", "registrationOpensAt" FROM "Event" WHERE "id" = ${eventId} FOR SHARE`,
   );
-  if (row?.resultsOnly) throw new SlotsUnavailableError(RESULTS_ONLY_MESSAGE);
-  if (row && !isPublished(row)) throw new SlotsUnavailableError(REGISTRATION_CLOSED_MESSAGE);
+  if (!row) return;
+  if (row.resultsOnly) throw new SlotsUnavailableError(RESULTS_ONLY_MESSAGE);
+  if (!isPublished(row)) throw new SlotsUnavailableError(REGISTRATION_CLOSED_MESSAGE);
+  if (isClosed(row)) throw new SlotsUnavailableError(REGISTRATION_CLOSED_MESSAGE);
+  if (row.registrationPaused) throw new SlotsUnavailableError(pauseNote(row));
+  if (opensLater(row)) throw new SlotsUnavailableError(openingNote(row));
 }
 
 /**
