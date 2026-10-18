@@ -166,8 +166,10 @@ export async function updateEvent(request: Request, { params }: { params: Promis
 
     // Format is locked once anyone has registered (VIRTUAL_RUN_PLAN.md D7):
     // a runner who paid for a race at a venue did not sign up to run alone,
-    // nor the other way round. Counted only when the save would change it.
-    if (format !== asEventFormat(current.format)) {
+    // nor the other way round. Counted only when the save would change it,
+    // and counted again under a lock inside the transaction below.
+    const formatChanges = format !== asEventFormat(current.format);
+    if (formatChanges) {
       const registered = await db.registration.count({ where: { eventId: id } });
       if (registered > 0) {
         return NextResponse.json(
@@ -216,6 +218,16 @@ export async function updateEvent(request: Request, { params }: { params: Promis
     const incomingIds = categories.filter((c: any) => c.id).map((c: any) => c.id);
 
     const updatedEvent = await db.$transaction(async (prisma) => {
+      // The count above can miss an order that commits before this save does.
+      // A checkout holds the row `FOR SHARE` while it writes
+      // (lockEventForRegistration), so locking it `FOR UPDATE` and recounting
+      // means an order in flight lands first and is counted here, and one that
+      // starts after waits for the new format.
+      if (formatChanges) {
+        await prisma.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${id} FOR UPDATE`;
+        if ((await prisma.registration.count({ where: { eventId: id } })) > 0) return null;
+      }
+
       // Handle category deletion carefully to avoid FK constraints
       try {
         await prisma.category.deleteMany({
@@ -380,6 +392,13 @@ export async function updateEvent(request: Request, { params }: { params: Promis
 
       return saved;
     });
+
+    if (!updatedEvent) {
+      return NextResponse.json(
+        { error: FORMAT_LOCKED_ERROR, errors: { format: FORMAT_LOCKED_ERROR } },
+        { status: 400 },
+      );
+    }
 
     return NextResponse.json(updatedEvent, { status: 200 });
   } catch (error: any) {
