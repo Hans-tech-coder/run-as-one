@@ -41,8 +41,8 @@ a bank-transfer payer), and remittances count every change (*Category changes* l
 release step is the **same `npx prisma migrate deploy`** above, which applies
 `20261018090000_category_change` along with the others; Sessions 2–4 need no
 migration of their own. After the promotion, on production: open an event's
-**Registration & Fees** panel once to see the three settings at their
-defaults, and check that `/admin/remittances` reads exactly as before (no race
+**Registration & Fees** panel once to see the change fee and the deadline at
+their defaults (the refund policy is hidden while downgrades are on hold), and check that `/admin/remittances` reads exactly as before (no race
 has a change yet, so no figure may move). The daily sweep now also expires
 unpaid upgrades; a real PayMongo webhook for an upgrade has only been driven
 by a signed script, never delivered — watch the first online upgrade go

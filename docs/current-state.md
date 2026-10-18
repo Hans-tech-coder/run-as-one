@@ -41,13 +41,16 @@ doing by hand: Vercel Firewall's bot protection, and watching the CU-hours
 after release.
 
 **Category changes (2026-10-18, on `dev`, not released; `CATEGORY_CHANGE_PLAN.md`
-Sessions 1–4, `e7e091f`, `f0907f5` and Session 4's settlement).** Staff with
+Sessions 1–4, `e7e091f`, `f0907f5`, `9d141f5` — the plan is deleted (it lived
+in the git-ignored `docs/plans/`, so it is not in history); every decision is
+below and what is open is in `ON_HOLD.md`).** Staff with
 `registration:edit` move a runner on a PAID order to another category from the
 registrants row menu (*Change Category*). The move is its own `CategoryChange`
 row with every figure snapshotted (§4); an upgrade waits for its payment — a
-PayMongo link (`/pay/change/[token]`) or a GCash/bank payment staff record —
-and holds a seat in the new category while it waits; a downgrade follows the
-race's refund policy, refunds paid by hand and recorded with a reference;
+PayMongo link (`/pay/change/[token]`) or a GCash/bank payment staff record,
+whichever way the entry was paid —
+and holds a seat in the new category while it waits; downgrades are on hold
+(below), their refund flow built but not offered;
 every step has an audit row and the runner an email. Remittances, the client
 payout summary, both runner lists and both exports show the change (§5
 `settlement.ts`, §6). Migration `20261018090000_category_change` is the only
@@ -61,8 +64,8 @@ platform and change fees ₱150 + processing ₱12.19 + owed ₱2,200, the same 
 `/admin/remittances`, the race's breakdown and the race page's payout summary
 (seen as the owner, who reads the client's page; no client viewer was signed
 in). Not seen: a real PayMongo webhook delivery for an upgrade (none reaches
-localhost) and the real cron route expiring one. Decisions, recorded here so
-the plan can be deleted:
+localhost) and the real cron route expiring one. Decisions (the plan's D1–D13
+and the owner's changes after it):
 **D1** a change is its own row; the original order and receipt are never
 edited, and settlement adds the change as its own line. **D2** staff-initiated
 only; runner self-service is Phase 2 (`ON_HOLD.md`). **D3** the basis (what the
