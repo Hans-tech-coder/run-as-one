@@ -1,4 +1,5 @@
 import prisma from '@/lib/db';
+import publicDb from '@/lib/public-db';
 import { PACER_DISCOUNT_TYPE } from '@/lib/pacer';
 import {
   pacerForResult,
@@ -167,7 +168,7 @@ export async function pacerOrdersByCode(
  * organizer handed a bib by hand is still a pacer on the course.
  */
 export async function pacerResultMatcherForEvent(eventId: string) {
-  const pacerFor = await pacerLookupForEvent(eventId);
+  const pacerFor = await pacerLookupForEvent(eventId, publicDb);
   return (result: Parameters<typeof pacerFor>[0]) => pacerFor(result) !== null;
 }
 
@@ -181,14 +182,16 @@ type SourcedPacer = PacerIdentity & { source: PacerSource; tagId: string | null 
  * passes on a pacer's pace group (and only that) for their certificate.
  * Tags first and codes after, because `pacerForResult` lets the later of two
  * pacers on one bib win, and the code is the authority (header above).
+ * `client` is lib/public-db.ts for the public pages and the plain client for
+ * the Results workspace.
  */
-async function pacerLookupForEvent(eventId: string) {
+async function pacerLookupForEvent(eventId: string, client: typeof prisma = prisma) {
   const [codes, tags] = await Promise.all([
-    prisma.promoCode.findMany({
+    client.promoCode.findMany({
       where: { eventId, discountType: PACER_DISCOUNT_TYPE },
       select: { assigneeName: true, bibNumber: true, paceGroup: true, categories: { select: { categoryId: true } } },
     }),
-    prisma.resultPacer.findMany({
+    client.resultPacer.findMany({
       where: { eventId },
       select: { id: true, bibNumber: true, paceGroup: true },
     }),
@@ -224,7 +227,7 @@ async function pacerLookupForEvent(eventId: string) {
  * certificate) and the adjusted numbers reach the page, never the pacer list.
  */
 export async function withPacerRanks<T extends RankedResult>(eventId: string, results: T[]) {
-  const pacerFor = await pacerLookupForEvent(eventId);
+  const pacerFor = await pacerLookupForEvent(eventId, publicDb);
   return rankedWith(pacerFor, results, () => ({}));
 }
 

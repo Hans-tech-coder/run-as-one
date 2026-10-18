@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import EventGrid from '@/components/EventGrid';
-import db from '@/lib/db';
+import db, { publishCutoff } from '@/lib/public-db';
 import { soonestFirst, upcomingEvents } from '@/lib/event-schedule';
 import { publishedEvents } from '@/lib/event-visibility';
 import { forListing } from '@/lib/registration-gate';
@@ -14,7 +14,8 @@ import { Calendar, CalendarCheck2, ChevronRight, Trophy } from 'lucide-react';
  * the full note (src/app/(home)/page.tsx). In short: a prerendered listing freezes
  * both the data and the clock, so it keeps badging a race Paused after the
  * hold was lifted, keeps a finished race in the grid, and keeps counting down
- * to an opening that has already come.
+ * to an opening that has already come. The rows are cached reads
+ * (lib/public-db.ts); only the judging is live.
  */
 export const dynamic = 'force-dynamic';
 
@@ -33,7 +34,7 @@ export default async function EventsPage() {
   const [site, linkOrigin] = await Promise.all([getSiteClient(), eventLinkOrigin()]);
   // Published events only, counts included: a draft is not something a runner
   // has "missed" (lib/event-visibility.ts).
-  const scope = { ...publishedEvents(), ...(site ? { clientId: site.id } : {}) };
+  const scope = { ...publishedEvents(await publishCutoff()), ...(site ? { clientId: site.id } : {}) };
   const [upcoming, totalEvents, eventsWithResults] = await Promise.all([
     db.event.findMany({
       // A results-only race is never enterable here, so it is not upcoming in

@@ -1,5 +1,6 @@
 import { Prisma } from '@prisma/client';
 import db from '@/lib/db';
+import publicDb from '@/lib/public-db';
 import { formatEventInstant } from '@/lib/event-schedule';
 import { isPublished } from '@/lib/event-visibility';
 
@@ -507,8 +508,11 @@ export async function fullEventIds(
   );
   if (capped.length === 0) return new Set();
 
+  // Listings are public pages, so the count is a cached read (lib/public-db.ts);
+  // every registration is a write, which clears it.
   const taken = await takenSlotsByCategory(
     capped.flatMap(event => event.categories.map(category => category.id)),
+    publicDb,
   );
 
   return new Set(

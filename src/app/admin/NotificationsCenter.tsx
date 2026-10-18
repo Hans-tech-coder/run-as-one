@@ -24,6 +24,7 @@ import LinkPending from '@/components/ui/LinkPending';
 import { formatTrailDayHeading, formatTrailInstant, trailDay } from '@/lib/activity';
 import {
   EMPTY_READ_STATE,
+  NOTIFICATION_IDLE_MS,
   NOTIFICATION_POLL_MS,
   NOTIFICATION_TONES,
   NOTIFICATION_WINDOW_DAYS,
@@ -43,8 +44,8 @@ import {
  * The feed is `GET /api/admin/notifications` (lib/notification-store.ts),
  * which already holds only what this person's permissions open, so nothing
  * here filters by role. It is asked on mount, every `NOTIFICATION_POLL_MS`
- * while the tab is in view, when the tab comes back into view, and each time
- * the modal opens — so the badge moves on its own and the bell swings when
+ * while the tab is in view and in use (`NOTIFICATION_IDLE_MS`), when the tab
+ * comes back into view, and each time the modal opens — so the badge moves on its own and the bell swings when
  * something new arrives.
  *
  * **Read state is this browser's** (lib/notifications.ts): a watermark plus
@@ -160,18 +161,36 @@ export default function NotificationsCenter() {
     }
   }, []);
 
-  // On mount, on a timer while the tab is in view, and on coming back to it.
+  // On mount, on a timer while the tab is in view and someone is using it, on
+  // coming back to the tab, and on the first touch after an idle spell. A
+  // dashboard left open on a desk stops asking, so the database can sleep.
   useEffect(() => {
+    let lastActive = Date.now();
     const first = window.setTimeout(() => void refresh(), 0);
+    const visible = () => document.visibilityState === 'visible';
     const tick = () => {
-      if (document.visibilityState === 'visible') void refresh();
+      if (visible() && Date.now() - lastActive < NOTIFICATION_IDLE_MS) void refresh();
+    };
+    const onVisibility = () => {
+      if (visible()) {
+        lastActive = Date.now();
+        void refresh();
+      }
+    };
+    const onActivity = () => {
+      const wasIdle = Date.now() - lastActive >= NOTIFICATION_IDLE_MS;
+      lastActive = Date.now();
+      if (wasIdle && visible()) void refresh();
     };
     const timer = window.setInterval(tick, NOTIFICATION_POLL_MS);
-    document.addEventListener('visibilitychange', tick);
+    const activity = ['pointerdown', 'keydown', 'scroll'] as const;
+    document.addEventListener('visibilitychange', onVisibility);
+    for (const type of activity) window.addEventListener(type, onActivity, { passive: true, capture: true });
     return () => {
       window.clearTimeout(first);
       window.clearInterval(timer);
-      document.removeEventListener('visibilitychange', tick);
+      document.removeEventListener('visibilitychange', onVisibility);
+      for (const type of activity) window.removeEventListener(type, onActivity, { capture: true });
     };
   }, [refresh]);
 

@@ -3,7 +3,7 @@ import { cache } from 'react';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
-import prisma from './db';
+import publicDb, { publishCutoff } from './public-db';
 import { eventByParam } from './event-slug';
 import { publishedEvents } from './event-visibility';
 import {
@@ -87,7 +87,7 @@ export const getSiteClient = cache(async (): Promise<SiteClient | null> => {
   const label = (await headers()).get(SITE_LABEL_HEADER);
   if (!label) return null;
 
-  const client = await prisma.client.findFirst({
+  const client = await publicDb.client.findFirst({
     where: { subdomain: label, status: { not: 'ARCHIVED' } },
     select: SITE_CLIENT_SELECT,
   });
@@ -147,9 +147,9 @@ export async function eventPageMetadata(
   param: string,
   path: (slug: string) => string,
 ): Promise<Metadata> {
-  const event = await prisma.event.findFirst({
+  const event = await publicDb.event.findFirst({
     // An unpublished event has no public page to point search engines at.
-    where: { AND: [eventByParam(param), publishedEvents()] },
+    where: { AND: [eventByParam(param), publishedEvents(await publishCutoff())] },
     select: { slug: true, client: EVENT_SITE_CLIENT },
   });
   if (!event) return {};

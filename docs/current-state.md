@@ -27,6 +27,19 @@ offers **QR Ph only** (`OFFERED_PAYMONGO_METHODS` in `lib/free-checkout.ts`)
 until it is. Where an entry below says something is "not released" or
 "production is N migrations behind", it predates this release.
 
+**Neon compute cut (2026-10-18, on `dev`, not released).** By Oct 18 the
+free plan's 100 CU-hours for October were 93% used: production ~77.5, the
+`local-dev` branch ~15. The compute averaged 0.26 CU, so queries were not the
+cost — it woke ~49 times a day and stayed up ~85% of hours, through the night
+too. The public pages read the database on every request, so every crawler
+hit kept it awake, and the dashboard bell asked every minute. Fixed with
+cached public reads (`lib/public-db.ts`, cleared by any write in `lib/db.ts`),
+`src/app/robots.ts`, and the bell asking every 10 minutes and not at all after
+15 idle minutes. `pg_stat_statements` is not installed and Neon logs are not
+on, so which callers woke it overnight was inferred, not seen. Still worth
+doing by hand: Vercel Firewall's bot protection, and watching the CU-hours
+after release.
+
 **Virtual runs, Phase A (2026-10-17, on `dev`, not released).** An admin
 picks **Virtual Run** at the top of the normal Create Event form and fills a
 run window instead of a race day and venue; everything else — categories,

@@ -1,4 +1,4 @@
-import prisma from '@/lib/db';
+import prisma, { publishCutoff } from '@/lib/public-db';
 import { publishedEvents } from '@/lib/event-visibility';
 import Link from 'next/link';
 import { User, Hash, ChevronRight } from 'lucide-react';
@@ -116,7 +116,7 @@ export default async function WinnersOverviewPage({
 
   // Slug or cuid — the old id links stay alive; see eventByParam.
   const event = await prisma.event.findFirst({
-    where: { AND: [eventByParam(slug), publishedEvents()] },
+    where: { AND: [eventByParam(slug), publishedEvents(await publishCutoff())] },
     include: { client: EVENT_SITE_CLIENT },
   });
 

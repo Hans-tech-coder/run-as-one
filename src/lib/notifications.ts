@@ -86,8 +86,20 @@ export const NOTIFICATION_KIND_LIMIT = 20;
 /** The most the modal lists at once. */
 export const NOTIFICATION_LIMIT = 60;
 
-/** How often an open dashboard asks again, while its tab is in view. */
-export const NOTIFICATION_POLL_MS = 60_000;
+/**
+ * How often an open dashboard asks again, while its tab is in view and its
+ * person is at it.
+ *
+ * Each ask is a database read, and Neon keeps its compute awake (and billed)
+ * for five minutes after one, so an ask every minute held the database up for
+ * as long as any dashboard tab sat open in front of anyone (lib/public-db.ts).
+ * Longer than that five minutes, so an idle dashboard lets it sleep between
+ * asks. Opening the modal or coming back to the tab still asks at once.
+ */
+export const NOTIFICATION_POLL_MS = 10 * 60_000;
+
+/** No click, key or scroll for this long, and the timer stops asking at all. */
+export const NOTIFICATION_IDLE_MS = 15 * 60_000;
 
 // ── Read state (the browser's) ─────────────────────────────────────────────
 

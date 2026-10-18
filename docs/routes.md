@@ -18,6 +18,14 @@
 | `/pay/[token]` | **The resume-payment page** (`UNPAID_FOLLOWUP_PLAN.md` Batch 3): where a runner lands from the payment link staff copied, to finish paying an abandoned online order without registering again. `noindex`, throttled (`PAY_LINK_RULE`). Shows the race, race day, the runner count, the method, the reference, *Pay by* (`expiresBy`, the same time the tab shows) and the amount, and **no name, email, phone or birthdate** — the link gets forwarded. **Pay now** (`PayNowButton`) posts to `api/pay/[token]` and follows its URL; an answer with a `state` refreshes into that state's panel. Every other case is its own designed `StatusPanel`: already paid, cancelled, expired (both offer *Register Again*), online payment unavailable, link not valid or expired, too many tries |
 | `/coming-soon`, `/privacy`, `/terms`, `not-found` | Real designed pages — see the no-dead-links rule in §8. Nothing links to `/coming-soon` any more (the footer hides a channel with no link); it stays for addresses already shared, and `?channel=Facebook` **redirects to the saved link** once there is one |
 
+**Every page above reads through `publicDb`** (`lib/public-db.ts`, §5): the
+rows are cached and cleared by any write, the pages stay `force-dynamic` and
+judge the clock per request. The register wizard and `/pay/[token]` are the
+exceptions — they read live, being the start of an order. `/robots.txt`
+(`src/app/robots.ts`) keeps crawlers off `/admin`, `/api/`, `/pay/`, the
+register wizard and `/coming-soon`, since every page a crawler opens is a
+database read.
+
 **A race lives in one section at a time, and the URL says which.** While a race
 can still be entered it is under `/events`. The moment its organizer uploads
 times it moves wholesale to `/results` — it drops off the `/events` listing, and
@@ -150,8 +158,10 @@ order — which marks it read and keeps the modal up with the row's
 `LinkPending` marker until the route changes, which folds it (as the phone
 menu does); a notification for the page already on screen folds at once. The wait draws skeleton rows; a failed load offers
 *Try Again*. What it lists is §5 `notification-store.ts`, fed by `GET
-/api/admin/notifications`, asked on mount, every minute while the tab is in
-view, on return to the tab and on each open. A bare path (sign-in, register,
+/api/admin/notifications`, asked on mount, every 10 minutes while the tab is
+in view and in use (no click, key or scroll for 15 minutes stops the timer, so
+an idle dashboard lets Neon sleep), on return to the tab, on the first touch
+after an idle spell and on each open. A bare path (sign-in, register,
 invite) has no bell.
 
 **A client viewer's `/admin` is its own page** (`ADMIN_MERGE_PLAN.md` Batch 4,

@@ -10,7 +10,7 @@ import {
   Users,
 } from 'lucide-react';
 import Link from 'next/link';
-import db from '@/lib/db';
+import db from '@/lib/public-db';
 import { formatPesos } from '@/lib/money';
 import { sellsPackages } from '@/lib/event-type';
 import { inclusionIcon } from '@/lib/inclusion-icon';
@@ -119,7 +119,7 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ s
   // runner who came for the 10K should see that the 10K is what is gone.
   const categories = withSlotCounts(
     event.categories,
-    await takenSlotsByCategory(event.categories.map((category) => category.id)),
+    await takenSlotsByCategory(event.categories.map((category) => category.id), db),
   );
   const state = registrationState(event, categories, finished);
 
@@ -130,7 +130,7 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ s
   // to hand out.
   const automaticPromos = finished
     ? []
-    : (await automaticPromosFor(event)).map(promoTerms);
+    : (await automaticPromosFor(event, db)).map(promoTerms);
 
   // Which options a promotion has repriced, so the list below can strike the
   // old price through. Only automatic, currently-running CATEGORY_PRICE

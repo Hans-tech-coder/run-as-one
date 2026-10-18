@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-44 pages · 70 API routes · 110 modules in `src/lib` · 515 files · 93,660 lines
+44 pages · 70 API routes · 111 modules in `src/lib` · 517 files · 93,973 lines
 
 ---
 
@@ -232,6 +232,7 @@ the file itself.
 | [`promo-redemptions.ts`](../src/lib/promo-redemptions.ts) | What a promotion actually cost, and which orders spent it. |
 | [`promo-store.ts`](../src/lib/promo-store.ts) | Reading promo codes out of the database, kept apart from `discount.ts` for the same reason `running-community-store.ts` is kept apart from `running… |
 | [`promo-winner.ts`](../src/lib/promo-winner.ts) | Which promotions an order gets (2026-10-15, split out of `discount.ts`). |
+| [`public-db.ts`](../src/lib/public-db.ts) | Public pages read the database through a cache, so a crawler or a link preview does not wake Neon (billed by the minutes its compute is awake, five… |
 | [`race-time.ts`](../src/lib/race-time.ts) | A finishing time is displayed to whole seconds. |
 | [`rate-limit.ts`](../src/lib/rate-limit.ts) | A throttle for the routes anyone on the internet can call. |
 | [`registration-codes.ts`](../src/lib/registration-codes.ts) | The three coded columns on a Registration — how they are stored, and how a person reads them. |
@@ -291,8 +292,8 @@ when a task touches one, split it before editing rather than after.
 | 614 | [`src/app/admin/feedback/FeedbackClient.tsx`](../src/app/admin/feedback/FeedbackClient.tsx) |
 | 601 | [`src/app/api/checkout/manual/route.ts`](../src/app/api/checkout/manual/route.ts) |
 | 578 | [`src/lib/email-document.ts`](../src/lib/email-document.ts) |
-| 550 | [`src/lib/registration-gate.ts`](../src/lib/registration-gate.ts) |
-| 548 | [`src/app/admin/NotificationsCenter.tsx`](../src/app/admin/NotificationsCenter.tsx) |
+| 570 | [`src/lib/registration-gate.ts`](../src/lib/registration-gate.ts) |
+| 567 | [`src/app/admin/NotificationsCenter.tsx`](../src/app/admin/NotificationsCenter.tsx) |
 | 543 | [`src/app/admin/events/[id]/registrants/RegistrantsTable.tsx`](../src/app/admin/events/[id]/registrants/RegistrantsTable.tsx) |
 | 539 | [`src/app/admin/events/[id]/registrants/RegistrantDetailModal.tsx`](../src/app/admin/events/[id]/registrants/RegistrantDetailModal.tsx) |
 | 526 | [`src/app/admin/DashboardShell.tsx`](../src/app/admin/DashboardShell.tsx) |
@@ -312,3 +313,4 @@ when a task touches one, split it before editing rather than after.
 | 426 | [`src/app/admin/events/EventsTableClient.tsx`](../src/app/admin/events/EventsTableClient.tsx) |
 | 423 | [`src/app/admin/events/[id]/edit/page.tsx`](../src/app/admin/events/[id]/edit/page.tsx) |
 | 422 | [`src/lib/pacer.ts`](../src/lib/pacer.ts) |
+| 412 | [`src/app/api/admin/events/[id]/update-event.ts`](../src/app/api/admin/events/[id]/update-event.ts) |

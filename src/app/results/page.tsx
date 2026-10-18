@@ -2,7 +2,7 @@ import React from 'react';
 import { publishedEvents } from '@/lib/event-visibility';
 import Link from 'next/link';
 import { ChevronRight, Trophy } from 'lucide-react';
-import db from '@/lib/db';
+import db, { publishCutoff } from '@/lib/public-db';
 import ResultsClientOrchestrator from '@/components/ResultsClientOrchestrator';
 import EventGrid from '@/components/EventGrid';
 import { mostRecentFirst } from '@/lib/event-schedule';
@@ -14,7 +14,8 @@ import { EVENT_SITE_CLIENT, eventLinkOrigin, getSiteClient } from '@/lib/site-cl
  * rather than the clock: a race appears here the moment its times are
  * uploaded, and a prerender would hold the landing page at whatever was true
  * on the day of the last deploy — a race whose runners are refreshing for
- * their times would simply not be listed.
+ * their times would simply not be listed. The rows are cached reads
+ * (lib/public-db.ts), cleared by the upload like by any other write.
  */
 export const dynamic = 'force-dynamic';
 
@@ -33,7 +34,7 @@ export default async function GlobalResultsPage() {
   const [site, linkOrigin] = await Promise.all([getSiteClient(), eventLinkOrigin()]);
   const rows = await db.event.findMany({
     where: {
-      ...publishedEvents(),
+      ...publishedEvents(await publishCutoff()),
       raceResults: {
         some: {}
       },

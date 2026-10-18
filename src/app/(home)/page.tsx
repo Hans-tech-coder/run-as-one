@@ -1,7 +1,7 @@
 import React from 'react';
 import HeroSection from '@/components/HeroSection';
 import HomeEventBrowser from '@/components/HomeEventBrowser';
-import db from '@/lib/db';
+import db, { publishCutoff } from '@/lib/public-db';
 import { soonestFirst, upcomingEvents } from '@/lib/event-schedule';
 import { publishedEvents } from '@/lib/event-visibility';
 import { forListing } from '@/lib/registration-gate';
@@ -25,8 +25,8 @@ const HOME_EVENT_LIMIT = 6;
  * already scheduled minutes earlier, while `/events/[slug]` one click away —
  * a dynamic route, so never prerendered — had the date right.
  *
- * The cost is two small indexed reads per view, against a Neon compute that is
- * already awake serving the event pages.
+ * The rows themselves are cached reads (lib/public-db.ts) and only the
+ * judging is live, so a visitor nobody expected does not wake the database.
  */
 export const dynamic = 'force-dynamic';
 
@@ -42,7 +42,7 @@ export default async function Home() {
   // Results-only races are left out: their sign-ups run elsewhere, so they
   // are not open for registration in any sense this section means. Drafts and
   // scheduled events are not public yet (lib/event-visibility.ts).
-  const upcoming = { ...upcomingEvents(), ...publishedEvents(), resultsOnly: false };
+  const upcoming = { ...upcomingEvents(), ...publishedEvents(await publishCutoff()), resultsOnly: false };
   const [openForRegistration, totalEvents] = await Promise.all([
     db.event.findMany({
       where: upcoming,

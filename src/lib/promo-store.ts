@@ -113,11 +113,15 @@ export async function findPromoCode(
  * and duplicating half of it as a `where` clause is how the badge on the event
  * page and the discount on the order start disagreeing.
  */
-export async function automaticPromosFor(event: {
-  id: string;
-  organizerId: string;
-}): Promise<StoredPromo[]> {
-  const raw = await prisma.promoCode.findMany({
+export async function automaticPromosFor(
+  event: {
+    id: string;
+    organizerId: string;
+  },
+  // lib/public-db.ts on the event page; the plain client where an order is priced.
+  client: typeof prisma = prisma,
+): Promise<StoredPromo[]> {
+  const raw = await client.promoCode.findMany({
     where: {
       organizerId: event.organizerId,
       automatic: true,
