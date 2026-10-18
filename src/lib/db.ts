@@ -69,9 +69,24 @@ const prismaClientSingleton = () => {
       },
     },
   });
+  // A write inside an interactive transaction expires the tag before COMMIT, so
+  // a public read in between can cache the old rows again. Expiring once more
+  // when the transaction resolves clears that.
+  const withCommitExpiry = new Proxy(client, {
+    get(target, prop, receiver) {
+      const value = Reflect.get(target, prop, receiver);
+      if (typeof value !== 'function') return value;
+      if (prop !== '$transaction') return value.bind(target);
+      return async (...args: unknown[]) => {
+        const result = await value.apply(target, args);
+        expirePublicData();
+        return result;
+      };
+    },
+  });
   // A query extension changes what runs, not the client's shape, so callers
   // keep the plain PrismaClient type (and Prisma.TransactionClient for `tx`).
-  return client as unknown as PrismaClient;
+  return withCommitExpiry as unknown as PrismaClient;
 };
 
 declare global {

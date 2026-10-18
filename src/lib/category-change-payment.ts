@@ -246,11 +246,16 @@ export type ChangeSettleOutcome =
  * checkout route: applies an awaiting change with the figures its checkout
  * wrote, and sends the applied email on the apply alone. A retried delivery
  * finds it applied and does nothing; a closed change is flagged, never applied.
+ *
+ * `paidPageId` is the page PayMongo says was paid. When it is not the page the
+ * change points at (a page that lost the checkout's claim and would not
+ * close, found by its reference), the claimed page is closed after the apply,
+ * so the runner cannot pay a second time on it.
  */
-export async function settleChangeOnline(changeId: string): Promise<ChangeSettleOutcome> {
+export async function settleChangeOnline(changeId: string, paidPageId?: string): Promise<ChangeSettleOutcome> {
   const change = await db.categoryChange.findUnique({
     where: { id: changeId },
-    select: { status: true, event: { select: { organizerId: true } } },
+    select: { status: true, changeRef: true, checkoutSessionId: true, event: { select: { organizerId: true } } },
   });
   if (!change) return { outcome: 'late', status: 'MISSING' };
   if (change.status === 'CANCELLED' || change.status === 'EXPIRED') {
@@ -268,6 +273,9 @@ export async function settleChangeOnline(changeId: string): Promise<ChangeSettle
     if (now?.status !== 'AWAITING_PAYMENT') return { outcome: 'already_applied' };
     await flagLatePayment(changeId, error.message);
     return { outcome: 'late', status: 'AWAITING_PAYMENT' };
+  }
+  if (paidPageId && change.checkoutSessionId && change.checkoutSessionId !== paidPageId) {
+    await retireChangePage(change);
   }
   await deliverAppliedEmail(changeId).catch(error => console.error('Category change email failed:', error));
   return { outcome: 'applied' };

@@ -113,8 +113,20 @@ export async function POST(request: Request) {
       );
     }
 
+    // Judged again after PayMongo answered: a hold or deadline that lapsed while
+    // the page was opening must not get a payable page.
+    const now = new Date();
+    if (payableStateOf(change, now) !== 'payable') {
+      await retirePaymongoPage(secretKey, page.id);
+      return NextResponse.json({ state: 'expired', error: 'This change can no longer be paid here.' }, { status: 409 });
+    }
     const claim = await db.categoryChange.updateMany({
-      where: { id: change.id, status: 'AWAITING_PAYMENT', checkoutSessionId: previous },
+      where: {
+        id: change.id,
+        status: 'AWAITING_PAYMENT',
+        checkoutSessionId: previous,
+        OR: [{ holdUntil: null }, { holdUntil: { gt: now } }],
+      },
       data: { checkoutSessionId: page.id, paymentMethod: method, transactionFee, totalCharged },
     });
     if (claim.count === 0) {

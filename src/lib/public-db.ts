@@ -29,8 +29,9 @@ import prisma, { PUBLIC_DATA_TAG } from './db';
  * publish cut-off, goes through `publishCutoff()` so its key does not change
  * every millisecond.
  *
- * Rows come back from the cache as JSON, so date strings are turned back into
- * `Date`s here; a caller sees what Prisma would have handed it.
+ * Rows come back from the cache as JSON, so each `Date` is stored tagged and
+ * turned back into a `Date` here; a caller sees what Prisma would have handed
+ * it, and a text column that merely looks like a timestamp stays a string.
  */
 
 /** A safety net, not the freshness rule — writes clear the tag at once. */
@@ -47,12 +48,23 @@ const READS = new Set([
   'groupBy',
 ]);
 
-const ISO_INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/;
+/** The key a `Date` is stored under in the cache, so only real dates are revived. */
+const DATE_TAG = '$publicDbDate';
+
+function tagDates(value: unknown): unknown {
+  if (value instanceof Date) return { [DATE_TAG]: value.toISOString() };
+  if (Array.isArray(value)) return value.map(tagDates);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, tagDates(item)]));
+  }
+  return value;
+}
 
 function reviveDates(value: unknown): unknown {
-  if (typeof value === 'string') return ISO_INSTANT.test(value) ? new Date(value) : value;
   if (Array.isArray(value)) return value.map(reviveDates);
-  if (value && typeof value === 'object' && !(value instanceof Date)) {
+  if (value && typeof value === 'object') {
+    const tagged = (value as Record<string, unknown>)[DATE_TAG];
+    if (typeof tagged === 'string') return new Date(tagged);
     return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, reviveDates(item)]));
   }
   return value;
@@ -66,7 +78,7 @@ const extended = prisma.$extends({
           throw new Error(`publicDb is read-only: ${model}.${operation} must go through db.`);
         }
         const read = unstable_cache(
-          async () => query(args),
+          async () => tagDates(await query(args)),
           ['public-db', model, operation, JSON.stringify(args ?? null)],
           { tags: [PUBLIC_DATA_TAG], revalidate: SAFETY_NET_SECONDS },
         );

@@ -170,7 +170,7 @@ export async function POST(request: Request) {
         // and never applied (lib/category-change-payment.ts).
         const change = await findChangeForPayment(paymentIntentId, referenceNumber);
         if (change) {
-          const settled = await settleChangeOnline(change.id);
+          const settled = await settleChangeOnline(change.id, paymentIntentId);
           if (settled.outcome === 'applied') {
             console.log(`Successfully applied category change ${change.changeRef}`);
           }
