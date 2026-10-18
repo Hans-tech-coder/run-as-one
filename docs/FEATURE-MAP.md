@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-45 pages · 78 API routes · 123 modules in `src/lib` · 551 files · 100,089 lines
+45 pages · 78 API routes · 125 modules in `src/lib` · 553 files · 100,751 lines
 
 ---
 
@@ -206,7 +206,7 @@ the file itself.
 | [`email-address.ts`](../src/lib/email-address.ts) | What counts as an email address, in one place. |
 | [`email-category-change.ts`](../src/lib/email-category-change.ts) | The emails about a category change. |
 | [`email-delivery.ts`](../src/lib/email-delivery.ts) | Whether the runner actually got their email, and what happens when they did not. |
-| [`email-document.ts`](../src/lib/email-document.ts) | How every email is built and sent, split out of `email.ts` (`UNPAID_FOLLOWUP_PLAN.md` Batch 4): the block document model, `renderHtml` / `renderTex… |
+| [`email-document.ts`](../src/lib/email-document.ts) | How every email is built and sent, split out of `email.ts` (`UNPAID_FOLLOWUP_PLAN.md` Batch 4): the block document model (paragraph, heading, card,… |
 | [`email-invitations.ts`](../src/lib/email-invitations.ts) | The emails that invite somebody to sign in rather than tell a runner about an order: `staffInvitationEmail` (team) and `clientInvitationEmail` (a c… |
 | [`email-password.ts`](../src/lib/email-password.ts) | The emails about how an admin signs in (`LOGIN_UX_PLAN.md` Batch 2; `TWO_FACTOR_PLAN.md` D10). |
 | [`email.ts`](../src/lib/email.ts) | Transactional email via Resend, sent from `CONTACT_EMAIL`. |
@@ -225,6 +225,8 @@ the file itself.
 | [`inclusion-icon.ts`](../src/lib/inclusion-icon.ts) | Which icon stands for a line of "What's Included". |
 | [`inclusions.ts`](../src/lib/inclusions.ts) | What a category or package gets you, as a list. |
 | [`jwt.ts`](../src/lib/jwt.ts) | — |
+| [`logistics-change-settings.ts`](../src/lib/logistics-change-settings.ts) | **What the event form may save for delivery switches** (LOGISTICS_CHANGE_PLAN.md L11): the *Delivery switch deadline*, read from a posted body and … |
+| [`logistics-change.ts`](../src/lib/logistics-change.ts) | **What switching a paid order between kit pickup and delivery costs, and when it may happen** (LOGISTICS_CHANGE_PLAN.md L3, L5, L6, L9, L11, L13). |
 | [`minor-consent.ts`](../src/lib/minor-consent.ts) | Who counts as a minor, and what a birthdate may be (`GUARDIAN_CONSENT_PLAN.md`). |
 | [`money.ts`](../src/lib/money.ts) | All money in this app is stored and passed around as INTEGER CENTAVOS. |
 | [`next-path.ts`](../src/lib/next-path.ts) | Where a sign-in sends a person afterwards: back to the admin page they were trying to open, and nowhere else. |
@@ -311,8 +313,8 @@ when a task touches one, split it before editing rather than after.
 | 663 | [`src/app/admin/activity/ActivityClient.tsx`](../src/app/admin/activity/ActivityClient.tsx) |
 | 660 | [`src/app/api/checkout/route.ts`](../src/app/api/checkout/route.ts) |
 | 614 | [`src/app/admin/feedback/FeedbackClient.tsx`](../src/app/admin/feedback/FeedbackClient.tsx) |
+| 608 | [`src/lib/email-document.ts`](../src/lib/email-document.ts) |
 | 601 | [`src/app/api/checkout/manual/route.ts`](../src/app/api/checkout/manual/route.ts) |
-| 578 | [`src/lib/email-document.ts`](../src/lib/email-document.ts) |
 | 567 | [`src/app/admin/NotificationsCenter.tsx`](../src/app/admin/NotificationsCenter.tsx) |
 | 554 | [`src/lib/registration-gate.ts`](../src/lib/registration-gate.ts) |
 | 528 | [`src/app/admin/DashboardShell.tsx`](../src/app/admin/DashboardShell.tsx) |
@@ -329,9 +331,10 @@ when a task touches one, split it before editing rather than after.
 | 462 | [`src/app/admin/page.tsx`](../src/app/admin/page.tsx) |
 | 451 | [`src/app/admin/events/[id]/registrants/RunnerEditModal.tsx`](../src/app/admin/events/[id]/registrants/RunnerEditModal.tsx) |
 | 443 | [`src/app/admin/events/[id]/registrants/RegistrantDetailModal.tsx`](../src/app/admin/events/[id]/registrants/RegistrantDetailModal.tsx) |
+| 441 | [`src/app/api/admin/events/[id]/update-event.ts`](../src/app/api/admin/events/[id]/update-event.ts) |
 | 441 | [`src/lib/actor.ts`](../src/lib/actor.ts) |
-| 429 | [`src/app/api/admin/events/[id]/update-event.ts`](../src/app/api/admin/events/[id]/update-event.ts) |
+| 435 | [`src/lib/logistics-change.ts`](../src/lib/logistics-change.ts) |
 | 426 | [`src/app/admin/events/EventsTableClient.tsx`](../src/app/admin/events/EventsTableClient.tsx) |
-| 424 | [`src/app/admin/events/[id]/edit/page.tsx`](../src/app/admin/events/[id]/edit/page.tsx) |
+| 425 | [`src/app/admin/events/[id]/edit/page.tsx`](../src/app/admin/events/[id]/edit/page.tsx) |
 | 422 | [`src/lib/pacer.ts`](../src/lib/pacer.ts) |
 | 404 | [`src/app/admin/events/[id]/registrants/UnpaidCheckoutsList.tsx`](../src/app/admin/events/[id]/registrants/UnpaidCheckoutsList.tsx) |

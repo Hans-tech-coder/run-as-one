@@ -148,6 +148,7 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
           eventType,
           registrationOpensAt: openingInstantISO(opening),
           categoryChangeUntil: changeUntilISO(formData.categoryChangeUntil),
+          logisticsChangeUntil: changeUntilISO(formData.logisticsChangeUntil),
           publishAt: publishValue(publish),
           categories,
           bankAccounts: cleanBankAccounts(bankAccounts),

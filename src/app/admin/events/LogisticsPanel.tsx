@@ -1,6 +1,7 @@
 'use client';
 
 import AdminSwitch from '../AdminSwitch';
+import AdminDatePicker from '../AdminDatePicker';
 import EventProvinceField from './EventProvinceField';
 import { inferProvince } from '@/lib/ph-address';
 
@@ -13,6 +14,11 @@ import { inferProvince } from '@/lib/ph-address';
  * a 0 fee is not offered at checkout — so `deliveryFees()` is what turns the
  * switch into the fees that are saved. Switching delivery off keeps the typed
  * fees on screen state, so switching it back on restores them.
+ *
+ * While delivery is on, the panel also holds the *Delivery Switch Deadline*
+ * (`Event.logisticsChangeUntil`, LOGISTICS_CHANGE_PLAN.md L11): the last
+ * moment staff may switch a paid order between pickup and delivery. Hidden,
+ * not cleared, while delivery is off, so a stored deadline survives the toggle.
  */
 
 export type LogisticsDraft = {
@@ -23,6 +29,10 @@ export type LogisticsDraft = {
   location: string;
   logisticsDeliveryFeeInside: number;
   logisticsDeliveryFeeOutside: number;
+  /** Race day, the deadline picker's upper bound. */
+  date: string;
+  /** The picker's `YYYY-MM-DDTHH:mm` in Manila, "" for 7 days before race day. */
+  logisticsChangeUntil: string;
 };
 
 type FeeDraft = Pick<LogisticsDraft, 'logisticsDeliveryFeeInside' | 'logisticsDeliveryFeeOutside'>;
@@ -163,6 +173,24 @@ export default function LogisticsPanel({
                   {zoneFromAddress ? "The runner's address decides the zone." : 'Runners pick their own zone at checkout.'}
                 </p>
               )}
+              <AdminDatePicker
+                id="logistics-change-until"
+                className="form-group-full"
+                label={
+                  <>
+                    Delivery Switch Deadline <span className="text-xs opacity-70">- optional</span>
+                  </>
+                }
+                value={draft.logisticsChangeUntil}
+                onChange={next => onChange({ logisticsChangeUntil: next })}
+                withTime
+                defaultTime="23:59"
+                max={draft.date || undefined}
+                clearable
+                placeholder="7 days before race day"
+                dialogLabel="Choose the last day a paid order may switch between pickup and delivery"
+                hint="Philippine time. The last moment staff may switch a paid order between pickup and delivery. Leave blank for 7 days before race day, so the courier has time."
+              />
             </>
           )}
         </div>

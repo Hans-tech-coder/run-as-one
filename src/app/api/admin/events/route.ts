@@ -14,6 +14,7 @@ import { isCalendarDay } from '@/lib/event-schedule';
 import { readFormatFields } from '@/lib/event-format';
 import { PUBLISH_INSTANT_ERROR, asPublishInstant, publishConflict } from '@/lib/event-visibility';
 import { readCategoryChangeSettings } from '@/lib/category-change-settings';
+import { readLogisticsChangeSettings } from '@/lib/logistics-change-settings';
 import {
   OPENING_INSTANT_ERROR,
   asOpeningInstant,
@@ -104,6 +105,15 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
+    // The delivery switch deadline (LOGISTICS_CHANGE_PLAN.md L11), refused
+    // the same way; absent, the column keeps its null (7 days before race day).
+    const switchSettings = readLogisticsChangeSettings(data);
+    if (!switchSettings.ok) {
+      return NextResponse.json(
+        { error: switchSettings.error, errors: { [switchSettings.field]: switchSettings.error } },
+        { status: 400 },
+      );
+    }
 
     // Which client the race is for — only Run As One staff with
     // platform:manage may say (lib/client-store.ts); from anyone else the
@@ -162,6 +172,7 @@ export async function POST(request: Request) {
           // they are published, and only one listed early holds its button back.
           registrationOpensAt: registrationOpens,
           ...changeSettings.values,
+          ...switchSettings.values,
           publishAt,
           resultsOnly,
           // The tenant, never the person: an event belongs to the organizer

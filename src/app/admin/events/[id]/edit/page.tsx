@@ -183,6 +183,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
           eventType,
           registrationOpensAt: openingInstantISO(opening),
           categoryChangeUntil: changeUntilISO(formData.categoryChangeUntil),
+          logisticsChangeUntil: changeUntilISO(formData.logisticsChangeUntil),
           categories,
           bankAccounts: cleanBankAccounts(bankAccounts),
           ...(canLinkClient ? { clientId } : {}),

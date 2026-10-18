@@ -77,6 +77,7 @@ type EventResponse = {
   categoryChangeFee?: Maybe<number>;
   downgradeRefundPolicy?: Maybe<string>;
   categoryChangeUntil?: Maybe<string>;
+  logisticsChangeUntil?: Maybe<string>;
   clientId?: Maybe<string>;
   resultsOnly?: Maybe<boolean>;
   _count?: { registrations?: number };
@@ -143,6 +144,7 @@ export function editStateFromEvent(data: EventResponse): {
       categoryChangeFee: toPesos(data.categoryChangeFee ?? 0),
       downgradeRefundPolicy: asDowngradeRefundPolicy(data.downgradeRefundPolicy),
       categoryChangeUntil: changeUntilDraft(data.categoryChangeUntil),
+      logisticsChangeUntil: changeUntilDraft(data.logisticsChangeUntil),
       registrationPaused: Boolean(data.registrationPaused),
       registrationPauseNote: data.registrationPauseNote || '',
     },

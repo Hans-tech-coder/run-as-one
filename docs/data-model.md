@@ -75,6 +75,11 @@ shape:
   or `REFUND_DIFFERENCE`; guarded by `asDowngradeRefundPolicy`) and
   `categoryChangeFee` (centavos, default 0, Run As One's share), all set in the
   event form's Registration & Fees panel,
+  `logisticsChangeUntil` (`LOGISTICS_CHANGE_PLAN.md` L11, migration
+  `20261018120000_logistics_change`, additive: the last moment staff may switch
+  a paid order between pickup and delivery; **null means 7 days before race
+  day, 00:00 Manila**, the courier's lead time; set as *Delivery Switch
+  Deadline* in the Logistics panel, shown only while delivery is on),
   `pickupLocation`
   + `pickupSchedule`
   (where and when a race kit is collected — `logisticsPickup` only ever said
@@ -346,6 +351,31 @@ shape:
   PayMongo is stored as `BANK_TRANSFER` with `transactionFee` 0). Written by
   `category-change-store.ts` and `category-change-payment.ts` only. Storage: a
   few hundred bytes a row, a handful per race.
+- **LogisticsChange / LogisticsChangeOrder** — one switch of paid orders
+  between kit pickup and delivery, paid once (`LOGISTICS_CHANGE_PLAN.md`,
+  migration `20261018120000_logistics_change`). **Its own row, never an edit to
+  the receipt** (L4): on apply the orders' `logisticsMethod`, `deliveryZone`,
+  `deliveryAddress` and `deliverySplit` move, their `deliveryFee` and
+  `totalAmount` stay, and the money is here. `changeRef` (unique, the primary
+  order's reference + `-L<n>`), `direction` (`TO_DELIVERY` / `TO_PICKUP`,
+  `asLogisticsDirection`), the target zone, address and split (null and false
+  for `TO_PICKUP`), `ridesOnRegistrationId` (L6: the PAID delivery order whose
+  parcel this joins at ₱0, else null), `fee` (one tier per distinct new address
+  not already receiving a paid parcel; all the organizer's, L8 — no Run As One
+  fee in v1, L7), `transactionFee` and `totalCharged` as on `CategoryChange`.
+  `status` is `AWAITING_PAYMENT`, `APPLIED`, `CANCELLED` or `EXPIRED`
+  (`asLogisticsChangeStatus`, §5 `logistics-change.ts`); payment columns,
+  `holdUntil` (never past the deadline, L12; no seat is held), the trail and
+  email stamps as on `CategoryChange`. Indexed on `eventId` and
+  **`(status, holdUntil)`** for the expiry sweep. **`LogisticsChangeOrder`**
+  links each order a switch moves (L6 combine), unique on `(changeId,
+  registrationId)` and indexed on `registrationId` (the one-open-switch check,
+  L13, and the history), with snapshots `fromLogisticsMethod`,
+  `fromDeliveryZone`, `fromDeliveryAddress`, `fromDeliverySplit` so the
+  history can say "from". Every foreign key is RESTRICT; the event delete
+  removes links, then switches, before its registrations. Schema only so far
+  (Session 1): nothing writes either table yet. Storage: a few hundred bytes a
+  switch, a handful per race.
 - **StaffAccount / StaffMembership / EventAssignment** — the people who work
   inside an organizer besides its owner (`STAFF_ACCESS_PLAN.md`). **`Organizer`
   stays the tenant and its own email and password stay the owner's login**; no

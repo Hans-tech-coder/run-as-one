@@ -171,6 +171,12 @@ model Event {
   /// Centavos charged on every category change, Run As One's share (D6),
   /// counted with platform fees in settlement. 0 = no fee.
   categoryChangeFee           Int               @default(0)
+  /// The last moment staff may switch a paid order between pickup and
+  /// delivery (LOGISTICS_CHANGE_PLAN.md L11). Null is the normal case and means
+  /// 7 days before race day, 00:00 Manila, to give the courier lead time.
+  /// Every awaiting switch expires here too. See logisticsChangeDeadline in
+  /// src/lib/logistics-change.ts.
+  logisticsChangeUntil        DateTime?
   organizerId                 String
   /// Which client this race is run for (ADMIN_MERGE_PLAN.md). Null means it
   /// has not been linked yet — every event that existed before clients did,
@@ -212,6 +218,7 @@ model Event {
   /// pacer codes, under Events.
   resultPacers                ResultPacer[]
   categoryChanges             CategoryChange[]
+  logisticsChanges            LogisticsChange[]
 }
 
 /// One account a runner can transfer to for this event.
@@ -445,6 +452,11 @@ model Registration {
   /// Category changes made to this order's runners. The order itself is
   /// never edited by one (CATEGORY_CHANGE_PLAN.md D1).
   categoryChanges         CategoryChange[]
+  /// Pickup/delivery switches that moved (or would move) this order. Its
+  /// logistics columns change on apply; its amounts never do (L4).
+  logisticsChangeOrders   LogisticsChangeOrder[]
+  /// Switches whose parcel joins this order's paid delivery at ₱0 (L6).
+  logisticsRiders         LogisticsChange[]      @relation("LogisticsChangeRidesOn")
 }
 
 model Runner {
@@ -636,6 +648,87 @@ model CategoryChange {
   /// A runner's change history, and the one-open-change check (D10).
   @@index([runnerId])
   @@index([eventId])
+}
+
+/// One switch of paid orders between kit pickup and delivery, paid once
+/// (LOGISTICS_CHANGE_PLAN.md). Its own row, never an edit to the receipt (L4):
+/// on apply the orders' logistics columns move, their amounts stay, and the
+/// money lives here. Several orders of one customer can switch together (L6),
+/// linked through LogisticsChangeOrder.
+model LogisticsChange {
+  id                    String                 @id @default(cuid())
+  /// The primary order's reference plus "-L<n>" ("RM-D918005C-L1"): what the
+  /// runner quotes back and what PayMongo carries for the switch.
+  changeRef             String                 @unique
+  eventId               String
+  /// TO_DELIVERY | TO_PICKUP, guarded by asLogisticsDirection.
+  direction             String
+  /// The target, with Registration's meaning. Null and false for TO_PICKUP.
+  deliveryZone          String?
+  deliveryAddress       String?
+  deliverySplit         Boolean                @default(false)
+  /// L6: the paid delivery order whose parcel this switch joins at ₱0, or null.
+  ridesOnRegistrationId String?
+  /// Centavos: one tier per distinct new address not already receiving a paid
+  /// parcel (L5, L6). 0 for TO_PICKUP (L9) and for a rider. All the
+  /// organizer's (L8); there is no Run As One fee in v1 (L7).
+  fee                   Int                    @default(0)
+  /// Centavos: PayMongo's cut on an online switch, the runner's to pay on top.
+  /// 0 on a bank transfer and on anything with nothing to pay.
+  transactionFee        Int                    @default(0)
+  /// Centavos: fee + transactionFee, what an awaiting switch collects.
+  totalCharged          Int                    @default(0)
+  /// AWAITING_PAYMENT | APPLIED | CANCELLED | EXPIRED, guarded by
+  /// asLogisticsChangeStatus like Registration.status.
+  status                String
+  /// Switch payment, the same columns and meaning as on Registration.
+  paymentMethod         String?
+  checkoutSessionId     String?
+  proofOfPayment        String?
+  transactionNumber     String?
+  /// Until when an awaiting switch waits for its money (L12). Never later
+  /// than the event's delivery switch deadline. No seat is held.
+  holdUntil             DateTime?
+  /// What the runner asked for, in staff's words. Optional.
+  reason                String?
+  /// Names, not account ids, like Registration.remarksBy: lines in a log.
+  createdBy             String
+  createdAt             DateTime               @default(now())
+  appliedAt             DateTime?
+  cancelledAt           DateTime?
+  cancelledBy           String?
+  expiredAt             DateTime?
+  /// Email delivery, same meaning as on Registration.
+  createdEmailSentAt    DateTime?
+  appliedEmailSentAt    DateTime?
+  lastEmailError        String?
+  updatedAt             DateTime               @updatedAt
+  event                 Event                  @relation(fields: [eventId], references: [id])
+  ridesOn               Registration?          @relation("LogisticsChangeRidesOn", fields: [ridesOnRegistrationId], references: [id], onDelete: Restrict)
+  orders                LogisticsChangeOrder[]
+
+  @@index([eventId])
+  /// The expiry sweep reads awaiting switches past their hold (L12).
+  @@index([status, holdUntil])
+}
+
+/// One order a LogisticsChange moves, with what it was before, so the
+/// history can say "from" after the order's own columns have moved.
+model LogisticsChangeOrder {
+  id                  String          @id @default(cuid())
+  changeId            String
+  registrationId      String
+  /// Snapshots of the order's logistics before the switch.
+  fromLogisticsMethod String
+  fromDeliveryZone    String?
+  fromDeliveryAddress String?
+  fromDeliverySplit   Boolean         @default(false)
+  change              LogisticsChange @relation(fields: [changeId], references: [id])
+  registration        Registration    @relation(fields: [registrationId], references: [id])
+
+  @@unique([changeId, registrationId])
+  /// An order's switch history, and the one-open-switch check (L13).
+  @@index([registrationId])
 }
 
 /// The running clubs a runner can pick from at sign-up. One master list across

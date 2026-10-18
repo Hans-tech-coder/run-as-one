@@ -15,6 +15,7 @@ import { FORMAT_LOCKED_ERROR, asEventFormat, readFormatFields } from '@/lib/even
 import { OPENING_INSTANT_ERROR, asOpeningInstant, asSlotLimit } from '@/lib/registration-gate';
 import { publishConflict } from '@/lib/event-visibility';
 import { readCategoryChangeSettings } from '@/lib/category-change-settings';
+import { readLogisticsChangeSettings } from '@/lib/logistics-change-settings';
 import { CATEGORY_ORDER } from '@/lib/category-order';
 import { readClientLink } from '@/lib/client-store';
 import { cleanHighlights } from '@/lib/event-highlights';
@@ -61,6 +62,7 @@ const EVENT_FIELDS = [
   'categoryChangeUntil',
   'downgradeRefundPolicy',
   'categoryChangeFee',
+  'logisticsChangeUntil',
   'resultsOnly',
   'certificateTemplate',
   'certificateCoordinates',
@@ -129,6 +131,15 @@ export async function updateEvent(request: Request, { params }: { params: Promis
     if (!changeSettings.ok) {
       return NextResponse.json(
         { error: changeSettings.error, errors: { [changeSettings.field]: changeSettings.error } },
+        { status: 400 },
+      );
+    }
+    // The delivery switch deadline (LOGISTICS_CHANGE_PLAN.md L11), refused
+    // the same way; absent, the column keeps its null (7 days before race day).
+    const switchSettings = readLogisticsChangeSettings(data);
+    if (!switchSettings.ok) {
+      return NextResponse.json(
+        { error: switchSettings.error, errors: { [switchSettings.field]: switchSettings.error } },
         { status: 400 },
       );
     }
@@ -301,6 +312,7 @@ export async function updateEvent(request: Request, { params }: { params: Promis
           // in the future holds the button back until it passes.
           registrationOpensAt: registrationOpens,
           ...changeSettings.values,
+          ...switchSettings.values,
           // The certificate has its own home now, the results workspace and
           // its PUT …/certificate (RESULTS_NAV_PLAN.md, Batch 2). The edit
           // form no longer sends these, and a body without them keeps what is

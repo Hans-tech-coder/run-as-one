@@ -47,6 +47,9 @@ export type EventFormDraft = {
   categoryChangeFee: number;
   downgradeRefundPolicy: DowngradeRefundPolicy;
   categoryChangeUntil: string;
+  // The delivery switch deadline (LOGISTICS_CHANGE_PLAN.md L11), held and
+  // posted like categoryChangeUntil; "" for 7 days before race day.
+  logisticsChangeUntil: string;
 };
 
 /** An empty event, with the platform fee the form should start at. */
@@ -76,10 +79,11 @@ export function blankEventDraft(adminFee: number): EventFormDraft {
     categoryChangeFee: 0,
     downgradeRefundPolicy: DOWNGRADE_REFUND_POLICIES.NO_REFUND,
     categoryChangeUntil: '',
+    logisticsChangeUntil: '',
   };
 }
 
-/** A stored category-change deadline as the picker holds it, `YYYY-MM-DDTHH:mm` in Manila, or "". */
+/** A stored change deadline (category or delivery switch) as the picker holds it, `YYYY-MM-DDTHH:mm` in Manila, or "". */
 export function changeUntilDraft(value: Date | string | null | undefined): string {
   if (!value) return '';
   const { day, time } = eventInstantParts(value);
@@ -88,7 +92,7 @@ export function changeUntilDraft(value: Date | string | null | undefined): strin
 
 /**
  * What the forms post for it: an ISO instant, so the zone travels with it (as
- * `openingInstantISO` does), or null for "the day before race day".
+ * `openingInstantISO` does), or null for the deadline's default.
  */
 export function changeUntilISO(draft: string): string | null {
   if (!draft) return null;
