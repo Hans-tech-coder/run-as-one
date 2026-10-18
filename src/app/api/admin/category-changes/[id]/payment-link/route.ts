@@ -23,6 +23,7 @@ import { getActor } from '@/lib/actor';
 import { recordAudit } from '@/lib/audit';
 import { deliverCreatedEmail, issueChangePaymentLink, renderCreatedEmail } from '@/lib/category-change-payment';
 import { readCategoryChangeView } from '@/lib/category-change-view';
+import { isOutsidePayment } from '@/lib/category-change-hold';
 
 type Via = 'copy' | 'email' | 'manual';
 
@@ -58,6 +59,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const ref = change.changeRef;
 
     if (via === 'copy') {
+      // A GCash or bank change is paid outside the app; its page has nothing to pay.
+      if (isOutsidePayment(change.paymentMethod)) {
+        return NextResponse.json(
+          { error: `${ref} is paid by GCash or bank transfer, so it has no payment link. Email the runner how to pay instead.` },
+          { status: 400 },
+        );
+      }
       await record(`Copied the payment link for category change ${ref}, valid until ${untilLabel}.`);
       return NextResponse.json({ url, ...expiry });
     }

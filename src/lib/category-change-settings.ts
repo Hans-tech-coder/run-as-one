@@ -2,7 +2,8 @@
  * **What the event form may save for category changes**
  * (CATEGORY_CHANGE_PLAN.md D5, D6, D12): the change fee, the downgrade refund
  * policy and the deadline, read from a posted body and refused in one
- * sentence when wrong.
+ * sentence when wrong — and which kind of change is offered at all
+ * (`DOWNGRADES_ON_HOLD`), since that decides whether the refund policy is shown.
  *
  * Its own module so the create and edit routes refuse exactly the same values,
  * and so `category-change.ts`, which owns what a change costs and when it may
@@ -12,6 +13,17 @@
 import { asDowngradeRefundPolicy, type DowngradeRefundPolicy } from './category-change';
 import { formatPesos } from './money';
 import { parsePesos } from './settlement';
+
+/**
+ * **Downgrades are on hold (owner, 2026-10-18)**: a quote whose `direction` is
+ * DOWNGRADE is disabled in the modal and refused by `createCategoryChange`.
+ * The refund flow stays built for rows already written; see ON_HOLD.md.
+ */
+export const DOWNGRADES_ON_HOLD = true;
+
+/** What staff read when a downgrade is refused while they are on hold. */
+export const DOWNGRADE_ON_HOLD_COPY =
+  'Moving to a cheaper category is not offered yet. Only upgrades and same-price moves can be made.';
 
 /**
  * The largest change fee accepted, ₱1,000.00. A figure past it is a typo (an

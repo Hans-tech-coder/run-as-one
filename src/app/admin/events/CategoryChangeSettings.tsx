@@ -4,12 +4,16 @@ import React from 'react';
 import { Ban, Undo2 } from 'lucide-react';
 import AdminDatePicker from '../AdminDatePicker';
 import { DOWNGRADE_REFUND_POLICIES, type DowngradeRefundPolicy } from '@/lib/category-change';
+import { DOWNGRADES_ON_HOLD } from '@/lib/category-change-settings';
 import type { EventFormDraft } from './event-form-draft';
 
 /**
  * The event's three category-change settings (CATEGORY_CHANGE_PLAN.md D5, D6,
  * D12), inside Registration & Fees on both forms: the change fee, what a move
  * to a cheaper category gives back, and the last moment staff may make one.
+ *
+ * While downgrades are on hold (`DOWNGRADES_ON_HOLD`) the refund policy is
+ * not shown: no change can reach it. The stored value is kept untouched.
  *
  * The refund policy is radio cards rather than a dropdown for the reason
  * RegistrationFormPicker gives: it decides whether runners get money back, and
@@ -71,45 +75,47 @@ export default function CategoryChangeSettings({
         <p className="text-xs opacity-70 mt-1">Set to 0 to let runners switch for free. Kept as Run As One&apos;s fee.</p>
       </div>
 
-      <div className="form-group">
-        <span className="form-label">Moving to a Cheaper Category</span>
-        <div className="grid gap-4 md:grid-cols-2" role="radiogroup" aria-label="Moving to a cheaper category">
-          {POLICY_OPTIONS.map(option => {
-            const Icon = option.icon;
-            const isSelected = draft.downgradeRefundPolicy === option.value;
-            return (
-              <label
-                key={option.value}
-                className={`relative flex cursor-pointer flex-col gap-3 rounded-xl border p-4 sm:p-5 transition-colors ${
-                  isSelected
-                    ? 'border-accent-blue bg-accent-blue/10'
-                    : 'border-[var(--dash-border)] bg-[var(--ink-02)] hover:border-[var(--ink-20)]'
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="downgradeRefundPolicy"
-                  value={option.value}
-                  checked={isSelected}
-                  onChange={() => onChange({ downgradeRefundPolicy: option.value })}
-                  className="sr-only"
-                />
-                <div className="flex items-center gap-3">
-                  <span
-                    className={`rounded-lg p-2 ${
-                      isSelected ? 'bg-accent-blue/20 text-accent-blue-ink' : 'bg-[var(--ink-05)] text-secondary'
-                    }`}
-                  >
-                    <Icon size={20} />
-                  </span>
-                  <span className="font-medium text-primary">{option.title}</span>
-                </div>
-                <p className="text-sm leading-relaxed text-secondary m-0">{option.description}</p>
-              </label>
-            );
-          })}
+      {!DOWNGRADES_ON_HOLD && (
+        <div className="form-group">
+          <span className="form-label">Moving to a Cheaper Category</span>
+          <div className="grid gap-4 md:grid-cols-2" role="radiogroup" aria-label="Moving to a cheaper category">
+            {POLICY_OPTIONS.map(option => {
+              const Icon = option.icon;
+              const isSelected = draft.downgradeRefundPolicy === option.value;
+              return (
+                <label
+                  key={option.value}
+                  className={`relative flex cursor-pointer flex-col gap-3 rounded-xl border p-4 sm:p-5 transition-colors ${
+                    isSelected
+                      ? 'border-accent-blue bg-accent-blue/10'
+                      : 'border-[var(--dash-border)] bg-[var(--ink-02)] hover:border-[var(--ink-20)]'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="downgradeRefundPolicy"
+                    value={option.value}
+                    checked={isSelected}
+                    onChange={() => onChange({ downgradeRefundPolicy: option.value })}
+                    className="sr-only"
+                  />
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={`rounded-lg p-2 ${
+                        isSelected ? 'bg-accent-blue/20 text-accent-blue-ink' : 'bg-[var(--ink-05)] text-secondary'
+                      }`}
+                    >
+                      <Icon size={20} />
+                    </span>
+                    <span className="font-medium text-primary">{option.title}</span>
+                  </div>
+                  <p className="text-sm leading-relaxed text-secondary m-0">{option.description}</p>
+                </label>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       <AdminDatePicker
         id="category-change-until"

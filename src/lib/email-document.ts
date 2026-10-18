@@ -204,7 +204,15 @@ export type Block =
    * something carries one — a receipt has nothing to press, and a button on it
    * would read as a request.
    */
-  | { kind: 'button'; label: string; href: string };
+  | { kind: 'button'; label: string; href: string }
+  /**
+   * A picture to scan or look at — a bank's QR code. `src` must be a public
+   * https URL (an uploaded file on Vercel Blob): mail clients fetch it
+   * themselves, so a private or relative path would arrive as a broken box.
+   * Drawn on a white tile, because a QR on the dark body does not scan, and
+   * spelled out as its address in the text part.
+   */
+  | { kind: 'image'; src: string; alt: string; caption?: string };
 
 export type StatusTone = 'pending' | 'success';
 
@@ -392,6 +400,20 @@ function blockHtml(block: Block, index: number): string {
         `<a href="${escapeHtml(block.href)}" style="display: inline-block; background-color: ${BRAND_ORANGE}; background-image: linear-gradient(90deg, ${BRAND_ORANGE} 0%, ${BRAND_BLUE} 100%); color: #ffffff; font-family: Arial, Helvetica, sans-serif; font-size: 15px; font-weight: 700; letter-spacing: 0.5px; text-decoration: none; padding: 14px 30px; border-radius: 12px;">${escapeHtml(block.label)}</a>`,
         'padding: 10px 0 8px; text-align: center;'
       );
+    case 'image':
+      return fullWidthRow(
+        // Fluid, not a fixed 200px: on a phone the body is ~295px wide and a
+        // fixed QR filled two thirds of it, too small to scan comfortably. The
+        // tile takes the full width up to 320px; a div rather than a nested
+        // table, which Gmail's Android app shrinks to its content. Outlook
+        // desktop ignores the CSS and keeps the width attribute.
+        `<div style="max-width: 320px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; padding: 12px; box-sizing: border-box;"><img src="${escapeHtml(block.src)}" alt="${escapeHtml(block.alt)}" width="296" style="display: block; width: 100%; height: auto; border: 0;"></div>${
+          block.caption
+            ? `<div style="font-family: Arial, Helvetica, sans-serif; font-size: 12px; color: #8b8b96; margin-top: 8px;">${escapeHtml(block.caption)}</div>`
+            : ''
+        }`,
+        'padding: 12px 0 4px; text-align: center;'
+      );
   }
 }
 
@@ -430,7 +452,12 @@ function renderHtml(doc: EmailDocument, contactEmail: string): string {
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #050505;">
       <tr>
         <td align="center" style="padding: 32px 16px;">
-          <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width: 600px; max-width: 100%; background-color: #0c0c10; border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08);">
+          <!-- Fluid up to 600px: a fixed width="600" never shrank on a phone,
+               so mail apps drew the whole email at 600px and scaled it down,
+               text and QR codes with it. Outlook desktop ignores max-width,
+               so it gets a fixed 600px table around it instead. -->
+          <!--[if mso]><table role="presentation" width="600" cellpadding="0" cellspacing="0"><tr><td><![endif]-->
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width: 100%; max-width: 600px; background-color: #0c0c10; border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08);">
 
             <!-- Header -->
             <tr>
@@ -470,6 +497,7 @@ function renderHtml(doc: EmailDocument, contactEmail: string): string {
             </tr>
 
           </table>
+          <!--[if mso]></td></tr></table><![endif]-->
         </td>
       </tr>
     </table>
@@ -543,6 +571,8 @@ function blockText(block: Block): string {
     case 'button':
       // A text client cannot draw a button, so the address is spelled out.
       return `${block.label}:\n${block.href}`;
+    case 'image':
+      return `${block.caption ?? block.alt}:\n${block.src}`;
   }
 }
 

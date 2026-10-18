@@ -88,7 +88,16 @@ applies. **D12** a deadline per event, `categoryChangeUntil`; null means
 changes close 00:00 Manila on race day (confirmed by the owner); every open
 change expires at it; a runner with a race result (matched by name) cannot
 move. **D13** the transaction fee on an online upgrade is the runner's, on top,
-as at checkout; a bank or outside-GCash payment carries none. **promoPrice:**
+as at checkout; a bank or outside-GCash payment carries none. **Payment
+follows the entry (owner, 2026-10-18):** an upgrade is paid the way the
+registration was — online stays online (tracked by PayMongo, no hand check),
+bank stays bank; free orders may use any. While it waits, the registrant's
+status reads **BALANCE DUE** instead of PAID (display only; the order stays
+PAID). The *Runner paid a different amount?* field stays, without its
+explanation paragraph. **Downgrades are on hold (owner, same day):**
+`DOWNGRADES_ON_HOLD` (`category-change-settings.ts`) — a change whose quote direction is
+DOWNGRADE is disabled in the modal and refused by `createCategoryChange`; the
+event form hides the refund policy. See `ON_HOLD.md`. **promoPrice:**
 applying a change sets `Runner.promoPrice` to null in the same transaction —
 the only reader on a paid runner is `releaseRedemption` after staff move the
 order PAID → PENDING and cancel it, where a kept snapshot would hand back a

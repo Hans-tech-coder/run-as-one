@@ -41,6 +41,8 @@ export type AppliedChangeForEmail = {
   basis: number;
   toPrice: number;
   changeFee: number;
+  /** PayMongo's cut on an online upgrade (D13); 0 or absent otherwise. */
+  transactionFee?: number;
   amount: number;
   totalCharged: number;
   refundAmount: number;
@@ -89,6 +91,10 @@ export function categoryChangeAppliedEmail(change: AppliedChangeForEmail): Promi
     { kind: 'amount', label: `${change.toCategory.name} price`, centavos: change.toPrice },
     ...(change.changeFee > 0
       ? [{ kind: 'amount' as const, label: 'Change fee', centavos: change.changeFee }]
+      : []),
+    // Without it an online upgrade's rows would not add up to what was paid.
+    ...((change.transactionFee ?? 0) > 0
+      ? [{ kind: 'amount' as const, label: 'Transaction fee', centavos: change.transactionFee ?? 0 }]
       : []),
     { kind: 'rule' },
     change.status === 'REFUND_DUE' || change.status === 'REFUNDED'
@@ -151,7 +157,10 @@ export type CreatedChangeForEmail = AppliedChangeForEmail & {
   paymentMethod: string | null;
   transactionFee: number;
   holdUntil: Date | null;
-  event: { title: string; bankAccounts: { bankName: string; accountName: string; accountNumber: string }[] };
+  event: {
+    title: string;
+    bankAccounts: { bankName: string; accountName: string; accountNumber: string; qrImageUrl?: string | null }[];
+  };
 };
 
 /**
@@ -178,11 +187,25 @@ export function categoryChangeCreatedEmail(change: CreatedChangeForEmail, url: s
     { kind: 'total', label: 'To Pay', centavos: change.totalCharged },
   ];
 
-  const accounts: Row[] = change.event.bankAccounts.map(account => ({
-    kind: 'info' as const,
-    label: account.bankName,
-    value: `${account.accountName} · ${account.accountNumber}`,
-  }));
+  // One card per account, its QR under it when one was uploaded — the runner
+  // scans the one for the app they pay with. Only a public https address is
+  // drawn: a mail client fetches the picture itself.
+  const accounts: EmailDocument['blocks'] = change.event.bankAccounts.flatMap(account => [
+    {
+      kind: 'card' as const,
+      rows: [{ kind: 'info' as const, label: account.bankName, value: `${account.accountName} · ${account.accountNumber}` }],
+    },
+    ...(account.qrImageUrl?.startsWith('https://')
+      ? [
+          {
+            kind: 'image' as const,
+            src: account.qrImageUrl,
+            alt: `${account.bankName} QR code`,
+            caption: `Scan with ${account.bankName}`,
+          },
+        ]
+      : []),
+  ]);
 
   const howToPay: EmailDocument['blocks'] = outside
     ? [
@@ -193,7 +216,7 @@ export function categoryChangeCreatedEmail(change: CreatedChangeForEmail, url: s
                 kind: 'paragraph' as const,
                 segments: [`Send exactly `, { strong: peso(change.totalCharged) }, ' by GCash or bank transfer to one of these accounts:'],
               },
-              { kind: 'card' as const, rows: accounts },
+              ...accounts,
             ]
           : []),
         {

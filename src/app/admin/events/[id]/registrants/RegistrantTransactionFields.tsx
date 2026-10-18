@@ -22,6 +22,7 @@ import {
   expiredExplanation,
   statusPillClass,
 } from './registrant-display';
+import { displayStatus } from './category-change-display';
 
 export default function RegistrantTransactionFields({
   runner,
@@ -47,8 +48,8 @@ export default function RegistrantTransactionFields({
           group paid under and what a bank line will match. */}
       <p className="flex flex-col"><span className="text-[var(--text-muted)]">Order Ref</span> <span className="text-primary font-medium">{runner.orderRef}</span></p>
       <p className="flex flex-col"><span className="text-[var(--text-muted)]">Status</span>
-        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium w-fit mt-1 ${statusPillClass(runner.status)}`}>
-          {runner.status}
+        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium w-fit mt-1 ${statusPillClass(displayStatus(runner))}`}>
+          {displayStatus(runner)}
         </span>
         {/* An EXPIRED row is the one status nobody chose, so it is
             the one that has to explain itself: what happened, when,

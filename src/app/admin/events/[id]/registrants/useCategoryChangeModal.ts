@@ -23,6 +23,7 @@
 import { useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 import { useAlert } from '@/components/ui/AlertProvider';
 import { CATEGORY_CHANGE_STATUSES, quoteCategoryChange, readBasisAdjustment } from '@/lib/category-change';
+import { DOWNGRADES_ON_HOLD } from '@/lib/category-change-settings';
 import {
   CHANGE_PAYMENT_CHOICES,
   OUTSIDE_CHANGE_HOLD_DAYS,
@@ -129,7 +130,7 @@ export function useCategoryChangeModal({
   const [basisText, setBasisText] = useState('');
   const [basisReason, setBasisReason] = useState('');
   const [showErrors, setShowErrors] = useState(false);
-  const [paymentChoice, setPaymentChoice] = useState<ChangePaymentChoice | null>(null);
+  const [pickedChoice, setPickedChoice] = useState<ChangePaymentChoice | null>(null);
   const [transactionNumber, setTransactionNumber] = useState('');
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [paymentErrors, setPaymentErrors] = useState<{ choice?: string; transactionNumber?: string; proofFile?: string }>({});
@@ -164,7 +165,7 @@ export function useCategoryChangeModal({
     setBasisText('');
     setBasisReason('');
     setShowErrors(false);
-    setPaymentChoice(null);
+    setPickedChoice(null);
     setTransactionNumber('');
     setProofFile(null);
     setPaymentErrors({});
@@ -191,15 +192,18 @@ export function useCategoryChangeModal({
   const reasonMissing = !!adjustment.error && adjustment.error.startsWith('Say');
   const pendingBasis = adjusting && reasonMissing ? parsePesos(basisText) : null;
   const target = preview?.categories.find(c => c.id === toCategoryId) ?? null;
+  // Only the way the entry was paid is offered; a single way is chosen for staff.
+  const paymentChoices = preview?.paymentChoices ?? [];
+  const paymentChoice = pickedChoice ?? (paymentChoices.length === 1 ? paymentChoices[0] : null);
 
   // The same function the route writes with, on what the preview read.
-  const quote = useMemo(() => {
-    if (!preview || !target) return null;
+  const quoteTo = (to: { price: number }, method: string | null) => {
+    if (!preview) return null;
     const current = preview.categories.find(c => c.id === preview.runner.categoryId);
     if (!current) return null;
     return quoteCategoryChange({
       fromPrice: current.price,
-      toPrice: target.price,
+      toPrice: to.price,
       promoPrice: preview.runner.promoPrice,
       order: {
         discountAmount: preview.order.discountAmount,
@@ -209,10 +213,23 @@ export function useCategoryChangeModal({
       },
       event: preview.event,
       basisAdjustment: adjustment.value,
-      // D13: the fee is on top only once staff choose to send a payment link.
-      paymentMethod: paymentChoice ? paymentMethodForChoice(paymentChoice) : null,
+      paymentMethod: method,
     });
-  }, [preview, target, adjustment.value, paymentChoice]);
+  };
+  const quote = useMemo(
+    // D13: the fee is on top only once staff choose to send a payment link.
+    () => (target ? quoteTo(target, paymentChoice ? paymentMethodForChoice(paymentChoice) : null) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [preview, target, adjustment.value, paymentChoice],
+  );
+  // Options that would be a downgrade for this runner, while downgrades are on
+  // hold (category-change.ts): measured by the same quote, so a tile and the
+  // route agree on what "cheaper" means for what this runner paid.
+  const downgradeIds = new Set(
+    DOWNGRADES_ON_HOLD
+      ? (preview?.categories ?? []).filter(c => quoteTo(c, null)?.direction === 'DOWNGRADE').map(c => c.id)
+      : [],
+  );
   const needsPayment = quote?.status === CATEGORY_CHANGE_STATUSES.AWAITING_PAYMENT;
   const onlineMethod = onlineChangeMethod();
   const onlineFee = quote && needsPayment ? transactionFeeFor(quote.amount, onlineMethod) : 0;
@@ -356,9 +373,11 @@ export function useCategoryChangeModal({
       needsPayment,
       onlineMethod,
       onlineFee,
+      paymentChoices,
+      downgradeIds,
       paymentChoice,
       setPaymentChoice: (choice: ChangePaymentChoice) => {
-        setPaymentChoice(choice);
+        setPickedChoice(choice);
         setPaymentErrors({});
       },
       transactionNumber,

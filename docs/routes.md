@@ -487,15 +487,19 @@ category** (`CATEGORY_CHANGE_PLAN.md` Session 2): a row-menu item with icon and
 label, on a PAID order and for `registration:edit`, opens `CategoryChangeModal`
 — the options as radio tiles with seats left (full ones and the current one
 disabled), the live quote computed in the browser by `quoteCategoryChange` on
-the preview's numbers (the amount paid beside the order's real total, an
+the preview's numbers — **an option that would be a downgrade is disabled,
+"Downgrade not offered yet", while `DOWNGRADES_ON_HOLD` (`category-change-settings.ts`)** — (the amount paid beside the order's real total, an
 *Estimated* chip with `BASIS_ESTIMATE_COPY` when it is a guess, the list price,
 the fee, then *Nothing to pay* / *Refund due* / *Not refunded*), the kit
-difference, *Adjust the amount paid* with a required reason (D3), and a button
+difference, *Runner paid a different amount?* (the amount actually paid, with a
+required reason, D3), and a button
 naming its effect ("Change to 10K"). **An upgrade** (Session 3) asks *How does
-the runner pay?* (`CategoryChangePaymentChoice.tsx`): *Send a payment link* (the
+the runner pay?* (`CategoryChangePaymentChoice.tsx`), offering **only the way the
+entry was paid** (`paymentChoicesForOrder`; a single way is shown already chosen):
+*Send a payment link* for an online payer (the
 transaction fee joins the quote, seat held 24 hours, the created email goes out
 with the link), *Will pay by GCash or bank* (no fee, held 7 days, the email says
-where to send it) or *Already paid by GCash or bank* (reference number and an
+where to send it) or *Already paid by GCash or bank* for a bank-transfer payer (reference number and an
 optional screenshot, shrunk in the browser, recorded in the same step so the
 runner moves at once); the button says what happens ("Hold Seat & Send Link").
 The quote panel is `CategoryChangeQuote.tsx`. The Category cell, card and detail modal read the row's
@@ -503,15 +507,25 @@ The quote panel is `CategoryChangeQuote.tsx`. The Category cell, card and detail
 measured from the first applied change, a blue **Kit changed** chip (its list
 in the title on the table, in words on the card and modal), and an amber
 "₱X to refund" while a downgrade's refund is unrecorded, and an amber
-**"₱X due · to 10K"** while an upgrade waits for its payment. The detail modal's
+**"₱X due · to 10K"** while an upgrade waits for its payment — and while it
+waits the row's status reads **BALANCE DUE** (amber) in place of PAID, in the
+table, the card, the detail modal and the export's Status column
+(`displayStatus`); it reads PAID again once the change applies, is cancelled or
+expires. Display only: the order stays `PAID` underneath, so the status filter
+and the tab counts still count it as paid. The detail modal's
 **Category Changes** history lists each move newest first with its money line,
 who and when, *Record refund* (`registration:validate`) and, when the applied
 or created email never went out, *Send by hand* through `CategoryChangeEmailModal`
 — the same `ManualEmailModal` panel. An upgrade waiting for its payment says how
 it is to be paid and until when its seat is held, with `AwaitingChangeActions`:
-*Copy payment link* / *Email payment link* (`registration:email`), *Record
-payment* (`registration:validate`; reference + screenshot, applies it) and
-*Cancel change* (`registration:edit`, after a confirm). A paid one says how it
+the buttons following how it is paid — **online**: *Copy payment link* /
+*Email payment link* (`registration:email`) and no *Record payment*, because
+PayMongo's webhook (or the runner reopening the link) applies it; **GCash or
+bank**: *Email how to pay* (`registration:email`, the accounts and QR codes, no
+link to copy) and *Record payment* (`registration:validate`; reference +
+screenshot, applies it) — and *Cancel change* (`registration:edit`, after a
+confirm). The routes enforce the same: `payment-link` refuses `copy` on a bank
+change (400) and `record-payment` refuses an online one (409). A paid one says how it
 was paid, the fee and reference, and *View screenshot* (`proof:view`). The
 **export** (`registrant-csv.ts`) carries the move too: **Changed From** (the
 category the runner started in) and **Kit Changed** ("Added: Medal · Removed:
@@ -1136,7 +1150,7 @@ settle both read *Event not found.* with a way back to Remittances.
 | `admin/registrations/[id]/payment-check` | POST | **"Check payment" on the Unpaid checkouts tab** (`UNPAID_ORDERS_PLAN.md` Batch 4). Gated by `registration:validate` and scoped to the order's race, like the status route; refuses a bank transfer or complimentary order (400) and a CANCELLED / REFUNDED one (409). Looks the stored `checkoutSessionId` up through `lookUpPaymongoPayment` (`lib/online-payment.ts`: `cs_` → `GET /v1/checkout_sessions/{id}`, `pi_` → `GET /v1/payment_intents/{id}`). Answers `{ result, message }`: `marked_paid` (a PENDING order PayMongo has paid — flipped through `settleOnlinePayment`, the webhook's own path, which sends the receipt and writes one `registration.status.changed` row in the same transaction), `already_paid`, `paid_after_expiry` (EXPIRED but paid — never flipped, needs a reinstate or refund) or `not_paid`. Only a check that changes the status writes to the trail. PayMongo unreachable or answering badly is a 502 with the reason |
 | `admin/registrations/[id]/status` | PATCH | Confirm or reject a manual payment, and write the validator's internal `remarks`. Takes either or both; the status is guarded against a fixed list and the receipt email fires only on the *transition* into `PAID`, so a later remarks-only PATCH cannot send a second receipt. Auth-checked and scoped to the signed-in organizer's own events — **this route had none at all until Batch E**, which made it the one way for anyone on the internet to mark a registration `PAID`. When the status moved, the answer carries `statusChange` (`by`, `at`, `from`, `to`, `reason` — the same name the trail entry snapshotted), which the registrant modal's *Validated by* line reads. Two optional fields serve Cancel order… on the Unpaid checkouts tab (`UNPAID_FOLLOWUP_PLAN.md` Batch 2): `reason` (text, at most 200 characters) goes into the status change's trail summary and `changes.reason`; `expectedStatus` refuses with 409 and changes nothing when the order is no longer in that status, checked after the permission check and again inside the transaction's PENDING claim, so an order paid while the dialog was open is never cancelled. **PENDING → CANCELLED hands the order's promo back** (`releaseRedemption`, `pending-expiry.ts`) and the trail row says so; cancelling from any other status hands nothing back. **Moving an order that holds no slot (`EXPIRED`, `CANCELLED`, `REFUNDED`) to PAID or PENDING takes its slot again** through `reserveSlots`, under the category lock checkout uses, and is refused with 409 when the race has refilled (the promo is not spent again); this is how an organizer validates a bank transfer the 7-day sweep already expired, and it stops an undone cancellation from overselling a full race (Strix vuln-0001, run 9cda) |
 | `admin/registrations/[id]/email` | GET, POST | The email a registration is owed, rendered for a person to send by hand — `GET` returns the recipient, subject and **both** renderings (HTML for the clipboard, plain text for a `mailto:`), `POST` records that a staff member sent it. Auth-checked and scoped like the status route, which matters more here than most: the rendered email carries every runner's contact details, birthdate and emergency contact |
-| `admin/runners/[id]/category-change` | POST | **Moving one paid runner to another category** (`CATEGORY_CHANGE_PLAN.md` Session 2), `registration:edit` on the runner's race; a refusal reads as "Runner not found". `?preview=1` writes nothing and returns the runner, the order's money, the event's change settings, every option with `taken`/`full`, `eligibility` (`canChangeCategory`, plus a results-only race refused) and, with `toCategoryId`, the server's quote. Otherwise body `{ toCategoryId, reason?, basis?, basisReason?, paymentChoice? }`: `createCategoryChange` recomputes the quote under the event lock and, with nothing to pay, writes the change `APPLIED` or `REFUND_DUE` and moves the runner (clearing `promoPrice`) in one transaction. **With something to pay** `paymentChoice` (`ONLINE` · `OUTSIDE_LATER` · `OUTSIDE_PAID`, `category-change-hold.ts`) is required (400 without it): the change is written `AWAITING_PAYMENT` with its method, fee and hold, holding a seat in the target; the runner does not move. A full target answers 409 naming the count. After the commit the applied email, or for an upgrade the created email (none for `OUTSIDE_PAID`, whose record follows at once), is sent and stamped; the answer is `{ change, category, email, emailKind }` (`category` null while it waits), where a refused send carries the rendered message for the by-hand panel. |
+| `admin/runners/[id]/category-change` | POST | **Moving one paid runner to another category** (`CATEGORY_CHANGE_PLAN.md` Session 2), `registration:edit` on the runner's race; a refusal reads as "Runner not found". `?preview=1` writes nothing and returns the runner, the order's money, the event's change settings, every option with `taken`/`full`, `eligibility` (`canChangeCategory`, plus a results-only race refused) and, with `toCategoryId`, the server's quote. Otherwise body `{ toCategoryId, reason?, basis?, basisReason?, paymentChoice? }`: `createCategoryChange` recomputes the quote under the event lock and, with nothing to pay, writes the change `APPLIED` or `REFUND_DUE` and moves the runner (clearing `promoPrice`) in one transaction. **With something to pay** `paymentChoice` (`ONLINE` · `OUTSIDE_LATER` · `OUTSIDE_PAID`, `category-change-hold.ts`) is required (400 without it) and must be one `paymentChoicesForOrder` allows for the order's own `paymentMethod` (400 otherwise; the preview returns them as `paymentChoices`). **A downgrade answers 409 while `DOWNGRADES_ON_HOLD`.** With an allowed choice the change is written `AWAITING_PAYMENT` with its method, fee and hold, holding a seat in the target; the runner does not move. A full target answers 409 naming the count. After the commit the applied email, or for an upgrade the created email (none for `OUTSIDE_PAID`, whose record follows at once), is sent and stamped; the answer is `{ change, category, email, emailKind }` (`category` null while it waits), where a refused send carries the rendered message for the by-hand panel. |
 | `admin/category-changes/[id]/record-payment` | POST | **An upgrade paid outside the app** (Session 3): multipart `transactionNumber` (required, at most 100) and `proofFile` (optional, already shrunk in the browser by `compress-proof.ts`, stored in the private blob store, deleted again if the write fails). `registration:validate`; 409 unless `AWAITING_PAYMENT`. `recordChangePayment` asks PayMongo first about any online page the change opened (paid → that payment settles it and this answers 409), applies with `totalCharged = amount`, `transactionFee = 0`, method `BANK_TRANSFER`, closes the page, then sends the applied email. Answers like the create route. |
 | `admin/category-changes/[id]/cancel` | POST | **An upgrade withdrawn before it is paid**: `AWAITING_PAYMENT` → `CANCELLED` (`cancelledAt`/`cancelledBy`, `category_change.cancelled`), releasing the held seat by the status alone; then its PayMongo page is closed. `registration:edit`; 409 otherwise. Nobody is emailed. |
 | `admin/category-changes/[id]/payment-link` | POST | **An upgrade's payment link**, `registration:email` on the change's race, only while `payable` (409 naming why not); never moves the hold. Body `{ via }`: `copy` (default) answers the `/pay/change/[token]` URL; `email` sends the created email and stamps it (a refusal carries the rendered message); `manual` renders it for the by-hand send. One `category_change.payment_link.copied` row per call. |

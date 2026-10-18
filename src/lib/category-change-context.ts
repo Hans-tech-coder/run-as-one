@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import db from '@/lib/db';
 import { takenSlotsByCategory } from '@/lib/slot-holds';
 import { runnerRef } from '@/lib/order-ref';
+import { paymentChoicesForOrder } from '@/lib/category-change-hold';
 import {
   CATEGORY_CHANGE_STATUSES,
   canChangeCategory,
@@ -62,6 +63,7 @@ export async function readRunnerContext(client: Prisma.TransactionClient | typeo
           discountType: true,
           totalAmount: true,
           promoCode: true,
+          paymentMethod: true,
           eventId: true,
           event: {
             select: {
@@ -226,7 +228,10 @@ export async function previewCategoryChange(input: {
       discountType: ctx.registration.discountType,
       promoCode: ctx.registration.promoCode,
       runnerCount: ctx.runnerCount,
+      paymentMethod: ctx.registration.paymentMethod,
     },
+    // How an upgrade may be paid: the way the entry was paid (category-change-hold.ts).
+    paymentChoices: paymentChoicesForOrder(ctx.registration.paymentMethod),
     event: {
       categoryChangeFee: ctx.event.categoryChangeFee,
       downgradeRefundPolicy: ctx.event.downgradeRefundPolicy,

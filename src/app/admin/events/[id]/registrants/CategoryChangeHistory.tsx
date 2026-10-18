@@ -212,31 +212,38 @@ export default function CategoryChangeHistory({
                   : ''}
                 {change.expiredAt ? ` · expired unpaid ${new Date(change.expiredAt).toLocaleString()}` : ''}
               </p>
-              {awaiting && (
-                <AwaitingChangeActions
-                  change={change}
-                  permissions={permissions}
-                  onUpdated={onUpdated}
-                  onRecorded={result => onUpdated(result.change, result)}
-                  onSendEmail={onSendEmail}
-                />
-              )}
-              {change.status === CATEGORY_CHANGE_STATUSES.REFUND_DUE && permissions.validate && (
-                <RecordRefund change={change} onUpdated={onUpdated} />
-              )}
-              {emailOwed && (
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="status-badge danger gap-1" title={change.lastEmailError ?? undefined}>
-                    <MailWarning size={12} aria-hidden="true" /> Email unsent
-                  </span>
-                  {permissions.email && (
-                    <button
-                      type="button"
-                      onClick={() => onSendEmail(change, awaiting ? 'created' : 'applied')}
-                      className="btn-filter is-compact"
-                    >
-                      Send by hand
-                    </button>
+              {/* The actions sit apart from the facts above them: the card's own
+                  6px rhythm is for lines of text, and buttons at that gap read as
+                  part of the last line. */}
+              {(awaiting || (change.status === CATEGORY_CHANGE_STATUSES.REFUND_DUE && permissions.validate) || emailOwed) && (
+                <div className="pt-2 space-y-2">
+                  {awaiting && (
+                    <AwaitingChangeActions
+                      change={change}
+                      permissions={permissions}
+                      onUpdated={onUpdated}
+                      onRecorded={result => onUpdated(result.change, result)}
+                      onSendEmail={onSendEmail}
+                    />
+                  )}
+                  {change.status === CATEGORY_CHANGE_STATUSES.REFUND_DUE && permissions.validate && (
+                    <RecordRefund change={change} onUpdated={onUpdated} />
+                  )}
+                  {emailOwed && (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="status-badge danger gap-1" title={change.lastEmailError ?? undefined}>
+                        <MailWarning size={12} aria-hidden="true" /> Email unsent
+                      </span>
+                      {permissions.email && (
+                        <button
+                          type="button"
+                          onClick={() => onSendEmail(change, awaiting ? 'created' : 'applied')}
+                          className="btn-filter is-compact"
+                        >
+                          Send by hand
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
               )}

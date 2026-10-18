@@ -6,7 +6,7 @@ import { formatPesos } from '@/lib/money';
 import { formatEventInstant } from '@/lib/event-schedule';
 import { PAYMENT_METHODS } from '@/lib/registration-codes';
 import { categoryChangeDeadline } from '@/lib/category-change';
-import { changePayableState, type ChangePayableState } from '@/lib/category-change-hold';
+import { changePayableState, isOutsidePayment, type ChangePayableState } from '@/lib/category-change-hold';
 import { CategoryChangeRefused } from '@/lib/category-change-context';
 import { applyCategoryChange } from '@/lib/category-change-store';
 import { deliverAppliedEmail } from '@/lib/category-change-view';
@@ -65,7 +65,10 @@ const LINK_INCLUDE = {
       organizerId: true,
       categoryChangeUntil: true,
       client: EVENT_SITE_CLIENT,
-      bankAccounts: { select: { bankName: true, accountName: true, accountNumber: true }, orderBy: { sortOrder: 'asc' } },
+      bankAccounts: {
+        select: { bankName: true, accountName: true, accountNumber: true, qrImageUrl: true },
+        orderBy: { sortOrder: 'asc' },
+      },
     },
   },
 } as const;
@@ -178,9 +181,17 @@ export type OutsidePayment = { transactionNumber: string; proofPathname: string 
 export async function recordChangePayment(actor: AuditActor, changeId: string, payment: OutsidePayment) {
   const change = await db.categoryChange.findUnique({
     where: { id: changeId },
-    select: { amount: true, checkoutSessionId: true, changeRef: true },
+    select: { amount: true, checkoutSessionId: true, changeRef: true, paymentMethod: true },
   });
   if (!change) throw new CategoryChangeRefused(404, 'Category change not found');
+  // Online is PayMongo's to report (webhook, or the runner reopening the link);
+  // a by-hand record would be a second account of the same money.
+  if (!isOutsidePayment(change.paymentMethod)) {
+    throw new CategoryChangeRefused(
+      409,
+      `${change.changeRef} is paid online through PayMongo, so it applies when PayMongo confirms the payment, not by hand.`,
+    );
+  }
 
   if (change.checkoutSessionId) {
     const lookup = await lookUpPaymongoPayment(change.checkoutSessionId);

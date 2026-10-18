@@ -30,7 +30,7 @@
  */
 
 import { formatPesos } from '@/lib/money';
-import { categoryMove, kitSummary, type MoveSource } from './category-change-display';
+import { categoryMove, displayStatus, kitSummary, type MoveSource } from './category-change-display';
 import type { UnpaidCheckout } from './UnpaidCheckoutsList';
 
 /**
@@ -139,7 +139,7 @@ function registrantCsvRow(runner: any): string {
     csvField(runner.promoCode || ''),
     csvField(runner.discountAmount ? formatPesos(runner.discountAmount) : ''),
     csvField(formatPesos(runner.totalAmount)),
-    csvField(runner.status),
+    csvField(displayStatus(runner)),
   ].join(',');
 }
 

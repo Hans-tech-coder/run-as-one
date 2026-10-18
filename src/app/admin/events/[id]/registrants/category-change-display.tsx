@@ -18,6 +18,7 @@ import {
 import type { CategoryChangeView } from '@/lib/category-change-view';
 
 type WithChanges = { category: string; categoryChanges?: CategoryChangeView[] };
+type ChangesOnly = { categoryChanges?: Pick<CategoryChangeView, 'status'>[] };
 
 /** All a move is read from — so the client runner list (`client-runners.ts`) reads it by the same rule. */
 export type MoveSource = Pick<CategoryChangeView, 'status' | 'fromCategory' | 'toCategory' | 'fromInclusions' | 'toInclusions'>;
@@ -49,8 +50,22 @@ export function refundOwed(runner: WithChanges): number {
 }
 
 /** An upgrade of this runner's still waiting for its payment, for the amber chip. */
-export function openUpgrade(runner: WithChanges): CategoryChangeView | null {
+export function openUpgrade<C extends Pick<CategoryChangeView, 'status'>>(runner: { categoryChanges?: C[] }): C | null {
   return (runner.categoryChanges ?? []).find(change => change.status === CATEGORY_CHANGE_STATUSES.AWAITING_PAYMENT) ?? null;
+}
+
+/** Shown in place of PAID while an upgrade waits for its money. */
+export const BALANCE_DUE = 'BALANCE DUE';
+
+/**
+ * The status a row is read as. A PAID order whose runner has an upgrade still
+ * unpaid reads **BALANCE DUE** until the difference is in; once it applies —
+ * or is cancelled or expires, leaving the runner where they paid for — it
+ * reads PAID again. Display only: `Registration.status` stays PAID, because
+ * the entry *is* paid and settlement, the receipt and the expiry sweep read it.
+ */
+export function displayStatus(runner: { status: string } & ChangesOnly): string {
+  return runner.status === 'PAID' && openUpgrade(runner) ? BALANCE_DUE : runner.status;
 }
 
 /** "Added: Medal · Removed: Singlet", the chip's full reading. */

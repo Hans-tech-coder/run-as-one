@@ -35,9 +35,9 @@ Additive; every existing event gets the defaults (no deadline set, no refund,
 ₱0 fee).
 
 **Category changes are complete on `dev` (Sessions 1–4, 2026-10-18).**
-Staff move a paid runner to another category, upgrades are paid by PayMongo
-or by GCash/bank recorded by staff, downgrades follow the race's refund
-policy, and remittances count every change (*Category changes* line). The
+Staff move a paid runner to another category, upgrades are paid the way the
+entry was paid (PayMongo for an online payer, GCash/bank recorded by staff for
+a bank-transfer payer), and remittances count every change (*Category changes* line). The
 release step is the **same `npx prisma migrate deploy`** above, which applies
 `20261018090000_category_change` along with the others; Sessions 2–4 need no
 migration of their own. After the promotion, on production: open an event's
@@ -47,6 +47,24 @@ has a change yet, so no figure may move). The daily sweep now also expires
 unpaid upgrades; a real PayMongo webhook for an upgrade has only been driven
 by a signed script, never delivered — watch the first online upgrade go
 through.
+
+**Category changes: downgrades (on hold, owner 2026-10-18).** The app does not
+take a runner to a cheaper category for now: `DOWNGRADES_ON_HOLD` in
+`src/lib/category-change-settings.ts` disables those options in the modal ("Downgrade
+not offered yet"), `createCategoryChange` refuses them, and the event form
+hides the *Moving to a Cheaper Category* refund setting. Upgrades and
+same-price moves go ahead. The downgrade flow itself (D5 refund policy,
+`REFUND_DUE` → *Record refund* → `REFUNDED`, the settlement line's refund
+rows) is built and was tested on local-dev; turning it on is setting the flag
+to `false`, then walking one NO_REFUND and one REFUND_DIFFERENCE downgrade
+on staging.
+
+**Category changes: runner uploads proof of a bank payment (future,
+owner 2026-10-18).** Today a bank-transfer upgrade's email asks the runner to
+reply with the reference and screenshot, and staff record it by hand. The
+upload page, the *Proof sent · verify* chip and the Needs Validation queue are
+written up in `docs/plans/CATEGORY_CHANGE_PROOF_UPLOAD_PLAN.md`, with the two
+decisions to make first.
 
 **Category changes, Phase 2: runner self-service (on hold).** A *Manage my
 registration* link in the runner's email, so a runner can ask for (or make)

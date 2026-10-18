@@ -2,7 +2,9 @@
 
 /**
  * How an upgrade is paid, in Change category (CATEGORY_CHANGE_PLAN.md Session
- * 3): the three ways in `category-change-hold.ts`, as the modal's radio tiles,
+ * 3): the ways in `category-change-hold.ts` that match how the entry was paid
+ * (`paymentChoicesForOrder` — online stays online, bank stays bank), as the
+ * modal's radio tiles; a single way is shown already chosen,
  * each saying in words what it does to the fee and how long the new seat is
  * held — and, for a payment already made by GCash or bank, the reference number
  * and the optional screenshot that record it in the same step.
@@ -31,6 +33,8 @@ export default function CategoryChangePaymentChoice({
   amount,
   onlineFee,
   onlineMethod,
+  allowed,
+  orderMethod,
   choice,
   setChoice,
   transactionNumber,
@@ -43,6 +47,10 @@ export default function CategoryChangePaymentChoice({
   /** The transaction fee an online payment adds (D13). */
   onlineFee: number;
   onlineMethod: string | null;
+  /** The choices this order may use (`paymentChoicesForOrder`). */
+  allowed: ChangePaymentChoice[];
+  /** How the entry itself was paid, for the line under the heading. */
+  orderMethod: string | null;
   choice: ChangePaymentChoice | null;
   setChoice: (choice: ChangePaymentChoice) => void;
   transactionNumber: string;
@@ -51,15 +59,12 @@ export default function CategoryChangePaymentChoice({
   setProofFile: (file: File | null) => void;
   errors: { choice?: string; transactionNumber?: string; proofFile?: string };
 }) {
-  const options: { value: ChangePaymentChoice; icon: React.ReactNode; title: string; hint: string; disabled?: boolean }[] = [
+  const all: { value: ChangePaymentChoice; icon: React.ReactNode; title: string; hint: string }[] = [
     {
       value: CHANGE_PAYMENT_CHOICES.ONLINE,
       icon: <Link2 size={16} aria-hidden="true" />,
       title: 'Send a payment link',
-      hint: onlineMethod
-        ? `Runner pays ${peso(amount + onlineFee)} online by ${paymentMethodLabel(onlineMethod)}, ${peso(onlineFee)} transaction fee included. Seat held ${ONLINE_CHANGE_HOLD_HOURS} hours.`
-        : 'Online payment is not offered right now.',
-      disabled: !onlineMethod,
+      hint: `Runner pays ${peso(amount + onlineFee)} online by ${paymentMethodLabel(onlineMethod)}, ${peso(onlineFee)} transaction fee included. Seat held ${ONLINE_CHANGE_HOLD_HOURS} hours.`,
     },
     {
       value: CHANGE_PAYMENT_CHOICES.OUTSIDE_LATER,
@@ -74,11 +79,19 @@ export default function CategoryChangePaymentChoice({
       hint: `Record the ${peso(amount)} now and move the runner at once.`,
     },
   ];
+  const options = all.filter(option => allowed.includes(option.value));
+  const methodLabel = paymentMethodLabel(orderMethod);
 
   return (
     <div className="space-y-3">
-      <fieldset className="p-0 border-none m-0" aria-describedby="category-change-payment-error">
-        <legend className="block text-secondary mb-2 p-0">How does the runner pay?</legend>
+      <fieldset className="p-0 border-none mx-0" aria-describedby="category-change-payment-error">
+        <legend className="block text-secondary mb-1 p-0">How does the runner pay?</legend>
+        {methodLabel && (
+          <p className="m-0 mb-2 text-xs text-[var(--text-muted)]">
+            Paid the registration {methodLabel === 'Online' ? 'online' : `by ${methodLabel}`}, so the difference is paid
+            the same way.
+          </p>
+        )}
         <div className="grid grid-cols-1 gap-2">
           {options.map(option => {
             const selected = choice === option.value;
@@ -86,9 +99,7 @@ export default function CategoryChangePaymentChoice({
               <label
                 key={option.value}
                 className={`flex min-h-11 items-start gap-3 rounded-lg border px-3 py-2.5 transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-[var(--ink-30)] ${
-                  option.disabled
-                    ? 'cursor-not-allowed border-[var(--dash-border)] bg-[var(--ink-02)] opacity-60'
-                    : selected
+                  selected
                       ? 'cursor-pointer border-accent-blue bg-accent-blue/10'
                       : 'cursor-pointer border-[var(--dash-border)] bg-[var(--ink-02)] hover:border-[var(--ink-20)]'
                 }`}
@@ -98,7 +109,6 @@ export default function CategoryChangePaymentChoice({
                   name="category-change-payment"
                   value={option.value}
                   checked={selected}
-                  disabled={option.disabled}
                   onChange={() => setChoice(option.value)}
                   className="sr-only"
                 />

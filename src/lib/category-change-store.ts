@@ -9,7 +9,8 @@ import {
   categoryChangeDeadline,
   categoryChangeRef,
 } from '@/lib/category-change';
-import { changeHoldUntil, holdLapsed } from '@/lib/category-change-hold';
+import { DOWNGRADES_ON_HOLD, DOWNGRADE_ON_HOLD_COPY } from '@/lib/category-change-settings';
+import { changeHoldUntil, holdLapsed, paymentChoicesForOrder, paymentMethodForChoice } from '@/lib/category-change-hold';
 import { CategoryChangeRefused, eligibilityFor, quoteFor } from '@/lib/category-change-context';
 import { claimSeat, lockChange, lockRunner } from '@/lib/category-change-locks';
 
@@ -96,9 +97,18 @@ export async function createCategoryChange(actor: AuditActor, input: CreateChang
 
     const method = input.paymentMethod ?? null;
     const quote = quoteFor(ctx, to, input.basisAdjustment ?? null, method);
+    if (DOWNGRADES_ON_HOLD && quote.direction === 'DOWNGRADE') throw new CategoryChangeRefused(409, DOWNGRADE_ON_HOLD_COPY);
     const awaiting = quote.status === CATEGORY_CHANGE_STATUSES.AWAITING_PAYMENT;
     if (awaiting && !method) {
       throw new CategoryChangeRefused(400, `Choose how the runner pays the ${peso(quote.amount)}.`);
+    }
+    // Paid the way the entry was paid (category-change-hold.ts).
+    if (awaiting && !paymentChoicesForOrder(ctx.registration.paymentMethod).some(c => paymentMethodForChoice(c) === method)) {
+      const paid = paymentMethodLabel(ctx.registration.paymentMethod);
+      throw new CategoryChangeRefused(
+        400,
+        `This runner paid ${paid === 'Online' ? 'online' : `by ${paid}`}; the difference is paid the same way.`,
+      );
     }
 
     await claimSeat(tx, to);

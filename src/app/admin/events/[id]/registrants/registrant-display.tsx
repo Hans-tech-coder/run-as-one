@@ -14,6 +14,7 @@ import { statusProvenance } from '@/lib/activity';
 import { GUARDIAN_CONSENT_MAX_AGE } from '@/lib/minor-consent';
 import { formatRunnerAddress, groupByAddress, type RunnerAddress } from '@/lib/runner-address';
 import type { RegistrantRow } from './RegistrantsTable';
+import { BALANCE_DUE, displayStatus } from './category-change-display';
 
 /**
  * The badge tone a payment status wears.
@@ -156,10 +157,16 @@ export function RegistrantStatusBadges({ runner }: { runner: RegistrantRow }) {
   return (
     <>
       <span
-        className={`status-badge ${statusTone(runner.status)}`}
-        title={runner.status === 'EXPIRED' ? expiredExplanation(runner) : undefined}
+        className={`status-badge ${statusTone(displayStatus(runner))}`}
+        title={
+          runner.status === 'EXPIRED'
+            ? expiredExplanation(runner)
+            : displayStatus(runner) === BALANCE_DUE
+              ? 'The entry is paid; an upgrade is waiting for its difference.'
+              : undefined
+        }
       >
-        {runner.status}
+        {displayStatus(runner)}
       </span>
       {/* Under the status rather than beside the name, because it explains
           the status: a pacer's order reads PAID with nothing collected, and

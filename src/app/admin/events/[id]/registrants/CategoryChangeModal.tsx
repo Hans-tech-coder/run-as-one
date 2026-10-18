@@ -19,9 +19,10 @@
  * the button names its effect ("Change to 10K").
  *
  * An upgrade — anything with money to collect — asks how it is paid
- * (`CategoryChangePaymentChoice.tsx`, Session 3): a payment link with the
- * transaction fee on top, GCash or bank to come, or GCash or bank already
- * paid, recorded in the same step. The first two hold the seat and email the
+ * (`CategoryChangePaymentChoice.tsx`, Session 3), offering only the way the
+ * entry was paid: a payment link with the transaction fee on top for an online
+ * payer; GCash or bank to come, or already paid and recorded in the same step,
+ * for a bank-transfer payer. The first two hold the seat and email the
  * runner how to pay; the runner moves once the money is in.
  *
  * Built on the remarks modal's panel, like the follow-up modal, and its option
@@ -35,6 +36,7 @@ import BusyLabel from '@/components/ui/BusyLabel';
 import FieldError from '@/components/ui/FieldError';
 import { formatPesos } from '@/lib/money';
 import { CATEGORY_CHANGE_STATUSES, asDowngradeRefundPolicy, kitDifference } from '@/lib/category-change';
+import { DOWNGRADE_ON_HOLD_COPY } from '@/lib/category-change-settings';
 import { CHANGE_PAYMENT_CHOICES } from '@/lib/category-change-hold';
 import CategoryChangeQuote from './CategoryChangeQuote';
 import CategoryChangePaymentChoice from './CategoryChangePaymentChoice';
@@ -65,6 +67,8 @@ export default function CategoryChangeModal({
   needsPayment,
   onlineMethod,
   onlineFee,
+  paymentChoices,
+  downgradeIds,
   paymentChoice,
   setPaymentChoice,
   transactionNumber,
@@ -98,7 +102,9 @@ export default function CategoryChangeModal({
   const refused = eligibility && !eligibility.allowed && eligibility.reason !== 'SAME_CATEGORY' ? eligibility : null;
   const kit = current && target ? kitDifference(current.inclusions, target.inclusions) : null;
   const policy = preview ? asDowngradeRefundPolicy(preview.event.downgradeRefundPolicy) : null;
-  const canSave = !!quote && !refused && !isSaving && !(adjusting && adjustmentError);
+  // A pick that became a downgrade after the amount paid was adjusted.
+  const downgradeHeld = !!target && downgradeIds.has(target.id);
+  const canSave = !!quote && !refused && !downgradeHeld && !isSaving && !(adjusting && adjustmentError);
   const saveLabel = !target
     ? 'Change Category'
     : !needsPayment || !paymentChoice || paymentChoice === CHANGE_PAYMENT_CHOICES.OUTSIDE_PAID
@@ -155,12 +161,14 @@ export default function CategoryChangeModal({
 
           {preview && !refused && (
             <>
-              <fieldset className="p-0 border-none m-0">
+              {/* mx-0, not m-0: m-0 would cancel the body's space-y gap below it. */}
+              <fieldset className="p-0 border-none mx-0">
                 <legend className="block text-secondary mb-2 p-0">Move to</legend>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {preview.categories.map(category => {
                     const isCurrent = category.id === preview.runner.categoryId;
-                    const disabled = isCurrent || category.full;
+                    const onHold = !isCurrent && downgradeIds.has(category.id);
+                    const disabled = isCurrent || category.full || onHold;
                     const selected = category.id === toCategoryId;
                     const left = category.slotLimit ? Math.max(0, category.slotLimit - category.taken) : null;
                     return (
@@ -197,7 +205,9 @@ export default function CategoryChangeModal({
                           <span className="block text-xs text-[var(--text-muted)]">
                             {isCurrent
                               ? 'Current category'
-                              : category.full
+                              : onHold
+                                ? 'Downgrade not offered yet'
+                                : category.full
                                 ? 'Full'
                                 : left !== null
                                   ? `${left} ${left === 1 ? 'slot' : 'slots'} left`
@@ -223,11 +233,20 @@ export default function CategoryChangeModal({
                 />
               )}
 
-              {quote && needsPayment && (
+              {downgradeHeld && (
+                <div role="alert" className="flex gap-3 rounded-lg border border-orange-500/30 bg-orange-500/10 p-3 text-primary">
+                  <TriangleAlert size={18} className="shrink-0 text-[var(--status-warning)]" aria-hidden="true" />
+                  <p className="m-0">{DOWNGRADE_ON_HOLD_COPY}</p>
+                </div>
+              )}
+
+              {quote && needsPayment && !downgradeHeld && (
                 <CategoryChangePaymentChoice
                   amount={quote.amount}
                   onlineFee={onlineFee}
                   onlineMethod={onlineMethod}
+                  allowed={paymentChoices}
+                  orderMethod={preview.order.paymentMethod}
                   choice={paymentChoice}
                   setChoice={setPaymentChoice}
                   transactionNumber={transactionNumber}
@@ -250,13 +269,6 @@ export default function CategoryChangeModal({
                     </button>
                   ) : (
                     <div className="space-y-3 rounded-lg border border-[var(--dash-border)] p-3">
-                      {/* Said in plain words, because staff meet this rarely: the
-                          computed amount is right for almost every order (D3). */}
-                      <p className="m-0 text-xs text-secondary">
-                        Only use this if {peso(quote.computedBasis)} is not what the runner really paid for their{' '}
-                        {current.name} entry, for example the {current.name} price changed after they registered. What
-                        they pay or get back is worked out from the amount you enter.
-                      </p>
                       <div className="space-y-1.5">
                         <label htmlFor="category-change-basis" className="block text-secondary">
                           What the runner really paid for {current.name} (₱)

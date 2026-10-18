@@ -5,12 +5,21 @@
  * runner's change history (CATEGORY_CHANGE_PLAN.md Session 3), each on the
  * permission it needs:
  *
- * - **Copy link / Email link** (`registration:email`) — the payment link, for a
- *   chat or by Resend (`…/payment-link`). An email Resend refuses opens the
- *   by-hand send, as the created email does when it fails at opening.
- * - **Record payment** (`registration:validate`) — a GCash or bank payment staff
- *   saw land, with its reference and an optional screenshot, shrunk in the
- *   browser (`compress-proof.ts`). It applies the change at once.
+ * **The buttons follow how the change is paid** (`isOutsidePayment`):
+ *
+ * - **Online** (PayMongo): *Copy payment link* and *Email payment link*
+ *   (`registration:email`, `…/payment-link`). No *Record payment* — PayMongo's
+ *   webhook, or the runner reopening the link, applies it; a payment typed in
+ *   by staff would be a second record of money PayMongo already reports.
+ * - **GCash or bank**: *Email how to pay* (`registration:email`), the same
+ *   created email with the accounts and QR codes — no link to copy, since the
+ *   runner pays outside the app — and **Record payment**
+ *   (`registration:validate`), the payment staff saw land, with its reference
+ *   and an optional screenshot shrunk in the browser (`compress-proof.ts`). It
+ *   applies the change at once.
+ *
+ * An email Resend refuses opens the by-hand send, as the created email does
+ * when it fails at opening.
  * - **Cancel change** (`registration:edit`), after a confirm — releases the
  *   held seat; the runner stays where they are.
  *
@@ -24,7 +33,7 @@ import BusyLabel from '@/components/ui/BusyLabel';
 import FieldError from '@/components/ui/FieldError';
 import { useAlert } from '@/components/ui/AlertProvider';
 import { formatPesos } from '@/lib/money';
-import { MAX_TRANSACTION_NUMBER, readTransactionNumber } from '@/lib/category-change-hold';
+import { MAX_TRANSACTION_NUMBER, isOutsidePayment, readTransactionNumber } from '@/lib/category-change-hold';
 import { compressProof } from '@/lib/compress-proof';
 import type { CategoryChangeView } from '@/lib/category-change-view';
 import type { RegistrantPermissions } from './RegistrantsTable';
@@ -134,6 +143,7 @@ export default function AwaitingChangeActions({
   onSendEmail: (change: CategoryChangeView, kind: 'applied' | 'created') => void;
 }) {
   const { alert, confirm, toast } = useAlert();
+  const outside = isOutsidePayment(change.paymentMethod);
   const [recording, setRecording] = useState(false);
   const [busy, setBusy] = useState<'copy' | 'email' | 'cancel' | null>(null);
 
@@ -160,7 +170,7 @@ export default function AwaitingChangeActions({
         return;
       }
       if (data.change) onUpdated(data.change);
-      if (data.email?.sent) toast(`Emailed the payment link to ${data.email.to}.`);
+      if (data.email?.sent) toast(`Emailed ${outside ? 'how to pay' : 'the payment link'} to ${data.email.to}.`);
       else onSendEmail(data.change ?? change, 'created');
     } catch {
       await alert({ variant: 'error', title: 'No Payment Link', message: 'Could not reach the server. Try again.' });
@@ -211,17 +221,18 @@ export default function AwaitingChangeActions({
 
   return (
     <div className="flex items-center gap-2 flex-wrap">
-      {permissions.email && (
-        <>
-          <button type="button" onClick={() => link('copy')} disabled={busy !== null} className="btn-filter is-compact gap-1.5">
-            <Copy size={14} aria-hidden="true" /> {busy === 'copy' ? <BusyLabel>Copying</BusyLabel> : 'Copy payment link'}
-          </button>
-          <button type="button" onClick={() => link('email')} disabled={busy !== null} className="btn-filter is-compact gap-1.5">
-            <Mail size={14} aria-hidden="true" /> {busy === 'email' ? <BusyLabel>Sending</BusyLabel> : 'Email payment link'}
-          </button>
-        </>
+      {permissions.email && !outside && (
+        <button type="button" onClick={() => link('copy')} disabled={busy !== null} className="btn-filter is-compact gap-1.5">
+          <Copy size={14} aria-hidden="true" /> {busy === 'copy' ? <BusyLabel>Copying</BusyLabel> : 'Copy payment link'}
+        </button>
       )}
-      {permissions.validate && (
+      {permissions.email && (
+        <button type="button" onClick={() => link('email')} disabled={busy !== null} className="btn-filter is-compact gap-1.5">
+          <Mail size={14} aria-hidden="true" />{' '}
+          {busy === 'email' ? <BusyLabel>Sending</BusyLabel> : outside ? 'Email how to pay' : 'Email payment link'}
+        </button>
+      )}
+      {permissions.validate && outside && (
         <button type="button" onClick={() => setRecording(true)} disabled={busy !== null} className="btn-filter is-compact gap-1.5">
           <Receipt size={14} aria-hidden="true" /> Record payment
         </button>

@@ -24,6 +24,15 @@
  * on the registration form: Run As One's accounts list GCash beside the banks
  * (`BankAccount.bankName`), and `paymentMethod` keeps `GCASH` for PayMongo's.
  *
+ * **Only the way the runner paid for the entry is offered**
+ * (`paymentChoicesForOrder`). A runner who paid online pays the difference
+ * online, so PayMongo's webhook applies it and its reference is the record —
+ * nothing for staff to check by hand. A runner who paid by bank transfer sends
+ * the difference the same way. A free order paid nothing and so names no way;
+ * every choice stays open. When online payment is off, an online payer falls
+ * back to GCash or bank so the change can still be made. The route refuses any
+ * other choice, so the rule holds outside the modal too.
+ *
  * Every hold stops at the event's change deadline (D12): there is no seat
  * worth holding past the moment the change could no longer be made.
  *
@@ -62,6 +71,22 @@ export function onlineChangeMethod(): string | null {
 /** The stored `paymentMethod` for a choice: the PayMongo method, or a bank transfer. */
 export function paymentMethodForChoice(choice: ChangePaymentChoice): string | null {
   return choice === CHANGE_PAYMENT_CHOICES.ONLINE ? onlineChangeMethod() : PAYMENT_METHODS.BANK_TRANSFER;
+}
+
+const OUTSIDE_CHOICES: ChangePaymentChoice[] = [CHANGE_PAYMENT_CHOICES.OUTSIDE_LATER, CHANGE_PAYMENT_CHOICES.OUTSIDE_PAID];
+
+/**
+ * The choices an upgrade may be paid by, from the order's own `paymentMethod`:
+ * bank transfer → GCash or bank only; free → all; anything paid through
+ * PayMongo (including the old `online` default) → the payment link, or GCash
+ * or bank while online payment is off.
+ */
+export function paymentChoicesForOrder(orderPaymentMethod: string | null | undefined): ChangePaymentChoice[] {
+  const method = (orderPaymentMethod ?? '').toUpperCase();
+  if (method === PAYMENT_METHODS.BANK_TRANSFER) return OUTSIDE_CHOICES;
+  const online: ChangePaymentChoice[] = onlineChangeMethod() ? [CHANGE_PAYMENT_CHOICES.ONLINE] : [];
+  if (method === PAYMENT_METHODS.COMPLIMENTARY) return [...online, ...OUTSIDE_CHOICES];
+  return online.length ? online : OUTSIDE_CHOICES;
 }
 
 /** Whether a stored method is one staff record by hand (no PayMongo, no fee). */
