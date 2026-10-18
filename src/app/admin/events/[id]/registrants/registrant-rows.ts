@@ -1,18 +1,11 @@
 import type { Prisma } from '@prisma/client';
 import type { StatusRecord } from '@/lib/activity';
 import type { CategoryChangeView } from '@/lib/category-change-view';
+import { orderLogisticsFields, type LogisticsChangeView } from '@/lib/logistics-change-view';
 import { runnerRef } from '@/lib/order-ref';
 import { isPdfProof } from '@/lib/uploads';
 import { EMAIL_KIND_LABELS, outstandingEmail } from '@/lib/email-delivery';
-import {
-  LOGISTICS_METHODS,
-  asLogisticsMethod,
-  deliveryZoneLabelFor,
-  isBankTransfer,
-  isComplimentary,
-  logisticsMethodLabel,
-  paymentMethodLabel,
-} from '@/lib/registration-codes';
+import { isBankTransfer, isComplimentary, paymentMethodLabel } from '@/lib/registration-codes';
 import { DISCOUNT_TYPES, asDiscountType } from '@/lib/discount';
 import {
   GUARDIAN_RELATIONSHIP_LABELS,
@@ -24,7 +17,6 @@ import {
 import { formatEventInstant } from '@/lib/event-schedule';
 import { bankTransferExpiresBy, isCancelledCheckout } from '@/lib/pending-expiry';
 import { formatRunnerAddress } from '@/lib/runner-address';
-import { shipmentsFor } from '@/app/events/[slug]/register/delivery-split';
 
 /**
  * One row per live runner, as the registrants table, its cards, the detail
@@ -45,6 +37,7 @@ export function buildRegistrantRows({
   event,
   statusRecords,
   changesByRunner,
+  logisticsByOrder,
   shortInstant,
   csvInstant,
 }: {
@@ -52,10 +45,13 @@ export function buildRegistrantRows({
   /** Who last moved each order's status (activity-store's latestStatusChanges). */
   statusRecords: Map<string, StatusRecord>;
   changesByRunner: Map<string, CategoryChangeView[]>;
+  /** Each order's delivery switches (LOGISTICS_CHANGE_PLAN.md), from logisticsChangesByOrder. */
+  logisticsByOrder: Map<string, LogisticsChangeView[]>;
   shortInstant: (value: Date) => string;
   csvInstant: (value: Date) => string;
 }): Record<string, unknown>[] {
   const runners: Record<string, unknown>[] = [];
+  const now = new Date();
   event.registrations.forEach(reg => {
     // An online checkout cancelled before it was paid was never a registrant;
     // it stays on the Unpaid checkouts tab (UNPAID_FOLLOWUP_PLAN.md Batch 2).
@@ -65,13 +61,12 @@ export function buildRegistrantRows({
     // the same answer drives the row's mark, the backlog filter and the
     // manual-send modal, and three copies of it would eventually disagree.
     const pendingEmail = outstandingEmail(reg);
-    // A split order (RUNNER_ADDRESS_PLAN.md Batch 2) stores no one delivery
-    // address: each household is its own parcel, shipped to the home address
-    // its runners gave. Grouped here with the same rule the checkout charged
-    // by, so each row can say where its own kit goes and in which zone.
-    const shipments = reg.deliverySplit ? shipmentsFor(event, reg.runners) : null;
+    // The Logistics columns, worded once in logistics-change-view.ts so a
+    // switch route answers with exactly what this page would print: each
+    // runner's own parcel on a split order (RUNNER_ADDRESS_PLAN.md Batch 2),
+    // the order's switches, and which switch the row menu may offer.
+    const logistics = orderLogisticsFields(event, reg, logisticsByOrder.get(reg.id) ?? [], now);
     reg.runners.forEach((runner, runnerIndex) => {
-      const shipment = shipments?.find(s => s.runners.includes(runnerIndex));
       runners.push({
         id: runner.id,
         registrationId: reg.id,
@@ -182,18 +177,14 @@ export function buildRegistrantRows({
         // CSV export can never format them three different ways again — and
         // uppercase, because on this screen they are stored data sitting beside
         // a runner's uppercase name, not a choice being offered.
-        logisticsMethod: logisticsMethodLabel(reg.logisticsMethod).toUpperCase(),
-        // The zone the runner declared at checkout — it decides which delivery
-        // fee they were charged, so the organizer needs to see it. Blank when
-        // both zones cost the same, since the runner was never asked.
-        deliveryZone: deliveryZoneLabelFor(event, shipment ? shipment.zone : reg.deliveryZone).toUpperCase(),
-        deliveryAddress: (shipment ? formatRunnerAddress(shipment.address) : reg.deliveryAddress) || 'N/A',
-        deliverySplit: reg.deliverySplit,
+        // The method, the zone the runner declared at checkout (it decides
+        // which delivery fee they were charged; blank when both zones cost the
+        // same), where this runner's kit goes, `isDelivery` decided from the
+        // code rather than the label, and the order's delivery switches.
+        ...logistics[runnerIndex],
         paymentMethod: paymentMethodLabel(reg.paymentMethod).toUpperCase(),
         // The branches the screen actually needs, decided from the code rather
         // than by matching the label back against a string.
-        isDelivery:
-          asLogisticsMethod(reg.logisticsMethod) === LOGISTICS_METHODS.DELIVERY,
         isBankTransfer: isBankTransfer(reg.paymentMethod),
         // A free pacer entry, read from the discount this order snapshotted
         // rather than from the promo code, which staff may since have paused

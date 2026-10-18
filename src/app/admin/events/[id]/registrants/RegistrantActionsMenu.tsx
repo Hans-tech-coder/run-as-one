@@ -2,11 +2,12 @@
 
 import React, { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { MoreVertical, CheckCircle, Trash2, Edit, Eye, ArrowLeftRight } from 'lucide-react';
+import { MoreVertical, CheckCircle, Trash2, Edit, Eye, ArrowLeftRight, Truck, Store } from 'lucide-react';
 import { placeRowMenu, type RowMenuPlacement } from '../../../row-menu-position';
 import BusyLabel from '@/components/ui/BusyLabel';
 import { cssDurationMs } from '@/lib/css-duration';
 import { canValidatePayment } from './registrant-display';
+import { LOGISTICS_DIRECTIONS, type LogisticsDirection } from '@/lib/logistics-change';
 
 interface RegistrantActionsMenuProps {
   runnerId: string;
@@ -22,6 +23,12 @@ interface RegistrantActionsMenuProps {
   onDelete: (runnerId: string) => void;
   /** Opens Change category (CATEGORY_CHANGE_PLAN.md); offered on a PAID order only (D9). */
   onChangeCategory: (runnerId: string) => void;
+  /**
+   * The one switch this order may make now (LOGISTICS_CHANGE_PLAN.md L3, L11,
+   * L13), decided on the server; null hides the item.
+   */
+  logisticsSwitch: LogisticsDirection | null;
+  onSwitchLogistics: (runnerId: string) => void;
   /**
    * What this person's role allows on this event, decided on the server. An
    * item the route would refuse is not offered: a validator who can settle an
@@ -55,6 +62,8 @@ export default function RegistrantActionsMenu({
   onEdit,
   onDelete,
   onChangeCategory,
+  logisticsSwitch,
+  onSwitchLogistics,
   canEdit,
   canDelete,
   canValidate,
@@ -205,6 +214,29 @@ export default function RegistrantActionsMenu({
           >
             <ArrowLeftRight size={16} />
             Change Category
+          </button>
+        )}
+
+        {/* Same permission (registration:edit). Offered only when the server
+            said this order may switch now, and named by where it goes. */}
+        {canEdit && logisticsSwitch && (
+          <button
+            className="action-dropdown-item flex items-center gap-3 px-4 py-2 text-sm text-left"
+            role="menuitem"
+            onClick={() => {
+              onSwitchLogistics(runnerId);
+              closeMenu();
+            }}
+          >
+            {logisticsSwitch === LOGISTICS_DIRECTIONS.TO_DELIVERY ? (
+              <>
+                <Truck size={16} aria-hidden="true" /> Switch to Delivery
+              </>
+            ) : (
+              <>
+                <Store size={16} aria-hidden="true" /> Switch to Pickup
+              </>
+            )}
           </button>
         )}
 

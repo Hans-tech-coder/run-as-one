@@ -14,6 +14,7 @@ import { Eye, Check } from 'lucide-react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { MinorBadge, RegistrantStatusBadges } from './registrant-display';
 import { CategoryWithChange } from './category-change-display';
+import { LogisticsWithSwitch } from './logistics-change-display';
 import type { RegistrantRow } from './RegistrantsTable';
 
 /** The Province filter's choice for rows with no home address on file. */
@@ -81,9 +82,12 @@ export function selectionColumn<T>(): ColumnDef<T> {
 export function buildRegistrantColumns({
   onView,
   renderActions,
+  onLogisticsHistory,
 }: {
   onView: (runner: RegistrantRow) => void;
   renderActions: (runner: RegistrantRow) => React.ReactNode;
+  /** Opens an order's delivery switch history (LOGISTICS_CHANGE_PLAN.md). */
+  onLogisticsHistory: (runnerId: string) => void;
 }): ColumnDef<RegistrantRow>[] {
   return [
     selectionColumn<RegistrantRow>(),
@@ -188,7 +192,13 @@ export function buildRegistrantColumns({
     {
       accessorKey: "logisticsMethod",
       header: "Logistics",
-      cell: ({ row }) => <span className="capitalize">{row.original.logisticsMethod}</span>,
+      // The method, and what a delivery switch left on it
+      // (LOGISTICS_CHANGE_PLAN.md): the "Pickup → Delivery" chip, the parcel
+      // it ships with, a switch waiting for its fee, and its history. Sorting
+      // and the filter still read the plain method.
+      cell: ({ row }) => (
+        <LogisticsWithSwitch runner={row.original} onHistory={() => onLogisticsHistory(row.original.id)} />
+      ),
       filterFn: (row, columnId, filterValue) => {
         if (!filterValue || filterValue.length === 0) return true;
         return filterValue.includes(row.getValue(columnId));

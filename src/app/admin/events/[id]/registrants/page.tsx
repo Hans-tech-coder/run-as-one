@@ -12,6 +12,7 @@ import { paymentMethodLabel } from '@/lib/registration-codes';
 import { eventInstantParts, formatEventTime, formatInstantDay, today } from '@/lib/event-schedule';
 import { expiresBy, isCancelledCheckout, listedRegistrationWhere, unpaidFollowUpWhere } from '@/lib/pending-expiry';
 import { categoryChangesByRunner } from '@/lib/category-change-view';
+import { logisticsChangesByOrder } from '@/lib/logistics-change-view';
 import { buildRegistrantRows } from './registrant-rows';
 import DashboardHeader from '@/app/admin/DashboardHeader';
 
@@ -124,6 +125,8 @@ export default async function RegistrantsPage({
     event,
     statusRecords,
     changesByRunner: await categoryChangesByRunner(id),
+    // And each order's delivery switches (LOGISTICS_CHANGE_PLAN.md), in one more.
+    logisticsByOrder: await logisticsChangesByOrder(id),
     shortInstant,
     csvInstant,
   });

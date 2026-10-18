@@ -40,6 +40,40 @@ on, so which callers woke it overnight was inferred, not seen. Still worth
 doing by hand: Vercel Firewall's bot protection, and watching the CU-hours
 after release.
 
+**Delivery switches (2026-10-19, on `dev`, not released; `LOGISTICS_CHANGE_PLAN.md`
+Sessions 1–2 done, 3–4 open; the plan is in the git-ignored `docs/plans/`).**
+Staff switch a whole PAID order between kit pickup and delivery from the
+registrants row menu (*Switch to Delivery* / *Switch to Pickup*). Session 1
+(`aa2f7dd`): the `LogisticsChange` and `LogisticsChangeOrder` tables and
+`Event.logisticsChangeUntil` (migration `20261018120000_logistics_change`, in
+`ON_HOLD.md`'s release steps), the pure quote and rules
+`lib/logistics-change.ts`, and the event form's *Delivery switch deadline*.
+Session 2: the writer `lib/logistics-change-store.ts` (with
+`logistics-change-context.ts` and `logistics-change-view.ts`), the routes
+`admin/registrations/[id]/logistics-change` and
+`admin/logistics-changes/[id]/cancel`, the modal, the Logistics cell's chip,
+"Ships with" note and switch history, and the export's *Logistics Note*.
+**A switch with a fee is only saved as waiting** and can be cancelled; nothing
+yet lets it be paid, so it can only be cancelled or left (and the sweep does
+not expire it yet). **Open: Session 3** (payment link and
+`/pay/logistics/[token]`, the PayMongo webhook branch, record payment, the
+expiry sweep, the emails) **and Session 4** (settlement and remittances, the
+client runner list's notes, data-model and domain-rules updates for them).
+Verified on `local-dev`'s QA event `qa-virtual-run-test` with four temporary
+orders (removed after, the event's settings restored): a ₱0 switch riding on a
+paid parcel applied at once, a ₱100 switch of two combined orders (one parcel,
+one fee; ₱250 when split across two households) saved as awaiting and then
+cancelled, L13 refused at the route, L10 refused in the modal and at the route
+and then applied with the rider ticked, and no receipt amount changed.
+Decisions the code cites: **L2** whole order; **L3** PAID only; **L4** the
+receipt is never edited; **L5** staff never type a fee; **L6** one fee per
+parcel, ₱0 on a paid parcel, combine by customer email; **L7** no Run As One
+fee; **L8** the fee is the organizer's; **L9** back to pickup is free and
+refunds nothing; **L10** a parcel others ride on goes back only with them;
+**L11** deadline, default 7 days before race day; **L12** hold windows as an
+upgrade's; **L13** one awaiting switch per order. Before the plan is deleted,
+copy L1–L14 here in full.
+
 **Category changes (2026-10-18, on `dev`, not released; `CATEGORY_CHANGE_PLAN.md`
 Sessions 1–4, `e7e091f`, `f0907f5`, `9d141f5` — the plan is deleted (it lived
 in the git-ignored `docs/plans/`, so it is not in history); every decision is

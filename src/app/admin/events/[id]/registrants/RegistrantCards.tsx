@@ -17,6 +17,7 @@ import type { Table } from '@tanstack/react-table';
 import AdminCardList from '../../../AdminCardList';
 import { MinorBadge, RegistrantStatusBadges, expiredExplanation } from './registrant-display';
 import { CategoryWithChange } from './category-change-display';
+import { LogisticsWithSwitch } from './logistics-change-display';
 import RegistrantRowActions, { type RegistrantRowActionHandlers } from './RegistrantRowActions';
 import type { RegistrantRow } from './RegistrantsTable';
 
@@ -85,7 +86,15 @@ export default function RegistrantCards({
           { label: 'Category', value: <CategoryWithChange runner={row.original} detailed /> },
           { label: 'Size', value: row.original.size || '—' },
           { label: 'Province', value: row.original.addressProvince || '—' },
-          { label: 'Logistics', value: row.original.logisticsMethod },
+          {
+            label: 'Logistics',
+            value: (
+              <LogisticsWithSwitch
+                runner={row.original}
+                onHistory={() => rowActions.onLogisticsHistory(row.original.id)}
+              />
+            ),
+          },
           { label: 'Payment', value: row.original.paymentMethod },
         ]}
         actions={row => <RegistrantRowActions runner={row.original} layout="card" {...rowActions} />}

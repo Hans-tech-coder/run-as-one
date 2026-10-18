@@ -31,6 +31,7 @@
 
 import { formatPesos } from '@/lib/money';
 import { categoryMove, displayStatus, kitSummary, type MoveSource } from './category-change-display';
+import { logisticsNote } from './logistics-change-display';
 import type { UnpaidCheckout } from './UnpaidCheckoutsList';
 
 /**
@@ -70,7 +71,7 @@ export const REGISTRANT_CSV_HEADERS = [
   'Runner Ref', 'Order Ref', 'Registered At', 'First Name', 'Last Name', 'Email', 'Phone', 'Gender', 'Birthdate',
   'Guardian Name', 'Guardian Relationship', 'Guardian Consent At',
   'Category', 'Changed From', 'Kit Changed', 'Distance', 'Shirt Size', 'Emergency Contact', 'Emergency Phone',
-  'Running Community', 'Medical Conditions', 'Home Address', 'Province', 'Logistics Method', 'Delivery Area', 'Delivery Address',
+  'Running Community', 'Medical Conditions', 'Home Address', 'Province', 'Logistics Method', 'Delivery Area', 'Delivery Address', 'Logistics Note',
   'Payment Method', 'Pacer', 'Promo Code', 'Order Discount', 'Order Total', 'Status'
 ];
 
@@ -124,6 +125,10 @@ function registrantCsvRow(runner: any): string {
     // their home address (registrants/page.tsx).
     csvField(runner.deliveryZone),
     csvField(runner.deliveryAddress),
+    // A delivery switch (LOGISTICS_CHANGE_PLAN.md), read as the Logistics
+    // cell reads it: where the order started, the paid parcel it ships with,
+    // and a switch still waiting for its fee. Blank for an order never switched.
+    csvField(logisticsNote(runner)),
     csvField(runner.paymentMethod),
     // A column of its own rather than a word folded into Payment Method
     // (PACER_DISCOUNT_PLAN.md Batch 3). The organizer sorts this sheet to

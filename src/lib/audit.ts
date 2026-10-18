@@ -134,6 +134,13 @@ export const AUDIT_ACTIONS = [
   'category_change.payment_link.copied',
   'category_change.expired',
   'category_change.payment_late',
+  // A paid order switched between kit pickup and delivery (LOGISTICS_CHANGE_
+  // PLAN.md): a switch opened to wait for its fee, one applied, and an
+  // awaiting one withdrawn. The receipt is never edited (L4), so these rows
+  // and the LogisticsChange table are the order's logistics history.
+  'logistics_change.created',
+  'logistics_change.applied',
+  'logistics_change.cancelled',
   'proof.viewed',
   'registrants.exported',
   // The Unpaid checkouts tab's own file (UNPAID_ORDERS_PLAN.md Batch 3): the
@@ -178,6 +185,7 @@ export type AuditEntityType =
   | 'Registration'
   | 'Runner'
   | 'CategoryChange'
+  | 'LogisticsChange'
   | 'PromoCode'
   | 'RaceResult'
   | 'ResultPacer'

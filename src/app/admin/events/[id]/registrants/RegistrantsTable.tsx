@@ -15,12 +15,12 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { Download, X, Trash2 } from 'lucide-react';
 import ProofLightbox from './ProofLightbox';
-import { useAlert } from '@/components/ui/AlertProvider';
 import AdminTablePager, { useFirstPageOnNewRows } from '../../../AdminTablePager';
 import RegistrantsDataTable from './RegistrantsDataTable';
 import RegistrantCards from './RegistrantCards';
+import RegistrantsBulkBar from './RegistrantsBulkBar';
+import { usePaymentStatus } from './usePaymentStatus';
 import {
   getCoreRowModel,
   getSortedRowModel,
@@ -47,6 +47,9 @@ import ManualEmailModal, { useManualEmailModal } from './ManualEmailModal';
 import CategoryChangeModal from './CategoryChangeModal';
 import { useCategoryChangeModal } from './useCategoryChangeModal';
 import CategoryChangeEmailModal from './CategoryChangeEmailModal';
+import LogisticsChangeModal from './LogisticsChangeModal';
+import LogisticsChangeHistory from './LogisticsChangeHistory';
+import { useLogisticsChangeModal } from './useLogisticsChangeModal';
 import {
   BulkDeleteModal,
   DeleteRegistrantModal,
@@ -104,8 +107,6 @@ export default function RegistrantsTable({
   permissions,
 }: RegistrantsTableProps) {
   const [runners, setRunners] = useState(initialRunners);
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
-  const { alert, toast, progress } = useAlert();
   const [viewingRunner, setViewingRunner] = useState<any | null>(null);
 
   // The proof of payment, full-screen. It is the runner whose receipt is
@@ -113,6 +114,13 @@ export default function RegistrantsTable({
   // numbers under the image and can validate it from there — the detail
   // modal behind it stays exactly where it was.
   const [proofRunner, setProofRunner] = useState<any | null>(null);
+
+  // Validate Payment from the menu, the detail modal or the lightbox.
+  const { updatingId, handleStatusChange, validatePayment } = usePaymentStatus({
+    setRunners,
+    setViewingRunner,
+    setProofRunner,
+  });
 
   // Edit Modal State
   const [editingRunner, setEditingRunner] = useState<any | null>(null);
@@ -175,6 +183,10 @@ export default function RegistrantsTable({
   // send (CATEGORY_CHANGE_PLAN.md), all handed back onto the rows here.
   const categoryChange = useCategoryChangeModal({ runners, setRunners, setViewingRunner });
 
+  // Switch to delivery or pickup, and an order's switch history
+  // (LOGISTICS_CHANGE_PLAN.md), handed back onto every row the switch moved.
+  const logisticsChange = useLogisticsChangeModal({ runners, setRunners, setViewingRunner });
+
   const queues = useRegistrantQueues(runners);
 
   // Table state
@@ -182,73 +194,6 @@ export default function RegistrantsTable({
   const [globalFilter, setGlobalFilter] = useState(initialSearch);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
-
-  /**
-   * `announce` says who shows the wait. From the row menu — the default — the
-   * menu has closed on the press, so a progress toast carries it (§9). From the
-   * detail modal or the receipt lightbox, their own Validate button already
-   * reads "Updating", so only the result is toasted.
-   */
-  const handleStatusChange = async (
-    registrationId: string,
-    newStatus: string,
-    announce: 'progress' | 'result' = 'progress',
-  ) => {
-    setUpdatingId(registrationId);
-    const paid = newStatus === 'PAID';
-    const done = paid ? 'Payment validated.' : 'Payment status updated.';
-    const status =
-      announce === 'progress'
-        ? progress(paid ? 'Validating payment' : 'Updating payment status')
-        : null;
-    try {
-      const res = await fetch(`/api/admin/registrations/${registrationId}/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
-      });
-      if (res.ok) {
-        const { statusChange } = await res.json().catch(() => ({ statusChange: null }));
-        // The route answers with who made the change, so the detail modal's
-        // "Validated by" line names them now rather than after a reload — and
-        // the open modal and lightbox hold copies of the row, so they move too.
-        const settle = (row: RegistrantRow | null) =>
-          row && row.registrationId === registrationId
-            ? { ...row, status: newStatus, statusRecord: statusChange ?? row.statusRecord }
-            : row;
-        setRunners(current => current.map(settle));
-        setViewingRunner(settle);
-        setProofRunner(settle);
-        if (status) status.done(done);
-        else toast(done);
-      } else {
-        // Used to fail silently (a console line nobody reads) while the row
-        // kept saying PENDING — the organizer had no way to know to retry.
-        const data = await res.json().catch(() => ({}));
-        status?.clear();
-        alert(data?.error || 'The payment status could not be changed. Please try again.');
-      }
-    } catch (e) {
-      console.error(e);
-      status?.clear();
-      alert('Could not reach the server. Check your connection and try again.');
-    } finally {
-      setUpdatingId(null);
-    }
-  };
-
-  /**
-   * Marks a bank transfer paid from either door — the detail modal's footer
-   * or the receipt lightbox. Whichever panel is open moves to PAID with the
-   * table, in handleStatusChange, once the route has said yes — never before:
-   * validating an expired transfer is refused when the race has refilled
-   * (api/admin/registrations/[id]/status), and a panel already reading PAID
-   * behind that refusal would tell the organizer the opposite of what
-   * happened.
-   */
-  const validatePayment = (runner: any) => {
-    handleStatusChange(runner.registrationId, 'PAID', 'result');
-  };
 
   /**
    * Open the detail modal from a runner's id rather than from the row object.
@@ -295,12 +240,15 @@ export default function RegistrantsTable({
     onRemarks: remarks.open,
     onEmail: email.open,
     onChangeCategory: categoryChange.open,
+    onSwitchLogistics: logisticsChange.open,
+    onLogisticsHistory: logisticsChange.openHistory,
   };
 
   const columns = useMemo(
     () => buildRegistrantColumns({
       onView: setViewingRunner,
       renderActions: runner => <RegistrantRowActions runner={runner} layout="table" {...rowActions} />,
+      onLogisticsHistory: logisticsChange.openHistory,
     }),
     // The row actions are rebuilt every render; updatingId and runners are
     // what they read that changes what a cell shows.
@@ -342,14 +290,6 @@ export default function RegistrantsTable({
   });
 
   const selectedCount = table.getSelectedRowModel().rows.length;
-
-  // What the bulk bar last counted, so a bar on its way out still reads
-  // "3 selected" while it fades rather than dropping to 0. Adjusted during
-  // render, which is React's own pattern for state that follows a value.
-  const [bulkBarCount, setBulkBarCount] = useState(0);
-  if (selectedCount > 0 && selectedCount !== bulkBarCount) {
-    setBulkBarCount(selectedCount);
-  }
 
   /**
    * The export, as the table calls it: the columns and the Excel-proofing
@@ -397,33 +337,13 @@ export default function RegistrantsTable({
 
       <AdminTablePager table={table} />
 
-      {/*
-        The bulk bar, below `lg`, while rows are selected. From `lg` up the red
-        chip in the toolbar does this. Export here is the toolbar's own export
-        (selected rows, audit call first); Clear empties the selection. See
-        `.bulk-bar` in Admin.css for why it is fixed rather than sticky.
-      */}
-      <div className="bulk-bar-spacer dash-mobile-only" hidden={selectedCount === 0} aria-hidden="true" />
-      <div className="dash-mobile-only">
-        <div
-          role="region"
-          aria-label="Selected registrants"
-          className={`bulk-bar t-toast ${selectedCount > 0 ? 'is-open' : ''}`}
-        >
-          <span className="bulk-bar-count" aria-live="polite">{bulkBarCount} selected</span>
-          <button type="button" onClick={handleExportCSV} className="btn-filter bulk-bar-export">
-            <Download size={16} aria-hidden="true" /> Export
-          </button>
-          {permissions.remove && (
-            <button type="button" onClick={bulkDelete.open} className="btn-filter is-danger bulk-bar-delete">
-              <Trash2 size={16} aria-hidden="true" /> Delete
-            </button>
-          )}
-          <button type="button" onClick={() => setRowSelection({})} className="btn-filter bulk-bar-clear">
-            <X size={16} aria-hidden="true" /> Clear
-          </button>
-        </div>
-      </div>
+      <RegistrantsBulkBar
+        selectedCount={selectedCount}
+        canRemove={permissions.remove}
+        onExport={handleExportCSV}
+        onDelete={bulkDelete.open}
+        onClear={() => setRowSelection({})}
+      />
 
       {viewingRunner && (
         <RegistrantDetailModal
@@ -481,6 +401,8 @@ export default function RegistrantsTable({
       <RemarksModal {...remarks.modalProps} />
       <ManualEmailModal {...email.modalProps} />
       <CategoryChangeModal {...categoryChange.modalProps} />
+      <LogisticsChangeModal {...logisticsChange.modalProps} />
+      <LogisticsChangeHistory {...logisticsChange.historyProps} canEdit={permissions.edit} />
       {categoryChange.changeEmail && (
         <CategoryChangeEmailModal
           key={categoryChange.changeEmail.changeId}
