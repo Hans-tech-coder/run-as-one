@@ -34,6 +34,15 @@ any event (`Event.categoryChangeUntil`, `downgradeRefundPolicy`,
 Additive; every existing event gets the defaults (no deadline set, no refund,
 ₱0 fee).
 
+The same release carries **delivery switch settings** (`LOGISTICS_CHANGE_PLAN.md`
+Session 1, `aa2f7dd`): the same `migrate deploy` also applies
+`20261018120000_logistics_change`, which the new code needs before it can read
+any event (`Event.logisticsChangeUntil`, the event form's *Delivery switch
+deadline*) and which creates the empty `LogisticsChange` and
+`LogisticsChangeOrder` tables the coming delivery switch writes. Additive;
+every existing event gets the default (no deadline set: 7 days before race
+day).
+
 **Category changes are complete on `dev` (Sessions 1–4, 2026-10-18).**
 Staff move a paid runner to another category, upgrades are paid the way the
 entry was paid (PayMongo for an online payer, GCash/bank recorded by staff for
