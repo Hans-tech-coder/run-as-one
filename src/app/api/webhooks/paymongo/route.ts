@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import crypto from 'crypto';
 import { settleOnlinePayment } from '@/lib/online-payment';
+import { findChangeForPayment, settleChangeOnline } from '@/lib/category-change-payment';
 
 /**
  * How old a signed event may be, in seconds, before it is refused as a replay.
@@ -161,7 +162,21 @@ export async function POST(request: Request) {
           );
         }
       } else {
-        console.warn(`PayMongo Webhook: Registration not found for reference ${referenceNumber} or PI ${paymentIntentId}`);
+        // Not an order: an upgrade's payment (CATEGORY_CHANGE_PLAN.md Session
+        // 3), matched by the page id its checkout stored or by its changeRef,
+        // which its page carries as the reference. Applied under the event
+        // lock (lib/category-change-store.ts); one that arrives for a change
+        // already EXPIRED or CANCELLED is flagged on the trail for a person
+        // and never applied (lib/category-change-payment.ts).
+        const change = await findChangeForPayment(paymentIntentId, referenceNumber);
+        if (change) {
+          const settled = await settleChangeOnline(change.id);
+          if (settled.outcome === 'applied') {
+            console.log(`Successfully applied category change ${change.changeRef}`);
+          }
+        } else {
+          console.warn(`PayMongo Webhook: Registration not found for reference ${referenceNumber} or PI ${paymentIntentId}`);
+        }
       }
     }
 

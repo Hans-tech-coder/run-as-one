@@ -326,7 +326,9 @@ export default function DashboardShell({
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key.toLowerCase() !== 'k' || !(event.metaKey || event.ctrlKey)) return;
+      // Chrome fires a keydown with no `key` when an autofill suggestion is
+      // picked, and this listener sees every keydown on the page.
+      if (event.key?.toLowerCase() !== 'k' || !(event.metaKey || event.ctrlKey)) return;
       event.preventDefault();
       setJump(current => (current === 'open' ? 'closing' : 'open'));
     };

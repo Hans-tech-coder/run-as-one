@@ -76,6 +76,12 @@ async function sweep(request: Request) {
       );
     }
 
+    if (result.changesExpired > 0) {
+      console.log(
+        `[expire-pending] expired ${result.changesExpired} unpaid category change(s): ${result.changeRefs.join(', ')}`,
+      );
+    }
+
     return NextResponse.json({ success: true, ...result });
   } catch (error: any) {
     console.error('Error expiring pending registrations:', error);

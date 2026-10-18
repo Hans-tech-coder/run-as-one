@@ -8,6 +8,10 @@
  * (paid through a late webhook, cancelled, expired): the page is read again,
  * so the runner sees that state's own panel rather than an error here. Any
  * other refusal is said in place, under the button, in the route's words.
+ *
+ * `kind="change"` is the same button on a category change's payment page
+ * (`/pay/change/[token]`, CATEGORY_CHANGE_PLAN.md Session 3), posting to
+ * `api/category-change/checkout`, which answers the same way.
  */
 
 import React, { useState } from 'react';
@@ -15,7 +19,15 @@ import { useRouter } from 'next/navigation';
 import { Lock } from 'lucide-react';
 import BusyLabel from '@/components/ui/BusyLabel';
 
-export default function PayNowButton({ token, amount }: { token: string; amount: string }) {
+export default function PayNowButton({
+  token,
+  amount,
+  kind = 'order',
+}: {
+  token: string;
+  amount: string;
+  kind?: 'order' | 'change';
+}) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +36,14 @@ export default function PayNowButton({ token, amount }: { token: string; amount:
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(`/api/pay/${encodeURIComponent(token)}`, { method: 'POST' });
+      const res =
+        kind === 'change'
+          ? await fetch('/api/category-change/checkout', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ token }),
+            })
+          : await fetch(`/api/pay/${encodeURIComponent(token)}`, { method: 'POST' });
       const body = await res.json().catch(() => ({}));
       if (res.ok && body.checkout_url) {
         // Left busy: the browser is on its way to PayMongo.

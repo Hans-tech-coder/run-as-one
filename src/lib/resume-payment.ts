@@ -95,3 +95,46 @@ export function payableState(
   }
   return 'payable';
 }
+
+// ── The second kind: a category change's payment link ────────────────────────
+
+/**
+ * The link for an upgrade's payment (CATEGORY_CHANGE_PLAN.md Session 3): the
+ * same stateless token as an order's, of a second kind. `purpose` is what
+ * keeps the two apart — an order's token opens no change and a change's token
+ * opens no order, because each reader refuses the other's purpose — and the
+ * subject is the change's id. It expires with the change's hold, and is
+ * checked against the change every time it is opened (`changePayableState`),
+ * so a change applied, cancelled or expired meanwhile is refused.
+ *
+ * The page it opens (`/pay/change/[token]`) shows the race, the two categories
+ * and the money, and never the runner's name, email or phone: like an order's
+ * link, it is pasted into Messenger and forwarded.
+ */
+const CHANGE_PURPOSE = 'category-change-payment';
+
+/** A link for this change, valid until `expiresAt` (the change's hold). */
+export async function createChangePaymentToken(changeId: string, expiresAt: Date): Promise<string> {
+  return new SignJWT({ purpose: CHANGE_PURPOSE })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setSubject(changeId)
+    .setIssuedAt()
+    .setExpirationTime(Math.floor(expiresAt.getTime() / 1000))
+    .sign(SECRET_KEY);
+}
+
+/** The change a link names, or null for a forged, expired or foreign token. */
+export async function readChangePaymentToken(token: string): Promise<string | null> {
+  try {
+    const { payload } = await jwtVerify(token, SECRET_KEY, { algorithms: ['HS256'] });
+    if (payload.purpose !== CHANGE_PURPOSE || typeof payload.sub !== 'string' || !payload.sub) return null;
+    return payload.sub;
+  } catch {
+    return null;
+  }
+}
+
+/** Where a change's link lands, on whichever host made it. */
+export function changePaymentUrl(origin: string, token: string): string {
+  return `${origin}/pay/change/${token}`;
+}

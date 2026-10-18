@@ -58,7 +58,7 @@ import {
   type SortingState,
   type VisibilityState,
 } from '@tanstack/react-table';
-import AdminTablePager from '../../../AdminTablePager';
+import AdminTablePager, { useFirstPageOnNewRows } from '../../../AdminTablePager';
 import FiltersMenu, { type FilterGroup } from '../../../FiltersMenu';
 import MobileSortMenu from '../../../MobileSortMenu';
 import ColumnsViewMenu from './ColumnsViewMenu';
@@ -253,7 +253,11 @@ export default function UnpaidCheckoutsList({
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    // Page 1 on new rows comes from useFirstPageOnNewRows below; TanStack's
+    // own reset warns on this screen (see the hook).
+    autoResetPageIndex: false,
   });
+  useFirstPageOnNewRows(table);
 
   /**
    * The registrants tab's rule: the marked rows if any are marked, every row

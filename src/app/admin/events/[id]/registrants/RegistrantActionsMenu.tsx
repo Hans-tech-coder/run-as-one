@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { MoreVertical, CheckCircle, Trash2, Edit, Eye } from 'lucide-react';
+import { MoreVertical, CheckCircle, Trash2, Edit, Eye, ArrowLeftRight } from 'lucide-react';
 import { placeRowMenu, type RowMenuPlacement } from '../../../row-menu-position';
 import BusyLabel from '@/components/ui/BusyLabel';
 import { cssDurationMs } from '@/lib/css-duration';
@@ -20,6 +20,8 @@ interface RegistrantActionsMenuProps {
   onView: (runnerId: string) => void;
   onEdit: (runnerId: string) => void;
   onDelete: (runnerId: string) => void;
+  /** Opens Change category (CATEGORY_CHANGE_PLAN.md); offered on a PAID order only (D9). */
+  onChangeCategory: (runnerId: string) => void;
   /**
    * What this person's role allows on this event, decided on the server. An
    * item the route would refuse is not offered: a validator who can settle an
@@ -52,6 +54,7 @@ export default function RegistrantActionsMenu({
   onView,
   onEdit,
   onDelete,
+  onChangeCategory,
   canEdit,
   canDelete,
   canValidate,
@@ -185,6 +188,23 @@ export default function RegistrantActionsMenu({
           >
             <Edit size={16} />
             Edit Registrant
+          </button>
+        )}
+
+        {/* Same permission as Edit (registration:edit). Only a paid order:
+            a pending one is paid or expires first (D9), and the item would
+            only open to say so. */}
+        {canEdit && status === 'PAID' && (
+          <button
+            className="action-dropdown-item flex items-center gap-3 px-4 py-2 text-sm text-left"
+            role="menuitem"
+            onClick={() => {
+              onChangeCategory(runnerId);
+              closeMenu();
+            }}
+          >
+            <ArrowLeftRight size={16} />
+            Change Category
           </button>
         )}
 

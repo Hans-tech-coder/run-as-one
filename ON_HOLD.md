@@ -26,6 +26,20 @@ also applies `20261017120000_event_format`, which the new code needs before
 it can read any event (`Event.format`, `Event.virtualEndDate`). Additive; every
 existing event stays on-site.
 
+The same release carries **category change settings** (`CATEGORY_CHANGE_PLAN.md`
+Session 1, `e7e091f`): the same `migrate deploy` also applies
+`20261018090000_category_change`, which the new code needs before it can read
+any event (`Event.categoryChangeUntil`, `downgradeRefundPolicy`,
+`categoryChangeFee`) and which creates the empty `CategoryChange` table.
+Additive; every existing event gets the defaults (no deadline set, no refund,
+₱0 fee).
+
+**Do not promote `dev` to `main` until category change Session 4 (the
+settlement line) has landed.** Session 3 lets upgrades collect money — by
+PayMongo and by GCash or bank recorded by staff — and until Session 4 that
+money is missing from `/admin/remittances`, so what the organizer is owed would
+be understated. Session 3 needs no migration of its own.
+
 **Virtual runs, Phase B (on hold).** Runners submit a GPS screenshot and their
 time for a virtual run, staff validate them in a queue, and an approved one
 becomes a `RaceResult` (`VIRTUAL_RUN_PLAN.md` D8, recorded in

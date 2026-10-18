@@ -45,6 +45,12 @@ export type PaymongoOrder = {
   deliveryFeeCents: number;
   platformFeeCents: number;
   transactionFeeCents: number;
+  /**
+   * The goods as lines of their own, in place of the runner lines: a category
+   * change bills its difference as one line (CATEGORY_CHANGE_PLAN.md Session
+   * 3), not as a runner. The fee lines below are added after them as usual.
+   */
+  items?: { name: string; amount: number }[];
 };
 
 /**
@@ -63,7 +69,11 @@ export function paymongoLineItems(order: PaymongoOrder): LineItem[] {
   // charge the runner more than the summary promised. The itemisation the
   // runner needs is in the wizard's summary and in both emails; what this
   // list has to be is exactly the amount being charged.
-  if (order.discountAmount > 0) {
+  if (order.items) {
+    for (const item of order.items) {
+      if (item.amount > 0) lineItems.push({ currency: 'PHP', amount: item.amount, name: item.name, quantity: 1 });
+    }
+  } else if (order.discountAmount > 0) {
     // A code that covers the goods entirely leaves nothing to bill for them,
     // and PayMongo rejects a zero-amount line — the fees below are then the
     // whole charge.

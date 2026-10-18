@@ -119,6 +119,21 @@ export const AUDIT_ACTIONS = [
   'registration.payment_link.copied',
   'runner.updated',
   'runner.deleted',
+  // A paid runner moved to another category (CATEGORY_CHANGE_PLAN.md): an
+  // upgrade opened to wait for its payment, a move applied, an awaiting one
+  // withdrawn, a downgrade's refund paid by hand, and the email saying so sent
+  // by hand. The order is never edited (D1), so these rows are its history.
+  'category_change.created',
+  'category_change.applied',
+  'category_change.cancelled',
+  'category_change.refunded',
+  'category_change.email.sent_by_hand',
+  // An upgrade's payment (Session 3): its link made, copied or emailed; the
+  // sweep letting an unpaid one go; and a payment that arrived for a change
+  // already closed, left for a person rather than applied.
+  'category_change.payment_link.copied',
+  'category_change.expired',
+  'category_change.payment_late',
   'proof.viewed',
   'registrants.exported',
   // The Unpaid checkouts tab's own file (UNPAID_ORDERS_PLAN.md Batch 3): the
@@ -162,6 +177,7 @@ export type AuditEntityType =
   | 'Event'
   | 'Registration'
   | 'Runner'
+  | 'CategoryChange'
   | 'PromoCode'
   | 'RaceResult'
   | 'ResultPacer'

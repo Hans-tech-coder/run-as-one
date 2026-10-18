@@ -3,6 +3,7 @@ import prisma from '@/lib/db';
 import { PAYMENT_METHODS, isBankTransfer } from '@/lib/registration-codes';
 import type { AuditEntry } from '@/lib/audit';
 import { eventInstant } from '@/lib/event-schedule';
+import { expireCategoryChanges } from '@/lib/category-change-expiry';
 
 /**
  * When an unpaid order — an online checkout, or a bank transfer nobody
@@ -112,6 +113,13 @@ export type SweepResult = {
   truncated: boolean;
   /** The order references expired, so a run is traceable in the logs. */
   orderRefs: string[];
+  /**
+   * Upgrades that waited out their hold or the change deadline unpaid
+   * (lib/category-change-expiry.ts, CATEGORY_CHANGE_PLAN.md D11), swept on the
+   * same run so one trigger tidies both.
+   */
+  changesExpired: number;
+  changeRefs: string[];
 };
 
 /** The moment before which an unpaid online checkout has waited long enough. */
@@ -231,7 +239,15 @@ export async function expirePendingRegistrations(
     if (released) redemptionsReleased += 1;
   }
 
-  return { expired: orderRefs.length, redemptionsReleased, truncated, orderRefs };
+  const changes = await expireCategoryChanges(now);
+  return {
+    expired: orderRefs.length,
+    redemptionsReleased,
+    truncated,
+    orderRefs,
+    changesExpired: changes.expired,
+    changeRefs: changes.changeRefs,
+  };
 }
 
 /**

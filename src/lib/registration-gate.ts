@@ -1,8 +1,8 @@
 import { Prisma } from '@prisma/client';
-import db from '@/lib/db';
 import publicDb from '@/lib/public-db';
 import { formatEventInstant } from '@/lib/event-schedule';
 import { isPublished } from '@/lib/event-visibility';
+import { takenSlotsByCategory } from '@/lib/slot-holds';
 
 /**
  * Whether an event is taking registrations right now, and why not when it
@@ -34,15 +34,10 @@ import { isPublished } from '@/lib/event-visibility';
  * trusting anything computed for a page.
  */
 
-/**
- * Which registrations hold a slot.
- *
- * PENDING counts. Counting only PAID would oversell every event that takes
- * bank transfers: those sit PENDING from the moment they are submitted until a
- * human has looked at the proof, which can be days. Selling that seat twice in
- * the meantime is exactly the failure a slot limit exists to prevent.
- */
-export const SLOT_HOLDING_STATUSES = ['PAID', 'PENDING'] as const;
+// What holds a slot and the count of them moved to slot-holds.ts when an
+// awaiting category change began holding one too (CATEGORY_CHANGE_PLAN.md
+// D11); re-exported so the readers of slots keep importing them from here.
+export { SLOT_HOLDING_STATUSES, takenSlotsByCategory } from '@/lib/slot-holds';
 
 /**
  * When remaining slots stop being trivia and start being a decision.
@@ -142,41 +137,6 @@ export type RegistrationState =
  */
 export const RESULTS_ONLY_MESSAGE =
   'This race does not take registrations on Run As One. The organizer handles sign-ups elsewhere; this site only publishes its results.';
-
-/**
- * How many runners each of these categories has already taken.
- *
- * Grouped in one query rather than counted per category: an event page asking
- * five separate counts would be five round trips to Neon for a number that is
- * read on every page load.
- *
- * `client` is the transaction handle when a checkout route calls this, and the
- * plain client everywhere else. The count has to be taken *inside* the write
- * transaction to mean anything there, and the arithmetic must not fork into a
- * second copy for that.
- */
-export async function takenSlotsByCategory(
-  categoryIds: string[],
-  client: { runner: { groupBy: any } } = db,
-): Promise<Map<string, number>> {
-  if (categoryIds.length === 0) return new Map();
-
-  const rows = await client.runner.groupBy({
-    by: ['categoryId'],
-    where: {
-      categoryId: { in: categoryIds },
-      // A runner an organizer removed holds no slot, exactly as it held none
-      // when removal was a hard delete — the row now stays for the trail.
-      deletedAt: null,
-      registration: { status: { in: [...SLOT_HOLDING_STATUSES] } },
-    },
-    _count: { _all: true },
-  });
-
-  return new Map(
-    rows.map((row: any) => [row.categoryId as string, row._count._all as number]),
-  );
-}
 
 /**
  * A slot limit as the database should hold it, from whatever the admin form
@@ -438,15 +398,39 @@ export class SlotsUnavailableError extends Error {
  * order and wording as the routes' own checks.
  */
 export async function lockEventForRegistration(tx: any, eventId: string): Promise<void> {
-  const [row] = await tx.$queryRaw(
-    Prisma.sql`SELECT "resultsOnly", "publishAt", "registrationPaused", "registrationPauseNote", "registrationClosedAt", "registrationOpensAt" FROM "Event" WHERE "id" = ${eventId} FOR SHARE`,
-  );
+  const row = await lockEventRow(tx, eventId);
   if (!row) return;
   if (row.resultsOnly) throw new SlotsUnavailableError(RESULTS_ONLY_MESSAGE);
   if (!isPublished(row)) throw new SlotsUnavailableError(REGISTRATION_CLOSED_MESSAGE);
   if (isClosed(row)) throw new SlotsUnavailableError(REGISTRATION_CLOSED_MESSAGE);
   if (row.registrationPaused) throw new SlotsUnavailableError(pauseNote(row));
   if (opensLater(row)) throw new SlotsUnavailableError(openingNote(row));
+}
+
+/**
+ * The event row locked `FOR SHARE`, and the flags read under that lock — the
+ * half of `lockEventForRegistration` that does not ask whether sign-ups are
+ * open. A staff write to a paid order (a category change,
+ * CATEGORY_CHANGE_PLAN.md) takes the same lock, so it waits out a switch to
+ * results only like an order does, but a paused, closed or not-yet-open race
+ * must not stop it: those close the race to new runners, not to the ones
+ * already in it. Null when the event is gone.
+ */
+export async function lockEventRow(
+  tx: any,
+  eventId: string,
+): Promise<{
+  resultsOnly: boolean;
+  publishAt: Date | null;
+  registrationPaused: boolean;
+  registrationPauseNote: string | null;
+  registrationClosedAt: Date | null;
+  registrationOpensAt: Date | null;
+} | null> {
+  const [row] = await tx.$queryRaw(
+    Prisma.sql`SELECT "resultsOnly", "publishAt", "registrationPaused", "registrationPauseNote", "registrationClosedAt", "registrationOpensAt" FROM "Event" WHERE "id" = ${eventId} FOR SHARE`,
+  );
+  return row ?? null;
 }
 
 /**

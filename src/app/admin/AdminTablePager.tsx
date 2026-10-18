@@ -134,3 +134,24 @@ export default function AdminTablePager<T>({
     </div>
   );
 }
+
+/**
+ * Back to page 1 whenever the rows a table pages through change — a search, a
+ * filter, a sort, a row added or removed. That is what TanStack's own
+ * `autoResetPageIndex` does; a table turns it off and calls this instead.
+ *
+ * TanStack queues its reset from inside the row models, which run during
+ * render, and the registrants screen renders its tables twice before they
+ * mount: the second pass fires the queued reset at a component that is not
+ * there yet, and React logs "Can't perform a React state update on a component
+ * that hasn't mounted yet". Here the rows are compared during render and the
+ * page moves back there, React's own pattern for state that follows a value.
+ */
+export function useFirstPageOnNewRows<T>(table: Table<T>) {
+  const rows = table.getPrePaginationRowModel();
+  const [pagedRows, setPagedRows] = useState(rows);
+  if (rows !== pagedRows) {
+    setPagedRows(rows);
+    if (table.getState().pagination.pageIndex !== 0) table.resetPageIndex();
+  }
+}

@@ -13,6 +13,7 @@ import React from 'react';
 import { Eye, Check } from 'lucide-react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { MinorBadge, RegistrantStatusBadges } from './registrant-display';
+import { CategoryWithChange } from './category-change-display';
 import type { RegistrantRow } from './RegistrantsTable';
 
 /** The Province filter's choice for rows with no home address on file. */
@@ -156,7 +157,10 @@ export function buildRegistrantColumns({
     {
       accessorKey: "category",
       header: "Category",
-      cell: ({ row }) => row.original.category,
+      // The option, "(from 5K)" after a change, and its Kit changed chip
+      // (CATEGORY_CHANGE_PLAN.md D7). Sorting and the filter still read the
+      // plain name, which is what the accessor returns.
+      cell: ({ row }) => <CategoryWithChange runner={row.original} />,
       filterFn: (row, columnId, filterValue) => {
         if (!filterValue || filterValue.length === 0) return true;
         return filterValue.includes(row.getValue(columnId));

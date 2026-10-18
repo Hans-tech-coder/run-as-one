@@ -22,18 +22,17 @@ import {
   Maximize2, FileText, Printer, TriangleAlert
 } from 'lucide-react';
 import BusyLabel from '@/components/ui/BusyLabel';
-import { formatPesos } from '@/lib/money';
-import { orderActivityPath } from '@/lib/activity';
-import type { RegistrantPermissions } from './RegistrantsTable';
+import type { RegistrantPermissions, RegistrantRow } from './RegistrantsTable';
+import RegistrantTransactionFields from './RegistrantTransactionFields';
+import CategoryChangeHistory from './CategoryChangeHistory';
+import { CategoryWithChange } from './category-change-display';
+import type { CategoryChangeView } from '@/lib/category-change-view';
+import type { AppliedChange } from './useCategoryChangeModal';
 import {
-  DeliveryParcels,
   MinorBadge,
   PacerBadge,
-  StatusProvenanceNote,
   canValidatePayment,
   consentSheetPath,
-  expiredExplanation,
-  statusPillClass,
 } from './registrant-display';
 
 export default function RegistrantDetailModal({
@@ -47,23 +46,29 @@ export default function RegistrantDetailModal({
   onOpenProof,
   onOpenRemarks,
   onOpenEmail,
+  onChangeUpdated,
+  onSendChangeEmail,
 }: {
-  runner: any;
+  runner: RegistrantRow;
   /**
    * Every live runner on this runner's order, in order, as the table holds
    * them now — so a split order's parcels are grouped from the addresses on
    * screen, including one staff just corrected, not from the page load.
    */
-  orderRunners: any[];
+  orderRunners: RegistrantRow[];
   eventId: string;
   permissions: RegistrantPermissions;
   /** The registration currently being validated, so its button can say so. */
   updatingId: string | null;
   onClose: () => void;
-  onValidate: (runner: any) => void;
-  onOpenProof: (runner: any) => void;
+  onValidate: (runner: RegistrantRow) => void;
+  onOpenProof: (runner: RegistrantRow) => void;
   onOpenRemarks: (runnerId: string) => void;
   onOpenEmail: (runnerId: string) => void;
+  /** A category change the history wrote, handed back to the table; `applied` when it moved the runner. */
+  onChangeUpdated: (change: CategoryChangeView, applied?: AppliedChange) => void;
+  /** The by-hand send of one of a change's emails, which the table owns. */
+  onSendChangeEmail: (change: CategoryChangeView, kind: 'applied' | 'created') => void;
 }) {
   return (
       // Below `sm` a full-height sheet (.admin-modal-sheet): the sections
@@ -121,7 +126,7 @@ export default function RegistrantDetailModal({
               <div className="space-y-4">
                 <h4 className="text-sm font-semibold text-secondary uppercase tracking-wider">Race Details</h4>
                 <div className="space-y-2 text-sm">
-                  <p className="flex flex-col"><span className="text-[var(--text-muted)]">Category</span> <span className="text-primary font-medium">{runner.category}</span></p>
+                  <p className="flex flex-col"><span className="text-[var(--text-muted)]">Category</span> <span className="text-primary font-medium"><CategoryWithChange runner={runner} detailed /></span></p>
                   {/* Fun-run packages have none, and a blank row reads like
                       missing data rather than an absent field. */}
                   {runner.distance && <p className="flex flex-col"><span className="text-[var(--text-muted)]">Distance</span> <span className="text-primary font-medium">{runner.distance}</span></p>}
@@ -129,6 +134,15 @@ export default function RegistrantDetailModal({
                 </div>
               </div>
             </div>
+
+            {/* Every move this runner has had (CATEGORY_CHANGE_PLAN.md), with a
+                downgrade's refund to record and an email to send by hand. */}
+            <CategoryChangeHistory
+              changes={runner.categoryChanges ?? []}
+              permissions={permissions}
+              onUpdated={onChangeUpdated}
+              onSendEmail={onSendChangeEmail}
+            />
 
             {/* Parent/Guardian consent (GUARDIAN_CONSENT_PLAN.md Batch 4).
                 Shown for a minor, and for anyone with a guardian on file —
@@ -211,123 +225,12 @@ export default function RegistrantDetailModal({
 
             <div className="mt-8 pt-8 border-t border-[var(--dash-border)] space-y-4">
               <h4 className="text-sm font-semibold text-secondary uppercase tracking-wider">Transaction Details</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                {/* Only on a group order, where the two differ. A solo
-                    registration's runner reference *is* its order reference,
-                    so printing it twice would say nothing twice. */}
-                {runner.runnerRef !== runner.orderRef && (
-                  <p className="flex flex-col"><span className="text-[var(--text-muted)]">Runner Ref</span> <span className="text-primary font-medium">{runner.runnerRef}</span></p>
-                )}
-                {/* The order reference is kept beside it: this runner's ref
-                    identifies the person, the order ref is what the whole
-                    group paid under and what a bank line will match. */}
-                <p className="flex flex-col"><span className="text-[var(--text-muted)]">Order Ref</span> <span className="text-primary font-medium">{runner.orderRef}</span></p>
-                <p className="flex flex-col"><span className="text-[var(--text-muted)]">Status</span>
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium w-fit mt-1 ${statusPillClass(runner.status)}`}>
-                    {runner.status}
-                  </span>
-                  {/* An EXPIRED row is the one status nobody chose, so it is
-                      the one that has to explain itself: what happened, when,
-                      and what it gave back. Without this the organizer is
-                      looking at an order that changed on its own. */}
-                  {runner.status === 'EXPIRED' && (
-                    <span className="text-xs text-[var(--text-muted)] mt-1.5">
-                      {runner.expiredAt
-                        ? `Expired on ${new Date(runner.expiredAt).toLocaleString()}. `
-                        : ''}
-                      {expiredExplanation(runner)}
-                    </span>
-                  )}
-                  {/* Status checked too: validating moves the open modal's
-                      copy to PAID without reloading verifyBy. */}
-                  {runner.status === 'PENDING' && runner.verifyBy && (
-                    <span className="text-xs text-[var(--text-muted)] mt-1.5">
-                      Verify the slip by {runner.verifyBy}, or the slot is released.
-                    </span>
-                  )}
-                  <StatusProvenanceNote runner={runner} />
-                  {/* Everything that happened to this order — the proof
-                      opened, the remarks rewritten, the runner edited — for
-                      the people who can read the trail. */}
-                  {permissions.activity && (
-                    <Link
-                      href={orderActivityPath(runner.orderRef, eventId)}
-                      className="text-xs font-medium text-accent-blue-ink hover:underline mt-1.5 w-fit"
-                    >
-                      See this order&rsquo;s activity
-                    </Link>
-                  )}
-                </p>
-                <p className="flex flex-col">
-                  <span className="text-[var(--text-muted)]">Payment Method</span>
-                  <span className="text-primary font-medium">{runner.paymentMethod}</span>
-                  {/* COMPLIMENTARY on its own is a word an organizer has to
-                      guess at — it says nobody paid, not why nobody had to.
-                      Every complimentary order in this app today is a pacer's
-                      (PACER_DISCOUNT_PLAN.md Batch 2), so the line names the
-                      reason rather than leaving a ₱0 order looking unpaid. */}
-                  {runner.isComplimentary && (
-                    <span className="text-xs text-[var(--text-muted)] mt-1">
-                      Complimentary: pacer entry
-                    </span>
-                  )}
-                </p>
-                <p className="flex flex-col"><span className="text-[var(--text-muted)]">Logistics</span> <span className="text-primary font-medium">{runner.logisticsMethod}</span></p>
-                {runner.isDelivery && runner.deliveryZone && (
-                  <p className="flex flex-col"><span className="text-[var(--text-muted)]">Delivery Area</span> <span className="text-primary font-medium">{runner.deliveryZone}</span></p>
-                )}
-                {runner.isDelivery && !runner.deliverySplit && (
-                  <p className="flex flex-col sm:col-span-2"><span className="text-[var(--text-muted)]">Address</span> <span className="text-primary font-medium">{runner.deliveryAddress}</span></p>
-                )}
-                {runner.isDelivery && runner.deliverySplit && (
-                  <DeliveryParcels runner={runner} orderRunners={orderRunners} />
-                )}
-                {runner.isBankTransfer && runner.transactionNumber && (
-                  <p className="flex flex-col"><span className="text-[var(--text-muted)]">Transaction No.</span> <span className="text-primary font-medium">{runner.transactionNumber}</span></p>
-                )}
-                {/* Only when there was one. A discount is the usual reason a
-                    transfer arrives short of the sticker price, so the code
-                    that caused it belongs next to the amount rather than in
-                    a report nobody opens mid-phone-call. */}
-                {runner.discountAmount > 0 && (
-                  <p className="flex flex-col">
-                    <span className="text-[var(--text-muted)]">Discount</span>
-                    <span className="text-primary font-medium">
-                      −₱{formatPesos(runner.discountAmount)}
-                      {runner.promoCode && (
-                        <span className="text-[var(--text-muted)] font-normal"> &middot; {runner.promoCode}</span>
-                      )}
-                    </span>
-                  </p>
-                )}
-                <p className="flex flex-col"><span className="text-[var(--text-muted)]">Order Total</span> <span className="text-primary font-medium">₱{formatPesos(runner.totalAmount)}</span></p>
-                <p className="flex flex-col">
-                  <span className="text-[var(--text-muted)]">Waiver Consent</span>
-                  {runner.consentGiven ? (
-                    <span className="inline-flex items-center gap-1 text-[var(--status-success)] font-medium w-fit mt-1">
-                      Agreed
-                      {runner.consentGivenAt && (
-                        <span className="text-[var(--text-muted)] font-normal">
-                          &middot; {new Date(runner.consentGivenAt).toLocaleString()}
-                        </span>
-                      )}
-                    </span>
-                  ) : (
-                    <span className="text-[var(--status-warning)] font-medium w-fit mt-1">
-                      Not on record
-                    </span>
-                  )}
-                </p>
-                <p className="flex flex-col">
-                  <span className="text-[var(--text-muted)]">Signed By</span>
-                  {/* The name typed under the tick. Registrations taken
-                      before a signature was asked for say so plainly rather
-                      than showing an empty line that reads like a bug. */}
-                  <span className={`font-medium ${runner.consentSignature ? 'text-primary' : 'text-[var(--text-muted)] italic'}`}>
-                    {runner.consentSignature || 'Not asked at the time'}
-                  </span>
-                </p>
-              </div>
+              <RegistrantTransactionFields
+                runner={runner}
+                orderRunners={orderRunners}
+                eventId={eventId}
+                permissions={permissions}
+              />
 
               {/* The validator's notes. Internal - this block has no
                   equivalent anywhere the runner can see, and nothing here
@@ -534,5 +437,6 @@ export default function RegistrantDetailModal({
             </button>
           </div>
         </div>
-      </div>  );
+      </div>
+  );
 }

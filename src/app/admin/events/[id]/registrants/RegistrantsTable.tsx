@@ -18,9 +18,9 @@ import React, { useState, useMemo } from 'react';
 import { Download, X, Trash2 } from 'lucide-react';
 import ProofLightbox from './ProofLightbox';
 import { useAlert } from '@/components/ui/AlertProvider';
-import AdminCardList from '../../../AdminCardList';
-import AdminTablePager from '../../../AdminTablePager';
+import AdminTablePager, { useFirstPageOnNewRows } from '../../../AdminTablePager';
 import RegistrantsDataTable from './RegistrantsDataTable';
+import RegistrantCards from './RegistrantCards';
 import {
   getCoreRowModel,
   getSortedRowModel,
@@ -44,6 +44,9 @@ import RegistrantRowActions, { type RegistrantRowActionHandlers } from './Regist
 import RegistrantsToolbar, { useRegistrantQueues } from './RegistrantsToolbar';
 import RemarksModal, { useRemarksModal } from './RemarksModal';
 import ManualEmailModal, { useManualEmailModal } from './ManualEmailModal';
+import CategoryChangeModal from './CategoryChangeModal';
+import { useCategoryChangeModal } from './useCategoryChangeModal';
+import CategoryChangeEmailModal from './CategoryChangeEmailModal';
 import {
   BulkDeleteModal,
   DeleteRegistrantModal,
@@ -168,6 +171,10 @@ export default function RegistrantsTable({
     },
   });
 
+  // Change category, its history's writes and the applied email's by-hand
+  // send (CATEGORY_CHANGE_PLAN.md), all handed back onto the rows here.
+  const categoryChange = useCategoryChangeModal({ runners, setRunners, setViewingRunner });
+
   const queues = useRegistrantQueues(runners);
 
   // Table state
@@ -287,6 +294,7 @@ export default function RegistrantsTable({
     onDelete: deleteModal.open,
     onRemarks: remarks.open,
     onEmail: email.open,
+    onChangeCategory: categoryChange.open,
   };
 
   const columns = useMemo(
@@ -318,7 +326,11 @@ export default function RegistrantsTable({
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    // Page 1 on new rows comes from useFirstPageOnNewRows below; TanStack's
+    // own reset warns on this screen (see the hook).
+    autoResetPageIndex: false,
   });
+  useFirstPageOnNewRows(table);
 
   const bulkDelete = useBulkDeleteModal({
     table,
@@ -380,81 +392,8 @@ export default function RegistrantsTable({
       {/* From `lg` up; the cards below take its place under it. */}
       <RegistrantsDataTable table={table} empty="No registrants found." />
 
-      {/*
-        The same rows as the table above, below `lg` (AdminCardList): search,
-        the queue chips, filters, sort, selection and the page all come from
-        the one table instance. A group's members keep their order (-1 above
-        -2) because the rows arrive in registration order and nothing here
-        re-sorts them.
-      */}
-      <div className="dash-mobile-only">
-        <AdminCardList
-          items={table.getRowModel().rows}
-          getKey={row => row.id}
-          label="Registrants"
-          className="is-flush"
-          selection={{
-            isSelected: row => row.getIsSelected(),
-            toggle: row => row.toggleSelected(),
-            label: row => `Select ${row.original.name}`,
-          }}
-          selectAll={{
-            checked: table.getIsAllPageRowsSelected(),
-            toggle: () => table.toggleAllPageRowsSelected(!table.getIsAllPageRowsSelected()),
-            label: `Select all ${table.getRowModel().rows.length} on this page`,
-          }}
-          // The registrant's own number from the server, never the position.
-          leading={row => <span className="font-mono">{row.original.regNo}</span>}
-          // A name is untrusted length: it truncates rather than holding the
-          // card open, and so does the email under it, as in the table cell.
-          title={row => (
-            <>
-              <span className="block truncate">{row.original.name}</span>
-              <span className="block truncate text-xs font-normal text-secondary">{row.original.email}</span>
-            </>
-          )}
-          // The reference alone. The table's eye beside it was left off the
-          // card at the owner's request; View Details in the card's ⋯ menu
-          // opens the same modal.
-          subtitle={row => (
-            <>
-              <span className="block">{row.original.runnerRef}</span>
-              <span className="block text-xs">{row.original.registeredAtLabel}</span>
-            </>
-          )}
-          badges={row => (
-            <>
-              {row.original.isMinor && <MinorBadge />}
-              <RegistrantStatusBadges runner={row.original} />
-              {/* What the table's badges say only on hover, said in words:
-                  a phone has no hover. Allowed to wrap, unlike the chips. */}
-              {row.original.status === 'EXPIRED' && (
-                <span className="status-note neutral" style={{ flexBasis: '100%', marginTop: 0, whiteSpace: 'normal' }}>
-                  {expiredExplanation(row.original)}
-                </span>
-              )}
-              {row.original.emailPending && (
-                <span className="status-note neutral" style={{ flexBasis: '100%', marginTop: 0, whiteSpace: 'normal' }}>
-                  The {row.original.emailPendingLabel} email has not gone out.
-                </span>
-              )}
-            </>
-          )}
-          fields={row => [
-            { label: 'Category', value: row.original.category },
-            { label: 'Size', value: row.original.size || '—' },
-            { label: 'Province', value: row.original.addressProvince || '—' },
-            { label: 'Logistics', value: row.original.logisticsMethod },
-            { label: 'Payment', value: row.original.paymentMethod },
-          ]}
-          actions={row => <RegistrantRowActions runner={row.original} layout="card" {...rowActions} />}
-          empty={
-            <div className="border border-[var(--dash-border)] rounded-lg py-16 px-4 text-center text-[var(--text-muted)]">
-              No registrants found.
-            </div>
-          }
-        />
-      </div>
+      {/* The same rows as cards, below `lg` (RegistrantCards). */}
+      <RegistrantCards table={table} rowActions={rowActions} />
 
       <AdminTablePager table={table} />
 
@@ -498,6 +437,10 @@ export default function RegistrantsTable({
           onOpenProof={setProofRunner}
           onOpenRemarks={remarks.open}
           onOpenEmail={email.open}
+          onChangeUpdated={(change, applied) =>
+            applied ? categoryChange.onApplied(viewingRunner.id, applied) : categoryChange.updateChange(viewingRunner.id, change)
+          }
+          onSendChangeEmail={(change, kind) => categoryChange.openChangeEmail(viewingRunner, change, kind)}
         />
       )}
 
@@ -537,6 +480,15 @@ export default function RegistrantsTable({
       <BulkDeleteModal {...bulkDelete.modalProps} />
       <RemarksModal {...remarks.modalProps} />
       <ManualEmailModal {...email.modalProps} />
+      <CategoryChangeModal {...categoryChange.modalProps} />
+      {categoryChange.changeEmail && (
+        <CategoryChangeEmailModal
+          key={categoryChange.changeEmail.changeId}
+          request={categoryChange.changeEmail}
+          onClose={categoryChange.closeChangeEmail}
+          onMarked={(runnerId, change) => categoryChange.updateChange(runnerId, change)}
+        />
+      )}
     </div>
   );
 }

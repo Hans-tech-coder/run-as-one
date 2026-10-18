@@ -85,6 +85,14 @@ export const ACTION_LABELS: Record<AuditAction, string> = {
   'registration.payment_link.copied': 'Made a payment link',
   'runner.updated': 'Edited a runner',
   'runner.deleted': 'Removed a runner',
+  'category_change.created': 'Opened a category change',
+  'category_change.applied': 'Changed a category',
+  'category_change.cancelled': 'Cancelled a category change',
+  'category_change.refunded': 'Recorded a category change refund',
+  'category_change.email.sent_by_hand': 'Sent a category change email by hand',
+  'category_change.payment_link.copied': 'Made a category change payment link',
+  'category_change.expired': 'A category change expired unpaid',
+  'category_change.payment_late': 'Payment for a closed category change',
   'proof.viewed': 'Opened a payment proof',
   'registrants.exported': 'Exported registrants',
   'unpaid_checkouts.exported': 'Exported unpaid checkouts',
@@ -110,7 +118,9 @@ export const ACTION_LABELS: Record<AuditAction, string> = {
 
 /** The one action worded as a warning: somebody tried a password and was refused. */
 export function isWarningAction(action: string): boolean {
-  return action === 'auth.sign_in_failed';
+  // Money that came in for a change nobody can apply any more: a person has
+  // to refund it or reopen the move, so it must not read like routine work.
+  return action === 'auth.sign_in_failed' || action === 'category_change.payment_late';
 }
 
 /**
@@ -123,8 +133,8 @@ export function isWarningAction(action: string): boolean {
  * changing, which is exactly what a Data Privacy Act review asks for first.
  */
 export const ACTIVITY_GROUPS = [
-  { key: 'payments', label: 'Payments', hint: 'Status changes, remarks, emails sent by hand and unpaid checkouts followed up' },
-  { key: 'runners', label: 'Runners', hint: 'Runner edits and removals' },
+  { key: 'payments', label: 'Payments', hint: 'Status changes, remarks, emails sent by hand, unpaid checkouts followed up and category change refunds' },
+  { key: 'runners', label: 'Runners', hint: 'Runner edits, removals and category changes' },
   { key: 'data', label: 'Personal data', hint: 'Payment proofs opened and registrant lists exported' },
   { key: 'events', label: 'Events', hint: 'Events created, edited, paused, scheduled or deleted, and results uploaded or corrected' },
   { key: 'promotions', label: 'Promotions', hint: 'Promotions created, edited, paused or deleted' },
@@ -199,6 +209,15 @@ export const ACTION_GROUP: Record<AuditAction, ActivityGroupKey> = {
   'registration.payment_link.copied': 'payments',
   'runner.updated': 'runners',
   'runner.deleted': 'runners',
+  'category_change.created': 'runners',
+  'category_change.applied': 'runners',
+  'category_change.cancelled': 'runners',
+  // Money handed back, so it sits with the other payment work.
+  'category_change.refunded': 'payments',
+  'category_change.email.sent_by_hand': 'payments',
+  'category_change.payment_link.copied': 'payments',
+  'category_change.expired': 'runners',
+  'category_change.payment_late': 'payments',
   'proof.viewed': 'data',
   'registrants.exported': 'data',
   'unpaid_checkouts.exported': 'data',

@@ -309,8 +309,21 @@
   is pasted into chats and forwarded. Pay now bills the stored order, never
   the request, and closes the order's earlier PayMongo page first, so one
   order can never be paid twice.
+- **A category change's payment link is the same kind of key, to one change**
+  (`CATEGORY_CHANGE_PLAN.md` Session 3). A second purpose,
+  `'category-change-payment'`, with the change id, expiring with its seat
+  hold — an order's token opens no change and a change's opens no order.
+  Handed out only with `registration:email`, every copy on the trail, and
+  re-checked on every open (`changePayableState`). `/pay/change/[token]` is
+  `noindex` and throttled and shows the race, the two categories, the
+  reference and the money, never the runner's name, email or phone; its
+  checkout (`/api/category-change/checkout`) charges the stored `amount` plus
+  the fee, never a figure from the request, and closes an earlier page first.
+  A payment that lands for a change no longer waiting is never applied.
 - Payment proofs are **private** blobs, served only through
-  `/api/admin/proof/[id]` with a roughly five-minute signed URL.
+  `/api/admin/proof/[id]` — and a category change's through
+  `/api/admin/category-changes/[id]/proof` — with a roughly five-minute signed
+  URL.
 - Passwords are bcrypt-hashed; the session cookie is httpOnly, `sameSite=lax`,
   `secure` in production, with a one-day expiry — or **30 days when the person
   ticks "Keep me signed in"** (`LOGIN_UX_PLAN.md` Batch 4, D8; opt-in, off by

@@ -26,6 +26,7 @@ export type RegistrantRowActionHandlers = {
   onDelete: (runnerId: string) => void;
   onRemarks: (runnerId: string) => void;
   onEmail: (runnerId: string) => void;
+  onChangeCategory: (runnerId: string) => void;
 };
 
 export default function RegistrantRowActions({
@@ -39,6 +40,7 @@ export default function RegistrantRowActions({
   onDelete,
   onRemarks,
   onEmail,
+  onChangeCategory,
 }: RegistrantRowActionHandlers & { runner: RegistrantRow; layout: 'table' | 'card' }) {
   // A different icon, not just a different colour: colour alone is the one
   // signal a colour-blind organizer cannot read.
@@ -63,6 +65,7 @@ export default function RegistrantRowActions({
       onView={onView}
       onEdit={onEdit}
       onDelete={onDelete}
+      onChangeCategory={onChangeCategory}
       canEdit={permissions.edit}
       canDelete={permissions.remove}
       canValidate={permissions.validate}
