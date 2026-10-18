@@ -6,7 +6,8 @@ import { asEventFormat, isVirtual } from '@/lib/event-format';
 import { formatWaiverParagraphs } from '@/lib/consent-waiver';
 import { cleanHighlights } from '@/lib/event-highlights';
 import type { EventPromotion } from '@/lib/promo-store';
-import { blankEventDraft, type EventFormDraft } from '../../event-form-draft';
+import { asDowngradeRefundPolicy } from '@/lib/category-change';
+import { blankEventDraft, changeUntilDraft, type EventFormDraft } from '../../event-form-draft';
 import { openingDraft, type OpeningDraft } from '../../registration-opening';
 import { deliveryOffered } from '../../LogisticsPanel';
 import type { CategoryDraft } from '../../category-draft';
@@ -73,6 +74,9 @@ type EventResponse = {
   consentWaiver?: Maybe<string[]>;
   registrationPauseNote?: Maybe<string>;
   registrationOpensAt?: Maybe<string>;
+  categoryChangeFee?: Maybe<number>;
+  downgradeRefundPolicy?: Maybe<string>;
+  categoryChangeUntil?: Maybe<string>;
   clientId?: Maybe<string>;
   resultsOnly?: Maybe<boolean>;
   _count?: { registrations?: number };
@@ -136,6 +140,9 @@ export function editStateFromEvent(data: EventResponse): {
       shirtSizeUpcharge: toPesos(data.shirtSizeUpcharge ?? 0),
       consentWaiver: formatWaiverParagraphs(data.consentWaiver),
       registrationForm: asRegistrationForm(data.registrationForm),
+      categoryChangeFee: toPesos(data.categoryChangeFee ?? 0),
+      downgradeRefundPolicy: asDowngradeRefundPolicy(data.downgradeRefundPolicy),
+      categoryChangeUntil: changeUntilDraft(data.categoryChangeUntil),
       registrationPaused: Boolean(data.registrationPaused),
       registrationPauseNote: data.registrationPauseNote || '',
     },

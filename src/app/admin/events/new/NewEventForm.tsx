@@ -21,7 +21,7 @@ import LogisticsPanel, { deliveryFees, deliveryProblem } from '../LogisticsPanel
 import BasicInfoPanel from '../BasicInfoPanel';
 import RegistrationFeesPanel from '../RegistrationFeesPanel';
 import EventFormResultModals from '../EventFormResultModals';
-import { basicInfoProblem, blankEventDraft } from '../event-form-draft';
+import { basicInfoProblem, blankEventDraft, changeUntilISO } from '../event-form-draft';
 import EventFormatPanel from '../EventFormatPanel';
 import { useEventImageUpload } from '../useEventImageUpload';
 import PublishingPanel from '../PublishingPanel';
@@ -147,6 +147,7 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
           ...deliveryFees(deliveryOn, formData),
           eventType,
           registrationOpensAt: openingInstantISO(opening),
+          categoryChangeUntil: changeUntilISO(formData.categoryChangeUntil),
           publishAt: publishValue(publish),
           categories,
           bankAccounts: cleanBankAccounts(bankAccounts),

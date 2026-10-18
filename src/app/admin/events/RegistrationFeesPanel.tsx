@@ -3,11 +3,13 @@
 import React from 'react';
 import ConsentWaiverField from './ConsentWaiverField';
 import RegistrationFormPicker from './RegistrationFormPicker';
+import CategoryChangeSettings from './CategoryChangeSettings';
 import type { EventFormDraft } from './event-form-draft';
 
 /**
  * The "Registration & Fees" panel, shared by the create and edit forms: the
- * per-runner fees, which checkout runners see, and the waiver.
+ * per-runner fees, which checkout runners see, the waiver, and what a
+ * category change after payment costs (CategoryChangeSettings).
  *
  * When sign-ups open is not here: it moved to PublishingPanel, beside when the
  * event goes public, so the two "when" questions are read together.
@@ -19,7 +21,18 @@ export default function RegistrationFeesPanel({
   onChange,
   adminFeeHint,
 }: {
-  draft: Pick<EventFormDraft, 'title' | 'adminFee' | 'shirtSizeUpcharge' | 'registrationForm' | 'consentWaiver'>;
+  draft: Pick<
+    EventFormDraft,
+    | 'title'
+    | 'date'
+    | 'adminFee'
+    | 'shirtSizeUpcharge'
+    | 'registrationForm'
+    | 'consentWaiver'
+    | 'categoryChangeFee'
+    | 'downgradeRefundPolicy'
+    | 'categoryChangeUntil'
+  >;
   onChange: (patch: Partial<EventFormDraft>) => void;
   adminFeeHint?: React.ReactNode;
 }) {
@@ -67,6 +80,7 @@ export default function RegistrationFeesPanel({
             eventTitle={draft.title}
             onChange={next => onChange({ consentWaiver: next })}
           />
+          <CategoryChangeSettings draft={draft} onChange={onChange} />
         </div>
       </div>
     </div>

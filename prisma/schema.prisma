@@ -158,6 +158,19 @@ model Event {
   /// and client summaries skip it. Turning it on is refused once the event
   /// has any registration. See RESULTS_ONLY_EVENT_PLAN.md.
   resultsOnly                 Boolean           @default(false)
+  /// The last moment staff may move a runner to another category
+  /// (CATEGORY_CHANGE_PLAN.md D12). Null is the normal case and means "until
+  /// the day before race day": changes close at 00:00 Manila on `date`, when
+  /// bibs, singlets and kits are final. Every open change expires here too.
+  /// See canChangeCategory in src/lib/category-change.ts.
+  categoryChangeUntil         DateTime?
+  /// "NO_REFUND" | "REFUND_DIFFERENCE" -- what a move to a cheaper category
+  /// gives back (D5). Guarded by asDowngradeRefundPolicy; anything unrecognised
+  /// reads as NO_REFUND, so a junk value can never promise a refund.
+  downgradeRefundPolicy       String            @default("NO_REFUND")
+  /// Centavos charged on every category change, Run As One's share (D6),
+  /// counted with platform fees in settlement. 0 = no fee.
+  categoryChangeFee           Int               @default(0)
   organizerId                 String
   /// Which client this race is run for (ADMIN_MERGE_PLAN.md). Null means it
   /// has not been linked yet — every event that existed before clients did,
@@ -198,6 +211,7 @@ model Event {
   /// (RESULTS_ROW_ACTIONS_PLAN.md Batch 2). A normal race's pacers are its
   /// pacer codes, under Events.
   resultPacers                ResultPacer[]
+  categoryChanges             CategoryChange[]
 }
 
 /// One account a runner can transfer to for this event.
@@ -262,6 +276,9 @@ model Category {
   /// The percentage and fixed-amount promotions restricted to this option --
   /// see PromoCategory.
   promoScopes PromoCategory[]
+  /// Category changes away from, and into, this option (CategoryChange).
+  changesFrom CategoryChange[]     @relation("CategoryChangeFrom")
+  changesTo   CategoryChange[]     @relation("CategoryChangeTo")
 }
 
 model Registration {
@@ -425,6 +442,9 @@ model Registration {
   deletedById             String?
   event                   Event     @relation(fields: [eventId], references: [id])
   runners                 Runner[]
+  /// Category changes made to this order's runners. The order itself is
+  /// never edited by one (CATEGORY_CHANGE_PLAN.md D1).
+  categoryChanges         CategoryChange[]
 }
 
 model Runner {
@@ -512,6 +532,7 @@ model Runner {
   deletedById           String?
   category              Category     @relation(fields: [categoryId], references: [id])
   registration          Registration @relation(fields: [registrationId], references: [id])
+  categoryChanges       CategoryChange[]
 
   /// Two runners sharing "-2" on the same order would hand two people the
   /// same reference, which is the ambiguity runnerNo exists to remove.
@@ -521,6 +542,100 @@ model Runner {
   /// key on its own, so without this the count is a sequential scan of every
   /// runner the platform has ever taken.
   @@index([categoryId])
+}
+
+/// One move of a runner from one category to another, after they paid
+/// (CATEGORY_CHANGE_PLAN.md). Its own row rather than an edit to the order
+/// (D1): the Registration and its receipt keep saying what was charged, and
+/// settlement adds the change as its own line. Every figure is a snapshot taken
+/// when the change was quoted, so editing a category's price or inclusions
+/// later cannot rewrite what this change charged, refunded or swapped.
+///
+/// The money rule is one formula, `amount = (toPrice - basis) + changeFee`
+/// (D8): above zero the change waits for payment, otherwise it applies at once
+/// and a refund of `-amount` is due under REFUND_DIFFERENCE. The rules live in
+/// src/lib/category-change.ts; this row only records them.
+///
+/// Storage: a few hundred bytes a row, a handful per race.
+model CategoryChange {
+  id                 String       @id @default(cuid())
+  /// The runner's reference plus "-C<n>" ("RM-D918005C-2-C1"): what the runner
+  /// quotes back and what PayMongo carries for an upgrade.
+  changeRef          String       @unique
+  eventId            String
+  registrationId     String
+  runnerId           String
+  fromCategoryId     String
+  toCategoryId       String
+  /// Centavos: what this runner is taken to have paid for the entry (D3) --
+  /// their promoPrice or the old list price, less their share of an
+  /// order-level deduction -- or the figure staff adjusted it to.
+  basis              Int
+  /// True when the basis could not be read cleanly off the order (an
+  /// order-level discount or a free order), so the quote was an estimate.
+  basisEstimated     Boolean      @default(false)
+  /// Why staff overrode the computed basis. Required when they did; null when
+  /// the computed figure was used.
+  basisAdjustReason  String?
+  /// Centavos: the new category's list price at the time (D4).
+  toPrice            Int
+  /// Centavos: the event's change fee at the time (D6).
+  changeFee          Int          @default(0)
+  /// Centavos: toPrice - basis. Negative on a downgrade.
+  difference         Int
+  /// Centavos: difference + changeFee (D8). Above zero is what the runner owes.
+  amount             Int
+  /// Centavos: PayMongo's cut on an online upgrade, the runner's to pay on
+  /// top (D13). 0 on a bank transfer and on anything with nothing to pay.
+  transactionFee     Int          @default(0)
+  /// Centavos: amount + transactionFee, what an upgrade actually collects.
+  totalCharged       Int          @default(0)
+  /// Centavos owed back on a downgrade under REFUND_DIFFERENCE; 0 otherwise.
+  refundAmount       Int          @default(0)
+  /// The GCash or bank reference staff record once the refund is paid by hand.
+  refundReference    String?
+  refundedAt         DateTime?
+  refundedBy         String?
+  /// Snapshots of both options' inclusions, for "Kit changed" (D7).
+  fromInclusions     String[]     @default([])
+  toInclusions       String[]     @default([])
+  /// AWAITING_PAYMENT | APPLIED | REFUND_DUE | REFUNDED | CANCELLED | EXPIRED,
+  /// guarded by asCategoryChangeStatus like Registration.status.
+  status             String
+  /// Upgrade payment, the same columns and meaning as on Registration.
+  paymentMethod      String?
+  checkoutSessionId  String?
+  proofOfPayment     String?
+  transactionNumber  String?
+  /// Until when an awaiting upgrade holds its seat in the target category
+  /// (D11). Never later than the event's category change deadline.
+  holdUntil          DateTime?
+  /// What the runner asked for, in staff's words. Optional.
+  reason             String?
+  /// Names, not account ids, like Registration.remarksBy: lines in a log.
+  createdBy          String
+  createdAt          DateTime     @default(now())
+  appliedAt          DateTime?
+  cancelledAt        DateTime?
+  cancelledBy        String?
+  expiredAt          DateTime?
+  /// Email delivery, same meaning as on Registration.
+  createdEmailSentAt DateTime?
+  appliedEmailSentAt DateTime?
+  lastEmailError     String?
+  updatedAt          DateTime     @updatedAt
+  event              Event        @relation(fields: [eventId], references: [id])
+  registration       Registration @relation(fields: [registrationId], references: [id])
+  runner             Runner       @relation(fields: [runnerId], references: [id])
+  fromCategory       Category     @relation("CategoryChangeFrom", fields: [fromCategoryId], references: [id])
+  toCategory         Category     @relation("CategoryChangeTo", fields: [toCategoryId], references: [id])
+
+  /// The slot count adds awaiting changes to their target category (D11),
+  /// so it filters on exactly these two.
+  @@index([toCategoryId, status])
+  /// A runner's change history, and the one-open-change check (D10).
+  @@index([runnerId])
+  @@index([eventId])
 }
 
 /// The running clubs a runner can pick from at sign-up. One master list across

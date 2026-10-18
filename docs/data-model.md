@@ -67,6 +67,14 @@ shape:
   `registrationState` answers `EXTERNAL`, both checkout routes refuse it, it is
   off the upcoming listings, `/events/[slug]` is a 404 until results exist, and
   settlement and client summaries skip it; `RESULTS_ONLY_EVENT_PLAN.md`),
+  the three **category-change settings** (`CATEGORY_CHANGE_PLAN.md`, migration
+  `20261018090000_category_change`, additive): `categoryChangeUntil` (the last
+  moment staff may move a paid runner to another category; **null means until
+  the day before race day** — changes close 00:00 Manila on `date`, owner's
+  confirmation 2026-10-18), `downgradeRefundPolicy` (`NO_REFUND`, the default,
+  or `REFUND_DIFFERENCE`; guarded by `asDowngradeRefundPolicy`) and
+  `categoryChangeFee` (centavos, default 0, Run As One's share), all set in the
+  event form's Registration & Fees panel,
   `pickupLocation`
   + `pickupSchedule`
   (where and when a race kit is collected — `logisticsPickup` only ever said
@@ -306,6 +314,32 @@ shape:
   quietly start ranking again. Nothing is written onto the result: the tag is
   matched on read beside the race's pacer codes (§5 `pacer-store.ts`).
   Cascades with its event. Storage: a few rows per race.
+- **CategoryChange** — one move of a paid runner from one category to another
+  (`CATEGORY_CHANGE_PLAN.md`, migration `20261018090000_category_change`).
+  **Its own row, never an edit to the order** (D1): the `Registration` and its
+  receipt keep saying what was charged, and settlement adds the change as its
+  own line. `changeRef` (unique, the runner's reference + `-C<n>`), the event,
+  order, runner and `fromCategoryId`/`toCategoryId` relations, and **snapshots
+  of every figure** taken at the quote — `basis` (what the runner is taken to
+  have paid, D3) with `basisEstimated` and `basisAdjustReason`, `toPrice`,
+  `changeFee`, `difference`, `amount` (`difference + changeFee`, D8),
+  `transactionFee` and `totalCharged` (an online upgrade, D13), `refundAmount`
+  with `refundReference`/`refundedAt`/`refundedBy`, and `fromInclusions` /
+  `toInclusions` for "Kit changed" (D7). `status` is `AWAITING_PAYMENT`,
+  `APPLIED`, `REFUND_DUE`, `REFUNDED`, `CANCELLED` or `EXPIRED`, guarded by
+  `asCategoryChangeStatus` (§5 `category-change.ts`). Upgrade payment reuses the
+  order's column names (`paymentMethod`, `checkoutSessionId`, `proofOfPayment`,
+  `transactionNumber`) plus `holdUntil`; the trail is names, like `remarksBy`;
+  `createdEmailSentAt`/`appliedEmailSentAt`/`lastEmailError` as on an order.
+  Indexed on **`(toCategoryId, status)`** for the slot count (an awaiting
+  upgrade holds a seat in its target, D11), on `runnerId` and on `eventId`.
+  Every foreign key is RESTRICT, so the event delete removes these first.
+  **Applying a change clears `Runner.promoPrice`** (decided 2026-10-18): the
+  only reader that runs on a paid runner is `releaseRedemption` after staff move
+  the order PAID → PENDING and cancel it, and a kept snapshot would hand a seat
+  back to the *new* category's sale. The figure survives as `basis`. Session 1
+  of the plan built the table and its rules; nothing writes it yet. Storage: a
+  few hundred bytes a row, a handful per race.
 - **StaffAccount / StaffMembership / EventAssignment** — the people who work
   inside an organizer besides its owner (`STAFF_ACCESS_PLAN.md`). **`Organizer`
   stays the tenant and its own email and password stay the owner's login**; no

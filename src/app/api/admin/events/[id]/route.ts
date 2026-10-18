@@ -124,6 +124,9 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     // The trail row survives the event — AuditLog has no foreign keys — and
     // says how much went with it, since after this nothing else can.
     await db.$transaction(async (prisma) => {
+      // A category change points at a runner, its order and two categories,
+      // so it goes before all of them (CATEGORY_CHANGE_PLAN.md).
+      await prisma.categoryChange.deleteMany({ where: { eventId: id } });
       const runners = await prisma.runner.deleteMany({ where: { registration: { eventId: id } } });
       const registrations = await prisma.registration.deleteMany({ where: { eventId: id } });
       const results = await prisma.raceResult.deleteMany({ where: { eventId: id } });

@@ -13,6 +13,7 @@ import { uniqueEventSlug } from '@/lib/event-slug';
 import { isCalendarDay } from '@/lib/event-schedule';
 import { readFormatFields } from '@/lib/event-format';
 import { PUBLISH_INSTANT_ERROR, asPublishInstant, publishConflict } from '@/lib/event-visibility';
+import { readCategoryChangeSettings } from '@/lib/category-change-settings';
 import {
   OPENING_INSTANT_ERROR,
   asOpeningInstant,
@@ -93,6 +94,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: publishProblem }, { status: 400 });
     }
 
+    // Category changes after payment (CATEGORY_CHANGE_PLAN.md): the deadline,
+    // what a downgrade gives back and the change fee. Absent fields take the
+    // column defaults — no deadline, NO_REFUND, no fee.
+    const changeSettings = readCategoryChangeSettings(data);
+    if (!changeSettings.ok) {
+      return NextResponse.json(
+        { error: changeSettings.error, errors: { [changeSettings.field]: changeSettings.error } },
+        { status: 400 },
+      );
+    }
+
     // Which client the race is for — only Run As One staff with
     // platform:manage may say (lib/client-store.ts); from anyone else the
     // field is ignored and the race starts with none.
@@ -149,6 +161,7 @@ export async function POST(request: Request) {
           // Null is the usual answer: most races are registrable the moment
           // they are published, and only one listed early holds its button back.
           registrationOpensAt: registrationOpens,
+          ...changeSettings.values,
           publishAt,
           resultsOnly,
           // The tenant, never the person: an event belongs to the organizer

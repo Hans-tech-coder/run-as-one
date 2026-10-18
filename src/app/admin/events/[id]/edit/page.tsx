@@ -25,7 +25,7 @@ import DashboardHeader from '@/app/admin/DashboardHeader';
 import LogisticsPanel, { deliveryFees, deliveryProblem } from '../../LogisticsPanel';
 import BasicInfoPanel from '../../BasicInfoPanel';
 import EventFormatPanel from '../../EventFormatPanel';
-import { basicInfoProblem } from '../../event-form-draft';
+import { basicInfoProblem, changeUntilISO } from '../../event-form-draft';
 import RegistrationFeesPanel from '../../RegistrationFeesPanel';
 import PublishingPanel from '../../PublishingPanel';
 import AdminSwitch from '../../../AdminSwitch';
@@ -182,6 +182,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
           ...deliveryFees(deliveryOn, formData),
           eventType,
           registrationOpensAt: openingInstantISO(opening),
+          categoryChangeUntil: changeUntilISO(formData.categoryChangeUntil),
           categories,
           bankAccounts: cleanBankAccounts(bankAccounts),
           ...(canLinkClient ? { clientId } : {}),

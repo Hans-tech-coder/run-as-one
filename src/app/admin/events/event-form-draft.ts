@@ -1,6 +1,8 @@
 import { DEFAULT_REGISTRATION_FORM, type RegistrationForm } from '@/lib/registration-form';
 import { type EventHighlight } from '@/lib/event-highlights';
 import { DEFAULT_EVENT_FORMAT, isVirtual, runWindowError, type EventFormat } from '@/lib/event-format';
+import { DOWNGRADE_REFUND_POLICIES, type DowngradeRefundPolicy } from '@/lib/category-change';
+import { eventInstant, eventInstantParts } from '@/lib/event-schedule';
 
 /**
  * The fields the create and edit forms both hold in `formData`, in the shape
@@ -38,6 +40,13 @@ export type EventFormDraft = {
   shirtSizeUpcharge: number;
   consentWaiver: string;
   registrationForm: RegistrationForm;
+  // Category changes after payment (CATEGORY_CHANGE_PLAN.md). The fee is
+  // pesos like every money field here; the deadline is the picker's
+  // `YYYY-MM-DDTHH:mm` in Manila, "" for the day before race day, and is
+  // posted as an instant by changeUntilISO (CategoryChangeSettings).
+  categoryChangeFee: number;
+  downgradeRefundPolicy: DowngradeRefundPolicy;
+  categoryChangeUntil: string;
 };
 
 /** An empty event, with the platform fee the form should start at. */
@@ -64,7 +73,27 @@ export function blankEventDraft(adminFee: number): EventFormDraft {
     shirtSizeUpcharge: 100,
     consentWaiver: '',
     registrationForm: DEFAULT_REGISTRATION_FORM,
+    categoryChangeFee: 0,
+    downgradeRefundPolicy: DOWNGRADE_REFUND_POLICIES.NO_REFUND,
+    categoryChangeUntil: '',
   };
+}
+
+/** A stored category-change deadline as the picker holds it, `YYYY-MM-DDTHH:mm` in Manila, or "". */
+export function changeUntilDraft(value: Date | string | null | undefined): string {
+  if (!value) return '';
+  const { day, time } = eventInstantParts(value);
+  return day ? `${day}T${time}` : '';
+}
+
+/**
+ * What the forms post for it: an ISO instant, so the zone travels with it (as
+ * `openingInstantISO` does), or null for "the day before race day".
+ */
+export function changeUntilISO(draft: string): string | null {
+  if (!draft) return null;
+  const [day, time = ''] = draft.split('T');
+  return eventInstant(day, time)?.toISOString() ?? null;
 }
 
 /**

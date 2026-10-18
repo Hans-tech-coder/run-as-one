@@ -14,6 +14,7 @@ import { isCalendarDay } from '@/lib/event-schedule';
 import { FORMAT_LOCKED_ERROR, asEventFormat, readFormatFields } from '@/lib/event-format';
 import { OPENING_INSTANT_ERROR, asOpeningInstant, asSlotLimit } from '@/lib/registration-gate';
 import { publishConflict } from '@/lib/event-visibility';
+import { readCategoryChangeSettings } from '@/lib/category-change-settings';
 import { CATEGORY_ORDER } from '@/lib/category-order';
 import { readClientLink } from '@/lib/client-store';
 import { cleanHighlights } from '@/lib/event-highlights';
@@ -57,6 +58,9 @@ const EVENT_FIELDS = [
   'registrationPaused',
   'registrationPauseNote',
   'registrationOpensAt',
+  'categoryChangeUntil',
+  'downgradeRefundPolicy',
+  'categoryChangeFee',
   'resultsOnly',
   'certificateTemplate',
   'certificateCoordinates',
@@ -115,6 +119,18 @@ export async function updateEvent(request: Request, { params }: { params: Promis
     const registrationOpens = asOpeningInstant(registrationOpensAt);
     if (registrationOpens === undefined) {
       return NextResponse.json({ error: OPENING_INSTANT_ERROR }, { status: 400 });
+    }
+
+    // Category changes after payment (CATEGORY_CHANGE_PLAN.md): the deadline,
+    // what a downgrade gives back and the change fee — the same reader as
+    // POST. Only the fields sent are written, so a body without them keeps
+    // what is stored.
+    const changeSettings = readCategoryChangeSettings(data);
+    if (!changeSettings.ok) {
+      return NextResponse.json(
+        { error: changeSettings.error, errors: { [changeSettings.field]: changeSettings.error } },
+        { status: 400 },
+      );
     }
 
     // The public URL follows the title, so renaming an event renames its link.
@@ -284,6 +300,7 @@ export async function updateEvent(request: Request, { params }: { params: Promis
           // Null means the race is open as soon as it is published; an instant
           // in the future holds the button back until it passes.
           registrationOpensAt: registrationOpens,
+          ...changeSettings.values,
           // The certificate has its own home now, the results workspace and
           // its PUT …/certificate (RESULTS_NAV_PLAN.md, Batch 2). The edit
           // form no longer sends these, and a body without them keeps what is
