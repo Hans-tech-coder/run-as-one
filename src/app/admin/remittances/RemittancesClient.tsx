@@ -22,6 +22,7 @@ import { formatEventDayShort } from '@/lib/event-schedule';
 import {
   SETTLEMENT_STATE_COPY,
   formatSignedPesos,
+  type Settlement,
   type SettlementState,
 } from '@/lib/settlement';
 import type { EventSettlementRow } from '@/lib/settlement-store';
@@ -92,7 +93,15 @@ const COLUMNS: ColumnDef<EventSettlementRow>[] = [
     id: 'owed',
     header: 'Owed',
     accessorFn: row => row.settlement.owed,
-    cell: ({ row }) => <span className="whitespace-nowrap">{formatSignedPesos(row.original.settlement.owed)}</span>,
+    // The Category changes line rides under owed, as Run As One's share rides
+    // under collected: inside the figure, named so a moved balance is not a
+    // mystery, and a refund still owed to a runner said in so many words.
+    cell: ({ row }) => (
+      <div className="whitespace-nowrap">
+        <div>{formatSignedPesos(row.original.settlement.owed)}</div>
+        <ChangeNote changes={row.original.settlement.changes} />
+      </div>
+    ),
   },
   {
     id: 'remitted',
@@ -247,7 +256,15 @@ export default function RemittancesClient({ rows }: { rows: EventSettlementRow[]
           fields={({ original }) => [
             { label: 'Balance', value: <strong className="text-primary">{formatSignedPesos(original.settlement.balance)}</strong> },
             { label: 'Collected', value: formatSignedPesos(original.settlement.collected) },
-            { label: 'Owed', value: formatSignedPesos(original.settlement.owed) },
+            {
+              label: 'Owed',
+              value: (
+                <>
+                  {formatSignedPesos(original.settlement.owed)}
+                  <ChangeNote changes={original.settlement.changes} />
+                </>
+              ),
+            },
             { label: 'Remitted', value: formatSignedPesos(original.settlement.remitted) },
           ]}
           actions={({ original }) => (
@@ -263,5 +280,22 @@ export default function RemittancesClient({ rows }: { rows: EventSettlementRow[]
 
       <AdminTablePager table={table} />
     </div>
+  );
+}
+
+/**
+ * "₱400.00 category changes", and "₱150.00 to refund" on a line of its own,
+ * under owed; nothing for a race with none. Allowed to wrap, unlike the
+ * figure above it, so the note never widens a column the table has no room for.
+ */
+function ChangeNote({ changes }: { changes: Settlement['changes'] }) {
+  if (changes.changes === 0) return null;
+  return (
+    <>
+      <div className="text-xs text-secondary whitespace-normal">{formatSignedPesos(changes.owed)} category changes</div>
+      {changes.toRefund > 0 && (
+        <div className="text-xs text-secondary whitespace-normal">{formatSignedPesos(changes.toRefund)} to refund</div>
+      )}
+    </>
   );
 }

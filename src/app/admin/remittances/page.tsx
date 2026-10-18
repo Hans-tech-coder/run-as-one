@@ -38,7 +38,7 @@ export default async function Page() {
   // overpayment against another's debt would hide both: the organizer of the
   // second race is still waiting, whatever the first one received.
   let collected = 0;
-  let share = 0; // platform fees only: the transaction fee is PayMongo's
+  let share = 0; // platform and change fees: the transaction fee is PayMongo's
   let due = 0;
   let remitted = 0;
   for (const { settlement } of rows) {
@@ -54,7 +54,7 @@ export default async function Page() {
 
       <div className="admin-content">
         <div className="metrics-grid">
-          <Metric title="Collected (Paid Orders)" value={formatSignedPesos(collected)} icon={<Banknote size={20} />} />
+          <Metric title="Collected from Runners" value={formatSignedPesos(collected)} icon={<Banknote size={20} />} />
           <Metric title="Run As One's Share" value={formatSignedPesos(share)} icon={<Landmark size={20} />} />
           <Metric title="Balance Due to Organizers" value={formatSignedPesos(due)} icon={<Scale size={20} />} />
           <Metric title="Remitted" value={formatSignedPesos(remitted)} icon={<HandCoins size={20} />} />

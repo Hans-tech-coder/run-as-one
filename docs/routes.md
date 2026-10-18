@@ -252,11 +252,17 @@ PayMongo to a client), *Paid out to you*, *Still owed* (read *Overpaid* when
 negative) — five across, or two pairs with *Still owed* across the bottom, or
 one column, one plain sentence on where the race stands, then the payouts
 latest first as day, method and amount, a return listed as a negative amount
-*Returned to Run As One*. Its hint says confirmed payments only. **Runners** (Batch 4, `RunnerList.tsx`, reading
+*Returned to Run As One*. Its hint says confirmed payments only. A race
+where a runner changed category gets one more sentence under the figures —
+"Category changes: 2 category changes added ₱400.00 to Collected, of which
+₱150.00 is still to be refunded to runners." — because the changes are already
+inside the five figures and a sixth would break the sum. **Runners** (Batch 4, `RunnerList.tsx`, reading
 `client-runners.ts`) follows it, also **screen only** and only for someone
 holding `event:view-runners` on the race: the list a client releases and
 ships race kits from, built like the staff Registrants table. Columns: mark
-checkbox, runner (name over runner ref), category, size (the size table's
+checkbox, runner (name over runner ref), category (the current one, "(from
+5K)" and the staff screen's blue **Kit changed** chip when a category change
+moved the runner — never its money; `RunnerCells.tsx`), size (the size table's
 code; *No shirt* for a package with nothing to wear), a *Paid* / *Awaiting
 verification* badge, race kit (*Pickup* / *Delivery*, with the delivery area
 under it), contact (tap-to-call phone, mailto email that wraps only at its
@@ -266,7 +272,8 @@ pickup, *Not given* on rows from before addresses were asked). A table from
 `AdminTablePager` under both (25 a page). Every runner arrives with the page;
 the search (name, ref, phone or email, every word must match), the **Filters**
 chip (Category, Status, Race Kit, Shirt Size in chart order, Province) and the
-paging all run in the browser. **Export to CSV** (`runner-csv.ts`, the staff
+paging all run in the browser. **Export to CSV** (`runner-csv.ts`, the screen's columns
+with *Changed From* and *Kit Changed* after Category, the staff
 export's quoting, phone-as-text and BOM; `runners_<race>.csv`) takes the
 marked rows when any are marked — the button reads *Export Marked (n)*, with
 *Unmark All* beside it — and every filtered row otherwise; it tells the
@@ -311,9 +318,12 @@ document shape (`route-loading-shape.ts`). Everyone else's `/admin` is the
 dashboard's **Overview** (`OVERVIEW_PLAN.md` Batch 1), four blocks and no more
 — the owner wants the work queue and the numbers, but not a long page:
 **tiles** — **Total Revenue (Net)** (`subtotal + deliveryFee − discountAmount`
-of PAID orders), **Total Registrants** (runners on PAID orders and on bank transfers awaiting verification — the same registrants every screen counts, never an unpaid checkout), **Active
+of PAID orders, plus what moved category changes on them leave the organizer
+after their fees and refunds — the settlement line's reading, so the tile agrees
+with Remittances), **Total Registrants** (runners on PAID orders and on bank transfers awaiting verification — the same registrants every screen counts, never an unpaid checkout), **Active
 Events** (races not finished, `upcomingEvents`), plus **Platform Fees
-Collected** (the `platformFee` of PAID orders) for `platform:manage` only — all
+Collected** (the `platformFee` of PAID orders plus their moved category
+changes' change fees) for `platform:manage` only — all
 **all-time**, with no period selector (per-period money is
 `/admin/remittances`). **Every tile is a link**: the money tiles to
 `/admin/remittances` for `remittance:manage`, otherwise to `/admin/events`; the
@@ -502,7 +512,11 @@ it is to be paid and until when its seat is held, with `AwaitingChangeActions`:
 *Copy payment link* / *Email payment link* (`registration:email`), *Record
 payment* (`registration:validate`; reference + screenshot, applies it) and
 *Cancel change* (`registration:edit`, after a confirm). A paid one says how it
-was paid, the fee and reference, and *View screenshot* (`proof:view`). Rows are built in `registrant-rows.ts`. **An online
+was paid, the fee and reference, and *View screenshot* (`proof:view`). The
+**export** (`registrant-csv.ts`) carries the move too: **Changed From** (the
+category the runner started in) and **Kit Changed** ("Added: Medal · Removed:
+Singlet") after *Category*, read by the same `categoryMove`, blank for a runner
+who never moved or moved back. Rows are built in `registrant-rows.ts`. **An online
 order appears only once PayMongo has confirmed it** — an unpaid or expired card /
 QRPh / GCash / Maya order is filtered out by `listedRegistrationWhere()` in
 `lib/pending-expiry.ts`; bank transfers are always listed. **Two tabs**
@@ -1054,8 +1068,9 @@ opens its message from a *Read message* button rather than a tap anywhere.
 **`/admin/remittances`** (`remittance:manage`, `ADMIN_MERGE_PLAN.md` Batch 6 —
 *Remittances* in the sidebar, first among Run As One's own screens; anyone else
 on the team gets the admin 404, a viewer the forbidden page). A **server page**:
-four tiles — *Collected (Paid Orders)*, *Run As One's Share* (platform fees
-only; the transaction fee is PayMongo's), *Balance Due to
+four tiles — *Collected from Runners* (PAID orders, plus moved category
+changes less their refunds), *Run As One's Share* (platform and change fees;
+the transaction fee is PayMongo's), *Balance Due to
 Organizers* (the sum of **positive** balances only, so one race's overpayment
 never hides another organizer still waiting) and *Remitted* — over every race,
 latest first, with Collected, Run As One, Owed, Remitted, Balance and a state
@@ -1070,7 +1085,14 @@ sentence) and *Run As One's Share*; a **How the Balance Is Worked Out** ledger
 (`.settlement-lines`: collected, less platform fees (Run As One) and payment
 processing fees (PayMongo), owed — with list-price
 entries, discounts and delivery inset under it as explanation — less remitted,
-balance); and the **Remittances** list (sent day, kind, amount — a return shown
+balance). **The Category changes line** (`CATEGORY_CHANGE_PLAN.md`) appears only
+on a race with a moved change: inset under collected, *Paid on orders*, *Paid for
+category changes*, *Less category change refunds paid* and *… still to refund*
+(each refund line only when non-zero); the fee line reads *Platform and change
+fees (Run As One)* when a change fee was taken; and under owed, *Category
+changes, after their fees and refunds*, so the inset lines still sum to owed.
+On the list, owed carries a small "₱X category changes · ₱Y to refund" line
+under it, on the table and the card alike; and the **Remittances** list (sent day, kind, amount — a return shown
 negative — method, reference and note, recorded by and when, Recorded / Voided
 with who voided it, when and why, and a ⋮ menu under Actions — Open Receipt,
 then Void in red — which a voided row without a receipt leaves empty; a card's

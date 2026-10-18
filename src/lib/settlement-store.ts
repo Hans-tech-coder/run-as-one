@@ -8,8 +8,8 @@
  * **Nothing about what is owed is stored.** Every figure is summed from the
  * PAID registrations at request time, so a payment validated a minute ago or
  * an order refunded after a payout is already in the balance, with no job to
- * keep a stored total in step. The list is two grouped queries for the whole
- * screen, not two per race.
+ * keep a stored total in step. The list is three grouped queries for the whole
+ * screen — orders, category changes, remittances — not three per race.
  *
  * Every read is scoped to the actor's tenant and asks `remittance:manage`, so
  * a per-event staff member or a client viewer reaches nothing here whatever
@@ -21,7 +21,20 @@
 import prisma from './db';
 import { can, reachableEvents, type Actor } from './actor';
 import { mostRecentFirst } from './event-schedule';
-import { NO_ORDERS, settle, type OrderTotals, type Settlement } from './settlement';
+import { CATEGORY_CHANGE_STATUSES } from './category-change';
+import { NO_CHANGES, NO_ORDERS, settle, type ChangeTotals, type OrderTotals, type Settlement } from './settlement';
+
+/**
+ * The category change statuses settlement reads: the runner has moved. An
+ * AWAITING_PAYMENT, CANCELLED or EXPIRED row carries the `totalCharged` it
+ * was opened with, none of it collected, so it is never summed. Shared with
+ * the Overview's money tiles, so the two screens cannot disagree.
+ */
+export const MOVED_CHANGE_STATUSES = [
+  CATEGORY_CHANGE_STATUSES.APPLIED,
+  CATEGORY_CHANGE_STATUSES.REFUND_DUE,
+  CATEGORY_CHANGE_STATUSES.REFUNDED,
+];
 
 export type EventSettlementRow = {
   id: string;
@@ -38,12 +51,20 @@ export type EventSettlementRow = {
  * summary through `event:view-payout` (`client-payout.ts`).
  */
 export async function totalsByEvent(eventIds: string[]) {
-  const [orders, remittances] = await Promise.all([
+  const [orders, changes, remittances] = await Promise.all([
     prisma.registration.groupBy({
       by: ['eventId'],
       where: { eventId: { in: eventIds }, status: 'PAID' },
       _count: { _all: true },
       _sum: { totalAmount: true, platformFee: true, transactionFee: true },
+    }),
+    // By status as well as event, because a refund still owed is shown apart
+    // from one paid. Only on PAID orders, the orders' own rule (settlement.ts).
+    prisma.categoryChange.groupBy({
+      by: ['eventId', 'status'],
+      where: { eventId: { in: eventIds }, status: { in: MOVED_CHANGE_STATUSES }, registration: { status: 'PAID' } },
+      _count: { _all: true },
+      _sum: { totalCharged: true, changeFee: true, transactionFee: true, refundAmount: true },
     }),
     prisma.remittance.groupBy({
       by: ['eventId', 'kind'],
@@ -64,13 +85,27 @@ export async function totalsByEvent(eventIds: string[]) {
     ]),
   );
 
+  const changeTotals = new Map<string, ChangeTotals>();
+  for (const row of changes) {
+    const sum = changeTotals.get(row.eventId) ?? { ...NO_CHANGES };
+    const refund = row._sum.refundAmount ?? 0;
+    sum.changes += row._count._all;
+    sum.charged += row._sum.totalCharged ?? 0;
+    sum.changeFees += row._sum.changeFee ?? 0;
+    sum.transactionFees += row._sum.transactionFee ?? 0;
+    if (row.status === CATEGORY_CHANGE_STATUSES.REFUNDED) sum.refunded += refund;
+    if (row.status === CATEGORY_CHANGE_STATUSES.REFUND_DUE) sum.toRefund += refund;
+    changeTotals.set(row.eventId, sum);
+  }
+
   const remitted = new Map<string, number>();
   for (const row of remittances) {
     const amount = row._sum.amount ?? 0;
     remitted.set(row.eventId, (remitted.get(row.eventId) ?? 0) + (row.kind === 'RETURN' ? -amount : amount));
   }
 
-  return (eventId: string) => settle(orderTotals.get(eventId) ?? NO_ORDERS, remitted.get(eventId) ?? 0);
+  return (eventId: string) =>
+    settle(orderTotals.get(eventId) ?? NO_ORDERS, remitted.get(eventId) ?? 0, changeTotals.get(eventId) ?? NO_CHANGES);
 }
 
 /** Every race this actor may settle, latest race first. */

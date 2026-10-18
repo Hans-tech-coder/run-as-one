@@ -31,6 +31,27 @@
  *   gets. A **non-waived** pacer pays only the admin fee, which lands in
  *   `platformFee` and so in Run As One's share, exactly as it should.
  * - **Per event**, because bank accounts are per event.
+ * - **A category change is a line of its own** (CATEGORY_CHANGE_PLAN.md D1),
+ *   never an edit to the order it came from. Only the statuses in which the
+ *   runner has moved count — APPLIED, REFUND_DUE, REFUNDED — because a
+ *   CANCELLED or EXPIRED upgrade still carries the `totalCharged` it was
+ *   opened with, and none of it was collected. On those rows: what an upgrade
+ *   charged is collected; its transaction fee is processing (D13); **the
+ *   change fee is Run As One's on every moved row** (D6), paid or not; a
+ *   downgrade's refund comes off collected, the one still owed (REFUND_DUE)
+ *   shown apart as *to refund* so staff can see it is not yet paid out.
+ *   A change counts only while its order is PAID, the rule above: an order
+ *   refunded whole takes the money its runners paid for changes with it.
+ *
+ *   The fee rule is why owed is again the residual rather than `difference`
+ *   added up: on a downgrade the fee was never charged anew — it is kept out
+ *   of the refund (REFUND_DIFFERENCE) or out of the forfeited difference
+ *   (NO_REFUND), so it sits inside the original order's money, which the
+ *   order line counted as the organizer's. Counting it as platform and letting
+ *   owed fall by it moves it from the organizer to Run As One, which is what
+ *   the runner was told the fee was. On a paid upgrade the residual comes out
+ *   at exactly `difference`, since `totalCharged = difference + changeFee +
+ *   transactionFee` on every one (`category-change-payment.ts`).
  *
  * Owed is computed as the order's total less the two fees, rather than re-added
  * from its parts. Checkout pins `total = subtotal + delivery + platform +
@@ -53,9 +74,9 @@ export type SettlementState = 'NOTHING' | 'DUE' | 'SETTLED' | 'OVERPAID';
 export type Settlement = {
   /** How many PAID orders the figures are made of. */
   paidOrders: number;
-  /** Everything runners paid on those orders. */
+  /** Everything runners paid on those orders, and on category changes less their refunds. */
   collected: number;
-  /** Run As One's share, and all of it. */
+  /** Run As One's share, and all of it: platform fees and change fees. */
   platformFees: number;
   /** PayMongo's cut, passed through to the runner: deducted, but not Run As One's. */
   transactionFees: number;
@@ -66,6 +87,8 @@ export type Settlement = {
   /** Owed less remitted. Negative means the organizer has been overpaid. */
   balance: number;
   state: SettlementState;
+  /** The category changes inside the figures above, for the line that explains them. */
+  changes: ChangeLine;
 };
 
 /** Order totals already summed by the database (one grouped query per screen). */
@@ -78,18 +101,75 @@ export type OrderTotals = {
 
 export const NO_ORDERS: OrderTotals = { paidOrders: 0, collected: 0, platformFees: 0, transactionFees: 0 };
 
-export function settle(orders: OrderTotals, remitted: number): Settlement {
-  const owed = orders.collected - orders.platformFees - orders.transactionFees;
+/**
+ * Category changes already summed by the database, over the moved statuses
+ * only (APPLIED, REFUND_DUE, REFUNDED). One grouped query per screen, beside
+ * the orders' one.
+ */
+export type ChangeTotals = {
+  /** How many moved changes the figures are made of. */
+  changes: number;
+  /** What upgrades charged, transaction fee included (`totalCharged`). */
+  charged: number;
+  /** Change fees on those rows: Run As One's (D6). */
+  changeFees: number;
+  /** PayMongo's cut on the online upgrades among them (D13). */
+  transactionFees: number;
+  /** Downgrade refunds staff recorded as paid (REFUNDED). */
+  refunded: number;
+  /** Downgrade refunds still owed to runners (REFUND_DUE). */
+  toRefund: number;
+};
+
+export const NO_CHANGES: ChangeTotals = {
+  changes: 0,
+  charged: 0,
+  changeFees: 0,
+  transactionFees: 0,
+  refunded: 0,
+  toRefund: 0,
+};
+
+/** The *Category changes* line: what changes moved in each figure, and their own sum to owed. */
+export type ChangeLine = ChangeTotals & {
+  /** Charged less refunds, paid or still owed: what changes add to collected. */
+  collected: number;
+  /** Collected less both fees: what changes add to (or take from) owed. */
+  owed: number;
+};
+
+export function settle(orders: OrderTotals, remitted: number, changes: ChangeTotals = NO_CHANGES): Settlement {
+  const changeLine = changeLineOf(changes);
+  const collected = orders.collected + changeLine.collected;
+  const platformFees = orders.platformFees + changes.changeFees;
+  const transactionFees = orders.transactionFees + changes.transactionFees;
+  // The residual, never re-added from parts, so the identity holds by construction.
+  const owed = collected - platformFees - transactionFees;
   const balance = owed - remitted;
   const state: SettlementState =
     balance > 0
       ? 'DUE'
       : balance < 0
         ? 'OVERPAID'
-        : orders.paidOrders === 0 && remitted === 0
+        : orders.paidOrders === 0 && changes.changes === 0 && remitted === 0
           ? 'NOTHING'
           : 'SETTLED';
-  return { ...orders, owed, remitted, balance, state };
+  return {
+    paidOrders: orders.paidOrders,
+    collected,
+    platformFees,
+    transactionFees,
+    owed,
+    remitted,
+    balance,
+    state,
+    changes: changeLine,
+  };
+}
+
+function changeLineOf(changes: ChangeTotals): ChangeLine {
+  const collected = changes.charged - changes.refunded - changes.toRefund;
+  return { ...changes, collected, owed: collected - changes.changeFees - changes.transactionFees };
 }
 
 /**

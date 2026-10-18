@@ -8,9 +8,11 @@ import './payout-summary.css';
 /**
  * The race page's payout section (CLIENT_RACE_PAGE_PLAN.md, Batch 3): five
  * figures that add up — collected, less Run As One's fees, less payment
- * processing fees, less paid out, leaves still owed — then the payouts themselves. Screen only: the printed
- * copy goes to a shirt supplier, who has no business with the money
- * (`RaceReport`).
+ * processing fees, less paid out, leaves still owed — then the payouts
+ * themselves. Category changes (CATEGORY_CHANGE_PLAN.md) are already inside
+ * the figures and are named on a line of their own beneath them. Screen only:
+ * the printed copy goes to a shirt supplier, who has no business with the
+ * money (`RaceReport`).
  */
 export default function PayoutSummary({ payout }: { payout: ClientPayout }) {
   const overpaid = payout.stillOwed < 0;
@@ -19,7 +21,11 @@ export default function PayoutSummary({ payout }: { payout: ClientPayout }) {
     <>
       <dl className="race-money-grid">
         <Figure label="Collected" value={payout.collected} note="What runners paid" />
-        <Figure label="Run As One fees" value={payout.fees} note="Platform fees" />
+        <Figure
+          label="Run As One fees"
+          value={payout.fees}
+          note={payout.categoryChanges?.changeFees ? 'Platform and category change fees' : 'Platform fees'}
+        />
         <Figure label="Payment processing fees" value={payout.processingFees} note="Charged by the payment provider" />
         <Figure label="Paid out to you" value={payout.paidOut} note="Payouts sent so far" />
         <Figure
@@ -29,6 +35,10 @@ export default function PayoutSummary({ payout }: { payout: ClientPayout }) {
           strong
         />
       </dl>
+
+      {payout.categoryChanges && (
+        <p className="race-money-state">{changeLine(payout.categoryChanges)}</p>
+      )}
 
       <p className="race-money-state">{stateLine(payout)}</p>
 
@@ -65,6 +75,22 @@ function Figure({ label, value, note, strong }: { label: string; value: number; 
       <dd className="race-money-note">{note}</dd>
     </div>
   );
+}
+
+/**
+ * The Category changes line: already inside the figures above, so it says how
+ * much of *Collected* the changes are rather than adding a figure that would
+ * break the sum.
+ */
+function changeLine(changes: NonNullable<ClientPayout['categoryChanges']>): string {
+  const runners = `${changes.count} category change${changes.count === 1 ? '' : 's'}`;
+  const amount =
+    changes.collected < 0
+      ? `took ${formatSignedPesos(-changes.collected)} off Collected in refunds`
+      : `added ${formatSignedPesos(changes.collected)} to Collected`;
+  const refund =
+    changes.toRefund > 0 ? `, of which ${formatSignedPesos(changes.toRefund)} is still to be refunded to runners` : '';
+  return `Category changes: ${runners} ${amount}${refund}.`;
 }
 
 /** One plain sentence on where the race stands, in the client's terms rather than the settlement screen's. */

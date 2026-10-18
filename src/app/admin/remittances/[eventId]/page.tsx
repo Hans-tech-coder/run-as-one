@@ -48,6 +48,7 @@ export default async function Page({ params }: { params: Promise<{ eventId: stri
   }
 
   const { event, settlement, parts, remittances } = detail;
+  const changes = settlement.changes;
 
   return (
     <>
@@ -83,15 +84,38 @@ export default async function Page({ params }: { params: Promise<{ eventId: stri
             <p className="text-sm text-secondary mt-0 mb-4">
               Paid orders only ({settlement.paidOrders}). Pending bank transfers count once they are
               validated; refunded and cancelled orders do not count.
+              {changes.changes > 0 &&
+                ` Category changes count once the runner has moved (${changes.changes}); an upgrade still
+                waiting for its payment does not.`}
             </p>
             <dl className="settlement-lines">
               <Line label="Collected from runners" value={settlement.collected} strong />
-              <Line label="Platform fees (Run As One)" value={-settlement.platformFees} />
+              {/* The Category changes line (CATEGORY_CHANGE_PLAN.md): only when
+                  there are any, so a race without one reads as it always has. */}
+              {changes.changes > 0 && (
+                <>
+                  <Line label="Paid on orders" value={settlement.collected - changes.collected} muted />
+                  <Line label="Paid for category changes" value={changes.charged} muted />
+                  {changes.refunded > 0 && (
+                    <Line label="Less category change refunds paid" value={-changes.refunded} muted />
+                  )}
+                  {changes.toRefund > 0 && (
+                    <Line label="Less category change refunds still to refund" value={-changes.toRefund} muted />
+                  )}
+                </>
+              )}
+              <Line
+                label={changes.changeFees > 0 ? 'Platform and change fees (Run As One)' : 'Platform fees (Run As One)'}
+                value={-settlement.platformFees}
+              />
               <Line label="Payment processing fees (PayMongo)" value={-settlement.transactionFees} />
               <Line label="Owed to the organizer" value={settlement.owed} strong rule />
               <Line label="Race entries at list price" value={parts.entries} muted />
               <Line label="Less discounts from promotions" value={-parts.discounts} muted />
               <Line label="Delivery fees" value={parts.delivery} muted />
+              {changes.changes > 0 && (
+                <Line label="Category changes, after their fees and refunds" value={changes.owed} muted />
+              )}
               <Line label="Remitted so far (payouts less returns)" value={-settlement.remitted} rule />
               <Line label="Balance" value={settlement.balance} strong rule />
             </dl>

@@ -16,6 +16,13 @@
  * recorded a payout, and any per-order or per-price breakdown. A client
  * cannot act on them, and a reference number is the bank's, not theirs.
  *
+ * **Category changes** (CATEGORY_CHANGE_PLAN.md) are already inside the five
+ * figures — an upgrade's payment in *Collected*, its change fee in *Run As
+ * One fees*, a downgrade's refund taken off — so the line that names them is
+ * an explanation, not a sixth figure: how many runners moved, what their
+ * changes came to in *Collected*, and any refund still owed to a runner. No
+ * per-runner amount, the same rule as the orders.
+ *
  * A **return** (the organizer paying money back after a refund left it
  * overpaid) is listed beside the payouts as a negative amount, because it is
  * already netted into *Paid out*: leaving it off would make the list fail to
@@ -59,6 +66,17 @@ export type ClientPayout = {
   /** What is owed less what was paid out. Negative when overpaid. */
   stillOwed: number;
   state: SettlementState;
+  /** The Category changes line; null when no runner of this race has moved. */
+  categoryChanges: {
+    /** Changes in which the runner moved. */
+    count: number;
+    /** What they add to *Collected*: upgrades paid less downgrade refunds. Negative when refunds win. */
+    collected: number;
+    /** Downgrade refunds Run As One still owes runners, already taken off *Collected*. */
+    toRefund: number;
+    /** Change fees inside *Run As One fees*, so the tile can say they are there. */
+    changeFees: number;
+  } | null;
   /** Latest first. */
   payouts: ClientPayoutRow[];
 };
@@ -93,6 +111,15 @@ export async function clientPayout(actor: Actor, eventId: string): Promise<Clien
     paidOut: settlement.remitted,
     stillOwed: settlement.balance,
     state: settlement.state,
+    categoryChanges:
+      settlement.changes.changes > 0
+        ? {
+            count: settlement.changes.changes,
+            collected: settlement.changes.collected,
+            toRefund: settlement.changes.toRefund,
+            changeFees: settlement.changes.changeFees,
+          }
+        : null,
     payouts: rows.map(row => ({
       paidOn: row.paidOn,
       method: remittanceMethodLabel(row.method),

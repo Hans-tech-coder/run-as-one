@@ -24,6 +24,13 @@
  * order's own address, or — on an order split per household — this runner's
  * own parcel, grouped by `shipmentsFor` with the rule the checkout charged by.
  *
+ * **A category change shows as the staff list shows it** (CATEGORY_CHANGE_PLAN.md
+ * D7): the current category, the one the runner started in, and the kit
+ * difference between them — read by the registrants screen's own
+ * `categoryMove`, so the client and the kit team see the same move. Only the
+ * two category names and the inclusions leave the query; no amount, status
+ * or reason of a change does.
+ *
  * Every runner is sent at once, as the staff Registrants table does, so the
  * search, filters, marking and export all work across the whole list in the
  * browser. Sorted by first name, then last name.
@@ -42,6 +49,8 @@ import { runnerRef } from './order-ref';
 import { asLogisticsMethod, deliveryZoneLabelFor, LOGISTICS_METHODS } from './registration-codes';
 import { formatRunnerAddress } from './runner-address';
 import { shipmentsFor } from '@/app/events/[slug]/register/delivery-split';
+import { CATEGORY_CHANGE_STATUSES } from './category-change';
+import { categoryMove } from '@/app/admin/events/[id]/registrants/category-change-display';
 
 /** One runner as a client sees it. Blank strings, never null, for what was not given. */
 export type ClientRunnerRow = {
@@ -49,7 +58,12 @@ export type ClientRunnerRow = {
   ref: string;
   firstName: string;
   lastName: string;
+  /** The category the runner stands in now. */
   category: string;
+  /** The category the runner registered in, when a change moved them; blank otherwise. */
+  changedFrom: string;
+  /** What the kit gained and lost by that move; null when it is the same kit. */
+  kitChange: { added: string[]; removed: string[] } | null;
   /** In the size table's code (`chartSize`); blank when the package has nothing to wear. */
   size: string;
   status: 'Paid' | 'Awaiting verification';
@@ -110,6 +124,26 @@ export async function clientRunners(actor: Actor, eventId: string): Promise<Clie
           addressCity: true,
           addressProvince: true,
           category: { select: { name: true } },
+          // Moved changes only, oldest first: `categoryMove` reads from the first to the last.
+          categoryChanges: {
+            where: {
+              status: {
+                in: [
+                  CATEGORY_CHANGE_STATUSES.APPLIED,
+                  CATEGORY_CHANGE_STATUSES.REFUND_DUE,
+                  CATEGORY_CHANGE_STATUSES.REFUNDED,
+                ],
+              },
+            },
+            orderBy: { createdAt: 'asc' },
+            select: {
+              status: true,
+              fromInclusions: true,
+              toInclusions: true,
+              fromCategory: { select: { name: true } },
+              toCategory: { select: { name: true } },
+            },
+          },
         },
       },
     },
@@ -121,11 +155,22 @@ export async function clientRunners(actor: Actor, eventId: string): Promise<Clie
     const shipments = delivered && order.deliverySplit ? shipmentsFor(event, order.runners) : null;
     order.runners.forEach((runner, index) => {
       const shipment = shipments?.find(s => s.runners.includes(index));
+      const move = categoryMove({
+        categoryChanges: runner.categoryChanges.map(change => ({
+          status: change.status,
+          fromCategory: change.fromCategory.name,
+          toCategory: change.toCategory.name,
+          fromInclusions: change.fromInclusions,
+          toInclusions: change.toInclusions,
+        })),
+      });
       rows.push({
         ref: runnerRef(order.orderRef, runner.runnerNo, order.runners.length),
         firstName: runner.firstName,
         lastName: runner.lastName,
         category: runner.category.name,
+        changedFrom: move?.from ?? '',
+        kitChange: move?.kit.changed ? { added: move.kit.added, removed: move.kit.removed } : null,
         size: chartSize(runner.singletSize),
         // `registrantOrders` admits only PAID and awaiting-verification orders.
         status: order.status === 'PAID' ? 'Paid' : 'Awaiting verification',

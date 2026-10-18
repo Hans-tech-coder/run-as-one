@@ -40,6 +40,60 @@ on, so which callers woke it overnight was inferred, not seen. Still worth
 doing by hand: Vercel Firewall's bot protection, and watching the CU-hours
 after release.
 
+**Category changes (2026-10-18, on `dev`, not released; `CATEGORY_CHANGE_PLAN.md`
+Sessions 1–4, `e7e091f`, `f0907f5` and Session 4's settlement).** Staff with
+`registration:edit` move a runner on a PAID order to another category from the
+registrants row menu (*Change Category*). The move is its own `CategoryChange`
+row with every figure snapshotted (§4); an upgrade waits for its payment — a
+PayMongo link (`/pay/change/[token]`) or a GCash/bank payment staff record —
+and holds a seat in the new category while it waits; a downgrade follows the
+race's refund policy, refunds paid by hand and recorded with a reference;
+every step has an audit row and the runner an email. Remittances, the client
+payout summary, both runner lists and both exports show the change (§5
+`settlement.ts`, §6). Migration `20261018090000_category_change` is the only
+one; it is in `ON_HOLD.md`'s release steps. Settlement was verified on
+`local-dev`'s QA event `qa-virtual-run-test`: two orders (₱1,500) and nine
+moved changes — a lateral move, a NO_REFUND downgrade with and without a ₱50
+fee, a REFUND_DIFFERENCE downgrade refunded (₱150) and one still to refund
+(₱250, ₱50 fee kept), upgrades paid by QR Ph (test mode and a signed webhook)
+and by GCash recorded, one with a ₱50 fee — read collected ₱2,362.19 =
+platform and change fees ₱150 + processing ₱12.19 + owed ₱2,200, the same on
+`/admin/remittances`, the race's breakdown and the race page's payout summary
+(seen as the owner, who reads the client's page; no client viewer was signed
+in). Not seen: a real PayMongo webhook delivery for an upgrade (none reaches
+localhost) and the real cron route expiring one. Decisions, recorded here so
+the plan can be deleted:
+**D1** a change is its own row; the original order and receipt are never
+edited, and settlement adds the change as its own line. **D2** staff-initiated
+only; runner self-service is Phase 2 (`ON_HOLD.md`). **D3** the basis (what the
+runner paid for the entry) is `promoPrice ?? fromCategory.price` less the
+runner's even share of an order-level deduction (`isPricedIn` false); an
+order-level discount or a ₱0 order marks the quote *estimated*, and staff may
+override the basis with a required reason, logged. **D4** the new category is
+charged at its list price, never a running sale, and spends no promo seat.
+**D5** the downgrade refund is per event, `NO_REFUND` (default) or
+`REFUND_DIFFERENCE`, paid by hand and recorded. **D6** the change fee is per
+event, ₱0 default, and Run As One's — counted with platform fees on every
+moved change, paid or not (Session 4: on a downgrade it comes out of money the
+order line counted as the organizer's, so owed falls by it). **D7** *Kit
+changed* with the inclusions that differ, wherever staff and the client see
+the category, and in the exports; only when the two kits differ, measured
+from the first move to the last. **D8** one formula: `amount = (toPrice −
+basis) + changeFee`; above zero waits for payment, at or below zero applies at
+once, refunding `−amount` under REFUND_DIFFERENCE and nothing under
+NO_REFUND. **D9** PAID orders only. **D10** at most one open
+(`AWAITING_PAYMENT`) change per runner. **D11** an awaiting upgrade holds a
+seat in its target (`slot-holds.ts`); the runner keeps the old one until it
+applies. **D12** a deadline per event, `categoryChangeUntil`; null means
+changes close 00:00 Manila on race day (confirmed by the owner); every open
+change expires at it; a runner with a race result (matched by name) cannot
+move. **D13** the transaction fee on an online upgrade is the runner's, on top,
+as at checkout; a bank or outside-GCash payment carries none. **promoPrice:**
+applying a change sets `Runner.promoPrice` to null in the same transaction —
+the only reader on a paid runner is `releaseRedemption` after staff move the
+order PAID → PENDING and cancel it, where a kept snapshot would hand back a
+seat in the *new* category's sale; the figure survives as `basis`.
+
 **Virtual runs, Phase A (2026-10-17, on `dev`, not released).** An admin
 picks **Virtual Run** at the top of the normal Create Event form and fills a
 run window instead of a race day and venue; everything else — categories,

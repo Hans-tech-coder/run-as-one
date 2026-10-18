@@ -30,6 +30,7 @@
  */
 
 import { formatPesos } from '@/lib/money';
+import { categoryMove, kitSummary, type MoveSource } from './category-change-display';
 import type { UnpaidCheckout } from './UnpaidCheckoutsList';
 
 /**
@@ -68,10 +69,16 @@ export const csvPhone = (value: unknown): string => {
 export const REGISTRANT_CSV_HEADERS = [
   'Runner Ref', 'Order Ref', 'Registered At', 'First Name', 'Last Name', 'Email', 'Phone', 'Gender', 'Birthdate',
   'Guardian Name', 'Guardian Relationship', 'Guardian Consent At',
-  'Category', 'Distance', 'Shirt Size', 'Emergency Contact', 'Emergency Phone',
+  'Category', 'Changed From', 'Kit Changed', 'Distance', 'Shirt Size', 'Emergency Contact', 'Emergency Phone',
   'Running Community', 'Medical Conditions', 'Home Address', 'Province', 'Logistics Method', 'Delivery Area', 'Delivery Address',
   'Payment Method', 'Pacer', 'Promo Code', 'Order Discount', 'Order Total', 'Status'
 ];
+
+/** "Added: Medal · Removed: Singlet" when a move changed the kit; blank otherwise. */
+function kitChangedCell(runner: { categoryChanges?: MoveSource[] }): string {
+  const move = categoryMove(runner);
+  return move?.kit.changed ? kitSummary(move.kit) : '';
+}
 
 /** One runner's line, in the order of `REGISTRANT_CSV_HEADERS`. */
 function registrantCsvRow(runner: any): string {
@@ -95,6 +102,11 @@ function registrantCsvRow(runner: any): string {
     csvField(runner.guardianRelationshipLabel || ''),
     csvField(runner.guardianConsentAtLabel || ''),
     csvField(runner.category),
+    // A category change (CATEGORY_CHANGE_PLAN.md D7), read as the Category
+    // cell reads it: where the runner started, and what the kit gained and
+    // lost against it. Blank for a runner who never moved, or moved back.
+    csvField(categoryMove(runner)?.from ?? ''),
+    csvField(kitChangedCell(runner)),
     csvField(runner.distance),
     csvField(runner.size),
     csvField(runner.emergencyContactName),

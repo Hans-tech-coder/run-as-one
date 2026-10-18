@@ -21,6 +21,7 @@ import AdminTablePager from '../../AdminTablePager';
 import FiltersMenu, { type FilterGroup } from '../../FiltersMenu';
 import { selectionColumn } from '../../events/[id]/registrants/registrant-columns';
 import { buildRunnerCsv, downloadRunnerCsv } from './runner-csv';
+import { AddressLine, CategoryLine, ContactLines, KitLine, NO_SHIRT, NoShirt, StatusBadge } from './RunnerCells';
 
 /**
  * The race page's runner list (CLIENT_RACE_PAGE_PLAN.md, Batch 4): what the
@@ -61,8 +62,6 @@ const searchRunner: FilterFn<ClientRunnerRow> = (row, _columnId, value: string) 
     .toLowerCase();
   return String(value).toLowerCase().split(/\s+/).filter(Boolean).every(word => haystack.includes(word));
 };
-
-const NO_SHIRT = 'No shirt';
 
 /** Sizes in the chart's order, as the Shirt Sizes panel lists them; others, then *No shirt*, after. */
 function bySizeChart(a: string, b: string): number {
@@ -255,7 +254,9 @@ export default function RunnerList({
                       </span>
                       <span className="block text-xs text-secondary font-mono">{runner.ref}</span>
                     </TableCell>
-                    <TableCell className="py-3 px-4 align-top text-primary">{runner.category}</TableCell>
+                    <TableCell className="py-3 px-4 align-top text-primary">
+                      <CategoryLine runner={runner} />
+                    </TableCell>
                     <TableCell className="py-3 px-4 align-top text-primary">{runner.size || <NoShirt />}</TableCell>
                     <TableCell className="py-3 px-4 align-top">
                       <StatusBadge status={runner.status} />
@@ -298,7 +299,7 @@ export default function RunnerList({
           subtitle={runner => <span className="font-mono">{runner.ref}</span>}
           badges={runner => <StatusBadge status={runner.status} />}
           fields={runner => [
-            { label: 'Category', value: runner.category },
+            { label: 'Category', value: <CategoryLine runner={runner} detailed />, full: Boolean(runner.kitChange) },
             { label: 'Shirt Size', value: runner.size || <NoShirt /> },
             { label: 'Race Kit', value: <KitLine runner={runner} />, full: true },
             { label: 'Contact', value: <ContactLines runner={runner} />, full: true },
@@ -324,70 +325,5 @@ export default function RunnerList({
         </div>
       </div>
     </div>
-  );
-}
-
-function StatusBadge({ status }: { status: ClientRunnerRow['status'] }) {
-  return (
-    <span className={`status-badge ${status === 'Paid' ? 'success' : 'pending'} whitespace-nowrap`}>{status}</span>
-  );
-}
-
-/** A package with nothing to wear: no size is the answer, not a missing one. */
-function NoShirt() {
-  return <span className="text-secondary">{NO_SHIRT}</span>;
-}
-
-function KitLine({ runner }: { runner: ClientRunnerRow }) {
-  return (
-    <span className="flex flex-col">
-      <span>{runner.kit}</span>
-      {runner.deliveryArea && <span className="text-xs text-secondary">{runner.deliveryArea}</span>}
-    </span>
-  );
-}
-
-function ContactLines({ runner }: { runner: ClientRunnerRow }) {
-  return (
-    <span className="flex flex-col min-w-0">
-      {runner.phone && (
-        <a href={`tel:${runner.phone}`} className="text-primary hover:underline whitespace-nowrap">
-          {runner.phone}
-        </a>
-      )}
-      {runner.email && (
-        <a href={`mailto:${runner.email}`} className="text-secondary hover:underline [overflow-wrap:break-word]">
-          <EmailText email={runner.email} />
-        </a>
-      )}
-    </span>
-  );
-}
-
-/** An email that wraps at its `@` rather than mid-word, when it has to wrap at all. */
-function EmailText({ email }: { email: string }) {
-  const at = email.indexOf('@');
-  if (at < 1) return <>{email}</>;
-  return (
-    <>
-      {email.slice(0, at)}
-      <wbr />
-      {email.slice(at)}
-    </>
-  );
-}
-
-/**
- * Where the kit goes for a delivery, the home address for a pickup. `labelled`
- * when the card's field label already says which, so it is not said twice.
- */
-function AddressLine({ runner, labelled = false }: { runner: ClientRunnerRow; labelled?: boolean }) {
-  const address = runner.kit === 'Delivery' ? runner.deliveryAddress : runner.homeAddress;
-  if (!address) return <span className="text-secondary">Not given</span>;
-  return (
-    <span className="flex flex-col">
-      {runner.kit === 'Delivery' && !labelled && <span className="text-xs text-secondary">Ship to</span>}
-      <span>{address}</span>
-    </span>
   );
 }

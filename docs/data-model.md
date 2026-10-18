@@ -337,8 +337,14 @@ shape:
   **Applying a change clears `Runner.promoPrice`** (decided 2026-10-18): the
   only reader that runs on a paid runner is `releaseRedemption` after staff move
   the order PAID → PENDING and cancel it, and a kept snapshot would hand a seat
-  back to the *new* category's sale. The figure survives as `basis`. Session 1
-  of the plan built the table and its rules; nothing writes it yet. Storage: a
+  back to the *new* category's sale. The figure survives as `basis`.
+  **Settlement reads only the moved statuses** — `APPLIED`, `REFUND_DUE`,
+  `REFUNDED`, on a PAID order (§5 `settlement.ts`): a `CANCELLED` or `EXPIRED`
+  row still carries the `totalCharged` it was opened with, none of it
+  collected. `totalCharged = difference + changeFee + transactionFee` on every
+  applied upgrade, online or recorded by hand (a GCash payment made outside
+  PayMongo is stored as `BANK_TRANSFER` with `transactionFee` 0). Written by
+  `category-change-store.ts` and `category-change-payment.ts` only. Storage: a
   few hundred bytes a row, a handful per race.
 - **StaffAccount / StaffMembership / EventAssignment** — the people who work
   inside an organizer besides its owner (`STAFF_ACCESS_PLAN.md`). **`Organizer`

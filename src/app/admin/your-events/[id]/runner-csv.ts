@@ -10,9 +10,10 @@
 
 import type { ClientRunnerRow } from '@/lib/client-runners';
 import { csvField, csvPhone, downloadCsv } from '../../events/[id]/registrants/registrant-csv';
+import { kitSummary } from '../../events/[id]/registrants/category-change-display';
 
 const HEADERS = [
-  'Runner Ref', 'First Name', 'Last Name', 'Category', 'Shirt Size', 'Status', 'Race Kit',
+  'Runner Ref', 'First Name', 'Last Name', 'Category', 'Changed From', 'Kit Changed', 'Shirt Size', 'Status', 'Race Kit',
   'Phone', 'Email', 'Home Address', 'Province', 'Delivery Area', 'Delivery Address',
 ];
 
@@ -25,6 +26,9 @@ export function buildRunnerCsv(rows: ClientRunnerRow[]): string {
         csvField(row.firstName),
         csvField(row.lastName),
         csvField(row.category),
+        // Blank unless a category change moved the runner (CATEGORY_CHANGE_PLAN.md D7).
+        csvField(row.changedFrom),
+        csvField(row.kitChange ? kitSummary(row.kitChange) : ''),
         csvField(row.size),
         csvField(row.status),
         csvField(row.kit),

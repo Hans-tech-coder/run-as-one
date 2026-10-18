@@ -7,6 +7,7 @@ import { totalCounts, viewerEventSummaries } from '@/lib/client-summary';
 import { formatPesos } from '@/lib/money';
 import { formatEventDayShort, formatInstantDay, soonestFirst, today, upcomingEvents } from '@/lib/event-schedule';
 import { awaitingVerificationWhere, heldPlacesByCategory } from '@/lib/pending-expiry';
+import { MOVED_CHANGE_STATUSES } from '@/lib/settlement-store';
 import AdminCardList from './AdminCardList';
 import ViewerDashboard from './ViewerDashboard';
 import DashboardHeader from './DashboardHeader';
@@ -121,6 +122,7 @@ export default async function AdminDashboard() {
     queue,
     recent,
     liveHeld,
+    changeMoney,
   ] = await Promise.all([
     prisma.event.findMany({
       where: live,
@@ -183,11 +185,22 @@ export default async function AdminDashboard() {
       },
     }),
     heldPlacesByCategory({ category: { event: live } }),
+    // Category changes on those orders, read as settlement.ts reads them, so
+    // these tiles agree with Remittances: moved changes only, the change fee
+    // Run As One's, refunds (paid or still due) off the organizer's side.
+    prisma.categoryChange.aggregate({
+      where: { status: { in: [...MOVED_CHANGE_STATUSES] }, registration: paidOrders },
+      _sum: { totalCharged: true, refundAmount: true, changeFee: true, transactionFee: true },
+    }),
   ]);
 
   const sum = money._sum;
-  const totalRevenue = (sum.subtotal ?? 0) + (sum.deliveryFee ?? 0) - (sum.discountAmount ?? 0);
-  const platformFees = sum.platformFee ?? 0;
+  const changes = changeMoney._sum;
+  const changeFees = changes.changeFee ?? 0;
+  const changeRevenue =
+    (changes.totalCharged ?? 0) - (changes.refundAmount ?? 0) - changeFees - (changes.transactionFee ?? 0);
+  const totalRevenue = (sum.subtotal ?? 0) + (sum.deliveryFee ?? 0) - (sum.discountAmount ?? 0) + changeRevenue;
+  const platformFees = (sum.platformFee ?? 0) + changeFees;
 
   // Per race: the runners paid, awaiting verification and on unpaid
   // checkouts (heldPlacesByCategory — the split every screen uses), and how

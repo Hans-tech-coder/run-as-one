@@ -34,11 +34,32 @@ any event (`Event.categoryChangeUntil`, `downgradeRefundPolicy`,
 Additive; every existing event gets the defaults (no deadline set, no refund,
 ₱0 fee).
 
-**Do not promote `dev` to `main` until category change Session 4 (the
-settlement line) has landed.** Session 3 lets upgrades collect money — by
-PayMongo and by GCash or bank recorded by staff — and until Session 4 that
-money is missing from `/admin/remittances`, so what the organizer is owed would
-be understated. Session 3 needs no migration of its own.
+**Category changes are complete on `dev` (Sessions 1–4, 2026-10-18).**
+Staff move a paid runner to another category, upgrades are paid by PayMongo
+or by GCash/bank recorded by staff, downgrades follow the race's refund
+policy, and remittances count every change (*Category changes* line). The
+release step is the **same `npx prisma migrate deploy`** above, which applies
+`20261018090000_category_change` along with the others; Sessions 2–4 need no
+migration of their own. After the promotion, on production: open an event's
+**Registration & Fees** panel once to see the three settings at their
+defaults, and check that `/admin/remittances` reads exactly as before (no race
+has a change yet, so no figure may move). The daily sweep now also expires
+unpaid upgrades; a real PayMongo webhook for an upgrade has only been driven
+by a signed script, never delivered — watch the first online upgrade go
+through.
+
+**Category changes, Phase 2: runner self-service (on hold).** A *Manage my
+registration* link in the runner's email, so a runner can ask for (or make)
+a category change without chatting staff. Left out on purpose
+(`CATEGORY_CHANGE_PLAN.md` D2, recorded in `docs/current-state.md`): runners
+have no accounts, so it needs a signed per-runner link, the same eligibility
+and quote (`category-change.ts`), and a decision on whether a runner's own
+downgrade may apply without staff. Also out of scope there and still not
+built: changes on PENDING orders (D9), moving a runner to another event, and
+refunds paid back through PayMongo automatically (refunds are paid by hand and
+recorded). A PayMongo payment that arrives for an expired or cancelled upgrade
+is flagged in the activity trail (`category_change.payment_late`) and is
+**not** in remittances until a person refunds it or reopens the change.
 
 **Virtual runs, Phase B (on hold).** Runners submit a GPS screenshot and their
 time for a virtual run, staff validate them in a queue, and an approved one

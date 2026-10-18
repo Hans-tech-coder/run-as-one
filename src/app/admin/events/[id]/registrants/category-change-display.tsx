@@ -19,6 +19,9 @@ import type { CategoryChangeView } from '@/lib/category-change-view';
 
 type WithChanges = { category: string; categoryChanges?: CategoryChangeView[] };
 
+/** All a move is read from — so the client runner list (`client-runners.ts`) reads it by the same rule. */
+export type MoveSource = Pick<CategoryChangeView, 'status' | 'fromCategory' | 'toCategory' | 'fromInclusions' | 'toInclusions'>;
+
 /**
  * Where this runner started and what their kit difference is against it.
  *
@@ -26,7 +29,7 @@ type WithChanges = { category: string; categoryChanges?: CategoryChangeView[] };
  * one alone: a runner moved 5K → 10K → 21K is "from 5K" to the kit team, who
  * packed a 5K kit, and moved back to 5K is no change at all.
  */
-export function categoryMove(runner: WithChanges) {
+export function categoryMove(runner: { categoryChanges?: MoveSource[] }) {
   const moved = (runner.categoryChanges ?? []).filter(change => hasMoved(change.status));
   if (moved.length === 0) return null;
   const first = moved[0];

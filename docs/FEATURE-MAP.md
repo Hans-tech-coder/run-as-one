@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-45 pages · 78 API routes · 123 modules in `src/lib` · 550 files · 99,625 lines
+45 pages · 78 API routes · 123 modules in `src/lib` · 551 files · 99,934 lines
 
 ---
 
@@ -54,7 +54,7 @@ The route, the server component behind it, and the client components beside it.
 | `/admin/settings/site` | [`/admin/settings/site/page.tsx`](../src/app/admin/settings/site/page.tsx) | — |
 | `/admin/team` | [`/admin/team/page.tsx`](../src/app/admin/team/page.tsx) | `RolePicker.tsx` `RolesPanel.tsx` `team-cells.tsx` `TeamActionsMenu.tsx` `TeamClient.tsx` |
 | `/admin/two-factor` | [`/admin/two-factor/page.tsx`](../src/app/admin/two-factor/page.tsx) | `TwoFactorClient.tsx` |
-| `/admin/your-events/[id]` | [`/admin/your-events/[id]/page.tsx`](../src/app/admin/your-events/[id]/page.tsx) | `PayoutSummary.tsx` `RaceReport.tsx` `RegistrationTrend.tsx` `runner-csv.ts` `RunnerList.tsx` |
+| `/admin/your-events/[id]` | [`/admin/your-events/[id]/page.tsx`](../src/app/admin/your-events/[id]/page.tsx) | `PayoutSummary.tsx` `RaceReport.tsx` `RegistrationTrend.tsx` `runner-csv.ts` `RunnerCells.tsx` `RunnerList.tsx` |
 | `/coming-soon` | [`/coming-soon/page.tsx`](../src/app/coming-soon/page.tsx) | — |
 | `/events` | [`/events/page.tsx`](../src/app/events/page.tsx) | — |
 | `/events/[slug]` | [`/events/[slug]/page.tsx`](../src/app/events/[slug]/page.tsx) | — |
