@@ -19,6 +19,10 @@ import {
   composeDeliveryAddress,
   EMPTY_DELIVERY_ADDRESS,
 } from '../src/app/events/[slug]/register/delivery-address';
+import { CHANGE_PAYMENT_CHOICES, paymentMethodForChoice, switchPaymentChoices } from '../src/lib/category-change-hold';
+import { NO_CHANGES, NO_ORDERS, settle } from '../src/lib/settlement';
+import { logisticsMove, shipsWith } from '../src/app/admin/events/[id]/registrants/logistics-change-display';
+import { kitNote } from '../src/app/admin/your-events/[id]/RunnerCells';
 
 /**
  * A check of the delivery switch quote (LOGISTICS_CHANGE_PLAN.md
@@ -27,18 +31,22 @@ import {
  * payment, a zone the event does not deliver to refused, back to pickup free,
  * the deadline, and Revision 1's two refusals: a second receipt to an address
  * still waiting for payment (R4), and a parcel others ride on going back
- * before them (R5).
+ * before them (R5). Session 4 adds who is offered *Already paid*, the
+ * settlement totals (a switch's fee is all the organizer's, L8), and the
+ * client runner list's notes, read from a shape that carries no money.
  *
  * There is no test runner in this project, so this is a script rather than a
  * spec. It touches no database and needs no environment. Run it with the
- * alias the module imports through, since jiti does not read tsconfig paths:
+ * alias the module imports through, since jiti does not read tsconfig paths,
+ * and with JSX on, since the display helpers it checks live in .tsx files:
  *
  *   PowerShell:
  *     $env:JITI_ALIAS='{"@/":"C:/Users/user/Web Projects/run-as-one/src/"}'
+ *     $env:JITI_JSX='1'
  *     npx jiti scripts/check-logistics-change.ts
  *
  *   Git Bash (the alias must be the Windows path; "$PWD" is a /c/... one):
- *     JITI_ALIAS='{"@/":"C:/Users/user/Web Projects/run-as-one/src/"}' npx jiti scripts/check-logistics-change.ts
+ *     JITI_JSX=1 JITI_ALIAS='{"@/":"C:/Users/user/Web Projects/run-as-one/src/"}' npx jiti scripts/check-logistics-change.ts
  *
  * Exits non-zero if anything disagrees.
  */
@@ -375,6 +383,77 @@ check(
   ridersRefusal(['RM-RIDER']),
   'RM-RIDER ships with this receipt at no charge. Switch RM-RIDER back to pickup first.',
 );
+
+
+// ── Already paid, record it now (the owner's addition to Session 4) ─────────
+
+const OUTSIDE_PAID = CHANGE_PAYMENT_CHOICES.OUTSIDE_PAID;
+check('already paid is offered on a bank order to staff who record payments', switchPaymentChoices('BANK_TRANSFER', true).includes(OUTSIDE_PAID), true);
+check('already paid is offered on an online order too: the money is already in', switchPaymentChoices('QRPH', true).includes(OUTSIDE_PAID), true);
+check('already paid is not offered to staff who cannot record a payment', switchPaymentChoices('BANK_TRANSFER', false).includes(OUTSIDE_PAID), false);
+check(
+  'the other choices still follow the entry',
+  switchPaymentChoices('BANK_TRANSFER', true),
+  [CHANGE_PAYMENT_CHOICES.OUTSIDE_LATER, OUTSIDE_PAID],
+);
+check('already paid is stored as a bank transfer', paymentMethodForChoice(OUTSIDE_PAID), 'BANK_TRANSFER');
+check('its quote carries no transaction fee', fee(quote({ paymentMethod: paymentMethodForChoice(OUTSIDE_PAID) })), INSIDE);
+
+// ── Settlement: delivery switches (L8) ───────────────────────────────────────
+
+// One PAID order: ₱1,000 entry + ₱50 platform + ₱30 transaction.
+const orders = { paidOrders: 1, collected: 108_000, platformFees: 5_000, transactionFees: 3_000 };
+const before = settle(orders, 0);
+check('without switches, owed is the entry', before.owed, 100_000);
+check('without switches, the line is empty', before.switches.switches, 0);
+
+const bankSwitch = { switches: 1, charged: INSIDE, fees: INSIDE, transactionFees: 0 };
+const afterBank = settle(orders, 0, NO_CHANGES, bankSwitch);
+check('a recorded switch adds its fee to collected', afterBank.collected - before.collected, INSIDE);
+check('a recorded switch adds exactly its fee to owed (L8)', afterBank.owed - before.owed, INSIDE);
+check('a switch adds nothing to Run As One (L7)', afterBank.platformFees, before.platformFees);
+check('the line names the fee', afterBank.switches.owed, INSIDE);
+
+const onlineFee = transactionFeeFor(INSIDE, 'QRPH');
+const onlineSwitch = { switches: 1, charged: INSIDE + onlineFee, fees: INSIDE, transactionFees: onlineFee };
+const afterOnline = settle(orders, 0, NO_CHANGES, onlineSwitch);
+check("an online switch's transaction fee is processing", afterOnline.transactionFees - before.transactionFees, onlineFee);
+check('an online switch still adds exactly its fee to owed', afterOnline.owed - before.owed, INSIDE);
+check(
+  'collected = platform + processing + owed',
+  afterOnline.collected,
+  afterOnline.platformFees + afterOnline.transactionFees + afterOnline.owed,
+);
+check('a paid switch alone is not "No Orders"', settle(NO_ORDERS, 0, NO_CHANGES, bankSwitch).state, 'DUE');
+check('the balance moves by the fee', afterBank.balance - before.balance, INSIDE);
+
+// ── The client's runner list: notes without money (Session 4) ───────────────
+
+// The shape client-runners.ts builds from its select: no amount, payment or reason.
+const switched = (direction: string, ridesOnOrderRef: string | null, fromLogisticsMethod: string) => ({
+  status: 'APPLIED',
+  direction,
+  ridesOnOrderRef,
+  orders: [{ registrationId: 'order', fromLogisticsMethod }],
+});
+const noted = (isDelivery: boolean, changes: ReturnType<typeof switched>[]) => ({
+  registrationId: 'order',
+  isDelivery,
+  logisticsChanges: changes,
+});
+check('a receipt switched to delivery reads "Switched from Pickup"', logisticsMove(noted(true, [switched('TO_DELIVERY', null, 'PICKUP')]))?.from, 'Pickup');
+check('a rider reads "Ships with" its host', shipsWith(noted(true, [switched('TO_DELIVERY', 'RM-HOST', 'PICKUP')])), 'RM-HOST');
+check(
+  'switched there and back is no switch to the kit team',
+  logisticsMove(noted(false, [switched('TO_DELIVERY', 'RM-HOST', 'PICKUP'), switched('TO_PICKUP', null, 'DELIVERY')])),
+  null,
+);
+check(
+  'a rider back on pickup ships with nothing',
+  shipsWith(noted(false, [switched('TO_DELIVERY', 'RM-HOST', 'PICKUP'), switched('TO_PICKUP', null, 'DELIVERY')])),
+  null,
+);
+check('the export note', kitNote({ switchedFrom: 'Pickup', shipsWith: 'RM-HOST' }), 'Switched from pickup · Ships with RM-HOST');
 
 console.log(failures ? `\n${failures} failed` : '\nAll passed');
 process.exit(failures ? 1 : 0);
