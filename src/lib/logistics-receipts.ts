@@ -1,6 +1,6 @@
 import 'server-only';
 import db from '@/lib/db';
-import { CHANGE_PAYMENT_CHOICES, paymentChoicesForOrder } from '@/lib/category-change-hold';
+import { switchPaymentChoices } from '@/lib/category-change-hold';
 import { listedRegistrationWhere } from '@/lib/pending-expiry';
 import {
   LOGISTICS_METHODS,
@@ -54,7 +54,13 @@ function addressOf(runner: Partial<Record<keyof RunnerAddress, string | null>>):
   };
 }
 
-export async function readEventReceipts(eventId: string, organizerId: string, now = new Date()) {
+export async function readEventReceipts(
+  eventId: string,
+  organizerId: string,
+  /** Whether this staff member may record a payment (`registration:validate`), which *Already paid* is. */
+  { recordPaid = false }: { recordPaid?: boolean } = {},
+  now = new Date(),
+) {
   const event = await db.event.findFirst({
     where: { id: eventId, organizerId },
     select: {
@@ -176,11 +182,8 @@ export async function readEventReceipts(eventId: string, organizerId: string, no
       canSwitch: eligibility.allowed
         ? { allowed: true as const, direction: eligibility.direction as LogisticsDirection }
         : { allowed: false as const, message: eligibility.message },
-      // The way the order was paid (category-change-hold.ts). A payment made
-      // outside the app is recorded in Session 3, so it is not offered yet.
-      paymentChoices: paymentChoicesForOrder(order.paymentMethod).filter(
-        choice => choice !== CHANGE_PAYMENT_CHOICES.OUTSIDE_PAID,
-      ),
+      // The entry's own way, plus *Already paid* for staff who record payments.
+      paymentChoices: switchPaymentChoices(order.paymentMethod, recordPaid),
       /** What the search box matches: the reference, the names, the emails. */
       searchText: [order.orderRef, order.customerEmail, ...runners.flatMap(runner => [runner.name, runner.email])]
         .join(' ')

@@ -22,7 +22,14 @@ import { useMemo, useState } from 'react';
 import { useAlert } from '@/components/ui/AlertProvider';
 import { LOGISTICS_CHANGE_STATUSES, LOGISTICS_DIRECTIONS, quoteLogisticsChange, type ExistingDelivery } from '@/lib/logistics-change';
 import { waitingConflict, type WaitingSwitch } from '@/lib/logistics-change-parcels';
-import { onlineChangeMethod, paymentMethodForChoice, type ChangePaymentChoice } from '@/lib/category-change-hold';
+import {
+  CHANGE_PAYMENT_CHOICES,
+  onlineChangeMethod,
+  paymentMethodForChoice,
+  readTransactionNumber,
+  type ChangePaymentChoice,
+} from '@/lib/category-change-hold';
+import { compressProof } from '@/lib/compress-proof';
 import { transactionFeeFor } from '@/lib/free-checkout';
 import { formatPesos } from '@/lib/money';
 import type { RunnerAddress } from '@/lib/runner-address';
@@ -73,6 +80,10 @@ export function useShipKits({
   const [reason, setReason] = useState('');
   const [pickedChoice, setPickedChoice] = useState<ChangePaymentChoice | null>(null);
   const [choiceError, setChoiceError] = useState('');
+  // Already paid: what *Record payment* asks for, asked up front.
+  const [transactionNumber, setTransactionNumber] = useState('');
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [paidErrors, setPaidErrors] = useState<{ transactionNumber?: string; proofFile?: string }>({});
   const [isSaving, setIsSaving] = useState(false);
 
   const canSplit = toDelivery && canShipSeparately(event, homes);
@@ -108,6 +119,7 @@ export function useShipKits({
     [receipt, event, existing, toDelivery, deliveryAddress, zone, splitOn, paymentChoice],
   );
   const needsPayment = quote.ok && quote.status === LOGISTICS_CHANGE_STATUSES.AWAITING_PAYMENT;
+  const alreadyPaid = needsPayment && paymentChoice === CHANGE_PAYMENT_CHOICES.OUTSIDE_PAID;
   const onlineMethod = onlineChangeMethod();
   const onlineFee = quote.ok && needsPayment ? transactionFeeFor(quote.fee, onlineMethod) : 0;
   // R4 and R5, said before the button rather than only by the route's refusal.
@@ -120,21 +132,34 @@ export function useShipKits({
       setChoiceError('Choose how the runner pays');
       return;
     }
+    if (alreadyPaid) {
+      const reference = readTransactionNumber(transactionNumber);
+      setPaidErrors(reference.error ? { transactionNumber: reference.error } : {});
+      if (reference.error) return;
+    }
     setIsSaving(true);
     try {
+      const fields = {
+        deliveryAddress: toDelivery && !splitOn ? deliveryAddress : null,
+        deliveryZone: zone,
+        deliverySplit: splitOn,
+        reason,
+        ...(needsPayment ? { paymentChoice } : {}),
+      };
       const res = await fetch(`/api/admin/registrations/${receipt.id}/logistics-change`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          deliveryAddress: toDelivery && !splitOn ? deliveryAddress : null,
-          deliveryZone: zone,
-          deliverySplit: splitOn,
-          reason,
-          ...(needsPayment ? { paymentChoice } : {}),
-        }),
+        // Already paid sends its proof, shrunk here as *Record payment* does,
+        // so it goes as a form; everything else is JSON.
+        ...(alreadyPaid
+          ? { body: await paidForm(fields, transactionNumber, proofFile) }
+          : { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(fields) }),
       });
       const data = await res.json().catch(() => ({}));
       setIsSaving(false);
+      if (!res.ok && (data?.field === 'transactionNumber' || data?.field === 'proofFile')) {
+        setPaidErrors({ [data.field]: data.error });
+        return;
+      }
       if (!res.ok) {
         await alert({
           variant: 'error',
@@ -151,7 +176,9 @@ export function useShipKits({
           ? `Switch saved for ${receipt.orderRef}: ${peso(change.totalCharged)} awaiting payment. It stays on pickup until paid.`
           : change.direction === LOGISTICS_DIRECTIONS.TO_PICKUP
             ? `${receipt.orderRef} switched to pickup.`
-            : `${receipt.orderRef} switched to delivery.`;
+            : change.transactionNumber
+              ? `${receipt.orderRef} switched to delivery: ${peso(change.totalCharged)} recorded as paid.`
+              : `${receipt.orderRef} switched to delivery.`;
       toast(saved + emailed);
       onSaved(data);
     } catch {
@@ -193,12 +220,40 @@ export function useShipKits({
       setChoiceError('');
     },
     choiceError,
+    alreadyPaid,
+    transactionNumber,
+    // A field's error goes once staff change that field.
+    setTransactionNumber: (value: string) => {
+      setTransactionNumber(value);
+      setPaidErrors(current => ({ ...current, transactionNumber: undefined }));
+    },
+    proofFile,
+    setProofFile: (file: File | null) => {
+      setProofFile(file);
+      setPaidErrors(current => ({ ...current, proofFile: undefined }));
+    },
+    paidErrors,
     waitingOn,
     ridersLeft,
     reason,
     setReason,
     save,
   };
+}
+
+/** The already-paid switch as a form: the panel's fields, the reference, and the shrunk proof. */
+async function paidForm(
+  fields: Record<string, string | boolean | null | undefined>,
+  transactionNumber: string,
+  proof: File | null,
+): Promise<FormData> {
+  const form = new FormData();
+  for (const [name, value] of Object.entries(fields)) {
+    if (value !== null && value !== undefined) form.set(name, String(value));
+  }
+  form.set('transactionNumber', transactionNumber);
+  if (proof) form.set('proofFile', await compressProof(proof));
+  return form;
 }
 
 export type ShipKitsState = ReturnType<typeof useShipKits>;

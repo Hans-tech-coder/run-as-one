@@ -89,6 +89,26 @@ export function paymentChoicesForOrder(orderPaymentMethod: string | null | undef
   return online.length ? online : OUTSIDE_CHOICES;
 }
 
+/**
+ * The choices a **delivery switch's** fee may be paid by
+ * (LOGISTICS_CHANGE_PLAN.md, the owner's addition to Session 4). A payment link
+ * or GCash or bank to come follow the way the entry was paid, as above.
+ * *Already paid* is offered on every receipt to staff who may record a payment
+ * (`registration:validate`), and to no one else: the money is already in, by
+ * GCash or bank, whatever the entry was paid with, so the only question left
+ * is whether it is real, which the reference and the proof answer, as on
+ * *Record payment*.
+ */
+export function switchPaymentChoices(
+  orderPaymentMethod: string | null | undefined,
+  recordPaid: boolean,
+): ChangePaymentChoice[] {
+  const choices = paymentChoicesForOrder(orderPaymentMethod).filter(
+    choice => choice !== CHANGE_PAYMENT_CHOICES.OUTSIDE_PAID,
+  );
+  return recordPaid ? [...choices, CHANGE_PAYMENT_CHOICES.OUTSIDE_PAID] : choices;
+}
+
 /** Whether a stored method is one staff record by hand (no PayMongo, no fee). */
 export function isOutsidePayment(paymentMethod: string | null | undefined): boolean {
   return paymentMethod === PAYMENT_METHODS.BANK_TRANSFER;

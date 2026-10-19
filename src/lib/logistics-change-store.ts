@@ -3,7 +3,7 @@ import type { Prisma } from '@prisma/client';
 import db from '@/lib/db';
 import { recordAudit, type AuditActor } from '@/lib/audit';
 import { formatPesos } from '@/lib/money';
-import { LOGISTICS_METHODS, paymentMethodLabel } from '@/lib/registration-codes';
+import { LOGISTICS_METHODS, PAYMENT_METHODS, paymentMethodLabel } from '@/lib/registration-codes';
 import { changeHoldUntil, paymentChoicesForOrder, paymentMethodForChoice } from '@/lib/category-change-hold';
 import {
   LOGISTICS_CHANGE_STATUSES,
@@ -50,7 +50,9 @@ import { refsOf, ridersRefusal, waitingConflict, waitingRefusal } from '@/lib/lo
  * written AWAITING_PAYMENT with its hold (`changeHoldUntil`, never past the
  * deadline, L12) and moves nothing yet. `applyLogisticsChange` moves it once
  * the fee is paid (Session 3, lib/logistics-change-payment.ts), or staff
- * cancel it.
+ * cancel it. A fee the runner **already paid** by GCash or bank (the owner's
+ * addition to Session 4) is written applied in the same transaction, with its
+ * reference and proof, so the runner is never asked to pay what they paid.
  */
 
 function peso(centavos: number): string {
@@ -101,6 +103,14 @@ export type CreateSwitchInput = {
   /** How a fee will be paid, stored form, from `paymentMethodForChoice`. Required when there is a fee. */
   paymentMethod?: string | null;
   reason?: string | null;
+  /**
+   * *Already paid* (the owner's addition to Session 4): the runner sent the fee
+   * by GCash or bank before staff opened the switch. It is written applied in
+   * the same transaction, with the money on the row as `recordSwitchPayment`
+   * writes it, and no *payment needed* email is owed. The proof is already in
+   * the private store; the caller deletes it if this throws.
+   */
+  paidOutside?: { transactionNumber: string; proofPathname: string | null } | null;
 };
 
 /**
@@ -138,15 +148,26 @@ export async function createLogisticsChange(actor: AuditActor, input: CreateSwit
     const blocking = waitingConflict(quote.parcels, ctx.waiting, order.id);
     if (blocking) throw new LogisticsChangeRefused(409, waitingRefusal(blocking));
 
-    const awaiting = quote.status === LOGISTICS_CHANGE_STATUSES.AWAITING_PAYMENT;
+    const hasFee = quote.status === LOGISTICS_CHANGE_STATUSES.AWAITING_PAYMENT;
+    const paid = input.paidOutside ?? null;
+    if (paid && !hasFee) {
+      // The address now rides on a paid parcel (or this is back to pickup), so
+      // there is nothing to record; refused, so the payment is not kept as if owed.
+      throw new LogisticsChangeRefused(
+        409,
+        'This switch has nothing to pay now, so there is no payment to record. Reload the page and switch it again.',
+      );
+    }
+    // Already paid is applied below; only a fee still to come waits.
+    const awaiting = hasFee && !paid;
     if (awaiting) {
       if (!method) throw new LogisticsChangeRefused(400, `Choose how the runner pays the ${peso(quote.fee)}.`);
       // Paid the way the entry was paid (category-change-hold.ts).
       if (!paymentChoicesForOrder(order.paymentMethod).some(c => paymentMethodForChoice(c) === method)) {
-        const paid = paymentMethodLabel(order.paymentMethod);
+        const entry = paymentMethodLabel(order.paymentMethod);
         throw new LogisticsChangeRefused(
           400,
-          `This order was paid ${paid === 'Online' ? 'online' : `by ${paid}`}; the delivery fee is paid the same way.`,
+          `This order was paid ${entry === 'Online' ? 'online' : `by ${entry}`}; the delivery fee is paid the same way.`,
         );
       }
     }
@@ -169,10 +190,14 @@ export async function createLogisticsChange(actor: AuditActor, input: CreateSwit
         deliverySplit: quote.deliverySplit,
         ridesOnRegistrationId: quote.ridesOnRegistrationId,
         fee: quote.fee,
-        transactionFee: quote.transactionFee,
-        totalCharged: quote.totalCharged,
-        status: quote.status,
-        paymentMethod: awaiting ? method : null,
+        // Already paid: the money as it really came in, the way
+        // `recordSwitchPayment` writes it (a bank transfer carries no PayMongo cut).
+        transactionFee: paid ? 0 : quote.transactionFee,
+        totalCharged: paid ? quote.fee : quote.totalCharged,
+        status: paid ? LOGISTICS_CHANGE_STATUSES.APPLIED : quote.status,
+        paymentMethod: paid ? PAYMENT_METHODS.BANK_TRANSFER : awaiting ? method : null,
+        transactionNumber: paid?.transactionNumber ?? null,
+        proofOfPayment: paid?.proofPathname ?? null,
         holdUntil,
         reason: input.reason?.trim() || null,
         createdBy: by(actor),
@@ -224,6 +249,26 @@ export async function createLogisticsChange(actor: AuditActor, input: CreateSwit
     }
 
     await moveOrder(tx, order.id, quote);
+    if (paid) {
+      // One row, applied: the payment was recorded as the switch was made, and
+      // the trail says so, since no *created* row comes before it.
+      await recordAudit(tx, actor, {
+        ...trail,
+        action: 'logistics_change.applied',
+        summary: `Switched ${which} from pickup to delivery to ${whereTo(quote)} (${change.changeRef}): ${peso(change.totalCharged)} already paid by ${paymentMethodLabel(change.paymentMethod)}, reference ${paid.transactionNumber}, recorded as the switch was made.`,
+        changes: {
+          ...changes,
+          status: change.status,
+          recordedAtCreation: true,
+          paymentMethod: change.paymentMethod,
+          totalCharged: change.totalCharged,
+          transactionFee: change.transactionFee,
+          transactionNumber: paid.transactionNumber,
+          ...(paid.proofPathname ? { proofOfPayment: 'attached' } : {}),
+        },
+      });
+      return change;
+    }
     await recordAudit(tx, actor, {
       ...trail,
       action: 'logistics_change.applied',

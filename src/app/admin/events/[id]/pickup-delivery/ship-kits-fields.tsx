@@ -11,19 +11,21 @@
  */
 
 import React from 'react';
-import { TriangleAlert, Link2, Landmark } from 'lucide-react';
+import { TriangleAlert, Link2, Landmark, CircleCheck } from 'lucide-react';
 import FieldError from '@/components/ui/FieldError';
 import { formatPesos } from '@/lib/money';
 import { formatRunnerAddress } from '@/lib/runner-address';
 import { ridersRefusal, waitingRefusal } from '@/lib/logistics-change-parcels';
 import {
   CHANGE_PAYMENT_CHOICES,
+  MAX_TRANSACTION_NUMBER,
   ONLINE_CHANGE_HOLD_HOURS,
   OUTSIDE_CHANGE_HOLD_DAYS,
 } from '@/lib/category-change-hold';
 import { paymentMethodLabel } from '@/lib/registration-codes';
 import { deliveryTiers } from '@/app/events/[slug]/register/delivery';
 import RunnerAddressEditor from '../registrants/RunnerAddressEditor';
+import { ProofPicker } from '../registrants/CategoryChangePaymentChoice';
 import type { ShipKitsState } from './useShipKits';
 
 const peso = (centavos: number) => `₱${formatPesos(centavos)}`;
@@ -214,7 +216,11 @@ export function WaitingWarning({ waitingOn }: Pick<Props, 'waitingOn'>) {
   return waitingOn ? <Warning>{waitingRefusal(waitingOn)}</Warning> : null;
 }
 
-/** How the fee is paid: the way the entry was paid (category-change-hold.ts). */
+/**
+ * How the fee is paid: a link or GCash or bank to come, the way the entry was
+ * paid (category-change-hold.ts), or *Already paid* for staff who may record a
+ * payment (`logistics-receipts.ts`).
+ */
 export function PaymentChoice(props: Props) {
   const { quote, paymentChoices, paymentChoice, setPaymentChoice, onlineFee, onlineMethod, choiceError } = props;
   if (!quote?.ok) return null;
@@ -242,8 +248,45 @@ export function PaymentChoice(props: Props) {
             hint={`Runner sends ${peso(quote.fee)}, no fee. Waits ${OUTSIDE_CHANGE_HOLD_DAYS} days.`}
           />
         )}
+        {paymentChoices.includes(CHANGE_PAYMENT_CHOICES.OUTSIDE_PAID) && (
+          <Tile
+            name="logistics-payment"
+            checked={paymentChoice === CHANGE_PAYMENT_CHOICES.OUTSIDE_PAID}
+            onChange={() => setPaymentChoice(CHANGE_PAYMENT_CHOICES.OUTSIDE_PAID)}
+            icon={<CircleCheck size={16} aria-hidden="true" />}
+            title="Already paid, record it now"
+            hint={`Runner already sent ${peso(quote.fee)} by GCash or bank. Switches at once; no payment request is emailed.`}
+          />
+        )}
       </div>
       <FieldError id="logistics-payment-error" message={choiceError || undefined} />
+      {props.alreadyPaid && <AlreadyPaidFields {...props} />}
     </fieldset>
+  );
+}
+
+/** Already paid: the reference and the proof *Record payment* asks for, asked up front. */
+function AlreadyPaidFields({ transactionNumber, setTransactionNumber, proofFile, setProofFile, paidErrors }: Props) {
+  return (
+    <div className="mt-3 space-y-3 rounded-lg border border-[var(--dash-border)] p-3">
+      <div className="space-y-1.5">
+        <label htmlFor="ship-kits-transaction" className="block text-secondary">
+          GCash or bank reference number
+        </label>
+        <input
+          id="ship-kits-transaction"
+          autoComplete="off"
+          value={transactionNumber}
+          onChange={e => setTransactionNumber(e.target.value)}
+          maxLength={MAX_TRANSACTION_NUMBER}
+          placeholder="e.g. 7012 345 678901"
+          aria-invalid={!!paidErrors.transactionNumber}
+          aria-describedby="ship-kits-transaction-error"
+          className="form-input w-full text-base"
+        />
+        <FieldError id="ship-kits-transaction-error" message={paidErrors.transactionNumber} />
+      </div>
+      <ProofPicker id="ship-kits-proof" file={proofFile} onChange={setProofFile} error={paidErrors.proofFile} />
+    </div>
   );
 }

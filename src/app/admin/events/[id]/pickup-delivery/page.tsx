@@ -18,7 +18,8 @@ import PickupDeliveryClient from './PickupDeliveryClient';
  * screen lists every runner's email and home address. Seeing it takes
  * `registration:view`, as Registrants does; switching and cancelling take
  * `registration:edit`, the payment link and emails `registration:email`,
- * recording a payment `registration:validate` and its proof `proof:view` —
+ * recording a payment — on a waiting switch, or *Already paid* as a switch is
+ * made — `registration:validate` and its proof `proof:view` —
  * the gates the routes behind its buttons ask (Session 3). A
  * no-match and a no-permission read identically, so the screen cannot be used
  * to confirm that some id exists.
@@ -28,7 +29,9 @@ export default async function PickupDeliveryPage({ params }: { params: Promise<{
   const actor = await requireTeamActor();
   const reach = { organizerId: actor.orgId, eventId: id };
 
-  const data = can(actor, 'registration:view', reach) ? await readEventReceipts(id, actor.orgId) : null;
+  const data = can(actor, 'registration:view', reach)
+    ? await readEventReceipts(id, actor.orgId, { recordPaid: can(actor, 'registration:validate', reach) })
+    : null;
   if (!data) return <AdminNotFound {...EVENT_NOT_FOUND} />;
 
   return (

@@ -48,7 +48,13 @@ export default function ShipKitsPanel({ isClosing, onClose, ...input }: Props) {
   const isOpen = entered && !isClosing;
   const title = toDelivery ? 'Ship Kits' : 'Back to Pickup';
   const canSave = !refused && quote.ok && !waitingOn && ridersLeft.length === 0 && !isSaving;
-  const saveLabel = !toDelivery ? 'Switch to Pickup' : needsPayment ? 'Save & Await Payment' : 'Switch to Delivery';
+  const saveLabel = !toDelivery
+    ? 'Switch to Pickup'
+    : state.alreadyPaid
+      ? 'Record & Switch to Delivery'
+      : needsPayment
+        ? 'Save & Await Payment'
+        : 'Switch to Delivery';
   const close = () => {
     if (!isSaving) onClose();
   };
@@ -138,7 +144,7 @@ export default function ShipKitsPanel({ isClosing, onClose, ...input }: Props) {
               disabled={!canSave}
               className="px-6 py-2 min-h-11 bg-[var(--dash-inverse-bg)] text-[var(--dash-inverse-fg)] rounded-lg text-sm font-medium hover:bg-[var(--dash-inverse-hover)] transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
             >
-              {isSaving ? <BusyLabel>{needsPayment ? 'Saving' : 'Switching'}</BusyLabel> : saveLabel}
+              {isSaving ? <BusyLabel>{needsPayment && !state.alreadyPaid ? 'Saving' : 'Switching'}</BusyLabel> : saveLabel}
             </button>
           )}
         </div>
