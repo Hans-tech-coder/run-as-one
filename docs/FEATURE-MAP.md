@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-47 pages · 85 API routes · 135 modules in `src/lib` · 584 files · 105,773 lines
+47 pages · 85 API routes · 135 modules in `src/lib` · 584 files · 106,221 lines
 
 ---
 
@@ -356,5 +356,6 @@ when a task touches one, split it before editing rather than after.
 | 425 | [`src/app/admin/events/[id]/edit/page.tsx`](../src/app/admin/events/[id]/edit/page.tsx) |
 | 422 | [`src/lib/pacer.ts`](../src/lib/pacer.ts) |
 | 415 | [`src/app/admin/events/[id]/pickup-delivery/PickupDeliveryClient.tsx`](../src/app/admin/events/[id]/pickup-delivery/PickupDeliveryClient.tsx) |
+| 415 | [`src/lib/logistics-change-store.ts`](../src/lib/logistics-change-store.ts) |
 | 405 | [`src/app/admin/events/[id]/registrants/RegistrantsTable.tsx`](../src/app/admin/events/[id]/registrants/RegistrantsTable.tsx) |
 | 404 | [`src/app/admin/events/[id]/registrants/UnpaidCheckoutsList.tsx`](../src/app/admin/events/[id]/registrants/UnpaidCheckoutsList.tsx) |

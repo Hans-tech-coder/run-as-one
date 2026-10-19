@@ -57,6 +57,42 @@ unpaid upgrades; a real PayMongo webhook for an upgrade has only been driven
 by a signed script, never delivered — watch the first online upgrade go
 through.
 
+**Delivery switches are complete on `dev` (`LOGISTICS_CHANGE_PLAN.md` Sessions
+1–4, 2026-10-19).** Staff switch a paid receipt between kit pickup and delivery
+on *Pickup & Delivery*; a fee is paid by link, by GCash or bank recorded later,
+or recorded as already paid when the switch is made, and remittances and the
+client's payout summary count it (*Delivery switches* line). The release step
+is the **same `npx prisma migrate deploy`** above, which applies
+`20261018120000_logistics_change`; Sessions 2–4 need no migration of their
+own. After the promotion, on production: open an event's **Logistics** panel
+once and see *Delivery switch deadline* empty (the default, 7 days before race
+day); open **Pickup & Delivery** from an event's row menu and check the counts
+match the registrants (no receipt has a switch yet); check that
+`/admin/remittances` reads exactly as before (no figure may move, and no
+*delivery switches* line appears); and watch the first online switch go
+through, since a real PayMongo webhook for a switch has only been driven by a
+signed script, never delivered, and the daily sweep now also expires unpaid
+switches.
+
+**Delivery switches: charge per parcel at checkout too (future,
+`LOGISTICS_CHANGE_PLAN.md` "Open for later").** A switch already charges once
+per address across receipts (L6), but two separate delivery **checkouts** to
+one address still pay the delivery fee twice. Doing it at checkout means
+reading the event's paid deliveries there, the way `quoteLogisticsChange`
+does.
+
+**Delivery switches: a Run As One switch fee (future, same source).** v1 has
+none (L7): the delivery fee is the whole price and all the organizer's (L8). A
+configurable fee would be set per event like `categoryChangeFee`, counted with
+platform fees in `settlement.ts` as the change fee is.
+
+**Delivery switches: runner self-service (future, same source, L1/L14).** Today
+only staff switch a receipt, after the runner asks by chat. Runner
+self-service would sit with the category change's *Manage my registration*
+link (Phase 2 below). Also out of scope for v1 (L14): switching some runners of
+a group order, changing only the address of an order already on delivery,
+refunds on a reverse switch, and kit release or shipment tracking.
+
 **Category changes: downgrades (on hold, owner 2026-10-18).** The app does not
 take a runner to a cheaper category for now: `DOWNGRADES_ON_HOLD` in
 `src/lib/category-change-settings.ts` disables those options in the modal ("Downgrade

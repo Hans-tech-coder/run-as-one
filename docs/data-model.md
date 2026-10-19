@@ -373,9 +373,17 @@ shape:
   L13, and the history), with snapshots `fromLogisticsMethod`,
   `fromDeliveryZone`, `fromDeliveryAddress`, `fromDeliverySplit` so the
   history can say "from". Every foreign key is RESTRICT; the event delete
-  removes links, then switches, before its registrations. Schema only so far
-  (Session 1): nothing writes either table yet. Storage: a few hundred bytes a
-  switch, a handful per race.
+  removes links, then switches, before its registrations. Written by
+  `logistics-change-store.ts` only (with `logistics-change-payment.ts` and
+  `logistics-change-expiry.ts` calling it), one receipt per switch since
+  Revision 1. **Money after apply:** an online switch keeps the checkout's
+  `transactionFee` and `totalCharged`; one paid by GCash or bank — recorded on
+  a waiting switch, or *Already paid* as it is made — is `BANK_TRANSFER` with
+  `totalCharged = fee`, `transactionFee` 0, its `transactionNumber` and
+  optional `proofOfPayment` (a private-store pathname). Settlement reads only
+  APPLIED rows with `totalCharged` above 0 on a PAID order: the fee to the
+  organizer, the transaction fee to processing (§5 `settlement.ts`). Storage:
+  a few hundred bytes a switch, a handful per race.
 - **StaffAccount / StaffMembership / EventAssignment** — the people who work
   inside an organizer besides its owner (`STAFF_ACCESS_PLAN.md`). **`Organizer`
   stays the tenant and its own email and password stay the owner's login**; no

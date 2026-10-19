@@ -40,8 +40,9 @@ on, so which callers woke it overnight was inferred, not seen. Still worth
 doing by hand: Vercel Firewall's bot protection, and watching the CU-hours
 after release.
 
-**Delivery switches (2026-10-19, on `dev`, not released; `LOGISTICS_CHANGE_PLAN.md`
-Sessions 1, 2, 2b and 3 done, 4 open; the plan is in the git-ignored `docs/plans/`).**
+**Delivery switches (2026-10-19, complete on `dev`, not released; `LOGISTICS_CHANGE_PLAN.md`
+Sessions 1, 2, 2b, 3 and 4 — the plan is in the git-ignored `docs/plans/` until
+the owner deletes it; every decision is below and what is open is in `ON_HOLD.md`).**
 Staff switch one PAID receipt at a time between kit pickup and delivery on
 its own screen, **Pickup & Delivery** (`/admin/events/[id]/pickup-delivery`, the events row
 menu; a table from `lg` up, cards below). Session 1 (`aa2f7dd`): the `LogisticsChange` and `LogisticsChangeOrder`
@@ -78,10 +79,47 @@ stamped on the switch, with a by-hand send. The waiting receipt's card and
 opened row carry *Copy payment link*, *Email payment link* / *Email how to pay*,
 *Record payment* and *Cancel switch*, each on its own permission. The trail
 vocabulary was split out of `activity.ts` into `activity-actions.ts` on the way.
-**Open: Session 4** (settlement and remittances, the client runner list's
-notes, data-model and domain-rules updates for them), and "already paid" in
-one step when opening a switch (today: open as GCash or bank, then *Record
-payment*).
+**Session 4 (money, client view):** an APPLIED switch that charged something
+is its own settlement line (`settlement.ts` `SwitchTotals`, summed by
+`settlement-store.ts` while its order is PAID): what it charged is collected,
+its PayMongo cut is processing, and owed rises by exactly the fee (L8). A
+waiting, cancelled or expired switch, a payment flagged late (never applied)
+and a ₱0 ride never count. `/admin/remittances` shows "₱… delivery switches"
+under Owed, the race's breakdown *Paid for delivery switches* and *Delivery
+switches*, and the client payout summary a *Delivery switches* sentence
+(`client-payout.ts`). The client viewer's runner list and export read
+"Switched from pickup" and "Ships with RM-…" (`client-runners.ts`, through the
+registrants' own `logisticsMove` and `shipsWith`; no amount, status, payment
+or reason of a switch leaves its select). **The owner's addition, *Already
+paid, record it now*:** a fee the runner already sent by GCash or bank is
+recorded as the switch is made, with its reference and an optional proof
+compressed in the browser: one form post to the create route, the proof
+uploaded to the private store first and deleted again if the switch is
+refused, the switch written APPLIED in the store's own transaction and locks
+(money as *Record payment* writes it: `BANK_TRANSFER`, `totalCharged = fee`,
+no transaction fee), one `logistics_change.applied` row saying "recorded as
+the switch was made" (`recordedAtCreation`), and only the *switched* email.
+Offered on every receipt with a fee to staff with `registration:validate`
+(the route asks it too), whatever the entry was paid with, since the money is
+already in (`switchPaymentChoices` in `category-change-hold.ts`).
+Session 4 verified on the same QA event with two temporary orders (removed,
+the event restored, the proof deleted): *Already paid* through the panel on a
+QR Ph order with a reference and a proof — applied at once, one audit row,
+`createdEmailSentAt` empty and `appliedEmailSentAt` stamped, the receipt's
+amounts unchanged; owed moved from ₱3,500.00 to ₱3,650.00, exactly the ₱150.00
+fee, on the breakdown and the list (desktop and card); a ₱100 switch waiting
+for payment left owed alone and was cancelled; *Already paid* with a proof on
+a switch that had become a ₱0 ride was refused and its upload deleted; the
+₱0 ride added nothing; and the client runner list, its export and the payout
+summary read through the lib functions with a client viewer actor ("Switched
+from pickup · Ships with RM-…", *Delivery switches* 1, ₱150.00). **Not seen:**
+the client race page signed in as a client viewer (the only viewer accounts on
+local-dev are real clients'), and the *Already paid* fields at 375px (they are
+single-column inside the shared panel). **Open:** the Overview's money tiles
+(`admin/page.tsx`, which sums category changes the way settlement does) do
+not add switch fees yet, so once a switch is paid its *Total Revenue (Net)*
+reads lower than Remittances' owed by those fees; `admin/page.tsx` is on the
+split-candidates list, so it was left for its own change.
 Verified on `local-dev`'s QA event `qa-virtual-run-test` with four temporary
 orders (removed after, the event's settings restored): a ₱0 switch riding on a
 paid parcel (the host's card gained *Also in this parcel*), a ₱100 switch saved
@@ -117,8 +155,43 @@ is waiting for payment for delivery to this address. Switch this receipt once
 that is paid, and it ships free."), and rides free once that one is paid;
 **R5** a receipt others ride on goes back to pickup after them ("RM-… ships
 with this receipt at no charge. Switch RM-… back to pickup first."); **R6** the
-registrants table only reads switches. Before the plan is deleted, copy L1–L14
-here in full.
+registrants table only reads switches.
+
+The decisions in full, as the owner accepted them (L1–L14, before Revision 1):
+**L1** staff only, started by staff like a category change; runner
+self-service is out of scope. **L2** a switch moves a whole order (logistics
+is an order-level fact); a group ships to one address or, when the event's
+province is known and the runners' homes differ, to each runner's home (the
+checkout's split rule, `delivery-split.ts`). **L3** PAID orders only; a
+PENDING bank transfer or an unpaid checkout cannot switch; a complimentary
+order can, and pays the fee. **L4** the receipt is never edited: on apply the
+order's `logisticsMethod`, `deliveryZone`, `deliveryAddress` and
+`deliverySplit` move, its `deliveryFee`, `totalAmount` and other amounts
+stay, and the money lives on the `LogisticsChange` row. **L5** staff never type
+a fee: it is computed from the address with the checkout's own functions;
+with the event's province unknown, staff pick the zone; an address in a zone
+the event does not deliver to is refused. **L6** shipping is charged per
+parcel, not per receipt: kits to one address pay one tier; an address that
+already receives a PAID delivery in the event rides on it at ₱0 and records
+the order it rides on, and one only awaiting payment never counts, so a
+cancelled or expired switch can never leave a free rider ("combine in one
+switch" with checkboxes was superseded by R3). **L7** no Run As One fee in v1:
+the delivery fee is the whole price, PayMongo's transaction fee on top when
+online; a configurable fee could come later like `categoryChangeFee`
+(`ON_HOLD.md`). **L8** the fee is the organizer's, added to what it is owed
+like a checkout delivery fee; the transaction fee is PayMongo's. **L9**
+delivery → pickup is allowed, at once and at ₱0, with no refund (staff may
+refund by hand outside the app). **L10** a parcel others ride on cannot be
+reversed alone (its checkboxes superseded by R5). **L11** a per-event
+deadline, `Event.logisticsChangeUntil`, null meaning 7 days before race day,
+00:00 Manila; after it the action is hidden and the routes refuse. **L12** an
+awaiting switch waits with an upgrade's windows (`changeHoldUntil`: hours
+online, days by bank), never past the deadline, then expires and the order
+stays pickup; no seat is held. **L13** one `AWAITING_PAYMENT` switch per
+order; a category change on the same order is independent. **L14** out of
+scope for v1: runner self-service, switching some runners of a group order,
+changing only the address of an order already on delivery, refunds on a
+reverse switch, and kit release or shipment tracking.
 
 **Category changes (2026-10-18, on `dev`, not released; `CATEGORY_CHANGE_PLAN.md`
 Sessions 1–4, `e7e091f`, `f0907f5`, `9d141f5` — the plan is deleted (it lived
