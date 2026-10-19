@@ -52,6 +52,16 @@
  *   the runner was told the fee was. On a paid upgrade the residual comes out
  *   at exactly `difference`, since `totalCharged = difference + changeFee +
  *   transactionFee` on every one (`category-change-payment.ts`).
+ * - **A delivery switch is a line of its own too** (LOGISTICS_CHANGE_PLAN.md
+ *   L4, L8), beside the category changes: the receipt it moved is never
+ *   edited, and its money is on the `LogisticsChange` row. Only APPLIED
+ *   switches with something charged count — an AWAITING_PAYMENT, CANCELLED or
+ *   EXPIRED one collected nothing, and a payment that came in too late is never
+ *   applied (`logistics_change.payment_late`), so it is never here either. What
+ *   it charged is collected; its transaction fee is PayMongo's, as everywhere;
+ *   **the fee is all the organizer's** (L8, no Run As One fee in v1, L7), so
+ *   owed rises by exactly the fee, the same as a delivery fee taken at
+ *   checkout. Like a category change, it counts only while its order is PAID.
  *
  * Owed is computed as the order's total less the two fees, rather than re-added
  * from its parts. Checkout pins `total = subtotal + delivery + platform +
@@ -74,7 +84,7 @@ export type SettlementState = 'NOTHING' | 'DUE' | 'SETTLED' | 'OVERPAID';
 export type Settlement = {
   /** How many PAID orders the figures are made of. */
   paidOrders: number;
-  /** Everything runners paid on those orders, and on category changes less their refunds. */
+  /** Everything runners paid on those orders, on category changes less their refunds, and on delivery switches. */
   collected: number;
   /** Run As One's share, and all of it: platform fees and change fees. */
   platformFees: number;
@@ -89,6 +99,8 @@ export type Settlement = {
   state: SettlementState;
   /** The category changes inside the figures above, for the line that explains them. */
   changes: ChangeLine;
+  /** The delivery switches inside the figures above, for the line that explains them. */
+  switches: SwitchLine;
 };
 
 /** Order totals already summed by the database (one grouped query per screen). */
@@ -138,11 +150,40 @@ export type ChangeLine = ChangeTotals & {
   owed: number;
 };
 
-export function settle(orders: OrderTotals, remitted: number, changes: ChangeTotals = NO_CHANGES): Settlement {
+/**
+ * Delivery switches already summed by the database: APPLIED with something
+ * charged, on PAID orders only. One grouped query per screen, beside the
+ * category changes' one.
+ */
+export type SwitchTotals = {
+  /** How many paid switches the figures are made of. */
+  switches: number;
+  /** What they charged, transaction fee included (`totalCharged`). */
+  charged: number;
+  /** The delivery fees among it: the organizer's (L8). */
+  fees: number;
+  /** PayMongo's cut on the online ones among them. */
+  transactionFees: number;
+};
+
+export const NO_SWITCHES: SwitchTotals = { switches: 0, charged: 0, fees: 0, transactionFees: 0 };
+
+/** The *Delivery switches* line: what switches moved in each figure, and their own sum to owed. */
+export type SwitchLine = SwitchTotals & {
+  /** Charged less PayMongo's cut: what switches add to owed. The fee, on every row. */
+  owed: number;
+};
+
+export function settle(
+  orders: OrderTotals,
+  remitted: number,
+  changes: ChangeTotals = NO_CHANGES,
+  switches: SwitchTotals = NO_SWITCHES,
+): Settlement {
   const changeLine = changeLineOf(changes);
-  const collected = orders.collected + changeLine.collected;
+  const collected = orders.collected + changeLine.collected + switches.charged;
   const platformFees = orders.platformFees + changes.changeFees;
-  const transactionFees = orders.transactionFees + changes.transactionFees;
+  const transactionFees = orders.transactionFees + changes.transactionFees + switches.transactionFees;
   // The residual, never re-added from parts, so the identity holds by construction.
   const owed = collected - platformFees - transactionFees;
   const balance = owed - remitted;
@@ -151,7 +192,7 @@ export function settle(orders: OrderTotals, remitted: number, changes: ChangeTot
       ? 'DUE'
       : balance < 0
         ? 'OVERPAID'
-        : orders.paidOrders === 0 && changes.changes === 0 && remitted === 0
+        : orders.paidOrders === 0 && changes.changes === 0 && switches.switches === 0 && remitted === 0
           ? 'NOTHING'
           : 'SETTLED';
   return {
@@ -164,6 +205,7 @@ export function settle(orders: OrderTotals, remitted: number, changes: ChangeTot
     balance,
     state,
     changes: changeLine,
+    switches: { ...switches, owed: switches.charged - switches.transactionFees },
   };
 }
 

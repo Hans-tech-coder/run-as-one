@@ -31,6 +31,15 @@
  * two category names and the inclusions leave the query; no amount, status
  * or reason of a change does.
  *
+ * **A delivery switch shows as the staff list shows it** too
+ * (LOGISTICS_CHANGE_PLAN.md Session 4): "Switched from pickup" and "Ships with
+ * RM-XXXX", read by the registrants screen's own `logisticsMove` and
+ * `shipsWith`. The kit team needs them: a switched receipt's kits leave the
+ * pickup pile, and a rider goes in its host's parcel. Only applied switches
+ * are read, and only the method an order switched from, the direction, and
+ * the reference of the receipt it ships with leave the query: **no amount,
+ * status, payment or reason** of a switch does.
+ *
  * Every runner is sent at once, as the staff Registrants table does, so the
  * search, filters, marking and export all work across the whole list in the
  * browser. Sorted by first name, then last name.
@@ -51,6 +60,8 @@ import { formatRunnerAddress } from './runner-address';
 import { shipmentsFor } from '@/app/events/[slug]/register/delivery-split';
 import { CATEGORY_CHANGE_STATUSES } from './category-change';
 import { categoryMove } from '@/app/admin/events/[id]/registrants/category-change-display';
+import { LOGISTICS_CHANGE_STATUSES } from './logistics-change';
+import { logisticsMove, shipsWith } from '@/app/admin/events/[id]/registrants/logistics-change-display';
 
 /** One runner as a client sees it. Blank strings, never null, for what was not given. */
 export type ClientRunnerRow = {
@@ -77,6 +88,10 @@ export type ClientRunnerRow = {
   deliveryArea: string;
   /** Where a delivered kit ships; blank for a pickup. */
   deliveryAddress: string;
+  /** "Pickup" when staff switched the receipt from pickup to delivery (or the reverse); blank otherwise. */
+  switchedFrom: string;
+  /** The receipt whose parcel this kit ships in at no charge, "RM-D918005C"; blank otherwise. */
+  shipsWith: string;
 };
 
 export async function clientRunners(actor: Actor, eventId: string): Promise<ClientRunnerRow[] | null> {
@@ -103,12 +118,24 @@ export async function clientRunners(actor: Actor, eventId: string): Promise<Clie
     where: { eventId: event.id, ...registrantOrders() },
     // The whitelist. Nothing else about an order or a runner leaves this query.
     select: {
+      id: true,
       orderRef: true,
       status: true,
       logisticsMethod: true,
       deliveryZone: true,
       deliveryAddress: true,
       deliverySplit: true,
+      // Applied switches only, oldest first: `logisticsMove` reads from the
+      // first, `shipsWith` from the last. The method switched from, the
+      // direction and the host receipt's reference, nothing more.
+      logisticsChangeOrders: {
+        where: { change: { status: LOGISTICS_CHANGE_STATUSES.APPLIED } },
+        orderBy: { change: { createdAt: 'asc' } },
+        select: {
+          fromLogisticsMethod: true,
+          change: { select: { direction: true, ridesOn: { select: { orderRef: true } } } },
+        },
+      },
       runners: {
         where: { deletedAt: null },
         orderBy: { runnerNo: 'asc' },
@@ -153,6 +180,19 @@ export async function clientRunners(actor: Actor, eventId: string): Promise<Clie
   for (const order of orders) {
     const delivered = asLogisticsMethod(order.logisticsMethod) === LOGISTICS_METHODS.DELIVERY;
     const shipments = delivered && order.deliverySplit ? shipmentsFor(event, order.runners) : null;
+    // The status is the query's `where`, not a column it read.
+    const switches = {
+      registrationId: order.id,
+      isDelivery: delivered,
+      logisticsChanges: order.logisticsChangeOrders.map(link => ({
+        status: LOGISTICS_CHANGE_STATUSES.APPLIED,
+        direction: link.change.direction,
+        ridesOnOrderRef: link.change.ridesOn?.orderRef ?? null,
+        orders: [{ registrationId: order.id, fromLogisticsMethod: link.fromLogisticsMethod }],
+      })),
+    };
+    const switchedFrom = logisticsMove(switches)?.from ?? '';
+    const host = shipsWith(switches) ?? '';
     order.runners.forEach((runner, index) => {
       const shipment = shipments?.find(s => s.runners.includes(index));
       const move = categoryMove({
@@ -183,6 +223,8 @@ export async function clientRunners(actor: Actor, eventId: string): Promise<Clie
         deliveryAddress: delivered
           ? ((shipment ? formatRunnerAddress(shipment.address) : order.deliveryAddress) ?? '')
           : '',
+        switchedFrom,
+        shipsWith: host,
       });
     });
   }

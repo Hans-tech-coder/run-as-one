@@ -24,7 +24,18 @@ type WithSwitches = {
 
 const peso = (centavos: number) => `₱${formatPesos(centavos)}`;
 
-function applied(row: WithSwitches): LogisticsChangeView[] {
+/**
+ * What reading a move needs of a switch, and nothing else: no amount, no
+ * payment, no reason. So the client viewer's runner list (`client-runners.ts`)
+ * reads its notes with these same functions from a select that carries none.
+ */
+export type MoveSwitch = Pick<LogisticsChangeView, 'status' | 'direction' | 'ridesOnOrderRef'> & {
+  orders: Pick<LogisticsChangeView['orders'][number], 'registrationId' | 'fromLogisticsMethod'>[];
+};
+
+type MoveRow = { registrationId: string; isDelivery: boolean; logisticsChanges?: MoveSwitch[] };
+
+function applied(row: MoveRow): MoveSwitch[] {
   return (row.logisticsChanges ?? []).filter(change => change.status === LOGISTICS_CHANGE_STATUSES.APPLIED);
 }
 
@@ -33,7 +44,7 @@ function applied(row: WithSwitches): LogisticsChangeView[] {
  * applied switch, as a category move is: switched to delivery and back is no
  * switch at all to the kit team.
  */
-export function logisticsMove(row: WithSwitches): { from: string; to: string } | null {
+export function logisticsMove(row: MoveRow): { from: string; to: string } | null {
   const first = applied(row)[0];
   const link = first?.orders.find(order => order.registrationId === row.registrationId);
   if (!link) return null;
@@ -43,7 +54,7 @@ export function logisticsMove(row: WithSwitches): { from: string; to: string } |
 }
 
 /** The paid order whose parcel this one rides on at ₱0 (L6), while it still does. */
-export function shipsWith(row: WithSwitches): string | null {
+export function shipsWith(row: MoveRow): string | null {
   const last = applied(row).at(-1);
   return row.isDelivery && last?.direction === LOGISTICS_DIRECTIONS.TO_DELIVERY ? last.ridesOnOrderRef : null;
 }

@@ -23,6 +23,12 @@
  * changes came to in *Collected*, and any refund still owed to a runner. No
  * per-runner amount, the same rule as the orders.
  *
+ * **Delivery switches** (LOGISTICS_CHANGE_PLAN.md L8) are inside the figures
+ * the same way — what a paid switch charged in *Collected*, its PayMongo cut
+ * in *Payment processing fees* — and get the same kind of line: how many
+ * receipts switched to delivery for a fee, and what those fees add to what the
+ * client is owed, which is the whole fee. No per-receipt amount.
+ *
  * A **return** (the organizer paying money back after a refund left it
  * overpaid) is listed beside the payouts as a negative amount, because it is
  * already netted into *Paid out*: leaving it off would make the list fail to
@@ -77,6 +83,13 @@ export type ClientPayout = {
     /** Change fees inside *Run As One fees*, so the tile can say they are there. */
     changeFees: number;
   } | null;
+  /** The Delivery switches line; null when no receipt of this race paid to switch to delivery. */
+  deliverySwitches: {
+    /** Paid switches, one receipt each. */
+    count: number;
+    /** What their fees add to what the client is owed: the delivery fees, all the client's. */
+    fees: number;
+  } | null;
   /** Latest first. */
   payouts: ClientPayoutRow[];
 };
@@ -119,6 +132,10 @@ export async function clientPayout(actor: Actor, eventId: string): Promise<Clien
             toRefund: settlement.changes.toRefund,
             changeFees: settlement.changes.changeFees,
           }
+        : null,
+    deliverySwitches:
+      settlement.switches.switches > 0
+        ? { count: settlement.switches.switches, fees: settlement.switches.owed }
         : null,
     payouts: rows.map(row => ({
       paidOn: row.paidOn,

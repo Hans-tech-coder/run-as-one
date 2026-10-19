@@ -49,6 +49,9 @@ export default async function Page({ params }: { params: Promise<{ eventId: stri
 
   const { event, settlement, parts, remittances } = detail;
   const changes = settlement.changes;
+  const switches = settlement.switches;
+  // Either line splits *Collected* into what it is made of.
+  const splitCollected = changes.changes > 0 || switches.switches > 0;
 
   return (
     <>
@@ -87,14 +90,19 @@ export default async function Page({ params }: { params: Promise<{ eventId: stri
               {changes.changes > 0 &&
                 ` Category changes count once the runner has moved (${changes.changes}); an upgrade still
                 waiting for its payment does not.`}
+              {switches.switches > 0 &&
+                ` Delivery switches count once paid and applied (${switches.switches}); one still waiting for
+                payment, cancelled or expired does not.`}
             </p>
             <dl className="settlement-lines">
               <Line label="Collected from runners" value={settlement.collected} strong />
               {/* The Category changes line (CATEGORY_CHANGE_PLAN.md): only when
                   there are any, so a race without one reads as it always has. */}
+              {splitCollected && (
+                <Line label="Paid on orders" value={settlement.collected - changes.collected - switches.charged} muted />
+              )}
               {changes.changes > 0 && (
                 <>
-                  <Line label="Paid on orders" value={settlement.collected - changes.collected} muted />
                   <Line label="Paid for category changes" value={changes.charged} muted />
                   {changes.refunded > 0 && (
                     <Line label="Less category change refunds paid" value={-changes.refunded} muted />
@@ -104,6 +112,9 @@ export default async function Page({ params }: { params: Promise<{ eventId: stri
                   )}
                 </>
               )}
+              {/* The Delivery switches line (LOGISTICS_CHANGE_PLAN.md L8): the
+                  receipt is never edited, so its fee is named here instead. */}
+              {switches.switches > 0 && <Line label="Paid for delivery switches" value={switches.charged} muted />}
               <Line
                 label={changes.changeFees > 0 ? 'Platform and change fees (Run As One)' : 'Platform fees (Run As One)'}
                 value={-settlement.platformFees}
@@ -116,6 +127,7 @@ export default async function Page({ params }: { params: Promise<{ eventId: stri
               {changes.changes > 0 && (
                 <Line label="Category changes, after their fees and refunds" value={changes.owed} muted />
               )}
+              {switches.switches > 0 && <Line label="Delivery switches" value={switches.owed} muted />}
               <Line label="Remitted so far (payouts less returns)" value={-settlement.remitted} rule />
               <Line label="Balance" value={settlement.balance} strong rule />
             </dl>

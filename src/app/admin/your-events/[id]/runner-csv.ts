@@ -11,10 +11,11 @@
 import type { ClientRunnerRow } from '@/lib/client-runners';
 import { csvField, csvPhone, downloadCsv } from '../../events/[id]/registrants/registrant-csv';
 import { kitSummary } from '../../events/[id]/registrants/category-change-display';
+import { kitNote } from './RunnerCells';
 
 const HEADERS = [
   'Runner Ref', 'First Name', 'Last Name', 'Category', 'Changed From', 'Kit Changed', 'Shirt Size', 'Status', 'Race Kit',
-  'Phone', 'Email', 'Home Address', 'Province', 'Delivery Area', 'Delivery Address',
+  'Kit Note', 'Phone', 'Email', 'Home Address', 'Province', 'Delivery Area', 'Delivery Address',
 ];
 
 export function buildRunnerCsv(rows: ClientRunnerRow[]): string {
@@ -32,6 +33,8 @@ export function buildRunnerCsv(rows: ClientRunnerRow[]): string {
         csvField(row.size),
         csvField(row.status),
         csvField(row.kit),
+        // Blank unless staff switched the receipt between pickup and delivery.
+        csvField(kitNote(row)),
         csvPhone(row.phone),
         csvField(row.email),
         csvField(row.homeAddress),

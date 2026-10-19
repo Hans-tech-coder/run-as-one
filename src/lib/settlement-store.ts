@@ -8,8 +8,9 @@
  * **Nothing about what is owed is stored.** Every figure is summed from the
  * PAID registrations at request time, so a payment validated a minute ago or
  * an order refunded after a payout is already in the balance, with no job to
- * keep a stored total in step. The list is three grouped queries for the whole
- * screen — orders, category changes, remittances — not three per race.
+ * keep a stored total in step. The list is four grouped queries for the whole
+ * screen — orders, category changes, delivery switches, remittances — not four
+ * per race.
  *
  * Every read is scoped to the actor's tenant and asks `remittance:manage`, so
  * a per-event staff member or a client viewer reaches nothing here whatever
@@ -22,7 +23,17 @@ import prisma from './db';
 import { can, reachableEvents, type Actor } from './actor';
 import { mostRecentFirst } from './event-schedule';
 import { CATEGORY_CHANGE_STATUSES } from './category-change';
-import { NO_CHANGES, NO_ORDERS, settle, type ChangeTotals, type OrderTotals, type Settlement } from './settlement';
+import { LOGISTICS_CHANGE_STATUSES } from './logistics-change';
+import {
+  NO_CHANGES,
+  NO_ORDERS,
+  NO_SWITCHES,
+  settle,
+  type ChangeTotals,
+  type OrderTotals,
+  type Settlement,
+  type SwitchTotals,
+} from './settlement';
 
 /**
  * The category change statuses settlement reads: the runner has moved. An
@@ -51,7 +62,7 @@ export type EventSettlementRow = {
  * summary through `event:view-payout` (`client-payout.ts`).
  */
 export async function totalsByEvent(eventIds: string[]) {
-  const [orders, changes, remittances] = await Promise.all([
+  const [orders, changes, switches, remittances] = await Promise.all([
     prisma.registration.groupBy({
       by: ['eventId'],
       where: { eventId: { in: eventIds }, status: 'PAID' },
@@ -65,6 +76,21 @@ export async function totalsByEvent(eventIds: string[]) {
       where: { eventId: { in: eventIds }, status: { in: MOVED_CHANGE_STATUSES }, registration: { status: 'PAID' } },
       _count: { _all: true },
       _sum: { totalCharged: true, changeFee: true, transactionFee: true, refundAmount: true },
+    }),
+    // Delivery switches that took money (L8): APPLIED only, since a payment
+    // that came in late is never applied, and only while the receipt they moved
+    // is PAID. A ₱0 switch (a rider, back to pickup) adds nothing and is not
+    // counted as one.
+    prisma.logisticsChange.groupBy({
+      by: ['eventId'],
+      where: {
+        eventId: { in: eventIds },
+        status: LOGISTICS_CHANGE_STATUSES.APPLIED,
+        totalCharged: { gt: 0 },
+        orders: { some: { registration: { status: 'PAID' } } },
+      },
+      _count: { _all: true },
+      _sum: { totalCharged: true, fee: true, transactionFee: true },
     }),
     prisma.remittance.groupBy({
       by: ['eventId', 'kind'],
@@ -98,6 +124,18 @@ export async function totalsByEvent(eventIds: string[]) {
     changeTotals.set(row.eventId, sum);
   }
 
+  const switchTotals = new Map<string, SwitchTotals>(
+    switches.map(row => [
+      row.eventId,
+      {
+        switches: row._count._all,
+        charged: row._sum.totalCharged ?? 0,
+        fees: row._sum.fee ?? 0,
+        transactionFees: row._sum.transactionFee ?? 0,
+      },
+    ]),
+  );
+
   const remitted = new Map<string, number>();
   for (const row of remittances) {
     const amount = row._sum.amount ?? 0;
@@ -105,7 +143,12 @@ export async function totalsByEvent(eventIds: string[]) {
   }
 
   return (eventId: string) =>
-    settle(orderTotals.get(eventId) ?? NO_ORDERS, remitted.get(eventId) ?? 0, changeTotals.get(eventId) ?? NO_CHANGES);
+    settle(
+      orderTotals.get(eventId) ?? NO_ORDERS,
+      remitted.get(eventId) ?? 0,
+      changeTotals.get(eventId) ?? NO_CHANGES,
+      switchTotals.get(eventId) ?? NO_SWITCHES,
+    );
 }
 
 /** Every race this actor may settle, latest race first. */

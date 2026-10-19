@@ -10,7 +10,8 @@ import './payout-summary.css';
  * figures that add up — collected, less Run As One's fees, less payment
  * processing fees, less paid out, leaves still owed — then the payouts
  * themselves. Category changes (CATEGORY_CHANGE_PLAN.md) are already inside
- * the figures and are named on a line of their own beneath them. Screen only:
+ * the figures and are named on a line of their own beneath them, and so are
+ * paid delivery switches (LOGISTICS_CHANGE_PLAN.md L8). Screen only:
  * the printed copy goes to a shirt supplier, who has no business with the
  * money (`RaceReport`).
  */
@@ -38,6 +39,10 @@ export default function PayoutSummary({ payout }: { payout: ClientPayout }) {
 
       {payout.categoryChanges && (
         <p className="race-money-state">{changeLine(payout.categoryChanges)}</p>
+      )}
+
+      {payout.deliverySwitches && (
+        <p className="race-money-state">{switchLine(payout.deliverySwitches)}</p>
       )}
 
       <p className="race-money-state">{stateLine(payout)}</p>
@@ -91,6 +96,15 @@ function changeLine(changes: NonNullable<ClientPayout['categoryChanges']>): stri
   const refund =
     changes.toRefund > 0 ? `, of which ${formatSignedPesos(changes.toRefund)} is still to be refunded to runners` : '';
   return `Category changes: ${runners} ${amount}${refund}.`;
+}
+
+/**
+ * The Delivery switches line: like the category changes line, already inside
+ * the figures, so it says what the switches' delivery fees add to what is owed.
+ */
+function switchLine(switches: NonNullable<ClientPayout['deliverySwitches']>): string {
+  const receipts = `${switches.count} receipt${switches.count === 1 ? '' : 's'} switched from pickup to delivery`;
+  return `Delivery switches: ${receipts}, adding ${formatSignedPesos(switches.fees)} in delivery fees to what you are owed.`;
 }
 
 /** One plain sentence on where the race stands, in the client's terms rather than the settlement screen's. */

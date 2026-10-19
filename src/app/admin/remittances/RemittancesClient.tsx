@@ -93,13 +93,14 @@ const COLUMNS: ColumnDef<EventSettlementRow>[] = [
     id: 'owed',
     header: 'Owed',
     accessorFn: row => row.settlement.owed,
-    // The Category changes line rides under owed, as Run As One's share rides
-    // under collected: inside the figure, named so a moved balance is not a
-    // mystery, and a refund still owed to a runner said in so many words.
+    // The Category changes and Delivery switches lines ride under owed, as Run
+    // As One's share rides under collected: inside the figure, named so a moved
+    // balance is not a mystery, and a refund still owed to a runner said in so
+    // many words.
     cell: ({ row }) => (
       <div className="whitespace-nowrap">
         <div>{formatSignedPesos(row.original.settlement.owed)}</div>
-        <ChangeNote changes={row.original.settlement.changes} />
+        <ChangeNote settlement={row.original.settlement} />
       </div>
     ),
   },
@@ -261,7 +262,7 @@ export default function RemittancesClient({ rows }: { rows: EventSettlementRow[]
               value: (
                 <>
                   {formatSignedPesos(original.settlement.owed)}
-                  <ChangeNote changes={original.settlement.changes} />
+                  <ChangeNote settlement={original.settlement} />
                 </>
               ),
             },
@@ -284,17 +285,23 @@ export default function RemittancesClient({ rows }: { rows: EventSettlementRow[]
 }
 
 /**
- * "₱400.00 category changes", and "₱150.00 to refund" on a line of its own,
- * under owed; nothing for a race with none. Allowed to wrap, unlike the
- * figure above it, so the note never widens a column the table has no room for.
+ * "₱400.00 category changes", "₱150.00 to refund" and "₱300.00 delivery
+ * switches", each on a line of its own, under owed; nothing for a race with
+ * none. Allowed to wrap, unlike the figure above it, so the note never widens a
+ * column the table has no room for.
  */
-function ChangeNote({ changes }: { changes: Settlement['changes'] }) {
-  if (changes.changes === 0) return null;
+function ChangeNote({ settlement: { changes, switches } }: { settlement: Settlement }) {
+  if (changes.changes === 0 && switches.switches === 0) return null;
   return (
     <>
-      <div className="text-xs text-secondary whitespace-normal">{formatSignedPesos(changes.owed)} category changes</div>
+      {changes.changes > 0 && (
+        <div className="text-xs text-secondary whitespace-normal">{formatSignedPesos(changes.owed)} category changes</div>
+      )}
       {changes.toRefund > 0 && (
         <div className="text-xs text-secondary whitespace-normal">{formatSignedPesos(changes.toRefund)} to refund</div>
+      )}
+      {switches.switches > 0 && (
+        <div className="text-xs text-secondary whitespace-normal">{formatSignedPesos(switches.owed)} delivery switches</div>
       )}
     </>
   );

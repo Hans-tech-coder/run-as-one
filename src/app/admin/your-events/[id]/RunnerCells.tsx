@@ -41,13 +41,33 @@ export function NoShirt() {
   return <span className="text-secondary">{NO_SHIRT}</span>;
 }
 
+/**
+ * Pickup or delivery, the delivery area, and the switch notes the kit team
+ * acts on (LOGISTICS_CHANGE_PLAN.md Session 4): "Switched from pickup" moves
+ * the kit out of the pickup pile, "Ships with RM-…" puts it in that receipt's
+ * parcel. No money: what a switch cost is not the client's (`client-runners.ts`).
+ */
 export function KitLine({ runner }: { runner: ClientRunnerRow }) {
   return (
     <span className="flex flex-col">
       <span>{runner.kit}</span>
       {runner.deliveryArea && <span className="text-xs text-secondary">{runner.deliveryArea}</span>}
+      {runner.switchedFrom && (
+        <span className="text-xs text-secondary">Switched from {runner.switchedFrom.toLowerCase()}</span>
+      )}
+      {runner.shipsWith && <span className="text-xs text-secondary">Ships with {runner.shipsWith}</span>}
     </span>
   );
+}
+
+/** The switch notes as one line, for the export: "Switched from pickup · Ships with RM-D918005C". */
+export function kitNote(runner: Pick<ClientRunnerRow, 'switchedFrom' | 'shipsWith'>): string {
+  return [
+    runner.switchedFrom ? `Switched from ${runner.switchedFrom.toLowerCase()}` : null,
+    runner.shipsWith ? `Ships with ${runner.shipsWith}` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
 }
 
 export function ContactLines({ runner }: { runner: ClientRunnerRow }) {
