@@ -63,7 +63,7 @@ export function buildRegistrantRows({
     // The Logistics columns, worded once in logistics-change-view.ts: each
     // runner's own parcel on a split order (RUNNER_ADDRESS_PLAN.md Batch 2)
     // and the order's switches, which the cell only reads — switching is on
-    // Kits & Delivery (LOGISTICS_CHANGE_PLAN.md R6).
+    // Pickup & Delivery (LOGISTICS_CHANGE_PLAN.md R6).
     const logistics = orderLogisticsFields(event, reg, logisticsByOrder.get(reg.id) ?? []);
     reg.runners.forEach((runner, runnerIndex) => {
       runners.push({

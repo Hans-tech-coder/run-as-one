@@ -14,7 +14,7 @@
  *   the second quotes ₱0 on its own (L6); staff can also cancel the first.
  *   This keeps the rule that an unpaid parcel never carries a free rider.
  *
- * Kept free of Prisma like `logistics-change.ts`, so the Kits & Delivery
+ * Kept free of Prisma like `logistics-change.ts`, so the Pickup & Delivery
  * panel says the refusal while staff type, and the store says it again under
  * the event's locks.
  */

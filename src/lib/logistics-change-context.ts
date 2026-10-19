@@ -26,7 +26,7 @@ import { ridersOf as ridersAmong, type WaitingSwitch } from '@/lib/logistics-cha
  * (L6), the event's switches still waiting for payment and where each would
  * ship (R4), and whether this order already has one waiting (L13). The store
  * reads it inside its transaction after `lockSwitch`, so what it writes is
- * decided from what is locked. The Kits & Delivery screen reads the same facts
+ * decided from what is locked. The Pickup & Delivery screen reads the same facts
  * for every receipt at once (`logistics-receipts.ts`) and applies the same
  * pure rules (`logistics-change-parcels.ts`).
  *

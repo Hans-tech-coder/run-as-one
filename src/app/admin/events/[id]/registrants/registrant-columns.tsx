@@ -192,7 +192,7 @@ export function buildRegistrantColumns({
       // The method, and what a delivery switch left on it
       // (LOGISTICS_CHANGE_PLAN.md): the "Pickup → Delivery" chip, the parcel
       // it ships with and a switch waiting for its fee. Switching and its
-      // history are on Kits & Delivery (R6). Sorting and the filter still
+      // history are on Pickup & Delivery (R6). Sorting and the filter still
       // read the plain method.
       cell: ({ row }) => <LogisticsWithSwitch runner={row.original} />,
       filterFn: (row, columnId, filterValue) => {

@@ -314,9 +314,9 @@ const PATTERNS: [RegExp, RouteShape][] = [
       lg: { toolbar: LG_TOOLBAR, table: { head: LG_TANSTACK_HEAD, row: 69, rows: 7 } },
     },
   ],
-  // Kits & Delivery: four tiles, a line, search over four filter chips, and
-  // receipt cards at every width (from `lg` up, drawn as one panel block).
-  [/^\/admin\/events\/[^/]+\/kits$/, { metrics: 4, list: { frame: 'page', toolbar: 240 }, lg: { toolbar: 80, panels: [{ rows: [360] }] } }],
+  // Pickup & Delivery: four tiles, a line, then search over the filter chips and
+  // one row per receipt (cards below `lg`).
+  [/^\/admin\/events\/[^/]+\/pickup-delivery$/, { metrics: 4, list: { frame: 'page', toolbar: 240 }, lg: { toolbar: 80, table: { head: LG_TANSTACK_HEAD, row: 69, rows: 7 } } }],
   // One race's settlement: four tiles over the breakdown panel, whose nine
   // lines are drawn as one block.
   [

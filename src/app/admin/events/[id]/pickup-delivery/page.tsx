@@ -4,7 +4,7 @@ import { readEventReceipts } from '@/lib/logistics-receipts';
 import AdminNotFound from '../../../AdminNotFound';
 import { EVENT_NOT_FOUND } from '../../event-not-found';
 import DashboardHeader from '@/app/admin/DashboardHeader';
-import KitsClient from './KitsClient';
+import PickupDeliveryClient from './PickupDeliveryClient';
 
 /**
  * One race's kits: which receipts are claimed at pickup and which ship, where
@@ -21,7 +21,7 @@ import KitsClient from './KitsClient';
  * no-match and a no-permission read identically, so the screen cannot be used
  * to confirm that some id exists.
  */
-export default async function KitsPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function PickupDeliveryPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const actor = await requireTeamActor();
   const reach = { organizerId: actor.orgId, eventId: id };
@@ -32,12 +32,12 @@ export default async function KitsPage({ params }: { params: Promise<{ id: strin
   return (
     <>
       <DashboardHeader
-        title="Kits & Delivery"
+        title="Pickup & Delivery"
         crumbs={[{ label: 'Events', href: '/admin/events' }, { label: data.event.title }]}
       />
 
       <div className="admin-content">
-        <KitsClient data={data} canEdit={can(actor, 'registration:edit', reach)} />
+        <PickupDeliveryClient data={data} canEdit={can(actor, 'registration:edit', reach)} />
       </div>
     </>
   );

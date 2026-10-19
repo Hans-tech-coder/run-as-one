@@ -222,7 +222,7 @@ export default function EventActionsMenu({
     // Each receipt's pickup or delivery, its parcel, and the switches between
     // them (LOGISTICS_CHANGE_PLAN.md R1). For everyone who sees Registrants:
     // it reads the same list, one card per receipt instead of a row per runner.
-    { href: `/admin/events/${eventId}/kits`, icon: <Truck size={16} />, label: 'Kits & Delivery' },
+    { href: `/admin/events/${eventId}/pickup-delivery`, icon: <Truck size={16} />, label: 'Pickup & Delivery' },
     // Under Registrants, because a pacer is a registrant the organizer invited,
     // and above Results, which only matter once the race has been run. The
     // count rides in the label rather than in a badge of its own, so the item

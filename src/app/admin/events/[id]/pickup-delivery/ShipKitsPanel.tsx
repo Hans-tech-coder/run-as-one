@@ -3,7 +3,7 @@
 /**
  * *Ship kits* / *Back to pickup*: moving one paid receipt between kit pickup
  * and delivery (LOGISTICS_CHANGE_PLAN.md L2–L13, Revision 1 R3–R5), opened
- * from that receipt's card on Kits & Delivery only when the switch is allowed.
+ * from that receipt's card on Pickup & Delivery only when the switch is allowed.
  *
  * **Ship kits**: the address starts as Runner 1's home address (every runner
  * gave one at sign-up) and staff edit it, add the ZIP or a landmark, or ship

@@ -43,8 +43,8 @@ after release.
 **Delivery switches (2026-10-19, on `dev`, not released; `LOGISTICS_CHANGE_PLAN.md`
 Sessions 1, 2 and 2b done, 3–4 open; the plan is in the git-ignored `docs/plans/`).**
 Staff switch one PAID receipt at a time between kit pickup and delivery on
-its own screen, **Kits & Delivery** (`/admin/events/[id]/kits`, the events row
-menu). Session 1 (`aa2f7dd`): the `LogisticsChange` and `LogisticsChangeOrder`
+its own screen, **Pickup & Delivery** (`/admin/events/[id]/pickup-delivery`, the events row
+menu; a table from `lg` up, cards below). Session 1 (`aa2f7dd`): the `LogisticsChange` and `LogisticsChangeOrder`
 tables and `Event.logisticsChangeUntil` (migration
 `20261018120000_logistics_change`, in `ON_HOLD.md`'s release steps), the pure
 quote and rules `lib/logistics-change.ts`, and the event form's *Delivery
@@ -53,8 +53,8 @@ switch deadline*. Session 2 (`12db630`): the writer
 `logistics-change-view.ts`), the routes `admin/registrations/[id]/logistics-change`
 and `admin/logistics-changes/[id]/cancel`, and a registrants-table modal.
 **Session 2b (Revision 1, the owner's call after trying Session 2):** the
-switch moved off the registrants table onto Kits & Delivery, one card per
-receipt; the store takes one receipt per switch (no `includeIds`, no
+switch moved off the registrants table onto Pickup & Delivery, one row per
+receipt (the owner then asked for a table on desktop, cards only on a phone); the store takes one receipt per switch (no `includeIds`, no
 same-email candidates, no rider pre-ticking, no preview read); new
 `lib/logistics-change-parcels.ts` (riders, R4's check and both sentences) and
 `lib/logistics-receipts.ts` (the page's one read); the registrants Logistics
@@ -82,7 +82,7 @@ pickup is free and refunds nothing; **L10** a parcel others ride on cannot go
 back alone (its checkboxes superseded by R5); **L11** deadline, default 7 days
 before race day; **L12** hold windows as an upgrade's; **L13** one awaiting
 switch per order. Revision 1 (owner, 2026-10-19, final): **R1** a screen of its
-own, Kits & Delivery, `registration:view` to see and `registration:edit` to
+own, Pickup & Delivery, `registration:view` to see and `registration:edit` to
 switch; **R2** one card per receipt with counts, search and filters; **R3** one
 receipt per switch, the panel mounted fresh per receipt; **R4** a second
 receipt to an address whose switch still waits for payment is refused ("RM-…

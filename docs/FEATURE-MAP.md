@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-46 pages · 80 API routes · 130 modules in `src/lib` · 570 files · 103,256 lines
+46 pages · 80 API routes · 130 modules in `src/lib` · 571 files · 103,495 lines
 
 ---
 
@@ -32,8 +32,8 @@ The route, the server component behind it, and the client components beside it.
 | `/admin/communities` | [`/admin/communities/page.tsx`](../src/app/admin/communities/page.tsx) | `CommunitiesClient.tsx` |
 | `/admin/events` | [`/admin/events/page.tsx`](../src/app/admin/events/page.tsx) | `bank-account-draft.ts` `BankAccountsPanel.tsx` `BasicInfoPanel.tsx` `category-draft.ts` `CategoryChangeSettings.tsx` `ConsentWaiverField.tsx` `DeleteEventModal.tsx` `DescriptionEditor.tsx` `event-columns.tsx` `event-form-draft.ts` `event-not-found.ts` `event-row.ts` `EventActionsMenu.tsx` `EventClientField.tsx` `EventFormatPanel.tsx` `EventFormResultModals.tsx` `EventOptionsPanel.tsx` `EventPromotionsPanel.tsx` `EventProvinceField.tsx` `EventRowCells.tsx` `EventsTableClient.tsx` `HighlightsField.tsx` `HighlightsModal.tsx` `InclusionsField.tsx` `LogisticsPanel.tsx` `PosterField.tsx` `publish-draft.ts` `PublishingPanel.tsx` `PublishModal.tsx` `PublishPicker.tsx` `registration-opening.ts` `registration-state-badge.ts` `RegistrationFeesPanel.tsx` `RegistrationFormPicker.tsx` `RegistrationOpeningPicker.tsx` `RegistrationScheduleModal.tsx` `useEventImageUpload.ts` `useEventPublishActions.ts` `useEventRowActions.ts` |
 | `/admin/events/[id]/edit` | [`/admin/events/[id]/edit/page.tsx`](../src/app/admin/events/[id]/edit/page.tsx) | `event-edit-draft.ts` |
-| `/admin/events/[id]/kits` | [`/admin/events/[id]/kits/page.tsx`](../src/app/admin/events/[id]/kits/page.tsx) | `KitsClient.tsx` `ReceiptCard.tsx` `ship-kits-fields.tsx` `ShipKitsPanel.tsx` `SwitchHistory.tsx` `useShipKits.ts` |
 | `/admin/events/[id]/pacers` | [`/admin/events/[id]/pacers/page.tsx`](../src/app/admin/events/[id]/pacers/page.tsx) | `AddPacerModal.tsx` `EditPacerModal.tsx` `pacer-row.ts` `PacerActionsMenu.tsx` `PacersClient.tsx` `use-pacer-actions.tsx` |
+| `/admin/events/[id]/pickup-delivery` | [`/admin/events/[id]/pickup-delivery/page.tsx`](../src/app/admin/events/[id]/pickup-delivery/page.tsx) | `PickupDeliveryClient.tsx` `receipt-columns.tsx` `receipt-display.tsx` `ship-kits-fields.tsx` `ShipKitsPanel.tsx` `SwitchHistory.tsx` `useShipKits.ts` |
 | `/admin/events/[id]/registrants` | [`/admin/events/[id]/registrants/page.tsx`](../src/app/admin/events/[id]/registrants/page.tsx) | `AwaitingChangeActions.tsx` `CancelOrderModal.tsx` `category-change-display.tsx` `CategoryChangeEmailModal.tsx` `CategoryChangeHistory.tsx` `CategoryChangeModal.tsx` `CategoryChangePaymentChoice.tsx` `CategoryChangeQuote.tsx` `ColumnsViewMenu.tsx` `DeleteRegistrantModals.tsx` `email-handoff.ts` `FollowUpModal.tsx` `logistics-change-display.tsx` `ManualEmailModal.tsx` `PaymentLinkEmailModal.tsx` `ProofLightbox.tsx` `registrant-columns.tsx` `registrant-csv.ts` `registrant-display.tsx` `registrant-rows.ts` `RegistrantActionsMenu.tsx` `RegistrantCards.tsx` `RegistrantDetailModal.tsx` `RegistrantRowActions.tsx` `RegistrantsBulkBar.tsx` `RegistrantsDataTable.tsx` `RegistrantsTable.tsx` `RegistrantsTabs.tsx` `RegistrantsToolbar.tsx` `RegistrantTransactionFields.tsx` `RemarksModal.tsx` `RunnerAddressEditor.tsx` `RunnerEditModal.tsx` `SendLinksButton.tsx` `unpaid-columns.tsx` `UnpaidCheckoutActions.tsx` `UnpaidCheckoutCards.tsx` `UnpaidCheckoutsList.tsx` `useCategoryChangeModal.ts` `usePaymentStatus.ts` |
 | `/admin/events/[id]/registrants/[runnerId]/consent` | [`/admin/events/[id]/registrants/[runnerId]/consent/page.tsx`](../src/app/admin/events/[id]/registrants/[runnerId]/consent/page.tsx) | `PrintableSheet.tsx` |
 | `/admin/events/new` | [`/admin/events/new/page.tsx`](../src/app/admin/events/new/page.tsx) | `NewEventForm.tsx` |
@@ -234,7 +234,7 @@ the file itself.
 | [`logistics-change-store.ts`](../src/lib/logistics-change-store.ts) | The only writer of an order's pickup or delivery after checkout (`LOGISTICS_CHANGE_PLAN.md` Session 2, Revision 1 R3–R5). |
 | [`logistics-change-view.ts`](../src/lib/logistics-change-view.ts) | A switch as the staff screens read it, and an order's Logistics fields. |
 | [`logistics-change.ts`](../src/lib/logistics-change.ts) | **What switching a paid order between kit pickup and delivery costs, and when it may happen** (LOGISTICS_CHANGE_PLAN.md L3, L5, L6, L9, L11, L13). |
-| [`logistics-receipts.ts`](../src/lib/logistics-receipts.ts) | The Kits & Delivery screen's receipts (R1–R5). |
+| [`logistics-receipts.ts`](../src/lib/logistics-receipts.ts) | The Pickup & Delivery screen's receipts (R1–R5). |
 | [`minor-consent.ts`](../src/lib/minor-consent.ts) | Who counts as a minor, and what a birthdate may be (`GUARDIAN_CONSENT_PLAN.md`). |
 | [`money.ts`](../src/lib/money.ts) | All money in this app is stored and passed around as INTEGER CENTAVOS. |
 | [`next-path.ts`](../src/lib/next-path.ts) | Where a sign-in sends a person afterwards: back to the admin page they were trying to open, and nowhere else. |

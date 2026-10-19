@@ -15,7 +15,7 @@ import { SWITCH_EVENT_SELECT, eligibilityFor } from '@/lib/logistics-change-cont
 import { LOGISTICS_VIEW_INCLUDE, logisticsChangeView, type LogisticsChangeView } from '@/lib/logistics-change-view';
 
 /**
- * **The Kits & Delivery screen's receipts** (LOGISTICS_CHANGE_PLAN.md
+ * **The Pickup & Delivery screen's receipts** (LOGISTICS_CHANGE_PLAN.md
  * Revision 1, R1–R5): one entry per receipt (order reference), because a
  * switch moves a whole receipt and is charged per parcel, while the
  * registrants table is one row per runner.

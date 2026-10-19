@@ -6,7 +6,7 @@
  *
  * `registration:edit`, the permission that opened it, scoped to the switch's
  * own race; a refusal reads like a missing switch. Nobody is emailed. Answers
- * with the switch, as the route that opened it does; the Kits & Delivery card
+ * with the switch, as the route that opened it does; the Pickup & Delivery card
  * it was pressed on refreshes itself.
  */
 

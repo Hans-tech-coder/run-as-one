@@ -1,36 +1,55 @@
 "use client";
 
 /**
- * Kits & Delivery (LOGISTICS_CHANGE_PLAN.md Revision 1, R1–R5): one card per
+ * Pickup & Delivery (LOGISTICS_CHANGE_PLAN.md Revision 1, R1–R5): one row per
  * receipt, the counts the kit team works from, search by reference, runner
  * name or email, and the filters All, Pickup, Delivery and Waiting for payment.
+ *
+ * **A table from `lg` up, cards below it** (§9 "One admin table"), both
+ * reading one TanStack instance, so search, filters, sort and the pager are
+ * shared: `AdminDataTable` with `RECEIPT_COLUMNS`, and `AdminCardList` on a
+ * phone. A row with a switch waiting or a history opens in place under it;
+ * a card folds the same things into its body.
  *
  * **One panel, one receipt at a time.** `ShipKitsPanel` is mounted with
  * `key={receipt.id}`, so what staff typed for one receipt is gone when they
  * open another. After a switch or a Cancel the page's server read runs again
- * (`router.refresh()`): a switch changes other cards too — the receipt it
+ * (`router.refresh()`): a switch changes other rows too — the receipt it
  * rides on gains "Also in this parcel", the counts move — and that read is the
  * one place all of it is decided.
  */
 
 import React, { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import {
+  getCoreRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+  type SortingState,
+  type VisibilityState,
+} from '@tanstack/react-table';
 import { Hourglass, Package, Search, Store, Truck, X } from 'lucide-react';
 import { useAlert } from '@/components/ui/AlertProvider';
+import AdminCardList from '@/app/admin/AdminCardList';
+import AdminDataTable, { AdminColumnsMenu, rowPosition } from '@/app/admin/AdminDataTable';
+import AdminTablePager from '@/app/admin/AdminTablePager';
+import MobileSortMenu from '@/app/admin/MobileSortMenu';
 import { formatEventInstant } from '@/lib/event-schedule';
+import { paymentMethodLabel } from '@/lib/registration-codes';
 import { groupByAddress } from '@/lib/runner-address';
 import { parcelAddressesOf } from '@/lib/logistics-change-parcels';
 import type { ExistingDelivery } from '@/lib/logistics-change';
 import type { EventReceipts, Receipt } from '@/lib/logistics-receipts';
 import type { LogisticsChangeView } from '@/lib/logistics-change-view';
 import { openSwitch } from '../registrants/logistics-change-display';
-import ReceiptCard from './ReceiptCard';
+import { RECEIPT_COLUMNS, opens, type PickupDeliveryTableMeta } from './receipt-columns';
+import { ReceiptAction, ReceiptBadges, WaitingSwitch, shipsToLines } from './receipt-display';
+import SwitchHistory, { SwitchHistoryList } from './SwitchHistory';
 import ShipKitsPanel from './ShipKitsPanel';
 
 /** Kept in step with the panel's closing transition (`.t-modal`). */
 const CLOSE_MS = 150;
-/** Cards drawn at a time; a big race's list grows by this much on request. */
-const PAGE = 30;
 
 type Filter = 'all' | 'pickup' | 'delivery' | 'waiting';
 
@@ -48,13 +67,15 @@ function matches(receipt: Receipt, filter: Filter): boolean {
   return true;
 }
 
-export default function KitsClient({ data, canEdit }: { data: EventReceipts; canEdit: boolean }) {
+export default function PickupDeliveryClient({ data, canEdit }: { data: EventReceipts; canEdit: boolean }) {
   const router = useRouter();
   const { alert, toast } = useAlert();
   const { event, receipts, waiting } = data;
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
-  const [shown, setShown] = useState(PAGE);
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [openId, setOpenId] = useState<string | null>(null);
   const [panel, setPanel] = useState<{ id: string; closing: boolean } | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
@@ -90,10 +111,12 @@ export default function KitsClient({ data, canEdit }: { data: EventReceipts; can
     };
   }, [receipts]);
 
-  const needle = search.trim().toLowerCase();
-  const listed = receipts.filter(
-    receipt => matches(receipt, filter) && (!needle || receipt.searchText.includes(needle)),
-  );
+  // Memoized: TanStack goes back to page one whenever its data changes identity (§9).
+  const listed = useMemo(() => {
+    const needle = search.trim().toLowerCase();
+    return receipts.filter(receipt => matches(receipt, filter) && (!needle || receipt.searchText.includes(needle)));
+  }, [receipts, search, filter]);
+
   const refOf = (registrationId: string) =>
     receipts.find(receipt => receipt.id === registrationId)?.orderRef ?? 'a paid receipt';
   const open = panel ? receipts.find(receipt => receipt.id === panel.id) ?? null : null;
@@ -123,12 +146,40 @@ export default function KitsClient({ data, canEdit }: { data: EventReceipts; can
     }
   };
 
+  const meta: PickupDeliveryTableMeta = {
+    openId,
+    canEdit,
+    cancellingId,
+    onSwitch: receipt => setPanel({ id: receipt.id, closing: false }),
+    onCancel: cancelSwitch,
+  };
+
+  const table = useReactTable({
+    data: listed,
+    columns: RECEIPT_COLUMNS,
+    getRowId: receipt => receipt.id,
+    state: { sorting, columnVisibility },
+    meta,
+    onSortingChange: setSorting,
+    onColumnVisibilityChange: setColumnVisibility,
+    // A switch re-reads the page; staff stay on the page of rows they were on.
+    autoResetPageIndex: false,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+  });
+
+  const toggleRow = (receipt: Receipt) => {
+    if (opens(receipt)) setOpenId(current => (current === receipt.id ? null : receipt.id));
+  };
+
   const tiles = [
     { title: 'Pickup Kits', value: counts.pickup, icon: <Store size={18} /> },
     { title: 'Delivery Kits', value: counts.delivery, icon: <Truck size={18} /> },
     { title: 'Parcels', value: counts.parcels, icon: <Package size={18} /> },
     { title: 'Waiting for Payment', value: counts.waiting, icon: <Hourglass size={18} /> },
   ];
+  const emptyMessage = receipts.length === 0 ? 'No paid receipts yet.' : 'No receipts match.';
 
   return (
     <>
@@ -145,7 +196,7 @@ export default function KitsClient({ data, canEdit }: { data: EventReceipts; can
       </div>
 
       <p className="mb-4 text-sm text-secondary">
-        One card per receipt. A switch moves a whole receipt; kits going to one address ship as one parcel and pay
+        One row per receipt. A switch moves a whole receipt; kits going to one address ship as one parcel and pay
         once.{' '}
         {event.deadline ? `Switches close ${formatEventInstant(event.deadline)}.` : ''}
       </p>
@@ -158,7 +209,7 @@ export default function KitsClient({ data, canEdit }: { data: EventReceipts; can
               value={search}
               onChange={e => {
                 setSearch(e.target.value);
-                setShown(PAGE);
+                table.setPageIndex(0);
               }}
               className="search-input"
               placeholder="Search RM number, runner or email..."
@@ -175,7 +226,7 @@ export default function KitsClient({ data, canEdit }: { data: EventReceipts; can
               </button>
             )}
           </div>
-          <div className="kits-filters" role="group" aria-label="Show">
+          <div className="pickup-delivery-filters" role="group" aria-label="Show">
             {FILTERS.map(option => (
               <button
                 key={option.value}
@@ -183,7 +234,7 @@ export default function KitsClient({ data, canEdit }: { data: EventReceipts; can
                 aria-pressed={filter === option.value}
                 onClick={() => {
                   setFilter(option.value);
-                  setShown(PAGE);
+                  table.setPageIndex(0);
                 }}
                 className="btn-filter"
               >
@@ -191,36 +242,107 @@ export default function KitsClient({ data, canEdit }: { data: EventReceipts; can
               </button>
             ))}
           </div>
+          <AdminColumnsMenu table={table} />
+          <MobileSortMenu table={table} />
         </div>
       </div>
 
-      {listed.length === 0 ? (
-        <div className="border border-[var(--dash-border)] rounded-lg py-16 px-4 text-center text-[var(--text-muted)]">
-          {receipts.length === 0 ? 'No paid receipts yet.' : 'No receipts match.'}
-        </div>
-      ) : (
-        <>
-          <ul className="admin-card-list kits-card-list">
-            {listed.slice(0, shown).map(receipt => (
-              <ReceiptCard
-                key={receipt.id}
-                receipt={receipt}
-                canEdit={canEdit}
-                cancelling={cancellingId === openSwitch(receipt)?.id}
-                onSwitch={() => setPanel({ id: receipt.id, closing: false })}
-                onCancel={cancelSwitch}
-              />
-            ))}
-          </ul>
-          {listed.length > shown && (
-            <div className="flex justify-center pt-4">
-              <button type="button" onClick={() => setShown(value => value + PAGE)} className="btn-filter min-h-11">
-                Show more ({listed.length - shown} left)
-              </button>
+      <AdminDataTable
+        table={table}
+        empty={emptyMessage}
+        leadColumn="no"
+        cellClassName={() => 'align-top'}
+        rowProps={row =>
+          opens(row.original)
+            ? {
+                onClick: () => toggleRow(row.original),
+                onKeyDown: e => {
+                  if (e.target !== e.currentTarget || (e.key !== 'Enter' && e.key !== ' ')) return;
+                  e.preventDefault();
+                  toggleRow(row.original);
+                },
+                tabIndex: 0,
+                'aria-expanded': openId === row.original.id,
+                className: 'cursor-pointer',
+              }
+            : {}
+        }
+        renderSubRow={row =>
+          openId === row.original.id && (
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] items-start">
+              {openSwitch(row.original) ? (
+                <WaitingSwitch change={openSwitch(row.original)!} />
+              ) : (
+                <p className="m-0 text-sm text-secondary">Nothing waiting for payment.</p>
+              )}
+              <div>
+                <p className="m-0 text-xs font-semibold uppercase tracking-wider text-secondary">Switch history</p>
+                <SwitchHistoryList changes={row.original.logisticsChanges} />
+              </div>
             </div>
+          )
+        }
+      />
+
+      <div className="dash-mobile-only">
+        <AdminCardList
+          items={table.getRowModel().rows.map(row => row.original)}
+          getKey={receipt => receipt.id}
+          label="Receipts"
+          className="is-flush"
+          leading={receipt => {
+            const row = table.getRowModel().rows.find(r => r.id === receipt.id);
+            return row ? rowPosition(table.getSortedRowModel().flatRows, row) : null;
+          }}
+          title={receipt => <span className="font-mono">{receipt.orderRef}</span>}
+          subtitle={receipt =>
+            `${receipt.runners.length} ${receipt.runners.length === 1 ? 'kit' : 'kits'} · paid by ${paymentMethodLabel(receipt.paymentMethod)}`
+          }
+          badges={receipt => <ReceiptBadges receipt={receipt} />}
+          fields={receipt => [
+            {
+              label: receipt.runners.length === 1 ? 'Runner' : 'Runners',
+              full: true,
+              value: (
+                <ul className="m-0 p-0 list-none space-y-1">
+                  {receipt.runners.map(runner => (
+                    <li key={runner.id}>
+                      <span className="font-medium">{runner.name}</span>
+                      {runner.category && <span className="text-secondary"> &middot; {runner.category}</span>}
+                      <span className="block text-xs text-[var(--text-muted)]">{runner.email}</span>
+                    </li>
+                  ))}
+                </ul>
+              ),
+            },
+            ...shipsToLines(receipt).map(line => ({ ...line, full: true })),
+          ]}
+          expanded={receipt =>
+            opens(receipt) && (
+              <div className="space-y-3">
+                {openSwitch(receipt) && <WaitingSwitch change={openSwitch(receipt)!} />}
+                <SwitchHistory changes={receipt.logisticsChanges} />
+              </div>
+            )
+          }
+          actions={receipt => (
+            <ReceiptAction
+              receipt={receipt}
+              canEdit={canEdit}
+              cancelling={cancellingId === openSwitch(receipt)?.id}
+              onSwitch={() => setPanel({ id: receipt.id, closing: false })}
+              onCancel={cancelSwitch}
+            />
           )}
-        </>
-      )}
+          empty={
+            <div className="border border-[var(--dash-border)] rounded-lg py-16 px-4 text-center text-[var(--text-muted)]">
+              {emptyMessage}
+            </div>
+          }
+        />
+      </div>
+
+      <AdminTablePager table={table} />
 
       {open && panel && (
         <ShipKitsPanel

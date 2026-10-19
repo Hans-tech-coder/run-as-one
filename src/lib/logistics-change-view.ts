@@ -16,7 +16,7 @@ import { shipmentsFor } from '@/app/events/[slug]/register/delivery-split';
  * as the registrants rows show them** (LOGISTICS_CHANGE_PLAN.md Session 2,
  * Revision 1).
  *
- * `logisticsChangeView` is the one shape a Kits & Delivery card, its history,
+ * `logisticsChangeView` is the one shape a Pickup & Delivery card, its history,
  * a registrants row and every route's answer carry: the order it moved with
  * what it was before, the order it rides on by reference, dates as strings.
  * `orderLogisticsFields` is the one place a registrants row's Logistics
