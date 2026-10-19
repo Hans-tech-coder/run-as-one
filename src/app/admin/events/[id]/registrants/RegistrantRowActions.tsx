@@ -27,10 +27,6 @@ export type RegistrantRowActionHandlers = {
   onRemarks: (runnerId: string) => void;
   onEmail: (runnerId: string) => void;
   onChangeCategory: (runnerId: string) => void;
-  /** Switch to delivery or to pickup (LOGISTICS_CHANGE_PLAN.md), offered only when allowed. */
-  onSwitchLogistics: (runnerId: string) => void;
-  /** The order's switch history, from the Logistics cell and the card. */
-  onLogisticsHistory: (runnerId: string) => void;
 };
 
 export default function RegistrantRowActions({
@@ -45,7 +41,6 @@ export default function RegistrantRowActions({
   onRemarks,
   onEmail,
   onChangeCategory,
-  onSwitchLogistics,
 }: RegistrantRowActionHandlers & { runner: RegistrantRow; layout: 'table' | 'card' }) {
   // A different icon, not just a different colour: colour alone is the one
   // signal a colour-blind organizer cannot read.
@@ -71,8 +66,6 @@ export default function RegistrantRowActions({
       onEdit={onEdit}
       onDelete={onDelete}
       onChangeCategory={onChangeCategory}
-      logisticsSwitch={runner.logisticsSwitch?.direction ?? null}
-      onSwitchLogistics={onSwitchLogistics}
       canEdit={permissions.edit}
       canDelete={permissions.remove}
       canValidate={permissions.validate}

@@ -41,38 +41,57 @@ doing by hand: Vercel Firewall's bot protection, and watching the CU-hours
 after release.
 
 **Delivery switches (2026-10-19, on `dev`, not released; `LOGISTICS_CHANGE_PLAN.md`
-Sessions 1–2 done, 3–4 open; the plan is in the git-ignored `docs/plans/`).**
-Staff switch a whole PAID order between kit pickup and delivery from the
-registrants row menu (*Switch to Delivery* / *Switch to Pickup*). Session 1
-(`aa2f7dd`): the `LogisticsChange` and `LogisticsChangeOrder` tables and
-`Event.logisticsChangeUntil` (migration `20261018120000_logistics_change`, in
-`ON_HOLD.md`'s release steps), the pure quote and rules
-`lib/logistics-change.ts`, and the event form's *Delivery switch deadline*.
-Session 2: the writer `lib/logistics-change-store.ts` (with
-`logistics-change-context.ts` and `logistics-change-view.ts`), the routes
-`admin/registrations/[id]/logistics-change` and
-`admin/logistics-changes/[id]/cancel`, the modal, the Logistics cell's chip,
-"Ships with" note and switch history, and the export's *Logistics Note*.
-**A switch with a fee is only saved as waiting** and can be cancelled; nothing
-yet lets it be paid, so it can only be cancelled or left (and the sweep does
-not expire it yet). **Open: Session 3** (payment link and
+Sessions 1, 2 and 2b done, 3–4 open; the plan is in the git-ignored `docs/plans/`).**
+Staff switch one PAID receipt at a time between kit pickup and delivery on
+its own screen, **Kits & Delivery** (`/admin/events/[id]/kits`, the events row
+menu). Session 1 (`aa2f7dd`): the `LogisticsChange` and `LogisticsChangeOrder`
+tables and `Event.logisticsChangeUntil` (migration
+`20261018120000_logistics_change`, in `ON_HOLD.md`'s release steps), the pure
+quote and rules `lib/logistics-change.ts`, and the event form's *Delivery
+switch deadline*. Session 2 (`12db630`): the writer
+`lib/logistics-change-store.ts` (with `logistics-change-context.ts` and
+`logistics-change-view.ts`), the routes `admin/registrations/[id]/logistics-change`
+and `admin/logistics-changes/[id]/cancel`, and a registrants-table modal.
+**Session 2b (Revision 1, the owner's call after trying Session 2):** the
+switch moved off the registrants table onto Kits & Delivery, one card per
+receipt; the store takes one receipt per switch (no `includeIds`, no
+same-email candidates, no rider pre-ticking, no preview read); new
+`lib/logistics-change-parcels.ts` (riders, R4's check and both sentences) and
+`lib/logistics-receipts.ts` (the page's one read); the registrants Logistics
+cell keeps the chip, "Ships with" and the export's *Logistics Note* but no
+action, modal or history. **A switch with a fee is only saved as waiting** and
+can be cancelled from its card; nothing yet lets it be paid, and the sweep
+does not expire it yet. **Open: Session 3** (payment link and
 `/pay/logistics/[token]`, the PayMongo webhook branch, record payment, the
-expiry sweep, the emails) **and Session 4** (settlement and remittances, the
-client runner list's notes, data-model and domain-rules updates for them).
+expiry sweep, the emails; its buttons go on the waiting switch's card) **and
+Session 4** (settlement and remittances, the client runner list's notes,
+data-model and domain-rules updates for them).
 Verified on `local-dev`'s QA event `qa-virtual-run-test` with four temporary
 orders (removed after, the event's settings restored): a ₱0 switch riding on a
-paid parcel applied at once, a ₱100 switch of two combined orders (one parcel,
-one fee; ₱250 when split across two households) saved as awaiting and then
-cancelled, L13 refused at the route, L10 refused in the modal and at the route
-and then applied with the rider ticked, and no receipt amount changed.
+paid parcel (the host's card gained *Also in this parcel*), a ₱100 switch saved
+as waiting and cancelled from its card, R4 refused in the panel and at the
+route, R5 refused in the panel and at the route and then the rider back first
+and the host after, the panel empty when opened on the next receipt, no
+receipt amount changed, the registrants row menu without a switch, and the page
+at 375px with no sideways scroll.
 Decisions the code cites: **L2** whole order; **L3** PAID only; **L4** the
 receipt is never edited; **L5** staff never type a fee; **L6** one fee per
-parcel, ₱0 on a paid parcel, combine by customer email; **L7** no Run As One
-fee; **L8** the fee is the organizer's; **L9** back to pickup is free and
-refunds nothing; **L10** a parcel others ride on goes back only with them;
-**L11** deadline, default 7 days before race day; **L12** hold windows as an
-upgrade's; **L13** one awaiting switch per order. Before the plan is deleted,
-copy L1–L14 here in full.
+parcel, ₱0 on a paid parcel (its "combine in one switch" is superseded by R3);
+**L7** no Run As One fee; **L8** the fee is the organizer's; **L9** back to
+pickup is free and refunds nothing; **L10** a parcel others ride on cannot go
+back alone (its checkboxes superseded by R5); **L11** deadline, default 7 days
+before race day; **L12** hold windows as an upgrade's; **L13** one awaiting
+switch per order. Revision 1 (owner, 2026-10-19, final): **R1** a screen of its
+own, Kits & Delivery, `registration:view` to see and `registration:edit` to
+switch; **R2** one card per receipt with counts, search and filters; **R3** one
+receipt per switch, the panel mounted fresh per receipt; **R4** a second
+receipt to an address whose switch still waits for payment is refused ("RM-…
+is waiting for payment for delivery to this address. Switch this receipt once
+that is paid, and it ships free."), and rides free once that one is paid;
+**R5** a receipt others ride on goes back to pickup after them ("RM-… ships
+with this receipt at no charge. Switch RM-… back to pickup first."); **R6** the
+registrants table only reads switches. Before the plan is deleted, copy L1–L14
+here in full.
 
 **Category changes (2026-10-18, on `dev`, not released; `CATEGORY_CHANGE_PLAN.md`
 Sessions 1–4, `e7e091f`, `f0907f5`, `9d141f5` — the plan is deleted (it lived

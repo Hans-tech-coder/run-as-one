@@ -1539,6 +1539,33 @@ a.reg-count-trigger {
   min-height: 44px;
 }
 
+/* ── Kits & Delivery (events/[id]/kits) ─────────────────────────────────
+   One card per receipt, straight on the page rather than inside a panel,
+   so the list drops the panel padding .admin-card-list carries. The four
+   filters are one choice, so the chosen chip wears the selected tone the
+   card list uses; 44px tall, since they are the screen's main control on a
+   phone. */
+.kits-card-list {
+  padding: 0;
+}
+
+.kits-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.kits-filters > .btn-filter {
+  height: auto;
+  min-height: 44px;
+}
+
+.kits-filters > .btn-filter[aria-pressed="true"] {
+  color: var(--text-primary);
+  background: var(--ink-10);
+  border-color: var(--ink-25);
+}
+
 /* An inline edit on a card (AdminCardEdit.tsx): the Communities screen's
    club rename. The label reads like a field's <dt>; the box is 16px so iOS
    does not zoom; Save and Cancel split the width at 44px. The field resets

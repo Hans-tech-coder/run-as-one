@@ -653,8 +653,8 @@ model CategoryChange {
 /// One switch of paid orders between kit pickup and delivery, paid once
 /// (LOGISTICS_CHANGE_PLAN.md). Its own row, never an edit to the receipt (L4):
 /// on apply the orders' logistics columns move, their amounts stay, and the
-/// money lives here. Several orders of one customer can switch together (L6),
-/// linked through LogisticsChangeOrder.
+/// money lives here. Since Revision 1 (R3) a switch moves one receipt, linked
+/// through LogisticsChangeOrder (which Session 2 also used for several).
 model LogisticsChange {
   id                    String                 @id @default(cuid())
   /// The primary order's reference plus "-L<n>" ("RM-D918005C-L1"): what the

@@ -86,15 +86,7 @@ export default function RegistrantCards({
           { label: 'Category', value: <CategoryWithChange runner={row.original} detailed /> },
           { label: 'Size', value: row.original.size || '—' },
           { label: 'Province', value: row.original.addressProvince || '—' },
-          {
-            label: 'Logistics',
-            value: (
-              <LogisticsWithSwitch
-                runner={row.original}
-                onHistory={() => rowActions.onLogisticsHistory(row.original.id)}
-              />
-            ),
-          },
+          { label: 'Logistics', value: <LogisticsWithSwitch runner={row.original} /> },
           { label: 'Payment', value: row.original.paymentMethod },
         ]}
         actions={row => <RegistrantRowActions runner={row.original} layout="card" {...rowActions} />}

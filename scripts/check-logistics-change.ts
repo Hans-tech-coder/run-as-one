@@ -8,6 +8,14 @@ import {
 } from '../src/lib/logistics-change';
 import { transactionFeeFor } from '../src/lib/free-checkout';
 import {
+  parcelAddressesOf,
+  ridersOf,
+  ridersRefusal,
+  waitingConflict,
+  waitingRefusal,
+  type AppliedLink,
+} from '../src/lib/logistics-change-parcels';
+import {
   composeDeliveryAddress,
   EMPTY_DELIVERY_ADDRESS,
 } from '../src/app/events/[slug]/register/delivery-address';
@@ -17,7 +25,9 @@ import {
  * Verification): one fee per parcel across the orders switched, ₱0 when the
  * address already receives a PAID delivery and never when it only awaits
  * payment, a zone the event does not deliver to refused, back to pickup free,
- * and the deadline.
+ * the deadline, and Revision 1's two refusals: a second receipt to an address
+ * still waiting for payment (R4), and a parcel others ride on going back
+ * before them (R5).
  *
  * There is no test runner in this project, so this is a script rather than a
  * spec. It touches no database and needs no environment. Run it with the
@@ -295,6 +305,75 @@ check(
   'a race without pickup refuses a switch to it',
   allowed({ logisticsMethod: 'DELIVERY', event: { ...event, logisticsPickup: false } }),
   'NO_PICKUP',
+);
+
+// ── Revision 1: an address waiting for payment (R4) ──────────────────────────
+
+const waitingTo = (address: typeof TARLAC_A, over: { split?: boolean; runners?: (typeof TARLAC_A)[] } = {}) => ({
+  orderRef: 'RM-WAIT',
+  registrationIds: ['order-9'],
+  deliveryAddress: over.split ? null : shipTo(address),
+  deliverySplit: over.split ?? false,
+  runners: over.runners ?? [address],
+});
+const toA = quote({});
+check(
+  'a fee to an address another receipt waits on is refused with its reference',
+  toA.ok && waitingConflict(toA.parcels, [waitingTo(TARLAC_A)], 'order-1'),
+  'RM-WAIT',
+);
+check(
+  'the same address with another ZIP and landmark still counts',
+  toA.ok && waitingConflict(toA.parcels, [{ ...waitingTo(TARLAC_A), deliveryAddress: shipTo(TARLAC_A, { zip: '2300', landmark: 'NEAR THE CHURCH' }) }], 'order-1'),
+  'RM-WAIT',
+);
+check('another address is not refused', toA.ok && waitingConflict(toA.parcels, [waitingTo(TARLAC_B)], 'order-1'), null);
+check(
+  "a split waiting switch's household counts as its address",
+  toA.ok && waitingConflict(toA.parcels, [waitingTo(TARLAC_B, { split: true, runners: [TARLAC_B, TARLAC_A] })], 'order-1'),
+  'RM-WAIT',
+);
+check(
+  'a receipt is never refused by its own waiting switch',
+  toA.ok && waitingConflict(toA.parcels, [{ ...waitingTo(TARLAC_A), registrationIds: ['order-1'] }], 'order-1'),
+  null,
+);
+const riding = quote({ existing: [paidOneAddress] });
+check(
+  'a parcel riding free on a paid one is not refused',
+  riding.ok && waitingConflict(riding.parcels, [waitingTo(TARLAC_A)], 'order-1'),
+  null,
+);
+check(
+  "R4's sentence",
+  waitingRefusal('RM-WAIT'),
+  'RM-WAIT is waiting for payment for delivery to this address. Switch this receipt once that is paid, and it ships free.',
+);
+check('a split order has one parcel per household', parcelAddressesOf({ deliveryAddress: null, deliverySplit: true, runners: [TARLAC_A, TARLAC_B, TARLAC_A] }).length, 2);
+
+// ── Revision 1: riders go back first (R5) ────────────────────────────────────
+
+const link = (registrationId: string, over: Partial<AppliedLink> = {}): AppliedLink => ({
+  registrationId,
+  status: 'PAID',
+  logisticsMethod: 'DELIVERY',
+  direction: 'TO_DELIVERY',
+  ridesOnRegistrationId: 'host',
+  at: 1,
+  ...over,
+});
+check('a receipt riding on the host is its rider', ridersOf([link('rider')], ['host']), ['rider']);
+check('a rider of a rider counts too', ridersOf([link('rider'), link('second', { ridesOnRegistrationId: 'rider' })], ['host']), ['rider', 'second']);
+check(
+  'a rider since switched back to pickup rides on nothing',
+  ridersOf([link('rider'), link('rider', { direction: 'TO_PICKUP', ridesOnRegistrationId: null, at: 2, logisticsMethod: 'PICKUP' })], ['host']),
+  [],
+);
+check('a cancelled rider order rides on nothing', ridersOf([link('rider', { status: 'CANCELLED' })], ['host']), []);
+check(
+  "R5's sentence",
+  ridersRefusal(['RM-RIDER']),
+  'RM-RIDER ships with this receipt at no charge. Switch RM-RIDER back to pickup first.',
 );
 
 console.log(failures ? `\n${failures} failed` : '\nAll passed');

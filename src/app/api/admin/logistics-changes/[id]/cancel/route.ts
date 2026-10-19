@@ -6,14 +6,15 @@
  *
  * `registration:edit`, the permission that opened it, scoped to the switch's
  * own race; a refusal reads like a missing switch. Nobody is emailed. Answers
- * with the switch and its orders' rows, as the route that opened it does.
+ * with the switch, as the route that opened it does; the Kits & Delivery card
+ * it was pressed on refreshes itself.
  */
 
 import { NextResponse } from 'next/server';
 import { can, getActor } from '@/lib/actor';
 import { LogisticsChangeRefused, findSwitchReach } from '@/lib/logistics-change-context';
 import { cancelLogisticsChange } from '@/lib/logistics-change-store';
-import { readLogisticsChangeView, readOrderLogistics } from '@/lib/logistics-change-view';
+import { readLogisticsChangeView } from '@/lib/logistics-change-view';
 
 export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -27,11 +28,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     }
 
     await cancelLogisticsChange(actor, id);
-    const view = await readLogisticsChangeView(id);
-    return NextResponse.json({
-      change: view,
-      rows: await readOrderLogistics(view.orders.map(order => order.registrationId)),
-    });
+    return NextResponse.json({ change: await readLogisticsChangeView(id) });
   } catch (error) {
     if (error instanceof LogisticsChangeRefused) {
       return NextResponse.json({ error: error.message }, { status: error.status });

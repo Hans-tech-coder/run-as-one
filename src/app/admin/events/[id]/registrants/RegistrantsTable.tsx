@@ -47,9 +47,6 @@ import ManualEmailModal, { useManualEmailModal } from './ManualEmailModal';
 import CategoryChangeModal from './CategoryChangeModal';
 import { useCategoryChangeModal } from './useCategoryChangeModal';
 import CategoryChangeEmailModal from './CategoryChangeEmailModal';
-import LogisticsChangeModal from './LogisticsChangeModal';
-import LogisticsChangeHistory from './LogisticsChangeHistory';
-import { useLogisticsChangeModal } from './useLogisticsChangeModal';
 import {
   BulkDeleteModal,
   DeleteRegistrantModal,
@@ -183,10 +180,6 @@ export default function RegistrantsTable({
   // send (CATEGORY_CHANGE_PLAN.md), all handed back onto the rows here.
   const categoryChange = useCategoryChangeModal({ runners, setRunners, setViewingRunner });
 
-  // Switch to delivery or pickup, and an order's switch history
-  // (LOGISTICS_CHANGE_PLAN.md), handed back onto every row the switch moved.
-  const logisticsChange = useLogisticsChangeModal({ runners, setRunners, setViewingRunner });
-
   const queues = useRegistrantQueues(runners);
 
   // Table state
@@ -240,15 +233,12 @@ export default function RegistrantsTable({
     onRemarks: remarks.open,
     onEmail: email.open,
     onChangeCategory: categoryChange.open,
-    onSwitchLogistics: logisticsChange.open,
-    onLogisticsHistory: logisticsChange.openHistory,
   };
 
   const columns = useMemo(
     () => buildRegistrantColumns({
       onView: setViewingRunner,
       renderActions: runner => <RegistrantRowActions runner={runner} layout="table" {...rowActions} />,
-      onLogisticsHistory: logisticsChange.openHistory,
     }),
     // The row actions are rebuilt every render; updatingId and runners are
     // what they read that changes what a cell shows.
@@ -401,8 +391,6 @@ export default function RegistrantsTable({
       <RemarksModal {...remarks.modalProps} />
       <ManualEmailModal {...email.modalProps} />
       <CategoryChangeModal {...categoryChange.modalProps} />
-      <LogisticsChangeModal {...logisticsChange.modalProps} />
-      <LogisticsChangeHistory {...logisticsChange.historyProps} canEdit={permissions.edit} />
       {categoryChange.changeEmail && (
         <CategoryChangeEmailModal
           key={categoryChange.changeEmail.changeId}

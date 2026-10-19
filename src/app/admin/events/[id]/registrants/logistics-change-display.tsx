@@ -1,15 +1,15 @@
 /**
- * How an order's delivery switches are *read* on the registrants screen
- * (LOGISTICS_CHANGE_PLAN.md Session 2): the "Pickup → Delivery" chip, the
- * "Ships with RM-XXXX" note, a switch still waiting for its fee, and the money
- * line each switch in the history carries. The table cell, the card, the
- * history and the CSV draw them from here, as `category-change-display.tsx`
- * does for category moves, so a chip cannot mean one thing in a cell and
- * another in the file.
+ * How an order's delivery switches are *read* (LOGISTICS_CHANGE_PLAN.md
+ * Session 2, Revision 1): the "Pickup → Delivery" chip, the "Ships with
+ * RM-XXXX" note, a switch still waiting for its fee, and the money line each
+ * switch in a history carries. The registrants cell, card and CSV and the
+ * Kits & Delivery cards and history draw them from here, as
+ * `category-change-display.tsx` does for category moves, so a chip cannot mean
+ * one thing on one screen and another in the file.
  */
 
 import React from 'react';
-import { ArrowRight, History } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { formatPesos } from '@/lib/money';
 import { LOGISTICS_CHANGE_STATUSES, LOGISTICS_DIRECTIONS } from '@/lib/logistics-change';
 import { logisticsMethodLabel } from '@/lib/registration-codes';
@@ -93,24 +93,17 @@ export function switchDirectionLabel(change: Pick<LogisticsChangeView, 'directio
 }
 
 /**
- * The Logistics cell: the method, the "Pickup → Delivery" chip once the order
- * has switched, "Ships with RM-XXXX" while it rides on another order's parcel,
- * a switch still waiting for its fee, and the way into the switch history.
- * Blue for the chip, as *Kit changed* is: a fact the kit team acts on, not a
- * fault in the order.
+ * The registrants Logistics cell: the method, the "Pickup → Delivery" chip
+ * once the order has switched, "Ships with RM-XXXX" while it rides on another
+ * order's parcel, and a switch still waiting for its fee. Read only: the
+ * switch, its history and its Cancel are on Kits & Delivery (R6). Blue for the
+ * chip, as *Kit changed* is: a fact the kit team acts on, not a fault in the
+ * order.
  */
-export function LogisticsWithSwitch({
-  runner,
-  onHistory,
-}: {
-  runner: WithSwitches;
-  /** Opens the order's switch history; omitted where there is nowhere to open it. */
-  onHistory?: () => void;
-}) {
+export function LogisticsWithSwitch({ runner }: { runner: WithSwitches }) {
   const move = logisticsMove(runner);
   const host = shipsWith(runner);
   const waiting = openSwitch(runner);
-  const count = runner.logisticsChanges?.length ?? 0;
   return (
     <span className="inline-flex flex-col items-start gap-1">
       <span className="capitalize">{runner.logisticsMethod}</span>
@@ -124,15 +117,6 @@ export function LogisticsWithSwitch({
         <span className="status-badge pending" title={`Waiting for payment to switch to delivery (${waiting.changeRef}).`}>
           {peso(waiting.totalCharged || waiting.fee)} due · to delivery
         </span>
-      )}
-      {count > 0 && onHistory && (
-        <button
-          type="button"
-          onClick={onHistory}
-          className="inline-flex items-center gap-1 min-h-11 -my-3 text-xs font-medium text-accent-blue-ink hover:underline bg-transparent border-none p-0 cursor-pointer"
-        >
-          <History size={12} aria-hidden="true" /> Switch history ({count})
-        </button>
       )}
     </span>
   );

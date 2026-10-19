@@ -51,7 +51,6 @@ export function buildRegistrantRows({
   csvInstant: (value: Date) => string;
 }): Record<string, unknown>[] {
   const runners: Record<string, unknown>[] = [];
-  const now = new Date();
   event.registrations.forEach(reg => {
     // An online checkout cancelled before it was paid was never a registrant;
     // it stays on the Unpaid checkouts tab (UNPAID_FOLLOWUP_PLAN.md Batch 2).
@@ -61,11 +60,11 @@ export function buildRegistrantRows({
     // the same answer drives the row's mark, the backlog filter and the
     // manual-send modal, and three copies of it would eventually disagree.
     const pendingEmail = outstandingEmail(reg);
-    // The Logistics columns, worded once in logistics-change-view.ts so a
-    // switch route answers with exactly what this page would print: each
-    // runner's own parcel on a split order (RUNNER_ADDRESS_PLAN.md Batch 2),
-    // the order's switches, and which switch the row menu may offer.
-    const logistics = orderLogisticsFields(event, reg, logisticsByOrder.get(reg.id) ?? [], now);
+    // The Logistics columns, worded once in logistics-change-view.ts: each
+    // runner's own parcel on a split order (RUNNER_ADDRESS_PLAN.md Batch 2)
+    // and the order's switches, which the cell only reads — switching is on
+    // Kits & Delivery (LOGISTICS_CHANGE_PLAN.md R6).
+    const logistics = orderLogisticsFields(event, reg, logisticsByOrder.get(reg.id) ?? []);
     reg.runners.forEach((runner, runnerIndex) => {
       runners.push({
         id: runner.id,

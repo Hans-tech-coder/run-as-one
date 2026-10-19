@@ -82,12 +82,9 @@ export function selectionColumn<T>(): ColumnDef<T> {
 export function buildRegistrantColumns({
   onView,
   renderActions,
-  onLogisticsHistory,
 }: {
   onView: (runner: RegistrantRow) => void;
   renderActions: (runner: RegistrantRow) => React.ReactNode;
-  /** Opens an order's delivery switch history (LOGISTICS_CHANGE_PLAN.md). */
-  onLogisticsHistory: (runnerId: string) => void;
 }): ColumnDef<RegistrantRow>[] {
   return [
     selectionColumn<RegistrantRow>(),
@@ -194,11 +191,10 @@ export function buildRegistrantColumns({
       header: "Logistics",
       // The method, and what a delivery switch left on it
       // (LOGISTICS_CHANGE_PLAN.md): the "Pickup → Delivery" chip, the parcel
-      // it ships with, a switch waiting for its fee, and its history. Sorting
-      // and the filter still read the plain method.
-      cell: ({ row }) => (
-        <LogisticsWithSwitch runner={row.original} onHistory={() => onLogisticsHistory(row.original.id)} />
-      ),
+      // it ships with and a switch waiting for its fee. Switching and its
+      // history are on Kits & Delivery (R6). Sorting and the filter still
+      // read the plain method.
+      cell: ({ row }) => <LogisticsWithSwitch runner={row.original} />,
       filterFn: (row, columnId, filterValue) => {
         if (!filterValue || filterValue.length === 0) return true;
         return filterValue.includes(row.getValue(columnId));

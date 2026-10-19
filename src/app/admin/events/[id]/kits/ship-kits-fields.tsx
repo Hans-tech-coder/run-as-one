@@ -1,12 +1,13 @@
 "use client";
 
 /**
- * The sections of Switch to delivery / Switch to pickup
- * (`LogisticsChangeModal.tsx`, LOGISTICS_CHANGE_PLAN.md Session 2): where the
- * kits go and which orders join (L2, L5, L6), the riders that go back with a
- * reverse (L10), the live quote's parcels, and how a fee is paid. Split out of
- * the modal to keep each file under the size the repository splits files at;
- * every section reads the same props the hook hands the modal.
+ * The sections of one receipt's *Ship kits* / *Back to pickup* panel
+ * (`ShipKitsPanel.tsx`, LOGISTICS_CHANGE_PLAN.md L2, L5, L6, Revision 1
+ * R3–R5): where the kits go, the live quote's parcels, how a fee is paid, and
+ * why a reverse must wait for its riders. Kept apart from the panel's frame
+ * to hold each file under the size the repository splits files at; every
+ * section reads the state `useShipKits` hands the panel. There are no
+ * checkboxes for other receipts: one receipt per switch (R3).
  */
 
 import React from 'react';
@@ -14,6 +15,7 @@ import { TriangleAlert, Link2, Landmark } from 'lucide-react';
 import FieldError from '@/components/ui/FieldError';
 import { formatPesos } from '@/lib/money';
 import { formatRunnerAddress } from '@/lib/runner-address';
+import { ridersRefusal, waitingRefusal } from '@/lib/logistics-change-parcels';
 import {
   CHANGE_PAYMENT_CHOICES,
   ONLINE_CHANGE_HOLD_HOURS,
@@ -21,13 +23,12 @@ import {
 } from '@/lib/category-change-hold';
 import { paymentMethodLabel } from '@/lib/registration-codes';
 import { deliveryTiers } from '@/app/events/[slug]/register/delivery';
-import RunnerAddressEditor from './RunnerAddressEditor';
-import type { useLogisticsChangeModal } from './useLogisticsChangeModal';
+import RunnerAddressEditor from '../registrants/RunnerAddressEditor';
+import type { ShipKitsState } from './useShipKits';
 
 const peso = (centavos: number) => `₱${formatPesos(centavos)}`;
 
-export type SwitchModalProps = ReturnType<typeof useLogisticsChangeModal>['modalProps'];
-type Props = SwitchModalProps;
+type Props = ShipKitsState;
 
 /** A radio tile, the same as Change category's option tiles. */
 function Tile({
@@ -80,7 +81,7 @@ export function Warning({ children }: { children: React.ReactNode }) {
 
 /** The parcels and what each costs, from the live quote. */
 export function SwitchQuote({ quote, onlineFee, needsPayment, paymentChoice, existingRef }: {
-  quote: Extract<NonNullable<Props['quote']>, { ok: true }>;
+  quote: Extract<Props['quote'], { ok: true }>;
   onlineFee: number;
   needsPayment: boolean;
   paymentChoice: Props['paymentChoice'];
@@ -116,42 +117,19 @@ export function SwitchQuote({ quote, onlineFee, needsPayment, paymentChoice, exi
       </p>
       <p className="m-0 text-xs text-[var(--text-muted)]">
         {quote.fee > 0
-          ? 'The order stays on pickup until the fee is paid. The receipt is not changed.'
+          ? 'The kits stay on pickup until the fee is paid. The receipt is not changed.'
           : 'Switches at once. The receipt is not changed.'}
       </p>
     </div>
   );
 }
 
-/** Where the kits go, which orders join (L6), and the zone when staff must pick it (L5). */
+/** Where the kits go, and the zone when staff must pick it (L5). */
 export function DeliveryFields(props: Props) {
-  const { preview, address, setAddress, zip, setZip, landmark, setLandmark, canSplit, split, setSplit } = props;
-  if (!preview) return null;
-  const groupSize = preview.order.runners.length + props.offered.filter(o => props.included.includes(o.id)).reduce((n, o) => n + o.runners.length, 0);
+  const { receipt, address, setAddress, zip, setZip, landmark, setLandmark, canSplit, split, setSplit } = props;
+  const groupSize = receipt.runners.length;
   return (
     <>
-      {props.offered.length > 0 && (
-        <fieldset className="p-0 border-none mx-0 space-y-2">
-          <legend className="block text-secondary mb-2 p-0">Same customer&apos;s other pickup orders</legend>
-          {props.offered.map(order => (
-            <label key={order.id} className="flex min-h-11 items-start gap-3 rounded-lg border border-[var(--dash-border)] px-3 py-2.5 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={props.included.includes(order.id)}
-                onChange={() => props.toggleIncluded(order.id)}
-                className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--ink)]"
-              />
-              <span className="min-w-0">
-                <span className="block font-medium text-primary">Include {order.orderRef}</span>
-                <span className="block text-xs text-[var(--text-muted)] [overflow-wrap:anywhere]">
-                  {order.runners.map(r => r.name).join(', ')} · ships in the same parcel when it goes to the same address
-                </span>
-              </span>
-            </label>
-          ))}
-        </fieldset>
-      )}
-
       {canSplit && (
         <fieldset className="p-0 border-none mx-0">
           <legend className="block text-secondary mb-2 p-0">Ship to</legend>
@@ -201,7 +179,7 @@ export function DeliveryFields(props: Props) {
         <fieldset className="p-0 border-none mx-0">
           <legend className="block text-secondary mb-2 p-0">Delivery area</legend>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {deliveryTiers(preview.event).map(tier => (
+            {deliveryTiers(props.event).map(tier => (
               <Tile
                 key={tier.zone}
                 name="logistics-zone"
@@ -218,48 +196,22 @@ export function DeliveryFields(props: Props) {
   );
 }
 
-/** Back to pickup: free, nothing refunded (L9), riders go back with it (L10). */
-export function PickupFields(props: Props) {
-  const { preview, ridersLeft } = props;
-  if (!preview) return null;
+/** Back to pickup: free, nothing refunded (L9); riders go back first (R5). */
+export function PickupFields({ receipt, ridersLeft }: Props) {
   return (
     <div className="space-y-4">
       <p className="m-0 text-secondary">
-        The {preview.order.runners.length === 1 ? 'kit is' : 'kits are'} claimed at pickup instead. Nothing is refunded:
+        The {receipt.runners.length === 1 ? 'kit is' : 'kits are'} claimed at pickup instead. Nothing is refunded:
         the delivery fee on the receipt stays as paid.
       </p>
-      {preview.riders.length > 0 && (
-        <fieldset className="p-0 border-none mx-0 space-y-2">
-          <legend className="block text-secondary mb-2 p-0">
-            Orders shipping with this one at no charge go back to pickup with it
-          </legend>
-          {preview.riders.map(order => (
-            <label key={order.id} className="flex min-h-11 items-start gap-3 rounded-lg border border-[var(--dash-border)] px-3 py-2.5 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={props.included.includes(order.id)}
-                onChange={() => props.toggleIncluded(order.id)}
-                className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--ink)]"
-              />
-              <span className="min-w-0">
-                <span className="block font-medium text-primary">Include {order.orderRef}</span>
-                <span className="block text-xs text-[var(--text-muted)] [overflow-wrap:anywhere]">
-                  {order.runners.map(r => r.name).join(', ')}
-                </span>
-              </span>
-            </label>
-          ))}
-        </fieldset>
-      )}
-      {ridersLeft.length > 0 && (
-        <Warning>
-          {ridersLeft.map(o => o.orderRef).join(', ')} {ridersLeft.length === 1 ? 'ships' : 'ship'} with this order at no
-          charge, so this order cannot go back to pickup alone. Tick {ridersLeft.length === 1 ? 'it' : 'them'} to switch
-          together.
-        </Warning>
-      )}
+      {ridersLeft.length > 0 && <Warning>{ridersRefusal(ridersLeft)}</Warning>}
     </div>
   );
+}
+
+/** R4: an address already waiting for another receipt's fee. */
+export function WaitingWarning({ waitingOn }: Pick<Props, 'waitingOn'>) {
+  return waitingOn ? <Warning>{waitingRefusal(waitingOn)}</Warning> : null;
 }
 
 /** How the fee is paid: the way the entry was paid (category-change-hold.ts). */

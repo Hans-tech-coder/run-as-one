@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
-import { MoreVertical, Users, ClipboardList, Trophy, Edit, Trash2, CalendarClock, PauseCircle, PlayCircle, Footprints, Lock, LockOpen, Globe } from 'lucide-react';
+import { MoreVertical, Users, ClipboardList, Trophy, Edit, Trash2, CalendarClock, PauseCircle, PlayCircle, Footprints, Lock, LockOpen, Globe, Truck } from 'lucide-react';
 import { publishState } from '@/lib/event-visibility';
 import LinkPending from '@/components/ui/LinkPending';
 import { placeRowMenu, type RowMenuPlacement } from '../row-menu-position';
@@ -219,6 +219,10 @@ export default function EventActionsMenu({
     // The client's race page, which staff read too: the counts, shirt pieces
     // to order and kit split, and the PDF that goes to the shirt supplier.
     { href: `/admin/your-events/${eventId}`, icon: <ClipboardList size={16} />, label: 'Race Report' },
+    // Each receipt's pickup or delivery, its parcel, and the switches between
+    // them (LOGISTICS_CHANGE_PLAN.md R1). For everyone who sees Registrants:
+    // it reads the same list, one card per receipt instead of a row per runner.
+    { href: `/admin/events/${eventId}/kits`, icon: <Truck size={16} />, label: 'Kits & Delivery' },
     // Under Registrants, because a pacer is a registrant the organizer invited,
     // and above Results, which only matter once the race has been run. The
     // count rides in the label rather than in a badge of its own, so the item
