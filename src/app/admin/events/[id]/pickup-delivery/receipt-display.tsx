@@ -9,14 +9,14 @@
  * one action a receipt has.
  *
  * **One action per receipt.** A receipt waiting for payment cannot switch
- * again (L13), so it offers *Cancel switch*; any other offers *Ship kits* or
- * *Back to pickup* while switching is allowed. One labelled chip, never a ⋮
- * menu (§9: a single action stays a chip).
+ * again (L13), so its row offers *Payment options*, which opens onto the
+ * payment controls (Session 3); any other offers *Ship kits* or *Back to
+ * pickup* while switching is allowed. One labelled chip, never a ⋮ menu (§9:
+ * a single action stays a chip).
  */
 
 import React from 'react';
-import { ArrowRight, Store, Truck, XCircle } from 'lucide-react';
-import BusyLabel from '@/components/ui/BusyLabel';
+import { ArrowRight, Store, Truck, Wallet } from 'lucide-react';
 import { formatEventInstant } from '@/lib/event-schedule';
 import { isOutsidePayment } from '@/lib/category-change-hold';
 import { formatPesos } from '@/lib/money';
@@ -93,47 +93,47 @@ export function WaitingSwitch({ change }: { change: LogisticsChangeView }) {
   );
 }
 
-/** The receipt's one action, or nothing when it has none for this person now. */
+/**
+ * The receipt's one action, or nothing when it has none for this person now.
+ * A receipt waiting for payment offers *Payment options* on a table row, which
+ * opens the row onto its controls (`WaitingSwitchActions`); a card shows those
+ * controls in its body, so it has no chip for them.
+ */
 export function ReceiptAction({
   receipt,
   canEdit,
-  cancelling,
+  open,
   onSwitch,
-  onCancel,
+  onOpen,
 }: {
   receipt: Receipt;
   /** `registration:edit`, decided on the server. */
   canEdit: boolean;
-  cancelling: boolean;
+  /** Whether the table row is open now. */
+  open?: boolean;
   onSwitch: () => void;
-  onCancel: (change: LogisticsChangeView) => void;
+  /** Opens the table row: given on the table only. */
+  onOpen?: () => void;
 }) {
-  if (!canEdit) return null;
-  const waiting = openSwitch(receipt);
-  // The table row opens on a click; its button must not open it too.
+  // The table row opens on a click; its button must not toggle it twice.
   const press = (action: () => void) => (event: React.MouseEvent) => {
     event.stopPropagation();
     action();
   };
-  if (waiting) {
+  if (openSwitch(receipt)) {
+    if (!onOpen) return null;
     return (
       <button
         type="button"
-        onClick={press(() => onCancel(waiting))}
-        disabled={cancelling}
-        className="btn-filter is-compact is-danger whitespace-nowrap"
+        onClick={press(onOpen)}
+        aria-expanded={open}
+        className="btn-filter is-compact whitespace-nowrap"
       >
-        {cancelling ? (
-          <BusyLabel>Cancelling</BusyLabel>
-        ) : (
-          <>
-            <XCircle size={16} aria-hidden="true" /> Cancel switch
-          </>
-        )}
+        <Wallet size={16} aria-hidden="true" /> {open ? 'Hide payment options' : 'Payment options'}
       </button>
     );
   }
-  if (!receipt.canSwitch.allowed) return null;
+  if (!canEdit || !receipt.canSwitch.allowed) return null;
   const toDelivery = receipt.canSwitch.direction === LOGISTICS_DIRECTIONS.TO_DELIVERY;
   return (
     <button type="button" onClick={press(onSwitch)} className="btn-filter is-compact whitespace-nowrap">

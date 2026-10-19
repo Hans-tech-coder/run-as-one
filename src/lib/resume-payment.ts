@@ -138,3 +138,46 @@ export async function readChangePaymentToken(token: string): Promise<string | nu
 export function changePaymentUrl(origin: string, token: string): string {
   return `${origin}/pay/change/${token}`;
 }
+
+// ── The third kind: a delivery switch's payment link ─────────────────────────
+
+/**
+ * The link for a delivery switch's fee (LOGISTICS_CHANGE_PLAN.md Session 3):
+ * the same stateless token again, of a third kind. `purpose` keeps it apart
+ * from an order's and a category change's, each reader refusing the others',
+ * and the subject is the switch's id. It expires with the switch's hold and is
+ * checked against the switch every time it is opened (`switchPayableState`),
+ * so a switch applied, cancelled or expired meanwhile is refused.
+ *
+ * The page it opens (`/pay/logistics/[token]`) shows the race, the receipt's
+ * reference, the number of kits and the fee, never a runner's name, email,
+ * phone or the address the kits ship to: it is pasted into Messenger and
+ * forwarded too.
+ */
+const SWITCH_PURPOSE = 'logistics-change-payment';
+
+/** A link for this switch, valid until `expiresAt` (the switch's hold). */
+export async function createSwitchPaymentToken(changeId: string, expiresAt: Date): Promise<string> {
+  return new SignJWT({ purpose: SWITCH_PURPOSE })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setSubject(changeId)
+    .setIssuedAt()
+    .setExpirationTime(Math.floor(expiresAt.getTime() / 1000))
+    .sign(SECRET_KEY);
+}
+
+/** The switch a link names, or null for a forged, expired or foreign token. */
+export async function readSwitchPaymentToken(token: string): Promise<string | null> {
+  try {
+    const { payload } = await jwtVerify(token, SECRET_KEY, { algorithms: ['HS256'] });
+    if (payload.purpose !== SWITCH_PURPOSE || typeof payload.sub !== 'string' || !payload.sub) return null;
+    return payload.sub;
+  } catch {
+    return null;
+  }
+}
+
+/** Where a switch's link lands, on whichever host made it. */
+export function switchPaymentUrl(origin: string, token: string): string {
+  return `${origin}/pay/logistics/${token}`;
+}

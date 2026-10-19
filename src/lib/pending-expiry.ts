@@ -3,7 +3,6 @@ import prisma from '@/lib/db';
 import { PAYMENT_METHODS, isBankTransfer } from '@/lib/registration-codes';
 import type { AuditEntry } from '@/lib/audit';
 import { eventInstant } from '@/lib/event-schedule';
-import { expireCategoryChanges } from '@/lib/category-change-expiry';
 
 /**
  * When an unpaid order — an online checkout, or a bank transfer nobody
@@ -103,7 +102,7 @@ type Sweepable = {
   runners: { categoryId: string; promoPrice: number | null }[];
 };
 
-/** What one sweep did, in the words the cron route reports back. */
+/** What one sweep of orders did, in the words the cron route reports back. */
 export type SweepResult = {
   /** Registrations moved to EXPIRED. */
   expired: number;
@@ -113,13 +112,6 @@ export type SweepResult = {
   truncated: boolean;
   /** The order references expired, so a run is traceable in the logs. */
   orderRefs: string[];
-  /**
-   * Upgrades that waited out their hold or the change deadline unpaid
-   * (lib/category-change-expiry.ts, CATEGORY_CHANGE_PLAN.md D11), swept on the
-   * same run so one trigger tidies both.
-   */
-  changesExpired: number;
-  changeRefs: string[];
 };
 
 /** The moment before which an unpaid online checkout has waited long enough. */
@@ -239,15 +231,9 @@ export async function expirePendingRegistrations(
     if (released) redemptionsReleased += 1;
   }
 
-  const changes = await expireCategoryChanges(now);
-  return {
-    expired: orderRefs.length,
-    redemptionsReleased,
-    truncated,
-    orderRefs,
-    changesExpired: changes.expired,
-    changeRefs: changes.changeRefs,
-  };
+  // Upgrades and delivery switches are swept on the same run, by
+  // `runExpirySweep` (expiry-sweep.ts), not from here.
+  return { expired: orderRefs.length, redemptionsReleased, truncated, orderRefs };
 }
 
 /**

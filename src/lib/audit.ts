@@ -141,6 +141,13 @@ export const AUDIT_ACTIONS = [
   'logistics_change.created',
   'logistics_change.applied',
   'logistics_change.cancelled',
+  // Its fee (Session 3): the payment email sent by hand, the link made, the
+  // sweep letting an unpaid one go, and a payment that arrived for a switch
+  // already closed or past the deadline, left for a person rather than applied.
+  'logistics_change.email.sent_by_hand',
+  'logistics_change.payment_link.copied',
+  'logistics_change.expired',
+  'logistics_change.payment_late',
   'proof.viewed',
   'registrants.exported',
   // The Unpaid checkouts tab's own file (UNPAID_ORDERS_PLAN.md Batch 3): the

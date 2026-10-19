@@ -17,6 +17,12 @@
  * (`router.refresh()`): a switch changes other rows too — the receipt it
  * rides on gains "Also in this parcel", the counts move — and that read is the
  * one place all of it is decided.
+ *
+ * **A switch waiting for payment** (Session 3) shows its controls under the
+ * fee in the opened row and in the card's body (`WaitingSwitchActions`): copy
+ * or email the payment link, record a GCash or bank payment, cancel. An email
+ * Resend refused opens the by-hand send (`SwitchEmailModal`), here or from the
+ * history's *Send email by hand*.
  */
 
 import React, { useMemo, useState } from 'react';
@@ -30,7 +36,6 @@ import {
   type VisibilityState,
 } from '@tanstack/react-table';
 import { Hourglass, Package, Search, Store, Truck, X } from 'lucide-react';
-import { useAlert } from '@/components/ui/AlertProvider';
 import AdminCardList from '@/app/admin/AdminCardList';
 import AdminDataTable, { AdminColumnsMenu, rowPosition } from '@/app/admin/AdminDataTable';
 import AdminTablePager from '@/app/admin/AdminTablePager';
@@ -42,11 +47,18 @@ import { parcelAddressesOf } from '@/lib/logistics-change-parcels';
 import type { ExistingDelivery } from '@/lib/logistics-change';
 import type { EventReceipts, Receipt } from '@/lib/logistics-receipts';
 import type { LogisticsChangeView } from '@/lib/logistics-change-view';
+import { LOGISTICS_CHANGE_STATUSES } from '@/lib/logistics-change';
 import { openSwitch } from '../registrants/logistics-change-display';
 import { RECEIPT_COLUMNS, opens, type PickupDeliveryTableMeta } from './receipt-columns';
 import { ReceiptAction, ReceiptBadges, WaitingSwitch, shipsToLines } from './receipt-display';
 import SwitchHistory, { SwitchHistoryList } from './SwitchHistory';
 import ShipKitsPanel from './ShipKitsPanel';
+import SwitchEmailModal from './SwitchEmailModal';
+import WaitingSwitchActions, {
+  refusedEmail,
+  type PickupDeliveryPermissions,
+  type SwitchEmailRequest,
+} from './WaitingSwitchActions';
 
 /** Kept in step with the panel's closing transition (`.t-modal`). */
 const CLOSE_MS = 150;
@@ -67,9 +79,15 @@ function matches(receipt: Receipt, filter: Filter): boolean {
   return true;
 }
 
-export default function PickupDeliveryClient({ data, canEdit }: { data: EventReceipts; canEdit: boolean }) {
+export default function PickupDeliveryClient({
+  data,
+  permissions,
+}: {
+  data: EventReceipts;
+  permissions: PickupDeliveryPermissions;
+}) {
   const router = useRouter();
-  const { alert, toast } = useAlert();
+  const canEdit = permissions.edit;
   const { event, receipts, waiting } = data;
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
@@ -77,7 +95,7 @@ export default function PickupDeliveryClient({ data, canEdit }: { data: EventRec
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [openId, setOpenId] = useState<string | null>(null);
   const [panel, setPanel] = useState<{ id: string; closing: boolean } | null>(null);
-  const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [emailRequest, setEmailRequest] = useState<SwitchEmailRequest | null>(null);
 
   // The event's PAID deliveries, the parcels a new one can ride on (L6).
   const existing: ExistingDelivery[] = useMemo(
@@ -127,31 +145,49 @@ export default function PickupDeliveryClient({ data, canEdit }: { data: EventRec
     setTimeout(() => setPanel(current => (current?.closing ? null : current)), CLOSE_MS);
   };
 
-  const cancelSwitch = async (change: LogisticsChangeView) => {
-    setCancellingId(change.id);
-    try {
-      const res = await fetch(`/api/admin/logistics-changes/${change.id}/cancel`, { method: 'POST' });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        await alert({ variant: 'error', title: 'Switch Not Cancelled', message: body?.error || 'Try again.' });
-        router.refresh();
-        return;
-      }
-      toast(`Cancelled the switch ${change.changeRef}. The kits stay on pickup.`);
-      router.refresh();
-    } catch {
-      await alert({ variant: 'error', title: 'Switch Not Cancelled', message: 'Could not reach the server. Try again.' });
-    } finally {
-      setCancellingId(null);
-    }
+  const refresh = () => router.refresh();
+
+  /** The by-hand send of an applied switch's email, from the history. */
+  const sendAppliedByHand = (receipt: Receipt) =>
+    permissions.email
+      ? (change: LogisticsChangeView) =>
+          setEmailRequest({
+            kind: 'applied',
+            changeId: change.id,
+            changeRef: change.changeRef,
+            orderRef: receipt.orderRef,
+            message: null,
+            error: change.lastEmailError,
+          })
+      : undefined;
+
+  /** The switch waiting for payment, with what this person may do about it. */
+  const waitingPanel = (receipt: Receipt) => {
+    const change = openSwitch(receipt);
+    if (!change) return null;
+    return (
+      <div className="space-y-3">
+        <WaitingSwitch change={change} />
+        <WaitingSwitchActions
+          change={change}
+          orderRef={receipt.orderRef}
+          permissions={permissions}
+          onChanged={refresh}
+          onSendEmail={setEmailRequest}
+        />
+      </div>
+    );
+  };
+
+  const toggleRow = (receipt: Receipt) => {
+    if (opens(receipt)) setOpenId(current => (current === receipt.id ? null : receipt.id));
   };
 
   const meta: PickupDeliveryTableMeta = {
     openId,
     canEdit,
-    cancellingId,
     onSwitch: receipt => setPanel({ id: receipt.id, closing: false }),
-    onCancel: cancelSwitch,
+    onToggle: toggleRow,
   };
 
   const table = useReactTable({
@@ -168,10 +204,6 @@ export default function PickupDeliveryClient({ data, canEdit }: { data: EventRec
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
   });
-
-  const toggleRow = (receipt: Receipt) => {
-    if (opens(receipt)) setOpenId(current => (current === receipt.id ? null : receipt.id));
-  };
 
   const tiles = [
     { title: 'Pickup Kits', value: counts.pickup, icon: <Store size={18} /> },
@@ -270,14 +302,16 @@ export default function PickupDeliveryClient({ data, canEdit }: { data: EventRec
         renderSubRow={row =>
           openId === row.original.id && (
             <div className="grid gap-4 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] items-start">
-              {openSwitch(row.original) ? (
-                <WaitingSwitch change={openSwitch(row.original)!} />
-              ) : (
+              {waitingPanel(row.original) ?? (
                 <p className="m-0 text-sm text-secondary">Nothing waiting for payment.</p>
               )}
               <div>
                 <p className="m-0 text-xs font-semibold uppercase tracking-wider text-secondary">Switch history</p>
-                <SwitchHistoryList changes={row.original.logisticsChanges} />
+                <SwitchHistoryList
+                  changes={row.original.logisticsChanges}
+                  canViewProof={permissions.proof}
+                  onSendEmail={sendAppliedByHand(row.original)}
+                />
               </div>
             </div>
           )
@@ -320,8 +354,12 @@ export default function PickupDeliveryClient({ data, canEdit }: { data: EventRec
           expanded={receipt =>
             opens(receipt) && (
               <div className="space-y-3">
-                {openSwitch(receipt) && <WaitingSwitch change={openSwitch(receipt)!} />}
-                <SwitchHistory changes={receipt.logisticsChanges} />
+                {waitingPanel(receipt)}
+                <SwitchHistory
+                  changes={receipt.logisticsChanges}
+                  canViewProof={permissions.proof}
+                  onSendEmail={sendAppliedByHand(receipt)}
+                />
               </div>
             )
           }
@@ -329,9 +367,7 @@ export default function PickupDeliveryClient({ data, canEdit }: { data: EventRec
             <ReceiptAction
               receipt={receipt}
               canEdit={canEdit}
-              cancelling={cancellingId === openSwitch(receipt)?.id}
               onSwitch={() => setPanel({ id: receipt.id, closing: false })}
-              onCancel={cancelSwitch}
             />
           )}
           empty={
@@ -344,6 +380,15 @@ export default function PickupDeliveryClient({ data, canEdit }: { data: EventRec
 
       <AdminTablePager table={table} />
 
+      {emailRequest && (
+        <SwitchEmailModal
+          key={`${emailRequest.changeId}-${emailRequest.kind}`}
+          request={emailRequest}
+          onClose={() => setEmailRequest(null)}
+          onMarked={refresh}
+        />
+      )}
+
       {open && panel && (
         <ShipKitsPanel
           key={open.id}
@@ -354,9 +399,12 @@ export default function PickupDeliveryClient({ data, canEdit }: { data: EventRec
           refOf={refOf}
           isClosing={panel.closing}
           onClose={closePanel}
-          onSaved={() => {
+          onSaved={({ change, email }) => {
             closePanel();
             router.refresh();
+            const kind = change.status === LOGISTICS_CHANGE_STATUSES.AWAITING_PAYMENT ? 'created' : 'applied';
+            const refused = refusedEmail(change, open.orderRef, kind, email);
+            if (refused) setEmailRequest(refused);
           }}
           onStale={() => router.refresh()}
         />

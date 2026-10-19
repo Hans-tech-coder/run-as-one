@@ -3,6 +3,7 @@ import prisma from '@/lib/db';
 import crypto from 'crypto';
 import { settleOnlinePayment } from '@/lib/online-payment';
 import { findChangeForPayment, settleChangeOnline } from '@/lib/category-change-payment';
+import { findSwitchForPayment, settleSwitchOnline } from '@/lib/logistics-change-payment';
 
 /**
  * How old a signed event may be, in seconds, before it is refused as a replay.
@@ -169,10 +170,21 @@ export async function POST(request: Request) {
         // already EXPIRED or CANCELLED is flagged on the trail for a person
         // and never applied (lib/category-change-payment.ts).
         const change = await findChangeForPayment(paymentIntentId, referenceNumber);
+        // Nor an upgrade: a delivery switch's fee (LOGISTICS_CHANGE_PLAN.md
+        // Session 3), matched the same two ways. Applied under the switch
+        // locks (lib/logistics-change-store.ts); one that arrives for a switch
+        // already EXPIRED or CANCELLED, or after the switch deadline, is
+        // flagged for a person and never applied (lib/logistics-change-payment.ts).
+        const switched = change ? null : await findSwitchForPayment(paymentIntentId, referenceNumber);
         if (change) {
           const settled = await settleChangeOnline(change.id, paymentIntentId);
           if (settled.outcome === 'applied') {
             console.log(`Successfully applied category change ${change.changeRef}`);
+          }
+        } else if (switched) {
+          const settled = await settleSwitchOnline(switched.id, paymentIntentId);
+          if (settled.outcome === 'applied') {
+            console.log(`Successfully applied delivery switch ${switched.changeRef}`);
           }
         } else {
           console.warn(`PayMongo Webhook: Registration not found for reference ${referenceNumber} or PI ${paymentIntentId}`);

@@ -16,8 +16,10 @@ import PickupDeliveryClient from './PickupDeliveryClient';
  * Scoped to the signed-in organizer's own event, like Registrants: an id in
  * the URL is not proof the race belongs to the browser's owner, and this
  * screen lists every runner's email and home address. Seeing it takes
- * `registration:view`, as Registrants does; switching takes
- * `registration:edit`, the gate the routes behind its buttons ask. A
+ * `registration:view`, as Registrants does; switching and cancelling take
+ * `registration:edit`, the payment link and emails `registration:email`,
+ * recording a payment `registration:validate` and its proof `proof:view` —
+ * the gates the routes behind its buttons ask (Session 3). A
  * no-match and a no-permission read identically, so the screen cannot be used
  * to confirm that some id exists.
  */
@@ -37,7 +39,15 @@ export default async function PickupDeliveryPage({ params }: { params: Promise<{
       />
 
       <div className="admin-content">
-        <PickupDeliveryClient data={data} canEdit={can(actor, 'registration:edit', reach)} />
+        <PickupDeliveryClient
+          data={data}
+          permissions={{
+            edit: can(actor, 'registration:edit', reach),
+            email: can(actor, 'registration:email', reach),
+            validate: can(actor, 'registration:validate', reach),
+            proof: can(actor, 'proof:view', reach),
+          }}
+        />
       </div>
     </>
   );

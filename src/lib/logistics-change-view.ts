@@ -54,6 +54,13 @@ export function logisticsChangeView(change: ChangeWithOrders) {
     transactionFee: change.transactionFee,
     totalCharged: change.totalCharged,
     paymentMethod: change.paymentMethod,
+    // A recorded payment (Session 3). The proof's pathname stays on the
+    // server; the screen asks the proof route for a signed URL.
+    transactionNumber: change.transactionNumber,
+    hasProof: change.proofOfPayment !== null,
+    createdEmailSentAt: change.createdEmailSentAt?.toISOString() ?? null,
+    appliedEmailSentAt: change.appliedEmailSentAt?.toISOString() ?? null,
+    lastEmailError: change.lastEmailError,
     holdUntil: change.holdUntil?.toISOString() ?? null,
     reason: change.reason,
     createdBy: change.createdBy,

@@ -1,4 +1,5 @@
 import 'server-only';
+import type { Prisma } from '@prisma/client';
 import db from '@/lib/db';
 import { recordAudit, type AuditActor } from '@/lib/audit';
 import { formatPesos } from '@/lib/money';
@@ -12,7 +13,14 @@ import {
   quoteLogisticsChange,
   type LogisticsQuote,
 } from '@/lib/logistics-change';
-import { LogisticsChangeRefused, asSwitchOrder, lockSwitch, readSwitchContext } from '@/lib/logistics-change-context';
+import {
+  LogisticsChangeRefused,
+  asSwitchOrder,
+  eligibilityFor,
+  lockSwitch,
+  readSwitchContext,
+  SWITCH_EVENT_SELECT,
+} from '@/lib/logistics-change-context';
 import { refsOf, ridersRefusal, waitingConflict, waitingRefusal } from '@/lib/logistics-change-parcels';
 
 /**
@@ -40,8 +48,9 @@ import { refsOf, ridersRefusal, waitingConflict, waitingRefusal } from '@/lib/lo
  * A switch with nothing to pay — back to pickup (L9), or every parcel riding on
  * one already paid (L6) — applies in the same transaction. One with a fee is
  * written AWAITING_PAYMENT with its hold (`changeHoldUntil`, never past the
- * deadline, L12) and moves nothing yet; paying it is Session 3, and until then
- * staff can cancel it.
+ * deadline, L12) and moves nothing yet. `applyLogisticsChange` moves it once
+ * the fee is paid (Session 3, lib/logistics-change-payment.ts), or staff
+ * cancel it.
  */
 
 function peso(centavos: number): string {
@@ -56,6 +65,33 @@ function by(actor: AuditActor): string {
 function whereTo(quote: Extract<LogisticsQuote, { ok: true }>): string {
   if (quote.deliverySplit) return "each runner's home address";
   return quote.deliveryAddress ?? 'the address given';
+}
+
+type Target = {
+  direction: string;
+  deliveryZone: string | null;
+  deliveryAddress: string | null;
+  deliverySplit: boolean;
+};
+
+/**
+ * L4: the order's logistics move and nothing else; the receipt's amounts stay.
+ * The one place an order's method is written after checkout, for a switch
+ * applied at once and one applied when its fee is paid.
+ */
+async function moveOrder(tx: Prisma.TransactionClient, registrationId: string, target: Target) {
+  await tx.registration.updateMany({
+    where: { id: registrationId },
+    data:
+      target.direction === LOGISTICS_DIRECTIONS.TO_DELIVERY
+        ? {
+            logisticsMethod: LOGISTICS_METHODS.DELIVERY,
+            deliveryZone: target.deliveryZone,
+            deliveryAddress: target.deliveryAddress,
+            deliverySplit: target.deliverySplit,
+          }
+        : { logisticsMethod: LOGISTICS_METHODS.PICKUP, deliveryZone: null, deliveryAddress: null, deliverySplit: false },
+  });
 }
 
 export type CreateSwitchInput = {
@@ -187,18 +223,7 @@ export async function createLogisticsChange(actor: AuditActor, input: CreateSwit
       return change;
     }
 
-    // L4: the logistics move and nothing else; the receipt's amounts stay.
-    await tx.registration.updateMany({
-      where: { id: order.id },
-      data: toDelivery
-        ? {
-            logisticsMethod: LOGISTICS_METHODS.DELIVERY,
-            deliveryZone: quote.deliveryZone,
-            deliveryAddress: quote.deliveryAddress,
-            deliverySplit: quote.deliverySplit,
-          }
-        : { logisticsMethod: LOGISTICS_METHODS.PICKUP, deliveryZone: null, deliveryAddress: null, deliverySplit: false },
-    });
+    await moveOrder(tx, order.id, quote);
     await recordAudit(tx, actor, {
       ...trail,
       action: 'logistics_change.applied',
@@ -252,3 +277,93 @@ export async function cancelLogisticsChange(actor: AuditActor, changeId: string)
   });
 }
 
+
+/** How the fee came in, written on the switch as it applies. */
+export type AppliedSwitchPayment = {
+  paymentMethod?: string;
+  transactionNumber?: string | null;
+  proofOfPayment?: string | null;
+  transactionFee?: number;
+  totalCharged?: number;
+};
+
+/**
+ * Applies a switch whose fee was paid: PayMongo's webhook, the runner back
+ * from PayMongo, or a payment staff recorded (lib/logistics-change-payment.ts).
+ * Takes the same locks a new switch does and re-checks under them, so a
+ * payment never moves an order somewhere a new switch could not go now:
+ *
+ * - the switch is still waiting (a claim on its status, so two payments for
+ *   one switch apply it once);
+ * - the order is still PAID and still on pickup, and the race still allows
+ *   switching (L3, L11): **after the deadline nothing applies**, because the
+ *   courier's lead time is what the deadline protects. A lapsed hold that the
+ *   sweep has not closed yet is not refused: there is no seat to lose, and the
+ *   money is in.
+ *
+ * The fee is the one quoted when the switch was opened: the runner pays what
+ * the link showed. A refusal rolls everything back and is the caller's to
+ * report as a late payment.
+ */
+export async function applyLogisticsChange(actor: AuditActor, changeId: string, payment: AppliedSwitchPayment = {}) {
+  const found = await db.logisticsChange.findUnique({
+    where: { id: changeId },
+    select: { eventId: true, orders: { select: { registrationId: true } } },
+  });
+  if (!found) throw new LogisticsChangeRefused(404, 'Delivery switch not found');
+
+  return db.$transaction(async tx => {
+    await lockSwitch(tx, found.eventId, found.orders.map(link => link.registrationId));
+    const now = new Date();
+    const claim = await tx.logisticsChange.updateMany({
+      where: { id: changeId, status: LOGISTICS_CHANGE_STATUSES.AWAITING_PAYMENT },
+      data: { ...payment, status: LOGISTICS_CHANGE_STATUSES.APPLIED, appliedAt: now },
+    });
+    if (claim.count === 0) {
+      throw new LogisticsChangeRefused(409, 'This switch is no longer waiting for payment. Reload the page.');
+    }
+    const change = await tx.logisticsChange.findUniqueOrThrow({
+      where: { id: changeId },
+      include: {
+        event: { select: SWITCH_EVENT_SELECT },
+        orders: { select: { registration: { select: { id: true, orderRef: true, status: true, logisticsMethod: true } } } },
+      },
+    });
+
+    const orders = change.orders.map(link => link.registration);
+    for (const order of orders) {
+      // The open switch is this one, so it is not counted against itself (L13).
+      const eligibility = eligibilityFor(change.event, order, false, now);
+      if (!eligibility.allowed) {
+        throw new LogisticsChangeRefused(409, `Order ${order.orderRef}: ${eligibility.message}`);
+      }
+      if (eligibility.direction !== change.direction) {
+        throw new LogisticsChangeRefused(409, `Order ${order.orderRef} is no longer on pickup, so it cannot be switched.`);
+      }
+    }
+    for (const order of orders) await moveOrder(tx, order.id, change);
+
+    const how = [
+      change.paymentMethod ? ` by ${paymentMethodLabel(change.paymentMethod)}` : '',
+      change.transactionNumber ? `, reference ${change.transactionNumber}` : '',
+    ].join('');
+    await recordAudit(tx, actor, {
+      action: 'logistics_change.applied',
+      entityType: 'LogisticsChange',
+      entityId: change.id,
+      eventId: change.eventId,
+      organizerId: change.event.organizerId,
+      summary: `Switched order${orders.length === 1 ? '' : 's'} ${refsOf(orders.map(o => o.orderRef))} from pickup to delivery to ${change.deliverySplit ? "each runner's home address" : (change.deliveryAddress ?? 'the address given')} (${change.changeRef}): ${peso(change.totalCharged)} paid${how}.`,
+      changes: {
+        orders: refsOf(orders.map(o => o.orderRef)),
+        status: [LOGISTICS_CHANGE_STATUSES.AWAITING_PAYMENT, LOGISTICS_CHANGE_STATUSES.APPLIED],
+        totalCharged: change.totalCharged,
+        transactionFee: change.transactionFee,
+        ...(change.paymentMethod ? { paymentMethod: change.paymentMethod } : {}),
+        ...(change.transactionNumber ? { transactionNumber: change.transactionNumber } : {}),
+        ...(change.proofOfPayment ? { proofOfPayment: 'attached' } : {}),
+      },
+    });
+    return change;
+  });
+}

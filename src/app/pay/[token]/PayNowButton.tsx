@@ -11,7 +11,9 @@
  *
  * `kind="change"` is the same button on a category change's payment page
  * (`/pay/change/[token]`, CATEGORY_CHANGE_PLAN.md Session 3), posting to
- * `api/category-change/checkout`, which answers the same way.
+ * `api/category-change/checkout`, which answers the same way; `kind="switch"`
+ * is a delivery switch's (`/pay/logistics/[token]`, LOGISTICS_CHANGE_PLAN.md
+ * Session 3), posting to `api/logistics-change/checkout`.
  */
 
 import React, { useState } from 'react';
@@ -26,7 +28,7 @@ export default function PayNowButton({
 }: {
   token: string;
   amount: string;
-  kind?: 'order' | 'change';
+  kind?: 'order' | 'change' | 'switch';
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -36,14 +38,15 @@ export default function PayNowButton({
     setBusy(true);
     setError(null);
     try {
-      const res =
-        kind === 'change'
-          ? await fetch('/api/category-change/checkout', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ token }),
-            })
-          : await fetch(`/api/pay/${encodeURIComponent(token)}`, { method: 'POST' });
+      const checkout =
+        kind === 'change' ? '/api/category-change/checkout' : kind === 'switch' ? '/api/logistics-change/checkout' : null;
+      const res = checkout
+        ? await fetch(checkout, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token }),
+          })
+        : await fetch(`/api/pay/${encodeURIComponent(token)}`, { method: 'POST' });
       const body = await res.json().catch(() => ({}));
       if (res.ok && body.checkout_url) {
         // Left busy: the browser is on its way to PayMongo.

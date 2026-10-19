@@ -28,6 +28,7 @@ import { formatPesos } from '@/lib/money';
 import type { RunnerAddress } from '@/lib/runner-address';
 import type { DeliveryZone } from '@/lib/registration-codes';
 import type { Receipt, ReceiptEvent } from '@/lib/logistics-receipts';
+import type { SwitchEmailAnswer } from './WaitingSwitchActions';
 import type { LogisticsChangeView } from '@/lib/logistics-change-view';
 import { composeDeliveryAddress, EMPTY_DELIVERY_ADDRESS } from '@/app/events/[slug]/register/delivery-address';
 import { canShipSeparately } from '@/app/events/[slug]/register/delivery-split';
@@ -51,7 +52,8 @@ export function useShipKits({
   /** The event's switches waiting for payment (R4). */
   waiting: readonly WaitingSwitch[];
   refOf: (registrationId: string) => string;
-  onSaved: () => void;
+  /** Saved; `email` is how the switch's email went (refused: send it by hand). */
+  onSaved: (result: { change: LogisticsChangeView; email?: SwitchEmailAnswer | null }) => void;
   /** The page's data may be out of date: read it again. */
   onStale: () => void;
 }) {
@@ -143,14 +145,15 @@ export function useShipKits({
         return;
       }
       const change = (data as { change: LogisticsChangeView }).change;
-      toast(
+      const emailed = data?.email?.sent ? ` Emailed ${data.email.to}.` : '';
+      const saved =
         change.status === LOGISTICS_CHANGE_STATUSES.AWAITING_PAYMENT
           ? `Switch saved for ${receipt.orderRef}: ${peso(change.totalCharged)} awaiting payment. It stays on pickup until paid.`
           : change.direction === LOGISTICS_DIRECTIONS.TO_PICKUP
             ? `${receipt.orderRef} switched to pickup.`
-            : `${receipt.orderRef} switched to delivery.`,
-      );
-      onSaved();
+            : `${receipt.orderRef} switched to delivery.`;
+      toast(saved + emailed);
+      onSaved(data);
     } catch {
       setIsSaving(false);
       await alert({

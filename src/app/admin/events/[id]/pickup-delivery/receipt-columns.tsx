@@ -5,8 +5,8 @@
  * (with its kit count), Runners, Logistics, Ships to and Actions, one row per receipt. A row
  * with a switch waiting or a history opens in place (`renderSubRow` in
  * `PickupDeliveryClient.tsx`). What a row reads that changes while the screen is open —
- * which row is open, which switch is being cancelled — comes from the table's
- * `meta`, so the column list is built once.
+ * which row is open — comes from the table's `meta`, so the column list is
+ * built once.
  */
 
 import React from 'react';
@@ -15,16 +15,14 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { rowPosition } from '@/app/admin/AdminDataTable';
 import { paymentMethodLabel } from '@/lib/registration-codes';
 import type { Receipt } from '@/lib/logistics-receipts';
-import type { LogisticsChangeView } from '@/lib/logistics-change-view';
 import { openSwitch } from '../registrants/logistics-change-display';
 import { ReceiptAction, ReceiptBadges, shipsToLines } from './receipt-display';
 
 export type PickupDeliveryTableMeta = {
   openId: string | null;
   canEdit: boolean;
-  cancellingId: string | null;
   onSwitch: (receipt: Receipt) => void;
-  onCancel: (change: LogisticsChangeView) => void;
+  onToggle: (receipt: Receipt) => void;
 };
 
 /** Whether a row has anything to open: a waiting switch or a history. */
@@ -120,15 +118,15 @@ export const RECEIPT_COLUMNS: ColumnDef<Receipt>[] = [
     id: 'actions',
     header: 'Actions',
     cell: ({ row, table }) => {
-      const { canEdit, cancellingId, onSwitch, onCancel } = table.options.meta as PickupDeliveryTableMeta;
+      const { canEdit, openId, onSwitch, onToggle } = table.options.meta as PickupDeliveryTableMeta;
       const receipt = row.original;
       return (
         <ReceiptAction
           receipt={receipt}
           canEdit={canEdit}
-          cancelling={cancellingId === openSwitch(receipt)?.id}
+          open={openId === receipt.id}
           onSwitch={() => onSwitch(receipt)}
-          onCancel={onCancel}
+          onOpen={() => onToggle(receipt)}
         />
       );
     },

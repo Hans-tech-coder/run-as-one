@@ -8,8 +8,8 @@ import { retireChangePage } from '@/lib/category-change-payment';
 /**
  * **When an unpaid upgrade lets go of its seat** (CATEGORY_CHANGE_PLAN.md D11,
  * D12; Session 3). Run by the daily abandoned-checkout sweep
- * (`expirePendingRegistrations` in pending-expiry.ts), so the one trigger that
- * tidies orders tidies changes too, and no second schedule can disagree.
+ * (`runExpirySweep` in expiry-sweep.ts), so the one trigger that tidies
+ * orders tidies changes too, and no second schedule can disagree.
  *
  * An awaiting change expires at its `holdUntil` — 24 hours from opening for an
  * online payment, 7 days for GCash or bank, both capped at the change deadline

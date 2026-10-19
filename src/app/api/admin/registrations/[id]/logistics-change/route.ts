@@ -11,10 +11,14 @@
  * receipt to an address still waiting for payment (R4) and a parcel others
  * still ride on (R5). With nothing to pay — back to pickup, or riding on a
  * parcel already paid for — it applies at once. With a fee it waits for
- * payment and nothing moves; the payment link, the recorded payment and the
- * emails are Session 3.
+ * payment and nothing moves.
  *
- * Answers with the switch. The screen reads everything it draws, the counts
+ * After the write commits, the order's contact is emailed: *payment needed*
+ * (the link, or the accounts to pay to) for a switch with a fee, *switched*
+ * for one applied at once (Session 3, lib/logistics-change-payment.ts). A
+ * failed send never undoes the switch; staff send it by hand from the card.
+ *
+ * Answers with the switch and how the email went. The screen reads everything it draws, the counts
  * and the other receipts' cards included, from a `router.refresh()`.
  */
 
@@ -24,6 +28,8 @@ import { asChangePaymentChoice, CHANGE_PAYMENT_CHOICES, paymentMethodForChoice }
 import { LogisticsChangeRefused, findOrderReach } from '@/lib/logistics-change-context';
 import { createLogisticsChange } from '@/lib/logistics-change-store';
 import { readLogisticsChangeView } from '@/lib/logistics-change-view';
+import { LOGISTICS_CHANGE_STATUSES } from '@/lib/logistics-change';
+import { deliverSwitchEmail } from '@/lib/logistics-change-payment';
 
 /** The longest "what the runner asked for" kept, a sentence or two. */
 const MAX_REASON = 300;
@@ -49,8 +55,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     }
 
     const choice = asChangePaymentChoice(body.paymentChoice);
-    // Recording a payment already made is Session 3; until then it would only
-    // leave a switch waiting for money that came in.
+    // "Already paid" in one step is not offered: the payment is recorded with
+    // its reference and proof on the card's *Record payment*, after the switch
+    // is opened as GCash or bank to come.
     if (choice === CHANGE_PAYMENT_CHOICES.OUTSIDE_PAID) {
       return NextResponse.json(
         { error: 'Choose a payment link or GCash or bank to come.', field: 'paymentChoice' },
@@ -76,7 +83,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       reason,
     });
 
-    return NextResponse.json({ change: await readLogisticsChangeView(change.id) });
+    const awaiting = change.status === LOGISTICS_CHANGE_STATUSES.AWAITING_PAYMENT;
+    const email = await deliverSwitchEmail(change.id, awaiting ? 'created' : 'applied', request.url).catch(error => {
+      console.error('Delivery switch email failed:', error);
+      return { sent: false as const, error: 'The email could not be prepared.', message: null };
+    });
+    return NextResponse.json({ change: await readLogisticsChangeView(change.id), email });
   } catch (error) {
     if (error instanceof LogisticsChangeRefused) {
       return NextResponse.json({ error: error.message }, { status: error.status });

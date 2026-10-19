@@ -6,14 +6,19 @@
  * made it and why. `SwitchHistoryList` is the list itself, which the table's
  * opened row shows; `SwitchHistory` folds it behind *Switch history (n)* so a
  * card stays a few lines tall. The switch still waiting for payment has its
- * Cancel on the row or card, so it has no button here.
+ * controls above the list (`WaitingSwitchActions`), so it has none here.
+ *
+ * A paid switch shows how it was paid: the reference, and *View proof* for a
+ * recorded screenshot (`proof:view`, through the proof route, which records
+ * the opening). An applied switch whose email Resend refused offers *Send
+ * email by hand* (`registration:email`).
  *
  * The receipt is never edited (L4), so this list is the only place on the
  * screen that says a receipt's logistics is not the one it was bought with.
  */
 
 import React, { useId, useState } from 'react';
-import { ArrowRight, ChevronDown, History } from 'lucide-react';
+import { ArrowRight, ChevronDown, History, Image as ImageIcon, Mail } from 'lucide-react';
 import { formatEventInstant } from '@/lib/event-schedule';
 import {
   LOGISTICS_CHANGE_STATUS_LABELS,
@@ -23,7 +28,14 @@ import {
 import type { LogisticsChangeView } from '@/lib/logistics-change-view';
 import { switchDirectionLabel, switchMoneyLine } from '../registrants/logistics-change-display';
 
-export default function SwitchHistory({ changes }: { changes: LogisticsChangeView[] }) {
+/** What a history entry may offer, decided on the server; none when absent. */
+type HistoryActions = {
+  canViewProof?: boolean;
+  /** Present when this person may send email: opens the by-hand send. */
+  onSendEmail?: (change: LogisticsChangeView) => void;
+};
+
+export default function SwitchHistory({ changes, ...actions }: { changes: LogisticsChangeView[] } & HistoryActions) {
   const [open, setOpen] = useState(false);
   const listId = useId();
   if (changes.length === 0) return null;
@@ -40,13 +52,18 @@ export default function SwitchHistory({ changes }: { changes: LogisticsChangeVie
         <History size={14} aria-hidden="true" /> Switch history ({changes.length})
         <ChevronDown size={14} aria-hidden="true" className={`transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
-      {open && <SwitchHistoryList id={listId} changes={changes} />}
+      {open && <SwitchHistoryList id={listId} changes={changes} {...actions} />}
     </div>
   );
 }
 
 /** Every switch of one receipt, newest first. */
-export function SwitchHistoryList({ changes, id }: { changes: LogisticsChangeView[]; id?: string }) {
+export function SwitchHistoryList({
+  changes,
+  id,
+  canViewProof,
+  onSendEmail,
+}: { changes: LogisticsChangeView[]; id?: string } & HistoryActions) {
   const newestFirst = [...changes].reverse();
   return (
     <ol id={id} className="m-0 mt-2 p-0 list-none space-y-2 text-sm">
@@ -70,7 +87,10 @@ export function SwitchHistoryList({ changes, id }: { changes: LogisticsChangeVie
                 {change.deliverySplit ? "To each runner's home address" : `To ${change.deliveryAddress}`}
               </p>
             )}
-            <p className="m-0 text-secondary">{switchMoneyLine(change)}</p>
+            <p className="m-0 text-secondary">
+              {switchMoneyLine(change)}
+              {change.transactionNumber ? ` · ref ${change.transactionNumber}` : ''}
+            </p>
             {change.reason && <p className="m-0 text-xs text-secondary [overflow-wrap:anywhere]">Asked: {change.reason}</p>}
             <p className="m-0 text-xs text-[var(--text-muted)] [overflow-wrap:anywhere]">
               {change.changeRef} &middot; by {change.createdBy} &middot; {formatEventInstant(change.createdAt)}
@@ -79,9 +99,41 @@ export function SwitchHistoryList({ changes, id }: { changes: LogisticsChangeVie
                 : ''}
               {change.expiredAt ? ` · expired unpaid ${formatEventInstant(change.expiredAt)}` : ''}
             </p>
+            {((canViewProof && change.hasProof) || (onSendEmail && emailNotSent(change))) && (
+              <div className="flex items-center gap-2 flex-wrap pt-1">
+                {canViewProof && change.hasProof && (
+                  <a
+                    href={`/api/admin/logistics-changes/${change.id}/proof`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={event => event.stopPropagation()}
+                    className="btn-filter is-compact gap-1.5 no-underline"
+                  >
+                    <ImageIcon size={14} aria-hidden="true" /> View proof
+                  </a>
+                )}
+                {onSendEmail && emailNotSent(change) && (
+                  <button
+                    type="button"
+                    onClick={event => {
+                      event.stopPropagation();
+                      onSendEmail(change);
+                    }}
+                    className="btn-filter is-compact gap-1.5"
+                  >
+                    <Mail size={14} aria-hidden="true" /> Send email by hand
+                  </button>
+                )}
+              </div>
+            )}
           </li>
         );
       })}
     </ol>
   );
+}
+
+/** An applied switch whose *switched* email Resend refused and nobody sent by hand. */
+function emailNotSent(change: LogisticsChangeView): boolean {
+  return change.status === 'APPLIED' && !change.appliedEmailSentAt && !!change.lastEmailError;
 }

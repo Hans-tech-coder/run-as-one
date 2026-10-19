@@ -41,7 +41,7 @@ doing by hand: Vercel Firewall's bot protection, and watching the CU-hours
 after release.
 
 **Delivery switches (2026-10-19, on `dev`, not released; `LOGISTICS_CHANGE_PLAN.md`
-Sessions 1, 2 and 2b done, 3–4 open; the plan is in the git-ignored `docs/plans/`).**
+Sessions 1, 2, 2b and 3 done, 4 open; the plan is in the git-ignored `docs/plans/`).**
 Staff switch one PAID receipt at a time between kit pickup and delivery on
 its own screen, **Pickup & Delivery** (`/admin/events/[id]/pickup-delivery`, the events row
 menu; a table from `lg` up, cards below). Session 1 (`aa2f7dd`): the `LogisticsChange` and `LogisticsChangeOrder`
@@ -59,13 +59,29 @@ same-email candidates, no rider pre-ticking, no preview read); new
 `lib/logistics-change-parcels.ts` (riders, R4's check and both sentences) and
 `lib/logistics-receipts.ts` (the page's one read); the registrants Logistics
 cell keeps the chip, "Ships with" and the export's *Logistics Note* but no
-action, modal or history. **A switch with a fee is only saved as waiting** and
-can be cancelled from its card; nothing yet lets it be paid, and the sweep
-does not expire it yet. **Open: Session 3** (payment link and
-`/pay/logistics/[token]`, the PayMongo webhook branch, record payment, the
-expiry sweep, the emails; its buttons go on the waiting switch's card) **and
-Session 4** (settlement and remittances, the client runner list's notes,
-data-model and domain-rules updates for them).
+action, modal or history. **Session 3 (payment):** a switch with a fee is
+paid through a third kind of payment-link token and `/pay/logistics/[token]`
+(`api/logistics-change/checkout`, the category change's checkout with its claim
+hardening), or by GCash or bank recorded on the card with a reference and an
+optional proof (`admin/logistics-changes/[id]/record-payment`, `…/proof`);
+both apply through `applyLogisticsChange` under the switch locks, moving the
+order's logistics and never its amounts. The PayMongo webhook settles a switch
+after orders and category changes; a payment for a cancelled or expired switch,
+or one arriving after the switch deadline, is written as
+`logistics_change.payment_late` and never applied
+(`lib/logistics-change-payment.ts`). The daily sweep expires lapsed switches
+(`lib/logistics-change-expiry.ts`; the three sweeps now run from
+`lib/expiry-sweep.ts`). Two emails to the order's contact
+(`lib/email-logistics-change.ts`): *payment needed* (link, or accounts and QR
+codes) and *switched* (where it ships, or the pickup details from `pickup.ts`),
+stamped on the switch, with a by-hand send. The waiting receipt's card and
+opened row carry *Copy payment link*, *Email payment link* / *Email how to pay*,
+*Record payment* and *Cancel switch*, each on its own permission. The trail
+vocabulary was split out of `activity.ts` into `activity-actions.ts` on the way.
+**Open: Session 4** (settlement and remittances, the client runner list's
+notes, data-model and domain-rules updates for them), and "already paid" in
+one step when opening a switch (today: open as GCash or bank, then *Record
+payment*).
 Verified on `local-dev`'s QA event `qa-virtual-run-test` with four temporary
 orders (removed after, the event's settings restored): a ₱0 switch riding on a
 paid parcel (the host's card gained *Also in this parcel*), a ₱100 switch saved
@@ -73,7 +89,18 @@ as waiting and cancelled from its card, R4 refused in the panel and at the
 route, R5 refused in the panel and at the route and then the rider back first
 and the host after, the panel empty when opened on the next receipt, no
 receipt amount changed, the registrants row menu without a switch, and the page
-at 375px with no sideways scroll.
+at 375px with no sideways scroll. Session 3, on the same event with three
+temporary orders (all removed, the event restored, the test proof deleted from
+the private store): a ₱101.53 switch paid through PayMongo test mode (QR Ph,
+simulated) and applied on the return through `settleSwitchOnline`, the
+webhook's own path (a webhook cannot reach localhost); the real webhook route,
+called in-process with a signed test event, ignoring a retry and flagging a
+payment for an expired switch and one after the deadline as late; a bank
+payment recorded with a proof (lib) and one through the card's *Record
+payment*; a switch expired by the sweep; *Copy payment link*, *Email payment
+link*, *Cancel switch* and the by-hand send from the card, at desktop and
+375px; and both emails, including back to pickup, rendered and delivered to the
+owner's own address.
 Decisions the code cites: **L2** whole order; **L3** PAID only; **L4** the
 receipt is never edited; **L5** staff never type a fee; **L6** one fee per
 parcel, ₱0 on a paid parcel (its "combine in one switch" is superseded by R3);

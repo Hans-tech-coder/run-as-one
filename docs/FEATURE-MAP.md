@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-46 pages · 80 API routes · 130 modules in `src/lib` · 571 files · 103,495 lines
+47 pages · 85 API routes · 135 modules in `src/lib` · 584 files · 105,773 lines
 
 ---
 
@@ -33,7 +33,7 @@ The route, the server component behind it, and the client components beside it.
 | `/admin/events` | [`/admin/events/page.tsx`](../src/app/admin/events/page.tsx) | `bank-account-draft.ts` `BankAccountsPanel.tsx` `BasicInfoPanel.tsx` `category-draft.ts` `CategoryChangeSettings.tsx` `ConsentWaiverField.tsx` `DeleteEventModal.tsx` `DescriptionEditor.tsx` `event-columns.tsx` `event-form-draft.ts` `event-not-found.ts` `event-row.ts` `EventActionsMenu.tsx` `EventClientField.tsx` `EventFormatPanel.tsx` `EventFormResultModals.tsx` `EventOptionsPanel.tsx` `EventPromotionsPanel.tsx` `EventProvinceField.tsx` `EventRowCells.tsx` `EventsTableClient.tsx` `HighlightsField.tsx` `HighlightsModal.tsx` `InclusionsField.tsx` `LogisticsPanel.tsx` `PosterField.tsx` `publish-draft.ts` `PublishingPanel.tsx` `PublishModal.tsx` `PublishPicker.tsx` `registration-opening.ts` `registration-state-badge.ts` `RegistrationFeesPanel.tsx` `RegistrationFormPicker.tsx` `RegistrationOpeningPicker.tsx` `RegistrationScheduleModal.tsx` `useEventImageUpload.ts` `useEventPublishActions.ts` `useEventRowActions.ts` |
 | `/admin/events/[id]/edit` | [`/admin/events/[id]/edit/page.tsx`](../src/app/admin/events/[id]/edit/page.tsx) | `event-edit-draft.ts` |
 | `/admin/events/[id]/pacers` | [`/admin/events/[id]/pacers/page.tsx`](../src/app/admin/events/[id]/pacers/page.tsx) | `AddPacerModal.tsx` `EditPacerModal.tsx` `pacer-row.ts` `PacerActionsMenu.tsx` `PacersClient.tsx` `use-pacer-actions.tsx` |
-| `/admin/events/[id]/pickup-delivery` | [`/admin/events/[id]/pickup-delivery/page.tsx`](../src/app/admin/events/[id]/pickup-delivery/page.tsx) | `PickupDeliveryClient.tsx` `receipt-columns.tsx` `receipt-display.tsx` `ship-kits-fields.tsx` `ShipKitsPanel.tsx` `SwitchHistory.tsx` `useShipKits.ts` |
+| `/admin/events/[id]/pickup-delivery` | [`/admin/events/[id]/pickup-delivery/page.tsx`](../src/app/admin/events/[id]/pickup-delivery/page.tsx) | `PickupDeliveryClient.tsx` `receipt-columns.tsx` `receipt-display.tsx` `ship-kits-fields.tsx` `ShipKitsPanel.tsx` `SwitchEmailModal.tsx` `SwitchHistory.tsx` `useShipKits.ts` `WaitingSwitchActions.tsx` |
 | `/admin/events/[id]/registrants` | [`/admin/events/[id]/registrants/page.tsx`](../src/app/admin/events/[id]/registrants/page.tsx) | `AwaitingChangeActions.tsx` `CancelOrderModal.tsx` `category-change-display.tsx` `CategoryChangeEmailModal.tsx` `CategoryChangeHistory.tsx` `CategoryChangeModal.tsx` `CategoryChangePaymentChoice.tsx` `CategoryChangeQuote.tsx` `ColumnsViewMenu.tsx` `DeleteRegistrantModals.tsx` `email-handoff.ts` `FollowUpModal.tsx` `logistics-change-display.tsx` `ManualEmailModal.tsx` `PaymentLinkEmailModal.tsx` `ProofLightbox.tsx` `registrant-columns.tsx` `registrant-csv.ts` `registrant-display.tsx` `registrant-rows.ts` `RegistrantActionsMenu.tsx` `RegistrantCards.tsx` `RegistrantDetailModal.tsx` `RegistrantRowActions.tsx` `RegistrantsBulkBar.tsx` `RegistrantsDataTable.tsx` `RegistrantsTable.tsx` `RegistrantsTabs.tsx` `RegistrantsToolbar.tsx` `RegistrantTransactionFields.tsx` `RemarksModal.tsx` `RunnerAddressEditor.tsx` `RunnerEditModal.tsx` `SendLinksButton.tsx` `unpaid-columns.tsx` `UnpaidCheckoutActions.tsx` `UnpaidCheckoutCards.tsx` `UnpaidCheckoutsList.tsx` `useCategoryChangeModal.ts` `usePaymentStatus.ts` |
 | `/admin/events/[id]/registrants/[runnerId]/consent` | [`/admin/events/[id]/registrants/[runnerId]/consent/page.tsx`](../src/app/admin/events/[id]/registrants/[runnerId]/consent/page.tsx) | `PrintableSheet.tsx` |
 | `/admin/events/new` | [`/admin/events/new/page.tsx`](../src/app/admin/events/new/page.tsx) | `NewEventForm.tsx` |
@@ -63,6 +63,7 @@ The route, the server component behind it, and the client components beside it.
 | `/feedback` | [`/feedback/page.tsx`](../src/app/feedback/page.tsx) | `FeedbackForm.tsx` `FeedbackSent.tsx` `ScreenshotField.tsx` |
 | `/pay/[token]` | [`/pay/[token]/page.tsx`](../src/app/pay/[token]/page.tsx) | `PayNowButton.tsx` |
 | `/pay/change/[token]` | [`/pay/change/[token]/page.tsx`](../src/app/pay/change/[token]/page.tsx) | — |
+| `/pay/logistics/[token]` | [`/pay/logistics/[token]/page.tsx`](../src/app/pay/logistics/[token]/page.tsx) | — |
 | `/privacy` | [`/privacy/page.tsx`](../src/app/privacy/page.tsx) | — |
 | `/results` | [`/results/page.tsx`](../src/app/results/page.tsx) | — |
 | `/results/[slug]` | [`/results/[slug]/page.tsx`](../src/app/results/[slug]/page.tsx) | — |
@@ -105,6 +106,10 @@ The route, the server component behind it, and the client components beside it.
 | `/api/admin/feedback/[id]` | PATCH DELETE | [`/admin/feedback/[id]/route.ts`](../src/app/api/admin/feedback/[id]/route.ts) |
 | `/api/admin/feedback/[id]/screenshot` | GET | [`/admin/feedback/[id]/screenshot/route.ts`](../src/app/api/admin/feedback/[id]/screenshot/route.ts) |
 | `/api/admin/logistics-changes/[id]/cancel` | POST | [`/admin/logistics-changes/[id]/cancel/route.ts`](../src/app/api/admin/logistics-changes/[id]/cancel/route.ts) |
+| `/api/admin/logistics-changes/[id]/email` | POST | [`/admin/logistics-changes/[id]/email/route.ts`](../src/app/api/admin/logistics-changes/[id]/email/route.ts) |
+| `/api/admin/logistics-changes/[id]/payment-link` | POST | [`/admin/logistics-changes/[id]/payment-link/route.ts`](../src/app/api/admin/logistics-changes/[id]/payment-link/route.ts) |
+| `/api/admin/logistics-changes/[id]/proof` | GET | [`/admin/logistics-changes/[id]/proof/route.ts`](../src/app/api/admin/logistics-changes/[id]/proof/route.ts) |
+| `/api/admin/logistics-changes/[id]/record-payment` | POST | [`/admin/logistics-changes/[id]/record-payment/route.ts`](../src/app/api/admin/logistics-changes/[id]/record-payment/route.ts) |
 | `/api/admin/notifications` | GET | [`/admin/notifications/route.ts`](../src/app/api/admin/notifications/route.ts) |
 | `/api/admin/platform-fee` | PATCH | [`/admin/platform-fee/route.ts`](../src/app/api/admin/platform-fee/route.ts) |
 | `/api/admin/profile` | PATCH | [`/admin/profile/route.ts`](../src/app/api/admin/profile/route.ts) |
@@ -152,6 +157,7 @@ The route, the server component behind it, and the client components beside it.
 | `/api/checkout/manual` | POST | [`/checkout/manual/route.ts`](../src/app/api/checkout/manual/route.ts) |
 | `/api/cron/expire-pending` | — | [`/cron/expire-pending/route.ts`](../src/app/api/cron/expire-pending/route.ts) |
 | `/api/feedback` | POST | [`/feedback/route.ts`](../src/app/api/feedback/route.ts) |
+| `/api/logistics-change/checkout` | POST | [`/logistics-change/checkout/route.ts`](../src/app/api/logistics-change/checkout/route.ts) |
 | `/api/pay/[token]` | POST | [`/pay/[token]/route.ts`](../src/app/api/pay/[token]/route.ts) |
 | `/api/promos/lookup` | POST | [`/promos/lookup/route.ts`](../src/app/api/promos/lookup/route.ts) |
 | `/api/upload` | POST | [`/upload/route.ts`](../src/app/api/upload/route.ts) |
@@ -168,8 +174,9 @@ the file itself.
 
 | Module | What it owns |
 | --- | --- |
+| [`activity-actions.ts`](../src/lib/activity-actions.ts) | **The trail's vocabulary**: what each recorded action is called, which shelf of the Activity filter it sits on, which one reads as a warning, and h… |
 | [`activity-store.ts`](../src/lib/activity-store.ts) | The trail's queries, for the activity screen and the registrants screen. |
-| [`activity.ts`](../src/lib/activity.ts) | Reading the trail back: what each recorded action is called, how the activity screen's filters are spelled in its URL, and how a line of the trail … |
+| [`activity.ts`](../src/lib/activity.ts) | Reading the trail back: what each recorded action is called (re-exported from `activity-actions.ts`), how the activity screen's filters are spelled… |
 | [`actor.ts`](../src/lib/actor.ts) | Who is acting in the admin, and what they may reach. |
 | [`audit.ts`](../src/lib/audit.ts) | The trail: what somebody did in an organizer's admin, and who. |
 | [`auth.ts`](../src/lib/auth.ts) | — |
@@ -211,6 +218,7 @@ the file itself.
 | [`email-delivery.ts`](../src/lib/email-delivery.ts) | Whether the runner actually got their email, and what happens when they did not. |
 | [`email-document.ts`](../src/lib/email-document.ts) | How every email is built and sent, split out of `email.ts` (`UNPAID_FOLLOWUP_PLAN.md` Batch 4): the block document model (paragraph, heading, card,… |
 | [`email-invitations.ts`](../src/lib/email-invitations.ts) | The emails that invite somebody to sign in rather than tell a runner about an order: `staffInvitationEmail` (team) and `clientInvitationEmail` (a c… |
+| [`email-logistics-change.ts`](../src/lib/email-logistics-change.ts) | The emails about a delivery switch (Session 3), to the order's contact (`customerEmail`: a switch moves a whole receipt, and its contact paid and a… |
 | [`email-password.ts`](../src/lib/email-password.ts) | The emails about how an admin signs in (`LOGIN_UX_PLAN.md` Batch 2; `TWO_FACTOR_PLAN.md` D10). |
 | [`email.ts`](../src/lib/email.ts) | Transactional email via Resend, sent from `CONTACT_EMAIL`. |
 | [`event-format.ts`](../src/lib/event-format.ts) | Where an event is run: at a venue on one race day, or anywhere inside a window of days (VIRTUAL_RUN_PLAN.md). |
@@ -220,6 +228,7 @@ the file itself.
 | [`event-slug.ts`](../src/lib/event-slug.ts) | The piece of an event's URL a runner actually reads. |
 | [`event-type.ts`](../src/lib/event-type.ts) | What an event sells to its runners. |
 | [`event-visibility.ts`](../src/lib/event-visibility.ts) | Whether the public may see an event yet (`EVENT_PUBLISH_PLAN.md`). |
+| [`expiry-sweep.ts`](../src/lib/expiry-sweep.ts) | The one daily sweep. |
 | [`feedback.ts`](../src/lib/feedback.ts) | What a piece of feedback is, and what the app will accept as one. |
 | [`follow-up.ts`](../src/lib/follow-up.ts) | Following up an unpaid checkout (UNPAID_FOLLOWUP_PLAN.md Batch 1): what a staff member records after trying to reach the runner, and how the latest… |
 | [`free-checkout.ts`](../src/lib/free-checkout.ts) | The ₱0 order: when one is real, and what it is written as (`PACER_DISCOUNT_PLAN.md` Batch 2). |
@@ -229,7 +238,9 @@ the file itself.
 | [`inclusions.ts`](../src/lib/inclusions.ts) | What a category or package gets you, as a list. |
 | [`jwt.ts`](../src/lib/jwt.ts) | — |
 | [`logistics-change-context.ts`](../src/lib/logistics-change-context.ts) | What a delivery switch is decided from, and the locks every switch write takes. |
+| [`logistics-change-expiry.ts`](../src/lib/logistics-change-expiry.ts) | When an unpaid delivery switch lapses (L12). |
 | [`logistics-change-parcels.ts`](../src/lib/logistics-change-parcels.ts) | **Which receipts share a parcel after a delivery switch** (LOGISTICS_CHANGE_PLAN.md L6, Revision 1 R4 and R5): who rides at ₱0 on whose paid parcel… |
+| [`logistics-change-payment.ts`](../src/lib/logistics-change-payment.ts) | How a delivery switch's fee comes in, and what happens when it comes in late (`LOGISTICS_CHANGE_PLAN.md` Session 3), the category change's `categor… |
 | [`logistics-change-settings.ts`](../src/lib/logistics-change-settings.ts) | **What the event form may save for delivery switches** (LOGISTICS_CHANGE_PLAN.md L11): the *Delivery switch deadline*, read from a posted body and … |
 | [`logistics-change-store.ts`](../src/lib/logistics-change-store.ts) | The only writer of an order's pickup or delivery after checkout (`LOGISTICS_CHANGE_PLAN.md` Session 2, Revision 1 R3–R5). |
 | [`logistics-change-view.ts`](../src/lib/logistics-change-view.ts) | A switch as the staff screens read it, and an order's Logistics fields. |
@@ -271,7 +282,7 @@ the file itself.
 | [`request-country.ts`](../src/lib/request-country.ts) | — |
 | [`result-status.ts`](../src/lib/result-status.ts) | What a result's status may be, and how it reads. |
 | [`results-ranking.ts`](../src/lib/results-ranking.ts) | How a race's stored ranks are worked out: the overall rank across the whole race, the category rank, and the gender rank within the category, each … |
-| [`resume-payment.ts`](../src/lib/resume-payment.ts) | The resume-payment link, and a category change's (a second kind of the same token, `purpose: 'category-change-payment'`, subject the change id, exp… |
+| [`resume-payment.ts`](../src/lib/resume-payment.ts) | The resume-payment link, a category change's and a delivery switch's (a second kind of the same token, `purpose: 'category-change-payment'`, subjec… |
 | [`rich-text.ts`](../src/lib/rich-text.ts) | The formatting an organizer may give "About This Event", and how it is read. |
 | [`runner-address.ts`](../src/lib/runner-address.ts) | Every runner's home address (`RUNNER_ADDRESS_PLAN.md` Batch 1). |
 | [`running-community-store.ts`](../src/lib/running-community-store.ts) | — |
@@ -315,8 +326,7 @@ when a task touches one, split it before editing rather than after.
 | 1179 | [`src/app/admin/settings/SettingsPanels.tsx`](../src/app/admin/settings/SettingsPanels.tsx) |
 | 1017 | [`src/app/admin/team/TeamClient.tsx`](../src/app/admin/team/TeamClient.tsx) |
 | 785 | [`src/app/results/[slug]/full/FullResultsClient.tsx`](../src/app/results/[slug]/full/FullResultsClient.tsx) |
-| 750 | [`src/lib/pending-expiry.ts`](../src/lib/pending-expiry.ts) |
-| 705 | [`src/lib/activity.ts`](../src/lib/activity.ts) |
+| 736 | [`src/lib/pending-expiry.ts`](../src/lib/pending-expiry.ts) |
 | 693 | [`src/app/admin/AdminDatePicker.tsx`](../src/app/admin/AdminDatePicker.tsx) |
 | 663 | [`src/app/admin/activity/ActivityClient.tsx`](../src/app/admin/activity/ActivityClient.tsx) |
 | 660 | [`src/app/api/checkout/route.ts`](../src/app/api/checkout/route.ts) |
@@ -341,8 +351,10 @@ when a task touches one, split it before editing rather than after.
 | 441 | [`src/app/api/admin/events/[id]/update-event.ts`](../src/app/api/admin/events/[id]/update-event.ts) |
 | 441 | [`src/lib/actor.ts`](../src/lib/actor.ts) |
 | 435 | [`src/lib/logistics-change.ts`](../src/lib/logistics-change.ts) |
+| 431 | [`src/lib/activity.ts`](../src/lib/activity.ts) |
 | 426 | [`src/app/admin/events/EventsTableClient.tsx`](../src/app/admin/events/EventsTableClient.tsx) |
 | 425 | [`src/app/admin/events/[id]/edit/page.tsx`](../src/app/admin/events/[id]/edit/page.tsx) |
 | 422 | [`src/lib/pacer.ts`](../src/lib/pacer.ts) |
+| 415 | [`src/app/admin/events/[id]/pickup-delivery/PickupDeliveryClient.tsx`](../src/app/admin/events/[id]/pickup-delivery/PickupDeliveryClient.tsx) |
 | 405 | [`src/app/admin/events/[id]/registrants/RegistrantsTable.tsx`](../src/app/admin/events/[id]/registrants/RegistrantsTable.tsx) |
 | 404 | [`src/app/admin/events/[id]/registrants/UnpaidCheckoutsList.tsx`](../src/app/admin/events/[id]/registrants/UnpaidCheckoutsList.tsx) |

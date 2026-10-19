@@ -3,9 +3,11 @@
  *
  * **The rule is not here.** How long an order is left alone, which payment
  * methods may be touched, and what releasing one involves all live in
- * `src/lib/pending-expiry.ts`. This file exists only to decide *who may ask*
- * and to say what happened — so a second trigger (a manual run, a script) can
- * never disagree with this one about the window.
+ * `src/lib/pending-expiry.ts`, and the sweep that runs it beside the category
+ * change and delivery switch sweeps is `src/lib/expiry-sweep.ts`. This file
+ * exists only to decide *who may ask* and to say what happened — so a second
+ * trigger (a manual run, a script) can never disagree with this one about the
+ * window.
  *
  * **It is not an admin route**, which is why it is not under `/api/admin`.
  * There is no signed-in organizer behind a scheduled job and no cookie to read,
@@ -30,7 +32,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { expirePendingRegistrations } from '@/lib/pending-expiry';
+import { runExpirySweep } from '@/lib/expiry-sweep';
 
 /**
  * Whether this request carries the shared secret.
@@ -62,7 +64,7 @@ async function sweep(request: Request) {
   }
 
   try {
-    const result = await expirePendingRegistrations();
+    const result = await runExpirySweep();
 
     // Logged as well as returned: the caller is a scheduler that reads nothing,
     // so the function log is where an organizer's "where did that registration
@@ -82,11 +84,17 @@ async function sweep(request: Request) {
       );
     }
 
+    if (result.switchesExpired > 0) {
+      console.log(
+        `[expire-pending] expired ${result.switchesExpired} unpaid delivery switch(es): ${result.switchRefs.join(', ')}`,
+      );
+    }
+
     return NextResponse.json({ success: true, ...result });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error expiring pending registrations:', error);
     return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+      { error: 'Internal server error', details: error instanceof Error ? error.message : String(error) },
       { status: 500 },
     );
   }
