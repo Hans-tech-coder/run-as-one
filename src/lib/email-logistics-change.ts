@@ -128,12 +128,26 @@ function accountBlocks(change: SwitchForEmail): EmailDocument['blocks'] {
  * Sent when a switch with a fee is opened: where the kits will ship, the fee,
  * how to pay it, and until when. `url` is the payment link for an online
  * payment; a payment sent outside the app gets the accounts instead, and is
- * asked to reply with the screenshot and reference so staff can record it.
+ * asked to reply with the screenshot and reference so staff can record it,
+ * and with the receiver's name and mobile when someone else takes the kit.
  */
 export function logisticsChangeCreatedEmail(change: SwitchForEmail, url: string | null): Promise<EmailMessage> {
   const outside = isOutsidePayment(change.paymentMethod);
   const until = change.holdUntil ? `${formatEventInstant(change.holdUntil)}, Manila time` : null;
   const accounts = accountBlocks(change);
+  // The proof reply also brings the receiver, when someone other than the
+  // runner takes the kit: staff add it to the switch from that reply.
+  const receiver = change.deliverySplit ? null : deliveryAddressDetails(change.deliveryAddress).receiver;
+  const receiverAsk = change.deliverySplit
+    ? []
+    : [
+        ' and, ',
+        {
+          strong: receiver
+            ? `if someone other than ${receiver.name} will receive the kit, their name and mobile number`
+            : 'if someone else will receive the kit, their name and mobile number',
+        },
+      ];
 
   const howToPay: EmailDocument['blocks'] = outside
     ? [
@@ -153,6 +167,7 @@ export function logisticsChangeCreatedEmail(change: SwitchForEmail, url: string 
               segments: [
                 'Then ',
                 { strong: 'reply to this email with the screenshot of your payment and its reference number' },
+                ...receiverAsk,
                 '. We switch your kits to delivery once we have checked it, and email you when it is done.',
               ],
             }
@@ -160,7 +175,9 @@ export function logisticsChangeCreatedEmail(change: SwitchForEmail, url: string 
               kind: 'paragraph' as const,
               segments: [
                 'Reply to this email and we will send you where to pay by GCash or bank transfer. ',
-                'Once paid, reply with the screenshot of your payment and its reference number, and we switch your kits to delivery once we have checked it.',
+                'Once paid, reply with the screenshot of your payment and its reference number',
+                ...receiverAsk,
+                '. We switch your kits to delivery once we have checked it.',
               ],
             },
       ]
