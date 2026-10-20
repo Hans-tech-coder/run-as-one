@@ -15,7 +15,7 @@
 import { NextResponse } from 'next/server';
 import { can, getActor } from '@/lib/actor';
 import { LogisticsChangeRefused, findSwitchReach } from '@/lib/logistics-change-context';
-import { cancelLogisticsChange } from '@/lib/logistics-change-store';
+import { cancelLogisticsChange } from '@/lib/logistics-change-outcome';
 import { retireSwitchPage } from '@/lib/logistics-change-payment';
 import { readLogisticsChangeView } from '@/lib/logistics-change-view';
 

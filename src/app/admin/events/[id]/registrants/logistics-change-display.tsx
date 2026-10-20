@@ -73,7 +73,9 @@ export function logisticsNote(row: WithSwitches): string {
     move ? `SWITCHED FROM ${move.from.toUpperCase()}` : null,
     host ? `SHIPS WITH ${host}` : null,
     waiting
-      ? waiting.proofSubmitted
+      ? waiting.awaitsAddress
+        ? 'DELIVERY SWITCH AWAITING ADDRESS'
+        : waiting.proofSubmitted
         ? 'DELIVERY SWITCH PROOF SUBMITTED'
         : `DELIVERY SWITCH AWAITING ${peso(waiting.totalCharged || waiting.fee)}`
       : null,
@@ -85,6 +87,13 @@ export function logisticsNote(row: WithSwitches): string {
 /** What became of the money on one switch, in one line for the history. */
 export function switchMoneyLine(change: LogisticsChangeView): string {
   const due = peso(change.totalCharged || change.fee);
+  // Revision 3b: opened with no address, so no fee was ever set.
+  if (change.direction === LOGISTICS_DIRECTIONS.TO_DELIVERY && !change.deliverySplit && !change.deliveryAddress) {
+    if (change.status === LOGISTICS_CHANGE_STATUSES.AWAITING_PAYMENT) return "Waiting for the runner's address";
+    if (change.status === LOGISTICS_CHANGE_STATUSES.CANCELLED || change.status === LOGISTICS_CHANGE_STATUSES.EXPIRED) {
+      return 'The runner never gave an address';
+    }
+  }
   switch (change.status) {
     case LOGISTICS_CHANGE_STATUSES.AWAITING_PAYMENT:
       return `${due} due`;
@@ -133,7 +142,12 @@ export function LogisticsWithSwitch({ runner }: { runner: WithSwitches }) {
           Proof submitted · to delivery
         </span>
       )}
-      {waiting && !waiting.proofSubmitted && (
+      {waiting?.awaitsAddress && (
+        <span className="status-badge pending" title={`The runner was sent the link to give the address and pay (${waiting.changeRef}).`}>
+          Waiting for address · to delivery
+        </span>
+      )}
+      {waiting && !waiting.proofSubmitted && !waiting.awaitsAddress && (
         <span className="status-badge pending" title={`Waiting for payment to switch to delivery (${waiting.changeRef}).`}>
           {peso(waiting.totalCharged || waiting.fee)} due · to delivery
         </span>

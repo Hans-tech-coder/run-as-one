@@ -60,10 +60,17 @@ function WaitingSwitch({ change }: { change: LogisticsChangeView }) {
     : null;
   return (
     <div className="rounded-lg border border-[var(--dash-hairline)] bg-[var(--ink-02)] p-3 space-y-1 text-sm">
-      <p className="m-0 font-medium text-primary">{peso(change.totalCharged || change.fee)} due to ship these kits</p>
-      <p className="m-0 text-secondary [overflow-wrap:anywhere]">
-        {change.deliverySplit ? "To each runner's home address" : `To ${change.deliveryAddress}`}
-      </p>
+      {change.awaitsAddress ? (
+        // Revision 3b T12: sent with no address; the fee follows the runner's.
+        <p className="m-0 font-medium text-primary">Waiting for the runner to give the address on the link</p>
+      ) : (
+        <>
+          <p className="m-0 font-medium text-primary">{peso(change.totalCharged || change.fee)} due to ship these kits</p>
+          <p className="m-0 text-secondary [overflow-wrap:anywhere]">
+            {change.deliverySplit ? "To each runner's home address" : `To ${change.deliveryAddress}`}
+          </p>
+        </>
+      )}
       {change.proofSubmitted ? (
         // Revision 3 T6, T8: the runner's proof is in, so the hold no longer runs out.
         <p className="m-0 text-xs text-secondary">

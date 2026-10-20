@@ -80,11 +80,18 @@ export function useDeliveryPlan({
   runners,
   logisticsMethod,
   restored,
+  startTyped = false,
 }: {
   event: DeliveryEvent;
   runners: readonly AddressedRunner[];
   logisticsMethod: LogisticsMethod;
   restored?: RestoredDelivery | null;
+  /**
+   * Start on the editable fields: a delivery switch's link (`SwitchConfirm`)
+   * for a runner with no home address on file. The wizards never pass it, since
+   * Step 1 always asks for one.
+   */
+  startTyped?: boolean;
 }) {
   const resolved = withResolvedAddresses(runners);
   const home = placeOf(resolved[0]);
@@ -95,7 +102,7 @@ export function useDeliveryPlan({
   // Whether the place came from Runner 1's home or was typed here. An order
   // restored with some other address comes back typed, so it is not lost.
   const [ownAddress, setOwnAddress] = useState(() => {
-    if (!restored?.deliveryAddress) return false;
+    if (!restored?.deliveryAddress) return startTyped;
     return homeKey(parseDeliveryAddress(restored.deliveryAddress)) !== homeKey(home);
   });
   const [chosenZone, setChosenZone] = useState<DeliveryZone | null>(

@@ -8,8 +8,8 @@ import { PAYMENT_METHODS } from '@/lib/registration-codes';
 import { changePayableState, isOutsidePayment, type ChangePayableState } from '@/lib/category-change-hold';
 import { LOGISTICS_CHANGE_STATUSES, logisticsChangeDeadline } from '@/lib/logistics-change';
 import { LogisticsChangeRefused } from '@/lib/logistics-change-context';
-import { switchHoldUntil } from '@/lib/logistics-change-proof';
-import { applyLogisticsChange } from '@/lib/logistics-change-store';
+import { switchAwaitsAddress, switchHoldUntil } from '@/lib/logistics-change-proof';
+import { applyLogisticsChange } from '@/lib/logistics-change-outcome';
 import {
   logisticsChangeAppliedEmail,
   logisticsChangeCreatedEmail,
@@ -276,9 +276,20 @@ export type OutsideSwitchPayment = { transactionNumber: string; proofPathname: s
 export async function recordSwitchPayment(actor: AuditActor, changeId: string, payment: OutsideSwitchPayment) {
   const change = await db.logisticsChange.findUnique({
     where: { id: changeId },
-    select: { fee: true, checkoutSessionId: true, changeRef: true, paymentMethod: true, proofOfPayment: true },
+    select: {
+      fee: true,
+      checkoutSessionId: true,
+      changeRef: true,
+      paymentMethod: true,
+      proofOfPayment: true,
+      status: true,
+      direction: true,
+      deliveryAddress: true,
+      deliverySplit: true,
+    },
   });
   if (!change) throw new LogisticsChangeRefused(404, 'Delivery switch not found');
+  if (switchAwaitsAddress(change)) throw new LogisticsChangeRefused(409, "The runner has not confirmed the delivery address yet, so there is nothing to apply. It waits on the link.");
   if (!isOutsidePayment(change.paymentMethod)) {
     throw new LogisticsChangeRefused(
       409,

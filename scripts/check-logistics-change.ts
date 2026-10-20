@@ -26,10 +26,10 @@ import {
   paymentMethodForChoice,
   switchPaymentChoices,
 } from '../src/lib/category-change-hold';
-import { switchHoldUntil, switchProofSubmitted } from '../src/lib/logistics-change-proof';
+import { switchAwaitsAddress, switchHoldUntil, switchProofSubmitted } from '../src/lib/logistics-change-proof';
 import type { LogisticsChangeView } from '../src/lib/logistics-change-view';
 import { NO_CHANGES, NO_ORDERS, settle } from '../src/lib/settlement';
-import { logisticsMove, logisticsNote, shipsWith } from '../src/app/admin/events/[id]/registrants/logistics-change-display';
+import { logisticsMove, logisticsNote, shipsWith, switchMoneyLine } from '../src/app/admin/events/[id]/registrants/logistics-change-display';
 import { kitNote } from '../src/app/admin/your-events/[id]/RunnerCells';
 
 /**
@@ -517,6 +517,39 @@ check(
     ],
   }),
   'DELIVERY SWITCH PROOF SUBMITTED',
+);
+
+// ── Revision 3b: Ship kits is confirm and send ───────────────────────────────
+
+const pending = { status: 'AWAITING_PAYMENT', direction: 'TO_DELIVERY', deliveryAddress: null, deliverySplit: false };
+check('a switch sent with no address waits for it (T12)', switchAwaitsAddress(pending), true);
+check('one with an address does not', switchAwaitsAddress({ ...pending, deliveryAddress: shipTo(TARLAC_A) }), false);
+check('an applied one does not', switchAwaitsAddress({ ...pending, status: 'APPLIED' }), false);
+check('back to pickup never does', switchAwaitsAddress({ ...pending, direction: 'TO_PICKUP' }), false);
+check('an old split switch is not missing its address', switchAwaitsAddress({ ...pending, deliverySplit: true }), false);
+check(
+  'a switch with no address blocks no other address (R4)',
+  parcelAddressesOf({ deliveryAddress: null, deliverySplit: false, runners: [TARLAC_A] }).length,
+  0,
+);
+check(
+  'so a second receipt to Runner 1 of the first is not refused',
+  (q => q.ok && waitingConflict(q.parcels, [{ orderRef: 'RM-PENDING', registrationIds: ['other'], deliveryAddress: null, deliverySplit: false, runners: [TARLAC_A] }], 'order-1'))(quote({})),
+  null,
+);
+const pendingView = (status: string) =>
+  ({ ...pending, status, fee: 0, totalCharged: 0, ridesOnOrderRef: null }) as unknown as LogisticsChangeView;
+check('the history says it waits for the address', switchMoneyLine(pendingView('AWAITING_PAYMENT')), "Waiting for the runner's address");
+check('an expired one says no address came', switchMoneyLine(pendingView('EXPIRED')), 'The runner never gave an address');
+check(
+  'the export note says it waits for the address',
+  logisticsNote({
+    registrationId: 'order-1',
+    logisticsMethod: 'Pickup',
+    isDelivery: false,
+    logisticsChanges: [{ ...pendingView('AWAITING_PAYMENT'), awaitsAddress: true, proofSubmitted: false } as LogisticsChangeView],
+  }),
+  'DELIVERY SWITCH AWAITING ADDRESS',
 );
 
 console.log(failures ? `\n${failures} failed` : '\nAll passed');

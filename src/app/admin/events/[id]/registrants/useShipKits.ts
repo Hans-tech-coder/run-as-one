@@ -6,6 +6,13 @@
  * address (one parcel for the whole receipt), the zone when staff pick it, the live quote, the
  * payment choice, the reason, and the save.
  *
+ * **Confirm and send** (Revision 3b T12, the owner after trying RM-1D5EEF1B):
+ * staff do not type an address. With Runner 1's home address on file the
+ * switch is quoted from it (a ₱0 ride still switches at once); with none, or
+ * when the race's area must be picked (L5), it is sent with no address
+ * (`askRunner`) and the runner gives it on the link, where the fee follows.
+ * Only *Already paid* (T13), which switches at once, opens the address below.
+ *
  * **The address works like the registration wizard's Logistics step**
  * (`useDeliveryPlan.ts`): it is Runner 1's home address, shown as a card,
  * until staff press Change, which copies it into the editable fields. ZIP,
@@ -165,16 +172,20 @@ export function useShipKits({
         message: `Delivery address — ${ADDRESS_PART_LABELS[receiverPart]}: ${receiverProblems[receiverPart]!.toLowerCase()}`,
       }
     : quoted;
-  const needsPayment = quote.ok && quote.status === LOGISTICS_CHANGE_STATUSES.AWAITING_PAYMENT;
-  const alreadyPaid = needsPayment && paymentChoice === CHANGE_PAYMENT_CHOICES.OUTSIDE_PAID;
+  const pickedPaid = toDelivery && paymentChoice === CHANGE_PAYMENT_CHOICES.OUTSIDE_PAID;
+  // T12: no address to quote from, so the runner gives it on the link.
+  const askRunner = toDelivery && !pickedPaid && (!hasHome || zoneChoice);
+  const quotedFee = quote.ok && quote.status === LOGISTICS_CHANGE_STATUSES.AWAITING_PAYMENT;
+  const needsPayment = askRunner || quotedFee || pickedPaid;
+  const alreadyPaid = pickedPaid && quotedFee;
   const onlineMethod = onlineChangeMethod();
-  const onlineFee = quote.ok && needsPayment ? transactionFeeFor(quote.fee, onlineMethod) : 0;
+  const onlineFee = quote.ok && quotedFee ? transactionFeeFor(quote.fee, onlineMethod) : 0;
   // R4 and R5, said before the button rather than only by the route's refusal.
-  const waitingOn = toDelivery && quote.ok ? waitingConflict(quote.parcels, waiting, receipt.id) : null;
+  const waitingOn = toDelivery && !askRunner && quote.ok ? waitingConflict(quote.parcels, waiting, receipt.id) : null;
   const ridersLeft = toDelivery ? [] : receipt.riderRefs;
 
   const save = async () => {
-    if (!receipt.canSwitch.allowed || !quote.ok || waitingOn || ridersLeft.length > 0) return;
+    if (!receipt.canSwitch.allowed || (!askRunner && !quote.ok) || waitingOn || ridersLeft.length > 0) return;
     if (needsPayment && !paymentChoice) {
       setChoiceError('Choose how the runner pays');
       return;
@@ -187,8 +198,9 @@ export function useShipKits({
     setIsSaving(true);
     try {
       const fields = {
-        deliveryAddress: toDelivery ? deliveryAddress : null,
-        deliveryZone: zone,
+        // Sent with none when the runner gives it on the link (T12).
+        deliveryAddress: toDelivery && !askRunner ? deliveryAddress : null,
+        deliveryZone: askRunner ? null : zone,
         reason,
         ...(needsPayment ? { paymentChoice } : {}),
       };
@@ -219,7 +231,9 @@ export function useShipKits({
       const emailed = data?.email?.sent ? ` Emailed ${data.email.to}.` : '';
       const saved =
         change.status === LOGISTICS_CHANGE_STATUSES.AWAITING_PAYMENT
-          ? `Switch saved for ${receipt.orderRef}: ${peso(change.totalCharged)} awaiting payment. It stays on pickup until paid.`
+          ? change.awaitsAddress
+            ? `Sent to the runner: ${receipt.orderRef} waits for them to give the address and pay. It stays on pickup until paid.`
+            : `Switch saved for ${receipt.orderRef}: ${peso(change.totalCharged)} awaiting payment. It stays on pickup until paid.`
           : change.direction === LOGISTICS_DIRECTIONS.TO_PICKUP
             ? `${receipt.orderRef} switched to pickup.`
             : change.transactionNumber
@@ -259,6 +273,8 @@ export function useShipKits({
     setZone,
     quote,
     needsPayment,
+    askRunner,
+    pickedPaid,
     onlineMethod,
     onlineFee,
     paymentChoices,

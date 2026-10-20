@@ -40,6 +40,7 @@ import { PAY_LINK_RULE, allowRequest, callerKey } from '@/lib/rate-limit';
 import { transactionFeeFor } from '@/lib/free-checkout';
 import { isOutsidePayment, onlineChangeMethod } from '@/lib/category-change-hold';
 import { LOGISTICS_CHANGE_STATUSES } from '@/lib/logistics-change';
+import { switchAwaitsAddress } from '@/lib/logistics-change-proof';
 import {
   readSwitchForPayment,
   receiptOf,
@@ -80,6 +81,11 @@ export async function POST(request: Request) {
         { error: 'This delivery is paid by GCash or bank transfer. Reload the page to see how.' },
         { status: 409 },
       );
+    }
+
+    // Revision 3b: the fee is known once the runner confirms the address.
+    if (switchAwaitsAddress(change)) {
+      return NextResponse.json({ error: 'Confirm the delivery address first. Reload the page.' }, { status: 409 });
     }
 
     const method = onlineChangeMethod();

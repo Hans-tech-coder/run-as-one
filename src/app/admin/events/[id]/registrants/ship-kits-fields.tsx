@@ -11,7 +11,7 @@
  */
 
 import React from 'react';
-import { TriangleAlert, Link2, Landmark, CircleCheck } from 'lucide-react';
+import { TriangleAlert, Link2, Landmark, CircleCheck, Home } from 'lucide-react';
 import FieldError from '@/components/ui/FieldError';
 import { formatPesos } from '@/lib/money';
 import { formatRunnerAddress } from '@/lib/runner-address';
@@ -22,7 +22,7 @@ import {
   ONLINE_CHANGE_HOLD_HOURS,
   OUTSIDE_CHANGE_HOLD_DAYS,
 } from '@/lib/category-change-hold';
-import { paymentMethodLabel } from '@/lib/registration-codes';
+import { deliveryZoneLabelFor, paymentMethodLabel } from '@/lib/registration-codes';
 import { deliveryTiers } from '@/app/events/[slug]/register/delivery';
 import ShipKitsAddress from './ship-kits-address';
 import { ProofPicker } from './CategoryChangePaymentChoice';
@@ -126,6 +126,42 @@ export function SwitchQuote({ quote, onlineFee, needsPayment, paymentChoice, exi
   );
 }
 
+/**
+ * Ship kits without an address to type (Revision 3b T12): where the switch
+ * starts from, and that the runner confirms it on the link. With no home
+ * address on file (or the area to pick, L5) the runner gives it there and the
+ * fee follows, so the tiers are listed.
+ */
+export function SendSummary({ receipt, event, hasHome, homeText, askRunner }: Props) {
+  const runner1 = receipt.runners.length === 1 ? 'The runner' : 'Runner 1';
+  const tiers = deliveryTiers(event)
+    .map(tier => `${peso(tier.fee)} ${deliveryZoneLabelFor(event, tier.zone).toLowerCase() || tier.label.toLowerCase()}`)
+    .join(' · ');
+  return (
+    <div className="flex gap-3 rounded-lg border border-[var(--dash-border)] bg-[var(--ink-02)] p-3">
+      <Home size={16} className="mt-0.5 shrink-0 text-[var(--accent-blue-text)]" aria-hidden="true" />
+      <div className="min-w-0 space-y-1">
+        {askRunner ? (
+          <>
+            <p className="m-0 text-primary">
+              {hasHome
+                ? 'The runner picks the delivery area and the address on the link.'
+                : `${runner1} has no home address on file. The runner types where to ship on the link.`}
+            </p>
+            {tiers && <p className="m-0 text-xs text-[var(--text-muted)]">The fee follows the address: {tiers}.</p>}
+          </>
+        ) : (
+          <>
+            <p className="m-0 text-xs text-secondary">Starts from {runner1 === 'The runner' ? "the runner's" : "Runner 1's"} home address</p>
+            <p className="m-0 text-primary [overflow-wrap:anywhere]">{homeText}</p>
+            <p className="m-0 text-xs text-[var(--text-muted)]">The runner may change it on the link; the fee follows.</p>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /** Where the kits go (`ship-kits-address.tsx`), and the zone when staff must pick it (L5). */
 export function DeliveryFields(props: Props) {
   return (
@@ -178,7 +214,10 @@ export function WaitingWarning({ waitingOn }: Pick<Props, 'waitingOn'>) {
  */
 export function PaymentChoice(props: Props) {
   const { quote, paymentChoices, paymentChoice, setPaymentChoice, onlineFee, onlineMethod, choiceError } = props;
-  if (!quote?.ok) return null;
+  // With no address yet (T12) the fee is not known: the hints say so.
+  const known = quote?.ok && !props.askRunner ? quote : null;
+  if (!known && !props.askRunner && !props.pickedPaid) return null;
+  const fee = known ? peso(known.fee) : 'the fee';
   return (
     <fieldset className="p-0 border-none mx-0">
       <legend className="block text-secondary mb-2 p-0">How the runner pays</legend>
@@ -190,7 +229,11 @@ export function PaymentChoice(props: Props) {
             onChange={() => setPaymentChoice(CHANGE_PAYMENT_CHOICES.ONLINE)}
             icon={<Link2 size={16} aria-hidden="true" />}
             title="Online"
-            hint={`Runner pays ${peso(quote.fee + onlineFee)} by ${paymentMethodLabel(onlineMethod)}, ${peso(onlineFee)} transaction fee included. Waits ${ONLINE_CHANGE_HOLD_HOURS} hours.`}
+            hint={
+              known
+                ? `Runner pays ${peso(known.fee + onlineFee)} by ${paymentMethodLabel(onlineMethod)}, ${peso(onlineFee)} transaction fee included. Waits ${ONLINE_CHANGE_HOLD_HOURS} hours.`
+                : `Runner pays the fee by ${paymentMethodLabel(onlineMethod)}, the transaction fee on top. Waits ${ONLINE_CHANGE_HOLD_HOURS} hours.`
+            }
           />
         )}
         {paymentChoices.includes(CHANGE_PAYMENT_CHOICES.OUTSIDE_LATER) && (
@@ -200,7 +243,7 @@ export function PaymentChoice(props: Props) {
             onChange={() => setPaymentChoice(CHANGE_PAYMENT_CHOICES.OUTSIDE_LATER)}
             icon={<Landmark size={16} aria-hidden="true" />}
             title="GCash or bank"
-            hint={`Runner sends ${peso(quote.fee)}, no fee. Waits ${OUTSIDE_CHANGE_HOLD_DAYS} days.`}
+            hint={`Runner sends ${fee}, no transaction fee. Waits ${OUTSIDE_CHANGE_HOLD_DAYS} days.`}
           />
         )}
         {paymentChoices.includes(CHANGE_PAYMENT_CHOICES.OUTSIDE_PAID) && (
@@ -210,12 +253,12 @@ export function PaymentChoice(props: Props) {
             onChange={() => setPaymentChoice(CHANGE_PAYMENT_CHOICES.OUTSIDE_PAID)}
             icon={<CircleCheck size={16} aria-hidden="true" />}
             title="Already paid, record it now"
-            hint={`Runner already sent ${peso(quote.fee)} by GCash or bank. Switches at once; no payment request is emailed.`}
+            hint={`Runner already sent ${fee} by GCash or bank. Type the address; switches at once, no payment request is emailed.`}
           />
         )}
       </div>
       <FieldError id="logistics-payment-error" message={choiceError || undefined} />
-      {props.alreadyPaid && <AlreadyPaidFields {...props} />}
+      {props.pickedPaid && <AlreadyPaidFields {...props} />}
     </fieldset>
   );
 }

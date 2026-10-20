@@ -1,7 +1,7 @@
 import { formatPesos } from './money';
 import { isOutsidePayment } from './category-change-hold';
 import { formatEventInstant } from './event-schedule';
-import { paymentMethodLabel } from './registration-codes';
+import { deliveryZoneLabelFor, paymentMethodLabel } from './registration-codes';
 import { PICKUP_FALLBACK, pickupDetails, pickupLabel } from './pickup';
 import {
   type EmailDocument,
@@ -12,6 +12,7 @@ import {
   sendEmail,
 } from './email-document';
 import { deliveryAddressDetails } from '@/app/events/[slug]/register/delivery-address';
+import { deliveryTiers } from '@/app/events/[slug]/register/delivery';
 
 /**
  * **The emails about a delivery switch** (LOGISTICS_CHANGE_PLAN.md Session 3):
@@ -62,6 +63,9 @@ export type SwitchForEmail = {
     format?: string | null;
     pickupLocation?: string | null;
     pickupSchedule?: string | null;
+    /** The tiers, listed when the switch has no address yet (Revision 3b T12). */
+    logisticsDeliveryFeeInside?: number;
+    logisticsDeliveryFeeOutside?: number;
   };
 };
 
@@ -118,6 +122,8 @@ function moneyRows(change: SwitchForEmail, total = 'To Pay'): Row[] {
 export function logisticsChangeCreatedEmail(change: SwitchForEmail, url: string | null): Promise<EmailMessage> {
   const outside = isOutsidePayment(change.paymentMethod);
   const until = change.holdUntil ? `${formatEventInstant(change.holdUntil)}, Manila time` : null;
+  // Revision 3b T12: no address yet, so no fee yet; the runner gives it on the link.
+  if (!change.deliveryAddress && !change.deliverySplit) return addressFirstEmail(change, url, until);
 
   const action: EmailDocument['blocks'] = url
     ? [
@@ -178,6 +184,83 @@ export function logisticsChangeCreatedEmail(change: SwitchForEmail, url: string 
       },
       { kind: 'heading', text: 'What You Pay' },
       { kind: 'rows', rows: moneyRows(change) },
+      {
+        kind: 'note',
+        segments: [
+          'Until it is paid your kits stay for pickup, and your registration and its receipt are unchanged. ',
+          until ? `If it is not paid by ${until}, the switch lapses and your kits stay for pickup. ` : '',
+          'Changed your mind? Do nothing, or reply to this email.',
+        ],
+      },
+    ],
+  });
+}
+
+/**
+ * The *confirm and pay* email for a switch opened with no address (Runner 1 had
+ * none on file): where to tell us the address, the fee by area, until when.
+ */
+function addressFirstEmail(change: SwitchForEmail, url: string | null, until: string | null): Promise<EmailMessage> {
+  const event = change.event;
+  const tiers =
+    event.logisticsDeliveryFeeInside !== undefined && event.logisticsDeliveryFeeOutside !== undefined
+      ? deliveryTiers({
+          logisticsDeliveryFeeInside: event.logisticsDeliveryFeeInside,
+          logisticsDeliveryFeeOutside: event.logisticsDeliveryFeeOutside,
+        })
+      : [];
+  return renderMessage({
+    to: change.order.customerEmail,
+    subject: `Confirm your delivery details and pay — ${event.title} (${change.changeRef})`,
+    status: { label: 'Payment Pending', tone: 'pending' },
+    footerTopic: 'switch',
+    blocks: [
+      {
+        kind: 'paragraph',
+        segments: [
+          `Hi ${firstNameOf(change.order.customerName)}, the ${kitsLabel(change.order.kits)} on order `,
+          { strong: change.order.orderRef },
+          ' for ',
+          { strong: event.title },
+          ' can be delivered instead of picked up. Tell us where to ship them and who will receive them, then pay the delivery fee',
+          ...(until ? [', by ', { strong: until }] : []),
+          '.',
+        ],
+      },
+      ...(url
+        ? [{ kind: 'button' as const, label: 'Choose the Address and Pay', href: url }]
+        : [{ kind: 'paragraph' as const, segments: ['Reply to this email and we will send you the link.'] }]),
+      ...(tiers.length > 0
+        ? [
+            { kind: 'heading' as const, text: 'Delivery Fee' },
+            {
+              kind: 'card' as const,
+              rows: tiers.map(tier => ({
+                kind: 'info' as const,
+                label: deliveryZoneLabelFor(event as Parameters<typeof deliveryZoneLabelFor>[0], tier.zone) || tier.label,
+                value: peso(tier.fee),
+              })),
+            },
+          ]
+        : []),
+      { kind: 'heading', text: 'Switch Details' },
+      {
+        kind: 'card',
+        rows: [
+          { kind: 'info', label: 'Switch Reference', value: change.changeRef },
+          { kind: 'info', label: 'Order Reference', value: change.order.orderRef },
+          { kind: 'info', label: 'Kits', value: kitsLabel(change.order.kits) },
+          ...(change.paymentMethod
+            ? [
+                {
+                  kind: 'info' as const,
+                  label: 'Payment',
+                  value: isOutsidePayment(change.paymentMethod) ? 'GCash or bank transfer' : paymentMethodLabel(change.paymentMethod),
+                },
+              ]
+            : []),
+        ],
+      },
       {
         kind: 'note',
         segments: [

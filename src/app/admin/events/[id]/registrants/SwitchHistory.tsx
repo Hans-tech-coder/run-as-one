@@ -61,7 +61,11 @@ export function SwitchHistoryList({
             </div>
             {change.direction === 'TO_DELIVERY' && (
               <p className="m-0 text-secondary [overflow-wrap:anywhere]">
-                {change.deliverySplit ? "To each runner's home address" : `To ${change.deliveryAddress}`}
+                {change.deliverySplit
+                  ? "To each runner's home address"
+                  : change.deliveryAddress
+                    ? `To ${change.deliveryAddress}`
+                    : 'No address yet: the runner gives it on the link'}
               </p>
             )}
             <p className="m-0 text-secondary">

@@ -5,7 +5,13 @@
  * and delivery (LOGISTICS_CHANGE_PLAN.md L2–L13, R3–R5, Revision 2), opened
  * from any of its runners' rows on the registrants table when the switch is allowed.
  *
- * **Ship kits**: the address is Runner 1's home address, shown as a card
+ * **Ship kits is confirm and send** (Revision 3b T12): no address to type. A
+ * line says where the switch starts from (Runner 1's home address, or none, in
+ * which case the runner gives it on the link and the fee follows), then how
+ * the runner pays and *Send to Runner*. Only *Already paid* (T13) opens the
+ * address, laid out as below.
+ *
+ * **The address** (Already paid): Runner 1's home address, shown as a card
  * with Change, as in the registration wizard's Logistics step
  * (`ship-kits-address.tsx`); staff add the ZIP, a landmark or another
  * receiver, and a runner with no home address on file starts on empty
@@ -30,7 +36,7 @@ import React, { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import BusyLabel from '@/components/ui/BusyLabel';
 import { useShipKits } from './useShipKits';
-import { DeliveryFields, PaymentChoice, PickupFields, SwitchQuote, WaitingWarning, Warning } from './ship-kits-fields';
+import { DeliveryFields, PaymentChoice, PickupFields, SendSummary, SwitchQuote, WaitingWarning, Warning } from './ship-kits-fields';
 
 type Props = Parameters<typeof useShipKits>[0] & {
   /** True while the parent plays the closing transition before unmounting. */
@@ -51,13 +57,14 @@ export default function ShipKitsPanel({ isClosing, onClose, ...input }: Props) {
   const refused = receipt.canSwitch.allowed ? null : receipt.canSwitch.message;
   const isOpen = entered && !isClosing;
   const title = toDelivery ? 'Ship Kits' : 'Back to Pickup';
-  const canSave = !refused && quote.ok && !waitingOn && ridersLeft.length === 0 && !isSaving;
+  const { askRunner, pickedPaid } = state;
+  const canSave = !refused && (askRunner || quote.ok) && !waitingOn && ridersLeft.length === 0 && !isSaving;
   const saveLabel = !toDelivery
     ? 'Switch to Pickup'
-    : state.alreadyPaid
+    : pickedPaid
       ? 'Record & Switch to Delivery'
       : needsPayment
-        ? 'Save & Await Payment'
+        ? 'Send to Runner'
         : 'Switch to Delivery';
   const close = () => {
     if (!isSaving) onClose();
@@ -96,10 +103,12 @@ export default function ShipKitsPanel({ isClosing, onClose, ...input }: Props) {
         <div className="admin-modal-body p-6 max-sm:p-4 overflow-y-auto flex-1 space-y-5 text-sm">
           {refused && <Warning>{refused}</Warning>}
 
-          {!refused && toDelivery && <DeliveryFields {...state} />}
+          {/* T12: an address to type only for Already paid (T13). */}
+          {!refused && toDelivery && pickedPaid && <DeliveryFields {...state} />}
+          {!refused && toDelivery && !pickedPaid && <SendSummary {...state} />}
           {!refused && !toDelivery && <PickupFields {...state} />}
 
-          {!refused && !quote.ok && toDelivery && (
+          {!refused && !quote.ok && toDelivery && !askRunner && (
             // An address still being typed is a step left, not an error.
             <p
               className={`${quote.reason === 'ADDRESS_INCOMPLETE' ? 'text-[var(--text-muted)]' : 'text-[var(--status-warning)]'}`}
@@ -108,7 +117,7 @@ export default function ShipKitsPanel({ isClosing, onClose, ...input }: Props) {
               {quote.message}
             </p>
           )}
-          {!refused && quote.ok && toDelivery && (
+          {!refused && quote.ok && toDelivery && !askRunner && (
             <SwitchQuote
               quote={quote}
               onlineFee={state.onlineFee}
@@ -119,11 +128,12 @@ export default function ShipKitsPanel({ isClosing, onClose, ...input }: Props) {
           )}
           {!refused && <WaitingWarning waitingOn={waitingOn} />}
 
-          {!refused && quote.ok && needsPayment && !waitingOn && <PaymentChoice {...state} />}
-          {!refused && quote.ok && needsPayment && !waitingOn && !state.alreadyPaid && (
-            // Revision 3 T1: staff need not get the address right; the runner checks it.
+          {!refused && toDelivery && needsPayment && !waitingOn && <PaymentChoice {...state} />}
+          {!refused && toDelivery && needsPayment && !waitingOn && !pickedPaid && (
+            // Revision 3: staff need not get the address right; the runner checks it.
             <p className="text-xs text-[var(--text-muted)]">
-              The runner gets a link to confirm the address and who receives the kit, change them if needed, and pay.
+              The runner gets an email with a link to confirm the address and who receives the kit, change them if
+              needed, and pay. Come back to record a GCash or bank payment once their proof is in.
             </p>
           )}
 
@@ -160,7 +170,7 @@ export default function ShipKitsPanel({ isClosing, onClose, ...input }: Props) {
               disabled={!canSave}
               className="px-6 py-2 min-h-11 bg-[var(--dash-inverse-bg)] text-[var(--dash-inverse-fg)] rounded-lg text-sm font-medium hover:bg-[var(--dash-inverse-hover)] transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
             >
-              {isSaving ? <BusyLabel>{needsPayment && !state.alreadyPaid ? 'Saving' : 'Switching'}</BusyLabel> : saveLabel}
+              {isSaving ? <BusyLabel>{needsPayment && !state.alreadyPaid ? 'Sending' : 'Switching'}</BusyLabel> : saveLabel}
             </button>
           )}
         </div>

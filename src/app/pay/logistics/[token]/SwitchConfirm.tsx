@@ -31,7 +31,11 @@ import type { BankAccountView } from '@/lib/bank-accounts';
 import { DEFAULT_COUNTRY } from '@/lib/phone';
 import DeliveryStep from '@/app/events/[slug]/register/DeliveryStep';
 import { useDeliveryPlan } from '@/app/events/[slug]/register/useDeliveryPlan';
-import { deliveryAddressDetails } from '@/app/events/[slug]/register/delivery-address';
+import {
+  deliveryAddressDetails,
+  EMPTY_DELIVERY_ADDRESS,
+  missingAddressParts,
+} from '@/app/events/[slug]/register/delivery-address';
 import type { AddressedRunner } from '@/app/events/[slug]/register/RunnerAddressFields';
 import PayNowButton from '../../[token]/PayNowButton';
 import SwitchBankProof from './SwitchBankProof';
@@ -68,7 +72,9 @@ export type SwitchConfirmProps = {
 export default function SwitchConfirm(props: SwitchConfirmProps) {
   const router = useRouter();
   const proofIn = props.submittedReference !== null;
-  const [step, setStep] = useState<'details' | 'pay'>(props.startOnPay || proofIn ? 'pay' : 'details');
+  // Revision 3b T12: with no address yet, there is nothing to pay until step 1 is done.
+  const hasAddress = props.deliveryAddress !== null;
+  const [step, setStep] = useState<'details' | 'pay'>(hasAddress && (props.startOnPay || proofIn) ? 'pay' : 'details');
   const [saved, setSaved] = useState({ address: props.deliveryAddress, fee: props.fee, totalCharged: props.totalCharged });
   const [showErrors, setShowErrors] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -80,6 +86,8 @@ export default function SwitchConfirm(props: SwitchConfirmProps) {
     runners: [props.runner],
     logisticsMethod: 'DELIVERY',
     restored: { deliveryAddress: props.deliveryAddress, deliveryZone: props.deliveryZone },
+    // No home address on file: the fields start open, with nothing claimed from home.
+    startTyped: missingAddressParts({ ...EMPTY_DELIVERY_ADDRESS, ...homeParts(props.runner) }).length > 0,
   });
   // The tier for the address as typed; the server's answer on Confirm is final.
   const previewTotal = plan.fee + (props.onlineMethod ? transactionFeeFor(plan.fee, props.onlineMethod) : 0);
@@ -134,7 +142,11 @@ export default function SwitchConfirm(props: SwitchConfirmProps) {
           <span className="text-sm text-secondary">
             {props.onlineMethod && plan.fee > 0 ? 'Delivery and transaction fee' : 'Delivery fee'}
           </span>
-          <span className="text-lg font-black tabular-nums text-white">{peso(previewTotal)}</span>
+          {plan.fee > 0 ? (
+            <span className="text-lg font-black tabular-nums text-white">{peso(previewTotal)}</span>
+          ) : (
+            <span className="text-sm text-secondary">Fill in the address to see it</span>
+          )}
         </div>
         {error && (
           <p role="alert" className="m-0 text-center text-sm font-medium text-red-400">
@@ -236,6 +248,16 @@ export default function SwitchConfirm(props: SwitchConfirmProps) {
       )}
     </div>
   );
+}
+
+/** Runner 1's home address as the address parts. */
+function homeParts(runner: AddressedRunner) {
+  return {
+    street: runner.addressStreet,
+    barangay: runner.addressBarangay,
+    city: runner.addressCity,
+    province: runner.addressProvince,
+  };
 }
 
 function StepLabel({ n, title }: { n: number; title: string }) {

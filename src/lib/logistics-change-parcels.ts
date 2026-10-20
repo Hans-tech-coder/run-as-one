@@ -101,6 +101,8 @@ export type WaitingSwitch = {
 export function parcelAddressesOf(
   delivery: Pick<ExistingDelivery, 'deliveryAddress' | 'deliverySplit' | 'runners'>,
 ): RunnerAddress[] {
+  // Revision 3b: a switch still waiting for the runner's address ships nowhere yet.
+  if (!delivery.deliverySplit && !delivery.deliveryAddress) return [];
   return paidParcels([
     { ...delivery, registrationId: '', status: 'PAID', logisticsMethod: LOGISTICS_METHODS.DELIVERY },
   ]).map(parcel => parcel.address);

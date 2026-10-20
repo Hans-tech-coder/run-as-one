@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-46 pages · 87 API routes · 137 modules in `src/lib` · 590 files · 106,831 lines
+46 pages · 87 API routes · 138 modules in `src/lib` · 591 files · 107,149 lines
 
 ---
 
@@ -240,9 +240,10 @@ the file itself.
 | [`jwt.ts`](../src/lib/jwt.ts) | — |
 | [`logistics-change-context.ts`](../src/lib/logistics-change-context.ts) | What a delivery switch is decided from, and the locks every switch write takes. |
 | [`logistics-change-expiry.ts`](../src/lib/logistics-change-expiry.ts) | When an unpaid delivery switch lapses (L12). |
+| [`logistics-change-outcome.ts`](../src/lib/logistics-change-outcome.ts) | How a waiting delivery switch ends: `applyLogisticsChange` (once its fee is paid, under `lockSwitch`, claimed on `AWAITING_PAYMENT`, eligibility re… |
 | [`logistics-change-parcels.ts`](../src/lib/logistics-change-parcels.ts) | **Which receipts share a parcel after a delivery switch** (LOGISTICS_CHANGE_PLAN.md L6, Revision 1 R4 and R5): who rides at ₱0 on whose paid parcel… |
 | [`logistics-change-payment.ts`](../src/lib/logistics-change-payment.ts) | How a delivery switch's fee comes in, and what happens when it comes in late (`LOGISTICS_CHANGE_PLAN.md` Session 3), the category change's `categor… |
-| [`logistics-change-proof.ts`](../src/lib/logistics-change-proof.ts) | When a GCash or bank delivery switch counts as "proof submitted", and what that does to its clock (`LOGISTICS_CHANGE_PLAN.md` Revision 3 T5, T6). |
+| [`logistics-change-proof.ts`](../src/lib/logistics-change-proof.ts) | What a waiting delivery switch is still waiting for (`LOGISTICS_CHANGE_PLAN.md` Revision 3 T5, T6; Revision 3b T12). |
 | [`logistics-change-runner.ts`](../src/lib/logistics-change-runner.ts) | What the runner may do on a delivery switch's link (`LOGISTICS_CHANGE_PLAN.md` Revision 3 T2–T8). |
 | [`logistics-change-settings.ts`](../src/lib/logistics-change-settings.ts) | **What the event form may save for delivery switches** (LOGISTICS_CHANGE_PLAN.md L11): the *Delivery switch deadline*, read from a posted body and … |
 | [`logistics-change-store.ts`](../src/lib/logistics-change-store.ts) | The only writer of an order's pickup or delivery after checkout (`LOGISTICS_CHANGE_PLAN.md` Session 2, Revision 1 R3–R5). |
@@ -359,5 +360,5 @@ when a task touches one, split it before editing rather than after.
 | 425 | [`src/app/admin/events/[id]/edit/page.tsx`](../src/app/admin/events/[id]/edit/page.tsx) |
 | 422 | [`src/lib/logistics-change.ts`](../src/lib/logistics-change.ts) |
 | 422 | [`src/lib/pacer.ts`](../src/lib/pacer.ts) |
-| 416 | [`src/lib/logistics-change-store.ts`](../src/lib/logistics-change-store.ts) |
+| 405 | [`src/lib/logistics-change-payment.ts`](../src/lib/logistics-change-payment.ts) |
 | 404 | [`src/app/admin/events/[id]/registrants/UnpaidCheckoutsList.tsx`](../src/app/admin/events/[id]/registrants/UnpaidCheckoutsList.tsx) |

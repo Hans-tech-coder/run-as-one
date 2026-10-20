@@ -209,6 +209,23 @@ switch restored. **Not exercised:** pressing *Pay now* after an edit (the
 open-page close path) and the sweep skipping a proof past its hold, which the
 check script covers as a rule only.
 
+**Revision 3b (owner, 2026-10-20): Ship kits is confirm and send.** Trying
+RM-1D5EEF1B (runners with no home address on file) opened the whole address
+form with *Switch to Delivery* disabled. Now staff type no address: the panel
+says where the switch starts from, how the runner pays, and **Send to Runner**;
+with no home address it is sent with none (`switchAwaitsAddress`, no fee) and
+the runner types it on the link, where the fee is set. Only *Already paid*
+opens the address. Record payment, checkout, the proof upload and apply all
+refuse a switch with no address; R4 ignores it. `logistics-change-store.ts`
+was split first (`logistics-change-outcome.ts` holds apply and cancel).
+Verified on `local-dev`: RM-1D5EEF1B's panel viewed only (its contact is not
+the owner, so nothing was sent); RM-7B67DB3F with its home address blanked for
+the test: *Send to Runner* → "Waiting for address · to delivery" → the email
+listed ₱150/₱200 with *Choose the Address and Pay* → the page opened on empty
+fields, refused a proof before an address, showed ₱200 for Lingayen →
+confirmed → ₱200 due on the row. The test switch was removed and the address
+restored.
+
 The decisions in full, as the owner accepted them (L1–L14, before Revision 1):
 **L1** staff only, started by staff like a category change; runner
 self-service is out of scope. **L2** a switch moves a whole order (logistics

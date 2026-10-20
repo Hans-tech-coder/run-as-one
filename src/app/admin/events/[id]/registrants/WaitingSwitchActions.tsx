@@ -296,7 +296,8 @@ export default function WaitingSwitchActions({
           {busy === 'email' ? <BusyLabel>Sending</BusyLabel> : 'Email payment link'}
         </button>
       )}
-      {permissions.validate && outside && (
+      {/* Nothing to record until the runner gives the address and the fee is set (Revision 3b). */}
+      {permissions.validate && outside && !change.awaitsAddress && (
         <button type="button" onClick={press(() => setRecording(true))} disabled={busy !== null} className="btn-filter is-compact gap-1.5">
           <Receipt size={14} aria-hidden="true" /> Record payment
         </button>

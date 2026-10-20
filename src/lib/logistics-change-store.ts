@@ -16,12 +16,11 @@ import {
 import {
   LogisticsChangeRefused,
   asSwitchOrder,
-  eligibilityFor,
   lockSwitch,
   readSwitchContext,
-  SWITCH_EVENT_SELECT,
+  type SwitchOrderRow,
 } from '@/lib/logistics-change-context';
-import { refsOf, ridersRefusal, waitingConflict, waitingRefusal } from '@/lib/logistics-change-parcels';
+import { ridersRefusal, waitingConflict, waitingRefusal } from '@/lib/logistics-change-parcels';
 
 /**
  * **The only writer of an order's pickup or delivery after checkout**
@@ -50,16 +49,16 @@ import { refsOf, ridersRefusal, waitingConflict, waitingRefusal } from '@/lib/lo
  * written AWAITING_PAYMENT with its hold (`changeHoldUntil`, never past the
  * deadline, L12) and moves nothing yet. `applyLogisticsChange` moves it once
  * the fee is paid (Session 3, lib/logistics-change-payment.ts), or staff
- * cancel it. A fee the runner **already paid** by GCash or bank (the owner's
+ * cancel it; both live in `logistics-change-outcome.ts`. A fee the runner **already paid** by GCash or bank (the owner's
  * addition to Session 4) is written applied in the same transaction, with its
  * reference and proof, so the runner is never asked to pay what they paid.
  */
 
-function peso(centavos: number): string {
+export function peso(centavos: number): string {
   return `₱${formatPesos(centavos)}`;
 }
 
-function by(actor: AuditActor): string {
+export function by(actor: AuditActor): string {
   return actor.name.trim() || actor.email || 'Unknown';
 }
 
@@ -95,6 +94,29 @@ export async function moveOrder(tx: Prisma.TransactionClient, registrationId: st
           }
         : { logisticsMethod: LOGISTICS_METHODS.PICKUP, deliveryZone: null, deliveryAddress: null, deliverySplit: false },
   });
+}
+
+/** The order a switch moves, with what it was before (the history's *from*). */
+function orderLink(order: SwitchOrderRow) {
+  return {
+    registrationId: order.id,
+    fromLogisticsMethod: order.logisticsMethod,
+    fromDeliveryZone: order.deliveryZone,
+    fromDeliveryAddress: order.deliveryAddress,
+    fromDeliverySplit: order.deliverySplit,
+  };
+}
+
+/** A fee to come is paid the way the entry was paid (category-change-hold.ts); refused otherwise. */
+function requireOrderMethod(orderMethod: string | null, method: string | null, what: string): asserts method is string {
+  if (!method) throw new LogisticsChangeRefused(400, `Choose how the runner pays ${what}.`);
+  if (!paymentChoicesForOrder(orderMethod).some(choice => paymentMethodForChoice(choice) === method)) {
+    const entry = paymentMethodLabel(orderMethod);
+    throw new LogisticsChangeRefused(
+      400,
+      `This order was paid ${entry === 'Online' ? 'online' : `by ${entry}`}; the delivery fee is paid the same way.`,
+    );
+  }
 }
 
 export type CreateSwitchInput = {
@@ -135,6 +157,45 @@ export async function createLogisticsChange(actor: AuditActor, input: CreateSwit
     }
 
     const method = input.paymentMethod ?? null;
+
+    // Revision 3b (T12): no address yet. The runner gives it on the switch's
+    // link, where the fee is quoted and R4 judged (`confirmSwitchDetails`);
+    // until then the switch waits with no address and no fee.
+    if (ctx.direction === LOGISTICS_DIRECTIONS.TO_DELIVERY && !input.paidOutside && !input.target?.deliveryAddress?.trim()) {
+      requireOrderMethod(order.paymentMethod, method, 'the delivery fee');
+      const holdUntil = changeHoldUntil(method, now, logisticsChangeDeadline(ctx.event));
+      const change = await tx.logisticsChange.create({
+        data: {
+          changeRef: logisticsChangeRef(order.orderRef, ctx.changeNo),
+          eventId: ctx.event.id,
+          direction: LOGISTICS_DIRECTIONS.TO_DELIVERY,
+          status: LOGISTICS_CHANGE_STATUSES.AWAITING_PAYMENT,
+          paymentMethod: method,
+          holdUntil,
+          reason: input.reason?.trim() || null,
+          createdBy: by(actor),
+          createdAt: now,
+          orders: { create: orderLink(order) },
+        },
+      });
+      await recordAudit(tx, actor, {
+        action: 'logistics_change.created',
+        entityType: 'LogisticsChange',
+        entityId: change.id,
+        eventId: ctx.event.id,
+        organizerId: ctx.event.organizerId,
+        summary: `Opened a switch to delivery for order ${order.orderRef} (${change.changeRef}): the runner gives the address on the link, then pays its fee by ${paymentMethodLabel(method)}.`,
+        changes: {
+          orders: order.orderRef,
+          direction: LOGISTICS_DIRECTIONS.TO_DELIVERY,
+          addressPending: true,
+          paymentMethod: method,
+          holdUntil: holdUntil.toISOString(),
+        },
+      });
+      return change;
+    }
+
     const quote = quoteLogisticsChange({
       event: ctx.event,
       direction: ctx.direction,
@@ -161,17 +222,7 @@ export async function createLogisticsChange(actor: AuditActor, input: CreateSwit
     }
     // Already paid is applied below; only a fee still to come waits.
     const awaiting = hasFee && !paid;
-    if (awaiting) {
-      if (!method) throw new LogisticsChangeRefused(400, `Choose how the runner pays the ${peso(quote.fee)}.`);
-      // Paid the way the entry was paid (category-change-hold.ts).
-      if (!paymentChoicesForOrder(order.paymentMethod).some(c => paymentMethodForChoice(c) === method)) {
-        const entry = paymentMethodLabel(order.paymentMethod);
-        throw new LogisticsChangeRefused(
-          400,
-          `This order was paid ${entry === 'Online' ? 'online' : `by ${entry}`}; the delivery fee is paid the same way.`,
-        );
-      }
-    }
+    if (awaiting) requireOrderMethod(order.paymentMethod, method, peso(quote.fee));
     const holdUntil = awaiting ? changeHoldUntil(method, now, logisticsChangeDeadline(ctx.event)) : null;
     const ridesOn = quote.ridesOnRegistrationId
       ? ctx.existing.find(paid => paid.registrationId === quote.ridesOnRegistrationId)
@@ -208,15 +259,7 @@ export async function createLogisticsChange(actor: AuditActor, input: CreateSwit
         appliedAt: awaiting ? null : now,
         // One link: one receipt per switch (R3). The link table stays, so the
         // history reads the same for switches made before Revision 1.
-        orders: {
-          create: {
-            registrationId: order.id,
-            fromLogisticsMethod: order.logisticsMethod,
-            fromDeliveryZone: order.deliveryZone,
-            fromDeliveryAddress: order.deliveryAddress,
-            fromDeliverySplit: order.deliverySplit,
-          },
-        },
+        orders: { create: orderLink(order) },
       },
     });
 
@@ -277,138 +320,6 @@ export async function createLogisticsChange(actor: AuditActor, input: CreateSwit
         ? `Switched ${which} from pickup to delivery to ${whereTo(quote)} (${change.changeRef}): ships with ${ridesOnRef ?? 'a paid parcel'}, nothing to pay.`
         : `Switched ${which} from delivery to pickup (${change.changeRef}): nothing refunded.`,
       changes: { ...changes, status: change.status },
-    });
-    return change;
-  });
-}
-
-/**
- * Withdraws a switch still waiting for its fee. Its orders never moved, so
- * nothing else changes; there is no seat to release.
- */
-export async function cancelLogisticsChange(actor: AuditActor, changeId: string) {
-  const found = await db.logisticsChange.findUnique({
-    where: { id: changeId },
-    select: { eventId: true, orders: { select: { registrationId: true } } },
-  });
-  if (!found) throw new LogisticsChangeRefused(404, 'Delivery switch not found');
-
-  return db.$transaction(async tx => {
-    await lockSwitch(tx, found.eventId, found.orders.map(link => link.registrationId));
-    const claim = await tx.logisticsChange.updateMany({
-      where: { id: changeId, status: LOGISTICS_CHANGE_STATUSES.AWAITING_PAYMENT },
-      data: { status: LOGISTICS_CHANGE_STATUSES.CANCELLED, cancelledAt: new Date(), cancelledBy: by(actor) },
-    });
-    if (claim.count === 0) {
-      throw new LogisticsChangeRefused(409, 'Only a switch waiting for payment can be cancelled. Reload the page.');
-    }
-    const change = await tx.logisticsChange.findUniqueOrThrow({
-      where: { id: changeId },
-      include: {
-        event: { select: { organizerId: true } },
-        orders: { select: { registration: { select: { orderRef: true } } } },
-      },
-    });
-    const orders = change.orders.map(link => link.registration);
-    await recordAudit(tx, actor, {
-      action: 'logistics_change.cancelled',
-      entityType: 'LogisticsChange',
-      entityId: change.id,
-      eventId: change.eventId,
-      organizerId: change.event.organizerId,
-      summary: `Cancelled the switch to delivery for order${orders.length === 1 ? '' : 's'} ${refsOf(orders.map(o => o.orderRef))} (${change.changeRef}).`,
-      changes: { status: [LOGISTICS_CHANGE_STATUSES.AWAITING_PAYMENT, LOGISTICS_CHANGE_STATUSES.CANCELLED] },
-    });
-    return change;
-  });
-}
-
-
-/** How the fee came in, written on the switch as it applies. */
-export type AppliedSwitchPayment = {
-  paymentMethod?: string;
-  transactionNumber?: string | null;
-  proofOfPayment?: string | null;
-  transactionFee?: number;
-  totalCharged?: number;
-};
-
-/**
- * Applies a switch whose fee was paid: PayMongo's webhook, the runner back
- * from PayMongo, or a payment staff recorded (lib/logistics-change-payment.ts).
- * Takes the same locks a new switch does and re-checks under them, so a
- * payment never moves an order somewhere a new switch could not go now:
- *
- * - the switch is still waiting (a claim on its status, so two payments for
- *   one switch apply it once);
- * - the order is still PAID and still on pickup, and the race still allows
- *   switching (L3, L11): **after the deadline nothing applies**, because the
- *   courier's lead time is what the deadline protects. A lapsed hold that the
- *   sweep has not closed yet is not refused: there is no seat to lose, and the
- *   money is in.
- *
- * The fee is the one quoted when the switch was opened: the runner pays what
- * the link showed. A refusal rolls everything back and is the caller's to
- * report as a late payment.
- */
-export async function applyLogisticsChange(actor: AuditActor, changeId: string, payment: AppliedSwitchPayment = {}) {
-  const found = await db.logisticsChange.findUnique({
-    where: { id: changeId },
-    select: { eventId: true, orders: { select: { registrationId: true } } },
-  });
-  if (!found) throw new LogisticsChangeRefused(404, 'Delivery switch not found');
-
-  return db.$transaction(async tx => {
-    await lockSwitch(tx, found.eventId, found.orders.map(link => link.registrationId));
-    const now = new Date();
-    const claim = await tx.logisticsChange.updateMany({
-      where: { id: changeId, status: LOGISTICS_CHANGE_STATUSES.AWAITING_PAYMENT },
-      data: { ...payment, status: LOGISTICS_CHANGE_STATUSES.APPLIED, appliedAt: now },
-    });
-    if (claim.count === 0) {
-      throw new LogisticsChangeRefused(409, 'This switch is no longer waiting for payment. Reload the page.');
-    }
-    const change = await tx.logisticsChange.findUniqueOrThrow({
-      where: { id: changeId },
-      include: {
-        event: { select: SWITCH_EVENT_SELECT },
-        orders: { select: { registration: { select: { id: true, orderRef: true, status: true, logisticsMethod: true } } } },
-      },
-    });
-
-    const orders = change.orders.map(link => link.registration);
-    for (const order of orders) {
-      // The open switch is this one, so it is not counted against itself (L13).
-      const eligibility = eligibilityFor(change.event, order, false, now);
-      if (!eligibility.allowed) {
-        throw new LogisticsChangeRefused(409, `Order ${order.orderRef}: ${eligibility.message}`);
-      }
-      if (eligibility.direction !== change.direction) {
-        throw new LogisticsChangeRefused(409, `Order ${order.orderRef} is no longer on pickup, so it cannot be switched.`);
-      }
-    }
-    for (const order of orders) await moveOrder(tx, order.id, change);
-
-    const how = [
-      change.paymentMethod ? ` by ${paymentMethodLabel(change.paymentMethod)}` : '',
-      change.transactionNumber ? `, reference ${change.transactionNumber}` : '',
-    ].join('');
-    await recordAudit(tx, actor, {
-      action: 'logistics_change.applied',
-      entityType: 'LogisticsChange',
-      entityId: change.id,
-      eventId: change.eventId,
-      organizerId: change.event.organizerId,
-      summary: `Switched order${orders.length === 1 ? '' : 's'} ${refsOf(orders.map(o => o.orderRef))} from pickup to delivery to ${change.deliverySplit ? "each runner's home address" : (change.deliveryAddress ?? 'the address given')} (${change.changeRef}): ${peso(change.totalCharged)} paid${how}.`,
-      changes: {
-        orders: refsOf(orders.map(o => o.orderRef)),
-        status: [LOGISTICS_CHANGE_STATUSES.AWAITING_PAYMENT, LOGISTICS_CHANGE_STATUSES.APPLIED],
-        totalCharged: change.totalCharged,
-        transactionFee: change.transactionFee,
-        ...(change.paymentMethod ? { paymentMethod: change.paymentMethod } : {}),
-        ...(change.transactionNumber ? { transactionNumber: change.transactionNumber } : {}),
-        ...(change.proofOfPayment ? { proofOfPayment: 'attached' } : {}),
-      },
     });
     return change;
   });

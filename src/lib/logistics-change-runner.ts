@@ -18,7 +18,7 @@ import {
   readSwitchContext,
 } from '@/lib/logistics-change-context';
 import { waitingConflict, waitingRefusal } from '@/lib/logistics-change-parcels';
-import { switchHoldUntil, switchProofSubmitted } from '@/lib/logistics-change-proof';
+import { switchAwaitsAddress, switchHoldUntil, switchProofSubmitted } from '@/lib/logistics-change-proof';
 import { moveOrder } from '@/lib/logistics-change-store';
 import { deliverSwitchEmail, readSwitchForPayment, receiptOf, settleSwitchOnline } from '@/lib/logistics-change-payment';
 import { logisticsChangeProofReceivedEmail, sendLogisticsChangeEmail } from '@/lib/email-logistics-change';
@@ -187,7 +187,7 @@ export async function confirmSwitchDetails(
       await recordAudit(tx, actor, {
         ...trail,
         action: 'logistics_change.details_confirmed',
-        summary: `The runner confirmed the delivery details for order ${order.orderRef} (${change.changeRef}): to ${quote.deliveryAddress}, ${peso(quote.totalCharged)} to pay${change.fee !== quote.fee ? ` (was ${peso(change.totalCharged)})` : ''}.`,
+        summary: `The runner confirmed the delivery details for order ${order.orderRef} (${change.changeRef}): to ${quote.deliveryAddress}, ${peso(quote.totalCharged)} to pay${!change.deliveryAddress ? ' (the first address given)' : change.fee !== quote.fee ? ` (was ${peso(change.totalCharged)})` : ''}.`,
         changes,
       });
     }
@@ -215,6 +215,9 @@ export async function submitSwitchProof(
   const order = receiptOf(found);
   if (!isOutsidePayment(found.paymentMethod)) {
     throw new LogisticsChangeRefused(409, 'This delivery is paid online. Reload the page and press Pay now.');
+  }
+  if (switchAwaitsAddress(found)) {
+    throw new LogisticsChangeRefused(409, 'Confirm the delivery address first. Reload the page.');
   }
 
   const replaced = await db.$transaction(async tx => {
