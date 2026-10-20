@@ -1,11 +1,15 @@
-import { Resend } from 'resend';
-import { DEFAULT_CONTACT_EMAIL, SITE_NAME, SITE_URL, canSendFrom } from './site-contact';
+import { SITE_NAME, SITE_URL } from './site-contact';
 import { getContactEmail } from './site-settings';
 import { formatPesos } from './money';
+import type { EmailMessage } from './email-send';
+
+// The one Resend call lives in email-send.ts; every email module keeps
+// importing it from here.
+export { sendEmail, type EmailMessage, type EmailOutcome } from './email-send';
 
 /**
  * **How every email the app sends is built and sent**: the document model, its
- * two renderings, and the one Resend call. Split out of email.ts
+ * two renderings, and (re-exported from email-send.ts) the one Resend call. Split out of email.ts
  * (UNPAID_FOLLOWUP_PLAN.md Batch 4) so each email lives beside its own kind
  * (email.ts for the order emails, email-invitations.ts for the sign-in ones)
  * and none of them can send any other way.
@@ -17,7 +21,7 @@ import { formatPesos } from './money';
  * the next send.
  *
  * A failed send never fails the caller — registration and payment state must
- * never depend on Resend being up. sendEmail() below catches everything and
+ * never depend on Resend being up. sendEmail() (email-send.ts) catches everything and
  * never throws, but it *reports*: it returns an EmailOutcome, and
  * lib/email-delivery.ts writes that outcome onto the registration. On Resend's
  * free tier (100 recipients a day, which stops rather than bills) a send can
@@ -33,22 +37,6 @@ import { formatPesos } from './money';
  */
 
 
-/**
- * The sender line every email goes out under.
- *
- * The display name is **quoted**. The name comes from `SITE_NAME`, and it once
- * held a colon — one of RFC 5322's specials, at which a parser stops and drops
- * the rest of a bare display-name wherever the receiving client decides.
- * Quoting keeps the whole name one atom whatever the constant holds.
- *
- * The address is the saved contact email when Resend can send from its domain
- * (`canSendFrom`), and the verified default otherwise — replies still reach the
- * saved address through `replyTo`, so a runner never notices the difference.
- */
-function fromAddress(contactEmail: string): string {
-  const sender = canSendFrom(contactEmail) ? contactEmail : DEFAULT_CONTACT_EMAIL;
-  return `"${SITE_NAME}" <${sender}>`;
-}
 const BRAND_ORANGE = '#FF6B00';
 const BRAND_BLUE = '#007AFF';
 
@@ -79,76 +67,6 @@ const BRAND_BLUE = '#007AFF';
  */
 const LOGO_VERSION = '3';
 const LOGO_URL = `${SITE_URL}/email/run-as-one-logo.png?v=${LOGO_VERSION}`;
-
-let client: Resend | null = null;
-
-/** Null when RESEND_API_KEY is unset, so local dev without it just skips sending. */
-function resendClient(): Resend | null {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    console.warn('RESEND_API_KEY is not set — skipping email send.');
-    return null;
-  }
-  if (!client) client = new Resend(apiKey);
-  return client;
-}
-
-/** One email in both of its renderings: ready to send, or to hand to a person. */
-export interface EmailMessage {
-  to: string;
-  subject: string;
-  html: string;
-  text: string;
-}
-
-/**
- * Whether a send actually happened, and why not when it did not.
- *
- * The reason is kept in Resend's own words rather than mapped to a code of
- * ours: the distinction that matters to whoever clears the backlog is a quota
- * stop ("daily limit reached") against a bad address, and their message says
- * which without us having to enumerate their failures in advance.
- */
-export type EmailOutcome = { sent: true } | { sent: false; error: string };
-
-export async function sendEmail(message: EmailMessage): Promise<EmailOutcome> {
-  const resend = resendClient();
-  // Not a failure being swallowed: nothing is configured, so nothing was
-  // sent, and the registration should say exactly that rather than imply the
-  // runner has an email they never got.
-  if (!resend) {
-    return { sent: false, error: 'Email is not configured (RESEND_API_KEY is unset), so nothing was sent.' };
-  }
-
-  try {
-    const contactEmail = await getContactEmail();
-    const { error } = await resend.emails.send({
-      from: fromAddress(contactEmail),
-      // One recipient, deliberately. Resend meters its free tier by
-      // *recipient*, not by message, and counts a bcc as one of them — so the
-      // archive copy this used to carry doubled the quota cost of every send,
-      // putting a registration's two emails at four units against a ceiling of
-      // a hundred a day. Resend's own dashboard already keeps a log of
-      // everything sent, which is what the archive mailbox was for.
-      to: message.to,
-      replyTo: contactEmail,
-      subject: message.subject,
-      html: message.html,
-      // The text alternative exists anyway now that the template renders one,
-      // and every spam filter that looks treats a multipart email as less
-      // suspect than an HTML-only one.
-      text: message.text,
-    });
-    if (error) {
-      console.error('Resend send failed:', error);
-      return { sent: false, error: error.message || String(error) };
-    }
-    return { sent: true };
-  } catch (err) {
-    console.error('Resend send threw:', err);
-    return { sent: false, error: err instanceof Error ? err.message : String(err) };
-  }
-}
 
 /* ────────────────────────────────────────────────────────────────────────
  * The document model.

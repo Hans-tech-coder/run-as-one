@@ -219,6 +219,7 @@ the file itself.
 | [`email-invitations.ts`](../src/lib/email-invitations.ts) | The emails that invite somebody to sign in rather than tell a runner about an order: `staffInvitationEmail` (team) and `clientInvitationEmail` (a c… |
 | [`email-logistics-change.ts`](../src/lib/email-logistics-change.ts) | The emails about a delivery switch (Session 3), to the order's contact (`customerEmail`: a switch moves a whole receipt, and its contact paid and a… |
 | [`email-password.ts`](../src/lib/email-password.ts) | The emails about how an admin signs in (`LOGIN_UX_PLAN.md` Batch 2; `TWO_FACTOR_PLAN.md` D10). |
+| [`email-send.ts`](../src/lib/email-send.ts) | The one Resend call, and who it may reach, split out of `email-document.ts` (which re-exports `sendEmail`): the sender line, the client, `sendEmail`. |
 | [`email.ts`](../src/lib/email.ts) | Transactional email via Resend, sent from `CONTACT_EMAIL`. |
 | [`event-format.ts`](../src/lib/event-format.ts) | Where an event is run: at a venue on one race day, or anywhere inside a window of days (VIRTUAL_RUN_PLAN.md). |
 | [`event-highlights.ts`](../src/lib/event-highlights.ts) | Event highlights: the posters an organizer shows off on the event page — the race kit, the trophies, a tourist spot near the venue, the after party. |
@@ -330,11 +331,11 @@ when a task touches one, split it before editing rather than after.
 | 663 | [`src/app/admin/activity/ActivityClient.tsx`](../src/app/admin/activity/ActivityClient.tsx) |
 | 656 | [`src/app/api/checkout/route.ts`](../src/app/api/checkout/route.ts) |
 | 614 | [`src/app/admin/feedback/FeedbackClient.tsx`](../src/app/admin/feedback/FeedbackClient.tsx) |
-| 608 | [`src/lib/email-document.ts`](../src/lib/email-document.ts) |
 | 597 | [`src/app/api/checkout/manual/route.ts`](../src/app/api/checkout/manual/route.ts) |
 | 567 | [`src/app/admin/NotificationsCenter.tsx`](../src/app/admin/NotificationsCenter.tsx) |
 | 554 | [`src/lib/registration-gate.ts`](../src/lib/registration-gate.ts) |
 | 528 | [`src/app/admin/DashboardShell.tsx`](../src/app/admin/DashboardShell.tsx) |
+| 526 | [`src/lib/email-document.ts`](../src/lib/email-document.ts) |
 | 519 | [`src/app/events/[slug]/page.tsx`](../src/app/events/[slug]/page.tsx) |
 | 512 | [`src/lib/email.ts`](../src/lib/email.ts) |
 | 512 | [`src/lib/promo-input.ts`](../src/lib/promo-input.ts) |
