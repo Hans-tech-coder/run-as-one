@@ -379,12 +379,6 @@ These are the user's own standing preferences. Follow them without being asked.
       called done.
     - The full checklist and the overflow-check script are in §9, under
       "One responsive dashboard" → "Checking a screen".
-13. **A test never emails a registrant.** On localhost or a `dev` preview,
-    every email goes to the owner's inbox, `obenahans@gmail.com`, never to a
-    runner or order contact, even on a copy of real orders. The code enforces it
-    (`lib/email-send.ts`: only `VERCEL_ENV === 'production'` reaches the real
-    address; anything else is redirected with `[TEST for …]` in the subject).
-    Do not loosen that guard, and do not send by hand to a registrant to test.
 
 ---
 
