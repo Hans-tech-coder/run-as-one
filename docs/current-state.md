@@ -116,11 +116,11 @@ summary read through the lib functions with a client viewer actor ("Switched
 from pickup · Ships with RM-…", *Delivery switches* 1, ₱150.00). **Not seen:**
 the client race page signed in as a client viewer (the only viewer accounts on
 local-dev are real clients'), and the *Already paid* fields at 375px (they are
-single-column inside the shared panel). **Open:** the Overview's money tiles
-(`admin/page.tsx`, which sums category changes the way settlement does) do
-not add switch fees yet, so once a switch is paid its *Total Revenue (Net)*
-reads lower than Remittances' owed by those fees; `admin/page.tsx` is on the
-split-candidates list, so it was left for its own change.
+single-column inside the shared panel). The Overview's *Total Revenue (Net)*
+counts paid switches the same way since (`admin/overview-data.ts`, split out of
+`admin/page.tsx` with `OverviewPanels.tsx` first): with one temporary ₱100
+online switch (₱5.25 PayMongo cut) on the QA event, the tile and Remittances'
+owed both rose by exactly ₱100.00 and *Platform Fees Collected* did not move.
 Verified on `local-dev`'s QA event `qa-virtual-run-test` with four temporary
 orders (removed after, the event's settings restored): a ₱0 switch riding on a
 paid parcel (the host's card gained *Also in this parcel*), a ₱100 switch saved
@@ -221,7 +221,7 @@ was split first (`logistics-change-outcome.ts` holds apply and cancel).
 Verified on `local-dev`: RM-1D5EEF1B's panel viewed only (its contact is not
 the owner, so nothing was sent); RM-7B67DB3F with its home address blanked for
 the test: *Send to Runner* → "Waiting for address · to delivery" → the email
-listed ₱150/₱200 with *Choose the Address and Pay* → the page opened on empty
+listed ₱150/₱200 with *Pay Delivery Fee* → the page opened on empty
 fields, refused a proof before an address, showed ₱200 for Lingayen →
 confirmed → ₱200 due on the row. The test switch was removed and the address
 restored.

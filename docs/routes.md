@@ -325,8 +325,9 @@ dashboard's **Overview** (`OVERVIEW_PLAN.md` Batch 1), four blocks and no more
 — the owner wants the work queue and the numbers, but not a long page:
 **tiles** — **Total Revenue (Net)** (`subtotal + deliveryFee − discountAmount`
 of PAID orders, plus what moved category changes on them leave the organizer
-after their fees and refunds — the settlement line's reading, so the tile agrees
-with Remittances), **Total Registrants** (runners on PAID orders and on bank transfers awaiting verification — the same registrants every screen counts, never an unpaid checkout), **Active
+after their fees and refunds, plus what paid delivery switches on them charged
+less PayMongo's cut — the switch fee, all the organizer's — the settlement
+lines' reading, so the tile agrees with Remittances), **Total Registrants** (runners on PAID orders and on bank transfers awaiting verification — the same registrants every screen counts, never an unpaid checkout), **Active
 Events** (races not finished, `upcomingEvents`), plus **Platform Fees
 Collected** (the `platformFee` of PAID orders plus their moved category
 changes' change fees) for `platform:manage` only — all
@@ -353,8 +354,9 @@ to `?tab=unpaid` (the title's link stretches over the row,
 `.overview-row.has-links`, since a link cannot hold another). Hidden when nothing is live. Last, the five
 most recent PAID registrations, each reference opening its order the same way
 (*View Order* on a phone's card); empty, it offers *Create Event* (or *Go to
-Events* without `event:create`). **Everything is counted by the database** — an
-`aggregate`, two `count`s, two `runner.groupBy`s and three bounded `findMany`s,
+Events* without `event:create`). **Everything is counted by the database**
+(`overview-data.ts`; the three lists are `OverviewPanels.tsx`) — three
+`aggregate`s, two `count`s, two `runner.groupBy`s and three bounded `findMany`s,
 run together — never a whole table reduced in JavaScript, and every query goes
 through `reachableEvents(actor, 'registration:view')`, so a STAFF member's
 queue and numbers cover only assigned races. Dates are the **Manila** day

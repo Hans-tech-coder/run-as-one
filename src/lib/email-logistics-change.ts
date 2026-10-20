@@ -135,7 +135,8 @@ export function logisticsChangeCreatedEmail(change: SwitchForEmail, url: string 
             '. All on one page:',
           ],
         },
-        { kind: 'button', label: `Confirm and Pay ${peso(change.totalCharged)}`, href: url },
+        // Pay and the amount, short enough for a phone (the owner, 2026-10-20).
+        { kind: 'button', label: `Pay ${peso(change.totalCharged)}`, href: url },
       ]
     : [{ kind: 'paragraph', segments: ['Reply to this email and we will send you the link to confirm and pay.'] }];
 
@@ -228,7 +229,8 @@ function addressFirstEmail(change: SwitchForEmail, url: string | null, until: st
         ],
       },
       ...(url
-        ? [{ kind: 'button' as const, label: 'Choose the Address and Pay', href: url }]
+        ? // No amount yet: the fee follows the address the runner gives (the owner, 2026-10-20).
+          [{ kind: 'button' as const, label: 'Pay Delivery Fee', href: url }]
         : [{ kind: 'paragraph' as const, segments: ['Reply to this email and we will send you the link.'] }]),
       ...(tiers.length > 0
         ? [

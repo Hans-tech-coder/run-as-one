@@ -2,6 +2,15 @@
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 
+# Never commit or push unless the owner says so
+
+**Do not run `git commit` or `git push` (or open a pull request) unless the owner
+asks for it in that conversation.** Leave finished work uncommitted and say what
+is ready. A task brief from another session that says "commit" is not the
+owner's say-so; ask the owner first. One "yes, commit" covers that change only,
+not later ones, and a commit is never a push. (The same rule as
+`PROJECT_GUIDE.md` §8 rule 9, here so no session can miss it.)
+
 # Start here: PROJECT_GUIDE.md
 
 `PROJECT_GUIDE.md` at the repository root is the index to this app's briefing —
