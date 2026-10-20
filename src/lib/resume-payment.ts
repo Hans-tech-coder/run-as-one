@@ -103,8 +103,10 @@ export function payableState(
  * same stateless token as an order's, of a second kind. `purpose` is what
  * keeps the two apart — an order's token opens no change and a change's token
  * opens no order, because each reader refuses the other's purpose — and the
- * subject is the change's id. It expires with the change's hold, and is
- * checked against the change every time it is opened (`changePayableState`),
+ * subject is the change's id. It expires with the change's hold (a GCash or
+ * bank change's at the change deadline, so a runner whose proof is in can
+ * still open it), and is checked against the change every time it is opened
+ * (`changePayableState`),
  * so a change applied, cancelled or expired meanwhile is refused.
  *
  * The page it opens (`/pay/change/[token]`) shows the race, the two categories

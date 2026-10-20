@@ -133,6 +133,28 @@ export function holdLapsed(holdUntil: Date | string | null, now: Date = new Date
   return holdUntil !== null && new Date(holdUntil).getTime() <= now.getTime();
 }
 
+type ProofFields = { status: string; paymentMethod: string | null; proofOfPayment: string | null };
+
+/**
+ * A GCash or bank upgrade whose runner handed in the screenshot and reference
+ * on its link (`category-change-runner.ts`), waiting for staff to validate it,
+ * not for the runner. No column says so; these fields do, as for a delivery
+ * switch (`switchProofSubmitted`).
+ */
+export function changeProofSubmitted(change: ProofFields): boolean {
+  return change.status === 'AWAITING_PAYMENT' && isOutsidePayment(change.paymentMethod) && change.proofOfPayment !== null;
+}
+
+/**
+ * The hold an upgrade is judged by: none once its proof is in (the owner,
+ * 2026-10-20, as a switch's T6). The runner paid, so neither the link, the
+ * sweep nor the seat count lets the seat go while staff check it; the event's
+ * change deadline still closes it, read by the callers as before.
+ */
+export function changeHeldUntil<T extends ProofFields & { holdUntil: Date | string | null }>(change: T): Date | string | null {
+  return changeProofSubmitted(change) ? null : change.holdUntil;
+}
+
 /** Whether a change can still be paid through its link, and if not, why. */
 export type ChangePayableState = 'payable' | 'applied' | 'cancelled' | 'expired';
 

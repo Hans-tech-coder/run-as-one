@@ -1,6 +1,7 @@
 import type { Prisma } from '@prisma/client';
 import db from '@/lib/db';
 import { CATEGORY_CHANGE_STATUSES } from '@/lib/category-change';
+import { changeHeldUntil, holdLapsed } from '@/lib/category-change-hold';
 
 /**
  * **What holds a seat in a category, and how many each category has taken.**
@@ -74,7 +75,7 @@ export async function takenSlotsByCategory(
         toCategoryId: { in: categoryIds },
         status: CATEGORY_CHANGE_STATUSES.AWAITING_PAYMENT,
       },
-      select: { toCategoryId: true, holdUntil: true },
+      select: { toCategoryId: true, holdUntil: true, status: true, paymentMethod: true, proofOfPayment: true },
     }),
   ]);
 
@@ -82,7 +83,8 @@ export async function takenSlotsByCategory(
   for (const change of held) {
     // No hold time is read as holding: an awaiting change without one is a
     // row nobody bounded, and counting it is the side that cannot oversell.
-    if (change.holdUntil && new Date(change.holdUntil).getTime() <= now.getTime()) continue;
+    // One whose runner sent proof holds past its time (`changeHeldUntil`).
+    if (holdLapsed(changeHeldUntil(change), now)) continue;
     taken.set(change.toCategoryId, (taken.get(change.toCategoryId) ?? 0) + 1);
   }
   return taken;

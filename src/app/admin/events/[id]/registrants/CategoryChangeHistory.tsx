@@ -10,6 +10,9 @@
  * payment (Session 3) says what is due, how, and until when its seat is held,
  * with its link, *Record payment* and *Cancel change* (`AwaitingChangeActions`);
  * a paid one says how it was paid, its reference, and opens its screenshot.
+ * One whose runner sent GCash or bank proof on the link shows the screenshot
+ * at once (`ProofPreview`) with *Validate Payment*, which the full-screen
+ * viewer (`ProofLightbox`) offers too, as a delivery switch's modal does.
  *
  * The order and its receipt are never edited, so this list is the only place
  * on the screen that says a runner's category is not the one they registered
@@ -18,7 +21,7 @@
  */
 
 import React, { useState } from 'react';
-import { ArrowRight, ExternalLink, MailWarning } from 'lucide-react';
+import { ArrowRight, MailWarning, Maximize2 } from 'lucide-react';
 import BusyLabel from '@/components/ui/BusyLabel';
 import FieldError from '@/components/ui/FieldError';
 import { useAlert } from '@/components/ui/AlertProvider';
@@ -33,11 +36,15 @@ import {
 import type { CategoryChangeView } from '@/lib/category-change-view';
 import type { RegistrantPermissions } from './RegistrantsTable';
 import { changeMoneyLine, kitSummary } from './category-change-display';
-import AwaitingChangeActions from './AwaitingChangeActions';
+import AwaitingChangeActions, { useValidateChange } from './AwaitingChangeActions';
+import ProofLightbox from './ProofLightbox';
+import ProofPreview from './ProofPreview';
 import type { AppliedChange } from './useCategoryChangeModal';
 import { formatEventInstant } from '@/lib/event-schedule';
 import { isOutsidePayment } from '@/lib/category-change-hold';
 import { paymentMethodLabel } from '@/lib/registration-codes';
+
+const proofSrc = (change: CategoryChangeView) => `/api/admin/category-changes/${change.id}/proof`;
 
 function RecordRefund({
   change,
@@ -133,6 +140,20 @@ export default function CategoryChangeHistory({
   /** Opens the by-hand send for one of a change's emails. */
   onSendEmail: (change: CategoryChangeView, kind: 'applied' | 'created') => void;
 }) {
+  // The change whose screenshot is open full screen, and the one waiting for
+  // staff to validate the proof its runner sent on the link (one at most, D10).
+  const [proofOf, setProofOf] = useState<CategoryChangeView | null>(null);
+  const waiting = changes.find(change => change.proofSubmitted) ?? null;
+  const validation = useValidateChange({
+    change: waiting,
+    onValidated: result => {
+      setProofOf(null);
+      onUpdated(result.change, result);
+    },
+  });
+  const canValidate = permissions.validate && !!waiting;
+  const proofStatus = proofOf ? asCategoryChangeStatus(proofOf.status) : null;
+
   if (changes.length === 0) return null;
   const newestFirst = [...changes].reverse();
 
@@ -177,11 +198,23 @@ export default function CategoryChangeHistory({
                 <p className="m-0 text-xs text-secondary">Kit: {kitSummary(kit)}</p>
               )}
               {change.reason && <p className="m-0 text-xs text-secondary">Asked: {change.reason}</p>}
-              {awaiting && (
-                <p className="m-0 text-xs text-secondary">
-                  {method ? `To pay by ${method}` : 'To pay'}
-                  {change.holdUntil ? ` · seat in ${change.toCategory} held until ${formatEventInstant(change.holdUntil)}` : ''}
-                </p>
+              {awaiting &&
+                (change.proofSubmitted ? (
+                  // The runner's proof is in, so the hold no longer runs out (`changeHeldUntil`).
+                  <p className="m-0 text-xs text-secondary [overflow-wrap:anywhere]">
+                    Proof submitted by the runner · reference {change.transactionNumber} · seat in {change.toCategory} held
+                    until you validate it or the change deadline
+                  </p>
+                ) : (
+                  <p className="m-0 text-xs text-secondary">
+                    {method ? `To pay by ${method}` : 'To pay'}
+                    {change.holdUntil ? ` · seat in ${change.toCategory} held until ${formatEventInstant(change.holdUntil)}` : ''}
+                  </p>
+                ))}
+              {awaiting && change.proofSubmitted && permissions.proof && (
+                <div className="pt-1">
+                  <ProofPreview src={proofSrc(change)} isPdf={change.proofIsPdf} onOpen={() => setProofOf(change)} />
+                </div>
               )}
               {hasMoved(change.status) && change.totalCharged > 0 && method && (
                 <p className="m-0 text-xs text-secondary flex items-center gap-2 flex-wrap">
@@ -191,14 +224,13 @@ export default function CategoryChangeHistory({
                     {change.transactionNumber ? ` · ref ${change.transactionNumber}` : ''}
                   </span>
                   {change.hasProof && permissions.proof && (
-                    <a
-                      href={`/api/admin/category-changes/${change.id}/proof`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 min-h-11 text-accent-blue-ink hover:underline"
+                    <button
+                      type="button"
+                      onClick={() => setProofOf(change)}
+                      className="inline-flex items-center gap-1 min-h-11 text-accent-blue-ink hover:underline bg-transparent border-none cursor-pointer p-0 text-xs"
                     >
-                      View screenshot <ExternalLink size={12} aria-hidden="true" />
-                    </a>
+                      View screenshot <Maximize2 size={12} aria-hidden="true" />
+                    </button>
                   )}
                 </p>
               )}
@@ -224,6 +256,7 @@ export default function CategoryChangeHistory({
                       onUpdated={onUpdated}
                       onRecorded={result => onUpdated(result.change, result)}
                       onSendEmail={onSendEmail}
+                      validation={validation}
                     />
                   )}
                   {change.status === CATEGORY_CHANGE_STATUSES.REFUND_DUE && permissions.validate && (
@@ -251,6 +284,22 @@ export default function CategoryChangeHistory({
           );
         })}
       </ol>
+
+      {proofOf && (
+        <ProofLightbox
+          src={proofSrc(proofOf)}
+          orderRef={proofOf.changeRef}
+          transactionNumber={proofOf.transactionNumber}
+          totalAmount={proofOf.totalCharged || proofOf.amount}
+          amountLabel="Category Change"
+          status={proofStatus ? CATEGORY_CHANGE_STATUS_LABELS[proofStatus] : proofOf.status}
+          isPdf={proofOf.proofIsPdf}
+          canValidate={canValidate && proofOf.id === waiting?.id}
+          isValidating={validation.validating}
+          onValidate={validation.validate}
+          onClose={() => setProofOf(null)}
+        />
+      )}
     </div>
   );
 }

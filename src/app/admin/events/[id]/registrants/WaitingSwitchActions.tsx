@@ -2,25 +2,24 @@
 
 /**
  * What staff can do with a switch still waiting for its fee, in the receipt's
- * *Delivery Payment* modal (LOGISTICS_CHANGE_PLAN.md Session 3, Revision 2), each on
- * the permission it needs, as `AwaitingChangeActions` gates a category change's:
+ * *Delivery Payment* modal (LOGISTICS_CHANGE_PLAN.md Session 3, Revisions 2
+ * and 3), each on the permission it needs, as `AwaitingChangeActions` gates a
+ * category change's. Staff already pressed *Send to Runner*; the runner
+ * confirms the address and pays on the link in that email, so the modal keeps
+ * only what is still left to do:
  *
- * **The buttons follow how the fee is paid** (`isOutsidePayment`):
- *
- * - **Both**: *Copy payment link* and *Email payment link*
- *   (`registration:email`). The link is where the runner confirms the address
- *   and receiver and pays (Revision 3): online, or with the GCash or bank
- *   screenshot and reference.
- * - **Online** (PayMongo): no *Record payment*: PayMongo's webhook, or the
- *   runner back from PayMongo, applies it.
- * - **GCash or bank**: *Record payment* (`registration:validate`): the
- *   reference and an optional screenshot, shrunk in the browser
- *   (`compress-proof.ts`). It applies the switch at once. When the runner sent
- *   their proof on the link, *View proof* opens it (`proof:view`), and *Record
- *   payment* starts from their reference and keeps their screenshot unless
- *   staff attach another.
+ * - **Validate Payment** (`registration:validate`, `useValidateSwitch`), once
+ *   the runner sent their GCash or bank proof on the link: one press, as a
+ *   registrant's bank transfer is validated. It records the runner's own
+ *   reference and keeps their screenshot, applies the switch and emails the
+ *   runner. The modal's footer and the full-screen proof both offer it. Proof
+ *   that came some other way is recorded up front, with *Already paid, record
+ *   it now* on *Switch to Delivery*; an online payment applies itself.
+ * - **Send email by hand** (`registration:email`), only when Resend refused
+ *   the *confirm and pay* email (the daily limit) and nobody marked it sent.
  * - **Cancel switch** (`registration:edit`), after a confirm. The kits stay on
- *   pickup and the payment link stops working.
+ *   pickup and the link stops working. Once the runner's proof is in, the
+ *   confirm says they paid and that cancelling does not refund them.
  *
  * Every success re-reads the page (`onChanged`), since a switch applied moves
  * other receipts' rows too; an email Resend refused opens the by-hand
@@ -28,26 +27,22 @@
  */
 
 import React, { useState } from 'react';
-import { Copy, Image as ImageIcon, Mail, Receipt, XCircle } from 'lucide-react';
+import { Mail, XCircle } from 'lucide-react';
 import BusyLabel from '@/components/ui/BusyLabel';
-import FieldError from '@/components/ui/FieldError';
 import { useAlert } from '@/components/ui/AlertProvider';
 import { formatPesos } from '@/lib/money';
-import { MAX_TRANSACTION_NUMBER, isOutsidePayment, readTransactionNumber } from '@/lib/category-change-hold';
-import { compressProof } from '@/lib/compress-proof';
 import type { LogisticsChangeView } from '@/lib/logistics-change-view';
-import { ProofPicker } from './CategoryChangePaymentChoice';
 import type { RenderedEmail } from './email-handoff';
 
 /** What this person may do here, decided on the server. */
 export type SwitchPermissions = {
   /** `registration:edit`: switch, and cancel a switch. */
   edit: boolean;
-  /** `registration:email`: the payment link and the emails. */
+  /** `registration:email`: the emails. */
   email: boolean;
-  /** `registration:validate`: record a payment made outside the app. */
+  /** `registration:validate`: validate a payment made outside the app. */
   validate: boolean;
-  /** `proof:view`: open a recorded payment's screenshot. */
+  /** `proof:view`: see a payment's screenshot. */
   proof: boolean;
 };
 
@@ -63,14 +58,13 @@ export type SwitchEmailRequest = {
 
 /** How a switch's email went, as every route that sends one answers. */
 export type SwitchEmailAnswer = { sent: true; to: string } | { sent: false; error: string; message: RenderedEmail | null };
-type EmailAnswer = SwitchEmailAnswer;
 
 /** The email request a refused send leaves, or null when it went out. */
 export function refusedEmail(
   change: LogisticsChangeView,
   orderRef: string,
   kind: SwitchEmailRequest['kind'],
-  email: EmailAnswer | null | undefined,
+  email: SwitchEmailAnswer | null | undefined,
 ): SwitchEmailRequest | null {
   if (!email || email.sent) return null;
   return { kind, changeId: change.id, changeRef: change.changeRef, orderRef, message: email.message, error: email.error };
@@ -78,96 +72,55 @@ export function refusedEmail(
 
 const peso = (centavos: number) => `₱${formatPesos(centavos)}`;
 
-function RecordPayment({
-  change,
-  onRecorded,
-  onClose,
-}: {
-  change: LogisticsChangeView;
-  onRecorded: (data: { change: LogisticsChangeView; email: EmailAnswer | null }) => void;
-  onClose: () => void;
-}) {
-  const { alert } = useAlert();
-  // The runner's own reference from the link (Revision 3 T5), for staff to check.
-  const [reference, setReference] = useState(change.proofSubmitted ? (change.transactionNumber ?? '') : '');
-  const [proof, setProof] = useState<File | null>(null);
-  const [errors, setErrors] = useState<{ transactionNumber?: string; proofFile?: string }>({});
-  const [saving, setSaving] = useState(false);
-  const fieldId = `switch-payment-${change.id}`;
+/** Whether the *confirm and pay* email never reached the runner: Resend refused it and nobody sent it by hand. */
+export function createdEmailNotSent(change: LogisticsChangeView): boolean {
+  return !change.createdEmailSentAt && !!change.lastEmailError;
+}
 
-  const save = async () => {
-    const checked = readTransactionNumber(reference);
-    if (checked.error) {
-      setErrors({ transactionNumber: checked.error });
-      return;
-    }
-    setSaving(true);
+/**
+ * Validate Payment for a switch whose runner sent their proof on the link:
+ * the record-payment route with the runner's own reference and no new file,
+ * so their screenshot stays the record.
+ */
+export function useValidateSwitch({
+  change,
+  orderRef,
+  onValidated,
+  onSendEmail,
+}: {
+  change: LogisticsChangeView | null;
+  orderRef: string;
+  /** The switch applied: the page's read runs again. */
+  onValidated: () => void;
+  onSendEmail: (request: SwitchEmailRequest) => void;
+}) {
+  const { alert, toast } = useAlert();
+  const [validating, setValidating] = useState(false);
+
+  const validate = async () => {
+    if (!change?.transactionNumber) return;
+    setValidating(true);
     try {
       const form = new FormData();
-      form.set('transactionNumber', reference);
-      if (proof) form.set('proofFile', await compressProof(proof));
+      form.set('transactionNumber', change.transactionNumber);
       const res = await fetch(`/api/admin/logistics-changes/${change.id}/record-payment`, { method: 'POST', body: form });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        if (data?.field === 'transactionNumber' || data?.field === 'proofFile') setErrors({ [data.field]: data.error });
-        else await alert({ variant: 'error', title: 'Payment Not Recorded', message: data?.error || 'Try again.' });
+        await alert({ variant: 'error', title: 'Payment Not Validated', message: data?.error || 'Try again.' });
         return;
       }
-      onRecorded(data);
+      const refused = refusedEmail(data.change, orderRef, 'applied', data.email);
+      if (refused) onSendEmail(refused);
+      else toast(`Payment validated. ${orderRef} now ships${data.email?.sent ? `, and ${data.email.to} was emailed` : ''}.`);
+      onValidated();
     } catch {
-      await alert({ variant: 'error', title: 'Payment Not Recorded', message: 'Could not reach the server. Try again.' });
+      await alert({ variant: 'error', title: 'Payment Not Validated', message: 'Could not reach the server. Try again.' });
     } finally {
-      setSaving(false);
+      setValidating(false);
     }
   };
 
-  return (
-    <div className="space-y-3 rounded-lg border border-[var(--dash-border)] p-3">
-      <p className="m-0 text-xs text-secondary">
-        Record the {peso(change.fee)} the runner sent by GCash or bank transfer. This switches the receipt to delivery at
-        once and emails them.
-        {change.proofSubmitted ? ' Their screenshot from the link stays attached; attach another only to replace it.' : ''}
-      </p>
-      <div className="space-y-1.5">
-        <label htmlFor={fieldId} className="block text-sm text-secondary">
-          GCash or bank reference number
-        </label>
-        <input
-          id={fieldId}
-          autoComplete="off"
-          value={reference}
-          onChange={e => {
-            setReference(e.target.value);
-            setErrors({});
-          }}
-          maxLength={MAX_TRANSACTION_NUMBER}
-          aria-invalid={!!errors.transactionNumber}
-          aria-describedby={`${fieldId}-error`}
-          className="form-input w-full text-base"
-        />
-        <FieldError id={`${fieldId}-error`} message={errors.transactionNumber} />
-      </div>
-      <ProofPicker id={`${fieldId}-proof`} file={proof} onChange={setProof} error={errors.proofFile} />
-      <div className="flex gap-2 max-sm:flex-col">
-        <button
-          type="button"
-          onClick={save}
-          disabled={saving}
-          className="px-4 min-h-11 bg-[var(--dash-inverse-bg)] text-[var(--dash-inverse-fg)] rounded-lg text-sm font-medium hover:bg-[var(--dash-inverse-hover)] disabled:opacity-50 inline-flex items-center justify-center"
-        >
-          {saving ? <BusyLabel>Recording</BusyLabel> : `Record ${peso(change.fee)} and ship`}
-        </button>
-        <button
-          type="button"
-          onClick={onClose}
-          disabled={saving}
-          className="px-4 min-h-11 text-sm text-secondary hover:text-primary bg-transparent border-none cursor-pointer"
-        >
-          Never mind
-        </button>
-      </div>
-    </div>
-  );
+  return { validating, validate };
 }
 
 export default function WaitingSwitchActions({
@@ -185,55 +138,22 @@ export default function WaitingSwitchActions({
   onSendEmail: (request: SwitchEmailRequest) => void;
 }) {
   const { alert, confirm, toast } = useAlert();
-  const outside = isOutsidePayment(change.paymentMethod);
-  const [recording, setRecording] = useState(false);
-  const [busy, setBusy] = useState<'copy' | 'email' | 'cancel' | null>(null);
-
-  const link = async (via: 'copy' | 'email') => {
-    setBusy(via);
-    try {
-      const res = await fetch(`/api/admin/logistics-changes/${change.id}/payment-link`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ via }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        await alert({ variant: 'error', title: 'No Payment Link', message: data?.error || 'Try again.' });
-        onChanged();
-        return;
-      }
-      if (via === 'copy') {
-        try {
-          await navigator.clipboard.writeText(data.url);
-          toast(`Copied the payment link. It works until ${data.untilLabel}.`);
-        } catch {
-          await alert({ title: 'Copy this link', message: data.url });
-        }
-        return;
-      }
-      const refused = refusedEmail(change, orderRef, 'created', data.email);
-      if (refused) onSendEmail(refused);
-      else toast(`Emailed the payment link to ${data.email.to}.`);
-      onChanged();
-    } catch {
-      await alert({ variant: 'error', title: 'No Payment Link', message: 'Could not reach the server. Try again.' });
-    } finally {
-      setBusy(null);
-    }
-  };
+  const [cancelling, setCancelling] = useState(false);
+  const byHand = permissions.email && createdEmailNotSent(change);
 
   const cancel = async () => {
     const ok = await confirm({
       variant: 'danger',
       title: 'Cancel this switch?',
-      message: `${orderRef} stays on pickup and its payment link stops working.`,
+      message: change.proofSubmitted
+        ? `The runner already sent ${peso(change.totalCharged || change.fee)} by GCash or bank (reference ${change.transactionNumber}). Cancelling keeps ${orderRef} on pickup but does not refund them; refund them yourself.`
+        : `${orderRef} stays on pickup and its payment link stops working.`,
       confirmLabel: 'Cancel switch',
       // "Cancel" beside "Cancel switch" would read as the same thing twice.
       cancelLabel: 'Keep it',
     });
     if (!ok) return;
-    setBusy('cancel');
+    setCancelling(true);
     try {
       const res = await fetch(`/api/admin/logistics-changes/${change.id}/cancel`, { method: 'POST' });
       const data = await res.json().catch(() => ({}));
@@ -246,25 +166,11 @@ export default function WaitingSwitchActions({
     } catch {
       await alert({ variant: 'error', title: 'Switch Not Cancelled', message: 'Could not reach the server. Try again.' });
     } finally {
-      setBusy(null);
+      setCancelling(false);
     }
   };
 
-  if (recording) {
-    return (
-      <RecordPayment
-        change={change}
-        onClose={() => setRecording(false)}
-        onRecorded={data => {
-          setRecording(false);
-          const refused = refusedEmail(data.change, orderRef, 'applied', data.email);
-          if (refused) onSendEmail(refused);
-          else toast(`Recorded the payment. ${orderRef} now ships${data.email?.sent ? `, and ${data.email.to} was emailed` : ''}.`);
-          onChanged();
-        }}
-      />
-    );
-  }
+  if (!byHand && !permissions.edit) return null;
 
   // The table row opens on a click; its buttons must not close it again.
   const press = (action: () => void) => (event: React.MouseEvent) => {
@@ -274,37 +180,28 @@ export default function WaitingSwitchActions({
 
   return (
     <div className="flex items-center gap-2 flex-wrap">
-      {permissions.proof && change.proofSubmitted && (
-        <a
-          href={`/api/admin/logistics-changes/${change.id}/proof`}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={event => event.stopPropagation()}
-          className="btn-filter is-compact gap-1.5 no-underline"
+      {byHand && (
+        <button
+          type="button"
+          onClick={press(() =>
+            onSendEmail({
+              kind: 'created',
+              changeId: change.id,
+              changeRef: change.changeRef,
+              orderRef,
+              message: null,
+              error: change.lastEmailError,
+            }),
+          )}
+          disabled={cancelling}
+          className="btn-filter is-compact gap-1.5"
         >
-          <ImageIcon size={14} aria-hidden="true" /> View proof
-        </a>
-      )}
-      {permissions.email && (
-        <button type="button" onClick={press(() => link('copy'))} disabled={busy !== null} className="btn-filter is-compact gap-1.5">
-          <Copy size={14} aria-hidden="true" /> {busy === 'copy' ? <BusyLabel>Copying</BusyLabel> : 'Copy payment link'}
-        </button>
-      )}
-      {permissions.email && (
-        <button type="button" onClick={press(() => link('email'))} disabled={busy !== null} className="btn-filter is-compact gap-1.5">
-          <Mail size={14} aria-hidden="true" />{' '}
-          {busy === 'email' ? <BusyLabel>Sending</BusyLabel> : 'Email payment link'}
-        </button>
-      )}
-      {/* Nothing to record until the runner gives the address and the fee is set (Revision 3b). */}
-      {permissions.validate && outside && !change.awaitsAddress && (
-        <button type="button" onClick={press(() => setRecording(true))} disabled={busy !== null} className="btn-filter is-compact gap-1.5">
-          <Receipt size={14} aria-hidden="true" /> Record payment
+          <Mail size={14} aria-hidden="true" /> Send email by hand
         </button>
       )}
       {permissions.edit && (
-        <button type="button" onClick={press(cancel)} disabled={busy !== null} className="btn-filter is-compact is-danger gap-1.5">
-          <XCircle size={14} aria-hidden="true" /> {busy === 'cancel' ? <BusyLabel>Cancelling</BusyLabel> : 'Cancel switch'}
+        <button type="button" onClick={press(cancel)} disabled={cancelling} className="btn-filter is-compact is-danger gap-1.5">
+          <XCircle size={14} aria-hidden="true" /> {cancelling ? <BusyLabel>Cancelling</BusyLabel> : 'Cancel switch'}
         </button>
       )}
     </div>

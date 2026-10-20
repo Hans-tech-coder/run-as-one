@@ -11,22 +11,38 @@
  * (L2), so on a group registration every runner's row opens the same receipt
  * and the header names how many runners it carries.
  *
+ * **Checking a runner's GCash or bank proof reads like validating a
+ * registrant's bank transfer** (`RegistrantDetailModal`): the screenshot the
+ * runner sent on the link shows at once, opens full screen in the same viewer
+ * (`ProofLightbox`), and *Validate Payment* sits in the footer and in the
+ * viewer (`useValidateSwitch`).
+ *
  * Built on the *Ship kits* panel's frame, so the two read as one family.
  */
 
 import React, { useEffect, useState } from 'react';
-import { X } from 'lucide-react';
+import { CheckCircle, X } from 'lucide-react';
+import BusyLabel from '@/components/ui/BusyLabel';
 import { formatEventInstant } from '@/lib/event-schedule';
 import { isOutsidePayment } from '@/lib/category-change-hold';
+import { LOGISTICS_CHANGE_STATUS_LABELS, asLogisticsChangeStatus } from '@/lib/logistics-change';
 import { formatPesos } from '@/lib/money';
 import { paymentMethodLabel } from '@/lib/registration-codes';
 import type { Receipt } from '@/lib/logistics-receipts';
 import type { LogisticsChangeView } from '@/lib/logistics-change-view';
 import { openSwitch, shipsWith } from './logistics-change-display';
+import ProofLightbox from './ProofLightbox';
+import ProofPreview from './ProofPreview';
 import { SwitchHistoryList } from './SwitchHistory';
-import WaitingSwitchActions, { type SwitchEmailRequest, type SwitchPermissions } from './WaitingSwitchActions';
+import WaitingSwitchActions, {
+  useValidateSwitch,
+  type SwitchEmailRequest,
+  type SwitchPermissions,
+} from './WaitingSwitchActions';
 
 const peso = (centavos: number) => `₱${formatPesos(centavos)}`;
+
+const proofSrc = (change: LogisticsChangeView) => `/api/admin/logistics-changes/${change.id}/proof`;
 
 /**
  * Where a delivery receipt ships: its one address or each household's parcel,
@@ -59,7 +75,7 @@ function WaitingSwitch({ change }: { change: LogisticsChangeView }) {
       : paymentMethodLabel(change.paymentMethod)
     : null;
   return (
-    <div className="rounded-lg border border-[var(--dash-hairline)] bg-[var(--ink-02)] p-3 space-y-1 text-sm">
+    <div className="rounded-lg border border-[var(--dash-hairline)] bg-[var(--ink-02)] p-3 flex flex-col gap-1 text-sm">
       {change.awaitsAddress ? (
         // Revision 3b T12: sent with no address; the fee follows the runner's.
         <p className="m-0 font-medium text-primary">Waiting for the runner to give the address on the link</p>
@@ -73,8 +89,8 @@ function WaitingSwitch({ change }: { change: LogisticsChangeView }) {
       )}
       {change.proofSubmitted ? (
         // Revision 3 T6, T8: the runner's proof is in, so the hold no longer runs out.
-        <p className="m-0 text-xs text-secondary">
-          Proof submitted by the runner · reference {change.transactionNumber} · waits for you to check it until the
+        <p className="m-0 text-xs text-secondary [overflow-wrap:anywhere]">
+          Proof submitted by the runner · reference {change.transactionNumber} · waits for you to validate it until the
           switch deadline
         </p>
       ) : (
@@ -111,10 +127,24 @@ export default function OrderSwitchModal({
     return () => cancelAnimationFrame(frame);
   }, []);
 
+  // The switch whose proof is open full screen: the waiting one, or one in the history.
+  const [proofOf, setProofOf] = useState<LogisticsChangeView | null>(null);
+
   const isOpen = entered && !isClosing;
   const waiting = openSwitch(receipt);
   const lines = shipsToLines(receipt);
   const runners = receipt.runners.length;
+  const canValidate = permissions.validate && !!waiting?.proofSubmitted;
+  const { validating, validate } = useValidateSwitch({
+    change: waiting,
+    orderRef: receipt.orderRef,
+    onValidated: () => {
+      setProofOf(null);
+      onChanged();
+    },
+    onSendEmail,
+  });
+  const proofStatus = proofOf ? asLogisticsChangeStatus(proofOf.status) : null;
 
   return (
     <div
@@ -147,7 +177,9 @@ export default function OrderSwitchModal({
           </button>
         </div>
 
-        <div className="admin-modal-body p-6 max-sm:p-4 overflow-y-auto flex-1 space-y-5 text-sm">
+        {/* A flex gap, not `space-y`: Tailwind 4's `space-y` loses to the
+            children's own `m-0`, which is what left these sections touching. */}
+        <div className="admin-modal-body p-6 max-sm:p-4 overflow-y-auto flex-1 flex flex-col gap-6 text-sm">
           <dl className="m-0 grid grid-cols-[max-content_minmax(0,1fr)] gap-x-4 gap-y-2">
             <dt className="text-secondary">Kits</dt>
             <dd className="m-0 text-primary">{receipt.logisticsMethod}</dd>
@@ -160,8 +192,11 @@ export default function OrderSwitchModal({
           </dl>
 
           {waiting && (
-            <div className="space-y-3">
+            <div className="flex flex-col gap-3">
               <WaitingSwitch change={waiting} />
+              {permissions.proof && waiting.proofSubmitted && (
+                <ProofPreview src={proofSrc(waiting)} isPdf={waiting.proofIsPdf} onOpen={() => setProofOf(waiting)} />
+              )}
               <WaitingSwitchActions
                 change={waiting}
                 orderRef={receipt.orderRef}
@@ -176,7 +211,7 @@ export default function OrderSwitchModal({
             <p className="m-0 text-xs font-semibold uppercase tracking-wider text-secondary">Switch history</p>
             <SwitchHistoryList
               changes={receipt.logisticsChanges}
-              canViewProof={permissions.proof}
+              onViewProof={permissions.proof ? setProofOf : undefined}
               onSendEmail={
                 permissions.email
                   ? change =>
@@ -194,7 +229,16 @@ export default function OrderSwitchModal({
           </div>
         </div>
 
-        <div className="admin-modal-footer p-6 max-sm:p-4 border-t border-[var(--dash-border)] flex justify-end gap-3 bg-[var(--dash-sunken)] shrink-0">
+        <div className="admin-modal-footer p-6 max-sm:p-4 border-t border-[var(--dash-border)] flex justify-between items-center gap-3 bg-[var(--dash-sunken)] shrink-0">
+          <div>
+            {/* The registrants' own Validate Payment button, as the detail modal's footer has it. */}
+            {canValidate && (
+              <button type="button" onClick={validate} disabled={validating} className="btn-light">
+                <CheckCircle className="w-4 h-4" />
+                {validating ? <BusyLabel>Validating</BusyLabel> : 'Validate Payment'}
+              </button>
+            )}
+          </div>
           <button
             type="button"
             onClick={onClose}
@@ -204,6 +248,22 @@ export default function OrderSwitchModal({
           </button>
         </div>
       </div>
+
+      {proofOf && (
+        <ProofLightbox
+          src={proofSrc(proofOf)}
+          orderRef={proofOf.changeRef}
+          transactionNumber={proofOf.transactionNumber}
+          totalAmount={proofOf.totalCharged || proofOf.fee}
+          amountLabel="Delivery Fee"
+          status={proofStatus ? LOGISTICS_CHANGE_STATUS_LABELS[proofStatus] : proofOf.status}
+          isPdf={proofOf.proofIsPdf}
+          canValidate={canValidate && proofOf.id === waiting?.id}
+          isValidating={validating}
+          onValidate={validate}
+          onClose={() => setProofOf(null)}
+        />
+      )}
     </div>
   );
 }

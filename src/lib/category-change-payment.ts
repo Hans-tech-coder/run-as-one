@@ -2,11 +2,12 @@ import 'server-only';
 import db from '@/lib/db';
 import { can, type Actor } from '@/lib/actor';
 import { recordAudit, type AuditActor } from '@/lib/audit';
+import { deletePrivateFile } from '@/lib/blob';
 import { formatPesos } from '@/lib/money';
 import { formatEventInstant } from '@/lib/event-schedule';
 import { PAYMENT_METHODS } from '@/lib/registration-codes';
 import { categoryChangeDeadline } from '@/lib/category-change';
-import { changePayableState, isOutsidePayment, type ChangePayableState } from '@/lib/category-change-hold';
+import { changeHeldUntil, changePayableState, isOutsidePayment, type ChangePayableState } from '@/lib/category-change-hold';
 import { CategoryChangeRefused } from '@/lib/category-change-context';
 import { applyCategoryChange } from '@/lib/category-change-store';
 import { deliverAppliedEmail } from '@/lib/category-change-view';
@@ -66,7 +67,7 @@ const LINK_INCLUDE = {
       categoryChangeUntil: true,
       client: EVENT_SITE_CLIENT,
       bankAccounts: {
-        select: { bankName: true, accountName: true, accountNumber: true, qrImageUrl: true },
+        select: { id: true, bankName: true, accountName: true, accountNumber: true, qrImageUrl: true },
         orderBy: { sortOrder: 'asc' },
       },
     },
@@ -82,7 +83,7 @@ export type ChangeForPayment = NonNullable<Awaited<ReturnType<typeof readChangeF
 
 /** Whether this change can still be paid, by the rule the public page applies. */
 export function payableStateOf(change: ChangeForPayment, now: Date = new Date()): ChangePayableState {
-  return changePayableState(change, categoryChangeDeadline(change.event), now);
+  return changePayableState({ status: change.status, holdUntil: changeHeldUntil(change) }, categoryChangeDeadline(change.event), now);
 }
 
 const REFUSALS: Record<Exclude<ChangePayableState, 'payable'>, string> = {
@@ -93,9 +94,15 @@ const REFUSALS: Record<Exclude<ChangePayableState, 'payable'>, string> = {
 
 /** The link for a change and when it stops working, made from the change itself. */
 async function linkFor(change: ChangeForPayment, requestUrl: string) {
-  // The link lives exactly as long as the seat is held.
+  // The link lives as long as the seat is held. A GCash or bank change's
+  // outlives its hold, up to the deadline, as a switch's does: once the proof
+  // is in the hold no longer closes it (`changeHeldUntil`), and the runner may
+  // still open the page to see or replace the proof. The page judges the rest
+  // (`payableStateOf`).
   const until = change.holdUntil ?? new Date();
-  const token = await createChangePaymentToken(change.id, until);
+  const deadline = categoryChangeDeadline(change.event);
+  const opensUntil = isOutsidePayment(change.paymentMethod) && deadline && deadline > until ? deadline : until;
+  const token = await createChangePaymentToken(change.id, opensUntil);
   return { url: changePaymentUrl(eventOrigin(change.event, requestUrl), token), until, untilLabel: formatEventInstant(until) };
 }
 
@@ -126,11 +133,13 @@ export async function issueChangePaymentLink(
   return { ok: true, change, ...(await linkFor(change, requestUrl)) };
 }
 
-/** The created email for a change, rendered, with its link when it is paid online. */
+/**
+ * The created email for a change, rendered, with its link: the page that pays
+ * it online, or, for GCash or bank, where the runner sends the proof
+ * (`category-change-runner.ts`).
+ */
 export async function renderCreatedEmail(change: ChangeForPayment, requestUrl: string) {
-  const outside = change.paymentMethod === PAYMENT_METHODS.BANK_TRANSFER;
-  const url = outside ? null : (await linkFor(change, requestUrl)).url;
-  return categoryChangeCreatedEmail(change, url);
+  return categoryChangeCreatedEmail(change, (await linkFor(change, requestUrl)).url);
 }
 
 /**
@@ -181,7 +190,7 @@ export type OutsidePayment = { transactionNumber: string; proofPathname: string 
 export async function recordChangePayment(actor: AuditActor, changeId: string, payment: OutsidePayment) {
   const change = await db.categoryChange.findUnique({
     where: { id: changeId },
-    select: { amount: true, checkoutSessionId: true, changeRef: true, paymentMethod: true },
+    select: { amount: true, checkoutSessionId: true, changeRef: true, paymentMethod: true, proofOfPayment: true },
   });
   if (!change) throw new CategoryChangeRefused(404, 'Category change not found');
   // Online is PayMongo's to report (webhook, or the runner reopening the link);
@@ -204,13 +213,21 @@ export async function recordChangePayment(actor: AuditActor, changeId: string, p
     }
   }
 
+  // The runner's own screenshot from the link (`submitChangeProof`) stays
+  // unless staff attach another, which replaces it: *Validate Payment* sends
+  // the runner's reference and no file.
   const applied = await applyCategoryChange(actor, changeId, {
     paymentMethod: PAYMENT_METHODS.BANK_TRANSFER,
     transactionNumber: payment.transactionNumber,
-    proofOfPayment: payment.proofPathname,
+    ...(payment.proofPathname ? { proofOfPayment: payment.proofPathname } : {}),
     transactionFee: 0,
     totalCharged: change.amount,
   });
+  if (payment.proofPathname && change.proofOfPayment && change.proofOfPayment !== payment.proofPathname) {
+    await deletePrivateFile(change.proofOfPayment).catch(error =>
+      console.error(`Category change ${change.changeRef}: the replaced proof could not be deleted`, error),
+    );
+  }
   await retireChangePage(change);
   return applied;
 }

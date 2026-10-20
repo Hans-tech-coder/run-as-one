@@ -11,6 +11,9 @@
  *
  * Once a proof is in, the page shows it as submitted (`SwitchConfirm`), and
  * this form comes back only on *Replace proof*.
+ *
+ * A GCash or bank category change's link (`/pay/change/[token]`) uses the same
+ * form, posting to `api/category-change/proof` through `endpoint`.
  */
 
 import React, { useState } from 'react';
@@ -32,8 +35,11 @@ export default function SwitchBankProof({
   bankAccounts,
   replacing,
   onCancel,
+  endpoint = '/api/logistics-change/proof',
 }: {
   token: string;
+  /** Where the proof is posted: a switch's route, or a category change's. */
+  endpoint?: string;
   /** "₱150.00", the exact figure to send. */
   amount: string;
   bankAccounts: BankAccountView[];
@@ -63,7 +69,7 @@ export default function SwitchBankProof({
       form.set('token', token);
       form.set('transactionNumber', reference);
       form.set('proofFile', await compressProof(file));
-      const res = await fetch('/api/logistics-change/proof', { method: 'POST', body: form });
+      const res = await fetch(endpoint, { method: 'POST', body: form });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         if (data?.field === 'proofFile' || data?.field === 'transactionNumber') setErrors({ [data.field]: data.error });

@@ -2,6 +2,8 @@ import 'server-only';
 import type { Prisma } from '@prisma/client';
 import db from '@/lib/db';
 import { kitDifference } from '@/lib/category-change';
+import { changeProofSubmitted } from '@/lib/category-change-hold';
+import { isPdfProof } from '@/lib/uploads';
 import { categoryChangeAppliedEmail, sendCategoryChangeEmail } from '@/lib/email-category-change';
 
 /**
@@ -61,6 +63,10 @@ export function categoryChangeView(change: ChangeWithNames) {
     transactionFee: change.transactionFee,
     transactionNumber: change.transactionNumber,
     hasProof: change.proofOfPayment !== null,
+    /** The runner sent GCash or bank proof on the link; it waits for staff to validate it. */
+    proofSubmitted: changeProofSubmitted(change),
+    /** A PDF receipt rather than a picture: the history shows a card for it, the viewer a frame. */
+    proofIsPdf: isPdfProof(change.proofOfPayment),
     holdUntil: change.holdUntil?.toISOString() ?? null,
     cancelledAt: change.cancelledAt?.toISOString() ?? null,
     cancelledBy: change.cancelledBy,

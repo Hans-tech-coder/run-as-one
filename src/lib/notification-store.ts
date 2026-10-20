@@ -8,6 +8,7 @@
  * | Kind | Permission | Goes to |
  * | --- | --- | --- |
  * | `payment.validate` | `registration:validate` on the race | its registrants, searched to the order |
+ * | `payment.validate` (a delivery switch's or an upgrade's proof) | the same | the same |
  * | `registration.paid` | `registration:view` on the race | the same |
  * | `email.unsent` | `registration:email` on the race | the same |
  * | `client.new`, `feedback.new`, `community.pending` | `platform:manage` | Clients, Feedback, Communities |
@@ -26,6 +27,11 @@ import { EMAIL_KIND_LABELS, outstandingEmail } from './email-delivery';
 import { feedbackKindLabel } from './feedback';
 import { ROLE_LABELS } from './permissions';
 import { trailDay } from './activity';
+import { formatPesos } from './money';
+import { LOGISTICS_CHANGE_STATUSES } from './logistics-change';
+import { switchProofSubmitted } from './logistics-change-proof';
+import { CATEGORY_CHANGE_STATUSES } from './category-change';
+import { changeProofSubmitted } from './category-change-hold';
 import {
   NOTIFICATION_KIND_LIMIT,
   NOTIFICATION_LIMIT,
@@ -81,7 +87,7 @@ async function teamNotifications(actor: Actor, now: Date): Promise<AppNotificati
 
   const none = Promise.resolve([]);
 
-  const [toValidate, paid, unsent, clients, feedback, clubs, joined] = await Promise.all([
+  const [toValidate, switchProofs, changeProofs, paid, unsent, clients, feedback, clubs, joined] = await Promise.all([
     prisma.registration.findMany({
       where: {
         event: reachableEvents(actor, 'registration:validate'),
@@ -93,6 +99,64 @@ async function teamNotifications(actor: Actor, now: Date): Promise<AppNotificati
       orderBy: { createdAt: 'desc' },
       take: NOTIFICATION_KIND_LIMIT,
       select: orderShape,
+    }),
+    // A paid entry's delivery switch whose runner sent GCash or bank proof on
+    // its link: staff validate it in *Delivery Payment*, and the row reads FOR
+    // VALIDATION (the owner, 2026-10-20). There is no submitted-at column, so
+    // the window and the time shown are the switch's last write, which the
+    // proof is. `switchProofSubmitted` has the last word on each row.
+    prisma.logisticsChange.findMany({
+      where: {
+        event: reachableEvents(actor, 'registration:validate'),
+        status: LOGISTICS_CHANGE_STATUSES.AWAITING_PAYMENT,
+        proofOfPayment: { not: null },
+        updatedAt: { gte: since },
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: NOTIFICATION_KIND_LIMIT,
+      select: {
+        id: true,
+        changeRef: true,
+        eventId: true,
+        status: true,
+        paymentMethod: true,
+        proofOfPayment: true,
+        fee: true,
+        totalCharged: true,
+        updatedAt: true,
+        event: { select: { title: true } },
+        orders: {
+          take: 1,
+          select: { registration: { select: { orderRef: true, runners: orderShape.runners } } },
+        },
+      },
+    }),
+    // The same for an upgrade's GCash or bank proof, sent on the change's
+    // link: staff validate it in the runner's *Category Changes*.
+    prisma.categoryChange.findMany({
+      where: {
+        event: reachableEvents(actor, 'registration:validate'),
+        status: CATEGORY_CHANGE_STATUSES.AWAITING_PAYMENT,
+        proofOfPayment: { not: null },
+        updatedAt: { gte: since },
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: NOTIFICATION_KIND_LIMIT,
+      select: {
+        id: true,
+        changeRef: true,
+        eventId: true,
+        status: true,
+        paymentMethod: true,
+        proofOfPayment: true,
+        amount: true,
+        totalCharged: true,
+        updatedAt: true,
+        event: { select: { title: true } },
+        runner: { select: { firstName: true, lastName: true } },
+        registration: { select: { orderRef: true } },
+        toCategory: { select: { name: true } },
+      },
     }),
     prisma.registration.findMany({
       where: {
@@ -175,6 +239,33 @@ async function teamNotifications(actor: Actor, now: Date): Promise<AppNotificati
       body: `${runnerName(order.runners[0])} sent a bank transfer for ${order.event.title} (${order.orderRef}).`,
       href: registrantsHref(order.eventId, order.orderRef),
       at: order.createdAt.toISOString(),
+      actionable: true,
+    });
+  }
+
+  for (const change of switchProofs) {
+    const order = change.orders[0]?.registration;
+    if (!order || !switchProofSubmitted(change)) continue;
+    items.push({
+      id: `payment.validate:switch:${change.id}`,
+      kind: 'payment.validate',
+      title: 'Delivery fee to validate',
+      body: `${runnerName(order.runners[0])} sent proof for the ₱${formatPesos(change.totalCharged || change.fee)} delivery fee for ${change.event.title} (${change.changeRef}).`,
+      href: registrantsHref(change.eventId, order.orderRef),
+      at: change.updatedAt.toISOString(),
+      actionable: true,
+    });
+  }
+
+  for (const change of changeProofs) {
+    if (!changeProofSubmitted(change)) continue;
+    items.push({
+      id: `payment.validate:change:${change.id}`,
+      kind: 'payment.validate',
+      title: 'Category change to validate',
+      body: `${runnerName(change.runner)} sent proof for the ₱${formatPesos(change.totalCharged || change.amount)} move to ${change.toCategory.name} for ${change.event.title} (${change.changeRef}).`,
+      href: registrantsHref(change.eventId, change.registration.orderRef),
+      at: change.updatedAt.toISOString(),
       actionable: true,
     });
   }

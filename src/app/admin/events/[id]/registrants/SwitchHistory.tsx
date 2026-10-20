@@ -8,9 +8,10 @@
  * list (`WaitingSwitchActions`), so it has none here.
  *
  * A paid switch shows how it was paid: the reference, and *View proof* for a
- * recorded screenshot (`proof:view`, through the proof route, which records
- * the opening). An applied switch whose email Resend refused offers *Send
- * email by hand* (`registration:email`).
+ * recorded screenshot (`proof:view`), which opens the full-screen viewer the
+ * modal owns (`ProofLightbox`, through the proof route, which records the
+ * opening). An applied switch whose email Resend refused offers *Send email by
+ * hand* (`registration:email`).
  *
  * The receipt is never edited (L4), so this list is the only place on the
  * screen that says a receipt's logistics is not the one it was bought with.
@@ -20,6 +21,7 @@ import React from 'react';
 import { ArrowRight, Image as ImageIcon, Mail } from 'lucide-react';
 import { formatEventInstant } from '@/lib/event-schedule';
 import {
+  LOGISTICS_CHANGE_STATUSES,
   LOGISTICS_CHANGE_STATUS_LABELS,
   LOGISTICS_CHANGE_STATUS_TONES,
   asLogisticsChangeStatus,
@@ -29,7 +31,8 @@ import { switchDirectionLabel, switchMoneyLine } from './logistics-change-displa
 
 /** What a history entry may offer, decided on the server; none when absent. */
 type HistoryActions = {
-  canViewProof?: boolean;
+  /** Present when this person may see proof (`proof:view`): opens it full screen. */
+  onViewProof?: (change: LogisticsChangeView) => void;
   /** Present when this person may send email: opens the by-hand send. */
   onSendEmail?: (change: LogisticsChangeView) => void;
 };
@@ -38,7 +41,7 @@ type HistoryActions = {
 export function SwitchHistoryList({
   changes,
   id,
-  canViewProof,
+  onViewProof,
   onSendEmail,
 }: { changes: LogisticsChangeView[]; id?: string } & HistoryActions) {
   const newestFirst = [...changes].reverse();
@@ -48,7 +51,7 @@ export function SwitchHistoryList({
         const status = asLogisticsChangeStatus(change.status);
         const way = switchDirectionLabel(change);
         return (
-          <li key={change.id} className="rounded-lg border border-[var(--dash-hairline)] p-3 space-y-1">
+          <li key={change.id} className="rounded-lg border border-[var(--dash-hairline)] p-3 flex flex-col gap-1">
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <span className="flex items-center gap-1.5 font-medium text-primary">
                 {way.from} <ArrowRight size={14} aria-label="to" /> {way.to}
@@ -80,18 +83,19 @@ export function SwitchHistoryList({
                 : ''}
               {change.expiredAt ? ` · expired unpaid ${formatEventInstant(change.expiredAt)}` : ''}
             </p>
-            {((canViewProof && change.hasProof) || (onSendEmail && emailNotSent(change))) && (
+            {((onViewProof && proofHere(change)) || (onSendEmail && emailNotSent(change))) && (
               <div className="flex items-center gap-2 flex-wrap pt-1">
-                {canViewProof && change.hasProof && (
-                  <a
-                    href={`/api/admin/logistics-changes/${change.id}/proof`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={event => event.stopPropagation()}
-                    className="btn-filter is-compact gap-1.5 no-underline"
+                {onViewProof && proofHere(change) && (
+                  <button
+                    type="button"
+                    onClick={event => {
+                      event.stopPropagation();
+                      onViewProof(change);
+                    }}
+                    className="btn-filter is-compact gap-1.5"
                   >
                     <ImageIcon size={14} aria-hidden="true" /> View proof
-                  </a>
+                  </button>
                 )}
                 {onSendEmail && emailNotSent(change) && (
                   <button
@@ -112,6 +116,11 @@ export function SwitchHistoryList({
       })}
     </ol>
   );
+}
+
+/** A recorded proof, except the waiting switch's: the modal shows that one above the list. */
+function proofHere(change: LogisticsChangeView): boolean {
+  return change.hasProof && change.status !== LOGISTICS_CHANGE_STATUSES.AWAITING_PAYMENT;
 }
 
 /** An applied switch whose *switched* email Resend refused and nobody sent by hand. */

@@ -226,6 +226,68 @@ fields, refused a proof before an address, showed ₱200 for Lingayen →
 confirmed → ₱200 due on the row. The test switch was removed and the address
 restored.
 
+**Delivery Payment like validating a payment (owner, 2026-10-20).** The modal
+(`OrderSwitchModal.tsx`) now reads like checking a registrant's bank transfer:
+once the runner sent GCash or bank proof on the link, the proof shows at once
+(a PDF as a card), opens full screen in the registrants' own `ProofLightbox`
+(new `src` and `amountLabel` props; the view gained `proofIsPdf`), and
+**Validate Payment** sits in the footer and in the viewer
+(`useValidateSwitch`: one press, the record-payment route with the runner's
+reference, their screenshot kept). Fewer buttons, as the owner chose: *Copy
+payment link*, *Email payment link* and the *Record payment* form are gone (the
+runner pays on the link in the email; proof sent another way is recorded with
+*Already paid* on *Switch to Delivery*); *Send email by hand* shows only when
+Resend refused the *confirm and pay* email; *Cancel switch* stays, and once
+proof is in its confirm says the runner paid and is not refunded. The
+history's *View proof* opens the same viewer. The cramped gap under "Kits ·
+Pickup" was Tailwind 4's `space-y` losing to the children's `m-0`; the body
+and the cards use flex gaps. The `payment-link` route has no caller left.
+Verified on `local-dev` with RM-7B67DB3F-L1 (the owner's test switch, PDF
+proof): the modal, the viewer, the by-hand email with the send marked failed,
+Cancel's warning (kept), Validate from the viewer (applied, *switched* email to
+the owner), then the switch, the order and the audit rows put back as they were.
+
+**BALANCE DUE and FOR VALIDATION for delivery switches (owner, 2026-10-20).**
+The Status column's display-only rule (`displayStatus`) now covers a switch:
+a PAID order with a switch waiting for its fee reads **BALANCE DUE**, as an
+unpaid upgrade did, and one whose runner sent GCash or bank proof reads
+**FOR VALIDATION** (blue; not PENDING, which is an entry's own payment) until
+staff validate it. That row joins the *Needs Validation* filter and count, and
+the bell lists *Delivery fee to validate* (`notification-store.ts`). Category
+changes got their proof link the same day (below). Verified on
+`local-dev`, data untouched: RM-7B67DB3F (the owner's L2 with proof) reads FOR
+VALIDATION and the queue went 6 → 7; RM-98EEC0B5 reads BALANCE DUE; the bell
+shows the item.
+
+**A proof link for GCash or bank category changes (owner, 2026-10-20; was
+`ON_HOLD.md` §14).** An upgrade paid by GCash or bank used to have no link:
+staff emailed how to pay, the runner replied with proof, and staff recorded it,
+so it never read FOR VALIDATION. Now its *payment needed* email carries the
+change's link (*Send Your Payment Proof* under the accounts), and
+`/pay/change/[token]` shows the accounts and takes the screenshot and reference
+(`ChangeBankProof.tsx` around the switch's `SwitchBankProof`, posted to
+`api/category-change/proof`, written by `submitChangeProof` in the new
+`category-change-runner.ts` with a `category_change.proof_submitted` row and a
+*proof received* email). No schema change: the change's own `proofOfPayment`
+and `transactionNumber` carry it, and `changeProofSubmitted` reads them, as
+`switchProofSubmitted` does. **Proof stops the clock** (the owner's choice, as
+a switch's T6): `changeHeldUntil` drops the hold once the proof is in, so the
+page, the sweep (`category-change-expiry.ts`), the seat count (`slot-holds.ts`)
+and the apply (`applyCategoryChange`) keep the seat until staff validate or
+cancel, or the change deadline closes it; the link of a GCash or bank change
+lasts until that deadline. The row reads **FOR VALIDATION**, joins *Needs
+Validation* (`proofForValidation`) and the bell (*Category change to
+validate*). In the runner's *Category Changes*, the waiting card shows the
+screenshot (`ProofPreview`, shared with the switch's modal), opens it in
+`ProofLightbox`, and **Validate Payment** (`useValidateChange`) records the
+runner's reference and keeps their screenshot (`recordChangePayment` no longer
+blanks a proof when no file is sent). The online checkout now refuses a GCash
+or bank change. Verified on `local-dev` on RM-7B67DB3F (a QA upgrade 5K → 1K
+PAWMAKER, ₱200): the email's button, the page, *Submit My Proof*, the row, the
+trail, the bell, the card's proof, the viewer and Validate (applied, screenshot
+kept); then the runner, the change and the proof blob put back (the trail rows
+stay). Not exercised in the browser: a hold lapsing with proof in.
+
 The decisions in full, as the owner accepted them (L1–L14, before Revision 1):
 **L1** staff only, started by staff like a category change; runner
 self-service is out of scope. **L2** a switch moves a whole order (logistics

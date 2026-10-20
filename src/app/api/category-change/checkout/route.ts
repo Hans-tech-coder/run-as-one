@@ -33,7 +33,7 @@ import { NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { PAY_LINK_RULE, allowRequest, callerKey } from '@/lib/rate-limit';
 import { transactionFeeFor } from '@/lib/free-checkout';
-import { onlineChangeMethod } from '@/lib/category-change-hold';
+import { isOutsidePayment, onlineChangeMethod } from '@/lib/category-change-hold';
 import { payableStateOf, readChangeForPayment, settleChangeOnline } from '@/lib/category-change-payment';
 import { lookUpPaymongoPayment } from '@/lib/online-payment';
 import { openPaymongoPage, retirePaymongoPage } from '@/lib/paymongo-session';
@@ -60,6 +60,14 @@ export async function POST(request: Request) {
     const state = payableStateOf(change);
     if (state !== 'payable') {
       return NextResponse.json({ state, error: 'This change can no longer be paid here.' }, { status: 409 });
+    }
+    // A GCash or bank change is paid with its proof on the page, never turned
+    // online here, now that its runner holds the link too.
+    if (isOutsidePayment(change.paymentMethod)) {
+      return NextResponse.json(
+        { error: 'This change is paid by GCash or bank transfer. Reload the page to see how.' },
+        { status: 409 },
+      );
     }
 
     const method = onlineChangeMethod();

@@ -14,7 +14,7 @@ import { statusProvenance } from '@/lib/activity';
 import { GUARDIAN_CONSENT_MAX_AGE } from '@/lib/minor-consent';
 import { formatRunnerAddress, groupByAddress, type RunnerAddress } from '@/lib/runner-address';
 import type { RegistrantRow } from './RegistrantsTable';
-import { BALANCE_DUE, displayStatus } from './category-change-display';
+import { BALANCE_DUE, FOR_VALIDATION, displayStatus, proofForValidation, switchForValidation } from './category-change-display';
 
 /**
  * The badge tone a payment status wears.
@@ -29,6 +29,8 @@ import { BALANCE_DUE, displayStatus } from './category-change-display';
  */
 export function statusTone(status: string): string {
   if (status === 'PAID') return 'success';
+  // Blue, as the Logistics cell's *Proof submitted* chip: the runner did their part.
+  if (status === FOR_VALIDATION) return 'info';
   if (status === 'EXPIRED') return 'neutral';
   return 'pending';
 }
@@ -36,6 +38,7 @@ export function statusTone(status: string): string {
 /** The same three tones as Tailwind classes, for the detail modal's pill. */
 export function statusPillClass(status: string): string {
   if (status === 'PAID') return 'bg-green-500/20 text-[var(--status-success)] border border-green-500/20';
+  if (status === FOR_VALIDATION) return 'bg-[color-mix(in_srgb,var(--accent-blue-ink)_12%,transparent)] text-accent-blue-ink border border-[color-mix(in_srgb,var(--accent-blue-ink)_25%,transparent)]';
   if (status === 'EXPIRED') return 'bg-[var(--ink-10)] text-[var(--ink-85)] border border-[var(--dash-border)]';
   return 'bg-orange-500/20 text-[var(--status-warning)] border border-orange-500/20';
 }
@@ -57,9 +60,18 @@ export function statusPillClass(status: string): string {
  * `paymentMethod = COMPLIMENTARY`, so it fails both halves. The same is true
  * of the bell's count, which asks the database for PENDING bank transfers
  * (`notification-store.ts`) — there is no second definition to keep in step.
+ *
+ * **A paid entry joins the queue while a change's proof waits** (the owner,
+ * 2026-10-20): the runner sent their GCash or bank screenshot on a delivery
+ * switch's or an upgrade's link, and the row reads FOR VALIDATION until staff
+ * validate it, in *Delivery Payment* or in the runner's *Category Changes*.
+ * The bell asks the same of the database (`switchProofSubmitted`,
+ * `changeProofSubmitted`).
  */
-export function needsValidation(runner: { status: string; isBankTransfer: boolean }): boolean {
-  return runner.status === 'PENDING' && runner.isBankTransfer;
+export function needsValidation(
+  runner: { status: string; isBankTransfer: boolean } & Parameters<typeof proofForValidation>[0],
+): boolean {
+  return (runner.status === 'PENDING' && runner.isBankTransfer) || proofForValidation(runner);
 }
 
 /**
@@ -161,9 +173,13 @@ export function RegistrantStatusBadges({ runner }: { runner: RegistrantRow }) {
         title={
           runner.status === 'EXPIRED'
             ? expiredExplanation(runner)
-            : displayStatus(runner) === BALANCE_DUE
-              ? 'The entry is paid; an upgrade is waiting for its difference.'
-              : undefined
+            : displayStatus(runner) === FOR_VALIDATION
+              ? switchForValidation(runner)
+                ? 'The entry is paid; the runner sent proof for a delivery fee. Open Delivery Payment to validate it.'
+                : 'The entry is paid; the runner sent proof for a category change. Open the runner to validate it.'
+              : displayStatus(runner) === BALANCE_DUE
+                ? 'The entry is paid; an upgrade or a delivery switch is waiting for its payment.'
+                : undefined
         }
       >
         {displayStatus(runner)}

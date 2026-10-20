@@ -16,9 +16,11 @@ import {
   kitDifference,
 } from '@/lib/category-change';
 import type { CategoryChangeView } from '@/lib/category-change-view';
+import { LOGISTICS_CHANGE_STATUSES } from '@/lib/logistics-change';
+import type { LogisticsChangeView } from '@/lib/logistics-change-view';
 
 type WithChanges = { category: string; categoryChanges?: CategoryChangeView[] };
-type ChangesOnly = { categoryChanges?: Pick<CategoryChangeView, 'status'>[] };
+type ChangesOnly = { categoryChanges?: Pick<CategoryChangeView, 'status' | 'proofSubmitted'>[] };
 
 /** All a move is read from — so the client runner list (`client-runners.ts`) reads it by the same rule. */
 export type MoveSource = Pick<CategoryChangeView, 'status' | 'fromCategory' | 'toCategory' | 'fromInclusions' | 'toInclusions'>;
@@ -54,18 +56,50 @@ export function openUpgrade<C extends Pick<CategoryChangeView, 'status'>>(runner
   return (runner.categoryChanges ?? []).find(change => change.status === CATEGORY_CHANGE_STATUSES.AWAITING_PAYMENT) ?? null;
 }
 
-/** Shown in place of PAID while an upgrade waits for its money. */
+/** Shown in place of PAID while an upgrade or a delivery switch waits for its money. */
 export const BALANCE_DUE = 'BALANCE DUE';
 
 /**
- * The status a row is read as. A PAID order whose runner has an upgrade still
- * unpaid reads **BALANCE DUE** until the difference is in; once it applies —
- * or is cancelled or expires, leaving the runner where they paid for — it
- * reads PAID again. Display only: `Registration.status` stays PAID, because
- * the entry *is* paid and settlement, the receipt and the expiry sweep read it.
+ * Shown in place of PAID once the runner sent GCash or bank proof on a
+ * change's link — a delivery switch's fee or an upgrade's difference — until
+ * staff validate it (the owner, 2026-10-20). Not PENDING: that is an entry's
+ * own payment still expected, and this entry is paid.
  */
-export function displayStatus(runner: { status: string } & ChangesOnly): string {
-  return runner.status === 'PAID' && openUpgrade(runner) ? BALANCE_DUE : runner.status;
+export const FOR_VALIDATION = 'FOR VALIDATION';
+
+/** What the status needs of an order's delivery switches. */
+type SwitchesOnly = { logisticsChanges?: Pick<LogisticsChangeView, 'status' | 'proofSubmitted'>[] };
+
+/** A delivery switch on this order whose runner sent proof that waits for staff. */
+export function switchForValidation(runner: SwitchesOnly): boolean {
+  return (runner.logisticsChanges ?? []).some(change => change.proofSubmitted);
+}
+
+/** An upgrade of this runner's whose proof, sent on its link, waits for staff. */
+export function changeForValidation(runner: ChangesOnly): boolean {
+  return (runner.categoryChanges ?? []).some(change => change.proofSubmitted);
+}
+
+/** Either: what puts a paid entry in the Needs Validation queue and reads FOR VALIDATION. */
+export function proofForValidation(runner: ChangesOnly & SwitchesOnly): boolean {
+  return switchForValidation(runner) || changeForValidation(runner);
+}
+
+/**
+ * The status a row is read as. A PAID order with money still owed on a change
+ * — an upgrade's difference, or a delivery switch's fee — reads **BALANCE
+ * DUE**, and **FOR VALIDATION** once the runner sent its proof on the link;
+ * once the change applies, or is cancelled or expires, it reads PAID again.
+ * Display only: `Registration.status` stays PAID, because the entry *is* paid
+ * and settlement, the receipt and the expiry sweep read it.
+ */
+export function displayStatus(runner: { status: string } & ChangesOnly & SwitchesOnly): string {
+  if (runner.status !== 'PAID') return runner.status;
+  if (proofForValidation(runner)) return FOR_VALIDATION;
+  const switchDue = (runner.logisticsChanges ?? []).some(
+    change => change.status === LOGISTICS_CHANGE_STATUSES.AWAITING_PAYMENT,
+  );
+  return openUpgrade(runner) || switchDue ? BALANCE_DUE : runner.status;
 }
 
 /** "Added: Medal · Removed: Singlet", the chip's full reading. */

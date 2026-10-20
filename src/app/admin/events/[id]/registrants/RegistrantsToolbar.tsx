@@ -266,8 +266,8 @@ export default function RegistrantsToolbar({
           aria-pressed={showOnlyNeedsValidation}
           className={`btn-filter ${showOnlyNeedsValidation ? 'is-pending' : ''} disabled:opacity-50 disabled:cursor-not-allowed`}
           title={needsValidationCount === 0
-            ? 'No bank transfer here is waiting on a payment check'
-            : 'Show only the bank transfers waiting for their payment to be checked'}
+            ? 'No bank transfer or delivery fee proof here is waiting on a payment check'
+            : 'Show only the bank transfers and delivery fee proofs waiting to be checked'}
         >
           <Hourglass size={16} /> Needs Validation
           {needsValidationCount > 0 && <span className="ml-1 px-1 bg-[var(--ink-10)] rounded">{needsValidationCount}</span>}

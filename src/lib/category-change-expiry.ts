@@ -2,7 +2,7 @@ import 'server-only';
 import db from '@/lib/db';
 import { recordAudit } from '@/lib/audit';
 import { CATEGORY_CHANGE_STATUSES, categoryChangeDeadline } from '@/lib/category-change';
-import { holdLapsed } from '@/lib/category-change-hold';
+import { changeHeldUntil, holdLapsed } from '@/lib/category-change-hold';
 import { retireChangePage } from '@/lib/category-change-payment';
 
 /**
@@ -13,7 +13,8 @@ import { retireChangePage } from '@/lib/category-change-payment';
  *
  * An awaiting change expires at its `holdUntil` — 24 hours from opening for an
  * online payment, 7 days for GCash or bank, both capped at the change deadline
- * when it was opened (`category-change-hold.ts`) — **or at the event's change
+ * when it was opened (`category-change-hold.ts`), unless the runner sent its
+ * GCash or bank proof (`changeHeldUntil`) — **or at the event's change
  * deadline, read now**, because an organizer can bring the deadline forward
  * after a change was opened, and every open change closes with it (D12).
  *
@@ -42,7 +43,10 @@ export async function expireCategoryChanges(now: Date = new Date()): Promise<{ e
     select: {
       id: true,
       changeRef: true,
+      status: true,
       holdUntil: true,
+      paymentMethod: true,
+      proofOfPayment: true,
       checkoutSessionId: true,
       eventId: true,
       event: { select: { organizerId: true, date: true, categoryChangeUntil: true } },
@@ -56,7 +60,8 @@ export async function expireCategoryChanges(now: Date = new Date()): Promise<{ e
     .filter(change => {
       const deadline = categoryChangeDeadline(change.event);
       // No readable deadline is read as closed, as `categoryChangeDeadline` says.
-      return holdLapsed(change.holdUntil, now) || deadline === null || deadline.getTime() <= now.getTime();
+      // A change whose runner sent proof waits for staff past its hold.
+      return holdLapsed(changeHeldUntil(change), now) || deadline === null || deadline.getTime() <= now.getTime();
     })
     .slice(0, MAX_CHANGE_SWEEP);
 

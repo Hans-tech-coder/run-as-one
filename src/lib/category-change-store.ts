@@ -10,7 +10,7 @@ import {
   categoryChangeRef,
 } from '@/lib/category-change';
 import { DOWNGRADES_ON_HOLD, DOWNGRADE_ON_HOLD_COPY } from '@/lib/category-change-settings';
-import { changeHoldUntil, holdLapsed, paymentChoicesForOrder, paymentMethodForChoice } from '@/lib/category-change-hold';
+import { changeHeldUntil, changeHoldUntil, holdLapsed, paymentChoicesForOrder, paymentMethodForChoice } from '@/lib/category-change-hold';
 import { CategoryChangeRefused, eligibilityFor, quoteFor } from '@/lib/category-change-context';
 import { claimSeat, lockChange, lockRunner } from '@/lib/category-change-locks';
 
@@ -222,7 +222,7 @@ export async function applyCategoryChange(actor: AuditActor, changeId: string, p
     const now = new Date();
     const before = await tx.categoryChange.findUniqueOrThrow({
       where: { id: changeId },
-      select: { status: true, holdUntil: true, toCategoryId: true },
+      select: { status: true, holdUntil: true, toCategoryId: true, paymentMethod: true, proofOfPayment: true },
     });
     if (before.status === CATEGORY_CHANGE_STATUSES.AWAITING_PAYMENT) {
       if (ctx.registration.status !== 'PAID') {
@@ -231,7 +231,8 @@ export async function applyCategoryChange(actor: AuditActor, changeId: string, p
           `Order ${ctx.registration.orderRef} is no longer paid, so this runner cannot be moved.`,
         );
       }
-      if (holdLapsed(before.holdUntil, now)) {
+      // A hold the runner's proof kept (`changeHeldUntil`) still holds its seat.
+      if (holdLapsed(changeHeldUntil(before), now)) {
         const to = ctx.event.categories.find(c => c.id === before.toCategoryId);
         if (to) await claimSeat(tx, to);
       }

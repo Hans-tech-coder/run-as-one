@@ -138,7 +138,7 @@ export function LogisticsWithSwitch({ runner }: { runner: WithSwitches }) {
       )}
       {host && <span className="text-xs text-[var(--text-muted)]">Ships with {host}</span>}
       {waiting?.proofSubmitted && (
-        <span className="status-badge info" title={`The runner sent the payment proof for ${waiting.changeRef}. Check it, then record the payment.`}>
+        <span className="status-badge info" title={`The runner sent the payment proof for ${waiting.changeRef}. Validate it in Delivery Payment.`}>
           Proof submitted · to delivery
         </span>
       )}

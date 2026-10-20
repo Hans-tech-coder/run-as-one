@@ -12,11 +12,12 @@ import { paymentMethodLabel } from '@/lib/registration-codes';
 import { transactionFeeFor } from '@/lib/free-checkout';
 import { PAY_LINK_RULE, allowRequest } from '@/lib/rate-limit';
 import { readChangePaymentToken } from '@/lib/resume-payment';
-import { onlineChangeMethod, type ChangePayableState } from '@/lib/category-change-hold';
+import { changeProofSubmitted, isOutsidePayment, onlineChangeMethod, type ChangePayableState } from '@/lib/category-change-hold';
 import { payableStateOf, readChangeForPayment, settleChangeOnline } from '@/lib/category-change-payment';
 import { lookUpPaymongoPayment } from '@/lib/online-payment';
 import { ensureEventHost } from '@/lib/site-client';
 import PayNowButton from '../../[token]/PayNowButton';
+import ChangeBankProof from './ChangeBankProof';
 
 export const metadata: Metadata = {
   title: `Pay for Your Category Change | ${SITE_NAME}`,
@@ -31,6 +32,12 @@ const peso = (centavos: number) => `₱${formatPesos(centavos)}`;
  * runner lands from the link staff sent for an upgrade, to see what they are
  * moving from and to, the breakdown to the centavo, and pay it through
  * PayMongo with the transaction fee on top (D13).
+ *
+ * **A GCash or bank change is paid here too** (the owner, 2026-10-20): the
+ * event's accounts, then the screenshot and reference for staff to validate
+ * (`ChangeBankProof`, `category-change-runner.ts`). Once the proof is in the
+ * page says so, the *Pay by* line goes (the hold no longer runs out,
+ * `changeHeldUntil`), and the runner can replace it.
  *
  * **What it shows is decided by who can end up holding the link**, as on an
  * order's page (`/pay/[token]`): the race, the two categories, the change
@@ -126,7 +133,9 @@ export default async function ChangePayPage({
     );
   }
 
-  const method = onlineChangeMethod();
+  const outside = isOutsidePayment(change.paymentMethod);
+  const proofIn = changeProofSubmitted(change);
+  const method = outside ? null : onlineChangeMethod();
   const transactionFee = method ? transactionFeeFor(change.amount, method) : 0;
   const total = change.amount + transactionFee;
 
@@ -135,8 +144,13 @@ export default async function ChangePayPage({
     ['Race day', formatEventDay(change.event.date)],
     ['Change', change.changeRef],
     ['Move', move],
-    ...(method ? [['Payment method', paymentMethodLabel(method)] as [string, string]] : []),
-    ...(change.holdUntil ? [['Pay by', formatEventInstant(change.holdUntil)] as [string, string]] : []),
+    ...(outside
+      ? [['Payment method', 'GCash or bank transfer'] as [string, string]]
+      : method
+        ? [['Payment method', paymentMethodLabel(method)] as [string, string]]
+        : []),
+    // With the proof in, the hold no longer closes it (`changeHeldUntil`).
+    ...(change.holdUntil && !proofIn ? [['Pay by', formatEventInstant(change.holdUntil)] as [string, string]] : []),
   ];
   const money: [string, number][] = [
     [`${change.toCategory.name} price`, change.toPrice],
@@ -157,8 +171,9 @@ export default async function ChangePayPage({
             Your New Seat Is Held
           </h1>
           <p className="m-0 max-w-md text-base leading-relaxed text-secondary">
-            Pay the difference below to move to {change.toCategory.name}. You stay in {change.fromCategory.name} until it
-            is paid, and your confirmation comes by email once PayMongo confirms the payment.
+            {outside
+              ? `Send the difference below by GCash or bank transfer to move to ${change.toCategory.name}, then send us the screenshot and its reference number. You stay in ${change.fromCategory.name} until we check it, and your confirmation comes by email.`
+              : `Pay the difference below to move to ${change.toCategory.name}. You stay in ${change.fromCategory.name} until it is paid, and your confirmation comes by email once PayMongo confirms the payment.`}
           </p>
         </div>
 
@@ -186,19 +201,31 @@ export default async function ChangePayPage({
           </div>
         </dl>
 
-        <div className="mx-auto mt-8 flex w-full max-w-md flex-col items-stretch gap-3">
-          {method ? (
-            <PayNowButton token={token} amount={peso(total)} kind="change" />
-          ) : (
-            <p role="alert" className="m-0 text-center text-sm font-medium text-red-400">
-              Online payment is not available right now. Reply to the email we sent and we will help you pay.
+        {outside ? (
+          <div className="mx-auto mt-8 w-full max-w-md">
+            <ChangeBankProof
+              token={token}
+              amount={peso(total)}
+              toCategory={change.toCategory.name}
+              bankAccounts={change.event.bankAccounts}
+              submittedReference={proofIn ? change.transactionNumber : null}
+            />
+          </div>
+        ) : (
+          <div className="mx-auto mt-8 flex w-full max-w-md flex-col items-stretch gap-3">
+            {method ? (
+              <PayNowButton token={token} amount={peso(total)} kind="change" />
+            ) : (
+              <p role="alert" className="m-0 text-center text-sm font-medium text-red-400">
+                Online payment is not available right now. Reply to the email we sent and we will help you pay.
+              </p>
+            )}
+            <p className="m-0 text-center text-xs leading-relaxed text-secondary">
+              You will be taken to PayMongo to pay. Any payment page opened for this change before stops working once you
+              press Pay now.
             </p>
-          )}
-          <p className="m-0 text-center text-xs leading-relaxed text-secondary">
-            You will be taken to PayMongo to pay. Any payment page opened for this change before stops working once you
-            press Pay now.
-          </p>
-        </div>
+          </div>
+        )}
       </StatusPanel>
     </Frame>
   );

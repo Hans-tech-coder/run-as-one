@@ -134,6 +134,9 @@ export const AUDIT_ACTIONS = [
   'category_change.payment_link.copied',
   'category_change.expired',
   'category_change.payment_late',
+  // On a GCash or bank upgrade's link: the runner handing in the proof for
+  // staff to validate.
+  'category_change.proof_submitted',
   // A paid order switched between kit pickup and delivery (LOGISTICS_CHANGE_
   // PLAN.md): a switch opened to wait for its fee, one applied, and an
   // awaiting one withdrawn. The receipt is never edited (L4), so these rows

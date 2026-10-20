@@ -46,6 +46,8 @@ const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(mi
 
 export default function ProofLightbox({
   registrationId,
+  src: proofSrc,
+  amountLabel = 'Order Total',
   orderRef,
   transactionNumber,
   totalAmount,
@@ -56,7 +58,12 @@ export default function ProofLightbox({
   onValidate,
   onClose,
 }: {
-  registrationId: string;
+  /** The registration whose deposit slip this is, read through `/api/admin/proof/[id]`. */
+  registrationId?: string;
+  /** Another proof route instead, such as a delivery switch's (`/api/admin/logistics-changes/[id]/proof`). */
+  src?: string;
+  /** What the amount under the image is: an order's total, or a delivery switch's fee. */
+  amountLabel?: string;
   orderRef: string;
   transactionNumber?: string | null;
   totalAmount: number;
@@ -96,7 +103,7 @@ export default function ProofLightbox({
   const dragFromRef = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null);
   const pinchFromRef = useRef<{ dist: number; scale: number } | null>(null);
 
-  const src = `/api/admin/proof/${registrationId}`;
+  const src = proofSrc ?? `/api/admin/proof/${registrationId}`;
 
   // One frame after mount, so the scale-in has a state to travel from.
   useEffect(() => {
@@ -422,7 +429,7 @@ export default function ProofLightbox({
             being done across two screens. */}
         <div className="shrink-0 border-t border-[var(--dash-border)] bg-[var(--dash-field)] px-4 py-3 flex flex-wrap items-center gap-x-6 gap-y-3 max-sm:order-4 max-sm:pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
           <p className="flex flex-col m-0 text-sm">
-            <span className="text-xs text-[var(--text-muted)]">Order Total</span>
+            <span className="text-xs text-[var(--text-muted)]">{amountLabel}</span>
             <span className="text-primary font-medium">&#8369;{formatPesos(totalAmount)}</span>
           </p>
           <p className="flex flex-col m-0 text-sm min-w-0">

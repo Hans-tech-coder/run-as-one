@@ -30,8 +30,12 @@ import {
  * `categoryChangeCreatedEmail` (Session 3) is the upgrade's: what is owed and
  * why, line by line, and how to pay it — the payment link for an online
  * payment, or Run As One's GCash and bank accounts for one sent outside the
- * app — and until when the new seat is held. Stamped on `createdEmailSentAt`,
- * with the same by-hand fallback.
+ * app, with the link to send its proof on — and until when the new seat is
+ * held. Stamped on `createdEmailSentAt`, with the same by-hand fallback.
+ *
+ * `categoryChangeProofReceivedEmail` says the GCash or bank proof the runner
+ * sent on the link arrived, as a delivery switch's does. Not stamped: the
+ * proof itself is the record.
  */
 
 /** What the applied email reads off a change, its runner and its event. */
@@ -166,9 +170,11 @@ export type CreatedChangeForEmail = AppliedChangeForEmail & {
 /**
  * Sent when an upgrade is opened and is waiting for its payment: old → new,
  * the breakdown to the centavo the runner will pay, how to pay it, and until
- * when the new seat is held. `url` is the payment link, for an online payment;
- * a payment sent outside the app gets the accounts to send it to instead, and
- * is asked to reply with the reference so staff can record it.
+ * when the new seat is held. `url` is the change's link: for an online payment
+ * the page that pays it; for GCash or bank the accounts come first, and the
+ * same page is where the runner sends the screenshot and reference for staff
+ * to validate (`category-change-runner.ts`). Without a link the runner is
+ * asked to reply with them instead.
  */
 export function categoryChangeCreatedEmail(change: CreatedChangeForEmail, url: string | null): Promise<EmailMessage> {
   const firstName = change.runner.firstName.split(' ')[0] || change.runner.firstName;
@@ -222,12 +228,15 @@ export function categoryChangeCreatedEmail(change: CreatedChangeForEmail, url: s
         {
           kind: 'paragraph',
           segments: [
-            accounts.length > 0
-              ? 'Then reply to this email with the reference number of your payment and its screenshot. '
-              : 'Reply to this email and we will send you where to pay by GCash or bank transfer. ',
+            accounts.length === 0
+              ? 'Reply to this email and we will send you where to pay by GCash or bank transfer. '
+              : url
+                ? 'Then send us the screenshot of your payment and its reference number on your payment page. '
+                : 'Then reply to this email with the reference number of your payment and its screenshot. ',
             'We move you to the new category once we have checked it.',
           ],
         },
+        ...(url && accounts.length > 0 ? [{ kind: 'button' as const, label: 'Send Your Payment Proof', href: url }] : []),
       ]
     : url
       ? [{ kind: 'button', label: `Pay ${peso(change.totalCharged)}`, href: url }]
@@ -295,6 +304,55 @@ export function categoryChangeCreatedEmail(change: CreatedChangeForEmail, url: s
             : '',
           'Already paid, or changed your mind? Reply to this email.',
         ],
+      },
+    ],
+  });
+}
+
+/** What the *proof received* email reads. */
+export type ChangeProofForEmail = {
+  changeRef: string;
+  totalCharged: number;
+  transactionNumber: string;
+  fromCategory: { name: string };
+  toCategory: { name: string };
+  runner: { firstName: string; email: string };
+  event: { title: string };
+};
+
+/** Sent when the runner hands in the GCash or bank proof on the change's link. */
+export function categoryChangeProofReceivedEmail(change: ChangeProofForEmail): Promise<EmailMessage> {
+  const firstName = change.runner.firstName.split(' ')[0] || change.runner.firstName;
+  return renderMessage({
+    to: change.runner.email,
+    subject: `We received your payment proof — ${change.event.title} (${change.changeRef})`,
+    status: { label: 'Proof Received', tone: 'pending' },
+    footerTopic: 'change',
+    blocks: [
+      {
+        kind: 'paragraph',
+        segments: [
+          `Hi ${firstName}, thank you. We received the proof of your `,
+          { strong: peso(change.totalCharged) },
+          ' payment to move from ',
+          { strong: change.fromCategory.name },
+          ' to ',
+          { strong: change.toCategory.name },
+          ' for ',
+          { strong: change.event.title },
+          `. We check it against our account, then move you and email you. Your seat in ${change.toCategory.name} stays held meanwhile.`,
+        ],
+      },
+      {
+        kind: 'card',
+        rows: [
+          { kind: 'info', label: 'Change Reference', value: change.changeRef },
+          { kind: 'info', label: 'Payment Reference', value: change.transactionNumber },
+        ],
+      },
+      {
+        kind: 'note',
+        segments: ['Sent the wrong screenshot? Open the link from our earlier email and replace it, or reply to this email.'],
       },
     ],
   });

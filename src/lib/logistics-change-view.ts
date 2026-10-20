@@ -10,6 +10,7 @@ import {
 import { formatRunnerAddress, type RunnerAddressField } from '@/lib/runner-address';
 import type { SwitchEvent } from '@/lib/logistics-change-context';
 import { switchAwaitsAddress, switchProofSubmitted } from '@/lib/logistics-change-proof';
+import { isPdfProof } from '@/lib/uploads';
 import { shipmentsFor } from '@/app/events/[slug]/register/delivery-split';
 
 /**
@@ -59,6 +60,8 @@ export function logisticsChangeView(change: ChangeWithOrders) {
     // server; the screen asks the proof route for a signed URL.
     transactionNumber: change.transactionNumber,
     hasProof: change.proofOfPayment !== null,
+    /** A PDF receipt rather than a picture: the modal shows a card for it, the viewer a frame. */
+    proofIsPdf: isPdfProof(change.proofOfPayment),
     /** A GCash or bank switch whose proof the runner sent on its link, for staff to check (Revision 3 T8). */
     proofSubmitted: switchProofSubmitted(change),
     /** No address yet: the runner gives it on the link, and the fee follows (Revision 3b T12). */

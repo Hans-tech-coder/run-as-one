@@ -17,6 +17,12 @@
  *   (`registration:validate`), the payment staff saw land, with its reference
  *   and an optional screenshot shrunk in the browser (`compress-proof.ts`). It
  *   applies the change at once.
+ * - **GCash or bank, with the runner's proof in** (sent on the link, the
+ *   owner, 2026-10-20): **Validate Payment** (`registration:validate`,
+ *   `useValidateChange`), one press, as a delivery switch's is. It records the
+ *   runner's own reference and keeps their screenshot, applies the change and
+ *   emails the runner. The history shows the screenshot, and the full-screen
+ *   viewer offers the same button. *Email how to pay* goes: they paid.
  *
  * An email Resend refuses opens the by-hand send, as the created email does
  * when it fails at opening.
@@ -28,7 +34,7 @@
  */
 
 import React, { useState } from 'react';
-import { Copy, Mail, Receipt, XCircle } from 'lucide-react';
+import { CheckCircle, Copy, Mail, Receipt, XCircle } from 'lucide-react';
 import BusyLabel from '@/components/ui/BusyLabel';
 import FieldError from '@/components/ui/FieldError';
 import { useAlert } from '@/components/ui/AlertProvider';
@@ -39,6 +45,49 @@ import type { CategoryChangeView } from '@/lib/category-change-view';
 import type { RegistrantPermissions } from './RegistrantsTable';
 import type { AppliedChange } from './useCategoryChangeModal';
 import { ProofPicker } from './CategoryChangePaymentChoice';
+
+/**
+ * Validate Payment for an upgrade whose runner sent their proof on the link:
+ * the record-payment route with the runner's own reference and no new file,
+ * so their screenshot stays the record.
+ */
+export function useValidateChange({
+  change,
+  onValidated,
+}: {
+  change: CategoryChangeView | null;
+  /** The change applied: the row and the open modal take the answer. */
+  onValidated: (result: AppliedChange) => void;
+}) {
+  const { alert, toast } = useAlert();
+  const [validating, setValidating] = useState(false);
+
+  const validate = async () => {
+    if (!change?.transactionNumber) return;
+    setValidating(true);
+    try {
+      const form = new FormData();
+      form.set('transactionNumber', change.transactionNumber);
+      const res = await fetch(`/api/admin/category-changes/${change.id}/record-payment`, { method: 'POST', body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        await alert({ variant: 'error', title: 'Payment Not Validated', message: data?.error || 'Try again.' });
+        return;
+      }
+      const result = data as AppliedChange;
+      if (result.email?.sent !== false) {
+        toast(`Payment validated. The runner moved to ${change.toCategory}${result.email?.sent ? `, and ${result.email.to} was emailed` : ''}.`);
+      }
+      onValidated(result);
+    } catch {
+      await alert({ variant: 'error', title: 'Payment Not Validated', message: 'Could not reach the server. Try again.' });
+    } finally {
+      setValidating(false);
+    }
+  };
+
+  return { validating, validate };
+}
 
 function RecordPayment({
   change,
@@ -134,6 +183,7 @@ export default function AwaitingChangeActions({
   onUpdated,
   onRecorded,
   onSendEmail,
+  validation,
 }: {
   change: CategoryChangeView;
   permissions: RegistrantPermissions;
@@ -141,9 +191,12 @@ export default function AwaitingChangeActions({
   /** A recorded payment moved the runner: the row's category changes too. */
   onRecorded: (result: AppliedChange) => void;
   onSendEmail: (change: CategoryChangeView, kind: 'applied' | 'created') => void;
+  /** `useValidateChange`, held by the history so the viewer's button shares it. */
+  validation: { validating: boolean; validate: () => void };
 }) {
   const { alert, confirm, toast } = useAlert();
   const outside = isOutsidePayment(change.paymentMethod);
+  const proofIn = change.proofSubmitted;
   const [recording, setRecording] = useState(false);
   const [busy, setBusy] = useState<'copy' | 'email' | 'cancel' | null>(null);
 
@@ -183,7 +236,9 @@ export default function AwaitingChangeActions({
     const ok = await confirm({
       variant: 'danger',
       title: 'Cancel this change?',
-      message: `The runner stays in ${change.fromCategory}, the seat held in ${change.toCategory} is released, and the payment link stops working.`,
+      message: proofIn
+        ? `The runner already sent ₱${formatPesos(change.totalCharged || change.amount)} by GCash or bank (reference ${change.transactionNumber}). Cancelling keeps them in ${change.fromCategory} and releases the seat in ${change.toCategory}, but does not refund them; refund them yourself.`
+        : `The runner stays in ${change.fromCategory}, the seat held in ${change.toCategory} is released, and the payment link stops working.`,
       confirmLabel: 'Cancel change',
       // "Cancel" beside "Cancel change" would read as the same thing twice.
       cancelLabel: 'Keep it',
@@ -226,13 +281,24 @@ export default function AwaitingChangeActions({
           <Copy size={14} aria-hidden="true" /> {busy === 'copy' ? <BusyLabel>Copying</BusyLabel> : 'Copy payment link'}
         </button>
       )}
-      {permissions.email && (
+      {permissions.validate && proofIn && (
+        <button
+          type="button"
+          onClick={validation.validate}
+          disabled={busy !== null || validation.validating}
+          className="btn-filter is-compact is-primary gap-1.5"
+        >
+          <CheckCircle size={14} aria-hidden="true" />
+          {validation.validating ? <BusyLabel>Validating</BusyLabel> : 'Validate Payment'}
+        </button>
+      )}
+      {permissions.email && !proofIn && (
         <button type="button" onClick={() => link('email')} disabled={busy !== null} className="btn-filter is-compact gap-1.5">
           <Mail size={14} aria-hidden="true" />{' '}
           {busy === 'email' ? <BusyLabel>Sending</BusyLabel> : outside ? 'Email how to pay' : 'Email payment link'}
         </button>
       )}
-      {permissions.validate && outside && (
+      {permissions.validate && outside && !proofIn && (
         <button type="button" onClick={() => setRecording(true)} disabled={busy !== null} className="btn-filter is-compact gap-1.5">
           <Receipt size={14} aria-hidden="true" /> Record payment
         </button>
