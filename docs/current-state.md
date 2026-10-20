@@ -173,6 +173,18 @@ mounted per receipt, every runner on the order moving with it — plus
 there is one (`OrderSwitchModal.tsx`, wired by `useOrderSwitch.tsx`). The
 registrants page reads `readEventReceipts` beside its own list, and the table
 takes the fresh rows after a switch re-reads the page.
+**Ship kits like the wizard (owner, 2026-10-20).** RM-1D5EEF1B's panel showed
+empty pickers under "from Runner 1's home address" because its runners have no
+home address at all (registered 2026-09-20, before `RUNNER_ADDRESS_PLAN.md`;
+the street text was the placeholder). The panel now lays the address out like
+the wizard's Logistics step (`ship-kits-address.tsx`): Runner 1's home as a
+card with *Change*, or empty fields and no claim when there is none; the fee
+line; ZIP, landmark and *Someone else will receive the kit*. The receiver is
+stored in `deliveryAddress` as checkout stores it. Both switch emails show a
+*Delivery* card with the landmark and receiver (`deliveryAddressDetails`), the
+GCash/bank one asks for a reply with the payment's screenshot and reference,
+and `/pay/logistics/[token]` shows the place to the barangay and the receiver
+masked.
 
 The decisions in full, as the owner accepted them (L1–L14, before Revision 1):
 **L1** staff only, started by staff like a category change; runner

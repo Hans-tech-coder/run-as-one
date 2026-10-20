@@ -17,6 +17,7 @@ import {
 } from '../src/lib/logistics-change-parcels';
 import {
   composeDeliveryAddress,
+  deliveryAddressDetails,
   EMPTY_DELIVERY_ADDRESS,
 } from '../src/app/events/[slug]/register/delivery-address';
 import { CHANGE_PAYMENT_CHOICES, paymentMethodForChoice, switchPaymentChoices } from '../src/lib/category-change-hold';
@@ -418,6 +419,50 @@ check(
   null,
 );
 check('the export note', kitNote({ switchedFrom: 'Pickup', shipsWith: 'RM-HOST' }), 'Switched from pickup · Ships with RM-HOST');
+
+// ── Ship kits like the wizard: another receiver (the owner, 2026-10-20) ─────
+
+const withReceiver = (receiverName: string, receiverPhone: string) =>
+  composeDeliveryAddress({
+    ...EMPTY_DELIVERY_ADDRESS,
+    street: TARLAC_A.addressStreet,
+    barangay: TARLAC_A.addressBarangay,
+    city: TARLAC_A.addressCity,
+    province: TARLAC_A.addressProvince,
+    zip: '2300',
+    landmark: 'BLUE GATE',
+    otherReceiver: true,
+    receiverName,
+    receiverPhone,
+  });
+const toReceiver = quote({ target: { deliveryAddress: withReceiver('MARIA SANTOS', '+639171234567') } });
+check('a receiver is quoted like any address', fee(toReceiver), INSIDE);
+check(
+  'the receiver is stored in the address, as at checkout',
+  toReceiver.ok && toReceiver.deliveryAddress,
+  'BLK 5 RIZAL ST., SAN ISIDRO, TARLAC CITY, TARLAC 2300 — LANDMARK: BLUE GATE — RECEIVER: MARIA SANTOS, +639171234567',
+);
+check(
+  'a receiver with no mobile is refused',
+  (r => !r.ok && r.reason)(quote({ target: { deliveryAddress: withReceiver('MARIA SANTOS', '') } })),
+  'ADDRESS_INCOMPLETE',
+);
+check(
+  'a receiver does not change which parcel it is (L6)',
+  fee(quote({ existing: [paidOneAddress], target: { deliveryAddress: withReceiver('MARIA SANTOS', '+639171234567') } })),
+  0,
+);
+check(
+  'a receiver does not change which waiting switch it meets (R4)',
+  toReceiver.ok && waitingConflict(toReceiver.parcels, [waitingTo(TARLAC_A)], 'order-1'),
+  'RM-WAIT',
+);
+check('the emails read the address apart from its receiver', deliveryAddressDetails(withReceiver('MARIA SANTOS', '+639171234567')), {
+  place: 'BLK 5 RIZAL ST., SAN ISIDRO, TARLAC CITY, TARLAC 2300',
+  landmark: 'BLUE GATE',
+  receiver: { name: 'MARIA SANTOS', phone: '+639171234567' },
+});
+check('no receiver reads as none', deliveryAddressDetails(shipTo(TARLAC_A)).receiver, null);
 
 console.log(failures ? `\n${failures} failed` : '\nAll passed');
 process.exit(failures ? 1 : 0);

@@ -21,6 +21,7 @@ import {
 } from '@/lib/logistics-change-payment';
 import { lookUpPaymongoPayment } from '@/lib/online-payment';
 import { ensureEventHost } from '@/lib/site-client';
+import { parseDeliveryAddress } from '@/app/events/[slug]/register/delivery-address';
 import PayNowButton from '../../[token]/PayNowButton';
 
 export const metadata: Metadata = {
@@ -38,9 +39,12 @@ const peso = (centavos: number) => `₱${formatPesos(centavos)}`;
  * top (L7). A copy of `/pay/change/[token]`.
  *
  * **What it shows is decided by who can end up holding the link**: the race,
- * the order and switch references, the number of kits and the money. Never a
- * name, an email, a phone or the street the kits ship to: the link is pasted
- * into Messenger and forwarded.
+ * the order and switch references, the number of kits and the money. Never an
+ * email, a whole name, a whole phone or the street the kits ship to: the link
+ * is pasted into Messenger and forwarded. Where the kits go is shown only as
+ * far as the barangay, and a receiver other than Runner 1 by first name and
+ * initial and a masked mobile (`shipsToRows`), enough for the payer to know it
+ * is their delivery; the email carries the whole address.
  *
  * **Back from PayMongo (`?paid=1`) it asks PayMongo first**, since a webhook
  * can be late and never reaches a developer's machine: a switch still waiting
@@ -138,7 +142,7 @@ export default async function SwitchPayPage({
     ['Order', order.orderRef],
     ['Switch', change.changeRef],
     ['Kits', `${kits} ${kits === 1 ? 'kit' : 'kits'}`],
-    ['Ships to', change.deliverySplit ? "Each runner's home address" : 'The address on your order'],
+    ...shipsToRows(change),
     ...(method ? [['Payment method', paymentMethodLabel(method)] as [string, string]] : []),
     ...(change.holdUntil ? [['Pay by', formatEventInstant(change.holdUntil)] as [string, string]] : []),
   ];
@@ -205,6 +209,34 @@ export default async function SwitchPayPage({
 }
 
 /** Each way a switch's link stops working, in the customer's words. */
+/** Where the kits ship, without the street or the receiver's whole name and number. */
+function shipsToRows(change: { deliveryAddress: string | null; deliverySplit: boolean }): [string, string][] {
+  if (change.deliverySplit) return [['Ships to', "Each runner's home address"]];
+  const parts = parseDeliveryAddress(change.deliveryAddress);
+  const area = parts.city
+    ? [parts.barangay, parts.city, [parts.province, parts.zip].filter(Boolean).join(' ')].filter(Boolean).join(', ')
+    : 'The address on your order';
+  return [
+    ['Ships to', area],
+    ...(parts.otherReceiver
+      ? [['Receiver', [maskName(parts.receiverName), maskPhone(parts.receiverPhone)].filter(Boolean).join(' · ')] as [string, string]]
+      : []),
+  ];
+}
+
+/** "MARIA SANTOS" → "MARIA S." */
+function maskName(name: string): string {
+  const [first, ...rest] = name.trim().split(/\s+/);
+  const last = rest.at(-1);
+  return last ? `${first} ${last[0]}.` : (first ?? '');
+}
+
+/** "+639171234567" → "+63917 ••• 4567" */
+function maskPhone(phone: string): string {
+  const raw = phone.trim();
+  return raw.length > 7 ? `${raw.slice(0, -7)} ••• ${raw.slice(-4)}` : '';
+}
+
 function Closed({
   state,
   changeRef,

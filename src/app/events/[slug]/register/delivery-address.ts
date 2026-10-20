@@ -180,3 +180,24 @@ export function parseDeliveryAddress(
   const [, street, barangay, city, province, zip = ""] = match;
   return { ...parts, street, barangay, city, province, zip };
 }
+
+/**
+ * A stored delivery address split for reading, as the delivery switch's emails
+ * and payment page show it: the place with its ZIP, the landmark, and the
+ * receiver when someone other than Runner 1 takes the kit. An address the
+ * parser cannot split comes back whole as the place.
+ */
+export function deliveryAddressDetails(stored: string | null | undefined): {
+  place: string;
+  landmark: string;
+  receiver: { name: string; phone: string } | null;
+} {
+  const parts = parseDeliveryAddress(stored);
+  return {
+    place: composeDeliveryAddress({ ...parts, landmark: "", otherReceiver: false }),
+    landmark: parts.landmark,
+    receiver: parts.otherReceiver
+      ? { name: parts.receiverName, phone: parts.receiverPhone }
+      : null,
+  };
+}

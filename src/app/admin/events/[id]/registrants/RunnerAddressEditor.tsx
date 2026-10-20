@@ -106,7 +106,7 @@ export default function RunnerAddressEditor({
           id="edit-runner-address-city"
           label={RUNNER_ADDRESS_LABELS.addressCity}
           value={value.addressCity}
-          placeholder="TARLAC CITY"
+          placeholder="e.g. TARLAC CITY"
           hint="The list did not load. Type the city or municipality."
           error={errors.addressCity}
           onChange={next => onChange({ addressCity: next, addressBarangay: '' })}
@@ -137,7 +137,7 @@ export default function RunnerAddressEditor({
           id="edit-runner-address-barangay"
           label={RUNNER_ADDRESS_LABELS.addressBarangay}
           value={value.addressBarangay}
-          placeholder="SAN ISIDRO"
+          placeholder="e.g. SAN ISIDRO"
           error={errors.addressBarangay}
           onChange={next => onChange({ addressBarangay: next })}
         />
@@ -158,7 +158,7 @@ export default function RunnerAddressEditor({
         id="edit-runner-address-street"
         label={RUNNER_ADDRESS_LABELS.addressStreet}
         value={value.addressStreet}
-        placeholder="BLK 5 LOT 12 RIZAL ST."
+        placeholder="e.g. BLK 5 LOT 12 RIZAL ST."
         error={errors.addressStreet}
         onChange={next => onChange({ addressStreet: next })}
       />

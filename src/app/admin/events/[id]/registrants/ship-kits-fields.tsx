@@ -24,7 +24,7 @@ import {
 } from '@/lib/category-change-hold';
 import { paymentMethodLabel } from '@/lib/registration-codes';
 import { deliveryTiers } from '@/app/events/[slug]/register/delivery';
-import RunnerAddressEditor from './RunnerAddressEditor';
+import ShipKitsAddress from './ship-kits-address';
 import { ProofPicker } from './CategoryChangePaymentChoice';
 import type { ShipKitsState } from './useShipKits';
 
@@ -126,43 +126,11 @@ export function SwitchQuote({ quote, onlineFee, needsPayment, paymentChoice, exi
   );
 }
 
-/** Where the kits go, and the zone when staff must pick it (L5). */
+/** Where the kits go (`ship-kits-address.tsx`), and the zone when staff must pick it (L5). */
 export function DeliveryFields(props: Props) {
-  const { address, setAddress, zip, setZip, landmark, setLandmark } = props;
   return (
     <>
-      <div className="space-y-3">
-        <p className="m-0 text-secondary">Delivery address <span className="text-[var(--text-muted)]">(from Runner 1&apos;s home address)</span></p>
-        <RunnerAddressEditor value={address} onChange={setAddress} />
-        <div className="grid grid-cols-1 sm:grid-cols-[8rem_1fr] gap-3">
-          <div className="space-y-1.5">
-            <label htmlFor="logistics-zip" className="block text-secondary">
-              ZIP Code <span className="text-[var(--text-muted)]">(optional)</span>
-            </label>
-            <input
-              id="logistics-zip"
-              autoComplete="off"
-              inputMode="numeric"
-              maxLength={4}
-              value={zip}
-              onChange={e => setZip(e.target.value.replace(/\D/g, ''))}
-              className="form-input w-full text-base"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label htmlFor="logistics-landmark" className="block text-secondary">
-              Landmark <span className="text-[var(--text-muted)]">(optional)</span>
-            </label>
-            <input
-              id="logistics-landmark"
-              autoComplete="off"
-              value={landmark}
-              onChange={e => setLandmark(e.target.value)}
-              className="form-input w-full text-base"
-            />
-          </div>
-        </div>
-      </div>
+      <ShipKitsAddress {...props} />
 
       {props.zoneChoice && (
         <fieldset className="p-0 border-none mx-0">

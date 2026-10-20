@@ -5,9 +5,11 @@
  * and delivery (LOGISTICS_CHANGE_PLAN.md L2–L13, R3–R5, Revision 2), opened
  * from any of its runners' rows on the registrants table when the switch is allowed.
  *
- * **Ship kits**: the address starts as Runner 1's home address (every runner
- * gave one at sign-up) and staff edit it, add the ZIP or a landmark, or ship
- * each kit to its runner's own home when the group lives apart (L2). The quote
+ * **Ship kits**: the address is Runner 1's home address, shown as a card
+ * with Change, as in the registration wizard's Logistics step
+ * (`ship-kits-address.tsx`); staff add the ZIP, a landmark or another
+ * receiver, and a runner with no home address on file starts on empty
+ * fields. A group's kits all ship to that one address (L2). The quote
  * below is live and is the route's own arithmetic (`quoteLogisticsChange`): a
  * parcel whose address already gets a paid delivery rides on it at ₱0 and says
  * which receipt it ships with (L6); one whose address is still waiting for
@@ -96,7 +98,13 @@ export default function ShipKitsPanel({ isClosing, onClose, ...input }: Props) {
           {!refused && !toDelivery && <PickupFields {...state} />}
 
           {!refused && !quote.ok && toDelivery && (
-            <p className="m-0 text-[var(--status-warning)]" role="status">{quote.message}</p>
+            // An address still being typed is a step left, not an error.
+            <p
+              className={`${quote.reason === 'ADDRESS_INCOMPLETE' ? 'text-[var(--text-muted)]' : 'text-[var(--status-warning)]'}`}
+              role="status"
+            >
+              {quote.message}
+            </p>
           )}
           {!refused && quote.ok && toDelivery && (
             <SwitchQuote

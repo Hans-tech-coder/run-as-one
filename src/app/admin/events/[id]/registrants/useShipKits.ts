@@ -6,6 +6,15 @@
  * address (one parcel for the whole receipt), the zone when staff pick it, the live quote, the
  * payment choice, the reason, and the save.
  *
+ * **The address works like the registration wizard's Logistics step**
+ * (`useDeliveryPlan.ts`): it is Runner 1's home address, shown as a card,
+ * until staff press Change, which copies it into the editable fields. ZIP,
+ * landmark and another receiver are added either way, and the whole is joined
+ * by `composeDeliveryAddress`, the checkout's own join, so a switched order
+ * reads like one that chose delivery at checkout. A runner who registered
+ * before home addresses were asked has none on file: then the panel starts on
+ * the editable fields, holding whatever parts there are, and claims nothing.
+ *
  * **One receipt, mounted fresh.** The panel is keyed on the order id, so this
  * hook starts over for every receipt: nothing typed for one can show on
  * another (the owner's report on the Session 2 modal, which kept one copy of
@@ -20,7 +29,13 @@
 
 import { useMemo, useState } from 'react';
 import { useAlert } from '@/components/ui/AlertProvider';
-import { LOGISTICS_CHANGE_STATUSES, LOGISTICS_DIRECTIONS, quoteLogisticsChange, type ExistingDelivery } from '@/lib/logistics-change';
+import {
+  LOGISTICS_CHANGE_STATUSES,
+  LOGISTICS_DIRECTIONS,
+  quoteLogisticsChange,
+  type ExistingDelivery,
+  type LogisticsQuote,
+} from '@/lib/logistics-change';
 import { waitingConflict, type WaitingSwitch } from '@/lib/logistics-change-parcels';
 import {
   CHANGE_PAYMENT_CHOICES,
@@ -32,15 +47,39 @@ import {
 import { compressProof } from '@/lib/compress-proof';
 import { transactionFeeFor } from '@/lib/free-checkout';
 import { formatPesos } from '@/lib/money';
-import type { RunnerAddress } from '@/lib/runner-address';
+import { formatRunnerAddress, type RunnerAddress } from '@/lib/runner-address';
 import type { DeliveryZone } from '@/lib/registration-codes';
 import type { Receipt, ReceiptEvent } from '@/lib/logistics-receipts';
 import type { SwitchEmailAnswer } from './WaitingSwitchActions';
 import type { LogisticsChangeView } from '@/lib/logistics-change-view';
-import { composeDeliveryAddress, EMPTY_DELIVERY_ADDRESS } from '@/app/events/[slug]/register/delivery-address';
-import { defaultDeliveryZone, deliveryProvinceOf, needsDeliveryZoneChoice } from '@/app/events/[slug]/register/delivery';
+import {
+  ADDRESS_PART_LABELS,
+  addressProblems,
+  composeDeliveryAddress,
+  EMPTY_DELIVERY_ADDRESS,
+  missingAddressParts,
+  type DeliveryAddressParts,
+} from '@/app/events/[slug]/register/delivery-address';
+import {
+  defaultDeliveryZone,
+  deliveryProvinceOf,
+  needsDeliveryZoneChoice,
+  zoneForProvince,
+  zoneNoteFor,
+} from '@/app/events/[slug]/register/delivery';
 
 const peso = (centavos: number) => `₱${formatPesos(centavos)}`;
+
+type Place = Pick<DeliveryAddressParts, 'street' | 'barangay' | 'city' | 'province'>;
+
+function placeOf(address: RunnerAddress | undefined): Place {
+  return {
+    street: address?.addressStreet ?? '',
+    barangay: address?.addressBarangay ?? '',
+    city: address?.addressCity ?? '',
+    province: address?.addressProvince ?? '',
+  };
+}
 
 export function useShipKits({
   receipt,
@@ -69,11 +108,15 @@ export function useShipKits({
     ? receipt.canSwitch.direction === LOGISTICS_DIRECTIONS.TO_DELIVERY
     : !receipt.isDelivery;
 
-  // Runner 1's home address, which every runner gave at sign-up
-  // (RUNNER_ADDRESS_PLAN.md); staff edit it if the kit goes elsewhere.
-  const [address, setAddress] = useState<RunnerAddress>(() => ({ ...homes[0] }));
-  const [zip, setZip] = useState('');
-  const [landmark, setLandmark] = useState('');
+  // Runner 1's home address (RUNNER_ADDRESS_PLAN.md), when it is whole: a
+  // runner from before the plan has none, or only some of it.
+  const home = placeOf(homes[0]);
+  const hasHome = missingAddressParts({ ...EMPTY_DELIVERY_ADDRESS, ...home }).length === 0;
+  const [parts, setParts] = useState<DeliveryAddressParts>(() =>
+    hasHome ? EMPTY_DELIVERY_ADDRESS : { ...EMPTY_DELIVERY_ADDRESS, ...home },
+  );
+  // Whether the place is typed here rather than Runner 1's home.
+  const [ownAddress, setOwnAddress] = useState(!hasHome);
   const [zone, setZone] = useState<DeliveryZone | null>(() => defaultDeliveryZone(event));
   const [reason, setReason] = useState('');
   const [pickedChoice, setPickedChoice] = useState<ChangePaymentChoice | null>(null);
@@ -87,20 +130,17 @@ export function useShipKits({
   // Staff pick the zone only when the race's province is unknown and the two
   // tiers cost differently (L5); otherwise the address decides it.
   const zoneChoice = toDelivery && !deliveryProvinceOf(event) && needsDeliveryZoneChoice(event);
-  const deliveryAddress = composeDeliveryAddress({
-    ...EMPTY_DELIVERY_ADDRESS,
-    street: address.addressStreet,
-    barangay: address.addressBarangay,
-    city: address.addressCity,
-    province: address.addressProvince,
-    zip,
-    landmark,
-  });
+  const address: DeliveryAddressParts = ownAddress ? parts : { ...parts, ...home };
+  const deliveryAddress = composeDeliveryAddress(address);
+  // The wizard's line under the address: which tier applies, and its fee.
+  const zoneNote = toDelivery
+    ? zoneNoteFor(event, deliveryProvinceOf(event) ? zoneForProvince(event, address.province) : zone)
+    : undefined;
 
   const paymentChoices = receipt.paymentChoices;
   const paymentChoice = pickedChoice ?? (paymentChoices.length === 1 ? paymentChoices[0] : null);
 
-  const quote = useMemo(
+  const quoted = useMemo(
     () =>
       quoteLogisticsChange({
         event,
@@ -114,6 +154,17 @@ export function useShipKits({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [receipt, event, existing, toDelivery, deliveryAddress, zone, paymentChoice],
   );
+  // A receiver ticked but left blank composes to no receiver at all, so the
+  // quote cannot see it: held here, as the wizard holds it on the parts.
+  const receiverProblems = toDelivery && address.otherReceiver ? addressProblems(address) : {};
+  const receiverPart = (['receiverName', 'receiverPhone'] as const).find(part => receiverProblems[part]);
+  const quote: LogisticsQuote = receiverPart
+    ? {
+        ok: false,
+        reason: 'ADDRESS_INCOMPLETE',
+        message: `Delivery address — ${ADDRESS_PART_LABELS[receiverPart]}: ${receiverProblems[receiverPart]!.toLowerCase()}`,
+      }
+    : quoted;
   const needsPayment = quote.ok && quote.status === LOGISTICS_CHANGE_STATUSES.AWAITING_PAYMENT;
   const alreadyPaid = needsPayment && paymentChoice === CHANGE_PAYMENT_CHOICES.OUTSIDE_PAID;
   const onlineMethod = onlineChangeMethod();
@@ -193,11 +244,16 @@ export function useShipKits({
     isSaving,
     toDelivery,
     address,
-    setAddress: (patch: Partial<RunnerAddress>) => setAddress(current => ({ ...current, ...patch })),
-    zip,
-    setZip,
-    landmark,
-    setLandmark,
+    setAddress: (patch: Partial<DeliveryAddressParts>) => setParts({ ...address, ...patch }),
+    ownAddress,
+    hasHome,
+    homeText: hasHome ? formatRunnerAddress(homes[0]) : '',
+    typeOwnAddress: () => {
+      setParts(address);
+      setOwnAddress(true);
+    },
+    useHomeAddress: () => setOwnAddress(false),
+    zoneNote,
     zoneChoice,
     zone,
     setZone,

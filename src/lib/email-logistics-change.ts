@@ -11,6 +11,7 @@ import {
   renderMessage,
   sendEmail,
 } from './email-document';
+import { deliveryAddressDetails } from '@/app/events/[slug]/register/delivery-address';
 
 /**
  * **The emails about a delivery switch** (LOGISTICS_CHANGE_PLAN.md Session 3):
@@ -24,11 +25,16 @@ import {
  *
  * - `logisticsChangeCreatedEmail` — *payment needed*: where the kits will ship,
  *   the fee to the centavo, how to pay it (the payment link for an online
- *   payment, or Run As One's GCash and bank accounts), and until when. The
- *   kits stay on pickup until it is paid. Stamped on `createdEmailSentAt`.
+ *   payment, or Run As One's GCash and bank accounts and a reply with the
+ *   payment's screenshot and reference), and until when. The kits stay on
+ *   pickup until it is paid. Stamped on `createdEmailSentAt`.
  * - `logisticsChangeAppliedEmail` — *switched*: the new method, where it ships
  *   or, back to pickup, where and when to collect the kits (`pickup.ts`), and
  *   what the money did. Stamped on `appliedEmailSentAt`.
+ *
+ * Both show the delivery as the runner gave it at checkout or staff typed it
+ * in *Ship kits* (`deliveryAddressDetails`): the address with its ZIP, the
+ * landmark, and the receiver's name and mobile when someone else takes the kit.
  *
  * A send Resend refuses goes to `lastEmailError`, and staff send it by hand
  * from the receipt's card, as for a category change.
@@ -69,11 +75,21 @@ function kitsLabel(kits: number): string {
   return `${kits} ${kits === 1 ? 'kit' : 'kits'}`;
 }
 
-/** Where a switch to delivery ships, in the customer's words. */
-function shipsTo(change: SwitchForEmail): string {
-  return change.deliverySplit
-    ? 'Each runner’s home address on file'
-    : (change.deliveryAddress ?? 'The address you gave us');
+/** Where a switch to delivery ships, in the customer's words: the place, the landmark, who receives it. */
+function deliveryRows(change: SwitchForEmail): Row[] {
+  if (change.deliverySplit) return [{ kind: 'info', label: 'Ships to', value: 'Each runner’s home address on file' }];
+  if (!change.deliveryAddress) return [{ kind: 'info', label: 'Ships to', value: 'The address you gave us' }];
+  const { place, landmark, receiver } = deliveryAddressDetails(change.deliveryAddress);
+  return [
+    { kind: 'info', label: 'Ships to', value: place },
+    ...(landmark ? [{ kind: 'info' as const, label: 'Landmark', value: landmark }] : []),
+    ...(receiver
+      ? [
+          { kind: 'info' as const, label: 'Receiver', value: receiver.name },
+          { kind: 'info' as const, label: 'Receiver’s Mobile', value: receiver.phone },
+        ]
+      : []),
+  ];
 }
 
 /** The fee, line by line, adding up to what is paid, under `total`. */
@@ -112,7 +128,7 @@ function accountBlocks(change: SwitchForEmail): EmailDocument['blocks'] {
  * Sent when a switch with a fee is opened: where the kits will ship, the fee,
  * how to pay it, and until when. `url` is the payment link for an online
  * payment; a payment sent outside the app gets the accounts instead, and is
- * asked to reply with the reference so staff can record it.
+ * asked to reply with the screenshot and reference so staff can record it.
  */
 export function logisticsChangeCreatedEmail(change: SwitchForEmail, url: string | null): Promise<EmailMessage> {
   const outside = isOutsidePayment(change.paymentMethod);
@@ -131,15 +147,22 @@ export function logisticsChangeCreatedEmail(change: SwitchForEmail, url: string 
               ...accounts,
             ]
           : []),
-        {
-          kind: 'paragraph',
-          segments: [
-            accounts.length > 0
-              ? 'Then reply to this email with the reference number of your payment and its screenshot. '
-              : 'Reply to this email and we will send you where to pay by GCash or bank transfer. ',
-            'We switch your kits to delivery once we have checked it.',
-          ],
-        },
+        accounts.length > 0
+          ? {
+              kind: 'paragraph' as const,
+              segments: [
+                'Then ',
+                { strong: 'reply to this email with the screenshot of your payment and its reference number' },
+                '. We switch your kits to delivery once we have checked it, and email you when it is done.',
+              ],
+            }
+          : {
+              kind: 'paragraph' as const,
+              segments: [
+                'Reply to this email and we will send you where to pay by GCash or bank transfer. ',
+                'Once paid, reply with the screenshot of your payment and its reference number, and we switch your kits to delivery once we have checked it.',
+              ],
+            },
       ]
     : url
       ? [{ kind: 'button', label: `Pay ${peso(change.totalCharged)}`, href: url }]
@@ -166,6 +189,9 @@ export function logisticsChangeCreatedEmail(change: SwitchForEmail, url: string 
           '.',
         ],
       },
+      // Where the kits go, right before how to pay, so the runner checks it first.
+      { kind: 'heading', text: 'Delivery' },
+      { kind: 'card', rows: deliveryRows(change) },
       ...howToPay,
       { kind: 'heading', text: 'Switch Details' },
       {
@@ -174,7 +200,6 @@ export function logisticsChangeCreatedEmail(change: SwitchForEmail, url: string 
           { kind: 'info', label: 'Switch Reference', value: change.changeRef },
           { kind: 'info', label: 'Order Reference', value: change.order.orderRef },
           { kind: 'info', label: 'Kits', value: kitsLabel(change.order.kits) },
-          { kind: 'info', label: 'Ships to', value: shipsTo(change) },
           ...(change.paymentMethod
             ? [
                 {
@@ -213,7 +238,7 @@ export function logisticsChangeAppliedEmail(change: SwitchForEmail): Promise<Ema
 
   const where: Row[] = toDelivery
     ? [
-        { kind: 'info', label: 'Ships to', value: shipsTo(change) },
+        ...deliveryRows(change),
         ...(change.ridesOn ? [{ kind: 'info' as const, label: 'Ships with', value: change.ridesOn.orderRef }] : []),
       ]
     : location || schedule
