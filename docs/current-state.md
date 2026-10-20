@@ -157,6 +157,13 @@ that is paid, and it ships free."), and rides free once that one is paid;
 **R5** a receipt others ride on goes back to pickup after them ("RM-… ships
 with this receipt at no charge. Switch RM-… back to pickup first."); **R6** the
 registrants table only reads switches.
+**One address per group (owner, 2026-10-20).** Shipping each kit to its
+runner's own home is gone everywhere: the wizards' *Where the kits go* choice
+(`DeliveryStep.tsx`, `useDeliveryPlan.ts`), both checkout routes
+(`checkoutDelivery` no longer takes `deliverySplit`) and the *Ship kits*
+panel's *One address* / *Each runner's home*. Every new order and switch is
+`deliverySplit: false`; orders already split keep reading right through
+`shipmentsFor`.
 **Revision 2 (owner, 2026-10-20, final): per transaction, from the
 registrants.** The Pickup & Delivery screen was removed (R1, R2 and R6 are
 superseded; R3–R5 and L2–L13 stand). Each runner's row menu offers *Switch to
@@ -170,9 +177,8 @@ takes the fresh rows after a switch re-reads the page.
 The decisions in full, as the owner accepted them (L1–L14, before Revision 1):
 **L1** staff only, started by staff like a category change; runner
 self-service is out of scope. **L2** a switch moves a whole order (logistics
-is an order-level fact); a group ships to one address or, when the event's
-province is known and the runners' homes differ, to each runner's home (the
-checkout's split rule, `delivery-split.ts`). **L3** PAID orders only; a
+is an order-level fact); a group ships to one address (the option to ship to
+each runner's home was removed on 2026-10-20, at checkout and here). **L3** PAID orders only; a
 PENDING bank transfer or an unpaid checkout cannot switch; a complimentary
 order can, and pays the fee. **L4** the receipt is never edited: on apply the
 order's `logisticsMethod`, `deliveryZone`, `deliveryAddress` and

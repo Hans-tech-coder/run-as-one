@@ -97,7 +97,6 @@ export async function POST(request: Request) {
       logisticsMethod,
       deliveryZone,
       deliveryAddress,
-      deliverySplit,
       subtotal,
       deliveryFee,
       platformFee,
@@ -270,19 +269,17 @@ export async function POST(request: Request) {
     const storedLogisticsMethod = asLogisticsMethod(logisticsMethod);
     const storedPaymentMethod = asPaymentMethod(paymentMethod);
     // With the event's province set, the zone comes from the address the
-    // runner gave, not from what the tab posted; a split delivery is priced
-    // per distinct home address (delivery-split.ts).
+    // runner gave, not from what the tab posted; a group ships every kit to
+    // that one address for one fee (delivery-split.ts).
     const delivery = checkoutDelivery(event, {
       logisticsMethod,
       deliveryZone,
       deliveryAddress,
-      deliverySplit,
-      participants,
     });
     if ('error' in delivery) {
       return NextResponse.json({ error: delivery.error }, { status: 400 });
     }
-    const { zone, split } = delivery;
+    const { zone } = delivery;
     const expectedDeliveryFee = delivery.fee;
     // Category prices plus the large-size surcharge. Checked rather than
     // trusted: without this, a client could post a subtotal that leaves out the
@@ -460,8 +457,7 @@ export async function POST(request: Request) {
           // Only meaningful for delivery; pickup leaves it null.
           deliveryZone: zone,
           // Split orders ship to each runner's own row address instead.
-          deliveryAddress: split ? null : storedDeliveryAddress,
-          deliverySplit: split,
+          deliveryAddress: storedDeliveryAddress,
           deliveryFee: deliveryFeeCents,
           subtotal: subtotalCents,
           platformFee: platformFeeCents,

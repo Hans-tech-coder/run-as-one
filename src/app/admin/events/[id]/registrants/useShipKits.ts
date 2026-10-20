@@ -3,7 +3,7 @@
 /**
  * The state behind one receipt's *Ship kits* / *Back to pickup* panel
  * (`ShipKitsPanel.tsx`, LOGISTICS_CHANGE_PLAN.md Revision 1 R3–R5): the
- * address, the split, the zone when staff pick it, the live quote, the
+ * address (one parcel for the whole receipt), the zone when staff pick it, the live quote, the
  * payment choice, the reason, and the save.
  *
  * **One receipt, mounted fresh.** The panel is keyed on the order id, so this
@@ -38,7 +38,6 @@ import type { Receipt, ReceiptEvent } from '@/lib/logistics-receipts';
 import type { SwitchEmailAnswer } from './WaitingSwitchActions';
 import type { LogisticsChangeView } from '@/lib/logistics-change-view';
 import { composeDeliveryAddress, EMPTY_DELIVERY_ADDRESS } from '@/app/events/[slug]/register/delivery-address';
-import { canShipSeparately } from '@/app/events/[slug]/register/delivery-split';
 import { defaultDeliveryZone, deliveryProvinceOf, needsDeliveryZoneChoice } from '@/app/events/[slug]/register/delivery';
 
 const peso = (centavos: number) => `₱${formatPesos(centavos)}`;
@@ -75,7 +74,6 @@ export function useShipKits({
   const [address, setAddress] = useState<RunnerAddress>(() => ({ ...homes[0] }));
   const [zip, setZip] = useState('');
   const [landmark, setLandmark] = useState('');
-  const [split, setSplit] = useState(false);
   const [zone, setZone] = useState<DeliveryZone | null>(() => defaultDeliveryZone(event));
   const [reason, setReason] = useState('');
   const [pickedChoice, setPickedChoice] = useState<ChangePaymentChoice | null>(null);
@@ -86,8 +84,6 @@ export function useShipKits({
   const [paidErrors, setPaidErrors] = useState<{ transactionNumber?: string; proofFile?: string }>({});
   const [isSaving, setIsSaving] = useState(false);
 
-  const canSplit = toDelivery && canShipSeparately(event, homes);
-  const splitOn = canSplit && split;
   // Staff pick the zone only when the race's province is unknown and the two
   // tiers cost differently (L5); otherwise the address decides it.
   const zoneChoice = toDelivery && !deliveryProvinceOf(event) && needsDeliveryZoneChoice(event);
@@ -110,13 +106,13 @@ export function useShipKits({
         event,
         direction: toDelivery ? LOGISTICS_DIRECTIONS.TO_DELIVERY : LOGISTICS_DIRECTIONS.TO_PICKUP,
         orders: [{ id: receipt.id, runners: homes }],
-        target: { deliveryAddress, deliveryZone: zone, deliverySplit: splitOn },
+        target: { deliveryAddress, deliveryZone: zone },
         existing,
         paymentMethod: paymentChoice ? paymentMethodForChoice(paymentChoice) : null,
       }),
     // `homes` is rebuilt every render from the receipt it is read from.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [receipt, event, existing, toDelivery, deliveryAddress, zone, splitOn, paymentChoice],
+    [receipt, event, existing, toDelivery, deliveryAddress, zone, paymentChoice],
   );
   const needsPayment = quote.ok && quote.status === LOGISTICS_CHANGE_STATUSES.AWAITING_PAYMENT;
   const alreadyPaid = needsPayment && paymentChoice === CHANGE_PAYMENT_CHOICES.OUTSIDE_PAID;
@@ -140,9 +136,8 @@ export function useShipKits({
     setIsSaving(true);
     try {
       const fields = {
-        deliveryAddress: toDelivery && !splitOn ? deliveryAddress : null,
+        deliveryAddress: toDelivery ? deliveryAddress : null,
         deliveryZone: zone,
-        deliverySplit: splitOn,
         reason,
         ...(needsPayment ? { paymentChoice } : {}),
       };
@@ -203,9 +198,6 @@ export function useShipKits({
     setZip,
     landmark,
     setLandmark,
-    canSplit,
-    split: splitOn,
-    setSplit,
     zoneChoice,
     zone,
     setZone,

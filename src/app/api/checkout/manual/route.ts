@@ -97,7 +97,6 @@ export async function POST(request: Request) {
     const logisticsMethod = formData.get('logisticsMethod') as string;
     const deliveryZone = formData.get('deliveryZone') as string;
     const deliveryAddress = formData.get('deliveryAddress') as string;
-    const deliverySplit = formData.get('deliverySplit');
     // Amounts arrive as centavos. Round defensively — Prisma rejects a
     // non-integer for an Int column, and a stray decimal here would 500.
     const centavos = (field: string) => Math.round(Number(formData.get(field)) || 0);
@@ -268,19 +267,17 @@ export async function POST(request: Request) {
     // below by FREE_ORDER_COLUMNS.
     const storedPaymentMethod = PAYMENT_METHODS.BANK_TRANSFER;
     // With the event's province set, the zone comes from the address the
-    // runner gave, not from what the tab posted; a split delivery is priced
-    // per distinct home address (delivery-split.ts).
+    // runner gave, not from what the tab posted; a group ships every kit to
+    // that one address for one fee (delivery-split.ts).
     const delivery = checkoutDelivery(event, {
       logisticsMethod,
       deliveryZone,
       deliveryAddress,
-      deliverySplit,
-      participants,
     });
     if ('error' in delivery) {
       return NextResponse.json({ error: delivery.error }, { status: 400 });
     }
-    const { zone, split } = delivery;
+    const { zone } = delivery;
     const expectedDeliveryFee = delivery.fee;
     // Category prices plus the large-size surcharge. Checked rather than
     // trusted: without this, a client could post a subtotal that leaves out the
@@ -439,8 +436,7 @@ export async function POST(request: Request) {
           // Only meaningful for delivery; pickup leaves it null.
           deliveryZone: zone,
           // Split orders ship to each runner's own row address instead.
-          deliveryAddress: split ? null : storedDeliveryAddress,
-          deliverySplit: split,
+          deliveryAddress: storedDeliveryAddress,
           deliveryFee,
           subtotal,
           platformFee,

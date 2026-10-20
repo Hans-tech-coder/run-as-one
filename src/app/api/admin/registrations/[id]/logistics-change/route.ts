@@ -5,7 +5,7 @@
  * scoped to the order's own race; a refusal reads exactly like a missing order.
  *
  * One receipt per switch: the body names where it ships (`deliveryAddress`,
- * `deliveryZone` when staff pick it, or `deliverySplit`), `paymentChoice` when
+ * `deliveryZone` when staff pick it; every kit goes to that one address), `paymentChoice` when
  * there is a fee, and an optional `reason`. The fee is recomputed under the
  * event's locks (lib/logistics-change-store.ts), which also refuse a second
  * receipt to an address still waiting for payment (R4) and a parcel others
@@ -52,7 +52,6 @@ const MAX_REASON = 300;
 type Body = {
   deliveryAddress?: unknown;
   deliveryZone?: unknown;
-  deliverySplit?: unknown;
   reason?: unknown;
   paymentChoice?: unknown;
   transactionNumber?: unknown;
@@ -67,7 +66,6 @@ async function readBody(request: Request): Promise<Body> {
     return {
       deliveryAddress: form.get('deliveryAddress') ?? undefined,
       deliveryZone: form.get('deliveryZone') || undefined,
-      deliverySplit: form.get('deliverySplit') === 'true',
       reason: form.get('reason') ?? undefined,
       paymentChoice: form.get('paymentChoice') ?? undefined,
       transactionNumber: form.get('transactionNumber') ?? undefined,
@@ -132,7 +130,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       target: {
         deliveryAddress: typeof body.deliveryAddress === 'string' ? body.deliveryAddress : null,
         deliveryZone: body.deliveryZone,
-        deliverySplit: body.deliverySplit === true,
       },
       paymentMethod,
       reason,

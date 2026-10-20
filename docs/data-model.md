@@ -119,8 +119,11 @@ shape:
   runner's own `Runner` home address instead of one address. Then
   `deliveryAddress` and `deliveryZone` are null (the parcels can sit in
   different zones), and `deliveryFee` is the sum of one tier per distinct
-  address, recomputed by the checkout routes (`register/delivery-split.ts`).
-  Stored explicitly, never inferred from a null address;
+  address. **No longer written** (the owner, 2026-10-20): neither checkout nor
+  the delivery switch offers it, so every new order is `false`; the column
+  stays so the orders already split keep reading right
+  (`register/delivery-split.ts` `shipmentsFor`). Stored explicitly, never
+  inferred from a null address;
   `status` (`PAID`, `PENDING`…), `paymentMethod`, `proofOfPayment` (private blob
   **pathname**, not URL), `transactionNumber`, `consentGiven` + `consentGivenAt` + `consentSignature`
   (the name typed under the tick — any non-empty text is accepted, see

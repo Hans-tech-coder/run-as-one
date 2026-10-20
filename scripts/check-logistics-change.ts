@@ -126,10 +126,15 @@ check(
   fee(quote({ orders: [group], target: { deliveryAddress: shipTo(TARLAC_A) } })),
   INSIDE,
 );
-const splitGroup = quote({ orders: [group], target: { deliverySplit: true } });
-check('group split pays one tier per household', fee(splitGroup), INSIDE + OUTSIDE);
-check('group split makes two parcels', splitGroup.ok && splitGroup.parcels.length, 2);
-check('group split stores no single address', splitGroup.ok && [splitGroup.deliveryAddress, splitGroup.deliverySplit], [null, true]);
+// Per-runner shipping was removed (2026-10-20): a group whose runners live
+// apart still ships as one parcel to the one address, and is never split.
+const oneParcel = quote({ orders: [group], target: { deliveryAddress: shipTo(TARLAC_A) } });
+check('a group living apart still makes one parcel', oneParcel.ok && oneParcel.parcels.length, 1);
+check(
+  'a group switch stores its one address, never split',
+  oneParcel.ok && [oneParcel.deliveryAddress, oneParcel.deliverySplit],
+  [shipTo(TARLAC_A), false],
+);
 
 // ── Combining orders (L6) ────────────────────────────────────────────────────
 
@@ -141,26 +146,6 @@ check(
   'two orders combined to one address pay one fee',
   fee(quote({ orders: twoOrders, target: { deliveryAddress: shipTo(TARLAC_A) } })),
   INSIDE,
-);
-check(
-  'two orders split, same household, pay one fee',
-  fee(
-    quote({
-      orders: [
-        { id: 'order-1', runners: [TARLAC_A] },
-        { id: 'order-2', runners: [{ ...TARLAC_A, addressStreet: 'blk 5 rizal st.' }] },
-      ],
-      target: { deliverySplit: true },
-    }),
-  ),
-  INSIDE,
-);
-const splitTwo = quote({ orders: twoOrders, target: { deliverySplit: true } });
-check('two orders split, two households, pay two fees', fee(splitTwo), INSIDE * 2);
-check(
-  'a split parcel remembers which order each kit came from',
-  splitTwo.ok && splitTwo.parcels.map(p => p.kits),
-  [[{ order: 0, runner: 0 }], [{ order: 1, runner: 0 }]],
 );
 
 // ── Riding on an existing parcel (L6) ────────────────────────────────────────
@@ -188,17 +173,6 @@ const paidSplit: ExistingDelivery = {
   runners: [PAMPANGA, TARLAC_A],
 };
 check('a rider on a paid split household pays ₱0', fee(quote({ existing: [paidSplit] })), 0);
-const halfRides = quote({ orders: [group], target: { deliverySplit: true }, existing: [paidSplit] });
-check(
-  'a split switch where both households already receive parcels pays ₱0',
-  fee(halfRides),
-  0,
-);
-check(
-  'a split switch with one household riding pays only the other',
-  fee(quote({ orders: [{ id: 'order-1', runners: [TARLAC_B, PAMPANGA] }], target: { deliverySplit: true }, existing: [paidSplit] })),
-  INSIDE,
-);
 
 check(
   'a rider on an awaiting (PENDING) delivery pays the full fee',
@@ -225,11 +199,6 @@ check(
   'NOT_DELIVERABLE',
 );
 check(
-  'a split with an undelivered household is refused',
-  fee(quote({ event: insideOnly, orders: [group], target: { deliverySplit: true } })),
-  'NOT_DELIVERABLE',
-);
-check(
   'an incomplete address is refused',
   fee(quote({ target: { deliveryAddress: '' } })),
   'ADDRESS_INCOMPLETE',
@@ -246,11 +215,6 @@ check(
 check(
   'with no event province, no zone picked is refused',
   fee(quote({ event: noProvince, target: { deliveryAddress: shipTo(PAMPANGA) } })),
-  'NOT_DELIVERABLE',
-);
-check(
-  'with no event province, a split is refused',
-  fee(quote({ event: noProvince, orders: [group], target: { deliverySplit: true } })),
   'NOT_DELIVERABLE',
 );
 

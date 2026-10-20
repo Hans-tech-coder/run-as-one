@@ -752,7 +752,6 @@ export default function BankTransferWizardClient({
       formData.append("logisticsMethod", logisticsMethod);
       formData.append("deliveryZone", delivery.zone || "");
       formData.append("deliveryAddress", delivery.address);
-      formData.append("deliverySplit", String(delivery.split));
       formData.append("subtotal", subtotal.toString());
       formData.append("deliveryFee", deliveryFee.toString());
       formData.append("platformFee", platformFee.toString());

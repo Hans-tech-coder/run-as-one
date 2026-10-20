@@ -99,7 +99,7 @@ async function moveOrder(tx: Prisma.TransactionClient, registrationId: string, t
 export type CreateSwitchInput = {
   registrationId: string;
   /** Where TO_DELIVERY ships. Ignored for TO_PICKUP. */
-  target?: { deliveryAddress?: string | null; deliveryZone?: unknown; deliverySplit?: boolean };
+  target?: { deliveryAddress?: string | null; deliveryZone?: unknown };
   /** How a fee will be paid, stored form, from `paymentMethodForChoice`. Required when there is a fee. */
   paymentMethod?: string | null;
   reason?: string | null;

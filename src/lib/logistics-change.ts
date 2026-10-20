@@ -17,7 +17,7 @@
  * can never leave a free rider behind.
  *
  * **Staff never type a fee** (L5). The tier comes from the address with the
- * checkout's own functions (`checkoutDelivery`, `shipmentsFor`, and
+ * checkout's own functions (`checkoutDelivery`, and
  * `groupByAddress` for what counts as one address), so a switch and a
  * checkout to the same address always cost the same. A zone the event does not
  * deliver to is refused, with the checkout's own sentence. Delivery → Pickup
@@ -40,7 +40,7 @@ import {
   addressProblems,
   parseDeliveryAddress,
 } from '@/app/events/[slug]/register/delivery-address';
-import { checkoutDelivery, shipmentsFor } from '@/app/events/[slug]/register/delivery-split';
+import { checkoutDelivery } from '@/app/events/[slug]/register/delivery-split';
 
 // ── Status vocabulary ────────────────────────────────────────────────────────
 
@@ -250,11 +250,12 @@ export type LogisticsQuoteInput = {
   direction: LogisticsDirection;
   orders: readonly SwitchOrder[];
   /**
-   * Where TO_DELIVERY ships: one composed `deliveryAddress` for every kit (and
-   * the zone staff picked when the event's province is unknown, L5), or
-   * `deliverySplit` for each runner's own home address. Ignored for TO_PICKUP.
+   * Where TO_DELIVERY ships: one composed `deliveryAddress` for every kit on
+   * the receipt, as one parcel (and the zone staff picked when the event's
+   * province is unknown, L5). Shipping each kit to its runner's own home was
+   * removed on 2026-10-20. Ignored for TO_PICKUP.
    */
-  target?: { deliveryAddress?: string | null; deliveryZone?: unknown; deliverySplit?: boolean };
+  target?: { deliveryAddress?: string | null; deliveryZone?: unknown };
   existing: readonly ExistingDelivery[];
   /** How the fee will be paid, in the stored form. Null: no transaction fee shown yet. */
   paymentMethod?: string | null;
@@ -279,14 +280,14 @@ export type LogisticsQuote =
   | {
       ok: true;
       direction: LogisticsDirection;
-      /** The target as the orders will store it; null/false for TO_PICKUP and on a split. */
+      /** The target as the orders will store it; null for TO_PICKUP. `deliverySplit` is always false now. */
       deliveryZone: DeliveryZone | null;
       deliveryAddress: string | null;
       deliverySplit: boolean;
       parcels: QuotedParcel[];
       /**
        * The first parcel's ride, for `LogisticsChange.ridesOnRegistrationId`.
-       * On a split switch each parcel says its own.
+       * One parcel per switch, so it is that parcel's.
        */
       ridesOnRegistrationId: string | null;
       /** Centavos: the sum of the parcels' fees (L6). */
@@ -352,55 +353,41 @@ export function quoteLogisticsChange(input: LogisticsQuoteInput): LogisticsQuote
 
   // Every kit across the ticked orders, remembered back to its order.
   const kits = input.orders.flatMap((order, o) => order.runners.map((_, r) => ({ order: o, runner: r })));
-  const runners = input.orders.flatMap(order => order.runners);
   const target = input.target ?? {};
-  const split = target.deliverySplit === true;
 
-  if (!split) {
-    const problems = addressProblems(parseDeliveryAddress(target.deliveryAddress));
-    const part = (Object.keys(problems) as (keyof typeof problems)[])[0];
-    if (part) {
-      return {
-        ok: false,
-        reason: 'ADDRESS_INCOMPLETE',
-        message: `Delivery address — ${ADDRESS_PART_LABELS[part]}: ${problems[part]!.toLowerCase()}`,
-      };
-    }
+  const problems = addressProblems(parseDeliveryAddress(target.deliveryAddress));
+  const part = (Object.keys(problems) as (keyof typeof problems)[])[0];
+  if (part) {
+    return {
+      ok: false,
+      reason: 'ADDRESS_INCOMPLETE',
+      message: `Delivery address — ${ADDRESS_PART_LABELS[part]}: ${problems[part]!.toLowerCase()}`,
+    };
   }
 
-  // The checkout's own answer: the zone, whether it may split, and the
-  // sentence when the event does not deliver there (L5).
+  // The checkout's own answer: the zone, and the sentence when the event does
+  // not deliver there (L5).
   const checked = checkoutDelivery(input.event, {
     logisticsMethod: LOGISTICS_METHODS.DELIVERY,
     deliveryZone: target.deliveryZone,
     deliveryAddress: target.deliveryAddress,
-    deliverySplit: split,
-    participants: runners,
   });
   if ('error' in checked) return { ok: false, reason: 'NOT_DELIVERABLE', message: checked.error };
 
-  const parcels: QuotedParcel[] = checked.split
-    ? shipmentsFor(input.event, runners).map(shipment => ({
-        address: shipment.address,
-        zone: shipment.zone,
-        tierFee: shipment.fee,
-        fee: shipment.fee,
-        ridesOnRegistrationId: null,
-        kits: shipment.runners.map(index => kits[index]),
-      }))
-    : [
-        {
-          address: addressOf(target.deliveryAddress),
-          zone: checked.zone,
-          tierFee: checked.fee,
-          fee: checked.fee,
-          ridesOnRegistrationId: null,
-          kits,
-        },
-      ];
+  // Every kit on the receipt in one parcel.
+  const parcels: QuotedParcel[] = [
+    {
+      address: addressOf(target.deliveryAddress),
+      zone: checked.zone,
+      tierFee: checked.fee,
+      fee: checked.fee,
+      ridesOnRegistrationId: null,
+      kits,
+    },
+  ];
 
   // L6: one grouping over the new parcels and the paid ones, by the same rule
-  // a split checkout groups households by, so "the same address" means one
+  // an old split order's households are grouped by, so "the same address" means one
   // thing everywhere. A new parcel grouped with a paid one rides on it.
   const paid = paidParcels(input.existing, new Set(input.orders.map(order => order.id)));
   for (const group of groupByAddress([...parcels.map(p => p.address), ...paid.map(p => p.address)])) {
@@ -422,8 +409,8 @@ export function quoteLogisticsChange(input: LogisticsQuoteInput): LogisticsQuote
     ok: true,
     direction: input.direction,
     deliveryZone: checked.zone,
-    deliveryAddress: checked.split ? null : (target.deliveryAddress ?? null),
-    deliverySplit: checked.split,
+    deliveryAddress: target.deliveryAddress ?? null,
+    deliverySplit: false,
     parcels,
     ridesOnRegistrationId: parcels.find(parcel => parcel.ridesOnRegistrationId)?.ridesOnRegistrationId ?? null,
     fee,

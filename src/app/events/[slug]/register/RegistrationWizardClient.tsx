@@ -803,7 +803,6 @@ export default function RegistrationWizardClient({
           logisticsMethod: logisticsMethod,
           deliveryZone: delivery.zone,
           deliveryAddress: delivery.address,
-          deliverySplit: delivery.split,
           subtotal: subtotal,
           deliveryFee: deliveryFee,
           platformFee: platformFee,
@@ -898,7 +897,6 @@ export default function RegistrationWizardClient({
       formData.append("logisticsMethod", logisticsMethod);
       formData.append("deliveryZone", delivery.zone || "");
       formData.append("deliveryAddress", delivery.address);
-      formData.append("deliverySplit", String(delivery.split));
       formData.append("subtotal", subtotal.toString());
       formData.append("deliveryFee", deliveryFee.toString());
       formData.append("platformFee", platformFee.toString());
