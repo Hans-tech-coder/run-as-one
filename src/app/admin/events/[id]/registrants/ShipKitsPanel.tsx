@@ -14,7 +14,9 @@
  * parcel whose address already gets a paid delivery rides on it at ₱0 and says
  * which receipt it ships with (L6); one whose address is still waiting for
  * another receipt's fee is refused (R4). A fee keeps the switch waiting for
- * payment (L12) and nothing moves until it is paid.
+ * payment (L12) and nothing moves until it is paid. Staff need only pick how
+ * it is paid (Revision 3 T1): the emailed link lets the runner confirm or
+ * change the address and receiver before paying.
  *
  * **Back to pickup** is free and gives nothing back (L9). A receipt others ride
  * on says which, and waits for them to go back first (R5).
@@ -118,6 +120,12 @@ export default function ShipKitsPanel({ isClosing, onClose, ...input }: Props) {
           {!refused && <WaitingWarning waitingOn={waitingOn} />}
 
           {!refused && quote.ok && needsPayment && !waitingOn && <PaymentChoice {...state} />}
+          {!refused && quote.ok && needsPayment && !waitingOn && !state.alreadyPaid && (
+            // Revision 3 T1: staff need not get the address right; the runner checks it.
+            <p className="text-xs text-[var(--text-muted)]">
+              The runner gets a link to confirm the address and who receives the kit, change them if needed, and pay.
+            </p>
+          )}
 
           {!refused && ridersLeft.length === 0 && (
             <div className="space-y-1.5">

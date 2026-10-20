@@ -23,18 +23,21 @@ import { deliveryAddressDetails } from '@/app/events/[slug]/register/delivery-ad
  * Addressed to the order's contact (`customerEmail`), not a runner: a switch
  * moves a whole receipt, and its contact is who paid for it and who asked.
  *
- * - `logisticsChangeCreatedEmail` — *payment needed*: where the kits will ship,
- *   the fee to the centavo, how to pay it (the payment link for an online
- *   payment, or Run As One's GCash and bank accounts and a reply with the
- *   payment's screenshot and reference), and until when. The kits stay on
- *   pickup until it is paid. Stamped on `createdEmailSentAt`.
+ * - `logisticsChangeCreatedEmail` — *confirm and pay* (Revision 3 T9): where
+ *   the kits will ship as it stands, the fee to the centavo, until when, and
+ *   the switch's link, where the runner confirms the address and receiver and
+ *   pays online or with the GCash or bank proof. The same for both methods.
+ *   The kits stay on pickup until it is paid. Stamped on `createdEmailSentAt`.
+ * - `logisticsChangeProofReceivedEmail` — the GCash or bank proof the runner
+ *   handed in on the link arrived (T8). Not stamped.
  * - `logisticsChangeAppliedEmail` — *switched*: the new method, where it ships
  *   or, back to pickup, where and when to collect the kits (`pickup.ts`), and
  *   what the money did. Stamped on `appliedEmailSentAt`.
  *
- * Both show the delivery as the runner gave it at checkout or staff typed it
- * in *Ship kits* (`deliveryAddressDetails`): the address with its ZIP, the
- * landmark, and the receiver's name and mobile when someone else takes the kit.
+ * The first and last show the delivery as the runner gave it at checkout,
+ * staff set it in *Ship kits*, or the runner confirmed it on the link
+ * (`deliveryAddressDetails`): the address with its ZIP, the landmark, and the
+ * receiver's name and mobile when someone else takes the kit.
  *
  * A send Resend refuses goes to `lastEmailError`, and staff send it by hand
  * from the receipt's card, as for a category change.
@@ -59,7 +62,6 @@ export type SwitchForEmail = {
     format?: string | null;
     pickupLocation?: string | null;
     pickupSchedule?: string | null;
-    bankAccounts: { bankName: string; accountName: string; accountNumber: string; qrImageUrl?: string | null }[];
   };
 };
 
@@ -104,91 +106,37 @@ function moneyRows(change: SwitchForEmail, total = 'To Pay'): Row[] {
   ];
 }
 
-/** One card per account, its QR under it when there is a public one to draw. */
-function accountBlocks(change: SwitchForEmail): EmailDocument['blocks'] {
-  return change.event.bankAccounts.flatMap(account => [
-    {
-      kind: 'card' as const,
-      rows: [{ kind: 'info' as const, label: account.bankName, value: `${account.accountName} · ${account.accountNumber}` }],
-    },
-    ...(account.qrImageUrl?.startsWith('https://')
-      ? [
-          {
-            kind: 'image' as const,
-            src: account.qrImageUrl,
-            alt: `${account.bankName} QR code`,
-            caption: `Scan with ${account.bankName}`,
-          },
-        ]
-      : []),
-  ]);
-}
-
 /**
- * Sent when a switch with a fee is opened: where the kits will ship, the fee,
- * how to pay it, and until when. `url` is the payment link for an online
- * payment; a payment sent outside the app gets the accounts instead, and is
- * asked to reply with the screenshot and reference so staff can record it,
- * and with the receiver's name and mobile when someone else takes the kit.
+ * Sent when a switch with a fee is opened (Revision 3 T9), the same for an
+ * online payment and for GCash or bank: where the kits will ship as it stands,
+ * the fee, until when, and one button to the switch's link, where the runner
+ * confirms the address and the receiver and pays, online or with the
+ * payment's screenshot and reference. The accounts are on that page, not here.
+ * `url` is that link; without one (no request to take its host from) the
+ * email says to reply instead.
  */
 export function logisticsChangeCreatedEmail(change: SwitchForEmail, url: string | null): Promise<EmailMessage> {
   const outside = isOutsidePayment(change.paymentMethod);
   const until = change.holdUntil ? `${formatEventInstant(change.holdUntil)}, Manila time` : null;
-  const accounts = accountBlocks(change);
-  // The proof reply also brings the receiver, when someone other than the
-  // runner takes the kit: staff add it to the switch from that reply.
-  const receiver = change.deliverySplit ? null : deliveryAddressDetails(change.deliveryAddress).receiver;
-  const receiverAsk = change.deliverySplit
-    ? []
-    : [
-        ' and, ',
-        {
-          strong: receiver
-            ? `if someone other than ${receiver.name} will receive the kit, their name and mobile number`
-            : 'if someone else will receive the kit, their name and mobile number',
-        },
-      ];
 
-  const howToPay: EmailDocument['blocks'] = outside
+  const action: EmailDocument['blocks'] = url
     ? [
-        { kind: 'heading', text: 'How to Pay' },
-        ...(accounts.length > 0
-          ? [
-              {
-                kind: 'paragraph' as const,
-                segments: ['Send exactly ', { strong: peso(change.totalCharged) }, ' by GCash or bank transfer to one of these accounts:'],
-              },
-              ...accounts,
-            ]
-          : []),
-        accounts.length > 0
-          ? {
-              kind: 'paragraph' as const,
-              segments: [
-                'Then ',
-                { strong: 'reply to this email with the screenshot of your payment and its reference number' },
-                ...receiverAsk,
-                '. We switch your kits to delivery once we have checked it, and email you when it is done.',
-              ],
-            }
-          : {
-              kind: 'paragraph' as const,
-              segments: [
-                'Reply to this email and we will send you where to pay by GCash or bank transfer. ',
-                'Once paid, reply with the screenshot of your payment and its reference number',
-                ...receiverAsk,
-                '. We switch your kits to delivery once we have checked it.',
-              ],
-            },
+        {
+          kind: 'paragraph',
+          segments: [
+            'Check the address and who will receive the kit, change them if you need to, then pay',
+            outside ? ' by GCash or bank transfer and upload the screenshot of your payment' : ' online',
+            '. All on one page:',
+          ],
+        },
+        { kind: 'button', label: `Confirm and Pay ${peso(change.totalCharged)}`, href: url },
       ]
-    : url
-      ? [{ kind: 'button', label: `Pay ${peso(change.totalCharged)}`, href: url }]
-      : [];
+    : [{ kind: 'paragraph', segments: ['Reply to this email and we will send you the link to confirm and pay.'] }];
 
   return renderMessage({
     to: change.order.customerEmail,
     // The switch reference keeps it its own thread, apart from the receipt.
-    subject: `Pay to ship your race kits — ${change.event.title} (${change.changeRef})`,
+    subject: `Confirm your delivery details and pay — ${change.event.title} (${change.changeRef})`,
     status: { label: 'Payment Pending', tone: 'pending' },
     footerTopic: 'switch',
     blocks: [
@@ -206,10 +154,10 @@ export function logisticsChangeCreatedEmail(change: SwitchForEmail, url: string 
           '.',
         ],
       },
-      // Where the kits go, right before how to pay, so the runner checks it first.
+      ...action,
+      // Where the kits go as it stands, so the runner knows what they confirm.
       { kind: 'heading', text: 'Delivery' },
       { kind: 'card', rows: deliveryRows(change) },
-      ...howToPay,
       { kind: 'heading', text: 'Switch Details' },
       {
         kind: 'card',
@@ -235,8 +183,56 @@ export function logisticsChangeCreatedEmail(change: SwitchForEmail, url: string 
         segments: [
           'Until it is paid your kits stay for pickup, and your registration and its receipt are unchanged. ',
           until ? `If it is not paid by ${until}, the switch lapses and your kits stay for pickup. ` : '',
-          'Already paid, or changed your mind? Reply to this email.',
+          'Changed your mind? Do nothing, or reply to this email.',
         ],
+      },
+    ],
+  });
+}
+
+/** What the *proof received* email reads. */
+export type SwitchProofForEmail = {
+  changeRef: string;
+  totalCharged: number;
+  transactionNumber: string;
+  order: { orderRef: string; customerName: string; customerEmail: string };
+  event: { title: string };
+};
+
+/**
+ * Sent when the runner hands in the GCash or bank proof on the switch's link
+ * (Revision 3 T8): it arrived, staff check it, and the *switched* email
+ * follows. Not stamped on the switch: the proof itself is the record.
+ */
+export function logisticsChangeProofReceivedEmail(change: SwitchProofForEmail): Promise<EmailMessage> {
+  return renderMessage({
+    to: change.order.customerEmail,
+    subject: `We received your payment proof — ${change.event.title} (${change.changeRef})`,
+    status: { label: 'Proof Received', tone: 'pending' },
+    footerTopic: 'switch',
+    blocks: [
+      {
+        kind: 'paragraph',
+        segments: [
+          `Hi ${firstNameOf(change.order.customerName)}, thank you. We received the proof of your `,
+          { strong: peso(change.totalCharged) },
+          ' payment for delivering the kits on order ',
+          { strong: change.order.orderRef },
+          ' for ',
+          { strong: change.event.title },
+          '. We check it against our account, then switch your kits to delivery and email you.',
+        ],
+      },
+      {
+        kind: 'card',
+        rows: [
+          { kind: 'info', label: 'Switch Reference', value: change.changeRef },
+          { kind: 'info', label: 'Payment Reference', value: change.transactionNumber },
+        ],
+      },
+      {
+        kind: 'note',
+        segments: ['Sent the wrong screenshot? Open the link from our earlier email and replace it, or reply to this email.'],
       },
     ],
   });

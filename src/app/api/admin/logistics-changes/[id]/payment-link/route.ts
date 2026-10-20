@@ -6,10 +6,10 @@
  * lib/logistics-change-payment.ts. This route decides only where it goes, from
  * `via` in the body, as a category change's link does:
  *
- * - **`copy`** (the default) — the link, for a chat app. Refused for a switch
- *   paid by GCash or bank: its page has nothing to pay.
- * - **`email`** — the *payment needed* email (the link, or the accounts to pay
- *   to) through Resend; the outcome is stamped on the switch, and a refusal
+ * - **`copy`** (the default) — the link, for a chat app. Online or GCash and
+ *   bank alike (Revision 3): the page is where the runner confirms the delivery
+ *   details and pays either way.
+ * - **`email`** — the *confirm and pay* email with the link, through Resend; the outcome is stamped on the switch, and a refusal
  *   comes back with the rendered message for the by-hand send.
  *
  * **One trail row per call**: a link is a key to a payment, so every one made
@@ -20,7 +20,6 @@ import { NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { getActor } from '@/lib/actor';
 import { recordAudit } from '@/lib/audit';
-import { isOutsidePayment } from '@/lib/category-change-hold';
 import { deliverSwitchEmail, issueSwitchPaymentLink } from '@/lib/logistics-change-payment';
 import { readLogisticsChangeView } from '@/lib/logistics-change-view';
 
@@ -45,7 +44,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (!link.ok) return NextResponse.json({ error: link.error }, { status: link.status });
     const { change, url, until, untilLabel } = link;
     const ref = change.changeRef;
-    const outside = isOutsidePayment(change.paymentMethod);
 
     const record = (summary: string) =>
       recordAudit(db, actor, {
@@ -59,18 +57,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const expiry = { expiresBy: until.toISOString(), untilLabel };
 
     if (via === 'copy') {
-      if (outside) {
-        return NextResponse.json(
-          { error: `${ref} is paid by GCash or bank transfer, so it has no payment link. Email how to pay instead.` },
-          { status: 400 },
-        );
-      }
       await record(`Copied the payment link for delivery switch ${ref}, valid until ${untilLabel}.`);
       return NextResponse.json({ url, ...expiry });
     }
 
     const email = await deliverSwitchEmail(id, 'created', request.url);
-    const what = outside ? 'how to pay' : 'the payment link';
+    const what = 'the payment link';
     await record(
       email.sent
         ? `Emailed ${what} for delivery switch ${ref} to ${email.to}.`

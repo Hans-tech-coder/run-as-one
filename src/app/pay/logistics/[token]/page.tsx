@@ -6,13 +6,12 @@ import { CalendarX, ChevronRight, CircleCheck, Clock, Hourglass, Link2Off, Mail,
 import { IconBadge, StatusPanel } from '@/components/StatusPanel';
 import { SITE_NAME, supportMailto } from '@/lib/site-contact';
 import { getSiteSettings } from '@/lib/site-settings';
-import { formatPesos } from '@/lib/money';
 import { formatEventDay, formatEventInstant } from '@/lib/event-schedule';
 import { paymentMethodLabel } from '@/lib/registration-codes';
-import { transactionFeeFor } from '@/lib/free-checkout';
 import { PAY_LINK_RULE, allowRequest } from '@/lib/rate-limit';
 import { readSwitchPaymentToken } from '@/lib/resume-payment';
-import { onlineChangeMethod, type ChangePayableState } from '@/lib/category-change-hold';
+import { isOutsidePayment, onlineChangeMethod, type ChangePayableState } from '@/lib/category-change-hold';
+import { switchProofSubmitted } from '@/lib/logistics-change-proof';
 import {
   readSwitchForPayment,
   receiptOf,
@@ -21,8 +20,7 @@ import {
 } from '@/lib/logistics-change-payment';
 import { lookUpPaymongoPayment } from '@/lib/online-payment';
 import { ensureEventHost } from '@/lib/site-client';
-import { parseDeliveryAddress } from '@/app/events/[slug]/register/delivery-address';
-import PayNowButton from '../../[token]/PayNowButton';
+import SwitchConfirm from './SwitchConfirm';
 
 export const metadata: Metadata = {
   title: `Pay for Kit Delivery | ${SITE_NAME}`,
@@ -30,21 +28,18 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-const peso = (centavos: number) => `₱${formatPesos(centavos)}`;
-
 /**
- * A delivery switch's payment page (LOGISTICS_CHANGE_PLAN.md Session 3): where
- * the person who asked for their kits to be shipped lands from the link staff
- * sent, to see the fee and pay it through PayMongo with the transaction fee on
- * top (L7). A copy of `/pay/change/[token]`.
+ * A delivery switch's link (LOGISTICS_CHANGE_PLAN.md Session 3, Revision 3):
+ * where the order's contact lands from the email staff sent, to **confirm
+ * where the kits ship and who receives them, then pay** (`SwitchConfirm`):
+ * through PayMongo with the transaction fee on top (L7), or by GCash or bank
+ * with the payment's screenshot and reference (T5), whichever staff picked.
  *
- * **What it shows is decided by who can end up holding the link**: the race,
- * the order and switch references, the number of kits and the money. Never an
- * email, a whole name, a whole phone or the street the kits ship to: the link
- * is pasted into Messenger and forwarded. Where the kits go is shown only as
- * far as the barangay, and a receiver other than Runner 1 by first name and
- * initial and a masked mobile (`shipsToRows`), enough for the payer to know it
- * is their delivery; the email carries the whole address.
+ * **A waiting switch shows its whole address and receiver, and takes edits**
+ * (T4, reversing Session 3's masking): the link goes only to the order's
+ * contact and stops working with the hold. The closed panels below show none
+ * of it, so a link forwarded after the switch is done gives nothing away.
+ * `?step=pay` (PayMongo's cancel) opens on the payment step.
  *
  * **Back from PayMongo (`?paid=1`) it asks PayMongo first**, since a webhook
  * can be late and never reaches a developer's machine: a switch still waiting
@@ -60,10 +55,10 @@ export default async function SwitchPayPage({
   searchParams,
 }: {
   params: Promise<{ token: string }>;
-  searchParams: Promise<{ paid?: string }>;
+  searchParams: Promise<{ paid?: string; step?: string }>;
 }) {
   const { token } = await params;
-  const { paid } = await searchParams;
+  const { paid, step } = await searchParams;
 
   const requestHeaders = await headers();
   const caller =
@@ -131,10 +126,11 @@ export default async function SwitchPayPage({
     );
   }
 
-  const method = onlineChangeMethod();
-  const transactionFee = method ? transactionFeeFor(change.fee, method) : 0;
-  const total = change.fee + transactionFee;
+  const outside = isOutsidePayment(change.paymentMethod);
+  const method = outside ? null : onlineChangeMethod();
   const kits = order.runners.length;
+  const runner = order.runners[0];
+  const proofIn = switchProofSubmitted(change);
 
   const rows: [string, React.ReactNode][] = [
     ['Race', change.event.title],
@@ -142,13 +138,9 @@ export default async function SwitchPayPage({
     ['Order', order.orderRef],
     ['Switch', change.changeRef],
     ['Kits', `${kits} ${kits === 1 ? 'kit' : 'kits'}`],
-    ...shipsToRows(change),
-    ...(method ? [['Payment method', paymentMethodLabel(method)] as [string, string]] : []),
-    ...(change.holdUntil ? [['Pay by', formatEventInstant(change.holdUntil)] as [string, string]] : []),
-  ];
-  const money: [string, number][] = [
-    ['Delivery fee', change.fee],
-    ...(transactionFee > 0 ? [['Transaction fee', transactionFee] as [string, number]] : []),
+    ['Payment method', outside ? 'GCash or bank transfer' : method ? paymentMethodLabel(method) : 'Online'],
+    // With the proof in, the hold no longer closes it (T6).
+    ...(change.holdUntil && !proofIn ? [['Pay by', formatEventInstant(change.holdUntil)] as [string, string]] : []),
   ];
 
   return (
@@ -163,8 +155,8 @@ export default async function SwitchPayPage({
             Ship Your Race Kits
           </h1>
           <p className="m-0 max-w-md text-base leading-relaxed text-secondary">
-            Pay the delivery fee below to have your kits shipped instead of picked up. They stay for pickup until it is
-            paid, and your confirmation comes by email once PayMongo confirms the payment.
+            Check where your kits go and who receives them, then pay the delivery fee. They stay for pickup until it is
+            paid, and your confirmation comes by email.
           </p>
         </div>
 
@@ -177,31 +169,35 @@ export default async function SwitchPayPage({
           ))}
         </dl>
 
-        <dl className="mx-auto mt-4 grid w-full max-w-md grid-cols-1 gap-0 overflow-hidden rounded-[16px] border border-white/[0.08]">
-          {money.map(([label, centavos]) => (
-            <div key={label} className="flex items-baseline justify-between gap-4 border-b border-white/[0.06] px-4 py-3">
-              <dt className="min-w-0 text-sm text-secondary">{label}</dt>
-              <dd className="m-0 shrink-0 text-sm font-semibold tabular-nums text-white">{peso(centavos)}</dd>
-            </div>
-          ))}
-          <div className="flex items-baseline justify-between gap-4 bg-white/[0.03] px-4 py-4">
-            <dt className="text-sm font-bold uppercase tracking-wide text-secondary">Amount due</dt>
-            <dd className="m-0 text-xl font-black tabular-nums text-white">{peso(total)}</dd>
-          </div>
-        </dl>
-
-        <div className="mx-auto mt-8 flex w-full max-w-md flex-col items-stretch gap-3">
-          {method ? (
-            <PayNowButton token={token} amount={peso(total)} kind="switch" />
-          ) : (
-            <p role="alert" className="m-0 text-center text-sm font-medium text-red-400">
-              Online payment is not available right now. Reply to the email we sent and we will help you pay.
-            </p>
-          )}
-          <p className="m-0 text-center text-xs leading-relaxed text-secondary">
-            You will be taken to PayMongo to pay. Any payment page opened for this switch before stops working once you
-            press Pay now.
-          </p>
+        <div className="mx-auto mt-8 w-full max-w-md">
+          <SwitchConfirm
+            token={token}
+            startOnPay={step === 'pay'}
+            event={{
+              location: change.event.location,
+              province: change.event.province,
+              format: change.event.format,
+              logisticsDeliveryFeeInside: change.event.logisticsDeliveryFeeInside,
+              logisticsDeliveryFeeOutside: change.event.logisticsDeliveryFeeOutside,
+            }}
+            runner={{
+              firstName: runner?.firstName ?? '',
+              lastName: runner?.lastName ?? '',
+              addressStreet: runner?.addressStreet ?? '',
+              addressBarangay: runner?.addressBarangay ?? '',
+              addressCity: runner?.addressCity ?? '',
+              addressProvince: runner?.addressProvince ?? '',
+              addressSameAs: null,
+            }}
+            deliveryAddress={change.deliveryAddress}
+            deliveryZone={change.deliveryZone}
+            onlineMethod={method}
+            outside={outside}
+            fee={change.fee}
+            totalCharged={change.totalCharged}
+            bankAccounts={change.event.bankAccounts}
+            submittedReference={proofIn ? change.transactionNumber : null}
+          />
         </div>
       </StatusPanel>
     </Frame>
@@ -209,34 +205,6 @@ export default async function SwitchPayPage({
 }
 
 /** Each way a switch's link stops working, in the customer's words. */
-/** Where the kits ship, without the street or the receiver's whole name and number. */
-function shipsToRows(change: { deliveryAddress: string | null; deliverySplit: boolean }): [string, string][] {
-  if (change.deliverySplit) return [['Ships to', "Each runner's home address"]];
-  const parts = parseDeliveryAddress(change.deliveryAddress);
-  const area = parts.city
-    ? [parts.barangay, parts.city, [parts.province, parts.zip].filter(Boolean).join(' ')].filter(Boolean).join(', ')
-    : 'The address on your order';
-  return [
-    ['Ships to', area],
-    ...(parts.otherReceiver
-      ? [['Receiver', [maskName(parts.receiverName), maskPhone(parts.receiverPhone)].filter(Boolean).join(' · ')] as [string, string]]
-      : []),
-  ];
-}
-
-/** "MARIA SANTOS" → "MARIA S." */
-function maskName(name: string): string {
-  const [first, ...rest] = name.trim().split(/\s+/);
-  const last = rest.at(-1);
-  return last ? `${first} ${last[0]}.` : (first ?? '');
-}
-
-/** "+639171234567" → "+63917 ••• 4567" */
-function maskPhone(phone: string): string {
-  const raw = phone.trim();
-  return raw.length > 7 ? `${raw.slice(0, -7)} ••• ${raw.slice(-4)}` : '';
-}
-
 function Closed({
   state,
   changeRef,

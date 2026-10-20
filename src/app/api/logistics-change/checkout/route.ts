@@ -27,16 +27,18 @@
  *     its own page and asks for a reload.
  *
  * The page carries the switch's `changeRef` as its `reference_number`, so the
- * webhook finds it by its stored id or by its reference either way. Opening a
- * page for a switch first opened for GCash or bank turns it into an online
- * one; its hold is not moved.
+ * webhook finds it by its stored id or by its reference either way. A switch
+ * opened for GCash or bank is refused (Revision 3 T10): it is paid with its
+ * proof on the page, so its method never flips to online here. The claim also
+ * checks the fee, since the runner may re-price the switch by changing its
+ * address on the page (T2) while this page opens.
  */
 
 import { NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { PAY_LINK_RULE, allowRequest, callerKey } from '@/lib/rate-limit';
 import { transactionFeeFor } from '@/lib/free-checkout';
-import { onlineChangeMethod } from '@/lib/category-change-hold';
+import { isOutsidePayment, onlineChangeMethod } from '@/lib/category-change-hold';
 import { LOGISTICS_CHANGE_STATUSES } from '@/lib/logistics-change';
 import {
   readSwitchForPayment,
@@ -69,6 +71,15 @@ export async function POST(request: Request) {
     const state = switchPayableStateOf(change);
     if (state !== 'payable') {
       return NextResponse.json({ state, error: 'This switch can no longer be paid here.' }, { status: 409 });
+    }
+
+    // T10: a GCash or bank switch is paid with its proof on the page, never
+    // turned online here.
+    if (isOutsidePayment(change.paymentMethod)) {
+      return NextResponse.json(
+        { error: 'This delivery is paid by GCash or bank transfer. Reload the page to see how.' },
+        { status: 409 },
+      );
     }
 
     const method = onlineChangeMethod();
@@ -114,7 +125,7 @@ export async function POST(request: Request) {
         transactionFeeCents: transactionFee,
         items: [{ name: `Kit delivery for order ${order.orderRef}`, amount: change.fee }],
       },
-      { successUrl: `${back}?paid=1`, cancelUrl: back },
+      { successUrl: `${back}?paid=1`, cancelUrl: `${back}?step=pay` },
     );
     if (!page.ok) {
       console.error('Delivery switch checkout: PayMongo refused a page', page.error, page.details);
@@ -136,6 +147,9 @@ export async function POST(request: Request) {
         id: change.id,
         status: LOGISTICS_CHANGE_STATUSES.AWAITING_PAYMENT,
         checkoutSessionId: previous,
+        // The fee the page charges: an address the runner changed meanwhile
+        // (T2) re-priced the switch, so this page is stale.
+        fee: change.fee,
         OR: [{ holdUntil: null }, { holdUntil: { gt: now } }],
       },
       data: { checkoutSessionId: page.id, paymentMethod: method, transactionFee, totalCharged },

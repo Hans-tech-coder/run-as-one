@@ -64,10 +64,18 @@ function WaitingSwitch({ change }: { change: LogisticsChangeView }) {
       <p className="m-0 text-secondary [overflow-wrap:anywhere]">
         {change.deliverySplit ? "To each runner's home address" : `To ${change.deliveryAddress}`}
       </p>
-      <p className="m-0 text-xs text-secondary">
-        {method ? `To pay by ${method}` : 'To pay'}
-        {change.holdUntil ? ` · waits until ${formatEventInstant(change.holdUntil)}` : ''}
-      </p>
+      {change.proofSubmitted ? (
+        // Revision 3 T6, T8: the runner's proof is in, so the hold no longer runs out.
+        <p className="m-0 text-xs text-secondary">
+          Proof submitted by the runner · reference {change.transactionNumber} · waits for you to check it until the
+          switch deadline
+        </p>
+      ) : (
+        <p className="m-0 text-xs text-secondary">
+          {method ? `To pay by ${method}` : 'To pay'}
+          {change.holdUntil ? ` · waits until ${formatEventInstant(change.holdUntil)}` : ''}
+        </p>
+      )}
       <p className="m-0 text-xs text-[var(--text-muted)]">Stays on pickup until paid. {change.changeRef}</p>
     </div>
   );

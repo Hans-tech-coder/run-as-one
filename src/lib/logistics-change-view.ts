@@ -9,6 +9,7 @@ import {
 } from '@/lib/registration-codes';
 import { formatRunnerAddress, type RunnerAddressField } from '@/lib/runner-address';
 import type { SwitchEvent } from '@/lib/logistics-change-context';
+import { switchProofSubmitted } from '@/lib/logistics-change-proof';
 import { shipmentsFor } from '@/app/events/[slug]/register/delivery-split';
 
 /**
@@ -58,6 +59,8 @@ export function logisticsChangeView(change: ChangeWithOrders) {
     // server; the screen asks the proof route for a signed URL.
     transactionNumber: change.transactionNumber,
     hasProof: change.proofOfPayment !== null,
+    /** A GCash or bank switch whose proof the runner sent on its link, for staff to check (Revision 3 T8). */
+    proofSubmitted: switchProofSubmitted(change),
     createdEmailSentAt: change.createdEmailSentAt?.toISOString() ?? null,
     appliedEmailSentAt: change.appliedEmailSentAt?.toISOString() ?? null,
     lastEmailError: change.lastEmailError,

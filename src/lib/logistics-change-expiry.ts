@@ -5,6 +5,7 @@ import { holdLapsed } from '@/lib/category-change-hold';
 import { LOGISTICS_CHANGE_STATUSES, logisticsChangeDeadline } from '@/lib/logistics-change';
 import { retireSwitchPage } from '@/lib/logistics-change-payment';
 import { refsOf } from '@/lib/logistics-change-parcels';
+import { switchHoldUntil } from '@/lib/logistics-change-proof';
 
 /**
  * **When an unpaid delivery switch lapses** (LOGISTICS_CHANGE_PLAN.md L12;
@@ -16,6 +17,10 @@ import { refsOf } from '@/lib/logistics-change-parcels';
  * online payment, 7 days for GCash or bank, capped at the switch deadline when
  * it was opened — **or at the event's switch deadline, read now**, because an
  * organizer can bring the deadline forward after a switch was opened (L11).
+ *
+ * A GCash or bank switch whose proof the runner submitted on its link waits
+ * past its hold for staff to check it (Revision 3 T6): only the deadline
+ * expires it.
  *
  * There is no seat to release: the order never moved, so it stays on pickup.
  * The sweep makes the status say so, which also lifts R4's refusal for another
@@ -41,6 +46,9 @@ export async function expireLogisticsChanges(now: Date = new Date()): Promise<{ 
       id: true,
       changeRef: true,
       holdUntil: true,
+      paymentMethod: true,
+      proofOfPayment: true,
+      status: true,
       checkoutSessionId: true,
       eventId: true,
       event: { select: { organizerId: true, date: true, logisticsChangeUntil: true } },
@@ -52,7 +60,7 @@ export async function expireLogisticsChanges(now: Date = new Date()): Promise<{ 
     .filter(change => {
       const deadline = logisticsChangeDeadline(change.event);
       // No readable deadline is read as closed, as `logisticsChangeDeadline` says.
-      return holdLapsed(change.holdUntil, now) || deadline === null || deadline.getTime() <= now.getTime();
+      return holdLapsed(switchHoldUntil(change), now) || deadline === null || deadline.getTime() <= now.getTime();
     })
     .slice(0, MAX_SWITCH_SWEEP);
 

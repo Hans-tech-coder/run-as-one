@@ -148,6 +148,10 @@ export const AUDIT_ACTIONS = [
   'logistics_change.payment_link.copied',
   'logistics_change.expired',
   'logistics_change.payment_late',
+  // On the switch's link (Revision 3): the runner confirming where the kits
+  // ship, and handing in the GCash or bank proof for staff to check.
+  'logistics_change.details_confirmed',
+  'logistics_change.proof_submitted',
   'proof.viewed',
   'registrants.exported',
   // The Unpaid checkouts tab's own file (UNPAID_ORDERS_PLAN.md Batch 3): the

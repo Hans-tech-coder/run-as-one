@@ -20,9 +20,16 @@ import {
   deliveryAddressDetails,
   EMPTY_DELIVERY_ADDRESS,
 } from '../src/app/events/[slug]/register/delivery-address';
-import { CHANGE_PAYMENT_CHOICES, paymentMethodForChoice, switchPaymentChoices } from '../src/lib/category-change-hold';
+import {
+  CHANGE_PAYMENT_CHOICES,
+  changePayableState,
+  paymentMethodForChoice,
+  switchPaymentChoices,
+} from '../src/lib/category-change-hold';
+import { switchHoldUntil, switchProofSubmitted } from '../src/lib/logistics-change-proof';
+import type { LogisticsChangeView } from '../src/lib/logistics-change-view';
 import { NO_CHANGES, NO_ORDERS, settle } from '../src/lib/settlement';
-import { logisticsMove, shipsWith } from '../src/app/admin/events/[id]/registrants/logistics-change-display';
+import { logisticsMove, logisticsNote, shipsWith } from '../src/app/admin/events/[id]/registrants/logistics-change-display';
 import { kitNote } from '../src/app/admin/your-events/[id]/RunnerCells';
 
 /**
@@ -463,6 +470,54 @@ check('the emails read the address apart from its receiver', deliveryAddressDeta
   receiver: { name: 'MARIA SANTOS', phone: '+639171234567' },
 });
 check('no receiver reads as none', deliveryAddressDetails(shipTo(TARLAC_A)).receiver, null);
+
+// ── Revision 3: the runner confirms on the link ─────────────────────────────
+
+// T2: the link re-quotes the address the runner gives, by the same rules.
+check('the runner moving the address to another tier re-prices it', fee(quote({ target: { deliveryAddress: shipTo(PAMPANGA) } })), OUTSIDE);
+check(
+  'the runner moving the address onto a paid parcel rides free and applies',
+  (q => q.ok && [q.fee, q.status, q.ridesOnRegistrationId])(quote({ existing: [paidOneAddress], target: { deliveryAddress: shipTo(TARLAC_A) } })),
+  [0, 'APPLIED', 'paid-1'],
+);
+check(
+  'an online re-quote carries the transaction fee for the new tier',
+  (q => q.ok && q.transactionFee)(quote({ paymentMethod: 'QRPH', target: { deliveryAddress: shipTo(PAMPANGA) } })),
+  transactionFeeFor(OUTSIDE, 'QRPH'),
+);
+
+// T5, T6: proof submitted, and the hold it stops.
+const lapsedHold = new Date('2026-11-01T00:00:00+08:00');
+const afterHold = new Date('2026-11-03T00:00:00+08:00');
+const deadline = new Date('2026-11-08T00:00:00+08:00');
+type ProofCase = { status: string; paymentMethod: string; proofOfPayment: string | null; holdUntil: Date };
+const waitingBank: ProofCase = { status: 'AWAITING_PAYMENT', paymentMethod: 'BANK_TRANSFER', proofOfPayment: null, holdUntil: lapsedHold };
+const withProof: ProofCase = { ...waitingBank, proofOfPayment: 'proofs/slip.jpg' };
+check('a waiting bank switch with a proof is proof submitted', switchProofSubmitted(withProof), true);
+check('without a proof it is not', switchProofSubmitted(waitingBank), false);
+check('an online switch is never proof submitted', switchProofSubmitted({ ...withProof, paymentMethod: 'QRPH' }), false);
+check('an applied switch is not proof submitted', switchProofSubmitted({ ...withProof, status: 'APPLIED' }), false);
+check('proof stops the hold (T6)', switchHoldUntil(withProof), null);
+check('no proof keeps the hold', switchHoldUntil(waitingBank), lapsedHold);
+const payable = (c: ProofCase, now: Date) =>
+  changePayableState({ status: c.status, holdUntil: switchHoldUntil(c) }, deadline, now);
+check('past its hold without proof, a switch expires', payable(waitingBank, afterHold), 'expired');
+check('past its hold with proof, it still waits for staff', payable(withProof, afterHold), 'payable');
+check('past the deadline, even with proof, it expires', payable(withProof, new Date('2026-11-09T00:00:00+08:00')), 'expired');
+
+// T8: the registrants export says the proof is in.
+check(
+  'the export note says proof submitted',
+  logisticsNote({
+    registrationId: 'order-1',
+    logisticsMethod: 'Pickup',
+    isDelivery: false,
+    logisticsChanges: [
+      { status: 'AWAITING_PAYMENT', proofSubmitted: true, totalCharged: INSIDE, fee: INSIDE } as LogisticsChangeView,
+    ],
+  }),
+  'DELIVERY SWITCH PROOF SUBMITTED',
+);
 
 console.log(failures ? `\n${failures} failed` : '\nAll passed');
 process.exit(failures ? 1 : 0);

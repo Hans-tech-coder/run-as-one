@@ -79,9 +79,10 @@ type Target = {
 /**
  * L4: the order's logistics move and nothing else; the receipt's amounts stay.
  * The one place an order's method is written after checkout, for a switch
- * applied at once and one applied when its fee is paid.
+ * applied at once, one applied when its fee is paid, and one the runner
+ * confirmed onto a paid parcel on its link (`logistics-change-runner.ts`).
  */
-async function moveOrder(tx: Prisma.TransactionClient, registrationId: string, target: Target) {
+export async function moveOrder(tx: Prisma.TransactionClient, registrationId: string, target: Target) {
   await tx.registration.updateMany({
     where: { id: registrationId },
     data:

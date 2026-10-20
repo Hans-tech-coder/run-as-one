@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-46 pages · 85 API routes · 135 modules in `src/lib` · 584 files · 105,628 lines
+46 pages · 87 API routes · 137 modules in `src/lib` · 590 files · 106,831 lines
 
 ---
 
@@ -62,7 +62,7 @@ The route, the server component behind it, and the client components beside it.
 | `/feedback` | [`/feedback/page.tsx`](../src/app/feedback/page.tsx) | `FeedbackForm.tsx` `FeedbackSent.tsx` `ScreenshotField.tsx` |
 | `/pay/[token]` | [`/pay/[token]/page.tsx`](../src/app/pay/[token]/page.tsx) | `PayNowButton.tsx` |
 | `/pay/change/[token]` | [`/pay/change/[token]/page.tsx`](../src/app/pay/change/[token]/page.tsx) | — |
-| `/pay/logistics/[token]` | [`/pay/logistics/[token]/page.tsx`](../src/app/pay/logistics/[token]/page.tsx) | — |
+| `/pay/logistics/[token]` | [`/pay/logistics/[token]/page.tsx`](../src/app/pay/logistics/[token]/page.tsx) | `SwitchBankProof.tsx` `SwitchConfirm.tsx` |
 | `/privacy` | [`/privacy/page.tsx`](../src/app/privacy/page.tsx) | — |
 | `/results` | [`/results/page.tsx`](../src/app/results/page.tsx) | — |
 | `/results/[slug]` | [`/results/[slug]/page.tsx`](../src/app/results/[slug]/page.tsx) | — |
@@ -157,6 +157,8 @@ The route, the server component behind it, and the client components beside it.
 | `/api/cron/expire-pending` | — | [`/cron/expire-pending/route.ts`](../src/app/api/cron/expire-pending/route.ts) |
 | `/api/feedback` | POST | [`/feedback/route.ts`](../src/app/api/feedback/route.ts) |
 | `/api/logistics-change/checkout` | POST | [`/logistics-change/checkout/route.ts`](../src/app/api/logistics-change/checkout/route.ts) |
+| `/api/logistics-change/details` | POST | [`/logistics-change/details/route.ts`](../src/app/api/logistics-change/details/route.ts) |
+| `/api/logistics-change/proof` | POST | [`/logistics-change/proof/route.ts`](../src/app/api/logistics-change/proof/route.ts) |
 | `/api/pay/[token]` | POST | [`/pay/[token]/route.ts`](../src/app/api/pay/[token]/route.ts) |
 | `/api/promos/lookup` | POST | [`/promos/lookup/route.ts`](../src/app/api/promos/lookup/route.ts) |
 | `/api/upload` | POST | [`/upload/route.ts`](../src/app/api/upload/route.ts) |
@@ -240,6 +242,8 @@ the file itself.
 | [`logistics-change-expiry.ts`](../src/lib/logistics-change-expiry.ts) | When an unpaid delivery switch lapses (L12). |
 | [`logistics-change-parcels.ts`](../src/lib/logistics-change-parcels.ts) | **Which receipts share a parcel after a delivery switch** (LOGISTICS_CHANGE_PLAN.md L6, Revision 1 R4 and R5): who rides at ₱0 on whose paid parcel… |
 | [`logistics-change-payment.ts`](../src/lib/logistics-change-payment.ts) | How a delivery switch's fee comes in, and what happens when it comes in late (`LOGISTICS_CHANGE_PLAN.md` Session 3), the category change's `categor… |
+| [`logistics-change-proof.ts`](../src/lib/logistics-change-proof.ts) | When a GCash or bank delivery switch counts as "proof submitted", and what that does to its clock (`LOGISTICS_CHANGE_PLAN.md` Revision 3 T5, T6). |
+| [`logistics-change-runner.ts`](../src/lib/logistics-change-runner.ts) | What the runner may do on a delivery switch's link (`LOGISTICS_CHANGE_PLAN.md` Revision 3 T2–T8). |
 | [`logistics-change-settings.ts`](../src/lib/logistics-change-settings.ts) | **What the event form may save for delivery switches** (LOGISTICS_CHANGE_PLAN.md L11): the *Delivery switch deadline*, read from a posted body and … |
 | [`logistics-change-store.ts`](../src/lib/logistics-change-store.ts) | The only writer of an order's pickup or delivery after checkout (`LOGISTICS_CHANGE_PLAN.md` Session 2, Revision 1 R3–R5). |
 | [`logistics-change-view.ts`](../src/lib/logistics-change-view.ts) | A switch as the staff screens read it, and an order's Logistics fields. |
@@ -352,8 +356,8 @@ when a task touches one, split it before editing rather than after.
 | 431 | [`src/app/admin/events/[id]/registrants/RegistrantsTable.tsx`](../src/app/admin/events/[id]/registrants/RegistrantsTable.tsx) |
 | 431 | [`src/lib/activity.ts`](../src/lib/activity.ts) |
 | 426 | [`src/app/admin/events/EventsTableClient.tsx`](../src/app/admin/events/EventsTableClient.tsx) |
-| 422 | [`src/lib/logistics-change.ts`](../src/lib/logistics-change.ts) |
 | 425 | [`src/app/admin/events/[id]/edit/page.tsx`](../src/app/admin/events/[id]/edit/page.tsx) |
+| 422 | [`src/lib/logistics-change.ts`](../src/lib/logistics-change.ts) |
 | 422 | [`src/lib/pacer.ts`](../src/lib/pacer.ts) |
-| 415 | [`src/lib/logistics-change-store.ts`](../src/lib/logistics-change-store.ts) |
+| 416 | [`src/lib/logistics-change-store.ts`](../src/lib/logistics-change-store.ts) |
 | 404 | [`src/app/admin/events/[id]/registrants/UnpaidCheckoutsList.tsx`](../src/app/admin/events/[id]/registrants/UnpaidCheckoutsList.tsx) |

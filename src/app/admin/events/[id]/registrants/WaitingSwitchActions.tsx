@@ -7,13 +7,18 @@
  *
  * **The buttons follow how the fee is paid** (`isOutsidePayment`):
  *
- * - **Online** (PayMongo): *Copy payment link* and *Email payment link*
- *   (`registration:email`). No *Record payment*: PayMongo's webhook, or the
+ * - **Both**: *Copy payment link* and *Email payment link*
+ *   (`registration:email`). The link is where the runner confirms the address
+ *   and receiver and pays (Revision 3): online, or with the GCash or bank
+ *   screenshot and reference.
+ * - **Online** (PayMongo): no *Record payment*: PayMongo's webhook, or the
  *   runner back from PayMongo, applies it.
- * - **GCash or bank**: *Email how to pay* (`registration:email`), the same
- *   email with the accounts and QR codes, and *Record payment*
- *   (`registration:validate`): the reference and an optional screenshot,
- *   shrunk in the browser (`compress-proof.ts`). It applies the switch at once.
+ * - **GCash or bank**: *Record payment* (`registration:validate`): the
+ *   reference and an optional screenshot, shrunk in the browser
+ *   (`compress-proof.ts`). It applies the switch at once. When the runner sent
+ *   their proof on the link, *View proof* opens it (`proof:view`), and *Record
+ *   payment* starts from their reference and keeps their screenshot unless
+ *   staff attach another.
  * - **Cancel switch** (`registration:edit`), after a confirm. The kits stay on
  *   pickup and the payment link stops working.
  *
@@ -23,7 +28,7 @@
  */
 
 import React, { useState } from 'react';
-import { Copy, Mail, Receipt, XCircle } from 'lucide-react';
+import { Copy, Image as ImageIcon, Mail, Receipt, XCircle } from 'lucide-react';
 import BusyLabel from '@/components/ui/BusyLabel';
 import FieldError from '@/components/ui/FieldError';
 import { useAlert } from '@/components/ui/AlertProvider';
@@ -83,7 +88,8 @@ function RecordPayment({
   onClose: () => void;
 }) {
   const { alert } = useAlert();
-  const [reference, setReference] = useState('');
+  // The runner's own reference from the link (Revision 3 T5), for staff to check.
+  const [reference, setReference] = useState(change.proofSubmitted ? (change.transactionNumber ?? '') : '');
   const [proof, setProof] = useState<File | null>(null);
   const [errors, setErrors] = useState<{ transactionNumber?: string; proofFile?: string }>({});
   const [saving, setSaving] = useState(false);
@@ -120,6 +126,7 @@ function RecordPayment({
       <p className="m-0 text-xs text-secondary">
         Record the {peso(change.fee)} the runner sent by GCash or bank transfer. This switches the receipt to delivery at
         once and emails them.
+        {change.proofSubmitted ? ' Their screenshot from the link stays attached; attach another only to replace it.' : ''}
       </p>
       <div className="space-y-1.5">
         <label htmlFor={fieldId} className="block text-sm text-secondary">
@@ -207,7 +214,7 @@ export default function WaitingSwitchActions({
       }
       const refused = refusedEmail(change, orderRef, 'created', data.email);
       if (refused) onSendEmail(refused);
-      else toast(`Emailed ${outside ? 'how to pay' : 'the payment link'} to ${data.email.to}.`);
+      else toast(`Emailed the payment link to ${data.email.to}.`);
       onChanged();
     } catch {
       await alert({ variant: 'error', title: 'No Payment Link', message: 'Could not reach the server. Try again.' });
@@ -267,7 +274,18 @@ export default function WaitingSwitchActions({
 
   return (
     <div className="flex items-center gap-2 flex-wrap">
-      {permissions.email && !outside && (
+      {permissions.proof && change.proofSubmitted && (
+        <a
+          href={`/api/admin/logistics-changes/${change.id}/proof`}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={event => event.stopPropagation()}
+          className="btn-filter is-compact gap-1.5 no-underline"
+        >
+          <ImageIcon size={14} aria-hidden="true" /> View proof
+        </a>
+      )}
+      {permissions.email && (
         <button type="button" onClick={press(() => link('copy'))} disabled={busy !== null} className="btn-filter is-compact gap-1.5">
           <Copy size={14} aria-hidden="true" /> {busy === 'copy' ? <BusyLabel>Copying</BusyLabel> : 'Copy payment link'}
         </button>
@@ -275,7 +293,7 @@ export default function WaitingSwitchActions({
       {permissions.email && (
         <button type="button" onClick={press(() => link('email'))} disabled={busy !== null} className="btn-filter is-compact gap-1.5">
           <Mail size={14} aria-hidden="true" />{' '}
-          {busy === 'email' ? <BusyLabel>Sending</BusyLabel> : outside ? 'Email how to pay' : 'Email payment link'}
+          {busy === 'email' ? <BusyLabel>Sending</BusyLabel> : 'Email payment link'}
         </button>
       )}
       {permissions.validate && outside && (

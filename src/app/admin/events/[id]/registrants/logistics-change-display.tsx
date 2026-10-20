@@ -72,7 +72,11 @@ export function logisticsNote(row: WithSwitches): string {
   return [
     move ? `SWITCHED FROM ${move.from.toUpperCase()}` : null,
     host ? `SHIPS WITH ${host}` : null,
-    waiting ? `DELIVERY SWITCH AWAITING ${peso(waiting.totalCharged || waiting.fee)}` : null,
+    waiting
+      ? waiting.proofSubmitted
+        ? 'DELIVERY SWITCH PROOF SUBMITTED'
+        : `DELIVERY SWITCH AWAITING ${peso(waiting.totalCharged || waiting.fee)}`
+      : null,
   ]
     .filter(Boolean)
     .join(' · ');
@@ -124,7 +128,12 @@ export function LogisticsWithSwitch({ runner }: { runner: WithSwitches }) {
         </span>
       )}
       {host && <span className="text-xs text-[var(--text-muted)]">Ships with {host}</span>}
-      {waiting && (
+      {waiting?.proofSubmitted && (
+        <span className="status-badge info" title={`The runner sent the payment proof for ${waiting.changeRef}. Check it, then record the payment.`}>
+          Proof submitted · to delivery
+        </span>
+      )}
+      {waiting && !waiting.proofSubmitted && (
         <span className="status-badge pending" title={`Waiting for payment to switch to delivery (${waiting.changeRef}).`}>
           {peso(waiting.totalCharged || waiting.fee)} due · to delivery
         </span>

@@ -8,6 +8,7 @@ import { PAYMENT_METHODS } from '@/lib/registration-codes';
 import { changePayableState, isOutsidePayment, type ChangePayableState } from '@/lib/category-change-hold';
 import { LOGISTICS_CHANGE_STATUSES, logisticsChangeDeadline } from '@/lib/logistics-change';
 import { LogisticsChangeRefused } from '@/lib/logistics-change-context';
+import { switchHoldUntil } from '@/lib/logistics-change-proof';
 import { applyLogisticsChange } from '@/lib/logistics-change-store';
 import {
   logisticsChangeAppliedEmail,
@@ -15,6 +16,7 @@ import {
   sendLogisticsChangeEmail,
   type SwitchForEmail,
 } from '@/lib/email-logistics-change';
+import { deletePrivateFile } from '@/lib/blob';
 import { lookUpPaymongoPayment } from '@/lib/online-payment';
 import { retirePaymongoPage } from '@/lib/paymongo-session';
 import { createSwitchPaymentToken, switchPaymentUrl } from '@/lib/resume-payment';
@@ -64,7 +66,21 @@ const PAYMENT_INCLUDE = {
           orderRef: true,
           customerName: true,
           customerEmail: true,
-          runners: { where: { deletedAt: null }, select: { id: true } },
+          paymentMethod: true,
+          // Runner 1's home address first: what the link offers to ship to (T1).
+          runners: {
+            where: { deletedAt: null },
+            orderBy: { runnerNo: 'asc' },
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              addressStreet: true,
+              addressBarangay: true,
+              addressCity: true,
+              addressProvince: true,
+            },
+          },
         },
       },
     },
@@ -78,11 +94,16 @@ const PAYMENT_INCLUDE = {
       format: true,
       organizerId: true,
       logisticsChangeUntil: true,
+      // The tiers the link re-quotes from (T2).
+      province: true,
+      location: true,
+      logisticsDeliveryFeeInside: true,
+      logisticsDeliveryFeeOutside: true,
       pickupLocation: true,
       pickupSchedule: true,
       client: EVENT_SITE_CLIENT,
       bankAccounts: {
-        select: { bankName: true, accountName: true, accountNumber: true, qrImageUrl: true },
+        select: { id: true, bankName: true, accountName: true, accountNumber: true, qrImageUrl: true },
         orderBy: { sortOrder: 'asc' },
       },
     },
@@ -107,9 +128,15 @@ export function receiptOf(change: SwitchForPayment) {
  * Whether this switch can still be paid, by the rule the public page applies:
  * the category change's `changePayableState` with this race's switch deadline,
  * so a lapsed hold or a passed deadline reads as expired before the sweep runs.
+ * A GCash or bank switch whose proof is in is judged without its hold
+ * (Revision 3 T6, `logistics-change-proof.ts`): only the deadline closes it.
  */
 export function switchPayableStateOf(change: SwitchForPayment, now: Date = new Date()): ChangePayableState {
-  return changePayableState(change, logisticsChangeDeadline(change.event), now);
+  return changePayableState(
+    { status: change.status, holdUntil: switchHoldUntil(change) },
+    logisticsChangeDeadline(change.event),
+    now,
+  );
 }
 
 const REFUSALS: Record<Exclude<ChangePayableState, 'payable'>, string> = {
@@ -121,7 +148,13 @@ const REFUSALS: Record<Exclude<ChangePayableState, 'payable'>, string> = {
 /** The link for a switch and when it stops working, made from the switch itself. */
 async function linkFor(change: SwitchForPayment, requestUrl: string) {
   const until = change.holdUntil ?? new Date();
-  const token = await createSwitchPaymentToken(change.id, until);
+  // A GCash or bank switch's link outlives its hold, up to the deadline: once
+  // the proof is in, the hold no longer closes it (T6), and the runner may
+  // still open the page to see or replace the proof (T7). The page judges the
+  // rest (`switchPayableStateOf`).
+  const deadline = logisticsChangeDeadline(change.event);
+  const opensUntil = isOutsidePayment(change.paymentMethod) && deadline && deadline > until ? deadline : until;
+  const token = await createSwitchPaymentToken(change.id, opensUntil);
   return { url: switchPaymentUrl(eventOrigin(change.event, requestUrl), token), until, untilLabel: formatEventInstant(until) };
 }
 
@@ -160,10 +193,14 @@ function emailFields(change: SwitchForPayment): SwitchForEmail {
 
 export type SwitchEmailKind = 'created' | 'applied';
 
-/** One of a switch's two emails, rendered; the created one carries its link when paid online. */
+/**
+ * One of a switch's two emails, rendered. The created one carries its link
+ * however the fee is paid (Revision 3 T9): the runner confirms the delivery
+ * details and pays, online or with the GCash or bank proof, on that page.
+ */
 export async function renderSwitchEmail(change: SwitchForPayment, kind: SwitchEmailKind, requestUrl: string | null) {
   if (kind === 'applied') return logisticsChangeAppliedEmail(emailFields(change));
-  const url = isOutsidePayment(change.paymentMethod) || !requestUrl ? null : (await linkFor(change, requestUrl)).url;
+  const url = requestUrl ? (await linkFor(change, requestUrl)).url : null;
   return logisticsChangeCreatedEmail(emailFields(change), url);
 }
 
@@ -239,7 +276,7 @@ export type OutsideSwitchPayment = { transactionNumber: string; proofPathname: s
 export async function recordSwitchPayment(actor: AuditActor, changeId: string, payment: OutsideSwitchPayment) {
   const change = await db.logisticsChange.findUnique({
     where: { id: changeId },
-    select: { fee: true, checkoutSessionId: true, changeRef: true, paymentMethod: true },
+    select: { fee: true, checkoutSessionId: true, changeRef: true, paymentMethod: true, proofOfPayment: true },
   });
   if (!change) throw new LogisticsChangeRefused(404, 'Delivery switch not found');
   if (!isOutsidePayment(change.paymentMethod)) {
@@ -260,13 +297,20 @@ export async function recordSwitchPayment(actor: AuditActor, changeId: string, p
     }
   }
 
+  // The runner's own screenshot from the link (Revision 3 T5) stays unless
+  // staff attach another, which replaces it.
   const applied = await applyLogisticsChange(actor, changeId, {
     paymentMethod: PAYMENT_METHODS.BANK_TRANSFER,
     transactionNumber: payment.transactionNumber,
-    proofOfPayment: payment.proofPathname,
+    ...(payment.proofPathname ? { proofOfPayment: payment.proofPathname } : {}),
     transactionFee: 0,
     totalCharged: change.fee,
   });
+  if (payment.proofPathname && change.proofOfPayment && change.proofOfPayment !== payment.proofPathname) {
+    await deletePrivateFile(change.proofOfPayment).catch(error =>
+      console.error(`Delivery switch ${change.changeRef}: the replaced proof could not be deleted`, error),
+    );
+  }
   await retireSwitchPage(change);
   return applied;
 }

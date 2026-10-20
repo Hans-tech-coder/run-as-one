@@ -77,7 +77,7 @@ or one arriving after the switch deadline, is written as
 (`lib/email-logistics-change.ts`): *payment needed* (link, or accounts and QR
 codes) and *switched* (where it ships, or the pickup details from `pickup.ts`),
 stamped on the switch, with a by-hand send. The waiting receipt's card and
-opened row carry *Copy payment link*, *Email payment link* / *Email how to pay*,
+opened row carry *Copy payment link*, *Email payment link* (both methods since Revision 3),
 *Record payment* and *Cancel switch*, each on its own permission. The trail
 vocabulary was split out of `activity.ts` into `activity-actions.ts` on the way.
 **Session 4 (money, client view):** an APPLIED switch that charged something
@@ -181,10 +181,33 @@ the wizard's Logistics step (`ship-kits-address.tsx`): Runner 1's home as a
 card with *Change*, or empty fields and no claim when there is none; the fee
 line; ZIP, landmark and *Someone else will receive the kit*. The receiver is
 stored in `deliveryAddress` as checkout stores it. Both switch emails show a
-*Delivery* card with the landmark and receiver (`deliveryAddressDetails`), the
-GCash/bank one asks for a reply with the payment's screenshot and reference,
-and `/pay/logistics/[token]` shows the place to the barangay and the receiver
-masked.
+*Delivery* card with the landmark and receiver (`deliveryAddressDetails`).
+
+**Revision 3 (owner, 2026-10-20): the runner confirms their own delivery
+details on the link**, for online and GCash/bank switches alike (T1–T11 at the
+top of `LOGISTICS_CHANGE_PLAN.md`). Staff pick only how the fee is paid; the
+*confirm and pay* email (one for both methods) links to `/pay/logistics/[token]`,
+now two steps (`SwitchConfirm.tsx`): the wizard's `DeliveryStep` from the
+switch's address, re-quoted under the locks on *Confirm Details*
+(`lib/logistics-change-runner.ts`, `api/logistics-change/details`: a new tier
+re-prices it, a paid parcel there applies it at ₱0, R4 refuses), then *Pay now*
+or the accounts, QR codes and the screenshot and reference
+(`api/logistics-change/proof`). The page shows the whole address while a switch
+waits (T4, reversing the masking). "Proof submitted" is a waiting bank switch
+with a proof (`lib/logistics-change-proof.ts`, no migration): it stops the hold
+until the switch deadline (T6), the runner may replace it (T7), the registrants
+cell and *Delivery Payment* show it with *View proof*, and *Record payment*
+starts from its reference and keeps its screenshot. The checkout route refuses
+a bank switch (T10). Verified on `local-dev` with the owner's orders only
+(RM-7B67DB3F by bank: Ship kits → Copy link → address moved from Pangasinan to
+Tarlac, ₱200 → ₱150 with a receiver → proof → replaced, the first file gone →
+*Proof submitted* on the row → Record payment applied with the runner's proof
+kept; RM-98EEC0B5's existing online switch: confirm, step 2 with ₱152.29 *Pay
+now*, then its address moved onto RM-7B67DB3F's paid parcel applied at ₱0 and
+showed *Kits Switched to Delivery*), all test data removed and RM-98EEC0B5's
+switch restored. **Not exercised:** pressing *Pay now* after an edit (the
+open-page close path) and the sweep skipping a proof past its hold, which the
+check script covers as a rule only.
 
 The decisions in full, as the owner accepted them (L1–L14, before Revision 1):
 **L1** staff only, started by staff like a category change; runner
