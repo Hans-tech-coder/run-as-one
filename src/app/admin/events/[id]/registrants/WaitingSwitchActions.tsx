@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * What staff can do with a switch still waiting for its fee, on the receipt's
- * card and opened row (LOGISTICS_CHANGE_PLAN.md Session 3, Revision 1), each on
+ * What staff can do with a switch still waiting for its fee, in the receipt's
+ * *Delivery Payment* modal (LOGISTICS_CHANGE_PLAN.md Session 3, Revision 2), each on
  * the permission it needs, as `AwaitingChangeActions` gates a category change's:
  *
  * **The buttons follow how the fee is paid** (`isOutsidePayment`):
@@ -18,7 +18,7 @@
  *   pickup and the payment link stops working.
  *
  * Every success re-reads the page (`onChanged`), since a switch applied moves
- * the counts and the other cards; an email Resend refused opens the by-hand
+ * other receipts' rows too; an email Resend refused opens the by-hand
  * send (`onSendEmail`).
  */
 
@@ -31,11 +31,11 @@ import { formatPesos } from '@/lib/money';
 import { MAX_TRANSACTION_NUMBER, isOutsidePayment, readTransactionNumber } from '@/lib/category-change-hold';
 import { compressProof } from '@/lib/compress-proof';
 import type { LogisticsChangeView } from '@/lib/logistics-change-view';
-import { ProofPicker } from '../registrants/CategoryChangePaymentChoice';
-import type { RenderedEmail } from '../registrants/email-handoff';
+import { ProofPicker } from './CategoryChangePaymentChoice';
+import type { RenderedEmail } from './email-handoff';
 
 /** What this person may do here, decided on the server. */
-export type PickupDeliveryPermissions = {
+export type SwitchPermissions = {
   /** `registration:edit`: switch, and cancel a switch. */
   edit: boolean;
   /** `registration:email`: the payment link and the emails. */
@@ -172,7 +172,7 @@ export default function WaitingSwitchActions({
 }: {
   change: LogisticsChangeView;
   orderRef: string;
-  permissions: PickupDeliveryPermissions;
+  permissions: SwitchPermissions;
   /** Something moved: the page's read runs again. */
   onChanged: () => void;
   onSendEmail: (request: SwitchEmailRequest) => void;

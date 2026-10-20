@@ -3,7 +3,7 @@
  * Session 2, Revision 1): the "Pickup → Delivery" chip, the "Ships with
  * RM-XXXX" note, a switch still waiting for its fee, and the money line each
  * switch in a history carries. The registrants cell, card and CSV and the
- * Pickup & Delivery cards and history draw them from here, as
+ * switch modal and history draw them from here, as
  * `category-change-display.tsx` does for category moves, so a chip cannot mean
  * one thing on one screen and another in the file.
  */
@@ -107,7 +107,7 @@ export function switchDirectionLabel(change: Pick<LogisticsChangeView, 'directio
  * The registrants Logistics cell: the method, the "Pickup → Delivery" chip
  * once the order has switched, "Ships with RM-XXXX" while it rides on another
  * order's parcel, and a switch still waiting for its fee. Read only: the
- * switch, its history and its Cancel are on Pickup & Delivery (R6). Blue for the
+ * switch, its payment and its history open from the row menu (Revision 2). Blue for the
  * chip, as *Kit changed* is: a fact the kit team acts on, not a fault in the
  * order.
  */

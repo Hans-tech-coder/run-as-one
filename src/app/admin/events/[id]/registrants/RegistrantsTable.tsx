@@ -47,6 +47,8 @@ import ManualEmailModal, { useManualEmailModal } from './ManualEmailModal';
 import CategoryChangeModal from './CategoryChangeModal';
 import { useCategoryChangeModal } from './useCategoryChangeModal';
 import CategoryChangeEmailModal from './CategoryChangeEmailModal';
+import { useOrderSwitch } from './useOrderSwitch';
+import type { EventReceipts } from '@/lib/logistics-receipts';
 import {
   BulkDeleteModal,
   DeleteRegistrantModal,
@@ -82,6 +84,12 @@ interface RegistrantsTableProps {
   runners: any[];
   permissions: RegistrantPermissions;
   /**
+   * The event's receipts as the pickup / delivery switch reads them
+   * (`readEventReceipts`, LOGISTICS_CHANGE_PLAN.md Revision 2): what each
+   * row's receipt may switch to, and everything the panels quote from.
+   */
+  switching: EventReceipts;
+  /**
    * What the search box starts with, from `?search=` on the URL.
    *
    * The marketing screen's redemptions panel links here with an order
@@ -102,8 +110,18 @@ export default function RegistrantsTable({
   runners: initialRunners,
   initialSearch = '',
   permissions,
+  switching,
 }: RegistrantsTableProps) {
   const [runners, setRunners] = useState(initialRunners);
+  // A delivery switch re-reads the page (router.refresh), and the rows it
+  // moved come back as new props: take them, as React's "adjusting state when
+  // a prop changes" does. Every other edit here is already saved, so the
+  // fresh read never loses one.
+  const [readRunners, setReadRunners] = useState(initialRunners);
+  if (initialRunners !== readRunners) {
+    setReadRunners(initialRunners);
+    setRunners(initialRunners);
+  }
   const [viewingRunner, setViewingRunner] = useState<any | null>(null);
 
   // The proof of payment, full-screen. It is the runner whose receipt is
@@ -180,6 +198,10 @@ export default function RegistrantsTable({
   // send (CATEGORY_CHANGE_PLAN.md), all handed back onto the rows here.
   const categoryChange = useCategoryChangeModal({ runners, setRunners, setViewingRunner });
 
+  // Switch a receipt between kit pickup and delivery (LOGISTICS_CHANGE_PLAN.md
+  // Revision 2): from any runner's row, for the whole order.
+  const orderSwitch = useOrderSwitch({ switching, permissions });
+
   const queues = useRegistrantQueues(runners);
 
   // Table state
@@ -233,6 +255,9 @@ export default function RegistrantsTable({
     onRemarks: remarks.open,
     onEmail: email.open,
     onChangeCategory: categoryChange.open,
+    orderSwitchFor: orderSwitch.menuFor,
+    onSwitchLogistics: orderSwitch.startSwitch,
+    onLogisticsDetails: orderSwitch.showDetails,
   };
 
   const columns = useMemo(
@@ -391,6 +416,7 @@ export default function RegistrantsTable({
       <RemarksModal {...remarks.modalProps} />
       <ManualEmailModal {...email.modalProps} />
       <CategoryChangeModal {...categoryChange.modalProps} />
+      {orderSwitch.element}
       {categoryChange.changeEmail && (
         <CategoryChangeEmailModal
           key={categoryChange.changeEmail.changeId}

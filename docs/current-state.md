@@ -43,9 +43,10 @@ after release.
 **Delivery switches (2026-10-19, complete on `dev`, not released; `LOGISTICS_CHANGE_PLAN.md`
 Sessions 1, 2, 2b, 3 and 4 — the plan is in the git-ignored `docs/plans/` until
 the owner deletes it; every decision is below and what is open is in `ON_HOLD.md`).**
-Staff switch one PAID receipt at a time between kit pickup and delivery on
-its own screen, **Pickup & Delivery** (`/admin/events/[id]/pickup-delivery`, the events row
-menu; a table from `lg` up, cards below). Session 1 (`aa2f7dd`): the `LogisticsChange` and `LogisticsChangeOrder`
+Staff switch one PAID receipt at a time between kit pickup and delivery from
+the **registrants table's row menu** (Revision 2, below): any runner's row
+switches that runner's whole receipt, so a group registration moves as one.
+Session 1 (`aa2f7dd`): the `LogisticsChange` and `LogisticsChangeOrder`
 tables and `Event.logisticsChangeUntil` (migration
 `20261018120000_logistics_change`, in `ON_HOLD.md`'s release steps), the pure
 quote and rules `lib/logistics-change.ts`, and the event form's *Delivery
@@ -156,6 +157,15 @@ that is paid, and it ships free."), and rides free once that one is paid;
 **R5** a receipt others ride on goes back to pickup after them ("RM-… ships
 with this receipt at no charge. Switch RM-… back to pickup first."); **R6** the
 registrants table only reads switches.
+**Revision 2 (owner, 2026-10-20, final): per transaction, from the
+registrants.** The Pickup & Delivery screen was removed (R1, R2 and R6 are
+superseded; R3–R5 and L2–L13 stand). Each runner's row menu offers *Switch to
+Delivery* / *Switch to Pickup* for its receipt — the same *Ship kits* panel,
+mounted per receipt, every runner on the order moving with it — plus
+*Delivery Payment* while a switch waits for its fee and *Switch History* once
+there is one (`OrderSwitchModal.tsx`, wired by `useOrderSwitch.tsx`). The
+registrants page reads `readEventReceipts` beside its own list, and the table
+takes the fresh rows after a switch re-reads the page.
 
 The decisions in full, as the owner accepted them (L1–L14, before Revision 1):
 **L1** staff only, started by staff like a category change; runner

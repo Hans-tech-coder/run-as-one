@@ -14,8 +14,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { useAlert } from '@/components/ui/AlertProvider';
-import ManualEmailModal from '../registrants/ManualEmailModal';
-import { CLIPBOARD_BLOCKED, copyFormattedEmail, openInMailApp, type RenderedEmail } from '../registrants/email-handoff';
+import ManualEmailModal from './ManualEmailModal';
+import { CLIPBOARD_BLOCKED, copyFormattedEmail, openInMailApp, type RenderedEmail } from './email-handoff';
 import type { SwitchEmailRequest } from './WaitingSwitchActions';
 
 /** Kept in step with the panel's closing transition (`.t-modal`). */

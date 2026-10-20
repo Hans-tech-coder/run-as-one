@@ -62,8 +62,8 @@ export function buildRegistrantRows({
     const pendingEmail = outstandingEmail(reg);
     // The Logistics columns, worded once in logistics-change-view.ts: each
     // runner's own parcel on a split order (RUNNER_ADDRESS_PLAN.md Batch 2)
-    // and the order's switches, which the cell only reads — switching is on
-    // Pickup & Delivery (LOGISTICS_CHANGE_PLAN.md R6).
+    // and the order's switches, which the cell only reads — switching opens
+    // from the row menu (LOGISTICS_CHANGE_PLAN.md Revision 2).
     const logistics = orderLogisticsFields(event, reg, logisticsByOrder.get(reg.id) ?? []);
     reg.runners.forEach((runner, runnerIndex) => {
       runners.push({

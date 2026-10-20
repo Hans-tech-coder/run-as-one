@@ -2,8 +2,8 @@
 
 /**
  * *Ship kits* / *Back to pickup*: moving one paid receipt between kit pickup
- * and delivery (LOGISTICS_CHANGE_PLAN.md L2–L13, Revision 1 R3–R5), opened
- * from that receipt's card on Pickup & Delivery only when the switch is allowed.
+ * and delivery (LOGISTICS_CHANGE_PLAN.md L2–L13, R3–R5, Revision 2), opened
+ * from any of its runners' rows on the registrants table when the switch is allowed.
  *
  * **Ship kits**: the address starts as Runner 1's home address (every runner
  * gave one at sign-up) and staff edit it, add the ZIP or a landmark, or ship
@@ -76,7 +76,7 @@ export default function ShipKitsPanel({ isClosing, onClose, ...input }: Props) {
             <h3 id="ship-kits-title" className="text-xl font-semibold text-primary m-0">{title}</h3>
             <p className="text-sm text-secondary mt-1 m-0 [overflow-wrap:anywhere]">
               {receipt.orderRef} &middot;{' '}
-              {receipt.runners.length === 1 ? receipt.runners[0].name : `${receipt.runners.length} runners`}
+              {receipt.runners.length === 1 ? receipt.runners[0].name : `all ${receipt.runners.length} runners on this receipt switch together`}
             </p>
           </div>
           <button

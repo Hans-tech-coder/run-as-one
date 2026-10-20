@@ -59,15 +59,15 @@ through.
 
 **Delivery switches are complete on `dev` (`LOGISTICS_CHANGE_PLAN.md` Sessions
 1–4, 2026-10-19).** Staff switch a paid receipt between kit pickup and delivery
-on *Pickup & Delivery*; a fee is paid by link, by GCash or bank recorded later,
+from a runner's row menu on Registrants (the whole receipt moves); a fee is paid by link, by GCash or bank recorded later,
 or recorded as already paid when the switch is made, and remittances and the
 client's payout summary count it (*Delivery switches* line). The release step
 is the **same `npx prisma migrate deploy`** above, which applies
 `20261018120000_logistics_change`; Sessions 2–4 need no migration of their
 own. After the promotion, on production: open an event's **Logistics** panel
 once and see *Delivery switch deadline* empty (the default, 7 days before race
-day); open **Pickup & Delivery** from an event's row menu and check the counts
-match the registrants (no receipt has a switch yet); check that
+day); open an event's **Registrants** and see *Switch to Delivery* in a paid pickup
+order's row menu (no receipt has a switch yet); check that
 `/admin/remittances` reads exactly as before (no figure may move, and no
 *delivery switches* line appears); and watch the first online switch go
 through, since a real PayMongo webhook for a switch has only been driven by a

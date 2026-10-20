@@ -1,7 +1,7 @@
 /**
  * Switching one paid receipt between kit pickup and delivery
- * (LOGISTICS_CHANGE_PLAN.md Session 2, Revision 1 R3–R5), from its card on
- * Pickup & Delivery. `registration:edit`, the permission Change category takes,
+ * (LOGISTICS_CHANGE_PLAN.md Session 2, R3–R5, Revision 2), from a runner's row on
+ * the registrants table. `registration:edit`, the permission Change category takes,
  * scoped to the order's own race; a refusal reads exactly like a missing order.
  *
  * One receipt per switch: the body names where it ships (`deliveryAddress`,

@@ -15,12 +15,13 @@ import { SWITCH_EVENT_SELECT, eligibilityFor } from '@/lib/logistics-change-cont
 import { LOGISTICS_VIEW_INCLUDE, logisticsChangeView, type LogisticsChangeView } from '@/lib/logistics-change-view';
 
 /**
- * **The Pickup & Delivery screen's receipts** (LOGISTICS_CHANGE_PLAN.md
- * Revision 1, R1–R5): one entry per receipt (order reference), because a
- * switch moves a whole receipt and is charged per parcel, while the
- * registrants table is one row per runner.
+ * **Each receipt as the pickup / delivery switch reads it**
+ * (LOGISTICS_CHANGE_PLAN.md R2–R5, Revision 2): one entry per receipt (order
+ * reference), because a switch moves a whole receipt — every runner of a
+ * group registration — and is charged per parcel, while the registrants
+ * table it is opened from is one row per runner.
  *
- * The rule this owns: what a receipt's card says — its runners and kits,
+ * The rule this owns: what a receipt's switch knows — its runners and kits,
  * pickup or delivery, where each household's parcel goes, which paid parcel
  * it ships with, which receipts ride on it ("Also in this parcel", R5), a
  * switch waiting for payment, its history, and whether staff may switch it now

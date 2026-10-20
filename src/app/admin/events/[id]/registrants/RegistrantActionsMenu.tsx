@@ -2,11 +2,13 @@
 
 import React, { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { MoreVertical, CheckCircle, Trash2, Edit, Eye, ArrowLeftRight } from 'lucide-react';
+import { MoreVertical, CheckCircle, Trash2, Edit, Eye, ArrowLeftRight, Truck, Store, Wallet, History } from 'lucide-react';
 import { placeRowMenu, type RowMenuPlacement } from '../../../row-menu-position';
 import BusyLabel from '@/components/ui/BusyLabel';
 import { cssDurationMs } from '@/lib/css-duration';
 import { canValidatePayment } from './registrant-display';
+import { LOGISTICS_DIRECTIONS } from '@/lib/logistics-change';
+import type { OrderSwitchMenu } from './useOrderSwitch';
 
 interface RegistrantActionsMenuProps {
   runnerId: string;
@@ -22,6 +24,14 @@ interface RegistrantActionsMenuProps {
   onDelete: (runnerId: string) => void;
   /** Opens Change category (CATEGORY_CHANGE_PLAN.md); offered on a PAID order only (D9). */
   onChangeCategory: (runnerId: string) => void;
+  /**
+   * The receipt's pickup / delivery switch (LOGISTICS_CHANGE_PLAN.md
+   * Revision 2), decided on the server for the whole order: on a group
+   * registration every runner's row offers the same switch. Null offers none.
+   */
+  orderSwitch: OrderSwitchMenu | null;
+  onSwitchLogistics: (registrationId: string) => void;
+  onLogisticsDetails: (registrationId: string) => void;
   /**
    * What this person's role allows on this event, decided on the server. An
    * item the route would refuse is not offered: a validator who can settle an
@@ -55,6 +65,9 @@ export default function RegistrantActionsMenu({
   onEdit,
   onDelete,
   onChangeCategory,
+  orderSwitch,
+  onSwitchLogistics,
+  onLogisticsDetails,
   canEdit,
   canDelete,
   canValidate,
@@ -205,6 +218,51 @@ export default function RegistrantActionsMenu({
           >
             <ArrowLeftRight size={16} />
             Change Category
+          </button>
+        )}
+
+        {/* The receipt's switch, named by where the kits go. Offered only
+            when the server said this order may switch now; it moves every
+            runner on the order. */}
+        {orderSwitch?.direction && (
+          <button
+            className="action-dropdown-item flex items-center gap-3 px-4 py-2 text-sm text-left"
+            role="menuitem"
+            onClick={() => {
+              onSwitchLogistics(registrationId);
+              closeMenu();
+            }}
+          >
+            {orderSwitch.direction === LOGISTICS_DIRECTIONS.TO_DELIVERY ? (
+              <>
+                <Truck size={16} aria-hidden="true" /> Switch to Delivery
+              </>
+            ) : (
+              <>
+                <Store size={16} aria-hidden="true" /> Switch to Pickup
+              </>
+            )}
+          </button>
+        )}
+
+        {orderSwitch?.details && (
+          <button
+            className="action-dropdown-item flex items-center gap-3 px-4 py-2 text-sm text-left"
+            role="menuitem"
+            onClick={() => {
+              onLogisticsDetails(registrationId);
+              closeMenu();
+            }}
+          >
+            {orderSwitch.details === 'payment' ? (
+              <>
+                <Wallet size={16} aria-hidden="true" /> Delivery Payment
+              </>
+            ) : (
+              <>
+                <History size={16} aria-hidden="true" /> Switch History
+              </>
+            )}
           </button>
         )}
 

@@ -1,12 +1,11 @@
 "use client";
 
 /**
- * A receipt's delivery switches on Pickup & Delivery (LOGISTICS_CHANGE_PLAN.md
- * R2): every switch, newest first, with where it went, what the money did, who
- * made it and why. `SwitchHistoryList` is the list itself, which the table's
- * opened row shows; `SwitchHistory` folds it behind *Switch history (n)* so a
- * card stays a few lines tall. The switch still waiting for payment has its
- * controls above the list (`WaitingSwitchActions`), so it has none here.
+ * A receipt's delivery switches (LOGISTICS_CHANGE_PLAN.md Revision 2), in its
+ * *Switch History* / *Delivery Payment* modal (`OrderSwitchModal.tsx`): every
+ * switch, newest first, with where it went, what the money did, who made it
+ * and why. The switch still waiting for payment has its controls above the
+ * list (`WaitingSwitchActions`), so it has none here.
  *
  * A paid switch shows how it was paid: the reference, and *View proof* for a
  * recorded screenshot (`proof:view`, through the proof route, which records
@@ -17,8 +16,8 @@
  * screen that says a receipt's logistics is not the one it was bought with.
  */
 
-import React, { useId, useState } from 'react';
-import { ArrowRight, ChevronDown, History, Image as ImageIcon, Mail } from 'lucide-react';
+import React from 'react';
+import { ArrowRight, Image as ImageIcon, Mail } from 'lucide-react';
 import { formatEventInstant } from '@/lib/event-schedule';
 import {
   LOGISTICS_CHANGE_STATUS_LABELS,
@@ -26,7 +25,7 @@ import {
   asLogisticsChangeStatus,
 } from '@/lib/logistics-change';
 import type { LogisticsChangeView } from '@/lib/logistics-change-view';
-import { switchDirectionLabel, switchMoneyLine } from '../registrants/logistics-change-display';
+import { switchDirectionLabel, switchMoneyLine } from './logistics-change-display';
 
 /** What a history entry may offer, decided on the server; none when absent. */
 type HistoryActions = {
@@ -34,28 +33,6 @@ type HistoryActions = {
   /** Present when this person may send email: opens the by-hand send. */
   onSendEmail?: (change: LogisticsChangeView) => void;
 };
-
-export default function SwitchHistory({ changes, ...actions }: { changes: LogisticsChangeView[] } & HistoryActions) {
-  const [open, setOpen] = useState(false);
-  const listId = useId();
-  if (changes.length === 0) return null;
-
-  return (
-    <div className="min-w-0">
-      <button
-        type="button"
-        aria-expanded={open}
-        aria-controls={listId}
-        onClick={() => setOpen(value => !value)}
-        className="inline-flex items-center gap-1.5 min-h-11 -my-2 text-xs font-medium text-accent-blue-ink hover:underline bg-transparent border-none p-0 cursor-pointer"
-      >
-        <History size={14} aria-hidden="true" /> Switch history ({changes.length})
-        <ChevronDown size={14} aria-hidden="true" className={`transition-transform ${open ? 'rotate-180' : ''}`} />
-      </button>
-      {open && <SwitchHistoryList id={listId} changes={changes} {...actions} />}
-    </div>
-  );
-}
 
 /** Every switch of one receipt, newest first. */
 export function SwitchHistoryList({

@@ -13,6 +13,7 @@ import { eventInstantParts, formatEventTime, formatInstantDay, today } from '@/l
 import { expiresBy, isCancelledCheckout, listedRegistrationWhere, unpaidFollowUpWhere } from '@/lib/pending-expiry';
 import { categoryChangesByRunner } from '@/lib/category-change-view';
 import { logisticsChangesByOrder } from '@/lib/logistics-change-view';
+import { readEventReceipts } from '@/lib/logistics-receipts';
 import { buildRegistrantRows } from './registrant-rows';
 import DashboardHeader from '@/app/admin/DashboardHeader';
 
@@ -131,6 +132,13 @@ export default async function RegistrantsPage({
     csvInstant,
   });
 
+  // What each receipt may do about pickup and delivery, and what the switch
+  // panels quote from (LOGISTICS_CHANGE_PLAN.md Revision 2). Read in full
+  // here so opening a switch fetches nothing; the store re-checks all of it
+  // under the event's locks on save.
+  const switching = await readEventReceipts(id, actor.orgId, { recordPaid: permissions.validate });
+  if (!switching) return <AdminNotFound {...EVENT_NOT_FOUND} />;
+
   // The Unpaid checkouts tab (UNPAID_ORDERS_PLAN.md Batch 3): online orders
   // never paid, which the list above leaves out by the owner's rule. A
   // separate query with its own filter, so these rows can never reach the
@@ -226,6 +234,7 @@ export default async function RegistrantsPage({
               raceDay={event.date}
               initialSearch={search ?? ''}
               permissions={permissions}
+              switching={switching}
             />
           }
           unpaid={

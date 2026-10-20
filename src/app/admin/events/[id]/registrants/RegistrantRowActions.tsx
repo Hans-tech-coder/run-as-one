@@ -16,6 +16,7 @@ import React from 'react';
 import { MessageSquare, MessageSquareText, Mail, MailWarning } from 'lucide-react';
 import RegistrantActionsMenu from './RegistrantActionsMenu';
 import type { RegistrantPermissions, RegistrantRow } from './RegistrantsTable';
+import type { OrderSwitchMenu } from './useOrderSwitch';
 
 export type RegistrantRowActionHandlers = {
   permissions: RegistrantPermissions;
@@ -27,6 +28,10 @@ export type RegistrantRowActionHandlers = {
   onRemarks: (runnerId: string) => void;
   onEmail: (runnerId: string) => void;
   onChangeCategory: (runnerId: string) => void;
+  /** What the row's receipt may do about pickup and delivery (LOGISTICS_CHANGE_PLAN.md Revision 2). */
+  orderSwitchFor: (registrationId: string) => OrderSwitchMenu | null;
+  onSwitchLogistics: (registrationId: string) => void;
+  onLogisticsDetails: (registrationId: string) => void;
 };
 
 export default function RegistrantRowActions({
@@ -41,6 +46,9 @@ export default function RegistrantRowActions({
   onRemarks,
   onEmail,
   onChangeCategory,
+  orderSwitchFor,
+  onSwitchLogistics,
+  onLogisticsDetails,
 }: RegistrantRowActionHandlers & { runner: RegistrantRow; layout: 'table' | 'card' }) {
   // A different icon, not just a different colour: colour alone is the one
   // signal a colour-blind organizer cannot read.
@@ -66,6 +74,9 @@ export default function RegistrantRowActions({
       onEdit={onEdit}
       onDelete={onDelete}
       onChangeCategory={onChangeCategory}
+      orderSwitch={orderSwitchFor(runner.registrationId)}
+      onSwitchLogistics={onSwitchLogistics}
+      onLogisticsDetails={onLogisticsDetails}
       canEdit={permissions.edit}
       canDelete={permissions.remove}
       canValidate={permissions.validate}

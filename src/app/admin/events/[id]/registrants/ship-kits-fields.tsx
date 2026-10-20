@@ -24,8 +24,8 @@ import {
 } from '@/lib/category-change-hold';
 import { paymentMethodLabel } from '@/lib/registration-codes';
 import { deliveryTiers } from '@/app/events/[slug]/register/delivery';
-import RunnerAddressEditor from '../registrants/RunnerAddressEditor';
-import { ProofPicker } from '../registrants/CategoryChangePaymentChoice';
+import RunnerAddressEditor from './RunnerAddressEditor';
+import { ProofPicker } from './CategoryChangePaymentChoice';
 import type { ShipKitsState } from './useShipKits';
 
 const peso = (centavos: number) => `₱${formatPesos(centavos)}`;
