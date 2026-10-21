@@ -11,68 +11,14 @@ the owner's choice. Start one only when the owner asks, and read its source plan
 before writing any code. When an item is picked up, give it its own plan file in
 `docs/plans/`, and delete it from this list once it has landed.
 
-The release steps come first because they block production, not a feature.
-
-**Next release: event publishing (on `dev` since 2026-10-17).** Run
-`npx prisma migrate deploy` (migration `20261017090000_event_publish_at`) on
-the production endpoint **before** promoting `dev` to `main`: the new code
-queries `Event.publishAt`, and the backfill marks every existing event
-published. If any event is created on production between the migration and the
-deploy, run the migration's `UPDATE` again afterwards (it touches null rows
-only), or that event will show as a draft.
-
-The same release carries **virtual runs** (Phase A): the same `migrate deploy`
-also applies `20261017120000_event_format`, which the new code needs before
-it can read any event (`Event.format`, `Event.virtualEndDate`). Additive; every
-existing event stays on-site.
-
-The same release carries **category change settings** (`CATEGORY_CHANGE_PLAN.md`
-Session 1, `e7e091f`): the same `migrate deploy` also applies
-`20261018090000_category_change`, which the new code needs before it can read
-any event (`Event.categoryChangeUntil`, `downgradeRefundPolicy`,
-`categoryChangeFee`) and which creates the empty `CategoryChange` table.
-Additive; every existing event gets the defaults (no deadline set, no refund,
-₱0 fee).
-
-The same release carries **delivery switch settings** (`LOGISTICS_CHANGE_PLAN.md`
-Session 1, `aa2f7dd`): the same `migrate deploy` also applies
-`20261018120000_logistics_change`, which the new code needs before it can read
-any event (`Event.logisticsChangeUntil`, the event form's *Delivery switch
-deadline*) and which creates the empty `LogisticsChange` and
-`LogisticsChangeOrder` tables the coming delivery switch writes. Additive;
-every existing event gets the default (no deadline set: 7 days before race
-day).
-
-**Category changes are complete on `dev` (Sessions 1–4, 2026-10-18).**
-Staff move a paid runner to another category, upgrades are paid the way the
-entry was paid (PayMongo for an online payer, GCash/bank recorded by staff for
-a bank-transfer payer), and remittances count every change (*Category changes* line). The
-release step is the **same `npx prisma migrate deploy`** above, which applies
-`20261018090000_category_change` along with the others; Sessions 2–4 need no
-migration of their own. After the promotion, on production: open an event's
-**Registration & Fees** panel once to see the change fee and the deadline at
-their defaults (the refund policy is hidden while downgrades are on hold), and check that `/admin/remittances` reads exactly as before (no race
-has a change yet, so no figure may move). The daily sweep now also expires
-unpaid upgrades; a real PayMongo webhook for an upgrade has only been driven
-by a signed script, never delivered — watch the first online upgrade go
-through.
-
-**Delivery switches are complete on `dev` (`LOGISTICS_CHANGE_PLAN.md` Sessions
-1–4, 2026-10-19).** Staff switch a paid receipt between kit pickup and delivery
-from a runner's row menu on Registrants (the whole receipt moves); a fee is paid by link, by GCash or bank recorded later,
-or recorded as already paid when the switch is made, and remittances and the
-client's payout summary count it (*Delivery switches* line). The release step
-is the **same `npx prisma migrate deploy`** above, which applies
-`20261018120000_logistics_change`; Sessions 2–4 need no migration of their
-own. After the promotion, on production: open an event's **Logistics** panel
-once and see *Delivery switch deadline* empty (the default, 7 days before race
-day); open an event's **Registrants** and see *Switch to Delivery* in a paid pickup
-order's row menu (no receipt has a switch yet); check that
-`/admin/remittances` reads exactly as before (no figure may move, and no
-*delivery switches* line appears); and watch the first online switch go
-through, since a real PayMongo webhook for a switch has only been driven by a
-signed script, never delivered, and the daily sweep now also expires unpaid
-switches.
+**No release step is pending.** Event publishing, virtual runs (Phase A),
+category changes and delivery switches are all live (the last two since
+2026-10-21), with
+every migration through `20261018120000_logistics_change` applied
+(`docs/current-state.md`, top). Still to watch on production: the first
+online upgrade and the first online delivery switch settled by a real PayMongo
+webhook (only a signed script and the `?paid=1` return path have settled one),
+and the daily sweep expiring an unpaid upgrade or switch.
 
 **Delivery switches: a Run As One switch fee (future, same source).** v1 has
 none (L7): the delivery fee is the whole price and all the organizer's (L8). A
@@ -97,13 +43,6 @@ rows) is built and was tested on local-dev; turning it on is setting the flag
 to `false`, then walking one NO_REFUND and one REFUND_DIFFERENCE downgrade
 on staging.
 
-**Category changes: runner uploads proof of a bank payment (future,
-owner 2026-10-18).** Today a bank-transfer upgrade's email asks the runner to
-reply with the reference and screenshot, and staff record it by hand. The
-upload page, the *Proof sent · verify* chip and the Needs Validation queue are
-written up in `docs/plans/CATEGORY_CHANGE_PROOF_UPLOAD_PLAN.md`, with the two
-decisions to make first.
-
 **Category changes, Phase 2: runner self-service (on hold).** A *Manage my
 registration* link in the runner's email, so a runner can ask for (or make)
 a category change without chatting staff. Left out on purpose
@@ -116,12 +55,6 @@ refunds paid back through PayMongo automatically (refunds are paid by hand and
 recorded). A PayMongo payment that arrives for an expired or cancelled upgrade
 is flagged in the activity trail (`category_change.payment_late`) and is
 **not** in remittances until a person refunds it or reopens the change.
-
-**Virtual runs, Phase B (on hold).** Runners submit a GPS screenshot and their
-time for a virtual run, staff validate them in a queue, and an approved one
-becomes a `RaceResult` (`VIRTUAL_RUN_PLAN.md` D8, recorded in
-`docs/current-state.md`). Needs the private blob store, so weigh storage cost
-first. Phase A takes results through the existing xlsx upload.
 
 **Event publishing leftovers (on hold).** From `EVENT_PUBLISH_PLAN.md`
 (decisions D1–D9 recorded in `docs/current-state.md`): (1) the edit form only

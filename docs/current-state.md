@@ -3,26 +3,30 @@
 
 ## 10. Current state
 
-**Production is current as of 2026-10-15.** `main` equals `dev` at
-`ae513ac`: everything below is live, including combinable promotions, the
-removal of the Move to Results switch, the stricter PayMongo webhook signature
-check, and admin API routes answering a refusal with the same 404 as a miss
-(`docs/security.md`). Every migration in `prisma/migrations` is applied,
-through `20261015090000_combinable_promos`. The 3 results-only races (PHM 2026,
-BizRun V2.0, CIM 2026) were moved to Results before the switch went away.
-Pre-deploy QA passed on 2026-10-15: on `local-dev`, a 6-runner bank transfer
-combining EARLY BIRD RATES EXTENDED with 5+1 FREE (`RM-1AA55AC3`, ₱6,985 in
-the wizard, the stored row and the email alike) and a QR Ph order to PayMongo
-(`RM-ABEC3EFB`). **A real QR Ph payment turning `PAID` is still to be seen**:
-the webhook cannot reach localhost. Strix `run-as-one-scan_8c32` found one
-issue (vuln-0001, admin routes telling "not yours" from "does not exist"),
-fixed in `ae513ac`; the re-scan `run-as-one-scan_4931` found nothing, though
-its budget cut the review short. **`crc.runasone.ph` answers in production;
-`racecore.runasone.ph` does not resolve yet** (its DNS record and Vercel
-domain, `ON_HOLD.md`, top). `TOTP_ENCRYPTION_KEY` and the Google sign-in
-credentials are set in Vercel. The previous release was 2026-10-14, at
-`763171e`. The
-live PayMongo account is not yet a business account, so the online wizard
+**Production is current as of 2026-10-21.** `main` equals `dev` at
+`a1b05df`: everything below is live, including category changes and delivery
+switches paid on the runner's link (online, or GCash/bank with a proof staff
+validate), one **Pay ₱X** button in the category change email, the switch
+link's two-step rail, and the Neon compute cut. Every migration in
+`prisma/migrations` is applied, through `20261018120000_logistics_change`
+(the live register page reads every `Event` column, so it would fail without
+it). The previous release was at `b689956`.
+Pre-deploy QA passed on 2026-10-21 on `local-dev` with the owner's orders
+RM-7B67DB3F (bank) and RM-98EEC0B5 (QR Ph), every email to the owner only: a
+bank upgrade 5K → 10K by proof link and Validate Payment; an online upgrade
+3K → 5K (₱203.05) through PayMongo test mode, applied on the `?paid=1` return;
+an online switch (₱152.29) and a bank switch re-priced on the link from ₱200
+to ₱150 with a receiver, proof and Validate; back to pickup; and the link at
+375px. **A real PayMongo webhook settling an upgrade or a switch is still to
+be seen** (the return path settled them; the webhook cannot reach localhost).
+Strix `run-as-one-scan_4695` found vuln-0001 (a switch rode free on another
+order's paid parcel; fixed in `234c782` by the owner's rule below, one
+delivery fee per order) and vuln-0002 (staff recording a payment with a fee or
+proof the runner had just changed; fixed in `a1b05df`); the re-scan
+`run-as-one-scan_aaa6` found nothing. **`crc.runasone.ph` answers in
+production; `racecore.runasone.ph` does not resolve yet** (`ON_HOLD.md`).
+`TOTP_ENCRYPTION_KEY` and the Google sign-in credentials are set in Vercel.
+The live PayMongo account is not yet a business account, so the online wizard
 offers **QR Ph only** (`OFFERED_PAYMONGO_METHODS` in `lib/free-checkout.ts`)
 until it is. Where an entry below says something is "not released" or
 "production is N migrations behind", it predates this release.
@@ -41,8 +45,9 @@ doing by hand: Vercel Firewall's bot protection, and watching the CU-hours
 after release.
 
 **Delivery switches (2026-10-19, complete on `dev`, not released; `LOGISTICS_CHANGE_PLAN.md`
-Sessions 1, 2, 2b, 3 and 4 — the plan is in the git-ignored `docs/plans/` until
-the owner deletes it; every decision is below and what is open is in `ON_HOLD.md`).**
+Sessions 1, 2, 2b, 3 and 4 and Revisions 1–3b — the plan was deleted on
+2026-10-21 (it lived in the git-ignored `docs/plans/`, so it is not in
+history); every decision is below and what is open is in `ON_HOLD.md`).**
 Staff switch one PAID receipt at a time between kit pickup and delivery from
 the **registrants table's row menu** (Revision 2, below): any runner's row
 switches that runner's whole receipt, so a group registration moves as one.
@@ -211,6 +216,33 @@ switch restored. **Not exercised:** pressing *Pay now* after an edit (the
 open-page close path) and the sweep skipping a proof past its hold, which the
 check script covers as a rule only.
 
+Revision 3 and 3b decisions the code cites (the owner's, settled by grilling
+on 2026-10-20): **T1** staff pick only how the fee is paid (narrowed by T12);
+**T2** the runner may change the address on the link, re-quoted live and
+re-checked under the event's locks on confirm (a new tier rewrites `fee`,
+`transactionFee` and `totalCharged`; the hold never moves); **T3** confirm,
+then pay: editable until payment starts, an edit after *Pay now* closes the
+open PayMongo page first, read-only once bank proof is in; **T4** while a
+switch waits the link shows the whole street and the receiver's name and
+mobile (the link goes only to the order's contact and dies with the hold);
+applied, cancelled and expired switches show none of it; **T5** GCash/bank on
+the link: the event's accounts and QR codes and the exact amount, then the
+screenshot and reference on `LogisticsChange.proofOfPayment` /
+`transactionNumber` ("proof submitted" is a waiting bank switch with a proof,
+no migration), and nothing applies until staff validate; **T6** proof stops
+the clock: the sweep ignores `holdUntil` and waits until the switch deadline;
+**T7** the runner may replace the proof until staff record it (the old file is
+deleted), and staff get no *Reject*: they message the runner or cancel;
+**T8** no staff email, the registrants row shows it, the runner gets a short
+*proof received* email; **T9** one *confirm and pay* email for both methods,
+with no account list and no "reply with the screenshot"; **T10** the link
+offers only the method staff picked, and the checkout route refuses a bank
+switch; **T11** no *Keep pickup* button, an unpaid switch lapses on its own;
+**T12** *Ship kits* has no address fields: *Send to Runner*, quoted from Runner
+1's home address when there is one, otherwise sent with no address and no fee
+for the runner to type on the link; **T13** only *Already paid* opens the
+address fields, because it switches at once.
+
 **Revision 3b (owner, 2026-10-20): Ship kits is confirm and send.** Trying
 RM-1D5EEF1B (runners with no home address on file) opened the whole address
 form with *Switch to Delivery* disabled. Now staff type no address: the panel
@@ -262,7 +294,9 @@ VALIDATION and the queue went 6 → 7; RM-98EEC0B5 reads BALANCE DUE; the bell
 shows the item.
 
 **A proof link for GCash or bank category changes (owner, 2026-10-20; was
-`ON_HOLD.md` §14).** An upgrade paid by GCash or bank used to have no link:
+`ON_HOLD.md` §14 and `CATEGORY_CHANGE_PROOF_UPLOAD_PLAN.md`, deleted
+2026-10-21).** That plan's staff *Reject* with a reason was not built: as on a
+switch (T7), the runner replaces the proof and staff cancel the change. An upgrade paid by GCash or bank used to have no link:
 staff emailed how to pay, the runner replied with proof, and staff recorded it,
 so it never read FOR VALIDATION. Now its *payment needed* email carries the
 change's link (since 2026-10-21 one **Pay ₱X** button for online and GCash/bank
@@ -475,8 +509,12 @@ end, required when virtual; **D5** logistics unchanged, `LogisticsPanel`
 untouched; **D6** venue (saved as *Virtual*), times and pacers hidden; **D7**
 format locked once the event has a registration; **D8** Phase A only —
 **Phase B** (runner submission of a GPS screenshot and time, an admin
-validation queue, approved → `RaceResult`) is not started and needs the
-private blob store, so weigh storage first. Public card, event page and wizard heading show two rows like an on-site
+validation queue, approved → `RaceResult`) is **dropped** (the owner,
+2026-10-21): the site handles registration for a virtual run and nothing
+more, with no runner submissions and no system of its own for a virtual run's
+results. The runner-side work built for it on 2026-10-17 was never committed;
+its stash, its `VirtualSubmission` table on `local-dev` and
+`VIRTUAL_RUN_PHASE_B_PLAN.md` were deleted the same day. Public card, event page and wizard heading show two rows like an on-site
 race — calendar icon with *Nov 1–30, 2026*, globe icon with *Virtual · Run
 anywhere* (the owner's call, 2026-10-17, after one combined line read badly); confirmation emails say *Run
 Window* and *Where* instead of Date and Location. Both registration
