@@ -198,6 +198,13 @@ export type AppliedPayment = Partial<
 >;
 
 /**
+ * The proof staff's record was judged against (`recordChangePayment`). The
+ * runner can replace it on the link meanwhile; the claim refuses then, so a
+ * proof staff never saw is not the one validated.
+ */
+export type ExpectedChange = { proofOfPayment: string | null };
+
+/**
  * Applies an awaiting upgrade once it is paid (`category-change-payment.ts`:
  * staff's record of a GCash or bank payment, and PayMongo's webhook). The seat
  * was held since the change was opened, so nothing is counted: the held seat
@@ -210,7 +217,12 @@ export type AppliedPayment = Partial<
  * can sit AWAITING_PAYMENT past its time — no longer holds a seat
  * (`slot-holds.ts`), so the seat is taken again only if one is free.
  */
-export async function applyCategoryChange(actor: AuditActor, changeId: string, payment: AppliedPayment = {}) {
+export async function applyCategoryChange(
+  actor: AuditActor,
+  changeId: string,
+  payment: AppliedPayment = {},
+  expected?: ExpectedChange,
+) {
   return db.$transaction(async tx => {
     const existing = await tx.categoryChange.findUnique({
       where: { id: changeId },
@@ -239,10 +251,16 @@ export async function applyCategoryChange(actor: AuditActor, changeId: string, p
     }
 
     const claim = await tx.categoryChange.updateMany({
-      where: { id: changeId, status: CATEGORY_CHANGE_STATUSES.AWAITING_PAYMENT },
+      where: { id: changeId, status: CATEGORY_CHANGE_STATUSES.AWAITING_PAYMENT, ...expected },
       data: { ...payment, status: CATEGORY_CHANGE_STATUSES.APPLIED, appliedAt: now } as Prisma.CategoryChangeUpdateManyMutationInput,
     });
     if (claim.count === 0) {
+      if (expected && before.status === CATEGORY_CHANGE_STATUSES.AWAITING_PAYMENT) {
+        throw new CategoryChangeRefused(
+          409,
+          'The runner replaced the proof on the link while this payment was being recorded. Reload the page and check the new proof.',
+        );
+      }
       throw new CategoryChangeRefused(409, 'This category change is no longer waiting for payment. Reload the page.');
     }
     const change = await tx.categoryChange.findUniqueOrThrow({

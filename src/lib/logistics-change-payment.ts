@@ -309,14 +309,20 @@ export async function recordSwitchPayment(actor: AuditActor, changeId: string, p
   }
 
   // The runner's own screenshot from the link (Revision 3 T5) stays unless
-  // staff attach another, which replaces it.
-  const applied = await applyLogisticsChange(actor, changeId, {
-    paymentMethod: PAYMENT_METHODS.BANK_TRANSFER,
-    transactionNumber: payment.transactionNumber,
-    ...(payment.proofPathname ? { proofOfPayment: payment.proofPathname } : {}),
-    transactionFee: 0,
-    totalCharged: change.fee,
-  });
+  // staff attach another, which replaces it. Pinned to the fee and proof read
+  // above: a re-quote or a new proof on the link meanwhile refuses this.
+  const applied = await applyLogisticsChange(
+    actor,
+    changeId,
+    {
+      paymentMethod: PAYMENT_METHODS.BANK_TRANSFER,
+      transactionNumber: payment.transactionNumber,
+      ...(payment.proofPathname ? { proofOfPayment: payment.proofPathname } : {}),
+      transactionFee: 0,
+      totalCharged: change.fee,
+    },
+    { fee: change.fee, proofOfPayment: change.proofOfPayment },
+  );
   if (payment.proofPathname && change.proofOfPayment && change.proofOfPayment !== payment.proofPathname) {
     await deletePrivateFile(change.proofOfPayment).catch(error =>
       console.error(`Delivery switch ${change.changeRef}: the replaced proof could not be deleted`, error),

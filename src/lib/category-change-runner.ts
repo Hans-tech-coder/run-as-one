@@ -2,10 +2,11 @@ import 'server-only';
 import db from '@/lib/db';
 import { recordAudit, type AuditActor } from '@/lib/audit';
 import { deletePrivateFile } from '@/lib/blob';
-import { CATEGORY_CHANGE_STATUSES } from '@/lib/category-change';
-import { isOutsidePayment } from '@/lib/category-change-hold';
+import { CATEGORY_CHANGE_STATUSES, categoryChangeDeadline } from '@/lib/category-change';
+import { changeHeldUntil, changePayableState, isOutsidePayment } from '@/lib/category-change-hold';
 import { CategoryChangeRefused } from '@/lib/category-change-context';
-import { payableStateOf, readChangeForPayment } from '@/lib/category-change-payment';
+import { lockChange } from '@/lib/category-change-locks';
+import { readChangeForPayment } from '@/lib/category-change-payment';
 import { categoryChangeProofReceivedEmail, sendCategoryChangeEmail } from '@/lib/email-category-change';
 
 /**
@@ -22,8 +23,8 @@ import { categoryChangeProofReceivedEmail, sendCategoryChangeEmail } from '@/lib
  * is in, the row reads FOR VALIDATION and the hold no longer lets the seat go
  * (`changeHeldUntil`); the change deadline still closes it.
  *
- * Claimed with a conditional write on AWAITING_PAYMENT and the proof it read,
- * so a payment applied, a cancel, the sweep, or a second upload landing at the
+ * Judged under the runner's lock (`lockChange`) and claimed with a conditional
+ * write on AWAITING_PAYMENT and the proof it read there, so a payment applied, a cancel, the sweep, or a second upload landing at the
  * same moment wins cleanly and this one is refused.
  */
 
@@ -47,13 +48,17 @@ export async function submitChangeProof(
   if (!isOutsidePayment(change.paymentMethod)) {
     throw new CategoryChangeRefused(409, 'This change is paid online. Reload the page and press Pay now.');
   }
-  if (payableStateOf(change) !== 'payable') {
-    throw new CategoryChangeRefused(409, 'This change is no longer waiting for payment. Reload the page.');
-  }
 
-  await db.$transaction(async tx => {
+  // Judged again under the runner's lock, as staff's Validate Payment and the
+  // sweep take it: the proof and hold read above may have moved since.
+  const replaced = await db.$transaction(async tx => {
+    const { change: locked } = await lockChange(tx, changeId);
+    const held = { status: locked.status, holdUntil: changeHeldUntil(locked) };
+    if (changePayableState(held, categoryChangeDeadline(change.event), new Date()) !== 'payable') {
+      throw new CategoryChangeRefused(409, 'This change is no longer waiting for payment. Reload the page.');
+    }
     const claim = await tx.categoryChange.updateMany({
-      where: { id: changeId, status: CATEGORY_CHANGE_STATUSES.AWAITING_PAYMENT, proofOfPayment: change.proofOfPayment },
+      where: { id: changeId, status: CATEGORY_CHANGE_STATUSES.AWAITING_PAYMENT, proofOfPayment: locked.proofOfPayment },
       data: { proofOfPayment: proof.proofPathname, transactionNumber: proof.transactionNumber },
     });
     if (claim.count === 0) throw new CategoryChangeRefused(409, 'This change moved just now. Reload the page and try again.');
@@ -63,16 +68,17 @@ export async function submitChangeProof(
       entityId: changeId,
       eventId: change.eventId,
       organizerId: change.event.organizerId,
-      summary: `The runner ${change.proofOfPayment ? 'replaced' : 'submitted'} the GCash or bank proof for the move from ${change.fromCategory.name} to ${change.toCategory.name} (${change.changeRef}, order ${change.registration.orderRef}), reference ${proof.transactionNumber}. Check it, then validate the payment.`,
+      summary: `The runner ${locked.proofOfPayment ? 'replaced' : 'submitted'} the GCash or bank proof for the move from ${change.fromCategory.name} to ${change.toCategory.name} (${change.changeRef}, order ${change.registration.orderRef}), reference ${proof.transactionNumber}. Check it, then validate the payment.`,
       changes: {
-        transactionNumber: [change.transactionNumber, proof.transactionNumber] as [string | null, string],
-        proofOfPayment: change.proofOfPayment ? 'replaced' : 'attached',
+        transactionNumber: [locked.transactionNumber, proof.transactionNumber] as [string | null, string],
+        proofOfPayment: locked.proofOfPayment ? 'replaced' : 'attached',
       },
     });
+    return locked.proofOfPayment;
   });
 
-  if (change.proofOfPayment) {
-    await deletePrivateFile(change.proofOfPayment).catch(error =>
+  if (replaced) {
+    await deletePrivateFile(replaced).catch(error =>
       console.error('Category change: the replaced proof could not be deleted', error),
     );
   }

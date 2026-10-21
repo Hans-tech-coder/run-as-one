@@ -69,13 +69,21 @@ export type AppliedSwitchPayment = {
 };
 
 /**
+ * What staff's record was judged against (`recordSwitchPayment`): the fee it
+ * charges and the proof it keeps or replaces. The runner can re-quote the
+ * address or replace the proof on the link meanwhile; the claim refuses then.
+ */
+export type ExpectedSwitch = { fee: number; proofOfPayment: string | null };
+
+/**
  * Applies a switch whose fee was paid: PayMongo's webhook, the runner back
  * from PayMongo, or a payment staff recorded (lib/logistics-change-payment.ts).
  * Takes the same locks a new switch does and re-checks under them, so a
  * payment never moves an order somewhere a new switch could not go now:
  *
  * - the switch is still waiting (a claim on its status, so two payments for
- *   one switch apply it once);
+ *   one switch apply it once), and, for staff's record, still has the fee
+ *   and the proof it was read with (`expected`);
  * - the order is still PAID and still on pickup, and the race still allows
  *   switching (L3, L11): **after the deadline nothing applies**, because the
  *   courier's lead time is what the deadline protects. A lapsed hold that the
@@ -86,7 +94,12 @@ export type AppliedSwitchPayment = {
  * the link showed. A refusal rolls everything back and is the caller's to
  * report as a late payment.
  */
-export async function applyLogisticsChange(actor: AuditActor, changeId: string, payment: AppliedSwitchPayment = {}) {
+export async function applyLogisticsChange(
+  actor: AuditActor,
+  changeId: string,
+  payment: AppliedSwitchPayment = {},
+  expected?: ExpectedSwitch,
+) {
   const found = await db.logisticsChange.findUnique({
     where: { id: changeId },
     select: { eventId: true, orders: { select: { registrationId: true } } },
@@ -97,10 +110,17 @@ export async function applyLogisticsChange(actor: AuditActor, changeId: string, 
     await lockSwitch(tx, found.eventId, found.orders.map(link => link.registrationId));
     const now = new Date();
     const claim = await tx.logisticsChange.updateMany({
-      where: { id: changeId, status: LOGISTICS_CHANGE_STATUSES.AWAITING_PAYMENT },
+      where: { id: changeId, status: LOGISTICS_CHANGE_STATUSES.AWAITING_PAYMENT, ...expected },
       data: { ...payment, status: LOGISTICS_CHANGE_STATUSES.APPLIED, appliedAt: now },
     });
     if (claim.count === 0) {
+      const still = await tx.logisticsChange.findUnique({ where: { id: changeId }, select: { status: true } });
+      if (expected && still?.status === LOGISTICS_CHANGE_STATUSES.AWAITING_PAYMENT) {
+        throw new LogisticsChangeRefused(
+          409,
+          'The runner changed the address or the proof on the link while this payment was being recorded. Reload the page and check the switch again.',
+        );
+      }
       throw new LogisticsChangeRefused(409, 'This switch is no longer waiting for payment. Reload the page.');
     }
     const change = await tx.logisticsChange.findUniqueOrThrow({

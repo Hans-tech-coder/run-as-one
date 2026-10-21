@@ -345,6 +345,22 @@ release already carries `20261018120000_logistics_change`) and is never
 written; no screen reads it, so the few riding rows on `local-dev` read as a
 plain ₱0 switch in the history. `lockSwitch`'s advisory lock stays.
 
+**Staff's payment record pins what it was judged on (2026-10-21, Strix
+vuln-0002, LOW).** `recordSwitchPayment` read the switch's `fee` and
+`proofOfPayment` before taking `lockSwitch`, and `applyLogisticsChange`
+claimed the row on its status alone, so a runner re-quoting the address
+(`confirmSwitchDetails`) or replacing the proof (`submitSwitchProof`) on the
+link while staff pressed *Record payment* / *Validate Payment* could apply the
+switch with `totalCharged` from the old fee (settlement then disagrees with
+`fee`) or with a proof staff never saw. The apply now takes an optional
+`expected` (`{ fee, proofOfPayment }`) pinned in its claim, as the online
+checkout route already pins `fee`; when it moved, staff get a 409 telling
+them to reload. Category changes got the same: `applyCategoryChange` takes
+`expected` (`{ proofOfPayment }`) from `recordChangePayment`, and
+`submitChangeProof` now judges `payable` and reads the proof it replaces under
+`lockChange`. The webhook and `settleSwitchOnline` / `settleChangeOnline` pass
+nothing and are unchanged.
+
 The decisions in full, as the owner accepted them (L1–L14, before Revision 1;
 L6 and L10 were retired on 2026-10-21, above):
 **L1** staff only, started by staff like a category change; runner

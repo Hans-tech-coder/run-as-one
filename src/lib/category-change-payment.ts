@@ -215,14 +215,20 @@ export async function recordChangePayment(actor: AuditActor, changeId: string, p
 
   // The runner's own screenshot from the link (`submitChangeProof`) stays
   // unless staff attach another, which replaces it: *Validate Payment* sends
-  // the runner's reference and no file.
-  const applied = await applyCategoryChange(actor, changeId, {
-    paymentMethod: PAYMENT_METHODS.BANK_TRANSFER,
-    transactionNumber: payment.transactionNumber,
-    ...(payment.proofPathname ? { proofOfPayment: payment.proofPathname } : {}),
-    transactionFee: 0,
-    totalCharged: change.amount,
-  });
+  // the runner's reference and no file. Pinned to the proof read above: a new
+  // one on the link meanwhile refuses this.
+  const applied = await applyCategoryChange(
+    actor,
+    changeId,
+    {
+      paymentMethod: PAYMENT_METHODS.BANK_TRANSFER,
+      transactionNumber: payment.transactionNumber,
+      ...(payment.proofPathname ? { proofOfPayment: payment.proofPathname } : {}),
+      transactionFee: 0,
+      totalCharged: change.amount,
+    },
+    { proofOfPayment: change.proofOfPayment },
+  );
   if (payment.proofPathname && change.proofOfPayment && change.proofOfPayment !== payment.proofPathname) {
     await deletePrivateFile(change.proofOfPayment).catch(error =>
       console.error(`Category change ${change.changeRef}: the replaced proof could not be deleted`, error),
