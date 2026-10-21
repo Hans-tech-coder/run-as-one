@@ -10,9 +10,8 @@
  *    *Someone else will receive the kit*. The fee shown is the event's tier
  *    for the address, worked out here as the wizard does. *Confirm* posts to
  *    `api/logistics-change/details`, which re-quotes under the switch locks
- *    with what the page cannot see (another receipt already paid for this
- *    address, or waiting on it), and either saves the new figures or applies
- *    the switch when it now rides free.
+ *    from this order alone (a delivery fee is charged per order, the owner on
+ *    2026-10-21) and saves the new figures.
  * 2. **Pay**: the details as saved with *Edit details*, the amount, then Pay
  *    now (online, `PayNowButton`) or the accounts and the proof upload
  *    (GCash or bank, `SwitchBankProof`). Staff's method only (T10).
@@ -26,7 +25,6 @@
  */
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { CircleCheck, Pencil } from 'lucide-react';
 import BusyLabel from '@/components/ui/BusyLabel';
 import StepRail from '@/components/ui/StepRail';
@@ -75,7 +73,6 @@ export type SwitchConfirmProps = {
 };
 
 export default function SwitchConfirm(props: SwitchConfirmProps) {
-  const router = useRouter();
   const proofIn = props.submittedReference !== null;
   // Revision 3b T12: with no address yet, there is nothing to pay until step 1 is done.
   const hasAddress = props.deliveryAddress !== null;
@@ -115,11 +112,6 @@ export default function SwitchConfirm(props: SwitchConfirmProps) {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(data?.error || 'Your delivery details could not be saved. Try again.');
-        return;
-      }
-      if (data.outcome === 'applied') {
-        // Rides free on a parcel already paid for: the page now says switched.
-        router.refresh();
         return;
       }
       setSaved({ address: plan.address, fee: data.fee, totalCharged: data.totalCharged });

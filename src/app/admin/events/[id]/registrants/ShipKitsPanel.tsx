@@ -2,7 +2,7 @@
 
 /**
  * *Ship kits* / *Back to pickup*: moving one paid receipt between kit pickup
- * and delivery (LOGISTICS_CHANGE_PLAN.md L2–L13, R3–R5, Revision 2), opened
+ * and delivery (LOGISTICS_CHANGE_PLAN.md L2–L13, R3, Revision 2), opened
  * from any of its runners' rows on the registrants table when the switch is allowed.
  *
  * **Ship kits is confirm and send** (Revision 3b T12): no address to type. A
@@ -16,16 +16,15 @@
  * (`ship-kits-address.tsx`); staff add the ZIP, a landmark or another
  * receiver, and a runner with no home address on file starts on empty
  * fields. A group's kits all ship to that one address (L2). The quote
- * below is live and is the route's own arithmetic (`quoteLogisticsChange`): a
- * parcel whose address already gets a paid delivery rides on it at ₱0 and says
- * which receipt it ships with (L6); one whose address is still waiting for
- * another receipt's fee is refused (R4). A fee keeps the switch waiting for
+ * below is live and is the route's own arithmetic (`quoteLogisticsChange`):
+ * the address's tier, charged to this receipt whatever other receipts ship
+ * to the same address (the owner, 2026-10-21: a delivery fee is charged per
+ * order; only a group registration's runners share one). A fee keeps the switch waiting for
  * payment (L12) and nothing moves until it is paid. Staff need only pick how
  * it is paid (Revision 3 T1): the emailed link lets the runner confirm or
  * change the address and receiver before paying.
  *
- * **Back to pickup** is free and gives nothing back (L9). A receipt others ride
- * on says which, and waits for them to go back first (R5).
+ * **Back to pickup** is free and gives nothing back (L9).
  *
  * **The parent mounts it with `key={receipt.id}`**, so its state (`useShipKits`)
  * is new for every receipt. Built on the remarks modal's panel, like Change
@@ -36,7 +35,7 @@ import React, { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import BusyLabel from '@/components/ui/BusyLabel';
 import { useShipKits } from './useShipKits';
-import { DeliveryFields, PaymentChoice, PickupFields, SendSummary, SwitchQuote, WaitingWarning, Warning } from './ship-kits-fields';
+import { DeliveryFields, PaymentChoice, PickupFields, SendSummary, SwitchQuote, Warning } from './ship-kits-fields';
 
 type Props = Parameters<typeof useShipKits>[0] & {
   /** True while the parent plays the closing transition before unmounting. */
@@ -46,7 +45,7 @@ type Props = Parameters<typeof useShipKits>[0] & {
 
 export default function ShipKitsPanel({ isClosing, onClose, ...input }: Props) {
   const state = useShipKits(input);
-  const { receipt, toDelivery, quote, needsPayment, paymentChoice, waitingOn, ridersLeft, isSaving } = state;
+  const { receipt, toDelivery, quote, needsPayment, paymentChoice, isSaving } = state;
   // Entered on the frame after mounting, so the panel's transition plays.
   const [entered, setEntered] = useState(false);
   useEffect(() => {
@@ -58,7 +57,7 @@ export default function ShipKitsPanel({ isClosing, onClose, ...input }: Props) {
   const isOpen = entered && !isClosing;
   const title = toDelivery ? 'Ship Kits' : 'Back to Pickup';
   const { askRunner, pickedPaid } = state;
-  const canSave = !refused && (askRunner || quote.ok) && !waitingOn && ridersLeft.length === 0 && !isSaving;
+  const canSave = !refused && (askRunner || quote.ok) && !isSaving;
   const saveLabel = !toDelivery
     ? 'Switch to Pickup'
     : pickedPaid
@@ -123,13 +122,11 @@ export default function ShipKitsPanel({ isClosing, onClose, ...input }: Props) {
               onlineFee={state.onlineFee}
               needsPayment={needsPayment}
               paymentChoice={paymentChoice}
-              existingRef={state.refOf}
             />
           )}
-          {!refused && <WaitingWarning waitingOn={waitingOn} />}
 
-          {!refused && toDelivery && needsPayment && !waitingOn && <PaymentChoice {...state} />}
-          {!refused && toDelivery && needsPayment && !waitingOn && !pickedPaid && (
+          {!refused && toDelivery && needsPayment && <PaymentChoice {...state} />}
+          {!refused && toDelivery && needsPayment && !pickedPaid && (
             // Revision 3: staff need not get the address right; the runner checks it.
             <p className="text-xs text-[var(--text-muted)]">
               The runner gets an email with a link to confirm the address and who receives the kit, change them if
@@ -137,7 +134,7 @@ export default function ShipKitsPanel({ isClosing, onClose, ...input }: Props) {
             </p>
           )}
 
-          {!refused && ridersLeft.length === 0 && (
+          {!refused && (
             <div className="space-y-1.5">
               <label htmlFor="ship-kits-reason" className="block text-secondary">
                 What the runner asked for <span className="text-[var(--text-muted)]">(optional)</span>
@@ -161,9 +158,9 @@ export default function ShipKitsPanel({ isClosing, onClose, ...input }: Props) {
             onClick={close}
             className="px-4 py-2 min-h-11 text-sm font-medium text-[var(--ink-85)] hover:text-primary transition-colors bg-transparent border-none cursor-pointer"
           >
-            {refused || ridersLeft.length > 0 ? 'Close' : 'Cancel'}
+            {refused ? 'Close' : 'Cancel'}
           </button>
-          {!refused && ridersLeft.length === 0 && (
+          {!refused && (
             <button
               type="button"
               onClick={state.save}

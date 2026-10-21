@@ -32,13 +32,13 @@
  * or reason of a change does.
  *
  * **A delivery switch shows as the staff list shows it** too
- * (LOGISTICS_CHANGE_PLAN.md Session 4): "Switched from pickup" and "Ships with
- * RM-XXXX", read by the registrants screen's own `logisticsMove` and
- * `shipsWith`. The kit team needs them: a switched receipt's kits leave the
- * pickup pile, and a rider goes in its host's parcel. Only applied switches
- * are read, and only the method an order switched from, the direction, and
- * the reference of the receipt it ships with leave the query: **no amount,
- * status, payment or reason** of a switch does.
+ * (LOGISTICS_CHANGE_PLAN.md Session 4): "Switched from pickup", read by the
+ * registrants screen's own `logisticsMove`. The kit team needs it: a switched
+ * receipt's kits leave the pickup pile. Every receipt ships in its own parcel
+ * (the owner, 2026-10-21: a delivery fee is charged per order), so no other
+ * receipt's reference is read. Only applied switches are read, and only the
+ * method an order switched from and the direction leave the query: **no
+ * amount, status, payment or reason** of a switch does.
  *
  * Every runner is sent at once, as the staff Registrants table does, so the
  * search, filters, marking and export all work across the whole list in the
@@ -61,7 +61,7 @@ import { shipmentsFor } from '@/app/events/[slug]/register/delivery-split';
 import { CATEGORY_CHANGE_STATUSES } from './category-change';
 import { categoryMove } from '@/app/admin/events/[id]/registrants/category-change-display';
 import { LOGISTICS_CHANGE_STATUSES } from './logistics-change';
-import { logisticsMove, shipsWith } from '@/app/admin/events/[id]/registrants/logistics-change-display';
+import { logisticsMove } from '@/app/admin/events/[id]/registrants/logistics-change-display';
 
 /** One runner as a client sees it. Blank strings, never null, for what was not given. */
 export type ClientRunnerRow = {
@@ -90,8 +90,6 @@ export type ClientRunnerRow = {
   deliveryAddress: string;
   /** "Pickup" when staff switched the receipt from pickup to delivery (or the reverse); blank otherwise. */
   switchedFrom: string;
-  /** The receipt whose parcel this kit ships in at no charge, "RM-D918005C"; blank otherwise. */
-  shipsWith: string;
 };
 
 export async function clientRunners(actor: Actor, eventId: string): Promise<ClientRunnerRow[] | null> {
@@ -126,14 +124,13 @@ export async function clientRunners(actor: Actor, eventId: string): Promise<Clie
       deliveryAddress: true,
       deliverySplit: true,
       // Applied switches only, oldest first: `logisticsMove` reads from the
-      // first, `shipsWith` from the last. The method switched from, the
-      // direction and the host receipt's reference, nothing more.
+      // first. The method switched from and the direction, nothing more.
       logisticsChangeOrders: {
         where: { change: { status: LOGISTICS_CHANGE_STATUSES.APPLIED } },
         orderBy: { change: { createdAt: 'asc' } },
         select: {
           fromLogisticsMethod: true,
-          change: { select: { direction: true, ridesOn: { select: { orderRef: true } } } },
+          change: { select: { direction: true } },
         },
       },
       runners: {
@@ -187,12 +184,10 @@ export async function clientRunners(actor: Actor, eventId: string): Promise<Clie
       logisticsChanges: order.logisticsChangeOrders.map(link => ({
         status: LOGISTICS_CHANGE_STATUSES.APPLIED,
         direction: link.change.direction,
-        ridesOnOrderRef: link.change.ridesOn?.orderRef ?? null,
         orders: [{ registrationId: order.id, fromLogisticsMethod: link.fromLogisticsMethod }],
       })),
     };
     const switchedFrom = logisticsMove(switches)?.from ?? '';
-    const host = shipsWith(switches) ?? '';
     order.runners.forEach((runner, index) => {
       const shipment = shipments?.find(s => s.runners.includes(index));
       const move = categoryMove({
@@ -224,7 +219,6 @@ export async function clientRunners(actor: Actor, eventId: string): Promise<Clie
           ? ((shipment ? formatRunnerAddress(shipment.address) : order.deliveryAddress) ?? '')
           : '',
         switchedFrom,
-        shipsWith: host,
       });
     });
   }

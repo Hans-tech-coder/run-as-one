@@ -17,10 +17,8 @@ import {
   lockSwitch,
   readSwitchContext,
 } from '@/lib/logistics-change-context';
-import { waitingConflict, waitingRefusal } from '@/lib/logistics-change-parcels';
 import { switchAwaitsAddress, switchHoldUntil, switchProofSubmitted } from '@/lib/logistics-change-proof';
-import { moveOrder } from '@/lib/logistics-change-store';
-import { deliverSwitchEmail, readSwitchForPayment, receiptOf, settleSwitchOnline } from '@/lib/logistics-change-payment';
+import { readSwitchForPayment, receiptOf, settleSwitchOnline } from '@/lib/logistics-change-payment';
 import { logisticsChangeProofReceivedEmail, sendLogisticsChangeEmail } from '@/lib/email-logistics-change';
 import { lookUpPaymongoPayment } from '@/lib/online-payment';
 import { retirePaymongoPage } from '@/lib/paymongo-session';
@@ -35,10 +33,14 @@ import { retirePaymongoPage } from '@/lib/paymongo-session';
  *
  * **Changing the address re-quotes it under the switch locks** (T2), by the
  * same rules a new switch is opened by (`logistics-change-store.ts`): the
- * order still allowed to switch, R4 (an address already waiting on another
- * receipt's fee) and L6 (an address already receiving a paid parcel rides on
- * it at ₱0). A ₱0 ride applies here and sends the *switched* email; any other
- * fee is written over the switch's figures. The hold never moves.
+ * order still allowed to switch, and the address's own tier. **The fee is
+ * this order's alone** (the owner, 2026-10-21, which replaced L6 and R4): no
+ * address the runner types can ride on, match or be refused by another
+ * order's parcel, so nothing here reads, names or reveals another receipt.
+ * Every tier the event delivers to costs more than ₱0, so the link only ever
+ * writes the new figures over the switch's: **nothing here applies a switch
+ * or moves an order.** That waits for the fee (online, or staff's *Record
+ * payment*). The hold never moves.
  *
  * **An open PayMongo page is closed first** (T3), as the checkout route closes
  * one before opening the next: asked whether it was paid (then the switch is
@@ -134,27 +136,23 @@ export async function confirmSwitchDetails(
       direction: LOGISTICS_DIRECTIONS.TO_DELIVERY,
       orders: [asSwitchOrder(ctx.order)],
       target,
-      existing: ctx.existing,
       paymentMethod: change.paymentMethod,
     });
     if (!quote.ok) throw new LogisticsChangeRefused(400, quote.message);
-    // R4: never a second fee waiting for one parcel.
-    const blocking = waitingConflict(quote.parcels, ctx.waiting, order.id);
-    if (blocking) throw new LogisticsChangeRefused(409, waitingRefusal(blocking));
-
-    const ridesFree = quote.status === LOGISTICS_CHANGE_STATUSES.APPLIED;
+    // Every delivered tier has a fee, so this never applies; refused rather than moved should that change.
+    if (quote.status !== LOGISTICS_CHANGE_STATUSES.AWAITING_PAYMENT) {
+      throw new LogisticsChangeRefused(409, 'Delivery to this address has no fee set. Reply to our email so we can check it.');
+    }
     const claim = await tx.logisticsChange.updateMany({
       where: { id: changeId, status: LOGISTICS_CHANGE_STATUSES.AWAITING_PAYMENT, checkoutSessionId: openPage },
       data: {
         deliveryZone: quote.deliveryZone,
         deliveryAddress: quote.deliveryAddress,
         deliverySplit: false,
-        ridesOnRegistrationId: quote.ridesOnRegistrationId,
         fee: quote.fee,
         transactionFee: quote.transactionFee,
         totalCharged: quote.totalCharged,
         checkoutSessionId: null,
-        ...(ridesFree ? { status: LOGISTICS_CHANGE_STATUSES.APPLIED, appliedAt: now } : {}),
       },
     });
     if (claim.count === 0) {
@@ -174,29 +172,14 @@ export async function confirmSwitchDetails(
       fee: [change.fee, quote.fee] as [number, number],
     };
 
-    if (ridesFree) {
-      await moveOrder(tx, order.id, quote);
-      const host = ctx.existing.find(paid => paid.registrationId === quote.ridesOnRegistrationId);
-      await recordAudit(tx, actor, {
-        ...trail,
-        action: 'logistics_change.applied',
-        summary: `The runner confirmed delivery for order ${order.orderRef} to ${quote.deliveryAddress} (${change.changeRef}): ships with ${host?.orderRef ?? 'a paid parcel'}, nothing to pay.`,
-        changes: { ...changes, status: [change.status, LOGISTICS_CHANGE_STATUSES.APPLIED], ...(host ? { ridesOn: host.orderRef } : {}) },
-      });
-    } else {
-      await recordAudit(tx, actor, {
-        ...trail,
-        action: 'logistics_change.details_confirmed',
-        summary: `The runner confirmed the delivery details for order ${order.orderRef} (${change.changeRef}): to ${quote.deliveryAddress}, ${peso(quote.totalCharged)} to pay${!change.deliveryAddress ? ' (the first address given)' : change.fee !== quote.fee ? ` (was ${peso(change.totalCharged)})` : ''}.`,
-        changes,
-      });
-    }
-    return { outcome: ridesFree ? ('applied' as const) : ('saved' as const), fee: quote.fee, totalCharged: quote.totalCharged };
+    await recordAudit(tx, actor, {
+      ...trail,
+      action: 'logistics_change.details_confirmed',
+      summary: `The runner confirmed the delivery details for order ${order.orderRef} (${change.changeRef}): to ${quote.deliveryAddress}, ${peso(quote.totalCharged)} to pay${!change.deliveryAddress ? ' (the first address given)' : change.fee !== quote.fee ? ` (was ${peso(change.totalCharged)})` : ''}.`,
+      changes,
+    });
+    return { outcome: 'saved' as const, fee: quote.fee, totalCharged: quote.totalCharged };
   });
-
-  if (result.outcome === 'applied') {
-    await deliverSwitchEmail(changeId, 'applied').catch(error => console.error('Delivery switch email failed:', error));
-  }
   return result;
 }
 

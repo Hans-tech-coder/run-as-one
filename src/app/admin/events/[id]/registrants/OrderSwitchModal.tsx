@@ -30,7 +30,7 @@ import { formatPesos } from '@/lib/money';
 import { paymentMethodLabel } from '@/lib/registration-codes';
 import type { Receipt } from '@/lib/logistics-receipts';
 import type { LogisticsChangeView } from '@/lib/logistics-change-view';
-import { openSwitch, shipsWith } from './logistics-change-display';
+import { openSwitch } from './logistics-change-display';
 import ProofLightbox from './ProofLightbox';
 import ProofPreview from './ProofPreview';
 import { SwitchHistoryList } from './SwitchHistory';
@@ -45,12 +45,12 @@ const peso = (centavos: number) => `₱${formatPesos(centavos)}`;
 const proofSrc = (change: LogisticsChangeView) => `/api/admin/logistics-changes/${change.id}/proof`;
 
 /**
- * Where a delivery receipt ships: its one address or each household's parcel,
- * the paid parcel it rides on, and the receipts riding on it (R5).
+ * Where a delivery receipt ships: its one address or each household's parcel.
+ * Never another receipt's: a delivery fee is charged per order (the owner,
+ * 2026-10-21), so no receipt ships with another.
  */
 export function shipsToLines(receipt: Receipt): { label: string; value: React.ReactNode }[] {
   if (!receipt.isDelivery) return [];
-  const host = shipsWith(receipt);
   const split = receipt.parcels.length > 1;
   return [
     ...receipt.parcels.map((parcel, index) => ({
@@ -62,8 +62,6 @@ export function shipsToLines(receipt: Receipt): { label: string; value: React.Re
         </>
       ),
     })),
-    ...(host ? [{ label: 'Ships with', value: `${host}, already paid` }] : []),
-    ...(receipt.riderRefs.length > 0 ? [{ label: 'Also in this parcel', value: receipt.riderRefs.join(', ') }] : []),
   ];
 }
 

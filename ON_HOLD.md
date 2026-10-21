@@ -74,13 +74,6 @@ through, since a real PayMongo webhook for a switch has only been driven by a
 signed script, never delivered, and the daily sweep now also expires unpaid
 switches.
 
-**Delivery switches: charge per parcel at checkout too (future,
-`LOGISTICS_CHANGE_PLAN.md` "Open for later").** A switch already charges once
-per address across receipts (L6), but two separate delivery **checkouts** to
-one address still pay the delivery fee twice. Doing it at checkout means
-reading the event's paid deliveries there, the way `quoteLogisticsChange`
-does.
-
 **Delivery switches: a Run As One switch fee (future, same source).** v1 has
 none (L7): the delivery fee is the whole price and all the organizer's (L8). A
 configurable fee would be set per event like `categoryChangeFee`, counted with

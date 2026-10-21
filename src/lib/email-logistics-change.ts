@@ -55,8 +55,6 @@ export type SwitchForEmail = {
   totalCharged: number;
   paymentMethod: string | null;
   holdUntil: Date | null;
-  /** The paid receipt whose parcel this one joined at ₱0 (L6). */
-  ridesOn: { orderRef: string } | null;
   order: { orderRef: string; customerName: string; customerEmail: string; kits: number };
   event: {
     title: string;
@@ -324,8 +322,9 @@ export function logisticsChangeProofReceivedEmail(change: SwitchProofForEmail): 
 }
 
 /**
- * Sent once a switch applies: to delivery when its fee was paid or it rides
- * free on a paid parcel, or back to pickup (L9). Back to pickup says where and
+ * Sent once a switch applies: to delivery when its fee was paid, or back to
+ * pickup (L9). It names this receipt
+ * only: no receipt ships with another (the owner, 2026-10-21). Back to pickup says where and
  * when to collect the kits, in the words the registration email uses
  * (`pickup.ts`), and that nothing is refunded.
  */
@@ -335,10 +334,7 @@ export function logisticsChangeAppliedEmail(change: SwitchForEmail): Promise<Ema
   const label = pickupLabel(change.event);
 
   const where: Row[] = toDelivery
-    ? [
-        ...deliveryRows(change),
-        ...(change.ridesOn ? [{ kind: 'info' as const, label: 'Ships with', value: change.ridesOn.orderRef }] : []),
-      ]
+    ? deliveryRows(change)
     : location || schedule
       ? [
           ...(location ? [{ kind: 'info' as const, label: 'Where', value: location }] : []),
@@ -349,9 +345,7 @@ export function logisticsChangeAppliedEmail(change: SwitchForEmail): Promise<Ema
   const money = toDelivery
     ? change.totalCharged > 0
       ? `You paid ${peso(change.totalCharged)} for the delivery.`
-      : change.ridesOn
-        ? `Your kits ship in the same parcel as order ${change.ridesOn.orderRef}, which already paid for delivery to this address, so there is nothing to pay.`
-        : 'There is nothing to pay for this switch.'
+      : 'There is nothing to pay for this switch.'
     : 'Nothing is refunded for the delivery fee already paid.';
 
   return renderMessage({

@@ -20,11 +20,10 @@ import {
   readSwitchContext,
   type SwitchOrderRow,
 } from '@/lib/logistics-change-context';
-import { ridersRefusal, waitingConflict, waitingRefusal } from '@/lib/logistics-change-parcels';
 
 /**
  * **The only writer of an order's pickup or delivery after checkout**
- * (LOGISTICS_CHANGE_PLAN.md L2–L13, Revision 1 R3–R5).
+ * (LOGISTICS_CHANGE_PLAN.md L2–L13, Revision 1 R3).
  *
  * The rule this owns: an order's `logisticsMethod`, `deliveryZone`,
  * `deliveryAddress` and `deliverySplit` move only here, and only together with
@@ -33,19 +32,21 @@ import { ridersRefusal, waitingConflict, waitingRefusal } from '@/lib/logistics-
  * and every other amount are never touched (L4): the receipt stays what was
  * paid, and the switch's money lives on its own row.
  *
- * **One receipt per switch** (R3). Kits of two receipts going to one address
- * still pay once: the second rides on the first's paid parcel at ₱0 (L6), and
- * while the first is only waiting for payment the second is refused (R4)
- * rather than charged again. A receipt others ride on goes back to pickup only
- * after they have, one at a time (R5).
+ * **One receipt per switch, one fee per receipt** (R3, and the owner on
+ * 2026-10-21: "kung magkaibang transaction or reference order, separate ang
+ * bayad sa delivery fee"). Kits of two receipts going to one address are two
+ * parcels and pay twice; only the runners of one group registration share a
+ * parcel, because the switch moves the whole order (L2). No receipt rides on
+ * another's paid parcel, none is refused for another's waiting one, and any
+ * receipt may go back to pickup on its own (this replaced L6, R4 and R5).
  *
  * Every write takes `lockSwitch` (event, the event's switches, the order) and
- * then re-reads and re-checks under it: eligibility (L3, L11, L13), R4, R5,
- * and the fee, recomputed by `quoteLogisticsChange` from what the database
- * holds now. Nothing posted is trusted as a figure.
+ * then re-reads and re-checks under it: eligibility (L3, L11, L13) and the
+ * fee, recomputed by `quoteLogisticsChange` from what the database holds now.
+ * Nothing posted is trusted as a figure.
  *
- * A switch with nothing to pay — back to pickup (L9), or every parcel riding on
- * one already paid (L6) — applies in the same transaction. One with a fee is
+ * Back to pickup (L9), the one switch with nothing to pay, applies in the
+ * same transaction; every delivered tier costs more than ₱0. One with a fee is
  * written AWAITING_PAYMENT with its hold (`changeHoldUntil`, never past the
  * deadline, L12) and moves nothing yet. `applyLogisticsChange` moves it once
  * the fee is paid (Session 3, lib/logistics-change-payment.ts), or staff
@@ -151,15 +152,10 @@ export async function createLogisticsChange(actor: AuditActor, input: CreateSwit
     if (!ctx.eligibility.allowed) throw new LogisticsChangeRefused(409, ctx.eligibility.message);
     const order = ctx.order;
 
-    // R5: a parcel others ride on at ₱0 goes back after they have.
-    if (ctx.direction === LOGISTICS_DIRECTIONS.TO_PICKUP && ctx.riders.length > 0) {
-      throw new LogisticsChangeRefused(409, ridersRefusal(ctx.riders.map(rider => rider.orderRef)));
-    }
-
     const method = input.paymentMethod ?? null;
 
     // Revision 3b (T12): no address yet. The runner gives it on the switch's
-    // link, where the fee is quoted and R4 judged (`confirmSwitchDetails`);
+    // link, where the fee is quoted (`confirmSwitchDetails`);
     // until then the switch waits with no address and no fee.
     if (ctx.direction === LOGISTICS_DIRECTIONS.TO_DELIVERY && !input.paidOutside && !input.target?.deliveryAddress?.trim()) {
       requireOrderMethod(order.paymentMethod, method, 'the delivery fee');
@@ -201,20 +197,18 @@ export async function createLogisticsChange(actor: AuditActor, input: CreateSwit
       direction: ctx.direction,
       orders: [asSwitchOrder(order)],
       target: input.target,
-      existing: ctx.existing,
       paymentMethod: method,
     });
     if (!quote.ok) throw new LogisticsChangeRefused(400, quote.message);
 
-    // R4: a second fee for an address already waiting on one is refused.
-    const blocking = waitingConflict(quote.parcels, ctx.waiting, order.id);
-    if (blocking) throw new LogisticsChangeRefused(409, waitingRefusal(blocking));
-
     const hasFee = quote.status === LOGISTICS_CHANGE_STATUSES.AWAITING_PAYMENT;
+    // Every delivered tier has a fee; refused rather than moved free should that change.
+    if (quote.direction === LOGISTICS_DIRECTIONS.TO_DELIVERY && !hasFee) {
+      throw new LogisticsChangeRefused(409, "Delivery to this address has no fee set. Check the race's delivery fees.");
+    }
     const paid = input.paidOutside ?? null;
     if (paid && !hasFee) {
-      // The address now rides on a paid parcel (or this is back to pickup), so
-      // there is nothing to record; refused, so the payment is not kept as if owed.
+      // Back to pickup, so there is nothing to record; refused, so the payment is not kept as if owed.
       throw new LogisticsChangeRefused(
         409,
         'This switch has nothing to pay now, so there is no payment to record. Reload the page and switch it again.',
@@ -224,13 +218,6 @@ export async function createLogisticsChange(actor: AuditActor, input: CreateSwit
     const awaiting = hasFee && !paid;
     if (awaiting) requireOrderMethod(order.paymentMethod, method, peso(quote.fee));
     const holdUntil = awaiting ? changeHoldUntil(method, now, logisticsChangeDeadline(ctx.event)) : null;
-    const ridesOn = quote.ridesOnRegistrationId
-      ? ctx.existing.find(paid => paid.registrationId === quote.ridesOnRegistrationId)
-      : null;
-    const ridesOnRef = ridesOn
-      ? (await tx.registration.findUniqueOrThrow({ where: { id: ridesOn.registrationId }, select: { orderRef: true } }))
-          .orderRef
-      : null;
 
     const change = await tx.logisticsChange.create({
       data: {
@@ -240,7 +227,6 @@ export async function createLogisticsChange(actor: AuditActor, input: CreateSwit
         deliveryZone: quote.deliveryZone,
         deliveryAddress: quote.deliveryAddress,
         deliverySplit: quote.deliverySplit,
-        ridesOnRegistrationId: quote.ridesOnRegistrationId,
         fee: quote.fee,
         // Already paid: the money as it really came in, the way
         // `recordSwitchPayment` writes it (a bank transfer carries no PayMongo cut).
@@ -278,7 +264,6 @@ export async function createLogisticsChange(actor: AuditActor, input: CreateSwit
       ...(toDelivery
         ? { deliverySplit: quote.deliverySplit, deliveryAddress: quote.deliverySplit ? null : quote.deliveryAddress }
         : {}),
-      ...(ridesOnRef ? { ridesOn: ridesOnRef } : {}),
     };
     const which = `order ${order.orderRef}`;
 
@@ -316,9 +301,7 @@ export async function createLogisticsChange(actor: AuditActor, input: CreateSwit
     await recordAudit(tx, actor, {
       ...trail,
       action: 'logistics_change.applied',
-      summary: toDelivery
-        ? `Switched ${which} from pickup to delivery to ${whereTo(quote)} (${change.changeRef}): ships with ${ridesOnRef ?? 'a paid parcel'}, nothing to pay.`
-        : `Switched ${which} from delivery to pickup (${change.changeRef}): nothing refunded.`,
+      summary: `Switched ${which} from delivery to pickup (${change.changeRef}): nothing refunded.`,
       changes: { ...changes, status: change.status },
     });
     return change;

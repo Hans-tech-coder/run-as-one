@@ -23,8 +23,7 @@ import { switchHoldUntil } from '@/lib/logistics-change-proof';
  * expires it.
  *
  * There is no seat to release: the order never moved, so it stays on pickup.
- * The sweep makes the status say so, which also lifts R4's refusal for another
- * receipt to the same address, writes the trail row, and closes the switch's
+ * The sweep makes the status say so, writes the trail row, and closes the switch's
  * PayMongo page. A payment that lands anyway is caught as late
  * (`settleSwitchOnline`). Nobody is emailed, as for an upgrade.
  *

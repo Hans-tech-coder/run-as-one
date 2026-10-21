@@ -1,16 +1,16 @@
 /**
  * Switching one paid receipt between kit pickup and delivery
- * (LOGISTICS_CHANGE_PLAN.md Session 2, R3–R5, Revision 2), from a runner's row on
+ * (LOGISTICS_CHANGE_PLAN.md Session 2, R3, Revision 2), from a runner's row on
  * the registrants table. `registration:edit`, the permission Change category takes,
  * scoped to the order's own race; a refusal reads exactly like a missing order.
  *
  * One receipt per switch: the body names where it ships (`deliveryAddress`,
  * `deliveryZone` when staff pick it; every kit goes to that one address), `paymentChoice` when
  * there is a fee, and an optional `reason`. The fee is recomputed under the
- * event's locks (lib/logistics-change-store.ts), which also refuse a second
- * receipt to an address still waiting for payment (R4) and a parcel others
- * still ride on (R5). With nothing to pay — back to pickup, or riding on a
- * parcel already paid for — it applies at once. With a fee it waits for
+ * event's locks (lib/logistics-change-store.ts) from this order alone: a
+ * delivery fee is charged per order, never waived for another order's parcel
+ * (the owner, 2026-10-21). With nothing to pay — back to pickup, or a tier the
+ * race prices at ₱0 — it applies at once. With a fee it waits for
  * payment and nothing moves.
  *
  * **Already paid** (`OUTSIDE_PAID`, the owner's addition to Session 4): the

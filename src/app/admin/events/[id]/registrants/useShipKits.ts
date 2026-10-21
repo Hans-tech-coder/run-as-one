@@ -2,13 +2,13 @@
 
 /**
  * The state behind one receipt's *Ship kits* / *Back to pickup* panel
- * (`ShipKitsPanel.tsx`, LOGISTICS_CHANGE_PLAN.md Revision 1 R3–R5): the
+ * (`ShipKitsPanel.tsx`, LOGISTICS_CHANGE_PLAN.md Revision 1 R3): the
  * address (one parcel for the whole receipt), the zone when staff pick it, the live quote, the
  * payment choice, the reason, and the save.
  *
  * **Confirm and send** (Revision 3b T12, the owner after trying RM-1D5EEF1B):
  * staff do not type an address. With Runner 1's home address on file the
- * switch is quoted from it (a ₱0 ride still switches at once); with none, or
+ * switch is quoted from it; with none, or
  * when the race's area must be picked (L5), it is sent with no address
  * (`askRunner`) and the runner gives it on the link, where the fee follows.
  * Only *Already paid* (T13), which switches at once, opens the address below.
@@ -29,9 +29,11 @@
  *
  * **The quote is the server's own arithmetic.** `quoteLogisticsChange` runs
  * here on what the page read, on every keystroke, and the store runs it again
- * under the event's locks; so do R4 (`waitingConflict`) and R5. Nothing posted
- * from here is trusted as a figure. A refusal from the route reloads the page's
- * data, since another receipt may have moved since the page was read.
+ * under the event's locks. It is quoted from this receipt alone: a delivery
+ * fee is charged per order, never waived for another order's parcel (the
+ * owner, 2026-10-21). Nothing posted from here is trusted as a figure. A
+ * refusal from the route reloads the page's data, since the receipt may have
+ * moved since the page was read.
  */
 
 import { useMemo, useState } from 'react';
@@ -40,10 +42,8 @@ import {
   LOGISTICS_CHANGE_STATUSES,
   LOGISTICS_DIRECTIONS,
   quoteLogisticsChange,
-  type ExistingDelivery,
   type LogisticsQuote,
 } from '@/lib/logistics-change';
-import { waitingConflict, type WaitingSwitch } from '@/lib/logistics-change-parcels';
 import {
   CHANGE_PAYMENT_CHOICES,
   onlineChangeMethod,
@@ -91,19 +91,11 @@ function placeOf(address: RunnerAddress | undefined): Place {
 export function useShipKits({
   receipt,
   event,
-  existing,
-  waiting,
-  refOf,
   onSaved,
   onStale,
 }: {
   receipt: Receipt;
   event: ReceiptEvent;
-  /** The event's PAID deliveries, the parcels a new one can ride on (L6). */
-  existing: readonly ExistingDelivery[];
-  /** The event's switches waiting for payment (R4). */
-  waiting: readonly WaitingSwitch[];
-  refOf: (registrationId: string) => string;
   /** Saved; `email` is how the switch's email went (refused: send it by hand). */
   onSaved: (result: { change: LogisticsChangeView; email?: SwitchEmailAnswer | null }) => void;
   /** The page's data may be out of date: read it again. */
@@ -154,12 +146,11 @@ export function useShipKits({
         direction: toDelivery ? LOGISTICS_DIRECTIONS.TO_DELIVERY : LOGISTICS_DIRECTIONS.TO_PICKUP,
         orders: [{ id: receipt.id, runners: homes }],
         target: { deliveryAddress, deliveryZone: zone },
-        existing,
         paymentMethod: paymentChoice ? paymentMethodForChoice(paymentChoice) : null,
       }),
     // `homes` is rebuilt every render from the receipt it is read from.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [receipt, event, existing, toDelivery, deliveryAddress, zone, paymentChoice],
+    [receipt, event, toDelivery, deliveryAddress, zone, paymentChoice],
   );
   // A receiver ticked but left blank composes to no receiver at all, so the
   // quote cannot see it: held here, as the wizard holds it on the parts.
@@ -180,12 +171,9 @@ export function useShipKits({
   const alreadyPaid = pickedPaid && quotedFee;
   const onlineMethod = onlineChangeMethod();
   const onlineFee = quote.ok && quotedFee ? transactionFeeFor(quote.fee, onlineMethod) : 0;
-  // R4 and R5, said before the button rather than only by the route's refusal.
-  const waitingOn = toDelivery && !askRunner && quote.ok ? waitingConflict(quote.parcels, waiting, receipt.id) : null;
-  const ridersLeft = toDelivery ? [] : receipt.riderRefs;
 
   const save = async () => {
-    if (!receipt.canSwitch.allowed || (!askRunner && !quote.ok) || waitingOn || ridersLeft.length > 0) return;
+    if (!receipt.canSwitch.allowed || (!askRunner && !quote.ok)) return;
     if (needsPayment && !paymentChoice) {
       setChoiceError('Choose how the runner pays');
       return;
@@ -254,7 +242,6 @@ export function useShipKits({
   return {
     receipt,
     event,
-    refOf,
     isSaving,
     toDelivery,
     address,
@@ -297,8 +284,6 @@ export function useShipKits({
       setPaidErrors(current => ({ ...current, proofFile: undefined }));
     },
     paidErrors,
-    waitingOn,
-    ridersLeft,
     reason,
     setReason,
     save,

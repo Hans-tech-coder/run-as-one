@@ -16,14 +16,13 @@
  * waiting payment (`OrderSwitchModal`; its past switches are in the row's
  * *History*, `useRegistrantHistory`), and an email to send by hand
  * (`SwitchEmailModal`) — and renders them through `element`. After anything
- * moves, the page's server read runs again (`router.refresh()`): one switch
- * changes other receipts too (who rides on whom), and that read is the one
- * place all of it is decided.
+ * moves, the page's server read runs again (`router.refresh()`): that read is
+ * the one place a receipt's switches and what it may do next are decided.
  */
 
 import React, { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { LOGISTICS_CHANGE_STATUSES, type ExistingDelivery, type LogisticsDirection } from '@/lib/logistics-change';
+import { LOGISTICS_CHANGE_STATUSES, type LogisticsDirection } from '@/lib/logistics-change';
 import type { EventReceipts } from '@/lib/logistics-receipts';
 import { openSwitch } from './logistics-change-display';
 import ShipKitsPanel from './ShipKitsPanel';
@@ -56,29 +55,12 @@ export function useOrderSwitch({
   permissions: SwitchPermissions;
 }) {
   const router = useRouter();
-  const { event, receipts, waiting } = switching;
+  const { event, receipts } = switching;
   const [open, setOpen] = useState<Open | null>(null);
   const [emailRequest, setEmailRequest] = useState<SwitchEmailRequest | null>(null);
 
   const byId = useMemo(() => new Map(receipts.map(receipt => [receipt.id, receipt])), [receipts]);
 
-  // The event's PAID deliveries, the parcels a new one can ride on (L6).
-  const existing: ExistingDelivery[] = useMemo(
-    () =>
-      receipts
-        .filter(receipt => receipt.status === 'PAID' && receipt.isDelivery)
-        .map(receipt => ({
-          registrationId: receipt.id,
-          status: receipt.status,
-          logisticsMethod: receipt.logisticsCode,
-          deliveryAddress: receipt.deliveryAddress,
-          deliverySplit: receipt.deliverySplit,
-          runners: receipt.runners.map(runner => runner.address),
-        })),
-    [receipts],
-  );
-
-  const refOf = (registrationId: string) => byId.get(registrationId)?.orderRef ?? 'a paid receipt';
   const refresh = () => router.refresh();
 
   const menuFor = (registrationId: string): OrderSwitchMenu | null => {
@@ -104,9 +86,6 @@ export function useOrderSwitch({
           key={receipt.id}
           receipt={receipt}
           event={event}
-          existing={existing}
-          waiting={waiting}
-          refOf={refOf}
           isClosing={open.closing}
           onClose={close}
           onSaved={({ change, email }) => {

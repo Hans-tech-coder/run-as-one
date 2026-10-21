@@ -2,9 +2,9 @@
 
 /**
  * The sections of one receipt's *Ship kits* / *Back to pickup* panel
- * (`ShipKitsPanel.tsx`, LOGISTICS_CHANGE_PLAN.md L2, L5, L6, Revision 1
- * R3–R5): where the kits go, the live quote's parcels, how a fee is paid, and
- * why a reverse must wait for its riders. Kept apart from the panel's frame
+ * (`ShipKitsPanel.tsx`, LOGISTICS_CHANGE_PLAN.md L2, L5, Revision 1 R3):
+ * where the kits go, the live quote's parcel and its fee, and how a fee is
+ * paid. Kept apart from the panel's frame
  * to hold each file under the size the repository splits files at; every
  * section reads the state `useShipKits` hands the panel. There are no
  * checkboxes for other receipts: one receipt per switch (R3).
@@ -15,7 +15,6 @@ import { TriangleAlert, Link2, Landmark, CircleCheck, Home } from 'lucide-react'
 import FieldError from '@/components/ui/FieldError';
 import { formatPesos } from '@/lib/money';
 import { formatRunnerAddress } from '@/lib/runner-address';
-import { ridersRefusal, waitingRefusal } from '@/lib/logistics-change-parcels';
 import {
   CHANGE_PAYMENT_CHOICES,
   MAX_TRANSACTION_NUMBER,
@@ -82,12 +81,11 @@ export function Warning({ children }: { children: React.ReactNode }) {
 }
 
 /** The parcels and what each costs, from the live quote. */
-export function SwitchQuote({ quote, onlineFee, needsPayment, paymentChoice, existingRef }: {
+export function SwitchQuote({ quote, onlineFee, needsPayment, paymentChoice }: {
   quote: Extract<Props['quote'], { ok: true }>;
   onlineFee: number;
   needsPayment: boolean;
   paymentChoice: Props['paymentChoice'];
-  existingRef: (registrationId: string) => string;
 }) {
   return (
     <div className="rounded-lg border border-[var(--dash-border)] p-3 space-y-2" aria-live="polite">
@@ -97,11 +95,6 @@ export function SwitchQuote({ quote, onlineFee, needsPayment, paymentChoice, exi
             <span className="min-w-0 text-secondary [overflow-wrap:anywhere]">
               {quote.parcels.length > 1 ? `Parcel ${i + 1}: ` : ''}
               {formatRunnerAddress(parcel.address) || 'No address'}
-              {parcel.ridesOnRegistrationId && (
-                <span className="block text-xs text-[var(--text-muted)]">
-                  Ships with {existingRef(parcel.ridesOnRegistrationId)}, already paid
-                </span>
-              )}
             </span>
             <span className="tabular-nums whitespace-nowrap text-primary">{peso(parcel.fee)}</span>
           </li>
@@ -189,22 +182,16 @@ export function DeliveryFields(props: Props) {
   );
 }
 
-/** Back to pickup: free, nothing refunded (L9); riders go back first (R5). */
-export function PickupFields({ receipt, ridersLeft }: Props) {
+/** Back to pickup: free, nothing refunded (L9). */
+export function PickupFields({ receipt }: Props) {
   return (
     <div className="space-y-4">
       <p className="m-0 text-secondary">
         The {receipt.runners.length === 1 ? 'kit is' : 'kits are'} claimed at pickup instead. Nothing is refunded:
         the delivery fee on the receipt stays as paid.
       </p>
-      {ridersLeft.length > 0 && <Warning>{ridersRefusal(ridersLeft)}</Warning>}
     </div>
   );
-}
-
-/** R4: an address already waiting for another receipt's fee. */
-export function WaitingWarning({ waitingOn }: Pick<Props, 'waitingOn'>) {
-  return waitingOn ? <Warning>{waitingRefusal(waitingOn)}</Warning> : null;
 }
 
 /**

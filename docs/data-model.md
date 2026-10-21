@@ -362,16 +362,17 @@ shape:
   `totalAmount` stay, and the money is here. `changeRef` (unique, the primary
   order's reference + `-L<n>`), `direction` (`TO_DELIVERY` / `TO_PICKUP`,
   `asLogisticsDirection`), the target zone, address and split (null and false
-  for `TO_PICKUP`), `ridesOnRegistrationId` (L6: the PAID delivery order whose
-  parcel this joins at ₱0, else null), `fee` (one tier per distinct new address
-  not already receiving a paid parcel; all the organizer's, L8 — no Run As One
-  fee in v1, L7), `transactionFee` and `totalCharged` as on `CategoryChange`.
+  for `TO_PICKUP`), `ridesOnRegistrationId` (L6, **retired 2026-10-21**: the
+  PAID delivery order whose parcel a switch joined at ₱0; never written now,
+  kept so old rows read without a migration, and no screen reads it), `fee`
+  (the tier for the switch's one address, **charged per order**: the owner,
+  2026-10-21; all the organizer's, L8 — no Run As One fee in v1, L7), `transactionFee` and `totalCharged` as on `CategoryChange`.
   `status` is `AWAITING_PAYMENT`, `APPLIED`, `CANCELLED` or `EXPIRED`
   (`asLogisticsChangeStatus`, §5 `logistics-change.ts`); payment columns,
   `holdUntil` (never past the deadline, L12; no seat is held), the trail and
   email stamps as on `CategoryChange`. Indexed on `eventId` and
   **`(status, holdUntil)`** for the expiry sweep. **`LogisticsChangeOrder`**
-  links each order a switch moves (L6 combine), unique on `(changeId,
+  links each order a switch moves (one since R3), unique on `(changeId,
   registrationId)` and indexed on `registrationId` (the one-open-switch check,
   L13, and the history), with snapshots `fromLogisticsMethod`,
   `fromDeliveryZone`, `fromDeliveryAddress`, `fromDeliverySplit` so the

@@ -1,8 +1,9 @@
 /**
  * How an order's delivery switches are *read* (LOGISTICS_CHANGE_PLAN.md
- * Session 2, Revision 1): the "Pickup → Delivery" chip, the "Ships with
- * RM-XXXX" note, a switch still waiting for its fee, and the money line each
- * switch in a history carries. The registrants cell, card and CSV and the
+ * Session 2, Revision 1): the "Pickup → Delivery" chip, a switch still
+ * waiting for its fee, and the money line each switch in a history carries.
+ * No receipt is ever said to ship with another: a delivery fee is charged per
+ * order (the owner, 2026-10-21, which retired L6's "Ships with RM-XXXX"). The registrants cell, card and CSV and the
  * switch modal and history draw them from here, as
  * `category-change-display.tsx` does for category moves, so a chip cannot mean
  * one thing on one screen and another in the file.
@@ -29,7 +30,7 @@ const peso = (centavos: number) => `₱${formatPesos(centavos)}`;
  * payment, no reason. So the client viewer's runner list (`client-runners.ts`)
  * reads its notes with these same functions from a select that carries none.
  */
-export type MoveSwitch = Pick<LogisticsChangeView, 'status' | 'direction' | 'ridesOnOrderRef'> & {
+export type MoveSwitch = Pick<LogisticsChangeView, 'status' | 'direction'> & {
   orders: Pick<LogisticsChangeView['orders'][number], 'registrationId' | 'fromLogisticsMethod'>[];
 };
 
@@ -53,25 +54,17 @@ export function logisticsMove(row: MoveRow): { from: string; to: string } | null
   return from === to ? null : { from, to };
 }
 
-/** The paid order whose parcel this one rides on at ₱0 (L6), while it still does. */
-export function shipsWith(row: MoveRow): string | null {
-  const last = applied(row).at(-1);
-  return row.isDelivery && last?.direction === LOGISTICS_DIRECTIONS.TO_DELIVERY ? last.ridesOnOrderRef : null;
-}
-
 /** A switch of this order's still waiting for its fee (L13: at most one). */
 export function openSwitch(row: WithSwitches): LogisticsChangeView | null {
   return (row.logisticsChanges ?? []).find(change => change.status === LOGISTICS_CHANGE_STATUSES.AWAITING_PAYMENT) ?? null;
 }
 
-/** "SWITCHED FROM PICKUP · SHIPS WITH RM-D918005C", the CSV's Logistics Note. */
+/** "SWITCHED FROM PICKUP · DELIVERY SWITCH AWAITING ₱150.00", the CSV's Logistics Note. */
 export function logisticsNote(row: WithSwitches): string {
   const move = logisticsMove(row);
-  const host = shipsWith(row);
   const waiting = openSwitch(row);
   return [
     move ? `SWITCHED FROM ${move.from.toUpperCase()}` : null,
-    host ? `SHIPS WITH ${host}` : null,
     waiting
       ? waiting.awaitsAddress
         ? 'DELIVERY SWITCH AWAITING ADDRESS'
@@ -104,7 +97,6 @@ export function switchMoneyLine(change: LogisticsChangeView): string {
     default:
       if (change.totalCharged > 0) return `${peso(change.totalCharged)} paid`;
       if (change.direction === LOGISTICS_DIRECTIONS.TO_PICKUP) return 'Nothing to pay, nothing refunded';
-      if (change.ridesOnOrderRef) return `Ships with ${change.ridesOnOrderRef}, nothing to pay`;
       return 'Nothing to pay';
   }
 }
@@ -118,15 +110,13 @@ export function switchDirectionLabel(change: Pick<LogisticsChangeView, 'directio
 
 /**
  * The registrants Logistics cell: the method, the "Pickup → Delivery" chip
- * once the order has switched, "Ships with RM-XXXX" while it rides on another
- * order's parcel, and a switch still waiting for its fee. Read only: the
+ * once the order has switched, and a switch still waiting for its fee. Read only: the
  * switch, its payment and its history open from the row menu (Revision 2). Blue for the
  * chip, as *Kit changed* is: a fact the kit team acts on, not a fault in the
  * order.
  */
 export function LogisticsWithSwitch({ runner }: { runner: WithSwitches }) {
   const move = logisticsMove(runner);
-  const host = shipsWith(runner);
   const waiting = openSwitch(runner);
   return (
     <span className="inline-flex flex-col items-start gap-1">
@@ -136,7 +126,6 @@ export function LogisticsWithSwitch({ runner }: { runner: WithSwitches }) {
           {move.from} <ArrowRight size={12} aria-hidden="true" /> {move.to}
         </span>
       )}
-      {host && <span className="text-xs text-[var(--text-muted)]">Ships with {host}</span>}
       {waiting?.proofSubmitted && (
         <span className="status-badge info" title={`The runner sent the payment proof for ${waiting.changeRef}. Validate it in Delivery Payment.`}>
           Proof submitted · to delivery

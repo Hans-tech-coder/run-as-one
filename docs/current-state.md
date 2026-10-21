@@ -141,22 +141,20 @@ link*, *Cancel switch* and the by-hand send from the card, at desktop and
 375px; and both emails, including back to pickup, rendered and delivered to the
 owner's own address.
 Decisions the code cites: **L2** whole order; **L3** PAID only; **L4** the
-receipt is never edited; **L5** staff never type a fee; **L6** one fee per
-parcel, ₱0 on a paid parcel (its "combine in one switch" is superseded by R3);
+receipt is never edited; **L5** staff never type a fee; ~~**L6** one fee per
+parcel, ₱0 on a paid parcel~~ (retired 2026-10-21: one fee per order, above);
 **L7** no Run As One fee; **L8** the fee is the organizer's; **L9** back to
-pickup is free and refunds nothing; **L10** a parcel others ride on cannot go
-back alone (its checkboxes superseded by R5); **L11** deadline, default 7 days
+pickup is free and refunds nothing; ~~**L10** a parcel others ride on cannot go
+back alone~~ (retired with L6); **L11** deadline, default 7 days
 before race day; **L12** hold windows as an upgrade's; **L13** one awaiting
 switch per order. Revision 1 (owner, 2026-10-19, final): **R1** a screen of its
 own, Pickup & Delivery, `registration:view` to see and `registration:edit` to
 switch; **R2** one card per receipt with counts, search and filters; **R3** one
-receipt per switch, the panel mounted fresh per receipt; **R4** a second
-receipt to an address whose switch still waits for payment is refused ("RM-…
-is waiting for payment for delivery to this address. Switch this receipt once
-that is paid, and it ships free."), and rides free once that one is paid;
-**R5** a receipt others ride on goes back to pickup after them ("RM-… ships
-with this receipt at no charge. Switch RM-… back to pickup first."); **R6** the
-registrants table only reads switches.
+receipt per switch, the panel mounted fresh per receipt; ~~**R4** a second
+receipt to an address whose switch still waits for payment is refused~~ and
+~~**R5** a receipt others ride on goes back to pickup after them~~ (both
+retired with L6 on 2026-10-21: no receipt rides on or waits on another);
+**R6** the registrants table only reads switches.
 **One address per group (owner, 2026-10-20).** Shipping each kit to its
 runner's own home is gone everywhere: the wizards' *Where the kits go* choice
 (`DeliveryStep.tsx`, `useDeliveryPlan.ts`), both checkout routes
@@ -166,7 +164,8 @@ panel's *One address* / *Each runner's home*. Every new order and switch is
 `shipmentsFor`.
 **Revision 2 (owner, 2026-10-20, final): per transaction, from the
 registrants.** The Pickup & Delivery screen was removed (R1, R2 and R6 are
-superseded; R3–R5 and L2–L13 stand). Each runner's row menu offers *Switch to
+superseded; R3 and L2–L13 stand, less L6, L10, R4 and R5, retired on
+2026-10-21). Each runner's row menu offers *Switch to
 Delivery* / *Switch to Pickup* for its receipt — the same *Ship kits* panel,
 mounted per receipt, every runner on the order moving with it — plus
 *Delivery Payment* while a switch waits for its fee (`OrderSwitchModal.tsx`,
@@ -192,7 +191,8 @@ now two steps (`SwitchConfirm.tsx`; since 2026-10-21 each opens with the
 wizards' `StepRail`, *Delivery details* → *Payment*, and "Step n of 2"): the wizard's `DeliveryStep` from the
 switch's address, re-quoted under the locks on *Confirm Details*
 (`lib/logistics-change-runner.ts`, `api/logistics-change/details`: a new tier
-re-prices it, a paid parcel there applies it at ₱0, R4 refuses), then *Pay now*
+re-prices it; until 2026-10-21 a paid parcel there applied it at ₱0 and R4
+refused, both now gone), then *Pay now*
 or the accounts, QR codes and the screenshot and reference
 (`api/logistics-change/proof`). The page shows the whole address while a switch
 waits (T4, reversing the masking). "Proof submitted" is a waiting bank switch
@@ -218,7 +218,7 @@ says where the switch starts from, how the runner pays, and **Send to Runner**;
 with no home address it is sent with none (`switchAwaitsAddress`, no fee) and
 the runner types it on the link, where the fee is set. Only *Already paid*
 opens the address. Record payment, checkout, the proof upload and apply all
-refuse a switch with no address; R4 ignores it. `logistics-change-store.ts`
+refuse a switch with no address. `logistics-change-store.ts`
 was split first (`logistics-change-outcome.ts` holds apply and cancel).
 Verified on `local-dev`: RM-1D5EEF1B's panel viewed only (its contact is not
 the owner, so nothing was sent); RM-7B67DB3F with its home address blanked for
@@ -311,7 +311,42 @@ receipt's pickup / delivery switches as two sections; *Category Payment* and
 the menu (View Details, Edit Registrant, Change Category, Switch to Delivery,
 History, Delete), both sections, and a switch's read-only *View proof*.
 
-The decisions in full, as the owner accepted them (L1–L14, before Revision 1):
+**One delivery fee per order (owner, 2026-10-21, final; Strix vuln-0001).**
+In the owner's words: "Wala dapat libreng delivery kung different transaction
+or reference order. Even same address, kung magkaibang transaction or
+reference order, separate ang bayad sa delivery fee. Ang pwede lang
+magsabay-sabay sa iisang delivery ay kung group registration yun." A delivery
+fee is charged per order (orderRef, receipt); only the runners inside one
+order, a group registration, share one parcel, which they already do because a
+switch moves a whole order (L2). This **retires L6** (a ₱0 ride on an address
+another PAID order already ships to, `ridesOnRegistrationId`), and with it
+**L10, R4** (refusing a second receipt to an address whose switch still waits
+for payment) and **R5** (a host receipt going back to pickup only after its
+riders). Strix scan `run-as-one-scan_4695` (vuln-0001, MEDIUM) showed why:
+since Revision 3 the runner types the address on the public link, so anyone
+with a switch link could type the street of a stranger's paid delivery (their
+own unit and receiver in the landmark) and have the switch applied at ₱0,
+learn the stranger's order reference from the email and "Ships with RM-…", and
+block the stranger's own switch back to pickup through R5. Fixed at the root:
+`quoteLogisticsChange` takes no other order (`existing`, `paidParcels` and the
+quote's `ridesOnRegistrationId` are gone) and refuses two orders in one quote
+(`MANY_ORDERS`); `readSwitchContext` reads only the switching order (its own
+open switch for L13); `logistics-change-parcels.ts` keeps only `refsOf`; the
+runner's *Confirm Details* (`confirmSwitchDetails`) can no longer apply a
+switch or move an order — every tier the event delivers to is above ₱0, so it
+only rewrites the figures, and refuses (409) should a quote ever come back
+with nothing to pay; the store refuses a delivery with no fee the same way.
+The *Ship kits* panel, *Delivery Payment*, the registrants Logistics cell and
+CSV note, the client runner list and its export, and the *switched* email no
+longer say "Ships with" or "Also in this parcel". Back to pickup stays free and
+refunds nothing (L9), and any receipt may go back on its own. The
+`LogisticsChange.ridesOnRegistrationId` column stays (no migration; the
+release already carries `20261018120000_logistics_change`) and is never
+written; no screen reads it, so the few riding rows on `local-dev` read as a
+plain ₱0 switch in the history. `lockSwitch`'s advisory lock stays.
+
+The decisions in full, as the owner accepted them (L1–L14, before Revision 1;
+L6 and L10 were retired on 2026-10-21, above):
 **L1** staff only, started by staff like a category change; runner
 self-service is out of scope. **L2** a switch moves a whole order (logistics
 is an order-level fact); a group ships to one address (the option to ship to
@@ -323,19 +358,16 @@ order's `logisticsMethod`, `deliveryZone`, `deliveryAddress` and
 stay, and the money lives on the `LogisticsChange` row. **L5** staff never type
 a fee: it is computed from the address with the checkout's own functions;
 with the event's province unknown, staff pick the zone; an address in a zone
-the event does not deliver to is refused. **L6** shipping is charged per
-parcel, not per receipt: kits to one address pay one tier; an address that
-already receives a PAID delivery in the event rides on it at ₱0 and records
-the order it rides on, and one only awaiting payment never counts, so a
-cancelled or expired switch can never leave a free rider ("combine in one
-switch" with checkboxes was superseded by R3). **L7** no Run As One fee in v1:
+the event does not deliver to is refused. **L6** (retired 2026-10-21 for one fee per order, above) shipping was charged
+per parcel, not per receipt: an address that already received a PAID delivery
+in the event rode on it at ₱0 and recorded the order it rode on. **L7** no Run As One fee in v1:
 the delivery fee is the whole price, PayMongo's transaction fee on top when
 online; a configurable fee could come later like `categoryChangeFee`
 (`ON_HOLD.md`). **L8** the fee is the organizer's, added to what it is owed
 like a checkout delivery fee; the transaction fee is PayMongo's. **L9**
 delivery → pickup is allowed, at once and at ₱0, with no refund (staff may
-refund by hand outside the app). **L10** a parcel others ride on cannot be
-reversed alone (its checkboxes superseded by R5). **L11** a per-event
+refund by hand outside the app). **L10** (retired with L6) a parcel others rode on could not be reversed
+alone. **L11** a per-event
 deadline, `Event.logisticsChangeUntil`, null meaning 7 days before race day,
 00:00 Manila; after it the action is hidden and the routes refuse. **L12** an
 awaiting switch waits with an upgrade's windows (`changeHoldUntil`: hours

@@ -20,14 +20,14 @@ import { shipmentsFor } from '@/app/events/[slug]/register/delivery-split';
  *
  * `logisticsChangeView` is the one shape the switch modal, its history,
  * a registrants row and every route's answer carry: the order it moved with
- * what it was before, the order it rides on by reference, dates as strings.
+ * what it was before, dates as strings. The `ridesOn` relation (L6, retired
+ * 2026-10-21) is not read: no receipt ships with another now.
  * `orderLogisticsFields` is the one place a registrants row's Logistics
  * columns are worded; that screen only reads switches now (R6), so it carries
  * no switch action. Server-only.
  */
 
 export const LOGISTICS_VIEW_INCLUDE = {
-  ridesOn: { select: { orderRef: true } },
   orders: {
     select: {
       registrationId: true,
@@ -50,8 +50,6 @@ export function logisticsChangeView(change: ChangeWithOrders) {
     direction: change.direction,
     deliveryAddress: change.deliveryAddress,
     deliverySplit: change.deliverySplit,
-    /** The paid order whose parcel this joined at ₱0 (L6), by reference. */
-    ridesOnOrderRef: change.ridesOn?.orderRef ?? null,
     fee: change.fee,
     transactionFee: change.transactionFee,
     totalCharged: change.totalCharged,

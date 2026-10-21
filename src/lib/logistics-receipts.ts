@@ -10,30 +10,30 @@ import {
 } from '@/lib/registration-codes';
 import { formatRunnerAddress, groupByAddress, type RunnerAddress } from '@/lib/runner-address';
 import { LOGISTICS_CHANGE_STATUSES, logisticsChangeDeadline, type LogisticsDirection } from '@/lib/logistics-change';
-import { ridersOf, type AppliedLink, type WaitingSwitch } from '@/lib/logistics-change-parcels';
 import { SWITCH_EVENT_SELECT, eligibilityFor } from '@/lib/logistics-change-context';
 import { LOGISTICS_VIEW_INCLUDE, logisticsChangeView, type LogisticsChangeView } from '@/lib/logistics-change-view';
 
 /**
  * **Each receipt as the pickup / delivery switch reads it**
- * (LOGISTICS_CHANGE_PLAN.md R2–R5, Revision 2): one entry per receipt (order
+ * (LOGISTICS_CHANGE_PLAN.md R2, R3, Revision 2): one entry per receipt (order
  * reference), because a switch moves a whole receipt — every runner of a
- * group registration — and is charged per parcel, while the registrants
+ * group registration — and is charged per receipt, while the registrants
  * table it is opened from is one row per runner.
  *
  * The rule this owns: what a receipt's switch knows — its runners and kits,
- * pickup or delivery, where each household's parcel goes, which paid parcel
- * it ships with, which receipts ride on it ("Also in this parcel", R5), a
- * switch waiting for payment, its history, and whether staff may switch it now
- * (L3, L11, L13). It is decided from **one** read of the event's listed orders
- * (`listedRegistrationWhere`, the registrants screen's own list), their live
- * runners' home addresses and the event's switches, so the page wakes the
- * database once.
+ * pickup or delivery, where each household's parcel goes, a switch waiting
+ * for payment, its history, and whether staff may switch it now (L3, L11,
+ * L13). **No receipt is read against another**: a delivery fee is charged per
+ * order (the owner, 2026-10-21, which replaced L6, R4 and R5), so nothing here
+ * says one receipt ships with, or waits on, another. It is decided from
+ * **one** read of the event's listed orders (`listedRegistrationWhere`, the
+ * registrants screen's own list), their live runners' home addresses and the
+ * event's switches, so the page wakes the database once.
  *
  * The same read carries what the *Ship kits* panel quotes from in the browser
- * (the event's fees, its paid parcels, the switches waiting for payment), so
- * opening a receipt fetches nothing; the store re-reads and re-checks all of
- * it under the event's locks when staff save. Server-only.
+ * (the event's fees), so opening a receipt fetches nothing; the store re-reads
+ * and re-checks all of it under the event's locks when staff save.
+ * Server-only.
  */
 
 /** Orders whose kits are still coming: paid, or a bank transfer awaiting its check. */
@@ -99,7 +99,6 @@ export async function readEventReceipts(
   });
   if (!event) return null;
 
-  const orders = new Map(event.registrations.map(order => [order.id, order]));
   const switchesOf = new Map<string, LogisticsChangeView[]>();
   for (const change of event.logisticsChanges) {
     const view = logisticsChangeView(change);
@@ -107,35 +106,6 @@ export async function readEventReceipts(
       switchesOf.set(link.registrationId, [...(switchesOf.get(link.registrationId) ?? []), view]);
     }
   }
-
-  // R5: who rides on whom, from the applied switches and each order as it is now.
-  const links: AppliedLink[] = event.logisticsChanges
-    .filter(change => change.status === LOGISTICS_CHANGE_STATUSES.APPLIED)
-    .flatMap(change =>
-      change.orders.map(link => {
-        const order = orders.get(link.registrationId);
-        return {
-          registrationId: link.registrationId,
-          // An order no longer listed here ships nothing.
-          status: order?.status ?? '',
-          logisticsMethod: order?.logisticsMethod ?? '',
-          direction: change.direction,
-          ridesOnRegistrationId: change.ridesOnRegistrationId,
-          at: (change.appliedAt ?? change.createdAt).getTime(),
-        };
-      }),
-    );
-
-  // R4: where each switch waiting for payment would ship.
-  const waiting: WaitingSwitch[] = event.logisticsChanges
-    .filter(change => change.status === LOGISTICS_CHANGE_STATUSES.AWAITING_PAYMENT)
-    .map(change => ({
-      orderRef: change.orders[0]?.registration.orderRef ?? '',
-      registrationIds: change.orders.map(link => link.registrationId),
-      deliveryAddress: change.deliveryAddress,
-      deliverySplit: change.deliverySplit,
-      runners: change.orders.flatMap(link => (orders.get(link.registrationId)?.runners ?? []).map(addressOf)),
-    }));
 
   const receipts = event.registrations.map(order => {
     const switches = switchesOf.get(order.id) ?? [];
@@ -157,8 +127,8 @@ export async function readEventReceipts(
             runners: group.runners.map(index => runners[index].name),
           }))
         : [{ address: order.deliveryAddress || 'No address on file', runners: runners.map(runner => runner.name) }];
-    const eligibility = eligibilityFor(event, order, waiting.some(change => change.registrationIds.includes(order.id)), now);
-    const riders = isDelivery ? ridersOf(links, [order.id]) : [];
+    const hasOpenSwitch = switches.some(change => change.status === LOGISTICS_CHANGE_STATUSES.AWAITING_PAYMENT);
+    const eligibility = eligibilityFor(event, order, hasOpenSwitch, now);
 
     return {
       id: order.id,
@@ -174,8 +144,6 @@ export async function readEventReceipts(
       deliverySplit: order.deliverySplit,
       runners,
       parcels,
-      /** The receipts riding on this one's parcel at ₱0, by reference (R5). */
-      riderRefs: riders.map(id => orders.get(id)?.orderRef ?? '').filter(Boolean),
       /** Every switch of this receipt, oldest first, for the shared display helpers. */
       registrationId: order.id,
       logisticsChanges: switches,
@@ -205,7 +173,6 @@ export async function readEventReceipts(
       deadline: deadline ? deadline.toISOString() : null,
     },
     receipts,
-    waiting,
   };
 }
 

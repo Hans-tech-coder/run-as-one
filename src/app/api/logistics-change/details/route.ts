@@ -2,8 +2,9 @@
  * Confirm on a delivery switch's link (`/pay/logistics/[token]`,
  * LOGISTICS_CHANGE_PLAN.md Revision 3 T2, T3): the runner saves where the kits
  * ship and who receives them, re-quoted under the switch locks by
- * `confirmSwitchDetails`. Answers the new figures, or `applied` when the
- * address now rides free on a paid parcel.
+ * `confirmSwitchDetails`. Answers the new figures. The fee is the order's own
+ * tier, never ₱0: no address matches another order's parcel (the owner,
+ * 2026-10-21), so this never applies a switch or moves an order.
  *
  * **Public, so rate-limited** (`PAY_LINK_RULE`), and it trusts nothing but the
  * signed token: the address and zone are posted as the wizard composes them,

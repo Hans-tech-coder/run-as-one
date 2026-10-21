@@ -667,10 +667,12 @@ model LogisticsChange {
   deliveryZone          String?
   deliveryAddress       String?
   deliverySplit         Boolean                @default(false)
-  /// L6: the paid delivery order whose parcel this switch joins at ₱0, or null.
+  /// L6, retired 2026-10-21: the paid delivery order whose parcel this switch
+  /// joined at ₱0. Never written now (one delivery fee per order); kept, null
+  /// on every new row, so old rows stay readable without a migration.
   ridesOnRegistrationId String?
-  /// Centavos: one tier per distinct new address not already receiving a paid
-  /// parcel (L5, L6). 0 for TO_PICKUP (L9) and for a rider. All the
+  /// Centavos: the delivery tier for the switch's one address, charged per
+  /// order (L5, the owner on 2026-10-21). 0 for TO_PICKUP (L9). All the
   /// organizer's (L8); there is no Run As One fee in v1 (L7).
   fee                   Int                    @default(0)
   /// Centavos: PayMongo's cut on an online switch, the runner's to pay on top.

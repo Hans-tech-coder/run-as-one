@@ -3,18 +3,10 @@ import {
   canSwitchLogistics,
   logisticsChangeDeadline,
   quoteLogisticsChange,
-  type ExistingDelivery,
   type LogisticsQuoteInput,
 } from '../src/lib/logistics-change';
 import { transactionFeeFor } from '../src/lib/free-checkout';
-import {
-  parcelAddressesOf,
-  ridersOf,
-  ridersRefusal,
-  waitingConflict,
-  waitingRefusal,
-  type AppliedLink,
-} from '../src/lib/logistics-change-parcels';
+import { refsOf } from '../src/lib/logistics-change-parcels';
 import {
   composeDeliveryAddress,
   deliveryAddressDetails,
@@ -29,19 +21,18 @@ import {
 import { switchAwaitsAddress, switchHoldUntil, switchProofSubmitted } from '../src/lib/logistics-change-proof';
 import type { LogisticsChangeView } from '../src/lib/logistics-change-view';
 import { NO_CHANGES, NO_ORDERS, settle } from '../src/lib/settlement';
-import { logisticsMove, logisticsNote, shipsWith, switchMoneyLine } from '../src/app/admin/events/[id]/registrants/logistics-change-display';
+import { logisticsMove, logisticsNote, switchMoneyLine } from '../src/app/admin/events/[id]/registrants/logistics-change-display';
 import { kitNote } from '../src/app/admin/your-events/[id]/RunnerCells';
 
 /**
  * A check of the delivery switch quote (LOGISTICS_CHANGE_PLAN.md
- * Verification): one fee per parcel across the orders switched, ₱0 when the
- * address already receives a PAID delivery and never when it only awaits
- * payment, a zone the event does not deliver to refused, back to pickup free,
- * the deadline, and Revision 1's two refusals: a second receipt to an address
- * still waiting for payment (R4), and a parcel others ride on going back
- * before them (R5). Session 4 adds who is offered *Already paid*, the
- * settlement totals (a switch's fee is all the organizer's, L8), and the
- * client runner list's notes, read from a shape that carries no money.
+ * Verification): one fee per order (the owner, 2026-10-21, which replaced
+ * L6, R4 and R5) — a group registration's runners share one parcel, two
+ * orders never do, and no address, however close to another order's paid
+ * parcel, quotes ₱0 — a zone the event does not deliver to refused, back to
+ * pickup free, and the deadline. Session 4 adds who is offered *Already
+ * paid*, the settlement totals (a switch's fee is all the organizer's, L8),
+ * and the client runner list's notes, read from a shape that carries no money.
  *
  * There is no test runner in this project, so this is a script rather than a
  * spec. It touches no database and needs no environment. Run it with the
@@ -109,7 +100,6 @@ const quote = (overrides: Partial<LogisticsQuoteInput>) =>
     direction: LOGISTICS_DIRECTIONS.TO_DELIVERY,
     orders: [{ id: 'order-1', runners: [TARLAC_A] }],
     target: { deliveryAddress: shipTo(TARLAC_A) },
-    existing: [],
     ...overrides,
   });
 
@@ -144,58 +134,32 @@ check(
   [shipTo(TARLAC_A), false],
 );
 
-// ── Combining orders (L6) ────────────────────────────────────────────────────
+// ── One fee per order (the owner, 2026-10-21; replaced L6) ──────────────────
 
 const twoOrders = [
   { id: 'order-1', runners: [TARLAC_A] },
   { id: 'order-2', runners: [TARLAC_B] },
 ];
 check(
-  'two orders combined to one address pay one fee',
+  'two orders are never quoted as one parcel',
   fee(quote({ orders: twoOrders, target: { deliveryAddress: shipTo(TARLAC_A) } })),
+  'MANY_ORDERS',
+);
+check('a group registration is one order, so its runners share one fee', fee(quote({ orders: [group] })), INSIDE);
+// The quote is given no other order: whatever another receipt ships to, this
+// one pays its own tier, at the same street, ZIP and landmark or not.
+check(
+  'the same address another order already ships to pays the full tier',
+  fee(quote({ target: { deliveryAddress: shipTo(TARLAC_A, { zip: '2300', landmark: 'BLUE GATE' }) } })),
   INSIDE,
 );
-
-// ── Riding on an existing parcel (L6) ────────────────────────────────────────
-
-const paidOneAddress: ExistingDelivery = {
-  registrationId: 'paid-1',
-  status: 'PAID',
-  logisticsMethod: 'DELIVERY',
-  // The zip and landmark are the parcel's, not the address: still one place.
-  deliveryAddress: shipTo(TARLAC_A, { zip: '2300', landmark: 'BLUE GATE' }),
-  deliverySplit: false,
-  runners: [TARLAC_B],
-};
-const rider = quote({ existing: [paidOneAddress] });
-check('a rider on a paid parcel pays ₱0', fee(rider), 0);
-check('a rider records the order it rides on', rider.ok && rider.ridesOnRegistrationId, 'paid-1');
-check('a ₱0 rider applies at once', rider.ok && rider.status, 'APPLIED');
-
-const paidSplit: ExistingDelivery = {
-  registrationId: 'paid-split',
-  status: 'PAID',
-  logisticsMethod: 'DELIVERY',
-  deliveryAddress: null,
-  deliverySplit: true,
-  runners: [PAMPANGA, TARLAC_A],
-};
-check('a rider on a paid split household pays ₱0', fee(quote({ existing: [paidSplit] })), 0);
-
+const sameAddress = quote({ target: { deliveryAddress: shipTo(TARLAC_A) } });
+check('so it waits for payment, never applying at once', sameAddress.ok && sameAddress.status, 'AWAITING_PAYMENT');
+check('the quote names no other order', sameAddress.ok && Object.keys(sameAddress).includes('ridesOnRegistrationId'), false);
 check(
-  'a rider on an awaiting (PENDING) delivery pays the full fee',
-  fee(quote({ existing: [{ ...paidOneAddress, status: 'PENDING' }] })),
-  INSIDE,
-);
-check(
-  'an order whose switch is only awaiting payment is still pickup, so pays the full fee',
-  fee(quote({ existing: [{ ...paidOneAddress, logisticsMethod: 'PICKUP' }] })),
-  INSIDE,
-);
-check(
-  'an order cannot ride on itself',
-  fee(quote({ existing: [{ ...paidOneAddress, registrationId: 'order-1' }] })),
-  INSIDE,
+  'a tier the race does not price is not deliverable, so a delivery is never ₱0',
+  fee(quote({ event: { ...event, logisticsDeliveryFeeInside: 0 } })),
+  'NOT_DELIVERABLE',
 );
 
 // ── Refusals ─────────────────────────────────────────────────────────────────
@@ -240,10 +204,6 @@ check(
 check('online transaction fee is above zero', online.ok && online.transactionFee > 0, true);
 const bank = quote({ paymentMethod: 'BANK_TRANSFER' });
 check('bank transfer adds no transaction fee', bank.ok && [bank.transactionFee, bank.totalCharged], [0, INSIDE]);
-check('a ₱0 rider online adds no transaction fee', (() => {
-  const q = quote({ existing: [paidOneAddress], paymentMethod: 'QRPH' });
-  return q.ok && [q.transactionFee, q.totalCharged];
-})(), [0, 0]);
 
 // ── Eligibility (L3, L11, L13) ───────────────────────────────────────────────
 
@@ -287,75 +247,10 @@ check(
   'NO_PICKUP',
 );
 
-// ── Revision 1: an address waiting for payment (R4) ──────────────────────────
+// ── Naming receipts in the trail ─────────────────────────────────────────────
 
-const waitingTo = (address: typeof TARLAC_A, over: { split?: boolean; runners?: (typeof TARLAC_A)[] } = {}) => ({
-  orderRef: 'RM-WAIT',
-  registrationIds: ['order-9'],
-  deliveryAddress: over.split ? null : shipTo(address),
-  deliverySplit: over.split ?? false,
-  runners: over.runners ?? [address],
-});
-const toA = quote({});
-check(
-  'a fee to an address another receipt waits on is refused with its reference',
-  toA.ok && waitingConflict(toA.parcels, [waitingTo(TARLAC_A)], 'order-1'),
-  'RM-WAIT',
-);
-check(
-  'the same address with another ZIP and landmark still counts',
-  toA.ok && waitingConflict(toA.parcels, [{ ...waitingTo(TARLAC_A), deliveryAddress: shipTo(TARLAC_A, { zip: '2300', landmark: 'NEAR THE CHURCH' }) }], 'order-1'),
-  'RM-WAIT',
-);
-check('another address is not refused', toA.ok && waitingConflict(toA.parcels, [waitingTo(TARLAC_B)], 'order-1'), null);
-check(
-  "a split waiting switch's household counts as its address",
-  toA.ok && waitingConflict(toA.parcels, [waitingTo(TARLAC_B, { split: true, runners: [TARLAC_B, TARLAC_A] })], 'order-1'),
-  'RM-WAIT',
-);
-check(
-  'a receipt is never refused by its own waiting switch',
-  toA.ok && waitingConflict(toA.parcels, [{ ...waitingTo(TARLAC_A), registrationIds: ['order-1'] }], 'order-1'),
-  null,
-);
-const riding = quote({ existing: [paidOneAddress] });
-check(
-  'a parcel riding free on a paid one is not refused',
-  riding.ok && waitingConflict(riding.parcels, [waitingTo(TARLAC_A)], 'order-1'),
-  null,
-);
-check(
-  "R4's sentence",
-  waitingRefusal('RM-WAIT'),
-  'RM-WAIT is waiting for payment for delivery to this address. Switch this receipt once that is paid, and it ships free.',
-);
-check('a split order has one parcel per household', parcelAddressesOf({ deliveryAddress: null, deliverySplit: true, runners: [TARLAC_A, TARLAC_B, TARLAC_A] }).length, 2);
-
-// ── Revision 1: riders go back first (R5) ────────────────────────────────────
-
-const link = (registrationId: string, over: Partial<AppliedLink> = {}): AppliedLink => ({
-  registrationId,
-  status: 'PAID',
-  logisticsMethod: 'DELIVERY',
-  direction: 'TO_DELIVERY',
-  ridesOnRegistrationId: 'host',
-  at: 1,
-  ...over,
-});
-check('a receipt riding on the host is its rider', ridersOf([link('rider')], ['host']), ['rider']);
-check('a rider of a rider counts too', ridersOf([link('rider'), link('second', { ridesOnRegistrationId: 'rider' })], ['host']), ['rider', 'second']);
-check(
-  'a rider since switched back to pickup rides on nothing',
-  ridersOf([link('rider'), link('rider', { direction: 'TO_PICKUP', ridesOnRegistrationId: null, at: 2, logisticsMethod: 'PICKUP' })], ['host']),
-  [],
-);
-check('a cancelled rider order rides on nothing', ridersOf([link('rider', { status: 'CANCELLED' })], ['host']), []);
-check(
-  "R5's sentence",
-  ridersRefusal(['RM-RIDER']),
-  'RM-RIDER ships with this receipt at no charge. Switch RM-RIDER back to pickup first.',
-);
-
+check('one receipt reads as itself', refsOf(['RM-A1']), 'RM-A1');
+check('several read as a list', refsOf(['RM-A1', 'RM-B2', 'RM-C3']), 'RM-A1, RM-B2 and RM-C3');
 
 // ── Already paid, record it now (the owner's addition to Session 4) ─────────
 
@@ -402,10 +297,9 @@ check('the balance moves by the fee', afterBank.balance - before.balance, INSIDE
 // ── The client's runner list: notes without money (Session 4) ───────────────
 
 // The shape client-runners.ts builds from its select: no amount, payment or reason.
-const switched = (direction: string, ridesOnOrderRef: string | null, fromLogisticsMethod: string) => ({
+const switched = (direction: string, fromLogisticsMethod: string) => ({
   status: 'APPLIED',
   direction,
-  ridesOnOrderRef,
   orders: [{ registrationId: 'order', fromLogisticsMethod }],
 });
 const noted = (isDelivery: boolean, changes: ReturnType<typeof switched>[]) => ({
@@ -413,19 +307,24 @@ const noted = (isDelivery: boolean, changes: ReturnType<typeof switched>[]) => (
   isDelivery,
   logisticsChanges: changes,
 });
-check('a receipt switched to delivery reads "Switched from Pickup"', logisticsMove(noted(true, [switched('TO_DELIVERY', null, 'PICKUP')]))?.from, 'Pickup');
-check('a rider reads "Ships with" its host', shipsWith(noted(true, [switched('TO_DELIVERY', 'RM-HOST', 'PICKUP')])), 'RM-HOST');
+check('a receipt switched to delivery reads "Switched from Pickup"', logisticsMove(noted(true, [switched('TO_DELIVERY', 'PICKUP')]))?.from, 'Pickup');
 check(
   'switched there and back is no switch to the kit team',
-  logisticsMove(noted(false, [switched('TO_DELIVERY', 'RM-HOST', 'PICKUP'), switched('TO_PICKUP', null, 'DELIVERY')])),
+  logisticsMove(noted(false, [switched('TO_DELIVERY', 'PICKUP'), switched('TO_PICKUP', 'DELIVERY')])),
   null,
 );
+check('the export note', kitNote({ switchedFrom: 'Pickup' }), 'Switched from pickup');
+check('no switch, no note', kitNote({ switchedFrom: '' }), '');
 check(
-  'a rider back on pickup ships with nothing',
-  shipsWith(noted(false, [switched('TO_DELIVERY', 'RM-HOST', 'PICKUP'), switched('TO_PICKUP', null, 'DELIVERY')])),
-  null,
+  'the registrants export never says a receipt ships with another',
+  logisticsNote({
+    registrationId: 'order',
+    logisticsMethod: 'Delivery',
+    isDelivery: true,
+    logisticsChanges: [switched('TO_DELIVERY', 'PICKUP') as unknown as LogisticsChangeView],
+  }),
+  'SWITCHED FROM PICKUP',
 );
-check('the export note', kitNote({ switchedFrom: 'Pickup', shipsWith: 'RM-HOST' }), 'Switched from pickup · Ships with RM-HOST');
 
 // ── Ship kits like the wizard: another receiver (the owner, 2026-10-20) ─────
 
@@ -454,16 +353,6 @@ check(
   (r => !r.ok && r.reason)(quote({ target: { deliveryAddress: withReceiver('MARIA SANTOS', '') } })),
   'ADDRESS_INCOMPLETE',
 );
-check(
-  'a receiver does not change which parcel it is (L6)',
-  fee(quote({ existing: [paidOneAddress], target: { deliveryAddress: withReceiver('MARIA SANTOS', '+639171234567') } })),
-  0,
-);
-check(
-  'a receiver does not change which waiting switch it meets (R4)',
-  toReceiver.ok && waitingConflict(toReceiver.parcels, [waitingTo(TARLAC_A)], 'order-1'),
-  'RM-WAIT',
-);
 check('the emails read the address apart from its receiver', deliveryAddressDetails(withReceiver('MARIA SANTOS', '+639171234567')), {
   place: 'BLK 5 RIZAL ST., SAN ISIDRO, TARLAC CITY, TARLAC 2300',
   landmark: 'BLUE GATE',
@@ -476,9 +365,9 @@ check('no receiver reads as none', deliveryAddressDetails(shipTo(TARLAC_A)).rece
 // T2: the link re-quotes the address the runner gives, by the same rules.
 check('the runner moving the address to another tier re-prices it', fee(quote({ target: { deliveryAddress: shipTo(PAMPANGA) } })), OUTSIDE);
 check(
-  'the runner moving the address onto a paid parcel rides free and applies',
-  (q => q.ok && [q.fee, q.status, q.ridesOnRegistrationId])(quote({ existing: [paidOneAddress], target: { deliveryAddress: shipTo(TARLAC_A) } })),
-  [0, 'APPLIED', 'paid-1'],
+  "the runner typing another order's address with their own unit and receiver still pays the full tier (vuln-0001)",
+  (q => q.ok && [q.fee, q.status])(quote({ target: { deliveryAddress: withReceiver('BOB RUNNER', '+639171234567') } })),
+  [INSIDE, 'AWAITING_PAYMENT'],
 );
 check(
   'an online re-quote carries the transaction fee for the new tier',
@@ -527,18 +416,8 @@ check('one with an address does not', switchAwaitsAddress({ ...pending, delivery
 check('an applied one does not', switchAwaitsAddress({ ...pending, status: 'APPLIED' }), false);
 check('back to pickup never does', switchAwaitsAddress({ ...pending, direction: 'TO_PICKUP' }), false);
 check('an old split switch is not missing its address', switchAwaitsAddress({ ...pending, deliverySplit: true }), false);
-check(
-  'a switch with no address blocks no other address (R4)',
-  parcelAddressesOf({ deliveryAddress: null, deliverySplit: false, runners: [TARLAC_A] }).length,
-  0,
-);
-check(
-  'so a second receipt to Runner 1 of the first is not refused',
-  (q => q.ok && waitingConflict(q.parcels, [{ orderRef: 'RM-PENDING', registrationIds: ['other'], deliveryAddress: null, deliverySplit: false, runners: [TARLAC_A] }], 'order-1'))(quote({})),
-  null,
-);
 const pendingView = (status: string) =>
-  ({ ...pending, status, fee: 0, totalCharged: 0, ridesOnOrderRef: null }) as unknown as LogisticsChangeView;
+  ({ ...pending, status, fee: 0, totalCharged: 0 }) as unknown as LogisticsChangeView;
 check('the history says it waits for the address', switchMoneyLine(pendingView('AWAITING_PAYMENT')), "Waiting for the runner's address");
 check('an expired one says no address came', switchMoneyLine(pendingView('EXPIRED')), 'The runner never gave an address');
 check(
