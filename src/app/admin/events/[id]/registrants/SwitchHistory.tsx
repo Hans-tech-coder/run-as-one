@@ -2,7 +2,8 @@
 
 /**
  * A receipt's delivery switches (LOGISTICS_CHANGE_PLAN.md Revision 2), in its
- * *Switch History* / *Delivery Payment* modal (`OrderSwitchModal.tsx`): every
+ * *Delivery Payment* modal (`OrderSwitchModal.tsx`) and the row's one
+ * *History* (`RegistrantHistoryModal.tsx`): every
  * switch, newest first, with where it went, what the money did, who made it
  * and why. The switch still waiting for payment has its controls above the
  * list (`WaitingSwitchActions`), so it has none here.

@@ -64,7 +64,7 @@ export function statusPillClass(status: string): string {
  * **A paid entry joins the queue while a change's proof waits** (the owner,
  * 2026-10-20): the runner sent their GCash or bank screenshot on a delivery
  * switch's or an upgrade's link, and the row reads FOR VALIDATION until staff
- * validate it, in *Delivery Payment* or in the runner's *Category Changes*.
+ * validate it, in *Delivery Payment* or *Category Payment* (row menu).
  * The bell asks the same of the database (`switchProofSubmitted`,
  * `changeProofSubmitted`).
  */
@@ -176,7 +176,7 @@ export function RegistrantStatusBadges({ runner }: { runner: RegistrantRow }) {
             : displayStatus(runner) === FOR_VALIDATION
               ? switchForValidation(runner)
                 ? 'The entry is paid; the runner sent proof for a delivery fee. Open Delivery Payment to validate it.'
-                : 'The entry is paid; the runner sent proof for a category change. Open the runner to validate it.'
+                : 'The entry is paid; the runner sent proof for a category change. Open Category Payment to validate it.'
               : displayStatus(runner) === BALANCE_DUE
                 ? 'The entry is paid; an upgrade or a delivery switch is waiting for its payment.'
                 : undefined

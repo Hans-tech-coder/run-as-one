@@ -169,8 +169,9 @@ registrants.** The Pickup & Delivery screen was removed (R1, R2 and R6 are
 superseded; R3–R5 and L2–L13 stand). Each runner's row menu offers *Switch to
 Delivery* / *Switch to Pickup* for its receipt — the same *Ship kits* panel,
 mounted per receipt, every runner on the order moving with it — plus
-*Delivery Payment* while a switch waits for its fee and *Switch History* once
-there is one (`OrderSwitchModal.tsx`, wired by `useOrderSwitch.tsx`). The
+*Delivery Payment* while a switch waits for its fee (`OrderSwitchModal.tsx`,
+wired by `useOrderSwitch.tsx`); past switches are in the row's one *History*
+since 2026-10-21 (below). The
 registrants page reads `readEventReceipts` beside its own list, and the table
 takes the fresh rows after a switch re-reads the page.
 **Ship kits like the wizard (owner, 2026-10-20).** RM-1D5EEF1B's panel showed
@@ -277,7 +278,7 @@ and the apply (`applyCategoryChange`) keep the seat until staff validate or
 cancel, or the change deadline closes it; the link of a GCash or bank change
 lasts until that deadline. The row reads **FOR VALIDATION**, joins *Needs
 Validation* (`proofForValidation`) and the bell (*Category change to
-validate*). In the runner's *Category Changes*, the waiting card shows the
+validate*). In the runner's *Category Payment* modal (below), the waiting card shows the
 screenshot (`ProofPreview`, shared with the switch's modal), opens it in
 `ProofLightbox`, and **Validate Payment** (`useValidateChange`) records the
 runner's reference and keeps their screenshot (`recordChangePayment` no longer
@@ -287,6 +288,26 @@ PAWMAKER, ₱200): the email's button, the page, *Submit My Proof*, the row, the
 trail, the bell, the card's proof, the viewer and Validate (applied, screenshot
 kept); then the runner, the change and the proof blob put back (the trail rows
 stay). Not exercised in the browser: a hold lapsing with proof in.
+
+**Category changes moved to their own modal (owner, 2026-10-21).** The
+*Category Changes* section left *Registrant Details*, which had grown long, for
+`CategoryChangesModal.tsx`, opened from the row menu the way a delivery switch's
+*Delivery Payment* is: **Category Payment** while an upgrade waits for its
+money (`useCategoryChanges.tsx`); while *Category Payment* is offered, *Change
+Category* is not, as *Switch to …* goes while a switch waits. It carries the order and runner, the Category line
+and the history, and **Validate Payment** in its footer once the runner's proof
+is in (the hook moved up from `CategoryChangeHistory`, which the card and the
+viewer share). The detail modal keeps only the Category line. Verified on
+`local-dev` on RM-7B67DB3F: the menu item, the modal, Validate from the footer
+(the modal turned into *Category Changes* at once), the detail modal without
+the section; the order put back after. **The same day the two histories
+became one** (owner: fewer menu items): the row menu's **History**
+(`RegistrantHistoryModal.tsx`, `useRegistrantHistory.tsx`) replaces *Category
+Changes* and *Switch History*, with the runner's category changes and the
+receipt's pickup / delivery switches as two sections; *Category Payment* and
+*Delivery Payment* stay only while a payment waits. Verified on RM-7B67DB3F:
+the menu (View Details, Edit Registrant, Change Category, Switch to Delivery,
+History, Delete), both sections, and a switch's read-only *View proof*.
 
 The decisions in full, as the owner accepted them (L1–L14, before Revision 1):
 **L1** staff only, started by staff like a category change; runner

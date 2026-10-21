@@ -24,10 +24,7 @@ import {
 import BusyLabel from '@/components/ui/BusyLabel';
 import type { RegistrantPermissions, RegistrantRow } from './RegistrantsTable';
 import RegistrantTransactionFields from './RegistrantTransactionFields';
-import CategoryChangeHistory from './CategoryChangeHistory';
 import { CategoryWithChange } from './category-change-display';
-import type { CategoryChangeView } from '@/lib/category-change-view';
-import type { AppliedChange } from './useCategoryChangeModal';
 import {
   MinorBadge,
   PacerBadge,
@@ -46,8 +43,6 @@ export default function RegistrantDetailModal({
   onOpenProof,
   onOpenRemarks,
   onOpenEmail,
-  onChangeUpdated,
-  onSendChangeEmail,
 }: {
   runner: RegistrantRow;
   /**
@@ -65,10 +60,6 @@ export default function RegistrantDetailModal({
   onOpenProof: (runner: RegistrantRow) => void;
   onOpenRemarks: (runnerId: string) => void;
   onOpenEmail: (runnerId: string) => void;
-  /** A category change the history wrote, handed back to the table; `applied` when it moved the runner. */
-  onChangeUpdated: (change: CategoryChangeView, applied?: AppliedChange) => void;
-  /** The by-hand send of one of a change's emails, which the table owns. */
-  onSendChangeEmail: (change: CategoryChangeView, kind: 'applied' | 'created') => void;
 }) {
   return (
       // Below `sm` a full-height sheet (.admin-modal-sheet): the sections
@@ -135,14 +126,9 @@ export default function RegistrantDetailModal({
               </div>
             </div>
 
-            {/* Every move this runner has had (CATEGORY_CHANGE_PLAN.md), with a
-                downgrade's refund to record and an email to send by hand. */}
-            <CategoryChangeHistory
-              changes={runner.categoryChanges ?? []}
-              permissions={permissions}
-              onUpdated={onChangeUpdated}
-              onSendEmail={onSendChangeEmail}
-            />
+            {/* A runner's category changes have their own modal since
+                2026-10-21 (`CategoryChangesModal`, from the row menu); the
+                Category line above still reads "(from 5K)" and its chips. */}
 
             {/* Parent/Guardian consent (GUARDIAN_CONSENT_PLAN.md Batch 4).
                 Shown for a minor, and for anyone with a guardian on file —

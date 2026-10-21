@@ -1,8 +1,9 @@
 "use client";
 
 /**
- * A runner's category changes, in the registrant detail modal
- * (CATEGORY_CHANGE_PLAN.md D1): every move, newest first, with who made it,
+ * A runner's category changes, in their own modal (`CategoryChangesModal`,
+ * out of the registrant detail modal since 2026-10-21;
+ * CATEGORY_CHANGE_PLAN.md D1): every move, newest first, with who made it,
  * what the money did, the kit difference, and the two things a change can
  * still be owed — a downgrade's refund, recorded here once it is paid by hand
  * (`registration:validate`), and the applied email, sent by hand here when
@@ -12,7 +13,8 @@
  * a paid one says how it was paid, its reference, and opens its screenshot.
  * One whose runner sent GCash or bank proof on the link shows the screenshot
  * at once (`ProofPreview`) with *Validate Payment*, which the full-screen
- * viewer (`ProofLightbox`) offers too, as a delivery switch's modal does.
+ * viewer (`ProofLightbox`) and the modal's footer offer too, as a delivery
+ * switch's modal does.
  *
  * The order and its receipt are never edited, so this list is the only place
  * on the screen that says a runner's category is not the one they registered
@@ -36,7 +38,7 @@ import {
 import type { CategoryChangeView } from '@/lib/category-change-view';
 import type { RegistrantPermissions } from './RegistrantsTable';
 import { changeMoneyLine, kitSummary } from './category-change-display';
-import AwaitingChangeActions, { useValidateChange } from './AwaitingChangeActions';
+import AwaitingChangeActions from './AwaitingChangeActions';
 import ProofLightbox from './ProofLightbox';
 import ProofPreview from './ProofPreview';
 import type { AppliedChange } from './useCategoryChangeModal';
@@ -132,25 +134,27 @@ export default function CategoryChangeHistory({
   permissions,
   onUpdated,
   onSendEmail,
+  validation,
+  title = 'Change history',
 }: {
+  /** The list's label: its own modal's "Change history", or a section of the row's *History*. */
+  title?: string;
   changes: CategoryChangeView[];
   permissions: RegistrantPermissions;
   /** With `applied` when the write moved the runner (a payment recorded). */
   onUpdated: (change: CategoryChangeView, applied?: AppliedChange) => void;
   /** Opens the by-hand send for one of a change's emails. */
   onSendEmail: (change: CategoryChangeView, kind: 'applied' | 'created') => void;
+  /**
+   * `useValidateChange` for the upgrade whose runner sent proof on the link
+   * (one at most, D10), held by the modal so its footer, the card and the
+   * full-screen viewer share one press.
+   */
+  validation: { change: CategoryChangeView | null; validating: boolean; validate: () => void };
 }) {
-  // The change whose screenshot is open full screen, and the one waiting for
-  // staff to validate the proof its runner sent on the link (one at most, D10).
+  // The change whose screenshot is open full screen.
   const [proofOf, setProofOf] = useState<CategoryChangeView | null>(null);
-  const waiting = changes.find(change => change.proofSubmitted) ?? null;
-  const validation = useValidateChange({
-    change: waiting,
-    onValidated: result => {
-      setProofOf(null);
-      onUpdated(result.change, result);
-    },
-  });
+  const waiting = validation.change;
   const canValidate = permissions.validate && !!waiting;
   const proofStatus = proofOf ? asCategoryChangeStatus(proofOf.status) : null;
 
@@ -158,9 +162,9 @@ export default function CategoryChangeHistory({
   const newestFirst = [...changes].reverse();
 
   return (
-    <div className="mt-8 pt-8 border-t border-[var(--dash-border)] space-y-4">
-      <h4 className="text-sm font-semibold text-secondary uppercase tracking-wider">Category Changes</h4>
-      <ol className="m-0 p-0 list-none space-y-3">
+    <div>
+      <p className="m-0 mb-2 text-xs font-semibold uppercase tracking-wider text-secondary">{title}</p>
+      <ol className="m-0 p-0 list-none flex flex-col gap-3">
         {newestFirst.map(change => {
           const status = asCategoryChangeStatus(change.status);
           const kit = { added: change.kitAdded, removed: change.kitRemoved };
@@ -296,7 +300,10 @@ export default function CategoryChangeHistory({
           isPdf={proofOf.proofIsPdf}
           canValidate={canValidate && proofOf.id === waiting?.id}
           isValidating={validation.validating}
-          onValidate={validation.validate}
+          onValidate={() => {
+            setProofOf(null);
+            validation.validate();
+          }}
           onClose={() => setProofOf(null)}
         />
       )}

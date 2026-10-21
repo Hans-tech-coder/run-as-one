@@ -48,7 +48,7 @@ const proofSrc = (change: LogisticsChangeView) => `/api/admin/logistics-changes/
  * Where a delivery receipt ships: its one address or each household's parcel,
  * the paid parcel it rides on, and the receipts riding on it (R5).
  */
-function shipsToLines(receipt: Receipt): { label: string; value: React.ReactNode }[] {
+export function shipsToLines(receipt: Receipt): { label: string; value: React.ReactNode }[] {
   if (!receipt.isDelivery) return [];
   const host = shipsWith(receipt);
   const split = receipt.parcels.length > 1;

@@ -132,7 +132,7 @@ async function teamNotifications(actor: Actor, now: Date): Promise<AppNotificati
       },
     }),
     // The same for an upgrade's GCash or bank proof, sent on the change's
-    // link: staff validate it in the runner's *Category Changes*.
+    // link: staff validate it in the runner's *Category Payment* modal.
     prisma.categoryChange.findMany({
       where: {
         event: reachableEvents(actor, 'registration:validate'),

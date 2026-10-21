@@ -17,6 +17,7 @@ import { MessageSquare, MessageSquareText, Mail, MailWarning } from 'lucide-reac
 import RegistrantActionsMenu from './RegistrantActionsMenu';
 import type { RegistrantPermissions, RegistrantRow } from './RegistrantsTable';
 import type { OrderSwitchMenu } from './useOrderSwitch';
+import type { CategoryChangesMenu } from './useCategoryChanges';
 
 export type RegistrantRowActionHandlers = {
   permissions: RegistrantPermissions;
@@ -28,6 +29,12 @@ export type RegistrantRowActionHandlers = {
   onRemarks: (runnerId: string) => void;
   onEmail: (runnerId: string) => void;
   onChangeCategory: (runnerId: string) => void;
+  /** The runner's *Category Payment* / *Category Changes* item (`useCategoryChanges`). */
+  categoryChangesFor: (runner: RegistrantRow) => CategoryChangesMenu;
+  onCategoryChanges: (runnerId: string) => void;
+  /** The row's one *History*: category changes and the receipt's switches (`useRegistrantHistory`). */
+  hasHistory: (runner: RegistrantRow) => boolean;
+  onHistory: (runnerId: string) => void;
   /** What the row's receipt may do about pickup and delivery (LOGISTICS_CHANGE_PLAN.md Revision 2). */
   orderSwitchFor: (registrationId: string) => OrderSwitchMenu | null;
   onSwitchLogistics: (registrationId: string) => void;
@@ -46,6 +53,10 @@ export default function RegistrantRowActions({
   onRemarks,
   onEmail,
   onChangeCategory,
+  categoryChangesFor,
+  onCategoryChanges,
+  hasHistory,
+  onHistory,
   orderSwitchFor,
   onSwitchLogistics,
   onLogisticsDetails,
@@ -74,6 +85,10 @@ export default function RegistrantRowActions({
       onEdit={onEdit}
       onDelete={onDelete}
       onChangeCategory={onChangeCategory}
+      categoryChanges={categoryChangesFor(runner)}
+      onCategoryChanges={onCategoryChanges}
+      hasHistory={hasHistory(runner)}
+      onHistory={onHistory}
       orderSwitch={orderSwitchFor(runner.registrationId)}
       onSwitchLogistics={onSwitchLogistics}
       onLogisticsDetails={onLogisticsDetails}

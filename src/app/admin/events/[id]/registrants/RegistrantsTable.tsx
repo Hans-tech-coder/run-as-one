@@ -48,6 +48,8 @@ import CategoryChangeModal from './CategoryChangeModal';
 import { useCategoryChangeModal } from './useCategoryChangeModal';
 import CategoryChangeEmailModal from './CategoryChangeEmailModal';
 import { useOrderSwitch } from './useOrderSwitch';
+import { useCategoryChanges } from './useCategoryChanges';
+import { useRegistrantHistory } from './useRegistrantHistory';
 import type { EventReceipts } from '@/lib/logistics-receipts';
 import {
   BulkDeleteModal,
@@ -202,6 +204,28 @@ export default function RegistrantsTable({
   // Revision 2): from any runner's row, for the whole order.
   const orderSwitch = useOrderSwitch({ switching, permissions });
 
+  // A runner's category changes in their own modal (2026-10-21), from the
+  // row menu: *Category Payment* while an upgrade waits, *Category Changes*.
+  const categoryChanges = useCategoryChanges({
+    runners,
+    permissions,
+    onUpdated: (runnerId, change, applied) =>
+      applied ? categoryChange.onApplied(runnerId, applied) : categoryChange.updateChange(runnerId, change),
+    onSendEmail: categoryChange.openChangeEmail,
+  });
+
+  // The row's one History (2026-10-21): category changes and the receipt's
+  // pickup / delivery switches together.
+  const history = useRegistrantHistory({
+    runners,
+    permissions,
+    receiptFor: orderSwitch.receiptFor,
+    onChangeUpdated: (runnerId, change, applied) =>
+      applied ? categoryChange.onApplied(runnerId, applied) : categoryChange.updateChange(runnerId, change),
+    onSendChangeEmail: categoryChange.openChangeEmail,
+    onSendSwitchEmail: orderSwitch.sendEmail,
+  });
+
   const queues = useRegistrantQueues(runners);
 
   // Table state
@@ -255,6 +279,10 @@ export default function RegistrantsTable({
     onRemarks: remarks.open,
     onEmail: email.open,
     onChangeCategory: categoryChange.open,
+    categoryChangesFor: categoryChanges.menuFor,
+    onCategoryChanges: categoryChanges.show,
+    hasHistory: history.hasHistory,
+    onHistory: history.show,
     orderSwitchFor: orderSwitch.menuFor,
     onSwitchLogistics: orderSwitch.startSwitch,
     onLogisticsDetails: orderSwitch.showDetails,
@@ -372,10 +400,6 @@ export default function RegistrantsTable({
           onOpenProof={setProofRunner}
           onOpenRemarks={remarks.open}
           onOpenEmail={email.open}
-          onChangeUpdated={(change, applied) =>
-            applied ? categoryChange.onApplied(viewingRunner.id, applied) : categoryChange.updateChange(viewingRunner.id, change)
-          }
-          onSendChangeEmail={(change, kind) => categoryChange.openChangeEmail(viewingRunner, change, kind)}
         />
       )}
 
@@ -416,7 +440,10 @@ export default function RegistrantsTable({
       <RemarksModal {...remarks.modalProps} />
       <ManualEmailModal {...email.modalProps} />
       <CategoryChangeModal {...categoryChange.modalProps} />
+      {/* Before the switch's element, so a switch email opened from History sits above it. */}
+      {history.element}
       {orderSwitch.element}
+      {categoryChanges.element}
       {categoryChange.changeEmail && (
         <CategoryChangeEmailModal
           key={categoryChange.changeEmail.changeId}

@@ -191,7 +191,7 @@ export default function AwaitingChangeActions({
   /** A recorded payment moved the runner: the row's category changes too. */
   onRecorded: (result: AppliedChange) => void;
   onSendEmail: (change: CategoryChangeView, kind: 'applied' | 'created') => void;
-  /** `useValidateChange`, held by the history so the viewer's button shares it. */
+  /** `useValidateChange`, held by `CategoryChangesModal` so its footer and the viewer share it. */
   validation: { validating: boolean; validate: () => void };
 }) {
   const { alert, confirm, toast } = useAlert();

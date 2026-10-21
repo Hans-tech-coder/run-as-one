@@ -13,7 +13,8 @@
  *
  * It holds the three things a switch can open — *Ship kits* / *Back to
  * pickup* (`ShipKitsPanel`, mounted fresh for each receipt), the receipt's
- * payment and history (`OrderSwitchModal`), and an email to send by hand
+ * waiting payment (`OrderSwitchModal`; its past switches are in the row's
+ * *History*, `useRegistrantHistory`), and an email to send by hand
  * (`SwitchEmailModal`) — and renders them through `element`. After anything
  * moves, the page's server read runs again (`router.refresh()`): one switch
  * changes other receipts too (who rides on whom), and that read is the one
@@ -37,8 +38,12 @@ const CLOSE_MS = 150;
 export type OrderSwitchMenu = {
   /** The switch this person may make now (L3, L11, L13), or null. */
   direction: LogisticsDirection | null;
-  /** *Delivery Payment* while a switch waits for its fee, *Switch History* once there is one. */
-  details: 'payment' | 'history' | null;
+  /**
+   * *Delivery Payment* while a switch waits for its fee. A receipt's past
+   * switches are read in the row's one *History* (`useRegistrantHistory`,
+   * the owner, 2026-10-21), beside its category changes.
+   */
+  details: 'payment' | null;
 };
 
 type Open = { kind: 'switch' | 'details'; id: string; closing: boolean };
@@ -80,7 +85,7 @@ export function useOrderSwitch({
     const receipt = byId.get(registrationId);
     if (!receipt) return null;
     const direction = permissions.edit && receipt.canSwitch.allowed ? receipt.canSwitch.direction : null;
-    const details = openSwitch(receipt) ? 'payment' : receipt.logisticsChanges.length > 0 ? 'history' : null;
+    const details = openSwitch(receipt) ? 'payment' : null;
     return direction || details ? { direction, details } : null;
   };
 
@@ -142,6 +147,10 @@ export function useOrderSwitch({
     menuFor,
     startSwitch: (registrationId: string) => setOpen({ kind: 'switch', id: registrationId, closing: false }),
     showDetails: (registrationId: string) => setOpen({ kind: 'details', id: registrationId, closing: false }),
+    /** The receipt a row belongs to, for the row's *History*. */
+    receiptFor: (registrationId: string) => byId.get(registrationId) ?? null,
+    /** The by-hand send of a switch's email, opened from the row's *History*. */
+    sendEmail: setEmailRequest,
     element,
   };
 }

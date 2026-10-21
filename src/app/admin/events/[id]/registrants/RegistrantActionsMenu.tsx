@@ -9,6 +9,7 @@ import { cssDurationMs } from '@/lib/css-duration';
 import { canValidatePayment } from './registrant-display';
 import { LOGISTICS_DIRECTIONS } from '@/lib/logistics-change';
 import type { OrderSwitchMenu } from './useOrderSwitch';
+import type { CategoryChangesMenu } from './useCategoryChanges';
 
 interface RegistrantActionsMenuProps {
   runnerId: string;
@@ -24,6 +25,15 @@ interface RegistrantActionsMenuProps {
   onDelete: (runnerId: string) => void;
   /** Opens Change category (CATEGORY_CHANGE_PLAN.md); offered on a PAID order only (D9). */
   onChangeCategory: (runnerId: string) => void;
+  /**
+   * *Category Payment* while an upgrade waits (2026-10-21), as the switch's
+   * *Delivery Payment*.
+   */
+  categoryChanges: CategoryChangesMenu;
+  onCategoryChanges: (runnerId: string) => void;
+  /** The row's one *History*: category changes and the receipt's switches. */
+  hasHistory: boolean;
+  onHistory: (runnerId: string) => void;
   /**
    * The receipt's pickup / delivery switch (LOGISTICS_CHANGE_PLAN.md
    * Revision 2), decided on the server for the whole order: on a group
@@ -65,6 +75,10 @@ export default function RegistrantActionsMenu({
   onEdit,
   onDelete,
   onChangeCategory,
+  categoryChanges,
+  onCategoryChanges,
+  hasHistory,
+  onHistory,
   orderSwitch,
   onSwitchLogistics,
   onLogisticsDetails,
@@ -206,8 +220,10 @@ export default function RegistrantActionsMenu({
 
         {/* Same permission as Edit (registration:edit). Only a paid order:
             a pending one is paid or expires first (D9), and the item would
-            only open to say so. */}
-        {canEdit && status === 'PAID' && (
+            only open to say so. Not while an upgrade waits for its money
+            (*Category Payment* below): one open change per runner (D10), as
+            *Switch to …* goes while a switch waits (L13). */}
+        {canEdit && status === 'PAID' && categoryChanges !== 'payment' && (
           <button
             className="action-dropdown-item flex items-center gap-3 px-4 py-2 text-sm text-left"
             role="menuitem"
@@ -218,6 +234,21 @@ export default function RegistrantActionsMenu({
           >
             <ArrowLeftRight size={16} />
             Change Category
+          </button>
+        )}
+
+        {/* An upgrade waiting for its money, in its own modal; readable by
+            anyone who sees the row. */}
+        {categoryChanges === 'payment' && (
+          <button
+            className="action-dropdown-item flex items-center gap-3 px-4 py-2 text-sm text-left"
+            role="menuitem"
+            onClick={() => {
+              onCategoryChanges(runnerId);
+              closeMenu();
+            }}
+          >
+            <Wallet size={16} aria-hidden="true" /> Category Payment
           </button>
         )}
 
@@ -245,7 +276,7 @@ export default function RegistrantActionsMenu({
           </button>
         )}
 
-        {orderSwitch?.details && (
+        {orderSwitch?.details === 'payment' && (
           <button
             className="action-dropdown-item flex items-center gap-3 px-4 py-2 text-sm text-left"
             role="menuitem"
@@ -254,15 +285,22 @@ export default function RegistrantActionsMenu({
               closeMenu();
             }}
           >
-            {orderSwitch.details === 'payment' ? (
-              <>
-                <Wallet size={16} aria-hidden="true" /> Delivery Payment
-              </>
-            ) : (
-              <>
-                <History size={16} aria-hidden="true" /> Switch History
-              </>
-            )}
+            <Wallet size={16} aria-hidden="true" /> Delivery Payment
+          </button>
+        )}
+
+        {/* One History for the runner's category changes and the receipt's
+            pickup / delivery switches (the owner, 2026-10-21). */}
+        {hasHistory && (
+          <button
+            className="action-dropdown-item flex items-center gap-3 px-4 py-2 text-sm text-left"
+            role="menuitem"
+            onClick={() => {
+              onHistory(runnerId);
+              closeMenu();
+            }}
+          >
+            <History size={16} aria-hidden="true" /> History
           </button>
         )}
 
