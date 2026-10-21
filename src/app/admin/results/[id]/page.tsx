@@ -13,6 +13,7 @@ import { withPacerRanksAndSources } from '@/lib/pacer-store';
 import { genderDivision } from '@/lib/gender-division';
 import DashboardHeader from '@/app/admin/DashboardHeader';
 import { handMade } from './runner-row';
+import { RESULTS_EVENTS } from '@/lib/event-format';
 
 /**
  * One race's results workspace (RESULTS_NAV_PLAN.md, Batch 2). It moved here
@@ -36,7 +37,8 @@ export default async function AdminResultsWorkspacePage({ params }: { params: Pr
   // below writes results against whatever event it is given. A STAFF member
   // unassigned to this race gets the same "not found".
   const event = await prisma.event.findFirst({
-    where: { id, organizerId: actor.orgId },
+    // A virtual run has no results (lib/event-format.ts): not found here too.
+    where: { id, organizerId: actor.orgId, ...RESULTS_EVENTS },
     include: {
       categories: { orderBy: CATEGORY_ORDER },
       client: { select: { name: true } },

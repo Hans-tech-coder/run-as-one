@@ -1,5 +1,6 @@
 import React from 'react';
 import { publishedEvents } from '@/lib/event-visibility';
+import { RESULTS_EVENTS } from '@/lib/event-format';
 import Link from 'next/link';
 import { ChevronRight, Trophy } from 'lucide-react';
 import db, { publishCutoff } from '@/lib/public-db';
@@ -35,6 +36,8 @@ export default async function GlobalResultsPage() {
   const rows = await db.event.findMany({
     where: {
       ...publishedEvents(await publishCutoff()),
+      // Never a virtual run, which has no results (lib/event-format.ts).
+      ...RESULTS_EVENTS,
       raceResults: {
         some: {}
       },

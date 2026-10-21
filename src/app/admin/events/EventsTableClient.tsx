@@ -15,7 +15,7 @@ import RegistrationScheduleModal from './RegistrationScheduleModal';
 import DeleteEventModal from './DeleteEventModal';
 import { REGISTRATION_STATES } from './registration-state-badge';
 import { CategoryChips, FormatBadge, PublishStatus, RegisteredCount, RegistrationStatus, eventDateLabel, rowPosition } from './EventRowCells';
-import { isVirtual } from '@/lib/event-format';
+import { isVirtual, takesResults } from '@/lib/event-format';
 import { eventColumns } from './event-columns';
 import { useEventRowActions } from './useEventRowActions';
 import { useEventPublishActions } from './useEventPublishActions';
@@ -106,6 +106,7 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
         // A virtual run has no pacers to invite (VIRTUAL_RUN_PLAN.md D6).
         canManagePacers={(event.access?.pacers ?? true) && !isVirtual(event)}
         pacersNotSent={event.pacersNotSent ?? 0}
+        hasResults={takesResults(event)}
         onTogglePause={
           (event.access?.edit ?? true)
             ? () => actions.togglePause(event)

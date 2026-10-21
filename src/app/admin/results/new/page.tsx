@@ -9,6 +9,7 @@ import DashboardHeader from '@/app/admin/DashboardHeader';
 import { certificateDraft } from '../[id]/certificate-draft';
 import NewResultsClient from './NewResultsClient';
 import type { ResultsOnlyPrefill } from './ResultsOnlyFlow';
+import { RESULTS_EVENTS } from '@/lib/event-format';
 
 /**
  * /admin/results/new (RESULTS_NAV_PLAN.md Batch 3, R2): the first question
@@ -59,6 +60,8 @@ export default async function NewResultsPage({
           reachableEvents(actor),
           { resultsOnly: false },
           { raceResults: { none: {} } },
+          // A virtual run has no results (lib/event-format.ts).
+          RESULTS_EVENTS,
           { date: { lte: today() } },
         ],
       },

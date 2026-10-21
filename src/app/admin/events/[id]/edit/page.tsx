@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { takesResults } from '@/lib/event-format';
+import CertificatePointer from './CertificatePointer';
 import {
   OPENS_IMMEDIATELY,
   openingInstantISO,
@@ -380,23 +381,8 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
             </>
           )}
 
-          {/* The certificate has one home, the race's results workspace
-              (RESULTS_NAV_PLAN.md, Batch 2), so two screens never edit the
-              same setting. This form no longer sends it, and its PUT keeps
-              what is stored. */}
-          <div className="admin-panel">
-            <div className="admin-panel-header">
-              <h2 className="admin-panel-title">E-Certificate</h2>
-              <Link href={`/admin/results/${id}`} className="btn-filter no-underline max-sm:min-h-11">
-                Open in Results <ArrowRight size={14} aria-hidden="true" />
-              </Link>
-            </div>
-            <div className="admin-panel-content">
-              <p className="text-sm opacity-70 m-0">
-                The certificate template and layout are set in this race&apos;s results workspace, beside its results.
-              </p>
-            </div>
-          </div>
+          {/* A virtual run has no results, so no certificate (lib/event-format.ts). */}
+          {takesResults(formData) && <CertificatePointer eventId={id} />}
 
           {/* Last, and read-only: what a runner can be given on this race,
               so a price set on this screen is not set without the discounts

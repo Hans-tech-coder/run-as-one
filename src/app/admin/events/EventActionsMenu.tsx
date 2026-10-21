@@ -20,6 +20,7 @@ export default function EventActionsMenu({
   canEdit = true,
   canManagePacers = false,
   pacersNotSent = 0,
+  hasResults = true,
   onTogglePause,
   onToggleClose,
   onSchedule,
@@ -55,6 +56,8 @@ export default function EventActionsMenu({
    * thinks to open the screen.
    */
   pacersNotSent?: number;
+  /** False for a virtual run, which has no results (lib/event-format.ts): no Manage Results. */
+  hasResults?: boolean;
   onTogglePause?: () => void;
   /** Closes sign-ups for good, or reopens a closed event. */
   onToggleClose?: () => void;
@@ -232,7 +235,9 @@ export default function EventActionsMenu({
           },
         ]
       : []),
-    { href: `/admin/results/${eventId}`, icon: <Trophy size={16} />, label: 'Manage Results' },
+    ...(hasResults
+      ? [{ href: `/admin/results/${eventId}`, icon: <Trophy size={16} />, label: 'Manage Results' }]
+      : []),
     ...(canEdit
       ? [{ href: `/admin/events/${eventId}/edit`, icon: <Edit size={16} />, label: 'Edit Event' }]
       : []),

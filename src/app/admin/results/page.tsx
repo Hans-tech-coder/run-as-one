@@ -1,6 +1,7 @@
 import React from 'react';
 import db from '@/lib/db';
 import { can, reachableEvents, requireTeamActor } from '@/lib/actor';
+import { RESULTS_EVENTS } from '@/lib/event-format';
 import DashboardHeader from '@/app/admin/DashboardHeader';
 import ResultsListClient from './ResultsListClient';
 import type { ResultRow } from './result-row';
@@ -24,6 +25,8 @@ export default async function AdminResultsPage() {
       AND: [
         reachableEvents(actor),
         { OR: [{ resultsOnly: true }, { raceResults: { some: {} } }] },
+        // Never a virtual run, which has no results (lib/event-format.ts).
+        RESULTS_EVENTS,
       ],
     },
     select: {

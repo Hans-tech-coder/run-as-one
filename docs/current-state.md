@@ -31,7 +31,7 @@ offers **QR Ph only** (`OFFERED_PAYMONGO_METHODS` in `lib/free-checkout.ts`)
 until it is. Where an entry below says something is "not released" or
 "production is N migrations behind", it predates this release.
 
-**Image compression on upload (2026-10-21, not committed).** Every image
+**Image compression on upload (2026-10-21, `875a1fc` on `dev`, not released).** Every image
 upload but certificate templates is shrunk in the browser before it is sent
 (`lib/image-compress.ts`, `IMAGE_COMPRESSION_PLAN.md` C1–C6): both
 registration wizards' proof, the category change and delivery switch links,
@@ -55,7 +55,19 @@ left the PDF, and *Submit & Finish Registration* disabled while a
 replacement was optimizing. **Not clicked through in the browser**: the
 online wizard's proof step (`RegistrationWizardClient`, the same change as
 the bank-transfer wizard's), and the category change and switch proofs
-(unchanged call, preset now 2000 px instead of 1600).
+(unchanged call, preset now 2000 px instead of 1600). Decisions the code
+cites, from `IMAGE_COMPRESSION_PLAN.md` (deleted once this landed): **C1** in
+the browser, before upload — a Vercel function refuses a body over ~4.5 MB,
+a phone on mobile data sends less, and the server needs no `sharp`; the
+server's type and 4 MB checks stay the guard; **C2** one helper,
+`compressImage(file, preset)`, that hands back the original whenever it
+cannot do better, so it never blocks an upload; **C3** presets by purpose —
+`proof` 2000 px JPEG 0.82, `photo` 1920 px JPEG 0.85, `graphic` 1024 px with
+PNG kept (transparency, crisp QR) — and certificate templates, PDFs and GIFs
+untouched; **C4** JPEG, not WebP (older iPhone Safari, `pdf-lib`); **C5**
+*Optimizing image* while it runs, and the original goes up if it throws;
+**C6** files already stored are never re-encoded, since a payment proof is
+evidence.
 
 **Neon compute cut (2026-10-18, on `dev`, not released).** By Oct 18 the
 free plan's 100 CU-hours for October were 93% used: production ~77.5, the
@@ -540,7 +552,7 @@ validation queue, approved → `RaceResult`) is **dropped** (the owner,
 more, with no runner submissions and no system of its own for a virtual run's
 results. The runner-side work built for it on 2026-10-17 was never committed;
 its stash, its `VirtualSubmission` table on `local-dev` and
-`VIRTUAL_RUN_PHASE_B_PLAN.md` were deleted the same day. Public card, event page and wizard heading show two rows like an on-site
+`VIRTUAL_RUN_PHASE_B_PLAN.md` were deleted the same day. **Results are switched off for a virtual run too** (the owner, the same day): no results upload, no Results workspace and no public results pages (`RESULTS_EVENTS` and `takesResults` in `lib/event-format.ts`, §5), so no e-certificate either; the e-certificate's *Oct 15–31, 2026 · Virtual* line below is left in `lib/e-certificate.ts` but no longer reachable. The only virtual run on `local-dev` (`pink-run-2026-virtual`) had no results. Verified on `local-dev` with the owner's dev server: its `/results` pages redirect to `/`, the upload, *Add runner* and pacer-tag routes answer 404, it is gone from *Add Results* and its row menu and edit form lose *Manage Results* and the E-Certificate panel, while an on-site race (BizRun V2.0's results, 32KM BEYOND 21's edit form, Pink Run 2026's menu) is unchanged. `events/[slug]/page.tsx` lost its closed-sidebar panels to `ClosedSidebarPanels.tsx`, and the edit form its E-Certificate panel to `CertificatePointer.tsx` (both were split candidates). Public card, event page and wizard heading show two rows like an on-site
 race — calendar icon with *Nov 1–30, 2026*, globe icon with *Virtual · Run
 anywhere* (the owner's call, 2026-10-17, after one combined line read badly); confirmation emails say *Run
 Window* and *Where* instead of Date and Location. Both registration

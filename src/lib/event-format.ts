@@ -11,8 +11,11 @@
  * pacers (D6). Its `location` is stored as the fixed word "Virtual", its
  * start and end times and pacer codes are never asked for, and its run window
  * is `date` (first day) through `virtualEndDate` (last day), which must not
- * end before it starts (D4). Everything else — categories, price, logistics,
- * payment, results, certificates — is the same event as on-site (D1, D5).
+ * end before it starts (D4). Its registration — categories, price, logistics,
+ * payment — is the same event as on-site (D1, D5). It has **no results**
+ * (the owner, 2026-10-21, dropping Phase B): no results upload, no Results
+ * screen and no public results pages, so no e-certificate either
+ * (`RESULTS_EVENTS`, `takesResults`).
  * Once an event has a registration its format is locked (D7): a runner who
  * paid for a race at a venue did not sign up to run alone, and vice versa.
  *
@@ -20,6 +23,7 @@
  * only guard between a typo'd payload and a half-virtual event.
  */
 
+import type { Prisma } from '@prisma/client';
 import { isCalendarDay } from './event-schedule';
 
 export const EVENT_FORMATS = {
@@ -44,6 +48,21 @@ export function asEventFormat(value: unknown): EventFormat {
 /** Whether this event is run anywhere inside a window rather than at a venue. */
 export function isVirtual(event: { format?: unknown }): boolean {
   return asEventFormat(event.format) === EVENT_FORMATS.VIRTUAL;
+}
+
+/**
+ * The events the site keeps results for: every one but a virtual run. Spread
+ * into every query that reaches a race's results — the public pages, the
+ * admin Results screens, the upload and edit routes — so a virtual run reads
+ * there as "not found", the same answer as a race that does not exist.
+ */
+export const RESULTS_EVENTS = {
+  format: { not: EVENT_FORMATS.VIRTUAL },
+} satisfies Prisma.EventWhereInput;
+
+/** `RESULTS_EVENTS` for one event already in hand. */
+export function takesResults(event: { format?: unknown }): boolean {
+  return !isVirtual(event);
 }
 
 /**

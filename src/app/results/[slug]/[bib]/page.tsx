@@ -1,5 +1,6 @@
 import React from 'react';
 import { publishedEvents } from '@/lib/event-visibility';
+import { RESULTS_EVENTS } from '@/lib/event-format';
 import prisma, { publishCutoff } from '@/lib/public-db';
 import { ArrowLeft, User, Trophy, Medal, Timer, Hash, Activity, Zap, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
@@ -43,7 +44,7 @@ export default async function RunnerAnalyticsPage({
   // something inside one race, so there is nothing to look up until we know
   // which race the URL is naming.
   const event = await prisma.event.findFirst({
-    where: { AND: [eventByParam(slug), publishedEvents(await publishCutoff())] },
+    where: { AND: [eventByParam(slug), publishedEvents(await publishCutoff()), RESULTS_EVENTS] },
     include: { client: EVENT_SITE_CLIENT },
   });
   if (!event) redirect('/results');

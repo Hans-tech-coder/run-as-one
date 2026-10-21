@@ -5,6 +5,7 @@ import { recordAudit } from '@/lib/audit';
 import { upperCaseForStorage } from '@/lib/text-case';
 import { parseTimeToSeconds, rankResults } from '@/lib/results-ranking';
 import { isResultStatus } from '@/lib/result-status';
+import { RESULTS_EVENTS } from '@/lib/event-format';
 
 export async function POST(
   req: Request,
@@ -22,9 +23,10 @@ export async function POST(
     // organizer's published finishing times from an id alone — the write half
     // of the same gap the results screen had on the read side. A STAFF member
     // additionally needs a role on this race that manages results, and is
-    // refused with the same "not found" so the id cannot be probed.
+    // refused with the same "not found" so the id cannot be probed, and so
+    // is a virtual run, which has no results (`RESULTS_EVENTS`).
     const event = await prisma.event.findFirst({
-      where: { id, organizerId: actor.orgId },
+      where: { id, organizerId: actor.orgId, ...RESULTS_EVENTS },
       select: {
         id: true,
         title: true,

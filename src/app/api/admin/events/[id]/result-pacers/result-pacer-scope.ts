@@ -1,5 +1,6 @@
 import prisma from '@/lib/db';
 import { can, type Actor } from '@/lib/actor';
+import { RESULTS_EVENTS } from '@/lib/event-format';
 
 /**
  * The race a pacer-tag route acts on, if this actor may manage its results;
@@ -7,12 +8,13 @@ import { can, type Actor } from '@/lib/actor';
  *
  * Scoped by `organizerId` in the query and asked with the upload's own verb,
  * `results:manage`, because a tag or a corrected row changes the ranks on the
- * race's results as surely as an upload does. A race the actor cannot reach answers null, and
+ * race's results as surely as an upload does. A race the actor cannot reach,
+ * or a virtual run (which has no results, `RESULTS_EVENTS`), answers null, and
  * the routes say "not found" either way so an id cannot be probed.
  */
 export async function resultPacerEvent(actor: Actor, eventId: string) {
   const event = await prisma.event.findFirst({
-    where: { id: eventId, organizerId: actor.orgId },
+    where: { id: eventId, organizerId: actor.orgId, ...RESULTS_EVENTS },
     select: { id: true, title: true, resultsOnly: true },
   });
   if (!event || !can(actor, 'results:manage', { organizerId: actor.orgId, eventId })) return null;
