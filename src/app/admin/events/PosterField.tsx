@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Trash, UploadCloud } from 'lucide-react';
 import BusyLabel from '@/components/ui/BusyLabel';
+import { compressImage } from '@/lib/image-compress';
 
 /**
  * The optional inclusions poster on one category or package row.
@@ -40,7 +41,7 @@ export default function PosterField({
     onBusyChange(true);
     try {
       const body = new FormData();
-      body.append('file', file);
+      body.append('file', await compressImage(file, 'photo'));
 
       const res = await fetch('/api/upload', { method: 'POST', body });
       const data = await res.json();

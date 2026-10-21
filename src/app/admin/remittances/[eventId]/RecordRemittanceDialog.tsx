@@ -12,6 +12,7 @@ import {
   allowedTypes,
   describeUploadTypes,
 } from '@/lib/uploads';
+import { useImageCompression } from '@/lib/image-compress';
 import {
   MAX_REMITTANCE_NOTE,
   REMITTANCE_KINDS,
@@ -41,7 +42,8 @@ import AdminDatePicker from '../../AdminDatePicker';
  * thing staff do, and the race will simply read Overpaid until it catches up.
  *
  * The receipt is optional and checked for type and size here too, so a phone
- * photo that is too large is refused under the box before it is uploaded.
+ * photo that is too large is refused under the box before it is uploaded. It is
+ * shrunk first (`image-compress.ts`), so the size judged is the size sent.
  */
 
 /** Kept in step with --modal-close-dur in globals.css. */
@@ -78,6 +80,7 @@ export default function RecordRemittanceDialog({
   const [formError, setFormError] = useState('');
   const amountRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const { optimizing, compress } = useImageCompression('proof');
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -108,16 +111,18 @@ export default function RecordRemittanceDialog({
   const cents = parsePesos(amount);
   const after = cents && cents > 0 ? (kind === 'RETURN' ? balance + cents : balance - cents) : null;
 
-  const pickFile = (file: File | null) => {
+  const pickFile = async (picked: File | null) => {
     clear('proof');
-    if (!file) {
+    if (!picked) {
       setProof(null);
       return;
     }
-    if (!allowedTypes('proof').includes(file.type)) {
+    if (!allowedTypes('proof').includes(picked.type)) {
       setErrors(prev => ({ ...prev, proof: `The receipt must be a ${describeUploadTypes('proof')} file.` }));
       return;
     }
+    const file = await compress(picked);
+    if (!file) return;
     if (file.size > MAX_UPLOAD_BYTES) {
       setErrors(prev => ({ ...prev, proof: `The receipt must be ${MAX_UPLOAD_MB} MB or smaller.` }));
       return;
@@ -127,7 +132,7 @@ export default function RecordRemittanceDialog({
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (busy) return;
+    if (busy || optimizing) return;
     setFormError('');
 
     const read = readRemittance({ kind, amount, paidOn, method, reference, note }, new Date());
@@ -368,6 +373,11 @@ export default function RecordRemittanceDialog({
                 </div>
               </div>
             )}
+            {optimizing && (
+              <p role="status" className="m-0 text-sm text-secondary">
+                <BusyLabel>Optimizing image</BusyLabel>
+              </p>
+            )}
             <FieldError id="remittance-proof-error" message={errors.proof} />
           </div>
 
@@ -383,7 +393,7 @@ export default function RecordRemittanceDialog({
           >
             Cancel
           </button>
-          <button type="submit" className="btn-light" disabled={busy}>
+          <button type="submit" className="btn-light" disabled={busy || optimizing}>
             <HandCoins size={16} aria-hidden="true" />
             {busy ? <BusyLabel>Saving</BusyLabel> : 'Record Remittance'}
           </button>

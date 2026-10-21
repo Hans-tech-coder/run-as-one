@@ -38,6 +38,15 @@
   Manila "today". Phones are E.164.
 - A finishing time is never shown with tenths — every display runs through
   `toWholeSeconds` (§5, `race-time.ts`), including the e-certificate.
+- **Every image upload goes through `compressImage`** (§5 `image-compress.ts`)
+  with the preset for its purpose — `proof`, `photo` or `graphic` — at the
+  point the picked `File` is read, before anything is sent. A field that
+  uploads at once compresses inside its existing *Uploading* state; a field
+  that holds the file (a preview, a size check on the spot) uses
+  `useImageCompression`, shows *Optimizing image* (`BusyLabel`) while it
+  runs, checks size **after** compressing so a 6 MB camera photo is judged by
+  what will be sent, and holds its form's submit until it is done. Only
+  certificate templates skip it.
 - **A runner's name is untrusted length.** Anywhere a name shares a row with
   something else, that something else gets `shrink-0` and the name's column gets
   `min-w-0` — otherwise the name holds the column open and mangles what is beside

@@ -25,6 +25,7 @@ import {
   acceptAttribute,
   describeUploadTypes,
 } from "@/lib/uploads";
+import { useImageCompression } from "@/lib/image-compress";
 import { PICKUP_FALLBACK, pickupDetails, pickupLabel, pickupOnlyLine } from "@/lib/pickup";
 import { deliveryTiers, offersDelivery, needsDeliveryZoneChoice } from "./delivery";
 import DeliveryStep from "./DeliveryStep";
@@ -299,6 +300,9 @@ export default function RegistrationWizardClient({
     isCancelParam && registration ? registration.orderRef : "",
   );
   const [proofFile, setProofFile] = useState<File | null>(null);
+  // A phone screenshot is shrunk the moment it is picked (image-compress.ts),
+  // so the size under the preview is what will be sent.
+  const proofCompression = useImageCompression("proof");
   const [isDragging, setIsDragging] = useState(false);
   const [selectedBankModal, setSelectedBankModal] = useState<BankAccountView | null>(
     null,
@@ -841,9 +845,14 @@ export default function RegistrationWizardClient({
     }
   };
 
+  const pickProof = async (picked: File) => {
+    const file = await proofCompression.compress(picked);
+    if (file) setProofFile(file);
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      setProofFile(e.target.files[0]);
+      void pickProof(e.target.files[0]);
     }
   };
 
@@ -1897,7 +1906,7 @@ export default function RegistrationWizardClient({
                       e.dataTransfer.files &&
                       e.dataTransfer.files.length > 0
                     ) {
-                      setProofFile(e.dataTransfer.files[0]);
+                      void pickProof(e.dataTransfer.files[0]);
                     }
                   }}
                 >
@@ -1924,7 +1933,11 @@ export default function RegistrationWizardClient({
                   </div>
                 </div>
 
-                {proofFile && (
+                {proofCompression.optimizing ? (
+                  <div role="status" className="animate-fade-in p-4 bg-white/5 border border-white/10 rounded-[16px] mt-4 text-sm text-secondary">
+                    <BusyLabel>Optimizing image</BusyLabel>
+                  </div>
+                ) : proofFile && (
                   <div className="file-preview animate-fade-in p-4 bg-white/5 border border-white/10 rounded-[16px] mt-4 flex items-center justify-between">
                     <div className="file-preview-meta flex items-center gap-3 min-w-0">
                       {/* A PDF is not a picture, and a picture icon beside one
@@ -1990,11 +2003,11 @@ export default function RegistrationWizardClient({
 
                 <div className="form-actions mt-10 flex justify-end">
                   <button
-                    className={`btn-gradient flex items-center justify-center gap-2 px-10 py-4 text-lg group shadow-xl shadow-accent-orange/20 ${isProcessing || !proofFile || !transactionNumber.trim() || !consentGiven ? "opacity-50 pointer-events-none" : ""}`}
+                    className={`btn-gradient flex items-center justify-center gap-2 px-10 py-4 text-lg group shadow-xl shadow-accent-orange/20 ${isProcessing || !proofFile || proofCompression.optimizing || !transactionNumber.trim() || !consentGiven ? "opacity-50 pointer-events-none" : ""}`}
                     onClick={handleManualSubmit}
                     disabled={
                       isProcessing ||
-                      !proofFile ||
+                      !proofFile || proofCompression.optimizing ||
                       !transactionNumber.trim() ||
                       !consentGiven
                     }

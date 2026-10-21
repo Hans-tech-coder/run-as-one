@@ -15,7 +15,7 @@
  *   created email with the accounts and QR codes — no link to copy, since the
  *   runner pays outside the app — and **Record payment**
  *   (`registration:validate`), the payment staff saw land, with its reference
- *   and an optional screenshot shrunk in the browser (`compress-proof.ts`). It
+ *   and an optional screenshot shrunk in the browser (`image-compress.ts`). It
  *   applies the change at once.
  * - **GCash or bank, with the runner's proof in** (sent on the link, the
  *   owner, 2026-10-20): **Validate Payment** (`registration:validate`,
@@ -40,7 +40,7 @@ import FieldError from '@/components/ui/FieldError';
 import { useAlert } from '@/components/ui/AlertProvider';
 import { formatPesos } from '@/lib/money';
 import { MAX_TRANSACTION_NUMBER, isOutsidePayment, readTransactionNumber } from '@/lib/category-change-hold';
-import { compressProof } from '@/lib/compress-proof';
+import { compressImage } from '@/lib/image-compress';
 import type { CategoryChangeView } from '@/lib/category-change-view';
 import type { RegistrantPermissions } from './RegistrantsTable';
 import type { AppliedChange } from './useCategoryChangeModal';
@@ -115,7 +115,7 @@ function RecordPayment({
     try {
       const form = new FormData();
       form.set('transactionNumber', reference);
-      if (proof) form.set('proofFile', await compressProof(proof));
+      if (proof) form.set('proofFile', await compressImage(proof, 'proof'));
       const res = await fetch(`/api/admin/category-changes/${change.id}/record-payment`, { method: 'POST', body: form });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {

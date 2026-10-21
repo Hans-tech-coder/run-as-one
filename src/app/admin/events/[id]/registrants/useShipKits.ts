@@ -51,7 +51,7 @@ import {
   readTransactionNumber,
   type ChangePaymentChoice,
 } from '@/lib/category-change-hold';
-import { compressProof } from '@/lib/compress-proof';
+import { compressImage } from '@/lib/image-compress';
 import { transactionFeeFor } from '@/lib/free-checkout';
 import { formatPesos } from '@/lib/money';
 import { formatRunnerAddress, type RunnerAddress } from '@/lib/runner-address';
@@ -301,7 +301,7 @@ async function paidForm(
     if (value !== null && value !== undefined) form.set(name, String(value));
   }
   form.set('transactionNumber', transactionNumber);
-  if (proof) form.set('proofFile', await compressProof(proof));
+  if (proof) form.set('proofFile', await compressImage(proof, 'proof'));
   return form;
 }
 

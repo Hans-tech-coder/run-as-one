@@ -3,6 +3,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { ImagePlus, X } from "lucide-react";
 import FieldError from "@/components/ui/FieldError";
+import BusyLabel from "@/components/ui/BusyLabel";
+import { useImageCompression } from "@/lib/image-compress";
 import {
   MAX_UPLOAD_BYTES,
   MAX_UPLOAD_MB,
@@ -42,6 +44,7 @@ export default function ScreenshotField({
   file,
   error,
   onChange,
+  onBusyChange,
 }: {
   id: string;
   file: File | null;
@@ -49,6 +52,8 @@ export default function ScreenshotField({
   /** A file that passed screenshotProblem, or null when it was removed; a
    *  refused pick arrives as the message to show instead. */
   onChange: (next: { file: File | null; error?: string }) => void;
+  /** True while a picked image is being shrunk, so the form holds Send. */
+  onBusyChange?: (busy: boolean) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -68,8 +73,17 @@ export default function ScreenshotField({
   }, [file]);
   const previewUrl = preview && preview.file === file ? preview.url : null;
 
-  const pick = (picked: File | undefined) => {
+  // Shrunk before the size check (image-compress.ts), so a phone's 6 MB
+  // screenshot is judged by what will actually be sent.
+  const { optimizing, compress } = useImageCompression("proof");
+
+  const pick = async (dropped: File | undefined) => {
+    if (!dropped) return;
+    onBusyChange?.(true);
+    const picked = await compress(dropped);
+    // A newer pick took over while this one was drawn; it reports for itself.
     if (!picked) return;
+    onBusyChange?.(false);
     const problem = screenshotProblem(picked);
     if (problem) {
       if (inputRef.current) inputRef.current.value = "";
@@ -166,6 +180,11 @@ export default function ScreenshotField({
         </div>
       )}
 
+      {optimizing && (
+        <p role="status" className="m-0 text-sm text-secondary">
+          <BusyLabel>Optimizing image</BusyLabel>
+        </p>
+      )}
       <FieldError id={`${id}-error`} message={error} />
       <p id={`${id}-hint`} className="m-0 text-xs text-secondary">
         {describeUploadTypes("image")}, up to {MAX_UPLOAD_MB} MB. Only the Run As One

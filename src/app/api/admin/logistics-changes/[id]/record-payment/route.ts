@@ -11,7 +11,7 @@
  * scoped to the switch's own race; a refusal reads like a missing switch.
  *
  * Sent as a form so the proof can ride along. The proof goes to the private
- * store (lib/blob.ts), already shrunk in the browser (lib/compress-proof.ts),
+ * store (lib/blob.ts), already shrunk in the browser (lib/image-compress.ts),
  * and is checked there for type and size again; a write that fails after the
  * upload deletes it again, so no slip is left that nothing points at.
  */

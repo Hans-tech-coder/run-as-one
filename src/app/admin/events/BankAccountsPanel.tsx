@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Landmark, Plus, Trash, Trash2, UploadCloud } from 'lucide-react';
 import { blankBankAccount, type BankAccountDraft } from './bank-account-draft';
 import BusyLabel from '@/components/ui/BusyLabel';
+import { compressImage } from '@/lib/image-compress';
 
 /**
  * The accounts runners transfer to for this event.
@@ -184,7 +185,7 @@ function QrField({
     onBusyChange(true);
     try {
       const body = new FormData();
-      body.append('file', file);
+      body.append('file', await compressImage(file, 'graphic'));
 
       const res = await fetch('/api/upload', { method: 'POST', body });
       const data = await res.json();

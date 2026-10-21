@@ -33,7 +33,7 @@ import {
   type ChangePaymentChoice,
 } from '@/lib/category-change-hold';
 import { transactionFeeFor } from '@/lib/free-checkout';
-import { compressProof } from '@/lib/compress-proof';
+import { compressImage } from '@/lib/image-compress';
 import { parsePesos } from '@/lib/settlement';
 import type { CategoryChangePreview } from '@/lib/category-change-context';
 import type { CategoryChangeView } from '@/lib/category-change-view';
@@ -249,7 +249,7 @@ export function useCategoryChangeModal({
   const recordPayment = async (changeId: string): Promise<AppliedChange | { error: string }> => {
     const form = new FormData();
     form.set('transactionNumber', transactionNumber);
-    if (proofFile) form.set('proofFile', await compressProof(proofFile));
+    if (proofFile) form.set('proofFile', await compressImage(proofFile, 'proof'));
     try {
       const res = await fetch(`/api/admin/category-changes/${changeId}/record-payment`, { method: 'POST', body: form });
       const data = await res.json().catch(() => ({}));

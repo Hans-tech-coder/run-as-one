@@ -77,6 +77,8 @@ export default function FeedbackForm({ pagePath }: { pagePath: string | null }) 
 
   const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
   const [isSending, setIsSending] = useState(false);
+  // The screenshot is still being shrunk; sending now would drop it.
+  const [screenshotBusy, setScreenshotBusy] = useState(false);
   const [isSent, setIsSent] = useState(false);
 
   // Where the thank-you panel lands, so a sender on a phone is not left looking
@@ -169,7 +171,7 @@ export default function FeedbackForm({ pagePath }: { pagePath: string | null }) 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSending) return;
+    if (isSending || screenshotBusy) return;
 
     const found = validate();
     if (Object.keys(found).length > 0) {
@@ -388,6 +390,7 @@ export default function FeedbackForm({ pagePath }: { pagePath: string | null }) 
               setScreenshot(file);
               setErrors((prev) => ({ ...prev, screenshot: error }));
             }}
+            onBusyChange={setScreenshotBusy}
           />
         </div>
 
@@ -453,7 +456,7 @@ export default function FeedbackForm({ pagePath }: { pagePath: string | null }) 
 
         <button
           type="submit"
-          disabled={isSending}
+          disabled={isSending || screenshotBusy}
           className="btn-gradient t-stagger-line t-stagger-line--6 w-full shadow-xl shadow-accent-orange/20"
         >
           {isSending ? (

@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { ArrowDown, ArrowUp, Images, Trash2, UploadCloud, X } from 'lucide-react';
 import BusyLabel from '@/components/ui/BusyLabel';
 import { acceptAttribute } from '@/lib/uploads';
+import { compressImage } from '@/lib/image-compress';
 import {
   HIGHLIGHT_CAPTION_EXAMPLES,
   MAX_EVENT_HIGHLIGHTS,
@@ -77,7 +78,7 @@ export default function HighlightsModal({
       const results = await Promise.allSettled(
         files.map(async file => {
           const body = new FormData();
-          body.append('file', file);
+          body.append('file', await compressImage(file, 'photo'));
           const res = await fetch('/api/upload', { method: 'POST', body });
           const data = await res.json();
           if (!res.ok) throw new Error(data.error || 'Upload failed');

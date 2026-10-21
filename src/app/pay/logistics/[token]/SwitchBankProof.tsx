@@ -6,7 +6,7 @@
  * (`BankDetailsModal`, the wizard's), then the payment's screenshot and its
  * reference, posted to `api/logistics-change/proof`. The upload box and the
  * reference field are the bank-transfer wizard's, at this page's size; the
- * screenshot is shrunk in the browser first (`compress-proof.ts`), as staff's
+ * screenshot is shrunk in the browser first (`image-compress.ts`), as staff's
  * *Record payment* does.
  *
  * Once a proof is in, the page shows it as submitted (`SwitchConfirm`), and
@@ -22,7 +22,7 @@ import { FileImage, FileText, Landmark, UploadCloud, X } from 'lucide-react';
 import BusyLabel from '@/components/ui/BusyLabel';
 import FieldError from '@/components/ui/FieldError';
 import type { BankAccountView } from '@/lib/bank-accounts';
-import { compressProof } from '@/lib/compress-proof';
+import { compressImage } from '@/lib/image-compress';
 import { MAX_UPLOAD_MB, PDF_TYPE, acceptAttribute, describeUploadTypes } from '@/lib/uploads';
 import { MAX_TRANSACTION_NUMBER, readTransactionNumber } from '@/lib/category-change-hold';
 import BankDetailsModal from '@/app/events/[slug]/register/BankDetailsModal';
@@ -68,7 +68,7 @@ export default function SwitchBankProof({
       const form = new FormData();
       form.set('token', token);
       form.set('transactionNumber', reference);
-      form.set('proofFile', await compressProof(file));
+      form.set('proofFile', await compressImage(file, 'proof'));
       const res = await fetch(endpoint, { method: 'POST', body: form });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {

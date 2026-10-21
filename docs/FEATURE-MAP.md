@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-46 pages · 88 API routes · 139 modules in `src/lib` · 600 files · 107,988 lines
+46 pages · 88 API routes · 139 modules in `src/lib` · 600 files · 108,228 lines
 
 ---
 
@@ -206,7 +206,6 @@ the file itself.
 | [`client-store.ts`](../src/lib/client-store.ts) | Reading clients out of the database, and the one write every event form makes about one: which client a race is for. |
 | [`client-summary.ts`](../src/lib/client-summary.ts) | What a client viewer is shown about its own races (ADMIN_MERGE_PLAN.md, Batch 4) — and, by what this module leaves out, what it is not. |
 | [`client.ts`](../src/lib/client.ts) | Where a client stands, and which moves between standings are allowed. |
-| [`compress-proof.ts`](../src/lib/compress-proof.ts) | **A payment screenshot is shrunk in the browser before it is uploaded** (CATEGORY_CHANGE_PLAN.md Session 3, the proof staff attach when they record… |
 | [`consent-signature.ts`](../src/lib/consent-signature.ts) | The typed signature under the consent waiver, and what counts as one. |
 | [`consent-waiver.ts`](../src/lib/consent-waiver.ts) | The liability, media, and data-privacy waiver every runner agrees to. |
 | [`css-duration.ts`](../src/lib/css-duration.ts) | A motion token's length in milliseconds, read from `:root` — client only. |
@@ -237,12 +236,13 @@ the file itself.
 | [`free-checkout.ts`](../src/lib/free-checkout.ts) | The ₱0 order: when one is real, and what it is written as (`PACER_DISCOUNT_PLAN.md` Batch 2). |
 | [`gender-division.ts`](../src/lib/gender-division.ts) | A timing sheet's gender as the division a runner reads: "M" and "male" are "Male", "F" and "female" are "Female", and anything else is passed throu… |
 | [`google-oauth.ts`](../src/lib/google-oauth.ts) | "Continue with Google": proving who a person is through Google, for staff and client viewers (LOGIN_UX_PLAN.md Batch 3). |
+| [`image-compress.ts`](../src/lib/image-compress.ts) | **Compression can only ever help.** A picked image is shrunk in the browser before it is uploaded (IMAGE_COMPRESSION_PLAN.md C1–C4), and this hands… |
 | [`inclusion-icon.ts`](../src/lib/inclusion-icon.ts) | Which icon stands for a line of "What's Included". |
 | [`inclusions.ts`](../src/lib/inclusions.ts) | What a category or package gets you, as a list. |
 | [`jwt.ts`](../src/lib/jwt.ts) | — |
 | [`logistics-change-context.ts`](../src/lib/logistics-change-context.ts) | What a delivery switch is decided from, and the locks every switch write takes. |
 | [`logistics-change-expiry.ts`](../src/lib/logistics-change-expiry.ts) | When an unpaid delivery switch lapses (L12). |
-| [`logistics-change-outcome.ts`](../src/lib/logistics-change-outcome.ts) | How a waiting delivery switch ends: `applyLogisticsChange` (once its fee is paid, under `lockSwitch`, claimed on `AWAITING_PAYMENT`, eligibility re… |
+| [`logistics-change-outcome.ts`](../src/lib/logistics-change-outcome.ts) | How a waiting delivery switch ends: `applyLogisticsChange` (once its fee is paid, under `lockSwitch`, claimed on `AWAITING_PAYMENT` — and, for staf… |
 | [`logistics-change-parcels.ts`](../src/lib/logistics-change-parcels.ts) | **How a delivery switch names the receipts it moved**, in the trail and the emails: "RM-A1" or "RM-A1, RM-B2 and RM-C3". |
 | [`logistics-change-payment.ts`](../src/lib/logistics-change-payment.ts) | How a delivery switch's fee comes in, and what happens when it comes in late (`LOGISTICS_CHANGE_PLAN.md` Session 3), the category change's `categor… |
 | [`logistics-change-proof.ts`](../src/lib/logistics-change-proof.ts) | What a waiting delivery switch is still waiting for (`LOGISTICS_CHANGE_PLAN.md` Revision 3 T5, T6; Revision 3b T12). |
@@ -326,8 +326,8 @@ when a task touches one, split it before editing rather than after.
 | Lines | File |
 | --- | --- |
 | 2382 | [`src/app/admin/marketing/PromoCodesClient.tsx`](../src/app/admin/marketing/PromoCodesClient.tsx) |
-| 2052 | [`src/app/events/[slug]/register/RegistrationWizardClient.tsx`](../src/app/events/[slug]/register/RegistrationWizardClient.tsx) |
-| 1770 | [`src/app/events/[slug]/register/BankTransferWizardClient.tsx`](../src/app/events/[slug]/register/BankTransferWizardClient.tsx) |
+| 2065 | [`src/app/events/[slug]/register/RegistrationWizardClient.tsx`](../src/app/events/[slug]/register/RegistrationWizardClient.tsx) |
+| 1784 | [`src/app/events/[slug]/register/BankTransferWizardClient.tsx`](../src/app/events/[slug]/register/BankTransferWizardClient.tsx) |
 | 1478 | [`src/lib/discount.ts`](../src/lib/discount.ts) |
 | 1179 | [`src/app/admin/settings/SettingsPanels.tsx`](../src/app/admin/settings/SettingsPanels.tsx) |
 | 1017 | [`src/app/admin/team/TeamClient.tsx`](../src/app/admin/team/TeamClient.tsx) |
@@ -348,9 +348,9 @@ when a task touches one, split it before editing rather than after.
 | 509 | [`src/app/admin/communities/CommunitiesClient.tsx`](../src/app/admin/communities/CommunitiesClient.tsx) |
 | 499 | [`src/app/admin/AdminRouteLoading.tsx`](../src/app/admin/AdminRouteLoading.tsx) |
 | 476 | [`src/app/admin/events/[id]/registrants/ProofLightbox.tsx`](../src/app/admin/events/[id]/registrants/ProofLightbox.tsx) |
+| 475 | [`src/app/feedback/FeedbackForm.tsx`](../src/app/feedback/FeedbackForm.tsx) |
 | 472 | [`src/app/admin/settings/TwoFactorPanel.tsx`](../src/app/admin/settings/TwoFactorPanel.tsx) |
 | 472 | [`src/app/events/[slug]/register/BirthdatePicker.tsx`](../src/app/events/[slug]/register/BirthdatePicker.tsx) |
-| 472 | [`src/app/feedback/FeedbackForm.tsx`](../src/app/feedback/FeedbackForm.tsx) |
 | 458 | [`src/app/admin/events/[id]/registrants/RegistrantsTable.tsx`](../src/app/admin/events/[id]/registrants/RegistrantsTable.tsx) |
 | 451 | [`src/app/admin/events/[id]/registrants/RunnerEditModal.tsx`](../src/app/admin/events/[id]/registrants/RunnerEditModal.tsx) |
 | 441 | [`src/app/api/admin/events/[id]/update-event.ts`](../src/app/api/admin/events/[id]/update-event.ts) |
@@ -361,5 +361,7 @@ when a task touches one, split it before editing rather than after.
 | 425 | [`src/app/admin/events/[id]/edit/page.tsx`](../src/app/admin/events/[id]/edit/page.tsx) |
 | 422 | [`src/lib/pacer.ts`](../src/lib/pacer.ts) |
 | 416 | [`src/lib/notification-store.ts`](../src/lib/notification-store.ts) |
-| 405 | [`src/lib/logistics-change-payment.ts`](../src/lib/logistics-change-payment.ts) |
+| 411 | [`src/lib/logistics-change-payment.ts`](../src/lib/logistics-change-payment.ts) |
+| 409 | [`src/lib/category-change-store.ts`](../src/lib/category-change-store.ts) |
+| 405 | [`src/app/admin/remittances/[eventId]/RecordRemittanceDialog.tsx`](../src/app/admin/remittances/[eventId]/RecordRemittanceDialog.tsx) |
 | 404 | [`src/app/admin/events/[id]/registrants/UnpaidCheckoutsList.tsx`](../src/app/admin/events/[id]/registrants/UnpaidCheckoutsList.tsx) |

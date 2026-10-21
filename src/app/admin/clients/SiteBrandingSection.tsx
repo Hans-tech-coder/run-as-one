@@ -223,6 +223,7 @@ export default function SiteBrandingSection({
             field="heroImageUrl"
             className="sm:col-span-2"
             label="Hero Image"
+            preset="photo"
             hint="wide, above the events list"
             alt={`${clientName} hero`}
             draft={draft}

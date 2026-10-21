@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { compressImage } from '@/lib/image-compress';
 
 /**
  * Uploads one of the event form's own images (cover, size chart, certificate
@@ -32,7 +33,8 @@ export function useEventImageUpload<D>(
     onError('');
     try {
       const body = new FormData();
-      body.append('file', file);
+      // A certificate template keeps its pixels: it prints at A4.
+      body.append('file', kind === 'image' ? await compressImage(file, 'photo') : file);
       body.append('kind', kind);
 
       const res = await fetch('/api/upload', { method: 'POST', body });

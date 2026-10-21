@@ -4,6 +4,7 @@ import React, { useId, useState } from 'react';
 import { Trash, UploadCloud } from 'lucide-react';
 import BusyLabel from '@/components/ui/BusyLabel';
 import { acceptAttribute, listUploadTypes } from '@/lib/uploads';
+import { compressImage, type CompressPreset } from '@/lib/image-compress';
 
 /**
  * One image of a client's site — the logo, the site icon or the hero — in
@@ -16,6 +17,9 @@ import { acceptAttribute, listUploadTypes } from '@/lib/uploads';
  * saved until the section's Save. Like PosterField it reports its in-flight
  * state, so Save waits for the upload. The preview keeps Remove visible rather
  * than behind a hover, since this panel is used on phones too.
+ *
+ * A logo or icon is shrunk as a `graphic` (PNG and its transparency kept);
+ * the hero, a wide photo, passes `preset="photo"` (`image-compress.ts`).
  */
 export default function BrandImageField({
   label,
@@ -27,6 +31,7 @@ export default function BrandImageField({
   onBusyChange,
   disabled = false,
   square = false,
+  preset = 'graphic',
 }: {
   label: string;
   hint: string;
@@ -37,6 +42,7 @@ export default function BrandImageField({
   onBusyChange: (busy: boolean) => void;
   disabled?: boolean;
   square?: boolean;
+  preset?: CompressPreset;
 }) {
   const id = useId();
   const [uploading, setUploading] = useState(false);
@@ -55,7 +61,7 @@ export default function BrandImageField({
     onBusyChange(true);
     try {
       const body = new FormData();
-      body.append('file', file);
+      body.append('file', await compressImage(file, preset));
       body.append('folder', 'clients');
 
       const res = await fetch('/api/upload', { method: 'POST', body });

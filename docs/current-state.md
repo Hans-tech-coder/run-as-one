@@ -31,6 +31,32 @@ offers **QR Ph only** (`OFFERED_PAYMONGO_METHODS` in `lib/free-checkout.ts`)
 until it is. Where an entry below says something is "not released" or
 "production is N migrations behind", it predates this release.
 
+**Image compression on upload (2026-10-21, not committed).** Every image
+upload but certificate templates is shrunk in the browser before it is sent
+(`lib/image-compress.ts`, `IMAGE_COMPRESSION_PLAN.md` C1–C6): both
+registration wizards' proof, the category change and delivery switch links,
+staff-recorded payments, remittance receipts and feedback screenshots
+(`proof`); event cover, size chart, posters, highlights and a client's hero
+(`photo`); client logo, site icon and bank QR (`graphic`). Stored files are
+left as they are (C6). Checked on localhost 2026-10-21 with the upload request
+stopped in the page, so nothing reached the shared Blob store: a 1080×2400
+PNG screenshot 1,876 KB → 0.30 MB JPEG (900×2000, every reference number
+legible); a 4032×3024 camera JPEG 6,187 KB → 227 KB for cover, poster and
+highlights, and accepted where the 4 MB check used to refuse it (feedback
+6.04 MB, remittance receipt 5.51 MB); a 2000×2000 transparent PNG logo
+148 KB → 72 KB, 1024×1024, PNG, corners still transparent; a 1600 px QR PNG
+sent unchanged (resizing made it no smaller); a GIF untouched. *Optimizing
+image* shows and the form's submit waits while it runs. The bank-transfer
+wizard's proof step was walked on `local-dev`'s Pink Run 2026 Virtual (the
+owner's pick, nothing submitted, `/api/checkout` stopped in the page): a
+picked 1,804 KB PNG screenshot → 0.27 MB, a dropped 5,634 KB camera JPEG →
+0.19 MB, a PDF untouched, a photo overtaken by a PDF picked straight after
+left the PDF, and *Submit & Finish Registration* disabled while a
+replacement was optimizing. **Not clicked through in the browser**: the
+online wizard's proof step (`RegistrationWizardClient`, the same change as
+the bank-transfer wizard's), and the category change and switch proofs
+(unchanged call, preset now 2000 px instead of 1600).
+
 **Neon compute cut (2026-10-18, on `dev`, not released).** By Oct 18 the
 free plan's 100 CU-hours for October were 93% used: production ~77.5, the
 `local-dev` branch ~15. The compute averaged 0.26 CU, so queries were not the

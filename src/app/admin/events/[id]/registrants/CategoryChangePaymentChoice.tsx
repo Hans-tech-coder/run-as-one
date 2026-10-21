@@ -161,7 +161,7 @@ export default function CategoryChangePaymentChoice({
  * The optional screenshot of a GCash or bank payment, in the event form's
  * upload control (`.file-upload-wrapper`, as `BankAccountsPanel`'s QR) rather
  * than the browser's own picker. Holds the file only; it is shrunk and sent
- * with the record (`compress-proof.ts`). Shared with the history's *Record
+ * with the record (`image-compress.ts`). Shared with the history's *Record
  * payment*.
  */
 export function ProofPicker({
