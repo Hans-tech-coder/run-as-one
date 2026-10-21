@@ -19,12 +19,17 @@
  *
  * Once the GCash or bank proof is in, step 2 is all there is: the details are
  * read-only and the proof shows as submitted, with *Replace proof* (T7).
+ *
+ * Each step opens with the wizards' own `StepRail` (*Delivery details*,
+ * *Payment*), so the runner sees there are two steps and which one they are on
+ * (the owner, 2026-10-21).
  */
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { CircleCheck, Pencil } from 'lucide-react';
 import BusyLabel from '@/components/ui/BusyLabel';
+import StepRail from '@/components/ui/StepRail';
 import { formatPesos } from '@/lib/money';
 import { transactionFeeFor } from '@/lib/free-checkout';
 import type { BankAccountView } from '@/lib/bank-accounts';
@@ -260,13 +265,17 @@ function homeParts(runner: AddressedRunner) {
   };
 }
 
+const STEP_LABELS = ['Delivery details', 'Payment'];
+
+/** The two-step rail, then the step's title (the rail's labels show from `sm` up only). */
 function StepLabel({ n, title }: { n: number; title: string }) {
   return (
-    <div className="flex items-center gap-3">
-      <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/15 text-sm font-bold text-white">
-        {n}
-      </span>
-      <h2 className="m-0 text-lg font-bold text-white">{title}</h2>
+    <div className="flex flex-col gap-5">
+      <StepRail labels={STEP_LABELS} current={n - 1} ariaLabel="Delivery switch progress" />
+      <h2 className="m-0 text-lg font-bold text-white">
+        <span className="text-secondary">Step {n} of {STEP_LABELS.length} · </span>
+        {title}
+      </h2>
     </div>
   );
 }

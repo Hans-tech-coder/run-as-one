@@ -188,7 +188,8 @@ stored in `deliveryAddress` as checkout stores it. Both switch emails show a
 details on the link**, for online and GCash/bank switches alike (T1–T11 at the
 top of `LOGISTICS_CHANGE_PLAN.md`). Staff pick only how the fee is paid; the
 *confirm and pay* email (one for both methods) links to `/pay/logistics/[token]`,
-now two steps (`SwitchConfirm.tsx`): the wizard's `DeliveryStep` from the
+now two steps (`SwitchConfirm.tsx`; since 2026-10-21 each opens with the
+wizards' `StepRail`, *Delivery details* → *Payment*, and "Step n of 2"): the wizard's `DeliveryStep` from the
 switch's address, re-quoted under the locks on *Confirm Details*
 (`lib/logistics-change-runner.ts`, `api/logistics-change/details`: a new tier
 re-prices it, a paid parcel there applies it at ₱0, R4 refuses), then *Pay now*
@@ -264,7 +265,8 @@ shows the item.
 `ON_HOLD.md` §14).** An upgrade paid by GCash or bank used to have no link:
 staff emailed how to pay, the runner replied with proof, and staff recorded it,
 so it never read FOR VALIDATION. Now its *payment needed* email carries the
-change's link (*Send Your Payment Proof* under the accounts), and
+change's link (since 2026-10-21 one **Pay ₱X** button for online and GCash/bank
+alike, with no accounts or QR codes in the email, as a delivery switch's), and
 `/pay/change/[token]` shows the accounts and takes the screenshot and reference
 (`ChangeBankProof.tsx` around the switch's `SwitchBankProof`, posted to
 `api/category-change/proof`, written by `submitChangeProof` in the new

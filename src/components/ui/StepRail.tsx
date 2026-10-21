@@ -6,8 +6,9 @@ import './StepRail.css';
  * fills in orange as the steps are walked, a check on every finished step and
  * a short label under each dot from `sm` up.
  *
- * Used by the organizer application (`/admin/register`) and both runner
- * registration wizards, so a multi-step form reads the same wherever it is.
+ * Used by the organizer application (`/admin/register`), both runner
+ * registration wizards and a delivery switch's link (`/pay/logistics/[token]`),
+ * so a multi-step form reads the same wherever it is.
  * It is a progress indicator, not a set of tabs: the dots are not buttons,
  * because a later step cannot be reached without answering the earlier ones.
  */

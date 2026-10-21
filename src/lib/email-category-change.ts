@@ -28,10 +28,9 @@ import {
  * sent by hand from the runner's history, the way a registration email is.
  *
  * `categoryChangeCreatedEmail` (Session 3) is the upgrade's: what is owed and
- * why, line by line, and how to pay it — the payment link for an online
- * payment, or Run As One's GCash and bank accounts for one sent outside the
- * app, with the link to send its proof on — and until when the new seat is
- * held. Stamped on `createdEmailSentAt`, with the same by-hand fallback.
+ * why, line by line, until when the new seat is held, and one button to the
+ * change's link, where it is paid online or by GCash or bank with its proof
+ * (the accounts and QR codes live on that page, not in the email). Stamped on `createdEmailSentAt`, with the same by-hand fallback.
  *
  * `categoryChangeProofReceivedEmail` says the GCash or bank proof the runner
  * sent on the link arrived, as a delivery switch's does. Not stamped: the
@@ -161,20 +160,17 @@ export type CreatedChangeForEmail = AppliedChangeForEmail & {
   paymentMethod: string | null;
   transactionFee: number;
   holdUntil: Date | null;
-  event: {
-    title: string;
-    bankAccounts: { bankName: string; accountName: string; accountNumber: string; qrImageUrl?: string | null }[];
-  };
+  event: { title: string };
 };
 
 /**
  * Sent when an upgrade is opened and is waiting for its payment: old → new,
- * the breakdown to the centavo the runner will pay, how to pay it, and until
- * when the new seat is held. `url` is the change's link: for an online payment
- * the page that pays it; for GCash or bank the accounts come first, and the
- * same page is where the runner sends the screenshot and reference for staff
- * to validate (`category-change-runner.ts`). Without a link the runner is
- * asked to reply with them instead.
+ * the breakdown to the centavo the runner will pay, and until when the new
+ * seat is held, with one **Pay ₱X** button to the change's link, the same for
+ * online and for GCash or bank (the owner, 2026-10-21, as a delivery switch's
+ * email): the page pays it online, or shows the accounts and QR codes and
+ * takes the screenshot and reference for staff to validate
+ * (`category-change-runner.ts`). Without a link the runner is asked to reply.
  */
 export function categoryChangeCreatedEmail(change: CreatedChangeForEmail, url: string | null): Promise<EmailMessage> {
   const firstName = change.runner.firstName.split(' ')[0] || change.runner.firstName;
@@ -193,54 +189,23 @@ export function categoryChangeCreatedEmail(change: CreatedChangeForEmail, url: s
     { kind: 'total', label: 'To Pay', centavos: change.totalCharged },
   ];
 
-  // One card per account, its QR under it when one was uploaded — the runner
-  // scans the one for the app they pay with. Only a public https address is
-  // drawn: a mail client fetches the picture itself.
-  const accounts: EmailDocument['blocks'] = change.event.bankAccounts.flatMap(account => [
-    {
-      kind: 'card' as const,
-      rows: [{ kind: 'info' as const, label: account.bankName, value: `${account.accountName} · ${account.accountNumber}` }],
-    },
-    ...(account.qrImageUrl?.startsWith('https://')
-      ? [
-          {
-            kind: 'image' as const,
-            src: account.qrImageUrl,
-            alt: `${account.bankName} QR code`,
-            caption: `Scan with ${account.bankName}`,
-          },
-        ]
-      : []),
-  ]);
-
-  const howToPay: EmailDocument['blocks'] = outside
+  // One button to the change's link for both methods, as a delivery switch's
+  // email (the owner, 2026-10-21): the accounts and QR codes are on that page,
+  // never here.
+  const action: EmailDocument['blocks'] = url
     ? [
-        { kind: 'heading', text: 'How to Pay' },
-        ...(accounts.length > 0
-          ? [
-              {
-                kind: 'paragraph' as const,
-                segments: [`Send exactly `, { strong: peso(change.totalCharged) }, ' by GCash or bank transfer to one of these accounts:'],
-              },
-              ...accounts,
-            ]
-          : []),
         {
           kind: 'paragraph',
           segments: [
-            accounts.length === 0
-              ? 'Reply to this email and we will send you where to pay by GCash or bank transfer. '
-              : url
-                ? 'Then send us the screenshot of your payment and its reference number on your payment page. '
-                : 'Then reply to this email with the reference number of your payment and its screenshot. ',
-            'We move you to the new category once we have checked it.',
+            outside
+              ? 'Pay by GCash or bank transfer and upload the screenshot of your payment and its reference number. We move you to the new category once we have checked it.'
+              : 'Pay online, and you move to the new category as soon as the payment goes through.',
+            ' All on one page:',
           ],
         },
-        ...(url && accounts.length > 0 ? [{ kind: 'button' as const, label: 'Send Your Payment Proof', href: url }] : []),
+        { kind: 'button', label: `Pay ${peso(change.totalCharged)}`, href: url },
       ]
-    : url
-      ? [{ kind: 'button', label: `Pay ${peso(change.totalCharged)}`, href: url }]
-      : [];
+    : [{ kind: 'paragraph', segments: ['Reply to this email and we will send you the link to pay.'] }];
 
   return renderMessage({
     to: change.runner.email,
@@ -264,7 +229,7 @@ export function categoryChangeCreatedEmail(change: CreatedChangeForEmail, url: s
           '.',
         ],
       },
-      ...howToPay,
+      ...action,
       { kind: 'heading', text: 'Change Details' },
       {
         kind: 'card',
@@ -302,7 +267,7 @@ export function categoryChangeCreatedEmail(change: CreatedChangeForEmail, url: s
           until
             ? `If it is not paid by ${until}, the seat is released and you stay in ${change.fromCategory.name}. `
             : '',
-          'Already paid, or changed your mind? Reply to this email.',
+          'Changed your mind? Do nothing, or reply to this email.',
         ],
       },
     ],
