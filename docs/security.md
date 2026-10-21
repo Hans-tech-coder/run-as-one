@@ -320,6 +320,18 @@
   checkout (`/api/category-change/checkout`) charges the stored `amount` plus
   the fee, never a figure from the request, and closes an earlier page first.
   A payment that lands for a change no longer waiting is never applied.
+- **A price lock is a signed time, never a price** (`lib/price-lock.ts`,
+  `PROMO_PRICE_LOCK_PLAN.md`). Anyone may take one from `/api/price-lock`
+  (throttled, no database read): a JWT under the app's secret with
+  `purpose: 'price-lock'`, the event id as subject, `iat` = the moment it was
+  taken, expiring 55 minutes later. `readPriceLock` refuses a forged or
+  expired token, another purpose's token, and one for a different event, and
+  every refusal is simply no lock. What a lock can buy is bounded: the
+  checkout still prices every amount from the database, the lock moves only
+  the promotions' date windows back to a moment we signed ourselves, paused
+  and usage stay live, and the order gets the better of that moment and now —
+  so a replayed or hoarded token is worth at most 55 minutes of a promotion
+  that was really running.
 - Payment proofs are **private** blobs, served only through
   `/api/admin/proof/[id]` — and a category change's through
   `/api/admin/category-changes/[id]/proof` — with a roughly five-minute signed

@@ -96,6 +96,18 @@ export const PAY_LINK_RULE: RateLimitRule = { limit: 20, windowMs: 60_000 };
 export const CHECKOUT_RULE: RateLimitRule = { limit: 10, windowMs: 60_000 };
 
 /**
+ * Taking a price lock (`/api/price-lock`): 20 a minute from one address.
+ *
+ * A runner's form takes one lock at its first keystroke and one more each time
+ * the 45 minutes run out, so a person is at one or two an hour. Twenty leaves
+ * room for a running club behind one address all opening the form on the
+ * morning registration opens. The lock is signed and holds a time we chose,
+ * so there is nothing to guess; what this stops is a script minting tokens
+ * in a loop for the cost of a signature each.
+ */
+export const PRICE_LOCK_RULE: RateLimitRule = { limit: 20, windowMs: 60_000 };
+
+/**
  * Signing in to the admin (`/api/auth/login`): 10 attempts a minute from one
  * address, counted before the body is read.
  *

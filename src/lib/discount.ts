@@ -903,15 +903,18 @@ export function describePromo(promo: PromoTerms): string {
  */
 export type PromoStatus = 'ACTIVE' | 'PAUSED' | 'SCHEDULED' | 'EXPIRED' | 'USED_UP';
 
-export function promoStatus(promo: PromoTerms): PromoStatus {
+export function promoStatus(promo: PromoTerms, at: number = Date.now()): PromoStatus {
   if (promo.paused) return 'PAUSED';
   if (isExhausted(promo)) return 'USED_UP';
 
+  // `at` reaches the date window alone. A price lock (lib/price-lock.ts) asks
+  // about the window as it stood when the runner started the form, while
+  // paused and usage are always the row as it is now.
   const from = asDate(promo.validFrom);
-  if (from && from.getTime() > Date.now()) return 'SCHEDULED';
+  if (from && from.getTime() > at) return 'SCHEDULED';
 
   const until = asDate(promo.validUntil);
-  if (until && until.getTime() < Date.now()) return 'EXPIRED';
+  if (until && until.getTime() < at) return 'EXPIRED';
 
   return 'ACTIVE';
 }
@@ -1073,6 +1076,7 @@ export interface CategorySalePrice {
 export function categorySalePrices(
   promos: readonly PromoTerms[],
   categories: readonly { id: string; price: number }[],
+  at: number = Date.now(),
 ): Map<string, CategorySalePrice> {
   const sale = new Map<string, CategorySalePrice>();
   const listPrices = new Map(categories.map(category => [category.id, category.price]));
@@ -1080,7 +1084,7 @@ export function categorySalePrices(
   for (const promo of promos) {
     if (!promo.automatic) continue;
     if (asDiscountType(promo.discountType) !== DISCOUNT_TYPES.CATEGORY_PRICE) continue;
-    if (promoStatus(promo) !== 'ACTIVE') continue;
+    if (promoStatus(promo, at) !== 'ACTIVE') continue;
 
     for (const entry of categoryPricesOf(promo)) {
       const listPrice = listPrices.get(entry.categoryId);
@@ -1121,6 +1125,7 @@ export function promoCodeError(
   promo: PromoTerms | null | undefined,
   order: OrderBasis,
   typedCode: string,
+  at: number = Date.now(),
 ): string | null {
   const cleaned = normalizePromoCode(typedCode);
   if (!cleaned) return null;
@@ -1148,13 +1153,15 @@ export function promoCodeError(
       : `${promo.code} has already been used the maximum number of times.`;
   }
 
+  // The date window at `at`, everything else against the row and the order as
+  // they are now — the same split as `promoStatus`, for the same reason.
   const from = asDate(promo.validFrom);
-  if (from && from.getTime() > Date.now()) {
+  if (from && from.getTime() > at) {
     return `${promo.code} isn't active yet — it starts on ${formatDay(from)}.`;
   }
 
   const until = asDate(promo.validUntil);
-  if (until && until.getTime() < Date.now()) {
+  if (until && until.getTime() < at) {
     return `${promo.code} expired on ${formatDay(until)}.`;
   }
 

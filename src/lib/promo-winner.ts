@@ -86,12 +86,13 @@ function combine(
   price: PromoTerms,
   deal: PromoTerms,
   order: OrderBasis,
+  at: number,
 ): AppliedDiscount | null {
   const first = applyPromo(price, order);
   if (!first) return null;
 
   const after = repricedOrder(price, order);
-  if (promoCodeError(deal, after, deal.code)) return null;
+  if (promoCodeError(deal, after, deal.code, at)) return null;
   const second = applyPromo(deal, after);
   if (!second) return null;
 
@@ -125,10 +126,14 @@ function combine(
  * pacer paying a fee they were told was covered, and leave their single-use
  * code unspent besides. A pacer on somebody else's race is not a shopper
  * looking for the best deal; they were handed one specific thing.
+ *
+ * `at` is the moment whose date windows count — now, unless a price lock asks
+ * for another (`bestDiscountLocked` below).
  */
 export function bestDiscount(
   promos: (PromoTerms | null | undefined)[],
   order: OrderBasis,
+  at: number = Date.now(),
 ): AppliedDiscount | null {
   let best: AppliedDiscount | null = null;
   const eligible: PromoTerms[] = [];
@@ -137,7 +142,7 @@ export function bestDiscount(
     if (!promo) continue;
     // The same gate the wizard shows and the checkout route enforces, so a
     // promotion that fails a condition is simply not a candidate here.
-    if (promoCodeError(promo, order, promo.code)) continue;
+    if (promoCodeError(promo, order, promo.code, at)) continue;
 
     const applied = applyPromo(promo, order);
     if (!applied) continue;
@@ -159,12 +164,43 @@ export function bestDiscount(
 
   for (const price of eligible.filter(isCombinablePrice)) {
     for (const deal of eligible.filter(isCombinableDeal)) {
-      const both = combine(price, deal, order);
+      const both = combine(price, deal, order, at);
       if (both && (!best || both.amount > best.amount)) best = both;
     }
   }
 
   return best;
+}
+
+/**
+ * The best discount for an order under a price lock (lib/price-lock.ts): the
+ * larger of what it gets at `lockedAt` and what it gets now, or just now when
+ * there is no lock.
+ *
+ * Both, not the lock alone, because the lock may never make an order dearer: a
+ * promotion that started while the runner was typing still applies. Only the
+ * date windows move with `lockedAt` — paused, usage, seats and group size are
+ * the rows as they are now, so the lock holds a price and reserves nothing.
+ *
+ * The one function both wizards' summaries and `resolveDiscount` call, so the
+ * total a runner is shown and the total the checkout charges cannot drift
+ * apart. A tie goes to now, and a pacer code wins outright as in
+ * `bestDiscount`.
+ */
+export function bestDiscountLocked(
+  promos: (PromoTerms | null | undefined)[],
+  order: OrderBasis,
+  lockedAt: number | null,
+): AppliedDiscount | null {
+  const now = bestDiscount(promos, order);
+  if (lockedAt === null) return now;
+
+  const locked = bestDiscount(promos, order, lockedAt);
+  if (!locked) return now;
+  if (!now) return locked;
+  if (now.type === DISCOUNT_TYPES.PACER) return now;
+  if (locked.type === DISCOUNT_TYPES.PACER) return locked;
+  return locked.amount > now.amount ? locked : now;
 }
 
 /**

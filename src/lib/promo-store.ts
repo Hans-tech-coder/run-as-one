@@ -7,7 +7,7 @@ import {
   promoCodeError,
   promoStatus,
 } from '@/lib/discount';
-import { bestDiscount, discountIncludesCode, outshoneByMessage } from '@/lib/promo-winner';
+import { bestDiscountLocked, discountIncludesCode, outshoneByMessage } from '@/lib/promo-winner';
 
 /**
  * Reading promo codes out of the database, kept apart from the rule that
@@ -290,11 +290,19 @@ export interface ResolvedDiscount {
  * `promoCodeError` and `applyPromo`, so an accepted code prices identically in
  * both places — and a code that has expired since the page loaded is refused
  * here with the same sentence the wizard would have shown.
+ *
+ * `lockedAt` is the runner's price lock (lib/price-lock.ts), already read and
+ * verified by the caller; null or absent prices the order at now, as before.
+ * Under a lock the order gets the better of the two moments
+ * (`bestDiscountLocked`), and a typed code is refused only when it fails at
+ * both — a code that was valid when the runner started the form is still
+ * theirs while the lock lasts.
  */
 export async function resolveDiscount(
   event: { id: string; organizerId: string },
   code: unknown,
   order: OrderBasis,
+  lockedAt: number | null = null,
 ): Promise<ResolvedDiscount> {
   const requested = normalizePromoCode(code);
 
@@ -315,12 +323,18 @@ export async function resolveDiscount(
   // an automatic promotion would have covered the order anyway: the runner
   // asked a question with that code and deserves the answer. A code that is
   // merely *smaller* than the automatic discount is not an error — see below.
+  // Under a lock the sentence is still today's: a code that fails at both
+  // moments is explained by why it fails now.
   if (cleaned) {
     const problem = promoCodeError(typed, order, cleaned);
-    if (problem) return { promo: null, combinedPromo: null, applied: null, error: problem };
+    const lockedProblem =
+      problem && lockedAt !== null ? promoCodeError(typed, order, cleaned, lockedAt) : problem;
+    if (problem && lockedProblem) {
+      return { promo: null, combinedPromo: null, applied: null, error: problem };
+    }
   }
 
-  const winner = bestDiscount([...automatic, typed], order);
+  const winner = bestDiscountLocked([...automatic, typed], order, lockedAt);
   if (!winner) return { promo: null, combinedPromo: null, applied: null, error: null };
 
   // Which rows won, so the write can spend a redemption against each.

@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-46 pages · 88 API routes · 139 modules in `src/lib` · 602 files · 108,300 lines
+46 pages · 89 API routes · 140 modules in `src/lib` · 604 files · 108,505 lines
 
 ---
 
@@ -161,6 +161,7 @@ The route, the server component behind it, and the client components beside it.
 | `/api/logistics-change/details` | POST | [`/logistics-change/details/route.ts`](../src/app/api/logistics-change/details/route.ts) |
 | `/api/logistics-change/proof` | POST | [`/logistics-change/proof/route.ts`](../src/app/api/logistics-change/proof/route.ts) |
 | `/api/pay/[token]` | POST | [`/pay/[token]/route.ts`](../src/app/api/pay/[token]/route.ts) |
+| `/api/price-lock` | POST | [`/price-lock/route.ts`](../src/app/api/price-lock/route.ts) |
 | `/api/promos/lookup` | POST | [`/promos/lookup/route.ts`](../src/app/api/promos/lookup/route.ts) |
 | `/api/upload` | POST | [`/upload/route.ts`](../src/app/api/upload/route.ts) |
 | `/api/webhooks/paymongo` | POST | [`/webhooks/paymongo/route.ts`](../src/app/api/webhooks/paymongo/route.ts) |
@@ -275,6 +276,7 @@ the file itself.
 | [`phone.ts`](../src/lib/phone.ts) | Phone numbers: the country list, and the rules for turning what a runner types into something storable. |
 | [`pickup.ts`](../src/lib/pickup.ts) | What a runner who chooses on-site pick-up is told. |
 | [`platform-fee.ts`](../src/lib/platform-fee.ts) | The **default platform fee** — what a new event's Admin Fee box starts at (SETTINGS_PLAN.md Batch 4). |
+| [`price-lock.ts`](../src/lib/price-lock.ts) | A runner keeps the promotions running when they started the form, for 45 minutes (`PROMO_PRICE_LOCK_PLAN.md`, after an early bird closed at midnigh… |
 | [`promo-input.ts`](../src/lib/promo-input.ts) | What the marketing form is allowed to say about a promotion. |
 | [`promo-redemptions.ts`](../src/lib/promo-redemptions.ts) | What a promotion actually cost, and which orders spent it. |
 | [`promo-store.ts`](../src/lib/promo-store.ts) | Reading promo codes out of the database, kept apart from `discount.ts` for the same reason `running-community-store.ts` is kept apart from `running… |
@@ -328,7 +330,7 @@ when a task touches one, split it before editing rather than after.
 | 2382 | [`src/app/admin/marketing/PromoCodesClient.tsx`](../src/app/admin/marketing/PromoCodesClient.tsx) |
 | 2065 | [`src/app/events/[slug]/register/RegistrationWizardClient.tsx`](../src/app/events/[slug]/register/RegistrationWizardClient.tsx) |
 | 1784 | [`src/app/events/[slug]/register/BankTransferWizardClient.tsx`](../src/app/events/[slug]/register/BankTransferWizardClient.tsx) |
-| 1478 | [`src/lib/discount.ts`](../src/lib/discount.ts) |
+| 1485 | [`src/lib/discount.ts`](../src/lib/discount.ts) |
 | 1179 | [`src/app/admin/settings/SettingsPanels.tsx`](../src/app/admin/settings/SettingsPanels.tsx) |
 | 1017 | [`src/app/admin/team/TeamClient.tsx`](../src/app/admin/team/TeamClient.tsx) |
 | 785 | [`src/app/results/[slug]/full/FullResultsClient.tsx`](../src/app/results/[slug]/full/FullResultsClient.tsx) |
