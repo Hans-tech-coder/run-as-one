@@ -3,6 +3,7 @@ import db from '@/lib/db';
 import { can, getActor } from '@/lib/actor';
 import { changedFields, listFields, recordAudit } from '@/lib/audit';
 import { parseCertificateSettings, serializeCertificateSettings } from '@/lib/certificate-settings';
+import { RESULTS_EVENTS } from '@/lib/event-format';
 
 /**
  * A race's e-certificate on its own: the template and how it is drawn
@@ -55,8 +56,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     // holds a shape the certificate drawer understands.
     const certificateCoordinates = serializeCertificateSettings(parseCertificateSettings(data.certificateCoordinates));
 
+    // A virtual run reads as not found too: it has no results, so no
+    // e-certificate either (`RESULTS_EVENTS`).
     const current = await db.event.findFirst({
-      where: { id, organizerId: actor.orgId },
+      where: { id, organizerId: actor.orgId, ...RESULTS_EVENTS },
       select: { id: true, title: true, certificateTemplate: true, certificateCoordinates: true },
     });
     if (!current || !can(actor, 'event:edit', { organizerId: actor.orgId, eventId: id })) {

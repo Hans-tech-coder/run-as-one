@@ -11,7 +11,7 @@ import { upperCaseForStorage } from '@/lib/text-case';
 import { asBankAccounts } from '@/lib/bank-accounts';
 import { uniqueEventSlug } from '@/lib/event-slug';
 import { isCalendarDay } from '@/lib/event-schedule';
-import { readFormatFields } from '@/lib/event-format';
+import { EVENT_FORMATS, RESULTS_ONLY_VIRTUAL_ERROR, readFormatFields } from '@/lib/event-format';
 import { PUBLISH_INSTANT_ERROR, asPublishInstant, publishConflict } from '@/lib/event-visibility';
 import { readCategoryChangeSettings } from '@/lib/category-change-settings';
 import { readLogisticsChangeSettings } from '@/lib/logistics-change-settings';
@@ -72,6 +72,12 @@ export async function POST(request: Request) {
       );
     }
     const { format, virtualEndDate, location, startTime, endTime } = formatFields;
+    if (resultsOnly && format === EVENT_FORMATS.VIRTUAL) {
+      return NextResponse.json(
+        { error: RESULTS_ONLY_VIRTUAL_ERROR, errors: { format: RESULTS_ONLY_VIRTUAL_ERROR } },
+        { status: 400 },
+      );
+    }
 
     // When sign-ups start, for a race published ahead of taking entries. The
     // form sends an instant it built from a Manila date and time, or nothing

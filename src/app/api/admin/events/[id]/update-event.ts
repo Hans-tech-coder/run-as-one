@@ -11,7 +11,13 @@ import { upperCaseForStorage } from '@/lib/text-case';
 import { asBankAccounts } from '@/lib/bank-accounts';
 import { uniqueEventSlug } from '@/lib/event-slug';
 import { isCalendarDay } from '@/lib/event-schedule';
-import { FORMAT_LOCKED_ERROR, asEventFormat, readFormatFields } from '@/lib/event-format';
+import {
+  EVENT_FORMATS,
+  FORMAT_LOCKED_ERROR,
+  RESULTS_ONLY_VIRTUAL_ERROR,
+  asEventFormat,
+  readFormatFields,
+} from '@/lib/event-format';
 import { OPENING_INSTANT_ERROR, asOpeningInstant, asSlotLimit } from '@/lib/registration-gate';
 import { publishConflict } from '@/lib/event-visibility';
 import { readCategoryChangeSettings } from '@/lib/category-change-settings';
@@ -177,6 +183,12 @@ export async function updateEvent(request: Request, { params }: { params: Promis
     // a race made in the wrong place is recreated in the right one. Whatever
     // the body says is ignored.
     const resultsOnly = current.resultsOnly;
+    if (resultsOnly && format === EVENT_FORMATS.VIRTUAL) {
+      return NextResponse.json(
+        { error: RESULTS_ONLY_VIRTUAL_ERROR, errors: { format: RESULTS_ONLY_VIRTUAL_ERROR } },
+        { status: 400 },
+      );
+    }
 
     // Sign-ups may not be moved to open while the event is still hidden (D8,
     // lib/event-visibility.ts). Checked only when the opening changes, so a

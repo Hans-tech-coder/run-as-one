@@ -15,7 +15,8 @@
  * payment — is the same event as on-site (D1, D5). It has **no results**
  * (the owner, 2026-10-21, dropping Phase B): no results upload, no Results
  * screen and no public results pages, so no e-certificate either
- * (`RESULTS_EVENTS`, `takesResults`).
+ * (`RESULTS_EVENTS`, `takesResults`), and a results-only race cannot be one
+ * (`RESULTS_ONLY_VIRTUAL_ERROR`).
  * Once an event has a registration its format is locked (D7): a runner who
  * paid for a race at a venue did not sign up to run alone, and vice versa.
  *
@@ -78,6 +79,14 @@ export function runWindowError(date: string, virtualEndDate: unknown): string | 
 /** The refusal when an event with registrations is asked to change format (D7). */
 export const FORMAT_LOCKED_ERROR =
   'This event already has registrations, so its format can no longer change.';
+
+/**
+ * The refusal when a results-only race is asked to be virtual: the one takes
+ * no registrations and the other no results, so together they make an event
+ * that can take neither.
+ */
+export const RESULTS_ONLY_VIRTUAL_ERROR =
+  'A results-only race cannot be a virtual run, because a virtual run has no results.';
 
 /**
  * The "where" half of that line on its own, for a screen that sets the range
