@@ -11,16 +11,11 @@ the owner's choice. Start one only when the owner asks, and read its source plan
 before writing any code. When an item is picked up, give it its own plan file in
 `docs/plans/`, and delete it from this list once it has landed.
 
-**Pending for the next release: one migration.**
-`20261022090000_registration_price_locked_at` (one nullable column,
-`Registration.priceLockedAt`, the promo price lock on the order, §14; applied
-to the local-dev database only). Run `npx prisma migrate deploy` with
-`DIRECT_URL` on the production endpoint (`ep-still-pine-b3n210bs`) **before**
-promoting `dev` to `main`: the new checkouts write the column, and the old
-code ignores it, so migrating first is safe in both directions. Event
-publishing, virtual runs (Phase A), category changes and delivery switches
-are all live (the last two since 2026-10-21), with every migration through
-`20261018120000_logistics_change` applied (`docs/current-state.md`, top). Still to watch on production: the first
+**No migration pending.** Every migration through
+`20261022090000_registration_price_locked_at` is applied in production
+(2026-10-22). Event publishing, virtual runs (Phase A), category changes,
+delivery switches and the promo price lock are all live
+(`docs/current-state.md`, top). Still to watch on production: the first
 online upgrade and the first online delivery switch settled by a real PayMongo
 webhook (only a signed script and the `?paid=1` return path have settled one),
 and the daily sweep expiring an unpaid upgrade or switch.

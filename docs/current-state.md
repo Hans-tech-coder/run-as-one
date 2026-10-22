@@ -3,14 +3,30 @@
 
 ## 10. Current state
 
-**Production is current as of 2026-10-21.** `main` equals `dev` at
-`a1b05df`: everything below is live, including category changes and delivery
+**Production is current as of 2026-10-22.** `main` equals `dev` at
+`6757bcb`: everything below is live, including the promo price lock, the
+structured "Prices have changed" refusal, browser-side image compression, and
+no results or e-certificates for virtual runs. Every migration in
+`prisma/migrations` is applied in production, through
+`20261022090000_registration_price_locked_at`. The previous release was at
+`a1b05df`. Which Neon branch each environment uses: runasone.ph runs on
+`production` (`ep-still-pine-…`); localhost and git `dev`'s Vercel Preview run
+on `local-dev` (`ep-shiny-sunset-…`).
+Pre-deploy QA passed on 2026-10-22 on `local-dev`, every email to the owner
+only: QR Ph RM-5C10E91F (₱1,166.50, reached the PayMongo test checkout, left
+PENDING) and bank transfer RM-58218FCC (₱939, slip compressed PNG → JPG, the
+received email delivered), with the price lock taken at the first keystroke and
+sent with each order; the empty-form check; and the register page at 375px.
+The code review's four price-lock findings were fixed in `6757bcb` (see the
+entry below). Strix `run-as-one-scan_07a0` (diff scan, $5.23) found nothing;
+its two optional hardening notes (no certificate template on a virtual run;
+no results-only virtual event) are fixed on `dev` in `ca78e7d`, not released.
+
+**Previous release (2026-10-21, `a1b05df`).** Category changes and delivery
 switches paid on the runner's link (online, or GCash/bank with a proof staff
 validate), one **Pay ₱X** button in the category change email, the switch
-link's two-step rail, and the Neon compute cut. Every migration in
-`prisma/migrations` is applied, through `20261018120000_logistics_change`
-(the live register page reads every `Event` column, so it would fail without
-it). The previous release was at `b689956`.
+link's two-step rail, and the Neon compute cut, with migrations through
+`20261018120000_logistics_change`.
 Pre-deploy QA passed on 2026-10-21 on `local-dev` with the owner's orders
 RM-7B67DB3F (bank) and RM-98EEC0B5 (QR Ph), every email to the owner only: a
 bank upgrade 5K → 10K by proof link and Validate Payment; an online upgrade
@@ -31,9 +47,9 @@ offers **QR Ph only** (`OFFERED_PAYMONGO_METHODS` in `lib/free-checkout.ts`)
 until it is. Where an entry below says something is "not released" or
 "production is N migrations behind", it predates this release.
 
-**Promo price lock (2026-10-22, `fb90815` `24f30b6` `39c5759` `a5ac5da` on
-`dev`, not released; **one migration**,
-`20261022090000_registration_price_locked_at`, applied to `local-dev` only).** After the Oct 18–19 incident — a 5+1
+**Promo price lock (2026-10-22, `fb90815` `24f30b6` `39c5759` `a5ac5da`
+`906ef42` `6757bcb`, released 2026-10-22; **one migration**,
+`20261022090000_registration_price_locked_at`, applied in production).** After the Oct 18–19 incident — a 5+1
 group filled out near midnight saw ₱6,985 (early bird + 5+1), paid it by
 GCash, submitted after 12MN and was asked for more because the early bird had
 closed — a runner now **keeps the promotions running when they started the
@@ -55,7 +71,16 @@ checkout) with its `Price lock held:` log line; no lock → ₱6,000; the
 bank-transfer warning shown; a promo paused after the lock → 409 with the
 "already sent" notice; and before any lock, "ends in" flipping both the
 category card and the summary at the deadline (the card stayed on the sale
-price until `a5ac5da`, which also silenced a countdown hydration warning). `scripts/check-price-lock.ts` checks the pricing. What was left out
+price until `a5ac5da`, which also silenced a countdown hydration warning). `scripts/check-price-lock.ts` checks the pricing.
+The pre-deploy review's fixes (`6757bcb`): a bank-transfer runner with a
+deposit slip picked keeps the old lock into the server's grace (renewed a
+minute before it lapses), so a runner who paid the held total is not
+re-priced at minute 45, and the *Wait for a fresh price* notice is hidden for
+them; a lock that could not be had (failed or 429) is asked for again at the
+next keystroke, at most once a minute; under a lock each category card quotes
+the lower of its sale prices at the lock and at now, as the summary does; and
+locks are signed with their own key, `PRICE_LOCK_KEY` (HMAC of the app secret),
+so a lock can never verify as a session or payment link. What was left out
 is in `ON_HOLD.md`. The plan's numbered decisions, cited in code and §5:
 **D1** the lock and countdown start at the first keystroke in the form, never
 on page load, and last 45 minutes; **D2** the countdown shows only when an
