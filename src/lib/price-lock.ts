@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify } from 'jose';
 import { SECRET_KEY } from '@/lib/jwt';
+import { PRICE_LOCK_GRACE_MINUTES, PRICE_LOCK_MINUTES } from '@/lib/price-lock-window';
 
 /**
  * The price lock (PROMO_PRICE_LOCK_PLAN.md): **a runner keeps the promotions
@@ -36,11 +37,9 @@ import { SECRET_KEY } from '@/lib/jwt';
 
 const PURPOSE = 'price-lock';
 
-/** How long a runner keeps the promotions they started with — the countdown. */
-export const PRICE_LOCK_MINUTES = 45;
-
-/** How long past the countdown the server still honours the lock. */
-export const PRICE_LOCK_GRACE_MINUTES = 10;
+// The window lives in price-lock-window.ts so the wizards can read it without
+// pulling the signing secret into a browser bundle.
+export { PRICE_LOCK_MINUTES, PRICE_LOCK_GRACE_MINUTES };
 
 const MINUTE_MS = 60_000;
 

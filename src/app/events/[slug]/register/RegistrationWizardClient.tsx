@@ -30,6 +30,10 @@ import { PICKUP_FALLBACK, pickupDetails, pickupLabel, pickupOnlyLine } from "@/l
 import { deliveryTiers, offersDelivery, needsDeliveryZoneChoice } from "./delivery";
 import DeliveryStep from "./DeliveryStep";
 import { useDeliveryPlan } from "./useDeliveryPlan";
+import { usePromoPricing } from "./usePromoPricing";
+import { usePriceHold, usePriceLock } from "./usePriceLock";
+import { PriceChangedNotice, WaitForFreshPrice } from "./PriceLockNotices";
+import { isPriceChanged, type PriceChangedBody } from "@/lib/price-changed";
 import { type BankAccountView } from "@/lib/bank-accounts";
 import {
   asLogisticsMethod,
@@ -52,32 +56,15 @@ import {
   categoryNeedsShirtSize,
   shouldAskShirtSize,
   findCategory,
-  totalShirtSizeUpcharge,
-  runnerCategories,
-  runnerPrices,
 } from "@/lib/shirt-size";
 import {
-  applyPromo,
-  categorySalePrices,
   describePromo,
-  freeSlotOffer,
-  promoCodeError,
-  promoGroupSize,
-  promoStatus,
   type PromoTerms,
 } from "@/lib/discount";
-import {
-  bestDiscount,
-  discountIncludesCode,
-  outshoneByMessage,
-} from "@/lib/promo-winner";
 import {
   FREE_ORDER_SUBMIT_LABEL,
   FREE_ORDER_TOTAL_LABEL,
   OFFERED_PAYMONGO_METHODS,
-  chargeableTotal,
-  isFreeOrder,
-  platformFeeAfterDiscount,
   transactionFeeFor,
 } from "@/lib/free-checkout";
 import PromoCodeField from "./PromoCodeField";
@@ -517,121 +504,41 @@ export default function RegistrationWizardClient({
   // matching the total being charged.
   const [promo, setPromo] = useState<PromoTerms | null>(null);
 
-  // Calculations. Every amount below is in centavos (integers), so these sums
-  // are exact — no floating point drift.
-  const categoryTotal = participants.reduce((total, p) => {
-    const cat = event.categories.find((c: any) => c.id === p.categoryId);
-    return total + (cat ? cat.price : 0);
-  }, 0);
-
-  // 4XL and above cost the organizer more to produce, so an event may add a
-  // flat amount for each runner in one. Charged only to runners who are
-  // actually getting a shirt — see totalShirtSizeUpcharge.
+  // What the order costs, shared with the bank-transfer wizard so the two
+  // summaries cannot drift apart (usePromoPricing.ts). Centavos throughout.
   const shirtSizeUpcharge = event.shirtSizeUpcharge ?? 0;
-  const sizeUpcharge = totalShirtSizeUpcharge(
-    participants,
-    event.categories,
-    shirtSizeUpcharge,
-  );
-
-  // The surcharge is part of what the runner pays for goods, so it belongs in
-  // the subtotal the server re-derives and checks at checkout.
-  const subtotal = categoryTotal + sizeUpcharge;
-
   const deliveryFee = delivery.fee;
-
-  // What the applied code is worth right now, from the same module the
-  // checkout route uses as its last word (lib/discount.ts) — so what this
-  // summary promises and what the server bills cannot disagree. A code that
-  // has stopped qualifying keeps its box but takes nothing off, and says why.
-  // The options an automatic promotion has repriced, so each card quotes the
-  // same two numbers the event page did. It is the same call that page makes
-  // and the same rule the summary charges by: the picker shows the new price
-  // on the option, and the summary reaches it by subtracting the discount from
-  // the list total, which is what the receipt and the organizer's Given column
-  // both count.
-  const salePrices = useMemo(
-    () => categorySalePrices(automaticPromos, event.categories),
-    [automaticPromos, event.categories],
-  );
-
-  const promoOrder = {
-    runnerPrices: runnerPrices(participants, event.categories, shirtSizeUpcharge),
-    runnerCategories: runnerCategories(participants, event.categories),
+  // The promotions the runner started under, held for 45 minutes from their
+  // first keystroke (usePriceLock.ts) and sent with the order.
+  const priceLock = usePriceLock(eventId);
+  const {
+    sizeUpcharge,
     subtotal,
-  };
-  const promoProblem = promo ? promoCodeError(promo, promoOrder, promo.code) : null;
-
-  // One discount, unless the organizer marked a price promotion and a group
-  // deal as combinable (lib/promo-winner.ts). The automatic promotions and the
-  // typed code are weighed together and the largest wins — an early bird
-  // stacking on top of a voucher nobody allowed is a number the organizer
-  // never agreed to.
-  const discount = bestDiscount(
-    [...automaticPromos, promoProblem ? null : promo],
-    promoOrder,
-  );
-  const discountAmount = discount?.amount ?? 0;
-
-  // Platform Fee (DB-driven per participant), less a pacer's waiver where the
-  // winning code carries one. Computed after the discount rather than before,
-  // because that waiver is the one thing in this app that can reach a fee —
-  // the rule is `platformFeeAfterDiscount`, which the checkout route runs
-  // again as its last word, so the summary and the charge cannot disagree.
-  const adminFeeWaived = discount?.waivesAdminFee === true;
-  const platformFee = platformFeeAfterDiscount(
-    adminFeePerRunner,
-    participants.length,
+    salePrices,
+    promoProblem,
     discount,
-  );
-
-  // Nothing left to collect — a pacer's free entry with the fee waived, or any
-  // other order that happens to come to zero. PayMongo cannot charge ₱0, so
-  // this order takes the free path instead: no payment method, no payment
-  // step, and a registration that is confirmed the moment it is placed. The
-  // server decides this again from its own figures; this copy only decides
-  // what the wizard draws. See lib/free-checkout.ts.
-  const isFree = isFreeOrder(
-    chargeableTotal({ subtotal, deliveryFee, platformFee, discountAmount }),
-  );
-
-  // A good code that simply lost. Not an error — nothing is wrong with it and
-  // it stays unspent — but saying nothing would look like the box was broken.
-  const typedApplied = promoProblem ? null : applyPromo(promo, promoOrder);
-  const promoOutshone =
-    promo && !promoProblem && discount && !discountIncludesCode(discount, promo.code)
-      ? outshoneByMessage(promo.code, discount)
-      : null;
-
-  // Which cards wear the FREE badge, and the offer that gets a group to the
-  // point where one of them can.
-  const freeRunners = new Set(discount?.freeRunners ?? []);
-
-  // The promotion that would give the free slot, whether or not it is
-  // currently the winning discount: an order sitting one runner short of it
-  // has no discount at all yet, so the offer cannot be read off the winner.
-  // Only one that is actually running: a paused, expired or used-up group deal
-  // must neither stop a group at its size nor promise a free runner the
-  // checkout will not give.
-  const groupPromo = [...automaticPromos, promo].find(
-    (candidate) =>
-      candidate &&
-      candidate.discountType === "BUY_X_GET_Y" &&
-      promoStatus(candidate) === "ACTIVE",
-  );
-  const groupOffer = freeSlotOffer(groupPromo, participants.length);
-
-  // And where that group ends. One registration covers one group: at buy + get
-  // the promotion is fully claimed, so step 1 stops taking runners and the
-  // seventh member of a group on a "register 5, get 1" starts a registration
-  // of their own. Kept in step with `promoGroupSize`, which is what the
-  // checkout pays out on.
-  const groupLimit = promoGroupSize(groupPromo);
-  const atGroupLimit = groupLimit !== null && participants.length >= groupLimit;
-  // The ceiling every order has, promotion or not (lib/order-size.ts). Kept
-  // apart from the group limit so one notice, not two, explains the button.
-  const atOrderLimit =
-    !atGroupLimit && participants.length >= MAX_RUNNERS_PER_ORDER;
+    discountAmount,
+    adminFeeWaived,
+    platformFee,
+    isFree,
+    typedApplied,
+    promoOutshone,
+    freeRunners,
+    groupPromo,
+    groupOffer,
+    groupLimit,
+    atGroupLimit,
+    atOrderLimit,
+  } = usePromoPricing({
+    event,
+    participants,
+    promo,
+    automaticPromos,
+    adminFeePerRunner,
+    deliveryFee,
+    lockedAt: priceLock.lockedAt,
+    now: priceLock.now,
+  });
 
   // PayMongo's cut, from the same function both checkout routes recompute it
   // with (lib/free-checkout.ts). Net of the discount: it is a share of what
@@ -644,6 +551,30 @@ export default function RegistrationWizardClient({
 
   const totalAmount =
     subtotal + deliveryFee + platformFee + transactionFee - discountAmount;
+
+  // The countdown and notices about that lock: shown only when a promotion on
+  // this order ends inside it (D2).
+  const {
+    countdown,
+    announcement,
+    notice: priceNotice,
+    dismissNotice: dismissPriceNotice,
+  } = usePriceHold({
+    priceLock,
+    discount,
+    promos: [...automaticPromos, promoProblem ? null : promo],
+    total: totalAmount,
+  });
+  // Under five minutes left on a held price: a bank transfer sent now may
+  // meet a renewed total, so the payment step says to wait for it.
+  const holdEndingSoon = countdown?.held === true && countdown.urgent;
+
+  // The checkout's own figures when it refused the order because a price
+  // changed (a 409 PRICE_CHANGED), with the total this page had shown.
+  const [priceChange, setPriceChange] = useState<{
+    body: PriceChangedBody;
+    shownTotal: number;
+  } | null>(null);
 
   // The waiver sits directly above the button that actually submits the
   // registration. Online and free orders submit from step 3; a bank transfer
@@ -824,6 +755,9 @@ export default function RegistrationWizardClient({
           // name, and the server applies those on its own — see
           // resolveDiscount in lib/promo-store.ts.
           promoCode: promo && !promoProblem ? promo.code : "",
+          // The moment the runner started, signed; never an amount. A missing
+          // or lapsed lock prices the order at now, as before locks existed.
+          priceLock: priceLock.token ?? "",
         }),
       });
 
@@ -831,6 +765,9 @@ export default function RegistrationWizardClient({
 
       if (response.ok && data.checkout_url) {
         window.location.href = data.checkout_url;
+      } else if (response.status === 409 && isPriceChanged(data)) {
+        setPriceChange({ body: data, shownTotal: totalAmount });
+        setIsProcessing(false);
       } else {
         alert(
           data.error ||
@@ -921,6 +858,8 @@ export default function RegistrationWizardClient({
       // name, and the server applies those on its own — see resolveDiscount
       // in lib/promo-store.ts.
       formData.append("promoCode", promo && !promoProblem ? promo.code : "");
+      // The moment the runner started, signed; never an amount.
+      formData.append("priceLock", priceLock.token ?? "");
 
       // Append complex data as JSON string
       // Every runner carries its resolved home address; the route stores it.
@@ -941,6 +880,12 @@ export default function RegistrationWizardClient({
         router.push(
           `/events/${event.slug}/register?success=true&orderRef=${data.orderRef}`,
         );
+      } else if (response.status === 409 && isPriceChanged(data)) {
+        // Inline, not an alert: the form stays, and the runner is shown the
+        // total the server worked out — and, having paid by hand, told not to
+        // send money twice.
+        setPriceChange({ body: data, shownTotal: totalAmount });
+        setIsProcessing(false);
       } else {
         alert(data.error || "Failed to submit registration. Please try again.");
         setIsProcessing(false);
@@ -1112,6 +1057,10 @@ export default function RegistrationWizardClient({
                   : null
               }
               totalAmount={totalAmount}
+              countdown={countdown}
+              announcement={announcement}
+              priceNotice={priceNotice}
+              onDismissPriceNotice={dismissPriceNotice}
             />
 
             {/* A free order has no deposit slip to upload, so the fourth step
@@ -1134,9 +1083,13 @@ export default function RegistrationWizardClient({
         </aside>
 
         {/* Main Wizard Form */}
+        {/* The first input or change anywhere in the form takes the price
+            lock; loading the page does not (D1). */}
         <section
           ref={panelRef}
           className="wizard-content t-stagger-line t-stagger-line--2"
+          onInputCapture={priceLock.start}
+          onChangeCapture={priceLock.start}
         >
           {/* overflow-clip, not overflow-hidden: the glow below overhangs the
               right edge, and a "hidden" box is still a scroll container, so
@@ -1831,6 +1784,14 @@ export default function RegistrationWizardClient({
                   />
                 )}
 
+                {priceChange && (
+                  <PriceChangedNotice
+                    change={priceChange.body}
+                    shownTotal={priceChange.shownTotal}
+                    bankTransfer={false}
+                  />
+                )}
+
                 <div className="form-actions mt-10 flex justify-end">
                   <button
                     className={`btn-gradient flex items-center justify-center gap-2 px-10 py-4 text-lg group shadow-xl shadow-accent-orange/20 ${isProcessing || (!waiverOnStep4 && !consentGiven) ? "opacity-50 pointer-events-none" : ""}`}
@@ -1868,6 +1829,8 @@ export default function RegistrationWizardClient({
                   </strong>
                   . After payment, upload your deposit slip.
                 </p>
+
+                {holdEndingSoon && <WaitForFreshPrice />}
 
                 <h4 className="mb-4 text-accent-blue font-bold tracking-wide">
                   Select a Bank for Transfer
@@ -2000,6 +1963,14 @@ export default function RegistrationWizardClient({
                   signatureError={signatureError}
                   onSignatureBlur={() => setSignatureTouched(true)}
                 />
+
+                {priceChange && (
+                  <PriceChangedNotice
+                    change={priceChange.body}
+                    shownTotal={priceChange.shownTotal}
+                    bankTransfer
+                  />
+                )}
 
                 <div className="form-actions mt-10 flex justify-end">
                   <button

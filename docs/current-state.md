@@ -31,7 +31,7 @@ offers **QR Ph only** (`OFFERED_PAYMONGO_METHODS` in `lib/free-checkout.ts`)
 until it is. Where an entry below says something is "not released" or
 "production is N migrations behind", it predates this release.
 
-**Price lock, Batches 1–2 (2026-10-21, on `dev`, not released; `PROMO_PRICE_LOCK_PLAN.md`).** The token, `/api/price-lock` and the locked pricing (`fb90815`), and both checkouts reading `priceLock` with a structured 409 `PRICE_CHANGED` (Batch 2, uncommitted); the wizards do not send a lock yet (Batch 3).
+**Price lock, Batches 1–3 (2026-10-22, on `dev`, not released; `PROMO_PRICE_LOCK_PLAN.md`).** The token, `/api/price-lock` and the locked pricing (`fb90815`), and both checkouts reading `priceLock` with a structured 409 `PRICE_CHANGED` (`24f30b6`). **Batch 3 (uncommitted):** both wizards price through one shared `usePromoPricing.ts` (split out of the two near-identical blocks), take the lock at the first input or change in the form (`usePriceLock.ts`, never on load, D1), send it as `priceLock`, renew it at the deadline with an old → new notice, and show the countdown in `OrderSummary` only when an applied promotion ends inside the window (D2); a 409 `PRICE_CHANGED` is an inline notice, not an alert. Next: Batch 4, the midnight scenario end to end on localhost.
 
 **Image compression on upload (2026-10-21, `875a1fc` on `dev`, not released).** Every image
 upload but certificate templates is shrunk in the browser before it is sent

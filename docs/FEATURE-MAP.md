@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-46 pages · 89 API routes · 141 modules in `src/lib` · 605 files · 108,674 lines
+46 pages · 89 API routes · 142 modules in `src/lib` · 609 files · 109,361 lines
 
 ---
 
@@ -58,7 +58,7 @@ The route, the server component behind it, and the client components beside it.
 | `/coming-soon` | [`/coming-soon/page.tsx`](../src/app/coming-soon/page.tsx) | — |
 | `/events` | [`/events/page.tsx`](../src/app/events/page.tsx) | — |
 | `/events/[slug]` | [`/events/[slug]/page.tsx`](../src/app/events/[slug]/page.tsx) | `ClosedSidebarPanels.tsx` |
-| `/events/[slug]/register` | [`/events/[slug]/register/page.tsx`](../src/app/events/[slug]/register/page.tsx) | `AddressPlaceFields.tsx` `BankDetailsModal.tsx` `BankTransferWizardClient.tsx` `BirthdatePicker.tsx` `CategoryPicker.tsx` `Combobox.tsx` `CommunityPicker.tsx` `ConsentWaiver.tsx` `delivery-address.ts` `delivery-split.ts` `delivery.ts` `DeliveryAddressFields.tsx` `DeliveryAreaPanel.tsx` `DeliveryStep.tsx` `FreeSlotOffer.tsx` `GenderField.tsx` `GroupLimitNotice.tsx` `GuardianConsent.tsx` `OrderSummary.tsx` `PhoneField.tsx` `PosterLightbox.tsx` `PromoCodeField.tsx` `RegistrationWizardClient.tsx` `RunnerAddressFields.tsx` `SelectField.tsx` `ShirtSizeField.tsx` `SizeGuideModal.tsx` `useDeliveryPlan.ts` `useStepReveal.ts` `validation.ts` `WizardEventHeader.tsx` |
+| `/events/[slug]/register` | [`/events/[slug]/register/page.tsx`](../src/app/events/[slug]/register/page.tsx) | `AddressPlaceFields.tsx` `BankDetailsModal.tsx` `BankTransferWizardClient.tsx` `BirthdatePicker.tsx` `CategoryPicker.tsx` `Combobox.tsx` `CommunityPicker.tsx` `ConsentWaiver.tsx` `delivery-address.ts` `delivery-split.ts` `delivery.ts` `DeliveryAddressFields.tsx` `DeliveryAreaPanel.tsx` `DeliveryStep.tsx` `FreeSlotOffer.tsx` `GenderField.tsx` `GroupLimitNotice.tsx` `GuardianConsent.tsx` `OrderSummary.tsx` `PhoneField.tsx` `PosterLightbox.tsx` `PriceLockNotices.tsx` `PromoCodeField.tsx` `RegistrationWizardClient.tsx` `RunnerAddressFields.tsx` `SelectField.tsx` `ShirtSizeField.tsx` `SizeGuideModal.tsx` `useDeliveryPlan.ts` `usePriceLock.ts` `usePromoPricing.ts` `useStepReveal.ts` `validation.ts` `WizardEventHeader.tsx` |
 | `/feedback` | [`/feedback/page.tsx`](../src/app/feedback/page.tsx) | `FeedbackForm.tsx` `FeedbackSent.tsx` `ScreenshotField.tsx` |
 | `/pay/[token]` | [`/pay/[token]/page.tsx`](../src/app/pay/[token]/page.tsx) | `PayNowButton.tsx` |
 | `/pay/change/[token]` | [`/pay/change/[token]/page.tsx`](../src/app/pay/change/[token]/page.tsx) | `ChangeBankProof.tsx` |
@@ -277,6 +277,7 @@ the file itself.
 | [`pickup.ts`](../src/lib/pickup.ts) | What a runner who chooses on-site pick-up is told. |
 | [`platform-fee.ts`](../src/lib/platform-fee.ts) | The **default platform fee** — what a new event's Admin Fee box starts at (SETTINGS_PLAN.md Batch 4). |
 | [`price-changed.ts`](../src/lib/price-changed.ts) | The "Prices have changed" refusal (PROMO_PRICE_LOCK_PLAN.md Batch 2): **when a checkout refuses an order because the amounts it was posted are not … |
+| [`price-lock-window.ts`](../src/lib/price-lock-window.ts) | How long a price lock lasts (PROMO_PRICE_LOCK_PLAN.md D1, R4): **45 minutes shown to the runner, honoured 10 minutes longer by the server.** Its ow… |
 | [`price-lock.ts`](../src/lib/price-lock.ts) | A runner keeps the promotions running when they started the form, for 45 minutes (`PROMO_PRICE_LOCK_PLAN.md`, after an early bird closed at midnigh… |
 | [`promo-input.ts`](../src/lib/promo-input.ts) | What the marketing form is allowed to say about a promotion. |
 | [`promo-redemptions.ts`](../src/lib/promo-redemptions.ts) | What a promotion actually cost, and which orders spent it. |
@@ -329,8 +330,8 @@ when a task touches one, split it before editing rather than after.
 | Lines | File |
 | --- | --- |
 | 2382 | [`src/app/admin/marketing/PromoCodesClient.tsx`](../src/app/admin/marketing/PromoCodesClient.tsx) |
-| 2065 | [`src/app/events/[slug]/register/RegistrationWizardClient.tsx`](../src/app/events/[slug]/register/RegistrationWizardClient.tsx) |
-| 1784 | [`src/app/events/[slug]/register/BankTransferWizardClient.tsx`](../src/app/events/[slug]/register/BankTransferWizardClient.tsx) |
+| 2036 | [`src/app/events/[slug]/register/RegistrationWizardClient.tsx`](../src/app/events/[slug]/register/RegistrationWizardClient.tsx) |
+| 1740 | [`src/app/events/[slug]/register/BankTransferWizardClient.tsx`](../src/app/events/[slug]/register/BankTransferWizardClient.tsx) |
 | 1485 | [`src/lib/discount.ts`](../src/lib/discount.ts) |
 | 1179 | [`src/app/admin/settings/SettingsPanels.tsx`](../src/app/admin/settings/SettingsPanels.tsx) |
 | 1017 | [`src/app/admin/team/TeamClient.tsx`](../src/app/admin/team/TeamClient.tsx) |

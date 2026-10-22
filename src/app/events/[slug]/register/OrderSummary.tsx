@@ -4,6 +4,8 @@ import React from "react";
 import { formatPesos } from "@/lib/money";
 import { chargedRunnerPrice, type AppliedDiscount } from "@/lib/discount";
 import { discountParts } from "@/lib/promo-winner";
+import { PriceCountdownLine, RenewedPriceNotice } from "./PriceLockNotices";
+import type { PriceCountdown, PriceNotice } from "./usePriceLock";
 
 /**
  * The order summary both registration wizards show beside the form.
@@ -12,6 +14,10 @@ import { discountParts } from "@/lib/promo-winner";
  * about how a price reads. Each runner is one row — who, which distance, what
  * they pay — with the list price struck underneath only when it differs, so
  * the column of bold numbers on the right is the column that adds up.
+ *
+ * It also carries the price lock's countdown, under the promotion it is about,
+ * and the notice when a renewal moved the total (usePriceLock.ts): the summary
+ * is the one panel every step shows.
  */
 export default function OrderSummary({
   categories,
@@ -23,6 +29,10 @@ export default function OrderSummary({
   waivedPlatformFee,
   transactionFee,
   totalAmount,
+  countdown = null,
+  announcement = "",
+  priceNotice = null,
+  onDismissPriceNotice,
   children,
 }: {
   categories: { id: string; name: string; price: number }[];
@@ -37,6 +47,13 @@ export default function OrderSummary({
   /** Null when no transaction fee applies (yet). */
   transactionFee: number | null;
   totalAmount: number;
+  /** The price lock's countdown, or null when none is shown (D2). */
+  countdown?: PriceCountdown | null;
+  /** The one line a screen reader hears about the countdown. */
+  announcement?: string;
+  /** A renewal that moved the total, until dismissed. */
+  priceNotice?: PriceNotice | null;
+  onDismissPriceNotice?: () => void;
   /** A note under the total, such as how the order is paid. */
   children?: React.ReactNode;
 }) {
@@ -109,6 +126,8 @@ export default function OrderSummary({
         </div>
       )}
 
+      <PriceCountdownLine countdown={countdown} announcement={announcement} />
+
       <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-white/5 text-sm">
         {sizeUpcharge > 0 && (
           <FeeLine label="Large size surcharge (4XL+)" amount={sizeUpcharge} />
@@ -153,6 +172,9 @@ export default function OrderSummary({
           <div className="text-right text-xs text-emerald-400 mt-0.5">
             You save ₱{formatPesos(discount.amount)}
           </div>
+        )}
+        {priceNotice && onDismissPriceNotice && (
+          <RenewedPriceNotice notice={priceNotice} onDismiss={onDismissPriceNotice} />
         )}
       </div>
       {children}
