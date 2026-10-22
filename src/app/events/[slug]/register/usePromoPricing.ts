@@ -76,11 +76,6 @@ export function usePromoPricing({
   /** The wizard's clock (usePriceLock), which moves when a promotion does. */
   now: number;
 }) {
-  // The moment the promotions' windows are read at, where one moment is
-  // asked for. Before the first keystroke there is no lock, and the clock
-  // moving at a promotion's end is what flips the price live.
-  const pricedAt = lockedAt ?? now;
-
   const categoryTotal = participants.reduce((total, p) => {
     const cat = event.categories.find((c) => c.id === p.categoryId);
     return total + (cat ? cat.price : 0);
@@ -106,10 +101,20 @@ export function usePromoPricing({
   // on the option, and the summary reaches it by subtracting the discount from
   // the list total, which is what the receipt and the organizer's Given column
   // both count.
-  const salePrices = useMemo(
-    () => categorySalePrices(automaticPromos, event.categories, pricedAt),
-    [automaticPromos, event.categories, pricedAt],
-  );
+  // Under a lock the discount is the better of the two moments
+  // (`bestDiscountLocked`), so each card quotes the lower of its two sale
+  // prices — a sale that started after the first keystroke shows on the card
+  // as it does in the summary.
+  const salePrices = useMemo(() => {
+    const atNow = categorySalePrices(automaticPromos, event.categories, now);
+    if (lockedAt === null) return atNow;
+    const held = categorySalePrices(automaticPromos, event.categories, lockedAt);
+    for (const [categoryId, price] of atNow) {
+      const other = held.get(categoryId);
+      if (!other || price.salePrice < other.salePrice) held.set(categoryId, price);
+    }
+    return held;
+  }, [automaticPromos, event.categories, lockedAt, now]);
 
   // What the applied code is worth right now, from the same module the
   // checkout route uses as its last word (lib/discount.ts) — so what this

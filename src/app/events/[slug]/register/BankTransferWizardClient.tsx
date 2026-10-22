@@ -468,8 +468,9 @@ export default function BankTransferWizardClient({
   const shirtSizeUpcharge = event.shirtSizeUpcharge ?? 0;
   const deliveryFee = delivery.fee;
   // The promotions the runner started under, held for 45 minutes from their
-  // first keystroke (usePriceLock.ts) and sent with the order.
-  const priceLock = usePriceLock(eventId);
+  // first keystroke (usePriceLock.ts) and sent with the order. Kept into
+  // its grace once a deposit slip is picked: that runner has already paid.
+  const priceLock = usePriceLock(eventId, proofFile !== null);
   const {
     sizeUpcharge,
     subtotal,
@@ -515,8 +516,10 @@ export default function BankTransferWizardClient({
     total: totalAmount,
   });
   // Under five minutes left on a held price: a bank transfer sent now may
-  // meet a renewed total, so the payment step says to wait for it.
-  const holdEndingSoon = countdown?.held === true && countdown.urgent;
+  // meet a renewed total, so the payment step says to wait for it. Not once
+  // a slip is picked: that runner has paid, and their price is kept.
+  const holdEndingSoon =
+    countdown?.held === true && countdown.urgent && proofFile === null;
 
   // The checkout's own figures when it refused the order because a price
   // changed (a 409 PRICE_CHANGED), with the total this page had shown.

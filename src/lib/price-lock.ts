@@ -1,3 +1,4 @@
+import { createHmac } from 'crypto';
 import { SignJWT, jwtVerify } from 'jose';
 import { SECRET_KEY } from '@/lib/jwt';
 import { PRICE_LOCK_GRACE_MINUTES, PRICE_LOCK_MINUTES } from '@/lib/price-lock-window';
@@ -29,13 +30,23 @@ import { PRICE_LOCK_GRACE_MINUTES, PRICE_LOCK_MINUTES } from '@/lib/price-lock-w
  * lives 10 minutes past it, so a bank-transfer runner still uploading a slip
  * when the countdown reaches zero is not refused for it.
  *
- * Stateless, like the payment links in `resume-payment.ts`: a JWT signed with
- * the app's one secret, with its own `purpose` so no other token of ours reads
- * as a lock and a lock reads as nothing else. No row, so issuing one never
- * wakes the database.
+ * Stateless, like the payment links in `resume-payment.ts`: a JWT with its own
+ * `purpose`, so no other token of ours reads as a lock. No row, so issuing one
+ * never wakes the database.
+ *
+ * **Its own key**, derived from the app secret (`PRICE_LOCK_KEY`). A lock is
+ * the one token anyone can have signed with a subject they chose, so it is
+ * signed with a key no session or payment link is verified with: it cannot
+ * read as one of those even to a future reader that forgets to check
+ * `purpose`.
  */
 
 const PURPOSE = 'price-lock';
+
+/** The key locks are signed and read with — never the session key itself. */
+export const PRICE_LOCK_KEY = new Uint8Array(
+  createHmac('sha256', SECRET_KEY).update(PURPOSE).digest(),
+);
 
 // The window lives in price-lock-window.ts so the wizards can read it without
 // pulling the signing secret into a browser bundle.
@@ -62,7 +73,7 @@ export async function createPriceLock(eventId: string): Promise<PriceLock> {
     .setSubject(eventId)
     .setIssuedAt(lockedAtSeconds)
     .setExpirationTime(lockedAtSeconds + (PRICE_LOCK_MINUTES + PRICE_LOCK_GRACE_MINUTES) * 60)
-    .sign(SECRET_KEY);
+    .sign(PRICE_LOCK_KEY);
 
   return {
     token,
@@ -79,7 +90,7 @@ export async function createPriceLock(eventId: string): Promise<PriceLock> {
 export async function readPriceLock(token: unknown, eventId: string): Promise<Date | null> {
   if (typeof token !== 'string' || !token) return null;
   try {
-    const { payload } = await jwtVerify(token, SECRET_KEY, { algorithms: ['HS256'] });
+    const { payload } = await jwtVerify(token, PRICE_LOCK_KEY, { algorithms: ['HS256'] });
     if (payload.purpose !== PURPOSE || payload.sub !== eventId) return null;
     if (typeof payload.iat !== 'number') return null;
     return new Date(payload.iat * 1000);

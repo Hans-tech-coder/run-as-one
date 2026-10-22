@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AppliedDiscount, PromoTerms } from "@/lib/discount";
 import { discountParts } from "@/lib/promo-winner";
-import { PRICE_LOCK_MINUTES } from "@/lib/price-lock-window";
+import { PRICE_LOCK_GRACE_MINUTES, PRICE_LOCK_MINUTES } from "@/lib/price-lock-window";
 
 /**
  * The price lock on the wizard's side (PROMO_PRICE_LOCK_PLAN.md, Batch 3).
@@ -29,6 +29,15 @@ import { PRICE_LOCK_MINUTES } from "@/lib/price-lock-window";
 
 const MINUTE_MS = 60_000;
 const LOCK_MS = PRICE_LOCK_MINUTES * MINUTE_MS;
+
+// How long past the deadline a lock is kept for a runner who has already
+// picked a deposit slip: the server's grace, less a margin so the renewal
+// lands while the old token is still honoured.
+const SLIP_HOLD_MS = PRICE_LOCK_GRACE_MINUTES * MINUTE_MS - MINUTE_MS;
+
+// After a lock could not be had, the next keystroke may ask again only after
+// this, so a throttled form does not send a request per key.
+const RETRY_AFTER_MS = MINUTE_MS;
 
 /** Under this, the countdown turns amber and a bank transfer is told to wait. */
 export const PRICE_HOLD_WARNING_MS = 5 * MINUTE_MS;
@@ -71,11 +80,18 @@ export interface PriceLockState {
   start: () => void;
 }
 
-export function usePriceLock(eventId: string): PriceLockState {
+/**
+ * `slipPicked` is true once a bank-transfer runner has a deposit slip in the
+ * form: they have sent money at the held total, so the lock is kept into the
+ * server's grace instead of renewed at the deadline (see the renewal below).
+ */
+export function usePriceLock(eventId: string, slipPicked = false): PriceLockState {
   const [lock, setLock] = useState<HeldLock | null>(null);
   const [renewals, setRenewals] = useState(0);
   const [now, setNow] = useState(() => Date.now());
   const requested = useRef(false);
+  // When a failed request lets `start` ask again (RETRY_AFTER_MS).
+  const retryAt = useRef(0);
 
   const requestLock = useCallback(async (): Promise<HeldLock | null> => {
     try {
@@ -100,29 +116,46 @@ export function usePriceLock(eventId: string): PriceLockState {
     }
   }, [eventId]);
 
+  // A request that came back empty frees `start` to ask again, a minute on,
+  // so a throttled or failed lock is not lost for the rest of the session.
+  const allowRetry = useCallback(() => {
+    requested.current = false;
+    retryAt.current = Date.now() + RETRY_AFTER_MS;
+  }, []);
+
   const start = useCallback(() => {
-    if (requested.current) return;
+    if (requested.current || Date.now() < retryAt.current) return;
     requested.current = true;
     void requestLock().then((held) => {
-      if (!held) return;
+      if (!held) {
+        allowRetry();
+        return;
+      }
       setLock(held);
       setNow(Date.now());
     });
-  }, [requestLock]);
+  }, [requestLock, allowRetry]);
 
   // Renew at the deadline the runner was shown. A renewal that fails drops to
   // no lock rather than keeping the old one into its grace: the runner was told
   // the hold ends here, and pricing at now is what they would get anyway.
+  //
+  // The one exception is a runner with a deposit slip picked: they transferred
+  // the held total, so the old lock — the token the checkout reads — is kept
+  // through the server's grace, which exists for exactly this, and renewed only
+  // just before it lapses. Removing the slip renews at once.
   useEffect(() => {
     if (!lock) return;
+    const renewAt = lock.renewAt + (slipPicked ? SLIP_HOLD_MS : 0);
     const timer = setTimeout(async () => {
       const next = await requestLock();
+      if (!next) allowRetry();
       setLock(next);
       setRenewals((count) => count + 1);
       setNow(Date.now());
-    }, Math.max(0, lock.renewAt - Date.now()));
+    }, Math.max(0, renewAt - Date.now()));
     return () => clearTimeout(timer);
-  }, [lock, requestLock]);
+  }, [lock, requestLock, allowRetry, slipPicked]);
 
   return {
     token: lock?.token ?? null,

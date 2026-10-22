@@ -169,7 +169,7 @@ async function main() {
 
   // ── The token ────────────────────────────────────────────────────────────
   process.env.JWT_SECRET ??= 'check-price-lock-throwaway-secret';
-  const { createPriceLock, readPriceLock, logHeldPrice, PRICE_LOCK_MINUTES, PRICE_LOCK_GRACE_MINUTES } =
+  const { createPriceLock, readPriceLock, logHeldPrice, PRICE_LOCK_KEY, PRICE_LOCK_MINUTES, PRICE_LOCK_GRACE_MINUTES } =
     await import('../src/lib/price-lock');
   const { SECRET_KEY } = await import('../src/lib/jwt');
 
@@ -193,7 +193,7 @@ async function main() {
     .setSubject('event-a')
     .setIssuedAt(seconds - 56 * 60)
     .setExpirationTime(seconds - 60)
-    .sign(SECRET_KEY);
+    .sign(PRICE_LOCK_KEY);
   check('expired: no lock', await readPriceLock(expired, 'event-a'), null);
 
   const otherPurpose = await new SignJWT({ purpose: 'resume-payment' })
@@ -212,13 +212,25 @@ async function main() {
     .sign(new TextEncoder().encode('somebody-elses-secret'));
   check('forged: no lock', await readPriceLock(forged, 'event-a'), null);
 
+  // A lock has its own key: one signed with the session secret is not a lock,
+  // and a lock does not verify as a session.
+  const sessionKeyed = await new SignJWT({ purpose: 'price-lock' })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setSubject('event-a')
+    .setIssuedAt()
+    .setExpirationTime(seconds + 600)
+    .sign(SECRET_KEY);
+  check('signed with the session key: no lock', await readPriceLock(sessionKeyed, 'event-a'), null);
+  const { verifyToken } = await import('../src/lib/jwt');
+  check('a lock is not a session', await verifyToken(lock.token), null);
+
   // Within the grace: past the shown 45 minutes, inside the 55.
   const inGrace = await new SignJWT({ purpose: 'price-lock' })
     .setProtectedHeader({ alg: 'HS256' })
     .setSubject('event-a')
     .setIssuedAt(seconds - 50 * 60)
     .setExpirationTime(seconds + 5 * 60)
-    .sign(SECRET_KEY);
+    .sign(PRICE_LOCK_KEY);
   check('in the grace: still a lock', (await readPriceLock(inGrace, 'event-a'))?.getTime(), (seconds - 50 * 60) * 1000);
 
   // ── Batch 2: what the checkout routes hand readPriceLock ─────────────────
