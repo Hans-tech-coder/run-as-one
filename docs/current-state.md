@@ -31,9 +31,42 @@ offers **QR Ph only** (`OFFERED_PAYMONGO_METHODS` in `lib/free-checkout.ts`)
 until it is. Where an entry below says something is "not released" or
 "production is N migrations behind", it predates this release.
 
-**Price lock, Batches 1–3 (2026-10-22, on `dev`, not released; `PROMO_PRICE_LOCK_PLAN.md`).** The token, `/api/price-lock` and the locked pricing (`fb90815`), and both checkouts reading `priceLock` with a structured 409 `PRICE_CHANGED` (`24f30b6`). **Batch 3 (uncommitted):** both wizards price through one shared `usePromoPricing.ts` (split out of the two near-identical blocks), take the lock at the first input or change in the form (`usePriceLock.ts`, never on load, D1), send it as `priceLock`, renew it at the deadline with an old → new notice, and show the countdown in `OrderSummary` only when an applied promotion ends inside the window (D2); a 409 `PRICE_CHANGED` is an inline notice, not an alert. Next: Batch 4, the midnight scenario end to end on localhost.
-
-**Price lock, Batch 4 (2026-10-22, localhost on `local-dev`): passed.** Early bird ₱999 + 5+1 on 6 runners, locked before the deadline and submitted after it, stored at the held total in both wizards (bank RM-AB0D0577 ₱4,995; QR Ph RM-6D2A3C2B ₱5,071.07, matching the PayMongo test checkout) with the `Price lock held:` log line; no lock → ₱6,000; the bank "Wait for a fresh price" warning seen; a paused promo after the lock → 409 with the "already sent ₱999" notice. Two fixes, uncommitted: the "ends in" clock no longer trips a hydration mismatch, and the category cards now flip at the deadline with the summary (`usePriceLock.ts` end timer lands one ms past `validUntil`). Next: Batch 5, docs.
+**Promo price lock (2026-10-22, `fb90815` `24f30b6` `39c5759` `a5ac5da` on
+`dev`, not released; no migration).** After the Oct 18–19 incident — a 5+1
+group filled out near midnight saw ₱6,985 (early bird + 5+1), paid it by
+GCash, submitted after 12MN and was asked for more because the early bird had
+closed — a runner now **keeps the promotions running when they started the
+form, for 45 minutes** (§5 `price-lock.ts`, `price-lock-window.ts`,
+`price-changed.ts`; §6 `/api/price-lock` and both checkouts; §7). What runners
+see: the order summary prices with the lock in both wizards (one shared
+`usePromoPricing.ts`); a countdown appears **only** when an applied promotion
+ends inside the window — "<promo> ends in mm:ss" before the lock (the price
+flips live at the deadline), "<promo> price held for you · mm:ss" after it,
+amber under five minutes; a bank transfer's payment step says *Wait for a
+fresh price before you send payment* in the last five minutes; a renewal that
+moves the total says old → new; and a refused total is an inline notice with
+the server's figure and, for a bank transfer, "If you already sent ₱X, don't
+send again", instead of the old `alert()`. Batch 4 on `local-dev` passed 7/7
+scenarios: an early bird ₱999 + 5+1 on 6 runners, locked before the deadline
+and submitted after it, was **stored at the held price in both wizards** (bank
+RM-AB0D0577 ₱4,995; QR Ph RM-6D2A3C2B ₱5,071.07, matching the PayMongo test
+checkout) with its `Price lock held:` log line; no lock → ₱6,000; the
+bank-transfer warning shown; a promo paused after the lock → 409 with the
+"already sent" notice; and before any lock, "ends in" flipping both the
+category card and the summary at the deadline (the card stayed on the sale
+price until `a5ac5da`, which also silenced a countdown hydration warning). `scripts/check-price-lock.ts` checks the pricing. What was left out
+is in `ON_HOLD.md`. The plan's numbered decisions, cited in code and §5:
+**D1** the lock and countdown start at the first keystroke in the form, never
+on page load, and last 45 minutes; **D2** the countdown shows only when an
+applied promotion ends inside the lock window, otherwise the lock is
+invisible and renews silently; **D3** typed codes and automatic promotions are
+both covered; **R1** only the date window is frozen — paused, usage, seats and
+group size stay live, nothing is reserved; **R2** the order gets the better
+of the discount at the lock and at now; **R3** a renewal is a new lock with a
+new `lockedAt`; **R4** the server honours the token 10 minutes past the
+countdown (55 minutes); **R5** a token is bound to one event; **R6** the token
+carries a time, never a price; **§7** no `Registration.priceLockedAt` column,
+an order the lock priced is logged instead.
 
 **Image compression on upload (2026-10-21, `875a1fc` on `dev`, not released).** Every image
 upload but certificate templates is shrunk in the browser before it is sent

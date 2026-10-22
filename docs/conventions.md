@@ -19,6 +19,16 @@
   Prisma and has no dynamic segment must opt in explicitly**; check the build's
   route table for a `○` on a page that should be live.
 - Imports use the `@/` alias for `src/`.
+- **A rule a client component imports lives in a module with no server-only
+  import.** When the browser needs part of a module that also reads Prisma or
+  holds the signing secret, the client-safe part is split into its own file
+  rather than the whole module reaching the bundle: `discount.ts` (the rule)
+  beside `promo-store.ts` (the queries), `running-community.ts` beside
+  `running-community-store.ts`, `price-lock-window.ts` (the 45 + 10 minutes)
+  beside `price-lock.ts` (which imports `SECRET_KEY`), and `price-changed.ts`,
+  whose 409 shape both checkout routes build and both wizards read. The split
+  file's header says why it is apart; when constants move out, the server
+  module re-exports them so its callers do not change (`price-lock.ts`).
 - Registrant text is stored **UPPERCASE**, email excepted (§5, `text-case.ts`).
   A field whose value is stored uppercase shows an uppercase *sample*
   placeholder; a placeholder that is an instruction stays sentence case.

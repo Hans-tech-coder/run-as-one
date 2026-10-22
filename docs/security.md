@@ -322,9 +322,16 @@
   A payment that lands for a change no longer waiting is never applied.
 - **A price lock is a signed time, never a price** (`lib/price-lock.ts`,
   `PROMO_PRICE_LOCK_PLAN.md`). Anyone may take one from `/api/price-lock`
-  (throttled, no database read): a JWT under the app's secret with
+  (no database read), throttled in its own `price-lock` bucket
+  (`PRICE_LOCK_RULE`, 20 a minute per address, 429 — the same per-instance
+  speed bump as `CHECKOUT_RULE`, since minting one costs a signature and
+  nothing else): a JWT under the app's secret with
   `purpose: 'price-lock'`, the event id as subject, `iat` = the moment it was
-  taken, expiring 55 minutes later. `readPriceLock` refuses a forged or
+  taken, expiring 55 minutes later. The moment is the server's clock at
+  issue; the request names only the event, so no caller can choose the time
+  it is locked at. **It carries a time, never a price**, because a time can
+  only point back at promotions that were really running, while an amount in
+  the token would be a figure the checkout had to trust. `readPriceLock` refuses a forged or
   expired token, another purpose's token, and one for a different event, and
   every refusal is simply no lock. What a lock can buy is bounded: the
   checkout still prices every amount from the database, the lock moves only

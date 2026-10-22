@@ -426,3 +426,33 @@ Known and not done:
   browser may keep the static file (which carries its own light/dark rule).
   Believed to date from Batch 2's move to `generateMetadata`; not proven.
 
+## 14. Leftovers from the promo price lock plan
+
+*Source: `PROMO_PRICE_LOCK_PLAN.md` (gitignored, never committed), Batches 1–4
+landed on `dev` 2026-10-22 (`fb90815`, `24f30b6`, `39c5759`, `a5ac5da`), not
+released. What it built and its decisions D1–D3 and R1–R6 are in
+`docs/current-state.md`.*
+
+Left out on purpose:
+
+- **A `Registration.priceLockedAt` column** (the plan's §7). Logged instead:
+  search the Vercel logs for `Price lock held: order <ref>`. A column would
+  answer "why did a 12:20 AM order get the early bird?" from the admin, at the
+  cost of a migration.
+- **Reserving promo seats or usage during the lock** (R1). The lock freezes
+  only the date window; an early bird whose seats fill mid-form is still lost,
+  and the 409 `PRICE_CHANGED` notice says so with the new total.
+- **Saving a draft of the form.** The 409 notice's *Reload page* button
+  reloads, which clears every field the runner typed; a saved draft would let
+  them reload without starting over.
+- **Category-change and logistics-change checkouts.** They do not take or read
+  a lock: staff start them and they are priced at the moment of the change.
+- **The Oct 18–19 order itself.** Staff reconcile it in the admin; nothing in
+  the app re-prices an old order.
+
+Not walked in a browser, worth one look after release:
+
+- **A full 45 + 10 minute expiry.** Covered by `scripts/check-price-lock.ts`;
+  the browser runs shortened it with a shifted clock.
+- **A renewal that moves the total** was seen only with a rewritten
+  `/api/price-lock` response (Batch 3), not a real promotion ending mid-lock.
