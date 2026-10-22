@@ -474,6 +474,9 @@ export async function POST(request: Request) {
           // Registration.combinedPromoCode.
           combinedPromoCode: discount.applied?.combined?.code ?? null,
           combinedDiscountAmount: discount.applied?.combined?.amount ?? 0,
+          // When the lock was taken, only on an order the lock priced — the
+          // same condition as the log line below. See Registration.priceLockedAt.
+          priceLockedAt: lockedAt && discount.heldByLock ? lockedAt : null,
           paymentMethod: storedPaymentMethod,
           proofOfPayment: proofPathname,
           transactionNumber: free ? null : transactionNumber,

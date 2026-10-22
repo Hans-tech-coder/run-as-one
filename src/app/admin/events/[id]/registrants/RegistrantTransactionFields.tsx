@@ -123,6 +123,15 @@ export default function RegistrantTransactionFields({
               <span className="text-[var(--text-muted)] font-normal"> &middot; {runner.promoCode}</span>
             )}
           </span>
+          {/* The promo price lock priced this order: the promotions running
+              when the runner started the form, which may have closed before
+              they submitted. Answers "why did a 12:20 AM order get the early
+              bird?" without anyone searching logs. */}
+          {runner.priceLockedAtLabel && (
+            <span className="text-xs text-[var(--text-muted)] mt-1">
+              Promo price held from {runner.priceLockedAtLabel}
+            </span>
+          )}
         </p>
       )}
       <p className="flex flex-col"><span className="text-[var(--text-muted)]">Order Total</span> <span className="text-primary font-medium">₱{formatPesos(runner.totalAmount)}</span></p>

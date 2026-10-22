@@ -158,8 +158,16 @@ shape:
   `UNPAID_FOLLOWUP_PLAN.md` Batch 3) is when an unpaid online order stops
   holding its slot once staff have handed the runner a payment link: set once,
   24 hours from the first link and never past race day (`extendedHold`). Null
-  on every other order, which the sweep still times from `createdAt`. Owns
-  `Runner[]`.
+  on every other order, which the sweep still times from `createdAt`.
+  **`priceLockedAt`** (nullable, `PROMO_PRICE_LOCK_PLAN.md` §7, migration
+  `20261022090000_registration_price_locked_at`) is when the runner's promo
+  price lock was taken, written by both checkouts **only on an order the lock
+  priced** (`resolveDiscount`'s `heldByLock`: the promotions running at that
+  moment beat the ones running at submit). Null on every other order and on
+  every order before the column. The registrant detail prints it under the
+  discount ("Promo price held from …") and the CSV beside the promo code, so
+  an early bird on an order placed after it closed is explained without the
+  Vercel logs, which Hobby keeps only briefly. Owns `Runner[]`.
 - **Runner** — one participant on an order: `runnerNo` (their 1..n position on
   the order, and the tail of the reference they quote — see `order-ref.ts`;
   unique per registration), name, contact, gender, birthdate, `singletSize`,

@@ -11,11 +11,16 @@ the owner's choice. Start one only when the owner asks, and read its source plan
 before writing any code. When an item is picked up, give it its own plan file in
 `docs/plans/`, and delete it from this list once it has landed.
 
-**No release step is pending.** Event publishing, virtual runs (Phase A),
-category changes and delivery switches are all live (the last two since
-2026-10-21), with
-every migration through `20261018120000_logistics_change` applied
-(`docs/current-state.md`, top). Still to watch on production: the first
+**Pending for the next release: one migration.**
+`20261022090000_registration_price_locked_at` (one nullable column,
+`Registration.priceLockedAt`, the promo price lock on the order, §14; applied
+to the local-dev database only). Run `npx prisma migrate deploy` with
+`DIRECT_URL` on the production endpoint (`ep-still-pine-b3n210bs`) **before**
+promoting `dev` to `main`: the new checkouts write the column, and the old
+code ignores it, so migrating first is safe in both directions. Event
+publishing, virtual runs (Phase A), category changes and delivery switches
+are all live (the last two since 2026-10-21), with every migration through
+`20261018120000_logistics_change` applied (`docs/current-state.md`, top). Still to watch on production: the first
 online upgrade and the first online delivery switch settled by a real PayMongo
 webhook (only a signed script and the `?paid=1` return path have settled one),
 and the daily sweep expiring an unpaid upgrade or switch.
@@ -435,10 +440,6 @@ released. What it built and its decisions D1–D3 and R1–R6 are in
 
 Left out on purpose:
 
-- **A `Registration.priceLockedAt` column** (the plan's §7). Logged instead:
-  search the Vercel logs for `Price lock held: order <ref>`. A column would
-  answer "why did a 12:20 AM order get the early bird?" from the admin, at the
-  cost of a migration.
 - **Reserving promo seats or usage during the lock** (R1). The lock freezes
   only the date window; an early bird whose seats fill mid-form is still lost,
   and the 409 `PRICE_CHANGED` notice says so with the new total.

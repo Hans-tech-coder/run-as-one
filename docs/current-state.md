@@ -32,7 +32,8 @@ until it is. Where an entry below says something is "not released" or
 "production is N migrations behind", it predates this release.
 
 **Promo price lock (2026-10-22, `fb90815` `24f30b6` `39c5759` `a5ac5da` on
-`dev`, not released; no migration).** After the Oct 18–19 incident — a 5+1
+`dev`, not released; **one migration**,
+`20261022090000_registration_price_locked_at`, applied to `local-dev` only).** After the Oct 18–19 incident — a 5+1
 group filled out near midnight saw ₱6,985 (early bird + 5+1), paid it by
 GCash, submitted after 12MN and was asked for more because the early bird had
 closed — a runner now **keeps the promotions running when they started the
@@ -65,8 +66,15 @@ group size stay live, nothing is reserved; **R2** the order gets the better
 of the discount at the lock and at now; **R3** a renewal is a new lock with a
 new `lockedAt`; **R4** the server honours the token 10 minutes past the
 countdown (55 minutes); **R5** a token is bound to one event; **R6** the token
-carries a time, never a price; **§7** no `Registration.priceLockedAt` column,
-an order the lock priced is logged instead.
+carries a time, never a price; **§7** an order the lock priced records it:
+both checkouts write **`Registration.priceLockedAt`** (the lock's moment) in
+the same `create` as the order, only when `heldByLock` says the lock decided
+the discount, and keep the `Price lock held:` log line beside it. The column
+was first left out for the log alone; the owner approved it on 2026-10-22,
+because Vercel Hobby keeps runtime logs too briefly to answer a complaint
+days later. Staff see it as *Promo price held from <Manila time>* under the
+Discount in the registrant detail, and in the CSV's *Promo Price Held From*
+column; the client viewer shows no discount, so not this either.
 
 **Image compression on upload (2026-10-21, `875a1fc` on `dev`, not released).** Every image
 upload but certificate templates is shrunk in the browser before it is sent

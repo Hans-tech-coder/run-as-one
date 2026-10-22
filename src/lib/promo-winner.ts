@@ -206,9 +206,9 @@ export function bestDiscountLocked(
 /**
  * Whether the price lock is what decided the discount: `winner` is what
  * `bestDiscountLocked` chose, `now` is `bestDiscount` at now. The checkout
- * routes log the order when it is, so staff can explain an early-bird price
- * on an order placed after the early bird closed (the plan's §7: logged, not
- * stored on the order). A tie goes to now in `bestDiscountLocked`, so equal
+ * routes store `Registration.priceLockedAt` and log the order when it is, so
+ * staff can explain an early-bird price on an order placed after the early
+ * bird closed (the plan's §7). A tie goes to now in `bestDiscountLocked`, so equal
  * figures mean the lock changed nothing.
  */
 export function lockChangedDiscount(

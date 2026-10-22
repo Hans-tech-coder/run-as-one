@@ -723,7 +723,12 @@ settle." instead of claiming PayMongo settled it (`statusProvenance`, §5). A
 complimentary order **cannot** reach the *Needs Validation* queue or the bell:
 both ask for PENDING **and** bank transfer, and it is neither. (Both also take a
 paid order whose delivery switch's or upgrade's proof waits, FOR VALIDATION,
-since 2026-10-20.)
+since 2026-10-20.) **An order the promo price lock priced** (2026-10-22,
+`Registration.priceLockedAt`) prints a quiet *Promo price held from <Manila
+time>* under its Discount in the detail modal
+(`RegistrantTransactionFields.tsx`), and the CSV gains a **Promo Price Held
+From** column right after *Promo Code*, blank on every other order. The client
+viewer's runner list shows no discount, so it shows no lock either.
 **The screen was split in the same change** — it was the repository's largest
 file at 2,571 lines. `RegistrantDetailModal.tsx` is the panel (it holds no state
 of its own; every way onward calls back to a modal the table owns),

@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-46 pages · 89 API routes · 142 modules in `src/lib` · 609 files · 109,378 lines
+46 pages · 89 API routes · 142 modules in `src/lib` · 609 files · 109,402 lines
 
 ---
 
@@ -338,9 +338,9 @@ when a task touches one, split it before editing rather than after.
 | 785 | [`src/app/results/[slug]/full/FullResultsClient.tsx`](../src/app/results/[slug]/full/FullResultsClient.tsx) |
 | 736 | [`src/lib/pending-expiry.ts`](../src/lib/pending-expiry.ts) |
 | 693 | [`src/app/admin/AdminDatePicker.tsx`](../src/app/admin/AdminDatePicker.tsx) |
-| 681 | [`src/app/api/checkout/route.ts`](../src/app/api/checkout/route.ts) |
+| 684 | [`src/app/api/checkout/route.ts`](../src/app/api/checkout/route.ts) |
 | 663 | [`src/app/admin/activity/ActivityClient.tsx`](../src/app/admin/activity/ActivityClient.tsx) |
-| 623 | [`src/app/api/checkout/manual/route.ts`](../src/app/api/checkout/manual/route.ts) |
+| 626 | [`src/app/api/checkout/manual/route.ts`](../src/app/api/checkout/manual/route.ts) |
 | 614 | [`src/app/admin/feedback/FeedbackClient.tsx`](../src/app/admin/feedback/FeedbackClient.tsx) |
 | 608 | [`src/lib/email-document.ts`](../src/lib/email-document.ts) |
 | 567 | [`src/app/admin/NotificationsCenter.tsx`](../src/app/admin/NotificationsCenter.tsx) |

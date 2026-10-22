@@ -72,7 +72,7 @@ export const REGISTRANT_CSV_HEADERS = [
   'Guardian Name', 'Guardian Relationship', 'Guardian Consent At',
   'Category', 'Changed From', 'Kit Changed', 'Distance', 'Shirt Size', 'Emergency Contact', 'Emergency Phone',
   'Running Community', 'Medical Conditions', 'Home Address', 'Province', 'Logistics Method', 'Delivery Area', 'Delivery Address', 'Logistics Note',
-  'Payment Method', 'Pacer', 'Promo Code', 'Order Discount', 'Order Total', 'Status'
+  'Payment Method', 'Pacer', 'Promo Code', 'Promo Price Held From', 'Order Discount', 'Order Total', 'Status'
 ];
 
 /** "Added: Medal · Removed: Singlet" when a move changed the kit; blank otherwise. */
@@ -142,6 +142,9 @@ function registrantCsvRow(runner: any): string {
     // summing this column would double-count, and an organizer matching a
     // bank line needs the figure on whichever row they searched for.
     csvField(runner.promoCode || ''),
+    // Beside the code it explains: blank unless the promo price lock priced
+    // the order (Registration.priceLockedAt).
+    csvField(runner.priceLockedAtLabel || ''),
     csvField(runner.discountAmount ? formatPesos(runner.discountAmount) : ''),
     csvField(formatPesos(runner.totalAmount)),
     csvField(displayStatus(runner)),

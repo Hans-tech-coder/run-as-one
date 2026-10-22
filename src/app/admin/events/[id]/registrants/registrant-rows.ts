@@ -241,6 +241,11 @@ export function buildRegistrantRows({
         // the detail modal say "EARLY BIRD + 5+1 FREE" beside the whole discount.
         promoCode: [reg.promoCode, reg.combinedPromoCode].filter(Boolean).join(' + ') || null,
         discountAmount: reg.discountAmount,
+        // When the runner's promo price lock was taken, on an order the lock
+        // priced (Registration.priceLockedAt) — what explains an early-bird
+        // discount on an order placed after the early bird closed. Worded on
+        // the server in Manila time, as the guardian consent above is.
+        priceLockedAtLabel: reg.priceLockedAt ? formatEventInstant(reg.priceLockedAt) : null,
         totalAmount: reg.totalAmount
       });
     });

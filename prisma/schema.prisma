@@ -380,6 +380,15 @@ model Registration {
   /// `extendedHold` in lib/pending-expiry.ts. 8 bytes, only on the rows that
   /// use it.
   holdUntil               DateTime?
+  /// When the runner's promo price lock was taken, on an order the lock
+  /// priced (lib/price-lock.ts): the promotions running at this moment gave a
+  /// bigger discount than the ones running at submit, so the order kept them.
+  /// Null on every order priced at now, which is almost all of them.
+  ///
+  /// A column rather than only the `Price lock held:` log line, because
+  /// Vercel Hobby keeps runtime logs briefly and "why did a 12:20 AM order get
+  /// the early bird?" is asked days later. 8 bytes, only on held orders.
+  priceLockedAt           DateTime?
   paymentMethod           String    @default("online")
   checkoutSessionId       String?
   createdAt               DateTime  @default(now())
