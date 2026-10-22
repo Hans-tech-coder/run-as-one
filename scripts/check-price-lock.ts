@@ -1,6 +1,7 @@
 import { SignJWT } from 'jose';
 import { DISCOUNT_TYPES, categorySalePrices, promoCodeError, type OrderBasis, type PromoTerms } from '../src/lib/discount';
-import { bestDiscountLocked } from '../src/lib/promo-winner';
+import { bestDiscount, bestDiscountLocked, lockChangedDiscount } from '../src/lib/promo-winner';
+import { PRICE_CHANGED_MESSAGE, isPriceChanged, priceChangedBody } from '../src/lib/price-changed';
 
 /**
  * A check of the price lock (PROMO_PRICE_LOCK_PLAN.md Batch 1): that an order
@@ -8,6 +9,11 @@ import { bestDiscountLocked } from '../src/lib/promo-winner';
  * the end, that the lock never makes an order dearer, that it freezes only
  * the date window, and that the token reads back only for its own event and
  * only while it lasts.
+ *
+ * Batch 2 adds the checkout routes' glue that needs no database: a raw
+ * `priceLock` as the routes receive it (a JSON field or a form field) reading
+ * as a lock or as none, when an order counts as held by its lock and the line
+ * it logs, and the shape of the "Prices have changed" 409.
  *
  * The Oct 18–19 shape: an early bird `CATEGORY_PRICE` ending at midnight
  * Manila and a combinable 5+1, a group of six that started at 23:50 and
@@ -163,9 +169,8 @@ async function main() {
 
   // ── The token ────────────────────────────────────────────────────────────
   process.env.JWT_SECRET ??= 'check-price-lock-throwaway-secret';
-  const { createPriceLock, readPriceLock, PRICE_LOCK_MINUTES, PRICE_LOCK_GRACE_MINUTES } = await import(
-    '../src/lib/price-lock'
-  );
+  const { createPriceLock, readPriceLock, logHeldPrice, PRICE_LOCK_MINUTES, PRICE_LOCK_GRACE_MINUTES } =
+    await import('../src/lib/price-lock');
   const { SECRET_KEY } = await import('../src/lib/jwt');
 
   const lock = await createPriceLock('event-a');
@@ -215,6 +220,91 @@ async function main() {
     .setExpirationTime(seconds + 5 * 60)
     .sign(SECRET_KEY);
   check('in the grace: still a lock', (await readPriceLock(inGrace, 'event-a'))?.getTime(), (seconds - 50 * 60) * 1000);
+
+  // ── Batch 2: what the checkout routes hand readPriceLock ─────────────────
+  // The online route reads a JSON field (absent, null, or anything a caller
+  // typed); the bank-transfer route reads a form field (null, or a File if a
+  // caller attached one under that name). All of it is simply no lock.
+  check('route: absent JSON field is no lock', await readPriceLock(undefined, 'event-a'), null);
+  check('route: null is no lock', await readPriceLock(null, 'event-a'), null);
+  check('route: a number is no lock', await readPriceLock(1_760_000_000, 'event-a'), null);
+  check('route: an object is no lock', await readPriceLock({ token: lock.token }, 'event-a'), null);
+  check('route: empty string is no lock', await readPriceLock('', 'event-a'), null);
+  check(
+    'route: a file under that form name is no lock',
+    await readPriceLock(new Blob([lock.token]), 'event-a'),
+    null,
+  );
+  const form = new FormData();
+  form.set('priceLock', lock.token);
+  check(
+    'route: the form field reads back as the lock',
+    (await readPriceLock(form.get('priceLock'), 'event-a'))?.getTime(),
+    lock.lockedAt.getTime(),
+  );
+
+  // ── Batch 2: when the order is logged as held by its lock ────────────────
+  const nowOnly = at(NOW, () => bestDiscount([earlyBird(), fivePlusOne], six));
+  check('held: the 23:50 lock changed the 00:20 discount', lockChangedDiscount(held, nowOnly), true);
+  check('held: without a lock nothing changed', lockChangedDiscount(today, nowOnly), false);
+  check('held: no discount at all is not held', lockChangedDiscount(null, null), false);
+  check('held: only a lock-time discount counts as held', lockChangedDiscount(held, null), true);
+  check(
+    'held: a lock that gives the same as now changed nothing',
+    lockChangedDiscount(
+      at(NOW, () => bestDiscountLocked([fivePlusOne], six, LOCKED_AT)),
+      at(NOW, () => bestDiscount([fivePlusOne], six)),
+    ),
+    false,
+  );
+
+  const logged: string[] = [];
+  const realInfo = console.info;
+  console.info = (line: string) => logged.push(line);
+  try {
+    logHeldPrice({
+      eventId: 'event-a',
+      orderRef: 'RAO-TEST1',
+      lockedAt: new Date(LOCKED_AT),
+      lockedAmount: held?.amount ?? 0,
+      nowAmount: nowOnly?.amount ?? 0,
+    });
+  } finally {
+    console.info = realInfo;
+  }
+  check('log: one line', logged.length, 1);
+  check(
+    'log: order, event, lock time and both amounts',
+    logged[0],
+    'Price lock held: order RAO-TEST1, event event-a, locked 2026-10-18T15:50:00.000Z, ' +
+      `discount ${held?.amount} centavos (${nowOnly?.amount} without the lock).`,
+  );
+
+  // ── Batch 2: the "Prices have changed" 409 body ──────────────────────────
+  check(
+    '409: the sentence the wizards alert() is unchanged',
+    PRICE_CHANGED_MESSAGE,
+    'Prices have changed. Please reload the page and try again.',
+  );
+  check('409: before the promotions, no total', priceChangedBody({ subtotal: 720_000, deliveryFee: 15_000 }), {
+    error: PRICE_CHANGED_MESSAGE,
+    code: 'PRICE_CHANGED',
+    subtotal: 720_000,
+    deliveryFee: 15_000,
+  });
+  const full = priceChangedBody({
+    subtotal: 720_000,
+    deliveryFee: 0,
+    discount: 120_000,
+    platformFee: 30_000,
+    transactionFee: 0,
+    total: 630_000,
+  });
+  check('409: with every figure, the total', full.total, 630_000);
+  check('409: the sentence rides along', full.error, PRICE_CHANGED_MESSAGE);
+  check('409: reads as PRICE_CHANGED', isPriceChanged(full), true);
+  check('409: a plain error does not', isPriceChanged({ error: 'Registration is closed.' }), false);
+  check('409: nor does nothing', isPriceChanged(null), false);
 
   console.log(failures === 0 ? '\nAll checks passed.' : `\n${failures} check(s) failed.`);
   process.exit(failures === 0 ? 0 : 1);

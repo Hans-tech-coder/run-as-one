@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-46 pages · 89 API routes · 140 modules in `src/lib` · 604 files · 108,505 lines
+46 pages · 89 API routes · 141 modules in `src/lib` · 605 files · 108,674 lines
 
 ---
 
@@ -276,6 +276,7 @@ the file itself.
 | [`phone.ts`](../src/lib/phone.ts) | Phone numbers: the country list, and the rules for turning what a runner types into something storable. |
 | [`pickup.ts`](../src/lib/pickup.ts) | What a runner who chooses on-site pick-up is told. |
 | [`platform-fee.ts`](../src/lib/platform-fee.ts) | The **default platform fee** — what a new event's Admin Fee box starts at (SETTINGS_PLAN.md Batch 4). |
+| [`price-changed.ts`](../src/lib/price-changed.ts) | The "Prices have changed" refusal (PROMO_PRICE_LOCK_PLAN.md Batch 2): **when a checkout refuses an order because the amounts it was posted are not … |
 | [`price-lock.ts`](../src/lib/price-lock.ts) | A runner keeps the promotions running when they started the form, for 45 minutes (`PROMO_PRICE_LOCK_PLAN.md`, after an early bird closed at midnigh… |
 | [`promo-input.ts`](../src/lib/promo-input.ts) | What the marketing form is allowed to say about a promotion. |
 | [`promo-redemptions.ts`](../src/lib/promo-redemptions.ts) | What a promotion actually cost, and which orders spent it. |
@@ -336,11 +337,11 @@ when a task touches one, split it before editing rather than after.
 | 785 | [`src/app/results/[slug]/full/FullResultsClient.tsx`](../src/app/results/[slug]/full/FullResultsClient.tsx) |
 | 736 | [`src/lib/pending-expiry.ts`](../src/lib/pending-expiry.ts) |
 | 693 | [`src/app/admin/AdminDatePicker.tsx`](../src/app/admin/AdminDatePicker.tsx) |
+| 681 | [`src/app/api/checkout/route.ts`](../src/app/api/checkout/route.ts) |
 | 663 | [`src/app/admin/activity/ActivityClient.tsx`](../src/app/admin/activity/ActivityClient.tsx) |
-| 656 | [`src/app/api/checkout/route.ts`](../src/app/api/checkout/route.ts) |
+| 623 | [`src/app/api/checkout/manual/route.ts`](../src/app/api/checkout/manual/route.ts) |
 | 614 | [`src/app/admin/feedback/FeedbackClient.tsx`](../src/app/admin/feedback/FeedbackClient.tsx) |
 | 608 | [`src/lib/email-document.ts`](../src/lib/email-document.ts) |
-| 597 | [`src/app/api/checkout/manual/route.ts`](../src/app/api/checkout/manual/route.ts) |
 | 567 | [`src/app/admin/NotificationsCenter.tsx`](../src/app/admin/NotificationsCenter.tsx) |
 | 554 | [`src/lib/registration-gate.ts`](../src/lib/registration-gate.ts) |
 | 528 | [`src/app/admin/DashboardShell.tsx`](../src/app/admin/DashboardShell.tsx) |

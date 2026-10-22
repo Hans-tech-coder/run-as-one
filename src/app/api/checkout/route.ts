@@ -66,6 +66,8 @@ import {
   runnersDiscounted,
 } from '@/lib/discount';
 import { resolveDiscount } from '@/lib/promo-store';
+import { logHeldPrice, readPriceLock } from '@/lib/price-lock';
+import { priceChangedBody } from '@/lib/price-changed';
 import { discountParts } from '@/lib/promo-winner';
 import { openPaymongoPage } from '@/lib/paymongo-session';
 import { CHECKOUT_RULE, allowRequest, callerKey } from '@/lib/rate-limit';
@@ -104,7 +106,8 @@ export async function POST(request: Request) {
       paymentMethod,
       consentGiven,
       consentSignature,
-      promoCode
+      promoCode,
+      priceLock
     } = body;
 
     // The wizard already disables its submit button without this, but the
@@ -298,7 +301,8 @@ export async function POST(request: Request) {
       subtotalCents !== expectedSubtotal
     ) {
       return NextResponse.json(
-        { error: 'Prices have changed. Please reload the page and try again.' },
+        // Before the promotions are read, so no total yet (lib/price-changed.ts).
+        priceChangedBody({ subtotal: expectedSubtotal, deliveryFee: expectedDeliveryFee }),
         { status: 409 }
       );
     }
@@ -316,7 +320,12 @@ export async function POST(request: Request) {
       runnerCategories: runnerCategories(participants, event.categories),
       subtotal: expectedSubtotal,
     };
-    const discount = await resolveDiscount(event, promoCode, promoOrder);
+    // The runner's price lock, if the wizard sent one (lib/price-lock.ts). A
+    // missing, forged or expired token, or one taken on another event, reads
+    // as no lock and the order is priced at now — so a tab opened before the
+    // wizards sent one still checks out exactly as it did.
+    const lockedAt = await readPriceLock(priceLock, event.id);
+    const discount = await resolveDiscount(event, promoCode, promoOrder, lockedAt?.getTime() ?? null);
     if (discount.error) {
       return NextResponse.json({ error: discount.error }, { status: 400 });
     }
@@ -331,13 +340,6 @@ export async function POST(request: Request) {
       participants.length,
       discount.applied,
     );
-    if (platformFeeCents !== expectedPlatformFee) {
-      return NextResponse.json(
-        { error: 'Prices have changed. Please reload the page and try again.' },
-        { status: 409 }
-      );
-    }
-
     // Whether there is anything left to collect — **the server's own answer**,
     // from figures it recomputed, never from the request. A free order skips
     // PayMongo entirely, so this is the one decision a posted `amount: 0` must
@@ -359,7 +361,25 @@ export async function POST(request: Request) {
     // From the *stored* method, and only for one PayMongo actually charges a
     // fee on: the raw value would price "gcash" or "PAYMAYA" at no fee while
     // PayMongo still took its cut from the organizer.
-    //
+    const expectedTransactionFee = transactionFeeFor(chargeable, storedPaymentMethod);
+    const expectedTotal = chargeable + expectedTransactionFee;
+
+    // Every figure the server now holds, handed back with a "Prices have
+    // changed" refusal so the wizard can show the runner the real amount
+    // (lib/price-changed.ts). Worked out before the admin-fee check, all of it
+    // pure arithmetic, so that refusal can name the total too.
+    const serverFigures = {
+      subtotal: expectedSubtotal,
+      deliveryFee: expectedDeliveryFee,
+      discount: discountAmount,
+      platformFee: expectedPlatformFee,
+      transactionFee: expectedTransactionFee,
+      total: expectedTotal,
+    };
+    if (platformFeeCents !== expectedPlatformFee) {
+      return NextResponse.json(priceChangedBody(serverFigures), { status: 409 });
+    }
+
     // A bank transfer is never placed here: it goes through
     // /api/checkout/manual, which requires the deposit slip. Taken here it
     // held slots with no slip and, since bank transfers are never swept
@@ -381,13 +401,8 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    const expectedTransactionFee = transactionFeeFor(chargeable, storedPaymentMethod);
-    const expectedTotal = chargeable + expectedTransactionFee;
     if (amountCents !== expectedTotal || transactionFeeCents !== expectedTransactionFee) {
-      return NextResponse.json(
-        { error: 'Prices have changed. Please reload the page and try again.' },
-        { status: 409 }
-      );
+      return NextResponse.json(priceChangedBody(serverFigures), { status: 409 });
     }
 
     // Checked only now, and only for an order that will actually be charged:
@@ -531,6 +546,16 @@ export async function POST(request: Request) {
         include: { event: true, runners: { include: { category: true } } },
       });
     });
+
+    if (lockedAt && discount.heldByLock) {
+      logHeldPrice({
+        eventId: event.id,
+        orderRef,
+        lockedAt,
+        lockedAmount: discountAmount,
+        nowAmount: discount.heldByLock.nowAmount,
+      });
+    }
 
     // Clubs nobody has approved yet go to the Communities review queue. This is
     // the only way a row enters that queue, so the list cannot be written to

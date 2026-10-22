@@ -331,7 +331,11 @@
   the promotions' date windows back to a moment we signed ourselves, paused
   and usage stay live, and the order gets the better of that moment and now —
   so a replayed or hoarded token is worth at most 55 minutes of a promotion
-  that was really running.
+  that was really running. Both checkouts take it as an optional `priceLock`
+  and never fail on it: a bad token is the order priced at now. The
+  "Prices have changed" 409 hands back the server's own figures
+  (`lib/price-changed.ts`), which are what the runner would be charged anyway,
+  never anything the request could steer.
 - Payment proofs are **private** blobs, served only through
   `/api/admin/proof/[id]` — and a category change's through
   `/api/admin/category-changes/[id]/proof` — with a roughly five-minute signed

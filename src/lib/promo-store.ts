@@ -7,7 +7,13 @@ import {
   promoCodeError,
   promoStatus,
 } from '@/lib/discount';
-import { bestDiscountLocked, discountIncludesCode, outshoneByMessage } from '@/lib/promo-winner';
+import {
+  bestDiscount,
+  bestDiscountLocked,
+  discountIncludesCode,
+  lockChangedDiscount,
+  outshoneByMessage,
+} from '@/lib/promo-winner';
 
 /**
  * Reading promo codes out of the database, kept apart from the rule that
@@ -278,6 +284,11 @@ export interface ResolvedDiscount {
   applied: AppliedDiscount | null;
   /** The sentence to hand back with a 400, or null when the code is fine. */
   error: string | null;
+  /**
+   * Set only when the runner's price lock decided the discount: what the
+   * order would have got at now. The routes log it (`logHeldPrice`).
+   */
+  heldByLock: { nowAmount: number } | null;
 }
 
 /**
@@ -330,12 +341,16 @@ export async function resolveDiscount(
     const lockedProblem =
       problem && lockedAt !== null ? promoCodeError(typed, order, cleaned, lockedAt) : problem;
     if (problem && lockedProblem) {
-      return { promo: null, combinedPromo: null, applied: null, error: problem };
+      return { promo: null, combinedPromo: null, applied: null, error: problem, heldByLock: null };
     }
   }
 
   const winner = bestDiscountLocked([...automatic, typed], order, lockedAt);
-  if (!winner) return { promo: null, combinedPromo: null, applied: null, error: null };
+  if (!winner) {
+    return { promo: null, combinedPromo: null, applied: null, error: null, heldByLock: null };
+  }
+  // Without a lock the winner is already the discount at now.
+  const now = lockedAt === null ? winner : bestDiscount([...automatic, typed], order);
 
   // Which rows won, so the write can spend a redemption against each.
   const rowFor = (code: string | undefined) =>
@@ -348,6 +363,7 @@ export async function resolveDiscount(
     combinedPromo: rowFor(winner.combined?.code),
     applied: winner,
     error: null,
+    heldByLock: lockChangedDiscount(winner, now) ? { nowAmount: now?.amount ?? 0 } : null,
   };
 }
 

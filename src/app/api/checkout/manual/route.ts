@@ -59,6 +59,8 @@ import {
   runnersDiscounted,
 } from '@/lib/discount';
 import { resolveDiscount } from '@/lib/promo-store';
+import { logHeldPrice, readPriceLock } from '@/lib/price-lock';
+import { priceChangedBody } from '@/lib/price-changed';
 import { CHECKOUT_RULE, allowRequest, callerKey } from '@/lib/rate-limit';
 
 export async function POST(request: Request) {
@@ -110,6 +112,8 @@ export async function POST(request: Request) {
     const consentGiven = formData.get('consentGiven') === 'true';
     const consentSignature = formData.get('consentSignature') as string;
     const promoCode = formData.get('promoCode') as string;
+    // A string, or null when the wizard sent none; readPriceLock takes either.
+    const priceLock = formData.get('priceLock');
 
     const participantsStr = formData.get('participants') as string;
     const participants = JSON.parse(participantsStr || '[]');
@@ -296,7 +300,8 @@ export async function POST(request: Request) {
       subtotal !== expectedSubtotal
     ) {
       return NextResponse.json(
-        { error: 'Prices have changed. Please reload the page and try again.' },
+        // Before the promotions are read, so no total yet (lib/price-changed.ts).
+        priceChangedBody({ subtotal: expectedSubtotal, deliveryFee: expectedDeliveryFee }),
         { status: 409 }
       );
     }
@@ -314,7 +319,12 @@ export async function POST(request: Request) {
       runnerCategories: runnerCategories(participants, event.categories),
       subtotal: expectedSubtotal,
     };
-    const discount = await resolveDiscount(event, promoCode, promoOrder);
+    // The runner's price lock, if the wizard sent one (lib/price-lock.ts). A
+    // missing, forged or expired token, or one taken on another event, reads
+    // as no lock and the order is priced at now — so a tab opened before the
+    // wizards sent one still checks out exactly as it did.
+    const lockedAt = await readPriceLock(priceLock, event.id);
+    const discount = await resolveDiscount(event, promoCode, promoOrder, lockedAt?.getTime() ?? null);
     if (discount.error) {
       return NextResponse.json({ error: discount.error }, { status: 400 });
     }
@@ -329,13 +339,6 @@ export async function POST(request: Request) {
       participants.length,
       discount.applied,
     );
-    if (platformFee !== expectedPlatformFee) {
-      return NextResponse.json(
-        { error: 'Prices have changed. Please reload the page and try again.' },
-        { status: 409 }
-      );
-    }
-
     // Whether there is anything left to transfer — **the server's own answer**,
     // from figures it recomputed, never from the request. See
     // lib/free-checkout.ts.
@@ -347,6 +350,22 @@ export async function POST(request: Request) {
     });
     const free = isFreeOrder(chargeable);
 
+    // Every figure the server now holds, handed back with a "Prices have
+    // changed" refusal so the wizard can show the runner the real amount
+    // (lib/price-changed.ts). Worked out before the admin-fee check, all of it
+    // pure arithmetic, so that refusal can name the total too.
+    const serverFigures = {
+      subtotal: expectedSubtotal,
+      deliveryFee: expectedDeliveryFee,
+      discount: discountAmount,
+      platformFee: expectedPlatformFee,
+      transactionFee: 0,
+      total: chargeable,
+    };
+    if (platformFee !== expectedPlatformFee) {
+      return NextResponse.json(priceChangedBody(serverFigures), { status: 409 });
+    }
+
     // The total matters more here than on the online route: this runner has
     // already transferred the money and is uploading the slip, so the amount
     // written on the order is what an organizer will reconcile against their
@@ -355,10 +374,7 @@ export async function POST(request: Request) {
     // the total below what the goods cost (Strix vuln-0014).
     const expectedTotal = chargeable;
     if (totalAmount !== expectedTotal || transactionFee !== 0) {
-      return NextResponse.json(
-        { error: 'Prices have changed. Please reload the page and try again.' },
-        { status: 409 }
-      );
+      return NextResponse.json(priceChangedBody(serverFigures), { status: 409 });
     }
 
     // The deposit slip, required for every order there is money behind. A free
@@ -514,6 +530,16 @@ export async function POST(request: Request) {
     });
     // The order points at the slip now; nothing after this may delete it.
     unclaimedProof = null;
+
+    if (lockedAt && discount.heldByLock) {
+      logHeldPrice({
+        eventId: event.id,
+        orderRef,
+        lockedAt,
+        lockedAmount: discountAmount,
+        nowAmount: discount.heldByLock.nowAmount,
+      });
+    }
 
     // Clubs nobody has approved yet go to the Communities review queue. This is
     // the only way a row enters that queue, so the list cannot be written to

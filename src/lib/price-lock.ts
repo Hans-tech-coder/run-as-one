@@ -88,3 +88,26 @@ export async function readPriceLock(token: unknown, eventId: string): Promise<Da
     return null;
   }
 }
+
+/**
+ * One log line for an order the lock priced, written once the order exists.
+ * There is no column for the lock (the plan's §7), so this is how staff answer
+ * "why did a 12:20 AM order get the early bird?" from the Vercel logs: search
+ * the order reference. Ids, a time and centavos only — no runner's name or
+ * address goes in a log.
+ */
+export function logHeldPrice(entry: {
+  eventId: string;
+  orderRef: string;
+  lockedAt: Date;
+  /** The discount the order got, under the lock. */
+  lockedAmount: number;
+  /** What it would have got at now. */
+  nowAmount: number;
+}): void {
+  console.info(
+    `Price lock held: order ${entry.orderRef}, event ${entry.eventId}, ` +
+      `locked ${entry.lockedAt.toISOString()}, discount ${entry.lockedAmount} centavos ` +
+      `(${entry.nowAmount} without the lock).`,
+  );
+}
