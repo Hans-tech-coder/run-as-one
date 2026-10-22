@@ -63,7 +63,9 @@ export function PriceCountdownLine({
             )}
             {/* The time never breaks from its dot: "· 04:12" alone on a line
                 still reads as the clock. */}
+            {/* The server renders this a second before the browser does. */}
             <span
+              suppressHydrationWarning
               className={`whitespace-nowrap font-semibold tabular-nums ${countdown.urgent ? "text-amber-300" : "text-white"}`}
             >
               {countdown.held && "· "}

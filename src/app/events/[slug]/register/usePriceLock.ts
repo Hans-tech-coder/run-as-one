@@ -225,8 +225,12 @@ export function usePriceHold({
       // The end gets its own timer rather than the next tick: a renewal can
       // land between two ticks, take the countdown away, and leave the end
       // unannounced.
+      // One past the deadline: a promotion's last millisecond is still its own
+      // (promoStatus: until < at), so a clock landing on it exactly hides the
+      // countdown but leaves the cards on the sale price, with nothing left
+      // to move the clock again.
       const end = setTimeout(() => {
-        setNow(Date.now());
+        setNow(Math.max(Date.now(), deadline + 1));
         setAnnouncement(
           held ? `The ${name} price is no longer held.` : `${name} has ended.`,
         );
