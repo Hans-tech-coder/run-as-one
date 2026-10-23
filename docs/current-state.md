@@ -23,7 +23,7 @@ its two optional hardening notes (no certificate template on a virtual run;
 no results-only virtual event) are fixed on `dev` in `ca78e7d`, not released.
 
 **Past events on `/events` (2026-10-23, `PAST_EVENTS_PLAN.md` Phase 1 + 1b
-committed on `dev` in `f265233` and `f60b7c9`; Phase 2 uncommitted on `dev`;
+committed on `dev` in `f265233` and `f60b7c9`; Phase 2 in `406c09c`;
 none of it released).** A finished race with no times — an
 untimed fun run, a virtual run, a race whose times are not up — used to appear
 nowhere public. `/events` now has two tabs, **Upcoming** and **Past**
