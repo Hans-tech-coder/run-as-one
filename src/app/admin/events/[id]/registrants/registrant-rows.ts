@@ -208,9 +208,9 @@ export function buildRegistrantRows({
         // registration made before it was asked for, which the detail modal
         // says rather than leaving a blank line.
         consentSignature: reg.consentSignature,
-        // The payment validator's own notes on this order. Internal, so they
-        // ride the row but never the CSV export the organizer hands out and
-        // never an email. Carried on every runner of a group because the note
+        // The payment validator's own notes on this order. Internal, so never
+        // an email; the CSV export carries them as Payment Remarks (since
+        // 2026-10-23). Carried on every runner of a group because the note
         // is about the order all of them are on.
         remarks: reg.remarks,
         remarksBy: reg.remarksBy,

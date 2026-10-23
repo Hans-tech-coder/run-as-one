@@ -9,7 +9,7 @@
  */
 
 import type { ClientRunnerRow } from '@/lib/client-runners';
-import { csvField, csvPhone, downloadCsv } from '../../events/[id]/registrants/registrant-csv';
+import { csvField, csvPhone, downloadCsv, fileSlug } from '../../events/[id]/registrants/registrant-csv';
 import { kitSummary } from '../../events/[id]/registrants/category-change-display';
 import { kitNote } from './RunnerCells';
 
@@ -48,6 +48,5 @@ export function buildRunnerCsv(rows: ClientRunnerRow[]): string {
 
 /** Named after the race, so a client with several races can tell the files apart. */
 export function downloadRunnerCsv(csv: string, raceTitle: string): void {
-  const slug = raceTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'race';
-  downloadCsv(csv, `runners_${slug}.csv`);
+  downloadCsv(csv, `runners_${fileSlug(raceTitle, 'race')}.csv`);
 }

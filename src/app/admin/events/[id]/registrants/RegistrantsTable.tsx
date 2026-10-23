@@ -77,6 +77,8 @@ export type RegistrantPermissions = {
 
 interface RegistrantsTableProps {
   eventId: string;
+  /** The event's title, which names the CSV export's file. */
+  eventTitle: string;
   /**
    * The race day (`Event.date`, YYYY-MM-DD). A runner's age is counted on it,
    * so the edit modal can tell staff when a corrected birthdate makes someone
@@ -108,6 +110,7 @@ export type RegistrantRow = RegistrantsTableProps['runners'][number];
 
 export default function RegistrantsTable({
   eventId,
+  eventTitle,
   raceDay,
   runners: initialRunners,
   initialSearch = '',
@@ -355,7 +358,7 @@ export default function RegistrantsTable({
       keepalive: true,
     }).catch(() => {});
 
-    downloadRegistrantCsv(buildRegistrantCsv(rowsToExport.map(r => r.original)), eventId);
+    downloadRegistrantCsv(buildRegistrantCsv(rowsToExport.map(r => r.original)), eventTitle);
   };
 
   return (

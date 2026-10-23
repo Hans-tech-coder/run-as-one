@@ -231,6 +231,7 @@ export default async function RegistrantsPage({
             <RegistrantsTable
               runners={runners}
               eventId={id}
+              eventTitle={event.title}
               raceDay={event.date}
               initialSearch={search ?? ''}
               permissions={permissions}
@@ -242,6 +243,7 @@ export default async function RegistrantsPage({
               orders={unpaidCheckouts}
               eventId={id}
               eventSlug={event.slug}
+              eventTitle={event.title}
               canValidate={permissions.validate}
               canEmail={permissions.email}
             />

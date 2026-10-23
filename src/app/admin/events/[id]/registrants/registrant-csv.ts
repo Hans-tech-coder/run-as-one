@@ -72,7 +72,8 @@ export const REGISTRANT_CSV_HEADERS = [
   'Guardian Name', 'Guardian Relationship', 'Guardian Consent At',
   'Category', 'Changed From', 'Kit Changed', 'Distance', 'Shirt Size', 'Emergency Contact', 'Emergency Phone',
   'Running Community', 'Medical Conditions', 'Home Address', 'Province', 'Logistics Method', 'Delivery Area', 'Delivery Address', 'Logistics Note',
-  'Payment Method', 'Pacer', 'Promo Code', 'Promo Price Held From', 'Order Discount', 'Order Total', 'Status'
+  'Payment Method', 'Pacer', 'Promo Code', 'Promo Price Held From', 'Order Discount', 'Order Total', 'Status',
+  'Payment Remarks',
 ];
 
 /** "Added: Medal · Removed: Singlet" when a move changed the kit; blank otherwise. */
@@ -148,6 +149,11 @@ function registrantCsvRow(runner: any): string {
     csvField(runner.discountAmount ? formatPesos(runner.discountAmount) : ''),
     csvField(formatPesos(runner.totalAmount)),
     csvField(displayStatus(runner)),
+    // The payment validator's notes on the order, beside the Status they
+    // explain; on every runner of a group, like the money. In the file since
+    // the owner asked for it (2026-10-23) — before then they stayed on screen
+    // only, so a sheet handed onward now carries them too.
+    csvField(runner.remarks || ''),
   ].join(',');
 }
 
@@ -194,14 +200,26 @@ export function buildUnpaidCheckoutCsv(orders: UnpaidCheckout[]): string {
   ].join('\r\n');
 }
 
-/** Hands the built file to the browser as a download. */
-export function downloadRegistrantCsv(csv: string, eventId: string): void {
-  downloadCsv(csv, `registrants_event_${eventId}.csv`);
+/**
+ * Hands the built file to the browser as a download, named after the event
+ * (`registrants_<title>.csv`) so an organizer with several races in their
+ * Downloads folder can tell the files apart without opening them.
+ */
+export function downloadRegistrantCsv(csv: string, eventTitle: string): void {
+  downloadCsv(csv, `registrants_${fileSlug(eventTitle, 'event')}.csv`);
 }
 
-/** The Unpaid checkouts file, named apart so the two are never confused. */
-export function downloadUnpaidCheckoutCsv(csv: string, eventId: string): void {
-  downloadCsv(csv, `unpaid_checkouts_event_${eventId}.csv`);
+/**
+ * The Unpaid checkouts file, named apart so the two are never confused, and
+ * after the event the same way (`unpaid_checkouts_<title>.csv`).
+ */
+export function downloadUnpaidCheckoutCsv(csv: string, eventTitle: string): void {
+  downloadCsv(csv, `unpaid_checkouts_${fileSlug(eventTitle, 'event')}.csv`);
+}
+
+/** A title as a filename: lowercase words joined by `-`, `fallback` if nothing is left. */
+export function fileSlug(title: string, fallback: string): string {
+  return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || fallback;
 }
 
 export function downloadCsv(csv: string, filename: string): void {

@@ -122,12 +122,15 @@ export default function UnpaidCheckoutsList({
   orders,
   eventId,
   eventSlug,
+  eventTitle,
   canValidate,
   canEmail,
 }: {
   orders: UnpaidCheckout[];
   eventId: string;
   eventSlug: string;
+  /** The event's title, which names the CSV export's file. */
+  eventTitle: string;
   /**
    * `registration:validate`: both a payment check that finds the money and a
    * cancel settle the order's status.
@@ -274,7 +277,7 @@ export default function UnpaidCheckoutsList({
       body: JSON.stringify({ count: rowsToExport.length, selected: selectedRows.length > 0, list: 'unpaid' }),
       keepalive: true,
     }).catch(() => {});
-    downloadUnpaidCheckoutCsv(buildUnpaidCheckoutCsv(rowsToExport.map(r => r.original)), eventId);
+    downloadUnpaidCheckoutCsv(buildUnpaidCheckoutCsv(rowsToExport.map(r => r.original)), eventTitle);
   };
 
   // The marked orders, read from the marks themselves (keyed by order id)
