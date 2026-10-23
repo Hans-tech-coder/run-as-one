@@ -11,22 +11,10 @@ the owner's choice. Start one only when the owner asks, and read its source plan
 before writing any code. When an item is picked up, give it its own plan file in
 `docs/plans/`, and delete it from this list once it has landed.
 
-**Pending for the next release: two migrations, in one deploy.**
-`20261023025133_past_event_photos_timing` adds `timedResults` (the timing
-override; null follows the event's kind) and a single `photosUrl`, and
-`20261023031425_past_event_photo_albums` replaces that link with
-`photoAlbums` (a JSON list, default `[]`), carrying any value over — for the
-Past Events tab (`PAST_EVENTS_PLAN.md` D7, `docs/current-state.md`). Applied
-to the local-dev database 2026-10-23; no backfill. `migrate deploy` runs both.
-Run `npx prisma migrate deploy` with `DIRECT_URL` on the production endpoint
-**before** the new code goes live: the new code selects both columns, the old
-code ignores them, so migrating first is safe in both directions. Rollback is
-dropping `timedResults` and `photoAlbums`.
-
-Every migration before it, through
-`20261022090000_registration_price_locked_at`, is applied in production
-(2026-10-22). Event publishing, virtual runs (Phase A), category changes,
-delivery switches and the promo price lock are all live
+**No migration pending.** Every migration through
+`20261023031425_past_event_photo_albums` is applied in production
+(2026-10-23). Event publishing, virtual runs (Phase A), category changes,
+delivery switches, the promo price lock and the Past Events tab are all live
 (`docs/current-state.md`, top). Still to watch on production: the first
 online upgrade and the first online delivery switch settled by a real PayMongo
 webhook (only a signed script and the `?paid=1` return path have settled one),

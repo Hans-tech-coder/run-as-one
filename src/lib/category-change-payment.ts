@@ -92,8 +92,8 @@ const REFUSALS: Record<Exclude<ChangePayableState, 'payable'>, string> = {
   expired: 'has expired: its held seat was released. Open a new change if the runner still wants to move.',
 };
 
-/** The link for a change and when it stops working, made from the change itself. */
-async function linkFor(change: ChangeForPayment, requestUrl: string) {
+/** The link for a change and when it stops working, made from the change itself; also read by the track page (lib/track.ts). */
+export async function changeLinkFor(change: ChangeForPayment, requestUrl: string) {
   // The link lives as long as the seat is held. A GCash or bank change's
   // outlives its hold, up to the deadline, as a switch's does: once the proof
   // is in the hold no longer closes it (`changeHeldUntil`), and the runner may
@@ -130,7 +130,7 @@ export async function issueChangePaymentLink(
 
   const state = payableStateOf(change);
   if (state !== 'payable') return { ok: false, status: 409, error: `${change.changeRef} ${REFUSALS[state]}` };
-  return { ok: true, change, ...(await linkFor(change, requestUrl)) };
+  return { ok: true, change, ...(await changeLinkFor(change, requestUrl)) };
 }
 
 /**
@@ -139,7 +139,7 @@ export async function issueChangePaymentLink(
  * (`category-change-runner.ts`).
  */
 export async function renderCreatedEmail(change: ChangeForPayment, requestUrl: string) {
-  return categoryChangeCreatedEmail(change, (await linkFor(change, requestUrl)).url);
+  return categoryChangeCreatedEmail(change, (await changeLinkFor(change, requestUrl)).url);
 }
 
 /**

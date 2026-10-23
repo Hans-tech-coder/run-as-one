@@ -33,6 +33,7 @@ const columns = (contactEmail: string): FooterColumn[] => [
       { label: 'Home', href: '/' },
       { label: 'Browse Events', href: '/events' },
       { label: 'Race Results', href: '/results' },
+      { label: 'Track My Registration', href: '/track' },
     ],
   },
   {

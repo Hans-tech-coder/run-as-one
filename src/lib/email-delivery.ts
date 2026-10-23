@@ -155,18 +155,20 @@ async function recordOutcome(
  * Called by both checkout routes at the moment the registration row is
  * created — see the note at the top of email.ts on why this email exists.
  */
-export async function deliverReceivedEmail(registration: RegistrationWithDetails): Promise<void> {
+export async function deliverReceivedEmail(registration: RegistrationWithDetails): Promise<EmailOutcome> {
   const outcome = await sendRegistrationReceivedEmail(registration);
   await recordOutcome(registration.id, EMAIL_KINDS.RECEIVED, outcome);
+  return outcome;
 }
 
 /**
  * Send the receipt and write down whether it went out. Called on the
  * transition into PAID, from the PayMongo webhook or the admin status route.
  */
-export async function deliverConfirmationEmail(registration: RegistrationWithDetails): Promise<void> {
+export async function deliverConfirmationEmail(registration: RegistrationWithDetails): Promise<EmailOutcome> {
   const outcome = await sendRegistrationConfirmationEmail(registration);
   await recordOutcome(registration.id, EMAIL_KINDS.CONFIRMATION, outcome);
+  return outcome;
 }
 
 /**

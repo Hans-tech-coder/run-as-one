@@ -12,6 +12,31 @@
   A token for the retired super admin, or an OWNER token for any Organizer
   row but Run As One's, does not verify (`jwt.ts`) and goes to sign-in. `/superadmin/**` never reaches the proxy — it is
   a permanent redirect in `next.config.ts`, which runs first.
+- **Track My Registration is public and shows only what is safe in a
+  stranger's hands** (`TRACK_PAGE_PLAN.md` §4, §5; `/track`, `api/track`,
+  `lib/track*.ts`). A reference + email (D1), POSTed, never in a URL. **The
+  group rule**: order ref + the contact's email → the whole order; order ref +
+  a runner's email → only the runner(s) with that email; runner ref `-N` +
+  that runner's or the contact's email → only runner N; anything else is one
+  identical "not found". **Masking happens on the server** from a whitelisted
+  Prisma `select` (like `client-runners.ts`): email `ju•••@gmail.com`, phone
+  `0917•••4567`, address city + province only (D9), birthdate month + year
+  (D10), emergency phone `•••4567`, medical "Declared" / "None declared";
+  payment proof, amounts paid, transaction numbers and staff remarks are never
+  read. The full values never reach the JSON, the HTML or the bundle. The
+  throttle (`TRACK_LOOKUP_RULE` per address, `TRACK_REF_RULE` per reference)
+  is per-instance memory, so it slows one script, not a distributed one: the
+  masking is what makes a leaked reference safe, not the throttle. The emailed
+  `/track/<token>` link is a stateless `purpose: 'track'` JWT (a whole order;
+  a `runners` claim narrows a lookup's own short-lived token to the runners it
+  proved), refused by every other token reader and re-checked against the
+  order on every open. *Resend* mails only the order's contact, proved by that
+  token, and is throttled per order to spare Resend's 100-a-day free tier.
+  `noindex` and `no-store` throughout. An order is shown only on its race's
+  own site (a client's race on the client's subdomain); asked elsewhere, the
+  answer is a link there, and only after the reference and email matched, so
+  it tells a stranger nothing a "not found" would not. The host stays a lens:
+  it decides where an order is drawn, never whether the pair may see it.
 - **Client subdomains are a lens, never a permission** (`CLIENT_SUBDOMAIN_PLAN.md`).
   The proxy's matcher now covers every page, but only `/admin/**` reaches the
   session check, which is unchanged (`toSignIn`'s `?next=` included); a public

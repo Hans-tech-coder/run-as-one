@@ -11,7 +11,7 @@ import type { SiteClient } from '@/lib/site-client';
 /**
  * On a client's site (`site` set, CLIENT_SUBDOMAIN_PLAN.md D2) the logo is the
  * client's and links to `/events`, which is that site's front page; the links
- * are the same two.
+ * are the same three.
  */
 export default function Navbar({ site }: { site: SiteClient | null }) {
   const pathname = usePathname();
@@ -24,7 +24,11 @@ export default function Navbar({ site }: { site: SiteClient | null }) {
 
   const links = [
     { href: "/events", label: "Events" },
-    { href: "/results", label: "Results" }
+    { href: "/results", label: "Results" },
+    // TRACK_PAGE_PLAN.md D8: "am I paid?" answered without messaging staff.
+    // One word beside Events and Results (the owner, 2026-10-23); the page's
+    // own heading and the Footer say "Track My Registration" in full.
+    { href: "/track", label: "Track" }
   ];
 
   // Below md the links have nowhere to sit in a 70px pill, so they move into a

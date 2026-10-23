@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-46 pages · 89 API routes · 144 modules in `src/lib` · 619 files · 110,843 lines
+48 pages · 91 API routes · 149 modules in `src/lib` · 633 files · 112,562 lines
 
 ---
 
@@ -69,6 +69,8 @@ The route, the server component behind it, and the client components beside it.
 | `/results/[slug]/[bib]` | [`/results/[slug]/[bib]/page.tsx`](../src/app/results/[slug]/[bib]/page.tsx) | `ECertificateGenerator.tsx` |
 | `/results/[slug]/full` | [`/results/[slug]/full/page.tsx`](../src/app/results/[slug]/full/page.tsx) | `FullResultsClient.tsx` |
 | `/terms` | [`/terms/page.tsx`](../src/app/terms/page.tsx) | — |
+| `/track` | [`/track/page.tsx`](../src/app/track/page.tsx) | `TrackHelpCard.tsx` `TrackLookup.tsx` `TrackResult.tsx` `TrackRunnerCard.tsx` `TrackStatusCard.tsx` |
+| `/track/[token]` | [`/track/[token]/page.tsx`](../src/app/track/[token]/page.tsx) | — |
 
 ---
 
@@ -163,6 +165,8 @@ The route, the server component behind it, and the client components beside it.
 | `/api/pay/[token]` | POST | [`/pay/[token]/route.ts`](../src/app/api/pay/[token]/route.ts) |
 | `/api/price-lock` | POST | [`/price-lock/route.ts`](../src/app/api/price-lock/route.ts) |
 | `/api/promos/lookup` | POST | [`/promos/lookup/route.ts`](../src/app/api/promos/lookup/route.ts) |
+| `/api/track` | POST | [`/track/route.ts`](../src/app/api/track/route.ts) |
+| `/api/track/resend` | POST | [`/track/resend/route.ts`](../src/app/api/track/resend/route.ts) |
 | `/api/upload` | POST | [`/upload/route.ts`](../src/app/api/upload/route.ts) |
 | `/api/webhooks/paymongo` | POST | [`/webhooks/paymongo/route.ts`](../src/app/api/webhooks/paymongo/route.ts) |
 
@@ -316,6 +320,11 @@ the file itself.
 | [`team.ts`](../src/lib/team.ts) | The rules of an organizer's team: what state a member is in, and what makes an invitation or a change of access valid. |
 | [`text-case.ts`](../src/lib/text-case.ts) | Registrant text is stored UPPERCASE. |
 | [`totp.ts`](../src/lib/totp.ts) | The 6-digit code from an authenticator app (RFC 6238 TOTP, RFC 4226 HOTP), written on Node's crypto rather than a package (TWO_FACTOR_PLAN.md D8). |
+| [`track-input.ts`](../src/lib/track-input.ts) | **What Track My Registration accepts as a lookup** (TRACK_PAGE_PLAN.md D1): a reference and an email, read the same way by the form and by `/api/tr… |
+| [`track-link.ts`](../src/lib/track-link.ts) | The Track My Registration link (`/track/<token>`, TRACK_PAGE_PLAN.md D8): the one in both registration emails, so a runner sees their status withou… |
+| [`track-mask.ts`](../src/lib/track-mask.ts) | **How Track My Registration shows a detail without handing it over** (TRACK_PAGE_PLAN.md §5, D9, D10). |
+| [`track-status.ts`](../src/lib/track-status.ts) | **Where a tracked order stands, and what is still owed on it** (TRACK_PAGE_PLAN.md §3): the status card's facts for Track My Registration, split ou… |
+| [`track.ts`](../src/lib/track.ts) | **Who may see which registration on Track My Registration, and what of it** (TRACK_PAGE_PLAN.md §4, §5). |
 | [`two-factor-pending.ts`](../src/lib/two-factor-pending.ts) | The sign-in that waits for its second step (`TWO_FACTOR_PLAN.md` Batch 3). |
 | [`two-factor.ts`](../src/lib/two-factor.ts) | Who has two-step sign-in on, and how a second-step code is checked (TWO_FACTOR_PLAN.md). |
 | [`uploads.ts`](../src/lib/uploads.ts) | What the app accepts from a file picker — the one list both sides read. |
@@ -348,7 +357,7 @@ when a task touches one, split it before editing rather than after.
 | 567 | [`src/app/admin/NotificationsCenter.tsx`](../src/app/admin/NotificationsCenter.tsx) |
 | 554 | [`src/lib/registration-gate.ts`](../src/lib/registration-gate.ts) |
 | 528 | [`src/app/admin/DashboardShell.tsx`](../src/app/admin/DashboardShell.tsx) |
-| 512 | [`src/lib/email.ts`](../src/lib/email.ts) |
+| 519 | [`src/lib/email.ts`](../src/lib/email.ts) |
 | 512 | [`src/lib/promo-input.ts`](../src/lib/promo-input.ts) |
 | 509 | [`src/app/admin/communities/CommunitiesClient.tsx`](../src/app/admin/communities/CommunitiesClient.tsx) |
 | 499 | [`src/app/admin/AdminRouteLoading.tsx`](../src/app/admin/AdminRouteLoading.tsx) |

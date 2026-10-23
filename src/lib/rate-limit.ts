@@ -157,6 +157,40 @@ export const PASSWORD_RESET_RULE: RateLimitRule = { limit: 5, windowMs: 10 * 60_
 export const TWO_FACTOR_RULE: RateLimitRule = { limit: 5, windowMs: 5 * 60_000 };
 
 /**
+ * Track My Registration's lookup (`/api/track`, and opening a `/track/<token>`
+ * link): 10 a minute from one address.
+ *
+ * A runner types their reference and email once, maybe twice after a typo; a
+ * family checking three orders from one phone is at three. What this stops is
+ * one machine walking references or emails. Like every rule here it is one
+ * instance's memory (TRACK_PAGE_PLAN.md §5), which is why the page shows only
+ * what is safe in a stranger's hands, not why it is safe.
+ */
+export const TRACK_LOOKUP_RULE: RateLimitRule = { limit: 10, windowMs: 60_000 };
+
+/**
+ * The same lookup counted per reference: 10 every 10 minutes, from anywhere.
+ *
+ * A reference leaks through a screenshot far more easily than an email does,
+ * and someone holding one could try email after email from many addresses.
+ * Keyed on the reference as typed, whether or not it exists, so a refusal says
+ * nothing about whether there is an order behind it. Its cost is that a
+ * stranger can make a known reference wait ten minutes, which loses its
+ * runner nothing.
+ */
+export const TRACK_REF_RULE: RateLimitRule = { limit: 10, windowMs: 10 * 60_000 };
+
+/**
+ * *Resend my confirmation email* on the track page: 2 an hour per order.
+ *
+ * Every send spends one of Resend's 100 free recipients a day, which runner
+ * confirmations share (TRACK_PAGE_PLAN.md §5). A runner who lost the email
+ * asks once, and once more if the first went to spam; past that the answer is
+ * the contact channels on the same page, not a third copy.
+ */
+export const TRACK_RESEND_RULE: RateLimitRule = { limit: 2, windowMs: 60 * 60_000 };
+
+/**
  * How many callers we will remember at once.
  *
  * A map keyed by address grows with every new address, and a serverless

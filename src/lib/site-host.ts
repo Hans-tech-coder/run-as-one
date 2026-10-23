@@ -144,6 +144,23 @@ export function siteLabelOf(client: SiteClientRef | null | undefined): string | 
 }
 
 /**
+ * The URL a route handler was called on, read as the proxy reads a page's
+ * (`publicUrl` in src/proxy.ts): from the `Host` header rather than
+ * `request.url`, which the dev server reports as `localhost:3000` whatever the
+ * host, and because the proxy does not run for `/api`, so a route reads its
+ * own. A lens like every host here, never a permission (`api/track` reads it
+ * to send a lookup to its race's own site).
+ */
+export function requestPublicUrl(request: Request): URL {
+  const url = new URL(request.url);
+  const host = request.headers.get('host');
+  if (host) url.host = host;
+  const proto = request.headers.get('x-forwarded-proto')?.split(',')[0].trim();
+  if (proto === 'http' || proto === 'https') url.protocol = `${proto}:`;
+  return url;
+}
+
+/**
  * Where an event's pages belong: its client's site when the client has one,
  * otherwise the main site.
  */

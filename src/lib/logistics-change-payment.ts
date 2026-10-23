@@ -145,8 +145,8 @@ const REFUSALS: Record<Exclude<ChangePayableState, 'payable'>, string> = {
   expired: 'has expired, or switching has closed for this race. Open a new switch if the runner still wants delivery.',
 };
 
-/** The link for a switch and when it stops working, made from the switch itself. */
-async function linkFor(change: SwitchForPayment, requestUrl: string) {
+/** The link for a switch and when it stops working, made from the switch itself; also read by the track page (lib/track.ts). */
+export async function switchLinkFor(change: SwitchForPayment, requestUrl: string) {
   const until = change.holdUntil ?? new Date();
   // A GCash or bank switch's link outlives its hold, up to the deadline: once
   // the proof is in, the hold no longer closes it (T6), and the runner may
@@ -175,7 +175,7 @@ export async function issueSwitchPaymentLink(changeId: string, actor: Actor, req
 
   const state = switchPayableStateOf(change);
   if (state !== 'payable') return { ok: false, status: 409, error: `${change.changeRef} ${REFUSALS[state]}` };
-  return { ok: true, change, ...(await linkFor(change, requestUrl)) };
+  return { ok: true, change, ...(await switchLinkFor(change, requestUrl)) };
 }
 
 function emailFields(change: SwitchForPayment): SwitchForEmail {
@@ -200,7 +200,7 @@ export type SwitchEmailKind = 'created' | 'applied';
  */
 export async function renderSwitchEmail(change: SwitchForPayment, kind: SwitchEmailKind, requestUrl: string | null) {
   if (kind === 'applied') return logisticsChangeAppliedEmail(emailFields(change));
-  const url = requestUrl ? (await linkFor(change, requestUrl)).url : null;
+  const url = requestUrl ? (await switchLinkFor(change, requestUrl)).url : null;
   return logisticsChangeCreatedEmail(emailFields(change), url);
 }
 

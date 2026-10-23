@@ -3,34 +3,72 @@
 
 ## 10. Current state
 
-**Production is current as of 2026-10-22.** `main` equals `dev` at
-`6757bcb`: everything below is live, including the promo price lock, the
-structured "Prices have changed" refusal, browser-side image compression, and
-no results or e-certificates for virtual runs. Every migration in
+**Production is current as of 2026-10-23.** `main` equals `dev` at
+`918c567`: everything below is live, including the Past Events tab and its
+entry points, photo albums and the timing override, the CSV exports named
+after the event with Payment Remarks, and no results-only virtual run or
+certificate on a virtual run (`ca78e7d`). Every migration in
 `prisma/migrations` is applied in production, through
-`20261022090000_registration_price_locked_at`. The previous release was at
-`a1b05df`. Which Neon branch each environment uses: runasone.ph runs on
-`production` (`ep-still-pine-…`); localhost and git `dev`'s Vercel Preview run
-on `local-dev` (`ep-shiny-sunset-…`).
-Pre-deploy QA passed on 2026-10-22 on `local-dev`, every email to the owner
-only: QR Ph RM-5C10E91F (₱1,166.50, reached the PayMongo test checkout, left
-PENDING) and bank transfer RM-58218FCC (₱939, slip compressed PNG → JPG, the
-received email delivered), with the price lock taken at the first keystroke and
-sent with each order; the empty-form check; and the register page at 375px.
-The code review's four price-lock findings were fixed in `6757bcb` (see the
-entry below). Strix `run-as-one-scan_07a0` (diff scan, $5.23) found nothing;
-its two optional hardening notes (no certificate template on a virtual run;
-no results-only virtual event) are fixed on `dev` in `ca78e7d`, not released.
+`20261023031425_past_event_photo_albums` (checked on the `production` branch
+after the deploy: `photoAlbums` and `timedResults` present, `photosUrl` gone).
+The previous release was at `6757bcb` (2026-10-22). Which Neon branch each
+environment uses: runasone.ph runs on `production` (`ep-still-pine-…`);
+localhost and git `dev`'s Vercel Preview run on `local-dev`
+(`ep-shiny-sunset-…`).
+Pre-deploy QA passed on 2026-10-23 on `local-dev`, every email to the owner
+only: QR Ph RM-A2504098 (₱1,166.50, reached the PayMongo test checkout, left
+PENDING) and bank transfer RM-EE2CC449 (₱939, generated test receipt,
+PENDING); the Past tab, tab swap and back button, a finished race's panel, the
+home strip, the `/results` line and the Our Services link, and the Past tab at
+375px. Strix `run-as-one-scan_91bb` (diff scan, $5.98) found nothing. Left for
+later, none blocking: `/events` reads every past race on each request though
+it shows 12 at a time; the main event save still passes `certificateTemplate`
+and `certificateCoordinates` through without the certificate route's checks
+(Strix's note, older than this release); over-limit album errors point at row
+6; `RacePhotoLinks` uses a fixed heading id.
+
+**Track My Registration (2026-10-23, `TRACK_PAGE_PLAN.md`; built on `dev`,
+not committed).** Registrants kept messaging staff to ask whether they were
+paid, whether their bank transfer was validated and whether their details were
+right. `/track` answers all three from data the app already stores: **no
+schema change, no migration, no new staff work**. A reference + email form
+(POSTed to `api/track`), the emailed `/track/<token>` link in both
+registration emails, Navbar and Footer links, a status card by state with
+*Complete Payment* inside the hold, the masked submitted details, pickup or
+delivery info with the proxy rule, results links after race day, a help card
+(email with a reference subject, Facebook + Copy Reference, Send feedback) and
+a throttled *Resend My Confirmation Email*. See §6 `/track`, §7, and §5
+`track.ts`. Verified on localhost against `local-dev`: a solo order, a group
+order in each §4 case, bank transfer PENDING and PAID, online PENDING with its
+pay link, a wrong email, a bad token, and 360px; the one Resend sent went to
+the owner only. **Decisions** (recorded here because the plan is deleted once
+this lands): **D1** reference + email; **D5** *Complete Payment* on an unpaid
+online order within the hold; **D7** proxy claiming with an authorization
+letter + a copy of the runner's valid ID with signature, shown as text (a
+prefilled letter PDF is a later nice-to-have); **D8** `/track`, linked from
+the Navbar, the Footer and both registration emails; **D9** an address shows
+city + province only; **D10** a birthdate shows month + year only; **scope**
+status + submitted details only. Kit claimed / shipped / delivered tracking
+(D2, D3, D4, D6) was dropped because it needs staff to mark every order by
+hand; it could layer on later when the owner asks. Registration concerns go to
+email or Facebook, not `/feedback`. **Each order is tracked on its race's own
+site** (the owner, 2026-10-23): a CRC order on crc.runasone.ph, every other on
+runasone.ph. A lookup on the wrong site points to the right one, `/track/<token>`
+moves there, and the emailed link is built on the race's site. The Navbar
+item reads *Track* (one word, the owner's call). Known limits: the throttle is
+per instance; the emailed link rests on `SITE_URL`, so a link in an email sent
+from localhost points at runasone.ph (or the client's subdomain of it) unless
+`NEXT_PUBLIC_SITE_URL` is set.
 
 **Past events on `/events` (2026-10-23, `PAST_EVENTS_PLAN.md` Phase 1 + 1b
-committed on `dev` in `f265233` and `f60b7c9`; Phase 2 in `406c09c`;
-none of it released).** A finished race with no times — an
+in `f265233` and `f60b7c9`, Phase 2 in `406c09c`; released 2026-10-23 at
+`918c567`).** A finished race with no times — an
 untimed fun run, a virtual run, a race whose times are not up — used to appear
 nowhere public. `/events` now has two tabs, **Upcoming** and **Past**
 (`?view=past`), and staff set a photo album and a timing override on the edit
 page. Migrations `20261023025133_past_event_photos_timing` and
-`20261023031425_past_event_photo_albums` (applied to local-dev; pending for
-production in `ON_HOLD.md`). **Phase 2** (§3 of the plan) adds three ways
+`20261023031425_past_event_photo_albums` (applied to local-dev and, on
+2026-10-23, to production). **Phase 2** (§3 of the plan) adds three ways
 into the Past tab, each shown only when it would have something to show: a
 *Recently Held* strip of the last 3 past cards under the home page's upcoming
 browser, a quiet *Looking for a race without timed results? See past events*

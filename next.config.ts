@@ -96,6 +96,22 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  /**
+   * Track My Registration (TRACK_PAGE_PLAN.md §5): the page and the emailed
+   * link draw somebody's registration, so no browser, proxy or CDN may keep a
+   * copy, and no search engine may list one. The route handlers under
+   * /api/track set `no-store` on their own responses.
+   */
+  async headers() {
+    const track = [
+      { key: "Cache-Control", value: "no-store" },
+      { key: "X-Robots-Tag", value: "noindex, nofollow" },
+    ];
+    return [
+      { source: "/track", headers: track },
+      { source: "/track/:token", headers: track },
+    ];
+  },
 };
 
 export default nextConfig;

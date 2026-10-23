@@ -7,6 +7,7 @@ import { runnerRef } from './order-ref';
 import { guardianLine } from './minor-consent';
 import { PICKUP_FALLBACK, pickupDetails } from './pickup';
 import { formatRunnerAddress, groupByAddress } from './runner-address';
+import { emailedTrackUrl } from './track-link';
 import {
   LOGISTICS_METHODS,
   asLogisticsMethod,
@@ -308,8 +309,9 @@ function summaryRows(registration: RegistrationWithDetails, totalLabel: string):
  * deliberately does not claim the money has been received, only that the
  * registration has.
  */
-export function registrationReceivedEmail(registration: RegistrationWithDetails): Promise<EmailMessage> {
+export async function registrationReceivedEmail(registration: RegistrationWithDetails): Promise<EmailMessage> {
   const { event } = registration;
+  const trackUrl = await emailedTrackUrl(registration);
   const paidByBankTransfer = isBankTransfer(registration.paymentMethod);
   const firstName = registration.customerName.split(' ')[0] || registration.customerName;
 
@@ -352,6 +354,9 @@ export function registrationReceivedEmail(registration: RegistrationWithDetails)
       { kind: 'card', rows: runnerDetailRows(registration) },
       { kind: 'heading', text: 'Order Summary' },
       { kind: 'rows', rows: summaryRows(registration, paidByBankTransfer ? 'Amount Due' : 'Total Amount') },
+      // TRACK_PAGE_PLAN.md D8: where the runner checks whether the payment was
+      // validated, instead of messaging staff to ask.
+      { kind: 'button', label: 'Track My Registration', href: trackUrl },
       {
         kind: 'note',
         segments: [`${nextStep} If anything above looks wrong, reply to this email right away.`],
@@ -368,8 +373,9 @@ export function registrationReceivedEmail(registration: RegistrationWithDetails)
  * order (online, free) never got that email, so its receipt also carries the
  * contact, logistics and full per-runner details.
  */
-export function registrationConfirmationEmail(registration: RegistrationWithDetails): Promise<EmailMessage> {
+export async function registrationConfirmationEmail(registration: RegistrationWithDetails): Promise<EmailMessage> {
   const { event, runners } = registration;
+  const trackUrl = await emailedTrackUrl(registration);
   const paidByBankTransfer = isBankTransfer(registration.paymentMethod);
   const firstName = registration.customerName.split(' ')[0] || registration.customerName;
 
@@ -418,6 +424,7 @@ export function registrationConfirmationEmail(registration: RegistrationWithDeta
         : { kind: 'card', rows: runnerDetailRows(registration) },
       { kind: 'heading', text: 'Payment Summary' },
       { kind: 'rows', rows: summaryRows(registration, 'Total Paid') },
+      { kind: 'button', label: 'Track My Registration', href: trackUrl },
       {
         kind: 'note',
         segments: [
