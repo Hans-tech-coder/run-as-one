@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-46 pages · 89 API routes · 143 modules in `src/lib` · 617 files · 110,455 lines
+46 pages · 89 API routes · 144 modules in `src/lib` · 619 files · 110,843 lines
 
 ---
 
@@ -23,7 +23,7 @@ The route, the server component behind it, and the client components beside it.
 
 | Route | Page | Beside it |
 | --- | --- | --- |
-| `/` | [`/(home)/page.tsx`](../src/app/%28home%29/page.tsx) | — |
+| `/` | [`/(home)/page.tsx`](../src/app/%28home%29/page.tsx) | `RecentlyHeld.tsx` |
 | `/admin` | [`/admin/page.tsx`](../src/app/admin/page.tsx) | `AccountMenu.tsx` `AdminCardEdit.tsx` `AdminCardList.tsx` `AdminDataTable.tsx` `AdminDatePicker.tsx` `AdminNotFound.tsx` `AdminRouteLoading.tsx` `AdminSelect.tsx` `AdminShell.tsx` `AdminSwitch.tsx` `AdminTablePager.tsx` `AuthHomeLink.tsx` `AuthRouteLoading.tsx` `bare-paths.ts` `dashboard-nav.tsx` `dashboard-sidebar.ts` `dashboard-theme.ts` `DashboardHeader.tsx` `DashboardQuickJump.tsx` `DashboardShell.tsx` `FilterOptions.tsx` `FiltersMenu.tsx` `forbidden.tsx` `MobileSortMenu.tsx` `NotificationsCenter.tsx` `overview-data.ts` `OverviewPanels.tsx` `PasswordField.tsx` `PastEventsGrid.tsx` `PrintableCopy.tsx` `route-loading-shape.ts` `row-menu-position.ts` `RowActionsMenu.tsx` `SmoothModalBody.tsx` `TwoStepChip.tsx` `ViewerDashboard.tsx` |
 | `/admin/[...missing]` | [`/admin/[...missing]/page.tsx`](../src/app/admin/[...missing]/page.tsx) | — |
 | `/admin/activity` | [`/admin/activity/page.tsx`](../src/app/admin/activity/page.tsx) | `ActivityClient.tsx` |
@@ -268,6 +268,7 @@ the file itself.
 | [`pacer-store.ts`](../src/lib/pacer-store.ts) | A race's pacers are its pacer codes plus the bibs tagged under Results (`RESULTS_ROW_ACTIONS_PLAN.md` Batch 2): a results-only race has no codes, s… |
 | [`pacer.ts`](../src/lib/pacer.ts) | What a pacer code is, and when the dashboard has to nag about it (`PACER_DISCOUNT_PLAN.md`). |
 | [`password-reset.ts`](../src/lib/password-reset.ts) | "Forgot password?" — who may reset their own password from the sign-in page, and the link that lets them (LOGIN_UX_PLAN.md Batch 2). |
+| [`past-events.ts`](../src/lib/past-events.ts) | What counts as a past event and where its card goes (`PAST_EVENTS_PLAN.md` D2, D3). |
 | [`payment-link.ts`](../src/lib/payment-link.ts) | Handing a payment link to staff, one path for every way it goes out (`UNPAID_FOLLOWUP_PLAN.md` Batches 3–4): `issuePaymentLink` checks `registratio… |
 | [`paymongo-session.ts`](../src/lib/paymongo-session.ts) | The PayMongo payment page an order is sent to, built in one place (`UNPAID_FOLLOWUP_PLAN.md` Batch 3, moved out of `api/checkout` unchanged). |
 | [`pending-expiry.ts`](../src/lib/pending-expiry.ts) | When an unpaid order — an online checkout, or a bank transfer nobody verified — stops holding what it took. |

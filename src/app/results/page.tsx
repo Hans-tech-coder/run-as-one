@@ -2,12 +2,14 @@ import React from 'react';
 import { publishedEvents } from '@/lib/event-visibility';
 import { RESULTS_EVENTS } from '@/lib/event-format';
 import Link from 'next/link';
-import { ChevronRight, Trophy } from 'lucide-react';
+import { ChevronRight, History, Trophy } from 'lucide-react';
 import db, { publishCutoff } from '@/lib/public-db';
 import ResultsClientOrchestrator from '@/components/ResultsClientOrchestrator';
 import EventGrid from '@/components/EventGrid';
 import { mostRecentFirst } from '@/lib/event-schedule';
 import { EVENT_SITE_CLIENT, eventLinkOrigin, getSiteClient } from '@/lib/site-client';
+import { pastWithoutResultsWhere } from '@/lib/past-events';
+import { PAST_EVENTS_HREF } from '@/app/events/events-view';
 
 /**
  * Rendered on every request, for the same reason as the two event listings
@@ -32,21 +34,29 @@ export default async function GlobalResultsPage() {
   // On a client's site (CLIENT_SUBDOMAIN_PLAN.md D5) only that client's races,
   // results-only ones included — they never show on /events, but their times
   // belong here like any other. A plain heading, no hero (D8).
+  //
+  // The races that are over and have no times are counted alongside, in the
+  // same pass, so the page can point at them (PAST_EVENTS_PLAN.md §3) — and
+  // only when there is one, since a link to a list of races this page already
+  // shows would send the runner round in a circle.
   const [site, linkOrigin] = await Promise.all([getSiteClient(), eventLinkOrigin()]);
-  const rows = await db.event.findMany({
-    where: {
-      ...publishedEvents(await publishCutoff()),
-      // Never a virtual run, which has no results (lib/event-format.ts).
-      ...RESULTS_EVENTS,
-      raceResults: {
-        some: {}
+  const scope = { ...publishedEvents(await publishCutoff()), ...(site ? { clientId: site.id } : {}) };
+  const [rows, pastWithoutResults] = await Promise.all([
+    db.event.findMany({
+      where: {
+        ...scope,
+        // Never a virtual run, which has no results (lib/event-format.ts).
+        ...RESULTS_EVENTS,
+        raceResults: {
+          some: {}
+        },
       },
-      ...(site ? { clientId: site.id } : {}),
-    },
-    orderBy: mostRecentFirst,
-    // The client only says which host a card links to (lib/site-client.ts).
-    include: { client: EVENT_SITE_CLIENT },
-  });
+      orderBy: mostRecentFirst,
+      // The client only says which host a card links to (lib/site-client.ts).
+      include: { client: EVENT_SITE_CLIENT },
+    }),
+    db.event.count({ where: pastWithoutResultsWhere(scope) }),
+  ]);
   const events = rows.map(({ client, ...event }) => ({ ...event, siteOrigin: linkOrigin({ client }) }));
 
   return (
@@ -69,11 +79,28 @@ export default async function GlobalResultsPage() {
         </div>
 
         {events.length === 0 ? (
-          <NoResultsYet />
+          <NoResultsYet hasPastEvents={pastWithoutResults > 0} />
         ) : (
-          // Same card as /events, so an event looks like itself whether it is
-          // open for registration or already run — only the button changes.
-          <EventGrid events={events} action="results" />
+          <>
+            {/* Same card as /events, so an event looks like itself whether it
+                is open for registration or already run — only the button
+                changes. */}
+            <EventGrid events={events} action="results" />
+            {/* One quiet line rather than a button: it is for the runner who
+                did not find their race above, not a second thing to do. */}
+            {pastWithoutResults > 0 && (
+              <p className="m-0 -mt-2 sm:-mt-4 text-center text-sm sm:text-base text-secondary">
+                Looking for a race without timed results?{' '}
+                <Link
+                  href={PAST_EVENTS_HREF}
+                  className="inline-flex min-h-11 items-center gap-1 font-semibold text-white underline decoration-white/30 underline-offset-4 transition-colors hover:decoration-accent-orange"
+                >
+                  See past events
+                  <ChevronRight size={16} aria-hidden="true" className="shrink-0" />
+                </Link>
+              </p>
+            )}
+          </>
         )}
       <ResultsClientOrchestrator />
       </div>
@@ -91,7 +118,7 @@ export default async function GlobalResultsPage() {
  * fill, inset highlight, blurred accent orb) so an empty results page and a
  * full one are recognisably the same surface.
  */
-function NoResultsYet() {
+function NoResultsYet({ hasPastEvents }: { hasPastEvents: boolean }) {
   const steps = [
     'You run the race.',
     'The organizer uploads the official times, usually within a few days.',
@@ -135,7 +162,7 @@ function NoResultsYet() {
         ))}
       </ol>
 
-      <div className="relative z-10 flex justify-center">
+      <div className="relative z-10 flex flex-col gap-3 sm:flex-row sm:justify-center">
         <Link
           href="/events"
           className="btn-gradient w-full sm:w-auto justify-center rounded-[16px] px-8 py-4 text-base text-center group no-underline shadow-xl shadow-accent-orange/20"
@@ -143,6 +170,15 @@ function NoResultsYet() {
           <span>Browse Events</span>
           <ChevronRight size={18} className="shrink-0 transition-transform group-hover:translate-x-1" />
         </Link>
+        {/* The races already run without times are not missing — they are
+            on the Past tab — and a runner looking for one should be told
+            so (PAST_EVENTS_PLAN.md §3). Only when there is one. */}
+        {hasPastEvents && (
+          <Link href={PAST_EVENTS_HREF} className="btn-secondary w-full sm:w-auto gap-2">
+            <History size={18} className="shrink-0" aria-hidden="true" />
+            See Past Events
+          </Link>
+        )}
       </div>
     </div>
   );

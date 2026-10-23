@@ -2,10 +2,9 @@ import React from 'react';
 import type { Prisma } from '@prisma/client';
 import EventGrid from '@/components/EventGrid';
 import db, { publishCutoff } from '@/lib/public-db';
-import { finishedEvents, mostRecentFirst, soonestFirst, upcomingEvents } from '@/lib/event-schedule';
+import { mostRecentFirst, soonestFirst, upcomingEvents } from '@/lib/event-schedule';
 import { publishedEvents } from '@/lib/event-visibility';
-import { awaitingResults, takesResults } from '@/lib/event-format';
-import { cleanPhotoAlbums } from '@/lib/photo-albums';
+import { PAST_CARD, pastEventsWhere, toPastCard } from '@/lib/past-events';
 import { forListing } from '@/lib/registration-gate';
 import { EVENT_SITE_CLIENT, eventLinkOrigin, getSiteClient } from '@/lib/site-client';
 import ClientSiteHero, { hasClientHero } from '@/components/ClientSiteHero';
@@ -24,29 +23,6 @@ import { NoPastEvents, NothingUpcoming } from './EventsEmptyStates';
  * (lib/public-db.ts); only the judging is live.
  */
 export const dynamic = 'force-dynamic';
-
-/**
- * What a past card is drawn from: card fields only, plus the result count
- * that decides where the card goes (D3), what says whether it may still
- * promise times (`awaitingResults`), and the photo albums behind its camera
- * chip — of which only "any?" reaches the browser.
- */
-const PAST_CARD = {
-  id: true,
-  slug: true,
-  title: true,
-  date: true,
-  location: true,
-  imageUrl: true,
-  format: true,
-  virtualEndDate: true,
-  eventType: true,
-  resultsOnly: true,
-  timedResults: true,
-  photoAlbums: true,
-  client: EVENT_SITE_CLIENT,
-  _count: { select: { raceResults: true } },
-} satisfies Prisma.EventSelect;
 
 export default async function EventsPage() {
   // Upcoming is races that have not been run yet, soonest first; Past is every
@@ -76,13 +52,9 @@ export default async function EventsPage() {
   // A results-only race is never enterable here, so it is not upcoming in the
   // sense this page means.
   const upcomingWhere: Prisma.EventWhereInput = { ...upcomingEvents(), resultsOnly: false, ...scope };
-  // Past (D2): virtual runs included, and a results-only race only once its
-  // times are up — before that its event page is a 404, and a card must never
-  // open onto one. finishedEvents() is itself an OR, hence AND rather than a
-  // second OR spread beside it.
-  const pastWhere: Prisma.EventWhereInput = {
-    AND: [finishedEvents(), scope, { OR: [{ resultsOnly: false }, { raceResults: { some: {} } }] }],
-  };
+  // Past (D2): what lib/past-events.ts says, which is also what the home
+  // page's Recently Held strip and the links into this tab go by.
+  const pastWhere = pastEventsWhere(scope);
 
   const [upcoming, past, totalEvents, eventsWithResults] = await Promise.all([
     db.event.findMany({
@@ -109,18 +81,8 @@ export default async function EventsPage() {
     ...event,
     siteOrigin: linkOrigin({ client }),
   }));
-  // Each past card goes where its race's answer is (D3). A virtual run never
-  // has results, whatever rows the table holds.
-  const pastCards = past.map(({ client, _count, eventType, resultsOnly, timedResults, photoAlbums, ...event }) => {
-    const hasResults = takesResults(event) && _count.raceResults > 0;
-    return {
-      ...event,
-      hasResults,
-      hasPhotos: cleanPhotoAlbums(photoAlbums).length > 0,
-      resultsSoon: !hasResults && awaitingResults({ ...event, eventType, resultsOnly, timedResults }),
-      siteOrigin: linkOrigin({ client }),
-    };
-  });
+  // Each past card goes where its race's answer is (D3).
+  const pastCards = past.map((row) => toPastCard(row, linkOrigin));
   const counts = { upcoming: events.length, past: pastCards.length };
   const hero = site && hasClientHero(site) ? site : null;
 

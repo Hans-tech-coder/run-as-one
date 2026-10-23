@@ -1,10 +1,11 @@
 "use client";
 
 import Link from 'next/link';
-import { AlertCircle, ArrowLeft, ArrowRight, Send } from 'lucide-react';
+import { AlertCircle, ArrowLeft, ArrowRight, ArrowUpRight, Send } from 'lucide-react';
 import { RunAsOneLogo } from '@/components/RunAsOneLogo';
 import BusyLabel from '@/components/ui/BusyLabel';
 import AuthHomeLink from '../AuthHomeLink';
+import { PAST_EVENTS_HREF } from '@/app/events/events-view';
 import { FORM_SUBTITLE, FORM_TITLE, STEPS } from './apply-steps';
 import { useApplicationForm } from './useApplicationForm';
 import OrganizationStep from './OrganizationStep';
@@ -54,7 +55,7 @@ import StepRail from '@/components/ui/StepRail';
  * demands an event date from somebody who has not booked the venue yet gets a
  * made-up date, which is worse than a blank.
  */
-export default function RegisterClient() {
+export default function RegisterClient({ hasPastEvents }: { hasPastEvents: boolean }) {
   const {
     step,
     form,
@@ -93,6 +94,26 @@ export default function RegisterClient() {
                 ? 'Thank you. Here is what happens next.'
                 : FORM_SUBTITLE}
             </p>
+            {/* The track record, for an organization deciding whether to
+                hire us (PAST_EVENTS_PLAN.md §3): one quiet line under the
+                subtitle, gone once the inquiry is sent. A new tab, because
+                nothing typed here is kept until the last step, and a look
+                at our races must not cost a half-written inquiry. Only when
+                there is a race to show. */}
+            {hasPastEvents && !isSent && (
+              <p className="apply-proof">
+                <Link
+                  href={PAST_EVENTS_HREF}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="auth-link"
+                >
+                  See races we have run
+                  <ArrowUpRight size={14} aria-hidden="true" />
+                  <span className="sr-only"> (opens in a new tab)</span>
+                </Link>
+              </p>
+            )}
           </div>
 
           {isSent ? (

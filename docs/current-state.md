@@ -22,17 +22,24 @@ entry below). Strix `run-as-one-scan_07a0` (diff scan, $5.23) found nothing;
 its two optional hardening notes (no certificate template on a virtual run;
 no results-only virtual event) are fixed on `dev` in `ca78e7d`, not released.
 
-**Past events on `/events` (2026-10-23, uncommitted on `dev`, not released;
-`PAST_EVENTS_PLAN.md` Phase 1 + 1b).** A finished race with no times — an
+**Past events on `/events` (2026-10-23, `PAST_EVENTS_PLAN.md` Phase 1 + 1b
+committed on `dev` in `f265233` and `f60b7c9`; Phase 2 uncommitted on `dev`;
+none of it released).** A finished race with no times — an
 untimed fun run, a virtual run, a race whose times are not up — used to appear
 nowhere public. `/events` now has two tabs, **Upcoming** and **Past**
 (`?view=past`), and staff set a photo album and a timing override on the edit
 page. Migrations `20261023025133_past_event_photos_timing` and
 `20261023031425_past_event_photo_albums` (applied to local-dev; pending for
-production in `ON_HOLD.md`). Phase 2 (a *Recently
-Held* strip on the home page, a line under `/results`, a link on
-`/admin/register`) is **later, by the owner's call**; when the plan is deleted
-it moves to `ON_HOLD.md`. The decisions code and docs cite:
+production in `ON_HOLD.md`). **Phase 2** (§3 of the plan) adds three ways
+into the Past tab, each shown only when it would have something to show: a
+*Recently Held* strip of the last 3 past cards under the home page's upcoming
+browser, a quiet *Looking for a race without timed results? See past events*
+line under the `/results` grid (and *See Past Events* in its empty state), and
+*See races we have run* on `/admin/register` (Our Services), in a new tab. The
+past rule moved out of `events/page.tsx` into **`lib/past-events.ts`**
+(`pastEventsWhere`, `pastWithoutResultsWhere`, `PAST_CARD`, `toPastCard`), so
+all four places count the same races; every new read shares its page's
+existing pass and goes through `publicDb`. The decisions code and docs cite:
 
 - **D1** — Past is a tab on `/events`, `?view=past`, read on the server; a
   plain link, Upcoming the default, an unknown value falls back to it. Not

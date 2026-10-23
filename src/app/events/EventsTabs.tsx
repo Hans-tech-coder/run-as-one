@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useReducedMotion } from 'framer-motion';
 import { EventGridEntrance } from '@/components/EventGrid';
-import { asEventsView, type EventsView } from './events-view';
+import { PAST_EVENTS_HREF, asEventsView, type EventsView } from './events-view';
 
 /**
  * The Upcoming / Past switch at the top of /events (PAST_EVENTS_PLAN.md D1),
@@ -33,7 +33,7 @@ const TABS: { view: EventsView; label: string }[] = [
   { view: 'upcoming', label: 'Upcoming' },
   { view: 'past', label: 'Past' },
 ];
-const HREF: Record<EventsView, string> = { upcoming: '/events', past: '/events?view=past' };
+const HREF: Record<EventsView, string> = { upcoming: '/events', past: PAST_EVENTS_HREF };
 
 /**
  * Set by `EventsTabSwitch`: moves to a tab without a navigation. Absent in

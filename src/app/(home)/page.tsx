@@ -2,12 +2,16 @@ import React from 'react';
 import HeroSection from '@/components/HeroSection';
 import HomeEventBrowser from '@/components/HomeEventBrowser';
 import db, { publishCutoff } from '@/lib/public-db';
-import { soonestFirst, upcomingEvents } from '@/lib/event-schedule';
+import { mostRecentFirst, soonestFirst, upcomingEvents } from '@/lib/event-schedule';
 import { publishedEvents } from '@/lib/event-visibility';
+import { PAST_CARD, pastEventsWhere, toPastCard } from '@/lib/past-events';
 import { forListing } from '@/lib/registration-gate';
 import { EVENT_SITE_CLIENT, eventLinkOrigin } from '@/lib/site-client';
+import RecentlyHeld from './RecentlyHeld';
 
 const HOME_EVENT_LIMIT = 6;
+/** One row of cards on a desktop grid: a glance back, not a second listing. */
+const RECENTLY_HELD_LIMIT = 3;
 
 /**
  * Rendered on every request rather than once at build time.
@@ -42,8 +46,15 @@ export default async function Home() {
   // Results-only races are left out: their sign-ups run elsewhere, so they
   // are not open for registration in any sense this section means. Drafts and
   // scheduled events are not public yet (lib/event-visibility.ts).
-  const upcoming = { ...upcomingEvents(), ...publishedEvents(await publishCutoff()), resultsOnly: false };
-  const [openForRegistration, totalEvents] = await Promise.all([
+  //
+  // Below them, the last few races already run (PAST_EVENTS_PLAN.md §3), by
+  // the Past tab's own rule (lib/past-events.ts) and read in the same pass,
+  // so the strip costs no wake-up of its own. Never scoped to a client: on a
+  // client's site `/` is redirected to its /events (src/proxy.ts), so this
+  // page only ever renders on the main host, where /events is unscoped too.
+  const published = publishedEvents(await publishCutoff());
+  const upcoming = { ...upcomingEvents(), ...published, resultsOnly: false };
+  const [openForRegistration, totalEvents, recentlyHeld] = await Promise.all([
     db.event.findMany({
       where: upcoming,
       orderBy: soonestFirst,
@@ -58,6 +69,12 @@ export default async function Home() {
       },
     }),
     db.event.count({ where: upcoming }),
+    db.event.findMany({
+      where: pastEventsWhere(published),
+      orderBy: mostRecentFirst,
+      take: RECENTLY_HELD_LIMIT,
+      select: PAST_CARD,
+    }),
   ]);
   const linkOrigin = await eventLinkOrigin();
 
@@ -68,6 +85,7 @@ export default async function Home() {
     ...event,
     siteOrigin: linkOrigin({ client }),
   }));
+  const pastCards = recentlyHeld.map((row) => toPastCard(row, linkOrigin));
 
   return (
     // No overflow-hidden here: the hero's dot arch is full-bleed and runs up
@@ -77,6 +95,7 @@ export default async function Home() {
       <div className="w-full relative z-10 flex flex-col items-center gap-10 sm:gap-20">
         <HeroSection />
         <HomeEventBrowser events={events} totalEvents={totalEvents} />
+        {pastCards.length > 0 && <RecentlyHeld events={pastCards} />}
         <HowItWorks />
       </div>
     </div>

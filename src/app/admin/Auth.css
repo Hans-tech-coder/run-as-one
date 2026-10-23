@@ -434,6 +434,26 @@
   margin-bottom: 0;
 }
 
+/* Our Services' one line of track record under the subtitle (RegisterClient).
+   The link is the whole 44px row, so its hover underline is lifted back up to
+   sit under the words rather than at the foot of the box. */
+.apply-proof {
+  margin: 0.25rem 0 -0.5rem;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+}
+
+.apply-proof .auth-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-height: 44px;
+}
+
+.apply-proof .auth-link::after {
+  bottom: 10px;
+}
+
 .apply-eyebrow {
   display: block;
   font-family: var(--font-body);
