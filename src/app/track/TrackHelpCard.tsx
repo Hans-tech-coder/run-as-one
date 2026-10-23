@@ -9,7 +9,8 @@ import BusyLabel from '@/components/ui/BusyLabel';
 import type { TrackView } from '@/lib/track';
 
 /**
- * "May problema sa registration mo?" (TRACK_PAGE_PLAN.md §6). A registration
+ * "Problem with your registration?" (TRACK_PAGE_PLAN.md §6; in English, like the
+ * rest of the app, the owner's call). A registration
  * concern goes to email or the Facebook page, never to /feedback, which is the
  * software's own inbox — that one is the small line at the bottom.
  *
@@ -68,10 +69,10 @@ export default function TrackHelpCard({ view, help }: { view: TrackView; help: T
   return (
     <section aria-labelledby="track-help-title" className="rounded-[20px] border border-white/[0.08] bg-white/[0.03] p-5 sm:p-6">
       <h2 id="track-help-title" className="m-0 text-lg font-black uppercase tracking-wide text-white">
-        May problema sa registration mo?
+        Problem with your registration?
       </h2>
       <p className="m-0 mt-1 text-sm leading-relaxed text-secondary">
-        Something wrong above? Tell us what it is and what it should be. Quote
+        Tell us what is wrong and what it should be. Quote
         your reference, <span className="font-mono font-semibold text-white">{reference}</span>, so we can find it.
       </p>
 

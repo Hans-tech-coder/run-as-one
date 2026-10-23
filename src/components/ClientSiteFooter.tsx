@@ -29,6 +29,9 @@ export default function ClientSiteFooter({ site }: { site: SiteClient }) {
       links: [
         { label: 'Browse Events', href: '/events' },
         { label: 'Race Results', href: '/results' },
+        // The main footer's link too: a client's runners track their order
+        // here, on the client's own site (lib/track.ts `trackHome`).
+        { label: 'Track My Registration', href: '/track' },
       ],
     },
     {

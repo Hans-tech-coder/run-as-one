@@ -27,13 +27,13 @@ and `certificateCoordinates` through without the certificate route's checks
 (Strix's note, older than this release); over-limit album errors point at row
 6; `RacePhotoLinks` uses a fixed heading id.
 
-**Track My Registration (2026-10-23, `TRACK_PAGE_PLAN.md`; built on `dev`,
-not committed).** Registrants kept messaging staff to ask whether they were
+**Track My Registration (2026-10-23, `TRACK_PAGE_PLAN.md`; on `dev` in
+`2978fbd`, not released).** Registrants kept messaging staff to ask whether they were
 paid, whether their bank transfer was validated and whether their details were
 right. `/track` answers all three from data the app already stores: **no
 schema change, no migration, no new staff work**. A reference + email form
 (POSTed to `api/track`), the emailed `/track/<token>` link in both
-registration emails, Navbar and Footer links, a status card by state with
+registration emails, Navbar and footer links, a status card by state with
 *Complete Payment* inside the hold, the masked submitted details, pickup or
 delivery info with the proxy rule, results links after race day, a help card
 (email with a reference subject, Facebook + Copy Reference, Send feedback) and
@@ -42,11 +42,12 @@ a throttled *Resend My Confirmation Email*. See §6 `/track`, §7, and §5
 order in each §4 case, bank transfer PENDING and PAID, online PENDING with its
 pay link, a wrong email, a bad token, and 360px; the one Resend sent went to
 the owner only. **Decisions** (recorded here because the plan is deleted once
-this lands): **D1** reference + email; **D5** *Complete Payment* on an unpaid
+it landed): **D1** reference + email; **D5** *Complete Payment* on an unpaid
 online order within the hold; **D7** proxy claiming with an authorization
 letter + a copy of the runner's valid ID with signature, shown as text (a
 prefilled letter PDF is a later nice-to-have); **D8** `/track`, linked from
-the Navbar, the Footer and both registration emails; **D9** an address shows
+the Navbar (as *Track*, one word, the owner's call), the footer (the main
+site's and every client site's) and both registration emails; **D9** an address shows
 city + province only; **D10** a birthdate shows month + year only; **scope**
 status + submitted details only. Kit claimed / shipped / delivered tracking
 (D2, D3, D4, D6) was dropped because it needs staff to mark every order by
@@ -54,8 +55,7 @@ hand; it could layer on later when the owner asks. Registration concerns go to
 email or Facebook, not `/feedback`. **Each order is tracked on its race's own
 site** (the owner, 2026-10-23): a CRC order on crc.runasone.ph, every other on
 runasone.ph. A lookup on the wrong site points to the right one, `/track/<token>`
-moves there, and the emailed link is built on the race's site. The Navbar
-item reads *Track* (one word, the owner's call). Known limits: the throttle is
+moves there, and the emailed link is built on the race's site. Known limits: the throttle is
 per instance; the emailed link rests on `SITE_URL`, so a link in an email sent
 from localhost points at runasone.ph (or the client's subdomain of it) unless
 `NEXT_PUBLIC_SITE_URL` is set.
