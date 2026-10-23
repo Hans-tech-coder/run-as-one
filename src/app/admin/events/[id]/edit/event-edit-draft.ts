@@ -5,6 +5,7 @@ import { asEventType, type EventType } from '@/lib/event-type';
 import { asEventFormat, isVirtual } from '@/lib/event-format';
 import { formatWaiverParagraphs } from '@/lib/consent-waiver';
 import { cleanHighlights } from '@/lib/event-highlights';
+import { cleanPhotoAlbums, type PhotoAlbum } from '@/lib/photo-albums';
 import type { EventPromotion } from '@/lib/promo-store';
 import { asDowngradeRefundPolicy } from '@/lib/category-change';
 import { blankEventDraft, changeUntilDraft, type EventFormDraft } from '../../event-form-draft';
@@ -29,6 +30,11 @@ export type EventEditDraft = EventFormDraft & {
   // src/lib/registration-gate.ts.
   registrationPaused: boolean;
   registrationPauseNote: string;
+  // After the Race (AfterRacePanel, PAST_EVENTS_PLAN.md D7): the photo
+  // albums, [] for none, and the timing override, null to follow the
+  // event's kind. Both ride the form's PUT like every other field here.
+  photoAlbums: PhotoAlbum[];
+  timedResults: boolean | null;
   // No certificate fields: the certificate is edited in the results workspace
   // and saved through its own route (RESULTS_NAV_PLAN.md, Batch 2). Leaving
   // them out of the draft keeps them out of this form's PUT, which then keeps
@@ -42,6 +48,8 @@ export function blankEditDraft(): EventEditDraft {
     ...blankEventDraft(60),
     registrationPaused: false,
     registrationPauseNote: '',
+    photoAlbums: [],
+    timedResults: null,
   };
 }
 
@@ -80,6 +88,7 @@ type EventResponse = {
   logisticsChangeUntil?: Maybe<string>;
   clientId?: Maybe<string>;
   resultsOnly?: Maybe<boolean>;
+  timedResults?: Maybe<boolean>;
   _count?: { registrations?: number };
   promotions?: EventPromotion[];
   bankAccounts?: {
@@ -147,6 +156,8 @@ export function editStateFromEvent(data: EventResponse): {
       logisticsChangeUntil: changeUntilDraft(data.logisticsChangeUntil),
       registrationPaused: Boolean(data.registrationPaused),
       registrationPauseNote: data.registrationPauseNote || '',
+      photoAlbums: cleanPhotoAlbums(data.photoAlbums),
+      timedResults: typeof data.timedResults === 'boolean' ? data.timedResults : null,
     },
 
     // Null on the row means the race was open from the moment it was

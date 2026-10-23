@@ -22,9 +22,9 @@ export const dynamic = 'force-dynamic';
 
 export default async function GlobalResultsPage() {
   // Only races whose organizer has actually uploaded times. A race that is over
-  // but has no results yet appears nowhere on the site — it has left /events,
-  // and there is nothing here to read — which is deliberate: an entry that
-  // opened onto an empty ranking would be a dead end.
+  // but has no results is not listed here — an entry that opened onto an empty
+  // ranking would be a dead end — and is found instead on the Past tab of
+  // /events (?view=past, PAST_EVENTS_PLAN.md), which lists every finished race.
   //
   // Ordered most recent first, so the race people have just come home from is
   // the one at the top. See src/lib/event-schedule.ts.

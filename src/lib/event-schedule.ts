@@ -4,10 +4,11 @@ import type { Prisma } from '@prisma/client';
  * When an event stops being something you can sign up for and becomes
  * something you look up the times for.
  *
- * Every listing on the site sits on one side of that line: /events and the home
- * page show races that have not happened yet, /results shows races that have,
- * and a race that is over but whose organizer has not uploaded times yet shows
- * in neither — it is not open for registration, and there is nothing to read.
+ * Every listing on the site sits on one side of that line: the home page and
+ * the Upcoming tab of /events show races that have not happened yet; the Past
+ * tab of /events (?view=past) and /results show races that have — Past every
+ * one, with or without times, /results only those whose times are up
+ * (PAST_EVENTS_PLAN.md).
  * Putting the rule here rather than in each page means those pages can never
  * disagree about which side an event is on.
  *
@@ -92,7 +93,12 @@ export function upcomingEvents(day: string = today()): Prisma.EventWhereInput {
   return { OR: [{ date: { gte: day } }, { virtualEndDate: { gte: day } }] };
 }
 
-/** Races that are over — yesterday and earlier, the whole window for a virtual run. */
+/**
+ * Races that are over — yesterday and earlier, the whole window for a virtual run.
+ *
+ * Also returns an OR (the window end), so a caller adding its own OR wraps
+ * both in `AND: [...]` rather than spreading them side by side.
+ */
 export function finishedEvents(day: string = today()): Prisma.EventWhereInput {
   return {
     date: { lt: day },

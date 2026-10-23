@@ -26,6 +26,7 @@ import { CATEGORY_ORDER } from '@/lib/category-order';
 import { readClientLink } from '@/lib/client-store';
 import { cleanHighlights } from '@/lib/event-highlights';
 import { findProvince, inferProvince } from '@/lib/ph-address';
+import { readPhotoAlbums } from '@/lib/photo-albums';
 
 /**
  * The Edit Event save: the whole form, categories and bank accounts with it,
@@ -70,6 +71,8 @@ const EVENT_FIELDS = [
   'categoryChangeFee',
   'logisticsChangeUntil',
   'resultsOnly',
+  'photoAlbums',
+  'timedResults',
   'certificateTemplate',
   'certificateCoordinates',
   'clientId',
@@ -203,6 +206,27 @@ export async function updateEvent(request: Request, { params }: { params: Promis
       );
     }
 
+    // After the Race (PAST_EVENTS_PLAN.md D7): the photo albums and the timing
+    // override. Only what is sent is written, like the certificate fields.
+    // Timing is not staff's to set on a virtual run (never timed) or a
+    // results-only race (always) — isTimed ignores the column there — so a
+    // value sent for one is dropped rather than stored to mislead later.
+    // A bad album is refused by its number, so the form can put the
+    // message under that row (lib/photo-albums.ts).
+    const photos = readPhotoAlbums(data.photoAlbums);
+    if (!photos.ok) {
+      return NextResponse.json(
+        { error: photos.error, errors: { photoAlbums: photos.error }, photoAlbumIndex: photos.index },
+        { status: 400 },
+      );
+    }
+    const timedResults =
+      resultsOnly || format === EVENT_FORMATS.VIRTUAL || data.timedResults === undefined
+        ? undefined
+        : typeof data.timedResults === 'boolean'
+          ? data.timedResults
+          : null;
+
     // Format is locked once anyone has registered (VIRTUAL_RUN_PLAN.md D7):
     // a runner who paid for a race at a venue did not sign up to run alone,
     // nor the other way round. Counted only when the save would change it,
@@ -332,6 +356,8 @@ export async function updateEvent(request: Request, { params }: { params: Promis
           ...(certificateTemplate !== undefined ? { certificateTemplate: certificateTemplate || null } : {}),
           ...(certificateCoordinates !== undefined ? { certificateCoordinates: certificateCoordinates || null } : {}),
           ...(clientLink.change ? { clientId: clientLink.clientId } : {}),
+          ...(photos.albums !== undefined ? { photoAlbums: photos.albums } : {}),
+          ...(timedResults !== undefined ? { timedResults } : {}),
         }
       });
 

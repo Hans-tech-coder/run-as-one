@@ -3,6 +3,7 @@ import { publishedEvents } from '@/lib/event-visibility';
 import { RESULTS_EVENTS } from '@/lib/event-format';
 import Link from 'next/link';
 import { User, Hash, ChevronRight } from 'lucide-react';
+import RacePhotoLinks from '@/components/RacePhotoLinks';
 import { redirect } from 'next/navigation';
 import EventHeroBanner from '@/components/EventHeroBanner';
 import LinkPendingIcon from '@/components/ui/LinkPendingIcon';
@@ -177,14 +178,18 @@ export default async function WinnersOverviewPage({
             </h1>
             <p className="text-secondary text-base sm:text-lg mb-6 sm:mb-8 text-balance">{event.title}</p>
 
-            {/* CTA to Full Leaderboard */}
-            <div className="flex justify-center mb-12 sm:mb-16">
+            {/* CTA to Full Leaderboard, and under it the organizer's photo
+                albums when there are any (PAST_EVENTS_PLAN.md D7). Here as
+                well as on the event page, because a race with results
+                redirects here and its photos would otherwise never be seen. */}
+            <div className="flex flex-col items-center gap-4 mb-12 sm:mb-16">
               <Link href={`/results/${event.slug}/full`} className="btn-gradient w-full max-w-sm py-4 text-base sm:text-lg rounded-[16px] group shadow-xl shadow-accent-orange/20 no-underline">
                 View Full Leaderboard
                 <LinkPendingIcon className="ml-1">
                   <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform inline-block" />
                 </LinkPendingIcon>
               </Link>
+              <RacePhotoLinks albums={event.photoAlbums} align="center" />
             </div>
           </div>
 

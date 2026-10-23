@@ -17,6 +17,8 @@
  * screen and no public results pages, so no e-certificate either
  * (`RESULTS_EVENTS`, `takesResults`), and a results-only race cannot be one
  * (`RESULTS_ONLY_VIRTUAL_ERROR`).
+ * It also owns whether a race keeps time (`isTimed`, PAST_EVENTS_PLAN.md D7)
+ * and so how long a finished one may promise its results (`awaitingResults`).
  * Once an event has a registration its format is locked (D7): a runner who
  * paid for a race at a venue did not sign up to run alone, and vice versa.
  *
@@ -25,7 +27,8 @@
  */
 
 import type { Prisma } from '@prisma/client';
-import { isCalendarDay } from './event-schedule';
+import { isCalendarDay, today } from './event-schedule';
+import { sellsPackages } from './event-type';
 
 export const EVENT_FORMATS = {
   /** One race day at a venue, with a gun start. */
@@ -64,6 +67,58 @@ export const RESULTS_EVENTS = {
 /** `RESULTS_EVENTS` for one event already in hand. */
 export function takesResults(event: { format?: unknown }): boolean {
   return !isVirtual(event);
+}
+
+/**
+ * Whether this race keeps time, so its finished page may promise results
+ * (PAST_EVENTS_PLAN.md D7). Many fun runs and every virtual run have no
+ * timing, so the answer follows the event's kind until staff say otherwise:
+ *
+ * - a virtual run never (it takes no results at all), whatever is stored;
+ * - a results-only race always, since holding times is all it exists for;
+ * - otherwise `timedResults` when staff set it, and when it is null a race
+ *   is timed and a fun run is not.
+ *
+ * Null rather than a default on the column, so a race switched between RACE
+ * and FUN_RUN follows its new kind until someone chooses, and no backfill was
+ * needed. `timedResults` is optional in the type for a caller that never
+ * selected it, which then reads as null.
+ */
+export function isTimed(event: {
+  format?: unknown;
+  eventType?: unknown;
+  resultsOnly?: boolean | null;
+  timedResults?: boolean | null;
+}): boolean {
+  if (!takesResults(event)) return false;
+  if (event.resultsOnly) return true;
+  if (typeof event.timedResults === 'boolean') return event.timedResults;
+  return !sellsPackages(event);
+}
+
+/**
+ * How long after race day a timed race without results still says its times
+ * are coming (D5, the owner: 14 days). Past this, a race whose times never
+ * came stops promising them rather than promising forever.
+ */
+export const RESULTS_PROMISE_DAYS = 14;
+
+/**
+ * Whether a finished race should still tell runners its times are on the way:
+ * it is timed (`isTimed`) and race day was at most `RESULTS_PROMISE_DAYS` ago.
+ * Uploaded results are not checked here — those win on their own, by sending
+ * the runner to /results.
+ */
+export function awaitingResults(
+  event: Parameters<typeof isTimed>[0] & { date: string },
+  day: string = today(),
+): boolean {
+  if (!isTimed(event) || !isCalendarDay(event.date)) return false;
+  const [year, month, date] = event.date.split('-').map(Number);
+  const until = new Date(Date.UTC(year, month - 1, date + RESULTS_PROMISE_DAYS))
+    .toISOString()
+    .slice(0, 10);
+  return day <= until;
 }
 
 /**

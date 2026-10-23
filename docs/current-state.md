@@ -22,6 +22,53 @@ entry below). Strix `run-as-one-scan_07a0` (diff scan, $5.23) found nothing;
 its two optional hardening notes (no certificate template on a virtual run;
 no results-only virtual event) are fixed on `dev` in `ca78e7d`, not released.
 
+**Past events on `/events` (2026-10-23, uncommitted on `dev`, not released;
+`PAST_EVENTS_PLAN.md` Phase 1 + 1b).** A finished race with no times — an
+untimed fun run, a virtual run, a race whose times are not up — used to appear
+nowhere public. `/events` now has two tabs, **Upcoming** and **Past**
+(`?view=past`), and staff set a photo album and a timing override on the edit
+page. Migrations `20261023025133_past_event_photos_timing` and
+`20261023031425_past_event_photo_albums` (applied to local-dev; pending for
+production in `ON_HOLD.md`). Phase 2 (a *Recently
+Held* strip on the home page, a line under `/results`, a link on
+`/admin/register`) is **later, by the owner's call**; when the plan is deleted
+it moves to `ON_HOLD.md`. The decisions code and docs cite:
+
+- **D1** — Past is a tab on `/events`, `?view=past`, read on the server; a
+  plain link, Upcoming the default, an unknown value falls back to it. Not
+  `/events/past`, which would shadow an event slugged `past`.
+- **D2** — Past = published, finished (`finishedEvents()`, wrapped in
+  `AND: [...]` because it is an `OR`), in the client's scope on a subdomain;
+  virtual runs included; a results-only race only once it has results, so no
+  card opens onto a 404.
+- **D3** — each card goes where its answer is: *Results* → `/results/[slug]`;
+  *Results Soon* (timed, inside the D5 window), *Held Oct 5*, or *Ended Oct 5*
+  for a virtual run → the event page. A camera chip when the race has any photo album.
+  `EventGrid`'s third action, `'past'`.
+- **D4** — newest first (`mostRecentFirst`), a year heading per group, 12 at a
+  time with *Show more past events · N left*; one `findMany` of card fields
+  plus `_count.raceResults`.
+- **D5** — `RaceIsOver` promises official times only while `awaitingResults`:
+  a timed race (`isTimed`) within **14 days** of race day. Buttons: *View Race
+  Photos* (with an album), *Back to Past Events*, *Find Another Race*.
+- **D6** — the empty states point at each other: *See Past Events* on
+  Upcoming's, a link back on Past's *No Races Held Yet*. Both tabs always show
+  their counts.
+- **D7** — `Event.photoAlbums` (a list, up to 5 `{ url, label }`, each https
+  only and ≤ 500 characters — widened from one `photosUrl` link by the owner
+  the same day, since a race often has a page per photographer; shown on the
+  past event page **and** `/results/[slug]`, `lib/photo-albums.ts`) and `Event.timedResults` (null follows
+  the kind: race timed, fun run not; ignored on virtual and results-only), set
+  in the edit page's **After the Race** panel (`AfterRacePanel.tsx`, switch
+  *This race has timed results*).
+- **D8** — no public runner count; turnout stays with staff and the client
+  viewer.
+
+Local-dev has **no `FUN_RUN` event and no finished virtual run** (Pink Run
+2026 Virtual ends Oct 31), so the fun-run default (timing off) and the
+*Ended* card were checked through the rule (`isTimed` / `awaitingResults`
+cases), not on real rows.
+
 **Previous release (2026-10-21, `a1b05df`).** Category changes and delivery
 switches paid on the runner's link (online, or GCash/bank with a proof staff
 validate), one **Pay ₱X** button in the category change email, the switch

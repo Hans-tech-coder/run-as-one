@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Calendar, MapPin, ChevronRight, Globe } from 'lucide-react';
+import { Calendar, Camera, MapPin, ChevronRight, Globe } from 'lucide-react';
 import EventImage from './EventImage';
 import LinkPendingIcon from './ui/LinkPendingIcon';
 import { formatEventDayShort, formatEventInstantShort, formatEventRange } from '@/lib/event-schedule';
@@ -41,21 +41,54 @@ type DBEvent = {
    * on the client's subdomain instead of through a redirect.
    */
   siteOrigin?: string;
+  /**
+   * Past cards only (`action="past"`), worked out by the page that queried
+   * them (PAST_EVENTS_PLAN.md D3): whether times are up, whether a timed race
+   * is still inside the window in which it promises them (`awaitingResults`),
+   * and whether the organizer posted any photo album, which earns the card a
+   * camera chip.
+   */
+  hasResults?: boolean;
+  resultsSoon?: boolean;
+  hasPhotos?: boolean;
 }
 
 /**
- * What the card's button does. The two public listings show the same event at
- * two points in its life — open for registration on /events, already run on
+ * What the card's button does. The public listings show the same event at
+ * points in its life — open for registration on /events, already run on
  * /results — so they share one card and differ only in where it sends you. A
  * plain string rather than a callback because the pages rendering this client
  * component are Server Components, and a function cannot cross that boundary.
+ *
+ * `past` is the Past tab on /events, where one grid holds races at different
+ * points after race day, so it picks per card (`pastCard`) instead of one
+ * destination for all.
  */
-export type EventCardAction = 'register' | 'results';
+export type EventCardAction = 'register' | 'results' | 'past';
 
-const ACTIONS: Record<EventCardAction, { label: string; path: (slug: string) => string }> = {
+const ACTIONS: Record<Exclude<EventCardAction, 'past'>, { label: string; path: (slug: string) => string }> = {
   register: { label: 'Register Now', path: (slug) => `/events/${slug}` },
   results: { label: 'View Results', path: (slug) => `/results/${slug}` },
 };
+
+/** "Oct 5" — a past card sits under its year's heading, so the year is said once there. */
+function dayInYear(date: string): string {
+  return formatEventDayShort(date).replace(/,\s*\d{4}$/, '');
+}
+
+/**
+ * Where a past card goes and what its chip says (D3): each race to where its
+ * answer is. Times up → the ranking. A virtual run says when its window
+ * ended; a timed race still inside its window says times are coming; any
+ * other says when it was held, which is all that is left to say.
+ */
+function pastCard(event: DBEvent): { badge: string; quiet: boolean; label: string; path: (slug: string) => string } {
+  if (event.hasResults) return { badge: 'Results', quiet: false, ...ACTIONS.results };
+  const view = { quiet: true, label: 'View Event', path: ACTIONS.register.path };
+  if (isVirtual(event)) return { badge: `Ended ${dayInYear(event.virtualEndDate ?? event.date)}`, ...view };
+  if (event.resultsSoon) return { badge: 'Results Soon', ...view };
+  return { badge: `Held ${dayInYear(event.date)}`, ...view };
+}
 
 /** The corner chip, and the word the button uses instead of "Register Now". */
 const CLOSURES = {
@@ -69,7 +102,8 @@ const CLOSURES = {
 } as const;
 
 function EventCard({ event, action }: { event: DBEvent; action: EventCardAction }) {
-  const { label, path } = ACTIONS[action];
+  const past = action === 'past' ? pastCard(event) : null;
+  const { label, path } = past ?? ACTIONS[action as Exclude<EventCardAction, 'past'>];
   const href = `${event.siteOrigin ?? ''}${path(event.slug)}`;
   // A race nobody can enter still links to its own page: that page is where
   // the reason lives, and the categories, inclusions and race kit are all
@@ -88,7 +122,10 @@ function EventCard({ event, action }: { event: DBEvent; action: EventCardAction 
     event.registrationClosed === 'SCHEDULED' && event.registrationOpensAt
       ? formatEventInstantShort(event.registrationOpensAt)
       : '';
-  const badge = opensOn ? `Opens ${opensOn}` : closure?.badge;
+  const badge = past ? past.badge : opensOn ? `Opens ${opensOn}` : closure?.badge;
+  // The quiet button: on a closed card and on a past one that only opens its
+  // event page, so the gradient stays the mark of a card that leads somewhere new.
+  const quietLabel = past ? (past.quiet ? past.label : null) : closure?.label ?? null;
 
   return (
     <div className="relative flex flex-col overflow-hidden rounded-[20px] border border-white/5 aspect-[4/5] transition-all duration-300 cursor-pointer hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(0,0,0,0.5)] group">
@@ -98,7 +135,15 @@ function EventCard({ event, action }: { event: DBEvent; action: EventCardAction 
       </div>
       {/* Over the image rather than down beside the title, so a runner
           scanning a grid of six reads it without reading anything else. */}
-      {closure && (
+      {/* Left of the status chip, so both fit on the narrowest card. A sign
+          rather than a link: the albums open from the race's own page. */}
+      {past && event.hasPhotos && (
+        <span className="absolute left-4 top-4 z-30 inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-white/20 bg-black/70 px-3 py-1 text-xs font-bold uppercase tracking-widest text-white backdrop-blur-sm">
+          <Camera size={14} aria-hidden="true" className="shrink-0" />
+          Photos
+        </span>
+      )}
+      {badge && (
         <span className="absolute right-4 top-4 z-30 whitespace-nowrap rounded-full border border-white/20 bg-black/70 px-3 py-1 text-xs font-bold uppercase tracking-widest text-white backdrop-blur-sm">
           {badge}
         </span>
@@ -132,9 +177,9 @@ function EventCard({ event, action }: { event: DBEvent; action: EventCardAction 
             </>
           )}
         </div>
-        {closure ? (
+        {quietLabel ? (
           <Link href={href} className="w-full flex items-center justify-center gap-2 py-4 text-base sm:text-lg rounded-[16px] border border-white/15 bg-white/[0.06] font-bold uppercase tracking-wider text-white no-underline transition-colors hover:border-white/30 hover:bg-white/10 group">
-            {closure.label}{' '}
+            {quietLabel}{' '}
             <LinkPendingIcon>
               <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform inline-block" />
             </LinkPendingIcon>
@@ -155,9 +200,16 @@ function EventCard({ event, action }: { event: DBEvent; action: EventCardAction 
 export default function EventGrid({
   events,
   action = 'register',
+  staggerFrom = 0,
 }: {
   events: DBEvent[];
   action?: EventCardAction;
+  /**
+   * The first card whose entrance is staggered from zero. Cards before it are
+   * already on screen; after a "Show more" the new ones should not wait out a
+   * delay counted from the top of the list.
+   */
+  staggerFrom?: number;
 }) {
   return (
     <section className="w-full">
@@ -165,9 +217,10 @@ export default function EventGrid({
         {events.map((event, index) => (
           <motion.div
             key={event.id}
+            data-event-card
             initial={{opacity:0, y:30}} 
             animate={{opacity:1, y:0}} 
-            transition={{ duration: 0.6, delay: index * 0.1, ease: "easeOut" }}
+            transition={{ duration: 0.6, delay: Math.max(0, index - staggerFrom) * 0.1, ease: "easeOut" }}
           >
             <EventCard event={event} action={action} />
           </motion.div>

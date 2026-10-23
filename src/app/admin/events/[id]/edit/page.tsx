@@ -29,7 +29,8 @@ import EventFormatPanel from '../../EventFormatPanel';
 import { basicInfoProblem, changeUntilISO } from '../../event-form-draft';
 import RegistrationFeesPanel from '../../RegistrationFeesPanel';
 import PublishingPanel from '../../PublishingPanel';
-import AdminSwitch from '../../../AdminSwitch';
+import RegistrationHoldFields from './RegistrationHoldFields';
+import AfterRacePanel from '../../AfterRacePanel';
 import { openingBeforePublish, publishDraft } from '../../publish-draft';
 import { describePublish } from '@/lib/event-visibility';
 import EventFormResultModals from '../../EventFormResultModals';
@@ -41,8 +42,9 @@ import { blankEditDraft, editStateFromEvent } from './event-edit-draft';
  * (BasicInfoPanel, RegistrationFeesPanel, LogisticsPanel…), and turning the
  * fetched event into form state is `event-edit-draft.ts`; this file owns the
  * fetch, the validation before PUT, the PUT itself, and what only a saved
- * event has: the registration hold, the promotions, and the link to its
- * certificate in the results workspace.
+ * event has: the registration hold (RegistrationHoldFields), what shows after
+ * the race (AfterRacePanel), the promotions, and the link to its certificate
+ * in the results workspace.
  */
 export default function EditEventPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -101,6 +103,8 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
   const [clientId, setClientId] = useState('');
   const [canLinkClient, setCanLinkClient] = useState(false);
   const [clientError, setClientError] = useState<string | undefined>();
+  // Why a photo album was refused, under that album's card (AfterRacePanel).
+  const [albumError, setAlbumError] = useState<{ index: number; message: string } | null>(null);
   // Read-only, and not part of formData for that reason: promotions belong to
   // the marketing screen and nothing here posts them back.
   const [promotions, setPromotions] = useState<EventPromotion[]>([]);
@@ -193,9 +197,13 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
 
       if (!res.ok) {
         const data = await res.json();
-        // A refusal about the client lands under the picker, not in the modal.
+        // A refusal about the client or an album lands under its field, not the modal.
         if (data.errors?.clientId) setClientError(data.errors.clientId);
-        else setError(data.error || 'Failed to update event');
+        else if (data.errors?.photoAlbums) {
+          const index = Number(data.photoAlbumIndex) || 0;
+          setAlbumError({ index, message: data.errors.photoAlbums });
+          document.getElementById(`photoAlbum-${index}-url`)?.focus();
+        } else setError(data.error || 'Failed to update event');
         setIsLoading(false);
         return;
       }
@@ -344,42 +352,24 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
                 idPrefix="editEvent"
                 paused={formData.registrationPaused}
               >
-                {/* A manual hold, distinct from an event whose options have all
-                    sold out: the slots and the days both remain, and the
-                    organizer has stopped anyway. It is enforced in both
-                    checkout routes, not only here, because a tab opened before
-                    the hold went on will still post. */}
-                {/* The dashboard's switch (AdminSwitch), like Logistics'
-                    delivery toggle, rather than a bare browser checkbox. */}
-                <AdminSwitch
-                  on={formData.registrationPaused}
-                  onToggle={() => patchForm({ registrationPaused: !formData.registrationPaused })}
-                  label="Pause Registration"
-                  hint="Stops new sign-ups immediately. The event stays listed and its page stays readable — runners are told it is paused rather than finding a button that fails."
-                />
-
-                {formData.registrationPaused && (
-                  <div className="form-group">
-                    <label className="form-label" htmlFor="registrationPauseNote">
-                      What Runners Are Told <span className="text-xs opacity-70">- optional</span>
-                    </label>
-                    <textarea
-                      id="registrationPauseNote"
-                      value={formData.registrationPauseNote}
-                      onChange={e => patchForm({ registrationPauseNote: e.target.value })}
-                      className="form-input"
-                      rows={3}
-                      placeholder="e.g. Sign-ups reopen on 15 April once the new singlets arrive."
-                    />
-                    <p className="text-xs opacity-70 mt-1">
-                      Shown on the event page and in place of the registration form.
-                      Leave it blank and we say sign-ups are paused and may reopen.
-                    </p>
-                  </div>
-                )}
+                {/* The organizer's manual hold on sign-ups (RegistrationHoldFields). */}
+                <RegistrationHoldFields draft={formData} onChange={patchForm} />
               </PublishingPanel>
             </>
           )}
+
+          {/* What a finished race shows: its photos, and whether it promises
+              times (PAST_EVENTS_PLAN.md D7). */}
+          <AfterRacePanel
+            draft={formData}
+            eventType={eventType}
+            resultsOnly={resultsOnly}
+            onChange={patch => {
+              patchForm(patch);
+              if (patch.photoAlbums !== undefined) setAlbumError(null);
+            }}
+            albumError={albumError}
+          />
 
           {/* A virtual run has no results, so no certificate (lib/event-format.ts). */}
           {takesResults(formData) && <CertificatePointer eventId={id} />}

@@ -158,6 +158,19 @@ model Event {
   /// and client summaries skip it. Turning it on is refused once the event
   /// has any registration. See RESULTS_ONLY_EVENT_PLAN.md.
   resultsOnly                 Boolean           @default(false)
+  /// The race's photo albums, [{ url, label }] in the organizer's order —
+  /// a page per photographer, a Drive folder beside a Facebook set — shown
+  /// once the race is over on its event page and on /results/[slug], and as
+  /// a camera chip on its Past card. At most 5, each https:// and at most 500
+  /// characters. JSON, so every read and write goes through
+  /// src/lib/photo-albums.ts. Empty = no photos. See PAST_EVENTS_PLAN.md D7.
+  photoAlbums                 Json              @default("[]")
+  /// Whether the race keeps time, so a finished one may promise its results.
+  /// Null means "follow the event's kind" — a race is timed, a fun run is
+  /// not — which is why no backfill was needed; true or false is staff's
+  /// override. Ignored for a virtual run (never timed) and a results-only
+  /// race (always). Read only through isTimed in src/lib/event-format.ts (D7).
+  timedResults                Boolean?
   /// The last moment staff may move a runner to another category
   /// (CATEGORY_CHANGE_PLAN.md D12). Null is the normal case and means "until
   /// the day before race day": changes close at 00:00 Manila on `date`, when

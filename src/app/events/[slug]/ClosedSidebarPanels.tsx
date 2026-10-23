@@ -1,12 +1,20 @@
 import React from 'react';
 import Link from 'next/link';
 import { CalendarCheck2 } from 'lucide-react';
+import RacePhotoLinks from '@/components/RacePhotoLinks';
 import { formatEventDay } from '@/lib/event-schedule';
+import { awaitingResults } from '@/lib/event-format';
 
 /**
  * The event page's sidebar when it cannot take an entry: the race is over
  * (`RaceIsOver`) or sign-ups are on hold (`RegistrationOnHold`). Split out of
  * `page.tsx`, which was on the split-candidates list.
+ *
+ * The rule `RaceIsOver` owns (PAST_EVENTS_PLAN.md D5): a finished race
+ * promises official times only while `awaitingResults` says so — a timed race
+ * (`isTimed`, lib/event-format.ts) in the first 14 days after race day. A fun
+ * run with no timing, a virtual run, and a timed race whose times never came
+ * say when they were held and nothing more.
  */
 
 /**
@@ -15,15 +23,25 @@ import { formatEventDay } from '@/lib/event-schedule';
  * It stands where Register Now stands on a live event, because that is where
  * someone's eye goes and the answer they need is "you cannot enter this one" —
  * not a button that quietly fails, and not a disabled button that says nothing
- * about why. It then tells them the one thing that is still coming.
+ * about why. It then tells them what is still coming, if anything is.
  *
  * There is no results branch here: the moment an organizer uploads times, the
- * event page redirects to /results and this panel is never reached. A race is
- * either still waiting for its times, which is what this says, or it has
- * moved. A virtual run has no results (lib/event-format.ts), so its panel
- * promises none.
+ * event page redirects to /results and this panel is never reached. What is
+ * left is when the race was held, the promise of times only while it is still
+ * fair to make (D5), the organizer's photo albums when there are any, and the
+ * way back to the other races held — this page is reached from the Past tab
+ * as often as from a saved link.
  */
-export function RaceIsOver({ event }: { event: { slug: string; date: string; virtualEndDate: string | null } }) {
+export function RaceIsOver({
+  event,
+}: {
+  event: Parameters<typeof awaitingResults>[0] & {
+    slug: string;
+    virtualEndDate: string | null;
+    /** The stored JSON as it comes; RacePhotoLinks cleans it. */
+    photoAlbums?: unknown;
+  };
+}) {
   return (
     <div className="rounded-3xl border border-white/10 bg-gradient-to-b from-white/5 to-transparent p-5 sm:p-6">
       <div className="flex items-center gap-3 mb-3">
@@ -36,15 +54,20 @@ export function RaceIsOver({ event }: { event: { slug: string; date: string; vir
       <p className="text-sm sm:text-base text-secondary leading-relaxed m-0">
         {event.virtualEndDate
           ? `This virtual run ended on ${formatEventDay(event.virtualEndDate)}.`
-          : `This race was held on ${formatEventDay(event.date)}. Official times appear on the results page once the organizer uploads them.`}
+          : `This race was held on ${formatEventDay(event.date)}.`}
+        {awaitingResults(event) &&
+          ' Official times appear on the results page once the organizer uploads them.'}
       </p>
 
-      <Link
-        href="/events"
-        className="btn-secondary mt-5 w-full"
-      >
-        Find Another Race
-      </Link>
+      <div className="mt-5 flex flex-col gap-3">
+        <RacePhotoLinks albums={event.photoAlbums} />
+        <Link href="/events?view=past" className="btn-secondary w-full">
+          Back to Past Events
+        </Link>
+        <Link href="/events" className="btn-secondary w-full">
+          Find Another Race
+        </Link>
+      </div>
     </div>
   );
 }

@@ -67,6 +67,20 @@ shape:
   `registrationState` answers `EXTERNAL`, both checkout routes refuse it, it is
   off the upcoming listings, `/events/[slug]` is a 404 until results exist, and
   settlement and client summaries skip it; `RESULTS_ONLY_EVENT_PLAN.md`),
+  `photoAlbums` (JSON `[{ url, label }]`, the race's **photo albums** — a page
+  per photographer, a Drive folder beside a Facebook set, any site — shown as
+  buttons once the race is over, on its event page and `/results/[slug]`, and
+  as a camera chip on its Past card; at most 5, each `https://` and at most
+  500 characters; every read and write through `lib/photo-albums.ts`; `[]` =
+  no photos)
+  and `timedResults` (**whether the race keeps time**, so its finished page may
+  promise results; **null follows the event's kind** — a race is timed, a fun
+  run is not — true/false is staff's override, ignored for a virtual run and a
+  results-only race; read only through `isTimed`, `lib/event-format.ts`).
+  From migrations `20261023025133_past_event_photos_timing` (both, then a
+  single `photosUrl`) and `20261023031425_past_event_photo_albums` (the link
+  becomes the list, carrying any value over); additive, no backfill
+  (`PAST_EVENTS_PLAN.md` D7),
   the three **category-change settings** (`CATEGORY_CHANGE_PLAN.md`, migration
   `20261018090000_category_change`, additive): `categoryChangeUntil` (the last
   moment staff may move a paid runner to another category; **null means until
