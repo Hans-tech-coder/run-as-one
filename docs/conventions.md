@@ -821,7 +821,13 @@
 - **Motion comes from transitions.dev.** The `--duration-*` / `--ease-*` /
   `--distance-*` scale at the top of `globals.css` is that library's shared
   motion scale, and the `t-*` classes below it are its snippets: `t-modal`,
-  `t-dropdown`, `t-tilt`, `t-stagger`, `t-toast`, `t-skel`. Each snippet keeps
+  `t-dropdown`, `t-tilt`, `t-stagger`, `t-toast`, `t-skel`, and for a
+  segmented switch `t-tabs-pill` (the sliding pill, measured by script, with
+  the active tab painting it itself until then) plus `t-tab-panel` (the page
+  side-by-side swap of what the tabs open, `data-phase` exit → enter → rest,
+  no blur and no transform at rest) — first used by `/events`'
+  `EventsTabSwitch`, which also shows how to swap a URL tab without a
+  navigation. Each snippet keeps
   its `@media (prefers-reduced-motion: reduce)` guard — never drop it — and its
   own token block in `:root` so a duration can be tuned in one place. The
   reference for all 32 free transitions is installed as an agent skill at

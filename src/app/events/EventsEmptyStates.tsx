@@ -1,6 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Calendar, CalendarCheck2, ChevronRight, History, Trophy } from 'lucide-react';
+import { EventsTabLink } from './EventsTabs';
 
 /**
  * What each /events tab shows when it has nothing to list. Split out of
@@ -9,7 +10,8 @@ import { Calendar, CalendarCheck2, ChevronRight, History, Trophy } from 'lucide-
  * The two point at each other (PAST_EVENTS_PLAN.md D6): an empty tab is a
  * normal state now that finished races leave Upcoming, and an empty tab on
  * its own reads as a page that failed to load, so each says what is true and
- * offers the other side when the other side has something.
+ * offers the other side when the other side has something — through
+ * `EventsTabLink`, so it swaps tabs the way the switch does.
  *
  * Same panel as the /results empty state and the home page's, so all of them
  * read as one surface.
@@ -86,10 +88,10 @@ export function NothingUpcoming({
               </Link>
             )}
             {hasPastEvents && (
-              <Link href="/events?view=past" className="btn-secondary w-full sm:w-auto gap-2">
+              <EventsTabLink view="past" className="btn-secondary w-full sm:w-auto gap-2">
                 <History size={18} className="shrink-0" aria-hidden="true" />
                 See Past Events
-              </Link>
+              </EventsTabLink>
             )}
           </>
         )
@@ -109,10 +111,10 @@ export function NoPastEvents() {
       icon={<History size={30} />}
       heading="No Races Held Yet"
       actions={
-        <Link href="/events" className="btn-secondary w-full sm:w-auto gap-2">
+        <EventsTabLink view="upcoming" className="btn-secondary w-full sm:w-auto gap-2">
           <Calendar size={18} className="shrink-0" aria-hidden="true" />
           See Upcoming Events
-        </Link>
+        </EventsTabLink>
       }
     >
       Races land here the day after they are run, with their results and photos once the organizer posts them.

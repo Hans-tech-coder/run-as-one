@@ -141,6 +141,19 @@ input[type="checkbox"],
   --skel-reveal-blur: 2px;
   --skel-reveal-ease: ease-in-out;
 
+  /* Tabs sliding — the /events Upcoming / Past switch. The snippet ships
+     light-theme colours; the pill here is the switch's own white glass. */
+  --tabs-dur: var(--duration-fast);
+  --tabs-ease: var(--ease-smooth-out);
+  --tabs-pill-bg: rgb(255 255 255 / 0.12);
+  --tabs-pill-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.12);
+
+  /* Page side-by-side, as a tab panel swap — the /events tabs' content */
+  --tab-panel-exit-dur: var(--duration-quick);
+  --tab-panel-enter-dur: var(--duration-fast);
+  --tab-panel-distance: var(--distance-base);
+  --tab-panel-ease: var(--ease-smooth-out);
+
   /* ── Layout ──────────────────────────────────────────────────
      The page gutter, and how far the content has to start below the floating
      navbar. Both are read in more than one place — .event-hero cancels the
@@ -1591,4 +1604,74 @@ html, body { overflow-x: clip; }
   .date-sheet {
     transition: none !important;
   }
+}
+
+/* Transitions.dev Tabs sliding (16) — the /events Upcoming / Past switch
+   (EventsTabs). Script writes the active tab's offsetLeft / offsetWidth onto
+   the pill and sets data-ready on the bar; until then the active tab paints
+   the pill on itself, so the server's HTML already shows which tab is open.
+   The bar and tabs are styled in Tailwind, so only the motion is here. */
+.t-tab {
+  position: relative;
+  z-index: 1;
+  transition: color var(--tabs-dur) var(--tabs-ease), background-color var(--tabs-dur) var(--tabs-ease);
+}
+.t-tab-count {
+  transition: color var(--tabs-dur) var(--tabs-ease), background-color var(--tabs-dur) var(--tabs-ease);
+}
+.t-tabs:not([data-ready]) .t-tab[aria-current="page"] {
+  background-color: var(--tabs-pill-bg);
+  box-shadow: var(--tabs-pill-shadow);
+}
+.t-tabs-pill {
+  position: absolute;
+  top: 0.25rem;
+  bottom: 0.25rem;
+  left: 0;
+  width: 0;
+  border-radius: 9999px;
+  background: var(--tabs-pill-bg);
+  box-shadow: var(--tabs-pill-shadow);
+  transform: translateX(0);
+  transition:
+    transform var(--tabs-dur) var(--tabs-ease),
+    width     var(--tabs-dur) var(--tabs-ease);
+  will-change: transform, width;
+  z-index: 0;
+  pointer-events: none;
+}
+.t-tabs:not([data-ready]) .t-tabs-pill {
+  visibility: hidden;
+}
+
+/* Transitions.dev Page side-by-side (08), as a tab panel swap — what the
+   /events tabs open (EventsTabSwitch). The snippet stacks both pages in one
+   absolutely positioned box; two lists of different lengths cannot share
+   one, so only the shown tab is in the page and the swap runs in two steps:
+   data-phase="exit" eases the old tab away from the tab pressed, then the
+   new one is placed on the far side ("enter", no transition) and released
+   to rest. --t-tab-dir is 1 toward the tab on the right, -1 toward the left.
+   No blur, unlike the snippet: a blurred grid of photos is heavy on a
+   phone, and at rest the panel carries no transform or filter, so nothing
+   fixed inside it is ever positioned against it. */
+.t-tab-panel {
+  transition:
+    opacity   var(--tab-panel-enter-dur) var(--tab-panel-ease),
+    transform var(--tab-panel-enter-dur) var(--tab-panel-ease);
+}
+.t-tab-panel[data-phase="exit"] {
+  opacity: 0;
+  transform: translateX(calc(var(--tab-panel-distance) * var(--t-tab-dir, 1) * -1));
+  transition-duration: var(--tab-panel-exit-dur);
+}
+.t-tab-panel[data-phase="enter"] {
+  opacity: 0;
+  transform: translateX(calc(var(--tab-panel-distance) * var(--t-tab-dir, 1)));
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-tab, .t-tab-count, .t-tabs-pill, .t-tab-panel { transition: none !important; }
+  /* The new tab simply replaces the old: no frame spent offset or faded. */
+  .t-tab-panel[data-phase] { opacity: 1; transform: none; }
 }

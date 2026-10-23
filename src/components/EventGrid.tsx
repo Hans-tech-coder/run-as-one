@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { createContext, useContext } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Calendar, Camera, MapPin, ChevronRight, Globe } from 'lucide-react';
@@ -197,6 +197,15 @@ function EventCard({ event, action }: { event: DBEvent; action: EventCardAction 
   );
 }
 
+/**
+ * Whether cards mounting now rise in one by one. True everywhere but a tab
+ * swap on /events (EventsTabSwitch), where the whole list eases in as one
+ * panel and a card-by-card entrance on top of it would read as a second,
+ * slower arrival. Only read on a card's mount, so cards that a later
+ * "Show more" adds still rise in.
+ */
+export const EventGridEntrance = createContext(true);
+
 export default function EventGrid({
   events,
   action = 'register',
@@ -211,6 +220,7 @@ export default function EventGrid({
    */
   staggerFrom?: number;
 }) {
+  const entrance = useContext(EventGridEntrance);
   return (
     <section className="w-full">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 w-full">
@@ -218,7 +228,7 @@ export default function EventGrid({
           <motion.div
             key={event.id}
             data-event-card
-            initial={{opacity:0, y:30}} 
+            initial={entrance ? { opacity: 0, y: 30 } : false}
             animate={{opacity:1, y:0}} 
             transition={{ duration: 0.6, delay: Math.max(0, index - staggerFrom) * 0.1, ease: "easeOut" }}
           >

@@ -36,7 +36,11 @@ it moves to `ON_HOLD.md`. The decisions code and docs cite:
 
 - **D1** — Past is a tab on `/events`, `?view=past`, read on the server; a
   plain link, Upcoming the default, an unknown value falls back to it. Not
-  `/events/past`, which would shadow an event slugged `past`.
+  `/events/past`, which would shadow an event slugged `past`. A press does not
+  navigate: the page renders both tabs (cached `publicDb` reads, so no extra
+  wake-up) and `EventsTabSwitch` swaps them with `history.pushState`, the pill
+  sliding and the list easing across, so no tab switch goes through
+  `events/loading.tsx` (owner's report that switching was not smooth).
 - **D2** — Past = published, finished (`finishedEvents()`, wrapped in
   `AND: [...]` because it is an `OR`), in the client's scope on a subdomain;
   virtual runs included; a results-only race only once it has results, so no
