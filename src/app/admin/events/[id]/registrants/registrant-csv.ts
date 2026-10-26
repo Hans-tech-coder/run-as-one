@@ -72,9 +72,14 @@ export const REGISTRANT_CSV_HEADERS = [
   'Guardian Name', 'Guardian Relationship', 'Guardian Consent At',
   'Category', 'Changed From', 'Kit Changed', 'Distance', 'Shirt Size', 'Emergency Contact', 'Emergency Phone',
   'Running Community', 'Medical Conditions', 'Home Address', 'Province', 'Logistics Method', 'Delivery Area', 'Delivery Address', 'Logistics Note',
-  'Payment Method', 'Pacer', 'Promo Code', 'Promo Price Held From', 'Order Discount', 'Order Total', 'Status',
-  'Payment Remarks',
+  'Payment Method', 'Pacer', 'Promo Code', 'Promo Price Held From', 'Order Discount', 'Order Total',
+  'Entry Price', 'Runner Discount', 'Registration Fee', 'Admin Fee', 'Delivery Fee', 'Transaction Fee',
+  'Runner Total', 'Free Entry', 'Status', 'Payment Remarks',
 ];
+
+/** A per-runner amount as the money columns print it; blank on a row without one. */
+const pesosCell = (centavos: number | undefined) =>
+  csvField(centavos === undefined ? '' : formatPesos(centavos));
 
 /** "Added: Medal · Removed: Singlet" when a move changed the kit; blank otherwise. */
 function kitChangedCell(runner: { categoryChanges?: MoveSource[] }): string {
@@ -148,6 +153,20 @@ function registrantCsvRow(runner: any): string {
     csvField(runner.priceLockedAtLabel || ''),
     csvField(runner.discountAmount ? formatPesos(runner.discountAmount) : ''),
     csvField(formatPesos(runner.totalAmount)),
+    // The same money split across the order's runners (lib/runner-money.ts),
+    // so these columns *can* be summed: a group's Runner Totals add up to its
+    // Order Total once, not once per runner. Staff asked for it on 2026-10-26,
+    // after building the split by hand for a 5+1 group. Delivery and
+    // transaction fees sit on the order's first runner only.
+    pesosCell(runner.runnerMoney?.entryPrice),
+    pesosCell(runner.runnerMoney?.discount),
+    pesosCell(runner.runnerMoney?.registrationFee),
+    pesosCell(runner.runnerMoney?.adminFee),
+    pesosCell(runner.runnerMoney?.deliveryFee),
+    pesosCell(runner.runnerMoney?.transactionFee),
+    pesosCell(runner.runnerMoney?.total),
+    // Blank rather than "NO", like Pacer: an empty cell is the ordinary case.
+    csvField(runner.runnerMoney?.freeEntry ? 'YES' : ''),
     csvField(displayStatus(runner)),
     // The payment validator's notes on the order, beside the Status they
     // explain; on every runner of a group, like the money. In the file since

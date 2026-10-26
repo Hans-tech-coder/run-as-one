@@ -17,6 +17,7 @@ import {
 import { formatEventInstant } from '@/lib/event-schedule';
 import { bankTransferExpiresBy, isCancelledCheckout } from '@/lib/pending-expiry';
 import { formatRunnerAddress } from '@/lib/runner-address';
+import { splitOrderMoney } from '@/lib/runner-money';
 
 /**
  * One row per live runner, as the registrants table, its cards, the detail
@@ -65,6 +66,18 @@ export function buildRegistrantRows({
     // and the order's switches, which the cell only reads — switching opens
     // from the row menu (LOGISTICS_CHANGE_PLAN.md Revision 2).
     const logistics = orderLogisticsFields(event, reg, logisticsByOrder.get(reg.id) ?? []);
+    // What each runner of the order cost, split so the export's per-runner
+    // columns sum to the order total (lib/runner-money.ts).
+    const money = splitOrderMoney(
+      reg,
+      reg.runners.map(runner => ({
+        listPrice: runner.category.price,
+        promoPrice: runner.promoPrice,
+        category: runner.category,
+        singletSize: runner.singletSize,
+      })),
+      event.shirtSizeUpcharge,
+    );
     reg.runners.forEach((runner, runnerIndex) => {
       runners.push({
         id: runner.id,
@@ -246,7 +259,10 @@ export function buildRegistrantRows({
         // discount on an order placed after the early bird closed. Worded on
         // the server in Manila time, as the guardian consent above is.
         priceLockedAtLabel: reg.priceLockedAt ? formatEventInstant(reg.priceLockedAt) : null,
-        totalAmount: reg.totalAmount
+        totalAmount: reg.totalAmount,
+        // This runner's own share of that money, for the export's columns
+        // that can be summed.
+        runnerMoney: money[runnerIndex],
       });
     });
   });

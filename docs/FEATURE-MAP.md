@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-48 pages · 91 API routes · 149 modules in `src/lib` · 633 files · 112,562 lines
+48 pages · 91 API routes · 150 modules in `src/lib` · 634 files · 112,914 lines
 
 ---
 
@@ -301,6 +301,7 @@ the file itself.
 | [`resume-payment.ts`](../src/lib/resume-payment.ts) | The resume-payment link, a category change's and a delivery switch's (a second kind of the same token, `purpose: 'category-change-payment'`, subjec… |
 | [`rich-text.ts`](../src/lib/rich-text.ts) | The formatting an organizer may give "About This Event", and how it is read. |
 | [`runner-address.ts`](../src/lib/runner-address.ts) | Every runner's home address (`RUNNER_ADDRESS_PLAN.md` Batch 1). |
+| [`runner-money.ts`](../src/lib/runner-money.ts) | One order's money, split across its runners, so the registrants export's per-runner columns sum to what the order paid (2026-10-26). |
 | [`running-community-store.ts`](../src/lib/running-community-store.ts) | — |
 | [`running-community.ts`](../src/lib/running-community.ts) | The running club a runner represents, and the shared list they pick it from. |
 | [`secret-box.ts`](../src/lib/secret-box.ts) | The one reversible secret in the app: a secret the server must read back, which today means a TOTP secret (lib/two-factor.ts, TWO_FACTOR_PLAN.md). |

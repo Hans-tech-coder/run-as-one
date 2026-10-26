@@ -744,6 +744,14 @@ owner; it was `registrants_event_<id>.csv`), slugged by `fileSlug` as the
 client's `runners_<race>.csv` is, and its last column is **Payment Remarks**
 — the validator's `Registration.remarks`, on every runner of the order, which
 until then stayed on screen only.
+**Per-runner money columns** (2026-10-26, staff's request): *Order Discount*
+and *Order Total* repeat on every runner of a group, so they cannot be summed.
+After them come **Entry Price, Runner Discount, Registration Fee, Admin Fee,
+Delivery Fee, Transaction Fee, Runner Total** and **Free Entry** (`YES` on the
+free runner of a deal or a pacer). These are this runner's own share, split by
+`runner-money.ts` (§5) in `registrant-rows.ts` as `runnerMoney`, so a group's
+Runner Totals sum to its Order Total once. Delivery and transaction fees sit
+on the order's first runner only (the owner's call).
 **The screen was split in the same change** — it was the repository's largest
 file at 2,571 lines. `RegistrantDetailModal.tsx` is the panel (it holds no state
 of its own; every way onward calls back to a modal the table owns),

@@ -27,6 +27,15 @@ and `certificateCoordinates` through without the certificate route's checks
 (Strix's note, older than this release); over-limit album errors point at row
 6; `RacePhotoLinks` uses a fixed heading id.
 
+**Per-runner money in the registrants export (2026-10-26; on `dev`, not
+committed).** Staff exporting a group order saw *Order Discount* and *Order
+Total* repeated on each runner and had to pivot by Order Ref to get revenue.
+The CSV now adds Entry Price, Runner Discount, Registration Fee, Admin Fee,
+Delivery Fee, Transaction Fee, Runner Total and Free Entry per runner, from
+§5 `runner-money.ts`. A group's Runner Totals sum to its Order Total once.
+Delivery and transaction fees are on the first runner only. No schema change.
+See §6 *registrants export*.
+
 **Track My Registration (2026-10-23, `TRACK_PAGE_PLAN.md`; on `dev` in
 `2978fbd`, not released).** Registrants kept messaging staff to ask whether they were
 paid, whether their bank transfer was validated and whether their details were
