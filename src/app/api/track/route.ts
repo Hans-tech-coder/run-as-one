@@ -53,7 +53,15 @@ export async function POST(request: Request) {
 
   const ref = readTrackRef(body.ref as string)!;
   if (!allowRequest('track-ref', ref.orderRef, TRACK_REF_RULE)) {
-    return reply({ error: 'This reference was looked up many times in the last few minutes. Wait ten minutes, then try again.' }, 429);
+    // The way past a stranger holding this reference: the emailed link never
+    // touches this limit (TRACK_REF_RULE).
+    return reply(
+      {
+        error:
+          'This reference was looked up many times in the last few minutes. Wait ten minutes, or open the Track My Registration button in your registration email.',
+      },
+      429,
+    );
   }
 
   const scope = await findTrackScope(ref, (body.email as string).trim());

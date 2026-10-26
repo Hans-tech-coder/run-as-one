@@ -35,7 +35,9 @@ function reply(body: unknown, status = 200) {
 const GONE = 'This page has been open a while. Look up your registration again, then press Resend.';
 
 export async function POST(request: Request) {
-  if (!allowRequest('track', callerKey(request), TRACK_LOOKUP_RULE)) {
+  // Its own bucket, so lookups from a shared address (a family, a carrier's
+  // NAT) never use up the Resend button too.
+  if (!allowRequest('track-resend-caller', callerKey(request), TRACK_LOOKUP_RULE)) {
     return reply({ error: 'Too many tries from your connection. Wait a minute, then try again.' }, 429);
   }
 

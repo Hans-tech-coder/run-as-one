@@ -70,6 +70,12 @@ export async function readTrackToken(token: string): Promise<TrackScope | null> 
  * Built with no request, because the email is also sent from the PayMongo
  * webhook, so it rests on `SITE_URL` (lib/site-host.ts). The client is read
  * here rather than added to every caller's registration query.
+ *
+ * That read never fails the email: it is rendered after the order is saved
+ * (and, from the webhook, after it is PAID), so a throw here would lose the
+ * email or answer the checkout with a 500. On a failed read the link falls back
+ * to the main site, and `/track/<token>` sends it on to the race's own
+ * (`ensureEventHost`).
  */
 export async function emailedTrackUrl(
   registration: { id: string; event: { clientId: string | null } },
@@ -79,7 +85,9 @@ export async function emailedTrackUrl(
   const [token, client] = await Promise.all([
     createTrackToken({ registrationId: registration.id, runnerNos: null }, expiresAt),
     registration.event.clientId
-      ? prisma.client.findUnique({ where: { id: registration.event.clientId }, select: { subdomain: true, status: true } })
+      ? prisma.client
+          .findUnique({ where: { id: registration.event.clientId }, select: { subdomain: true, status: true } })
+          .catch(() => null)
       : null,
   ]);
   return `${eventOrigin({ client })}/track/${token}`;

@@ -107,6 +107,9 @@ function dealRunners(charged: number[], amount: number): Set<number> {
   let covered = 0;
   for (const { price, index } of order) {
     if (covered >= amount) break;
+    // A runner already at ₱0 (a pacer, a seat the promotion fully priced in)
+    // has nothing left for the deal to take.
+    if (price <= 0) continue;
     free.add(index);
     covered += price;
   }
@@ -142,21 +145,28 @@ export function splitOrderMoney(
       : Math.min(order.combinedDiscountAmount, order.discountAmount);
   const priced = order.discountAmount - deal;
 
-  const priceWeights = isPricedIn(type)
-    ? runners.map(runner =>
-        runner.promoPrice === null ? 0 : Math.max(0, runner.listPrice - runner.promoPrice),
+  // Each runner's saving, never more than their entry: a price changed since
+  // checkout can leave the live gap bigger than the rescaled entry. When the
+  // savings no longer cover the stored amount, it follows the entries instead,
+  // which keeps every share within its entry.
+  const savings = isPricedIn(type)
+    ? runners.map((runner, index) =>
+        runner.promoPrice === null
+          ? 0
+          : Math.min(entries[index], Math.max(0, runner.listPrice - runner.promoPrice)),
       )
     : entries;
-  const priceShares =
-    priced > 0
-      ? allocate(priced, priceWeights.some(weight => weight > 0) ? priceWeights : entries)
-      : runners.map(() => 0);
+  const priceWeights = savings.reduce((sum, saving) => sum + saving, 0) >= priced ? savings : entries;
+  const priceShares = priced > 0 ? allocate(priced, priceWeights) : runners.map(() => 0);
 
   const charged = entries.map((entry, index) => entry - priceShares[index]);
   const free = deal > 0 ? dealRunners(charged, deal) : new Set<number>();
+  // With no free runner left to carry it, the deal follows what each runner was
+  // charged rather than allocate's even split, which would push ₱0 rows negative.
+  const dealWeights = charged.map((price, index) => (free.has(index) ? price : 0));
   const dealShares =
     deal > 0
-      ? allocate(deal, charged.map((price, index) => (free.has(index) ? price : 0)))
+      ? allocate(deal, dealWeights.some(weight => weight > 0) ? dealWeights : charged)
       : runners.map(() => 0);
 
   const adminFees = allocate(order.platformFee, runners.map(() => 1));

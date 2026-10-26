@@ -298,7 +298,12 @@ function sweep(now: number, windowMs: number) {
  * cannot tell apart, not a block.
  */
 export function callerKey(request: Request): string {
-  const forwarded = request.headers.get('x-forwarded-for');
+  return callerKeyOf(request.headers);
+}
+
+/** `callerKey` from bare headers, for a page reading `headers()` rather than a Request. */
+export function callerKeyOf(headers: { get(name: string): string | null }): string {
+  const forwarded = headers.get('x-forwarded-for');
   const first = forwarded?.split(',')[0]?.trim();
-  return first || request.headers.get('x-real-ip')?.trim() || 'unknown';
+  return first || headers.get('x-real-ip')?.trim() || 'unknown';
 }

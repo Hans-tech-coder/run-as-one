@@ -7,7 +7,7 @@ import { IconBadge, StatusPanel } from '@/components/StatusPanel';
 import { SITE_NAME, SITE_URL } from '@/lib/site-contact';
 import { getSiteSettings } from '@/lib/site-settings';
 import { SITE_URL_HEADER } from '@/lib/site-host';
-import { TRACK_LOOKUP_RULE, allowRequest } from '@/lib/rate-limit';
+import { TRACK_LOOKUP_RULE, allowRequest, callerKeyOf } from '@/lib/rate-limit';
 import { readTrackToken } from '@/lib/track-link';
 import { readTrackView, trackHome } from '@/lib/track';
 import { ensureEventHost } from '@/lib/site-client';
@@ -35,12 +35,7 @@ export const metadata: Metadata = {
 export default async function TrackLinkPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   const requestHeaders = await headers();
-  const caller =
-    requestHeaders.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    requestHeaders.get('x-real-ip')?.trim() ||
-    'unknown';
-
-  if (!allowRequest('track', caller, TRACK_LOOKUP_RULE)) {
+  if (!allowRequest('track', callerKeyOf(requestHeaders), TRACK_LOOKUP_RULE)) {
     return (
       <Notice
         icon={<Clock size={30} aria-hidden="true" />}
