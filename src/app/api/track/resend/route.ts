@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { TRACK_LOOKUP_RULE, TRACK_RESEND_RULE, allowRequest, callerKey } from '@/lib/rate-limit';
 import { readTrackToken } from '@/lib/track-link';
-import { readResendTarget } from '@/lib/track';
+import { provesContact, readResendTarget } from '@/lib/track';
 import { maskEmail } from '@/lib/track-mask';
 import { isBankTransfer } from '@/lib/registration-codes';
 import { deliverConfirmationEmail, deliverReceivedEmail } from '@/lib/email-delivery';
@@ -19,6 +19,10 @@ import { deliverConfirmationEmail, deliverReceivedEmail } from '@/lib/email-deli
  * **Proved by the page's own token**, the short-lived track token the lookup
  * or the emailed link handed out (lib/track-link.ts), not by a reference and
  * email posted again: the browser never has to keep the email.
+ *
+ * **For the contact's own lookup only**: a token that proved only another
+ * runner's email (`provesContact` false) is refused, so a group runner cannot
+ * spend the order's sends; the page shows them no Resend button either.
  *
  * **Throttled per order** (`TRACK_RESEND_RULE`, 2 an hour) as well as per
  * address, because each send spends one of Resend's 100 free recipients a day.
@@ -52,6 +56,11 @@ export async function POST(request: Request) {
 
   const order = await readResendTarget(scope.registrationId);
   if (!order || order.deletedAt || order.runners.length === 0) return reply({ error: GONE }, 401);
+
+  const shown = scope.runnerNos ? order.runners.filter(runner => scope.runnerNos!.includes(runner.runnerNo)) : order.runners;
+  if (!provesContact(scope, shown, order.customerEmail)) {
+    return reply({ error: 'Only the email this registration was made with can resend its confirmation.' }, 403);
+  }
 
   const sendsReceipt = order.status === 'PAID';
   const sendsReceived = order.status === 'PENDING' && isBankTransfer(order.paymentMethod);

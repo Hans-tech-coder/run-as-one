@@ -152,9 +152,11 @@ export function changePaymentUrl(origin: string, token: string): string {
  * so a switch applied, cancelled or expired meanwhile is refused.
  *
  * The page it opens (`/pay/logistics/[token]`) shows the race, the receipt's
- * reference, the number of kits and the fee, never a runner's name, email,
- * phone or the address the kits ship to: it is pasted into Messenger and
- * forwarded too.
+ * reference, the number of kits and the fee, and, while the switch awaits
+ * payment, the full delivery address, receiver phone and Runner 1's street,
+ * which it also takes edits to (`api/logistics-change/details`). So the link
+ * is the contact's: Track My Registration lists it only for a lookup that
+ * proved the contact's email (`pendingFor`).
  */
 const SWITCH_PURPOSE = 'logistics-change-payment';
 

@@ -11,7 +11,8 @@
  *   reads expired before the daily sweep marks it.
  * - An upgrade or a delivery switch awaiting money shows what is owed and its
  *   own pay link, made by the same `changeLinkFor` / `switchLinkFor` staff use;
- *   one whose proof is in reads as for validation, with no link.
+ *   one whose proof is in reads as for validation, with no link. A delivery
+ *   switch is shown to the contact only.
  *
  * Amounts here are only the money still owed, never what was paid. Server-only.
  */
@@ -135,17 +136,30 @@ export async function statusOf(order: StatusOrder, liveRunners: number, requestU
   return { ...base, kind: 'unpaid-closed', holdUntil: label(until) };
 }
 
-/** Upgrades and delivery switches still waiting on money, for the runners shown. */
-export async function pendingFor(order: PendingOrder, runnerIds: string[], runnersOnOrder: number, requestUrl: string): Promise<TrackPending[]> {
+/**
+ * Upgrades and delivery switches still waiting on money, for the runners shown.
+ * A delivery switch is the whole order's, and its pay page shows the address
+ * the kits ship to and takes edits to it, so it is listed only when the lookup
+ * proved the contact's email (`includeOrderSwitches`), never to another runner.
+ */
+export async function pendingFor(
+  order: PendingOrder,
+  runnerIds: string[],
+  runnersOnOrder: number,
+  requestUrl: string,
+  includeOrderSwitches: boolean,
+): Promise<TrackPending[]> {
   const [changes, switches] = await Promise.all([
     prisma.categoryChange.findMany({
       where: { registrationId: order.id, runnerId: { in: runnerIds }, status: CATEGORY_CHANGE_STATUSES.AWAITING_PAYMENT },
       select: { id: true },
     }),
-    prisma.logisticsChangeOrder.findMany({
-      where: { registrationId: order.id, change: { status: LOGISTICS_CHANGE_STATUSES.AWAITING_PAYMENT } },
-      select: { changeId: true },
-    }),
+    includeOrderSwitches
+      ? prisma.logisticsChangeOrder.findMany({
+          where: { registrationId: order.id, change: { status: LOGISTICS_CHANGE_STATUSES.AWAITING_PAYMENT } },
+          select: { changeId: true },
+        })
+      : Promise.resolve([]),
   ]);
   const pending: TrackPending[] = [];
 

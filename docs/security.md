@@ -30,8 +30,14 @@
   `/track/<token>` link is a stateless `purpose: 'track'` JWT (a whole order;
   a `runners` claim narrows a lookup's own short-lived token to the runners it
   proved), refused by every other token reader and re-checked against the
-  order on every open. *Resend* mails only the order's contact, proved by that
-  token, and is throttled per order to spare Resend's 100-a-day free tier.
+  order on every open. **What belongs to the whole order is the contact's
+  alone** (`provesContact`, Strix vuln-0001): a delivery switch's pay link
+  (`/pay/logistics/<token>` shows the full delivery address and takes edits to
+  it) is listed only when the lookup covers the whole order or shows a runner
+  with the contact's email, and so is *Resend*; another runner sees only their
+  own upgrades. *Resend* mails only the order's contact, proved by that token
+  (403 for a token that proved another runner's email), and is throttled per
+  order to spare Resend's 100-a-day free tier.
   `noindex` and `no-store` throughout. An order is shown only on its race's
   own site (a client's race on the client's subdomain); asked elsewhere, the
   answer is a link there, and only after the reference and email matched, so

@@ -60,6 +60,15 @@ export type { TrackPending, TrackStatus, TrackStatusKind } from './track-status'
 
 const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
 
+/**
+ * Whether a scope proved the contact's own email (Strix vuln-0001): it covers
+ * the whole order, or a runner it shows registered with that email. Only then
+ * does the page get what belongs to the whole order, not to the runners shown.
+ */
+export function provesContact(scope: TrackScope, shown: { email: string }[], customerEmail: string): boolean {
+  return scope.runnerNos === null || shown.some(runner => same(runner.email, customerEmail));
+}
+
 /** The §4 rule: the scope this reference and email open, or null for "not found". */
 export async function findTrackScope(ref: TrackRef, email: string): Promise<TrackScope | null> {
   const order = await prisma.registration.findUnique({
@@ -263,21 +272,23 @@ export async function readTrackView(scope: TrackScope, requestUrl: string, now: 
     : order.runners;
   if (shown.length === 0) return null;
 
+  // A delivery switch is the whole order's, and its pay link shows and edits
+  // where the kits ship; Resend spends the order's quota. Both are the
+  // contact's alone.
+  const contactProved = provesContact(scope, shown, order.customerEmail);
+
   const { event } = order;
   const finished = hasFinished(event);
   const [status, pending, results, token] = await Promise.all([
     statusOf({ ...order, removedRunners: order._count.runners }, runnersOnOrder, requestUrl, now),
-    pendingFor(order, shown.map(r => r.id), runnersOnOrder, requestUrl),
+    pendingFor(order, shown.map(r => r.id), runnersOnOrder, requestUrl, contactProved),
     finished && takesResults(event) ? resultLinks(order, shown) : Promise.resolve({ any: false, byRunner: new Map<string, string>() }),
     createTrackToken(scope, new Date(now.getTime() + LOOKUP_TOKEN_MINUTES * 60_000)),
   ]);
 
   // The payer is named only to a runner who is not them: none of the runners
   // shown registered with the contact's email.
-  const registeredBy =
-    scope.runnerNos && !shown.some(runner => same(runner.email, order.customerEmail))
-      ? order.customerName.trim().split(/\s+/)[0] || null
-      : null;
+  const registeredBy = contactProved ? null : order.customerName.trim().split(/\s+/)[0] || null;
 
   return {
     token,
@@ -317,7 +328,7 @@ export async function readTrackView(scope: TrackScope, requestUrl: string, now: 
         : null,
       resultHref: results.byRunner.get(runner.id) ?? null,
     })),
-    resend: resendOf(order),
+    resend: contactProved ? resendOf(order) : null,
   };
 }
 
