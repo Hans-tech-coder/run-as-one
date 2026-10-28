@@ -49,7 +49,12 @@
   page never asks for a sign-in. The host's client label travels as
   `x-rao-site` (and the URL as `x-rao-url`), and **the proxy deletes both from
   what the browser sent before setting its own**, so a visitor cannot choose a
-  site by header. Nothing that decides who may do what reads either. On a
+  site by header. The site-tree pages get the label as a path instead (the
+  proxy rewrites them to `/s/<label>/…`, routes §6), and a browser's own
+  `/s/…` is rewritten like any other path, so it lands on a 404 and a visitor
+  cannot choose a site by path either; `/s/:path*` is its own matcher entry so
+  no file extension slips it past. Nothing that decides who may do what reads
+  the label. On a
   subdomain, `/admin/**` is sent to the main host *before* the session check
   (the cookie is host-only, so a sign-in there would land on the wrong host).
   `/admin/:path*` stays its own matcher entry so the page matcher's static-file

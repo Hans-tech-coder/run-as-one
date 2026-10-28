@@ -12,7 +12,7 @@ import { canonicalResultsPath, eventByParam, resultsPath, runnerResultPath } fro
 import { toWholeSeconds } from '@/lib/race-time';
 import { withPacerRanks } from '@/lib/pacer-store';
 import { RESULT_STATUS_LABELS, isResultStatus } from '@/lib/result-status';
-import { EVENT_SITE_CLIENT, ensureEventHost, eventPageMetadata } from '@/lib/site-client';
+import { EVENT_SITE_CLIENT, ensureEventSite, eventPageMetadata } from '@/lib/site-client';
 
 /**
  * One runner's result, addressed by the number they wore: /results/[slug]/1042.
@@ -36,9 +36,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 export default async function RunnerAnalyticsPage({ 
   params 
 }: { 
-  params: Promise<{ slug: string, bib: string }>
+  params: Promise<{ site: string, slug: string, bib: string }>
 }) {
-  const { slug, bib } = await params;
+  const { site, slug, bib } = await params;
 
   // The event comes first here, unlike the old cuid lookup: a bib only means
   // something inside one race, so there is nothing to look up until we know
@@ -51,7 +51,7 @@ export default async function RunnerAnalyticsPage({
 
   // On its own site first: a client's race opened on another host goes there,
   // path kept (lib/site-client.ts).
-  await ensureEventHost(event);
+  ensureEventSite(event, site, `/results/${encodeURIComponent(slug)}/${encodeURIComponent(bib)}`);
 
   const include = { category: true, event: true } as const;
 

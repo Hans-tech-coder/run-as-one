@@ -5,7 +5,7 @@ import { AlertCircle, ArrowLeft, ArrowRight, ArrowUpRight, Send } from 'lucide-r
 import { RunAsOneLogo } from '@/components/RunAsOneLogo';
 import BusyLabel from '@/components/ui/BusyLabel';
 import AuthHomeLink from '../AuthHomeLink';
-import { PAST_EVENTS_HREF } from '@/app/events/events-view';
+import { PAST_EVENTS_HREF } from '@/app/s/[site]/events/events-view';
 import { FORM_SUBTITLE, FORM_TITLE, STEPS } from './apply-steps';
 import { useApplicationForm } from './useApplicationForm';
 import OrganizationStep from './OrganizationStep';

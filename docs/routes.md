@@ -59,9 +59,39 @@ the winners board and would otherwise swallow it.
 
 ### Hosts: the main site and client sites (`CLIENT_SUBDOMAIN_PLAN.md`)
 `src/proxy.ts` runs on every page (not `/api`, `_next` or static files) as well
-as on `/admin/**`. It reads the host's client label (`lib/site-host.ts`) and
-forwards it as `x-rao-site`, with the URL as `x-rao-url`, after deleting any
-the browser sent. **On a client's site** (`crc.runasone.ph`, `crc.localhost:3000`):
+as on `/admin/**` and `/s/**`. It reads the host's client label
+(`lib/site-host.ts`) and hands it to the app one of two ways
+(`PUBLIC_PAGE_CACHE_PLAN.md` Batch 1):
+
+- **The site tree.** Every public page path is **rewritten** to
+  `/s/<label>/<path>` (`/s/_main/<path>` on the main site), served by
+  `src/app/s/[site]/` (a plain `s`, not the plan's `_s`: an underscore folder
+  is private and unrouted, and the `%5Fs` escape breaks Next's dev typegen,
+  so `next build` fails after `next dev`). That tree holds the home page, `/events` and
+  `/events/[slug]`, `/results`, `/results/[slug]`, `/results/[slug]/full` and
+  `/results/[slug]/[bib]` (with their `loading.tsx` and CSS), plus a
+  `[...missing]` catch-all, so an address nobody serves gets **that site's own
+  branded 404** (`s/[site]/not-found.tsx`). The site is `params.site`, and
+  nothing in the tree reads a request API, so its pages can later be cached per
+  site (Batch 2; today they are still dynamic, the three listings
+  `force-dynamic`). The browser's URL never shows `/s`; a browser that asks
+  for `/s/…` itself is rewritten like any path, to `/s/<this site>/s/…`,
+  which is the 404 — nobody picks a site by path.
+- **The header pages.** `/events/[slug]/register`, `/pay/**`, `/track/**`,
+  `/feedback`, `/privacy`, `/terms` and `/coming-soon` (`REQUEST_SITE_PAGE` in
+  the proxy — **a new page outside the tree must be added there**, or it is
+  rewritten into the tree and 404s) and `/admin/**` get the label as
+  `x-rao-site`, with the URL as `x-rao-url`, after deleting any the browser
+  sent. Each of those folders has a one-line `layout.tsx` re-exporting
+  `app/RequestSiteLayout.tsx`, which reads the header for the metadata and the
+  frame. The root `not-found.tsx` (a miss under one of those paths) wears the
+  main site's frame and reads no request API, because Next renders every
+  not-found into each page's payload; the wizard has its own, inside its
+  site's frame.
+
+The root layout reads **no** request API: the document, fonts, platform
+settings and the main site's metadata (what the dashboard keeps). **On a
+client's site** (`crc.runasone.ph`, `crc.localhost:3000`):
 `/` → 307 `/events`, and `/admin/**` — the public admin pages included — →
 307 to the same path and query on the main host, **before** the session check,
 because `admin_token` is host-only. (Under `next dev` that second move is a
@@ -69,9 +99,10 @@ refresh page, since Next rewrites a `Location` on the host it thinks it serves
 into a bare path.) Staff set a client's subdomain and branding in the client
 panel's **Site & branding** section on `/admin/clients`.
 
-**What a client's site shows** (Batch 2). The root layout reads
-`getSiteClient()` (`lib/site-client.ts`) and hands it to the navbar and
-footer: the **client's logo** (its name as a wordmark when none is uploaded)
+**What a client's site shows** (Batch 2). The layout over the page —
+`s/[site]/layout.tsx` from the param (`findSiteClient`), `RequestSiteLayout`
+from the header (`requestSiteClient`), `lib/site-client.ts` — hands the client
+to the navbar and footer (`app/SiteFrame.tsx`): the **client's logo** (its name as a wordmark when none is uploaded)
 linking to `/events`, and the client footer (`components/ClientSiteFooter.tsx`,
 D9: logo, name, public email / phone, website, socials, Run As One's address
 for payment concerns, Privacy / Terms / Feedback, "Powered by Run As One"; no
@@ -87,21 +118,32 @@ client's site icon** (`faviconUrl`, a square upload; Run As One's mark when
 none is saved — never the logo, which would be stretched). `/privacy`, `/terms`,
 `/feedback` and `/track` (linked from the shared Navbar and the client's footer) work there unchanged; `/pay/[token]` is moved to its order's own
 site by `ensureEventHost`, so it wears that organizer's branding. An unknown
-or archived label is sent to the main site from the layout, path and query
-kept.
+or archived label is sent to the main site: by `requestSiteClient` on a header
+page, path and query kept; in the site tree by the page (the layout cannot see
+its path), so `/events` and `/results` go to that path on the main site **with
+the query dropped**, and an event or result page goes on to its event's own
+site through `ensureEventSite`. Meanwhile the layout brands it as the main
+site.
 
-**Wrong host.** `/events/[slug]`, `/events/[slug]/register`,
-`/results/[slug]`, `/results/[slug]/full` and `/results/[slug]/[bib]` call
-`ensureEventHost(event)` first: a client's event opened anywhere but its
-client's site goes there, a no-client event goes to the main site, path and
-query kept (PayMongo's `?success=true&orderRef=…` included). Those pages stream
+**Wrong host.** `/events/[slug]`, `/results/[slug]`, `/results/[slug]/full`
+and `/results/[slug]/[bib]` call `ensureEventSite(event, site, path)` first,
+and `/events/[slug]/register` `ensureEventHost(event)`: a client's event
+opened anywhere but its client's site goes there, a no-client event goes to
+the main site, path kept. The wizard keeps the query too (PayMongo's
+`?success=true&orderRef=…`); the site-tree pages drop it, since a page cached
+per site cannot read it. Those pages stream
 under `loading.tsx`, so the move arrives as Next's in-stream redirect (the
 client router, with a meta-refresh fallback) rather than a header 307; same as
 the canonical-slug redirects they already made. Each sets
 `alternates.canonical` to the page on `eventOrigin(event)`
 (`eventPageMetadata`). **On the main site, event and result cards** (home,
 `/events`, `/results`) link a client's race straight to its subdomain
-(`EventGrid`'s `siteOrigin`, from `eventLinkOrigin()`), with no redirect hop.
+(`EventGrid`'s `siteOrigin`, from `eventLinkOrigin(site)`), with no redirect hop.
+Off production the site tree's origins come from `deploymentOrigin()`
+(`lib/site-host.ts`), not the request: the branch's `*.vercel.app` host on a
+preview, `http://localhost:<port>` / `http://<label>.localhost:<port>` in dev —
+so in dev those links and canonicals name `localhost` even when the page was
+opened on a LAN address.
 
 **Payment comes back to the event's site** (Batch 3). `api/checkout`'s
 return URLs, `api/pay/[token]`'s success and cancel URLs, and the

@@ -12,7 +12,7 @@
   build-time `new Date()` would also keep a finished race in the grid and count
   down to an opening that had already come. So `/`, `/events` and `/results`
   each export `dynamic = 'force-dynamic'`, with the reasoning written out in
-  `src/app/(home)/page.tsx`. The `[slug]` pages under `/events` and `/results` are
+  `src/app/s/[site]/(home)/page.tsx`. The `[slug]` pages under `/events` and `/results` are
   already server-rendered on demand because they take a dynamic segment and
   have no `generateStaticParams` — that is why the event page was right while
   the listing in front of it was wrong — but **any new public page that queries

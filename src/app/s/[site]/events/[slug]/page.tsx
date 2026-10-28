@@ -31,7 +31,7 @@ import {
   takenSlotsByCategory,
   withSlotCounts,
 } from '@/lib/registration-gate';
-import { EVENT_SITE_CLIENT, ensureEventHost, eventPageMetadata } from '@/lib/site-client';
+import { EVENT_SITE_CLIENT, ensureEventSite, eventPageMetadata } from '@/lib/site-client';
 import './EventDetails.css';
 
 import EventHeroBanner from '@/components/EventHeroBanner';
@@ -55,8 +55,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   return eventPageMetadata(slug, eventSlug => `/events/${eventSlug}`);
 }
 
-export default async function EventDetailsPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params;
+export default async function EventDetailsPage({ params }: { params: Promise<{ site: string; slug: string }> }) {
+  const { site, slug } = await params;
 
   // Matched on slug or cuid, because the id links minted before slugs existed
   // are still out there on posters and in group chats.
@@ -78,7 +78,7 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ s
 
   // On its own site first: a client's race opened on another host goes there,
   // path kept (lib/site-client.ts).
-  await ensureEventHost(event);
+  ensureEventSite(event, site, `/events/${encodeURIComponent(slug)}`);
 
   // One canonical address per event: an old cuid link lands here and is sent on
   // to the readable URL rather than quietly serving the page under both.

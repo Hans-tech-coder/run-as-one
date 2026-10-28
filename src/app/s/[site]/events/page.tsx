@@ -16,7 +16,7 @@ import { NoPastEvents, NothingUpcoming } from './EventsEmptyStates';
 
 /**
  * Rendered on every request — the same reason as the home page, which carries
- * the full note (src/app/(home)/page.tsx). In short: a prerendered listing freezes
+ * the full note (src/app/s/[site]/(home)/page.tsx). In short: a prerendered listing freezes
  * both the data and the clock, so it keeps badging a race Paused after the
  * hold was lifted, keeps a finished race in the grid, and keeps counting down
  * to an opening that has already come. The rows are cached reads
@@ -24,7 +24,7 @@ import { NoPastEvents, NothingUpcoming } from './EventsEmptyStates';
  */
 export const dynamic = 'force-dynamic';
 
-export default async function EventsPage() {
+export default async function EventsPage({ params }: { params: Promise<{ site: string }> }) {
   // Upcoming is races that have not been run yet, soonest first; Past is every
   // one that has, newest first. See src/lib/event-schedule.ts for where that
   // line is drawn.
@@ -45,7 +45,9 @@ export default async function EventsPage() {
   // On a client's site (CLIENT_SUBDOMAIN_PLAN.md D1) this is that client's
   // front page: its races only, counted the same way, under its hero — so its
   // Past tab is that client's track record.
-  const [site, linkOrigin] = await Promise.all([getSiteClient(), eventLinkOrigin()]);
+  const { site: siteParam } = await params;
+  const site = await getSiteClient(siteParam, '/events');
+  const linkOrigin = eventLinkOrigin(siteParam);
   // Published events only, counts included: a draft is not something a runner
   // has "missed" (lib/event-visibility.ts).
   const scope = { ...publishedEvents(await publishCutoff()), ...(site ? { clientId: site.id } : {}) };

@@ -1,6 +1,6 @@
 import React from 'react';
 import type { SiteClient } from '@/lib/site-client';
-import '../app/events/[slug]/EventDetails.css';
+import '@/app/s/[site]/events/[slug]/EventDetails.css';
 
 /**
  * The banner over a client site's `/events` (CLIENT_SUBDOMAIN_PLAN.md D8):

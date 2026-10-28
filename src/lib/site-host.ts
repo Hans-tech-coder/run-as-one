@@ -17,16 +17,30 @@ import { SITE_URL } from './site-contact';
  * (lib/team-invite.ts): `SITE_URL` in production, the request's own origin
  * everywhere else — so a link made on `local-dev` or a preview comes back to
  * the database it was written into. A caller with no request (an email sent
- * from a webhook) gets `SITE_URL`.
+ * from a webhook) gets `SITE_URL`; a page that may not read its request gets
+ * `deploymentOrigin()`, the same answer from the environment.
  *
  * No database here: `src/proxy.ts` imports it. Which client a request is for
  * is lib/site-client.ts.
  */
 
 /**
- * The client label the proxy forwards to the app, and the URL the request was
- * made for. The proxy strips both from what the browser sent before setting
- * its own, so nothing downstream ever reads a value a visitor wrote.
+ * The public pages that can be cached per site (PUBLIC_PAGE_CACHE_PLAN.md) are
+ * not told their site by a header: the proxy rewrites them to
+ * `/s/<site>/<path>`, served by `src/app/s/[site]/`, where `<site>` is the
+ * client label or `MAIN_SITE`. The browser's URL never shows it, and a browser
+ * that asks for `/s/…` itself gets a 404, so nobody picks a site by path.
+ * `_main` can never be a label: a subdomain has no underscore.
+ */
+export const SITE_PATH_PREFIX = '/s';
+export const MAIN_SITE = '_main';
+
+/**
+ * Every other page (the register wizard, `/pay`, `/track`, the 404) still
+ * learns its site from the proxy: the client label as `x-rao-site` and the URL
+ * the request was made for as `x-rao-url`. The proxy strips both from what the
+ * browser sent before setting its own, so nothing downstream ever reads a value
+ * a visitor wrote.
  */
 export const SITE_LABEL_HEADER = 'x-rao-site';
 export const SITE_URL_HEADER = 'x-rao-url';
@@ -102,6 +116,20 @@ export function subdomainError(value: string): string | null {
     return `"${label}" is reserved for Run As One. Choose another.`;
   }
   return null;
+}
+
+/**
+ * This deployment's main origin from the environment alone, for a page that
+ * cannot read its request (the `s/[site]` pages): `SITE_URL` in production,
+ * the branch's own `*.vercel.app` host on a preview, `http://localhost:<port>`
+ * in development. Passed as `requestUrl` below, it gives the origins a request
+ * on that deployment's own host would.
+ */
+export function deploymentOrigin(): string {
+  if (process.env.VERCEL_ENV === 'production') return new URL(SITE_URL).origin;
+  const vercelHost = process.env.VERCEL_BRANCH_URL || process.env.VERCEL_URL;
+  if (vercelHost) return `https://${vercelHost}`;
+  return `http://localhost:${process.env.PORT || 3000}`;
 }
 
 /** The main site's origin, as seen from `requestUrl` (see the header). */

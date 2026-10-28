@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { ChevronRight, History } from 'lucide-react';
 import EventGrid from '@/components/EventGrid';
 import LinkPendingIcon from '@/components/ui/LinkPendingIcon';
-import { PAST_EVENTS_HREF } from '@/app/events/events-view';
+import { PAST_EVENTS_HREF } from '../events/events-view';
 
 /**
  * The home page's look back (PAST_EVENTS_PLAN.md §3): the last few races

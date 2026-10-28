@@ -1,6 +1,7 @@
 import React from 'react';
 import { cookies } from 'next/headers';
 import { getSignedInUser } from '@/lib/signed-in-user';
+import ThemedFavicon from '@/components/ThemedFavicon';
 import AdminShell from './AdminShell';
 import { SIDEBAR_COOKIE, isSidebarCollapsed } from './dashboard-sidebar';
 import { THEME_COOKIE, readDashboardTheme } from './dashboard-theme';
@@ -23,9 +24,14 @@ export default async function AdminLayout({
   const initialCollapsed = isSidebarCollapsed(cookieStore.get(SIDEBAR_COOKIE)?.value);
   const initialTheme = readDashboardTheme(cookieStore.get(THEME_COOKIE)?.value);
 
+  // The dashboard has no site frame (app/SiteFrame.tsx), so it mounts the
+  // tab icon's light/dark swap itself.
   return (
-    <AdminShell user={user} initialCollapsed={initialCollapsed} initialTheme={initialTheme}>
-      {children}
-    </AdminShell>
+    <>
+      <ThemedFavicon />
+      <AdminShell user={user} initialCollapsed={initialCollapsed} initialTheme={initialTheme}>
+        {children}
+      </AdminShell>
+    </>
   );
 }

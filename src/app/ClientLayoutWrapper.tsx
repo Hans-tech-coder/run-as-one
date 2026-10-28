@@ -7,8 +7,8 @@ import type { SiteClient } from "@/lib/site-client";
 
 /**
  * `site` is the client whose subdomain this is, or null on the main site
- * (lib/site-client.ts). The root layout reads it on the server; the navbar and
- * footer only wear it.
+ * (lib/site-client.ts). The layout drawing the frame (SiteFrame) reads it on
+ * the server; the navbar and footer only wear it.
  */
 export default function ClientLayoutWrapper({
   site,

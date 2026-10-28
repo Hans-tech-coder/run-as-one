@@ -11,7 +11,7 @@ import { canonicalResultsPath, eventByParam, runnerResultPath } from '@/lib/even
 import { toWholeSeconds } from '@/lib/race-time';
 import { CATEGORY_ORDER } from '@/lib/category-order';
 import { pacerResultMatcherForEvent } from '@/lib/pacer-store';
-import { EVENT_SITE_CLIENT, ensureEventHost, eventPageMetadata } from '@/lib/site-client';
+import { EVENT_SITE_CLIENT, ensureEventSite, eventPageMetadata } from '@/lib/site-client';
 
 type Winner = { id: string; name: string; bibNumber: string; chipTime: string };
 
@@ -112,9 +112,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 export default async function WinnersOverviewPage({
   params
 }: {
-  params: Promise<{ slug: string }>
+  params: Promise<{ site: string; slug: string }>
 }) {
-  const { slug } = await params;
+  const { site, slug } = await params;
 
   // Slug or cuid — the old id links stay alive; see eventByParam.
   const event = await prisma.event.findFirst({
@@ -126,7 +126,7 @@ export default async function WinnersOverviewPage({
 
   // On its own site first: a client's race opened on another host goes there,
   // path kept (lib/site-client.ts).
-  await ensureEventHost(event);
+  ensureEventSite(event, site, `/results/${encodeURIComponent(slug)}`);
 
   const canonical = canonicalResultsPath(event, slug);
   if (canonical) redirect(canonical);

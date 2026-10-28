@@ -59,7 +59,7 @@ export const PAST_CARD = {
 } satisfies Prisma.EventSelect;
 
 type PastRow = Prisma.EventGetPayload<{ select: typeof PAST_CARD }>;
-type LinkOrigin = Awaited<ReturnType<typeof eventLinkOrigin>>;
+type LinkOrigin = ReturnType<typeof eventLinkOrigin>;
 
 /**
  * One row as `EventGrid`'s `past` action reads it. A virtual run never has

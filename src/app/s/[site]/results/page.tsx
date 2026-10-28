@@ -9,11 +9,11 @@ import EventGrid from '@/components/EventGrid';
 import { mostRecentFirst } from '@/lib/event-schedule';
 import { EVENT_SITE_CLIENT, eventLinkOrigin, getSiteClient } from '@/lib/site-client';
 import { pastWithoutResultsWhere } from '@/lib/past-events';
-import { PAST_EVENTS_HREF } from '@/app/events/events-view';
+import { PAST_EVENTS_HREF } from '../events/events-view';
 
 /**
  * Rendered on every request, for the same reason as the two event listings
- * (the full note is in src/app/(home)/page.tsx). This one turns on the organizer
+ * (the full note is in src/app/s/[site]/(home)/page.tsx). This one turns on the organizer
  * rather than the clock: a race appears here the moment its times are
  * uploaded, and a prerender would hold the landing page at whatever was true
  * on the day of the last deploy — a race whose runners are refreshing for
@@ -22,7 +22,7 @@ import { PAST_EVENTS_HREF } from '@/app/events/events-view';
  */
 export const dynamic = 'force-dynamic';
 
-export default async function GlobalResultsPage() {
+export default async function GlobalResultsPage({ params }: { params: Promise<{ site: string }> }) {
   // Only races whose organizer has actually uploaded times. A race that is over
   // but has no results is not listed here — an entry that opened onto an empty
   // ranking would be a dead end — and is found instead on the Past tab of
@@ -39,7 +39,9 @@ export default async function GlobalResultsPage() {
   // same pass, so the page can point at them (PAST_EVENTS_PLAN.md §3) — and
   // only when there is one, since a link to a list of races this page already
   // shows would send the runner round in a circle.
-  const [site, linkOrigin] = await Promise.all([getSiteClient(), eventLinkOrigin()]);
+  const { site: siteParam } = await params;
+  const site = await getSiteClient(siteParam, '/results');
+  const linkOrigin = eventLinkOrigin(siteParam);
   const scope = { ...publishedEvents(await publishCutoff()), ...(site ? { clientId: site.id } : {}) };
   const [rows, pastWithoutResults] = await Promise.all([
     db.event.findMany({

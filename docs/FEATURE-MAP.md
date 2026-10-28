@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-48 pages · 93 API routes · 154 modules in `src/lib` · 647 files · 116,238 lines
+49 pages · 93 API routes · 155 modules in `src/lib` · 662 files · 116,564 lines
 
 ---
 
@@ -23,7 +23,6 @@ The route, the server component behind it, and the client components beside it.
 
 | Route | Page | Beside it |
 | --- | --- | --- |
-| `/` | [`/(home)/page.tsx`](../src/app/%28home%29/page.tsx) | `RecentlyHeld.tsx` |
 | `/admin` | [`/admin/page.tsx`](../src/app/admin/page.tsx) | `AccountMenu.tsx` `AdminCardEdit.tsx` `AdminCardList.tsx` `AdminDataTable.tsx` `AdminDatePicker.tsx` `AdminNotFound.tsx` `AdminRouteLoading.tsx` `AdminSelect.tsx` `AdminShell.tsx` `AdminSwitch.tsx` `AdminTablePager.tsx` `AuthHomeLink.tsx` `AuthRouteLoading.tsx` `bare-paths.ts` `dashboard-nav.tsx` `dashboard-sidebar.ts` `dashboard-theme.ts` `DashboardHeader.tsx` `DashboardQuickJump.tsx` `DashboardShell.tsx` `FilterOptions.tsx` `FiltersMenu.tsx` `forbidden.tsx` `MobileSortMenu.tsx` `NotificationsCenter.tsx` `overview-data.ts` `OverviewPanels.tsx` `PasswordField.tsx` `PastEventsGrid.tsx` `PrintableCopy.tsx` `route-loading-shape.ts` `row-menu-position.ts` `RowActionsMenu.tsx` `SmoothModalBody.tsx` `TwoStepChip.tsx` `ViewerDashboard.tsx` |
 | `/admin/[...missing]` | [`/admin/[...missing]/page.tsx`](../src/app/admin/[...missing]/page.tsx) | — |
 | `/admin/activity` | [`/admin/activity/page.tsx`](../src/app/admin/activity/page.tsx) | `ActivityClient.tsx` |
@@ -56,18 +55,20 @@ The route, the server component behind it, and the client components beside it.
 | `/admin/two-factor` | [`/admin/two-factor/page.tsx`](../src/app/admin/two-factor/page.tsx) | `TwoFactorClient.tsx` |
 | `/admin/your-events/[id]` | [`/admin/your-events/[id]/page.tsx`](../src/app/admin/your-events/[id]/page.tsx) | `PayoutSummary.tsx` `RaceReport.tsx` `RegistrationTrend.tsx` `runner-csv.ts` `RunnerCells.tsx` `RunnerList.tsx` |
 | `/coming-soon` | [`/coming-soon/page.tsx`](../src/app/coming-soon/page.tsx) | — |
-| `/events` | [`/events/page.tsx`](../src/app/events/page.tsx) | `events-view.ts` `EventsEmptyStates.tsx` `EventsTabs.tsx` `PastEvents.tsx` |
-| `/events/[slug]` | [`/events/[slug]/page.tsx`](../src/app/events/[slug]/page.tsx) | `ClosedSidebarPanels.tsx` |
 | `/events/[slug]/register` | [`/events/[slug]/register/page.tsx`](../src/app/events/[slug]/register/page.tsx) | `AddressPlaceFields.tsx` `BankDetailsModal.tsx` `BankTransferWizardClient.tsx` `BirthdatePicker.tsx` `CategoryPicker.tsx` `Combobox.tsx` `CommunityPicker.tsx` `ConsentWaiver.tsx` `delivery-address.ts` `delivery-split.ts` `delivery.ts` `DeliveryAddressFields.tsx` `DeliveryAreaPanel.tsx` `DeliveryStep.tsx` `FreeSlotOffer.tsx` `GenderField.tsx` `GroupLimitNotice.tsx` `GuardianConsent.tsx` `OrderSummary.tsx` `PhoneField.tsx` `PosterLightbox.tsx` `PriceLockNotices.tsx` `PromoCodeField.tsx` `RegistrationWizardClient.tsx` `RunnerAddOns.tsx` `RunnerAddressFields.tsx` `RunnerCard.tsx` `SelectField.tsx` `ShirtSizeField.tsx` `SizeGuideModal.tsx` `useAddOnTotals.ts` `useDeliveryPlan.ts` `usePriceLock.ts` `usePromoPricing.ts` `useStepReveal.ts` `validation.ts` `WizardEventHeader.tsx` |
 | `/feedback` | [`/feedback/page.tsx`](../src/app/feedback/page.tsx) | `FeedbackForm.tsx` `FeedbackSent.tsx` `ScreenshotField.tsx` |
 | `/pay/[token]` | [`/pay/[token]/page.tsx`](../src/app/pay/[token]/page.tsx) | `PayNowButton.tsx` |
 | `/pay/change/[token]` | [`/pay/change/[token]/page.tsx`](../src/app/pay/change/[token]/page.tsx) | `ChangeBankProof.tsx` |
 | `/pay/logistics/[token]` | [`/pay/logistics/[token]/page.tsx`](../src/app/pay/logistics/[token]/page.tsx) | `SwitchBankProof.tsx` `SwitchConfirm.tsx` |
 | `/privacy` | [`/privacy/page.tsx`](../src/app/privacy/page.tsx) | — |
-| `/results` | [`/results/page.tsx`](../src/app/results/page.tsx) | — |
-| `/results/[slug]` | [`/results/[slug]/page.tsx`](../src/app/results/[slug]/page.tsx) | — |
-| `/results/[slug]/[bib]` | [`/results/[slug]/[bib]/page.tsx`](../src/app/results/[slug]/[bib]/page.tsx) | `ECertificateGenerator.tsx` |
-| `/results/[slug]/full` | [`/results/[slug]/full/page.tsx`](../src/app/results/[slug]/full/page.tsx) | `FullResultsClient.tsx` |
+| `/s/[site]` | [`/s/[site]/(home)/page.tsx`](../src/app/s/[site]/%28home%29/page.tsx) | `RecentlyHeld.tsx` |
+| `/s/[site]/[...missing]` | [`/s/[site]/[...missing]/page.tsx`](../src/app/s/[site]/[...missing]/page.tsx) | — |
+| `/s/[site]/events` | [`/s/[site]/events/page.tsx`](../src/app/s/[site]/events/page.tsx) | `events-view.ts` `EventsEmptyStates.tsx` `EventsTabs.tsx` `PastEvents.tsx` |
+| `/s/[site]/events/[slug]` | [`/s/[site]/events/[slug]/page.tsx`](../src/app/s/[site]/events/[slug]/page.tsx) | `ClosedSidebarPanels.tsx` |
+| `/s/[site]/results` | [`/s/[site]/results/page.tsx`](../src/app/s/[site]/results/page.tsx) | — |
+| `/s/[site]/results/[slug]` | [`/s/[site]/results/[slug]/page.tsx`](../src/app/s/[site]/results/[slug]/page.tsx) | — |
+| `/s/[site]/results/[slug]/[bib]` | [`/s/[site]/results/[slug]/[bib]/page.tsx`](../src/app/s/[site]/results/[slug]/[bib]/page.tsx) | `ECertificateGenerator.tsx` |
+| `/s/[site]/results/[slug]/full` | [`/s/[site]/results/[slug]/full/page.tsx`](../src/app/s/[site]/results/[slug]/full/page.tsx) | `FullResultsClient.tsx` |
 | `/terms` | [`/terms/page.tsx`](../src/app/terms/page.tsx) | — |
 | `/track` | [`/track/page.tsx`](../src/app/track/page.tsx) | `TrackHelpCard.tsx` `TrackLookup.tsx` `TrackResult.tsx` `TrackRunnerCard.tsx` `TrackStatusCard.tsx` |
 | `/track/[token]` | [`/track/[token]/page.tsx`](../src/app/track/[token]/page.tsx) | — |
@@ -321,6 +322,7 @@ the file itself.
 | [`site-client.ts`](../src/lib/site-client.ts) | Which client a public request is for (server-only). |
 | [`site-contact.ts`](../src/lib/site-contact.ts) | Who Run As One is, and how a runner reaches it. |
 | [`site-host.ts`](../src/lib/site-host.ts) | Which host is which (`CLIENT_SUBDOMAIN_PLAN.md` Batch 1). |
+| [`site-metadata.ts`](../src/lib/site-metadata.ts) | What a site's pages say about themselves to a link preview and a browser tab. |
 | [`site-settings.ts`](../src/lib/site-settings.ts) | The saved site-wide settings (server-only; reads the `SiteSettings` row). |
 | [`slot-holds.ts`](../src/lib/slot-holds.ts) | What holds a seat in a category, and how many each has taken. |
 | [`team-invite.ts`](../src/lib/team-invite.ts) | Invitation links: making one, finding the membership behind one, and sending it. |
@@ -353,7 +355,7 @@ when a task touches one, split it before editing rather than after.
 | 1485 | [`src/lib/discount.ts`](../src/lib/discount.ts) |
 | 1179 | [`src/app/admin/settings/SettingsPanels.tsx`](../src/app/admin/settings/SettingsPanels.tsx) |
 | 1017 | [`src/app/admin/team/TeamClient.tsx`](../src/app/admin/team/TeamClient.tsx) |
-| 785 | [`src/app/results/[slug]/full/FullResultsClient.tsx`](../src/app/results/[slug]/full/FullResultsClient.tsx) |
+| 785 | [`src/app/s/[site]/results/[slug]/full/FullResultsClient.tsx`](../src/app/s/[site]/results/[slug]/full/FullResultsClient.tsx) |
 | 736 | [`src/lib/pending-expiry.ts`](../src/lib/pending-expiry.ts) |
 | 693 | [`src/app/admin/AdminDatePicker.tsx`](../src/app/admin/AdminDatePicker.tsx) |
 | 663 | [`src/app/admin/activity/ActivityClient.tsx`](../src/app/admin/activity/ActivityClient.tsx) |
@@ -365,7 +367,7 @@ when a task touches one, split it before editing rather than after.
 | 563 | [`src/app/api/checkout/manual/route.ts`](../src/app/api/checkout/manual/route.ts) |
 | 554 | [`src/lib/registration-gate.ts`](../src/lib/registration-gate.ts) |
 | 528 | [`src/app/admin/DashboardShell.tsx`](../src/app/admin/DashboardShell.tsx) |
-| 515 | [`src/app/events/[slug]/page.tsx`](../src/app/events/[slug]/page.tsx) |
+| 515 | [`src/app/s/[site]/events/[slug]/page.tsx`](../src/app/s/[site]/events/[slug]/page.tsx) |
 | 512 | [`src/lib/promo-input.ts`](../src/lib/promo-input.ts) |
 | 509 | [`src/app/admin/communities/CommunitiesClient.tsx`](../src/app/admin/communities/CommunitiesClient.tsx) |
 | 499 | [`src/app/admin/AdminRouteLoading.tsx`](../src/app/admin/AdminRouteLoading.tsx) |

@@ -2,7 +2,14 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { verifyToken } from '@/lib/jwt';
 import { isPublicAdminPath } from '@/lib/next-path';
-import { SITE_LABEL_HEADER, SITE_URL_HEADER, mainOrigin, parseSiteLabel } from '@/lib/site-host';
+import {
+  MAIN_SITE,
+  SITE_LABEL_HEADER,
+  SITE_PATH_PREFIX,
+  SITE_URL_HEADER,
+  mainOrigin,
+  parseSiteLabel,
+} from '@/lib/site-host';
 
 /**
  * The sign-in screen, remembering the page that was asked for. The sign-in
@@ -60,6 +67,17 @@ async function guardAdmin(request: NextRequest, forward: Headers) {
 }
 
 /**
+ * The public pages that stay outside `src/app/s/[site]/` and learn their
+ * site from the header: they read the live request (the register wizard,
+ * `/pay`, `/track`) or have not been moved (PUBLIC_PAGE_CACHE_PLAN.md §2).
+ * Every other page path goes to the site tree, so an address nobody serves
+ * gets that site's own 404 there. **A new page outside the site tree has to
+ * be added here**, or it is rewritten into the tree and 404s.
+ */
+const REQUEST_SITE_PAGE =
+  /^\/(?:(?:pay|track|feedback|privacy|terms|coming-soon)(?:\/|$)|events\/[^/]+\/register(?:\/|$))/;
+
+/**
  * The URL the browser asked for. `request.url` is not it everywhere: the dev
  * server writes its own `localhost:3000` there whatever the host, so the host
  * (and, behind Vercel's edge, the scheme) come from the request's headers.
@@ -95,9 +113,15 @@ function redirectToHost(target: URL, request: NextRequest) {
 /**
  * Every page request, for two jobs (CLIENT_SUBDOMAIN_PLAN.md §2).
  *
- * **Which site this is.** The host's client label (lib/site-host.ts) goes to
- * the app as `x-rao-site`, with the URL as `x-rao-url`. Both are deleted from
- * what the browser sent first, so a visitor cannot pick a site by header.
+ * **Which site this is**, from the host's client label (lib/site-host.ts). A
+ * public page is rewritten to `/s/<label or _main>` plus its path, so the
+ * site is a route param its page can be cached under
+ * (PUBLIC_PAGE_CACHE_PLAN.md); the browser's URL does not change. The pages in
+ * `REQUEST_SITE_PAGE` and the dashboard get the label as `x-rao-site`, with
+ * the URL as `x-rao-url` instead. Both are deleted from what the browser sent
+ * first, so a visitor cannot pick a site by header. Nor by path: a browser's
+ * own `/s/crc/events` is rewritten like any other path, to
+ * `/s/<this site>/s/crc/events`, which is this site's 404.
  *
  * **The dashboard's session check**, unchanged, and reached only by `/admin`.
  * A public page never gets near it, or every page would ask for a sign-in.
@@ -124,6 +148,13 @@ export default async function proxy(request: NextRequest) {
   const forward = new Headers(request.headers);
   forward.delete(SITE_LABEL_HEADER);
   forward.delete(SITE_URL_HEADER);
+
+  if (!isAdminPath(pathname) && !REQUEST_SITE_PAGE.test(pathname)) {
+    const target = request.nextUrl.clone();
+    target.pathname = `${SITE_PATH_PREFIX}/${label ?? MAIN_SITE}${pathname === '/' ? '' : pathname}`;
+    return NextResponse.rewrite(target, { request: { headers: forward } });
+  }
+
   if (label) forward.set(SITE_LABEL_HEADER, label);
   forward.set(SITE_URL_HEADER, here.href);
 
@@ -137,10 +168,14 @@ export default async function proxy(request: NextRequest) {
  * `/api` (no page to brand; routes read their own host), not Next's own files,
  * and not a static file by its extension. Only real file extensions are
  * excluded, so a path with a dot in it (a slug, a bib) still gets its site.
+ * `/s/:path*` is its own entry too, extensions and all, so the browser can
+ * never reach the site tree directly (`/s/crc/events/x.json` would otherwise
+ * slip past as a "static file").
  */
 export const config = {
   matcher: [
     '/admin/:path*',
+    '/s/:path*',
     '/((?!api/|_next/|.*\\.(?:png|jpe?g|gif|svg|ico|webp|avif|json|txt|xml|webmanifest|css|js|map|woff2?|ttf|pdf)$).*)',
   ],
 };

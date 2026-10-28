@@ -35,7 +35,8 @@ const RECENTLY_HELD_LIMIT = 3;
 export const dynamic = 'force-dynamic';
 
 
-export default async function Home() {
+export default async function Home({ params }: { params: Promise<{ site: string }> }) {
+  const { site } = await params;
   // Two rows of cards on a desktop grid rather than one, so the section that
   // the page exists for looks like a listing instead of a leftover. The count
   // decides whether a "view all" link is worth showing at all.
@@ -76,7 +77,7 @@ export default async function Home() {
       select: PAST_CARD,
     }),
   ]);
-  const linkOrigin = await eventLinkOrigin();
+  const linkOrigin = eventLinkOrigin(site);
 
   // A race that is full or paused keeps its place here — it is still upcoming,
   // and this section is the site's front door to it.

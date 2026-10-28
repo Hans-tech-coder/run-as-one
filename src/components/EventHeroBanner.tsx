@@ -2,7 +2,7 @@ import React from 'react';
 import { Calendar, MapPin, Clock, Globe } from 'lucide-react';
 import { formatEventDay, formatEventRange, formatEventTime } from '@/lib/event-schedule';
 import { VIRTUAL_RUN_WHERE, isVirtual } from '@/lib/event-format';
-import '../app/events/[slug]/EventDetails.css'; // Reuse existing CSS for now, but will modify it to handle breakout
+import '@/app/s/[site]/events/[slug]/EventDetails.css'; // Reuse existing CSS for now, but will modify it to handle breakout
 
 interface EventHeroBannerProps {
   event: {
