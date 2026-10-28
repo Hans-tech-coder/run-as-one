@@ -39,11 +39,12 @@ import {
   expiredExplanation,
 } from './registrant-display';
 import { buildRegistrantCsv, downloadRegistrantCsv } from './registrant-csv';
-import { buildRegistrantColumns } from './registrant-columns';
+import { buildRegistrantColumns, initialColumnVisibility } from './registrant-columns';
 import RegistrantRowActions, { type RegistrantRowActionHandlers } from './RegistrantRowActions';
 import RegistrantsToolbar, { useRegistrantQueues } from './RegistrantsToolbar';
 import RemarksModal, { useRemarksModal } from './RemarksModal';
 import ManualEmailModal, { useManualEmailModal } from './ManualEmailModal';
+import { remarked, withEmailMark, withRemarks } from './registrant-row-patches';
 import CategoryChangeModal from './CategoryChangeModal';
 import { useCategoryChangeModal } from './useCategoryChangeModal';
 import CategoryChangeEmailModal from './CategoryChangeEmailModal';
@@ -154,48 +155,19 @@ export default function RegistrantsTable({
 
   const remarks = useRemarksModal({
     runners,
+    // The note is the order's, so every one of its rows takes it, and the
+    // detail modal's copy too when it is open on that order.
     onSaved: (registrationId, registration) => {
-      // Every runner on the order carries the same note, so all of their
-      // rows are updated — otherwise the icon would light up on one member
-      // of a group and stay grey on the other four.
-      setRunners(runners.map(r => r.registrationId === registrationId ? {
-        ...r,
-        remarks: registration.remarks,
-        remarksBy: registration.remarksBy,
-        remarksAt: registration.remarksAt,
-      } : r));
-      // The detail modal, if it is the one open behind this, is holding a
-      // copy of the row rather than reading it back out of the list.
-      setViewingRunner((current: any) =>
-        current && current.registrationId === registrationId
-          ? {
-              ...current,
-              remarks: registration.remarks,
-              remarksBy: registration.remarksBy,
-              remarksAt: registration.remarksAt,
-            }
-          : current
-      );
+      setRunners(withRemarks(runners, registrationId, registration));
+      setViewingRunner((current: any) => remarked(current, registrationId, registration));
     },
   });
 
   const email = useManualEmailModal({
     runners,
+    // The mark is the order's too, so it lands on every one of its rows.
     onMarkedSent: (registrationId, registration, outstanding) => {
-      // Every runner on the order carries the same mark, for the same reason
-      // the remarks do — otherwise one member of a group would look handled
-      // and the other four would not.
-      setRunners(runners.map(r => r.registrationId === registrationId ? {
-        ...r,
-        emailPending: outstanding !== null,
-        emailPendingKind: outstanding,
-        emailPendingLabel: outstanding === 'CONFIRMATION' ? 'Payment Receipt' : outstanding === 'RECEIVED' ? 'Registration Received' : null,
-        lastEmailError: registration?.lastEmailError ?? null,
-        receivedEmailSentAt: registration?.receivedEmailSentAt ?? r.receivedEmailSentAt,
-        confirmationEmailSentAt: registration?.confirmationEmailSentAt ?? r.confirmationEmailSentAt,
-        manualEmailSentAt: registration?.manualEmailSentAt ?? null,
-        manualEmailSentBy: registration?.manualEmailSentBy ?? null,
-      } : r));
+      setRunners(withEmailMark(runners, registrationId, registration, outstanding));
     },
   });
 
@@ -234,7 +206,8 @@ export default function RegistrantsTable({
   // Table state
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState(initialSearch);
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  // Add-ons starts hidden on a race that sold none (registrant-columns.tsx).
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(() => initialColumnVisibility(initialRunners));
   const [rowSelection, setRowSelection] = useState({});
 
   /**

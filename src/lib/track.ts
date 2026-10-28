@@ -27,7 +27,10 @@
  * amount paid, staff remark, transaction number, street or barangay is ever
  * read, and the full email, phone, birthdate and medical note are read only to
  * be turned into the masked strings of lib/track-mask.ts here, on the server.
- * `TrackView` has no field that could carry the full value.
+ * `TrackView` has no field that could carry the full value. A runner's add-ons
+ * (ADD_ONS_PLAN.md Batch 4) leave as the item, its option and how many — never
+ * a price, since what was paid stays off this page — and only on that
+ * runner's own card, so the group rule above covers them too.
  *
  * Read on demand only — no polling, no refresh — because Neon's compute is
  * billed by wake-ups.
@@ -49,12 +52,14 @@ import { EVENT_SITE_CLIENT } from './site-client';
 import { siteLabelOf } from './site-host';
 import { runnerResultPath, resultsPath } from './event-slug';
 import { chartSize } from './client-race-report';
+import { ADD_ON_LINES_READ, addOnItemLabel } from './add-ons';
 import { EMAIL_KINDS, type EmailKind } from './email-delivery';
 import { LOOKUP_TOKEN_MINUTES, createTrackToken, type TrackScope } from './track-link';
 import { birthMonthYear, cityProvince, maskEmail, maskPhone, maskPhoneTail, medicalLine } from './track-mask';
 import { parseDeliveryAddress } from '@/app/events/[slug]/register/delivery-address';
 import type { TrackRef } from './track-input';
 import { pendingFor, statusOf, type TrackPending, type TrackStatus } from './track-status';
+import { EMAIL_RUNNER_INCLUDE } from './email';
 
 export type { TrackPending, TrackStatus, TrackStatusKind } from './track-status';
 
@@ -103,6 +108,8 @@ export type TrackRunner = {
   category: string;
   inclusions: string[];
   size: string;
+  /** This runner's add-on lines, `COMMEMORATIVE SHIRT (M) × 1`; empty for none. */
+  addOns: string[];
   club: string;
   email: string;
   phone: string;
@@ -208,6 +215,8 @@ async function readOrder(registrationId: string) {
           guardianName: true,
           guardianRelationship: true,
           category: { select: { name: true, inclusions: true } },
+          // The item, its option and how many: no price leaves this query.
+          addOns: { select: { name: true, option: true, quantity: true }, orderBy: ADD_ON_LINES_READ.orderBy },
         },
       },
     },
@@ -315,6 +324,7 @@ export async function readTrackView(scope: TrackScope, requestUrl: string, now: 
       category: runner.category.name,
       inclusions: runner.category.inclusions,
       size: runner.singletSize ? chartSize(runner.singletSize) : '',
+      addOns: runner.addOns.map(addOnItemLabel),
       club: runner.runningCommunity,
       email: maskEmail(runner.email),
       phone: maskPhone(runner.phone),
@@ -362,6 +372,6 @@ export async function trackHome(registrationId: string) {
 export async function readResendTarget(registrationId: string) {
   return prisma.registration.findUnique({
     where: { id: registrationId },
-    include: { event: true, runners: { where: { deletedAt: null }, orderBy: { runnerNo: 'asc' }, include: { category: true } } },
+    include: { event: true, runners: { where: { deletedAt: null }, orderBy: { runnerNo: 'asc' }, include: EMAIL_RUNNER_INCLUDE } },
   });
 }

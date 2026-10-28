@@ -21,6 +21,22 @@ import type { RegistrantRow } from './RegistrantsTable';
 export const NO_PROVINCE = 'NOT ON FILE';
 
 /**
+ * The Add-ons filter's "has any" choice. Not a word an item can be named:
+ * item names are uppercase text, so a runner's shirt can never be mistaken
+ * for it.
+ */
+export const ANY_ADD_ON = '__ANY__';
+
+/**
+ * The columns a race starts with hidden: Add-ons on a race where nobody
+ * bought one, so a race without add-ons keeps the table it always had. The
+ * View chip still offers it.
+ */
+export function initialColumnVisibility(rows: { addOnsText?: string }[]): Record<string, boolean> {
+  return rows.some(row => row.addOnsText) ? {} : { addOns: false };
+}
+
+/**
  * A column's own padding, on top of the tables' tight `px-2.5`. The
  * registrants table has eleven columns to fit beside the open sidebar on a
  * 1366px laptop without a sideways scroll, so every column is kept to what it
@@ -171,6 +187,24 @@ export function buildRegistrantColumns({
       accessorKey: "size",
       header: "Size",
       cell: ({ row }) => row.original.size,
+    },
+    {
+      // What the runner bought with their entry (ADD_ONS_PLAN.md D3), as the
+      // CSV words it: `COMMEMORATIVE SHIRT (M) × 1, CAP × 1`. Hidden by
+      // default on a race that sold none (`initialColumnVisibility`), so the
+      // eleven columns that fit beside the sidebar still do. The Add-ons
+      // filter reads the item names (`addOnNames`), never the sizes.
+      id: "addOns",
+      accessorFn: row => row.addOnsText || '',
+      header: "Add-ons",
+      cell: ({ row }) => row.original.addOnsText
+        ? <span className="text-xs text-primary">{row.original.addOnsText}</span>
+        : <span className="text-[var(--text-muted)]">—</span>,
+      filterFn: (row, _columnId, filterValue) => {
+        if (!filterValue || filterValue.length === 0) return true;
+        const names: string[] = row.original.addOnNames ?? [];
+        return (filterValue as string[]).some(value => (value === ANY_ADD_ON ? names.length > 0 : names.includes(value)));
+      }
     },
     {
       // The province of the runner's home address (RUNNER_ADDRESS_PLAN.md

@@ -57,7 +57,7 @@ function previewEmailHtml(html: string): string {
 }
 
 /** The email route's answer to "mark as sent", as the table copies it onto its rows. */
-type MarkedSentRegistration = {
+export type MarkedSentRegistration = {
   lastEmailError?: string | null;
   receivedEmailSentAt?: string | null;
   confirmationEmailSentAt?: string | null;

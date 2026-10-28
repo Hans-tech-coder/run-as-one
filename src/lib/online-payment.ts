@@ -19,6 +19,7 @@
 import prisma from './db';
 import { recordAudit, type AuditActor, type AuditEntry } from './audit';
 import { deliverConfirmationEmail } from './email-delivery';
+import { EMAIL_RUNNER_INCLUDE } from './email';
 
 export type SettleOutcome =
   | { outcome: 'marked_paid' }
@@ -59,7 +60,7 @@ export async function settleOnlinePayment(
     include: {
       event: true,
       // A runner removed from the order is not on the receipt.
-      runners: { where: { deletedAt: null }, include: { category: true } },
+      runners: { where: { deletedAt: null }, include: EMAIL_RUNNER_INCLUDE },
     },
   });
   if (full) await deliverConfirmationEmail(full);

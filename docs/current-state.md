@@ -206,7 +206,7 @@ days later. Staff see it as *Promo price held from <Manila time>* under the
 Discount in the registrant detail, and in the CSV's *Promo Price Held From*
 column; the client viewer shows no discount, so not this either.
 
-**Event add-ons, Batches 0–3 (2026-10-28, Batches 0–2 on `dev`, Batch 3 in
+**Event add-ons, Batches 0–4 (2026-10-28, Batches 0–3 on `dev`, Batch 4 in
 the working tree; not released;
 `ADD_ONS_PLAN.md`, migration `20261028031230_event_add_ons`).** Optional items
 a runner buys with their entry — a commemorative shirt, a cap. Batch 0 split
@@ -266,10 +266,34 @@ and RM-094FFE68 marked PAID with a ₱60-per-runner platform fee added, and a
 RUN AS ONE TOWEL item (₱350, Run As One, switched off) put on runner 2 of
 RM-094FFE68 — owed ₱4,300 (₱3,600 entries + ₱700 organizer shirts), the towel
 on its own line, the client payout ₱4,521.88 − ₱180 − ₱41.88 = ₱4,300, no
-horizontal scroll at 360px. **Not built yet**: the receipt email's lines still
-leave add-ons out (its total is right; Batch 4 adds the lines), and
-registrants, the Race Report, the client runner list, emails and Track are
-Batch 4. The owner's decisions, cited by
+horizontal scroll at 360px. **Batch 4: every screen that reads an order
+after checkout.** One read include (`ADD_ON_LINES_READ`) and one spelling
+(`addOnItemLabel`, `COMMEMORATIVE SHIRT (M) × 1`) for all of them (§5
+`add-ons.ts`). **Registrants**: an Add-ons column (hidden on a race nobody
+bought one on), card field, filter (*Any add-on* or an item), the lines in the
+detail modal with the order's add-on amount, and an *Add-on Items* CSV column
+beside the *Add-ons* money (§6). **Race Report** (screen and PDF): an
+Add-ons block, pieces per item and option, every seller's item. **Client
+runner list** and its CSV: each runner's items, no price. **Emails** (both
+registration emails and the payment link): the lines under each runner and one
+amount line each in the summary, so the lines sum to the total — the rows moved
+to `email-order-rows.ts` (§5) and every sending route queries
+`EMAIL_RUNNER_INCLUDE`. **Track**: the items on each runner's own card.
+Split before editing: `email.ts`, `RegistrantsTable.tsx` (row patches) and
+`RegistrantDetailModal.tsx` (guardian consent). Decided in Batch 4 beyond the
+plan: the **Race Report counts add-ons on the same registrants as its shirt
+sizes** — PAID orders *and* bank transfers awaiting verification
+(`registrantOrders`) — so the two blocks of one supplier order agree; **Track
+shows no add-on price**, because `track.ts` / `track-status.ts` keep what was
+paid off that page (only money still owed is shown); the emails print each
+add-on as its own amount line (as the wizard and PayMongo do) rather than one
+*Add-ons* total. Checked on localhost 2026-10-28 on PRICE LOCK TEST
+(RM-C26C6F75, RM-094FFE68): the column, *Any add-on* (3 runners) and the
+shirt filter (2), the detail modal, the CSV (runner totals still sum to the
+order), the cards at 375px, the Race Report and its print copy, the client
+list and its export, Track; both emails rendered from the stored orders by a
+read-only script (lines sum to ₱3,261.88 and ₱1,610), none sent. Phase 2 and
+D4 are `ON_HOLD.md` §15. The owner's decisions, cited by
 number in code: **D1** each item is *Sold by* `ORGANIZER` (default, owed in
 the remittance) or `RUN_AS_ONE` (kept), snapshotted per line; **D2** no
 platform fee on add-ons; **D3** bought per runner; **D4** buying after

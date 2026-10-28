@@ -1,5 +1,7 @@
 import {
   addOnFromInput,
+  addOnItemsText,
+  addOnLineLabel,
   addOnLinesTotal,
   availableAddOns,
   readAddOnSelection,
@@ -9,6 +11,7 @@ import {
   type AddOnRule,
   picksAllowedIn,
   withRaceSizeFilled,
+  tallyAddOns,
 } from '../src/lib/add-ons';
 import { chargeableTotal, isFreeOrder, raceEntryIsFree, transactionFeeFor } from '../src/lib/free-checkout';
 import { quoteCategoryChange } from '../src/lib/category-change';
@@ -234,6 +237,33 @@ const freeRao = settle(
   0,
 );
 check('a ₱0 entry + Run As One shirt owes the organizer ₱0', [freeRao.owed, freeRao.state], [0, 'SETTLED']);
+
+// ── The read side (Batch 4) ──
+check(
+  'a runner’s lines on one line, option in brackets, none for an item without',
+  addOnItemsText([{ name: 'COMMEMORATIVE SHIRT', option: 'M', quantity: 1 }, { name: 'CAP', option: null, quantity: 2 }]),
+  'COMMEMORATIVE SHIRT (M) × 1, CAP × 2',
+);
+check('no lines read blank', addOnItemsText([]), '');
+check(
+  'the summary label is the same item with its runner in front',
+  addOnLineLabel({ runnerNo: 2, name: 'COMMEMORATIVE SHIRT', option: 'M', quantity: 1 }),
+  'Runner 2 · COMMEMORATIVE SHIRT (M) × 1',
+);
+check(
+  'the report tallies pieces per item, sizes in chart order, items by name',
+  tallyAddOns([
+    { name: 'SHIRT', option: 'XL', pieces: 2 },
+    { name: 'SHIRT', option: 'S', pieces: 1 },
+    { name: 'CAP', option: null, pieces: 3 },
+    { name: 'SHIRT', option: 'S', pieces: 4 },
+    { name: 'TOWEL', option: 'BLUE', pieces: 0 },
+  ]),
+  [
+    { name: 'CAP', options: [{ option: null, pieces: 3 }], total: 3 },
+    { name: 'SHIRT', options: [{ option: 'S', pieces: 5 }, { option: 'XL', pieces: 2 }], total: 7 },
+  ],
+);
 
 if (failures > 0) {
   console.error(`\n${failures} check(s) failed.`);

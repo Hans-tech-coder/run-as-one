@@ -4,8 +4,9 @@
  * owner on 2026-10-08): **the runner list a client needs to release and ship
  * race kits, and nothing more.**
  *
- * Each runner is a name, a runner reference, a category, a shirt size, *Paid*
- * or *Awaiting verification*, pickup or delivery — and, because the client is
+ * Each runner is a name, a runner reference, a category, a shirt size, the
+ * add-ons packed in their kit, *Paid* or *Awaiting verification*, pickup or
+ * delivery — and, because the client is
  * the one who hands over and ships the kits, a phone, an email, the home
  * address with its province, and for a delivered kit the delivery area and
  * the address it ships to. The `select` below is the whitelist: **no
@@ -62,6 +63,7 @@ import { CATEGORY_CHANGE_STATUSES } from './category-change';
 import { categoryMove } from '@/app/admin/events/[id]/registrants/category-change-display';
 import { LOGISTICS_CHANGE_STATUSES } from './logistics-change';
 import { logisticsMove } from '@/app/admin/events/[id]/registrants/logistics-change-display';
+import { ADD_ON_LINES_READ, addOnItemsText } from './add-ons';
 
 /** One runner as a client sees it. Blank strings, never null, for what was not given. */
 export type ClientRunnerRow = {
@@ -77,6 +79,13 @@ export type ClientRunnerRow = {
   kitChange: { added: string[]; removed: string[] } | null;
   /** In the size table's code (`chartSize`); blank when the package has nothing to wear. */
   size: string;
+  /**
+   * What goes in this runner's kit on top of the race's own (ADD_ONS_PLAN.md
+   * D3): `COMMEMORATIVE SHIRT (M) × 1, CAP × 1`, blank for none. Items and
+   * counts only — never a price, under the no-amount rule above — and every
+   * item whatever its seller, because every one is packed.
+   */
+  addOns: string;
   status: 'Paid' | 'Awaiting verification';
   kit: 'Pickup' | 'Delivery';
   phone: string;
@@ -148,6 +157,8 @@ export async function clientRunners(actor: Actor, eventId: string): Promise<Clie
           addressCity: true,
           addressProvince: true,
           category: { select: { name: true } },
+          // The item, its option and how many; `addOnItemsText` prints no price.
+          addOns: { select: { name: true, option: true, quantity: true }, orderBy: ADD_ON_LINES_READ.orderBy },
           // Moved changes only, oldest first: `categoryMove` reads from the first to the last.
           categoryChanges: {
             where: {
@@ -207,6 +218,7 @@ export async function clientRunners(actor: Actor, eventId: string): Promise<Clie
         changedFrom: move?.from ?? '',
         kitChange: move?.kit.changed ? { added: move.kit.added, removed: move.kit.removed } : null,
         size: chartSize(runner.singletSize),
+        addOns: addOnItemsText(runner.addOns),
         // `registrantOrders` admits only PAID and awaiting-verification orders.
         status: order.status === 'PAID' ? 'Paid' : 'Awaiting verification',
         kit: delivered ? 'Delivery' : 'Pickup',

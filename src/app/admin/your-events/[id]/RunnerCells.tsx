@@ -59,6 +59,16 @@ export function KitLine({ runner }: { runner: ClientRunnerRow }) {
   );
 }
 
+/**
+ * What goes in the kit on top of the race's own (ADD_ONS_PLAN.md): the items
+ * the runner bought, so the person releasing it hands over the shirt too.
+ * Nothing at all for a runner who bought none.
+ */
+export function AddOnsLine({ runner }: { runner: Pick<ClientRunnerRow, 'addOns'> }) {
+  if (!runner.addOns) return null;
+  return <span className="block text-xs text-secondary">+ {runner.addOns}</span>;
+}
+
 /** The switch note for the export: "Switched from pickup". */
 export function kitNote(runner: Pick<ClientRunnerRow, 'switchedFrom'>): string {
   return runner.switchedFrom ? `Switched from ${runner.switchedFrom.toLowerCase()}` : '';

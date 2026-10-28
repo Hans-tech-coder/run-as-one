@@ -21,7 +21,7 @@ import FiltersMenu, { type FilterGroup } from '../../../FiltersMenu';
 import { GUARDIAN_CONSENT_MAX_AGE } from '@/lib/minor-consent';
 import { compareCategoryNames } from '@/lib/category-distance';
 import { needsValidation } from './registrant-display';
-import { NO_PROVINCE } from './registrant-columns';
+import { ANY_ADD_ON, NO_PROVINCE } from './registrant-columns';
 import type { RegistrantRow } from './RegistrantsTable';
 
 /**
@@ -145,7 +145,15 @@ export default function RegistrantsToolbar({
     return Array.from(pays).sort();
   }, [runners]);
 
+  // The items anyone on this race bought (ADD_ONS_PLAN.md Batch 4), after
+  // "Any add-on". Offered only when somebody bought one, like Age below.
+  const addOnOptions = useMemo(() => {
+    const names = Array.from(new Set(runners.flatMap(r => r.addOnNames ?? []))).sort() as string[];
+    return names.length === 0 ? [] : [{ value: ANY_ADD_ON, label: 'Any add-on' }, ...names.map(name => ({ value: name, label: name }))];
+  }, [runners]);
+
   const selectedCategories = (table.getColumn('category')?.getFilterValue() as string[]) || [];
+  const selectedAddOns = (table.getColumn('addOns')?.getFilterValue() as string[]) || [];
   const selectedLogistics = (table.getColumn('logisticsMethod')?.getFilterValue() as string[]) || [];
   const selectedProvinces = (table.getColumn('province')?.getFilterValue() as string[]) || [];
   const selectedPayment = (table.getColumn('paymentMethod')?.getFilterValue() as string[]) || [];
@@ -171,6 +179,13 @@ export default function RegistrantsToolbar({
     table.getColumn('province')?.setFilterValue(newSelected.length ? newSelected : undefined);
   };
 
+  const toggleAddOn = (value: string) => {
+    const newSelected = selectedAddOns.includes(value)
+      ? selectedAddOns.filter(v => v !== value)
+      : [...selectedAddOns, value];
+    table.getColumn('addOns')?.setFilterValue(newSelected.length ? newSelected : undefined);
+  };
+
   const togglePayment = (pay: string) => {
     const newSelected = selectedPayment.includes(pay)
       ? selectedPayment.filter(p => p !== pay)
@@ -185,6 +200,9 @@ export default function RegistrantsToolbar({
     { label: 'Logistics', options: uniqueLogistics, selected: selectedLogistics, onToggle: toggleLogistics, capitalize: true },
     { label: 'Payment', options: uniquePayment, selected: selectedPayment, onToggle: togglePayment, capitalize: true },
     { label: 'Province', options: uniqueProvinces, selected: selectedProvinces, onToggle: toggleProvince, capitalize: false },
+    // Any add-on, or a runner with this item: one checked is enough, as in
+    // the groups above.
+    { label: 'Add-ons', options: addOnOptions, selected: selectedAddOns, onToggle: toggleAddOn, capitalize: false },
     // Offered only on a race that has a minor, so the sheet never lists an
     // option that could only ever empty the table.
     {
@@ -210,7 +228,7 @@ export default function RegistrantsToolbar({
   const clearFilters = () => {
     setShowOnlyMinors(false);
     setShowOnlyPacers(false);
-    for (const id of ['category', 'province', 'logisticsMethod', 'paymentMethod']) {
+    for (const id of ['category', 'province', 'logisticsMethod', 'paymentMethod', 'addOns']) {
       table.getColumn(id)?.setFilterValue(undefined);
     }
   };

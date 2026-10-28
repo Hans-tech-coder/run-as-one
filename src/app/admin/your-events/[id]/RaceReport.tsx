@@ -1,9 +1,10 @@
 import React from 'react';
-import { BadgeCheck, CalendarDays, ClipboardList, EyeOff, Wallet, Hourglass, MapPin, Package, ShoppingCart, Shirt, TrendingUp, Truck, Users } from 'lucide-react';
+import { BadgeCheck, CalendarDays, ClipboardList, EyeOff, Wallet, Hourglass, MapPin, Package, ShoppingBag, ShoppingCart, Shirt, TrendingUp, Truck, Users } from 'lucide-react';
 import type { ClientPayout } from '@/lib/client-payout';
 import type { ClientRunnerRow } from '@/lib/client-runners';
 import type { GarmentRow, KitSplit, ViewerRaceReport } from '@/lib/client-race-report';
 import type { GarmentType } from '@/lib/shirt-size';
+import type { AddOnTally } from '@/lib/add-ons';
 import type { ViewerCategorySummary } from '@/lib/client-summary';
 import { formatEventDayShort, formatEventInstant } from '@/lib/event-schedule';
 import { SITE_NAME } from '@/lib/site-contact';
@@ -52,7 +53,7 @@ export default function RaceReport({
   payout?: ClientPayout | null;
   runners?: ClientRunnerRow[] | null;
 }) {
-  const { event, garments, kits, trend } = report;
+  const { event, garments, kits, trend, addOns } = report;
   const state = REGISTRATION_STATES[event.state];
   const printed = printedOn !== undefined;
   const panel = { idPrefix };
@@ -124,6 +125,19 @@ export default function RaceReport({
         <SizeSection garments={garments} categories={event.categories} />
       </Panel>
 
+      {/* Only on a race that sells add-ons (ADD_ONS_PLAN.md Batch 4), so
+          every other race's report and PDF are the ones they were. */}
+      {addOns && (
+        <Panel
+          {...panel}
+          title="Add-ons"
+          icon={<ShoppingBag size={18} />}
+          hint="Pieces to order and pack: every add-on runners bought with their entry, per size or option, for paid and awaiting-verification runners. Each one goes in that runner's kit."
+        >
+          <AddOnSection addOns={addOns} />
+        </Panel>
+      )}
+
       <Panel {...panel} title="Race Kits" icon={<Package size={18} />} hint="One kit per registered runner, by how they chose to get it.">
         <KitSection kits={kits} />
       </Panel>
@@ -135,7 +149,7 @@ export default function RaceReport({
           <SavePdfPanel
             id={`${idPrefix}race-save-title`}
             title="Sending this to your supplier or team?"
-            note="The PDF has the race report above: the runner counts, slots per category, registrations over time, shirt sizes and race kits."
+            note={`The PDF has the race report above: the runner counts, slots per category, registrations over time, shirt sizes${addOns ? ', add-ons' : ''} and race kits.`}
             label={SAVE_LABEL}
           />
         </div>
@@ -318,6 +332,42 @@ function SizeSection({
             <SizeChips counts={garment.sizes.map(row => [row.size, row.total])} />
           </li>
         ))}
+      </ul>
+    </>
+  );
+}
+
+/**
+ * Add-on pieces, one block per item, drawn as the garments are: what to order
+ * from a supplier and pack in the kits. An item without options is its total
+ * alone; one with sizes or colours gets the chips.
+ */
+function AddOnSection({ addOns }: { addOns: AddOnTally[] }) {
+  if (addOns.length === 0) {
+    return <p className="race-empty">No add-ons bought yet. They appear here as runners register.</p>;
+  }
+  const pieces = addOns.reduce((sum, item) => sum + item.total, 0);
+  return (
+    <>
+      <p className="race-garment-totals">
+        {count(addOns.length, 'item', 'items')} · {count(pieces, 'piece', 'pieces')}
+      </p>
+      <ul className="race-garment-list">
+        {addOns.map(item => {
+          const options = item.options.filter(row => row.option !== null);
+          return (
+            <li key={item.name} className="race-garment">
+              <div className="race-garment-head">
+                <h3 className="race-sub race-garment-name">{item.name}</h3>
+                <span className="race-garment-tag">Add-on</span>
+                <span className="race-garment-count">{count(item.total, 'piece', 'pieces')}</span>
+              </div>
+              {options.length > 0 && (
+                <SizeChips counts={item.options.map(row => [row.option ?? 'No option', row.pieces])} />
+              )}
+            </li>
+          );
+        })}
       </ul>
     </>
   );

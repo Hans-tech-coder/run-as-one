@@ -1,6 +1,6 @@
 import prisma from '@/lib/db';
 import { can, type Actor } from '@/lib/actor';
-import type { RegistrationWithDetails } from '@/lib/email';
+import { EMAIL_RUNNER_INCLUDE, type RegistrationWithDetails } from '@/lib/email';
 import { formatEventInstant, today } from '@/lib/event-schedule';
 import { expiresBy, extendedHold, unpaidFollowUpWhere } from '@/lib/pending-expiry';
 import {
@@ -73,7 +73,7 @@ export async function issuePaymentLink(
     include: {
       event: { include: { client: EVENT_SITE_CLIENT } },
       // A runner removed from the order is not in the email, nor counted.
-      runners: { where: { deletedAt: null }, include: { category: true } },
+      runners: { where: { deletedAt: null }, include: EMAIL_RUNNER_INCLUDE },
       _count: { select: { runners: { where: { deletedAt: { not: null } } } } },
     },
   });

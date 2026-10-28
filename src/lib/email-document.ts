@@ -188,6 +188,8 @@ export type Row =
       size: string | null;
       /** "MARIA DELA CRUZ (Parent)" for a minor with a guardian on file. */
       guardian: string | null;
+      /** This runner's add-on lines, `COMMEMORATIVE SHIRT (M) × 1` each; empty for none. */
+      addOns: string[];
     };
 
 export type Block =
@@ -339,6 +341,9 @@ function rowHtml(row: Row, isLastRunner: boolean): string {
             ? `<div style="font-size: 12px; color: #8b8b96; margin-top: 2px;">Parent/Guardian: ${escapeHtml(row.guardian)}</div>`
             : ''
         }
+        ${row.addOns
+          .map(line => `<div style="font-size: 12px; color: #8b8b96; margin-top: 2px;">Add-on: ${escapeHtml(line)}</div>`)
+          .join('')}
       </td>
       <td align="right" style="padding: 10px 0; border-bottom: ${border}; font-family: Arial, Helvetica, sans-serif; text-align: right; vertical-align: top; white-space: nowrap;">${size}</td>
     </tr>`;
@@ -553,6 +558,7 @@ function rowText(row: Row): string[] {
         ...(row.community ? [`  ${row.community}`] : []),
         ...(row.guardian ? [`  Parent/Guardian: ${row.guardian}`] : []),
         ...(row.size ? [`  Size: ${row.size}`] : []),
+        ...row.addOns.map(line => `  Add-on: ${line}`),
         '',
       ];
   }

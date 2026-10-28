@@ -13,6 +13,8 @@ export default function TrackRunnerCard({ runner }: { runner: TrackRunner }) {
     ['Category', runner.category],
     ...(runner.inclusions.length > 0 ? [['Inclusions', runner.inclusions.join(', ')] as [string, string]] : []),
     ...(runner.size ? [['Singlet size', runner.size] as [string, string]] : []),
+    // What they bought with the entry, beside the size it may share.
+    ...(runner.addOns.length > 0 ? [['Add-ons', runner.addOns.join(', ')] as [string, string]] : []),
     ['Gender', runner.gender],
     ...(runner.birth ? [['Birth month', runner.birth] as [string, string]] : []),
     ['Email', runner.email],

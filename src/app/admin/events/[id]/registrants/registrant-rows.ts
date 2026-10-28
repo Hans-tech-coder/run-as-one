@@ -18,6 +18,7 @@ import { formatEventInstant } from '@/lib/event-schedule';
 import { bankTransferExpiresBy, isCancelledCheckout } from '@/lib/pending-expiry';
 import { formatRunnerAddress } from '@/lib/runner-address';
 import { splitOrderMoney } from '@/lib/runner-money';
+import { ADD_ON_LINES_READ, addOnItemLabel, addOnItemsText } from '@/lib/add-ons';
 
 /**
  * One row per live runner, as the registrants table, its cards, the detail
@@ -34,7 +35,7 @@ export type RegistrantsEvent = Prisma.EventGetPayload<{
   include: {
     registrations: {
       include: {
-        runners: { include: { category: true; addOns: { select: { unitPrice: true; quantity: true } } } };
+        runners: { include: { category: true; addOns: typeof ADD_ON_LINES_READ } };
       };
     };
   };
@@ -155,6 +156,14 @@ export function buildRegistrantRows({
         // category-change-display.tsx, so the three cannot disagree.
         categoryChanges: changesByRunner.get(runner.id) ?? [],
         size: runner.singletSize,
+        // What this runner bought with their entry (ADD_ONS_PLAN.md D3): each
+        // line worded once here, `COMMEMORATIVE SHIRT (M) × 1`, for the detail
+        // modal; the lines joined for the column, the cards and the CSV; and
+        // the item names alone for the Add-ons filter, which picks by item,
+        // not by size. Empty, never null, on a runner who bought none.
+        addOnLines: runner.addOns.map(addOnItemLabel),
+        addOnsText: addOnItemsText(runner.addOns),
+        addOnNames: [...new Set(runner.addOns.map(line => line.name))],
         runningCommunity: runner.runningCommunity,
         status: reg.status,
         // The latest recorded change to that status — who, when, and to what.
@@ -261,6 +270,9 @@ export function buildRegistrantRows({
         // the detail modal say "EARLY BIRD + 5+1 FREE" beside the whole discount.
         promoCode: [reg.promoCode, reg.combinedPromoCode].filter(Boolean).join(' + ') || null,
         discountAmount: reg.discountAmount,
+        // The order's add-on lines in all, for the detail modal's money: the
+        // reason an order total is more than its entries.
+        orderAddOnTotal: reg.addOnTotal,
         // When the runner's promo price lock was taken, on an order the lock
         // priced (Registration.priceLockedAt) — what explains an early-bird
         // discount on an order placed after the early bird closed. Worded on

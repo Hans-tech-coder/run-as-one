@@ -38,6 +38,7 @@ import { getSignedInUser } from '@/lib/signed-in-user';
 import { deliverConfirmationEmail } from '@/lib/email-delivery';
 import { releaseRedemption } from '@/lib/pending-expiry';
 import { SLOT_HOLDING_STATUSES, SlotsUnavailableError, reserveSlots } from '@/lib/registration-gate';
+import { EMAIL_RUNNER_INCLUDE } from '@/lib/email';
 
 /**
  * The statuses an organizer may set from the admin. Guarded rather than
@@ -284,7 +285,7 @@ export async function PATCH(
         include: {
           event: true,
           // A runner removed from the order is not on the receipt.
-          runners: { where: { deletedAt: null }, include: { category: true } },
+          runners: { where: { deletedAt: null }, include: EMAIL_RUNNER_INCLUDE },
         },
       });
       if (full) await deliverConfirmationEmail(full);

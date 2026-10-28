@@ -33,6 +33,13 @@
  * (`includesWearable`), so its sized runners count under one "not listed"
  * item rather than dropping out of the order.
  *
+ * **Add-ons are counted as pieces too** (ADD_ONS_PLAN.md Batch 4): each item a
+ * runner bought with their entry, per option, for the same registrants as the
+ * garments, so the two blocks of a supplier's order agree on who is counted.
+ * Every item whatever its seller (D1): a Run As One shirt is still packed in
+ * the organizer's kits. Pieces, never prices — the item's name and option are
+ * a product, not a person, so they fit the counts-only rule above.
+ *
  * Server-only.
  */
 
@@ -45,6 +52,7 @@ import { awaitingVerificationWhere } from './pending-expiry';
 import { pickupDetails } from './pickup';
 import { asDeliveryZone, asLogisticsMethod, deliveryZoneLabelFor, LOGISTICS_METHODS } from './registration-codes';
 import { SHIRT_SIZES, wearableItems, type GarmentType } from './shirt-size';
+import { tallyAddOns, type AddOnTally } from './add-ons';
 
 /** One shirt size: registrants wearing it, per category id and in all. */
 export type SizeRow = { size: string; byCategory: Record<string, number>; total: number };
@@ -95,6 +103,11 @@ export type ViewerRaceReport = {
   garments: GarmentRow[];
   kits: KitSplit;
   trend: RegistrationTrend;
+  /**
+   * Add-on pieces to order and pack, per item and option; null on a race that
+   * sells none and never sold any, so its report keeps the panels it had.
+   */
+  addOns: AddOnTally[] | null;
 };
 
 /** The registrants: paid, or a bank transfer awaiting verification. Shared with `client-runners.ts`. */
@@ -106,7 +119,7 @@ export async function viewerRaceReport(actor: Actor, eventId: string): Promise<V
   const [event] = await viewerEventSummaries(actor, eventId);
   if (!event) return null;
 
-  const [sizeGroups, orders, logistics, inclusions] = await Promise.all([
+  const [sizeGroups, orders, logistics, inclusions, addOnGroups, itemsOnSale] = await Promise.all([
     prisma.runner.groupBy({
       by: ['categoryId', 'singletSize'],
       where: { deletedAt: null, category: { eventId }, registration: registrantOrders() },
@@ -134,13 +147,22 @@ export async function viewerRaceReport(actor: Actor, eventId: string): Promise<V
       where: { id: { in: event.categories.map(category => category.id) } },
       select: { id: true, inclusions: true },
     }),
+    // The garments' registrants, one level down: a line on a counted runner.
+    prisma.runnerAddOn.groupBy({
+      by: ['name', 'option'],
+      where: { runner: { deletedAt: null, category: { eventId }, registration: registrantOrders() } },
+      _sum: { quantity: true },
+    }),
+    prisma.eventAddOn.count({ where: { eventId } }),
   ]);
+  const addOns = tallyAddOns(addOnGroups.map(group => ({ name: group.name, option: group.option, pieces: group._sum.quantity ?? 0 })));
 
   return {
     event,
     garments: garmentTable(sizeTable(sizeGroups), event.categories, new Map(inclusions.map(c => [c.id, c.inclusions]))),
     kits: kitSplit(orders, logistics),
     trend: registrationTrend(orders, event.date),
+    addOns: addOns.length > 0 || itemsOnSale > 0 ? addOns : null,
   };
 }
 

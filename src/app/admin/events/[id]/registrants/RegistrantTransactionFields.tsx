@@ -134,6 +134,12 @@ export default function RegistrantTransactionFields({
           )}
         </p>
       )}
+      {/* The order's add-ons in all (ADD_ONS_PLAN.md), every runner's: the
+          part of the total that is not entries or fees. Each runner's own
+          lines are under Race Details. */}
+      {runner.orderAddOnTotal > 0 && (
+        <p className="flex flex-col"><span className="text-[var(--text-muted)]">Add-ons (whole order)</span> <span className="text-primary font-medium">₱{formatPesos(runner.orderAddOnTotal)}</span></p>
+      )}
       <p className="flex flex-col"><span className="text-[var(--text-muted)]">Order Total</span> <span className="text-primary font-medium">₱{formatPesos(runner.totalAmount)}</span></p>
       <p className="flex flex-col">
         <span className="text-[var(--text-muted)]">Waiver Consent</span>

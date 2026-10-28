@@ -15,6 +15,7 @@ import { categoryChangesByRunner } from '@/lib/category-change-view';
 import { logisticsChangesByOrder } from '@/lib/logistics-change-view';
 import { readEventReceipts } from '@/lib/logistics-receipts';
 import { buildRegistrantRows } from './registrant-rows';
+import { ADD_ON_LINES_READ } from '@/lib/add-ons';
 import DashboardHeader from '@/app/admin/DashboardHeader';
 
 export default async function RegistrantsPage({
@@ -72,9 +73,10 @@ export default async function RegistrantsPage({
             // A runner removed from an order stays in the table for the audit
             // trail (Runner.deletedAt) and never on this screen.
             where: { deletedAt: null },
-            // The add-on lines' money only, for the per-runner split
-            // (runner-money.ts); the items themselves are Batch 4's.
-            include: { category: true, addOns: { select: { unitPrice: true, quantity: true } } }
+            // Each runner's add-on lines (ADD_ONS_PLAN.md): the items for the
+            // Add-ons column, filter, detail and CSV, and their money for the
+            // per-runner split (runner-money.ts).
+            include: { category: true, addOns: ADD_ON_LINES_READ }
           }
         }
       }

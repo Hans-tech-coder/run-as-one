@@ -14,7 +14,7 @@ import { kitSummary } from '../../events/[id]/registrants/category-change-displa
 import { kitNote } from './RunnerCells';
 
 const HEADERS = [
-  'Runner Ref', 'First Name', 'Last Name', 'Category', 'Changed From', 'Kit Changed', 'Shirt Size', 'Status', 'Race Kit',
+  'Runner Ref', 'First Name', 'Last Name', 'Category', 'Changed From', 'Kit Changed', 'Shirt Size', 'Add-ons', 'Status', 'Race Kit',
   'Kit Note', 'Phone', 'Email', 'Home Address', 'Province', 'Delivery Area', 'Delivery Address',
 ];
 
@@ -31,6 +31,8 @@ export function buildRunnerCsv(rows: ClientRunnerRow[]): string {
         csvField(row.changedFrom),
         csvField(row.kitChange ? kitSummary(row.kitChange) : ''),
         csvField(row.size),
+        // What else is packed in the kit (ADD_ONS_PLAN.md); blank for none.
+        csvField(row.addOns),
         csvField(row.status),
         csvField(row.kit),
         // Blank unless staff switched the receipt between pickup and delivery.

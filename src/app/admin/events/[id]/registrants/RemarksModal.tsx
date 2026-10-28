@@ -24,7 +24,7 @@ import BusyLabel from '@/components/ui/BusyLabel';
 import { useAlert } from '@/components/ui/AlertProvider';
 import type { RegistrantRow } from './RegistrantsTable';
 
-type SavedRemarks = { remarks: string | null; remarksBy: string | null; remarksAt: string | null };
+export type SavedRemarks = { remarks: string | null; remarksBy: string | null; remarksAt: string | null };
 
 /**
  * The note belongs to the registration, not the runner, so the row is only

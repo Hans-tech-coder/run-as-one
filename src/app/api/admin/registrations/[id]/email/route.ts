@@ -31,12 +31,13 @@ import {
   outstandingEmail,
   recordManualSend,
 } from '@/lib/email-delivery';
+import { EMAIL_RUNNER_INCLUDE } from '@/lib/email';
 
 /** The registration plus everything either email renders from. */
 const WITH_DETAILS = {
   event: true,
   // A runner removed from the order is not in the email they are owed.
-  runners: { where: { deletedAt: null }, include: { category: true } },
+  runners: { where: { deletedAt: null }, include: EMAIL_RUNNER_INCLUDE },
 } as const;
 
 type Loaded =

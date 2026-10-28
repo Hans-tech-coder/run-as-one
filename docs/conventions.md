@@ -369,6 +369,13 @@
     fetches its own list (clients, communities, feedback) passes `loading` to
     `AdminDataTable` for placeholder rows and shows `AdminCardListSkeleton`
     (`is-flush`) in place of its cards while it waits.
+  - **A column only some events fill starts hidden where nothing fills it.**
+    The registrants table's *Add-ons* (`ADD_ONS_PLAN.md` Batch 4) is hidden
+    by default on a race where no row has one (`initialColumnVisibility` in
+    `registrant-columns.tsx`) and stays in the View chip; its card field and
+    its filter group appear only on a row or race that has one. A race that
+    never used the feature keeps the table, cards and sheet it had, and the
+    table's columns still fit beside the sidebar.
   - **A table filters through one `admin/FiltersMenu` chip, at every width**
     (events, registrants, results, clients, feedback, remittances, activity).
     It takes `groups` — a heading, `FilterOptions` checkboxes (a `hint` for

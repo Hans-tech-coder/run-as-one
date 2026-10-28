@@ -21,7 +21,7 @@ import AdminTablePager from '../../AdminTablePager';
 import FiltersMenu, { type FilterGroup } from '../../FiltersMenu';
 import { selectionColumn } from '../../events/[id]/registrants/registrant-columns';
 import { buildRunnerCsv, downloadRunnerCsv } from './runner-csv';
-import { AddressLine, CategoryLine, ContactLines, KitLine, NO_SHIRT, NoShirt, StatusBadge } from './RunnerCells';
+import { AddOnsLine, AddressLine, CategoryLine, ContactLines, KitLine, NO_SHIRT, NoShirt, StatusBadge } from './RunnerCells';
 
 /**
  * The race page's runner list (CLIENT_RACE_PAGE_PLAN.md, Batch 4): what the
@@ -263,6 +263,7 @@ export default function RunnerList({
                     </TableCell>
                     <TableCell className="py-3 px-4 align-top text-primary">
                       <KitLine runner={runner} />
+                      <AddOnsLine runner={runner} />
                     </TableCell>
                     <TableCell className="py-3 px-4 align-top text-sm">
                       <ContactLines runner={runner} />
@@ -301,7 +302,7 @@ export default function RunnerList({
           fields={runner => [
             { label: 'Category', value: <CategoryLine runner={runner} detailed />, full: Boolean(runner.kitChange) },
             { label: 'Shirt Size', value: runner.size || <NoShirt /> },
-            { label: 'Race Kit', value: <KitLine runner={runner} />, full: true },
+            { label: 'Race Kit', value: <><KitLine runner={runner} /><AddOnsLine runner={runner} /></>, full: true },
             { label: 'Contact', value: <ContactLines runner={runner} />, full: true },
             { label: runner.kit === 'Delivery' ? 'Ship To' : 'Home Address', value: <AddressLine runner={runner} labelled />, full: true },
           ]}

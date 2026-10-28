@@ -85,6 +85,9 @@ export default function RegistrantCards({
         fields={row => [
           { label: 'Category', value: <CategoryWithChange runner={row.original} detailed /> },
           { label: 'Size', value: row.original.size || '—' },
+          // Only on a runner who bought one, so a race without add-ons keeps
+          // the card it had (the table hides its column the same way).
+          ...(row.original.addOnsText ? [{ label: 'Add-ons', value: row.original.addOnsText }] : []),
           { label: 'Province', value: row.original.addressProvince || '—' },
           { label: 'Logistics', value: <LogisticsWithSwitch runner={row.original} /> },
           { label: 'Payment', value: row.original.paymentMethod },

@@ -52,6 +52,7 @@ import { ADD_ON_ORDER, reserveAddOnStock } from '@/lib/add-on-stock';
 import { logHeldPrice } from '@/lib/price-lock';
 import { priceChangedBody } from '@/lib/price-changed';
 import { CHECKOUT_RULE, allowRequest, callerKey } from '@/lib/rate-limit';
+import { EMAIL_RUNNER_INCLUDE } from '@/lib/email';
 
 export async function POST(request: Request) {
   // Same window as /api/checkout ('checkout' bucket): both spend the same
@@ -464,7 +465,7 @@ export async function POST(request: Request) {
             }))
           }
         },
-        include: { event: true, runners: { include: { category: true } } },
+        include: { event: true, runners: { include: EMAIL_RUNNER_INCLUDE } },
       });
     });
     // The order points at the slip now; nothing after this may delete it.

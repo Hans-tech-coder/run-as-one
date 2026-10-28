@@ -62,6 +62,7 @@ import { priceChangedBody } from '@/lib/price-changed';
 import { discountParts } from '@/lib/promo-winner';
 import { openPaymongoPage } from '@/lib/paymongo-session';
 import { CHECKOUT_RULE, allowRequest, callerKey } from '@/lib/rate-limit';
+import { EMAIL_RUNNER_INCLUDE } from '@/lib/email';
 
 export async function POST(request: Request) {
   // Before the body is read or a slot is touched: every order placed here holds
@@ -472,7 +473,7 @@ export async function POST(request: Request) {
             }))
           }
         },
-        include: { event: true, runners: { include: { category: true } } },
+        include: { event: true, runners: { include: EMAIL_RUNNER_INCLUDE } },
       });
     });
 

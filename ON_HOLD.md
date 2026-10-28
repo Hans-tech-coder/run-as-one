@@ -461,3 +461,34 @@ Not walked in a browser, worth one look after release:
   the browser runs shortened it with a shifted clock.
 - **A renewal that moves the total** was seen only with a rewritten
   `/api/price-lock` response (Batch 3), not a real promotion ending mid-lock.
+
+## 15. Leftovers from the event add-ons plan
+
+*Source: `ADD_ONS_PLAN.md` (gitignored, never committed), Batches 0–4,
+2026-10-28; Batches 0–3 on `dev` (`fa76dd5`, `54c8871`, `bfddc29`,
+`6d41c01`), Batch 4 in the working tree; not released. What it built and the
+owner's decisions D1–D9 are in `docs/current-state.md`.*
+
+Phase 2, left out on purpose:
+
+- **Buying an add-on after registering** (D4), from Track My Registration,
+  through the resume-payment flow the category change uses. Phase 1 sells
+  add-ons only inside the registration wizard.
+- **Removing or refunding one add-on line** from a paid order. Cancel and
+  refund stay whole-order.
+- **Add-on-only purchases**: merch bought with no race entry.
+- **A per-size price or an upcharge on add-ons** (D7 says one price for every
+  size; the race shirt's `shirtSizeUpcharge` does not apply).
+
+Not walked in a browser, worth one look after release:
+
+- **The whole flow on one fresh order**: the plan's "Done when" group of two
+  (one runner with a shirt in M, one without) paid on the PayMongo test page
+  was checked in parts across Batches 2–4 on `local-dev`'s PRICE LOCK TEST,
+  with Batch 3's script marking the orders paid, not by one webhook-settled
+  order end to end.
+- **A sent receipt in a real inbox.** Batch 4 rendered both registration
+  emails from the stored orders and checked their lines sum to the total; it
+  sent none.
+- **The stock count coming back when an unpaid checkout with a shirt
+  expires** through the daily sweep.

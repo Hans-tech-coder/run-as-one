@@ -394,7 +394,76 @@ export function addOnLineLabel(line: {
   option: string | null;
   quantity: number;
 }): string {
-  return `Runner ${line.runnerNo} · ${line.name}${line.option ? ` (${line.option})` : ''} × ${line.quantity}`;
+  return `Runner ${line.runnerNo} · ${addOnItemLabel(line)}`;
+}
+
+// ── After checkout: the read side ───────────────────────────────────────────
+
+/**
+ * What every screen that reads an order after checkout takes of a stored line
+ * (ADD_ONS_PLAN.md Batch 4): the registrants screen, the receipt emails, the
+ * client runner list and Track. Oldest first, which is the order the runner
+ * picked them in, so a runner's lines read the same everywhere. One `include`
+ * for all of them, so none can forget the order or a field another prints.
+ */
+export const ADD_ON_LINES_READ = {
+  select: { name: true, option: true, quantity: true, unitPrice: true, soldBy: true },
+  orderBy: { createdAt: 'asc' },
+} as const;
+
+/** A stored line as the read side prints it: what, which option, how many. */
+export type AddOnItemLine = Pick<AddOnLine, 'name' | 'option' | 'quantity'>;
+
+/**
+ * `COMMEMORATIVE SHIRT (M) × 1`: one line without its runner, for a screen
+ * that already shows whose it is. `addOnLineLabel` is this with the runner in
+ * front, so the summary, PayMongo and every screen after spell an item alike.
+ */
+export function addOnItemLabel(line: AddOnItemLine): string {
+  return `${line.name}${line.option ? ` (${line.option})` : ''} × ${line.quantity}`;
+}
+
+/** One runner's lines on one line — `COMMEMORATIVE SHIRT (M) × 1, CAP × 1` — blank for none. */
+export function addOnItemsText(lines: readonly AddOnItemLine[]): string {
+  return lines.map(addOnItemLabel).join(', ');
+}
+
+/** One item to order and pack: its pieces per option, and in all. */
+export type AddOnTally = {
+  name: string;
+  /** Chart order for sizes, then alphabetical; one row with a null option for an item without one. */
+  options: { option: string | null; pieces: number }[];
+  total: number;
+};
+
+/**
+ * Pieces per item and option, from counted lines (the Race Report's Add-ons,
+ * read in `client-race-report.ts`). An item is matched by its snapshotted
+ * name, not its id: a line keeps its name when the item is deleted
+ * (`addOnId` goes null), and that shirt was still sold and still has to be
+ * packed. Items in name order, so the block reads like a supplier's list.
+ */
+export function tallyAddOns(groups: readonly { name: string; option: string | null; pieces: number }[]): AddOnTally[] {
+  const items = new Map<string, Map<string | null, number>>();
+  for (const group of groups) {
+    if (group.pieces <= 0) continue;
+    const options = items.get(group.name) ?? new Map<string | null, number>();
+    options.set(group.option || null, (options.get(group.option || null) ?? 0) + group.pieces);
+    items.set(group.name, options);
+  }
+  const rank = (option: string | null) => {
+    if (option === null) return -1;
+    const at = SHIRT_SIZES.indexOf(option);
+    return at === -1 ? SHIRT_SIZES.length : at;
+  };
+  return [...items]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([name, options]) => {
+      const rows = [...options]
+        .map(([option, pieces]) => ({ option, pieces }))
+        .sort((a, b) => rank(a.option) - rank(b.option) || (a.option ?? '').localeCompare(b.option ?? ''));
+      return { name, options: rows, total: rows.reduce((sum, row) => sum + row.pieces, 0) };
+    });
 }
 
 // ── The runner side ─────────────────────────────────────────────────────────
