@@ -1,5 +1,7 @@
-import type { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import db from '@/lib/db';
+import { addOnSalesClosed, stockLeft, type AddOnLine, type PublicAddOn } from '@/lib/add-ons';
+import { SlotsUnavailableError } from '@/lib/registration-gate';
 import { SLOT_HOLDING_STATUSES } from '@/lib/slot-holds';
 
 /**
@@ -99,4 +101,96 @@ export async function addOnsForEvent(eventId: string): Promise<AdminAddOn[]> {
   ]);
   const withSales = new Set(everSold.map(row => row.addOnId));
   return rows.map(row => ({ ...row, sold: taken.get(row.id) ?? 0, hasSales: withSales.has(row.id) }));
+}
+
+/**
+ * **The last word on whether an order's add-ons can be sold**, taken inside
+ * the transaction that writes the order, beside `reserveSlots` and for the
+ * same reason: a count read before the write is a count two runners buying
+ * the last shirt both pass.
+ *
+ * The items are locked `FOR UPDATE`, ordered by id so two checkouts never
+ * deadlock on each other, and then read again under the lock: switched off
+ * or past its cutoff since `priceCheckout` read it is refused here too, so a
+ * staff save and an order can never both land. Stock is then counted
+ * (`takenAddOnStock`, on the transaction) against what this order wants.
+ *
+ * Refused with `SlotsUnavailableError`, the error both checkout routes already
+ * answer as a 409 carrying its own sentence: "the order no longer fits" is
+ * exactly what a sold-out shirt is, and its message says which item and what
+ * is left.
+ */
+export async function reserveAddOnStock(
+  tx: Prisma.TransactionClient,
+  lines: readonly Pick<AddOnLine, 'addOnId' | 'quantity'>[],
+  now: Date = new Date(),
+): Promise<void> {
+  const wanted = new Map<string, number>();
+  for (const line of lines) wanted.set(line.addOnId, (wanted.get(line.addOnId) ?? 0) + line.quantity);
+  if (wanted.size === 0) return;
+
+  const ids = [...wanted.keys()].sort();
+  const items = await tx.$queryRaw<{ id: string; name: string; active: boolean; stockLimit: number | null; salesCloseAt: Date | null }[]>(
+    Prisma.sql`SELECT "id", "name", "active", "stockLimit", "salesCloseAt" FROM "EventAddOn" WHERE "id" IN (${Prisma.join(ids)}) ORDER BY "id" FOR UPDATE`,
+  );
+
+  for (const id of ids) {
+    const item = items.find(row => row.id === id);
+    if (!item || !item.active || addOnSalesClosed(item, now)) {
+      throw new SlotsUnavailableError(
+        `${item?.name ?? 'An add-on you picked'} is no longer on sale. Remove it from the order and try again.`,
+      );
+    }
+  }
+
+  const limited = items.filter(item => item.stockLimit !== null);
+  if (limited.length === 0) return;
+  const taken = await takenAddOnStock(limited.map(item => item.id), tx);
+  for (const item of limited) {
+    const left = stockLeft(item, taken.get(item.id) ?? 0) ?? 0;
+    const want = wanted.get(item.id) ?? 0;
+    if (want > left) {
+      throw new SlotsUnavailableError(
+        left === 0
+          ? `${item.name} has just sold out. Remove it from the order and try again.`
+          : `Only ${left} ${item.name} ${left === 1 ? 'is' : 'are'} left. Lower the quantity and try again.`,
+      );
+    }
+  }
+}
+
+type PublicReadClient = Pick<Prisma.TransactionClient, 'runnerAddOn' | 'eventAddOn'>;
+
+/**
+ * One event's items for the runner side — the event page and the wizard —
+ * with what is left of each (D9). Switched-off items are left out; a closed or
+ * sold-out one is kept, marked, because it stays visible. Two queries
+ * whatever the number of items. `client` is the cached public reader on the
+ * event page (lib/public-db.ts), the plain client in the wizard.
+ */
+export async function publicAddOns(eventId: string, client: PublicReadClient = db): Promise<PublicAddOn[]> {
+  const rows = await client.eventAddOn.findMany({
+    where: { eventId, active: true },
+    orderBy: ADD_ON_ORDER,
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      price: true,
+      imageUrls: true,
+      optionKind: true,
+      options: true,
+      maxPerRunner: true,
+      stockLimit: true,
+      salesCloseAt: true,
+      categoryIds: true,
+      soldBy: true,
+      active: true,
+    },
+  });
+  const taken = await takenAddOnStock(rows.map(row => row.id), client);
+  return rows.map(row => {
+    const left = stockLeft(row, taken.get(row.id) ?? 0);
+    return { ...row, salesCloseAt: row.salesCloseAt?.toISOString() ?? null, left, soldOut: left === 0 };
+  });
 }

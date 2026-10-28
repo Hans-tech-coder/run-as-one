@@ -20,12 +20,18 @@ import { CategorySalePrice } from '@/lib/discount';
  * .animate-fade-in (an animated transform) — each of which makes itself the
  * containing block for fixed descendants, so left inline the overlay is
  * positioned against the form panel and then clipped by it.
+ *
+ * An add-on opens here too (RunnerAddOns.tsx), with its own words: a subtitle,
+ * its description, every poster it has, and Add / Added / Sold out on the
+ * button in place of Choose / Selected / Full.
  */
 export default function PosterLightbox({
   category,
   isSelected,
   isFull = false,
   sale,
+  subtitle = "What's included",
+  labels,
   onSelect,
   onClose,
 }: {
@@ -33,8 +39,14 @@ export default function PosterLightbox({
     name: string;
     price: number;
     imageUrl?: string | null;
+    /** Every poster, in order, when there are several; wins over `imageUrl`. */
+    imageUrls?: string[] | null;
+    description?: string | null;
     inclusions?: string[] | null;
   };
+  subtitle?: string;
+  /** The button's three states, when they are not an option's. */
+  labels?: { choose: string; selected: string; full: string };
   isSelected: boolean;
   /**
    * Whether this option has reached its slot limit. The picker's own row is
@@ -55,6 +67,8 @@ export default function PosterLightbox({
   const closeRef = useRef<HTMLButtonElement>(null);
   const [mounted, setMounted] = useState(false);
   const inclusions = category.inclusions ?? [];
+  const images = category.imageUrls?.length ? category.imageUrls : category.imageUrl ? [category.imageUrl] : [];
+  const description = category.description?.trim() ?? '';
 
   useEffect(() => {
     setMounted(true);
@@ -79,7 +93,7 @@ export default function PosterLightbox({
         className="poster-lightbox"
         role="dialog"
         aria-modal="true"
-        aria-label={`${category.name} inclusions`}
+        aria-label={`${category.name}: ${subtitle}`}
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center gap-3 p-4 border-b border-white/10">
@@ -87,7 +101,7 @@ export default function PosterLightbox({
             <div className="font-bold text-white uppercase tracking-wide truncate">
               {category.name}
             </div>
-            <div className="text-sm text-secondary">What&apos;s included</div>
+            <div className="text-sm text-secondary">{subtitle}</div>
           </div>
           <div className="ml-auto shrink-0">
             <CategoryPrice
@@ -111,10 +125,14 @@ export default function PosterLightbox({
         {/* Scrolls as one, so a long list under a tall poster stays reachable
             without the header or the choose button leaving the screen. */}
         <div className="poster-lightbox-scroll">
-          {category.imageUrl && (
-            <div className="poster-lightbox-body">
-              <img src={category.imageUrl} alt={`${category.name} inclusions`} />
+          {images.map((url, idx) => (
+            <div key={url} className="poster-lightbox-body">
+              <img src={url} alt={idx === 0 ? `${category.name} poster` : ''} />
             </div>
+          ))}
+
+          {description && (
+            <p className="m-0 p-4 text-sm leading-relaxed text-white/90 whitespace-pre-line">{description}</p>
           )}
 
           {inclusions.length > 0 && (
@@ -153,13 +171,13 @@ export default function PosterLightbox({
               // Says which option is gone, not just that something is. The
               // runner opened this panel to compare, and they are still free
               // to read what it included and pick another.
-              `${category.name} Is Full`
+              labels?.full ?? `${category.name} Is Full`
             ) : isSelected ? (
               <span className="flex items-center justify-center gap-2">
-                <Check size={18} aria-hidden="true" /> Selected
+                <Check size={18} aria-hidden="true" /> {labels?.selected ?? 'Selected'}
               </span>
             ) : (
-              `Choose ${category.name}`
+              labels?.choose ?? `Choose ${category.name}`
             )}
           </button>
         </div>

@@ -56,6 +56,7 @@ import {
   runnersDiscounted,
 } from '@/lib/discount';
 import { priceCheckout } from '@/lib/checkout-pricing';
+import { ADD_ON_ORDER, reserveAddOnStock } from '@/lib/add-on-stock';
 import { logHeldPrice } from '@/lib/price-lock';
 import { priceChangedBody } from '@/lib/price-changed';
 import { discountParts } from '@/lib/promo-winner';
@@ -176,7 +177,7 @@ export async function POST(request: Request) {
     // prices must not reach PayMongo, let alone leave a registration behind.
     const event = await prisma.event.findUnique({
       where: { id: eventId },
-      include: { categories: true, client: EVENT_SITE_CLIENT }
+      include: { categories: true, addOns: { orderBy: ADD_ON_ORDER }, client: EVENT_SITE_CLIENT }
     });
 
     // A draft or scheduled event reads as missing: nothing is sold on an
@@ -285,6 +286,9 @@ export async function POST(request: Request) {
       discount,
       discountAmount,
       free,
+      addOnLines,
+      addOnTotal,
+      addOnRunAsOneTotal,
       subtotal: expectedSubtotal,
       transactionFee: expectedTransactionFee,
       total: expectedTotal,
@@ -343,6 +347,10 @@ export async function POST(request: Request) {
     const registration = await prisma.$transaction(async (tx) => {
       await lockEventForRegistration(tx, event.id);
       await reserveSlots(tx, event.categories, participants);
+      // The add-ons' stock and cutoff, read again under their own row locks
+      // (lib/add-on-stock.ts): two runners buying the last shirt cannot both
+      // pass, and an item switched off a second ago is not sold.
+      await reserveAddOnStock(tx, addOnLines.flat());
 
       // Spent when the order is placed, not when it is paid — the same moment
       // a slot is taken, and for the same reason: a voucher that only counted
@@ -408,6 +416,10 @@ export async function POST(request: Request) {
           // When the lock was taken, only on an order the lock priced — the
           // same condition as the log line below. See Registration.priceLockedAt.
           priceLockedAt: lockedAt && discount.heldByLock ? lockedAt : null,
+          // Every add-on line on the order, and Run As One's part of it (D1),
+          // from the lines priced above. Zero on an order with none.
+          addOnTotal,
+          addOnRunAsOneTotal,
           paymentMethod: storedPaymentMethod,
           status: 'PENDING', // All payments start as PENDING until verified by webhook or admin
           // Nothing to collect, so nothing to wait for. Spread *after* the two
@@ -454,6 +466,9 @@ export async function POST(request: Request) {
               // client sent; the timestamp is always the server's.
               ...storedGuardianConsent(p, event.date),
               ...storedRunnerAddress(p),
+              // This runner's add-ons, each a snapshot of the item as sold
+              // (name, price, seller), so a later edit never rewrites a receipt.
+              addOns: { create: addOnLines[index] },
             }))
           }
         },
@@ -534,6 +549,11 @@ export async function POST(request: Request) {
           const category = event.categories.find((c: any) => c.id === p.categoryId);
           return category ? [{ categoryName: category.name, price: promoOrder.runnerPrices[index] }] : [];
         }),
+        // Each runner's add-ons as their own lines, never folded into a
+        // discounted goods line: no promotion touches them (D5).
+        addOns: addOnLines.flatMap((lines, index) =>
+          lines.map(line => ({ ...line, runnerNo: index + 1 })),
+        ),
         subtotalCents: expectedSubtotal,
         discountAmount,
         // Both names when two promotions were combined: "EARLY BIRD + 5+1 FREE".

@@ -61,6 +61,7 @@ export function usePromoPricing({
   automaticPromos,
   adminFeePerRunner,
   deliveryFee,
+  addOnTotal = 0,
   lockedAt,
   now,
 }: {
@@ -71,6 +72,12 @@ export function usePromoPricing({
   automaticPromos: PromoTerms[];
   adminFeePerRunner: number;
   deliveryFee: number;
+  /**
+   * The order's add-ons (useAddOnTotals.ts). Read only for whether the order
+   * is free: a ₱0 entry plus a shirt is a paid order (ADD_ONS_PLAN.md D8),
+   * and no promotion here ever prices an add-on (D5).
+   */
+  addOnTotal?: number;
   /** Epoch ms of the price lock, or null without one. */
   lockedAt: number | null;
   /** The wizard's clock (usePriceLock), which moves when a promotion does. */
@@ -163,7 +170,7 @@ export function usePromoPricing({
   // The server decides this again from its own figures; this copy only decides
   // what the wizard draws. See lib/free-checkout.ts.
   const isFree = isFreeOrder(
-    chargeableTotal({ subtotal, deliveryFee, platformFee, discountAmount }),
+    chargeableTotal({ subtotal, deliveryFee, platformFee, discountAmount, addOnTotal }),
   );
 
   // A good code that simply lost. Not an error — nothing is wrong with it and

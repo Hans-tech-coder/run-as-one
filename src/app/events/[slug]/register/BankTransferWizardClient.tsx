@@ -69,6 +69,9 @@ import {
 } from "@/lib/free-checkout";
 import PromoCodeField from "./PromoCodeField";
 import OrderSummary from "./OrderSummary";
+import RunnerAddOns from "./RunnerAddOns";
+import { droppedAddOnsNotice, useAddOnTotals } from "./useAddOnTotals";
+import { addOnsShownFor, picksAllowedIn, withRaceSizeFilled, type AddOnPick } from "@/lib/add-ons";
 import StepRail from "@/components/ui/StepRail";
 import FreeSlotOffer from "./FreeSlotOffer";
 import GroupLimitNotice from "./GroupLimitNotice";
@@ -144,6 +147,8 @@ interface Participant {
   addressStreet: string;
   /** The earlier runner (0-based) whose address this one shares, or null. */
   addressSameAs: number | null;
+  /** This runner's add-on picks (ADD_ONS_PLAN.md D3), posted as they are. */
+  addOns: AddOnPick[];
 }
 
 /** The guardian answers of a runner who does not owe them. */
@@ -220,6 +225,7 @@ export default function BankTransferWizardClient({
       runningCommunity: "",
       ...NO_GUARDIAN,
       ...startingAddress(0),
+      addOns: [],
     },
   ]);
 
@@ -337,6 +343,13 @@ export default function BankTransferWizardClient({
     if (field === "birthdate" && !needsGuardianConsent(value, event.date)) {
       newParticipants[index] = { ...newParticipants[index], ...NO_GUARDIAN };
     }
+    // A shirt add-on picked before the race size takes that size too.
+    if (field === "singletSize") {
+      newParticipants[index] = {
+        ...newParticipants[index],
+        addOns: withRaceSizeFilled(newParticipants[index].addOns, event.addOns ?? [], value),
+      };
+    }
     setParticipants(newParticipants);
   };
 
@@ -381,12 +394,41 @@ export default function BankTransferWizardClient({
     const keepSize = categoryNeedsShirtSize(
       findCategory(event.categories, categoryId),
     );
+    // Add-ons the new category is not offered go, and the card says which.
+    const { kept, dropped } = picksAllowedIn(
+      newParticipants[index].addOns,
+      event.addOns ?? [],
+      categoryId,
+    );
     newParticipants[index] = {
       ...newParticipants[index],
       categoryId,
       singletSize: keepSize ? newParticipants[index].singletSize : "",
+      addOns: kept,
     };
     setParticipants(newParticipants);
+    const runnerId = newParticipants[index].id;
+    const notice = droppedAddOnsNotice(dropped, sellsPackages(event) ? "package" : "category");
+    setAddOnNotices((prev) => {
+      const next = { ...prev };
+      if (notice) next[runnerId] = notice;
+      else delete next[runnerId];
+      return next;
+    });
+  };
+
+  // Which add-ons a category change took off each runner, by runner id, until
+  // that runner's add-ons are next touched.
+  const [addOnNotices, setAddOnNotices] = useState<Record<number, string>>({});
+  const handleAddOnsChange = (index: number, picks: AddOnPick[]) => {
+    const runnerId = participants[index].id;
+    setParticipants((prev) => prev.map((p, i) => (i === index ? { ...p, addOns: picks } : p)));
+    setAddOnNotices((prev) => {
+      if (!(runnerId in prev)) return prev;
+      const next = { ...prev };
+      delete next[runnerId];
+      return next;
+    });
   };
 
   /**
@@ -439,6 +481,7 @@ export default function BankTransferWizardClient({
           medicalConditions: "",
           ...NO_GUARDIAN,
           ...startingAddress(prev.length + offset),
+          addOns: [],
         })),
       ];
     });
@@ -467,6 +510,8 @@ export default function BankTransferWizardClient({
   // summaries cannot drift apart (usePromoPricing.ts). Centavos throughout.
   const shirtSizeUpcharge = event.shirtSizeUpcharge ?? 0;
   const deliveryFee = delivery.fee;
+  // Every runner's add-ons and the summary's line for each (useAddOnTotals.ts).
+  const { addOnTotal, addOnSummaryLines } = useAddOnTotals(participants, event.addOns);
   // The promotions the runner started under, held for 45 minutes from their
   // first keystroke (usePriceLock.ts) and sent with the order. Kept into
   // its grace once a deposit slip is picked: that runner has already paid.
@@ -496,11 +541,14 @@ export default function BankTransferWizardClient({
     automaticPromos,
     adminFeePerRunner,
     deliveryFee,
+    addOnTotal,
     lockedAt: priceLock.lockedAt,
     now: priceLock.now,
   });
 
-  const totalAmount = subtotal + deliveryFee + platformFee - discountAmount;
+  // A bank transfer carries no transaction fee; the add-ons are added at their
+  // listed price (D5), as the checkout adds them.
+  const totalAmount = subtotal + deliveryFee + platformFee + addOnTotal - discountAmount;
 
   // The countdown and notices about that lock: shown only when a promotion on
   // this order ends inside it (D2).
@@ -923,6 +971,7 @@ export default function BankTransferWizardClient({
               participants={participants}
               discount={discount}
               sizeUpcharge={sizeUpcharge}
+              addOnLines={addOnSummaryLines}
               deliveryFee={
                 logisticsMethod === "DELIVERY"
                   ? { amount: deliveryFee, label: delivery.feeLabel }
@@ -1188,6 +1237,16 @@ export default function BankTransferWizardClient({
                         onAdd={rememberCommunity}
                       />
                     </div>
+
+                    <RunnerAddOns
+                      index={idx}
+                      addOns={addOnsShownFor(event.addOns ?? [], p.categoryId)}
+                      picks={p.addOns}
+                      raceShirtSize={p.singletSize}
+                      error={errorFor(idx, "addOns")}
+                      notice={addOnNotices[p.id]}
+                      onChange={(picks) => handleAddOnsChange(idx, picks)}
+                    />
 
                     <RunnerAddressFields
                       index={idx}

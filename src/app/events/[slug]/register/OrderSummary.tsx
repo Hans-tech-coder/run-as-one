@@ -24,6 +24,7 @@ export default function OrderSummary({
   participants,
   discount,
   sizeUpcharge,
+  addOnLines = [],
   deliveryFee,
   platformFee,
   waivedPlatformFee,
@@ -39,6 +40,11 @@ export default function OrderSummary({
   participants: { id: number | string; categoryId: string }[];
   discount: AppliedDiscount | null | undefined;
   sizeUpcharge: number;
+  /**
+   * One line per runner per add-on (useAddOnTotals.ts). Listed apart from the
+   * runners and below the promotions, since no promotion touches them (D5).
+   */
+  addOnLines?: { key: string; label: string; amount: number }[];
   /** Null when the order is not being delivered. */
   deliveryFee: { amount: number; label: string } | null;
   platformFee: number;
@@ -121,6 +127,18 @@ export default function OrderSummary({
               <span className="font-semibold text-emerald-400 whitespace-nowrap">
                 {promotionAmount(part, categories, participants)}
               </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {addOnLines.length > 0 && (
+        <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-white/5 text-sm">
+          <div className="text-xs font-bold uppercase tracking-wide text-secondary">Add-ons</div>
+          {addOnLines.map((line) => (
+            <div key={line.key} className="flex justify-between items-start gap-3">
+              <span className="text-white min-w-0 break-words">{line.label}</span>
+              <span className="text-white whitespace-nowrap">₱{formatPesos(line.amount)}</span>
             </div>
           ))}
         </div>

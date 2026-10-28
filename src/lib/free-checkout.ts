@@ -51,9 +51,20 @@ export function chargeableTotal(amounts: {
   deliveryFee: number;
   platformFee: number;
   discountAmount: number;
+  /**
+   * The order's add-ons (ADD_ONS_PLAN.md), never discounted (D5) and carrying
+   * no platform fee (D2), so simply added. Counted here, in the "anything to
+   * charge?" figure, because of D8: a pacer's free entry plus a ₱350 shirt is
+   * a ₱350 checkout with the normal payment step, not a ₱0 order.
+   */
+  addOnTotal?: number;
 }): number {
   return (
-    amounts.subtotal + amounts.deliveryFee + amounts.platformFee - amounts.discountAmount
+    amounts.subtotal +
+    amounts.deliveryFee +
+    amounts.platformFee -
+    amounts.discountAmount +
+    (amounts.addOnTotal ?? 0)
   );
 }
 
@@ -68,6 +79,27 @@ export function chargeableTotal(amounts: {
  */
 export function isFreeOrder(chargeable: number): boolean {
   return chargeable <= 0;
+}
+
+/**
+ * **Whether a stored order's race entry cost nothing** — asked of an order
+ * already written, by anything that credits or prices the entry later (a
+ * category change's basis, `category-change.ts`).
+ *
+ * Not `isFreeOrder(totalAmount)`. Under D8 a free entry plus an add-on is a
+ * paid order, so its total is the add-on's price plus PayMongo's cut on it.
+ * The entry's part is what is left once both are taken off: `totalAmount −
+ * addOnTotal − transactionFee` is subtotal − discount + delivery + platform
+ * fee, the very figure `isFreeOrder` judged at checkout before add-ons
+ * existed. Every "was this entry free?" asks here, so the next money column
+ * is taken off in one place.
+ */
+export function raceEntryIsFree(order: {
+  totalAmount: number;
+  addOnTotal: number;
+  transactionFee: number;
+}): boolean {
+  return isFreeOrder(order.totalAmount - order.addOnTotal - order.transactionFee);
 }
 
 /**

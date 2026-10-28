@@ -1,4 +1,12 @@
 import { checkoutDelivery } from '@/app/events/[slug]/register/delivery-split';
+import {
+  addOnLinesTotal,
+  availableAddOns,
+  readAddOnSelection,
+  runAsOneShare,
+  type AddOnLine,
+  type AddOnRule,
+} from '@/lib/add-ons';
 import { chargeableTotal, isFreeOrder, platformFeeAfterDiscount, transactionFeeFor } from '@/lib/free-checkout';
 import { priceChangedBody, type PriceChangedBody, type PriceChangedFigures } from '@/lib/price-changed';
 import { readPriceLock } from '@/lib/price-lock';
@@ -21,9 +29,15 @@ import { runnerCategories, runnerPrices, subtotalWithUpcharge, type PricedCatego
  *    total (lib/price-changed.ts).
  * 3. **Discount**, recomputed from the PromoCode rows under the runner's price
  *    lock — never read off the request.
- * 4. **Platform fee** (`Event.adminFee` per runner, a pacer's waiver applied),
- *    then the **chargeable** total and whether the order is **free**.
- * 5. **Transaction fee** on the chargeable total for the stored method — zero
+ * 4. **Add-ons** (ADD_ONS_PLAN.md): each runner's picks re-read against the
+ *    items on sale to their category *now* and priced from the item, never
+ *    the post. Never discounted (D5), no platform fee (D2), no delivery fee
+ *    (D6). Stock is not counted here: that needs the checkout's lock
+ *    (`reserveAddOnStock`, add-on-stock.ts).
+ * 5. **Platform fee** (`Event.adminFee` per runner, a pacer's waiver applied),
+ *    then the **chargeable** total — add-ons included — and whether the order
+ *    is **free**. So a ₱0 entry plus a shirt is a paid order (D8).
+ * 6. **Transaction fee** on the chargeable total for the stored method — zero
  *    for a bank transfer, which PayMongo never sees, and for a free order —
  *    and the **total** the runner pays.
  *
@@ -45,10 +59,13 @@ export type CheckoutPricingEvent = DeliveryEvent & {
   categories: PricedCategory[];
   shirtSizeUpcharge: number;
   adminFee: number;
+  /** Every add-on on the event; which a runner may buy is decided here. */
+  addOns: AddOnRule[];
 };
 
 export interface CheckoutPricingInput {
-  participants: readonly { categoryId: string; singletSize: string }[];
+  /** `addOns` is the runner's posted picks, as `readAddOnSelection` reads them. */
+  participants: readonly { categoryId: string; singletSize: string; addOns?: unknown }[];
   logisticsMethod: unknown;
   deliveryZone: unknown;
   deliveryAddress: string | null | undefined;
@@ -79,6 +96,11 @@ export interface CheckoutPricing {
   discountAmount: number;
   subtotal: number;
   deliveryFee: number;
+  /** Each runner's add-on lines, in runner order; written as `RunnerAddOn` rows. */
+  addOnLines: AddOnLine[][];
+  addOnTotal: number;
+  /** The part of `addOnTotal` Run As One sells and keeps (D1). */
+  addOnRunAsOneTotal: number;
   platformFee: number;
   chargeable: number;
   free: boolean;
@@ -128,6 +150,26 @@ export async function priceCheckout(
     };
   }
 
+  // Each runner's add-ons, priced from the items as they stand now. An item
+  // switched off, closed, or not open to this runner's category since the page
+  // loaded is refused with the sentence saying so, and the runner named, so a
+  // group of five knows whose card to look at.
+  const now = new Date();
+  const addOnLines: AddOnLine[][] = [];
+  for (const [index, participant] of participants.entries()) {
+    const read = readAddOnSelection(
+      participant.addOns,
+      availableAddOns(event.addOns, participant.categoryId, now),
+    );
+    if ('error' in read) {
+      const error = participants.length > 1 ? `Runner ${index + 1}: ${read.error}` : read.error;
+      return { refusal: { status: 400, body: { error } } };
+    }
+    addOnLines.push(read.lines);
+  }
+  const allAddOnLines = addOnLines.flat();
+  const addOnTotal = addOnLinesTotal(allAddOnLines);
+
   // The discount is recomputed from the PromoCode row, never read off the
   // request. A code that expired, filled up or stopped applying since the
   // wizard priced it is refused with the sentence the wizard itself would
@@ -167,6 +209,7 @@ export async function priceCheckout(
     deliveryFee: expectedDeliveryFee,
     platformFee: expectedPlatformFee,
     discountAmount,
+    addOnTotal,
   });
   const free = isFreeOrder(chargeable);
 
@@ -183,6 +226,7 @@ export async function priceCheckout(
     deliveryFee: expectedDeliveryFee,
     discount: discountAmount,
     platformFee: expectedPlatformFee,
+    addOnTotal,
     transactionFee: expectedTransactionFee,
     total: expectedTotal,
   };
@@ -198,6 +242,9 @@ export async function priceCheckout(
     discountAmount,
     subtotal: expectedSubtotal,
     deliveryFee: expectedDeliveryFee,
+    addOnLines,
+    addOnTotal,
+    addOnRunAsOneTotal: runAsOneShare(allAddOnLines),
     platformFee: expectedPlatformFee,
     chargeable,
     free,

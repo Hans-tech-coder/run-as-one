@@ -30,7 +30,7 @@
  */
 
 import { isPricedIn } from './discount';
-import { isFreeOrder, isPayMongoMethod, transactionFeeFor } from './free-checkout';
+import { isPayMongoMethod, raceEntryIsFree, transactionFeeFor } from './free-checkout';
 import { eventInstant } from './event-schedule';
 import { parsePesos } from './settlement';
 
@@ -233,6 +233,9 @@ export type QuoteInput = {
     discountAmount: number;
     discountType: string | null;
     totalAmount: number;
+    /** The order's add-ons and PayMongo cut: taken off the total to judge the entry (D8). */
+    addOnTotal: number;
+    transactionFee: number;
     /**
      * Every runner the order was priced for, removed ones included: an
      * order-level discount was spread over all of them at checkout.
@@ -289,9 +292,11 @@ export function computeBasis(input: Pick<QuoteInput, 'fromPrice' | 'promoPrice' 
   estimateReason: BasisEstimateReason | null;
 } {
   const entry = input.promoPrice ?? input.fromPrice;
-  const { discountAmount, discountType, totalAmount, runnerCount } = input.order;
+  const { discountAmount, discountType, runnerCount } = input.order;
 
-  if (isFreeOrder(totalAmount)) return { basis: 0, estimateReason: 'FREE_ORDER' };
+  // The entry, not the whole order: a pacer's free entry plus a ₱350 shirt
+  // is a ₱350 order whose entry still cost nothing (ADD_ONS_PLAN.md D8).
+  if (raceEntryIsFree(input.order)) return { basis: 0, estimateReason: 'FREE_ORDER' };
 
   if (discountAmount > 0 && !isPricedIn(discountType)) {
     const share = Math.floor(discountAmount / Math.max(1, runnerCount));

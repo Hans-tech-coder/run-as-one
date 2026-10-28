@@ -209,6 +209,8 @@ export function useCategoryChangeModal({
         discountAmount: preview.order.discountAmount,
         discountType: preview.order.discountType,
         totalAmount: preview.order.totalAmount,
+        addOnTotal: preview.order.addOnTotal,
+        transactionFee: preview.order.transactionFee,
         runnerCount: preview.order.runnerCount,
       },
       event: preview.event,

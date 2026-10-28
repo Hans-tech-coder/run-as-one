@@ -36,6 +36,8 @@ export interface PriceChangedFigures {
   /** The discount the order gets now, promotions and any price lock weighed. */
   discount?: number;
   platformFee?: number;
+  /** Every add-on line on the order, at its listed price (ADD_ONS_PLAN.md D5). */
+  addOnTotal?: number;
   /** Zero on a bank transfer, which carries none. */
   transactionFee?: number;
   /** What the runner would pay. Absent when the refusal came before it was known. */

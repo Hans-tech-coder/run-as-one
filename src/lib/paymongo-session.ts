@@ -1,3 +1,4 @@
+import { addOnLineLabel } from '@/lib/add-ons';
 import { paymongoPaymentType } from '@/lib/registration-codes';
 import { runnerPrices } from '@/lib/shirt-size';
 
@@ -38,7 +39,14 @@ export type PaymongoOrder = {
    *  their own large-size upcharge (`runnerPrices`, lib/shirt-size.ts) — in
    *  runner order. */
   runners: { categoryName: string; price: number }[];
-  /** The goods before any discount (the order's `subtotal`). */
+  /**
+   * Every add-on line on the order (ADD_ONS_PLAN.md), with the runner it
+   * belongs to. Billed as lines of their own after the entries, even when the
+   * entries collapse into one discounted line: no promotion touches an add-on
+   * (D5), so its price is exactly what it adds to the total.
+   */
+  addOns?: { runnerNo: number; name: string; option: string | null; unitPrice: number; quantity: number }[];
+  /** The race entries before any discount (the order's `subtotal`, add-ons not in it). */
   subtotalCents: number;
   discountAmount: number;
   promoCode: string | null;
@@ -111,6 +119,15 @@ export function paymongoLineItems(order: PaymongoOrder): LineItem[] {
     });
   }
 
+  // Not on a category change's own lines (`items`): that bills a difference
+  // in the entry, and the add-ons were paid with the order.
+  if (!order.items) {
+    for (const line of order.addOns ?? []) {
+      const amount = line.unitPrice * line.quantity;
+      if (amount > 0) lineItems.push({ currency: 'PHP', amount, name: addOnLineLabel(line), quantity: 1 });
+    }
+  }
+
   if (order.deliveryFeeCents > 0) {
     lineItems.push({ currency: 'PHP', amount: order.deliveryFeeCents, name: 'Delivery Fee', quantity: 1 });
   }
@@ -149,6 +166,9 @@ type StoredOrder = {
     categoryId: string;
     singletSize: string;
     category: { id: string; name: string; price: number; inclusions: string[] };
+    runnerNo?: number;
+    /** The runner's stored `RunnerAddOn` lines, every field a snapshot. */
+    addOns?: { name: string; option: string | null; unitPrice: number; quantity: number }[];
   }[];
 };
 
@@ -169,6 +189,9 @@ export function paymongoOrderFromRegistration(order: StoredOrder): PaymongoOrder
     customerName: order.customerName,
     customerEmail: order.customerEmail,
     runners: order.runners.map((r, i) => ({ categoryName: r.category.name, price: prices[i] })),
+    // From the stored lines, never the items: an add-on repriced or deleted
+    // since the order was placed still bills what this order was sold at.
+    addOns: order.runners.flatMap((r, i) => (r.addOns ?? []).map(line => ({ ...line, runnerNo: r.runnerNo ?? i + 1 }))),
     subtotalCents: order.subtotal,
     discountAmount: order.discountAmount,
     // Both names when two promotions were combined, as the first page said.

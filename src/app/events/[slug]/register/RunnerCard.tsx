@@ -5,6 +5,7 @@ import { Trash2 } from "lucide-react";
 import FieldError from "@/components/ui/FieldError";
 import { ageOn, needsGuardianConsent } from "@/lib/minor-consent";
 import { shouldAskShirtSize } from "@/lib/shirt-size";
+import { addOnsShownFor, type AddOnPick, type PublicAddOn } from "@/lib/add-ons";
 import CategoryPicker from "./CategoryPicker";
 import CommunityPicker from "./CommunityPicker";
 import PhoneField from "./PhoneField";
@@ -13,12 +14,13 @@ import BirthdatePicker from "./BirthdatePicker";
 import GuardianConsent from "./GuardianConsent";
 import ShirtSizeField from "./ShirtSizeField";
 import RunnerAddressFields from "./RunnerAddressFields";
+import RunnerAddOns from "./RunnerAddOns";
 import { runnerFieldId, type RunnerErrors, type RunnerField } from "./validation";
 
 /**
  * One runner's card on step 1 of the online wizard: the category or package
- * picker, personal details, shirt size, running club, home address and the
- * health and emergency block.
+ * picker, personal details, shirt size, running club, add-ons, home address
+ * and the health and emergency block.
  *
  * Moved out of RegistrationWizardClient (ADD_ONS_PLAN.md Batch 0) so that
  * everything a runner picks for themselves has one home of normal size. The
@@ -54,6 +56,8 @@ export interface Participant {
   addressStreet: string;
   /** The earlier runner (0-based) whose address this one shares, or null. */
   addressSameAs: number | null;
+  /** This runner's add-on picks (ADD_ONS_PLAN.md D3), posted as they are. */
+  addOns: AddOnPick[];
 }
 
 type GuardianPatch = Partial<
@@ -91,6 +95,9 @@ export default function RunnerCard({
   onAddressChange,
   onAddCommunity,
   onOpenSizeGuide,
+  addOns = [],
+  addOnNotice,
+  onAddOnsChange,
 }: {
   event: React.ComponentProps<typeof CategoryPicker>["event"] & {
     /** Race day, which decides whether a runner owes guardian consent. */
@@ -125,6 +132,11 @@ export default function RunnerCard({
   onAddressChange: (index: number, patch: AddressPatch) => void;
   onAddCommunity: (name: string) => void;
   onOpenSizeGuide: () => void;
+  /** Every add-on on the event; the card shows those open to this runner. */
+  addOns?: PublicAddOn[];
+  /** Which picks this runner's category change took off, until the next edit. */
+  addOnNotice?: string;
+  onAddOnsChange?: (index: number, picks: AddOnPick[]) => void;
 }) {
   return (
     <div
@@ -312,6 +324,18 @@ export default function RunnerCard({
           onAdd={onAddCommunity}
         />
       </div>
+
+      {onAddOnsChange && (
+        <RunnerAddOns
+          index={index}
+          addOns={addOnsShownFor(addOns, runner.categoryId)}
+          picks={runner.addOns}
+          raceShirtSize={runner.singletSize}
+          error={errorFor(index, "addOns")}
+          notice={addOnNotice}
+          onChange={(picks) => onAddOnsChange(index, picks)}
+        />
+      )}
 
       <RunnerAddressFields
         index={index}

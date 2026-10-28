@@ -382,3 +382,120 @@ export function stockBelowSoldProblem(stockLimit: number | null, sold: number): 
     error: `${sold} ${sold === 1 ? 'piece has' : 'pieces have'} already been sold, so the stock cannot be lower than ${sold}.`,
   };
 }
+
+/**
+ * One line as the runner reads it on the summary and the PayMongo page:
+ * `Runner 2 · COMMEMORATIVE SHIRT (M) × 1`. One spelling for both, so the bill
+ * the runner pays reads exactly like the summary they agreed to.
+ */
+export function addOnLineLabel(line: {
+  runnerNo: number;
+  name: string;
+  option: string | null;
+  quantity: number;
+}): string {
+  return `Runner ${line.runnerNo} · ${line.name}${line.option ? ` (${line.option})` : ''} × ${line.quantity}`;
+}
+
+// ── The runner side ─────────────────────────────────────────────────────────
+
+/**
+ * An item as the event page and the wizard draw it: the rules' fields, what
+ * the card shows, and whether any is left. Built on the server
+ * (`publicAddOns`, add-on-stock.ts), so the stock count is never the
+ * browser's.
+ */
+export interface PublicAddOn extends AddOnRule {
+  description: string;
+  imageUrls: string[];
+  /** ISO instant, or null for no cutoff of its own. */
+  salesCloseAt: string | null;
+  /** Pieces left, or null for no limit (D9). */
+  left: number | null;
+  soldOut: boolean;
+}
+
+/** One runner's pick on one item, as the wizard holds and posts it. */
+export interface AddOnPick {
+  addOnId: string;
+  /** The size or option; '' until one is chosen on an item that has them. */
+  option: string;
+  quantity: number;
+}
+
+/**
+ * The items a runner in `categoryId` is *shown*: switched on and open to that
+ * category. A closed or sold-out one stays on the card marked so (D9), which
+ * is why the cutoff is not filtered here as `availableAddOns` filters it —
+ * whether it can be *picked* is `addOnPickable`.
+ */
+export function addOnsShownFor<T extends AddOnRule>(addOns: readonly T[], categoryId: string): T[] {
+  return addOns.filter(
+    addOn => addOn.active && (addOn.categoryIds.length === 0 || addOn.categoryIds.includes(categoryId)),
+  );
+}
+
+/** Whether a runner may add this item now: some left and still on sale. */
+export function addOnPickable(addOn: Pick<PublicAddOn, 'soldOut' | 'salesCloseAt'>, now: Date = new Date()): boolean {
+  return !addOn.soldOut && !addOnSalesClosed(addOn, now);
+}
+
+/**
+ * The picks a runner keeps after moving to `categoryId`: only those the new
+ * category is offered. The wizard says which were dropped.
+ */
+export function picksAllowedIn(
+  picks: readonly AddOnPick[],
+  addOns: readonly AddOnRule[],
+  categoryId: string,
+): { kept: AddOnPick[]; dropped: string[] } {
+  const shown = addOnsShownFor(addOns, categoryId);
+  const kept: AddOnPick[] = [];
+  const dropped: string[] = [];
+  for (const pick of picks) {
+    if (shown.some(addOn => addOn.id === pick.addOnId)) kept.push(pick);
+    else dropped.push(addOns.find(addOn => addOn.id === pick.addOnId)?.name ?? 'An add-on');
+  }
+  return { kept, dropped };
+}
+
+/**
+ * A runner's picks as priced lines for the summary and the total, priced from
+ * the item like the server prices them. Lenient where `readAddOnSelection` is
+ * strict: a pick still waiting for its size is counted at its price, so the
+ * total moves the moment Add is pressed; the step's validation asks for the
+ * size before the order can be sent.
+ */
+export function pickedAddOnLines(picks: readonly AddOnPick[], addOns: readonly AddOnRule[]): AddOnLine[] {
+  return picks.flatMap(pick => {
+    const addOn = addOns.find(item => item.id === pick.addOnId);
+    if (!addOn) return [];
+    return [{
+      addOnId: addOn.id,
+      name: addOn.name,
+      unitPrice: addOn.price,
+      option: pick.option || null,
+      soldBy: asSeller(addOn.soldBy),
+      quantity: pick.quantity,
+    }];
+  });
+}
+
+/**
+ * A runner's picks once their race shirt size is set: a shirt-size item still
+ * waiting for its size takes that one, as it would have had it been added
+ * after the size was chosen. A size already picked on the item is left alone.
+ */
+export function withRaceSizeFilled(
+  picks: readonly AddOnPick[],
+  addOns: readonly AddOnRule[],
+  raceShirtSize: string,
+): AddOnPick[] {
+  if (!SHIRT_SIZES.includes(raceShirtSize)) return [...picks];
+  return picks.map(pick => {
+    const addOn = addOns.find(item => item.id === pick.addOnId);
+    return !pick.option && addOn && asOptionKind(addOn.optionKind) === 'SHIRT_SIZES'
+      ? { ...pick, option: raceShirtSize }
+      : pick;
+  });
+}

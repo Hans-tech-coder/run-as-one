@@ -65,7 +65,8 @@ export async function POST(
       where: { id: registrationId },
       include: {
         event: { select: { title: true, slug: true, shirtSizeUpcharge: true, client: EVENT_SITE_CLIENT } },
-        runners: { where: { deletedAt: null }, orderBy: { runnerNo: 'asc' }, include: { category: true } },
+        // Each runner's stored add-on lines, billed again as they were sold.
+        runners: { where: { deletedAt: null }, orderBy: { runnerNo: 'asc' }, include: { category: true, addOns: { orderBy: { createdAt: 'asc' } } } },
         _count: { select: { runners: { where: { deletedAt: { not: null } } } } },
       },
     });

@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import LinkPendingIcon from "@/components/ui/LinkPendingIcon";
 import { formatPesos } from "@/lib/money";
+import { picksAllowedIn, withRaceSizeFilled, type AddOnPick } from "@/lib/add-ons";
+import { droppedAddOnsNotice, useAddOnTotals } from "./useAddOnTotals";
 import {
   MAX_UPLOAD_MB,
   PDF_TYPE,
@@ -177,6 +179,10 @@ export default function RegistrationWizardClient({
           addressBarangay: r.addressBarangay || "",
           addressStreet: r.addressStreet || "",
           addressSameAs: null,
+          // Back from a cancelled PayMongo page: the picks as they were sent.
+          addOns: (r.addOns ?? []).flatMap((line: any) =>
+            line.addOnId ? [{ addOnId: line.addOnId, option: line.option ?? "", quantity: line.quantity }] : [],
+          ),
         }))
           // The rows hold resolved copies, so "same as" is rebuilt from them.
           .map((p: Participant, i: number, all: Participant[]) => ({
@@ -200,6 +206,7 @@ export default function RegistrationWizardClient({
             runningCommunity: "",
             ...NO_GUARDIAN,
             ...startingAddress(0),
+            addOns: [],
           },
         ],
   );
@@ -339,6 +346,13 @@ export default function RegistrationWizardClient({
     if (field === "birthdate" && !needsGuardianConsent(value, event.date)) {
       newParticipants[index] = { ...newParticipants[index], ...NO_GUARDIAN };
     }
+    // A shirt add-on picked before the race size takes that size too.
+    if (field === "singletSize") {
+      newParticipants[index] = {
+        ...newParticipants[index],
+        addOns: withRaceSizeFilled(newParticipants[index].addOns, event.addOns ?? [], value),
+      };
+    }
     setParticipants(newParticipants);
   };
 
@@ -383,12 +397,42 @@ export default function RegistrationWizardClient({
     const keepSize = categoryNeedsShirtSize(
       findCategory(event.categories, categoryId),
     );
+    // Add-ons the new category is not offered go, and the card says which:
+    // a shirt silently gone from the summary reads as a bug.
+    const { kept, dropped } = picksAllowedIn(
+      newParticipants[index].addOns,
+      event.addOns ?? [],
+      categoryId,
+    );
     newParticipants[index] = {
       ...newParticipants[index],
       categoryId,
       singletSize: keepSize ? newParticipants[index].singletSize : "",
+      addOns: kept,
     };
     setParticipants(newParticipants);
+    const runnerId = newParticipants[index].id;
+    const notice = droppedAddOnsNotice(dropped, sellsPackages(event) ? "package" : "category");
+    setAddOnNotices((prev) => {
+      const next = { ...prev };
+      if (notice) next[runnerId] = notice;
+      else delete next[runnerId];
+      return next;
+    });
+  };
+
+  // Which add-ons a category change took off each runner, by runner id, until
+  // that runner's add-ons are next touched.
+  const [addOnNotices, setAddOnNotices] = useState<Record<number, string>>({});
+  const handleAddOnsChange = (index: number, picks: AddOnPick[]) => {
+    const runnerId = participants[index].id;
+    setParticipants((prev) => prev.map((p, i) => (i === index ? { ...p, addOns: picks } : p)));
+    setAddOnNotices((prev) => {
+      if (!(runnerId in prev)) return prev;
+      const next = { ...prev };
+      delete next[runnerId];
+      return next;
+    });
   };
 
   /**
@@ -441,6 +485,7 @@ export default function RegistrationWizardClient({
           medicalConditions: "",
           ...NO_GUARDIAN,
           ...startingAddress(prev.length + offset),
+          addOns: [],
         })),
       ];
     });
@@ -469,6 +514,9 @@ export default function RegistrationWizardClient({
   // summaries cannot drift apart (usePromoPricing.ts). Centavos throughout.
   const shirtSizeUpcharge = event.shirtSizeUpcharge ?? 0;
   const deliveryFee = delivery.fee;
+  // Every runner's add-ons, at their listed price (D5), and the summary's
+  // line for each (useAddOnTotals.ts, shared with the bank-transfer wizard).
+  const { addOnTotal, addOnSummaryLines } = useAddOnTotals(participants, event.addOns);
   // The promotions the runner started under, held for 45 minutes from their
   // first keystroke (usePriceLock.ts) and sent with the order. Kept into
   // its grace once a deposit slip is picked: that runner has already paid.
@@ -498,6 +546,7 @@ export default function RegistrationWizardClient({
     automaticPromos,
     adminFeePerRunner,
     deliveryFee,
+    addOnTotal,
     lockedAt: priceLock.lockedAt,
     now: priceLock.now,
   });
@@ -508,11 +557,11 @@ export default function RegistrationWizardClient({
   // chosen.
   const transactionFee =
     step === 3
-      ? transactionFeeFor(subtotal + deliveryFee + platformFee - discountAmount, paymentMethod)
+      ? transactionFeeFor(subtotal + deliveryFee + platformFee + addOnTotal - discountAmount, paymentMethod)
       : 0;
 
   const totalAmount =
-    subtotal + deliveryFee + platformFee + transactionFee - discountAmount;
+    subtotal + deliveryFee + platformFee + addOnTotal + transactionFee - discountAmount;
 
   // The countdown and notices about that lock: shown only when a promotion on
   // this order ends inside it (D2).
@@ -1006,6 +1055,7 @@ export default function RegistrationWizardClient({
               participants={participants}
               discount={discount}
               sizeUpcharge={sizeUpcharge}
+              addOnLines={addOnSummaryLines}
               deliveryFee={
                 logisticsMethod === "DELIVERY"
                   ? { amount: deliveryFee, label: delivery.feeLabel }
@@ -1120,6 +1170,9 @@ export default function RegistrationWizardClient({
                     onAddressChange={handleAddressChange}
                     onAddCommunity={rememberCommunity}
                     onOpenSizeGuide={() => setShowSizeGuideModal(true)}
+                    addOns={event.addOns ?? []}
+                    addOnNotice={addOnNotices[p.id]}
+                    onAddOnsChange={handleAddOnsChange}
                   />
                 ))}
 

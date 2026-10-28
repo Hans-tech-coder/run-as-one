@@ -137,5 +137,79 @@ check(
   discounted + discountedFee,
 );
 
+// ── Add-ons (ADD_ONS_PLAN.md): their own lines, never folded into a discount ─
+const SHIRT = { name: 'COMMEMORATIVE SHIRT', option: 'M', unitPrice: 35_000, quantity: 1 };
+const CAP = { name: 'CAP', option: null, unitPrice: 25_000, quantity: 2 };
+const addOnTotal = SHIRT.unitPrice * SHIRT.quantity + CAP.unitPrice * CAP.quantity;
+
+const withAddOnsChargeable = chargeableTotal({ subtotal, deliveryFee: 0, platformFee, discountAmount: 0, addOnTotal });
+const withAddOnsFee = transactionFeeFor(withAddOnsChargeable, 'QRPH');
+const withAddOns: PaymongoOrder = {
+  ...order,
+  amountCents: withAddOnsChargeable + withAddOnsFee,
+  transactionFeeCents: withAddOnsFee,
+  addOns: [{ ...SHIRT, runnerNo: 2 }, { ...CAP, runnerNo: 1 }],
+};
+const addOnItems = paymongoLineItems(withAddOns);
+check('add-ons: line items sum to totalAmount', sum(addOnItems), withAddOnsChargeable + withAddOnsFee);
+check(
+  'add-ons: each line names its runner, item, option and quantity',
+  addOnItems.filter(item => item.name.startsWith('Runner ') && item.name.includes('·')).map(item => [item.name, item.amount]),
+  [['Runner 2 · COMMEMORATIVE SHIRT (M) × 1', 35_000], ['Runner 1 · CAP × 2', 50_000]],
+);
+
+// A discounted order: the entries collapse into one line, the add-ons do not.
+const discountedAddOns = chargeableTotal({ subtotal, deliveryFee: 0, platformFee, discountAmount, addOnTotal });
+const discountedAddOnsFee = transactionFeeFor(discountedAddOns, 'QRPH');
+const discountedAddOnItems = paymongoLineItems({
+  ...withAddOns,
+  amountCents: discountedAddOns + discountedAddOnsFee,
+  discountAmount,
+  promoCode: 'PINK',
+  transactionFeeCents: discountedAddOnsFee,
+});
+check('add-ons, discounted: line items sum to totalAmount', sum(discountedAddOnItems), discountedAddOns + discountedAddOnsFee);
+check('add-ons, discounted: the shirt keeps its full price', discountedAddOnItems.find(item => item.name.includes('SHIRT'))?.amount, 35_000);
+
+// A pacer's free entry plus a shirt (D8): the entries bill nothing, the shirt
+// and PayMongo's cut on it are the whole charge.
+const pacerChargeable = chargeableTotal({ subtotal: 79_900, deliveryFee: 0, platformFee: 0, discountAmount: 79_900, addOnTotal: 35_000 });
+const pacerFee = transactionFeeFor(pacerChargeable, 'QRPH');
+const pacerItems = paymongoLineItems({
+  ...order,
+  amountCents: pacerChargeable + pacerFee,
+  runners: [{ categoryName: '5K', price: 79_900 }],
+  subtotalCents: 79_900,
+  discountAmount: 79_900,
+  promoCode: 'PACER',
+  platformFeeCents: 0,
+  transactionFeeCents: pacerFee,
+  addOns: [{ ...SHIRT, runnerNo: 1 }],
+});
+check('free entry + shirt: billed the shirt and its fee only', pacerItems.map(item => item.amount), [35_000, pacerFee]);
+
+// On the resume link, rebuilt from the stored RunnerAddOn rows, by runnerNo.
+const storedWithAddOns = {
+  ...stored,
+  totalAmount: withAddOnsChargeable + withAddOnsFee,
+  transactionFee: withAddOnsFee,
+  runners: participants.map((p, i) => ({
+    ...p,
+    category: FIVE_K,
+    runnerNo: i + 1,
+    addOns: i === 0 ? [CAP] : [SHIRT],
+  })),
+};
+const resumedAddOnItems = paymongoLineItems(paymongoOrderFromRegistration(storedWithAddOns));
+check('resume, add-ons: line items sum to totalAmount', sum(resumedAddOnItems), withAddOnsChargeable + withAddOnsFee);
+check('resume, add-ons: the shirt is Runner 2’s', resumedAddOnItems.some(item => item.name === 'Runner 2 · COMMEMORATIVE SHIRT (M) × 1'), true);
+
+// A category change bills its own lines; the add-ons were paid with the order.
+check(
+  'category change: add-ons are not billed again',
+  paymongoLineItems({ ...withAddOns, items: [{ name: 'Category change', amount: 30_000 }], transactionFeeCents: 0, platformFeeCents: 0 }).map(item => item.amount),
+  [30_000],
+);
+
 console.log(failures === 0 ? '\nAll checks passed.' : `\n${failures} check(s) failed.`);
 process.exit(failures === 0 ? 0 : 1);

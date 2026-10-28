@@ -30,6 +30,7 @@ import {
 import { EVENT_SITE_CLIENT, ensureEventHost, eventPageMetadata } from '@/lib/site-client';
 import { acceptsPromoCodes, automaticPromosFor, promoTerms } from '@/lib/promo-store';
 import { CATEGORY_ORDER } from '@/lib/category-order';
+import { publicAddOns } from '@/lib/add-on-stock';
 
 /** One URL per event, on the site it belongs to (CLIENT_SUBDOMAIN_PLAN.md). */
 export async function generateMetadata(props: { params: Promise<{ slug: string }> }) {
@@ -176,9 +177,13 @@ export default async function RegisterPage(props: {
   //
   // Beside them, whether there is any code a runner could type. With none, the
   // wizards leave the promo code box out entirely — see acceptsPromoCodes.
-  const [automaticRows, promoCodesAccepted] = await Promise.all([
+  // The add-ons on sale here, each with what is left (D9), read fresh: the
+  // wizard marks a sold-out one before the runner tries for it, and the
+  // checkout counts again under its lock either way.
+  const [automaticRows, promoCodesAccepted, addOns] = await Promise.all([
     automaticPromosFor(event),
     acceptsPromoCodes(event),
+    publicAddOns(event.id),
   ]);
   const automaticPromos = automaticRows.map(promoTerms);
 
@@ -201,7 +206,7 @@ export default async function RegisterPage(props: {
   if (orderRef) {
     registration = await db.registration.findUnique({
       where: { orderRef },
-      include: { runners: { where: { deletedAt: null } } }
+      include: { runners: { where: { deletedAt: null }, include: { addOns: true } } }
     });
   }
 
@@ -212,7 +217,7 @@ export default async function RegisterPage(props: {
 
   if (form === REGISTRATION_FORMS.BANK_TRANSFER) {
     return <BankTransferWizardClient
-        event={{ ...event, categories }}
+        event={{ ...event, categories, addOns }}
         eventId={event.id}
         registration={registration}
         communities={communities}
@@ -224,7 +229,7 @@ export default async function RegisterPage(props: {
   }
 
   return <RegistrationWizardClient
-        event={{ ...event, categories }}
+        event={{ ...event, categories, addOns }}
         eventId={event.id}
         registration={registration}
         communities={communities}

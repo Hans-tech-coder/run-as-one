@@ -1,4 +1,5 @@
 import { emailAddressError } from "@/lib/email-address";
+import { addOnsShownFor, readAddOnSelection, type AddOnRule } from "@/lib/add-ons";
 import { sellsPackages } from "@/lib/event-type";
 import {
   asGuardianRelationship,
@@ -47,6 +48,7 @@ export type RunnerField =
   | "birthdate"
   | GuardianField
   | "singletSize"
+  | "addOns"
   | RunnerAddressField
   | "emergencyContactName"
   | "emergencyContactPhone";
@@ -62,6 +64,7 @@ const FIELD_ORDER: RunnerField[] = [
   "birthdate",
   ...GUARDIAN_FIELDS,
   "singletSize",
+  "addOns",
   ...RUNNER_ADDRESS_FIELDS,
   "emergencyContactName",
   "emergencyContactPhone",
@@ -80,6 +83,7 @@ const LABELS: Record<RunnerField, string> = {
   guardianRelationship: "Relationship",
   guardianConsent: "Parent/guardian consent",
   singletSize: "Shirt size",
+  addOns: "Add-ons",
   addressProvince: "Home province",
   addressCity: "Home city/municipality",
   addressBarangay: "Home barangay",
@@ -103,6 +107,7 @@ const MESSAGES: Record<RunnerField, string> = {
   birthdate: "Enter a birthdate",
   ...GUARDIAN_FIELD_MESSAGES,
   singletSize: "Select a shirt size",
+  addOns: "Review the add-ons",
   addressProvince: "Choose a province",
   addressCity: "Choose a city or municipality",
   addressBarangay: "Choose a barangay",
@@ -173,6 +178,8 @@ export type ValidatedEvent = {
   /** Race day, `YYYY-MM-DD` — the day a runner's age is taken on. */
   date?: unknown;
   categories?: readonly SizableCategory[] | null;
+  /** The event's add-ons, for checking a runner's picks (lib/add-ons.ts). */
+  addOns?: readonly AddOnRule[] | null;
 };
 
 /**
@@ -218,6 +225,9 @@ export function requiredFieldsFor(
     needsGuardianConsent(participant.birthdate, event.date);
 
   return FIELD_ORDER.filter((field) => {
+    // Optional: nothing is owed until an item is added, and then only what
+    // validateRunner asks of the pick itself.
+    if (field === "addOns") return false;
     if (field === "singletSize") {
       return shouldAskShirtSize(event.categories, chosenId);
     }
@@ -287,6 +297,16 @@ export function validateRunner(
     !asGuardianRelationship(participant.guardianRelationship)
   ) {
     errors.guardianRelationship = GUARDIAN_FIELD_MESSAGES.guardianRelationship;
+  }
+
+  // An added item still missing its size or option, or one taken off sale
+  // since the page loaded, in the sentence the checkout itself would refuse
+  // it with (readAddOnSelection, shared with lib/checkout-pricing.ts). The
+  // cutoff is not re-read here; the checkout has the last word on it.
+  if (Array.isArray(participant.addOns) && participant.addOns.length > 0) {
+    const chosenId = typeof participant.categoryId === "string" ? participant.categoryId : "";
+    const read = readAddOnSelection(participant.addOns, addOnsShownFor(event.addOns ?? [], chosenId));
+    if ("error" in read) errors.addOns = read.error;
   }
 
   return errors;

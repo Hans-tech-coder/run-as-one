@@ -206,18 +206,49 @@ days later. Staff see it as *Promo price held from <Manila time>* under the
 Discount in the registrant detail, and in the CSV's *Promo Price Held From*
 column; the client viewer shows no discount, so not this either.
 
-**Event add-ons, Batches 0–1 (2026-10-28, on `dev`, not released;
+**Event add-ons, Batches 0–2 (2026-10-28, Batches 0–1 on `dev`, Batch 2 in
+the working tree; not released;
 `ADD_ONS_PLAN.md`, migration `20261028031230_event_add_ons`).** Optional items
 a runner buys with their entry — a commemorative shirt, a cap. Batch 0 split
 the wizard's runner card (`RunnerCard.tsx`) and the two checkouts' shared
 pricing (`checkout-pricing.ts`). Batch 1 is the schema (`EventAddOn`,
 `RunnerAddOn`, `Registration.addOnTotal` / `addOnRunAsOneTotal`), the rules
 (§5 `add-ons.ts`, `add-on-stock.ts`, `scripts/check-add-ons.ts`) and the
-staff side: **Event edit › Add-ons** and its two routes (§6). **Runners
-cannot buy one yet**: the event page, the wizard, both checkouts and PayMongo
-are Batch 2; settlement, the platform-fee view, the client payout and the
-per-runner money split are Batch 3; registrants, the Race Report, the client
-runner list, emails and Track are Batch 4. The owner's decisions, cited by
+staff side: **Event edit › Add-ons** and its two routes (§6). **Batch 2:
+runners buy them.** The event page's *Add-ons* block; *Add-ons (optional)*
+on each runner's card in **both** wizards (`RunnerAddOns.tsx` — the
+bank-transfer-form wizard has its own inline card, so it got the same
+component rather than being left unable to sell what the event page shows);
+summary lines and totals (`useAddOnTotals.ts`); `priceCheckout` repricing
+them, `reserveAddOnStock` under row locks in both checkouts' transactions,
+`RunnerAddOn` rows and the two totals written with the order; each line its
+own PayMongo goods line, rebuilt from stored lines on the resume path; and
+Risk 2 closed (`raceEntryIsFree` in `category-change.ts`). Decided in
+Batch 2 beyond the plan: "was the entry free?" takes off the **transaction
+fee** as well as `addOnTotal` (a pacer's free entry plus a shirt paid by
+QR Ph has a fee on the shirt); no add-on figure is posted on its own — the
+posted total covers it, and the 409 `PRICE_CHANGED` figures carry
+`addOnTotal`; a sold-out or closed item at checkout is a 409 through
+`SlotsUnavailableError` with its own sentence; closed items are *shown*,
+marked, in the wizard and on the event page (`addOnsShownFor`), while the
+server sells only `availableAddOns`; a shirt-size item starts on the race
+shirt size and, added before that size is chosen, takes it once it is
+(`withRaceSizeFilled`). Checked on localhost 2026-10-28 on `local-dev`'s
+PRICE LOCK TEST (switched to the Online form for the PayMongo run, then
+back): a ₱350 COMMEMORATIVE SHIRT (sizes, stock 20, 2 per runner, poster
+reused from an existing blob, nothing uploaded); a bank-transfer order of one
+runner with the shirt (RM-C26C6F75: ₱1,200 + ₱350 = ₱1,550, one
+`RunnerAddOn` row); a group of two on the PayMongo test page, runner 1 with
+the shirt in M, runner 2 without (RM-094FFE68: ₱2,400 + ₱350 + ₱41.88 QR Ph
+fee = ₱2,791.88, the page listing *Runner 1 · COMMEMORATIVE SHIRT (M) × 1*
+as its own line; not paid, so it stays PENDING until the sweep); stock set to
+what was sold, then a direct order with the shirt refused 409 *has just sold
+out*, a total that kept the shirt's price refused 409 `PRICE_CHANGED`, an
+unknown item 400; the missing-size error on step 1; the card at 360px.
+**Not built yet**: settlement, the platform-fee view, the client payout and
+the per-runner money split are Batch 3; registrants, the Race Report, the
+client runner list, emails and Track are Batch 4 — so today the shirt shows
+nowhere after checkout but the database. The owner's decisions, cited by
 number in code: **D1** each item is *Sold by* `ORGANIZER` (default, owed in
 the remittance) or `RUN_AS_ONE` (kept), snapshotted per line; **D2** no
 platform fee on add-ons; **D3** bought per runner; **D4** buying after

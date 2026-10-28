@@ -7,7 +7,11 @@ import {
   stockBelowSoldProblem,
   stockLeft,
   type AddOnRule,
+  picksAllowedIn,
+  withRaceSizeFilled,
 } from '../src/lib/add-ons';
+import { chargeableTotal, isFreeOrder, raceEntryIsFree, transactionFeeFor } from '../src/lib/free-checkout';
+import { quoteCategoryChange } from '../src/lib/category-change';
 
 /**
  * A check of `src/lib/add-ons.ts`: which add-ons a runner may buy, what their
@@ -167,6 +171,42 @@ check('a non-https image is refused', field({ imageUrls: ['javascript:alert(1)']
 check('a bad cutoff is refused', field({ salesCloseAt: 'next week' }), 'salesCloseAt');
 check('stock may not go under what sold', stockBelowSoldProblem(5, 7)?.field, 'stockLimit');
 check('stock equal to what sold is fine', stockBelowSoldProblem(7, 7), null);
+
+// ── The order's money (Batch 2) ─────────────────────────────────────────────
+// D8: a pacer's free entry (100% off, admin fee waived) plus a ₱350 shirt is
+// a ₱350 checkout, paid the normal way, not a ₱0 order.
+const pacerChargeable = chargeableTotal({ subtotal: 79900, deliveryFee: 0, platformFee: 0, discountAmount: 79900, addOnTotal: 35000 });
+check('D8: free entry + shirt is chargeable for the shirt', pacerChargeable, 35000);
+check('D8: free entry + shirt is not a free order', isFreeOrder(pacerChargeable), false);
+check('D8: free entry alone is still free', isFreeOrder(chargeableTotal({ subtotal: 79900, deliveryFee: 0, platformFee: 0, discountAmount: 79900 })), true);
+const pacerFee = transactionFeeFor(pacerChargeable, 'QRPH');
+const pacerOrder = { totalAmount: pacerChargeable + pacerFee, addOnTotal: 35000, transactionFee: pacerFee };
+check('the entry of free entry + shirt (QR Ph) still reads as free', raceEntryIsFree(pacerOrder), true);
+check('a paid entry with a shirt is not free', raceEntryIsFree({ totalAmount: 79900 + 4000 + 35000, addOnTotal: 35000, transactionFee: 0 }), false);
+
+// Risk 2: that pacer upgrades 5K (₱799) → 10K (₱1,099). The entry cost
+// nothing, so the basis is 0 and the full new price is charged — not the
+// ₱300 difference a whole-order "was it free?" would have quoted.
+const upgrade = quoteCategoryChange({
+  fromPrice: 79900,
+  toPrice: 109900,
+  promoPrice: null,
+  order: { discountAmount: 79900, discountType: 'PERCENTAGE', ...pacerOrder, runnerCount: 1 },
+  event: { categoryChangeFee: 0, downgradeRefundPolicy: 'NO_REFUND' },
+});
+check('Risk 2: free entry + shirt upgrading has basis 0', [upgrade.basis, upgrade.estimateReason], [0, 'FREE_ORDER']);
+check('Risk 2: free entry + shirt upgrading is charged the full new price', upgrade.amount, 109900);
+
+// The wizard: a category change drops what the new category is not offered,
+// and a shirt picked before the race size takes that size.
+const tenKOnly = item({ id: 'cap', name: 'CAP', optionKind: 'NONE', categoryIds: ['cat-10k'] });
+const picks = [{ addOnId: 'shirt', option: '', quantity: 1 }, { addOnId: 'cap', option: '', quantity: 1 }];
+check('5K → keeps the shirt, drops the 10K-only cap', picksAllowedIn(picks, [item(), tenKOnly], 'cat-5k'), {
+  kept: [picks[0]],
+  dropped: ['CAP'],
+});
+check('a blank shirt size takes the race size', withRaceSizeFilled(picks, [item(), tenKOnly], 'M').map(p => p.option), ['M', '']);
+check('a chosen shirt size is kept', withRaceSizeFilled([{ addOnId: 'shirt', option: 'XL', quantity: 1 }], [item()], 'M')[0].option, 'XL');
 
 if (failures > 0) {
   console.error(`\n${failures} check(s) failed.`);
