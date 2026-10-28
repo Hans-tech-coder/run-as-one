@@ -1,0 +1,522 @@
+import { notFound, redirect } from 'next/navigation';
+import {
+  CalendarClock,
+  CheckCircle2,
+  ChevronRight,
+  Lock,
+  PauseCircle,
+  Users,
+} from 'lucide-react';
+import Link from 'next/link';
+import db from '@/lib/public-db';
+import { formatPesos } from '@/lib/money';
+import { sellsPackages } from '@/lib/event-type';
+import { inclusionIcon } from '@/lib/inclusion-icon';
+import { hasFinished } from '@/lib/event-schedule';
+import { takesResults } from '@/lib/event-format';
+import { canViewEventPage } from '@/lib/event-preview';
+import { describePublish, isPublished } from '@/lib/event-visibility';
+import {
+  canonicalEventPath,
+  eventByParam,
+  registerPath,
+  resultsPath,
+} from '@/lib/event-slug';
+import {
+  EVENT_FULL_MESSAGE,
+  REGISTRATION_CLOSED_MESSAGE,
+  openingNote,
+  pauseNote,
+  registrationState,
+  takenSlotsByCategory,
+  withSlotCounts,
+} from '@/lib/registration-gate';
+import { EVENT_SITE_CLIENT, ensureEventSite, eventPageMetadata } from '@/lib/site-client';
+import './EventDetails.css';
+
+import EventHeroBanner from '@/components/EventHeroBanner';
+import { RaceIsOver, RegistrationOnHold } from './ClosedSidebarPanels';
+import PromoHighlights from '@/components/PromoHighlights';
+import CategoryPrice from '@/components/CategoryPrice';
+import LinkPendingIcon from '@/components/ui/LinkPendingIcon';
+import { automaticPromosFor, promoTerms } from '@/lib/promo-store';
+import { categorySalePrices } from '@/lib/discount';
+import { CATEGORY_ORDER } from '@/lib/category-order';
+import RichText from '@/components/RichText';
+import { cleanHighlights } from '@/lib/event-highlights';
+import EventHighlightsGallery from '@/components/EventHighlightsGallery';
+import { pickupLabel } from '@/lib/pickup';
+import { publicAddOns } from '@/lib/add-on-stock';
+import { addOnSalesClosed, type PublicAddOn } from '@/lib/add-ons';
+
+/** One URL per event, on the site it belongs to (CLIENT_SUBDOMAIN_PLAN.md). */
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  return eventPageMetadata(slug, eventSlug => `/events/${eventSlug}`);
+}
+
+/**
+ * The event page, rendered by two routes: `page.tsx`, the cached copy everyone
+ * gets, and `app/preview/[site]/events/[slug]`, rendered per request for a
+ * browser that carries a dashboard session (`src/proxy.ts`). Only the second
+ * may read the session (`staff`): a cached page that reads a cookie fails at
+ * runtime ("changed from static to dynamic"), and could not be one copy for
+ * everyone anyway.
+ */
+export default async function EventDetails({ site, slug, staff }: { site: string; slug: string; staff: boolean }) {
+
+  // Matched on slug or cuid, because the id links minted before slugs existed
+  // are still out there on posters and in group chats.
+  const event = await db.event.findFirst({
+    where: eventByParam(slug),
+    include: { categories: { orderBy: CATEGORY_ORDER }, client: EVENT_SITE_CLIENT }
+  });
+
+  if (!event) {
+    notFound();
+  }
+
+  // A draft or scheduled event is a 404 to the public and a preview to the
+  // team that is still finishing it (lib/event-preview.ts), who never get the
+  // cached copy.
+  const access = staff ? await canViewEventPage(event) : { visible: isPublished(event), preview: false };
+  if (!access.visible) {
+    notFound();
+  }
+
+  // On its own site first: a client's race opened on another host goes there,
+  // path kept (lib/site-client.ts).
+  ensureEventSite(event, site, `/events/${encodeURIComponent(slug)}`);
+
+  // One canonical address per event: an old cuid link lands here and is sent on
+  // to the readable URL rather than quietly serving the page under both.
+  const canonical = canonicalEventPath(event, slug);
+  if (canonical) {
+    redirect(canonical);
+  }
+
+  // A virtual run has no results (lib/event-format.ts), so it never hands over
+  // to /results nor offers View Results, whatever rows the table holds.
+  const resultsCount = takesResults(event)
+    ? await db.raceResult.count({ where: { eventId: event.id } })
+    : 0;
+
+  // A race that has already been run cannot be entered any more, so the sidebar
+  // swaps its Register button for an explanation. Taking someone's money for a
+  // race they cannot run is the one outcome this page must not allow;
+  // /register turns them away too, for anyone who typed the URL.
+  const finished = hasFinished(event);
+  const highlights = cleanHighlights(event.highlights);
+
+  // Once the organizer has uploaded the times, this race has left /events for
+  // good. It is no longer something you sign up for, and what a visitor opening
+  // the link now wants is the ranking — so the event page hands them over to
+  // /results rather than standing as a second, emptier address for the same
+  // race. Old links keep working; they just arrive where the race now lives.
+  //
+  // A results-only event takes the same exit whatever its date, since there is
+  // nothing to register for, and has no page at all until its results are up
+  // (RESULTS_ONLY_EVENT_PLAN.md, D1): its client sells the entries elsewhere,
+  // and a page here would read as a second, wrong place to sign up.
+  if ((finished || event.resultsOnly) && resultsCount > 0) {
+    redirect(resultsPath(event));
+  }
+  if (event.resultsOnly) {
+    notFound();
+  }
+
+  // Whether this race is taking entries at all, and why not — the organizer's
+  // hold, or every option sold out. Worked out here rather than in the sidebar
+  // because the per-option counts are also what the categories list shows: a
+  // runner who came for the 10K should see that the 10K is what is gone.
+  const categories = withSlotCounts(
+    event.categories,
+    await takenSlotsByCategory(event.categories.map((category) => category.id), db),
+  );
+  const state = registrationState(event, categories, finished);
+
+  // What this race is offering without a code. Shown here rather than only
+  // in the wizard because an early bird that nobody knows about cannot do
+  // the one thing an early bird is for, which is to bring a decision
+  // forward. Codes are deliberately not listed: those are the organizer's
+  // to hand out.
+  const automaticPromos = finished
+    ? []
+    : (await automaticPromosFor(event, db)).map(promoTerms);
+
+  // Which options a promotion has repriced, so the list below can strike the
+  // old price through. Only automatic, currently-running CATEGORY_PRICE
+  // promotions count, and `categorySalePrices` is the one place that decides
+  // it — half of that rule re-expressed here is how a page starts advertising
+  // a price the checkout will not honour.
+  const salePrices = categorySalePrices(automaticPromos, event.categories);
+
+  // The add-ons a runner can buy with their entry, shown before they register
+  // so the shirt is part of the decision, not a surprise on step 1. None on a
+  // race already run: there is nothing left to buy them with.
+  const addOns = finished ? [] : await publicAddOns(event.id, db);
+
+  // Inclusions are per category now, and optional, so this section has three
+  // shapes. Organizers who set nothing get no section at all — better than the
+  // four hardcoded items that used to stand here and were wrong for most events.
+  const withInclusions = event.categories.filter(
+    (cat) => cat.inclusions.length > 0,
+  );
+  // When every option includes the same things — the usual case on a race, where
+  // the 5K and the 10K both get a singlet and a medal — repeating the list under
+  // each distance is noise. One list, no headings.
+  const sharedInclusions =
+    withInclusions.length === event.categories.length &&
+    withInclusions.every(
+      (cat) =>
+        cat.inclusions.join('\0') === withInclusions[0].inclusions.join('\0'),
+    );
+
+  return (
+    <div className="event-details-page">
+      <EventHeroBanner event={event as any} />
+
+      {/* Only the team ever sees this page unpublished, and they must not
+          mistake the preview for the live page. */}
+      {access.preview && (
+        <p
+          role="status"
+          className="mt-6 mb-0 rounded-2xl border border-amber-400/30 bg-amber-400/10 px-5 py-3 text-sm font-medium text-amber-200"
+        >
+          Preview. {describePublish(event)} Runners cannot open or register for it yet.
+        </p>
+      )}
+
+      {/* Main Content */}
+      <section className="mt-12 mb-20 t-stagger is-shown">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+          
+          {/* Left Column: About & Inclusions */}
+          <div className="lg:col-span-2 space-y-6 lg:space-y-8">
+            {/* The organizer writes this now, so an empty one means they had
+                nothing to add — not that the page should invent a sentence. */}
+            {event.description?.trim() && (
+              <div className="info-block glass-panel p-8 rounded-3xl border border-white/10 hover:border-accent-blue/30 transition-colors t-stagger-line t-stagger-line--3">
+                <h2 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 text-white tracking-tight">About The Event</h2>
+                {/* Headings, lists and emphasis come from the admin editor's
+                    toolbar; see src/lib/rich-text.ts for what it may contain. */}
+                <RichText
+                  source={event.description}
+                  className="text-base sm:text-lg text-secondary leading-relaxed"
+                />
+              </div>
+            )}
+
+            <PromoHighlights promos={automaticPromos} categories={event.categories} />
+
+            {withInclusions.length > 0 && (
+              <div className="info-block glass-panel p-8 rounded-3xl border border-white/10 hover:border-accent-blue/30 transition-colors t-stagger-line t-stagger-line--4">
+                <h2 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 text-white tracking-tight">What&apos;s Included</h2>
+
+                {sharedInclusions ? (
+                  <InclusionsGrid items={withInclusions[0].inclusions} />
+                ) : (
+                  <div className="flex flex-col gap-8">
+                    {withInclusions.map((cat) => (
+                      <div key={cat.id}>
+                        {/* Price stays out of here: the sidebar is where costs
+                            are compared, and repeating them beside every
+                            inclusions list only adds noise. */}
+                        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-2 mb-4 pb-3 border-b border-white/10">
+                          <h3 className="text-xl font-bold text-white uppercase tracking-wide">
+                            {cat.name}
+                          </h3>
+                          {cat.distance && (
+                            <span className="text-xs text-secondary bg-white/10 px-2.5 py-1 rounded-full">
+                              {cat.distance}
+                            </span>
+                          )}
+                        </div>
+                        <InclusionsGrid items={cat.inclusions} />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {addOns.length > 0 && (
+              <AddOnsBlock addOns={addOns} categories={event.categories} />
+            )}
+
+            {/* Everything the organizer wants to show off — race kit, trophies,
+                the venue, an after party — as one gallery that opens full
+                screen with zoom, so small print on a poster can be read. */}
+            {highlights.length > 0 && (
+               <div className="info-block glass-panel p-6 sm:p-8 rounded-3xl border border-white/10 hover:border-accent-blue/30 transition-colors t-stagger-line t-stagger-line--5">
+                 <h2 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 text-white tracking-tight">Event Highlights</h2>
+                 <EventHighlightsGallery highlights={highlights} title={event.title} />
+               </div>
+            )}
+          </div>
+
+          {/* Right Column: Sidebar (Sticky) */}
+          <div className="order-first lg:order-none lg:col-span-1 t-stagger-line t-stagger-line--3">
+            <div className="lg:sticky lg:top-32 space-y-6">
+              
+              {/* Categories Bento */}
+              <div className="glass-panel p-5 sm:p-6 rounded-3xl border border-white/10 bg-gradient-to-b from-white/5 to-transparent">
+                <h2 className="text-xl sm:text-2xl font-bold mb-5 sm:mb-6 text-white">{sellsPackages(event) ? 'Packages' : 'Categories'}</h2>
+                <div className="flex flex-col gap-4">
+                  {categories.map((cat: any) => {
+                    // A row is a way in whenever Register Now would be: the
+                    // race is open and this option still has room. A full row,
+                    // or any row while the race is paused, full or over, stays
+                    // plain text — a link the wizard would only turn away is a
+                    // dead end dressed up as a button.
+                    const bookable = state === 'OPEN' && !cat.isFull;
+                    const body = (
+                      <>
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-accent-orange/10 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-accent-orange/20 transition-all"></div>
+                      <div className="relative z-10 min-w-0 flex-1 flex flex-col items-start gap-1">
+                        <div className={cat.isFull ? 'font-bold text-lg leading-snug break-words text-white/60' : 'font-bold text-lg leading-snug break-words text-white'}>{cat.name}</div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          {/* Packages have no distance; an empty pill is worse
+                              than no pill. */}
+                          {cat.distance && <div className="text-sm text-secondary bg-white/10 px-3 py-1 rounded-full">{cat.distance}</div>}
+                          {/* The whole point of a per-option cap: a full 10K
+                              says nothing about the 5K beside it, so it is this
+                              row that has to carry the news. */}
+                          {cat.isFull && (
+                            <div className="text-xs font-bold uppercase tracking-wide text-white/70 bg-white/10 border border-white/10 px-3 py-1 rounded-full">
+                              Full
+                            </div>
+                          )}
+                          {cat.isLastCall && (
+                            <div className="text-xs font-bold uppercase tracking-wide text-accent-orange bg-accent-orange/15 px-3 py-1 rounded-full">
+                              {cat.slotsLeft} slot{cat.slotsLeft === 1 ? '' : 's'} left
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="relative z-10 shrink-0 flex items-center gap-2">
+                        <CategoryPrice
+                          price={cat.price}
+                          sale={salePrices.get(cat.id)}
+                          dimmed={cat.isFull}
+                          stacked
+                          className={
+                            cat.isFull
+                              ? 'text-lg sm:text-xl font-bold shrink-0 text-white/40'
+                              : 'text-lg sm:text-xl font-bold shrink-0 text-accent-orange'
+                          }
+                        />
+                        {/* The same chevron Register Now carries, so the row
+                            reads as the same kind of thing: a way into the
+                            wizard. It turns into the runner while the wizard
+                            loads, like every other call to action here. */}
+                        {bookable && (
+                          <LinkPendingIcon className="text-white/40 group-hover:text-accent-orange transition-colors">
+                            <ChevronRight size={18} className="group-hover:translate-x-0.5 transition-transform" />
+                          </LinkPendingIcon>
+                        )}
+                      </div>
+                      </>
+                    );
+
+                    return bookable ? (
+                      // Opens the wizard with this option already chosen for
+                      // the first runner — see registerPath.
+                      <Link
+                        key={cat.id}
+                        href={registerPath(event, cat)}
+                        className={CATEGORY_ROW(false, true)}
+                      >
+                        <span className="sr-only">Register for </span>
+                        {body}
+                      </Link>
+                    ) : (
+                      <div key={cat.id} className={CATEGORY_ROW(cat.isFull, false)}>
+                        {body}
+                      </div>
+                    );
+                  })}
+                </div>
+                
+                <div className="mt-6 pt-6 border-t border-white/10 text-sm text-secondary flex flex-col gap-2">
+                  {event.logisticsPickup && <div className="flex items-center gap-2"><CheckCircle2 size={16} className="text-accent-blue" /> {pickupLabel(event)} Available</div>}
+                  {event.logisticsDeliveryFeeInside > 0 && <div className="flex items-center gap-2"><CheckCircle2 size={16} className="text-accent-blue" /> Delivery, inside province (+₱{formatPesos(event.logisticsDeliveryFeeInside)})</div>}
+                  {event.logisticsDeliveryFeeOutside > 0 && <div className="flex items-center gap-2"><CheckCircle2 size={16} className="text-accent-blue" /> Delivery, outside province (+₱{formatPesos(event.logisticsDeliveryFeeOutside)})</div>}
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex flex-col gap-4">
+                {finished ? (
+                  <RaceIsOver event={event} />
+                ) : state === 'CLOSED' ? (
+                  <RegistrationOnHold
+                    icon={<Lock size={20} />}
+                    heading="Registration Closed"
+                    message={REGISTRATION_CLOSED_MESSAGE}
+                  />
+                ) : state === 'PAUSED' ? (
+                  <RegistrationOnHold
+                    icon={<PauseCircle size={20} />}
+                    heading="Registration Paused"
+                    message={pauseNote(event)}
+                  />
+                ) : state === 'SCHEDULED' ? (
+                  /* The race is real and listed; it just has not opened yet.
+                     The panel carries the date instead of a button, because
+                     the date is the whole of what this visitor came to find
+                     out — see openingNote. The calendar-and-clock icon is
+                     this state's now, and Paused has taken the pause glyph. */
+                  <RegistrationOnHold
+                    icon={<CalendarClock size={20} />}
+                    heading="Registration Opens Soon"
+                    message={openingNote(event)}
+                  />
+                ) : state === 'FULL' ? (
+                  <RegistrationOnHold
+                    icon={<Users size={20} />}
+                    heading="Every Option Is Full"
+                    message={EVENT_FULL_MESSAGE}
+                  />
+                ) : (
+                  <>
+                    <Link href={registerPath(event)} className="btn-gradient w-full text-center justify-center py-4 text-lg font-bold flex items-center gap-2 group shadow-xl shadow-accent-orange/20">
+                      Register Now{' '}
+                      <LinkPendingIcon className="ml-1">
+                        <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform inline-block" />
+                      </LinkPendingIcon>
+                    </Link>
+
+                    {resultsCount > 0 && (
+                      <Link href={resultsPath(event)} className="w-full bg-white/5 border border-white/10 text-white hover:bg-white/10 hover:border-white/30 transition-all py-4 px-6 rounded-[16px] font-bold text-center uppercase tracking-wider flex items-center justify-center gap-2">
+                        View Results
+                      </Link>
+                    )}
+                  </>
+                )}
+              </div>
+
+            </div>
+          </div>
+          
+        </div>
+      </section>
+    </div>
+  );
+}
+
+/**
+ * One row of the categories list, dimmed once that option has sold out.
+ *
+ * Only a `bookable` row — one that is a link into the wizard — lights its
+ * border on hover and wears a focus ring; a row that cannot be pressed must not
+ * look as though it can. A function rather than an inline template literal only
+ * because this file's class strings are long enough already.
+ */
+function CATEGORY_ROW(isFull: boolean, bookable: boolean) {
+  const base =
+    'group relative overflow-hidden bg-black/40 border border-white/5 rounded-2xl p-4 sm:p-5 transition-colors flex items-center justify-between gap-3';
+  if (isFull) return base + ' opacity-60';
+  if (!bookable) return base;
+  return (
+    base +
+    ' no-underline cursor-pointer hover:border-accent-orange/50 focus-visible:outline-none focus-visible:border-accent-orange focus-visible:ring-2 focus-visible:ring-accent-orange/40'
+  );
+}
+
+/**
+ * **Add-ons** (ADD_ONS_PLAN.md Batch 2): what a runner can add to their entry,
+ * each with its poster, name and price. Bought in the wizard, per runner; this
+ * is the shop window. A sold-out or closed item stays, marked (D9), and an
+ * item sold with only some options says which.
+ */
+function AddOnsBlock({
+  addOns,
+  categories,
+}: {
+  addOns: PublicAddOn[];
+  categories: { id: string; name: string }[];
+}) {
+  return (
+    <div className="info-block glass-panel p-6 sm:p-8 rounded-3xl border border-white/10 hover:border-accent-blue/30 transition-colors t-stagger-line t-stagger-line--4">
+      <h2 className="text-2xl sm:text-3xl font-bold mb-2 text-white tracking-tight">Add-ons</h2>
+      <p className="m-0 mb-5 sm:mb-6 text-secondary">Optional extras, picked per runner when you register.</p>
+      <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4 list-none p-0 m-0">
+        {addOns.map((addOn) => {
+          const status = addOn.soldOut ? 'Sold out' : addOnSalesClosed(addOn) ? 'Sales closed' : null;
+          const only = addOn.categoryIds
+            .map((id) => categories.find((category) => category.id === id)?.name)
+            .filter(Boolean);
+          const poster = addOn.imageUrls[0];
+          return (
+            <li
+              key={addOn.id}
+              className={`flex gap-4 rounded-2xl border border-white/5 bg-black/40 p-3 sm:p-4 ${status ? 'opacity-70' : ''}`}
+            >
+              {poster && (
+                <img
+                  src={poster}
+                  alt={`${addOn.name} poster`}
+                  loading="lazy"
+                  className="w-20 h-20 sm:w-24 sm:h-24 shrink-0 rounded-xl object-cover border border-white/10 bg-black/40"
+                />
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="font-bold text-white uppercase tracking-wide leading-tight break-words">{addOn.name}</div>
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <span className={`text-lg font-bold tabular-nums ${status ? 'text-white/50' : 'text-accent-orange'}`}>
+                    ₱{formatPesos(addOn.price)}
+                  </span>
+                  {status && (
+                    <span className="text-xs font-bold uppercase tracking-wide text-white/70 bg-white/10 border border-white/10 px-2.5 py-0.5 rounded-full">
+                      {status}
+                    </span>
+                  )}
+                </div>
+                {addOn.description && (
+                  <p className="m-0 mt-1 text-sm text-secondary line-clamp-3">{addOn.description}</p>
+                )}
+                {only.length > 0 && (
+                  <p className="m-0 mt-1 text-xs text-secondary">With {only.join(', ')} only</p>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+/**
+ * One option's inclusions, as a plain list.
+ *
+ * Every row used to be a bordered, tinted card holding a 48px tile with the
+ * same check in it, which made four short words stand three lines tall and gave
+ * a five-item list the weight of the whole page. What a runner is reading here
+ * is a list, so it looks like one: an icon, the words, nothing else.
+ *
+ * The icon is chosen from the text (lib/inclusion-icon), so the shirt line
+ * draws a shirt and the medal line a medal — that is what makes the list
+ * scannable now that the cards are gone.
+ */
+function InclusionsGrid({ items }: { items: string[] }) {
+  return (
+    <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3 sm:gap-y-4 list-none p-0 m-0">
+      {items.map((item, idx) => {
+        const Icon = inclusionIcon(item);
+        return (
+          <li key={idx} className="flex items-start gap-3">
+            <Icon
+              className="text-accent-blue h-5 w-5 shrink-0 mt-0.5"
+              aria-hidden="true"
+            />
+            <span className="font-medium text-white/90 text-sm sm:text-base leading-relaxed">
+              {item}
+            </span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}

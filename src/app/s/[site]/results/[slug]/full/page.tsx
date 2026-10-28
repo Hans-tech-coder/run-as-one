@@ -12,6 +12,16 @@ import { withPacerRanks } from '@/lib/pacer-store';
 import { genderDivision } from '@/lib/gender-division';
 import { EVENT_SITE_CLIENT, ensureEventSite, eventPageMetadata } from '@/lib/site-client';
 
+/**
+ * Cached per site and address for at most a minute, and dropped by any write
+ * (the note is in src/app/s/[site]/(home)/page.tsx).
+ */
+export const revalidate = 60;
+
+export function generateStaticParams() {
+  return [];
+}
+
 /** One URL per event, on the site it belongs to (CLIENT_SUBDOMAIN_PLAN.md). */
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;

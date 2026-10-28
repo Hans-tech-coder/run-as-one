@@ -183,16 +183,29 @@ function tokenMs(name: string) {
  * the one-by-one entrance stays for the first load and for Show more. Under
  * reduced motion the new tab simply replaces the old.
  */
-export function EventsTabSwitch({
-  counts,
-  heading,
-  panels,
-}: {
+export function EventsTabSwitch(props: TabSwitchProps) {
+  // The page is cached (ISR), so its HTML is made without the address's query.
+  // Reading `?view=` outside a boundary would leave the whole listing to the
+  // browser; inside this one, the cached HTML is the Upcoming tab, and a Past
+  // link swaps to its tab once the page hydrates.
+  return (
+    <Suspense fallback={<TabSwitch {...props} view="upcoming" />}>
+      <TabSwitchFromAddress {...props} />
+    </Suspense>
+  );
+}
+
+type TabSwitchProps = {
   counts: Record<EventsView, number>;
   heading?: Record<EventsView, React.ReactNode>;
   panels: Record<EventsView, React.ReactNode>;
-}) {
-  const view = asEventsView(useSearchParams().get('view'));
+};
+
+function TabSwitchFromAddress(props: TabSwitchProps) {
+  return <TabSwitch {...props} view={asEventsView(useSearchParams().get('view'))} />;
+}
+
+function TabSwitch({ counts, heading, panels, view }: TabSwitchProps & { view: EventsView }) {
   const reduced = useReducedMotion();
   const [shown, setShown] = useState(view);
   const [phase, setPhase] = useState<SwapPhase>('idle');

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useRef, useCallback, useTransition } from 'react';
+import React, { Suspense, useState, useMemo, useEffect, useRef, useCallback, useTransition } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -316,9 +316,23 @@ function ActionMenu({ path, onViewCert, isGenerating }: { path: string, onViewCe
   );
 }
 
-export default function FullResultsClient({ results, event }: Props) {
-  const searchParams = useSearchParams();
-  const categoryParam = searchParams.get('category');
+export default function FullResultsClient(props: Props) {
+  // The page is cached (ISR), so its HTML is made without the address's query.
+  // Reading `?category=` outside a boundary would leave the whole table to the
+  // browser; inside this one, the cached HTML is the unfiltered table, and a
+  // category link narrows it once the page hydrates.
+  return (
+    <Suspense fallback={<FullResults {...props} categoryParam={null} />}>
+      <FullResultsFromAddress {...props} />
+    </Suspense>
+  );
+}
+
+function FullResultsFromAddress(props: Props) {
+  return <FullResults {...props} categoryParam={useSearchParams().get('category')} />;
+}
+
+function FullResults({ results, event, categoryParam }: Props & { categoryParam: string | null }) {
   
   // Find the category name corresponding to the ID if the param exists
   const initialCategoryName = useMemo(() => {

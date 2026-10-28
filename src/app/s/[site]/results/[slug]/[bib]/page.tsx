@@ -15,6 +15,16 @@ import { RESULT_STATUS_LABELS, isResultStatus } from '@/lib/result-status';
 import { EVENT_SITE_CLIENT, ensureEventSite, eventPageMetadata } from '@/lib/site-client';
 
 /**
+ * Cached per site and address for at most a minute, and dropped by any write
+ * (the note is in src/app/s/[site]/(home)/page.tsx).
+ */
+export const revalidate = 60;
+
+export function generateStaticParams() {
+  return [];
+}
+
+/**
  * One runner's result, addressed by the number they wore: /results/[slug]/1042.
  *
  * The segment is read as a bib first and as a row cuid only if that finds

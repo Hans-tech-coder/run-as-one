@@ -12,15 +12,17 @@ import { pastWithoutResultsWhere } from '@/lib/past-events';
 import { PAST_EVENTS_HREF } from '../events/events-view';
 
 /**
- * Rendered on every request, for the same reason as the two event listings
- * (the full note is in src/app/s/[site]/(home)/page.tsx). This one turns on the organizer
- * rather than the clock: a race appears here the moment its times are
- * uploaded, and a prerender would hold the landing page at whatever was true
- * on the day of the last deploy — a race whose runners are refreshing for
- * their times would simply not be listed. The rows are cached reads
- * (lib/public-db.ts), cleared by the upload like by any other write.
+ * Cached per site for at most a minute, like the two event listings (the full
+ * note is in src/app/s/[site]/(home)/page.tsx). This one turns on the
+ * organizer rather than the clock: a race appears here the moment its times
+ * are uploaded, because the upload is a write and a write drops the cached
+ * copy (lib/public-db.ts) — a build-time prerender would simply not list it.
  */
-export const dynamic = 'force-dynamic';
+export const revalidate = 60;
+
+export function generateStaticParams() {
+  return [];
+}
 
 export default async function GlobalResultsPage({ params }: { params: Promise<{ site: string }> }) {
   // Only races whose organizer has actually uploaded times. A race that is over

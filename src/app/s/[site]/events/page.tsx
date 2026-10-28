@@ -15,14 +15,16 @@ import PastEvents from './PastEvents';
 import { NoPastEvents, NothingUpcoming } from './EventsEmptyStates';
 
 /**
- * Rendered on every request — the same reason as the home page, which carries
- * the full note (src/app/s/[site]/(home)/page.tsx). In short: a prerendered listing freezes
- * both the data and the clock, so it keeps badging a race Paused after the
- * hold was lifted, keeps a finished race in the grid, and keeps counting down
- * to an opening that has already come. The rows are cached reads
- * (lib/public-db.ts); only the judging is live.
+ * Cached per site for at most a minute, and dropped by any write — the home
+ * page carries the full note (src/app/s/[site]/(home)/page.tsx). The badges
+ * judge the clock when the copy is made, so they can be that minute late;
+ * checkout never is.
  */
-export const dynamic = 'force-dynamic';
+export const revalidate = 60;
+
+export function generateStaticParams() {
+  return [];
+}
 
 export default async function EventsPage({ params }: { params: Promise<{ site: string }> }) {
   // Upcoming is races that have not been run yet, soonest first; Past is every

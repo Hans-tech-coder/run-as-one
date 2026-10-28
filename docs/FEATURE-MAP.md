@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-49 pages · 93 API routes · 155 modules in `src/lib` · 662 files · 116,564 lines
+50 pages · 93 API routes · 155 modules in `src/lib` · 667 files · 116,764 lines
 
 ---
 
@@ -60,11 +60,12 @@ The route, the server component behind it, and the client components beside it.
 | `/pay/[token]` | [`/pay/[token]/page.tsx`](../src/app/pay/[token]/page.tsx) | `PayNowButton.tsx` |
 | `/pay/change/[token]` | [`/pay/change/[token]/page.tsx`](../src/app/pay/change/[token]/page.tsx) | `ChangeBankProof.tsx` |
 | `/pay/logistics/[token]` | [`/pay/logistics/[token]/page.tsx`](../src/app/pay/logistics/[token]/page.tsx) | `SwitchBankProof.tsx` `SwitchConfirm.tsx` |
+| `/preview/[site]/events/[slug]` | [`/preview/[site]/events/[slug]/page.tsx`](../src/app/preview/[site]/events/[slug]/page.tsx) | — |
 | `/privacy` | [`/privacy/page.tsx`](../src/app/privacy/page.tsx) | — |
 | `/s/[site]` | [`/s/[site]/(home)/page.tsx`](../src/app/s/[site]/%28home%29/page.tsx) | `RecentlyHeld.tsx` |
 | `/s/[site]/[...missing]` | [`/s/[site]/[...missing]/page.tsx`](../src/app/s/[site]/[...missing]/page.tsx) | — |
 | `/s/[site]/events` | [`/s/[site]/events/page.tsx`](../src/app/s/[site]/events/page.tsx) | `events-view.ts` `EventsEmptyStates.tsx` `EventsTabs.tsx` `PastEvents.tsx` |
-| `/s/[site]/events/[slug]` | [`/s/[site]/events/[slug]/page.tsx`](../src/app/s/[site]/events/[slug]/page.tsx) | `ClosedSidebarPanels.tsx` |
+| `/s/[site]/events/[slug]` | [`/s/[site]/events/[slug]/page.tsx`](../src/app/s/[site]/events/[slug]/page.tsx) | `ClosedSidebarPanels.tsx` `EventDetails.tsx` |
 | `/s/[site]/results` | [`/s/[site]/results/page.tsx`](../src/app/s/[site]/results/page.tsx) | — |
 | `/s/[site]/results/[slug]` | [`/s/[site]/results/[slug]/page.tsx`](../src/app/s/[site]/results/[slug]/page.tsx) | — |
 | `/s/[site]/results/[slug]/[bib]` | [`/s/[site]/results/[slug]/[bib]/page.tsx`](../src/app/s/[site]/results/[slug]/[bib]/page.tsx) | `ECertificateGenerator.tsx` |
@@ -355,7 +356,7 @@ when a task touches one, split it before editing rather than after.
 | 1485 | [`src/lib/discount.ts`](../src/lib/discount.ts) |
 | 1179 | [`src/app/admin/settings/SettingsPanels.tsx`](../src/app/admin/settings/SettingsPanels.tsx) |
 | 1017 | [`src/app/admin/team/TeamClient.tsx`](../src/app/admin/team/TeamClient.tsx) |
-| 785 | [`src/app/s/[site]/results/[slug]/full/FullResultsClient.tsx`](../src/app/s/[site]/results/[slug]/full/FullResultsClient.tsx) |
+| 799 | [`src/app/s/[site]/results/[slug]/full/FullResultsClient.tsx`](../src/app/s/[site]/results/[slug]/full/FullResultsClient.tsx) |
 | 736 | [`src/lib/pending-expiry.ts`](../src/lib/pending-expiry.ts) |
 | 693 | [`src/app/admin/AdminDatePicker.tsx`](../src/app/admin/AdminDatePicker.tsx) |
 | 663 | [`src/app/admin/activity/ActivityClient.tsx`](../src/app/admin/activity/ActivityClient.tsx) |
@@ -367,7 +368,7 @@ when a task touches one, split it before editing rather than after.
 | 563 | [`src/app/api/checkout/manual/route.ts`](../src/app/api/checkout/manual/route.ts) |
 | 554 | [`src/lib/registration-gate.ts`](../src/lib/registration-gate.ts) |
 | 528 | [`src/app/admin/DashboardShell.tsx`](../src/app/admin/DashboardShell.tsx) |
-| 515 | [`src/app/s/[site]/events/[slug]/page.tsx`](../src/app/s/[site]/events/[slug]/page.tsx) |
+| 523 | [`src/app/s/[site]/events/[slug]/EventDetails.tsx`](../src/app/s/[site]/events/[slug]/EventDetails.tsx) |
 | 512 | [`src/lib/promo-input.ts`](../src/lib/promo-input.ts) |
 | 509 | [`src/app/admin/communities/CommunitiesClient.tsx`](../src/app/admin/communities/CommunitiesClient.tsx) |
 | 499 | [`src/app/admin/AdminRouteLoading.tsx`](../src/app/admin/AdminRouteLoading.tsx) |
@@ -386,6 +387,7 @@ when a task touches one, split it before editing rather than after.
 | 422 | [`src/app/admin/your-events/[id]/RaceReport.tsx`](../src/app/admin/your-events/[id]/RaceReport.tsx) |
 | 422 | [`src/lib/pacer.ts`](../src/lib/pacer.ts) |
 | 416 | [`src/lib/notification-store.ts`](../src/lib/notification-store.ts) |
+| 413 | [`src/lib/category-change.ts`](../src/lib/category-change.ts) |
 | 411 | [`src/lib/logistics-change-payment.ts`](../src/lib/logistics-change-payment.ts) |
 | 409 | [`src/lib/category-change-store.ts`](../src/lib/category-change-store.ts) |
 | 407 | [`src/app/admin/events/[id]/registrants/UnpaidCheckoutsList.tsx`](../src/app/admin/events/[id]/registrants/UnpaidCheckoutsList.tsx) |

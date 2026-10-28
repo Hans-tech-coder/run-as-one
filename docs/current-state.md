@@ -27,6 +27,26 @@ and `certificateCoordinates` through without the certificate route's checks
 (Strix's note, older than this release); over-limit album errors point at row
 6; `RacePhotoLinks` uses a fixed heading id.
 
+**Public page cache, Batches 1–2 (2026-10-28, on `dev`, Batch 2 not
+committed; `PUBLIC_PAGE_CACHE_PLAN.md`).** Vercel Hobby's 4 h of Fluid Active
+CPU per 30 days was at 3 h 27 m because no public page was ever cached: 77% of
+requests reached a function. Batch 1 (`6771f93`) made the site a route param
+(`app/s/[site]/`, proxy rewrite); Batch 2 caches every page in that tree per
+site and address (ISR, `revalidate = 60`; routes §6 Hosts). Decisions: **D1**
+a clock-made change shows on a public page up to **60 s** late, checkout is
+live; **D2** off production the tree's origins come from `deploymentOrigin()`;
+**D3** (stay on Hobby or move to Pro) was not decided here. Found while
+caching: the staff preview of an unpublished event read the session, which
+fails a cached page at runtime, so a browser carrying `admin_token` now gets a
+per-request copy (`app/preview`); and `/events?view=past` and the full
+leaderboard's `?category=` are read in the browser. Verified on a local
+`next build` + `next start`: every page MISS then HIT with `s-maxage=60`, on
+`localhost` and `crc.localhost`. Not yet seen on the Vercel Preview, and the
+draft-event preview was not exercised (`local-dev` has no draft event). Still
+true from Batch 1: an unknown slug's 404 is streamed as HTTP 200 (with
+`noindex`) under `loading.tsx`. After release, write down the Usage card and
+watch ISR Writes; Batch 3 (per-event tags) waits for that measurement.
+
 **Per-runner money in the registrants export (2026-10-26; on `dev`, not
 committed).** Staff exporting a group order saw *Order Discount* and *Order
 Total* repeated on each runner and had to pivot by Order Ref to get revenue.

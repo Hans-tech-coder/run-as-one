@@ -36,6 +36,14 @@ export const SITE_PATH_PREFIX = '/s';
 export const MAIN_SITE = '_main';
 
 /**
+ * Where the proxy sends an event page instead when the browser carries a
+ * dashboard session: `src/app/preview/[site]/`, the same page rendered per
+ * request, so the team can preview an unpublished event that the cached copy
+ * 404s. Unreachable by typing it, like `/s/…`.
+ */
+export const STAFF_PREVIEW_PREFIX = '/preview';
+
+/**
  * Every other page (the register wizard, `/pay`, `/track`, the 404) still
  * learns its site from the proxy: the client label as `x-rao-site` and the URL
  * the request was made for as `x-rao-url`. The proxy strips both from what the

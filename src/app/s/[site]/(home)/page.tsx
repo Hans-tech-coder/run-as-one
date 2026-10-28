@@ -14,26 +14,33 @@ const HOME_EVENT_LIMIT = 6;
 const RECENTLY_HELD_LIMIT = 3;
 
 /**
- * Rendered on every request rather than once at build time.
+ * Rendered once per site, then served from Next's cache (ISR,
+ * PUBLIC_PAGE_CACHE_PLAN.md), never at build time.
  *
  * Every word this listing says about a race is a live answer: whether the
  * organizer has a hold on sign-ups, whether an opening date has arrived,
  * whether the last slot has gone, and whether the race has already been run.
- * A prerender freezes all four at the moment of the last deploy, and the
+ * A build-time prerender would freeze all four at the last deploy, and the
  * clock is the worse half of that — `upcomingEvents()` here and `opensLater()`
- * inside `forListing` both compare against `new Date()`, so a build-time
- * render would keep a finished race in the grid and go on promising
- * "Opens Sep 15" for weeks after sign-ups opened.
+ * inside `forListing` both compare against `new Date()`, so it would keep a
+ * finished race in the grid and go on promising "Opens Sep 15" for weeks
+ * after sign-ups opened. (It cost us a live one: this page badged a race
+ * Paused that its organizer had already scheduled minutes earlier.)
  *
- * It cost us a live one: this page badged a race Paused that its organizer had
- * already scheduled minutes earlier, while `/events/[slug]` one click away —
- * a dynamic route, so never prerendered — had the date right.
- *
- * The rows themselves are cached reads (lib/public-db.ts) and only the
- * judging is live, so a visitor nobody expected does not wake the database.
+ * So the cached copy lives at most `revalidate` seconds, the owner's D1: a
+ * clock-made change (a schedule going live, sign-ups opening, a promo ending)
+ * shows up to a minute late. Checkout judges the clock itself, so only the
+ * badge lags, never the sale. Any write expires the copy at once: the rows
+ * are read under `PUBLIC_DATA_TAG` (lib/public-db.ts), which the page carries
+ * too. `generateStaticParams` returning nothing is what makes a page cached on
+ * its first visit instead of rendered on every one. The other pages under
+ * `s/[site]` follow this note.
  */
-export const dynamic = 'force-dynamic';
+export const revalidate = 60;
 
+export function generateStaticParams() {
+  return [];
+}
 
 export default async function Home({ params }: { params: Promise<{ site: string }> }) {
   const { site } = await params;

@@ -7,6 +7,7 @@ import {
   SITE_LABEL_HEADER,
   SITE_PATH_PREFIX,
   SITE_URL_HEADER,
+  STAFF_PREVIEW_PREFIX,
   mainOrigin,
   parseSiteLabel,
 } from '@/lib/site-host';
@@ -76,6 +77,16 @@ async function guardAdmin(request: NextRequest, forward: Headers) {
  */
 const REQUEST_SITE_PAGE =
   /^\/(?:(?:pay|track|feedback|privacy|terms|coming-soon)(?:\/|$)|events\/[^/]+\/register(?:\/|$))/;
+
+/**
+ * The event page, which the team may open before it is published
+ * (lib/event-preview.ts). The cached copy cannot read a session, so a browser
+ * that carries `admin_token` gets the per-request copy under
+ * `STAFF_PREVIEW_PREFIX` instead. Whether the session is real, and may open
+ * that event, is still the page's own check; a stale cookie only costs a
+ * render.
+ */
+const EVENT_PAGE = /^\/events\/[^/]+$/;
 
 /**
  * The URL the browser asked for. `request.url` is not it everywhere: the dev
@@ -151,7 +162,9 @@ export default async function proxy(request: NextRequest) {
 
   if (!isAdminPath(pathname) && !REQUEST_SITE_PAGE.test(pathname)) {
     const target = request.nextUrl.clone();
-    target.pathname = `${SITE_PATH_PREFIX}/${label ?? MAIN_SITE}${pathname === '/' ? '' : pathname}`;
+    const prefix =
+      EVENT_PAGE.test(pathname) && request.cookies.has('admin_token') ? STAFF_PREVIEW_PREFIX : SITE_PATH_PREFIX;
+    target.pathname = `${prefix}/${label ?? MAIN_SITE}${pathname === '/' ? '' : pathname}`;
     return NextResponse.rewrite(target, { request: { headers: forward } });
   }
 
@@ -168,14 +181,16 @@ export default async function proxy(request: NextRequest) {
  * `/api` (no page to brand; routes read their own host), not Next's own files,
  * and not a static file by its extension. Only real file extensions are
  * excluded, so a path with a dot in it (a slug, a bib) still gets its site.
- * `/s/:path*` is its own entry too, extensions and all, so the browser can
- * never reach the site tree directly (`/s/crc/events/x.json` would otherwise
- * slip past as a "static file").
+ * `/s/:path*` and `/preview/:path*` are their own entries too, extensions and
+ * all, so the browser can never reach the site tree or the staff preview
+ * directly (`/s/crc/events/x.json` would otherwise slip past as a "static
+ * file").
  */
 export const config = {
   matcher: [
     '/admin/:path*',
     '/s/:path*',
+    '/preview/:path*',
     '/((?!api/|_next/|.*\\.(?:png|jpe?g|gif|svg|ico|webp|avif|json|txt|xml|webmanifest|css|js|map|woff2?|ttf|pdf)$).*)',
   ],
 };
