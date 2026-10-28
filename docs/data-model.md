@@ -181,7 +181,15 @@ shape:
   every order before the column. The registrant detail prints it under the
   discount ("Promo price held from …") and the CSV beside the promo code, so
   an early bird on an order placed after it closed is explained without the
-  Vercel logs, which Hobby keeps only briefly. Owns `Runner[]`.
+  Vercel logs, which Hobby keeps only briefly. **`addOnTotal`** and
+  **`addOnRunAsOneTotal`** (Int, default 0, `ADD_ONS_PLAN.md` Batch 1,
+  migration `20261028031230_event_add_ons`): every add-on line on the order,
+  and the part of it sold by Run As One (D1), denormalised so settlement keeps
+  one `_sum`. **`subtotal` stays the race-entry list total**, so discount,
+  revenue and promo math do not change; the order's total becomes
+  `subtotal − discountAmount + addOnTotal + deliveryFee + platformFee +
+  transactionFee` once checkout writes them (Batch 2 — until then both read 0
+  on every order). Owns `Runner[]`.
 - **Runner** — one participant on an order: `runnerNo` (their 1..n position on
   the order, and the tail of the reference they quote — see `order-ref.ts`;
   unique per registration), name, contact, gender, birthdate, `singletSize`,
@@ -344,6 +352,24 @@ shape:
   quietly start ranking again. Nothing is written onto the result: the tag is
   matched on read beside the race's pacer codes (§5 `pacer-store.ts`).
   Cascades with its event. Storage: a few rows per race.
+- **EventAddOn** — an optional item a runner may buy with their entry
+  (`ADD_ONS_PLAN.md`, migration `20261028031230_event_add_ons`): a
+  commemorative shirt, a cap. `name` **uppercase** (the category-name
+  exception in `text-case.ts`), `description`, `price` (centavos, > 0, one
+  price for every size, D7), `imageUrls` (Blob; the first is the card),
+  `optionKind` (`NONE` | `SHIRT_SIZES` | `CUSTOM`, a string like every kind
+  column here) with `options` (the CUSTOM list, uppercase), `maxPerRunner`
+  (1–10), `stockLimit` and `salesCloseAt` (both nullable: no limit, on sale
+  until registration closes, D9), `categoryIds` (empty is every category),
+  `soldBy` (`ORGANIZER` default | `RUN_AS_ONE`, D1), `active`, `sortOrder`.
+  Cascades with its event. The rules are §5 `add-ons.ts`; staff set them on
+  Event edit › Add-ons. Storage: a few rows per event.
+- **RunnerAddOn** — one purchased add-on line on one runner (D3): `runnerId`
+  (cascades with the runner), `addOnId` (**nullable, `SetNull`**, so deleting
+  an item never rewrites a receipt), and snapshots of `name`, `unitPrice`,
+  `option` and `soldBy`, plus `quantity`. Indexed on `addOnId` for the stock
+  count (`add-on-stock.ts`). Nothing writes it until checkout learns add-ons
+  (Batch 2). Storage: ~150 bytes per line.
 - **CategoryChange** — one move of a paid runner from one category to another
   (`CATEGORY_CHANGE_PLAN.md`, migration `20261018090000_category_change`).
   **Its own row, never an edit to the order** (D1): the `Registration` and its

@@ -232,6 +232,9 @@ model Event {
   resultPacers                ResultPacer[]
   categoryChanges             CategoryChange[]
   logisticsChanges            LogisticsChange[]
+  /// Optional items sold with an entry (ADD_ONS_PLAN.md): a commemorative
+  /// shirt, a cap. See EventAddOn.
+  addOns                      EventAddOn[]
 }
 
 /// One account a runner can transfer to for this event.
@@ -302,9 +305,9 @@ model Category {
 }
 
 model Registration {
-  id                      String    @id @default(cuid())
+  id                      String                 @id @default(cuid())
   eventId                 String
-  orderRef                String    @unique
+  orderRef                String                 @unique
   customerEmail           String
   customerName            String
   customerPhone           String?
@@ -316,12 +319,21 @@ model Registration {
   /// A group delivery that ships each kit to its runner's own home address
   /// (the Runner address columns) instead of one deliveryAddress, which is then
   /// null. One fee per distinct address — RUNNER_ADDRESS_PLAN.md Batch 2.
-  deliverySplit           Boolean   @default(false)
+  deliverySplit           Boolean                @default(false)
   /// All amounts below are centavos
-  deliveryFee             Int       @default(0)
+  deliveryFee             Int                    @default(0)
   subtotal                Int
-  platformFee             Int       @default(0)
-  transactionFee          Int       @default(0)
+  platformFee             Int                    @default(0)
+  transactionFee          Int                    @default(0)
+  /// Every add-on line on the order (RunnerAddOn), in centavos — never
+  /// discounted, never part of `subtotal` (ADD_ONS_PLAN.md D5), so discount,
+  /// revenue and promo math read `subtotal` exactly as before. 0 on every
+  /// order taken before add-ons, which reads unchanged.
+  addOnTotal              Int                    @default(0)
+  /// The part of addOnTotal sold by Run As One (D1): kept by Run As One and
+  /// never owed in the remittance. Denormalised so settlement keeps one _sum
+  /// aggregate instead of joining every line.
+  addOnRunAsOneTotal      Int                    @default(0)
   totalAmount             Int
   /// What the promo code took off, in centavos, and which code it was. The
   /// amount is stored rather than recomputed on read: a code's percentage can
@@ -332,7 +344,7 @@ model Registration {
   /// runningCommunity is: it is what was quoted on the day, and it must keep
   /// reading correctly after the PromoCode row is gone. 0 and null are the
   /// normal case -- most orders carry no discount at all.
-  discountAmount          Int       @default(0)
+  discountAmount          Int                    @default(0)
   promoCode               String?
   /// Which kind of promotion it was -- "CATEGORY_PRICE" or "BUY_X_GET_Y" --
   /// snapshotted for the same reason promoCode is, and needed for a reason
@@ -360,7 +372,7 @@ model Registration {
   /// -- so the receipt can show it as its own line and each promotion's
   /// *Given* column counts only its own share. Null and 0 on every other order.
   combinedPromoCode       String?
-  combinedDiscountAmount  Int       @default(0)
+  combinedDiscountAmount  Int                    @default(0)
   /// PAID, PENDING, CANCELLED, REFUNDED or EXPIRED -- guarded against that
   /// list wherever it is written (see api/admin/registrations/[id]/status).
   ///
@@ -372,7 +384,7 @@ model Registration {
   ///
   /// Only PAID and PENDING hold a slot (see lib/registration-gate.ts), so the
   /// sweep releases the seat by the act of changing this column.
-  status                  String    @default("PAID")
+  status                  String                 @default("PAID")
   /// When the sweep expired this order. Null on every row that was never
   /// swept, which is almost all of them.
   ///
@@ -402,16 +414,16 @@ model Registration {
   /// Vercel Hobby keeps runtime logs briefly and "why did a 12:20 AM order get
   /// the early bird?" is asked days later. 8 bytes, only on held orders.
   priceLockedAt           DateTime?
-  paymentMethod           String    @default("online")
+  paymentMethod           String                 @default("online")
   checkoutSessionId       String?
-  createdAt               DateTime  @default(now())
-  updatedAt               DateTime  @updatedAt
+  createdAt               DateTime               @default(now())
+  updatedAt               DateTime               @updatedAt
   proofOfPayment          String?
   transactionNumber       String?
   /// Whether the customer checked the liability & data-privacy consent box at
   /// submission. false on registrations made before this was required, since
   /// they were never actually asked — not a claim that they refused.
-  consentGiven            Boolean   @default(false)
+  consentGiven            Boolean                @default(false)
   /// When consentGiven was recorded. Null whenever consentGiven is false.
   consentGivenAt          DateTime?
   /// The full name the person submitting typed as their digital signature,
@@ -469,7 +481,7 @@ model Registration {
   /// the migration to carry once; see STAFF_ACCESS_PLAN.md §4.5.
   deletedAt               DateTime?
   deletedById             String?
-  event                   Event     @relation(fields: [eventId], references: [id])
+  event                   Event                  @relation(fields: [eventId], references: [id])
   runners                 Runner[]
   /// Category changes made to this order's runners. The order itself is
   /// never edited by one (CATEGORY_CHANGE_PLAN.md D1).
@@ -482,7 +494,7 @@ model Registration {
 }
 
 model Runner {
-  id                    String       @id @default(cuid())
+  id                    String           @id @default(cuid())
   registrationId        String
   /// Which runner on this order, 1..n — the tail of the reference this person
   /// quotes back at us ("RM-D918005C-2"; see src/lib/order-ref.ts). One
@@ -524,7 +536,7 @@ model Runner {
   /// RunningCommunity on purpose: it is what they answered on the day, and it
   /// must not change if Run As One's staff later rename or remove that club.
   /// Blank answers are stored as "INDEPENDENT RUNNER", itself a listed option.
-  runningCommunity      String       @default("INDEPENDENT RUNNER")
+  runningCommunity      String           @default("INDEPENDENT RUNNER")
   /// The runner's home address, required of every runner on Step 1 whether
   /// they chose pickup or delivery (src/lib/runner-address.ts,
   /// RUNNER_ADDRESS_PLAN.md): when a race is postponed and runners switch to
@@ -553,8 +565,8 @@ model Runner {
   /// When the checkout route wrote the guardian's consent — stamped by the
   /// server with the order, never taken from the client.
   guardianConsentAt     DateTime?
-  createdAt             DateTime     @default(now())
-  updatedAt             DateTime     @updatedAt
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
   /// When an organizer or staff member removed this runner, and whose id did
   /// it. Removal used to be a hard DELETE, which left an audit trail pointing
   /// at nothing; now the row stays and every read a person sees filters it out
@@ -564,9 +576,11 @@ model Runner {
   /// order reference. See STAFF_ACCESS_PLAN.md §4.5.
   deletedAt             DateTime?
   deletedById           String?
-  category              Category     @relation(fields: [categoryId], references: [id])
-  registration          Registration @relation(fields: [registrationId], references: [id])
+  category              Category         @relation(fields: [categoryId], references: [id])
+  registration          Registration     @relation(fields: [registrationId], references: [id])
   categoryChanges       CategoryChange[]
+  /// What this runner bought beside their entry (ADD_ONS_PLAN.md D3).
+  addOns                RunnerAddOn[]
 
   /// Two runners sharing "-2" on the same order would hand two people the
   /// same reference, which is the ambiguity runnerNo exists to remove.
@@ -981,7 +995,7 @@ model PromoCategory {
 }
 
 model RaceResult {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   eventId      String
   categoryId   String
   bibNumber    String
@@ -995,15 +1009,15 @@ model RaceResult {
   categoryRank Int
   /// FINISHED, DNF, DNS or DQ (lib/result-status.ts). An upload stores
   /// FINISHED; only *Edit details* sets another.
-  status       String   @default("FINISHED")
+  status       String    @default("FINISHED")
   /// When staff last corrected this row by hand from the Results workspace
   /// (RESULTS_ROW_ACTIONS_PLAN.md Batch 3). Null on an uploaded row. The upload
   /// counts these to warn that a new sheet replaces the corrections.
   editedAt     DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  category     Category @relation(fields: [categoryId], references: [id])
-  event        Event    @relation(fields: [eventId], references: [id])
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  category     Category  @relation(fields: [categoryId], references: [id])
+  event        Event     @relation(fields: [eventId], references: [id])
 
   @@unique([eventId, bibNumber])
 }
@@ -1016,6 +1030,72 @@ model RaceResult {
 /// (lib/pacer-store.ts) reads these beside the race's pacer codes.
 ///
 /// Storage: a few rows per race, at most one per finisher.
+/// An optional item a runner may buy with their entry (ADD_ONS_PLAN.md): a
+/// commemorative shirt, a cap, a towel. Set by staff on Event edit › Add-ons.
+/// Which ones a runner may buy, and what they cost, is src/lib/add-ons.ts.
+model EventAddOn {
+  id           String        @id @default(cuid())
+  eventId      String
+  /// Uppercase, under the same exception text-case.ts makes for category
+  /// names: it is printed beside uppercase runner data in the registrants
+  /// table, the CSV and the emails.
+  name         String
+  /// Plain text, capped (MAX_ADD_ON_DESCRIPTION_LENGTH).
+  description  String        @default("")
+  /// Centavos, more than 0. One price whatever the size (D7).
+  price        Int
+  /// Blob URLs; the first is the card image.
+  imageUrls    String[]      @default([])
+  /// "NONE" | "SHIRT_SIZES" (lib/shirt-size.ts's chart) | "CUSTOM" (`options`).
+  /// A string like every other kind column in this schema, read through
+  /// ADD_ON_OPTION_KINDS.
+  optionKind   String        @default("NONE")
+  /// The CUSTOM list (BLACK, WHITE), uppercased; empty for the other kinds.
+  options      String[]      @default([])
+  maxPerRunner Int           @default(1)
+  /// The whole item across options; null is unlimited (D9).
+  stockLimit   Int?
+  /// Null is on sale until registration closes (D9).
+  salesCloseAt DateTime?
+  /// Which categories may buy it; empty is every category.
+  categoryIds  String[]      @default([])
+  /// "ORGANIZER" (owed in the remittance) or "RUN_AS_ONE" (kept), D1.
+  /// Snapshotted on each RunnerAddOn, so changing it never moves a settled
+  /// remittance.
+  soldBy       String        @default("ORGANIZER")
+  /// Off hides it from new orders; past purchases are unaffected.
+  active       Boolean       @default(true)
+  sortOrder    Int           @default(0)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  event        Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  purchases    RunnerAddOn[]
+
+  @@index([eventId])
+}
+
+/// One purchased add-on line on one runner. Every field a receipt reads is a
+/// snapshot, and the item link is SetNull, so deleting or editing an item
+/// never rewrites what a runner was charged.
+model RunnerAddOn {
+  id        String      @id @default(cuid())
+  runnerId  String
+  addOnId   String?
+  name      String
+  unitPrice Int
+  /// The size or CUSTOM option chosen; null for an item with none.
+  option    String?
+  soldBy    String
+  quantity  Int
+  createdAt DateTime    @default(now())
+  runner    Runner      @relation(fields: [runnerId], references: [id], onDelete: Cascade)
+  addOn     EventAddOn? @relation(fields: [addOnId], references: [id], onDelete: SetNull)
+
+  @@index([runnerId])
+  /// Stock counting groups these per item (add-on-stock.ts).
+  @@index([addOnId])
+}
+
 model ResultPacer {
   id        String   @id @default(cuid())
   eventId   String
@@ -1048,31 +1128,31 @@ model ResultPacer {
 /// user agent is truncated on the way in, so a row is under 3 KB in the worst
 /// case. Even a thousand of them is a rounding error against the 0.5 GB tier.
 model Feedback {
-  id        String   @id @default(cuid())
+  id         String   @id @default(cuid())
   /// "ISSUE" | "SUGGESTION" | "FEATURE" -- uppercase like every other coded
   /// column, and guarded by asFeedbackKind at the API door. It is what the
   /// sender chose the form's purpose to be, not a category we inferred.
-  kind      String
+  kind       String
   /// What they actually wrote, exactly as they wrote it. Prose is the one kind
   /// of text this app does not uppercase: the registrant rule in text-case.ts
   /// exists so a name sorts and de-dupes predictably, and a shouted paragraph
   /// is simply harder to read.
-  message   String
+  message    String
   /// Who sent it, both optional on purpose. Demanding a name and an address
   /// before someone can report a broken page is how a feedback form ends up
   /// collecting nothing; an anonymous report about a checkout that failed is
   /// still worth more than the silence.
-  name      String?
-  email     String?
+  name       String?
+  email      String?
   /// The page they were on when they opened the form, when the entry point
   /// could say. An issue report that does not say where it happened usually
   /// costs a round trip to find out, and by then the person has moved on.
   /// Validated as a same-site path before it is stored -- it arrives in a
   /// query string, so it is somebody else's text until it is checked.
-  pagePath  String?
+  pagePath   String?
   /// The browser, truncated. "It does not work on my phone" is unactionable;
   /// the same sentence with a Safari build number is a bug we can chase.
-  userAgent String?
+  userAgent  String?
   /// The one screenshot a sender may attach, as a pathname in the PRIVATE Blob
   /// store (folder `feedback/`), never a URL: a screenshot of a checkout can
   /// show a name, an amount or a bank reference, so it is read only through a
@@ -1082,9 +1162,9 @@ model Feedback {
   /// "NEW" | "REVIEWED" -- the platform owner's own triage mark, so the inbox
   /// can show what has not been read yet. Nothing the sender ever sees, and
   /// deliberately not a workflow: two states are enough to keep a queue.
-  status    String   @default("NEW")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  status     String   @default("NEW")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   /// The inbox reads newest-first and filters by triage state, which is the
   /// only query this table has.

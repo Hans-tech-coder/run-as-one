@@ -24,12 +24,18 @@ export default function PosterField({
   onError,
   onBusyChange,
   alt,
+  label = 'Inclusions Poster',
+  hint = 'the shirt, medal and race kit this option includes',
 }: {
   value: string;
   onChange: (url: string) => void;
   onError: (message: string) => void;
   onBusyChange: (busy: boolean) => void;
   alt: string;
+  /** The field's name; an add-on's picture is its own poster, not an inclusions one. */
+  label?: string;
+  /** What the poster should show, under "PNG or JPG". */
+  hint?: string;
 }) {
   const [uploading, setUploading] = useState(false);
 
@@ -48,8 +54,8 @@ export default function PosterField({
       if (!res.ok) throw new Error(data.error || 'Upload failed');
 
       onChange(data.url);
-    } catch (err: any) {
-      onError(err.message || 'Upload failed');
+    } catch (err) {
+      onError((err instanceof Error && err.message) || 'Upload failed');
       // Clearing lets the organizer retry the same file; otherwise the input
       // holds it and re-picking it fires no change event.
       e.target.value = '';
@@ -62,7 +68,7 @@ export default function PosterField({
   return (
     <div className="form-group form-group-full">
       <label className="form-label">
-        Inclusions Poster <span className="text-xs opacity-70">- optional, shown to runners</span>
+        {label} <span className="text-xs opacity-70">- optional, shown to runners</span>
       </label>
       {!value ? (
         <div className="file-upload-wrapper" style={{ opacity: uploading ? 0.6 : 1 }}>
@@ -81,7 +87,7 @@ export default function PosterField({
               {uploading ? <BusyLabel>Uploading</BusyLabel> : 'Click to upload poster'}
             </div>
             <div className="file-upload-desc">
-              PNG or JPG • the shirt, medal and race kit this option includes
+              PNG or JPG • {hint}
             </div>
           </div>
         </div>

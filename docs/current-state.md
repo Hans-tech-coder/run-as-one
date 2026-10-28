@@ -206,6 +206,28 @@ days later. Staff see it as *Promo price held from <Manila time>* under the
 Discount in the registrant detail, and in the CSV's *Promo Price Held From*
 column; the client viewer shows no discount, so not this either.
 
+**Event add-ons, Batches 0–1 (2026-10-28, on `dev`, not released;
+`ADD_ONS_PLAN.md`, migration `20261028031230_event_add_ons`).** Optional items
+a runner buys with their entry — a commemorative shirt, a cap. Batch 0 split
+the wizard's runner card (`RunnerCard.tsx`) and the two checkouts' shared
+pricing (`checkout-pricing.ts`). Batch 1 is the schema (`EventAddOn`,
+`RunnerAddOn`, `Registration.addOnTotal` / `addOnRunAsOneTotal`), the rules
+(§5 `add-ons.ts`, `add-on-stock.ts`, `scripts/check-add-ons.ts`) and the
+staff side: **Event edit › Add-ons** and its two routes (§6). **Runners
+cannot buy one yet**: the event page, the wizard, both checkouts and PayMongo
+are Batch 2; settlement, the platform-fee view, the client payout and the
+per-runner money split are Batch 3; registrants, the Race Report, the client
+runner list, emails and Track are Batch 4. The owner's decisions, cited by
+number in code: **D1** each item is *Sold by* `ORGANIZER` (default, owed in
+the remittance) or `RUN_AS_ONE` (kept), snapshotted per line; **D2** no
+platform fee on add-ons; **D3** bought per runner; **D4** buying after
+registration is Phase 2; **D5** promotions never touch add-ons; **D6** no
+extra delivery fee; **D7** one price for every size; **D8** a ₱0 entry plus
+an add-on is a paid order; **D9** stock and a sales cutoff are optional, and a
+sold-out item stays visible marked *Sold out*. Batch 1 also settled: an item
+any order ever named (even a cancelled one) can only be switched off, not
+deleted; stock may not be set under what live orders hold.
+
 **Image compression on upload (2026-10-21, `875a1fc` on `dev`, not released).** Every image
 upload but certificate templates is shrunk in the browser before it is sent
 (`lib/image-compress.ts`, `IMAGE_COMPRESSION_PLAN.md` C1–C6): both

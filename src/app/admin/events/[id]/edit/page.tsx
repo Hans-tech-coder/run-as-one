@@ -12,6 +12,7 @@ import {
   type OpeningDraft,
 } from '../../registration-opening';
 import EventOptionsPanel from '../../EventOptionsPanel';
+import AddOnsPanel from '../../AddOnsPanel';
 import { blankCategory, type CategoryDraft } from '../../category-draft';
 import { DEFAULT_EVENT_TYPE, type EventType } from '@/lib/event-type';
 import BankAccountsPanel from '@/app/admin/events/BankAccountsPanel';
@@ -310,6 +311,10 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
               in state, so switching back restores it. */}
           {!resultsOnly && (
             <>
+              {/* Optional items sold with an entry; saves on its own,
+                  not through this form's PUT (AddOnsPanel). */}
+              <AddOnsPanel eventId={id} />
+
               <BankAccountsPanel
                 accounts={bankAccounts}
                 offersBankTransfer={offersBankTransfer(formData.registrationForm)}

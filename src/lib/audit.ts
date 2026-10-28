@@ -175,6 +175,13 @@ export const AUDIT_ACTIONS = [
   'pacer.updated',
   'pacer.fee_waived',
   'pacer.deleted',
+  // An optional item sold with an entry (ADD_ONS_PLAN.md Batch 1): added,
+  // edited (a reorder too), switched on or off, and deleted — the last only
+  // while nobody has bought it.
+  'add_on.created',
+  'add_on.updated',
+  'add_on.toggled',
+  'add_on.deleted',
   // A finisher tagged as a pacer from a results-only race's results table
   // (RESULTS_ROW_ACTIONS_PLAN.md Batch 2): no code, no fee, only a bib.
   'result_pacer.added',
@@ -201,6 +208,7 @@ export type AuditEntityType =
   | 'CategoryChange'
   | 'LogisticsChange'
   | 'PromoCode'
+  | 'EventAddOn'
   | 'RaceResult'
   | 'ResultPacer'
   | 'Organizer'

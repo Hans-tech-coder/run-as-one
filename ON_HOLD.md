@@ -11,8 +11,17 @@ the owner's choice. Start one only when the owner asks, and read its source plan
 before writing any code. When an item is picked up, give it its own plan file in
 `docs/plans/`, and delete it from this list once it has landed.
 
-**No migration pending.** Every migration through
-`20261023031425_past_event_photo_albums` is applied in production
+**Pending for the next release: one migration.**
+`20261028031230_event_add_ons` (`ADD_ONS_PLAN.md` Batch 1, 2026-10-28): two
+new tables, `EventAddOn` (an event's optional items) and `RunnerAddOn` (one
+runner's purchased line), and two Int columns on `Registration`,
+`addOnTotal` and `addOnRunAsOneTotal`, both defaulting to 0. Applied to the
+local-dev database. Additive: the old code ignores it, so run
+`npx prisma migrate deploy` with `DIRECT_URL` on the production endpoint
+before (or with) the deploy. Rollback is in the migration's header comment.
+
+Before that, every migration through
+`20261023031425_past_event_photo_albums` was applied in production
 (2026-10-23). Event publishing, virtual runs (Phase A), category changes,
 delivery switches, the promo price lock and the Past Events tab are all live
 (`docs/current-state.md`, top). Still to watch on production: the first
