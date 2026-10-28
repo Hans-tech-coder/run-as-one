@@ -67,7 +67,9 @@ export async function totalsByEvent(eventIds: string[]) {
       by: ['eventId'],
       where: { eventId: { in: eventIds }, status: 'PAID' },
       _count: { _all: true },
-      _sum: { totalAmount: true, platformFee: true, transactionFee: true },
+      // The add-on columns ride in the same aggregate (ADD_ONS_PLAN.md D1):
+      // `addOnRunAsOneTotal` is denormalised on the order so no line is joined.
+      _sum: { totalAmount: true, platformFee: true, transactionFee: true, addOnTotal: true, addOnRunAsOneTotal: true },
     }),
     // By status as well as event, because a refund still owed is shown apart
     // from one paid. Only on PAID orders, the orders' own rule (settlement.ts).
@@ -107,6 +109,8 @@ export async function totalsByEvent(eventIds: string[]) {
         collected: row._sum.totalAmount ?? 0,
         platformFees: row._sum.platformFee ?? 0,
         transactionFees: row._sum.transactionFee ?? 0,
+        addOnSales: row._sum.addOnTotal ?? 0,
+        runAsOneAddOns: row._sum.addOnRunAsOneTotal ?? 0,
       },
     ]),
   );

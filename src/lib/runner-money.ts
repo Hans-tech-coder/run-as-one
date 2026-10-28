@@ -29,6 +29,14 @@ import { shirtSizeUpchargeFor, type SizableCategory } from './shirt-size';
  *    charged it per runner. **Delivery and transaction fees go on the first
  *    runner only.** The owner settled this on 2026-10-26: those are charged
  *    once per order, and putting them on one row avoids centavo fractions.
+ *  - **Each runner's add-ons are their own** (ADD_ONS_PLAN.md D3): the sum of
+ *    the `RunnerAddOn` lines bought under their name, at the snapshotted
+ *    price. No discount touches them (D5), so they sit outside the entry and
+ *    its discount. Should the lines read no longer add up to the stored
+ *    `addOnTotal` (a runner removed since, whose lines left with them), the
+ *    stored figure is shared out in proportion to them, the entries' rule.
+ *    Who sold an item is not this split's business: the CSV says what each
+ *    runner paid, and settlement says whose it is.
  *  - **A remainder centavo goes to the first runner it can**, so a split never
  *    loses or invents a centavo.
  *
@@ -43,6 +51,8 @@ export interface MoneyRunner {
   promoPrice: number | null;
   category: SizableCategory;
   singletSize: string;
+  /** The runner's `RunnerAddOn` lines, at their snapshotted unit price. */
+  addOns: { unitPrice: number; quantity: number }[];
 }
 
 /** The order's stored money, every amount in centavos. */
@@ -53,6 +63,8 @@ export interface MoneyOrder {
   /** The buy-X-get-Y part of `discountAmount` on a combined order, else 0. */
   combinedDiscountAmount: number;
   discountType: string | null;
+  /** Every add-on line on the order (`Registration.addOnTotal`). */
+  addOnTotal: number;
   platformFee: number;
   deliveryFee: number;
   transactionFee: number;
@@ -66,6 +78,8 @@ export interface RunnerMoney {
   discount: number;
   /** `entryPrice − discount`: what the entry itself was paid at. */
   registrationFee: number;
+  /** This runner's own add-ons. Never discounted (D5). */
+  addOns: number;
   adminFee: number;
   /** The order's delivery fee on its first runner, 0 on the rest. */
   deliveryFee: number;
@@ -171,6 +185,14 @@ export function splitOrderMoney(
 
   const adminFees = allocate(order.platformFee, runners.map(() => 1));
 
+  const ownAddOns = runners.map(runner =>
+    runner.addOns.reduce((sum, line) => sum + line.unitPrice * line.quantity, 0),
+  );
+  const addOns =
+    ownAddOns.reduce((sum, amount) => sum + amount, 0) === order.addOnTotal
+      ? ownAddOns
+      : allocate(order.addOnTotal, ownAddOns);
+
   return runners.map((_, index) => {
     const entryPrice = entries[index];
     const discount = priceShares[index] + dealShares[index];
@@ -181,10 +203,11 @@ export function splitOrderMoney(
       entryPrice,
       discount,
       registrationFee,
+      addOns: addOns[index],
       adminFee: adminFees[index],
       deliveryFee,
       transactionFee,
-      total: registrationFee + adminFees[index] + deliveryFee + transactionFee,
+      total: registrationFee + addOns[index] + adminFees[index] + deliveryFee + transactionFee,
       freeEntry: entryPrice > 0 && registrationFee <= 0,
     };
   });

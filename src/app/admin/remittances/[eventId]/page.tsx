@@ -50,6 +50,7 @@ export default async function Page({ params }: { params: Promise<{ eventId: stri
   const { event, settlement, parts, remittances } = detail;
   const changes = settlement.changes;
   const switches = settlement.switches;
+  const addOns = settlement.addOns;
   // Either line splits *Collected* into what it is made of.
   const splitCollected = changes.changes > 0 || switches.switches > 0;
 
@@ -76,7 +77,12 @@ export default async function Page({ params }: { params: Promise<{ eventId: stri
             note={SETTLEMENT_STATE_COPY[settlement.state].hint}
             icon={<Scale size={20} />}
           />
-          <Metric title="Run As One's Share" value={formatSignedPesos(settlement.platformFees)} icon={<Landmark size={20} />} />
+          <Metric
+            title="Run As One's Share"
+            value={formatSignedPesos(settlement.platformFees)}
+            note={addOns.runAsOne > 0 ? `Plus ${formatSignedPesos(addOns.runAsOne)} in Run As One add-on sales` : undefined}
+            icon={<Landmark size={20} />}
+          />
         </div>
 
         <div className="admin-panel mb-8">
@@ -115,14 +121,21 @@ export default async function Page({ params }: { params: Promise<{ eventId: stri
               {/* The Delivery switches line (LOGISTICS_CHANGE_PLAN.md L8): the
                   receipt is never edited, so its fee is named here instead. */}
               {switches.switches > 0 && <Line label="Paid for delivery switches" value={switches.charged} muted />}
+              {/* Add-ons (ADD_ONS_PLAN.md D1): inside what orders paid, named
+                  so staff see the item money apart from the entries. */}
+              {addOns.sales > 0 && <Line label="Of which add-on sales" value={addOns.sales} muted />}
               <Line
                 label={changes.changeFees > 0 ? 'Platform and change fees (Run As One)' : 'Platform fees (Run As One)'}
                 value={-settlement.platformFees}
               />
+              {/* Run As One's own merchandise: kept, so off what is owed, and
+                  never inside the platform fee line above (D1, D2). */}
+              {addOns.runAsOne > 0 && <Line label="Add-ons sold by Run As One" value={-addOns.runAsOne} />}
               <Line label="Payment processing fees (PayMongo)" value={-settlement.transactionFees} />
               <Line label="Owed to the organizer" value={settlement.owed} strong rule />
               <Line label="Race entries at list price" value={parts.entries} muted />
               <Line label="Less discounts from promotions" value={-parts.discounts} muted />
+              {addOns.organizer > 0 && <Line label="Add-ons sold by the organizer" value={addOns.organizer} muted />}
               <Line label="Delivery fees" value={parts.delivery} muted />
               {changes.changes > 0 && (
                 <Line label="Category changes, after their fees and refunds" value={changes.owed} muted />

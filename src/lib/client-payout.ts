@@ -29,6 +29,15 @@
  * receipts switched to delivery for a fee, and what those fees add to what the
  * client is owed, which is the whole fee. No per-receipt amount.
  *
+ * **Add-ons** (ADD_ONS_PLAN.md D1) are split by who sold them. The client's
+ * own (sold by the organizer) are inside *Collected* and owed to it, and get a
+ * line like the two above: what runners paid for its add-ons. **Run As One's
+ * own add-on sales are not part of the client's payout at all** — Run As One
+ * sold them and keeps them — so they are taken out of *Collected* here, which
+ * keeps the five figures adding up (*Collected* less the two fees is what is
+ * owed) without naming a sale that is none of the client's money. Only a flag
+ * says *Collected* left something out, so the note under it stays true.
+ *
  * A **return** (the organizer paying money back after a refund left it
  * overpaid) is listed beside the payouts as a negative amount, because it is
  * already netted into *Paid out*: leaving it off would make the list fail to
@@ -61,8 +70,10 @@ export type ClientPayoutRow = {
 };
 
 export type ClientPayout = {
-  /** Everything runners paid on confirmed (PAID) orders. */
+  /** Everything runners paid on confirmed (PAID) orders, Run As One's own add-on sales aside. */
   collected: number;
+  /** Whether *Collected* left out add-ons Run As One sold, so its note can say so (no amount). */
+  leavesOutRunAsOneAddOns: boolean;
   /** Run As One's platform fees on those orders. */
   fees: number;
   /** The payment processor's cut on those orders (the transaction fee). Not Run As One's. */
@@ -90,6 +101,8 @@ export type ClientPayout = {
     /** What their fees add to what the client is owed: the delivery fees, all the client's. */
     fees: number;
   } | null;
+  /** The Add-ons line: the client's own add-on sales, inside *Collected* and owed; null when it sold none. */
+  addOns: { sales: number } | null;
   /** Latest first. */
   payouts: ClientPayoutRow[];
 };
@@ -118,7 +131,10 @@ export async function clientPayout(actor: Actor, eventId: string): Promise<Clien
 
   const settlement = settlementOf(event.id);
   return {
-    collected: settlement.collected,
+    // Run As One's own add-on sales are its, not the client's (D1): out of
+    // Collected, so Collected less the two fees is still what is owed.
+    collected: settlement.collected - settlement.addOns.runAsOne,
+    leavesOutRunAsOneAddOns: settlement.addOns.runAsOne > 0,
     fees: settlement.platformFees,
     processingFees: settlement.transactionFees,
     paidOut: settlement.remitted,
@@ -137,6 +153,7 @@ export async function clientPayout(actor: Actor, eventId: string): Promise<Clien
       settlement.switches.switches > 0
         ? { count: settlement.switches.switches, fees: settlement.switches.owed }
         : null,
+    addOns: settlement.addOns.organizer > 0 ? { sales: settlement.addOns.organizer } : null,
     payouts: rows.map(row => ({
       paidOn: row.paidOn,
       method: remittanceMethodLabel(row.method),

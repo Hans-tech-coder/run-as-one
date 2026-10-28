@@ -31,7 +31,13 @@ import { splitOrderMoney } from '@/lib/runner-money';
 
 /** The event as page.tsx fetches it: its listed orders, their live runners and categories. */
 export type RegistrantsEvent = Prisma.EventGetPayload<{
-  include: { registrations: { include: { runners: { include: { category: true } } } } };
+  include: {
+    registrations: {
+      include: {
+        runners: { include: { category: true; addOns: { select: { unitPrice: true; quantity: true } } } };
+      };
+    };
+  };
 }>;
 
 export function buildRegistrantRows({
@@ -75,6 +81,7 @@ export function buildRegistrantRows({
         promoPrice: runner.promoPrice,
         category: runner.category,
         singletSize: runner.singletSize,
+        addOns: runner.addOns,
       })),
       event.shirtSizeUpcharge,
     );

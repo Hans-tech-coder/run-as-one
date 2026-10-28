@@ -22,7 +22,7 @@ const SHIRT = { id: 'cat-shirt', inclusions: ['Singlet', 'Medal'] };
 const BAND = { id: 'cat-band', inclusions: ['Bib'] };
 
 function runner(listPrice: number, options: Partial<MoneyRunner> = {}): MoneyRunner {
-  return { listPrice, promoPrice: null, category: BAND, singletSize: '', ...options };
+  return { listPrice, promoPrice: null, category: BAND, singletSize: '', addOns: [], ...options };
 }
 
 function order(options: Partial<MoneyOrder>): MoneyOrder {
@@ -31,6 +31,7 @@ function order(options: Partial<MoneyOrder>): MoneyOrder {
     discountAmount: 0,
     combinedDiscountAmount: 0,
     discountType: null,
+    addOnTotal: 0,
     platformFee: 0,
     deliveryFee: 0,
     transactionFee: 0,
@@ -42,15 +43,21 @@ function check(
   name: string,
   money: MoneyOrder,
   runners: MoneyRunner[],
-  expected: { registrationFee: number[]; total: number[]; free?: number[] },
+  expected: { registrationFee: number[]; total: number[]; free?: number[]; addOns?: number[] },
   upcharge = 0,
 ) {
   const split = splitOrderMoney(money, runners, upcharge);
   const fees = split.map(r => r.registrationFee);
   const totals = split.map(r => r.total);
   const free = split.flatMap((r, index) => (r.freeEntry ? [index] : []));
+  const addOns = split.map(r => r.addOns);
   const orderTotal =
-    money.subtotal - money.discountAmount + money.platformFee + money.deliveryFee + money.transactionFee;
+    money.subtotal -
+    money.discountAmount +
+    money.addOnTotal +
+    money.platformFee +
+    money.deliveryFee +
+    money.transactionFee;
   const summed = totals.reduce((sum, total) => sum + total, 0);
 
   const problems: string[] = [];
@@ -62,6 +69,9 @@ function check(
   }
   if (JSON.stringify(free) !== JSON.stringify(expected.free ?? [])) {
     problems.push(`free runners ${JSON.stringify(free)}, expected ${JSON.stringify(expected.free ?? [])}`);
+  }
+  if (JSON.stringify(addOns) !== JSON.stringify(expected.addOns ?? runners.map(() => 0))) {
+    problems.push(`add-ons ${JSON.stringify(addOns)}, expected ${JSON.stringify(expected.addOns ?? runners.map(() => 0))}`);
   }
   if (summed !== orderTotal) problems.push(`runners sum to ${summed}, order total is ${orderTotal}`);
 
@@ -167,6 +177,55 @@ check(
   order({ subtotal: 250000, discountAmount: 50000, discountType: 'PERCENTAGE' }),
   [runner(150000, { promoPrice: 120000 }), runner(100000, { promoPrice: 80000 })],
   { registrationFee: [120000, 80000], total: [120000, 80000] },
+);
+
+// ── Add-ons (ADD_ONS_PLAN.md Batch 3) ───────────────────────────────────────
+
+const SHIRT_LINE = { unitPrice: 35000, quantity: 1 };
+const CAP_LINE = { unitPrice: 20000, quantity: 1 };
+
+// Who sold an item does not change who paid for it: runner 1's organizer
+// shirt and Run As One cap are both theirs, and the QR Ph fee rides on runner 1.
+check(
+  'mixed sellers: each runner carries their own add-ons',
+  order({ subtotal: 240000, addOnTotal: 75000, platformFee: 8000, transactionFee: 4500 }),
+  [runner(120000, { addOns: [SHIRT_LINE, CAP_LINE] }), runner(120000, { addOns: [CAP_LINE] })],
+  { registrationFee: [120000, 120000], total: [183500, 144000], addOns: [55000, 20000] },
+);
+
+check(
+  'a 20% code never touches the add-ons (D5)',
+  order({ subtotal: 250000, discountAmount: 50000, discountType: 'PERCENTAGE', addOnTotal: 70000 }),
+  [runner(150000, { promoPrice: 120000 }), runner(100000, { promoPrice: 80000, addOns: [{ unitPrice: 35000, quantity: 2 }] })],
+  { registrationFee: [120000, 80000], total: [120000, 150000], addOns: [0, 70000] },
+);
+
+check(
+  'a ₱0 pacer entry plus a shirt is a free entry on a paid order (D8)',
+  order({ subtotal: 149900, discountAmount: 149900, discountType: 'PACER', addOnTotal: 35000, transactionFee: 2100 }),
+  [runner(149900, { addOns: [SHIRT_LINE] })],
+  { registrationFee: [0], total: [37100], free: [0], addOns: [35000] },
+);
+
+check(
+  'a 5+1 deal gives away an entry, not the free runner’s shirt',
+  order({ subtotal: 899400, discountAmount: 149900, discountType: 'BUY_X_GET_Y', addOnTotal: 35000, platformFee: 24000 }),
+  [...Array.from({ length: 5 }, () => runner(149900)), runner(149900, { addOns: [SHIRT_LINE] })],
+  {
+    registrationFee: [149900, 149900, 149900, 149900, 149900, 0],
+    total: [153900, 153900, 153900, 153900, 153900, 39000],
+    free: [5],
+    addOns: [0, 0, 0, 0, 0, 35000],
+  },
+);
+
+// A runner removed since checkout took their shirt line with them, but the
+// order still holds what was paid for it: the stored add-on total wins.
+check(
+  'lines that no longer reach the stored add-on total: the total wins',
+  order({ subtotal: 120000, addOnTotal: 70000, platformFee: 4000 }),
+  [runner(120000, { addOns: [SHIRT_LINE] })],
+  { registrationFee: [120000], total: [194000], addOns: [70000] },
 );
 
 if (failures > 0) {

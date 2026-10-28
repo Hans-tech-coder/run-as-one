@@ -90,9 +90,21 @@ export async function loadOverview(actor: Actor) {
     // given away — a percentage and a free runner both reduce the goods, not
     // the platform's cut — so a total that ignored it would report revenue the
     // organizer never actually received.
+    //
+    // Add-ons are summed apart (ADD_ONS_PLAN.md D1): `subtotal` is entries
+    // only, so the organizer's add-on sales are added on purpose and named on
+    // the tile, and Run As One's own are kept out of both revenue and the
+    // platform fee — the same split settlement.ts makes.
     prisma.registration.aggregate({
       where: paidOrders,
-      _sum: { subtotal: true, deliveryFee: true, discountAmount: true, platformFee: true },
+      _sum: {
+        subtotal: true,
+        deliveryFee: true,
+        discountAmount: true,
+        platformFee: true,
+        addOnTotal: true,
+        addOnRunAsOneTotal: true,
+      },
     }),
     // Registrants as every screen counts them (pending-expiry.ts): paid, and
     // bank transfers awaiting verification. Never an unpaid online checkout.
@@ -148,8 +160,15 @@ export async function loadOverview(actor: Actor) {
   const changeRevenue =
     (changes.totalCharged ?? 0) - (changes.refundAmount ?? 0) - changeFees - (changes.transactionFee ?? 0);
   const switchRevenue = (switchMoney._sum.totalCharged ?? 0) - (switchMoney._sum.transactionFee ?? 0);
+  const runAsOneAddOns = sum.addOnRunAsOneTotal ?? 0;
+  const organizerAddOns = (sum.addOnTotal ?? 0) - runAsOneAddOns;
   const totalRevenue =
-    (sum.subtotal ?? 0) + (sum.deliveryFee ?? 0) - (sum.discountAmount ?? 0) + changeRevenue + switchRevenue;
+    (sum.subtotal ?? 0) +
+    (sum.deliveryFee ?? 0) -
+    (sum.discountAmount ?? 0) +
+    organizerAddOns +
+    changeRevenue +
+    switchRevenue;
   const platformFees = (sum.platformFee ?? 0) + changeFees;
 
   // Per race: the runners paid, awaiting verification and on unpaid
@@ -176,5 +195,15 @@ export async function loadOverview(actor: Actor) {
     return { id: event.id, title: event.title, date: event.date, paid, awaiting, unpaid, capacity };
   });
 
-  return { totalRevenue, platformFees, totalRegistrants, awaitingCount, queue, recent, liveRows };
+  return {
+    totalRevenue,
+    organizerAddOns,
+    platformFees,
+    runAsOneAddOns,
+    totalRegistrants,
+    awaitingCount,
+    queue,
+    recent,
+    liveRows,
+  };
 }

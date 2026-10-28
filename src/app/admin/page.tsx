@@ -66,6 +66,11 @@ export default async function AdminDashboard() {
               <div className="metric-icon"><DollarSign size={20} /></div>
             </div>
             <div className="metric-value">₱{formatPesos(overview.totalRevenue)}</div>
+            {overview.organizerAddOns > 0 && (
+              <p className="m-0 -mt-2 text-xs text-secondary">
+                Includes ₱{formatPesos(overview.organizerAddOns)} in add-on sales
+              </p>
+            )}
           </Link>
 
           <Link href="/admin/events" className="metric-card is-link">
@@ -91,6 +96,12 @@ export default async function AdminDashboard() {
                 <div className="metric-icon"><Landmark size={20} /></div>
               </div>
               <div className="metric-value">₱{formatPesos(overview.platformFees)}</div>
+              {/* Run As One's own merchandise is a sale, not a fee (ADD_ONS_PLAN.md D1): named beside it, never in it. */}
+              {overview.runAsOneAddOns > 0 && (
+                <p className="m-0 -mt-2 text-xs text-secondary">
+                  Plus ₱{formatPesos(overview.runAsOneAddOns)} in Run As One add-on sales
+                </p>
+              )}
             </Link>
           )}
         </div>

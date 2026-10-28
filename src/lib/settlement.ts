@@ -63,11 +63,23 @@
  *   owed rises by exactly the fee, the same as a delivery fee taken at
  *   checkout. Like a category change, it counts only while its order is PAID.
  *
- * Owed is computed as the order's total less the two fees, rather than re-added
- * from its parts. Checkout pins `total = subtotal + delivery + platform +
- * transaction − discount`, so the two are the same number — but reading it this
- * way means *collected = platform + processing + owed* holds on every row by
- * construction, and the screen's figures can never fail to add up.
+ * - **An add-on is owed to whoever sells it** (ADD_ONS_PLAN.md D1). Its price
+ *   is inside `totalAmount`, so it is collected like the entry. One the
+ *   organizer sells is owed with the entry; one **Run As One sells is Run As
+ *   One's own sale**, never owed — so `addOnRunAsOneTotal` comes off owed
+ *   like a fee. It is a figure of its own, *not* added to `platformFees`: a
+ *   shirt Run As One sold is merchandise, and the platform fee stays the
+ *   per-runner fee the organizer agreed to (D2: add-ons carry none). The
+ *   seller is the snapshot on the order, so switching an item's *Sold by*
+ *   later never moves a settled balance. A ₱0 entry with a shirt (D8) is an
+ *   ordinary PAID order and needs nothing more.
+ *
+ * Owed is computed as the order's total less the two fees and Run As One's
+ * add-on sales, rather than re-added from its parts. Checkout pins `total =
+ * subtotal + addOns + delivery + platform + transaction − discount`, so the two
+ * are the same number — but reading it this way means *collected = platform +
+ * processing + Run As One add-ons + owed* holds on every row by construction,
+ * and the screen's figures can never fail to add up.
  *
  * Integer centavos throughout (`money.ts`). Prisma-free, so the record dialog
  * can run the same field checks the route runs; the queries live in
@@ -90,7 +102,7 @@ export type Settlement = {
   platformFees: number;
   /** PayMongo's cut, passed through to the runner: deducted, but not Run As One's. */
   transactionFees: number;
-  /** The organizer's share: collected less both fees. */
+  /** The organizer's share: collected less both fees and Run As One's add-on sales. */
   owed: number;
   /** Payouts less returns, voided rows left out. */
   remitted: number;
@@ -101,6 +113,18 @@ export type Settlement = {
   changes: ChangeLine;
   /** The delivery switches inside the figures above, for the line that explains them. */
   switches: SwitchLine;
+  /** The add-on sales inside *collected*, split by who sold them (D1). */
+  addOns: AddOnLine;
+};
+
+/** The *Add-ons* lines: every add-on line on the PAID orders, and whose each part is. */
+export type AddOnLine = {
+  /** Everything runners paid for add-ons. */
+  sales: number;
+  /** Sold by the organizer: inside owed, like the entry. */
+  organizer: number;
+  /** Sold by Run As One: kept, so taken off owed — and never part of `platformFees`. */
+  runAsOne: number;
 };
 
 /** Order totals already summed by the database (one grouped query per screen). */
@@ -109,9 +133,20 @@ export type OrderTotals = {
   collected: number;
   platformFees: number;
   transactionFees: number;
+  /** `addOnTotal`: every add-on line, already inside `collected`. */
+  addOnSales: number;
+  /** `addOnRunAsOneTotal`: the part of it Run As One sold (D1). */
+  runAsOneAddOns: number;
 };
 
-export const NO_ORDERS: OrderTotals = { paidOrders: 0, collected: 0, platformFees: 0, transactionFees: 0 };
+export const NO_ORDERS: OrderTotals = {
+  paidOrders: 0,
+  collected: 0,
+  platformFees: 0,
+  transactionFees: 0,
+  addOnSales: 0,
+  runAsOneAddOns: 0,
+};
 
 /**
  * Category changes already summed by the database, over the moved statuses
@@ -184,8 +219,10 @@ export function settle(
   const collected = orders.collected + changeLine.collected + switches.charged;
   const platformFees = orders.platformFees + changes.changeFees;
   const transactionFees = orders.transactionFees + changes.transactionFees + switches.transactionFees;
-  // The residual, never re-added from parts, so the identity holds by construction.
-  const owed = collected - platformFees - transactionFees;
+  // The residual, never re-added from parts, so the identity holds by
+  // construction. Run As One's add-on sales come off like a fee (D1) but stay
+  // their own figure, out of `platformFees`.
+  const owed = collected - platformFees - transactionFees - orders.runAsOneAddOns;
   const balance = owed - remitted;
   const state: SettlementState =
     balance > 0
@@ -206,6 +243,11 @@ export function settle(
     state,
     changes: changeLine,
     switches: { ...switches, owed: switches.charged - switches.transactionFees },
+    addOns: {
+      sales: orders.addOnSales,
+      organizer: orders.addOnSales - orders.runAsOneAddOns,
+      runAsOne: orders.runAsOneAddOns,
+    },
   };
 }
 

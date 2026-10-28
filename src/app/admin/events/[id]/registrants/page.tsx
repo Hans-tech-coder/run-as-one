@@ -72,7 +72,9 @@ export default async function RegistrantsPage({
             // A runner removed from an order stays in the table for the audit
             // trail (Runner.deletedAt) and never on this screen.
             where: { deletedAt: null },
-            include: { category: true }
+            // The add-on lines' money only, for the per-runner split
+            // (runner-money.ts); the items themselves are Batch 4's.
+            include: { category: true, addOns: { select: { unitPrice: true, quantity: true } } }
           }
         }
       }

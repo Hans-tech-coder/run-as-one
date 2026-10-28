@@ -73,7 +73,7 @@ export const REGISTRANT_CSV_HEADERS = [
   'Category', 'Changed From', 'Kit Changed', 'Distance', 'Shirt Size', 'Emergency Contact', 'Emergency Phone',
   'Running Community', 'Medical Conditions', 'Home Address', 'Province', 'Logistics Method', 'Delivery Area', 'Delivery Address', 'Logistics Note',
   'Payment Method', 'Pacer', 'Promo Code', 'Promo Price Held From', 'Order Discount', 'Order Total',
-  'Entry Price', 'Runner Discount', 'Registration Fee', 'Admin Fee', 'Delivery Fee', 'Transaction Fee',
+  'Entry Price', 'Runner Discount', 'Registration Fee', 'Add-ons', 'Admin Fee', 'Delivery Fee', 'Transaction Fee',
   'Runner Total', 'Free Entry', 'Status', 'Payment Remarks',
 ];
 
@@ -161,6 +161,9 @@ function registrantCsvRow(runner: any): string {
     pesosCell(runner.runnerMoney?.entryPrice),
     pesosCell(runner.runnerMoney?.discount),
     pesosCell(runner.runnerMoney?.registrationFee),
+    // This runner's own add-ons (ADD_ONS_PLAN.md D3), outside the entry and
+    // its discount, so the Runner Totals still sum to the order's.
+    pesosCell(runner.runnerMoney?.addOns),
     pesosCell(runner.runnerMoney?.adminFee),
     pesosCell(runner.runnerMoney?.deliveryFee),
     pesosCell(runner.runnerMoney?.transactionFee),

@@ -269,7 +269,7 @@ check('its quote carries no transaction fee', fee(quote({ paymentMethod: payment
 // ── Settlement: delivery switches (L8) ───────────────────────────────────────
 
 // One PAID order: ₱1,000 entry + ₱50 platform + ₱30 transaction.
-const orders = { paidOrders: 1, collected: 108_000, platformFees: 5_000, transactionFees: 3_000 };
+const orders = { ...NO_ORDERS, paidOrders: 1, collected: 108_000, platformFees: 5_000, transactionFees: 3_000 };
 const before = settle(orders, 0);
 check('without switches, owed is the entry', before.owed, 100_000);
 check('without switches, the line is empty', before.switches.switches, 0);

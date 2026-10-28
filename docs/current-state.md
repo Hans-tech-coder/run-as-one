@@ -206,7 +206,7 @@ days later. Staff see it as *Promo price held from <Manila time>* under the
 Discount in the registrant detail, and in the CSV's *Promo Price Held From*
 column; the client viewer shows no discount, so not this either.
 
-**Event add-ons, Batches 0–2 (2026-10-28, Batches 0–1 on `dev`, Batch 2 in
+**Event add-ons, Batches 0–3 (2026-10-28, Batches 0–2 on `dev`, Batch 3 in
 the working tree; not released;
 `ADD_ONS_PLAN.md`, migration `20261028031230_event_add_ons`).** Optional items
 a runner buys with their entry — a commemorative shirt, a cap. Batch 0 split
@@ -245,10 +245,31 @@ as its own line; not paid, so it stays PENDING until the sweep); stock set to
 what was sold, then a direct order with the shirt refused 409 *has just sold
 out*, a total that kept the shirt's price refused 409 `PRICE_CHANGED`, an
 unknown item 400; the missing-size error on step 1; the card at 360px.
-**Not built yet**: settlement, the platform-fee view, the client payout and
-the per-runner money split are Batch 3; registrants, the Race Report, the
-client runner list, emails and Track are Batch 4 — so today the shirt shows
-nowhere after checkout but the database. The owner's decisions, cited by
+**Batch 3: money after payment.** Risk 1 closed: `settle()` takes Run As
+One-sold add-ons (`addOnRunAsOneTotal`, summed in the existing aggregate) off
+owed as a figure of their own, never inside `platformFees`, and organizer-sold
+ones stay owed (§5 `settlement.ts`; `scripts/check-add-ons.ts` checks the
+₱800 + ₱60 + ₱350 example both ways). Per screen, decided: **Remittances**
+list and settlement name add-on sales by seller (§6); the **Overview**'s
+*Total Revenue (Net)* adds the organizer's add-on sales, so it still agrees
+with Remittances, and says so under the figure, while *Platform Fees
+Collected* stays fees and names Run As One's add-on sales under it; the
+**client payout** leaves Run As One's add-on sales out of *Collected* and
+names its own; **`splitOrderMoney`** gives each runner their own lines and the
+registrants CSV an *Add-ons* money column (`check-runner-money.ts`: mixed
+sellers, a 20% code, a 5+1 deal, a ₱0 pacer plus a shirt, a removed runner;
+all 183 `local-dev` orders with a live runner split exactly).
+`client-summary.ts`, `client-race-report.ts` and `promo-redemptions.ts` read
+no order money beyond discounts, so they needed nothing. Checked on localhost
+2026-10-28 on PRICE LOCK TEST, with local-dev data made by script: RM-C26C6F75
+and RM-094FFE68 marked PAID with a ₱60-per-runner platform fee added, and a
+RUN AS ONE TOWEL item (₱350, Run As One, switched off) put on runner 2 of
+RM-094FFE68 — owed ₱4,300 (₱3,600 entries + ₱700 organizer shirts), the towel
+on its own line, the client payout ₱4,521.88 − ₱180 − ₱41.88 = ₱4,300, no
+horizontal scroll at 360px. **Not built yet**: the receipt email's lines still
+leave add-ons out (its total is right; Batch 4 adds the lines), and
+registrants, the Race Report, the client runner list, emails and Track are
+Batch 4. The owner's decisions, cited by
 number in code: **D1** each item is *Sold by* `ORGANIZER` (default, owed in
 the remittance) or `RUN_AS_ONE` (kept), snapshotted per line; **D2** no
 platform fee on add-ons; **D3** bought per runner; **D4** buying after

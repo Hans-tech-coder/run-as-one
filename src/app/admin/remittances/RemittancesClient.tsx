@@ -86,6 +86,7 @@ const COLUMNS: ColumnDef<EventSettlementRow>[] = [
       <div className="whitespace-nowrap">
         <div>{formatSignedPesos(row.original.settlement.collected)}</div>
         <div className="text-xs text-secondary">{formatSignedPesos(row.original.settlement.platformFees)} Run As One</div>
+        <RunAsOneAddOnNote settlement={row.original.settlement} />
       </div>
     ),
   },
@@ -256,7 +257,15 @@ export default function RemittancesClient({ rows }: { rows: EventSettlementRow[]
           badges={({ original }) => <SettlementBadge state={original.settlement.state} />}
           fields={({ original }) => [
             { label: 'Balance', value: <strong className="text-primary">{formatSignedPesos(original.settlement.balance)}</strong> },
-            { label: 'Collected', value: formatSignedPesos(original.settlement.collected) },
+            {
+              label: 'Collected',
+              value: (
+                <>
+                  {formatSignedPesos(original.settlement.collected)}
+                  <RunAsOneAddOnNote settlement={original.settlement} />
+                </>
+              ),
+            },
             {
               label: 'Owed',
               value: (
@@ -285,15 +294,18 @@ export default function RemittancesClient({ rows }: { rows: EventSettlementRow[]
 }
 
 /**
- * "₱400.00 category changes", "₱150.00 to refund" and "₱300.00 delivery
- * switches", each on a line of its own, under owed; nothing for a race with
- * none. Allowed to wrap, unlike the figure above it, so the note never widens a
+ * "₱350.00 add-ons" (the organizer's own, D1), "₱400.00 category changes",
+ * "₱150.00 to refund" and "₱300.00 delivery switches", each on a line of its
+ * own, under owed; nothing for a race with none. Allowed to wrap, unlike the figure above it, so the note never widens a
  * column the table has no room for.
  */
-function ChangeNote({ settlement: { changes, switches } }: { settlement: Settlement }) {
-  if (changes.changes === 0 && switches.switches === 0) return null;
+function ChangeNote({ settlement: { changes, switches, addOns } }: { settlement: Settlement }) {
+  if (changes.changes === 0 && switches.switches === 0 && addOns.organizer === 0) return null;
   return (
     <>
+      {addOns.organizer > 0 && (
+        <div className="text-xs text-secondary whitespace-normal">{formatSignedPesos(addOns.organizer)} add-ons</div>
+      )}
       {changes.changes > 0 && (
         <div className="text-xs text-secondary whitespace-normal">{formatSignedPesos(changes.owed)} category changes</div>
       )}
@@ -304,5 +316,17 @@ function ChangeNote({ settlement: { changes, switches } }: { settlement: Settlem
         <div className="text-xs text-secondary whitespace-normal">{formatSignedPesos(switches.owed)} delivery switches</div>
       )}
     </>
+  );
+}
+
+/**
+ * "₱350.00 Run As One add-ons" under collected: Run As One's own merchandise
+ * (ADD_ONS_PLAN.md D1), kept like the fee above it but named apart, since it
+ * is a sale, not a fee. Nothing for a race that sold none.
+ */
+function RunAsOneAddOnNote({ settlement: { addOns } }: { settlement: Settlement }) {
+  if (addOns.runAsOne === 0) return null;
+  return (
+    <div className="text-xs text-secondary whitespace-normal">{formatSignedPesos(addOns.runAsOne)} Run As One add-ons</div>
   );
 }

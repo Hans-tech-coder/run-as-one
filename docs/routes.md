@@ -265,7 +265,12 @@ where a runner changed category gets one more sentence under the figures —
 inside the five figures and a sixth would break the sum. A race with a paid
 delivery switch gets one more the same way — "Delivery switches: 1 receipt
 switched from pickup to delivery, adding ₱150.00 in delivery fees to what you
-are owed." (`LOGISTICS_CHANGE_PLAN.md` L8). **Runners** (Batch 4, `RunnerList.tsx`, reading
+are owed." (`LOGISTICS_CHANGE_PLAN.md` L8). A race whose organizer sold
+add-ons gets "Add-ons: runners paid ₱700.00 for your add-ons, inside Collected
+and owed to you." (`ADD_ONS_PLAN.md` D1); **Run As One's own add-on sales are
+left out of *Collected*** — no part of the client's payout — and the note
+under it then reads *What runners paid, less Run As One's own add-ons*, with
+no amount. **Runners** (Batch 4, `RunnerList.tsx`, reading
 `client-runners.ts`) follows it, also **screen only** and only for someone
 holding `event:view-runners` on the race: the list a client releases and
 ships race kits from, built like the staff Registrants table. Columns: mark
@@ -332,11 +337,14 @@ dashboard's **Overview** (`OVERVIEW_PLAN.md` Batch 1), four blocks and no more
 **tiles** — **Total Revenue (Net)** (`subtotal + deliveryFee − discountAmount`
 of PAID orders, plus what moved category changes on them leave the organizer
 after their fees and refunds, plus what paid delivery switches on them charged
-less PayMongo's cut — the switch fee, all the organizer's — the settlement
+less PayMongo's cut — the switch fee, all the organizer's — plus the add-ons
+the organizer sold (`addOnTotal − addOnRunAsOneTotal`, `ADD_ONS_PLAN.md` D1),
+named under the figure as *Includes ₱X in add-on sales* — the settlement
 lines' reading, so the tile agrees with Remittances), **Total Registrants** (runners on PAID orders and on bank transfers awaiting verification — the same registrants every screen counts, never an unpaid checkout), **Active
 Events** (races not finished, `upcomingEvents`), plus **Platform Fees
 Collected** (the `platformFee` of PAID orders plus their moved category
-changes' change fees) for `platform:manage` only — all
+changes' change fees; Run As One's own add-on sales are never in it, and
+appear under it as *Plus ₱X in Run As One add-on sales*) for `platform:manage` only — all
 **all-time**, with no period selector (per-period money is
 `/admin/remittances`). **Every tile is a link**: the money tiles to
 `/admin/remittances` for `remittance:manage`, otherwise to `/admin/events`; the
@@ -1177,9 +1185,16 @@ changes, after their fees and refunds*, so the inset lines still sum to owed.
 a race with a paid switch: *Paid for delivery switches* inset under collected
 (with *Paid on orders* above it), and *Delivery switches* — the fees, all the
 organizer's — under owed; the intro says a switch counts once paid and
-applied. On the list, owed carries a small "₱X category changes · ₱Y to
-refund · ₱Z delivery switches" line under it, each part only when non-zero,
-on the table and the card alike; and the **Remittances** list (sent day, kind, amount — a return shown
+applied. **The Add-ons lines** (`ADD_ONS_PLAN.md` Batch 3, D1) appear only on a
+race that sold any: *Of which add-on sales* inset under collected, **Add-ons
+sold by Run As One** as a deduction of its own between the platform fees and
+the processing fees (never inside the platform fee line), and *Add-ons sold
+by the organizer* inset under owed; the *Run As One's Share* tile (here and
+on the list) stays the platform and change fees, with *Plus ₱X in Run As One
+add-on sales* under it. On the list, owed carries a small "₱W add-ons · ₱X
+category changes · ₱Y to refund · ₱Z delivery switches" line under it (the
+organizer's add-ons), and collected a "₱V Run As One add-ons" line under its
+Run As One share, each part only when non-zero, on the table and the card alike; and the **Remittances** list (sent day, kind, amount — a return shown
 negative — method, reference and note, recorded by and when, Recorded / Voided
 with who voided it, when and why, and a ⋮ menu under Actions — Open Receipt,
 then Void in red — which a voided row without a receipt leaves empty; a card's

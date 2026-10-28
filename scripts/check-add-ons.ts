@@ -12,6 +12,7 @@ import {
 } from '../src/lib/add-ons';
 import { chargeableTotal, isFreeOrder, raceEntryIsFree, transactionFeeFor } from '../src/lib/free-checkout';
 import { quoteCategoryChange } from '../src/lib/category-change';
+import { NO_ORDERS, settle } from '../src/lib/settlement';
 
 /**
  * A check of `src/lib/add-ons.ts`: which add-ons a runner may buy, what their
@@ -207,6 +208,32 @@ check('5K → keeps the shirt, drops the 10K-only cap', picksAllowedIn(picks, [i
 });
 check('a blank shirt size takes the race size', withRaceSizeFilled(picks, [item(), tenKOnly], 'M').map(p => p.option), ['M', '']);
 check('a chosen shirt size is kept', withRaceSizeFilled([{ addOnId: 'shirt', option: 'XL', quantity: 1 }], [item()], 'M')[0].option, 'XL');
+
+// ── Settlement (Batch 3, Risk 1) ────────────────────────────────────────────
+
+// One PAID order: ₱800 entry + ₱60 platform fee + a ₱350 shirt, by bank
+// transfer (no transaction fee). Who sold the shirt decides who is owed it.
+const shirtOrder = { ...NO_ORDERS, paidOrders: 1, collected: 121000, platformFees: 6000, addOnSales: 35000 };
+const raoShirt = settle({ ...shirtOrder, runAsOneAddOns: 35000 }, 0);
+check('Risk 1: a Run As One shirt is not owed to the organizer', raoShirt.owed, 80000);
+check('Risk 1: it is not part of the platform fee', raoShirt.platformFees, 6000);
+check('Risk 1: it is its own figure', raoShirt.addOns, { sales: 35000, organizer: 0, runAsOne: 35000 });
+check(
+  'collected = platform + processing + Run As One add-ons + owed',
+  raoShirt.collected,
+  raoShirt.platformFees + raoShirt.transactionFees + raoShirt.addOns.runAsOne + raoShirt.owed,
+);
+const orgShirt = settle(shirtOrder, 0);
+check('Risk 1: an organizer shirt is owed with the entry', orgShirt.owed, 115000);
+check('…and named as the organizer’s', orgShirt.addOns, { sales: 35000, organizer: 35000, runAsOne: 0 });
+// A pacer's free entry plus a Run As One shirt paid by QR Ph (D8): the
+// organizer is owed nothing, Run As One keeps the shirt, PayMongo its fee.
+const freeFee = transactionFeeFor(35000, 'QRPH');
+const freeRao = settle(
+  { ...NO_ORDERS, paidOrders: 1, collected: 35000 + freeFee, transactionFees: freeFee, addOnSales: 35000, runAsOneAddOns: 35000 },
+  0,
+);
+check('a ₱0 entry + Run As One shirt owes the organizer ₱0', [freeRao.owed, freeRao.state], [0, 'SETTLED']);
 
 if (failures > 0) {
   console.error(`\n${failures} check(s) failed.`);

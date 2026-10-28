@@ -39,11 +39,13 @@ export default async function Page() {
   // second race is still waiting, whatever the first one received.
   let collected = 0;
   let share = 0; // platform and change fees: the transaction fee is PayMongo's
+  let ownAddOns = 0; // Run As One's add-on sales: kept, but not a fee (ADD_ONS_PLAN.md D1)
   let due = 0;
   let remitted = 0;
   for (const { settlement } of rows) {
     collected += settlement.collected;
     share += settlement.platformFees;
+    ownAddOns += settlement.addOns.runAsOne;
     remitted += settlement.remitted;
     if (settlement.balance > 0) due += settlement.balance;
   }
@@ -55,7 +57,12 @@ export default async function Page() {
       <div className="admin-content">
         <div className="metrics-grid">
           <Metric title="Collected from Runners" value={formatSignedPesos(collected)} icon={<Banknote size={20} />} />
-          <Metric title="Run As One's Share" value={formatSignedPesos(share)} icon={<Landmark size={20} />} />
+          <Metric
+            title="Run As One's Share"
+            value={formatSignedPesos(share)}
+            note={ownAddOns > 0 ? `Plus ${formatSignedPesos(ownAddOns)} in Run As One add-on sales` : undefined}
+            icon={<Landmark size={20} />}
+          />
           <Metric title="Balance Due to Organizers" value={formatSignedPesos(due)} icon={<Scale size={20} />} />
           <Metric title="Remitted" value={formatSignedPesos(remitted)} icon={<HandCoins size={20} />} />
         </div>
@@ -66,7 +73,7 @@ export default async function Page() {
   );
 }
 
-function Metric({ title, value, icon }: { title: string; value: string; icon: React.ReactNode }) {
+function Metric({ title, value, note, icon }: { title: string; value: string; note?: string; icon: React.ReactNode }) {
   return (
     <div className="metric-card">
       <div className="metric-header">
@@ -74,6 +81,7 @@ function Metric({ title, value, icon }: { title: string; value: string; icon: Re
         <div className="metric-icon">{icon}</div>
       </div>
       <div className="metric-value">{value}</div>
+      {note && <p className="m-0 -mt-2 text-xs text-secondary">{note}</p>}
     </div>
   );
 }

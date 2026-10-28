@@ -11,7 +11,9 @@ import './payout-summary.css';
  * processing fees, less paid out, leaves still owed — then the payouts
  * themselves. Category changes (CATEGORY_CHANGE_PLAN.md) are already inside
  * the figures and are named on a line of their own beneath them, and so are
- * paid delivery switches (LOGISTICS_CHANGE_PLAN.md L8). Screen only:
+ * paid delivery switches (LOGISTICS_CHANGE_PLAN.md L8), and the client's own
+ * add-on sales (ADD_ONS_PLAN.md D1; Run As One's are no part of this payout and
+ * are left out of *Collected* in `client-payout.ts`). Screen only:
  * the printed copy goes to a shirt supplier, who has no business with the
  * money (`RaceReport`).
  */
@@ -21,7 +23,11 @@ export default function PayoutSummary({ payout }: { payout: ClientPayout }) {
   return (
     <>
       <dl className="race-money-grid">
-        <Figure label="Collected" value={payout.collected} note="What runners paid" />
+        <Figure
+          label="Collected"
+          value={payout.collected}
+          note={payout.leavesOutRunAsOneAddOns ? "What runners paid, less Run As One's own add-ons" : 'What runners paid'}
+        />
         <Figure
           label="Run As One fees"
           value={payout.fees}
@@ -43,6 +49,12 @@ export default function PayoutSummary({ payout }: { payout: ClientPayout }) {
 
       {payout.deliverySwitches && (
         <p className="race-money-state">{switchLine(payout.deliverySwitches)}</p>
+      )}
+
+      {payout.addOns && (
+        <p className="race-money-state">
+          Add-ons: runners paid {formatSignedPesos(payout.addOns.sales)} for your add-ons, inside Collected and owed to you.
+        </p>
       )}
 
       <p className="race-money-state">{stateLine(payout)}</p>
