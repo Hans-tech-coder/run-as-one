@@ -90,13 +90,27 @@ export async function readRunnerContext(client: Prisma.TransactionClient | typeo
   if (!runner) return null;
 
   const eventId = runner.registration.eventId;
-  const [liveRunners, openChange, changeCount, result] = await Promise.all([
+  const [liveRunners, openChange, changeCount, moved, result] = await Promise.all([
     client.runner.count({ where: { registrationId: runner.registrationId, deletedAt: null } }),
     client.categoryChange.findFirst({
       where: { runnerId, status: CATEGORY_CHANGE_STATUSES.AWAITING_PAYMENT },
       select: { id: true, changeRef: true },
     }),
     client.categoryChange.count({ where: { runnerId } }),
+    // Any earlier move resets the basis to the current list price (computeBasis).
+    client.categoryChange.findFirst({
+      where: {
+        runnerId,
+        status: {
+          in: [
+            CATEGORY_CHANGE_STATUSES.APPLIED,
+            CATEGORY_CHANGE_STATUSES.REFUND_DUE,
+            CATEGORY_CHANGE_STATUSES.REFUNDED,
+          ],
+        },
+      },
+      select: { id: true },
+    }),
     // A result has no link to its runner — it is keyed by bib, which a runner
     // row does not carry — so the name is the match (Session 1's note). A
     // false match only refuses a change staff can still make by fixing the
@@ -119,6 +133,7 @@ export async function readRunnerContext(client: Prisma.TransactionClient | typeo
     runnerCount: runner.registration._count.runners,
     openChange,
     changeCount,
+    movedBefore: moved !== null,
     hasRaceResult: result !== null,
   };
 }
@@ -157,6 +172,7 @@ export function quoteFor(
     fromPrice: ctx.runner.category.price,
     toPrice: to.price,
     promoPrice: ctx.runner.promoPrice,
+    movedBefore: ctx.movedBefore,
     order: {
       discountAmount: ctx.registration.discountAmount,
       discountType: ctx.registration.discountType,
@@ -223,6 +239,7 @@ export async function previewCategoryChange(input: {
       runnerRef: ctx.runnerRef,
       categoryId: ctx.runner.categoryId,
       promoPrice: ctx.runner.promoPrice,
+      movedBefore: ctx.movedBefore,
     },
     order: {
       orderRef: ctx.registration.orderRef,

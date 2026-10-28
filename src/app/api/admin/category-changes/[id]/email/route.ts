@@ -5,23 +5,34 @@
  * to the change's own race. `via` in the body:
  *
  * - **`manual`** — the email rendered, for the staff member to send from their
- *   own mailbox at no quota. Writes nothing.
+ *   own mailbox at no quota. Writes nothing for the applied email; the created
+ *   one carries a signed payment link, so it writes the same
+ *   `category_change.payment_link.copied` row the payment-link route does.
  * - **`mark-sent`** — they sent it: stamps `appliedEmailSentAt` and records who.
  * - **`email`** — try Resend again; the outcome is stamped on the change, and a
  *   refusal comes back with the rendered message.
  *
  * `kind` says which email: **`applied`** (the default) — only an applied change
  * has it; **`created`** (Session 3) — the payment link and breakdown of an
- * upgrade still waiting for its payment (lib/category-change-payment.ts).
+ * upgrade still waiting for its payment (lib/category-change-payment.ts), only
+ * while `payableStateOf` calls it payable — the rule `issueChangePaymentLink`
+ * applies, so a change whose hold or change deadline has lapsed before the
+ * daily sweep gets no link.
  */
 
 import { NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { can, getActor } from '@/lib/actor';
+import { recordAudit } from '@/lib/audit';
 import { hasMoved } from '@/lib/category-change';
 import { CategoryChangeRefused, findChangeReachById } from '@/lib/category-change-context';
 import { markChangeEmailSentByHand } from '@/lib/category-change-store';
-import { deliverCreatedEmail, readChangeForPayment, renderCreatedEmail } from '@/lib/category-change-payment';
+import {
+  deliverCreatedEmail,
+  payableStateOf,
+  readChangeForPayment,
+  renderCreatedEmail,
+} from '@/lib/category-change-payment';
 import { deliverAppliedEmail, readCategoryChangeView, renderAppliedEmail } from '@/lib/category-change-view';
 
 type Via = 'manual' | 'mark-sent' | 'email';
@@ -50,7 +61,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const kind = body.kind === 'created' ? 'created' : 'applied';
     if (kind === 'created') {
       const change = await readChangeForPayment(id);
-      if (!change || change.status !== 'AWAITING_PAYMENT') {
+      if (!change || payableStateOf(change) !== 'payable') {
         return NextResponse.json(
           { error: 'This change is no longer waiting for payment, so its payment email is not needed.' },
           { status: 409 },
@@ -58,6 +69,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       }
       if (via === 'manual') {
         const message = await renderCreatedEmail(change, request.url);
+        await recordAudit(db, actor, {
+          action: 'category_change.payment_link.copied',
+          entityType: 'CategoryChange',
+          entityId: change.id,
+          eventId: change.eventId,
+          organizerId: change.event.organizerId,
+          summary: `Prepared the payment link email for category change ${change.changeRef} to send by hand.`,
+        });
         return NextResponse.json({
           message: { to: message.to, subject: message.subject, html: message.html, text: message.text },
         });

@@ -22,7 +22,8 @@
  * order-level deduction (a buy-X-get-Y or pacer comp, the kinds `isPricedIn`
  * says are not priced into the runner). Those, and a ₱0 order, have no clean
  * per-runner figure, so the quote says it is an estimate and why; staff may
- * override it with a reason.
+ * override it with a reason. Once a runner has moved, the order no longer
+ * describes their entry: they hold the current category at its list price.
  *
  * Kept free of Prisma, like `discount.ts`, so the modal's live preview runs the
  * same code as the route. The writes — under the event lock, with an audit row
@@ -229,6 +230,12 @@ export type QuoteInput = {
   toPrice: number;
   /** `Runner.promoPrice`: what a repricing promotion sold this runner's seat at. */
   promoPrice: number | null;
+  /**
+   * Whether an earlier change of this runner's moved them (`hasMoved`). The
+   * order's ₱0 total and its discount then describe the entry they left, not
+   * the one they hold.
+   */
+  movedBefore?: boolean;
   order: {
     discountAmount: number;
     discountType: string | null;
@@ -286,11 +293,18 @@ export type CategoryChangeQuote = {
  * The share of an order-level deduction is rounded **down**, so a remainder
  * centavo stays with the runner's basis — the runner is never charged a
  * centavo more, or refunded one less, because of how a split fell.
+ *
+ * After a move the basis is the current category's list price: the runner
+ * paid up to it (or was refunded down to it), and the move cleared their
+ * `promoPrice`. Reading the order again would credit a ₱0 order nothing a
+ * second time, or take its discount share off twice.
  */
-export function computeBasis(input: Pick<QuoteInput, 'fromPrice' | 'promoPrice' | 'order'>): {
+export function computeBasis(input: Pick<QuoteInput, 'fromPrice' | 'promoPrice' | 'movedBefore' | 'order'>): {
   basis: number;
   estimateReason: BasisEstimateReason | null;
 } {
+  if (input.movedBefore) return { basis: input.fromPrice, estimateReason: null };
+
   const entry = input.promoPrice ?? input.fromPrice;
   const { discountAmount, discountType, runnerCount } = input.order;
 

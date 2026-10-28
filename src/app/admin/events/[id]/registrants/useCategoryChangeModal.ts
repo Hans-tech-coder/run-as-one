@@ -205,6 +205,7 @@ export function useCategoryChangeModal({
       fromPrice: current.price,
       toPrice: to.price,
       promoPrice: preview.runner.promoPrice,
+      movedBefore: preview.runner.movedBefore,
       order: {
         discountAmount: preview.order.discountAmount,
         discountType: preview.order.discountType,
