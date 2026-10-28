@@ -5,17 +5,11 @@ import prisma from '@/lib/db';
 import { newOrderRef } from '@/lib/order-ref';
 import { recordWriteInCommunities, runnerCommunity } from '@/lib/running-community-store';
 import { deletePrivateFile, uploadPrivateProof, UploadError } from '@/lib/blob';
-import { checkoutDelivery } from '@/app/events/[slug]/register/delivery-split';
 import {
   asLogisticsMethod,
   PAYMENT_METHODS,
 } from '@/lib/registration-codes';
-import {
-  runnerCategories,
-  runnerPrices,
-  storedShirtSize,
-  subtotalWithUpcharge,
-} from '@/lib/shirt-size';
+import { storedShirtSize } from '@/lib/shirt-size';
 import { hasFinished } from '@/lib/event-schedule';
 import {
   participantBirthdateError,
@@ -35,12 +29,7 @@ import {
   reserveSlots,
 } from '@/lib/registration-gate';
 import { deliverConfirmationEmail, deliverReceivedEmail } from '@/lib/email-delivery';
-import {
-  FREE_ORDER_COLUMNS,
-  chargeableTotal,
-  isFreeOrder,
-  platformFeeAfterDiscount,
-} from '@/lib/free-checkout';
+import { FREE_ORDER_COLUMNS } from '@/lib/free-checkout';
 import {
   optionalUpperCaseForStorage,
   upperCaseForStorage,
@@ -58,8 +47,8 @@ import {
   redeemPromoCode,
   runnersDiscounted,
 } from '@/lib/discount';
-import { resolveDiscount } from '@/lib/promo-store';
-import { logHeldPrice, readPriceLock } from '@/lib/price-lock';
+import { priceCheckout } from '@/lib/checkout-pricing';
+import { logHeldPrice } from '@/lib/price-lock';
 import { priceChangedBody } from '@/lib/price-changed';
 import { CHECKOUT_RULE, allowRequest, callerKey } from '@/lib/rate-limit';
 
@@ -270,101 +259,33 @@ export async function POST(request: Request) {
     // sweep expires despite its slip. A free order is rewritten COMPLIMENTARY
     // below by FREE_ORDER_COLUMNS.
     const storedPaymentMethod = PAYMENT_METHODS.BANK_TRANSFER;
-    // With the event's province set, the zone comes from the address the
-    // runner gave, not from what the tab posted; a group ships every kit to
-    // that one address for one fee (delivery-split.ts).
-    const delivery = checkoutDelivery(event, {
+    // Priced by the server, never the request: delivery, subtotal, discount,
+    // platform fee and total, with the "Prices have changed" refusals for a
+    // posted subtotal, delivery fee or admin fee that disagree
+    // (lib/checkout-pricing.ts). A bank transfer's transaction fee is zero.
+    const pricing = await priceCheckout(event, {
+      participants,
       logisticsMethod,
       deliveryZone,
       deliveryAddress,
+      promoCode,
+      priceLock,
+      paymentMethod: storedPaymentMethod,
+      posted: { subtotal, deliveryFee, platformFee },
     });
-    if ('error' in delivery) {
-      return NextResponse.json({ error: delivery.error }, { status: 400 });
+    if (pricing.refusal) {
+      return NextResponse.json(pricing.refusal.body, { status: pricing.refusal.status });
     }
-    const { zone } = delivery;
-    const expectedDeliveryFee = delivery.fee;
-    // Category prices plus the large-size surcharge. Checked rather than
-    // trusted: without this, a client could post a subtotal that leaves out the
-    // 4XL surcharge and pay the smaller amount.
-    const expectedSubtotal = subtotalWithUpcharge(
-      participants,
-      event.categories,
-      event.shirtSizeUpcharge
-    );
-
-    // The admin fee is checked a few lines below instead of here, because a
-    // pacer code can waive it (lib/free-checkout.ts) and the code has to be
-    // resolved before we know what the fee should be.
-    if (
-      deliveryFee !== expectedDeliveryFee ||
-      subtotal !== expectedSubtotal
-    ) {
-      return NextResponse.json(
-        // Before the promotions are read, so no total yet (lib/price-changed.ts).
-        priceChangedBody({ subtotal: expectedSubtotal, deliveryFee: expectedDeliveryFee }),
-        { status: 409 }
-      );
-    }
-
-    // The discount is recomputed from the PromoCode row, never read off the
-    // request — the same rule the subtotal and the fees above already live
-    // under. A code that expired, filled up or stopped applying since the
-    // wizard priced it is refused here with the sentence the wizard itself
-    // would have shown, because the two run the same check.
-    // Named rather than inline because the write below needs the same basis:
-    // the seats a repricing promotion claims have to come from the walk that
-    // priced the order, not from a second one built slightly differently.
-    const promoOrder = {
-      runnerPrices: runnerPrices(participants, event.categories, event.shirtSizeUpcharge),
-      runnerCategories: runnerCategories(participants, event.categories),
-      subtotal: expectedSubtotal,
-    };
-    // The runner's price lock, if the wizard sent one (lib/price-lock.ts). A
-    // missing, forged or expired token, or one taken on another event, reads
-    // as no lock and the order is priced at now — so a tab opened before the
-    // wizards sent one still checks out exactly as it did.
-    const lockedAt = await readPriceLock(priceLock, event.id);
-    const discount = await resolveDiscount(event, promoCode, promoOrder, lockedAt?.getTime() ?? null);
-    if (discount.error) {
-      return NextResponse.json({ error: discount.error }, { status: 400 });
-    }
-    const discountAmount = discount.applied?.amount ?? 0;
-
-    // The admin fee, with a pacer's waiver applied if the winning code carries
-    // one. Recomputed from the row like every other amount here: a client that
-    // posted a waived fee it had not earned would be handing itself Run As
-    // One's commission.
-    const expectedPlatformFee = platformFeeAfterDiscount(
-      event.adminFee,
-      participants.length,
-      discount.applied,
-    );
-    // Whether there is anything left to transfer — **the server's own answer**,
-    // from figures it recomputed, never from the request. See
-    // lib/free-checkout.ts.
-    const chargeable = chargeableTotal({
-      subtotal: expectedSubtotal,
-      deliveryFee: expectedDeliveryFee,
-      platformFee: expectedPlatformFee,
+    const {
+      zone,
+      promoOrder,
+      lockedAt,
+      discount,
       discountAmount,
-    });
-    const free = isFreeOrder(chargeable);
-
-    // Every figure the server now holds, handed back with a "Prices have
-    // changed" refusal so the wizard can show the runner the real amount
-    // (lib/price-changed.ts). Worked out before the admin-fee check, all of it
-    // pure arithmetic, so that refusal can name the total too.
-    const serverFigures = {
-      subtotal: expectedSubtotal,
-      deliveryFee: expectedDeliveryFee,
-      discount: discountAmount,
-      platformFee: expectedPlatformFee,
-      transactionFee: 0,
-      total: chargeable,
-    };
-    if (platformFee !== expectedPlatformFee) {
-      return NextResponse.json(priceChangedBody(serverFigures), { status: 409 });
-    }
+      free,
+      total: expectedTotal,
+      figures: serverFigures,
+    } = pricing;
 
     // The total matters more here than on the online route: this runner has
     // already transferred the money and is uploading the slip, so the amount
@@ -372,7 +293,6 @@ export async function POST(request: Request) {
     // bank statement. A bank transfer carries no transaction fee, so a posted
     // one is refused rather than trusted — a negative fee would otherwise pull
     // the total below what the goods cost (Strix vuln-0014).
-    const expectedTotal = chargeable;
     if (totalAmount !== expectedTotal || transactionFee !== 0) {
       return NextResponse.json(priceChangedBody(serverFigures), { status: 409 });
     }

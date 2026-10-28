@@ -7,7 +7,6 @@ import {
   ChevronRight,
   ArrowLeft,
   Plus,
-  Trash2,
   CheckCircle2,
   UploadCloud,
   FileImage,
@@ -41,20 +40,12 @@ import {
 } from "@/lib/registration-codes";
 import BankDetailsModal from "./BankDetailsModal";
 import SizeGuideModal from "./SizeGuideModal";
-import CategoryPicker from "./CategoryPicker";
-import CommunityPicker from "./CommunityPicker";
 import ConsentWaiver, { SIGNATURE_FIELD_ID } from "./ConsentWaiver";
 import { consentSignatureError } from "@/lib/consent-signature";
-import PhoneField from "./PhoneField";
-import GenderField from "./GenderField";
-import BirthdatePicker from "./BirthdatePicker";
-import GuardianConsent from "./GuardianConsent";
-import { ageOn, needsGuardianConsent } from "@/lib/minor-consent";
+import { needsGuardianConsent } from "@/lib/minor-consent";
 import { resolveConsentWaiver } from "@/lib/consent-waiver";
-import ShirtSizeField from "./ShirtSizeField";
 import {
   categoryNeedsShirtSize,
-  shouldAskShirtSize,
   findCategory,
 } from "@/lib/shirt-size";
 import {
@@ -81,7 +72,6 @@ import {
 import { sellsPackages } from "@/lib/event-type";
 import WizardEventHeader from "./WizardEventHeader";
 import { useAlert } from "@/components/ui/AlertProvider";
-import FieldError from "@/components/ui/FieldError";
 import RunnerOverlay from "@/components/ui/RunnerOverlay";
 import {
   focusField,
@@ -94,43 +84,14 @@ import {
 } from "./validation";
 import { useStepReveal } from "./useStepReveal";
 import BusyLabel from "@/components/ui/BusyLabel";
-import RunnerAddressFields, {
+import RunnerCard, { type Participant } from "./RunnerCard";
+import {
   startingAddress,
   withResolvedAddresses,
   withoutRunner,
   restoredSameAs,
 } from "./RunnerAddressFields";
 import "./RegistrationWizard.css";
-
-interface Participant {
-  id: number;
-  categoryId: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  gender: string;
-  birthdate: string;
-  singletSize: string;
-  emergencyContactName: string;
-  emergencyContactPhone: string;
-  medicalConditions: string;
-  runningCommunity: string;
-  /**
-   * Asked only while this runner is 12 or under on race day, and cleared the
-   * moment they are not (lib/minor-consent.ts, GuardianConsent.tsx).
-   */
-  guardianName: string;
-  guardianRelationship: string;
-  guardianConsent: boolean;
-  /** Home address, required of every runner — lib/runner-address.ts. */
-  addressProvince: string;
-  addressCity: string;
-  addressBarangay: string;
-  addressStreet: string;
-  /** The earlier runner (0-based) whose address this one shares, or null. */
-  addressSameAs: number | null;
-}
 
 /** The guardian answers of a runner who does not owe them. */
 const NO_GUARDIAN = {
@@ -1138,258 +1099,28 @@ export default function RegistrationWizardClient({
                 </p>
 
                 {participants.map((p, idx) => (
-                  <div
+                  <RunnerCard
                     key={p.id}
-                    className="participant-form-block mb-10 p-6 rounded-[16px] bg-black/20 border border-white/5 relative"
-                  >
-                    <div className="flex justify-between items-center mb-6 pb-4 border-b border-white/10">
-                      <h3 className="text-2xl font-bold text-white flex items-center gap-2 flex-wrap">
-                        <span className="bg-white/10 w-8 h-8 rounded-full flex items-center justify-center text-sm">
-                          {idx + 1}
-                        </span>
-                        Runner Details
-                        {/* The badge follows the cheapest entry, so it moves
-                            when a runner changes category. That is the rule
-                            being shown, not a decoration. */}
-                        {freeRunners.has(idx) && (
-                          <span className="rounded-full border border-emerald-400/40 bg-emerald-400/10 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider text-emerald-300">
-                            Free
-                          </span>
-                        )}
-                      </h3>
-                      {idx > 0 && (
-                        <button
-                          className="text-red-500 hover:text-red-400 hover:bg-red-500/10 px-3 py-1.5 rounded-lg flex items-center gap-1 transition-colors text-sm font-bold"
-                          onClick={() => removeParticipant(idx)}
-                        >
-                          <Trash2 size={16} /> Remove
-                        </button>
-                      )}
-                    </div>
-
-                    <CategoryPicker
-                      id={runnerFieldId(idx, "categoryId")}
-                      error={errorFor(idx, "categoryId")}
-                      event={event}
-                      selectedId={p.categoryId}
-                      salePrices={salePrices}
-                      onSelect={categoryId =>
-                        handleCategoryChange(idx, categoryId)
-                      }
-                    />
-
-                    <h4 className="mb-3 text-secondary">
-                      Personal Information
-                    </h4>
-                    <div className="form-grid">
-                      <div className="input-group">
-                        <label htmlFor={runnerFieldId(idx, "firstName")}>
-                          First Name
-                        </label>
-                        <input
-                          {...fieldAria(idx, "firstName")}
-                          type="text"
-                          value={p.firstName}
-                          onChange={(e) =>
-                            handleParticipantChange(
-                              idx,
-                              "firstName",
-                              e.target.value,
-                            )
-                          }
-                          placeholder="JUAN"
-                        />
-                        <FieldError
-                          id={`${runnerFieldId(idx, "firstName")}-error`}
-                          message={errorFor(idx, "firstName")}
-                        />
-                      </div>
-                      <div className="input-group">
-                        <label htmlFor={runnerFieldId(idx, "lastName")}>
-                          Last Name
-                        </label>
-                        <input
-                          {...fieldAria(idx, "lastName")}
-                          type="text"
-                          value={p.lastName}
-                          onChange={(e) =>
-                            handleParticipantChange(
-                              idx,
-                              "lastName",
-                              e.target.value,
-                            )
-                          }
-                          placeholder="DELA CRUZ"
-                        />
-                        <FieldError
-                          id={`${runnerFieldId(idx, "lastName")}-error`}
-                          message={errorFor(idx, "lastName")}
-                        />
-                      </div>
-                      <div className="input-group">
-                        <label htmlFor={runnerFieldId(idx, "email")}>
-                          Email Address
-                        </label>
-                        <input
-                          {...fieldAria(idx, "email")}
-                          type="email"
-                          value={p.email}
-                          onChange={(e) =>
-                            handleParticipantChange(
-                              idx,
-                              "email",
-                              e.target.value,
-                            )
-                          }
-                          placeholder="juan@example.com"
-                        />
-                        <FieldError
-                          id={`${runnerFieldId(idx, "email")}-error`}
-                          message={errorFor(idx, "email")}
-                        />
-                      </div>
-                      <PhoneField
-                        label="Mobile Number"
-                        id={runnerFieldId(idx, "phone")}
-                        error={errorFor(idx, "phone")}
-                        value={p.phone}
-                        defaultCountry={defaultCountry}
-                        onChange={(e164) =>
-                          handleParticipantChange(idx, "phone", e164)
-                        }
-                      />
-                      <GenderField
-                        id={runnerFieldId(idx, "gender")}
-                        error={errorFor(idx, "gender")}
-                        value={p.gender}
-                        onChange={(gender) =>
-                          handleParticipantChange(idx, "gender", gender)
-                        }
-                      />
-                      <BirthdatePicker
-                        id={runnerFieldId(idx, "birthdate")}
-                        error={errorFor(idx, "birthdate")}
-                        value={p.birthdate}
-                        onChange={(birthdate) =>
-                          handleParticipantChange(idx, "birthdate", birthdate)
-                        }
-                      />
-                      {needsGuardianConsent(p.birthdate, event.date) && (
-                        <GuardianConsent
-                          runnerIndex={idx}
-                          childName={`${p.firstName} ${p.lastName}`}
-                          age={ageOn(p.birthdate, event.date) ?? 0}
-                          name={p.guardianName}
-                          relationship={p.guardianRelationship}
-                          consent={p.guardianConsent}
-                          onNameChange={(guardianName) =>
-                            handleGuardianChange(idx, { guardianName })
-                          }
-                          onRelationshipChange={(guardianRelationship) =>
-                            handleGuardianChange(idx, { guardianRelationship })
-                          }
-                          onConsentChange={(guardianConsent) =>
-                            handleGuardianChange(idx, { guardianConsent })
-                          }
-                          errorFor={(field) => errorFor(idx, field)}
-                        />
-                      )}
-                      {shouldAskShirtSize(
-                        event.categories,
-                        p.categoryId,
-                      ) && (
-                        <ShirtSizeField
-                          id={runnerFieldId(idx, "singletSize")}
-                          error={errorFor(idx, "singletSize")}
-                          value={p.singletSize}
-                          upcharge={shirtSizeUpcharge}
-                          onChange={(size) =>
-                            handleParticipantChange(idx, "singletSize", size)
-                          }
-                          onOpenSizeGuide={() => setShowSizeGuideModal(true)}
-                          showMeasurements={!event.sizeChartImageUrl}
-                        />
-                      )}
-
-                      <CommunityPicker
-                        value={p.runningCommunity}
-                        options={communityOptions}
-                        onChange={(name) =>
-                          handleParticipantChange(
-                            idx,
-                            "runningCommunity",
-                            name,
-                          )
-                        }
-                        onAdd={rememberCommunity}
-                      />
-                    </div>
-
-                    <RunnerAddressFields
-                      index={idx}
-                      runners={participants}
-                      errors={showErrors ? (runnerErrors[idx] ?? {}) : {}}
-                      onChange={(patch) => handleAddressChange(idx, patch)}
-                    />
-
-                    <h4 className="mt-6 mb-3 text-secondary">
-                      Health & Emergency Info
-                    </h4>
-                    <div className="form-grid">
-                      <div className="input-group">
-                        <label
-                          htmlFor={runnerFieldId(idx, "emergencyContactName")}
-                        >
-                          Emergency Contact Name
-                        </label>
-                        <input
-                          {...fieldAria(idx, "emergencyContactName")}
-                          type="text"
-                          value={p.emergencyContactName}
-                          onChange={(e) =>
-                            handleParticipantChange(
-                              idx,
-                              "emergencyContactName",
-                              e.target.value,
-                            )
-                          }
-                          placeholder="MARIA DELA CRUZ"
-                        />
-                        <FieldError
-                          id={`${runnerFieldId(idx, "emergencyContactName")}-error`}
-                          message={errorFor(idx, "emergencyContactName")}
-                        />
-                      </div>
-                      <PhoneField
-                        label="Emergency Contact No."
-                        id={runnerFieldId(idx, "emergencyContactPhone")}
-                        error={errorFor(idx, "emergencyContactPhone")}
-                        value={p.emergencyContactPhone}
-                        defaultCountry={defaultCountry}
-                        onChange={(e164) =>
-                          handleParticipantChange(
-                            idx,
-                            "emergencyContactPhone",
-                            e164,
-                          )
-                        }
-                      />
-                      <div className="input-group full-width">
-                        <label>Medical Conditions (Optional)</label>
-                        <textarea
-                          value={p.medicalConditions}
-                          onChange={(e) =>
-                            handleParticipantChange(
-                              idx,
-                              "medicalConditions",
-                              e.target.value,
-                            )
-                          }
-                          placeholder="e.g. ASTHMA, ALLERGIES (Leave blank if none)"
-                        ></textarea>
-                      </div>
-                    </div>
-                  </div>
+                    event={event}
+                    index={idx}
+                    runner={p}
+                    runners={participants}
+                    isFree={freeRunners.has(idx)}
+                    salePrices={salePrices}
+                    shirtSizeUpcharge={shirtSizeUpcharge}
+                    defaultCountry={defaultCountry}
+                    communityOptions={communityOptions}
+                    addressErrors={showErrors ? (runnerErrors[idx] ?? {}) : {}}
+                    errorFor={errorFor}
+                    fieldAria={fieldAria}
+                    onRemove={removeParticipant}
+                    onCategoryChange={handleCategoryChange}
+                    onChange={handleParticipantChange}
+                    onGuardianChange={handleGuardianChange}
+                    onAddressChange={handleAddressChange}
+                    onAddCommunity={rememberCommunity}
+                    onOpenSizeGuide={() => setShowSizeGuideModal(true)}
+                  />
                 ))}
 
                 {groupOffer && (
