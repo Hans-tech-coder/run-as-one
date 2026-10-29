@@ -118,12 +118,19 @@ export async function addOnsForEvent(eventId: string): Promise<AdminAddOn[]> {
  * Refused with `SlotsUnavailableError`, the error both checkout routes already
  * answer as a 409 carrying its own sentence: "the order no longer fits" is
  * exactly what a sold-out shirt is, and its message says which item and what
- * is left.
+ * is left. A stock shortfall is the subclass `AddOnStockError`, which also
+ * carries the item and the counts, for a caller that words it for staff.
+ *
+ * `alreadySold` is for an order taking back what it bought
+ * (`retakeAddOnStock`): only the stock can refuse it. An item switched off
+ * or past its cutoff since was still on sale when the order bought it, and
+ * one deleted since is no longer there to count.
  */
 export async function reserveAddOnStock(
   tx: Prisma.TransactionClient,
   lines: readonly Pick<AddOnLine, 'addOnId' | 'quantity'>[],
   now: Date = new Date(),
+  { alreadySold = false }: { alreadySold?: boolean } = {},
 ): Promise<void> {
   const wanted = new Map<string, number>();
   for (const line of lines) wanted.set(line.addOnId, (wanted.get(line.addOnId) ?? 0) + line.quantity);
@@ -134,7 +141,7 @@ export async function reserveAddOnStock(
     Prisma.sql`SELECT "id", "name", "active", "stockLimit", "salesCloseAt" FROM "EventAddOn" WHERE "id" IN (${Prisma.join(ids)}) ORDER BY "id" FOR UPDATE`,
   );
 
-  for (const id of ids) {
+  for (const id of alreadySold ? [] : ids) {
     const item = items.find(row => row.id === id);
     if (!item || !item.active || addOnSalesClosed(item, now)) {
       throw new SlotsUnavailableError(
@@ -150,13 +157,51 @@ export async function reserveAddOnStock(
     const left = stockLeft(item, taken.get(item.id) ?? 0) ?? 0;
     const want = wanted.get(item.id) ?? 0;
     if (want > left) {
-      throw new SlotsUnavailableError(
+      throw new AddOnStockError(
         left === 0
           ? `${item.name} has just sold out. Remove it from the order and try again.`
           : `Only ${left} ${item.name} ${left === 1 ? 'is' : 'are'} left. Lower the quantity and try again.`,
+        item.name,
+        left,
+        want,
       );
     }
   }
+}
+
+/** `reserveAddOnStock`'s stock shortfall: which item, what is left, what the order wants. */
+export class AddOnStockError extends SlotsUnavailableError {
+  constructor(
+    message: string,
+    readonly item: string,
+    readonly left: number,
+    readonly wanted: number,
+  ) {
+    super(message);
+    this.name = 'AddOnStockError';
+  }
+}
+
+/**
+ * **An order taking its add-ons back** — the status route moving an expired,
+ * cancelled or refunded order to PAID or PENDING, right after `reserveSlots`
+ * takes its seats back, under the same locks in the same order (categories,
+ * then items by id). The order's lines stopped counting when it left PAID or
+ * PENDING, and the pieces may have sold since; this is the locked count that
+ * stops a late bank slip overselling them. Lines on removed runners and lines
+ * whose item was deleted (`addOnId` null) take nothing.
+ */
+export async function retakeAddOnStock(tx: Prisma.TransactionClient, registrationId: string): Promise<void> {
+  const lines = await tx.runnerAddOn.findMany({
+    where: { addOnId: { not: null }, runner: { registrationId, deletedAt: null } },
+    select: { addOnId: true, quantity: true },
+  });
+  await reserveAddOnStock(
+    tx,
+    lines.flatMap(line => (line.addOnId ? [{ addOnId: line.addOnId, quantity: line.quantity }] : [])),
+    new Date(),
+    { alreadySold: true },
+  );
 }
 
 type PublicReadClient = Pick<Prisma.TransactionClient, 'runnerAddOn' | 'eventAddOn'>;

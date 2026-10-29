@@ -38,6 +38,7 @@ import { getSignedInUser } from '@/lib/signed-in-user';
 import { deliverConfirmationEmail } from '@/lib/email-delivery';
 import { releaseRedemption } from '@/lib/pending-expiry';
 import { SLOT_HOLDING_STATUSES, SlotsUnavailableError, reserveSlots } from '@/lib/registration-gate';
+import { AddOnStockError, retakeAddOnStock } from '@/lib/add-on-stock';
 import { EMAIL_RUNNER_INCLUDE } from '@/lib/email';
 
 /**
@@ -210,7 +211,8 @@ export async function PATCH(
 
       // This order gave its slot back (expired, cancelled or refunded). Taking
       // it again is the same locked count checkout makes, so validating a late
-      // slip or undoing a cancellation cannot oversell a race that has refilled.
+      // slip or undoing a cancellation cannot oversell a race that has refilled,
+      // nor an add-on whose last pieces sold in the meantime.
       const holdsSlot = (s: string) => (SLOT_HOLDING_STATUSES as readonly string[]).includes(s);
       if (wantsStatus && !holdsSlot(existing.status) && holdsSlot(status)) {
         const categories = await tx.category.findMany({
@@ -222,6 +224,7 @@ export async function PATCH(
           select: { categoryId: true },
         });
         await reserveSlots(tx, categories, runners);
+        await retakeAddOnStock(tx, id);
       }
 
       const updated = await tx.registration.update({
@@ -314,7 +317,21 @@ export async function PATCH(
       );
     }
     // The runner-facing wording in the error ("go back to step 1") is for a
-    // checkout, so the organizer gets their own.
+    // checkout, so the organizer gets their own. An add-on short of stock is
+    // a SlotsUnavailableError too, so it is caught first: the race may have
+    // room, and staff need to know which item ran out.
+    if (error instanceof AddOnStockError) {
+      return NextResponse.json(
+        {
+          error: `${
+            error.left === 0
+              ? `${error.item} has sold out`
+              : `Only ${error.left} ${error.item} ${error.left === 1 ? 'is' : 'are'} left and this order has ${error.wanted}`
+          }, so nothing was changed. This order gave its pieces back when it expired or was cancelled, and they sold in the meantime. Raise that add-on's stock to make room, or refund the runner.`,
+        },
+        { status: 409 }
+      );
+    }
     if (error instanceof SlotsUnavailableError) {
       return NextResponse.json(
         {

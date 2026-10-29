@@ -25,7 +25,8 @@ import { NO_ORDERS, settle } from '../src/lib/settlement';
  * its quantity and nothing else, and the Run As One share is read off each
  * line's own seller — and that a posted pick the screen would not have offered
  * is refused rather than sold. Touches no database, like
- * `check-runner-money.ts`.
+ * `check-runner-money.ts`: the locked stock count (`add-on-stock.ts`) runs on a
+ * stand-in transaction that answers its three queries.
  *
  *   PowerShell:
  *     $env:JITI_ALIAS='{"@/":"C:/Users/user/Web Projects/run-as-one/src/"}'
@@ -265,8 +266,107 @@ check(
   ],
 );
 
-if (failures > 0) {
-  console.error(`\n${failures} check(s) failed.`);
-  process.exit(1);
+// ── Taking stock back on reinstatement (Strix vuln-0001) ──
+// An expired order's shirt stopped counting when it left PENDING. Staff
+// validating its late slip must take the shirt again under the lock, and be
+// refused if it sold in the meantime — by stock only, not by a switch or a
+// cutoff that came after the order bought it.
+
+type StockRow = { id: string; name: string; active: boolean; stockLimit: number | null; salesCloseAt: Date | null };
+
+/** Answers `reserveAddOnStock`'s three queries from fixed rows, and records what it was asked. */
+function standInTx(rows: StockRow[], taken: Record<string, number>, lines: { addOnId: string | null; quantity: number }[]) {
+  const asked = { locked: 0, linesWhere: null as unknown };
+  const tx = {
+    $queryRaw: async () => {
+      asked.locked++;
+      return rows;
+    },
+    runnerAddOn: {
+      findMany: async (args: { where: unknown }) => {
+        asked.linesWhere = args.where;
+        return lines;
+      },
+      groupBy: async () => Object.entries(taken).map(([addOnId, quantity]) => ({ addOnId, _sum: { quantity } })),
+    },
+  };
+  return { tx: tx as never, asked };
 }
-console.log('\nAll add-on checks passed.');
+
+async function checkStockRetake() {
+  // add-on-stock.ts imports the database client, which needs a URL to load;
+  // the stand-in transaction means it never connects.
+  process.env.DATABASE_URL ??= 'postgresql://unused@localhost:5432/unused';
+  const { AddOnStockError, reserveAddOnStock, retakeAddOnStock } = await import('../src/lib/add-on-stock');
+  // The alias add-on-stock.ts itself imports it by, so `instanceof` sees one class.
+  const { SlotsUnavailableError } = await import('@/lib/registration-gate');
+
+  const outcome = async (run: () => Promise<void>): Promise<string> => {
+    try {
+      await run();
+      return 'taken';
+    } catch (error) {
+      if (error instanceof AddOnStockError) return `short: ${error.item} left ${error.left} wanted ${error.wanted}`;
+      if (error instanceof SlotsUnavailableError) return `refused: ${error.message}`;
+      throw error;
+    }
+  };
+  const shirt = (o: Partial<StockRow> = {}): StockRow => ({
+    id: 'shirt', name: 'COMMEMORATIVE SHIRT', active: true, stockLimit: 1, salesCloseAt: null, ...o,
+  });
+  const oneShirt = [{ addOnId: 'shirt', quantity: 1 }];
+
+  const full = standInTx([shirt()], { shirt: 1 }, oneShirt);
+  check(
+    'reinstating when the last shirt sold since is refused, naming the shirt',
+    await outcome(() => retakeAddOnStock(full.tx, 'reg-1')),
+    'short: COMMEMORATIVE SHIRT left 0 wanted 1',
+  );
+  check(
+    'the order’s lines are read without removed runners or deleted items',
+    full.asked.linesWhere,
+    { addOnId: { not: null }, runner: { registrationId: 'reg-1', deletedAt: null } },
+  );
+
+  const roomy = standInTx([shirt({ stockLimit: 3 })], { shirt: 1 }, [{ addOnId: 'shirt', quantity: 2 }]);
+  check('reinstating with stock left takes it', await outcome(() => retakeAddOnStock(roomy.tx, 'reg-1')), 'taken');
+  const tight = standInTx([shirt({ stockLimit: 3 })], { shirt: 2 }, [{ addOnId: 'shirt', quantity: 2 }]);
+  check(
+    'reinstating 2 when 1 is left is refused with the count',
+    await outcome(() => retakeAddOnStock(tight.tx, 'reg-1')),
+    'short: COMMEMORATIVE SHIRT left 1 wanted 2',
+  );
+
+  const offAndClosed = shirt({ active: false, salesCloseAt: new Date('2026-01-01T00:00:00Z'), stockLimit: 5 });
+  const late = standInTx([offAndClosed], { shirt: 1 }, oneShirt);
+  check('a shirt switched off and past its cutoff since is still taken back', await outcome(() => retakeAddOnStock(late.tx, 'reg-1')), 'taken');
+  const lateCheckout = standInTx([offAndClosed], {}, []);
+  check(
+    'checkout still refuses that shirt',
+    await outcome(() => reserveAddOnStock(lateCheckout.tx, oneShirt)),
+    'refused: COMMEMORATIVE SHIRT is no longer on sale. Remove it from the order and try again.',
+  );
+
+  const deleted = standInTx([], {}, [{ addOnId: null, quantity: 1 }]);
+  check(
+    'a line whose item was deleted takes nothing and locks nothing',
+    [await outcome(() => retakeAddOnStock(deleted.tx, 'reg-1')), deleted.asked.locked],
+    ['taken', 0],
+  );
+
+  const soldOut = standInTx([shirt()], { shirt: 1 }, []);
+  const checkoutError = await reserveAddOnStock(soldOut.tx, oneShirt).then(() => null, (error: unknown) => error);
+  check(
+    'checkout’s sold-out refusal is still a SlotsUnavailableError with the runner’s sentence',
+    [checkoutError instanceof SlotsUnavailableError, (checkoutError as Error | null)?.message],
+    [true, 'COMMEMORATIVE SHIRT has just sold out. Remove it from the order and try again.'],
+  );
+}
+
+checkStockRetake().then(() => {
+  if (failures > 0) {
+    console.error(`\n${failures} check(s) failed.`);
+    process.exit(1);
+  }
+  console.log('\nAll add-on checks passed.');
+});
