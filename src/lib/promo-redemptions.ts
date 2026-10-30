@@ -205,7 +205,7 @@ export type PromoRedemption = {
   status: string;
   /** Centavos this promotion took off this order — its own share on a combined one. */
   discountAmount: number;
-  /** Centavos of Run As One's admin fee this order did not pay — free entries only, else 0. */
+  /** Centavos of Run As One's admin fee this order did not pay — paid free entries only, else 0. */
   feeWaived: number;
   createdAt: string;
 };
@@ -272,8 +272,10 @@ export async function redemptionsFor(
         discountAmount: asDeal
           ? row.combinedDiscountAmount
           : row.discountAmount - row.combinedDiscountAmount,
+        // Paid orders only, like `spendByCode`: an order that expired or was
+        // cancelled unpaid never waived anything.
         feeWaived:
-          row.discountType === DISCOUNT_TYPES.FREE_ENTRY
+          row.discountType === DISCOUNT_TYPES.FREE_ENTRY && row.status === MONEY_MOVED_STATUS
             ? feeWaivedOn({
                 platformFee: row.platformFee,
                 adminFee: row.event.adminFee,
