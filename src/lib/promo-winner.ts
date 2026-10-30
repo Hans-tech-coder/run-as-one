@@ -127,6 +127,9 @@ function combine(
  * code unspent besides. A pacer on somebody else's race is not a shopper
  * looking for the best deal; they were handed one specific thing.
  *
+ * **A `FREE_ENTRY` promotion wins outright too**, for the same fee it waives
+ * (`winsOutright`).
+ *
  * `at` is the moment whose date windows count — now, unless a price lock asks
  * for another (`bestDiscountLocked` below).
  */
@@ -148,10 +151,10 @@ export function bestDiscount(
     if (!applied) continue;
     eligible.push(promo);
 
-    if (best?.type === DISCOUNT_TYPES.PACER) continue;
+    if (winsOutright(best)) continue;
 
     if (
-      applied.type === DISCOUNT_TYPES.PACER ||
+      winsOutright(applied) ||
       !best ||
       applied.amount > best.amount ||
       (applied.amount === best.amount && applied.automatic && !best.automatic)
@@ -160,7 +163,7 @@ export function bestDiscount(
     }
   }
 
-  if (best?.type === DISCOUNT_TYPES.PACER) return best;
+  if (winsOutright(best)) return best;
 
   for (const price of eligible.filter(isCombinablePrice)) {
     for (const deal of eligible.filter(isCombinableDeal)) {
@@ -184,8 +187,8 @@ export function bestDiscount(
  *
  * The one function both wizards' summaries and `resolveDiscount` call, so the
  * total a runner is shown and the total the checkout charges cannot drift
- * apart. A tie goes to now, and a pacer code wins outright as in
- * `bestDiscount`.
+ * apart. A tie goes to now, and a pacer code or a free entry wins outright
+ * as in `bestDiscount`.
  */
 export function bestDiscountLocked(
   promos: (PromoTerms | null | undefined)[],
@@ -198,9 +201,20 @@ export function bestDiscountLocked(
   const locked = bestDiscount(promos, order, lockedAt);
   if (!locked) return now;
   if (!now) return locked;
-  if (now.type === DISCOUNT_TYPES.PACER) return now;
-  if (locked.type === DISCOUNT_TYPES.PACER) return locked;
+  if (winsOutright(now)) return now;
+  if (winsOutright(locked)) return locked;
   return locked.amount > now.amount ? locked : now;
+}
+
+/**
+ * Whether this discount beats every other whatever the amounts say: a pacer
+ * code, or a `FREE_ENTRY` promotion. Both are the whole entry, so nothing can
+ * outbid them, and the admin fee one of them waives is money `amount` does
+ * not see — a tie lost to an automatic promotion would charge the fee the
+ * runner was told was covered.
+ */
+function winsOutright(applied: AppliedDiscount | null): boolean {
+  return applied?.type === DISCOUNT_TYPES.PACER || applied?.type === DISCOUNT_TYPES.FREE_ENTRY;
 }
 
 /**

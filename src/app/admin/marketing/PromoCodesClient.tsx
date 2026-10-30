@@ -97,6 +97,8 @@ type PromoRow = {
    */
   given: number;
   paidOrders: number;
+  /** Centavos of Run As One's admin fee waived on paid orders — FREE_ENTRY only. */
+  feeWaived: number;
   validFrom: string | null;
   validUntil: string | null;
   buyQuantity: number | null;
@@ -148,6 +150,8 @@ type Group = {
   left: number | null;
   /** Centavos given away across every code of this promotion, paid orders only. */
   given: number;
+  /** Run As One's admin fee waived across them, kept apart from `given`. */
+  feeWaived: number;
   /** How many of those redemptions reached PAID. */
   paid: number;
 };
@@ -391,6 +395,27 @@ function UsedCount({ group }: { group: Group }) {
 }
 
 /**
+ * The Given column, for the table cell and the card alike. A free entry's
+ * waived admin fee sits under the entries rather than inside them: the entries
+ * were the organizer's to give, the fee was Run As One's, and adding the two
+ * would make *Given Away* overstate what the organizer spent.
+ */
+function GivenAmount({ group }: { group: Group }) {
+  return (
+    <>
+      <span className={`block ${group.given > 0 ? '' : 'text-secondary'}`}>
+        &#8369;{formatPesos(group.given)}
+      </span>
+      {group.feeWaived > 0 && (
+        <span className="text-xs text-secondary">
+          {`+ ₱${formatPesos(group.feeWaived)} admin fee waived`}
+        </span>
+      )}
+    </>
+  );
+}
+
+/**
  * A batch's vouchers and the button that copies them — the opened table row
  * from `lg` up, the inside of the card's disclosure below it. One component,
  * so the codes an organizer copies on a phone are the ones the table lists.
@@ -442,9 +467,12 @@ function VoucherCodes({
 export default function PromoCodesClient({
   initialPromos,
   events,
+  canGiveFreeEntry,
 }: {
   initialPromos: PromoRow[];
   events: EventOption[];
+  /** Whether this person holds `promo:waive-fee`, which a free entry needs. */
+  canGiveFreeEntry: boolean;
 }) {
   const router = useRouter();
   // Shadows window.alert on purpose — see AlertProvider.
@@ -932,11 +960,7 @@ export default function PromoCodesClient({
       id: "given",
       header: "Given",
       accessorFn: row => row.given,
-      cell: ({ row }) => (
-        <span className={row.original.given > 0 ? '' : 'text-secondary'}>
-          &#8369;{formatPesos(row.original.given)}
-        </span>
-      ),
+      cell: ({ row }) => <GivenAmount group={row.original} />,
     },
     {
       id: "status",
@@ -1093,6 +1117,8 @@ export default function PromoCodesClient({
   // Percentage or fixed: a value per runner, optional categories, and a limit
   // counted in runners.
   const perRunner = limitCountsRunners(type);
+  // A free entry is a per-runner kind with no number to type: always 100%.
+  const hasValue = perRunner && type !== DISCOUNT_TYPES.FREE_ENTRY;
 
   return (
     <>
@@ -1287,14 +1313,7 @@ export default function PromoCodesClient({
                 full: true,
               },
               { label: 'Used', value: <UsedCount group={row.original} /> },
-              {
-                label: 'Given',
-                value: (
-                  <span className={row.original.given > 0 ? '' : 'text-secondary'}>
-                    &#8369;{formatPesos(row.original.given)}
-                  </span>
-                ),
-              },
+              { label: 'Given', value: <GivenAmount group={row.original} /> },
             ]}
             expanded={row => {
               const group = row.original;
@@ -1417,7 +1436,11 @@ export default function PromoCodesClient({
               <h3 id="promo-redemptions-title" className="text-xl font-semibold text-primary m-0">Redemptions</h3>
               {redemptionsOf && (
                 <p className="text-sm text-secondary mt-1 m-0 [overflow-wrap:anywhere]">
-                  {`${redemptionsOf.batchLabel ?? redemptionsOf.terms.code} · ${redemptionsOf.used} redeemed · ₱${formatPesos(redemptionsOf.given)} given away`}
+                  {`${redemptionsOf.batchLabel ?? redemptionsOf.terms.code} · ${redemptionsOf.used} redeemed · ₱${formatPesos(redemptionsOf.given)} given away${
+                    redemptionsOf.feeWaived > 0
+                      ? ` · ₱${formatPesos(redemptionsOf.feeWaived)} admin fee waived`
+                      : ''
+                  }`}
                 </p>
               )}
             </div>
@@ -1486,6 +1509,11 @@ export default function PromoCodesClient({
                       <span className="text-sm font-bold text-primary">
                         {`−₱${formatPesos(order.discountAmount)}`}
                       </span>
+                      {order.feeWaived > 0 && (
+                        <span className="text-xs text-secondary">
+                          {`+ ₱${formatPesos(order.feeWaived)} admin fee`}
+                        </span>
+                      )}
                       <span
                         className={`status-badge ${order.status === 'PAID' ? 'success' : 'pending'}`}
                       >
@@ -1612,6 +1640,18 @@ export default function PromoCodesClient({
                       label: DISCOUNT_TYPE_LABELS.FIXED,
                       hint: "₱200 off each runner's entry",
                     },
+                    // Offered only to `promo:waive-fee`: the admin fee it
+                    // waives is Run As One's, and the routes refuse it to
+                    // anyone else with the same sentence.
+                    ...(canGiveFreeEntry
+                      ? [
+                          {
+                            value: DISCOUNT_TYPES.FREE_ENTRY,
+                            label: DISCOUNT_TYPE_LABELS.FREE_ENTRY,
+                            hint: 'One runner pays nothing, admin fee included',
+                          },
+                        ]
+                      : []),
                   ]}
                 />
                 <AdminSelect
@@ -1634,7 +1674,7 @@ export default function PromoCodesClient({
               {/* What a per-runner discount is worth. The unit sits inside the
                   box, so "20" can only be read one way; the value is cleared
                   when the kind switches for the same reason. */}
-              {perRunner && (
+              {hasValue && (
                 <div className="form-group">
                   <label className="form-label" htmlFor="promo-value">
                     {type === DISCOUNT_TYPES.PERCENTAGE ? 'Percentage off' : 'Amount off'}
@@ -2009,7 +2049,9 @@ export default function PromoCodesClient({
                     ? 'A discounted category price is shown on the event page beside the option it reprices, so there is nothing to hand out and no code to type.'
                     : CLAIMS.find(option => option.value === claim)?.hint}
                   {perRunner &&
-                    ' Automatic is not offered for a percentage or a fixed amount. For an early bird, use a discounted category price.'}
+                    (type === DISCOUNT_TYPES.FREE_ENTRY
+                      ? ' A free entry is never automatic: only a runner given the code gets it, one runner per order.'
+                      : ' Automatic is not offered for a percentage or a fixed amount. For an early bird, use a discounted category price.')}
                 </p>
               </div>
 
@@ -2018,8 +2060,9 @@ export default function PromoCodesClient({
                   only pairing lib/promo-winner.ts gives. Said in the hint,
                   because switching one on alone and seeing nothing change
                   would read as a broken control. The admin form's own
-                  switch, like the event form's settings. */}
-              <div className="form-group">
+                  switch, like the event form's settings. Not drawn for a free
+                  entry, which never combines (the route forces it off). */}
+              <div className="form-group" hidden={type === DISCOUNT_TYPES.FREE_ENTRY}>
                 <AdminSwitch
                   on={form.combinable}
                   label="Combine with other promotions"
@@ -2053,8 +2096,9 @@ export default function PromoCodesClient({
                   />
                   <FieldError id="promo-limit-error" message={errorFor('usageLimit')} />
                   <p id="promo-limit-hint" className="text-xs text-secondary">
-                    How many runners can get this discount in total. A group of 5 uses 5. Leave
-                    blank for no limit.
+                    {type === DISCOUNT_TYPES.FREE_ENTRY
+                      ? 'How many free entries this code gives in total, one runner per order. Leave blank for no limit.'
+                      : 'How many runners can get this discount in total. A group of 5 uses 5. Leave blank for no limit.'}
                     {editing && editing.used > 0
                       ? ` ${editing.used} runner${editing.used === 1 ? ' has' : 's have'} already got it, so the limit cannot go below that.`
                       : ''}
@@ -2063,8 +2107,9 @@ export default function PromoCodesClient({
               )}
               {perRunner && claim === 'VOUCHERS' && (
                 <p className="-mt-3 m-0 text-xs text-secondary">
-                  Each voucher covers one runner on one order: the runner with the most expensive
-                  entry among those it applies to.
+                  {type === DISCOUNT_TYPES.FREE_ENTRY
+                    ? 'Each voucher is one free entry, admin fee included, for a runner registering on their own.'
+                    : 'Each voucher covers one runner on one order: the runner with the most expensive entry among those it applies to.'}
                 </p>
               )}
 
@@ -2264,6 +2309,7 @@ function groupPromos(promos: PromoRow[]): Group[] {
       existing.codes.push(promo);
       existing.used += promo.usageCount;
       existing.given += promo.given;
+      existing.feeWaived += promo.feeWaived;
       existing.paid += promo.paidOrders;
       if (existing.left !== null) {
         existing.left += remaining(promo) ?? 0;
@@ -2278,6 +2324,7 @@ function groupPromos(promos: PromoRow[]): Group[] {
       used: promo.usageCount,
       left: remaining(promo),
       given: promo.given,
+      feeWaived: promo.feeWaived,
       paid: promo.paidOrders,
     });
   }
@@ -2336,7 +2383,9 @@ function formFrom(group: Group): typeof BLANK_FORM {
         .map(entry => [entry.categoryId, String(entry.usageLimit)]),
     ),
     // A percent is stored as typed; a fixed amount is centavos, back to pesos.
-    discountValue: !limitCountsRunners(promo.discountType)
+    // A free entry has no number of its own.
+    discountValue: !limitCountsRunners(promo.discountType) ||
+      promo.discountType === DISCOUNT_TYPES.FREE_ENTRY
       ? ''
       : promo.discountType === DISCOUNT_TYPES.FIXED
         ? String(promo.discountValue / 100)

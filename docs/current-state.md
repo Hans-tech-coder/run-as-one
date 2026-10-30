@@ -27,6 +27,22 @@ and `certificateCoordinates` through without the certificate route's checks
 (Strix's note, older than this release); over-limit album errors point at row
 6; `RacePhotoLinks` uses a fixed heading id.
 
+**Free entry promotion (2026-10-30, uncommitted).** A sixth discount kind,
+`FREE_ENTRY`, labelled *Free entry (incl. admin fee)* on `/admin/marketing`:
+the whole entry **and** Run As One's admin fee, for **one runner on an order
+of one** (a group is refused with a sentence saying to register that runner
+alone). Shared code or single-use vouchers, never automatic, never combined;
+optional category restriction and runner limit like `PERCENTAGE`/`FIXED`;
+delivery and add-ons still paid. It wins outright over any other promotion,
+like a pacer code. The table's *Given* column, the redemptions panel and the
+*Given Away* card show the admin fee waived **apart** from the organizer's
+entries. **`promo:waive-fee` now covers `ADMIN` as well as `OWNER`** (owner's
+decision, same day), so admins can also switch on a pacer's fee waiver. No
+migration. Checked end to end on `local-dev`: code `FREEQA` (32KM BEYOND 21,
+runner limit 2) gave order `RM-7D3A8261` — one 5K runner, ₱0, no payment
+step, written `PAID` with `platformFee` 0 — and was refused on a two-runner
+order, which kept its full ₱2,333.
+
 **Public page cache, Batches 1–2 (2026-10-28, on `dev`, Batch 2 not
 committed; `PUBLIC_PAGE_CACHE_PLAN.md`).** Vercel Hobby's 4 h of Fluid Active
 CPU per 30 days was at 3 h 27 m because no public page was ever cached: 77% of

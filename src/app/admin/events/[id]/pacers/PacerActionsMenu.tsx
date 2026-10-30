@@ -71,8 +71,8 @@ export default function PacerActionsMenu({
   onEdit: () => void;
   onTogglePause: () => void;
   /**
-   * Turning Run As One's admin fee waiver on or off. **Undefined for anyone but
-   * the Super Admin**, which is how the item is withheld — the same way the
+   * Turning Run As One's admin fee waiver on or off. **Undefined for anyone
+   * without `promo:waive-fee`**, which is how the item is withheld — the same way the
    * events table withholds Delete: by not passing its handler, so the screen and
    * the route decide it from one `can()`.
    */
@@ -236,7 +236,7 @@ export default function PacerActionsMenu({
           {isPaused ? <PlayCircle size={16} /> : <PauseCircle size={16} />}
           {isPaused ? 'Resume' : 'Pause'}
         </button>
-        {/* Last of the reversible items, and only for the Super Admin: this is
+        {/* Last of the reversible items, and only for `promo:waive-fee`: this is
             the one thing in this menu that is about Run As One's own money
             rather than the organizer's entry. */}
         {onToggleFeeWaiver && (

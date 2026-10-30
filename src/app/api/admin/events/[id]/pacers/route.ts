@@ -17,9 +17,9 @@ import { PACER_SELECT, pacerBibTaken, pacersForEvent } from '@/lib/pacer-store';
  * **Managing pacers is `promo:manage`** (OWNER and ADMIN), the same verb that
  * guards promotions, because both are the organizer giving away its own
  * entries. **Waiving Run As One's admin fee is `promo:waive-fee`** (OWNER
- * alone), because that one is not the organizer's money to give — and it is
- * checked here rather than trusted from the form, which could simply post
- * `true`.
+ * and ADMIN since 2026-10-30), a verb of its own because that one is not the
+ * organizer's money to give — and it is checked here rather than trusted from
+ * the form, which could simply post `true`.
  *
  * Every write is scoped to the actor's own organizer's event: an id in the URL
  * is not proof the race belongs to the browser's owner, and without the
@@ -100,7 +100,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const body = await request.json();
     const input = pacerFromInput(body, {
       eventCategoryIds: event.categories.map(category => category.id),
-      // The Super Admin alone. Asked of the matrix rather than of the role
+      // The Super Admin and admins. Asked of the matrix rather than of the role
       // string, so the day the owner decides otherwise it is one edit in
       // permissions.ts and no edit here.
       canWaiveAdminFee: can(actor, 'promo:waive-fee', { organizerId: actor.orgId, eventId: id }),

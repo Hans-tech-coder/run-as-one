@@ -246,16 +246,20 @@ shape:
   2026-09-19 by `MARKETING_DISCOUNTS_PLAN.md`: `discountValue` is the whole
   percent 1–100 or the centavos off, taken off **each discounted runner's entry
   line** — category price plus shirt upcharge — and never off a fee; a fixed
-  amount is capped at that runner's entry), or **`PACER`** (a free entry for one
+  amount is capped at that runner's entry), **`FREE_ENTRY`** (2026-10-30: a
+  per-runner kind fixed at 100% that **also waives Run As One's admin fee**,
+  for **one runner on an order of one** — a group is refused, never part-applied;
+  delivery and add-ons are still paid; never combinable; set up only by
+  `promo:waive-fee`), or **`PACER`** (a free entry for one
   named pacer, `PACER_DISCOUNT_PLAN.md`, migration
   `20260922100000_pacer_codes`). `discountValue` is 0 for the two
-  older kinds and for `PACER`, whose discount is always the whole entry line. The per-runner kinds are claimed by one shared code or
+  older kinds, for `FREE_ENTRY` and for `PACER`, whose discount is always the whole entry line. No migration added `FREE_ENTRY`: the column is text, guarded by `asDiscountType`. The per-runner kinds are claimed by one shared code or
   single-use vouchers, **never automatically** (owner's decision; the early
   bird is `CATEGORY_PRICE`). `eventId` scopes it to one event; null means every
   event that organizer runs, which a `CATEGORY_PRICE` promotion may never be,
   since categories belong to an event. A promotion's window is
   `validFrom`/`validUntil`, both optional. **`usageLimit` counts runners for
-  `PERCENTAGE` and `FIXED` and orders for the older kinds**
+  `PERCENTAGE`, `FIXED` and `FREE_ENTRY` and orders for the older kinds**
   (`limitCountsRunners` in `discount.ts`): a shared per-runner code may carry a
   runner limit (blank = none, never set below the runners already counted), and
   a group of five uses five. The older kinds set none from the form. **A
@@ -280,9 +284,11 @@ shape:
 - **PromoCode, the three pacer columns** (`PACER_DISCOUNT_PLAN.md`, Batch 1).
   **`waiveAdminFee`** — whether this pacer's free entry also waives Run As One's
   admin fee, which is what makes the whole order ₱0 and skips the payment step.
-  It is the **one deliberate exception** to "fees are never discounted", and
-  **only `promo:waive-fee` (OWNER) may set it**, because the admin fee is Run As
-  One's own money (`settlement.ts`) rather than the organizer's to give away.
+  It and the `FREE_ENTRY` kind (which waives the fee by its kind and never
+  reads this column) are the **only exceptions** to "fees are never
+  discounted", and **only `promo:waive-fee` (OWNER and ADMIN) may set it**,
+  because the admin fee is Run As One's own money (`settlement.ts`) rather
+  than the organizer's to give away.
   **`assigneeName`** — the pacer's name, uppercase like every other stored name,
   shown only in the dashboard: a pacer code is given to a person, so the screen
   has to be able to say whose it is. **`bibNumber`** — the pacer's race bib,
@@ -321,7 +327,7 @@ shape:
   the code alone: a lookup always arrives through an event, so we know whose
   code we want, and the global constraint only stopped the second organizer to
   think of "EARLYBIRD". See `discount.ts`.
-- **PromoCategory** — one category a `PERCENTAGE`, `FIXED` or `PACER` discount
+- **PromoCategory** — one category a `PERCENTAGE`, `FIXED`, `FREE_ENTRY` or `PACER` discount
   is restricted to: `promoCodeId`, `categoryId`, unique per pair, cascading on
   both sides (migration `20260919180000_promo_category`). **No rows means every
   category**, the default. Only offered when the promotion names one event, and

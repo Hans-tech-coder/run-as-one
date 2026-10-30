@@ -185,9 +185,13 @@ export async function promoTermsFromInput(
   let categoryIds: string[] = [];
   let usageLimit: number | null = null;
   if (limitCountsRunners(type)) {
-    const value = discountValueFromInput(type, input.discountValue);
-    if ('problem' in value) return value;
-    discountValue = value.discountValue;
+    // A free entry has no number to type: it is always the whole entry, read
+    // as 100% by `perRunnerSavings`, so the column keeps 0 like a pacer's.
+    if (type !== DISCOUNT_TYPES.FREE_ENTRY) {
+      const value = discountValueFromInput(type, input.discountValue);
+      if ('problem' in value) return value;
+      discountValue = value.discountValue;
+    }
 
     const scoped = await categoryIdsFromInput(input.categoryIds, scopedEventId);
     if ('problem' in scoped) return scoped;
@@ -207,10 +211,14 @@ export async function promoTermsFromInput(
     return problem('The end is before the start.', 'validUntil');
   }
 
-  // Every marketing kind may be marked; a pacer's free entry never stacks, and
-  // a kind with nothing to pair with (see lib/promo-winner.ts) simply never
-  // finds a partner, which needs no refusal here.
-  const combinable = input.combinable === true && type !== DISCOUNT_TYPES.PACER;
+  // Every marketing kind may be marked; a free entry — a pacer's or a
+  // FREE_ENTRY promotion — never stacks, and a kind with nothing to pair with
+  // (see lib/promo-winner.ts) simply never finds a partner, which needs no
+  // refusal here.
+  const combinable =
+    input.combinable === true &&
+    type !== DISCOUNT_TYPES.PACER &&
+    type !== DISCOUNT_TYPES.FREE_ENTRY;
 
   return {
     data: {

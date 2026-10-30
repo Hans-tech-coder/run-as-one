@@ -23,7 +23,7 @@ import { formatPesos } from '@/lib/money';
  */
 
 /**
- * The five kinds of discount. Stored UPPERCASE like every other coded column
+ * The six kinds of discount. Stored UPPERCASE like every other coded column
  * in this schema.
  *
  * `CATEGORY_PRICE` and `BUY_X_GET_Y` are the race-shaped kinds: a second price
@@ -34,11 +34,15 @@ import { formatPesos } from '@/lib/money';
  * never off a fee. Which runners one of them reaches is decided by
  * `perRunnerSavings`, and its cap counts runners (`limitCountsRunners`).
  *
- * `PACER` is the odd one out, and deliberately so: the other four are
- * marketing, offered to whoever qualifies, and a pacer code is a free entry
- * handed to one named person so they will run the race for the organizer. It
- * is the only kind that can reach a fee, and the only one managed outside
- * `/admin/marketing`.
+ * `FREE_ENTRY` is a third number-off kind with the number fixed at 100%, plus
+ * the one thing the other marketing kinds never do: it waives Run As One's
+ * admin fee too.
+ *
+ * `PACER` is the odd one out, and deliberately so: the others are marketing,
+ * offered to whoever qualifies, and a pacer code is a free entry handed to one
+ * named person so they will run the race for the organizer. It is the only
+ * kind managed outside `/admin/marketing`. It and `FREE_ENTRY` are the only
+ * two that can reach a fee.
  */
 export const DISCOUNT_TYPES = {
   /**
@@ -54,6 +58,15 @@ export const DISCOUNT_TYPES = {
   PERCENTAGE: 'PERCENTAGE',
   /** ₱200 off each discounted runner's entry. `discountValue` is centavos. */
   FIXED: 'FIXED',
+  /**
+   * A whole free entry, Run As One's admin fee included, for **one runner on
+   * an order of one** (owner, 2026-10-30). A shared code or single-use
+   * vouchers, never automatic, never combined. `discountValue` is unused: it
+   * is always 100% of the entry line. Delivery and add-ons are still paid, as
+   * for a pacer. Setting one up is `promo:waive-fee`, because the fee it
+   * gives away is the platform's, not the organizer's.
+   */
+  FREE_ENTRY: 'FREE_ENTRY',
   /**
    * A free entry for one named pacer, in one category of one race
    * (`PACER_DISCOUNT_PLAN.md`). `discountValue` is unused: the discount is
@@ -90,6 +103,7 @@ export const DISCOUNT_TYPE_LABELS: Record<DiscountType, string> = {
   BUY_X_GET_Y: 'Buy X, get Y free',
   PERCENTAGE: 'Percentage off',
   FIXED: 'Fixed amount off',
+  FREE_ENTRY: 'Free entry (incl. admin fee)',
   // Never offered in the marketing form's kind picker: a pacer code is created
   // on the event's Pacers screen, which knows the category it is locked to.
   // The label exists for the places that print a stored kind back.
@@ -110,10 +124,62 @@ export const DISCOUNT_TYPE_LABELS: Record<DiscountType, string> = {
  * Written once because the checkout that spends the cap, the expiry sweep that
  * gives it back, the form that sets it and the table that reports it all have
  * to agree about what the number means.
+ *
+ * `FREE_ENTRY` is one of them: it is 100% off per runner, so it rides the same
+ * walk (`perRunnerSavings`), the same category restriction and the same
+ * code-or-vouchers rule. On an order of one, runners and orders agree anyway.
  */
 export function limitCountsRunners(discountType: unknown): boolean {
   const type = asDiscountType(discountType);
-  return type === DISCOUNT_TYPES.PERCENTAGE || type === DISCOUNT_TYPES.FIXED;
+  return (
+    type === DISCOUNT_TYPES.PERCENTAGE ||
+    type === DISCOUNT_TYPES.FIXED ||
+    type === DISCOUNT_TYPES.FREE_ENTRY
+  );
+}
+
+/**
+ * What someone without `promo:waive-fee` is told when they try to create or
+ * change a `FREE_ENTRY` promotion. Here rather than beside the routes so the
+ * marketing form, a client component, says the same sentence the server does.
+ */
+export const FREE_ENTRY_REFUSAL =
+  "Only the Super Admin or an admin can give a free entry, because it waives Run As One's admin fee.";
+
+/**
+ * Whether this code is only ever for an order of one runner: a `FREE_ENTRY`
+ * promotion or a pacer code, both refused on a group by `promoCodeError`.
+ *
+ * Asked by the wizards so step 1 stops offering *Add Another Runner* while
+ * such a code is applied — a runner who went back from checkout to add a
+ * friend would otherwise only learn at checkout that the code fell off.
+ */
+export function coversOneRunner(promo: Pick<PromoTerms, 'discountType'> | null | undefined): boolean {
+  const type = asDiscountType(promo?.discountType);
+  return type === DISCOUNT_TYPES.FREE_ENTRY || type === DISCOUNT_TYPES.PACER;
+}
+
+/**
+ * Why step 1 will not take another runner while a one-runner code is applied.
+ * Says what to do instead, like every refusal in the wizard.
+ */
+export function oneRunnerCodeNotice(code: string): string {
+  return `${code} covers one runner, so this registration is for one runner only. To add more, remove the code at checkout, or register the others as a separate order.`;
+}
+
+/**
+ * Whether this kind is a whole free entry for one runner on an order of one,
+ * waiving Run As One's admin fee: a `FREE_ENTRY` promotion always, a `PACER`
+ * code when it carries `waiveAdminFee`, and nothing else.
+ *
+ * One answer for `applyPromo`, which carries it to `platformFeeAfterDiscount`.
+ * Both kinds are refused on a group (`promoCodeError`), because that function
+ * waives the fee of every runner on the order.
+ */
+export function waivesAdminFee(promo: Pick<PromoTerms, 'discountType' | 'waiveAdminFee'>): boolean {
+  const type = asDiscountType(promo.discountType);
+  if (type === DISCOUNT_TYPES.FREE_ENTRY) return true;
+  return type === DISCOUNT_TYPES.PACER && promo.waiveAdminFee === true;
 }
 
 /** The most a PERCENTAGE promotion may take off, in whole percent. */
@@ -246,8 +312,9 @@ export interface PromoTerms {
    * The one flag in this module that reaches a fee, and it is carried rather
    * than turned into centavos — see `discountAmountFor`'s comment and
    * `platformFeeAfterDiscount` below, which is the only thing that spends it.
-   * Only the Super Admin can set it (`promo:waive-fee`), because the admin fee
-   * is the platform's own money.
+   * Only `promo:waive-fee` can set it, because the admin fee is the
+   * platform's own money. A `FREE_ENTRY` promotion waives the fee by its kind
+   * and never reads this (`waivesAdminFee`).
    */
   waiveAdminFee?: boolean;
 }
@@ -334,7 +401,8 @@ export interface AppliedDiscount {
   /**
    * Whether Run As One's admin fee is waived along with the entry.
    *
-   * True only for a `PACER` code whose `waiveAdminFee` is set. It is a flag
+   * True for a `FREE_ENTRY` promotion and for a `PACER` code whose
+   * `waiveAdminFee` is set (`waivesAdminFee` above). It is a flag
    * rather than centavos inside `amount` on purpose: `amount` is money off the
    * **goods** everywhere else in this app — it is what `Registration.
    * discountAmount` stores and what *Given Away* counts — and folding a fee
@@ -453,8 +521,9 @@ export function pacerRunnerIndex(promo: PromoTerms, order: OrderBasis): number {
  * pacer was promised a free entry.
  *
  * It waives the fee for **every** runner on the order, which costs nothing in
- * practice: a pacer code is refused on an order of more than one
- * (`promoCodeError`), so there is only ever the pacer's own fee to waive.
+ * practice: a pacer code and a `FREE_ENTRY` promotion are both refused on an
+ * order of more than one (`promoCodeError`), so there is only ever the one
+ * runner's own fee to waive.
  */
 export function platformFeeAfterDiscount(
   adminFeePerRunner: number,
@@ -515,6 +584,9 @@ export function discountAmountFor(promo: PromoTerms, order: OrderBasis): number 
     }
     case DISCOUNT_TYPES.PERCENTAGE:
     case DISCOUNT_TYPES.FIXED:
+    // The entry only. The admin fee it also waives is a fee, and travels as
+    // `waivesAdminFee` per the note above.
+    case DISCOUNT_TYPES.FREE_ENTRY:
       return clamp(
         perRunnerSavings(promo, order).reduce((sum, saving) => sum + saving, 0),
         order.subtotal,
@@ -562,8 +634,8 @@ export function runnersLeft(promo: Pick<PromoTerms, 'usageLimit' | 'usageCount'>
 }
 
 /**
- * What each runner on this order saves under a PERCENTAGE or FIXED promotion,
- * by index — zero for everyone under any other kind.
+ * What each runner on this order saves under a PERCENTAGE, FIXED or
+ * FREE_ENTRY promotion, by index — zero for everyone under any other kind.
  *
  * **The one walk every reading of these kinds goes through**: the amount
  * charged, the price on each runner's line, the runners counted against the
@@ -582,7 +654,8 @@ export function runnersLeft(promo: Pick<PromoTerms, 'usageLimit' | 'usageCount'>
  *    A short code is split rather than refused, as `categoryPriceSavings`
  *    splits a nearly-gone sale.
  * 4. Each runner taken saves `min(entry, fixed)` or `floor(entry × % / 100)`,
- *    rounded down to the centavo.
+ *    rounded down to the centavo — the whole entry for FREE_ENTRY, read as
+ *    100% rather than off its unused `discountValue`.
  *
  * **Most expensive first** is the opposite of `BUY_X_GET_Y`'s cheapest-first,
  * and on purpose: a free runner is a gift an organizer defends by giving away
@@ -594,7 +667,8 @@ export function perRunnerSavings(promo: PromoTerms, order: OrderBasis): number[]
   const savings = order.runnerPrices.map(() => 0);
   if (!limitCountsRunners(type)) return savings;
 
-  const value = positive(promo.discountValue);
+  const value =
+    type === DISCOUNT_TYPES.FREE_ENTRY ? MAX_PERCENT_OFF : positive(promo.discountValue);
   if (value === null) return savings;
 
   const only = new Set(promoCategoryIdsOf(promo));
@@ -840,9 +914,10 @@ export function applyPromo(
     usageLimit: promo.usageLimit,
     automatic: promo.automatic === true,
     freeRunners: freeRunnerIndexes(promo, order.runnerPrices),
-    // Carried off the row, and only ever true for a pacer code: nothing else
-    // in this app may reach a fee. See `platformFeeAfterDiscount`.
-    waivesAdminFee: type === DISCOUNT_TYPES.PACER && promo.waiveAdminFee === true,
+    // Only ever true for a FREE_ENTRY promotion or a pacer code that carries
+    // the waiver: nothing else in this app may reach a fee. See
+    // `platformFeeAfterDiscount`.
+    waivesAdminFee: waivesAdminFee(promo),
     pricedIn,
     salePriceByRunner: pricedIn
       ? order.runnerCategories.map((runner, index) =>
@@ -878,7 +953,9 @@ export function describePromo(promo: PromoTerms): string {
       return `${positive(promo.discountValue) ?? 0}% off`;
     case DISCOUNT_TYPES.FIXED:
       return `₱${formatPesoAmount(positive(promo.discountValue) ?? 0)} off`;
-    // No number to quote: a pacer code is the whole entry, every time.
+    // No number to quote: these are the whole entry, every time.
+    case DISCOUNT_TYPES.FREE_ENTRY:
+      return 'Free entry, admin fee included';
     case DISCOUNT_TYPES.PACER:
       return 'Free pacer entry';
     default:
@@ -1173,6 +1250,15 @@ export function promoCodeError(
   }
 
   const only = promoCategoryIdsOf(promo);
+
+  // A free entry with the admin fee waived is for one runner on an order of
+  // one (owner, 2026-10-30), and refused on a group rather than applied to
+  // part of it: `platformFeeAfterDiscount` waives every runner's fee on the
+  // order, so a group would get the platform's fee waived for runners the
+  // promotion never covered.
+  if (type === DISCOUNT_TYPES.FREE_ENTRY && runners !== 1) {
+    return `${promo.code} covers one runner. Register that runner on their own, then register the rest of the group as a separate order.`;
+  }
 
   // A pacer code is a free entry for one named person in one category, and it
   // is refused on anything else rather than applied to part of it — a code that

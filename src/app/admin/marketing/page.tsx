@@ -104,6 +104,12 @@ export default async function MarketingPage() {
     (sum, promo) => sum + (spend.get(promo.code) ?? NO_SPEND).given,
     0,
   );
+  // Run As One's admin fee waived by free entries, kept apart from the
+  // organizer's Given Away for the reason lib/promo-redemptions.ts gives.
+  const feeWaived = promoCodes.reduce(
+    (sum, promo) => sum + (spend.get(promo.code) ?? NO_SPEND).feeWaived,
+    0,
+  );
 
   return (
     <>
@@ -135,6 +141,11 @@ export default async function MarketingPage() {
               <div className="metric-icon"><HandCoins size={20} /></div>
             </div>
             <div className="metric-value">&#8369;{formatPesos(givenAway)}</div>
+            {feeWaived > 0 && (
+              <p className="text-xs text-secondary m-0 mt-1">
+                {`+ ₱${formatPesos(feeWaived)} admin fee waived on free entries`}
+              </p>
+            )}
           </div>
         </div>
 
@@ -147,11 +158,13 @@ export default async function MarketingPage() {
             // way it already adds up redemptions across a voucher batch.
             given: (spend.get(promo.code) ?? NO_SPEND).given,
             paidOrders: (spend.get(promo.code) ?? NO_SPEND).paid,
+            feeWaived: (spend.get(promo.code) ?? NO_SPEND).feeWaived,
             validFrom: promo.validFrom ? promo.validFrom.toISOString() : null,
             validUntil: promo.validUntil ? promo.validUntil.toISOString() : null,
             createdAt: promo.createdAt.toISOString(),
           }))}
           events={events}
+          canGiveFreeEntry={can(actor, 'promo:waive-fee', { organizerId: actor.orgId })}
         />
       </div>
     </>

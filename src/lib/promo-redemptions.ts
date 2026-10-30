@@ -1,4 +1,5 @@
 import prisma from '@/lib/db';
+import { DISCOUNT_TYPES } from '@/lib/discount';
 import { PACER_DISCOUNT_TYPE } from '@/lib/pacer';
 
 /**
@@ -36,6 +37,13 @@ import { PACER_DISCOUNT_TYPE } from '@/lib/pacer';
  * genuinely different, and the screens above show both rather than quietly
  * preferring one.
  *
+ * **A free entry's admin fee is counted apart** (`feeWaived`). *Given* is the
+ * organizer's money, off the entries; the admin fee a `FREE_ENTRY` promotion
+ * waives is Run As One's, so it is reported beside it rather than folded in.
+ * It is read as the event's admin fee now less what the order paid, because a
+ * registration does not snapshot the fee it was waived: an event whose admin
+ * fee was changed after the fact reports the new figure.
+ *
  * **Pacer entries are left out.** A pacer code is not a promotion — it is a
  * free entry given to a named person — so counting one here would add it to
  * *Given Away* and to the marketing table's totals, where it would look like a
@@ -64,10 +72,20 @@ export type PromoSpend = {
   paid: number;
   /** Centavos discounted across those orders. */
   given: number;
+  /** Centavos of Run As One's admin fee waived across them — free entries only. */
+  feeWaived: number;
 };
 
 /** Nothing spent yet — the shape a promotion nobody has used still has. */
-export const NO_SPEND: PromoSpend = { paid: 0, given: 0 };
+export const NO_SPEND: PromoSpend = { paid: 0, given: 0, feeWaived: 0 };
+
+/**
+ * The admin fee one free-entry order did not pay: what its runners would have
+ * owed at the event's fee, less what was actually charged. Never negative.
+ */
+function feeWaivedOn(row: { platformFee: number; adminFee: number; runners: number }): number {
+  return Math.max(0, row.adminFee * row.runners - row.platformFee);
+}
 
 /**
  * The most redemptions one listing returns.
@@ -93,7 +111,7 @@ export const MAX_REDEMPTIONS_LISTED = 500;
  * a promotion that no longer exists belongs in its total.
  */
 export async function spendByCode(organizerId: string): Promise<Map<string, PromoSpend>> {
-  const [rows, combinedRows] = await Promise.all([
+  const [rows, combinedRows, freeEntries] = await Promise.all([
     prisma.registration.groupBy({
       by: ['promoCode'],
       where: {
@@ -117,13 +135,47 @@ export async function spendByCode(organizerId: string): Promise<Map<string, Prom
       _sum: { combinedDiscountAmount: true },
       _count: { _all: true },
     }),
+    // The free entries, one row each, for the admin fee they waived. Not a
+    // groupBy: the fee is the event's, which a groupBy cannot reach.
+    prisma.registration.findMany({
+      where: {
+        discountType: DISCOUNT_TYPES.FREE_ENTRY,
+        promoCode: { not: null },
+        status: MONEY_MOVED_STATUS,
+        event: { organizerId },
+      },
+      select: {
+        promoCode: true,
+        platformFee: true,
+        event: { select: { adminFee: true } },
+        _count: { select: { runners: { where: { deletedAt: null } } } },
+      },
+    }),
   ]);
 
   const spend = new Map<string, PromoSpend>();
-  const add = (code: string, paid: number, given: number) => {
+  const add = (code: string, paid: number, given: number, feeWaived = 0) => {
     const existing = spend.get(code) ?? NO_SPEND;
-    spend.set(code, { paid: existing.paid + paid, given: existing.given + given });
+    spend.set(code, {
+      paid: existing.paid + paid,
+      given: existing.given + given,
+      feeWaived: existing.feeWaived + feeWaived,
+    });
   };
+  for (const row of freeEntries) {
+    if (!row.promoCode) continue;
+    // Counted on the order itself already, so only the fee is added here.
+    add(
+      row.promoCode,
+      0,
+      0,
+      feeWaivedOn({
+        platformFee: row.platformFee,
+        adminFee: row.event.adminFee,
+        runners: row._count.runners,
+      }),
+    );
+  }
   for (const row of rows) {
     if (!row.promoCode) continue;
     // The price promotion's own share: the deal it was combined with, if any,
@@ -153,6 +205,8 @@ export type PromoRedemption = {
   status: string;
   /** Centavos this promotion took off this order — its own share on a combined one. */
   discountAmount: number;
+  /** Centavos of Run As One's admin fee this order did not pay — free entries only, else 0. */
+  feeWaived: number;
   createdAt: string;
 };
 
@@ -191,10 +245,12 @@ export async function redemptionsFor(
       promoCode: true,
       combinedPromoCode: true,
       status: true,
+      discountType: true,
       discountAmount: true,
       combinedDiscountAmount: true,
+      platformFee: true,
       createdAt: true,
-      event: { select: { id: true, title: true } },
+      event: { select: { id: true, title: true, adminFee: true } },
       // Removed runners are kept for the audit trail, not for this count.
       _count: { select: { runners: { where: { deletedAt: null } } } },
     },
@@ -216,6 +272,14 @@ export async function redemptionsFor(
         discountAmount: asDeal
           ? row.combinedDiscountAmount
           : row.discountAmount - row.combinedDiscountAmount,
+        feeWaived:
+          row.discountType === DISCOUNT_TYPES.FREE_ENTRY
+            ? feeWaivedOn({
+                platformFee: row.platformFee,
+                adminFee: row.event.adminFee,
+                runners: row._count.runners,
+              })
+            : 0,
         createdAt: row.createdAt.toISOString(),
       };
     }),

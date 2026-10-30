@@ -40,7 +40,7 @@ export default function AddPacerModal({
   eventId: string;
   /** This event's categories, in the event's own order. */
   categories: PacerCategory[];
-  /** Whether this person holds `promo:waive-fee` — the Super Admin alone. */
+  /** Whether this person holds `promo:waive-fee` — the Super Admin and admins. */
   canWaiveAdminFee: boolean;
   onClose: () => void;
 }) {

@@ -2,7 +2,13 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { can, getActor } from '@/lib/actor';
 import { AuditChanges, recordAudit } from '@/lib/audit';
-import { MAX_PROMO_CODE_LENGTH, limitCountsRunners, normalizePromoCode } from '@/lib/discount';
+import {
+  DISCOUNT_TYPES,
+  FREE_ENTRY_REFUSAL,
+  MAX_PROMO_CODE_LENGTH,
+  limitCountsRunners,
+  normalizePromoCode,
+} from '@/lib/discount';
 import { MAX_VOUCHER_BATCH, newVoucherCodes } from '@/lib/voucher-codes';
 import { promoTermsFromInput, wholeNumber } from '@/lib/promo-input';
 
@@ -15,8 +21,9 @@ import { promoTermsFromInput, wholeNumber } from '@/lib/promo-input';
  * walk straight past.
  *
  * Promotions are organizer-wide marketing, so creating one is `promo:manage`,
- * which only OWNER and ADMIN hold. The promotion belongs to the organizer and
- * the trail names who on its team created it.
+ * which only OWNER and ADMIN hold — and a `FREE_ENTRY` one is also
+ * `promo:waive-fee`, since it waives Run As One's admin fee. The promotion
+ * belongs to the organizer and the trail names who on its team created it.
  */
 
 export async function POST(request: Request) {
@@ -40,6 +47,18 @@ export async function POST(request: Request) {
     const terms = await promoTermsFromInput(body, actor.orgId);
     if ('problem' in terms) {
       return NextResponse.json(terms.problem, { status: 400 });
+    }
+    // A free entry gives away Run As One's admin fee, which is not the
+    // organizer's to give: `promo:waive-fee`, asked of the matrix like every
+    // verb here rather than of the role.
+    if (
+      terms.data.discountType === DISCOUNT_TYPES.FREE_ENTRY &&
+      !can(actor, 'promo:waive-fee', { organizerId: actor.orgId })
+    ) {
+      return NextResponse.json(
+        { error: FREE_ENTRY_REFUSAL, field: 'discountType' },
+        { status: 403 },
+      );
     }
     const shared = { ...terms.data, organizerId: actor.orgId };
 

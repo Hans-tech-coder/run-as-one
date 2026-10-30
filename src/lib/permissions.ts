@@ -69,11 +69,12 @@ export const PERMISSIONS = [
   'promo:view',
   'promo:manage',
   /**
-   * Waiving Run As One's admin fee on a pacer's free entry
-   * (`PACER_DISCOUNT_PLAN.md`). `OWNER` alone, because the admin fee is Run As
-   * One's own money (`settlement.ts`): an organizer's admin may give away the
-   * organizer's entry — that is what `promo:manage` is — but not the
-   * platform's commission on it.
+   * Waiving Run As One's admin fee: on a pacer's free entry
+   * (`PACER_DISCOUNT_PLAN.md`) and on a `FREE_ENTRY` promotion, the one
+   * marketing kind that waives it. A verb of its own because the admin fee is
+   * Run As One's own money (`settlement.ts`), not the organizer's entry that
+   * `promo:manage` gives away. It was `OWNER` alone until the owner opened it
+   * to admins too (2026-10-30), when the Free entry promotion was added.
    *
    * **Deliberately not `org:settings`.** That verb means "set the default
    * platform fee", and it happens to be OWNER-only today; a route that
@@ -260,7 +261,7 @@ const MATRIX: Record<Permission, readonly Role[]> = {
   'results:manage': ['OWNER', 'ADMIN', 'EVENT_MANAGER', 'ENCODER'],
   'promo:view': ['OWNER', 'ADMIN', 'EVENT_MANAGER', 'VIEWER'],
   'promo:manage': ['OWNER', 'ADMIN'],
-  'promo:waive-fee': ['OWNER'],
+  'promo:waive-fee': ['OWNER', 'ADMIN'],
   'team:manage': ['OWNER', 'ADMIN'],
   'org:settings': ['OWNER'],
   'activity:view': ['OWNER', 'ADMIN'],

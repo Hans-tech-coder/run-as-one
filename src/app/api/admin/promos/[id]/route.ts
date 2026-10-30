@@ -2,7 +2,12 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { can, getActor } from '@/lib/actor';
 import { CHANGED, changedFields, listFields, recordAudit } from '@/lib/audit';
-import { MAX_PROMO_CODE_LENGTH, normalizePromoCode } from '@/lib/discount';
+import {
+  DISCOUNT_TYPES,
+  FREE_ENTRY_REFUSAL,
+  MAX_PROMO_CODE_LENGTH,
+  normalizePromoCode,
+} from '@/lib/discount';
 import { promoTermsFromInput } from '@/lib/promo-input';
 
 /**
@@ -127,6 +132,20 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     );
     if ('problem' in terms) {
       return NextResponse.json(terms.problem, { status: 400 });
+    }
+    // Making a promotion a free entry, or changing the terms of one that is,
+    // decides how much of Run As One's admin fee is given away:
+    // `promo:waive-fee`, as when creating one. Pausing it (above) and deleting
+    // it only ever give away less, so those stay `promo:manage`.
+    if (
+      (terms.data.discountType === DISCOUNT_TYPES.FREE_ENTRY ||
+        existing.discountType === DISCOUNT_TYPES.FREE_ENTRY) &&
+      !can(actor, 'promo:waive-fee', { organizerId: actor.orgId })
+    ) {
+      return NextResponse.json(
+        { error: FREE_ENTRY_REFUSAL, field: 'discountType' },
+        { status: 403 },
+      );
     }
 
     // A batch's codes are random and per-row; only its shared terms are the

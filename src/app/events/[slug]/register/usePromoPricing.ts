@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import {
   applyPromo,
   categorySalePrices,
+  coversOneRunner,
   freeSlotOffer,
   promoCodeError,
   promoGroupSize,
@@ -208,10 +209,17 @@ export function usePromoPricing({
   // checkout pays out on.
   const groupLimit = promoGroupSize(groupPromo);
   const atGroupLimit = groupLimit !== null && participants.length >= groupLimit;
+  // A code that only ever covers one runner — a free entry or a pacer code —
+  // and is applied: step 1 takes nobody else while it is on the order, since
+  // a second runner would make the checkout drop it. Only while it is good;
+  // a code already refused is not holding anything.
+  const soloCode =
+    promo && !promoProblem && coversOneRunner(promo) ? promo.code : null;
+  const atSoloLimit = soloCode !== null && participants.length >= 1;
   // The ceiling every order has, promotion or not (lib/order-size.ts). Kept
-  // apart from the group limit so one notice, not two, explains the button.
+  // apart from the limits above so one notice, not two, explains the button.
   const atOrderLimit =
-    !atGroupLimit && participants.length >= MAX_RUNNERS_PER_ORDER;
+    !atGroupLimit && !atSoloLimit && participants.length >= MAX_RUNNERS_PER_ORDER;
 
   return {
     sizeUpcharge,
@@ -230,6 +238,8 @@ export function usePromoPricing({
     groupOffer,
     groupLimit,
     atGroupLimit,
+    soloCode,
+    atSoloLimit,
     atOrderLimit,
   };
 }

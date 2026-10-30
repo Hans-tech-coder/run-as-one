@@ -58,7 +58,7 @@ export default function PacersClient({
   pacers: PacerRow[];
   /** The amber line, or null when nobody is waiting for their code. */
   reminder: string | null;
-  /** Whether this person holds `promo:waive-fee` — the Super Admin alone. */
+  /** Whether this person holds `promo:waive-fee` — the Super Admin and admins. */
   canWaiveAdminFee: boolean;
 }) {
   const [isAddOpen, setIsAddOpen] = useState(false);

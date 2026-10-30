@@ -61,6 +61,7 @@ import {
 } from "@/lib/shirt-size";
 import {
   describePromo,
+  oneRunnerCodeNotice,
   type PromoTerms,
 } from "@/lib/discount";
 import {
@@ -446,12 +447,20 @@ export default function BankTransferWizardClient({
    * button is disabled at the ceiling; this is the same rule again where the
    * array is actually written, so no path can slip a runner past it.
    *
+   * **And to one runner while a one-runner code is applied** (`soloCode`):
+   * a free entry or a pacer code is refused on a group, so the free-slot
+   * offer must not slip a second runner in either.
+   *
    * **And to `MAX_RUNNERS_PER_ORDER`** (lib/order-size.ts), the size the
    * checkout routes refuse an order above, promotion or not.
    */
   const addParticipants = (count: number) => {
     setParticipants((prev) => {
-      const ceiling = Math.min(groupLimit ?? Infinity, MAX_RUNNERS_PER_ORDER);
+      const ceiling = Math.min(
+        groupLimit ?? Infinity,
+        soloCode ? 1 : Infinity,
+        MAX_RUNNERS_PER_ORDER,
+      );
       const room = ceiling - prev.length;
       const adding = Math.min(Math.max(1, count), room);
       if (adding < 1) return prev;
@@ -533,6 +542,8 @@ export default function BankTransferWizardClient({
     groupOffer,
     groupLimit,
     atGroupLimit,
+    soloCode,
+    atSoloLimit,
     atOrderLimit,
   } = usePromoPricing({
     event,
@@ -1315,7 +1326,7 @@ export default function BankTransferWizardClient({
                   </div>
                 ))}
 
-                {groupOffer && (
+                {groupOffer && !atSoloLimit && (
                   <FreeSlotOffer
                     needed={groupOffer.needed}
                     free={groupOffer.free}
@@ -1335,6 +1346,16 @@ export default function BankTransferWizardClient({
                   />
                 )}
 
+                {atSoloLimit && soloCode && (
+                  <p
+                    id="solo-limit-notice"
+                    role="status"
+                    className="mt-4 m-0 rounded-[16px] border border-white/10 bg-white/5 p-5 text-sm leading-relaxed text-secondary"
+                  >
+                    {oneRunnerCodeNotice(soloCode)}
+                  </p>
+                )}
+
                 {atOrderLimit && (
                   <p
                     id="order-limit-notice"
@@ -1348,11 +1369,13 @@ export default function BankTransferWizardClient({
                 <button
                   className="w-full mt-4 flex items-center justify-center gap-2 border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/30 text-white font-bold py-4 rounded-[16px] transition-all disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-white/10 disabled:hover:bg-white/5"
                   onClick={addParticipant}
-                  disabled={atGroupLimit || atOrderLimit}
+                  disabled={atGroupLimit || atSoloLimit || atOrderLimit}
                   aria-describedby={
                     atGroupLimit
                       ? "group-limit-notice"
-                      : atOrderLimit
+                      : atSoloLimit
+                        ? "solo-limit-notice"
+                        : atOrderLimit
                         ? "order-limit-notice"
                         : undefined
                   }

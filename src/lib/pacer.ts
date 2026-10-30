@@ -261,7 +261,7 @@ export interface PacerInput {
 export interface PacerInputContext {
   /** The ids of the categories **of this event**, so a category cannot be borrowed from another race. */
   eventCategoryIds: readonly string[];
-  /** Whether this actor holds `promo:waive-fee` — the Super Admin alone. */
+  /** Whether this actor holds `promo:waive-fee` — the Super Admin and admins. */
   canWaiveAdminFee: boolean;
 }
 
@@ -272,7 +272,7 @@ export interface PacerInputContext {
  * bug in the screen rather than as a decision about money.
  */
 export const WAIVE_REFUSAL = {
-  error: 'Only the Super Admin can waive the admin fee.',
+  error: 'Only the Super Admin or an admin can waive the admin fee.',
   field: 'waiveAdminFee',
 } as const;
 

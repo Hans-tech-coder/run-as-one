@@ -62,11 +62,15 @@
   branding are staff-only (`platform:manage`, `PATCH /api/admin/clients/[id]`),
   and its images must be uploads to the public blob store, never a third
   party's address (`lib/client-branding.ts`).
-- **Waiving Run As One's admin fee is `promo:waive-fee`** (`OWNER` alone,
-  `PACER_DISCOUNT_PLAN.md`). A pacer's free entry is the organizer's own money
-  and `promo:manage` covers it; the admin fee on top is **Run As One's
-  commission** (`settlement.ts`), so giving that away is the company deciding
-  about itself and not something an organizer's admin does. The screen shows the
+- **Waiving Run As One's admin fee is `promo:waive-fee`** (`OWNER` and, since
+  2026-10-30, `ADMIN`; `PACER_DISCOUNT_PLAN.md`). A pacer's free entry is the
+  organizer's own money and `promo:manage` covers it; the admin fee on top is
+  **Run As One's commission** (`settlement.ts`), so it keeps a verb of its own
+  even now that the same two roles hold both. It gates the pacer switch and
+  **creating or editing a `FREE_ENTRY` promotion** on `/admin/marketing` (the
+  kind is only offered to holders, and both promo routes answer 403 on
+  `discountType` otherwise; pausing or deleting one stays `promo:manage`). The
+  pacer screen shows the
   switch disabled with that sentence in its hint, and **both routes check the
   verb rather than trusting the form**, answering **403 with the field** so the
   refusal can be shown on the control that caused it — never silently saving

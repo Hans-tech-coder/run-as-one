@@ -33,7 +33,7 @@ import { PACER_SELECT, pacerBibTaken } from '@/lib/pacer-store';
  *    actually told, which is why it is a deliberate mark and not something
  *    copying the code sets for you.
  *  - **`waiveAdminFee`** — Run As One's own commission. **`promo:waive-fee`,
- *    the Super Admin alone**; anyone else is answered 403 with the field, so
+ *    the Super Admin and admins**; anyone else is answered 403 with the field, so
  *    the screen can point at the control rather than showing a bare error.
  *
  * The category is deliberately **not** editable. It is what the code is locked
@@ -139,7 +139,7 @@ export async function PATCH(
     if (typeof body?.waiveAdminFee === 'boolean' && body.waiveAdminFee !== pacer.waiveAdminFee) {
       if (!can(actor, 'promo:waive-fee', { organizerId: actor.orgId, eventId: id })) {
         return NextResponse.json(
-          { error: 'Only the Super Admin can waive the admin fee.', field: 'waiveAdminFee' },
+          { error: 'Only the Super Admin or an admin can waive the admin fee.', field: 'waiveAdminFee' },
           { status: 403 },
         );
       }
