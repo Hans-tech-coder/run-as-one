@@ -61,6 +61,11 @@ export const PERMISSIONS = [
   'registration:view',
   'registration:validate',
   'registration:remark',
+  // Fix a manual order's Transaction No., proof or method after checkout
+  // (PAYMENT_CORRECTION_PLAN.md C3, lib/payment-correction.ts). Its own line,
+  // not part of validating: replacing what a runner submitted is not the
+  // same act as accepting it.
+  'registration:correct-payment',
   'registration:email',
   'registration:edit',
   'registration:delete',
@@ -224,6 +229,7 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   'registration:view': 'See registrants',
   'registration:validate': 'Validate payments',
   'registration:remark': 'Write payment remarks',
+  'registration:correct-payment': 'Correct a payment reference or proof',
   'registration:email': 'Send a missing email by hand',
   'registration:edit': 'Edit a runner',
   'registration:delete': 'Remove a runner',
@@ -254,6 +260,7 @@ const MATRIX: Record<Permission, readonly Role[]> = {
   'registration:view': ALL,
   'registration:validate': ['OWNER', 'ADMIN', 'EVENT_MANAGER', 'VALIDATOR'],
   'registration:remark': ['OWNER', 'ADMIN', 'EVENT_MANAGER', 'VALIDATOR'],
+  'registration:correct-payment': ['OWNER', 'ADMIN', 'EVENT_MANAGER', 'VALIDATOR'],
   'registration:email': ['OWNER', 'ADMIN', 'EVENT_MANAGER', 'VALIDATOR'],
   'registration:edit': ['OWNER', 'ADMIN', 'EVENT_MANAGER'],
   'registration:delete': ['OWNER', 'ADMIN'],

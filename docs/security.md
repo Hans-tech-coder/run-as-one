@@ -530,6 +530,17 @@
   (worded as a warning), every success `auth.step_up_confirmed` with the
   method, action, target and the token's `jti`. Who may do the action is
   still the guarded route's own question.
+- **Correcting a payment is its own permission, and a PAID order needs a
+  step-up** (`PAYMENT_CORRECTION_PLAN.md` C2a, C3). `POST
+  /api/admin/registrations/[id]/payment` asks `registration:correct-payment`
+  (OWNER, ADMIN, EVENT_MANAGER, VALIDATOR; its own line on the roles screen,
+  apart from `registration:validate`) on the order's race, refused as a
+  missing order. For a PAID order it spends a step-up token for action
+  `registration.correct-payment` bound to that order id inside the
+  correction's transaction, so a token for another order, a replay, or a
+  forged one is a 403 and a refused correction keeps the token. A PENDING
+  order needs no token: the reason and the confirm dialog are enough. Online
+  (PayMongo) orders are never corrected.
 - **An account is found by a lowercased email, and written as one.** `login`,
   `register` and `admin/profile` all run the address through
   `normalizeAccountEmail` (§5). The failure this prevents is quiet and reads

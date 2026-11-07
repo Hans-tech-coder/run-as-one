@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-50 pages · 95 API routes · 157 modules in `src/lib` · 673 files · 118,084 lines
+50 pages · 96 API routes · 158 modules in `src/lib` · 675 files · 118,504 lines
 
 ---
 
@@ -133,6 +133,7 @@ The route, the server component behind it, and the client components beside it.
 | `/api/admin/registrations/[id]/email` | GET POST | [`/admin/registrations/[id]/email/route.ts`](../src/app/api/admin/registrations/[id]/email/route.ts) |
 | `/api/admin/registrations/[id]/follow-up` | POST | [`/admin/registrations/[id]/follow-up/route.ts`](../src/app/api/admin/registrations/[id]/follow-up/route.ts) |
 | `/api/admin/registrations/[id]/logistics-change` | POST | [`/admin/registrations/[id]/logistics-change/route.ts`](../src/app/api/admin/registrations/[id]/logistics-change/route.ts) |
+| `/api/admin/registrations/[id]/payment` | POST | [`/admin/registrations/[id]/payment/route.ts`](../src/app/api/admin/registrations/[id]/payment/route.ts) |
 | `/api/admin/registrations/[id]/payment-check` | POST | [`/admin/registrations/[id]/payment-check/route.ts`](../src/app/api/admin/registrations/[id]/payment-check/route.ts) |
 | `/api/admin/registrations/[id]/payment-link` | POST | [`/admin/registrations/[id]/payment-link/route.ts`](../src/app/api/admin/registrations/[id]/payment-link/route.ts) |
 | `/api/admin/registrations/[id]/status` | PATCH | [`/admin/registrations/[id]/status/route.ts`](../src/app/api/admin/registrations/[id]/status/route.ts) |
@@ -283,6 +284,7 @@ the file itself.
 | [`pacer.ts`](../src/lib/pacer.ts) | What a pacer code is, and when the dashboard has to nag about it (`PACER_DISCOUNT_PLAN.md`). |
 | [`password-reset.ts`](../src/lib/password-reset.ts) | "Forgot password?" — who may reset their own password from the sign-in page, and the link that lets them (LOGIN_UX_PLAN.md Batch 2). |
 | [`past-events.ts`](../src/lib/past-events.ts) | What counts as a past event and where its card goes (`PAST_EVENTS_PLAN.md` D2, D3). |
+| [`payment-correction.ts`](../src/lib/payment-correction.ts) | Correcting a manual order's payment details after checkout (PAYMENT_CORRECTION_PLAN.md C1–C8). |
 | [`payment-link.ts`](../src/lib/payment-link.ts) | Handing a payment link to staff, one path for every way it goes out (`UNPAID_FOLLOWUP_PLAN.md` Batches 3–4): `issuePaymentLink` checks `registratio… |
 | [`paymongo-session.ts`](../src/lib/paymongo-session.ts) | The PayMongo payment page an order is sent to, built in one place (`UNPAID_FOLLOWUP_PLAN.md` Batch 3, moved out of `api/checkout` unchanged). |
 | [`pending-expiry.ts`](../src/lib/pending-expiry.ts) | When an unpaid order — an online checkout, or a bank transfer nobody verified — stops holding what it took. |

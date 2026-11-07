@@ -41,6 +41,20 @@ uses it yet**: Batch 1's payment correction route is its first caller (C2a:
 PAID orders only). Not yet exercised: the Google popup end to end (needs a
 Google-linked staff account on localhost).
 
+**Payment correction, server side (2026-11-07, uncommitted;
+`PAYMENT_CORRECTION_PLAN.md` Batch 1).** `lib/payment-correction.ts` and
+`POST /api/admin/registrations/[id]/payment` correct a manual order's
+Transaction No., proof or method on PENDING / PAID orders, with a required
+reason, one `registration.payment.corrected` trail row holding `[old, new]`
+(old proof pathname kept), and never a status move. New permission
+`registration:correct-payment` (OWNER, ADMIN, EVENT_MANAGER, VALIDATOR). PAID
+orders spend a step-up token (first caller of `consumeStepUp`); optional
+receipt resend on PAID. The method can only be `BANK_TRANSFER` — the only
+method the manual checkout writes. **No screen yet** (Batch 2: modal, row
+action, history view). Exercised on localhost through the API; not yet
+exercised: an actual proof upload (the private store is shared with
+production and local code never deletes from it).
+
 **Free entry promotion (2026-10-30, uncommitted).** A sixth discount kind,
 `FREE_ENTRY`, labelled *Free entry (incl. admin fee)* on `/admin/marketing`:
 the whole entry **and** Run As One's admin fee, for **one runner on an order
