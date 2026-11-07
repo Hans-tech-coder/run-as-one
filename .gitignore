@@ -61,3 +61,8 @@ strix_runs/
 
 # Working plan documents (deleted once implemented; never committed)
 docs/plans/
+
+# Python bytecode cache (from skill scripts)
+__pycache__/
+*.py[cod]
+
