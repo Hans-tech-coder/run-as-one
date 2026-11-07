@@ -70,8 +70,37 @@ function clientSecret(): string {
 
 const random = () => randomBytes(32).toString('base64url');
 
+/**
+ * A step-up confirmation riding the same callback (lib/step-up.ts): which
+ * signed-in account asked, for what, when (ms, for `auth_time`), and the
+ * dialog's `ref` so its window takes only its own answer. Present means the
+ * callback confirms and never signs anybody in.
+ */
+export type PendingStepUp = {
+  kind: 'OWNER' | 'STAFF';
+  id: string;
+  action: string;
+  target: string;
+  ref: string;
+  startedAt: number;
+};
+
 /** `keep` is the "Keep me signed in" box, carried through Google to the callback. */
-type PendingSignIn = { state: string; nonce: string; verifier: string; next: string; keep: boolean };
+type PendingSignIn = {
+  state: string;
+  nonce: string;
+  verifier: string;
+  next: string;
+  keep: boolean;
+  stepUp?: PendingStepUp;
+};
+
+/**
+ * How recent a step-up's Google sign-in must be. `prompt=login` asks Google to
+ * sign the person in again; `max_age` makes it send `auth_time`, which the
+ * callback checks rather than trusting the prompt was obeyed.
+ */
+export const STEP_UP_MAX_AGE_SECONDS = 60;
 
 /**
  * Where to send the browser to start a Google sign-in. Writes the pending
@@ -82,12 +111,21 @@ export async function googleAuthUrl({
   redirectUri,
   next,
   keep,
+  stepUp,
 }: {
   redirectUri: string;
   next: string;
   keep: boolean;
+  stepUp?: PendingStepUp;
 }): Promise<string> {
-  const pending: PendingSignIn = { state: random(), nonce: random(), verifier: random(), next, keep };
+  const pending: PendingSignIn = {
+    state: random(),
+    nonce: random(),
+    verifier: random(),
+    next,
+    keep,
+    ...(stepUp ? { stepUp } : {}),
+  };
 
   const cookieStore = await cookies();
   cookieStore.set(PENDING_COOKIE, Buffer.from(JSON.stringify(pending)).toString('base64url'), {
@@ -110,8 +148,11 @@ export async function googleAuthUrl({
     nonce: pending.nonce,
     code_challenge: createHash('sha256').update(pending.verifier).digest('base64url'),
     code_challenge_method: 'S256',
-    // A shared race-day laptop is often signed in to somebody else's Google.
-    prompt: 'select_account',
+    ...(stepUp
+      ? // Sign in again, whoever is signed in to Google in this browser.
+        { prompt: 'login', max_age: String(STEP_UP_MAX_AGE_SECONDS) }
+      : // A shared race-day laptop is often signed in to somebody else's Google.
+        { prompt: 'select_account' }),
   }).toString();
   return url.toString();
 }
@@ -130,6 +171,19 @@ export async function takePendingSignIn(state: string | null): Promise<PendingSi
     const pending = JSON.parse(Buffer.from(raw, 'base64url').toString('utf8')) as PendingSignIn;
     if (typeof pending.state !== 'string' || pending.state !== state) return null;
     if (typeof pending.nonce !== 'string' || typeof pending.verifier !== 'string') return null;
+    const stepUp = pending.stepUp;
+    if (
+      stepUp !== undefined &&
+      (typeof stepUp !== 'object' ||
+        stepUp === null ||
+        typeof stepUp.id !== 'string' ||
+        typeof stepUp.action !== 'string' ||
+        typeof stepUp.target !== 'string' ||
+        typeof stepUp.ref !== 'string' ||
+        typeof stepUp.startedAt !== 'number')
+    ) {
+      return null;
+    }
     return { ...pending, keep: pending.keep === true };
   } catch {
     return null;
@@ -166,7 +220,7 @@ export async function exchangeCode(
 export async function verifyIdToken(
   idToken: string,
   nonce: string,
-): Promise<{ sub: string; email: string }> {
+): Promise<{ sub: string; email: string; authTime: number | null }> {
   let payload;
   try {
     ({ payload } = await jwtVerify(idToken, JWKS, { issuer: ISSUERS, audience: clientId() }));
@@ -183,7 +237,9 @@ export async function verifyIdToken(
   if (payload.email_verified !== true) {
     throw new GoogleSignInError('google_unverified');
   }
-  return { sub: payload.sub, email: payload.email };
+  // Seconds; sent when `max_age` was asked for (a step-up), else maybe absent.
+  const authTime = typeof payload.auth_time === 'number' ? payload.auth_time : null;
+  return { sub: payload.sub, email: payload.email, authTime };
 }
 
 /**

@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-50 pages · 93 API routes · 155 modules in `src/lib` · 667 files · 116,764 lines
+50 pages · 95 API routes · 157 modules in `src/lib` · 673 files · 118,084 lines
 
 ---
 
@@ -23,7 +23,7 @@ The route, the server component behind it, and the client components beside it.
 
 | Route | Page | Beside it |
 | --- | --- | --- |
-| `/admin` | [`/admin/page.tsx`](../src/app/admin/page.tsx) | `AccountMenu.tsx` `AdminCardEdit.tsx` `AdminCardList.tsx` `AdminDataTable.tsx` `AdminDatePicker.tsx` `AdminNotFound.tsx` `AdminRouteLoading.tsx` `AdminSelect.tsx` `AdminShell.tsx` `AdminSwitch.tsx` `AdminTablePager.tsx` `AuthHomeLink.tsx` `AuthRouteLoading.tsx` `bare-paths.ts` `dashboard-nav.tsx` `dashboard-sidebar.ts` `dashboard-theme.ts` `DashboardHeader.tsx` `DashboardQuickJump.tsx` `DashboardShell.tsx` `FilterOptions.tsx` `FiltersMenu.tsx` `forbidden.tsx` `MobileSortMenu.tsx` `NotificationsCenter.tsx` `overview-data.ts` `OverviewPanels.tsx` `PasswordField.tsx` `PastEventsGrid.tsx` `PrintableCopy.tsx` `route-loading-shape.ts` `row-menu-position.ts` `RowActionsMenu.tsx` `SmoothModalBody.tsx` `TwoStepChip.tsx` `ViewerDashboard.tsx` |
+| `/admin` | [`/admin/page.tsx`](../src/app/admin/page.tsx) | `AccountMenu.tsx` `AdminCardEdit.tsx` `AdminCardList.tsx` `AdminDataTable.tsx` `AdminDatePicker.tsx` `AdminNotFound.tsx` `AdminRouteLoading.tsx` `AdminSelect.tsx` `AdminShell.tsx` `AdminSwitch.tsx` `AdminTablePager.tsx` `AuthHomeLink.tsx` `AuthRouteLoading.tsx` `bare-paths.ts` `dashboard-nav.tsx` `dashboard-sidebar.ts` `dashboard-theme.ts` `DashboardHeader.tsx` `DashboardQuickJump.tsx` `DashboardShell.tsx` `FilterOptions.tsx` `FiltersMenu.tsx` `forbidden.tsx` `MobileSortMenu.tsx` `NotificationsCenter.tsx` `overview-data.ts` `OverviewPanels.tsx` `PasswordField.tsx` `PastEventsGrid.tsx` `PrintableCopy.tsx` `route-loading-shape.ts` `row-menu-position.ts` `RowActionsMenu.tsx` `SmoothModalBody.tsx` `StepUpDialog.tsx` `TwoStepChip.tsx` `ViewerDashboard.tsx` |
 | `/admin/[...missing]` | [`/admin/[...missing]/page.tsx`](../src/app/admin/[...missing]/page.tsx) | — |
 | `/admin/activity` | [`/admin/activity/page.tsx`](../src/app/admin/activity/page.tsx) | `ActivityClient.tsx` |
 | `/admin/certificate-guide` | [`/admin/certificate-guide/page.tsx`](../src/app/admin/certificate-guide/page.tsx) | `GuideChecklist.tsx` `GuideDiagram.tsx` `GuideDocument.tsx` `GuideToc.tsx` |
@@ -144,6 +144,7 @@ The route, the server component behind it, and the client components beside it.
 | `/api/admin/runners/bulk-delete` | POST | [`/admin/runners/bulk-delete/route.ts`](../src/app/api/admin/runners/bulk-delete/route.ts) |
 | `/api/admin/search` | GET | [`/admin/search/route.ts`](../src/app/api/admin/search/route.ts) |
 | `/api/admin/site-settings` | PATCH | [`/admin/site-settings/route.ts`](../src/app/api/admin/site-settings/route.ts) |
+| `/api/admin/step-up` | GET POST | [`/admin/step-up/route.ts`](../src/app/api/admin/step-up/route.ts) |
 | `/api/admin/team` | POST | [`/admin/team/route.ts`](../src/app/api/admin/team/route.ts) |
 | `/api/admin/team/[id]` | PATCH DELETE | [`/admin/team/[id]/route.ts`](../src/app/api/admin/team/[id]/route.ts) |
 | `/api/admin/team/[id]/invite` | POST | [`/admin/team/[id]/invite/route.ts`](../src/app/api/admin/team/[id]/invite/route.ts) |
@@ -151,6 +152,7 @@ The route, the server component behind it, and the client components beside it.
 | `/api/auth/forgot-password` | POST | [`/auth/forgot-password/route.ts`](../src/app/api/auth/forgot-password/route.ts) |
 | `/api/auth/google` | GET | [`/auth/google/route.ts`](../src/app/api/auth/google/route.ts) |
 | `/api/auth/google/callback` | GET | [`/auth/google/callback/route.ts`](../src/app/api/auth/google/callback/route.ts) |
+| `/api/auth/google/step-up` | GET | [`/auth/google/step-up/route.ts`](../src/app/api/auth/google/step-up/route.ts) |
 | `/api/auth/invite/[token]` | POST | [`/auth/invite/[token]/route.ts`](../src/app/api/auth/invite/[token]/route.ts) |
 | `/api/auth/login` | POST | [`/auth/login/route.ts`](../src/app/api/auth/login/route.ts) |
 | `/api/auth/logout` | POST | [`/auth/logout/route.ts`](../src/app/api/auth/logout/route.ts) |
@@ -326,6 +328,8 @@ the file itself.
 | [`site-metadata.ts`](../src/lib/site-metadata.ts) | What a site's pages say about themselves to a link preview and a browser tab. |
 | [`site-settings.ts`](../src/lib/site-settings.ts) | The saved site-wide settings (server-only; reads the `SiteSettings` row). |
 | [`slot-holds.ts`](../src/lib/slot-holds.ts) | What holds a seat in a category, and how many each has taken. |
+| [`step-up-message.ts`](../src/lib/step-up-message.ts) | The answer the "Confirm with Google" popup hands back to the dialog that opened it (lib/step-up.ts, StepUpDialog). |
+| [`step-up.ts`](../src/lib/step-up.ts) | Step-up confirmation: a signed-in staff member proves it is still them right before a dangerous action (PAYMENT_CORRECTION_PLAN.md C2a, Batch 0). |
 | [`team-invite.ts`](../src/lib/team-invite.ts) | Invitation links: making one, finding the membership behind one, and sending it. |
 | [`team.ts`](../src/lib/team.ts) | The rules of an organizer's team: what state a member is in, and what makes an invitation or a change of access valid. |
 | [`text-case.ts`](../src/lib/text-case.ts) | Registrant text is stored UPPERCASE. |
@@ -350,10 +354,10 @@ when a task touches one, split it before editing rather than after.
 
 | Lines | File |
 | --- | --- |
-| 2382 | [`src/app/admin/marketing/PromoCodesClient.tsx`](../src/app/admin/marketing/PromoCodesClient.tsx) |
-| 1823 | [`src/app/events/[slug]/register/RegistrationWizardClient.tsx`](../src/app/events/[slug]/register/RegistrationWizardClient.tsx) |
-| 1802 | [`src/app/events/[slug]/register/BankTransferWizardClient.tsx`](../src/app/events/[slug]/register/BankTransferWizardClient.tsx) |
-| 1485 | [`src/lib/discount.ts`](../src/lib/discount.ts) |
+| 2431 | [`src/app/admin/marketing/PromoCodesClient.tsx`](../src/app/admin/marketing/PromoCodesClient.tsx) |
+| 1846 | [`src/app/events/[slug]/register/RegistrationWizardClient.tsx`](../src/app/events/[slug]/register/RegistrationWizardClient.tsx) |
+| 1825 | [`src/app/events/[slug]/register/BankTransferWizardClient.tsx`](../src/app/events/[slug]/register/BankTransferWizardClient.tsx) |
+| 1571 | [`src/lib/discount.ts`](../src/lib/discount.ts) |
 | 1179 | [`src/app/admin/settings/SettingsPanels.tsx`](../src/app/admin/settings/SettingsPanels.tsx) |
 | 1017 | [`src/app/admin/team/TeamClient.tsx`](../src/app/admin/team/TeamClient.tsx) |
 | 799 | [`src/app/s/[site]/results/[slug]/full/FullResultsClient.tsx`](../src/app/s/[site]/results/[slug]/full/FullResultsClient.tsx) |
@@ -369,7 +373,7 @@ when a task touches one, split it before editing rather than after.
 | 554 | [`src/lib/registration-gate.ts`](../src/lib/registration-gate.ts) |
 | 528 | [`src/app/admin/DashboardShell.tsx`](../src/app/admin/DashboardShell.tsx) |
 | 523 | [`src/app/s/[site]/events/[slug]/EventDetails.tsx`](../src/app/s/[site]/events/[slug]/EventDetails.tsx) |
-| 512 | [`src/lib/promo-input.ts`](../src/lib/promo-input.ts) |
+| 520 | [`src/lib/promo-input.ts`](../src/lib/promo-input.ts) |
 | 509 | [`src/app/admin/communities/CommunitiesClient.tsx`](../src/app/admin/communities/CommunitiesClient.tsx) |
 | 499 | [`src/app/admin/AdminRouteLoading.tsx`](../src/app/admin/AdminRouteLoading.tsx) |
 | 479 | [`src/app/api/admin/events/[id]/update-event.ts`](../src/app/api/admin/events/[id]/update-event.ts) |

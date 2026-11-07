@@ -48,6 +48,10 @@ model Organizer {
   recoveryCodes     String[]          @default([])
   /// The 30-second step of the last code accepted, so a code is never taken twice.
   totpLastStep      Int?
+  /// When the newest step-up confirmation this account spent was issued
+  /// (lib/step-up.ts): a confirmation issued at or before it is refused, so
+  /// each one works once. One column instead of a table of used token ids.
+  stepUpUsedAt      DateTime?
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
   events            Event[]
@@ -1217,6 +1221,10 @@ model StaffAccount {
   recoveryCodes     String[]          @default([])
   /// The 30-second step of the last code accepted, so a code is never taken twice.
   totpLastStep      Int?
+  /// When the newest step-up confirmation this account spent was issued
+  /// (lib/step-up.ts): a confirmation issued at or before it is refused, so
+  /// each one works once. One column instead of a table of used token ids.
+  stepUpUsedAt      DateTime?
   lastLoginAt       DateTime?
   /// Every session issued before this instant is dead. Bumped on password
   /// change, on suspension, and by "sign out everywhere" — the reason it is

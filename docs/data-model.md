@@ -557,6 +557,12 @@ shape:
   `20261012025827_two_factor` adds all four to Organizer and `totpLastStep`
   to StaffAccount, additive (nullable or defaulted, so nobody is affected).
   Storage: ~1 KB per account that turns it on (the hashes), nothing otherwise.
+- **`stepUpUsedAt`** on **Organizer** and **StaffAccount**
+  (`PAYMENT_CORRECTION_PLAN.md` Batch 0, read only through `step-up.ts`, §5) —
+  the issue time of the newest step-up confirmation token the account spent;
+  a token issued at or before it is refused, so each works once. Chosen over
+  a table of used token ids: no rows, no cleanup, 8 bytes an account.
+  Migration `20261107060151_step_up_used_at`, additive (nullable).
 - **PasswordReset** — a "forgot password" link (`LOGIN_UX_PLAN.md` Batch 2,
   `lib/password-reset.ts`). `tokenHash` is the token's sha256 (unique; the
   token itself is only in the email), `accountKind` (`ORGANIZER` | `STAFF`) and

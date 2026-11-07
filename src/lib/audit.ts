@@ -70,6 +70,10 @@ export const AUDIT_ACTIONS = [
   'auth.two_factor_failed',
   'auth.recovery_code_used',
   'auth.recovery_codes_renewed',
+  // Step-up confirmation (PAYMENT_CORRECTION_PLAN.md Batch 0, lib/step-up.ts):
+  // a signed-in person re-proving it is them before a dangerous action.
+  'auth.step_up_confirmed',
+  'auth.step_up_failed',
   // Retired with the approve / reject screens (ADMIN_MERGE_PLAN.md, Batch 5);
   // kept so decisions recorded before then still carry a label.
   'organizer.approved',

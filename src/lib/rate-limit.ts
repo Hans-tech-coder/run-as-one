@@ -157,6 +157,15 @@ export const PASSWORD_RESET_RULE: RateLimitRule = { limit: 5, windowMs: 10 * 60_
 export const TWO_FACTOR_RULE: RateLimitRule = { limit: 5, windowMs: 5 * 60_000 };
 
 /**
+ * A step-up confirmation (lib/step-up.ts): a signed-in person re-proving it is
+ * them before a dangerous action — 5 tries every 5 minutes per account, the
+ * same shape as TWO_FACTOR_RULE. Here it bounds every try on this instance;
+ * the failures alone are also counted from the trail, so the cap holds across
+ * instances.
+ */
+export const STEP_UP_RULE: RateLimitRule = { limit: 5, windowMs: 5 * 60_000 };
+
+/**
  * Track My Registration's lookup (`/api/track`, and opening a `/track/<token>`
  * link): 10 a minute from one address.
  *

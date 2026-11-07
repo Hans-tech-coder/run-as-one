@@ -38,6 +38,8 @@ export const ACTION_LABELS: Record<AuditAction, string> = {
   'auth.two_factor_failed': 'Wrong two-step code',
   'auth.recovery_code_used': 'Used a recovery code',
   'auth.recovery_codes_renewed': 'Made new recovery codes',
+  'auth.step_up_confirmed': 'Passed a security check',
+  'auth.step_up_failed': 'Failed a security check',
   'organizer.approved': 'Approved the account',
   'organizer.rejected': 'Rejected the application',
   'organizer.suspended': 'Suspended the account',
@@ -125,6 +127,7 @@ export function isWarningAction(action: string): boolean {
   // like routine work.
   return (
     action === 'auth.sign_in_failed' ||
+    action === 'auth.step_up_failed' ||
     action === 'category_change.payment_late' ||
     action === 'logistics_change.payment_late'
   );
@@ -151,7 +154,7 @@ export const ACTIVITY_GROUPS = [
   // waived) must not be lost among a race's campaigns.
   { key: 'pacers', label: 'Pacers', hint: "Pacers added, renamed, marked as sent, paused or removed, and admin fees waived" },
   { key: 'team', label: 'Team', hint: 'Invitations, access changes, suspensions and removals' },
-  { key: 'access', label: 'Sign-ins', hint: 'Sign-ins, failed sign-ins, other devices signed out, password resets, Google sign-in linked or unlinked, two-step sign-in turned on, off or reset, and profile or password changes' },
+  { key: 'access', label: 'Sign-ins', hint: 'Sign-ins, failed sign-ins, other devices signed out, password resets, Google sign-in linked or unlinked, two-step sign-in turned on, off or reset, security checks before a dangerous action, and profile or password changes' },
   { key: 'remittances', label: 'Remittances', hint: 'Payouts to organizers and returns recorded or voided, and receipts opened' },
   { key: 'clients', label: 'Clients', hint: 'Submissions invited or archived, and invitations accepted' },
   { key: 'organizers', label: 'Organizer decisions', hint: 'Applications approved or rejected, accounts suspended or reinstated' },
@@ -177,6 +180,8 @@ export const ACTION_GROUP: Record<AuditAction, ActivityGroupKey> = {
   'auth.two_factor_failed': 'access',
   'auth.recovery_code_used': 'access',
   'auth.recovery_codes_renewed': 'access',
+  'auth.step_up_confirmed': 'access',
+  'auth.step_up_failed': 'access',
   'organizer.approved': 'organizers',
   'organizer.rejected': 'organizers',
   'organizer.suspended': 'organizers',

@@ -11,7 +11,15 @@ the owner's choice. Start one only when the owner asks, and read its source plan
 before writing any code. When an item is picked up, give it its own plan file in
 `docs/plans/`, and delete it from this list once it has landed.
 
-**Pending for the next release: one migration.**
+**Pending for the next release: two migrations.**
+`20261107060151_step_up_used_at` (`PAYMENT_CORRECTION_PLAN.md` Batch 0,
+2026-11-07): one nullable `stepUpUsedAt` timestamp on `Organizer` and on
+`StaffAccount` (lib/step-up.ts spends a confirmation token once by moving it
+forward). Applied to the local-dev database only. Additive: the old code
+ignores it; run `npx prisma migrate deploy` before (or with) the deploy.
+Rollback is in the migration's header comment.
+
+
 `20261028031230_event_add_ons` (`ADD_ONS_PLAN.md` Batch 1, 2026-10-28): two
 new tables, `EventAddOn` (an event's optional items) and `RunnerAddOn` (one
 runner's purchased line), and two Int columns on `Registration`,

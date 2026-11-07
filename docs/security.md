@@ -497,6 +497,39 @@
   owner is an `Organizer` row with nobody above it: a lost phone without
   recovery codes is a hand-run database step, done only after proving who is
   asking (`ON_HOLD.md` §2).
+- **A dangerous action can ask the signed-in person to prove it is them again**
+  (step-up, `PAYMENT_CORRECTION_PLAN.md` C2a; `lib/step-up.ts`). A session
+  can be thirty days old on a shared laptop, so a route that guards something
+  dangerous (first: correcting a PAID order's payment, Batch 1) refuses
+  without a fresh **step-up token**. The proof is the account's strongest
+  one: with two-step sign-in on, **only** the 6-digit code (spent under the
+  `totpLastStep` rule; no recovery code, and no password or Google beside it,
+  which would be a way around the code); otherwise the **password** (bcrypt),
+  and for a staff account linked to Google also **Confirm with Google**. The
+  owner has a password only. Google is a popup forced to sign in again
+  (`prompt=login`, `max_age=60`) through `/api/auth/google/step-up`, coming
+  back through the **existing** sign-in callback (no new redirect URI to
+  register); the pending cookie's `stepUp` part makes that callback confirm
+  instead of sign in — it **never sets, reissues or clears a session, and
+  never links a `sub`**. It is accepted only if the signed-in session is the
+  account that started it, `auth_time` is after the dialog asked (30 s skew),
+  and the ID token's `sub` equals that account's own `googleSub` — a
+  colleague's Google on the same laptop proves nothing. The token is a JWT
+  under the app's secret with `purpose: 'step-up'` (no session `kind`, so
+  `verifyToken` refuses it), **five minutes**, bound to the account, an
+  action from `STEP_UP_ACTIONS` and one target id, and **spent once** by
+  `consumeStepUp`: a conditional update moves the account's `stepUpUsedAt`
+  forward only for a newer token, so a replay or a race matches no row (a
+  newer token spent also retires an older unspent one). The popup hands the
+  token back on a same-origin `BroadcastChannel` (and `window.opener` when
+  Google's pages left it), keyed by the dialog's random `ref`, never in an
+  address. **Throttled like sign-in**: `STEP_UP_RULE` (5 in 5 minutes per
+  account, per instance) and the trail's count of `auth.step_up_failed` plus
+  `auth.two_factor_failed` in that window, so neither a fresh instance nor
+  switching doors resets it. Every failure writes `auth.step_up_failed`
+  (worded as a warning), every success `auth.step_up_confirmed` with the
+  method, action, target and the token's `jti`. Who may do the action is
+  still the guarded route's own question.
 - **An account is found by a lowercased email, and written as one.** `login`,
   `register` and `admin/profile` all run the address through
   `normalizeAccountEmail` (§5). The failure this prevents is quiet and reads

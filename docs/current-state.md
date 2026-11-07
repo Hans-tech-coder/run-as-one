@@ -27,6 +27,20 @@ and `certificateCoordinates` through without the certificate route's checks
 (Strix's note, older than this release); over-limit album errors point at row
 6; `RacePhotoLinks` uses a fixed heading id.
 
+**Step-up confirmation (2026-11-07, uncommitted; `PAYMENT_CORRECTION_PLAN.md`
+Batch 0).** A reusable "Confirm it's you" check before a dangerous action:
+`lib/step-up.ts`, `GET/POST /api/admin/step-up`, `GET /api/auth/google/step-up`
+(Confirm with Google, back through the existing callback), and
+`admin/StepUpDialog.tsx`. Two-step on → the code only; otherwise the password,
+plus Google for a linked staff account; the owner by password. Success is a
+5-minute, one-use token bound to account, action and target, spent by
+`consumeStepUp` (new column `stepUpUsedAt`, migration
+`20261107060151_step_up_used_at`, applied to local-dev only). Audited as
+`auth.step_up_confirmed` / `auth.step_up_failed` (Sign-ins shelf). **Nothing
+uses it yet**: Batch 1's payment correction route is its first caller (C2a:
+PAID orders only). Not yet exercised: the Google popup end to end (needs a
+Google-linked staff account on localhost).
+
 **Free entry promotion (2026-10-30, uncommitted).** A sixth discount kind,
 `FREE_ENTRY`, labelled *Free entry (incl. admin fee)* on `/admin/marketing`:
 the whole entry **and** Run As One's admin fee, for **one runner on an order
