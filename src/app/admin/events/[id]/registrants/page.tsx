@@ -4,7 +4,7 @@ import { can, requireTeamActor } from '@/lib/actor';
 import RegistrantsTable, { type RegistrantPermissions } from './RegistrantsTable';
 import RegistrantsTabs, { type RegistrantsTab } from './RegistrantsTabs';
 import UnpaidCheckoutsList, { type UnpaidCheckout } from './UnpaidCheckoutsList';
-import { latestFollowUps, latestStatusChanges } from '@/lib/activity-store';
+import { latestFollowUps, latestPaymentCorrections, latestStatusChanges } from '@/lib/activity-store';
 import { followUpAgo } from '@/lib/follow-up';
 import AdminNotFound from '../../../AdminNotFound';
 import { EVENT_NOT_FOUND } from '../../event-not-found';
@@ -106,6 +106,7 @@ export default async function RegistrantsPage({
     edit: can(actor, 'registration:edit', reach),
     remove: can(actor, 'registration:delete', reach),
     proof: can(actor, 'proof:view', reach),
+    correctPayment: can(actor, 'registration:correct-payment', reach),
     activity: can(actor, 'activity:view', { organizerId: actor.orgId }),
   };
 
@@ -132,6 +133,9 @@ export default async function RegistrantsPage({
     changesByRunner: await categoryChangesByRunner(id),
     // And each order's delivery switches (LOGISTICS_CHANGE_PLAN.md), in one more.
     logisticsByOrder: await logisticsChangesByOrder(id),
+    // And each order's latest payment correction (PAYMENT_CORRECTION_PLAN.md
+    // Batch 2), in one more, for the detail modal's "Corrected" line.
+    correctionsByOrder: await latestPaymentCorrections(actor.orgId, id),
     shortInstant,
     csvInstant,
   });

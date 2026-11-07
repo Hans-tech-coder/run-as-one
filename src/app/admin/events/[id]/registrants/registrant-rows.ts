@@ -1,5 +1,7 @@
 import type { Prisma } from '@prisma/client';
 import type { StatusRecord } from '@/lib/activity';
+import type { CorrectionRecord } from '@/lib/activity-store';
+import { isManualPaymentMethod } from '@/lib/payment-correction-rules';
 import type { CategoryChangeView } from '@/lib/category-change-view';
 import { orderLogisticsFields, type LogisticsChangeView } from '@/lib/logistics-change-view';
 import { runnerRef } from '@/lib/order-ref';
@@ -46,6 +48,7 @@ export function buildRegistrantRows({
   statusRecords,
   changesByRunner,
   logisticsByOrder,
+  correctionsByOrder,
   shortInstant,
   csvInstant,
 }: {
@@ -55,6 +58,8 @@ export function buildRegistrantRows({
   changesByRunner: Map<string, CategoryChangeView[]>;
   /** Each order's delivery switches (LOGISTICS_CHANGE_PLAN.md), from logisticsChangesByOrder. */
   logisticsByOrder: Map<string, LogisticsChangeView[]>;
+  /** Each order's latest payment correction (activity-store's latestPaymentCorrections). */
+  correctionsByOrder: Map<string, CorrectionRecord>;
   shortInstant: (value: Date) => string;
   csvInstant: (value: Date) => string;
 }): Record<string, unknown>[] {
@@ -214,6 +219,12 @@ export function buildRegistrantRows({
         // The branches the screen actually needs, decided from the code rather
         // than by matching the label back against a string.
         isBankTransfer: isBankTransfer(reg.paymentMethod),
+        // Whether the order was paid by hand, which is what lets staff
+        // correct its Transaction No. or proof (lib/payment-correction-rules.ts).
+        isManualPayment: isManualPaymentMethod(reg.paymentMethod),
+        // The latest correction of those details, for the detail modal's
+        // "Corrected … by …" line; null on nearly every order.
+        paymentCorrection: correctionsByOrder.get(reg.id) ?? null,
         // A free pacer entry, read from the discount this order snapshotted
         // rather than from the promo code, which staff may since have paused
         // or deleted (PACER_DISCOUNT_PLAN.md Batch 3). Decided here for the

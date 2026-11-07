@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronDown, History, RotateCcw, Search, X } from 'lucide-react';
+import { History, Search, X } from 'lucide-react';
 import {
   getCoreRowModel,
   useReactTable,
@@ -10,10 +10,8 @@ import {
   type PaginationState,
   type Updater,
 } from '@tanstack/react-table';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import RunnerLoader from '@/components/ui/RunnerLoader';
 import FiltersMenu, { type FilterGroup } from '../FiltersMenu';
-import AdminCardList from '../AdminCardList';
 import AdminTablePager from '../AdminTablePager';
 import {
   ACTIVITY_GROUPS,
@@ -24,17 +22,10 @@ import {
   ACTION_GROUP,
   ACTION_LABELS,
   ACTOR_KIND_LABELS,
-  actionGroupLabel,
-  actionLabel,
   activityQuery,
-  describeChanges,
-  describeDevice,
-  formatTrailDayHeading,
   formatTrailInstant,
-  formatTrailTime,
   groupFilterValue,
   hasActiveFilters,
-  isWarningAction,
   trailDay,
   type ActivityFilterErrors,
   type ActivityFilters,
@@ -43,6 +34,9 @@ import {
 import type { ActivityPerson } from '@/lib/activity-store';
 import type { AuditAction } from '@/lib/audit';
 import AdminDatePicker from '../AdminDatePicker';
+import ActivityTable from './ActivityTable';
+import ActivityCards from './ActivityCards';
+import { ActivityEmpty } from './activity-row-parts';
 
 /**
  * The activity screen's filters and list.
@@ -76,6 +70,9 @@ export type ActivityRow = {
   eventId: string | null;
   /** Null for an entry that belongs to no race, or to a race since deleted. */
   eventTitle: string | null;
+  /** What the entry is about, for links such as a payment correction's proofs. */
+  entityType: string | null;
+  entityId: string | null;
   summary: string;
   changes: unknown;
   ip: string | null;
@@ -92,102 +89,6 @@ function eventDayHint(date: string): string {
   if (!year || !month || !day) return date;
   return new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric', year: 'numeric' }).format(
     new Date(Date.UTC(year, month - 1, day)),
-  );
-}
-
-// ── What a row shows, drawn once for the table and the card ────────────────
-
-/**
- * Who did it. In the table's narrow column the address truncates with the
- * whole of it in a title, as the team table's does — an address broken
- * between two letters reads as a typo. A card has the width to show it whole.
- */
-function ActorLine({ row, layout }: { row: ActivityRow; layout: 'table' | 'card' }) {
-  const kind = ACTOR_KIND_LABELS[row.actorKind] ?? row.actorKind;
-  const line = row.actorEmail ? `${kind} · ${row.actorEmail}` : kind;
-  return (
-    <span className="block min-w-0">
-      <span className="block font-semibold text-primary [overflow-wrap:anywhere]">{row.actorName}</span>
-      <span
-        className={`block text-xs text-secondary ${layout === 'table' ? 'truncate' : '[overflow-wrap:anywhere]'}`}
-        title={layout === 'table' ? line : undefined}
-      >
-        {line}
-      </span>
-    </span>
-  );
-}
-
-/**
- * The entry's sentence, unless it only repeats the label ("Signed in" over
- * "Signed in."), where saying it twice adds a line and nothing else.
- */
-function entrySentence(row: ActivityRow): string | null {
-  const plain = (text: string) => text.trim().replace(/\.$/, '').toLowerCase();
-  return plain(row.summary) === plain(actionLabel(row.action)) ? null : row.summary;
-}
-
-function EventLine({ row }: { row: ActivityRow }) {
-  if (!row.eventId) return <span className="text-secondary">&mdash;</span>;
-  if (!row.eventTitle) return <span className="text-secondary italic">Deleted event</span>;
-  return <span className="[overflow-wrap:anywhere]">{row.eventTitle}</span>;
-}
-
-function ActionLabel({ row }: { row: ActivityRow }) {
-  return isWarningAction(row.action) ? (
-    <span className="status-badge danger">{actionLabel(row.action)}</span>
-  ) : (
-    <span className="font-medium text-primary">{actionLabel(row.action)}</span>
-  );
-}
-
-/** Everything the one-line entry leaves out: the fields that moved, and where it came from. */
-function EntryDetails({ row }: { row: ActivityRow }) {
-  const lines = describeChanges(row.changes);
-  const device = describeDevice(row.userAgent);
-  const group = actionGroupLabel(row.action);
-
-  return (
-    <div className="flex flex-col gap-4 text-sm">
-      <div>
-        <p className="m-0 mb-2 text-xs font-semibold uppercase tracking-wider text-secondary">What changed</p>
-        {lines.length > 0 ? (
-          <dl className="m-0 grid gap-2">
-            {lines.map(line => (
-              <div key={line.field} className="grid gap-x-4 gap-y-0.5 sm:grid-cols-[minmax(8rem,12rem)_1fr]">
-                <dt className="text-secondary">{line.field}</dt>
-                <dd className={`m-0 min-w-0 [overflow-wrap:anywhere] ${line.redacted ? 'text-secondary italic' : 'text-primary'}`}>
-                  {line.text}
-                </dd>
-              </div>
-            ))}
-          </dl>
-        ) : (
-          <p className="m-0 text-secondary">No field-level changes were recorded for this entry. The sentence above is the whole of it.</p>
-        )}
-      </div>
-
-      <dl className="m-0 grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="min-w-0">
-          <dt className="text-xs text-secondary">Recorded</dt>
-          <dd className="m-0 text-primary">{formatTrailInstant(row.at, true)}</dd>
-        </div>
-        <div className="min-w-0">
-          <dt className="text-xs text-secondary">Kind</dt>
-          <dd className="m-0 text-primary">{group ?? 'Other'}</dd>
-        </div>
-        <div className="min-w-0">
-          <dt className="text-xs text-secondary">IP address</dt>
-          <dd className="m-0 font-mono text-primary [overflow-wrap:anywhere]">{row.ip ?? 'Not recorded'}</dd>
-        </div>
-        <div className="min-w-0">
-          <dt className="text-xs text-secondary">Device</dt>
-          <dd className="m-0 text-primary" title={row.userAgent ?? undefined}>
-            {device ?? 'Not recorded'}
-          </dd>
-        </div>
-      </dl>
-    </div>
   );
 }
 
@@ -217,8 +118,6 @@ export default function ActivityClient({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [openId, setOpenId] = useState<string | null>(null);
-  // Time, person, what happened, the event, details.
-  const columnCount = 5;
 
   // ── Navigation ─────────────────────────────────────────────────────────────
 
@@ -396,22 +295,7 @@ export default function ActivityClient({
     go({ person: [], event: [], action: [], range: 'all', from: '', to: '', q: '' });
   };
 
-  const emptyMessage = filtered ? (
-    <>
-      <p className="m-0 text-primary font-medium">Nothing in the trail matches these filters.</p>
-      <p className="m-0 mt-1">Widen the dates or clear a filter to see more.</p>
-      <button type="button" onClick={clearFilters} className="btn-filter mt-4 max-lg:min-h-11">
-        <RotateCcw size={16} aria-hidden="true" /> Clear filters
-      </button>
-    </>
-  ) : (
-    <>
-      <p className="m-0 text-primary font-medium">Nothing has been recorded yet.</p>
-      <p className="m-0 mt-1">
-        Every validated payment, edited runner, opened proof, organizer decision and sign-in will appear here under the name of the person who did it.
-      </p>
-    </>
-  );
+  const emptyMessage = <ActivityEmpty filtered={filtered} onClear={clearFilters} />;
 
   const toggle = (id: string) => setOpenId(current => (current === id ? null : id));
 
@@ -504,156 +388,10 @@ export default function ActivityClient({
         aria-busy={isPending}
       >
         {/* The table, from `lg` up. */}
-        <div className="dash-desktop-only border border-[var(--dash-border)] rounded-lg overflow-hidden bg-transparent">
-          <Table>
-            <TableHeader className="bg-transparent">
-              <TableRow className="border-b border-[var(--dash-border)] hover:bg-transparent">
-                <TableHead className="py-4 px-4 pl-8 text-secondary font-medium h-auto w-28">Time</TableHead>
-                <TableHead className="py-4 px-4 text-secondary font-medium h-auto w-[16rem]">Person</TableHead>
-                <TableHead className="py-4 px-4 text-secondary font-medium h-auto">What happened</TableHead>
-                <TableHead className="py-4 px-4 text-secondary font-medium h-auto w-[14rem]">Event</TableHead>
-                <TableHead className="py-4 px-4 text-secondary font-medium h-auto w-28">Details</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {days.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={columnCount} className="py-16 px-4 text-center text-[var(--text-muted)]">
-                    {emptyMessage}
-                  </TableCell>
-                </TableRow>
-              ) : (
-                days.map(group => (
-                  <React.Fragment key={group.day}>
-                    <TableRow className="border-b border-[var(--dash-hairline)] hover:bg-transparent">
-                      <TableCell
-                        colSpan={columnCount}
-                        className="py-2 px-4 pl-8 bg-[var(--ink-03)] text-xs font-semibold uppercase tracking-wider text-secondary"
-                      >
-                        {formatTrailDayHeading(group.day, now)}
-                      </TableCell>
-                    </TableRow>
-                    {group.rows.map(row => {
-                      const isOpen = openId === row.id;
-                      return (
-                        <React.Fragment key={row.id}>
-                          <TableRow className={`border-b border-[var(--dash-hairline)] hover:bg-[var(--ink-05)] transition-colors ${isOpen ? 'bg-[var(--ink-03)]' : ''}`}>
-                            <TableCell className="py-4 px-4 pl-8 align-top text-secondary whitespace-nowrap">
-                              {formatTrailTime(row.at)}
-                            </TableCell>
-                            <TableCell className="py-4 px-4 align-top max-w-[16rem]">
-                              <ActorLine row={row} layout="table" />
-                            </TableCell>
-                            <TableCell className="py-4 px-4 align-top">
-                              <span className="flex flex-col gap-1 min-w-0">
-                                <span><ActionLabel row={row} /></span>
-                                {entrySentence(row) && (
-                                  <span className="text-sm text-secondary [overflow-wrap:anywhere]">{entrySentence(row)}</span>
-                                )}
-                              </span>
-                            </TableCell>
-                            <TableCell className="py-4 px-4 align-top max-w-[14rem] text-primary">
-                              <EventLine row={row} />
-                            </TableCell>
-                            {/* Under its own header, never pushed to the row's right edge (§8, rule 6). */}
-                            <TableCell className="py-4 px-4 align-top">
-                              <button
-                                type="button"
-                                onClick={() => toggle(row.id)}
-                                aria-expanded={isOpen}
-                                aria-label={`${isOpen ? 'Hide' : 'Show'} details: ${actionLabel(row.action)} by ${row.actorName}`}
-                                className="icon-btn"
-                              >
-                                <ChevronDown
-                                  size={16}
-                                  aria-hidden="true"
-                                  className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
-                                />
-                              </button>
-                            </TableCell>
-                          </TableRow>
-                          {isOpen && (
-                            <TableRow className="border-b border-[var(--dash-hairline)] hover:bg-transparent">
-                              <TableCell colSpan={columnCount} className="px-4 pl-8 py-4">
-                                <div>
-                                  <EntryDetails row={row} />
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          )}
-                        </React.Fragment>
-                      );
-                    })}
-                  </React.Fragment>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+        <ActivityTable days={days} now={now} openId={openId} toggle={toggle} emptyMessage={emptyMessage} />
 
         {/* The same page of entries as cards, below `lg`, under the same day headings. */}
-        <div className="dash-mobile-only">
-          {days.length === 0 ? (
-            <div className="border border-[var(--dash-border)] rounded-lg py-12 px-4 text-center text-[var(--text-muted)]">{emptyMessage}</div>
-          ) : (
-            <div className="flex flex-col gap-4">
-              {days.map(group => (
-                <section key={group.day} className="flex flex-col gap-3">
-                  <h2 className="m-0 text-xs font-semibold uppercase tracking-wider text-secondary">
-                    {formatTrailDayHeading(group.day, now)}
-                  </h2>
-                  <AdminCardList
-                    items={group.rows}
-                    getKey={row => row.id}
-                    label={`Activity on ${formatTrailDayHeading(group.day, now)}`}
-                    className="is-flush"
-                    title={row => <ActionLabel row={row} />}
-                    subtitle={row => {
-                      const sentence = entrySentence(row);
-                      return sentence ? <span className="[overflow-wrap:anywhere]">{sentence}</span> : null;
-                    }}
-                    fields={row => [
-                      { label: 'Time', value: formatTrailTime(row.at) },
-                      { label: 'Kind', value: actionGroupLabel(row.action) ?? 'Other' },
-                      { label: 'Person', value: <ActorLine row={row} layout="card" />, full: true },
-                      ...(row.eventId ? [{ label: 'Event', value: <EventLine row={row} />, full: true }] : []),
-                    ]}
-                    expanded={row => {
-                      const isOpen = openId === row.id;
-                      return (
-                        // transitions.dev's accordion (21), as the feedback
-                        // inbox's cards. No `id` or aria-controls: the table
-                        // renders beside these cards.
-                        <div className="t-acc" data-open={isOpen ? 'true' : 'false'}>
-                          <button
-                            type="button"
-                            onClick={() => toggle(row.id)}
-                            aria-expanded={isOpen}
-                            className="t-acc-head btn-filter w-full justify-between min-h-11"
-                          >
-                            <span>{isOpen ? 'Hide details' : 'Show details'}</span>
-                            <span className="t-acc-chevron" aria-hidden="true">
-                              <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M4 6.5L8 10.5L12 6.5" />
-                              </svg>
-                            </span>
-                          </button>
-                          <div className="t-acc-panel" inert={!isOpen}>
-                            <div className="t-acc-panel-inner">
-                              <div className="pt-3">
-                                <EntryDetails row={row} />
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    }}
-                  />
-                </section>
-              ))}
-            </div>
-          )}
-        </div>
+        <ActivityCards days={days} now={now} openId={openId} toggle={toggle} emptyMessage={emptyMessage} />
       </div>
 
       <AdminTablePager table={table} pageSizes={ACTIVITY_PAGE_SIZES} />

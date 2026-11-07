@@ -236,6 +236,31 @@ export function downloadRegistrantCsv(csv: string, eventTitle: string): void {
 }
 
 /**
+ * The registrants export as the table calls it: the rows on screen — the
+ * selection if there is one, every filtered row otherwise — logged, then
+ * downloaded. Moved here from `RegistrantsTable.tsx` (PAYMENT_CORRECTION_PLAN.md
+ * Batch 2) unchanged.
+ *
+ * The file is built in the browser from rows the screen already holds, so the
+ * audit trail can only be told about it (api/admin/events/[id]/registrants/export).
+ * Fire and forget, with keepalive so the request outlives the download
+ * starting: a log that failed must not cost the organizer their file.
+ */
+export function exportRegistrants(
+  rows: Parameters<typeof buildRegistrantCsv>[0],
+  { eventId, eventTitle, selected }: { eventId: string; eventTitle: string; selected: boolean },
+): void {
+  void fetch(`/api/admin/events/${eventId}/registrants/export`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ count: rows.length, selected }),
+    keepalive: true,
+  }).catch(() => {});
+
+  downloadRegistrantCsv(buildRegistrantCsv(rows), eventTitle);
+}
+
+/**
  * The Unpaid checkouts file, named apart so the two are never confused, and
  * after the event the same way (`unpaid_checkouts_<title>.csv`).
  */

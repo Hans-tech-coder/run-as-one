@@ -387,6 +387,12 @@
   `/api/admin/proof/[id]` — and a category change's through
   `/api/admin/category-changes/[id]/proof` — with a roughly five-minute signed
   URL.
+  `/api/admin/proof/[id]?path=` opens an earlier slip a payment correction
+  replaced (`PAYMENT_CORRECTION_PLAN.md` C5), **only** when that exact
+  pathname is recorded in a `registration.payment.corrected` row's
+  `changes.proofOfPayment` for the same order (same `proof:view` check, same
+  signed URL, same `proof.viewed` row; any other path reads as no proof), so
+  the parameter cannot be used to sign an arbitrary blob.
 - Passwords are bcrypt-hashed; the session cookie is httpOnly, `sameSite=lax`,
   `secure` in production, with a one-day expiry — or **30 days when the person
   ticks "Keep me signed in"** (`LOGIN_UX_PLAN.md` Batch 4, D8; opt-in, off by

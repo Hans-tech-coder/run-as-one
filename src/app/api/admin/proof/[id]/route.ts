@@ -18,7 +18,34 @@ import { signedProofUrl } from '@/lib/blob';
  * The row is written before the URL is handed over, so a proof is never served
  * without its record — and it names only which order's proof, never its
  * contents.
+ *
+ * **`?path=` opens an earlier or replaced slip** (PAYMENT_CORRECTION_PLAN.md
+ * C5, Batch 2): a payment correction keeps the old pathname in its trail row
+ * (`changes.proofOfPayment = [old, new]`), and the history screen links to
+ * both. The path is served only when it appears in a
+ * `registration.payment.corrected` row of **this same order** — never a
+ * pathname the caller made up, nor one from another order — under the same
+ * `proof:view` check, the same short-lived signed URL and the same
+ * `proof.viewed` row.
  */
+
+/** Whether `path` is one of the slips this order's corrections recorded. */
+async function isRecordedProof(registrationId: string, organizerId: string, path: string): Promise<boolean> {
+  const rows = await prisma.auditLog.findMany({
+    where: {
+      organizerId,
+      action: 'registration.payment.corrected',
+      entityType: 'Registration',
+      entityId: registrationId,
+    },
+    select: { changes: true },
+  });
+  return rows.some(row => {
+    const pair = (row.changes as { proofOfPayment?: unknown } | null)?.proofOfPayment;
+    return Array.isArray(pair) && pair.some(value => typeof value === 'string' && value === path);
+  });
+}
+
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const actor = await getActor();
   if (!actor) {
@@ -26,6 +53,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   }
 
   const { id } = await params;
+  const path = new URL(request.url).searchParams.get('path');
 
   const registration = await prisma.registration.findUnique({
     where: { id },
@@ -37,7 +65,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     },
   });
 
-  if (!registration?.proofOfPayment) {
+  // With `?path=`, the order need not have a proof now: a correction may
+  // have been the first one attached.
+  if (!registration || (!path && !registration.proofOfPayment)) {
     return NextResponse.json({ error: 'No proof of payment on file' }, { status: 404 });
   }
 
@@ -50,15 +80,30 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: 'No proof of payment on file' }, { status: 404 });
   }
 
+  // Checked after the permission, and refused with the same words, so a
+  // pathname cannot be confirmed by probing.
+  let pathname = registration.proofOfPayment;
+  if (path) {
+    if (path !== registration.proofOfPayment && !(await isRecordedProof(id, registration.event.organizerId, path))) {
+      return NextResponse.json({ error: 'No proof of payment on file' }, { status: 404 });
+    }
+    pathname = path;
+  }
+  if (!pathname) {
+    return NextResponse.json({ error: 'No proof of payment on file' }, { status: 404 });
+  }
+
   try {
-    const url = await signedProofUrl(registration.proofOfPayment);
+    const url = await signedProofUrl(pathname);
     await recordAudit(prisma, actor, {
       action: 'proof.viewed',
       entityType: 'Registration',
       entityId: id,
       eventId: registration.eventId,
       organizerId: registration.event.organizerId,
-      summary: `Opened the proof of payment for ${registration.orderRef}.`,
+      summary: path && path !== registration.proofOfPayment
+        ? `Opened an earlier proof of payment for ${registration.orderRef}.`
+        : `Opened the proof of payment for ${registration.orderRef}.`,
     });
     return NextResponse.redirect(url);
   } catch (error) {

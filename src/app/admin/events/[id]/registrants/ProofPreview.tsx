@@ -3,17 +3,29 @@
  * modal shows a registrant's deposit slip: the thumbnail and *View fullscreen*
  * both open the viewer (`ProofLightbox`). A PDF gets a card, since an <img>
  * cannot draw one. Shared by a delivery switch's *Delivery Payment* modal and
- * a runner's *Category Changes*, so the two proofs read alike.
+ * a runner's *Category Changes*, so the two proofs read alike; Correct
+ * payment shows the order's current slip with it.
  */
 
 import React from 'react';
 import { FileText, Maximize2 } from 'lucide-react';
 
-export default function ProofPreview({ src, isPdf, onOpen }: { src: string; isPdf: boolean; onOpen: () => void }) {
+export default function ProofPreview({
+  src,
+  isPdf,
+  onOpen,
+  label = 'Proof of Payment',
+}: {
+  src: string;
+  isPdf: boolean;
+  onOpen: () => void;
+  /** The line above it; Correct payment calls it "On file now". */
+  label?: string;
+}) {
   return (
     <div>
       <div className="flex items-center justify-between gap-4 mb-2">
-        <p className="text-[var(--text-muted)] text-sm m-0">Proof of Payment</p>
+        <p className="text-[var(--text-muted)] text-sm m-0">{label}</p>
         <button
           type="button"
           onClick={onOpen}

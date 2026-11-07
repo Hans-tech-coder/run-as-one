@@ -38,19 +38,17 @@ import type { Actor } from './actor';
 import { recordAudit, type AuditChanges } from './audit';
 import { readTransactionNumber } from './category-change-hold';
 import { PAYMENT_METHODS, asPaymentMethod } from './registration-codes';
+import { CORRECTABLE_STATUSES, CORRECTION_REASON_MAX, isManualPaymentMethod } from './payment-correction-rules';
 
-/** The methods a manual order may hold. The manual checkout writes only this one. */
-export const MANUAL_PAYMENT_METHODS = [PAYMENT_METHODS.BANK_TRANSFER] as const;
-
-/** The statuses a correction may land on (C2). */
-export const CORRECTABLE_STATUSES = ['PENDING', 'PAID'] as const;
-
-/** One trail line's worth of "why". */
-export const CORRECTION_REASON_MAX = 200;
-
-export function isManualPaymentMethod(value: unknown): boolean {
-  return (MANUAL_PAYMENT_METHODS as readonly string[]).includes(asPaymentMethod(value));
-}
+// The client-safe half of the rule (no Prisma), re-exported so server code
+// keeps one import.
+export {
+  CORRECTABLE_STATUSES,
+  CORRECTION_REASON_MAX,
+  MANUAL_PAYMENT_METHODS,
+  isCorrectableStatus,
+  isManualPaymentMethod,
+} from './payment-correction-rules';
 
 /** Refused with a sentence the screen shows as it is. */
 export class CorrectionRefused extends Error {

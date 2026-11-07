@@ -31,20 +31,21 @@ import {
   VisibilityState,
 } from '@tanstack/react-table';
 import RegistrantDetailModal from './RegistrantDetailModal';
-import RunnerEditModal, { mergeSavedRunner } from './RunnerEditModal';
+import { useRunnerEdit } from './useRunnerEdit';
 import {
   MinorBadge,
   RegistrantStatusBadges,
   canValidatePayment,
   expiredExplanation,
 } from './registrant-display';
-import { buildRegistrantCsv, downloadRegistrantCsv } from './registrant-csv';
+import { exportRegistrants } from './registrant-csv';
 import { buildRegistrantColumns, initialColumnVisibility } from './registrant-columns';
 import RegistrantRowActions, { type RegistrantRowActionHandlers } from './RegistrantRowActions';
 import RegistrantsToolbar, { useRegistrantQueues } from './RegistrantsToolbar';
 import RemarksModal, { useRemarksModal } from './RemarksModal';
 import ManualEmailModal, { useManualEmailModal } from './ManualEmailModal';
-import { remarked, withEmailMark, withRemarks } from './registrant-row-patches';
+import { paymentCorrected, remarked, withEmailMark, withPaymentCorrection, withRemarks } from './registrant-row-patches';
+import { usePaymentCorrection } from './PaymentCorrectionModal';
 import CategoryChangeModal from './CategoryChangeModal';
 import { useCategoryChangeModal } from './useCategoryChangeModal';
 import CategoryChangeEmailModal from './CategoryChangeEmailModal';
@@ -72,6 +73,8 @@ export type RegistrantPermissions = {
   edit: boolean;
   remove: boolean;
   proof: boolean;
+  /** Correct a manual order's Transaction No. or proof (PAYMENT_CORRECTION_PLAN.md). */
+  correctPayment: boolean;
   /** The organizer's activity trail, for the order's "full activity" link. */
   activity: boolean;
 };
@@ -143,10 +146,8 @@ export default function RegistrantsTable({
     setProofRunner,
   });
 
-  // Edit Modal State
-  const [editingRunner, setEditingRunner] = useState<any | null>(null);
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  const [isEditClosing, setIsEditClosing] = useState(false);
+  // Edit Registrant, its state and modal (useRunnerEdit).
+  const runnerEdit = useRunnerEdit({ runners, raceDay, setRunners });
 
   const deleteModal = useDeleteRegistrantModal({
     runners,
@@ -201,6 +202,16 @@ export default function RegistrantsTable({
     onSendSwitchEmail: orderSwitch.sendEmail,
   });
 
+  // Correct payment (PAYMENT_CORRECTION_PLAN.md Batch 2): the corrected
+  // details land on every row of the order and on the open detail modal.
+  const correction = usePaymentCorrection({
+    runners,
+    onCorrected: (registrationId, saved) => {
+      setRunners(current => withPaymentCorrection(current, registrationId, saved));
+      setViewingRunner((current: any) => paymentCorrected(current, registrationId, saved));
+    },
+  });
+
   const queues = useRegistrantQueues(runners);
 
   // Table state
@@ -226,31 +237,12 @@ export default function RegistrantsTable({
     }
   };
 
-  const openEditModal = (runnerId: string) => {
-    const runner = runners.find(r => r.id === runnerId);
-    if (runner) {
-      // The row carries the shirt size as `size`; the route takes it as
-      // `singletSize`, so without this the field opened blank.
-      setEditingRunner({ ...runner, singletSize: runner.size ?? '' });
-      setIsEditOpen(true);
-    }
-  };
-
-  const closeEditModal = () => {
-    setIsEditOpen(false);
-    setIsEditClosing(true);
-    setTimeout(() => {
-      setIsEditClosing(false);
-      setEditingRunner(null);
-    }, 150);
-  };
-
   const rowActions: RegistrantRowActionHandlers = {
     permissions,
     updatingId,
     onStatusChange: handleStatusChange,
     onView: openViewModal,
-    onEdit: openEditModal,
+    onEdit: runnerEdit.open,
     onDelete: deleteModal.open,
     onRemarks: remarks.open,
     onEmail: email.open,
@@ -262,6 +254,7 @@ export default function RegistrantsTable({
     orderSwitchFor: orderSwitch.menuFor,
     onSwitchLogistics: orderSwitch.startSwitch,
     onLogisticsDetails: orderSwitch.showDetails,
+    onCorrectPayment: correction.open,
   };
 
   const columns = useMemo(
@@ -310,28 +303,11 @@ export default function RegistrantsTable({
 
   const selectedCount = table.getSelectedRowModel().rows.length;
 
-  /**
-   * The export, as the table calls it: the columns and the Excel-proofing
-   * live in registrant-csv.ts, and what leaves here is whichever rows are on
-   * screen — the selection if there is one, every filtered row otherwise.
-   */
+  // The export: the selection if there is one, every filtered row otherwise.
   const handleExportCSV = () => {
     const selectedRows = table.getSelectedRowModel().rows;
     const rowsToExport = selectedRows.length > 0 ? selectedRows : table.getFilteredRowModel().rows;
-
-    // The file is built in the browser from rows the screen already holds, so
-    // the audit trail can only be told about it
-    // (api/admin/events/[id]/registrants/export). Fire and forget, with
-    // keepalive so the request outlives the download starting: a log that
-    // failed must not cost the organizer their file.
-    void fetch(`/api/admin/events/${eventId}/registrants/export`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ count: rowsToExport.length, selected: selectedRows.length > 0 }),
-      keepalive: true,
-    }).catch(() => {});
-
-    downloadRegistrantCsv(buildRegistrantCsv(rowsToExport.map(r => r.original)), eventTitle);
+    exportRegistrants(rowsToExport.map(r => r.original), { eventId, eventTitle, selected: selectedRows.length > 0 });
   };
 
   return (
@@ -397,19 +373,7 @@ export default function RegistrantsTable({
         />
       )}
 
-      <RunnerEditModal
-        runner={editingRunner}
-        setRunner={setEditingRunner}
-        isOpen={isEditOpen}
-        isClosing={isEditClosing}
-        raceDay={raceDay}
-        onClose={closeEditModal}
-        onSaved={saved =>
-          setRunners(current =>
-            current.map(r => (r.id === saved.id ? mergeSavedRunner(r, saved, raceDay) : r)),
-          )
-        }
-      />
+      {runnerEdit.element}
 
       <DeleteRegistrantModal {...deleteModal.modalProps} />
       <BulkDeleteModal {...bulkDelete.modalProps} />
@@ -420,6 +384,7 @@ export default function RegistrantsTable({
       {history.element}
       {orderSwitch.element}
       {categoryChanges.element}
+      {correction.element}
       {categoryChange.changeEmail && (
         <CategoryChangeEmailModal
           key={categoryChange.changeEmail.changeId}

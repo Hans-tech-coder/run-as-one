@@ -50,8 +50,13 @@ reason, one `registration.payment.corrected` trail row holding `[old, new]`
 `registration:correct-payment` (OWNER, ADMIN, EVENT_MANAGER, VALIDATOR). PAID
 orders spend a step-up token (first caller of `consumeStepUp`); optional
 receipt resend on PAID. The method can only be `BANK_TRANSFER` — the only
-method the manual checkout writes. **No screen yet** (Batch 2: modal, row
-action, history view). Exercised on localhost through the API; not yet
+method the manual checkout writes. **The screen (Batch 2, uncommitted)**: the
+*Correct Payment* row action and `PaymentCorrectionModal.tsx` (step-up on
+PAID, plain confirm on PENDING, optional receipt resend), the detail modal's
+*Corrected … by …* note, and the Activity row's *Open old / new proof* links
+through `admin/proof/[id]?path=` (trail-recorded pathnames only).
+`ActivityClient.tsx` and `RegistrantsTable.tsx` were split on the way.
+Batch 3 (the final walkthrough) is next. Exercised on localhost through the API; not yet
 exercised: an actual proof upload (the private store is shared with
 production and local code never deletes from it).
 

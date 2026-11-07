@@ -272,7 +272,10 @@
     (`lib/step-up.ts`), never a page-local password box. Mount it with the
     action and target id; it shows only the proofs that account has (code,
     or password with Confirm with Google beside it) and hands back a token
-    through `onConfirmed`, which the caller sends with the action.
+    through `onConfirmed`, which the caller sends with the action. Keep the
+    token for a retry after a 400 / 409 (a refused action leaves it unspent)
+    and drop it after a 200 or a 403, reopening the dialog on a 403
+    (`PaymentCorrectionModal.tsx` is the first caller).
   - **Every TanStack table's pager is `admin/AdminTablePager`.** It holds the
     rows-per-page menu, the range and First / Previous / Next / Last. Below
     `sm` it shows only the range and 44px Previous / Next. It counts with

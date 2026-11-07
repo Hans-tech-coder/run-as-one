@@ -34,6 +34,9 @@ export type ActivityEntry = {
   actorEmail: string | null;
   action: string;
   eventId: string | null;
+  /** What the entry is about (`Registration` + its id), for links such as a correction's proofs. */
+  entityType: string | null;
+  entityId: string | null;
   summary: string;
   changes: unknown;
   ip: string | null;
@@ -85,6 +88,8 @@ export async function loadActivityPage(
       actorEmail: true,
       action: true,
       eventId: true,
+      entityType: true,
+      entityId: true,
       summary: true,
       changes: true,
       ip: true,
@@ -100,6 +105,8 @@ export async function loadActivityPage(
     actorEmail: entry.actorEmail,
     action: entry.action,
     eventId: entry.eventId,
+    entityType: entry.entityType,
+    entityId: entry.entityId,
     summary: entry.summary,
     changes: entry.changes ?? null,
     ip: entry.ip,
@@ -266,6 +273,33 @@ export async function latestFollowUps(
       by: entry.actorName,
       at: entry.createdAt.toISOString(),
     });
+  }
+  return latest;
+}
+
+/** The latest payment correction on an order: who and when (PAYMENT_CORRECTION_PLAN.md Batch 2). */
+export type CorrectionRecord = { by: string; at: string };
+
+/**
+ * The latest payment correction of every order on one event, by registration
+ * id — the detail modal's "Corrected 7 Nov by Ana" line. One query for the
+ * whole screen, read the way `latestStatusChanges` is, without `changes`:
+ * the line needs only the name and the instant.
+ */
+export async function latestPaymentCorrections(
+  organizerId: string,
+  eventId: string,
+): Promise<Map<string, CorrectionRecord>> {
+  const entries = await prisma.auditLog.findMany({
+    where: { organizerId, eventId, action: 'registration.payment.corrected' },
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    select: { entityId: true, actorName: true, createdAt: true },
+  });
+
+  const latest = new Map<string, CorrectionRecord>();
+  for (const entry of entries) {
+    if (!entry.entityId || latest.has(entry.entityId)) continue;
+    latest.set(entry.entityId, { by: entry.actorName, at: entry.createdAt.toISOString() });
   }
   return latest;
 }

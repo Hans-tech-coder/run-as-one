@@ -2,11 +2,12 @@
 
 import React, { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { MoreVertical, CheckCircle, Trash2, Edit, Eye, ArrowLeftRight, Truck, Store, Wallet, History } from 'lucide-react';
+import { MoreVertical, CheckCircle, Trash2, Edit, Eye, ArrowLeftRight, Truck, Store, Wallet, History, ReceiptText } from 'lucide-react';
 import { placeRowMenu, type RowMenuPlacement } from '../../../row-menu-position';
 import BusyLabel from '@/components/ui/BusyLabel';
 import { cssDurationMs } from '@/lib/css-duration';
 import { canValidatePayment } from './registrant-display';
+import { isCorrectableStatus } from '@/lib/payment-correction-rules';
 import { LOGISTICS_DIRECTIONS } from '@/lib/logistics-change';
 import type { OrderSwitchMenu } from './useOrderSwitch';
 import type { CategoryChangesMenu } from './useCategoryChanges';
@@ -51,6 +52,13 @@ interface RegistrantActionsMenuProps {
   canEdit: boolean;
   canDelete: boolean;
   canValidate: boolean;
+  /**
+   * Correct payment (PAYMENT_CORRECTION_PLAN.md Batch 2): the role holds
+   * `registration:correct-payment` and the order was paid by hand. The menu
+   * adds the status check (pending or paid), since validating moves it here.
+   */
+  canCorrectPayment: boolean;
+  onCorrectPayment: (runnerId: string) => void;
 }
 
 /**
@@ -85,6 +93,8 @@ export default function RegistrantActionsMenu({
   canEdit,
   canDelete,
   canValidate,
+  canCorrectPayment,
+  onCorrectPayment,
 }: RegistrantActionsMenuProps) {
   // No "mounted" flag: the menu opens only on a click, which never happens
   // during server rendering, so `isOpen` alone guarantees `document` is there.
@@ -301,6 +311,21 @@ export default function RegistrantActionsMenu({
             }}
           >
             <History size={16} aria-hidden="true" /> History
+          </button>
+        )}
+
+        {/* Fix a wrong Transaction No. or proof on a bank transfer, pending
+            or paid. Never the amount or the status. */}
+        {canCorrectPayment && isCorrectableStatus(status) && (
+          <button
+            className="action-dropdown-item flex items-center gap-3 px-4 py-2 text-sm text-left"
+            role="menuitem"
+            onClick={() => {
+              onCorrectPayment(runnerId);
+              closeMenu();
+            }}
+          >
+            <ReceiptText size={16} aria-hidden="true" /> Correct Payment
           </button>
         )}
 

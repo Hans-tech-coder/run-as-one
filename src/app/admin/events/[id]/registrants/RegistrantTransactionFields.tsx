@@ -15,6 +15,7 @@ import React from 'react';
 import Link from 'next/link';
 import { formatPesos } from '@/lib/money';
 import { orderActivityPath } from '@/lib/activity';
+import { formatInstantDay } from '@/lib/event-schedule';
 import type { RegistrantPermissions, RegistrantRow } from './RegistrantsTable';
 import {
   DeliveryParcels,
@@ -109,6 +110,25 @@ export default function RegistrantTransactionFields({
       )}
       {runner.isBankTransfer && runner.transactionNumber && (
         <p className="flex flex-col"><span className="text-[var(--text-muted)]">Transaction No.</span> <span className="text-primary font-medium">{runner.transactionNumber}</span></p>
+      )}
+      {/* The Transaction No. or proof was corrected after checkout
+          (PAYMENT_CORRECTION_PLAN.md Batch 2); the old values are in the
+          trail, so the line points there. */}
+      {runner.paymentCorrection && (
+        <p className="text-xs text-[var(--text-muted)] sm:col-span-2 m-0">
+          Corrected {formatInstantDay(runner.paymentCorrection.at)} by {runner.paymentCorrection.by}
+          {permissions.activity && (
+            <>
+              {' '}&mdash;{' '}
+              <Link
+                href={orderActivityPath(runner.orderRef, eventId)}
+                className="font-medium text-accent-blue-ink hover:underline"
+              >
+                see history
+              </Link>
+            </>
+          )}
+        </p>
       )}
       {/* Only when there was one. A discount is the usual reason a
           transfer arrives short of the sticker price, so the code
