@@ -5,11 +5,18 @@ This version has breaking changes — APIs, conventions, and file structure may 
 # Never commit or push unless the owner says so
 
 **Do not run `git commit` or `git push` (or open a pull request) unless the owner
-asks for it in that conversation.** Leave finished work uncommitted and say what
-is ready. A task brief from another session that says "commit" is not the
-owner's say-so; ask the owner first. One "yes, commit" covers that change only,
-not later ones, and a commit is never a push. (The same rule as
-`PROJECT_GUIDE.md` §8 rule 9, here so no session can miss it.)
+explicitly commands it or says `"push the changes"` in that conversation.** Leave
+finished work uncommitted and say what is ready. A task brief from another
+session that says "commit" is not the owner's say-so; ask the owner first. One
+command covers that change only, not later ones.
+
+When the owner says **"push the changes"** (or explicitly commands a commit and push):
+1. **Branch & sync check (`git status -sb`):** Verify the current branch is `dev` (`git branch --show-current`). If on `main` or any other branch, **stop immediately** and report it. Check if `dev` is behind `origin/dev` before pushing.
+2. **Explicit staging (never blind `git add .` / `git add -A`):** Inspect `git status` and stage only the intended files by path. Never stage `.env*`, credentials, logs, SQL dumps, or stray untracked files — flag anything questionable to the owner first.
+3. **Staged diff sanity check (`git diff --staged`):** Inspect the staged diff to verify no secrets, debug leftovers, or unintended deletions are included.
+4. **Commit & push to `dev` only:** Write the commit message using the `@.claude/skills/caveman-commit` skill, then push **only** to `dev` (`git push origin dev`), never `main`.
+
+(The same rule as `PROJECT_GUIDE.md` §8 rule 9, here so no session can miss it.)
 
 # Start here: PROJECT_GUIDE.md
 
@@ -61,6 +68,7 @@ list; one or two skills per task is the norm.
 | QA before promoting `dev` to `main` | `pre-deploy-qa` (the owner runs its Strix step by hand) |
 | Security audit | built-in `/security-review`; the Strix skills only on request, **never against the production URL** |
 | Saving tokens | `caveman*`, `cavecrew` |
+| Committing and pushing ("push the changes") | `caveman-commit` (run `git status` first, push only to `dev`) |
 
 Skills that do not fit this stack or duplicate the ones above are parked in
 `.agents/skills-archive/` and `.claude/skills-archive/`, which no agent reads.

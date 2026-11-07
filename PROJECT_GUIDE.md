@@ -354,8 +354,20 @@ These are the user's own standing preferences. Follow them without being asked.
    enough for them to see the change.
 9. **Never commit or push until the user says so.** Finish the work, verify it,
    report it, and leave it uncommitted in the working tree. `git commit` and
-   `git push` wait for their explicit command — say plainly that the change is
-   sitting there unstaged rather than assuming a finished change should land.
+   `git push` wait for the user's explicit command or `"push the changes"` — say
+   plainly that the change is sitting there unstaged rather than assuming a
+   finished change should land. When the user says **"push the changes"**:
+   - **Branch & sync guard:** Run `git status -sb` and `git branch --show-current`
+     to confirm the checkout is on `dev` (stop immediately if on `main` or
+     another branch) and check whether `dev` is behind `origin/dev`.
+   - **Explicit file staging:** Never run blind `git add .` or `git add -A`.
+     Stage only the intended paths and refuse to stage `.env*`, secrets, dumps,
+     logs, or unknown untracked files without asking.
+   - **Staged diff check:** Inspect `git diff --staged` to catch stray debug
+     code, secrets, or unintended deletions.
+   - **Commit & push:** Format the commit message with
+     `@.claude/skills/caveman-commit` and push **only** to `dev`
+     (`git push origin dev`), never `main`.
 10. **Weigh storage cost** (Neon's free 0.5 GB tier) before growing the schema.
 11. **Comment the *why*.** This codebase's header comments explain the reasoning
     behind a decision, not what the code does. Match that voice.

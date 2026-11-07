@@ -492,3 +492,20 @@ Not walked in a browser, worth one look after release:
   sent none.
 - **The stock count coming back when an unpaid checkout with a shirt
   expires** through the daily sweep.
+
+## 16. One payment reference, one payment
+
+*Source: `docs/plans/PAYMENT_REFERENCE_UNIQUE_PLAN.md` (gitignored), written
+2026-11-07; nothing built.*
+
+Two NEURUN 2027 orders (RM-FDCC85E7, RM-8E151ABA) went in on one GCash
+reference and one receipt, because nothing checks a Transaction No. against
+other payments. The plan normalizes the reference, refuses one already held by
+a live order, upgrade or switch anywhere in the app (an advisory lock per
+reference plus a partial unique index on `Registration`), and covers all eight
+writers, staff ones included.
+
+**Waits on:** staff verifying and resolving **RM-8E151ABA** (Roldan Alvarez):
+the migration's unique index fails while it is PENDING with Joan's reference.
+The owner left the two `6046287195001` delivery switches (RM-FF1E56E5-L1,
+RM-B95DADDC-L1) as they are; do not touch them.
