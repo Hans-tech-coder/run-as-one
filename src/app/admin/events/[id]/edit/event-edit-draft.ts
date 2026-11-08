@@ -11,7 +11,7 @@ import { asDowngradeRefundPolicy } from '@/lib/category-change';
 import { blankEventDraft, changeUntilDraft, type EventFormDraft } from '../../event-form-draft';
 import { openingDraft, type OpeningDraft } from '../../registration-opening';
 import { deliveryOffered } from '../../LogisticsPanel';
-import type { CategoryDraft } from '../../category-draft';
+import type { BibMedalDraft, CategoryDraft } from '../../category-draft';
 import type { BankAccountDraft } from '../../bank-account-draft';
 
 /**
@@ -113,8 +113,24 @@ type EventResponse = {
     inclusions?: Maybe<string[]>;
     slotLimit?: Maybe<number>;
     slotsTaken?: number;
+    closed?: Maybe<boolean>;
+    bibMedalOfId?: Maybe<string>;
   }[];
 };
+
+type LoadedCategory = NonNullable<EventResponse['categories']>[number];
+
+/** A Bib + Medal row, in the shape its parent's row edits it. */
+function bibMedalDraft(child: LoadedCategory): BibMedalDraft {
+  return {
+    enabled: !child.closed,
+    price: toPesos(child.price),
+    slotLimit: child.slotLimit ?? '',
+    inclusions: formatInclusions(child.inclusions),
+    saved: true,
+    slotsTaken: child.slotsTaken ?? 0,
+  };
+}
 
 export function editStateFromEvent(data: EventResponse): {
   formData: EventEditDraft;
@@ -190,7 +206,11 @@ export function editStateFromEvent(data: EventResponse): {
 
     categories:
       data.categories && data.categories.length > 0
-        ? data.categories.map(c => ({
+        ? // A Bib + Medal row is edited inside its parent's card, never as a
+          // row of its own.
+          data.categories.filter(c => !c.bibMedalOfId).map(c => {
+            const child = data.categories?.find(other => other.bibMedalOfId === c.id);
+            return {
             id: c.id,
             name: c.name,
             distance: c.distance,
@@ -203,7 +223,10 @@ export function editStateFromEvent(data: EventResponse): {
             slotLimit: c.slotLimit ?? '',
             // Read-only, so the organizer can see what they are capping.
             slotsTaken: c.slotsTaken ?? 0,
-          }))
+            closed: Boolean(c.closed),
+            ...(child ? { bibMedal: bibMedalDraft(child) } : {}),
+            };
+          })
         : null,
   };
 }

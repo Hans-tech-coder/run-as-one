@@ -7,6 +7,8 @@ import InclusionsField from './InclusionsField';
 import { blankCategory, type CategoryDraft } from './category-draft';
 import { EVENT_TYPES, type EventType } from '@/lib/event-type';
 import { upperCaseAsTyped } from '@/lib/text-case';
+import { offersBibMedal, type BibMedalFault } from '@/lib/bib-medal';
+import BibMedalFields from './BibMedalFields';
 
 /**
  * What an event sells, and the rows that make it up.
@@ -80,6 +82,7 @@ export default function EventOptionsPanel({
   onError,
   onBusyChange,
   resultsOnly = false,
+  bibMedalFault = null,
 }: {
   eventType: EventType;
   onEventTypeChange: (next: EventType) => void;
@@ -93,6 +96,8 @@ export default function EventOptionsPanel({
   onError: (message: string) => void;
   onBusyChange: (busy: boolean) => void;
   resultsOnly?: boolean;
+  /** The save's refusal of one Bib + Medal field, shown under that field. */
+  bibMedalFault?: BibMedalFault | null;
 }) {
   const words = wording(eventType);
   const locked = Boolean(lockedReason);
@@ -291,6 +296,19 @@ export default function EventOptionsPanel({
                       onBusyChange={onBusyChange}
                       alt={`${row.name || words.rowLabel} Preview`}
                     />
+
+                    {offersBibMedal(eventType, resultsOnly) && (
+                      <BibMedalFields
+                        row={row}
+                        index={idx}
+                        fault={bibMedalFault}
+                        onChange={changes => {
+                          const next = [...options];
+                          next[idx] = { ...next[idx], ...changes };
+                          onChange(next);
+                        }}
+                      />
+                    )}
                   </>
                 )}
               </div>

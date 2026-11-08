@@ -28,6 +28,8 @@ import { readClientLink } from '@/lib/client-store';
 import { cleanHighlights } from '@/lib/event-highlights';
 import { findProvince, inferProvince } from '@/lib/ph-address';
 import { readPhotoAlbums } from '@/lib/photo-albums';
+import { offersBibMedal, readBibMedalOptions } from '@/lib/bib-medal';
+import { syncBibMedalOption } from '../bib-medal-save';
 
 /**
  * The Edit Event save: the whole form, categories and bank accounts with it,
@@ -267,13 +269,23 @@ export async function updateEvent(request: Request, { params }: { params: Promis
     // A category sent with an id must already be one of this event's: the
     // permission above is for this event only, so an id from another race
     // would let an event-scoped manager rename or reprice an option there.
-    const ownCategoryIds = new Set(current.categories.map((c) => c.id));
+    // A Bib + Medal row is written only through its parent, so its id is not
+    // one a row may carry either.
+    const ownCategoryIds = new Set(current.categories.filter((c) => !c.bibMedalOfId).map((c) => c.id));
     if (categories.some((c: any) => c.id && !ownCategoryIds.has(c.id))) {
       return NextResponse.json(
         { error: 'One of the categories does not belong to this event. Reload the page and try again.' },
         { status: 400 },
       );
     }
+
+    const bibMedalOffered = offersBibMedal(asEventType(eventType), resultsOnly);
+    const bibMedal = readBibMedalOptions(categories, bibMedalOffered);
+    if (!bibMedal.ok) {
+      return NextResponse.json({ error: bibMedal.error, bibMedalFault: bibMedal.fault }, { status: 400 });
+    }
+    const childOf = (parentId: string | undefined) =>
+      parentId ? current.categories.find((c) => c.bibMedalOfId === parentId)?.id : undefined;
 
     const slug = current.title === title
       ? current.slug
@@ -305,14 +317,27 @@ export async function updateEvent(request: Request, { params }: { params: Promis
 
       // Handle category deletion carefully to avoid FK constraints
       try {
+        // The form never lists a Bib + Medal row, so only parents are judged
+        // by absence. A removed parent takes its child with it first: the
+        // link is ON DELETE SET NULL, which would otherwise leave the child
+        // on sale as a normal option. A child with runners fails here and
+        // refuses the removal, the same as a parent with runners.
+        const removedParents = current.categories
+          .filter((c) => !c.bibMedalOfId && !incomingIds.includes(c.id))
+          .map((c) => c.id);
+        await prisma.category.deleteMany({
+          where: { eventId: id, bibMedalOfId: { in: removedParents } },
+        });
         await prisma.category.deleteMany({
           where: {
             eventId: id,
-            id: { notIn: incomingIds }
+            id: { in: removedParents },
           }
         });
       } catch (e: any) {
-        if (e.code === 'P2003') throw new CategoryInUseError();
+        // The pg adapter reports a RESTRICT foreign key as an unknown error
+        // rather than P2003, so the constraint kind has to be read as well.
+        if (e.code === 'P2003' || String(e.message).includes('RestrictViolation')) throw new CategoryInUseError();
         throw e;
       }
 
@@ -397,9 +422,10 @@ export async function updateEvent(request: Request, { params }: { params: Promis
       });
       let nextSortOrder = (_max.sortOrder ?? -1) + 1;
 
-      for (const cat of categories) {
+      for (const [index, cat] of categories.entries()) {
+        let parent;
         if (cat.id) {
-          await prisma.category.update({
+          parent = await prisma.category.update({
             // Scoped to this event as well, so the write itself can never
             // land on another race's option.
             where: { id: cat.id, eventId: id },
@@ -421,10 +447,11 @@ export async function updateEvent(request: Request, { params }: { params: Promis
               // that is how an organizer closes an option early, and the
               // runners already in it keep their places.
               slotLimit: resultsOnly ? null : asSlotLimit(cat.slotLimit),
+              ...(cat.closed !== undefined ? { closed: bibMedalOffered && cat.closed === true } : {}),
             }
           });
         } else {
-          await prisma.category.create({
+          parent = await prisma.category.create({
             data: {
               name: upperCaseForStorage(cat.name),
               distance: cat.distance || '',
@@ -433,10 +460,12 @@ export async function updateEvent(request: Request, { params }: { params: Promis
               inclusions: asInclusions(cat.inclusions),
               slotLimit: resultsOnly ? null : asSlotLimit(cat.slotLimit),
               sortOrder: nextSortOrder++,
+              closed: bibMedalOffered && cat.closed === true,
               eventId: id,
             }
           });
         }
+        await syncBibMedalOption(prisma, id, parent, childOf(cat.id), bibMedal.choices[index]);
       }
 
       const saved = await prisma.event.findUnique({
@@ -451,7 +480,7 @@ export async function updateEvent(request: Request, { params }: { params: Promis
       // as wholes and recorded as "changed" — the summary says which, and the
       // edit screen itself is where their contents are read.
       const changes = changedFields(current, ev, EVENT_FIELDS);
-      const categoryFields = ['id', 'name', 'distance', 'price', 'imageUrl', 'inclusions', 'slotLimit'];
+      const categoryFields = ['id', 'name', 'distance', 'price', 'imageUrl', 'inclusions', 'slotLimit', 'bibMedalOfId', 'closed'];
       if (saved && listKey(current.categories, categoryFields) !== listKey(saved.categories, categoryFields)) {
         changes.categories = CHANGED;
       }

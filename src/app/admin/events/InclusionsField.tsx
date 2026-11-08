@@ -22,18 +22,24 @@ export default function InclusionsField({
   value,
   onChange,
   placeholder,
+  id: givenId,
+  hint = '- optional, one per line',
 }: {
   value: string;
   onChange: (next: string) => void;
   placeholder: string;
+  /** Set when a refusal has to move focus here. */
+  id?: string;
+  hint?: string;
 }) {
-  const id = useId();
+  const generatedId = useId();
+  const id = givenId ?? generatedId;
   const items = parseInclusions(value);
 
   return (
     <div className="form-group form-group-full">
       <label className="form-label" htmlFor={id}>
-        Inclusions <span className="text-xs opacity-70">- optional, one per line</span>
+        Inclusions <span className="text-xs opacity-70">{hint}</span>
       </label>
       <textarea
         id={id}

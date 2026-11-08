@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-50 pages · 96 API routes · 160 modules in `src/lib` · 685 files · 120,183 lines
+50 pages · 96 API routes · 161 modules in `src/lib` · 688 files · 120,685 lines
 
 ---
 
@@ -29,7 +29,7 @@ The route, the server component behind it, and the client components beside it.
 | `/admin/certificate-guide` | [`/admin/certificate-guide/page.tsx`](../src/app/admin/certificate-guide/page.tsx) | `GuideChecklist.tsx` `GuideDiagram.tsx` `GuideDocument.tsx` `GuideToc.tsx` |
 | `/admin/clients` | [`/admin/clients/page.tsx`](../src/app/admin/clients/page.tsx) | `application-rows.ts` `ApplicationAnswers.tsx` `ApplicationPanel.tsx` `ApplicationSection.tsx` `BrandImageField.tsx` `client-actions.tsx` `ClientsClient.tsx` `InviteDialog.tsx` `SignInsSection.tsx` `SiteBrandingSection.tsx` `useApplicationDialog.ts` `useClientActions.ts` |
 | `/admin/communities` | [`/admin/communities/page.tsx`](../src/app/admin/communities/page.tsx) | `CommunitiesClient.tsx` |
-| `/admin/events` | [`/admin/events/page.tsx`](../src/app/admin/events/page.tsx) | `AddOnFormModal.tsx` `AddOnsPanel.tsx` `AfterRacePanel.tsx` `bank-account-draft.ts` `BankAccountsPanel.tsx` `BasicInfoPanel.tsx` `category-draft.ts` `CategoryChangeSettings.tsx` `ConsentWaiverField.tsx` `DeleteEventModal.tsx` `DescriptionEditor.tsx` `event-columns.tsx` `event-form-draft.ts` `event-not-found.ts` `event-row.ts` `EventActionsMenu.tsx` `EventClientField.tsx` `EventFormatPanel.tsx` `EventFormResultModals.tsx` `EventOptionsPanel.tsx` `EventPromotionsPanel.tsx` `EventProvinceField.tsx` `EventRowCells.tsx` `EventsTableClient.tsx` `HighlightsField.tsx` `HighlightsModal.tsx` `InclusionsField.tsx` `LogisticsPanel.tsx` `ManageSignUpsModal.tsx` `PosterField.tsx` `publish-draft.ts` `PublishingPanel.tsx` `PublishModal.tsx` `PublishPicker.tsx` `registration-opening.ts` `registration-state-badge.ts` `RegistrationFeesPanel.tsx` `RegistrationFormPicker.tsx` `RegistrationOpeningPicker.tsx` `useEventImageUpload.ts` `useEventPublishActions.ts` `useEventRowActions.ts` `useManageSignUps.ts` |
+| `/admin/events` | [`/admin/events/page.tsx`](../src/app/admin/events/page.tsx) | `AddOnFormModal.tsx` `AddOnsPanel.tsx` `AfterRacePanel.tsx` `bank-account-draft.ts` `BankAccountsPanel.tsx` `BasicInfoPanel.tsx` `BibMedalFields.tsx` `category-draft.ts` `CategoryChangeSettings.tsx` `ConsentWaiverField.tsx` `DeleteEventModal.tsx` `DescriptionEditor.tsx` `event-columns.tsx` `event-form-draft.ts` `event-not-found.ts` `event-row.ts` `EventActionsMenu.tsx` `EventClientField.tsx` `EventFormatPanel.tsx` `EventFormResultModals.tsx` `EventOptionsPanel.tsx` `EventPromotionsPanel.tsx` `EventProvinceField.tsx` `EventRowCells.tsx` `EventsTableClient.tsx` `HighlightsField.tsx` `HighlightsModal.tsx` `InclusionsField.tsx` `LogisticsPanel.tsx` `ManageSignUpsModal.tsx` `PosterField.tsx` `publish-draft.ts` `PublishingPanel.tsx` `PublishModal.tsx` `PublishPicker.tsx` `registration-opening.ts` `registration-state-badge.ts` `RegistrationFeesPanel.tsx` `RegistrationFormPicker.tsx` `RegistrationOpeningPicker.tsx` `useEventImageUpload.ts` `useEventPublishActions.ts` `useEventRowActions.ts` `useManageSignUps.ts` |
 | `/admin/events/[id]/edit` | [`/admin/events/[id]/edit/page.tsx`](../src/app/admin/events/[id]/edit/page.tsx) | `CertificatePointer.tsx` `event-edit-draft.ts` `RegistrationHoldFields.tsx` `useSignUpWindow.ts` |
 | `/admin/events/[id]/pacers` | [`/admin/events/[id]/pacers/page.tsx`](../src/app/admin/events/[id]/pacers/page.tsx) | `AddPacerModal.tsx` `EditPacerModal.tsx` `pacer-row.ts` `PacerActionsMenu.tsx` `PacersClient.tsx` `use-pacer-actions.tsx` |
 | `/admin/events/[id]/registrants` | [`/admin/events/[id]/registrants/page.tsx`](../src/app/admin/events/[id]/registrants/page.tsx) | `AwaitingChangeActions.tsx` `CancelOrderModal.tsx` `category-change-display.tsx` `CategoryChangeEmailModal.tsx` `CategoryChangeHistory.tsx` `CategoryChangeModal.tsx` `CategoryChangePaymentChoice.tsx` `CategoryChangeQuote.tsx` `CategoryChangesModal.tsx` `ColumnsViewMenu.tsx` `DeleteRegistrantModals.tsx` `email-handoff.ts` `FollowUpModal.tsx` `logistics-change-display.tsx` `ManualEmailModal.tsx` `OrderSwitchModal.tsx` `PaymentCorrectionModal.tsx` `PaymentLinkEmailModal.tsx` `ProofLightbox.tsx` `ProofPreview.tsx` `registrant-columns.tsx` `registrant-csv.ts` `registrant-display.tsx` `registrant-row-patches.ts` `registrant-rows.ts` `RegistrantActionsMenu.tsx` `RegistrantCards.tsx` `RegistrantDetailModal.tsx` `RegistrantGuardianConsent.tsx` `RegistrantHistoryModal.tsx` `RegistrantRowActions.tsx` `RegistrantsBulkBar.tsx` `RegistrantsDataTable.tsx` `RegistrantsTable.tsx` `RegistrantsTabs.tsx` `RegistrantsToolbar.tsx` `RegistrantTransactionFields.tsx` `RemarksModal.tsx` `RunnerAddressEditor.tsx` `RunnerEditModal.tsx` `SendLinksButton.tsx` `ship-kits-address.tsx` `ship-kits-fields.tsx` `ShipKitsPanel.tsx` `SwitchEmailModal.tsx` `SwitchHistory.tsx` `unpaid-columns.tsx` `UnpaidCheckoutActions.tsx` `UnpaidCheckoutCards.tsx` `UnpaidCheckoutsList.tsx` `useCategoryChangeModal.ts` `useCategoryChanges.tsx` `useOrderSwitch.tsx` `usePaymentStatus.ts` `useRegistrantHistory.tsx` `useRunnerEdit.tsx` `useShipKits.ts` `WaitingSwitchActions.tsx` |
@@ -197,6 +197,7 @@ the file itself.
 | [`audit.ts`](../src/lib/audit.ts) | The trail: what somebody did in an organizer's admin, and who. |
 | [`auth.ts`](../src/lib/auth.ts) | — |
 | [`bank-accounts.ts`](../src/lib/bank-accounts.ts) | The accounts a runner can transfer to for one event. |
+| [`bib-medal.ts`](../src/lib/bib-medal.ts) | What a Bib + Medal option may be. |
 | [`blob.ts`](../src/lib/blob.ts) | Every upload. |
 | [`brand-mark.ts`](../src/lib/brand-mark.ts) | The geometry of the Run As One mark, in one place. |
 | [`calendar-day.ts`](../src/lib/calendar-day.ts) | Arithmetic on calendar days, the `YYYY-MM-DD` strings every date field in this app holds (`Event.date`, `Runner.birthdate`, the promo windows). |
@@ -371,16 +372,16 @@ when a task touches one, split it before editing rather than after.
 | 614 | [`src/app/admin/feedback/FeedbackClient.tsx`](../src/app/admin/feedback/FeedbackClient.tsx) |
 | 614 | [`src/lib/email-document.ts`](../src/lib/email-document.ts) |
 | 571 | [`src/lib/add-ons.ts`](../src/lib/add-ons.ts) |
+| 568 | [`src/lib/registration-gate.ts`](../src/lib/registration-gate.ts) |
 | 567 | [`src/app/admin/NotificationsCenter.tsx`](../src/app/admin/NotificationsCenter.tsx) |
 | 563 | [`src/app/api/checkout/manual/route.ts`](../src/app/api/checkout/manual/route.ts) |
 | 528 | [`src/app/admin/DashboardShell.tsx`](../src/app/admin/DashboardShell.tsx) |
 | 523 | [`src/app/s/[site]/events/[slug]/EventDetails.tsx`](../src/app/s/[site]/events/[slug]/EventDetails.tsx) |
 | 520 | [`src/lib/promo-input.ts`](../src/lib/promo-input.ts) |
-| 517 | [`src/lib/registration-gate.ts`](../src/lib/registration-gate.ts) |
+| 519 | [`src/app/api/admin/events/[id]/update-event.ts`](../src/app/api/admin/events/[id]/update-event.ts) |
 | 509 | [`src/app/admin/communities/CommunitiesClient.tsx`](../src/app/admin/communities/CommunitiesClient.tsx) |
 | 509 | [`src/app/admin/events/[id]/registrants/PaymentCorrectionModal.tsx`](../src/app/admin/events/[id]/registrants/PaymentCorrectionModal.tsx) |
 | 499 | [`src/app/admin/AdminRouteLoading.tsx`](../src/app/admin/AdminRouteLoading.tsx) |
-| 492 | [`src/app/api/admin/events/[id]/update-event.ts`](../src/app/api/admin/events/[id]/update-event.ts) |
 | 477 | [`src/app/admin/events/AddOnFormModal.tsx`](../src/app/admin/events/AddOnFormModal.tsx) |
 | 476 | [`src/app/admin/events/[id]/registrants/ProofLightbox.tsx`](../src/app/admin/events/[id]/registrants/ProofLightbox.tsx) |
 | 475 | [`src/app/feedback/FeedbackForm.tsx`](../src/app/feedback/FeedbackForm.tsx) |
@@ -388,9 +389,9 @@ when a task touches one, split it before editing rather than after.
 | 472 | [`src/app/events/[slug]/register/BirthdatePicker.tsx`](../src/app/events/[slug]/register/BirthdatePicker.tsx) |
 | 451 | [`src/app/admin/events/[id]/registrants/RunnerEditModal.tsx`](../src/app/admin/events/[id]/registrants/RunnerEditModal.tsx) |
 | 441 | [`src/lib/actor.ts`](../src/lib/actor.ts) |
+| 436 | [`src/app/admin/events/[id]/edit/page.tsx`](../src/app/admin/events/[id]/edit/page.tsx) |
 | 433 | [`src/lib/settlement.ts`](../src/lib/settlement.ts) |
 | 431 | [`src/lib/activity.ts`](../src/lib/activity.ts) |
-| 427 | [`src/app/admin/events/[id]/edit/page.tsx`](../src/app/admin/events/[id]/edit/page.tsx) |
 | 426 | [`src/app/admin/your-events/[id]/RaceReport.tsx`](../src/app/admin/your-events/[id]/RaceReport.tsx) |
 | 422 | [`src/lib/pacer.ts`](../src/lib/pacer.ts) |
 | 420 | [`src/app/admin/events/EventsTableClient.tsx`](../src/app/admin/events/EventsTableClient.tsx) |

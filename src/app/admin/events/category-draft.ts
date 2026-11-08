@@ -27,6 +27,29 @@ export interface CategoryDraft {
    */
   slotLimit?: number | '';
   slotsTaken?: number;
+  /** Stop selling this option; runners already in it stay. Saved as `closed`. */
+  closed?: boolean;
+  /**
+   * The cheaper Bib + Medal version, edited inside its parent's row although it
+   * is its own Category row. Absent until the organizer first switches it on.
+   */
+  bibMedal?: BibMedalDraft;
+}
+
+export interface BibMedalDraft {
+  /** On means on sale. A saved option that was switched off loads as off. */
+  enabled: boolean;
+  /** Pesos, like the parent's. Blank until typed, so 0 is never suggested. */
+  price: number | '';
+  slotLimit: number | '';
+  inclusions: string;
+  /** Present only for a saved option: what switching it off will do. */
+  saved?: boolean;
+  slotsTaken?: number;
+}
+
+export function blankBibMedal(): BibMedalDraft {
+  return { enabled: true, price: '', slotLimit: '', inclusions: 'Race Bib\nFinisher Medal' };
 }
 
 export function blankCategory(): CategoryDraft {

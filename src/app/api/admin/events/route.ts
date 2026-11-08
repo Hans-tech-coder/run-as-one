@@ -25,6 +25,8 @@ import { readSignUpWindow } from './[id]/sign-up-window-input';
 import { readClientLink } from '@/lib/client-store';
 import { cleanHighlights } from '@/lib/event-highlights';
 import { findProvince, inferProvince } from '@/lib/ph-address';
+import { offersBibMedal, readBibMedalOptions } from '@/lib/bib-medal';
+import { syncBibMedalOption } from './bib-medal-save';
 
 export async function POST(request: Request) {
   try {
@@ -152,6 +154,13 @@ export async function POST(request: Request) {
       );
     }
 
+    // The Bib + Medal options, refused before anything is written.
+    const bibMedalOffered = offersBibMedal(asEventType(eventType), resultsOnly);
+    const bibMedal = readBibMedalOptions(categories, bibMedalOffered);
+    if (!bibMedal.ok) {
+      return NextResponse.json({ error: bibMedal.error, bibMedalFault: bibMedal.fault }, { status: 400 });
+    }
+
     // The public URL is made from the title, so it is settled here, once, with
     // a counter appended if some other organizer already has that slug.
     const slug = await uniqueEventSlug(title, async (candidate) => {
@@ -232,6 +241,7 @@ export async function POST(request: Request) {
               inclusions: asInclusions(cat.inclusions),
               // Blank, 0 and anything unparseable all mean uncapped.
               slotLimit: resultsOnly ? null : asSlotLimit(cat.slotLimit),
+              closed: bibMedalOffered && cat.closed === true,
             })),
           },
         },
@@ -239,6 +249,12 @@ export async function POST(request: Request) {
           categories: { orderBy: CATEGORY_ORDER },
         },
       });
+
+      // A nested create cannot point one new row at another, so these follow.
+      // sortOrder is the form's position, which is how each finds its parent.
+      for (const parent of created.categories) {
+        await syncBibMedalOption(tx, created.id, parent, undefined, bibMedal.choices[parent.sortOrder]);
+      }
 
       await recordAudit(tx, actor, {
         action: 'event.created',

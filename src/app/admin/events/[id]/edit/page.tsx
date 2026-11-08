@@ -14,6 +14,7 @@ import {
 import EventOptionsPanel from '../../EventOptionsPanel';
 import AddOnsPanel from '../../AddOnsPanel';
 import { blankCategory, type CategoryDraft } from '../../category-draft';
+import type { BibMedalFault } from '@/lib/bib-medal';
 import { DEFAULT_EVENT_TYPE, type EventType } from '@/lib/event-type';
 import BankAccountsPanel from '@/app/admin/events/BankAccountsPanel';
 import EventPromotionsPanel from '@/app/admin/events/EventPromotionsPanel';
@@ -85,6 +86,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
   const [registrationCount, setRegistrationCount] = useState(0);
 
   const [categories, setCategories] = useState<CategoryDraft[]>([blankCategory()]);
+  const [bibMedalFault, setBibMedalFault] = useState<BibMedalFault | null>(null);
 
   // The client runs registration elsewhere and we only post results. Set when
   // the race is created (/admin/results/new) and never changed here — the
@@ -212,7 +214,10 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
         // A refusal about the client or an album lands under its field, not the modal.
         if (data.errors?.clientId) setClientError(data.errors.clientId);
         else if (data.errors?.registrationClosesAt) signUps.setClosingError(data.errors.registrationClosesAt);
-        else if (data.errors?.photoAlbums) {
+        else if (data.bibMedalFault) {
+          setBibMedalFault(data.bibMedalFault);
+          document.getElementById(`bibMedal-${data.bibMedalFault.index}-${data.bibMedalFault.field}`)?.focus();
+        } else if (data.errors?.photoAlbums) {
           const index = Number(data.photoAlbumIndex) || 0;
           setAlbumError({ index, message: data.errors.photoAlbums });
           document.getElementById(`photoAlbum-${index}-url`)?.focus();
@@ -313,10 +318,14 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
                 : null
             }
             options={categories}
-            onChange={setCategories}
+            onChange={next => {
+              setCategories(next);
+              setBibMedalFault(null);
+            }}
             onError={setError}
             onBusyChange={posterBusy}
             resultsOnly={resultsOnly}
+            bibMedalFault={bibMedalFault}
           />
 
           {/* Everything about selling an entry. A results-only event sells

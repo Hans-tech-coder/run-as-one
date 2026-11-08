@@ -15,6 +15,7 @@ import {
 import EventOptionsPanel from '../EventOptionsPanel';
 import { isVirtual } from '@/lib/event-format';
 import { blankCategory, type CategoryDraft } from '../category-draft';
+import type { BibMedalFault } from '@/lib/bib-medal';
 import { DEFAULT_EVENT_TYPE, type EventType } from '@/lib/event-type';
 import BankAccountsPanel from '@/app/admin/events/BankAccountsPanel';
 import { cleanBankAccounts, type BankAccountDraft } from '@/app/admin/events/bank-account-draft';
@@ -79,6 +80,7 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
   const [eventType, setEventType] = useState<EventType>(DEFAULT_EVENT_TYPE);
 
   const [categories, setCategories] = useState<CategoryDraft[]>([blankCategory()]);
+  const [bibMedalFault, setBibMedalFault] = useState<BibMedalFault | null>(null);
 
   // When this race starts taking sign-ups. Kept beside the form rather than in
   // it because it is two fields standing for one nullable column — see
@@ -183,7 +185,10 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
         // A refusal about the client lands under the picker, not in the modal.
         if (data.errors?.clientId) setClientError(data.errors.clientId);
         else if (data.errors?.registrationClosesAt) setClosingError(data.errors.registrationClosesAt);
-        else setError(data.error || 'Failed to create event');
+        else if (data.bibMedalFault) {
+          setBibMedalFault(data.bibMedalFault);
+          document.getElementById(`bibMedal-${data.bibMedalFault.index}-${data.bibMedalFault.field}`)?.focus();
+        } else setError(data.error || 'Failed to create event');
         setIsLoading(false);
         return;
       }
@@ -250,9 +255,13 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
             eventType={eventType}
             onEventTypeChange={setEventType}
             options={categories}
-            onChange={setCategories}
+            onChange={next => {
+              setCategories(next);
+              setBibMedalFault(null);
+            }}
             onError={setError}
             onBusyChange={posterBusy}
+            bibMedalFault={bibMedalFault}
           />
 
           <BankAccountsPanel
