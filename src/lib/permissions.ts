@@ -69,6 +69,9 @@ export const PERMISSIONS = [
   'registration:email',
   'registration:edit',
   'registration:delete',
+  // Refund one runner of a paid order (REFUND_PLAN.md D4). Owners and admins
+  // only: money leaves, and a runner leaves with it.
+  'registration:refund',
   'proof:view',
   'results:manage',
   'promo:view',
@@ -233,6 +236,7 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   'registration:email': 'Send a missing email by hand',
   'registration:edit': 'Edit a runner',
   'registration:delete': 'Remove a runner',
+  'registration:refund': 'Refund a runner',
   'proof:view': 'Open payment proofs',
   'results:manage': 'Upload results',
   'promo:view': 'See promotions',
@@ -264,6 +268,7 @@ const MATRIX: Record<Permission, readonly Role[]> = {
   'registration:email': ['OWNER', 'ADMIN', 'EVENT_MANAGER', 'VALIDATOR'],
   'registration:edit': ['OWNER', 'ADMIN', 'EVENT_MANAGER'],
   'registration:delete': ['OWNER', 'ADMIN'],
+  'registration:refund': ['OWNER', 'ADMIN'],
   'proof:view': ['OWNER', 'ADMIN', 'EVENT_MANAGER', 'VALIDATOR'],
   'results:manage': ['OWNER', 'ADMIN', 'EVENT_MANAGER', 'ENCODER'],
   'promo:view': ['OWNER', 'ADMIN', 'EVENT_MANAGER', 'VIEWER'],

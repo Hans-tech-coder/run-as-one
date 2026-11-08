@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { MoreVertical, CheckCircle, Trash2, Edit, Eye, ArrowLeftRight, Truck, Store, Wallet, History, ReceiptText } from 'lucide-react';
+import { MoreVertical, CheckCircle, Trash2, Edit, Eye, ArrowLeftRight, Truck, Store, Wallet, History, ReceiptText, Undo2 } from 'lucide-react';
 import { placeRowMenu, type RowMenuPlacement } from '../../../row-menu-position';
 import BusyLabel from '@/components/ui/BusyLabel';
 import { cssDurationMs } from '@/lib/css-duration';
@@ -59,6 +59,9 @@ interface RegistrantActionsMenuProps {
    */
   canCorrectPayment: boolean;
   onCorrectPayment: (runnerId: string) => void;
+  /** Refund runner (REFUND_PLAN.md D4): owners and admins, a paid order only. */
+  canRefund: boolean;
+  onRefund: (runnerId: string) => void;
 }
 
 /**
@@ -93,6 +96,8 @@ export default function RegistrantActionsMenu({
   canEdit,
   canDelete,
   canValidate,
+  canRefund,
+  onRefund,
   canCorrectPayment,
   onCorrectPayment,
 }: RegistrantActionsMenuProps) {
@@ -339,6 +344,22 @@ export default function RegistrantActionsMenu({
             <CheckCircle size={16} />
             {updatingId === registrationId ? <BusyLabel>Updating</BusyLabel> : 'Validate Payment'}
           </button>
+        )}
+
+        {canRefund && status === 'PAID' && (
+          <>
+            <div className="action-dropdown-divider"></div>
+            <button
+              className="action-dropdown-item flex items-center gap-3 px-4 py-2 text-sm text-left"
+              role="menuitem"
+              onClick={() => {
+                onRefund(runnerId);
+                closeMenu();
+              }}
+            >
+              <Undo2 size={16} aria-hidden="true" /> Refund Runner…
+            </button>
+          </>
         )}
 
         {canDelete && (

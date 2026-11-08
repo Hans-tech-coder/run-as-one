@@ -52,7 +52,8 @@ export default async function Page({ params }: { params: Promise<{ eventId: stri
   const switches = settlement.switches;
   const addOns = settlement.addOns;
   // Either line splits *Collected* into what it is made of.
-  const splitCollected = changes.changes > 0 || switches.switches > 0;
+  const refunds = settlement.refunds;
+  const splitCollected = changes.changes > 0 || switches.switches > 0 || refunds.refunds > 0;
 
   return (
     <>
@@ -105,7 +106,7 @@ export default async function Page({ params }: { params: Promise<{ eventId: stri
               {/* The Category changes line (CATEGORY_CHANGE_PLAN.md): only when
                   there are any, so a race without one reads as it always has. */}
               {splitCollected && (
-                <Line label="Paid on orders" value={settlement.collected - changes.collected - switches.charged} muted />
+                <Line label="Paid on orders" value={settlement.collected - changes.collected - switches.charged + refunds.amount} muted />
               )}
               {changes.changes > 0 && (
                 <>
@@ -121,6 +122,11 @@ export default async function Page({ params }: { params: Promise<{ eventId: stri
               {/* The Delivery switches line (LOGISTICS_CHANGE_PLAN.md L8): the
                   receipt is never edited, so its fee is named here instead. */}
               {switches.switches > 0 && <Line label="Paid for delivery switches" value={switches.charged} muted />}
+              {/* Below what was paid, so these lines add up to *Collected*, which is net of them. */}
+              {refunds.refunds > 0 && (
+                <Line label={`Less runner refunds (${refunds.refunds})`} value={-refunds.amount} muted />
+              )}
+              {refunds.toRefund > 0 && <Line label="Of those, still to send to runners" value={refunds.toRefund} muted />}
               {/* Add-ons (ADD_ONS_PLAN.md D1): inside what orders paid, named
                   so staff see the item money apart from the entries. */}
               {addOns.sales > 0 && <Line label="Of which add-on sales" value={addOns.sales} muted />}
@@ -135,6 +141,10 @@ export default async function Page({ params }: { params: Promise<{ eventId: stri
               <Line label="Owed to the organizer" value={settlement.owed} strong rule />
               <Line label="Race entries at list price" value={parts.entries} muted />
               <Line label="Less discounts from promotions" value={-parts.discounts} muted />
+              {/* The add-on part of a refund is already off the add-on lines. */}
+              {refunds.refunds > 0 && (
+                <Line label="Less entries refunded to runners" value={refunds.addOnSales - refunds.amount} muted />
+              )}
               {addOns.organizer > 0 && <Line label="Add-ons sold by the organizer" value={addOns.organizer} muted />}
               <Line label="Delivery fees" value={parts.delivery} muted />
               {changes.changes > 0 && (
@@ -142,6 +152,9 @@ export default async function Page({ params }: { params: Promise<{ eventId: stri
               )}
               {switches.switches > 0 && <Line label="Delivery switches" value={switches.owed} muted />}
               <Line label="Remitted so far (payouts less returns)" value={-settlement.remitted} rule />
+              {refunds.organizerPaid > 0 && (
+                <Line label="Refunded by organizer (already off remitted)" value={refunds.organizerPaid} muted />
+              )}
               <Line label="Balance" value={settlement.balance} strong rule />
             </dl>
           </div>

@@ -127,6 +127,12 @@ export const AUDIT_ACTIONS = [
   'registration.payment_link.copied',
   'runner.updated',
   'runner.deleted',
+  // A runner refunded out of a paid order (REFUND_PLAN.md): opened, paid by
+  // hand, or voided, and each opening of its private proofs.
+  'runner_refund.created',
+  'runner_refund.recorded',
+  'runner_refund.voided',
+  'runner_refund.proof.viewed',
   // A paid runner moved to another category (CATEGORY_CHANGE_PLAN.md): an
   // upgrade opened to wait for its payment, a move applied, an awaiting one
   // withdrawn, a downgrade's refund paid by hand, and the email saying so sent
@@ -224,6 +230,7 @@ export type AuditEntityType =
   | 'StaffAccount'
   | 'StaffMembership'
   | 'Remittance'
+  | 'RunnerRefund'
   | 'SiteSettings';
 
 /** Who did it. An `Actor` from lib/actor.ts is one; SYSTEM is the cron or a webhook. */

@@ -23,22 +23,27 @@
 
 import React, { useId, useLayoutEffect, useRef, useState } from 'react';
 
-export type RegistrantsTab = 'registrants' | 'unpaid';
+export type RegistrantsTab = 'registrants' | 'unpaid' | 'refunds';
 
 export default function RegistrantsTabs({
   initialTab,
   registrantCount,
   unpaidCount,
+  refundCount,
   registrants,
   unpaid,
+  refunds,
 }: {
   initialTab: RegistrantsTab;
   /** Runners on the Registrants tab: paid, and bank transfers awaiting verification. */
   registrantCount: number;
   /** Runners on online checkouts still awaiting payment, the same number as "+N unpaid". */
   unpaidCount: number;
+  /** Runners refunded on this race; null hides the tab from whoever may not refund. */
+  refundCount: number | null;
   registrants: React.ReactNode;
   unpaid: React.ReactNode;
+  refunds: React.ReactNode;
 }) {
   const id = useId();
   const [tab, setTab] = useState<RegistrantsTab>(initialTab);
@@ -66,7 +71,7 @@ export default function RegistrantsTabs({
   const choose = (next: RegistrantsTab) => {
     setTab(next);
     const url = new URL(window.location.href);
-    if (next === 'unpaid') url.searchParams.set('tab', 'unpaid');
+    if (next !== 'registrants') url.searchParams.set('tab', next);
     else url.searchParams.delete('tab');
     window.history.replaceState(null, '', url);
   };
@@ -74,6 +79,9 @@ export default function RegistrantsTabs({
   const options: { value: RegistrantsTab; label: string }[] = [
     { value: 'registrants', label: `Registrants (${registrantCount.toLocaleString('en-US')})` },
     { value: 'unpaid', label: `Unpaid checkouts (${unpaidCount.toLocaleString('en-US')})` },
+    ...(refundCount === null
+      ? []
+      : [{ value: 'refunds' as const, label: `Refunds (${refundCount.toLocaleString('en-US')})` }]),
   ];
 
   return (
@@ -85,7 +93,11 @@ export default function RegistrantsTabs({
         onKeyDown={event => {
           if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
           event.preventDefault();
-          const next: RegistrantsTab = tab === 'registrants' ? 'unpaid' : 'registrants';
+          const at = options.findIndex(option => option.value === tab);
+          const last = options.length - 1;
+          const nextIndex =
+            event.key === 'Home' ? 0 : event.key === 'End' ? last : event.key === 'ArrowLeft' ? (at === 0 ? last : at - 1) : at === last ? 0 : at + 1;
+          const next = options[nextIndex].value;
           choose(next);
           tabRefs.current.get(next)?.focus();
         }}
@@ -120,7 +132,7 @@ export default function RegistrantsTabs({
           aria-labelledby={`${id}-tab-${option.value}`}
           hidden={tab !== option.value}
         >
-          {option.value === 'registrants' ? registrants : unpaid}
+          {option.value === 'registrants' ? registrants : option.value === 'unpaid' ? unpaid : refunds}
         </div>
       ))}
     </div>

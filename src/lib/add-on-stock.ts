@@ -190,10 +190,19 @@ export class AddOnStockError extends SlotsUnavailableError {
  * PENDING, and the pieces may have sold since; this is the locked count that
  * stops a late bank slip overselling them. Lines on removed runners and lines
  * whose item was deleted (`addOnId` null) take nothing.
+ *
+ * `runnerId` narrows it to one runner, for a voided refund putting them back
+ * (REFUND_PLAN.md): the rest of that order never let go of its pieces, so
+ * counting them as wanted again would refuse a void that fits. That runner is
+ * still removed at this point, which is why the filter is theirs alone.
  */
-export async function retakeAddOnStock(tx: Prisma.TransactionClient, registrationId: string): Promise<void> {
+export async function retakeAddOnStock(
+  tx: Prisma.TransactionClient,
+  registrationId: string,
+  { runnerId }: { runnerId?: string } = {},
+): Promise<void> {
   const lines = await tx.runnerAddOn.findMany({
-    where: { addOnId: { not: null }, runner: { registrationId, deletedAt: null } },
+    where: { addOnId: { not: null }, runner: runnerId ? { id: runnerId, registrationId } : { registrationId, deletedAt: null } },
     select: { addOnId: true, quantity: true },
   });
   await reserveAddOnStock(

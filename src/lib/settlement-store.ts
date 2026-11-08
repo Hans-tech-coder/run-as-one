@@ -24,13 +24,16 @@ import { can, reachableEvents, type Actor } from './actor';
 import { mostRecentFirst } from './event-schedule';
 import { CATEGORY_CHANGE_STATUSES } from './category-change';
 import { LOGISTICS_CHANGE_STATUSES } from './logistics-change';
+import { ACTIVE_REFUND_STATUSES, REFUND_PAID_BY, REFUND_STATUSES } from './refund';
 import {
   NO_CHANGES,
   NO_ORDERS,
+  NO_REFUNDS,
   NO_SWITCHES,
   settle,
   type ChangeTotals,
   type OrderTotals,
+  type RefundTotals,
   type Settlement,
   type SwitchTotals,
 } from './settlement';
@@ -62,7 +65,7 @@ export type EventSettlementRow = {
  * summary through `event:view-payout` (`client-payout.ts`).
  */
 export async function totalsByEvent(eventIds: string[]) {
-  const [orders, changes, switches, remittances] = await Promise.all([
+  const [orders, changes, switches, remittances, refunds] = await Promise.all([
     prisma.registration.groupBy({
       by: ['eventId'],
       where: { eventId: { in: eventIds }, status: 'PAID' },
@@ -98,6 +101,14 @@ export async function totalsByEvent(eventIds: string[]) {
       by: ['eventId', 'kind'],
       where: { eventId: { in: eventIds }, status: 'RECORDED' },
       _sum: { amount: true },
+    }),
+    // Runners refunded out of a paid order (REFUND_PLAN.md). By status and
+    // payer, since what is still due and what the organizer paid read apart.
+    prisma.runnerRefund.groupBy({
+      by: ['eventId', 'status', 'paidBy'],
+      where: { eventId: { in: eventIds }, status: { in: ACTIVE_REFUND_STATUSES }, registration: { status: 'PAID' } },
+      _count: { _all: true },
+      _sum: { amount: true, addOnOrganizerAmount: true, addOnRunAsOneAmount: true },
     }),
   ]);
 
@@ -146,12 +157,27 @@ export async function totalsByEvent(eventIds: string[]) {
     remitted.set(row.eventId, (remitted.get(row.eventId) ?? 0) + (row.kind === 'RETURN' ? -amount : amount));
   }
 
+  const refundTotals = new Map<string, RefundTotals>();
+  for (const row of refunds) {
+    const sum = refundTotals.get(row.eventId) ?? { ...NO_REFUNDS };
+    const amount = row._sum.amount ?? 0;
+    const runAsOne = row._sum.addOnRunAsOneAmount ?? 0;
+    sum.refunds += row._count._all;
+    sum.amount += amount;
+    sum.addOnSales += (row._sum.addOnOrganizerAmount ?? 0) + runAsOne;
+    sum.runAsOneAddOns += runAsOne;
+    if (row.status === REFUND_STATUSES.REFUND_DUE) sum.toRefund += amount;
+    if (row.paidBy === REFUND_PAID_BY.ORGANIZER) sum.organizerPaid += amount;
+    refundTotals.set(row.eventId, sum);
+  }
+
   return (eventId: string) =>
     settle(
       orderTotals.get(eventId) ?? NO_ORDERS,
       remitted.get(eventId) ?? 0,
       changeTotals.get(eventId) ?? NO_CHANGES,
       switchTotals.get(eventId) ?? NO_SWITCHES,
+      refundTotals.get(eventId) ?? NO_REFUNDS,
     );
 }
 

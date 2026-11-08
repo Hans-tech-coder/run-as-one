@@ -127,6 +127,8 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
       // A category change points at a runner, its order and two categories,
       // so it goes before all of them (CATEGORY_CHANGE_PLAN.md).
       await prisma.categoryChange.deleteMany({ where: { eventId: id } });
+      // A refund points at a runner and its order the same way (REFUND_PLAN.md).
+      await prisma.runnerRefund.deleteMany({ where: { eventId: id } });
       // A delivery switch points at its orders, and its links at both, so
       // links, then switches, before the registrations (LOGISTICS_CHANGE_PLAN.md).
       await prisma.logisticsChangeOrder.deleteMany({ where: { change: { eventId: id } } });

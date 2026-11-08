@@ -74,6 +74,17 @@
  *   later never moves a settled balance. A ₱0 entry with a shirt (D8) is an
  *   ordinary PAID order and needs nothing more.
  *
+ * - **A runner refunded out of a paid order is a line of its own**
+ *   (REFUND_PLAN.md): the order stays PAID, so its platform and transaction fees
+ *   stay Run As One's and PayMongo's (D2). `amount` comes off collected and each
+ *   add-on part off its own figure; owed, being the residual, falls by the entry
+ *   and the organizer's add-on by itself. REFUND_DUE counts as deducted and is
+ *   shown apart as *to refund*, as a category change's is. **A refund the
+ *   organizer paid comes off `remitted` too** (D7): they paid the runner out of
+ *   money already remitted, so nothing is owed in either direction and the
+ *   balance must not read Overpaid. Should it include a Run As One add-on, the
+ *   balance rises by that part, which is right: Run As One now owes it to them.
+ *
  * Owed is computed as the order's total less the two fees and Run As One's
  * add-on sales, rather than re-added from its parts. Checkout pins `total =
  * subtotal + addOns + delivery + platform + transaction − discount`, so the two
@@ -115,6 +126,8 @@ export type Settlement = {
   switches: SwitchLine;
   /** The add-on sales inside *collected*, split by who sold them (D1). */
   addOns: AddOnLine;
+  /** The runner refunds taken off the figures above, for the line that explains them. */
+  refunds: RefundTotals;
 };
 
 /** The *Add-ons* lines: every add-on line on the PAID orders, and whose each part is. */
@@ -209,20 +222,51 @@ export type SwitchLine = SwitchTotals & {
   owed: number;
 };
 
+/**
+ * Runner refunds already summed by the database, REFUND_DUE and REFUNDED on
+ * PAID orders only (REFUND_PLAN.md). One grouped query per screen.
+ */
+export type RefundTotals = {
+  refunds: number;
+  /** Everything refunded, paid or still due: comes off collected. */
+  amount: number;
+  /** The part of `amount` not yet paid to runners (REFUND_DUE). */
+  toRefund: number;
+  /** Add-on lines inside `amount`: comes off add-on sales. */
+  addOnSales: number;
+  /** The part of those Run As One sold: comes off its add-on sales. */
+  runAsOneAddOns: number;
+  /** The part of `amount` the organizer pays or paid (D7): comes off remitted. */
+  organizerPaid: number;
+};
+
+export const NO_REFUNDS: RefundTotals = {
+  refunds: 0,
+  amount: 0,
+  toRefund: 0,
+  addOnSales: 0,
+  runAsOneAddOns: 0,
+  organizerPaid: 0,
+};
+
 export function settle(
   orders: OrderTotals,
-  remitted: number,
+  remittedGross: number,
   changes: ChangeTotals = NO_CHANGES,
   switches: SwitchTotals = NO_SWITCHES,
+  refunds: RefundTotals = NO_REFUNDS,
 ): Settlement {
   const changeLine = changeLineOf(changes);
-  const collected = orders.collected + changeLine.collected + switches.charged;
+  const collected = orders.collected + changeLine.collected + switches.charged - refunds.amount;
+  const remitted = remittedGross - refunds.organizerPaid;
+  const runAsOneAddOns = orders.runAsOneAddOns - refunds.runAsOneAddOns;
+  const addOnSales = orders.addOnSales - refunds.addOnSales;
   const platformFees = orders.platformFees + changes.changeFees;
   const transactionFees = orders.transactionFees + changes.transactionFees + switches.transactionFees;
   // The residual, never re-added from parts, so the identity holds by
   // construction. Run As One's add-on sales come off like a fee (D1) but stay
   // their own figure, out of `platformFees`.
-  const owed = collected - platformFees - transactionFees - orders.runAsOneAddOns;
+  const owed = collected - platformFees - transactionFees - runAsOneAddOns;
   const balance = owed - remitted;
   const state: SettlementState =
     balance > 0
@@ -244,10 +288,11 @@ export function settle(
     changes: changeLine,
     switches: { ...switches, owed: switches.charged - switches.transactionFees },
     addOns: {
-      sales: orders.addOnSales,
-      organizer: orders.addOnSales - orders.runAsOneAddOns,
-      runAsOne: orders.runAsOneAddOns,
+      sales: addOnSales,
+      organizer: addOnSales - runAsOneAddOns,
+      runAsOne: runAsOneAddOns,
     },
+    refunds,
   };
 }
 

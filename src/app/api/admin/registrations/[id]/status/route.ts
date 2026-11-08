@@ -40,6 +40,7 @@ import { releaseRedemption } from '@/lib/pending-expiry';
 import { SLOT_HOLDING_STATUSES, SlotsUnavailableError, reserveSlots } from '@/lib/registration-gate';
 import { AddOnStockError, retakeAddOnStock } from '@/lib/add-on-stock';
 import { EMAIL_RUNNER_INCLUDE } from '@/lib/email';
+import { ACTIVE_REFUND_STATUSES } from '@/lib/refund';
 
 /**
  * The statuses an organizer may set from the admin. Guarded rather than
@@ -77,6 +78,14 @@ const REASON_MAX = 200;
 
 /** The order moved before the cancel landed (`expectedStatus`). */
 class StatusMoved extends Error {}
+
+/**
+ * The order has a runner refund on it (REFUND_PLAN.md). Those rows are counted
+ * only while the order is PAID, so moving it would drop or restore the runner's
+ * money behind the refund's back, and moving it back to PAID would send a
+ * receipt for a runner who was refunded (trap 4).
+ */
+class HasRunnerRefunds extends Error {}
 
 export async function PATCH(
   request: Request,
@@ -181,6 +190,15 @@ export async function PATCH(
     }
 
     const updatedRegistration = await prisma.$transaction(async tx => {
+      // Locked so a refund opened this instant cannot land after the count.
+      if (wantsStatus && status !== existing.status) {
+        await tx.$queryRaw`SELECT "id" FROM "Registration" WHERE "id" = ${id} FOR UPDATE`;
+        const refunds = await tx.runnerRefund.count({
+          where: { registrationId: id, status: { in: ACTIVE_REFUND_STATUSES } },
+        });
+        if (refunds > 0) throw new HasRunnerRefunds();
+      }
+
       // Claimed with the same conditional write the sweep uses, so an order
       // the sweep or a payment moved first is not handed back twice.
       let promoReleased = false;
@@ -311,6 +329,12 @@ export async function PATCH(
 
     return NextResponse.json({ success: true, registration: updatedRegistration, statusChange });
   } catch (error: any) {
+    if (error instanceof HasRunnerRefunds) {
+      return NextResponse.json(
+        { error: 'This order has a refunded runner, so its status cannot be changed. Void the refund first if it was a mistake.' },
+        { status: 409 }
+      );
+    }
     if (error instanceof StatusMoved) {
       return NextResponse.json(
         { error: 'The order changed while you were cancelling it, so nothing was changed. Reload the page to see where it stands.' },

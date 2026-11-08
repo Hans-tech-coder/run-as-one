@@ -244,6 +244,7 @@ model Event {
   /// pacer codes, under Events.
   resultPacers                ResultPacer[]
   categoryChanges             CategoryChange[]
+  runnerRefunds               RunnerRefund[]
   logisticsChanges            LogisticsChange[]
   /// Optional items sold with an entry (ADD_ONS_PLAN.md): a commemorative
   /// shirt, a cap. See EventAddOn.
@@ -513,6 +514,7 @@ model Registration {
   /// Category changes made to this order's runners. The order itself is
   /// never edited by one (CATEGORY_CHANGE_PLAN.md D1).
   categoryChanges         CategoryChange[]
+  runnerRefunds           RunnerRefund[]
   /// Pickup/delivery switches that moved (or would move) this order. Its
   /// logistics columns change on apply; its amounts never do (L4).
   logisticsChangeOrders   LogisticsChangeOrder[]
@@ -606,6 +608,7 @@ model Runner {
   category              Category         @relation(fields: [categoryId], references: [id])
   registration          Registration     @relation(fields: [registrationId], references: [id])
   categoryChanges       CategoryChange[]
+  refund                RunnerRefund?
   /// What this runner bought beside their entry (ADD_ONS_PLAN.md D3).
   addOns                RunnerAddOn[]
 
@@ -632,6 +635,65 @@ model Runner {
 /// src/lib/category-change.ts; this row only records them.
 ///
 /// Storage: a few hundred bytes a row, a handful per race.
+/// One runner refunded out of a PAID order (REFUND_PLAN.md). The order stays
+/// PAID and this row subtracts, the same pattern as CategoryChange: setting the
+/// order REFUNDED would drop the platform fee Run As One keeps (D2) and every
+/// other runner of a group. A handful per race at a few hundred bytes each.
+/// Every amount is centavos.
+model RunnerRefund {
+  id                    String       @id @default(cuid())
+  eventId               String
+  registrationId        String
+  /// One refund per runner. A VOIDED row is overwritten by a fresh refund,
+  /// and its history stays in the audit trail.
+  runnerId              String       @unique
+  /// Entry refunded, net of discount. Lowered only on Buy X get Y orders (D10).
+  entryAmount           Int
+  /// The split's figure when the refund was made, so "₱700 of ₱1,000" can be shown.
+  suggestedAmount       Int
+  /// This runner's share of the order discount, for the promo Given figures.
+  discountShare         Int
+  /// The part of discountShare that was the group deal on a combined order,
+  /// mirroring Registration.combinedDiscountAmount. 0 otherwise.
+  combinedDiscountShare Int          @default(0)
+  addOnOrganizerAmount  Int          @default(0)
+  addOnRunAsOneAmount   Int          @default(0)
+  /// entryAmount + both add-on amounts: all that leaves `collected`.
+  amount                Int
+  /// REFUND_DUE | REFUNDED | VOIDED, guarded by asRefundStatus.
+  status                String
+  /// RUN_AS_ONE | ORGANIZER (D7), guarded by asRefundPaidBy.
+  paidBy                String
+  reason                String
+  /// Who approved it for the organizer, staff-attached (D3, D8).
+  approverName          String
+  /// YYYY-MM-DD, like Remittance.paidOn.
+  approvedOn            String
+  /// Private blob pathname, served through a signed URL like Remittance.proof.
+  approvalProof         String
+  /// What was handed back to promotions at refund time (D5), so a void puts
+  /// back exactly that: [{ promoId, uses, categoryId }]. Null when nothing was.
+  promoHandBack         Json?
+  paymentReference      String?
+  /// Private blob pathname of the proof the refund was sent.
+  paymentProof          String?
+  refundedAt            DateTime?
+  refundedBy            String?
+  /// Names, not account ids, like Remittance: lines in a log.
+  createdBy             String
+  createdAt             DateTime     @default(now())
+  voidedAt              DateTime?
+  voidedBy              String?
+  voidReason            String?
+  updatedAt             DateTime     @updatedAt
+  event                 Event        @relation(fields: [eventId], references: [id])
+  registration          Registration @relation(fields: [registrationId], references: [id])
+  runner                Runner       @relation(fields: [runnerId], references: [id])
+
+  @@index([eventId, status])
+  @@index([registrationId])
+}
+
 model CategoryChange {
   id                 String       @id @default(cuid())
   /// The runner's reference plus "-C<n>" ("RM-D918005C-2-C1"): what the runner

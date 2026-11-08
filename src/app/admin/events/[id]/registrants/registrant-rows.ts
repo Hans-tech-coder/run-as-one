@@ -21,6 +21,7 @@ import { bankTransferExpiresBy, isCancelledCheckout } from '@/lib/pending-expiry
 import { formatRunnerAddress } from '@/lib/runner-address';
 import { splitOrderMoney } from '@/lib/runner-money';
 import { ADD_ON_LINES_READ, addOnItemLabel, addOnItemsText } from '@/lib/add-ons';
+import { isActiveRefund } from '@/lib/refund';
 
 /**
  * One row per live runner, as the registrants table, its cards, the detail
@@ -37,7 +38,9 @@ export type RegistrantsEvent = Prisma.EventGetPayload<{
   include: {
     registrations: {
       include: {
-        runners: { include: { category: true; addOns: typeof ADD_ON_LINES_READ } };
+        runners: {
+          include: { category: true; addOns: typeof ADD_ON_LINES_READ; refund: { select: { status: true } } };
+        };
       };
     };
   };
@@ -64,7 +67,12 @@ export function buildRegistrantRows({
   csvInstant: (value: Date) => string;
 }): Record<string, unknown>[] {
   const runners: Record<string, unknown>[] = [];
-  event.registrations.forEach(reg => {
+  event.registrations.forEach(order => {
+    // page.tsx reads refunded runners too, for the split alone (REFUND_PLAN.md
+    // trap 1): without them it would rescale everyone left. They get no row.
+    const paidRunners = order.runners;
+    const reg = { ...order, runners: paidRunners.filter(runner => !isActiveRefund(runner.refund?.status)) };
+    const runnerCount = paidRunners.length;
     // An online checkout cancelled before it was paid was never a registrant;
     // it stays on the Unpaid checkouts tab (UNPAID_FOLLOWUP_PLAN.md Batch 2).
     if (isCancelledCheckout(reg, statusRecords.get(reg.id))) return;
@@ -82,7 +90,7 @@ export function buildRegistrantRows({
     // columns sum to the order total (lib/runner-money.ts).
     const money = splitOrderMoney(
       reg,
-      reg.runners.map(runner => ({
+      paidRunners.map(runner => ({
         listPrice: runner.category.price,
         promoPrice: runner.promoPrice,
         category: runner.category,
@@ -91,7 +99,8 @@ export function buildRegistrantRows({
       })),
       event.shirtSizeUpcharge,
     );
-    reg.runners.forEach((runner, runnerIndex) => {
+    reg.runners.forEach(runner => {
+      const runnerIndex = paidRunners.findIndex(paid => paid.id === runner.id);
       runners.push({
         id: runner.id,
         registrationId: reg.id,
@@ -122,7 +131,7 @@ export function buildRegistrantRows({
         // order reference is the answer. Built here rather than in the table so
         // the reference the admin reads is the same string the runner was
         // emailed — see lib/order-ref.ts.
-        runnerRef: runnerRef(reg.orderRef, runner.runnerNo, reg.runners.length),
+        runnerRef: runnerRef(reg.orderRef, runner.runnerNo, runnerCount),
         firstName: runner.firstName,
         lastName: runner.lastName,
         name: `${runner.firstName} ${runner.lastName}`,

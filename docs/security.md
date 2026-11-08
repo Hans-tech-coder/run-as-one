@@ -558,3 +558,4 @@
   in its own comment — correctly, while login matched exactly — which is why
   changing one of the three means changing all three.
 
+**`registration:refund`** (`REFUND_PLAN.md` D4): owners and admins only, on the runner's race, for the four refund routes and the Refunds tab. Opening a refund also spends a one-use step-up token for action `runner.refund`, bound to the runner. Approval and payment proofs are in the private store, served by signed URL, each opening written to the trail.

@@ -138,7 +138,7 @@ export async function uploadPrivateProof(
   // holds the screenshot a sender attaches to /feedback — a picture of the
   // page they were on can show a name or a reference number just as a slip
   // does, so it is private too.
-  folder: 'proofs' | 'remittances' | 'feedback' = 'proofs',
+  folder: 'proofs' | 'remittances' | 'feedback' | 'refunds' = 'proofs',
   kind: UploadKind = 'proof',
 ): Promise<string> {
   assertUploadable(file, kind);

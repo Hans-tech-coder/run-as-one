@@ -1,6 +1,7 @@
 import prisma from '@/lib/db';
 import { DISCOUNT_TYPES } from '@/lib/discount';
 import { PACER_DISCOUNT_TYPE } from '@/lib/pacer';
+import { ACTIVE_REFUND_STATUSES } from '@/lib/refund';
 
 /**
  * What a promotion actually cost, and which orders spent it.
@@ -43,6 +44,12 @@ import { PACER_DISCOUNT_TYPE } from '@/lib/pacer';
  * It is read as the event's admin fee now less what the order paid, because a
  * registration does not snapshot the fee it was waived: an event whose admin
  * fee was changed after the fact reports the new figure.
+ *
+ * **A refunded runner's discount is no longer given** (REFUND_PLAN.md). The
+ * order stays PAID, so its stored discount is still summed; each refund row's
+ * `discountShare` comes off the code it was given under, and an order with no
+ * runner left stops counting as paid. Handed-back uses are `usageCount`'s
+ * business (`refund-store.ts`), never read here.
  *
  * **Pacer entries are left out.** A pacer code is not a promotion — it is a
  * free entry given to a named person — so counting one here would add it to
@@ -111,7 +118,7 @@ export const MAX_REDEMPTIONS_LISTED = 500;
  * a promotion that no longer exists belongs in its total.
  */
 export async function spendByCode(organizerId: string): Promise<Map<string, PromoSpend>> {
-  const [rows, combinedRows, freeEntries] = await Promise.all([
+  const [rows, combinedRows, freeEntries, refunds] = await Promise.all([
     prisma.registration.groupBy({
       by: ['promoCode'],
       where: {
@@ -149,6 +156,29 @@ export async function spendByCode(organizerId: string): Promise<Map<string, Prom
         platformFee: true,
         event: { select: { adminFee: true } },
         _count: { select: { runners: { where: { deletedAt: null } } } },
+      },
+    }),
+    prisma.runnerRefund.findMany({
+      where: {
+        status: { in: ACTIVE_REFUND_STATUSES },
+        registration: {
+          status: MONEY_MOVED_STATUS,
+          event: { organizerId },
+          OR: [{ promoCode: { not: null } }, { combinedPromoCode: { not: null } }],
+          discountType: { not: PACER_DISCOUNT_TYPE },
+        },
+      },
+      select: {
+        discountShare: true,
+        combinedDiscountShare: true,
+        registration: {
+          select: {
+            id: true,
+            promoCode: true,
+            combinedPromoCode: true,
+            _count: { select: { runners: { where: { deletedAt: null } } } },
+          },
+        },
       },
     }),
   ]);
@@ -189,6 +219,14 @@ export async function spendByCode(organizerId: string): Promise<Map<string, Prom
   for (const row of combinedRows) {
     if (!row.combinedPromoCode) continue;
     add(row.combinedPromoCode, row._count._all, row._sum.combinedDiscountAmount ?? 0);
+  }
+  // One order is one paid use however many of its runners were refunded.
+  const emptied = new Set<string>();
+  for (const { discountShare, combinedDiscountShare, registration } of refunds) {
+    const gone = registration._count.runners === 0 && !emptied.has(registration.id);
+    if (gone) emptied.add(registration.id);
+    if (registration.promoCode) add(registration.promoCode, gone ? -1 : 0, combinedDiscountShare - discountShare);
+    if (registration.combinedPromoCode) add(registration.combinedPromoCode, gone ? -1 : 0, -combinedDiscountShare);
   }
   return spend;
 }
@@ -253,6 +291,10 @@ export async function redemptionsFor(
       event: { select: { id: true, title: true, adminFee: true } },
       // Removed runners are kept for the audit trail, not for this count.
       _count: { select: { runners: { where: { deletedAt: null } } } },
+      runnerRefunds: {
+        where: { status: { in: ACTIVE_REFUND_STATUSES } },
+        select: { discountShare: true, combinedDiscountShare: true },
+      },
     },
   });
 
@@ -269,9 +311,12 @@ export async function redemptionsFor(
         eventTitle: row.event.title,
         runners: row._count.runners,
         status: row.status,
-        discountAmount: asDeal
-          ? row.combinedDiscountAmount
-          : row.discountAmount - row.combinedDiscountAmount,
+        // Less what refunded runners gave back, the marketing table's reading.
+        discountAmount: row.runnerRefunds.reduce(
+          (left, refund) =>
+            left - (asDeal ? refund.combinedDiscountShare : refund.discountShare - refund.combinedDiscountShare),
+          asDeal ? row.combinedDiscountAmount : row.discountAmount - row.combinedDiscountAmount,
+        ),
         // Paid orders only, like `spendByCode`: an order that expired or was
         // cancelled unpaid never waived anything.
         feeWaived:

@@ -37,6 +37,7 @@
  */
 
 import 'server-only';
+import { ACTIVE_REFUND_STATUSES, isActiveRefund } from './refund';
 import prisma from './db';
 import { formatEventDay, formatEventRange, hasFinished } from './event-schedule';
 import { VIRTUAL_RUN_WHERE, awaitingResults, isVirtual, takesResults } from './event-format';
@@ -74,6 +75,9 @@ export function provesContact(scope: TrackScope, shown: { email: string }[], cus
   return scope.runnerNos === null || shown.some(runner => same(runner.email, customerEmail));
 }
 
+/** Live runners, and those refunded: a refund must read as refunded, not as not found. */
+const LISTED_RUNNERS = { OR: [{ deletedAt: null }, { refund: { status: { in: ACTIVE_REFUND_STATUSES } } }] };
+
 /** The §4 rule: the scope this reference and email open, or null for "not found". */
 export async function findTrackScope(ref: TrackRef, email: string): Promise<TrackScope | null> {
   const order = await prisma.registration.findUnique({
@@ -82,7 +86,8 @@ export async function findTrackScope(ref: TrackRef, email: string): Promise<Trac
       id: true,
       customerEmail: true,
       deletedAt: true,
-      runners: { where: { deletedAt: null }, orderBy: { runnerNo: 'asc' }, select: { runnerNo: true, email: true } },
+      // A refunded runner still looks their entry up (REFUND_PLAN.md trap 5).
+      runners: { where: LISTED_RUNNERS, orderBy: { runnerNo: 'asc' }, select: { runnerNo: true, email: true } },
     },
   });
   if (!order || order.deletedAt || order.runners.length === 0) return null;
@@ -103,6 +108,8 @@ export async function findTrackScope(ref: TrackRef, email: string): Promise<Trac
 
 export type TrackRunner = {
   ref: string;
+  /** This runner's entry was refunded (REFUND_PLAN.md trap 5). */
+  refunded: boolean;
   name: string;
   gender: string;
   category: string;
@@ -194,9 +201,10 @@ async function readOrder(registrationId: string) {
         },
       },
       runners: {
-        where: { deletedAt: null },
+        where: LISTED_RUNNERS,
         orderBy: { runnerNo: 'asc' },
         select: {
+          refund: { select: { status: true } },
           id: true,
           runnerNo: true,
           firstName: true,
@@ -289,7 +297,17 @@ export async function readTrackView(scope: TrackScope, requestUrl: string, now: 
   const { event } = order;
   const finished = hasFinished(event);
   const [status, pending, results, token] = await Promise.all([
-    statusOf({ ...order, removedRunners: order._count.runners }, runnersOnOrder, requestUrl, now),
+    statusOf(
+      {
+        ...order,
+        removedRunners: order._count.runners,
+        // Reads Refunded when everyone shown was, while the order stays PAID.
+        status: shown.every(runner => isActiveRefund(runner.refund?.status)) ? 'REFUNDED' : order.status,
+      },
+      runnersOnOrder,
+      requestUrl,
+      now,
+    ),
     pendingFor(order, shown.map(r => r.id), runnersOnOrder, requestUrl, contactProved),
     finished && takesResults(event) ? resultLinks(order, shown) : Promise.resolve({ any: false, byRunner: new Map<string, string>() }),
     createTrackToken(scope, new Date(now.getTime() + LOOKUP_TOKEN_MINUTES * 60_000)),
@@ -319,6 +337,7 @@ export async function readTrackView(scope: TrackScope, requestUrl: string, now: 
     pending,
     runners: shown.map(runner => ({
       ref: runnerRef(order.orderRef, runner.runnerNo, runnersOnOrder),
+      refunded: isActiveRefund(runner.refund?.status),
       name: `${runner.firstName} ${runner.lastName}`.trim(),
       gender: runner.gender,
       category: runner.category.name,

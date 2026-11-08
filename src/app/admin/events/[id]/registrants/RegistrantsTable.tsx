@@ -46,6 +46,7 @@ import RemarksModal, { useRemarksModal } from './RemarksModal';
 import ManualEmailModal, { useManualEmailModal } from './ManualEmailModal';
 import { paymentCorrected, remarked, withEmailMark, withPaymentCorrection, withRemarks } from './registrant-row-patches';
 import { usePaymentCorrection } from './PaymentCorrectionModal';
+import { useRunnerRefund } from './RunnerRefundModal';
 import CategoryChangeModal from './CategoryChangeModal';
 import { useCategoryChangeModal } from './useCategoryChangeModal';
 import CategoryChangeEmailModal from './CategoryChangeEmailModal';
@@ -75,6 +76,8 @@ export type RegistrantPermissions = {
   proof: boolean;
   /** Correct a manual order's Transaction No. or proof (PAYMENT_CORRECTION_PLAN.md). */
   correctPayment: boolean;
+  /** Refund one runner of a paid order (REFUND_PLAN.md D4). */
+  refund: boolean;
   /** The organizer's activity trail, for the order's "full activity" link. */
   activity: boolean;
 };
@@ -212,6 +215,10 @@ export default function RegistrantsTable({
     },
   });
 
+  // Refund runner (REFUND_PLAN.md): saving re-reads the page, which takes the
+  // runner off this list.
+  const refund = useRunnerRefund({ runners });
+
   const queues = useRegistrantQueues(runners);
 
   // Table state
@@ -255,6 +262,7 @@ export default function RegistrantsTable({
     onSwitchLogistics: orderSwitch.startSwitch,
     onLogisticsDetails: orderSwitch.showDetails,
     onCorrectPayment: correction.open,
+    onRefund: refund.open,
   };
 
   const columns = useMemo(
@@ -385,6 +393,7 @@ export default function RegistrantsTable({
       {orderSwitch.element}
       {categoryChanges.element}
       {correction.element}
+      {refund.element}
       {categoryChange.changeEmail && (
         <CategoryChangeEmailModal
           key={categoryChange.changeEmail.changeId}

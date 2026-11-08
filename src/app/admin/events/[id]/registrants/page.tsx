@@ -16,6 +16,9 @@ import { logisticsChangesByOrder } from '@/lib/logistics-change-view';
 import { readEventReceipts } from '@/lib/logistics-receipts';
 import { buildRegistrantRows } from './registrant-rows';
 import { ADD_ON_LINES_READ } from '@/lib/add-ons';
+import { ACTIVE_REFUND_STATUSES } from '@/lib/refund';
+import { refundsForEvent } from '@/lib/refund-store';
+import RefundsList from './RefundsList';
 import DashboardHeader from '@/app/admin/DashboardHeader';
 
 export default async function RegistrantsPage({
@@ -32,7 +35,7 @@ export default async function RegistrantsPage({
 }) {
   const { id } = await params;
   const { search, tab } = await searchParams;
-  const initialTab: RegistrantsTab = tab === 'unpaid' ? 'unpaid' : 'registrants';
+  const initialTab: RegistrantsTab = tab === 'unpaid' ? 'unpaid' : tab === 'refunds' ? 'refunds' : 'registrants';
 
   // Scoped to the signed-in organizer's own events, the way every admin route
   // is. This screen carries the most sensitive data in the app — every
@@ -71,12 +74,14 @@ export default async function RegistrantsPage({
             // lib/email.ts); this screen was the one place that did not.
             orderBy: { runnerNo: 'asc' },
             // A runner removed from an order stays in the table for the audit
-            // trail (Runner.deletedAt) and never on this screen.
-            where: { deletedAt: null },
+            // trail (Runner.deletedAt) and never on this screen. A refunded
+            // one is read too, only so the money split stays whole; the rows
+            // leave them out (registrant-rows.ts).
+            where: { OR: [{ deletedAt: null }, { refund: { status: { in: ACTIVE_REFUND_STATUSES } } }] },
             // Each runner's add-on lines (ADD_ONS_PLAN.md): the items for the
             // Add-ons column, filter, detail and CSV, and their money for the
             // per-runner split (runner-money.ts).
-            include: { category: true, addOns: ADD_ON_LINES_READ }
+            include: { category: true, addOns: ADD_ON_LINES_READ, refund: { select: { status: true } } }
           }
         }
       }
@@ -107,6 +112,7 @@ export default async function RegistrantsPage({
     remove: can(actor, 'registration:delete', reach),
     proof: can(actor, 'proof:view', reach),
     correctPayment: can(actor, 'registration:correct-payment', reach),
+    refund: can(actor, 'registration:refund', reach),
     activity: can(actor, 'activity:view', { organizerId: actor.orgId }),
   };
 
@@ -226,6 +232,9 @@ export default async function RegistrantsPage({
     .filter(order => order.status === 'PENDING')
     .reduce((sum, order) => sum + order.runnerNames.length, 0);
 
+  // Refunds are money, so the tab is for those who may make one (D4).
+  const refunds = permissions.refund ? await refundsForEvent(id) : null;
+
   return (
     <>
       <DashboardHeader title="Registrants" crumbs={[{ label: 'Events', href: '/admin/events' }, { label: event.title }]} />
@@ -235,6 +244,8 @@ export default async function RegistrantsPage({
           initialTab={initialTab}
           registrantCount={runners.length}
           unpaidCount={unpaidRunners}
+          refundCount={refunds?.filter(refund => refund.active).length ?? null}
+          refunds={refunds ? <RefundsList refunds={refunds} /> : null}
           registrants={
             <RegistrantsTable
               runners={runners}

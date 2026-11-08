@@ -76,6 +76,8 @@ export interface RunnerMoney {
   entryPrice: number;
   /** This runner's share of the order's discount. */
   discount: number;
+  /** The buy-X-get-Y part of `discount` on a combined order, else 0. */
+  combinedDiscount: number;
   /** `entryPrice − discount`: what the entry itself was paid at. */
   registrationFee: number;
   /** This runner's own add-ons. Never discounted (D5). */
@@ -130,15 +132,9 @@ function dealRunners(charged: number[], amount: number): Set<number> {
   return free;
 }
 
-/** The split, one entry per runner, in the order `runners` was given. */
-export function splitOrderMoney(
-  order: MoneyOrder,
-  runners: MoneyRunner[],
-  upchargePerRunner: number,
-): RunnerMoney[] {
-  if (runners.length === 0) return [];
-
-  const natural = runners.map(
+/** Each runner's category price plus their shirt upcharge, before any rescaling. */
+export function runnerEntries(runners: MoneyRunner[], upchargePerRunner: number): number[] {
+  return runners.map(
     runner =>
       runner.listPrice +
       shirtSizeUpchargeFor(
@@ -147,6 +143,17 @@ export function splitOrderMoney(
         upchargePerRunner,
       ),
   );
+}
+
+/** The split, one entry per runner, in the order `runners` was given. */
+export function splitOrderMoney(
+  order: MoneyOrder,
+  runners: MoneyRunner[],
+  upchargePerRunner: number,
+): RunnerMoney[] {
+  if (runners.length === 0) return [];
+
+  const natural = runnerEntries(runners, upchargePerRunner);
   const entries =
     natural.reduce((sum, entry) => sum + entry, 0) === order.subtotal
       ? natural
@@ -202,6 +209,7 @@ export function splitOrderMoney(
     return {
       entryPrice,
       discount,
+      combinedDiscount: order.combinedDiscountAmount > 0 ? dealShares[index] : 0,
       registrationFee,
       addOns: addOns[index],
       adminFee: adminFees[index],

@@ -157,6 +157,11 @@ export function DeleteRegistrantModal({
             Are you sure you want to delete {deletingRunner?.name}? They will be removed from the registrants list, the counts and exports. This cannot be undone from the dashboard.
           </p>
           <EmptiedOrdersNote {...emptied} single />
+          {deletingRunner?.status === 'PAID' && (
+            <p className="m-0 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm leading-relaxed text-primary">
+              This runner paid. Deleting keeps their money in the revenue while the count falls. To give the money back, use Refund Runner instead.
+            </p>
+          )}
         </div>
 
         <div className="admin-modal-footer flex justify-end gap-3 pt-2 border-t border-[var(--dash-hairline)]">

@@ -5,6 +5,7 @@ import { soonestFirst, today, upcomingEvents } from '@/lib/event-schedule';
 import { awaitingVerificationWhere, heldPlacesByCategory } from '@/lib/pending-expiry';
 import { LOGISTICS_CHANGE_STATUSES } from '@/lib/logistics-change';
 import { MOVED_CHANGE_STATUSES } from '@/lib/settlement-store';
+import { ACTIVE_REFUND_STATUSES } from '@/lib/refund';
 
 /**
  * Everything the Overview (`page.tsx`) shows, read in one go (OVERVIEW_PLAN.md).
@@ -75,6 +76,7 @@ export async function loadOverview(actor: Actor) {
     liveHeld,
     changeMoney,
     switchMoney,
+    refundMoney,
   ] = await Promise.all([
     prisma.event.findMany({
       where: live,
@@ -152,6 +154,13 @@ export async function loadOverview(actor: Actor) {
       },
       _sum: { totalCharged: true, transactionFee: true },
     }),
+    // Runners refunded out of those orders, read as settlement-store.ts reads
+    // them (REFUND_PLAN.md): the entry and the organizer's add-on leave
+    // revenue, the fees stay, and Run As One's add-on leaves its own figure.
+    prisma.runnerRefund.aggregate({
+      where: { status: { in: ACTIVE_REFUND_STATUSES }, registration: paidOrders },
+      _sum: { entryAmount: true, addOnOrganizerAmount: true, addOnRunAsOneAmount: true },
+    }),
   ]);
 
   const sum = money._sum;
@@ -160,12 +169,15 @@ export async function loadOverview(actor: Actor) {
   const changeRevenue =
     (changes.totalCharged ?? 0) - (changes.refundAmount ?? 0) - changeFees - (changes.transactionFee ?? 0);
   const switchRevenue = (switchMoney._sum.totalCharged ?? 0) - (switchMoney._sum.transactionFee ?? 0);
-  const runAsOneAddOns = sum.addOnRunAsOneTotal ?? 0;
-  const organizerAddOns = (sum.addOnTotal ?? 0) - runAsOneAddOns;
+  const refunded = refundMoney._sum;
+  const orderRunAsOneAddOns = sum.addOnRunAsOneTotal ?? 0;
+  const runAsOneAddOns = orderRunAsOneAddOns - (refunded.addOnRunAsOneAmount ?? 0);
+  const organizerAddOns = (sum.addOnTotal ?? 0) - orderRunAsOneAddOns - (refunded.addOnOrganizerAmount ?? 0);
   const totalRevenue =
     (sum.subtotal ?? 0) +
     (sum.deliveryFee ?? 0) -
-    (sum.discountAmount ?? 0) +
+    (sum.discountAmount ?? 0) -
+    (refunded.entryAmount ?? 0) +
     organizerAddOns +
     changeRevenue +
     switchRevenue;

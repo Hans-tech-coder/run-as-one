@@ -41,6 +41,8 @@ export type RegistrantRowActionHandlers = {
   onLogisticsDetails: (registrationId: string) => void;
   /** Opens Correct payment (PAYMENT_CORRECTION_PLAN.md Batch 2). */
   onCorrectPayment: (runnerId: string) => void;
+  /** Opens Refund runner (REFUND_PLAN.md). */
+  onRefund: (runnerId: string) => void;
 };
 
 export default function RegistrantRowActions({
@@ -63,6 +65,7 @@ export default function RegistrantRowActions({
   onSwitchLogistics,
   onLogisticsDetails,
   onCorrectPayment,
+  onRefund,
 }: RegistrantRowActionHandlers & { runner: RegistrantRow; layout: 'table' | 'card' }) {
   // A different icon, not just a different colour: colour alone is the one
   // signal a colour-blind organizer cannot read.
@@ -100,6 +103,8 @@ export default function RegistrantRowActions({
       canValidate={permissions.validate}
       canCorrectPayment={permissions.correctPayment && runner.isManualPayment === true}
       onCorrectPayment={onCorrectPayment}
+      canRefund={permissions.refund}
+      onRefund={onRefund}
     />
   );
 
