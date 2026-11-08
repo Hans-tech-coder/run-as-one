@@ -517,3 +517,21 @@ writers, staff ones included.
 the migration's unique index fails while it is PENDING with Joan's reference.
 The owner left the two `6046287195001` delivery switches (RM-FF1E56E5-L1,
 RM-B95DADDC-L1) as they are; do not touch them.
+
+## 17. Leftovers from the payment correction plan
+
+*Source: `docs/plans/PAYMENT_CORRECTION_PLAN.md` §6 (gitignored, written
+2026-11-07, deleted 2026-11-08 once every batch landed). What it built and the decisions it settled (C1–C8) are in
+`docs/current-state.md` under "Payment correction".*
+
+Staff can now correct a manual order's Transaction No. and proof on PENDING
+and PAID orders (`lib/payment-correction.ts`). Left out on purpose:
+
+- **The runner fixes it themselves.** Staff press *"Ask runner to re-upload"*
+  and the runner gets a one-time link (the `resume-payment.ts` token pattern)
+  to replace the slip and the reference. Needs a token purpose, a public page
+  and an email.
+- **Correcting upgrade (`CategoryChange`) and switch (`LogisticsChange`)
+  payments.** They keep their own *Record payment* doors; the correction
+  route touches `Registration` only.
+- **Bulk correction** of several orders at once.

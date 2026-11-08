@@ -36,9 +36,9 @@ plus Google for a linked staff account; the owner by password. Success is a
 5-minute, one-use token bound to account, action and target, spent by
 `consumeStepUp` (new column `stepUpUsedAt`, migration
 `20261107060151_step_up_used_at`, applied to local-dev only). Audited as
-`auth.step_up_confirmed` / `auth.step_up_failed` (Sign-ins shelf). **Nothing
-uses it yet**: Batch 1's payment correction route is its first caller (C2a:
-PAID orders only). Not yet exercised: the Google popup end to end (needs a
+`auth.step_up_confirmed` / `auth.step_up_failed` (Sign-ins shelf). Its only
+caller so far is the payment correction route (C2a: PAID orders only); the
+password and two-step code paths were walked in Batch 3. Not yet exercised: the Google popup end to end (needs a
 Google-linked staff account on localhost).
 
 **Payment correction, server side (2026-11-07, uncommitted;
@@ -56,9 +56,39 @@ PAID, plain confirm on PENDING, optional receipt resend), the detail modal's
 *Corrected … by …* note, and the Activity row's *Open old / new proof* links
 through `admin/proof/[id]?path=` (trail-recorded pathnames only).
 `ActivityClient.tsx` and `RegistrantsTable.tsx` were split on the way.
-Batch 3 (the final walkthrough) is next. Exercised on localhost through the API; not yet
-exercised: an actual proof upload (the private store is shared with
-production and local code never deletes from it).
+Batches 0–2 are on `dev` (`eb727cf`, `5d7fae4`, `3169788`). **Batch 3
+(2026-11-07) walked it on localhost against local-dev** with throwaway
+staff and orders: PENDING correct → validate (trail reads corrected, then
+validated); PAID correct with a new proof, password step-up and resend (the
+receipt printed the corrected reference); two-step code step-up (only the
+code box; a reused and a wrong code refused); *Open old / new proof* with two
+real uploads, made-up and other-order paths 404; the 403 → reopen-dialog
+branch and the token kept after a 409; online, EXPIRED, ENCODER and
+reason refusals; 375px and both themes. Not exercised: Confirm with Google
+(no Google-linked test account). Promoting to `main` needs migration
+`20261107060151_step_up_used_at` (`ON_HOLD.md`); leftovers are `ON_HOLD.md` §17.
+
+Decisions the code cites, from `PAYMENT_CORRECTION_PLAN.md` (gitignored,
+deleted 2026-11-08, so this is the only record):
+**C1** only the Transaction No. and the proof are corrected, never amounts;
+the plan also allowed the manual method, but Batch 1 found the manual
+checkout writes only `BANK_TRANSFER` (hand-sent GCash is stored as it; a
+stored `GCASH` means PayMongo), so the method is always `BANK_TRANSFER` and
+the screen shows it read-only. **C2** PENDING and PAID orders only; EXPIRED /
+CANCELLED are reopened first; online (PayMongo) orders never. **C2a** a PAID
+order needs a step-up confirmation (two-step code if on, else password, plus
+Confirm with Google for a linked staff account) issuing a 5-minute, one-use
+token bound to account, action and order, spent inside the correction's
+transaction (a refused correction leaves it good); failures are audited and
+rate limited; PENDING needs only a confirm and the reason. **C3** permission
+`registration:correct-payment` for OWNER, ADMIN, EVENT_MANAGER, VALIDATOR.
+**C4** a reason (≤200 chars) is always required and goes in the trail.
+**C5** the old proof is kept; its pathname sits in
+`AuditLog.changes.proofOfPayment = [old, new]` and opens through
+`admin/proof/[id]?path=`. **C6** the runner hears nothing unless staff tick
+the receipt resend, offered on PAID only. **C7** one reference, one payment:
+`claimReference` is added to this writer when `ON_HOLD.md` §16 is built.
+**C8** correcting never moves the status; Mark PAID stays a separate press.
 
 **Free entry promotion (2026-10-30, uncommitted).** A sixth discount kind,
 `FREE_ENTRY`, labelled *Free entry (incl. admin fee)* on `/admin/marketing`:
