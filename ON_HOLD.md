@@ -11,7 +11,15 @@ the owner's choice. Start one only when the owner asks, and read its source plan
 before writing any code. When an item is picked up, give it its own plan file in
 `docs/plans/`, and delete it from this list once it has landed.
 
-**Pending for the next release: three migrations** (`event_add_ons` is already on `main`; `npx prisma migrate status` against production says whether it still needs running).
+**Pending for the next release: four migrations** (`event_add_ons` is already on `main`; `npx prisma migrate status` against production says whether it still needs running).
+`20261108090000_category_bib_medal_closed` (Bib + Medal, 2026-11-08): a nullable
+`bibMedalOfId` (unique, foreign key to `Category`) and a `closed` boolean
+defaulting to false, both on `Category`. Applied to the local-dev database only.
+Additive, but the new code breaks without it, since Prisma reads every
+`Category` column and `reserveSlots`' raw `SELECT` names `closed`. Run
+`npx prisma migrate deploy` with `DIRECT_URL` on the production endpoint
+**before** `main` is pushed. Rollback: `ALTER TABLE "Category" DROP COLUMN "bibMedalOfId", DROP COLUMN "closed";` (only while no event has a Bib + Medal option, or those rows become normal options).
+
 `20261108063403_registration_closes_at` (scheduled close, 2026-11-08): one
 nullable `registrationClosesAt` timestamp on `Event`, the date sign-ups close
 on their own. Applied to the local-dev database only. Additive, but like the

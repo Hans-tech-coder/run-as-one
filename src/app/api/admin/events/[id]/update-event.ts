@@ -85,6 +85,7 @@ const EVENT_FIELDS = [
 
 /** Thrown inside the edit transaction when a category it removes is still in use. */
 class CategoryInUseError extends Error {}
+class PromoOnlyScopeError extends Error {}
 
 /** A set of rows as one comparable string, so an edit can say whether it moved. */
 function listKey(rows: Record<string, unknown>[], fields: string[]) {
@@ -315,16 +316,41 @@ export async function updateEvent(request: Request, { params }: { params: Promis
         if ((await prisma.registration.count({ where: { eventId: id } })) > 0) return null;
       }
 
+      // The form never lists a Bib + Medal row, so only parents are judged
+      // by absence.
+      const removedParents = current.categories
+        .filter((c) => !c.bibMedalOfId && !incomingIds.includes(c.id))
+        .map((c) => c.id);
+
+      // PromoCategory cascades, and a promo with no scope rows means every
+      // category, so removing all of a promo's scope would quietly make it
+      // event-wide. Only that case is refused: a promo that keeps another
+      // category just gets narrower, as it always has.
+      const removing = current.categories
+        .filter((c) => removedParents.includes(c.id) || (c.bibMedalOfId && removedParents.includes(c.bibMedalOfId)))
+        .map((c) => c.id);
+      if (removing.length > 0) {
+        const widened = await prisma.promoCode.findMany({
+          where: { categories: { some: { categoryId: { in: removing } }, every: { categoryId: { in: removing } } } },
+          select: { code: true },
+          orderBy: { code: 'asc' },
+        });
+        if (widened.length > 0) {
+          const codes = widened.map((p) => p.code).join(', ');
+          throw new PromoOnlyScopeError(
+            widened.length === 1
+              ? `Cannot remove this category yet. Promo code ${codes} is limited to it and would start applying to every category. Change or delete that promo first.`
+              : `Cannot remove this category yet. Promo codes ${codes} are limited to it and would start applying to every category. Change or delete those promos first.`,
+          );
+        }
+      }
+
       // Handle category deletion carefully to avoid FK constraints
       try {
-        // The form never lists a Bib + Medal row, so only parents are judged
-        // by absence. A removed parent takes its child with it first: the
-        // link is ON DELETE SET NULL, which would otherwise leave the child
-        // on sale as a normal option. A child with runners fails here and
-        // refuses the removal, the same as a parent with runners.
-        const removedParents = current.categories
-          .filter((c) => !c.bibMedalOfId && !incomingIds.includes(c.id))
-          .map((c) => c.id);
+        // A removed parent takes its child with it first: the link is ON
+        // DELETE SET NULL, which would otherwise leave the child on sale as a
+        // normal option. A child with runners fails here and refuses the
+        // removal, the same as a parent with runners.
         await prisma.category.deleteMany({
           where: { eventId: id, bibMedalOfId: { in: removedParents } },
         });
@@ -511,6 +537,9 @@ export async function updateEvent(request: Request, { params }: { params: Promis
 
     return NextResponse.json(updatedEvent, { status: 200 });
   } catch (error: any) {
+    if (error instanceof PromoOnlyScopeError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     if (error instanceof CategoryInUseError) {
       return NextResponse.json({ error: 'Cannot remove a category that already has registered runners or results.' }, { status: 400 });
     }

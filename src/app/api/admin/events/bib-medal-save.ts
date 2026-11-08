@@ -10,6 +10,12 @@ import { asSlotLimit } from '@/lib/registration-gate';
  * the runner count on screen: a cancelled runner, a race result or a past
  * category change all hold a foreign key, and a failed delete would abort the
  * whole save. Those rows are closed instead, and their history stays.
+ *
+ * A promo scoped to the row counts too, though its foreign key would not stop
+ * the delete: PromoCategory cascades, and a promo left with no scope rows means
+ * every category, so deleting a promo's only scope would make it event-wide.
+ * promoPrices is left out on purpose: losing a price row only takes that price
+ * away, and never widens what a promo covers.
  */
 export async function syncBibMedalOption(
   tx: Pick<Prisma.TransactionClient, 'category'>,
@@ -45,7 +51,7 @@ export async function syncBibMedalOption(
 
   const usage = await tx.category.findUniqueOrThrow({
     where: { id: existingId },
-    select: { _count: { select: { runners: true, raceResults: true, changesFrom: true, changesTo: true } } },
+    select: { _count: { select: { runners: true, raceResults: true, changesFrom: true, changesTo: true, promoScopes: true } } },
   });
   if (Object.values(usage._count).some(count => count > 0)) {
     await tx.category.update({ where: { id: existingId, eventId }, data: { ...linked, closed: true } });
