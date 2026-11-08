@@ -42,7 +42,7 @@ import db from './db';
 import type { Actor, AccountByEmail } from './actor';
 import { recordAudit } from './audit';
 import { verifyNoPassword, verifyPassword } from './auth';
-import { googleSignInConfigured, type PendingStepUp } from './google-oauth';
+import { STEP_UP_MAX_AGE_SECONDS, googleSignInConfigured, type PendingStepUp } from './google-oauth';
 import { SECRET_KEY } from './jwt';
 import { STEP_UP_RULE, allowRequest } from './rate-limit';
 import { accountEntityType, checkSecondStep, fieldsOf, ownAccount, twoFactorOn } from './two-factor';
@@ -219,6 +219,16 @@ export async function verifyStepUp(
 const AUTH_TIME_SKEW_MS = 30_000;
 
 /**
+ * How old Google's sign-in may be when the callback judges it, measured from
+ * this server's clock, not from the pending cookie: that cookie is plain
+ * base64 JSON, so its `startedAt` can be edited in the browser, and a
+ * hand-built Google URL without `prompt=login` would otherwise pass with an
+ * hours-old sign-in. Google re-signs the person in moments before the
+ * redirect, so `max_age` plus the skew is plenty.
+ */
+const AUTH_TIME_MAX_AGE_MS = STEP_UP_MAX_AGE_SECONDS * 1000 + AUTH_TIME_SKEW_MS;
+
+/**
  * The Google half: the callback has verified the ID token (issuer, audience,
  * nonce, expiry); this decides whether that sign-in confirms *this* person
  * now. The signed-in session must be the account that started it, Google must
@@ -246,7 +256,12 @@ export async function confirmGoogleStepUp(
 
   const now = Date.now();
   const signedInAt = identity.authTime === null ? null : identity.authTime * 1000;
-  if (signedInAt === null || signedInAt < pending.startedAt - AUTH_TIME_SKEW_MS || signedInAt > now + AUTH_TIME_SKEW_MS) {
+  if (
+    signedInAt === null ||
+    signedInAt < pending.startedAt - AUTH_TIME_SKEW_MS ||
+    signedInAt < now - AUTH_TIME_MAX_AGE_MS ||
+    signedInAt > now + AUTH_TIME_SKEW_MS
+  ) {
     await recordStepUpFailure(actor, account, 'google', action, targetId, 'Google did not ask for the sign-in again');
     return { ok: false, status: 401, error: 'Google did not ask you to sign in again. Try once more.' };
   }

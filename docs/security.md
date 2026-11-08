@@ -518,7 +518,9 @@
   register); the pending cookie's `stepUp` part makes that callback confirm
   instead of sign in — it **never sets, reissues or clears a session, and
   never links a `sub`**. It is accepted only if the signed-in session is the
-  account that started it, `auth_time` is after the dialog asked (30 s skew),
+  account that started it, `auth_time` is after the dialog asked (30 s skew)
+  and no older than `max_age` + skew by the server's own clock (the pending
+  cookie is unsigned, so its `startedAt` alone is not trusted),
   and the ID token's `sub` equals that account's own `googleSub` — a
   colleague's Google on the same laptop proves nothing. The token is a JWT
   under the app's secret with `purpose: 'step-up'` (no session `kind`, so

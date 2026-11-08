@@ -27,7 +27,7 @@ and `certificateCoordinates` through without the certificate route's checks
 (Strix's note, older than this release); over-limit album errors point at row
 6; `RacePhotoLinks` uses a fixed heading id.
 
-**Step-up confirmation (2026-11-07, uncommitted; `PAYMENT_CORRECTION_PLAN.md`
+**Step-up confirmation (2026-11-07, on `dev` as `eb727cf`; `PAYMENT_CORRECTION_PLAN.md`
 Batch 0).** A reusable "Confirm it's you" check before a dangerous action:
 `lib/step-up.ts`, `GET/POST /api/admin/step-up`, `GET /api/auth/google/step-up`
 (Confirm with Google, back through the existing callback), and
@@ -41,7 +41,7 @@ caller so far is the payment correction route (C2a: PAID orders only); the
 password and two-step code paths were walked in Batch 3. Not yet exercised: the Google popup end to end (needs a
 Google-linked staff account on localhost).
 
-**Payment correction, server side (2026-11-07, uncommitted;
+**Payment correction, server side (2026-11-07, on `dev` as `5d7fae4`;
 `PAYMENT_CORRECTION_PLAN.md` Batch 1).** `lib/payment-correction.ts` and
 `POST /api/admin/registrations/[id]/payment` correct a manual order's
 Transaction No., proof or method on PENDING / PAID orders, with a required
@@ -50,7 +50,7 @@ reason, one `registration.payment.corrected` trail row holding `[old, new]`
 `registration:correct-payment` (OWNER, ADMIN, EVENT_MANAGER, VALIDATOR). PAID
 orders spend a step-up token (first caller of `consumeStepUp`); optional
 receipt resend on PAID. The method can only be `BANK_TRANSFER` — the only
-method the manual checkout writes. **The screen (Batch 2, uncommitted)**: the
+method the manual checkout writes. **The screen (Batch 2, `3169788`)**: the
 *Correct Payment* row action and `PaymentCorrectionModal.tsx` (step-up on
 PAID, plain confirm on PENDING, optional receipt resend), the detail modal's
 *Corrected … by …* note, and the Activity row's *Open old / new proof* links
