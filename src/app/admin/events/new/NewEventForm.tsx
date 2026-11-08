@@ -4,12 +4,16 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
+  NO_CLOSING_DATE,
   OPENS_IMMEDIATELY,
+  closingDraftProblem,
+  closingInstantISO,
   openingInstantISO,
   openingProblem,
   type OpeningDraft,
 } from '../registration-opening';
 import EventOptionsPanel from '../EventOptionsPanel';
+import { isVirtual } from '@/lib/event-format';
 import { blankCategory, type CategoryDraft } from '../category-draft';
 import { DEFAULT_EVENT_TYPE, type EventType } from '@/lib/event-type';
 import BankAccountsPanel from '@/app/admin/events/BankAccountsPanel';
@@ -85,6 +89,10 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
   // rather than in the error modal: a validation message belongs beside the
   // box it is about.
   const [openingError, setOpeningError] = useState<string | null>(null);
+  // When sign-ups close on their own (registration-window.ts) — the other
+  // end of the same window, held the same way. No deadline by default.
+  const [closing, setClosing] = useState<OpeningDraft>(NO_CLOSING_DATE);
+  const [closingError, setClosingError] = useState<string | null>(null);
   // When the public first sees it (EVENT_PUBLISH_PLAN.md). A draft by default:
   // a race goes public because someone chose to publish it, never as a side
   // effect of saving.
@@ -122,6 +130,19 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
       return;
     }
 
+    // The closing date after the opening it is measured against, so the
+    // message under it can name that opening.
+    const closingFault = closingDraftProblem(closing, {
+      opening,
+      date: formData.date,
+      virtualEndDate: isVirtual(formData) ? formData.virtualEndDate : null,
+    });
+    setClosingError(closingFault);
+    if (closingFault) {
+      setIsLoading(false);
+      return;
+    }
+
     const publishFault = publishProblem(publish);
     setPublishError(publishFault);
     if (publishFault) {
@@ -147,6 +168,7 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
           ...deliveryFees(deliveryOn, formData),
           eventType,
           registrationOpensAt: openingInstantISO(opening),
+          registrationClosesAt: closingInstantISO(closing),
           categoryChangeUntil: changeUntilISO(formData.categoryChangeUntil),
           logisticsChangeUntil: changeUntilISO(formData.logisticsChangeUntil),
           publishAt: publishValue(publish),
@@ -160,6 +182,7 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
         const data = await res.json();
         // A refusal about the client lands under the picker, not in the modal.
         if (data.errors?.clientId) setClientError(data.errors.clientId);
+        else if (data.errors?.registrationClosesAt) setClosingError(data.errors.registrationClosesAt);
         else setError(data.error || 'Failed to create event');
         setIsLoading(false);
         return;
@@ -280,6 +303,12 @@ export default function NewEventForm({ defaultAdminFee }: { defaultAdminFee: num
               if (openingError) setOpeningError(null);
             }}
             openingError={openingError}
+            closing={closing}
+            onClosingChange={next => {
+              setClosing(next);
+              if (closingError) setClosingError(null);
+            }}
+            closingError={closingError}
             idPrefix="newEvent"
           />
 

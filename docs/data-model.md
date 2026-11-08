@@ -56,7 +56,12 @@ shape:
   case — means it is registrable the moment it is published),
   `registrationClosedAt` (when the organizer closed sign-ups for good; null
   while not closed — unlike a pause, runners are not told to check back, and
-  only Reopen clears it), `publishAt` (**when the public first sees the
+  only Reopen clears it), `registrationClosesAt` (**the scheduled close**,
+  2026-11-08, migration `20261108063403_registration_closes_at`, one nullable
+  column: null means sign-ups run until race day; once it passes the event
+  reads CLOSED at request time, no cron, and the column is left as set; must
+  fall after the opening and on or before race day — `lib/registration-window.ts`),
+  `publishAt` (**when the public first sees the
   event**: null is a **draft** — staff only, a 404 to everyone else; a past
   instant is published; a future one is **scheduled** and goes live by itself,
   checked at request time, `lib/event-visibility.ts`. Migration

@@ -1,6 +1,5 @@
 import { Prisma } from '@prisma/client';
 import publicDb from '@/lib/public-db';
-import { formatEventInstant } from '@/lib/event-schedule';
 import { isPublished } from '@/lib/event-visibility';
 import { takenSlotsByCategory } from '@/lib/slot-holds';
 
@@ -19,7 +18,10 @@ import { takenSlotsByCategory } from '@/lib/slot-holds';
  *   only once every option it sells has filled.
  * - **The organizer closed it.** Also a decision, but a final one: no note,
  *   no "check back". Slots may remain and race day may be weeks away; the
- *   race is simply not taking entries any more. Only Reopen undoes it.
+ *   race is simply not taking entries any more. Only Reopen undoes it. A
+ *   **closing date** that has passed (`registrationClosesAt`) is the same
+ *   closure set ahead of time, with a sentence that names the date — see
+ *   registration-window.ts, which owns the time rules.
  * - **The organizer paused it.** A decision rather than a fact — slots remain
  *   and race day is still ahead — so it carries the organizer's own words.
  * - **Sign-ups have not opened yet.** The organizer published the race ahead
@@ -39,6 +41,33 @@ import { takenSlotsByCategory } from '@/lib/slot-holds';
 // D11); re-exported so the readers of slots keep importing them from here.
 export { SLOT_HOLDING_STATUSES, takenSlotsByCategory } from '@/lib/slot-holds';
 
+// The rules about time — opening, closing date, the organizer's closure —
+// moved to registration-window.ts with the scheduled close; re-exported so
+// every reader keeps importing them from here.
+import {
+  REGISTRATION_CLOSED_MESSAGE,
+  closedMessage,
+  isClosed,
+  openingNote,
+  opensLater,
+} from '@/lib/registration-window';
+export {
+  CLOSING_INSTANT_ERROR,
+  OPENING_INSTANT_ERROR,
+  REGISTRATION_CLOSED_MESSAGE,
+  REOPEN_PAST_CLOSING_ERROR,
+  asClosingInstant,
+  asOpeningInstant,
+  closedMessage,
+  closesLater,
+  closingHasPassed,
+  closingProblem,
+  isClosed,
+  openingNote,
+  opensLater,
+  raceDayEnds,
+} from '@/lib/registration-window';
+
 /**
  * When remaining slots stop being trivia and start being a decision.
  *
@@ -49,58 +78,9 @@ export { SLOT_HOLDING_STATUSES, takenSlotsByCategory } from '@/lib/slot-holds';
  */
 export const LAST_CALL_SLOTS = 20;
 
-/** What a runner is told once the organizer has closed sign-ups. */
-export const REGISTRATION_CLOSED_MESSAGE =
-  'Registration for this race is closed. The organizer is no longer taking sign-ups. If you have already paid, your entry stands — contact the organizer with any questions.';
-
-/** Whether the organizer has closed sign-ups on this event. */
-export function isClosed(event: { registrationClosedAt?: Date | string | null }): boolean {
-  return Boolean(event.registrationClosedAt);
-}
-
 /** What runners are told while a hold is on and the organizer wrote nothing. */
 export const DEFAULT_PAUSE_NOTE =
   'The organizer has paused sign-ups for this event. Slots may open again — check back soon, or contact the organizer if you have already paid.';
-
-/**
- * Whether this event's sign-ups have not started yet.
- *
- * Null — the normal case — means the race was open the moment it was
- * published, so there is nothing to wait for. A time already past is not a
- * schedule any more, it is simply an open event: the column is left alone once
- * it passes rather than cleared, so the organizer can still read the date they
- * set, and every reader compares instead of trusting the column's presence.
- *
- * `now` is a parameter so a page and the listing beside it can be answered
- * against the same moment rather than each reading the clock for itself.
- */
-export function opensLater(
-  event: { registrationOpensAt?: Date | string | null },
-  now: Date = new Date(),
-): boolean {
-  const opensAt = event.registrationOpensAt;
-  if (!opensAt) return false;
-  const instant = opensAt instanceof Date ? opensAt : new Date(opensAt);
-  return !Number.isNaN(instant.getTime()) && instant.getTime() > now.getTime();
-}
-
-/**
- * What a runner is told when they arrive before sign-ups open.
- *
- * It names the instant rather than saying "soon", because the one thing this
- * runner came for is a date they can put in their calendar — and because a
- * race whose opening has no date attached reads as a race that has been
- * forgotten about. The fallback sentence exists only for the impossible row
- * whose column will not parse; nothing that reaches here should need it.
- */
-export function openingNote(event: {
-  registrationOpensAt?: Date | string | null;
-}): string {
-  const when = event.registrationOpensAt ? formatEventInstant(event.registrationOpensAt) : '';
-  return when
-    ? `Sign-ups for this race open on ${when}. Nothing to do until then — the page stays here, so come back when it opens or set yourself a reminder.`
-    : 'Sign-ups for this race have not opened yet. The organizer has listed it early so you can plan for it; check back for the opening date.';
-}
 
 /** The minimum shape of a category this module can reason about. */
 export type SlotLimited = {
@@ -153,28 +133,6 @@ export function asSlotLimit(value: unknown): number | null {
   if (!Number.isFinite(limit) || limit <= 0) return null;
   return limit;
 }
-
-/**
- * The opening instant as the database should hold it, from whatever the admin
- * form posted.
- *
- * Blank, null and a missing key all mean "open as soon as it is published",
- * which is null. Anything that will not read as an instant returns `undefined`
- * instead, and every route turns that into a refusal rather than storing the
- * null it resembles: an opening date that silently failed to save would put a
- * race on sale the moment it was published, which is the exact opposite of
- * what the organizer asked for, and they would only find out from a runner.
- */
-export function asOpeningInstant(value: unknown): Date | null | undefined {
-  if (value === null || value === undefined || value === '') return null;
-  if (!(value instanceof Date) && typeof value !== 'string') return undefined;
-  const instant = value instanceof Date ? value : new Date(value);
-  return Number.isNaN(instant.getTime()) ? undefined : instant;
-}
-
-/** What a route says when the opening instant it was sent will not parse. */
-export const OPENING_INSTANT_ERROR =
-  'Registration opening must be a date and time. Pick both, or choose to open registration immediately.';
 
 /** Attaches the slot arithmetic to each category, leaving the rest untouched. */
 export function withSlotCounts<T extends SlotLimited>(
@@ -247,6 +205,7 @@ export function soleOpenCategory<T extends CategorySlots>(
 export function registrationState(
   event: {
     registrationClosedAt?: Date | string | null;
+    registrationClosesAt?: Date | string | null;
     registrationPaused?: boolean | null;
     registrationOpensAt?: Date | string | null;
     resultsOnly?: boolean | null;
@@ -257,7 +216,9 @@ export function registrationState(
 ): RegistrationState {
   if (event.resultsOnly) return 'EXTERNAL';
   if (finished) return 'FINISHED';
-  if (isClosed(event)) return 'CLOSED';
+  // The organizer's Close, or a closing date that has passed — one state,
+  // two sentences (closedMessage).
+  if (isClosed(event, now)) return 'CLOSED';
   if (event.registrationPaused) return 'PAUSED';
   if (opensLater(event, now)) return 'SCHEDULED';
   if (everyOptionIsFull(categories)) return 'FULL';
@@ -391,7 +352,7 @@ export class SlotsUnavailableError extends Error {
  * route locks the row `FOR UPDATE` and recounts before taking an event back
  * to draft, so an order and an unpublish can never both land either.
  *
- * So are the organizer's close, pause and opening date. The routes check them
+ * So are the organizer's close, closing date, pause and opening date. The routes check them
  * before the transaction, against a read that a Pause pressed in the same
  * second can make stale; the registration-controls PATCH is a plain UPDATE,
  * which waits on this lock, so the read here is the one that counts. Same
@@ -402,7 +363,7 @@ export async function lockEventForRegistration(tx: any, eventId: string): Promis
   if (!row) return;
   if (row.resultsOnly) throw new SlotsUnavailableError(RESULTS_ONLY_MESSAGE);
   if (!isPublished(row)) throw new SlotsUnavailableError(REGISTRATION_CLOSED_MESSAGE);
-  if (isClosed(row)) throw new SlotsUnavailableError(REGISTRATION_CLOSED_MESSAGE);
+  if (isClosed(row)) throw new SlotsUnavailableError(closedMessage(row));
   if (row.registrationPaused) throw new SlotsUnavailableError(pauseNote(row));
   if (opensLater(row)) throw new SlotsUnavailableError(openingNote(row));
 }
@@ -425,10 +386,11 @@ export async function lockEventRow(
   registrationPaused: boolean;
   registrationPauseNote: string | null;
   registrationClosedAt: Date | null;
+  registrationClosesAt: Date | null;
   registrationOpensAt: Date | null;
 } | null> {
   const [row] = await tx.$queryRaw(
-    Prisma.sql`SELECT "resultsOnly", "publishAt", "registrationPaused", "registrationPauseNote", "registrationClosedAt", "registrationOpensAt" FROM "Event" WHERE "id" = ${eventId} FOR SHARE`,
+    Prisma.sql`SELECT "resultsOnly", "publishAt", "registrationPaused", "registrationPauseNote", "registrationClosedAt", "registrationClosesAt", "registrationOpensAt" FROM "Event" WHERE "id" = ${eventId} FOR SHARE`,
   );
   return row ?? null;
 }
@@ -522,6 +484,7 @@ export async function forListing<
   T extends {
     id: string;
     registrationClosedAt?: Date | string | null;
+    registrationClosesAt?: Date | string | null;
     registrationPaused?: boolean | null;
     registrationOpensAt?: Date | string | null;
     categories: SlotLimited[];
@@ -539,7 +502,7 @@ export async function forListing<
       ...card,
       // The same order registrationState uses, for the same reasons — a card
       // and the page it links to must never label the event differently.
-      registrationClosed: isClosed(event)
+      registrationClosed: isClosed(event, now)
         ? 'CLOSED'
         : event.registrationPaused
           ? 'PAUSED'

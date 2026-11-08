@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { ArrowRight, BadgeCheck, BookOpen, CalendarDays, ChevronDown, Hourglass, MapPin, ShoppingCart, Users } from 'lucide-react';
 import EventImage from '@/components/EventImage';
 import { formatEventDayShort, formatEventInstant } from '@/lib/event-schedule';
+import { closingLine } from '@/lib/registration-window';
 import type { RegistrantCounts, ViewerEventSummary } from '@/lib/client-summary';
 import { REGISTRATION_STATES } from './events/registration-state-badge';
 import DashboardHeader from './DashboardHeader';
@@ -189,6 +190,11 @@ function EventSummaryCard({ event }: { event: ViewerEventSummary }) {
             <span className="status-note neutral">
               Opens {formatEventInstant(event.registrationOpensAt)}
             </span>
+          )}
+          {/* Only a deadline still ahead: the summary does not say whether a
+              closed race was closed by hand or by its date. */}
+          {event.state !== 'CLOSED' && closingLine(event, event.state) && (
+            <span className="status-note neutral">{closingLine(event, event.state)}</span>
           )}
         </div>
 

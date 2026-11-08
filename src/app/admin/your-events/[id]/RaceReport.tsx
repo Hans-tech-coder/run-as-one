@@ -7,6 +7,7 @@ import type { GarmentType } from '@/lib/shirt-size';
 import type { AddOnTally } from '@/lib/add-ons';
 import type { ViewerCategorySummary } from '@/lib/client-summary';
 import { formatEventDayShort, formatEventInstant } from '@/lib/event-schedule';
+import { closingLine } from '@/lib/registration-window';
 import { SITE_NAME } from '@/lib/site-contact';
 import { REGISTRATION_STATES } from '../../events/registration-state-badge';
 import { PrintHead, SavePdfButton, SavePdfPanel } from '../../PrintableCopy';
@@ -73,6 +74,9 @@ export default function RaceReport({
           <span className={`status-badge ${state.tone} whitespace-nowrap`}>{state.label}</span>
           {event.state === 'SCHEDULED' && event.registrationOpensAt && (
             <span>Opens {formatEventInstant(event.registrationOpensAt)}</span>
+          )}
+          {event.state !== 'CLOSED' && closingLine(event, event.state) && (
+            <span>{closingLine(event, event.state)}</span>
           )}
           <span className="race-meta-item">
             <CalendarDays size={14} aria-hidden="true" />

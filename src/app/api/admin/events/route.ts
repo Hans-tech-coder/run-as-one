@@ -21,6 +21,7 @@ import {
   asSlotLimit,
 } from '@/lib/registration-gate';
 import { CATEGORY_ORDER } from '@/lib/category-order';
+import { readSignUpWindow } from './[id]/sign-up-window-input';
 import { readClientLink } from '@/lib/client-store';
 import { cleanHighlights } from '@/lib/event-highlights';
 import { findProvince, inferProvince } from '@/lib/ph-address';
@@ -101,6 +102,25 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: publishProblem }, { status: 400 });
     }
 
+    // The scheduled close, checked the way the edit form's is. A new event
+    // has no closure to keep, so only the date is read; a results-only race
+    // takes no sign-ups and stores none.
+    const windowFields = { ...data };
+    delete windowFields.registrationClosed;
+    const signUpWindow = resultsOnly
+      ? ({ ok: true, values: {} } as const)
+      : readSignUpWindow(windowFields, { registrationClosesAt: null, registrationClosedAt: null }, {
+          registrationOpens,
+          date,
+          virtualEndDate,
+        });
+    if (!signUpWindow.ok) {
+      return NextResponse.json(
+        { error: signUpWindow.error, errors: { [signUpWindow.field]: signUpWindow.error } },
+        { status: 400 },
+      );
+    }
+
     // Category changes after payment (CATEGORY_CHANGE_PLAN.md): the deadline,
     // what a downgrade gives back and the change fee. Absent fields take the
     // column defaults — no deadline, NO_REFUND, no fee.
@@ -177,6 +197,7 @@ export async function POST(request: Request) {
           // Null is the usual answer: most races are registrable the moment
           // they are published, and only one listed early holds its button back.
           registrationOpensAt: registrationOpens,
+          ...signUpWindow.values,
           ...changeSettings.values,
           ...switchSettings.values,
           publishAt,

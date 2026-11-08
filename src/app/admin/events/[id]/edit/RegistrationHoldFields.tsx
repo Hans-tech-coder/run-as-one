@@ -6,7 +6,11 @@ import type { EventEditDraft } from './event-edit-draft';
 
 /**
  * The organizer's manual hold on sign-ups, inside the edit form's Publishing
- * panel: the switch and, while it is on, what runners are told. Split out of
+ * panel: the switch and, while it is on, what runners are told — and below it
+ * the Close switch, the final stop (registration-window.ts). Pause and Close
+ * sit together because they are the two "stop now" answers; the dates above
+ * them are the "stop later" ones. Close asks before the save goes through
+ * (useSignUpWindow), as the events table's Close does. Split out of
  * the edit page, which was on the split-candidates list.
  *
  * A hold is distinct from an event whose options have all sold out: the slots
@@ -19,9 +23,12 @@ import type { EventEditDraft } from './event-edit-draft';
 export default function RegistrationHoldFields({
   draft,
   onChange,
+  closedOnSchedule = false,
 }: {
-  draft: Pick<EventEditDraft, 'registrationPaused' | 'registrationPauseNote'>;
+  draft: Pick<EventEditDraft, 'registrationPaused' | 'registrationPauseNote' | 'registrationClosed'>;
   onChange: (patch: Partial<EventEditDraft>) => void;
+  /** Its closing date has passed, so it reads CLOSED with this switch off. */
+  closedOnSchedule?: boolean;
 }) {
   return (
     <>
@@ -50,6 +57,22 @@ export default function RegistrationHoldFields({
             Leave it blank and we say sign-ups are paused and may reopen.
           </p>
         </div>
+      )}
+
+      <AdminSwitch
+        on={draft.registrationClosed}
+        onToggle={() => onChange({ registrationClosed: !draft.registrationClosed })}
+        label="Close Registration"
+        hint="Ends sign-ups for good, even with slots left and race day ahead. Runners are told registration is closed — no note, no “check back”. Orders already placed are not affected; turn it off to reopen."
+      />
+
+      {/* Closed by its date, with the switch off: say why, and what reopens
+          it, so the organizer is not left wondering why Register is off. */}
+      {closedOnSchedule && (
+        <p className="text-sm text-secondary m-0" role="status">
+          Registration is closed because its closing date has passed. To reopen it, pick a new
+          closing date above or choose <strong className="text-primary">Until Race Day</strong>.
+        </p>
       )}
     </>
   );

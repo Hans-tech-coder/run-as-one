@@ -11,13 +11,14 @@ import EventActionsMenu from './EventActionsMenu';
 import AdminCardList from '../AdminCardList';
 import AdminTablePager from '../AdminTablePager';
 import MobileSortMenu from '../MobileSortMenu';
-import RegistrationScheduleModal from './RegistrationScheduleModal';
+import ManageSignUpsModal from './ManageSignUpsModal';
 import DeleteEventModal from './DeleteEventModal';
 import { REGISTRATION_STATES } from './registration-state-badge';
 import { CategoryChips, FormatBadge, PublishStatus, RegisteredCount, RegistrationStatus, eventDateLabel, rowPosition } from './EventRowCells';
 import { isVirtual, takesResults } from '@/lib/event-format';
 import { eventColumns } from './event-columns';
 import { useEventRowActions } from './useEventRowActions';
+import { useManageSignUps } from './useManageSignUps';
 import { useEventPublishActions } from './useEventPublishActions';
 import PublishModal from './PublishModal';
 import type { EventRow } from './event-row';
@@ -73,8 +74,8 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
   const [selectedStates, setSelectedStates] = useState<string[]>([]);
 
   const actions = useEventRowActions(setTableEvents);
+  const signUps = useManageSignUps(setTableEvents);
   const publishing = useEventPublishActions(setTableEvents);
-  const { pausingId } = actions;
 
   const viewRef = useRef<HTMLDivElement>(null);
 
@@ -99,7 +100,6 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
         label={event.title}
         registrationState={event.registrationState ?? 'OPEN'}
         publishAt={event.publishAt ?? null}
-        isPausing={pausingId === event.id}
         // Decided on the server with the same can() each route asks
         // (events/page.tsx). A row without `access` is an owner's.
         canEdit={event.access?.edit ?? true}
@@ -107,19 +107,9 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
         canManagePacers={(event.access?.pacers ?? true) && !isVirtual(event)}
         pacersNotSent={event.pacersNotSent ?? 0}
         hasResults={takesResults(event)}
-        onTogglePause={
+        onManageSignUps={
           (event.access?.edit ?? true)
-            ? () => actions.togglePause(event)
-            : undefined
-        }
-        onToggleClose={
-          (event.access?.edit ?? true)
-            ? () => actions.toggleClose(event)
-            : undefined
-        }
-        onSchedule={
-          (event.access?.edit ?? true)
-            ? () => actions.openSchedule(event)
+            ? () => signUps.open(event)
             : undefined
         }
         onPublish={
@@ -136,10 +126,12 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
     </div>
   );
 
-  // renderActions is rebuilt every render; pausingId is the one thing it
-  // reads that changes what a cell shows, as before it was pulled out.
+  // renderActions is rebuilt every render, but nothing it reads changes what
+  // a cell shows: each row's menu draws from the row passed to it, and the
+  // handlers only set state. (The pause and close toggles' in-flight id was
+  // the one thing that did; they moved into Manage Sign-Ups.)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const columns = useMemo(() => eventColumns(event => renderActions(event)), [pausingId]);
+  const columns = useMemo(() => eventColumns(event => renderActions(event)), []);
 
   const filteredEvents = useMemo(
     () =>
@@ -393,14 +385,15 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
       {/* Keyed by the row and by the value it is editing, so the modal starts
           from what this event actually holds — including the second time it is
           opened on a row whose opening was just changed. */}
-      <RegistrationScheduleModal
-        key={`${actions.schedule.event?.id ?? 'none'}-${actions.schedule.event?.registrationOpensAt ?? ''}`}
-        event={actions.schedule.event}
-        isOpen={actions.schedule.isOpen}
-        isClosing={actions.schedule.isClosing}
-        isSaving={actions.schedule.isSaving}
-        onClose={actions.schedule.close}
-        onSave={actions.schedule.save}
+      <ManageSignUpsModal
+        key={`${signUps.event?.id ?? 'none'}-${signUps.event?.registrationState ?? ''}`}
+        event={signUps.event}
+        isOpen={signUps.isOpen}
+        isClosing={signUps.isClosing}
+        isSaving={signUps.isSaving}
+        onClose={signUps.close}
+        onSave={signUps.save}
+        onToggleClosed={signUps.toggleClosed}
       />
 
       <PublishModal

@@ -1,8 +1,9 @@
 "use client";
 
 import React from 'react';
-import { CalendarClock, DoorOpen } from 'lucide-react';
+import { CalendarClock, CalendarX, DoorOpen, Flag } from 'lucide-react';
 import {
+  DEFAULT_CLOSING_TIME,
   DEFAULT_OPENING_TIME,
   OPENS_IMMEDIATELY,
   isScheduledOpening,
@@ -24,14 +25,67 @@ import AdminDatePicker from '../AdminDatePicker';
  * made, and an organizer who wants their race open now should not have to read
  * past them.
  *
- * Shared by the create form, the edit form and the events table's scheduling
- * modal, so a race's opening is set the same way wherever it is set from.
+ * Shared by the create form, the edit form and the events table's Manage
+ * Sign-Ups modal, so a race's opening is set the same way wherever it is set
+ * from. `kind="closing"` asks the other end of the window — the scheduled
+ * close — with the same two cards and fields, because it is the same kind of
+ * answer: no date, or a date and a time.
  */
+
+const COPY = {
+  opening: {
+    options: [
+      {
+        scheduled: false,
+        icon: DoorOpen,
+        title: 'When It Goes Public',
+        description:
+          'The Register button works as soon as runners can see the event. This is how most races are run.',
+      },
+      {
+        scheduled: true,
+        icon: CalendarClock,
+        title: 'On A Later Date',
+        description:
+          'Runners can see the event and plan for it, but the Register button only turns on at the date you set. Good for announcing a launch.',
+      },
+    ],
+    dateLabel: 'Opening Date',
+    timeLabel: 'Opening Time',
+    dialogLabel: 'Choose the opening date',
+    defaultTime: DEFAULT_OPENING_TIME,
+    note: 'Philippine time. Until it passes, the event page shows the opening date in place of the Register button — nobody has to come back and switch it on. A date already gone means sign-ups are open now.',
+  },
+  closing: {
+    options: [
+      {
+        scheduled: false,
+        icon: Flag,
+        title: 'Until Race Day',
+        description:
+          'Sign-ups stay open until the race is run, unless every option fills or you close them yourself.',
+      },
+      {
+        scheduled: true,
+        icon: CalendarX,
+        title: 'On A Set Date',
+        description:
+          'The Register button turns off by itself at the date you set — a deadline runners can see and plan around.',
+      },
+    ],
+    dateLabel: 'Closing Date',
+    timeLabel: 'Closing Time',
+    dialogLabel: 'Choose the closing date',
+    defaultTime: DEFAULT_CLOSING_TIME,
+    note: 'Philippine time. It must fall after the opening and on or before race day. Once it passes, runners are told registration closed on that date — nobody has to press Close.',
+  },
+} as const;
 export default function RegistrationOpeningPicker({
   value,
   onChange,
   idPrefix = 'registrationOpening',
   error,
+  kind = 'opening',
 }: {
   value: OpeningDraft;
   onChange: (next: OpeningDraft) => void;
@@ -44,28 +98,16 @@ export default function RegistrationOpeningPicker({
   idPrefix?: string;
   /** Why the date is unusable, shown under the field it belongs to. */
   error?: string | null;
+  /** Which end of the sign-up window this picker sets. */
+  kind?: 'opening' | 'closing';
 }) {
+  const copy = COPY[kind];
   const scheduled = isScheduledOpening(value);
   const dateId = `${idPrefix}-day`;
   const timeId = `${idPrefix}-time`;
   const errorId = `${idPrefix}-error`;
 
-  const options = [
-    {
-      scheduled: false,
-      icon: DoorOpen,
-      title: 'When It Goes Public',
-      description:
-        'The Register button works as soon as runners can see the event. This is how most races are run.',
-    },
-    {
-      scheduled: true,
-      icon: CalendarClock,
-      title: 'On A Later Date',
-      description:
-        'Runners can see the event and plan for it, but the Register button only turns on at the date you set. Good for announcing a launch.',
-    },
-  ];
+  const options = copy.options;
 
   return (
     <div className="flex flex-col gap-4">
@@ -97,7 +139,7 @@ export default function RegistrationOpeningPicker({
                         // the fields this reveals are where they pick it. An
                         // organizer coming back to a draft they already filled
                         // in keeps what they typed.
-                        { scheduled: true, day: value.day, time: value.time || DEFAULT_OPENING_TIME }
+                        { scheduled: true, day: value.day, time: value.time || copy.defaultTime }
                       : OPENS_IMMEDIATELY,
                   )
                 }
@@ -127,17 +169,17 @@ export default function RegistrationOpeningPicker({
           <div className="grid gap-4 sm:grid-cols-2">
             <AdminDatePicker
               id={dateId}
-              label="Opening Date"
+              label={copy.dateLabel}
               className="min-w-0"
               value={value.day}
-              dialogLabel="Choose the opening date"
+              dialogLabel={copy.dialogLabel}
               onChange={(day) => onChange({ ...value, day })}
               invalid={Boolean(error)}
               describedBy={error ? errorId : undefined}
             />
             <div className="form-group min-w-0">
               <label className="form-label" htmlFor={timeId}>
-                Opening Time
+                {copy.timeLabel}
               </label>
               <input
                 id={timeId}
@@ -157,11 +199,7 @@ export default function RegistrationOpeningPicker({
             </p>
           )}
 
-          <p className="text-xs opacity-70 m-0">
-            Philippine time. Until it passes, the event page shows the opening date in
-            place of the Register button — nobody has to come back and switch it on.
-            A date already gone means sign-ups are open now.
-          </p>
+          <p className="text-xs opacity-70 m-0">{copy.note}</p>
         </div>
       )}
     </div>

@@ -8,6 +8,7 @@ import { eventInstantParts, formatEventInstant, formatEventInstantShort, formatE
 import { isVirtual } from '@/lib/event-format';
 import { publishState } from '@/lib/event-visibility';
 import { REGISTRATION_STATES } from './registration-state-badge';
+import { closingLine } from '@/lib/registration-window';
 import type { CategoryChip, EventRow } from './event-row';
 
 /**
@@ -105,6 +106,10 @@ export function RegistrationStatus({ event }: { event: EventRow }) {
         <span className="status-note neutral whitespace-nowrap">
           Opens {formatEventInstant(event.registrationOpensAt)}
         </span>
+      )}
+      {/* The other end of the window, under the same badge. */}
+      {closingLine(event, key) && (
+        <span className="status-note neutral whitespace-nowrap">{closingLine(event, key)}</span>
       )}
     </div>
   );

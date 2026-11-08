@@ -1,4 +1,5 @@
 import { eventInstant, eventInstantParts, formatEventInstant } from '@/lib/event-schedule';
+import { closingProblem } from '@/lib/registration-window';
 
 /**
  * When an event starts taking sign-ups, as the admin forms hold it.
@@ -91,4 +92,77 @@ export function describeOpening(draft: OpeningDraft): string {
   return instant
     ? `Sign-ups open on ${formatEventInstant(instant)}.`
     : 'Sign-ups open as soon as the event is published.';
+}
+
+/*
+ * The closing date (`registrationClosesAt`) is the same shape — a choice, a
+ * day and a time standing for one nullable instant — so it reuses the draft
+ * and the picker rather than growing a twin of each. `scheduled: false` here
+ * means no deadline: sign-ups run until race day or until someone presses
+ * Close.
+ */
+
+/** A race whose sign-ups run until race day. */
+export const NO_CLOSING_DATE: OpeningDraft = OPENS_IMMEDIATELY;
+
+/**
+ * The time of day a newly scheduled close lands on unless the organizer says
+ * otherwise: the last minute of the day, because "registration closes on the
+ * 20th" is read by runners as "you still have the 20th".
+ */
+export const DEFAULT_CLOSING_TIME = '23:59';
+
+/** The stored closing instant taken apart into the picker's fields. */
+export const closingDraft = openingDraft;
+
+/** What the form posts for the closing date: an ISO instant, or null for none. */
+export const closingInstantISO = openingInstantISO;
+
+/**
+ * Why this closing date cannot be saved, or null when it can — the same rule
+ * the routes enforce (`closingProblem` in lib/registration-window.ts), read
+ * against the opening and race day as the form currently holds them, so the
+ * organizer sees the refusal under the field before pressing Save.
+ */
+export function closingDraftProblem(
+  closing: OpeningDraft,
+  context: {
+    opening: OpeningDraft;
+    date: string;
+    virtualEndDate?: string | null;
+    /** The closing instant the event was loaded with, so an untouched past date is not refused. */
+    savedClosesAt?: string | null;
+  },
+): string | null {
+  if (!closing.scheduled) return null;
+  const closesAt = eventInstant(closing.day, closing.time);
+  if (!closesAt) return 'Pick the date registration closes, or keep it open until race day.';
+  const opensAt = context.opening.scheduled ? eventInstant(context.opening.day, context.opening.time) : null;
+  return closingProblem(closesAt, {
+    opensAt,
+    date: context.date,
+    virtualEndDate: context.virtualEndDate || null,
+    changed: !sameMinute(closesAt, context.savedClosesAt),
+  });
+}
+
+/**
+ * Whether a picker's instant is the stored one. To the minute, because the
+ * picker has no seconds: a stored value carrying some (written by anything
+ * other than this form) must still read as untouched, or saving an unrelated
+ * field would be refused for "changing" a date nobody moved.
+ */
+export function sameMinute(instant: Date | string | null | undefined, stored: Date | string | null | undefined): boolean {
+  const minute = (value: Date | string | null | undefined) =>
+    value ? Math.floor(new Date(value).getTime() / 60_000) : null;
+  return minute(instant) === minute(stored);
+}
+
+/** The closing draft read back as a sentence, in the words runners read. */
+export function describeClosing(draft: OpeningDraft): string {
+  const instant = draft.scheduled ? eventInstant(draft.day, draft.time) : null;
+  if (!instant) return 'Sign-ups stay open until race day, unless you close them.';
+  return instant.getTime() <= Date.now()
+    ? `Sign-ups closed on ${formatEventInstant(instant)}.`
+    : `Sign-ups close on ${formatEventInstant(instant)}.`;
 }

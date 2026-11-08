@@ -30,6 +30,9 @@ export type EventEditDraft = EventFormDraft & {
   // src/lib/registration-gate.ts.
   registrationPaused: boolean;
   registrationPauseNote: string;
+  // The organizer's Close, as a switch beside Pause. The PUT stamps the
+  // instant (registrationClosedAt) so the trail reads the server's clock.
+  registrationClosed: boolean;
   // After the Race (AfterRacePanel, PAST_EVENTS_PLAN.md D7): the photo
   // albums, [] for none, and the timing override, null to follow the
   // event's kind. Both ride the form's PUT like every other field here.
@@ -48,6 +51,7 @@ export function blankEditDraft(): EventEditDraft {
     ...blankEventDraft(60),
     registrationPaused: false,
     registrationPauseNote: '',
+    registrationClosed: false,
     photoAlbums: [],
     timedResults: null,
   };
@@ -82,6 +86,8 @@ type EventResponse = {
   consentWaiver?: Maybe<string[]>;
   registrationPauseNote?: Maybe<string>;
   registrationOpensAt?: Maybe<string>;
+  registrationClosesAt?: Maybe<string>;
+  registrationClosedAt?: Maybe<string>;
   categoryChangeFee?: Maybe<number>;
   downgradeRefundPolicy?: Maybe<string>;
   categoryChangeUntil?: Maybe<string>;
@@ -156,6 +162,7 @@ export function editStateFromEvent(data: EventResponse): {
       logisticsChangeUntil: changeUntilDraft(data.logisticsChangeUntil),
       registrationPaused: Boolean(data.registrationPaused),
       registrationPauseNote: data.registrationPauseNote || '',
+      registrationClosed: Boolean(data.registrationClosedAt),
       photoAlbums: cleanPhotoAlbums(data.photoAlbums),
       timedResults: typeof data.timedResults === 'boolean' ? data.timedResults : null,
     },

@@ -20,6 +20,7 @@ import {
 } from '@/lib/event-format';
 import { OPENING_INSTANT_ERROR, asOpeningInstant, asSlotLimit } from '@/lib/registration-gate';
 import { publishConflict } from '@/lib/event-visibility';
+import { readSignUpWindow } from './sign-up-window-input';
 import { readCategoryChangeSettings } from '@/lib/category-change-settings';
 import { readLogisticsChangeSettings } from '@/lib/logistics-change-settings';
 import { CATEGORY_ORDER } from '@/lib/category-order';
@@ -66,6 +67,8 @@ const EVENT_FIELDS = [
   'registrationPaused',
   'registrationPauseNote',
   'registrationOpensAt',
+  'registrationClosesAt',
+  'registrationClosedAt',
   'categoryChangeUntil',
   'downgradeRefundPolicy',
   'categoryChangeFee',
@@ -202,6 +205,15 @@ export async function updateEvent(request: Request, { params }: { params: Promis
     if (conflict) {
       return NextResponse.json(
         { error: conflict, errors: { registrationOpensAt: conflict } },
+        { status: 400 },
+      );
+    }
+
+    // The closing date and the Close switch (sign-up-window-input.ts).
+    const signUpWindow = readSignUpWindow(data, current, { registrationOpens, date, virtualEndDate });
+    if (!signUpWindow.ok) {
+      return NextResponse.json(
+        { error: signUpWindow.error, errors: { [signUpWindow.field]: signUpWindow.error } },
         { status: 400 },
       );
     }
@@ -347,6 +359,7 @@ export async function updateEvent(request: Request, { params }: { params: Promis
           // Null means the race is open as soon as it is published; an instant
           // in the future holds the button back until it passes.
           registrationOpensAt: registrationOpens,
+          ...signUpWindow.values,
           ...changeSettings.values,
           ...switchSettings.values,
           // The certificate has its own home now, the results workspace and

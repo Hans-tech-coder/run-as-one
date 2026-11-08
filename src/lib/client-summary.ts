@@ -63,6 +63,8 @@ export type ViewerEventSummary = {
   state: RegistrationState;
   /** When a SCHEDULED event opens, for the line under its badge. */
   registrationOpensAt: Date | null;
+  /** When an open event's sign-ups close on their own, for the same line. */
+  registrationClosesAt: Date | null;
   counts: RegistrantCounts;
   categories: ViewerCategorySummary[];
 };
@@ -98,6 +100,7 @@ export async function viewerEventSummaries(
       organizerId: true,
       clientId: true,
       registrationClosedAt: true,
+      registrationClosesAt: true,
       registrationPaused: true,
       registrationOpensAt: true,
       categories: {
@@ -153,6 +156,7 @@ export async function viewerEventSummaries(
       imageUrl: event.imageUrl,
       state: registrationState(event, withSlotCounts(event.categories, taken), finished),
       registrationOpensAt: event.registrationOpensAt,
+      registrationClosesAt: event.registrationClosesAt,
       counts: categories.reduce(addCounts, NONE),
       categories,
     };

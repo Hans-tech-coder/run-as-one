@@ -24,7 +24,7 @@ import {
 } from '@/lib/event-slug';
 import {
   EVENT_FULL_MESSAGE,
-  REGISTRATION_CLOSED_MESSAGE,
+  closedMessage,
   openingNote,
   pauseNote,
   registrationState,
@@ -353,7 +353,7 @@ export default async function EventDetails({ site, slug, staff }: { site: string
                   <RegistrationOnHold
                     icon={<Lock size={20} />}
                     heading="Registration Closed"
-                    message={REGISTRATION_CLOSED_MESSAGE}
+                    message={closedMessage(event)}
                   />
                 ) : state === 'PAUSED' ? (
                   <RegistrationOnHold

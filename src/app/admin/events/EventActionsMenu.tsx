@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
-import { MoreVertical, Users, ClipboardList, Trophy, Edit, Trash2, CalendarClock, PauseCircle, PlayCircle, Footprints, Lock, LockOpen, Globe } from 'lucide-react';
+import { MoreVertical, Users, ClipboardList, Trophy, Edit, Trash2, Footprints, Globe, SlidersHorizontal } from 'lucide-react';
 import { publishState } from '@/lib/event-visibility';
 import LinkPending from '@/components/ui/LinkPending';
 import { placeRowMenu, type RowMenuPlacement } from '../row-menu-position';
@@ -16,14 +16,11 @@ export default function EventActionsMenu({
   label,
   registrationState = 'OPEN',
   publishAt = null,
-  isPausing = false,
   canEdit = true,
   canManagePacers = false,
   pacersNotSent = 0,
   hasResults = true,
-  onTogglePause,
-  onToggleClose,
-  onSchedule,
+  onManageSignUps,
   onPublish,
   onDelete
 }: {
@@ -34,11 +31,9 @@ export default function EventActionsMenu({
   registrationState?: RegistrationState;
   /** When the public first sees it; null is a draft (lib/event-visibility.ts). */
   publishAt?: string | Date | null;
-  /** True while this row's pause or close request is in flight. */
-  isPausing?: boolean;
   /**
    * Whether this person's role on the event includes `event:edit`. Without it
-   * Edit Event is not offered. Pause, Schedule and Delete are withheld the
+   * Edit Event is not offered. Manage Sign-Ups and Delete are withheld the
    * other way — by not passing their handler — so the table decides each from
    * the same `can()` its route asks.
    */
@@ -58,11 +53,12 @@ export default function EventActionsMenu({
   pacersNotSent?: number;
   /** False for a virtual run, which has no results (lib/event-format.ts): no Manage Results. */
   hasResults?: boolean;
-  onTogglePause?: () => void;
-  /** Closes sign-ups for good, or reopens a closed event. */
-  onToggleClose?: () => void;
-  /** Opens the modal that decides when sign-ups start. */
-  onSchedule?: () => void;
+  /**
+   * Opens the Manage Sign-Ups modal: opening, closing date, pause and
+   * Close / Reopen in one place (ManageSignUpsModal), so the menu carries one
+   * item for the one question "when can runners register?".
+   */
+  onManageSignUps?: () => void;
   /** Opens the modal that publishes, schedules or un-publishes the event. */
   onPublish?: () => void;
   onDelete?: () => void;
@@ -167,37 +163,15 @@ export default function EventActionsMenu({
   };
 
 
-  const isPaused = registrationState === 'PAUSED';
-  // A race that has been run cannot be paused — it is already closed, and
-  // offering a hold on it would suggest sign-ups could come back.
-  // A closed race offers neither a hold nor a schedule: both would read as
-  // ways back in, and the only way back from a closure is Reopen.
-  const isClosed = registrationState === 'CLOSED';
-  const canPause = registrationState !== 'FINISHED' && !isClosed && Boolean(onTogglePause);
+  // A race that has been run has nothing left to manage — sign-ups ended
+  // with it — and a results-only race never took any here.
+  const canManageSignUps =
+    registrationState !== 'FINISHED' && registrationState !== 'EXTERNAL' && Boolean(onManageSignUps);
 
-  // A race that has been run has no opening left to schedule either — the same
-  // line the pause item is drawn on, for the same reason.
-  const canSchedule = registrationState !== 'FINISHED' && !isClosed && Boolean(onSchedule);
-
-  // Closing is the same line again: a race that has been run is already over.
-  const canClose = registrationState !== 'FINISHED' && Boolean(onToggleClose);
-
-  const handleTogglePause = (e: React.MouseEvent) => {
+  const handleManageSignUps = (e: React.MouseEvent) => {
     e.preventDefault();
     closeMenu();
-    onTogglePause?.();
-  };
-
-  const handleToggleClose = (e: React.MouseEvent) => {
-    e.preventDefault();
-    closeMenu();
-    onToggleClose?.();
-  };
-
-  const handleSchedule = (e: React.MouseEvent) => {
-    e.preventDefault();
-    closeMenu();
-    onSchedule?.();
+    onManageSignUps?.();
   };
 
   const isLive = publishState({ publishAt }) === 'PUBLISHED';
@@ -287,46 +261,17 @@ export default function EventActionsMenu({
             {isLive ? 'Change Publishing' : 'Publish Event'}
           </button>
         )}
-        {canSchedule && (
+        {canManageSignUps && (
           <button
-            onClick={handleSchedule}
+            onClick={handleManageSignUps}
             className="action-dropdown-item w-full flex items-center gap-3 px-4 py-2 text-sm text-left"
             role="menuitem"
           >
-            <CalendarClock size={16} />
-            {/* One label for both answers the modal offers. Naming only one of
-                them — "Open Sign-Ups" — would hide the other behind an item
-                nobody with an already-open race would think to press. */}
-            Schedule Sign-Ups
-          </button>
-        )}
-        {canPause && (
-          <button
-            onClick={handleTogglePause}
-            disabled={isPausing}
-            className={`action-dropdown-item w-full flex items-center gap-3 px-4 py-2 text-sm text-left ${isPausing ? 'opacity-50 cursor-not-allowed' : ''}`}
-            role="menuitem"
-          >
-            {isPaused ? <PlayCircle size={16} /> : <PauseCircle size={16} />}
-            {/* "Sign-Ups" rather than "Registration": the shorter word is
-                what the rest of the dashboard calls this, and it keeps the
-                three states of this one item the same length. */}
-            {isPausing
-              ? 'Saving'
-              : isPaused
-                ? 'Resume Sign-Ups'
-                : 'Pause Sign-Ups'}
-          </button>
-        )}
-        {canClose && (
-          <button
-            onClick={handleToggleClose}
-            disabled={isPausing}
-            className={`action-dropdown-item w-full flex items-center gap-3 px-4 py-2 text-sm text-left ${isPausing ? 'opacity-50 cursor-not-allowed' : ''}`}
-            role="menuitem"
-          >
-            {isClosed ? <LockOpen size={16} /> : <Lock size={16} />}
-            {isPausing ? 'Saving' : isClosed ? 'Reopen Sign-Ups' : 'Close Sign-Ups'}
+            <SlidersHorizontal size={16} />
+            {/* "Sign-Ups", the dashboard's word for registration. One item
+                for opening, closing date, pause and close, so the menu does
+                not grow with each way of answering the same question. */}
+            Manage Sign-Ups
           </button>
         )}
         {onDelete && (

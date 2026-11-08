@@ -20,7 +20,7 @@ import {
   storedGuardianConsent,
 } from '@/lib/minor-consent';
 import {
-  REGISTRATION_CLOSED_MESSAGE,
+  closedMessage,
   RESULTS_ONLY_MESSAGE,
   SlotsUnavailableError,
   isClosed,
@@ -233,7 +233,7 @@ export async function POST(request: Request) {
     // The organizer closed sign-ups for good. Checked before the hold so a
     // closed race never tells a runner that slots may open again.
     if (isClosed(event)) {
-      return NextResponse.json({ error: REGISTRATION_CLOSED_MESSAGE }, { status: 409 });
+      return NextResponse.json({ error: closedMessage(event) }, { status: 409 });
     }
 
     // The organizer's manual hold. Same reasoning as the finished check and

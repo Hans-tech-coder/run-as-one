@@ -31,6 +31,7 @@ import { basicInfoProblem, changeUntilISO } from '../../event-form-draft';
 import RegistrationFeesPanel from '../../RegistrationFeesPanel';
 import PublishingPanel from '../../PublishingPanel';
 import RegistrationHoldFields from './RegistrationHoldFields';
+import { useSignUpWindow } from './useSignUpWindow';
 import AfterRacePanel from '../../AfterRacePanel';
 import { openingBeforePublish, publishDraft } from '../../publish-draft';
 import { describePublish } from '@/lib/event-visibility';
@@ -60,6 +61,8 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
   // fields standing for one nullable column — see registration-opening.ts.
   const [opening, setOpening] = useState<OpeningDraft>(OPENS_IMMEDIATELY);
   const [openingError, setOpeningError] = useState<string | null>(null);
+  // The closing date and the Close switch's confirm (useSignUpWindow).
+  const signUps = useSignUpWindow();
   // When the event went (or goes) public. Read-only here: it changes from the
   // events list's Publish item, never by saving this form.
   const [publishAt, setPublishAt] = useState<string | null>(null);
@@ -121,6 +124,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
 
         setFormData(loaded.formData);
         setOpening(loaded.opening);
+        signUps.load(raw);
         setDeliveryOn(loaded.deliveryOn);
         setBankAccounts(loaded.bankAccounts);
         setEventType(loaded.eventType);
@@ -170,6 +174,12 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
       return;
     }
 
+    // The closing date, a Reopen past it, and a new Close's confirm.
+    if (!resultsOnly && !(await signUps.ready(formData, opening))) {
+      setIsLoading(false);
+      return;
+    }
+
     // Delivery switched on with both zones at 0 would quietly save as pickup
     // only; the message sits under the two fee fields that need a number.
     const deliveryFault = resultsOnly ? null : deliveryProblem(deliveryOn, formData);
@@ -188,6 +198,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
           ...deliveryFees(deliveryOn, formData),
           eventType,
           registrationOpensAt: openingInstantISO(opening),
+          ...(resultsOnly ? {} : signUps.body()),
           categoryChangeUntil: changeUntilISO(formData.categoryChangeUntil),
           logisticsChangeUntil: changeUntilISO(formData.logisticsChangeUntil),
           categories,
@@ -200,6 +211,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
         const data = await res.json();
         // A refusal about the client or an album lands under its field, not the modal.
         if (data.errors?.clientId) setClientError(data.errors.clientId);
+        else if (data.errors?.registrationClosesAt) signUps.setClosingError(data.errors.registrationClosesAt);
         else if (data.errors?.photoAlbums) {
           const index = Number(data.photoAlbumIndex) || 0;
           setAlbumError({ index, message: data.errors.photoAlbums });
@@ -209,6 +221,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
         return;
       }
 
+      signUps.markSaved(formData);
       setSuccessMsg('Event updated successfully!');
     } catch (err) {
       setError('An unexpected error occurred');
@@ -354,11 +367,19 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
                   if (openingError) setOpeningError(null);
                 }}
                 openingError={openingError}
+                closing={signUps.closing}
+                onClosingChange={signUps.onClosingChange}
+                closingError={signUps.closingError}
                 idPrefix="editEvent"
                 paused={formData.registrationPaused}
+                closed={formData.registrationClosed}
               >
-                {/* The organizer's manual hold on sign-ups (RegistrationHoldFields). */}
-                <RegistrationHoldFields draft={formData} onChange={patchForm} />
+                {/* The organizer's Pause and Close switches (RegistrationHoldFields). */}
+                <RegistrationHoldFields
+                  draft={formData}
+                  onChange={patchForm}
+                  closedOnSchedule={signUps.closedOnSchedule(formData)}
+                />
               </PublishingPanel>
             </>
           )}

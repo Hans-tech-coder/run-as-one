@@ -26,6 +26,10 @@ export type EventRow = {
   registrationOpensAt?: string | Date | null;
   registrationPaused?: boolean | null;
   registrationClosedAt?: string | Date | null;
+  /** When sign-ups close on their own (lib/registration-window.ts). */
+  registrationClosesAt?: string | Date | null;
+  /** What runners read while paused; the Manage Sign-Ups modal edits it. */
+  registrationPauseNote?: string | null;
   /** When the public first sees it; null is a draft (lib/event-visibility.ts). */
   publishAt?: string | Date | null;
   /** Every option has filled (events/page.tsx) — what a reopened row falls back to. */

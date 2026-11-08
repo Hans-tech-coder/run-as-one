@@ -11,7 +11,14 @@ the owner's choice. Start one only when the owner asks, and read its source plan
 before writing any code. When an item is picked up, give it its own plan file in
 `docs/plans/`, and delete it from this list once it has landed.
 
-**Pending for the next release: two migrations** (`event_add_ons` is already on `main`; `npx prisma migrate status` against production says whether it still needs running).
+**Pending for the next release: three migrations** (`event_add_ons` is already on `main`; `npx prisma migrate status` against production says whether it still needs running).
+`20261108063403_registration_closes_at` (scheduled close, 2026-11-08): one
+nullable `registrationClosesAt` timestamp on `Event`, the date sign-ups close
+on their own. Applied to the local-dev database only. Additive, but like the
+one below the new code breaks without it — Prisma reads every `Event` column,
+and `lockEventRow`'s raw `SELECT` names it — so run `npx prisma migrate deploy`
+**before** `main` is pushed. Rollback: `ALTER TABLE "Event" DROP COLUMN "registrationClosesAt";` (the SQL file is left as Prisma wrote it, since editing an applied migration changes its checksum).
+
 `20261107060151_step_up_used_at` (`PAYMENT_CORRECTION_PLAN.md` Batch 0,
 2026-11-07): one nullable `stepUpUsedAt` timestamp on `Organizer` and on
 `StaffAccount` (lib/step-up.ts spends a confirmation token once by moving it

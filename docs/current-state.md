@@ -27,6 +27,26 @@ and `certificateCoordinates` through without the certificate route's checks
 (Strix's note, older than this release); over-limit album errors point at row
 6; `RacePhotoLinks` uses a fixed heading id.
 
+**Scheduled close and Manage Sign-Ups (2026-11-08, uncommitted on `dev`).**
+A race can now close sign-ups on its own at a set date and time: new column
+`Event.registrationClosesAt` (migration `20261108063403_registration_closes_at`,
+one nullable column, applied to local-dev only). A passed closing date reads
+CLOSED at request time everywhere `isClosed` is asked — the event page, the
+register page, listing cards, both checkout routes and the `FOR SHARE` lock
+(`lockEventRow` now selects the column) — with a runner sentence naming the
+date. The time rules moved to the new client-safe `lib/registration-window.ts`
+(re-exported from `registration-gate.ts`). The owner's decisions: **Q1** the
+edit form gets a Close switch beside Pause, confirmed before Save; **Q2** a
+closing date must fall after the opening and on or before race day
+(`virtualEndDate` for a virtual run); **Q3** a Reopen past a passed closing
+date must carry a new date or clear it. On the events table, **Schedule, Pause
+and Close Sign-Ups became one item, Manage Sign-Ups** (`ManageSignUpsModal`,
+`useManageSignUps`; `RegistrationScheduleModal` deleted); both forms'
+Publishing & Sign-ups panel gained *When does registration close?*; *Closes …*
+shows under the badge on the events table, the client's cards and the race
+report. No automated tests cover it; checked by typecheck, lint, build and a
+localhost walkthrough.
+
 **Step-up confirmation (2026-11-07, on `dev` as `eb727cf`; `PAYMENT_CORRECTION_PLAN.md`
 Batch 0).** A reusable "Confirm it's you" check before a dangerous action:
 `lib/step-up.ts`, `GET/POST /api/admin/step-up`, `GET /api/auth/google/step-up`

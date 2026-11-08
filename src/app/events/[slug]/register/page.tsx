@@ -19,7 +19,7 @@ import { hasFinished } from '@/lib/event-schedule';
 import { publishedEvents } from '@/lib/event-visibility';
 import {
   EVENT_FULL_MESSAGE,
-  REGISTRATION_CLOSED_MESSAGE,
+  closedMessage,
   openingNote,
   pauseNote,
   registrationState,
@@ -138,7 +138,7 @@ export default async function RegisterPage(props: {
   const CLOSED = {
     CLOSED: {
       heading: 'Registration Is Closed',
-      message: REGISTRATION_CLOSED_MESSAGE,
+      message: closedMessage(event),
       icon: <Lock size={30} />,
     },
     PAUSED: {
