@@ -27,3 +27,12 @@ export const CATEGORY_ORDER = [
   { bibMedalOfId: { sort: 'asc', nulls: 'first' } },
   { id: 'asc' },
 ] satisfies Prisma.CategoryOrderByWithRelationInput[];
+
+/**
+ * Where a category means "a race distance" rather than "something to buy":
+ * results and pacers. A Bib + Medal option is a second row for the same
+ * distance, and ranking is per `categoryId`, so offering it there would split
+ * a 10K sheet into two podiums. Those runners ran the parent's race and their
+ * results live on the parent. Not on `closed`: a sold-out Full still has runners.
+ */
+export const RACE_DISTANCE_CATEGORIES = { bibMedalOfId: null } satisfies Prisma.CategoryWhereInput;

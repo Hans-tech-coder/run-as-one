@@ -1,5 +1,6 @@
 import prisma from '@/lib/db';
 import type { Prisma } from '@prisma/client';
+import { RACE_DISTANCE_CATEGORIES } from '@/lib/category-order';
 import { upperCaseForStorage } from '@/lib/text-case';
 import { genderDivision } from '@/lib/gender-division';
 import { isRaceTime, rankResults } from '@/lib/results-ranking';
@@ -73,7 +74,7 @@ export async function checkResultFields(
   }
 
   const category = await prisma.category.findFirst({
-    where: { id: String(body?.categoryId ?? ''), eventId },
+    where: { id: String(body?.categoryId ?? ''), eventId, ...RACE_DISTANCE_CATEGORIES },
     select: { id: true, name: true },
   });
   if (!category) return refuse('categoryId', 'Choose one of this race’s categories.');

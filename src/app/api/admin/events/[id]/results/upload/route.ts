@@ -31,7 +31,7 @@ export async function POST(
         id: true,
         title: true,
         resultsOnly: true,
-        categories: { select: { id: true, name: true, sortOrder: true } },
+        categories: { select: { id: true, name: true, sortOrder: true, bibMedalOfId: true } },
       },
     });
     if (!event || !can(actor, 'results:manage', { organizerId: actor.orgId, eventId: id })) {
@@ -80,8 +80,9 @@ export async function POST(
 
     // Every row must land in a category of this event: an existing one by id,
     // or one declared above by name. Unchecked, a row could carry another
-    // race's category id and publish a time under it.
-    const ownIds = new Set(event.categories.map(cat => cat.id));
+    // race's category id and publish a time under it. A Bib + Medal option is
+    // not a target either: its runners rank with the parent's distance.
+    const ownIds = new Set(event.categories.filter(cat => !cat.bibMedalOfId).map(cat => cat.id));
     const NEW_KEY = 'new:';
     for (const r of results) {
       const known = r?.newCategory

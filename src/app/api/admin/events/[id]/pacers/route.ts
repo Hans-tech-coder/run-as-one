@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { can, getActor } from '@/lib/actor';
 import { recordAudit } from '@/lib/audit';
-import { CATEGORY_ORDER } from '@/lib/category-order';
+import { CATEGORY_ORDER, RACE_DISTANCE_CATEGORIES } from '@/lib/category-order';
 import { DUPLICATE_BIB_REFUSAL, PACER_DISCOUNT_TYPE, pacerCodeFor, pacerFromInput } from '@/lib/pacer';
 import { PACER_SELECT, pacerBibTaken, pacersForEvent } from '@/lib/pacer-store';
 
@@ -88,6 +88,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         // `distance` as well as `name`: the generated code carries the
         // distance (`PACER-21KM-7KQ4`), falling back to the name.
         categories: {
+          where: RACE_DISTANCE_CATEGORIES,
           orderBy: CATEGORY_ORDER,
           select: { id: true, name: true, distance: true },
         },

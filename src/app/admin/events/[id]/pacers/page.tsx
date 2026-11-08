@@ -1,7 +1,7 @@
 import React from 'react';
 import { can, requireTeamActor } from '@/lib/actor';
 import prisma from '@/lib/db';
-import { CATEGORY_ORDER } from '@/lib/category-order';
+import { CATEGORY_ORDER, RACE_DISTANCE_CATEGORIES } from '@/lib/category-order';
 import { codeSentReminder } from '@/lib/pacer';
 import { pacerOrdersByCode, pacersForEvent } from '@/lib/pacer-store';
 import AdminNotFound from '../../../AdminNotFound';
@@ -36,6 +36,7 @@ export default async function PacersPage({ params }: { params: Promise<{ id: str
       title: true,
       format: true,
       categories: {
+        where: RACE_DISTANCE_CATEGORIES,
         orderBy: CATEGORY_ORDER,
         select: { id: true, name: true, distance: true },
       },

@@ -9,7 +9,7 @@ import EventHeroBanner from '@/components/EventHeroBanner';
 import LinkPendingIcon from '@/components/ui/LinkPendingIcon';
 import { canonicalResultsPath, eventByParam, runnerResultPath } from '@/lib/event-slug';
 import { toWholeSeconds } from '@/lib/race-time';
-import { CATEGORY_ORDER } from '@/lib/category-order';
+import { CATEGORY_ORDER, RACE_DISTANCE_CATEGORIES } from '@/lib/category-order';
 import { pacerResultMatcherForEvent } from '@/lib/pacer-store';
 import { EVENT_SITE_CLIENT, ensureEventSite, eventPageMetadata } from '@/lib/site-client';
 
@@ -143,7 +143,7 @@ export default async function WinnersOverviewPage({
 
   // Fetch categories and top 3 results per gender
   const categories = await prisma.category.findMany({
-    where: { eventId: event.id },
+    where: { eventId: event.id, ...RACE_DISTANCE_CATEGORIES },
     orderBy: CATEGORY_ORDER,
     include: {
       raceResults: {

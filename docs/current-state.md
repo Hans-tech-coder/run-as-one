@@ -3,7 +3,7 @@
 
 ## 10. Current state
 
-**Bib + Medal (`BIB_MEDAL_PLAN.md`), in progress on `dev`:** Batch 1 (columns, gate, ordering) and Batch 2 (the admin switch, its validation and the save) are built. Batches 3-5 are not: results and pacers still list the child as its own category, so do not ship this before Batch 3. D1: two runner choices, Full closable. D2: own slot limit. D3: sale prices do not carry over. D4: same admin fee. D5: staff may move a runner into a closed option.
+**Bib + Medal (`BIB_MEDAL_PLAN.md`), in progress on `dev`:** Batch 1 (columns, gate, ordering), Batch 2 (the admin switch, its validation and the save) and Batch 3 (results and pacers offer parents only, and the routes refuse a child id) are built. Batches 4-5 are not. D1: two runner choices, Full closable. D2: own slot limit. D3: sale prices do not carry over. D4: same admin fee. D5: staff may move a runner into a closed option.
 
 **Production is current as of 2026-10-23.** `main` equals `dev` at
 `918c567`: everything below is live, including the Past Events tab and its

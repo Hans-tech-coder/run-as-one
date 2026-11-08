@@ -8,7 +8,7 @@ import CertificateWorkspacePanel from './CertificateWorkspacePanel';
 import { certificateDraft } from './certificate-draft';
 import AdminNotFound from '../../AdminNotFound';
 import { EVENT_NOT_FOUND } from '../../events/event-not-found';
-import { CATEGORY_ORDER } from '@/lib/category-order';
+import { CATEGORY_ORDER, RACE_DISTANCE_CATEGORIES } from '@/lib/category-order';
 import { withPacerRanksAndSources } from '@/lib/pacer-store';
 import { genderDivision } from '@/lib/gender-division';
 import DashboardHeader from '@/app/admin/DashboardHeader';
@@ -40,7 +40,7 @@ export default async function AdminResultsWorkspacePage({ params }: { params: Pr
     // A virtual run has no results (lib/event-format.ts): not found here too.
     where: { id, organizerId: actor.orgId, ...RESULTS_EVENTS },
     include: {
-      categories: { orderBy: CATEGORY_ORDER },
+      categories: { where: RACE_DISTANCE_CATEGORIES, orderBy: CATEGORY_ORDER },
       client: { select: { name: true } },
     }
   });

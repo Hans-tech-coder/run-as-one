@@ -1,7 +1,7 @@
 import db from '@/lib/db';
 import { can, reachableEvents, requireTeamActor, type Actor } from '@/lib/actor';
 import { isCalendarDay, mostRecentFirst, today } from '@/lib/event-schedule';
-import { CATEGORY_ORDER } from '@/lib/category-order';
+import { CATEGORY_ORDER, RACE_DISTANCE_CATEGORIES } from '@/lib/category-order';
 import { toPesos } from '@/lib/money';
 import { DEFAULT_PLATFORM_FEE } from '@/lib/platform-fee';
 import AdminNotFound from '../../AdminNotFound';
@@ -73,7 +73,7 @@ export default async function NewResultsPage({
         format: true,
         virtualEndDate: true,
         client: { select: { name: true } },
-        categories: { select: { id: true, name: true, distance: true }, orderBy: CATEGORY_ORDER },
+        categories: { where: RACE_DISTANCE_CATEGORIES, select: { id: true, name: true, distance: true }, orderBy: CATEGORY_ORDER },
         certificateTemplate: true,
         certificateCoordinates: true,
       },
