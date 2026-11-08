@@ -278,43 +278,57 @@ model BankAccount {
 }
 
 model Category {
-  id          String               @id @default(cuid())
-  name        String
+  id             String               @id @default(cuid())
+  name           String
   /// "42K" for a race. Empty for a fun run package, which has no distance.
-  distance    String
+  distance       String
   /// Centavos
-  price       Int
+  price          Int
   /// Poster showing what a package includes. Races leave this null.
-  imageUrl    String?
+  imageUrl       String?
   /// How many runners this option can take. Null means uncapped, which is what
   /// every option was before limits existed. The cap belongs here rather than
   /// on the Event because a 10K filling up says nothing about the 5K beside
   /// it: the event closes only once every option has.
-  slotLimit   Int?
+  slotLimit      Int?
   /// What this option gets you — "Race Singlet", "Finisher Medal". Per category
   /// rather than per event, because a 10K and a 5K rarely include the same
   /// things. Empty means the event page shows no inclusions block.
-  inclusions  String[]             @default([])
+  inclusions     String[]             @default([])
   /// Where this option sits in the event's list, fixed when it is created:
   /// the first option the organizer entered stays first however often the
   /// event is edited, and one added later joins the end. Without it the list
   /// came back in Postgres's physical row order, which an UPDATE rewrites —
   /// saving the event moved every edited option to the bottom. Read through
   /// CATEGORY_ORDER in src/lib/category-order.ts, never ordered by hand.
-  sortOrder   Int                  @default(0)
-  eventId     String
-  event       Event                @relation(fields: [eventId], references: [id])
-  raceResults RaceResult[]
-  runners     Runner[]
+  sortOrder      Int                  @default(0)
+  /// The option this one is the cheaper Bib + Medal version of. Null on every
+  /// normal option. A second row rather than a per-runner tier, because price,
+  /// shirt size, slots, promos, category change and reports all key off
+  /// `categoryId` and so need no second reading of it. Unique: an option has at
+  /// most one Bib + Medal version. A child shares its parent's `sortOrder`, and
+  /// CATEGORY_ORDER lists it directly after.
+  bibMedalOfId   String?              @unique
+  bibMedalOf     Category?            @relation("BibMedalOption", fields: [bibMedalOfId], references: [id])
+  bibMedalOption Category?            @relation("BibMedalOption")
+  /// The organizer stopped selling this option; runners already in it stay.
+  /// Its own flag because a slot limit cannot stand in: lowering the cap to the
+  /// current count would reopen the option the moment a seat was released.
+  /// Read as full by withSlotCounts in src/lib/registration-gate.ts.
+  closed         Boolean              @default(false)
+  eventId        String
+  event          Event                @relation(fields: [eventId], references: [id])
+  raceResults    RaceResult[]
+  runners        Runner[]
   /// The promotions that put this option on a lower price -- see
   /// PromoCategoryPrice.
-  promoPrices PromoCategoryPrice[]
+  promoPrices    PromoCategoryPrice[]
   /// The percentage and fixed-amount promotions restricted to this option --
   /// see PromoCategory.
-  promoScopes PromoCategory[]
+  promoScopes    PromoCategory[]
   /// Category changes away from, and into, this option (CategoryChange).
-  changesFrom CategoryChange[]     @relation("CategoryChangeFrom")
-  changesTo   CategoryChange[]     @relation("CategoryChangeTo")
+  changesFrom    CategoryChange[]     @relation("CategoryChangeFrom")
+  changesTo      CategoryChange[]     @relation("CategoryChangeTo")
 }
 
 model Registration {

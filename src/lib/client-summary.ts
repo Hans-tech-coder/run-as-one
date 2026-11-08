@@ -105,7 +105,7 @@ export async function viewerEventSummaries(
       registrationOpensAt: true,
       categories: {
         orderBy: CATEGORY_ORDER,
-        select: { id: true, name: true, distance: true, slotLimit: true },
+        select: { id: true, name: true, distance: true, slotLimit: true, closed: true },
       },
     },
   });

@@ -15,10 +15,15 @@
  *
  * `id` breaks ties. Rows created before `sortOrder` existed were backfilled
  * from it, and cuids sort in creation order, so a tie still lands the right way.
+ *
+ * `bibMedalOfId` comes first among ties because a Bib + Medal option shares its
+ * parent's `sortOrder`: nulls first puts the parent ahead, so the pair sits
+ * together and the cheaper version directly follows the one it is cut from.
  */
 import type { Prisma } from '@prisma/client';
 
 export const CATEGORY_ORDER = [
   { sortOrder: 'asc' },
+  { bibMedalOfId: { sort: 'asc', nulls: 'first' } },
   { id: 'asc' },
 ] satisfies Prisma.CategoryOrderByWithRelationInput[];

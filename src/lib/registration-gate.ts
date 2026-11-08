@@ -86,6 +86,12 @@ export const DEFAULT_PAUSE_NOTE =
 export type SlotLimited = {
   id: string;
   slotLimit: number | null;
+  /**
+   * The organizer stopped selling this option. Required rather than optional so
+   * a query that forgets to select it fails to compile instead of quietly
+   * reading a closed option as open.
+   */
+  closed: boolean;
 };
 
 /** A category with its slot arithmetic already done. */
@@ -146,7 +152,10 @@ export function withSlotCounts<T extends SlotLimited>(
     // which is not something the admin form offers. Treated as uncapped rather
     // than as a permanently full row, because an empty field means "no cap".
     const capped = typeof limit === 'number' && limit > 0;
-    const slotsLeft = capped ? Math.max(0, limit - slotsTaken) : null;
+    // A closed option has none left whatever its cap says, including no cap at
+    // all. Zero rather than a separate branch, so the FULL chip, the event's
+    // FULL state and the sole-open-option rule all follow from this one line.
+    const slotsLeft = category.closed ? 0 : capped ? Math.max(0, limit - slotsTaken) : null;
     return {
       ...category,
       slotsTaken,
@@ -242,6 +251,8 @@ export type SlotShortfall = {
   wanted: number;
   /** Slots actually left when the write was attempted. */
   available: number;
+  /** The organizer stopped selling it, so "filled up" would be untrue. */
+  closed: boolean;
 };
 
 /**
@@ -256,7 +267,7 @@ export type SlotShortfall = {
  */
 export function slotShortfalls(
   participants: { categoryId?: string }[],
-  categories: (CategorySlots & { id: string; name: string })[],
+  categories: (CategorySlots & { id: string; name: string; closed: boolean })[],
 ): SlotShortfall[] {
   const wantedPerCategory = new Map<string, number>();
   for (const participant of participants) {
@@ -270,7 +281,12 @@ export function slotShortfalls(
     const wanted = wantedPerCategory.get(category.id) ?? 0;
     if (wanted === 0 || category.slotsLeft === null) continue;
     if (wanted > category.slotsLeft) {
-      shortfalls.push({ name: category.name, wanted, available: category.slotsLeft });
+      shortfalls.push({
+        name: category.name,
+        wanted,
+        available: category.slotsLeft,
+        closed: category.closed,
+      });
     }
   }
   return shortfalls;
@@ -311,8 +327,10 @@ export function participantCategoryError(
 
 /** The sentence a runner reads when their order no longer fits. */
 export function shortfallMessage(shortfalls: SlotShortfall[]): string {
-  const parts = shortfalls.map(({ name, wanted, available }) =>
-    available === 0
+  const parts = shortfalls.map(({ name, wanted, available, closed }) =>
+    closed
+      ? `${name} is no longer open for sign-ups`
+      : available === 0
       ? `${name} has just filled up`
       : `${name} has only ${available} slot${available === 1 ? '' : 's'} left and you entered ${wanted} runner${wanted === 1 ? '' : 's'}`,
   );
@@ -406,29 +424,61 @@ export async function lockEventRow(
  * of the transaction — and only then counted. The second group waits on the
  * lock, and by the time it counts, the first group's runners are there.
  *
- * Only capped options are locked, so an event with no limits pays nothing for
- * this: no lock, no count, no round trip.
+ * `closed` is read from those same locked rows, not from the caller's copy,
+ * which a Close pressed in the same second can make stale. An uncapped option
+ * this order wants is locked too, for that one question, but `FOR SHARE`: it has
+ * no count to protect, so orders into it still run side by side and only a
+ * Close waits. That costs an uncapped event one short query per order.
+ *
+ * `allowClosed` is for staff putting an existing order back (the status route):
+ * closing an option stops new runners, not the ones already in it, the same
+ * line `lockEventRow` draws for a closed race. The cap still applies to them.
  */
 export async function reserveSlots(
   tx: any,
-  categories: (SlotLimited & { name: string })[],
+  categories: (Omit<SlotLimited, 'closed'> & { name: string })[],
   participants: { categoryId?: string }[],
+  { allowClosed = false }: { allowClosed?: boolean } = {},
 ): Promise<void> {
-  const capped = categories.filter(category => (category.slotLimit ?? 0) > 0);
-  if (capped.length === 0) return;
+  const isCapped = (category: { slotLimit: number | null }) => (category.slotLimit ?? 0) > 0;
+  const wanted = new Set(participants.map(participant => participant.categoryId));
+  const cappedIds = categories.filter(isCapped).map(category => category.id);
+  const uncappedIds = allowClosed
+    ? []
+    : categories
+        .filter(category => !isCapped(category) && wanted.has(category.id))
+        .map(category => category.id);
+  if (cappedIds.length === 0 && uncappedIds.length === 0) return;
 
-  const ids = capped.map(category => category.id);
   // Ordered by id so two transactions locking the same event's options always
   // take them in the same order, which is what stops them deadlocking on each
   // other.
-  await tx.$queryRaw(
-    Prisma.sql`SELECT "id" FROM "Category" WHERE "id" IN (${Prisma.join(
-      [...ids].sort(),
-    )}) ORDER BY "id" FOR UPDATE`,
-  );
+  const lockRows = (ids: string[], lock: Prisma.Sql): Promise<{ id: string; closed: boolean }[]> =>
+    ids.length === 0
+      ? Promise.resolve([])
+      : tx.$queryRaw(
+          Prisma.sql`SELECT "id", "closed" FROM "Category" WHERE "id" IN (${Prisma.join(
+            [...ids].sort(),
+          )}) ORDER BY "id" ${lock}`,
+        );
+  const cappedRows = await lockRows(cappedIds, Prisma.sql`FOR UPDATE`);
+  const uncappedRows = await lockRows(uncappedIds, Prisma.sql`FOR SHARE`);
 
-  const taken = await takenSlotsByCategory(ids, tx);
-  const shortfalls = slotShortfalls(participants, withSlotCounts(capped, taken));
+  const closedIds = new Set(
+    allowClosed ? [] : [...cappedRows, ...uncappedRows].filter(row => row.closed).map(row => row.id),
+  );
+  const checked = new Set([...cappedIds, ...uncappedIds]);
+
+  const taken = cappedIds.length > 0 ? await takenSlotsByCategory(cappedIds, tx) : new Map<string, number>();
+  const shortfalls = slotShortfalls(
+    participants,
+    withSlotCounts(
+      categories
+        .filter(category => checked.has(category.id))
+        .map(category => ({ ...category, closed: closedIds.has(category.id) })),
+      taken,
+    ),
+  );
   if (shortfalls.length > 0) {
     throw new SlotsUnavailableError(shortfallMessage(shortfalls));
   }
@@ -444,13 +494,14 @@ export async function reserveSlots(
 export async function fullEventIds(
   events: { id: string; categories: SlotLimited[] }[],
 ): Promise<Set<string>> {
-  // An event with an uncapped option can never be full, so it is not worth
+  // An event with an open uncapped option can never be full, so it is not worth
   // counting. On a platform where nobody uses limits, this leaves nothing to
-  // ask the database at all.
+  // ask the database at all. A closed option cannot keep the event open, cap or
+  // no cap.
   const capped = events.filter(
     event =>
       event.categories.length > 0 &&
-      event.categories.every(category => (category.slotLimit ?? 0) > 0),
+      event.categories.every(category => category.closed || (category.slotLimit ?? 0) > 0),
   );
   if (capped.length === 0) return new Set();
 

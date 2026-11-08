@@ -128,7 +128,14 @@ shape:
   because a full 10K says nothing about the 5K beside it. **`sortOrder` is its
   place in the event's list, fixed at creation** (the order the organizer
   entered them): an edit never renumbers an existing option, and one added
-  later joins the end. Read through `CATEGORY_ORDER` (§5).
+  later joins the end. Read through `CATEGORY_ORDER` (§5). **`bibMedalOfId`**
+  (unique, null on a normal option) links a cheaper Bib + Medal option to its
+  parent: a second row rather than a per-runner tier, because price, shirt size,
+  slots, promos, category change and reports all key off `categoryId`. It shares
+  the parent's `sortOrder` and lists directly after it. **`closed`** stops selling
+  one option and keeps the runners in it: `withSlotCounts` reads it as full, and
+  `reserveSlots` re-reads it under a lock at checkout. Its own flag because a slot
+  limit cannot stand in: a released seat would reopen the option.
 - **BankAccount** — per event, not per organizer: bank/account name, number kept
   exactly as typed, optional QR image, `sortOrder`.
 - **Registration** — one order. `orderRef` unique; all amounts centavos

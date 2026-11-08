@@ -72,7 +72,7 @@ export default async function Home({ params }: { params: Promise<{ site: string 
       // capacity is shipped to the browser.
       // The client only says which host a card links to (lib/site-client.ts).
       include: {
-        categories: { select: { id: true, slotLimit: true } },
+        categories: { select: { id: true, slotLimit: true, closed: true } },
         client: EVENT_SITE_CLIENT,
       },
     }),

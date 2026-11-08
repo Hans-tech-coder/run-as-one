@@ -223,7 +223,8 @@ export async function PATCH(
           where: { registrationId: id, deletedAt: null },
           select: { categoryId: true },
         });
-        await reserveSlots(tx, categories, runners);
+        // allowClosed: this runner was already in the option when it closed.
+        await reserveSlots(tx, categories, runners, { allowClosed: true });
         await retakeAddOnStock(tx, id);
       }
 
