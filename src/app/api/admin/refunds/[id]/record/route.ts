@@ -9,12 +9,15 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { can, getActor } from '@/lib/actor';
-import { uploadPrivateProof, UploadError } from '@/lib/blob';
+import { discardUnclaimedProof, uploadPrivateProof, UploadError } from '@/lib/blob';
 import { runnerRefundedEmail } from '@/lib/email-refund';
 import { sendEmail } from '@/lib/email-document';
 import { RefundRefused, readRefundReference, recordRefund } from '@/lib/refund-store';
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  // The proof this request uploaded, until the record that points at it commits.
+  let unclaimedProof: string | null = null;
+
   try {
     const actor = await getActor();
     if (!actor) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -35,8 +38,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const hasFile = file instanceof File && file.size > 0;
     if (needsProof && !hasFile) throw new RefundRefused('Attach the proof the refund was sent.', 400, 'proof');
     const proof = hasFile ? await uploadPrivateProof(file, 'refunds') : null;
+    unclaimedProof = proof;
 
     const { refund, runner, order } = await recordRefund(actor, id, reference, proof);
+    unclaimedProof = null;
     const outcome = await sendEmail(
       await runnerRefundedEmail({
         runner: { firstName: runner.firstName, email: runner.email },
@@ -51,6 +56,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       email: outcome.sent ? { sent: true } : { sent: false, error: outcome.error },
     });
   } catch (error) {
+    await discardUnclaimedProof(unclaimedProof, 'Record runner refund');
     if (error instanceof RefundRefused) {
       return NextResponse.json({ error: error.message, field: error.field }, { status: error.status });
     }

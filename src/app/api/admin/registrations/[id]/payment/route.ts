@@ -28,7 +28,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { can, getActor } from '@/lib/actor';
-import { deletePrivateFile, uploadPrivateProof, UploadError } from '@/lib/blob';
+import { discardUnclaimedProof, uploadPrivateProof, UploadError } from '@/lib/blob';
 import { EMAIL_RUNNER_INCLUDE } from '@/lib/email';
 import { deliverConfirmationEmail } from '@/lib/email-delivery';
 import {
@@ -158,7 +158,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       at: new Date().toISOString(),
     });
   } catch (error: unknown) {
-    await discardUnclaimedProof(unclaimedProof);
+    await discardUnclaimedProof(unclaimedProof, 'Payment correction');
     if (error instanceof CorrectionRefused) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
@@ -167,23 +167,5 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     }
     console.error('Payment correction failed:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-  }
-}
-
-/**
- * Delete a proof no correction ended up pointing at. Deployment only, best
- * effort — the same rule and reasons as `discardUnclaimedProof` in
- * `api/checkout/manual/route.ts`.
- */
-async function discardUnclaimedProof(pathname: string | null): Promise<void> {
-  if (!pathname) return;
-  if (process.env.VERCEL !== '1') {
-    console.warn(`Payment correction failed; kept unclaimed proof ${pathname} (not deleted off Vercel).`);
-    return;
-  }
-  try {
-    await deletePrivateFile(pathname);
-  } catch (error) {
-    console.error(`Payment correction failed; could not delete unclaimed proof ${pathname}:`, error);
   }
 }

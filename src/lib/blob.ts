@@ -159,6 +159,36 @@ export async function deletePrivateFile(pathname: string): Promise<void> {
 }
 
 /**
+ * Delete a proof the request uploaded when the write that should point at it
+ * never committed (Strix vuln-0001, run fca9). A route uploads before its
+ * transaction, so a refusal or a database error would otherwise leave a private
+ * blob nothing points at, for as long as the store lives. Nothing can reach
+ * such a file (a proof is only ever opened through its record) and whoever
+ * retries uploads it again. The owner's ruling (2026-10-13): delete it.
+ *
+ * **Only on a deployment, never on a developer's machine.** The private store
+ * is shared with production, and the rule for this project is that nothing
+ * local deletes a blob from it. A local failure keeps its file and logs the
+ * pathname instead. `VERCEL` is set on every Vercel deployment and on none of
+ * the local `.env` files.
+ *
+ * Best effort: a delete that fails is logged, never allowed to replace the
+ * response the caller needs to see. `flow` names the route in those logs.
+ */
+export async function discardUnclaimedProof(pathname: string | null, flow: string): Promise<void> {
+  if (!pathname) return;
+  if (process.env.VERCEL !== '1') {
+    console.warn(`${flow} failed; kept unclaimed proof ${pathname} (not deleted off Vercel).`);
+    return;
+  }
+  try {
+    await deletePrivateFile(pathname);
+  } catch (error) {
+    console.error(`${flow} failed; could not delete unclaimed proof ${pathname}:`, error);
+  }
+}
+
+/**
  * Mints a short-lived URL for one private proof. Called per view, so the token
  * is not cached — if proof viewing ever becomes hot enough to matter, cache the
  * issueSignedToken() result and reuse it until it nears expiry.

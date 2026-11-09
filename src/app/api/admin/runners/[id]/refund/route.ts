@@ -15,7 +15,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { can, getActor, type Actor } from '@/lib/actor';
-import { uploadPrivateProof, UploadError } from '@/lib/blob';
+import { discardUnclaimedProof, uploadPrivateProof, UploadError } from '@/lib/blob';
 import { RefundRefused, createRefund, readRefundForm, readRefundQuote } from '@/lib/refund-store';
 
 const NOT_FOUND = { error: 'Runner not found' };
@@ -45,6 +45,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  // The approval this request uploaded, until the refund that points at it commits.
+  let unclaimedProof: string | null = null;
+
   try {
     const actor = await getActor();
     if (!actor) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -74,6 +77,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       throw new RefundRefused("Attach the organizer's approval.", 400, 'approvalProof');
     }
     const approvalProof = await uploadPrivateProof(file, 'refunds');
+    unclaimedProof = approvalProof;
 
     const refund = await createRefund({
       actor,
@@ -83,8 +87,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       stepUpToken,
       expectedStatus: text('expectedStatus'),
     });
+    unclaimedProof = null;
     return NextResponse.json({ id: refund.id, amount: refund.amount }, { status: 201 });
   } catch (error) {
+    await discardUnclaimedProof(unclaimedProof, 'Runner refund');
     if (error instanceof RefundRefused) {
       return NextResponse.json({ error: error.message, field: error.field }, { status: error.status });
     }

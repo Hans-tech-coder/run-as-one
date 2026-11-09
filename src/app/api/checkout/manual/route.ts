@@ -4,7 +4,7 @@ import { participantCountError } from '@/lib/order-size';
 import prisma from '@/lib/db';
 import { newOrderRef } from '@/lib/order-ref';
 import { recordWriteInCommunities, runnerCommunity } from '@/lib/running-community-store';
-import { deletePrivateFile, uploadPrivateProof, UploadError } from '@/lib/blob';
+import { discardUnclaimedProof, uploadPrivateProof, UploadError } from '@/lib/blob';
 import {
   asLogisticsMethod,
   PAYMENT_METHODS,
@@ -503,7 +503,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error: any) {
-    await discardUnclaimedProof(unclaimedProof);
+    await discardUnclaimedProof(unclaimedProof, 'Manual checkout');
     // A rejected file is the runner's mistake, not ours — tell them what to fix.
     if (error instanceof UploadError) {
       return NextResponse.json({ error: error.message }, { status: 400 });
@@ -524,39 +524,5 @@ export async function POST(request: Request) {
       { error: 'Internal Server Error', message: error.message },
       { status: 500 }
     );
-  }
-}
-
-/**
- * Delete the slip a failed order left behind (Strix vuln-0001, run fca9).
- *
- * The slip is uploaded before the order transaction, so slots running out, a
- * promo used up, the race switched to results only or a database error each
- * left a private blob no order pointed at — up to 4 MB a try, for as long as
- * the store lives. It used to be kept on the theory that a receipt the runner
- * may have paid against must not be deleted, but nothing can reach a slip with
- * no order behind it (an admin opens one only through its registration), and
- * the runner who retries uploads it again. The owner's ruling (2026-10-13):
- * delete it.
- *
- * **Only on a deployment, never on a developer's machine.** The private store
- * is shared with production, and the rule for this project is that nothing
- * local deletes a blob from it. A local failure keeps its slip and logs the
- * pathname instead. `VERCEL` is set on every Vercel deployment and on none of
- * the local `.env` files.
- *
- * Best effort: a delete that fails is logged, never allowed to replace the
- * error the runner needs to see.
- */
-async function discardUnclaimedProof(pathname: string | null): Promise<void> {
-  if (!pathname) return;
-  if (process.env.VERCEL !== '1') {
-    console.warn(`Manual checkout failed; kept unclaimed slip ${pathname} (not deleted off Vercel).`);
-    return;
-  }
-  try {
-    await deletePrivateFile(pathname);
-  } catch (error) {
-    console.error(`Manual checkout failed; could not delete unclaimed slip ${pathname}:`, error);
   }
 }
