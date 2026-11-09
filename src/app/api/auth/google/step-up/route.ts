@@ -22,7 +22,9 @@ import { stepUpPopup } from './popup';
  */
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const ref = (url.searchParams.get('ref') ?? '').slice(0, 64);
+  // Checked on read: even a refusal echoes `ref` to the page, signed in or not.
+  const rawRef = url.searchParams.get('ref') ?? '';
+  const ref = /^[A-Za-z0-9_-]{8,64}$/.test(rawRef) ? rawRef : '';
   const fail = (error: string) => stepUpPopup({ type: 'step-up', ref, ok: false, error });
 
   const actor = await getActor();
@@ -30,7 +32,7 @@ export async function GET(request: Request) {
 
   const action = asStepUpAction(url.searchParams.get('action'));
   const target = asStepUpTarget(url.searchParams.get('target'));
-  if (!action || !target || !/^[A-Za-z0-9_-]{8,64}$/.test(ref)) return fail('This confirmation link is not complete.');
+  if (!action || !target || !ref) return fail('This confirmation link is not complete.');
 
   const account = await ownAccount(actor);
   if (!account || !stepUpMethods(account).includes('google')) {

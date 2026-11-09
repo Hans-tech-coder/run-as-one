@@ -531,7 +531,10 @@
   newer token spent also retires an older unspent one). The popup hands the
   token back on a same-origin `BroadcastChannel` (and `window.opener` when
   Google's pages left it), keyed by the dialog's random `ref`, never in an
-  address. **Throttled like sign-in**: `STEP_UP_RULE` (5 in 5 minutes per
+  address. That page is the one place the app writes JSON into an inline
+  script, so `popup.ts` escapes every `<` in it for all callers (the callback's
+  `ref` comes from the unsigned pending cookie), and the route refuses a `ref`
+  of the wrong shape and echoes it as empty. **Throttled like sign-in**: `STEP_UP_RULE` (5 in 5 minutes per
   account, per instance) and the trail's count of `auth.step_up_failed` plus
   `auth.two_factor_failed` in that window, so neither a fresh instance nor
   switching doors resets it. Every failure writes `auth.step_up_failed`

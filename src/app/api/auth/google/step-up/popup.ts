@@ -9,8 +9,10 @@ import { STEP_UP_CHANNEL, type StepUpMessage } from '@/lib/step-up-message';
  * token in an address. Not a route itself; Next serves only `route.ts`.
  */
 export function stepUpPopup(message: StepUpMessage) {
-  // `<` escaped so nothing in the JSON can close the script element.
-  const data = JSON.stringify(message).replace(/</g, '\u003c');
+  // Every `<` leaves as a JSON unicode escape, so nothing in the JSON can close
+  // the script element. The backslash is doubled on purpose: with a single one
+  // this literal is just `<` again and the replace does nothing.
+  const data = JSON.stringify(message).replace(/</g, '\\u003c');
   const channel = JSON.stringify(STEP_UP_CHANNEL);
   const text = message.ok ? 'Confirmed. You can close this window.' : 'Not confirmed. You can close this window.';
   const html = `<!doctype html>
