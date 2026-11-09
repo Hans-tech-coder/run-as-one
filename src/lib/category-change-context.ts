@@ -46,6 +46,7 @@ const CATEGORY_SELECT = {
   price: true,
   inclusions: true,
   slotLimit: true,
+  closed: true,
 } as const;
 
 /** Everything the quote, the eligibility check and the modal read about one runner. */

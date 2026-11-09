@@ -34,10 +34,23 @@ import {
  *
  * Also asked when an upgrade's own hold has lapsed before its payment landed:
  * the lapsed hold no longer counts, so the seat is taken only if one is free.
+ *
+ * A closed option has no seat for anyone new, cap or no cap. `closed` is read
+ * from the locked row, not the caller's copy, as `reserveSlots` does; an
+ * uncapped option has no count to protect, so `FOR SHARE` is enough.
  */
 export async function claimSeat(tx: Prisma.TransactionClient, to: Pick<CategoryRow, 'id' | 'name' | 'slotLimit'>) {
+  const lock = to.slotLimit && to.slotLimit > 0 ? Prisma.sql`FOR UPDATE` : Prisma.sql`FOR SHARE`;
+  const [row] = await tx.$queryRaw<{ closed: boolean }[]>(
+    Prisma.sql`SELECT "closed" FROM "Category" WHERE "id" = ${to.id} ${lock}`,
+  );
+  if (row?.closed) {
+    throw new CategoryChangeRefused(
+      409,
+      `${to.name} is closed to new runners, so nobody can move into it. Pick another category.`,
+    );
+  }
   if (!to.slotLimit || to.slotLimit <= 0) return;
-  await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "Category" WHERE "id" = ${to.id} FOR UPDATE`);
   const taken = (await takenSlotsByCategory([to.id], tx)).get(to.id) ?? 0;
   if (taken >= to.slotLimit) {
     throw new CategoryChangeRefused(

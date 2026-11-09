@@ -168,7 +168,7 @@ export default function CategoryChangeModal({
                   {preview.categories.map(category => {
                     const isCurrent = category.id === preview.runner.categoryId;
                     const onHold = !isCurrent && downgradeIds.has(category.id);
-                    const disabled = isCurrent || category.full || onHold;
+                    const disabled = isCurrent || category.closed || category.full || onHold;
                     const selected = category.id === toCategoryId;
                     const left = category.slotLimit ? Math.max(0, category.slotLimit - category.taken) : null;
                     return (
@@ -207,6 +207,8 @@ export default function CategoryChangeModal({
                               ? 'Current category'
                               : onHold
                                 ? 'Downgrade not offered yet'
+                                : category.closed
+                                ? 'Closed'
                                 : category.full
                                 ? 'Full'
                                 : left !== null
