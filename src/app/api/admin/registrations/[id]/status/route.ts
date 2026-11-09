@@ -28,6 +28,13 @@
  * button being pressed, and cancelling an order that has just been paid would
  * take a runner's money and drop their entry. When the order has moved, the
  * request is refused and nothing changes.
+ *
+ * **Leaving PAID needs a step-up token** (`stepUpToken`, action
+ * `registration.leave-paid`, lib/step-up.ts), for every status it could leave
+ * to. A payment correction asks for one only while the order is PAID, so
+ * without this, PAID → PENDING (or PAID → CANCELLED → PENDING), a correction,
+ * then back to PAID walks around it (Strix re-scan 6d50). No admin screen moves
+ * an order out of PAID today; a button that does must mount `StepUpDialog`.
  */
 
 import { NextResponse } from 'next/server';
@@ -41,6 +48,7 @@ import { SLOT_HOLDING_STATUSES, SlotsUnavailableError, reserveSlots } from '@/li
 import { AddOnStockError, retakeAddOnStock } from '@/lib/add-on-stock';
 import { EMAIL_RUNNER_INCLUDE } from '@/lib/email';
 import { ACTIVE_REFUND_STATUSES } from '@/lib/refund';
+import { consumeStepUp } from '@/lib/step-up';
 
 /**
  * The statuses an organizer may set from the admin. Guarded rather than
@@ -87,6 +95,11 @@ class StatusMoved extends Error {}
  */
 class HasRunnerRefunds extends Error {}
 
+/** Leaving PAID without a fresh, unspent confirmation for this order. */
+class StepUpRefused extends Error {}
+
+const STEP_UP_REFUSED = "Confirm it's you again. Moving a paid order out of paid needs a fresh confirmation.";
+
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -99,7 +112,7 @@ export async function PATCH(
 
     const { id } = await params;
     const body = await request.json();
-    const { status, remarks, reason: rawReason, expectedStatus } = body;
+    const { status, remarks, reason: rawReason, expectedStatus, stepUpToken } = body;
 
     // Two independent edits down one route: a status change, a remark, or
     // both. Requiring one of them means an empty body cannot silently stamp a
@@ -190,13 +203,24 @@ export async function PATCH(
     }
 
     const updatedRegistration = await prisma.$transaction(async tx => {
-      // Locked so a refund opened this instant cannot land after the count.
-      if (wantsStatus && status !== existing.status) {
-        await tx.$queryRaw`SELECT "id" FROM "Registration" WHERE "id" = ${id} FOR UPDATE`;
-        const refunds = await tx.runnerRefund.count({
-          where: { registrationId: id, status: { in: ACTIVE_REFUND_STATUSES } },
-        });
-        if (refunds > 0) throw new HasRunnerRefunds();
+      // Locked so a refund opened this instant cannot land after the count, and
+      // read under the lock so an order paid a moment ago needs the token too.
+      if (wantsStatus) {
+        const [locked] = await tx.$queryRaw<{ status: string }[]>`
+          SELECT "status" FROM "Registration" WHERE "id" = ${id} FOR UPDATE`;
+        if (locked && locked.status !== status) {
+          const refunds = await tx.runnerRefund.count({
+            where: { registrationId: id, status: { in: ACTIVE_REFUND_STATUSES } },
+          });
+          if (refunds > 0) throw new HasRunnerRefunds();
+          // Spent in this transaction, so a refused move keeps the token.
+          if (
+            locked.status === 'PAID' &&
+            !(await consumeStepUp(stepUpToken, { actor, action: 'registration.leave-paid', targetId: id }, tx))
+          ) {
+            throw new StepUpRefused();
+          }
+        }
       }
 
       // Claimed with the same conditional write the sweep uses, so an order
@@ -329,6 +353,9 @@ export async function PATCH(
 
     return NextResponse.json({ success: true, registration: updatedRegistration, statusChange });
   } catch (error: any) {
+    if (error instanceof StepUpRefused) {
+      return NextResponse.json({ error: STEP_UP_REFUSED }, { status: 403 });
+    }
     if (error instanceof HasRunnerRefunds) {
       return NextResponse.json(
         { error: 'This order has a refunded runner, so its status cannot be changed. Void the refund first if it was a mistake.' },

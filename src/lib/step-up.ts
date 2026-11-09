@@ -55,12 +55,13 @@ const TOKEN_SECONDS = 5 * 60;
  * that is not here cannot be confirmed, so a token minted for one dangerous
  * thing never opens another.
  */
-export const STEP_UP_ACTIONS = ['registration.correct-payment', 'runner.refund'] as const;
+export const STEP_UP_ACTIONS = ['registration.correct-payment', 'registration.leave-paid', 'runner.refund'] as const;
 export type StepUpAction = (typeof STEP_UP_ACTIONS)[number];
 
 /** What each action reads as in the trail ("…to correct an order's payment"). */
 const ACTION_WORDS: Record<StepUpAction, string> = {
   'registration.correct-payment': "correct an order's payment",
+  'registration.leave-paid': 'move an order out of paid',
   'runner.refund': 'refund a runner',
 };
 

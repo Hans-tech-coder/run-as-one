@@ -552,6 +552,15 @@
   forged one is a 403 and a refused correction keeps the token. A PENDING
   order needs no token: the reason and the confirm dialog are enough. Online
   (PayMongo) orders are never corrected.
+- **Moving an order out of PAID needs a step-up too** (Strix re-scan 6d50).
+  `PATCH /api/admin/registrations/[id]/status` spends a token for action
+  `registration.leave-paid`, bound to the order id, for a move from PAID to
+  any other status, inside the status transaction and judged on the status
+  read under the row lock. Without it, PAID → PENDING (or PAID → CANCELLED →
+  PENDING), a correction, then back to PAID walks around the correction's
+  step-up. Validating a PENDING order and cancelling one take no token. No
+  admin screen moves an order out of PAID today; a button that does must mount
+  `StepUpDialog`.
 - **An account is found by a lowercased email, and written as one.** `login`,
   `register` and `admin/profile` all run the address through
   `normalizeAccountEmail` (§5). The failure this prevents is quiet and reads
