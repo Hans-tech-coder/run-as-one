@@ -22,9 +22,10 @@ import { blankBibMedal, type BibMedalDraft, type CategoryDraft } from './categor
  * words what runners will be offered and when, because a switch that closes a
  * different option is not something to leave implied.
  *
- * "Stop selling" is therefore only the early stop: shirts ran out before the
- * date. It shows while the date is still ahead, and on any option already
- * closed by hand, otherwise that option could never be reopened.
+ * So there is no "Stop selling the full option" switch to offer: shirts
+ * running out early is answered by bringing the date forward or clearing it.
+ * The switch survives only on an option already closed by hand, where it is
+ * the way to reopen it, and it goes once that is done.
  */
 export default function BibMedalFields({
   row,
@@ -148,20 +149,17 @@ export default function BibMedalFields({
               ? `Until ${formatEventInstant(opens)}, runners see only the full option. From then on Bib + Medal takes its place and the full option stops selling by itself.`
               : 'Bib + Medal is on sale once you save, and the full option stops selling at the same moment.'}{' '}
             Runners already in the full option keep their places.
+            {scheduled && ' If shirts run out sooner, bring this date forward or clear it.'}
           </p>
         </div>
       )}
 
-      {(row.closed || (on && scheduled)) && (
+      {row.closed && (
         <AdminSwitch
-          on={Boolean(row.closed)}
-          label="Stop Selling the Full Option"
-          hint={
-            on && scheduled
-              ? 'For when shirts run out before that date. Nothing in this category is sold until Bib + Medal opens.'
-              : 'Closed by hand. Runners already in it keep their places; turn it off to sell it again.'
-          }
-          onToggle={() => onChange({ closed: !row.closed })}
+          on
+          label="Full Option Closed by Hand"
+          hint="It is not sold whatever the date above says. Runners already in it keep their places; turn this off to sell it again."
+          onToggle={() => onChange({ closed: false })}
         />
       )}
     </div>
