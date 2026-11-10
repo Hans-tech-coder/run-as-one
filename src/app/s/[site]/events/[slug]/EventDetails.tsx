@@ -42,6 +42,7 @@ import LinkPendingIcon from '@/components/ui/LinkPendingIcon';
 import { automaticPromosFor, promoTerms } from '@/lib/promo-store';
 import { categorySalePrices } from '@/lib/discount';
 import { CATEGORY_ORDER } from '@/lib/category-order';
+import { shownToRunners } from '@/lib/bib-medal';
 import RichText from '@/components/RichText';
 import { cleanHighlights } from '@/lib/event-highlights';
 import EventHighlightsGallery from '@/components/EventHighlightsGallery';
@@ -75,6 +76,11 @@ export default async function EventDetails({ site, slug, staff }: { site: string
   if (!event) {
     notFound();
   }
+
+  // A Bib + Medal option that has not reached its date is not shown at all
+  // (lib/bib-medal.ts). Dropped here, once, so the list, the prices, the promo
+  // strip and the add-ons below all read the same options.
+  event.categories = shownToRunners(event.categories);
 
   // A draft or scheduled event is a 404 to the public and a preview to the
   // team that is still finishing it (lib/event-preview.ts), who never get the

@@ -1,5 +1,6 @@
 import { Prisma } from '@prisma/client';
 import publicDb from '@/lib/public-db';
+import { CLOSED_NOW_SQL, closedNow } from '@/lib/bib-medal';
 import { isPublished } from '@/lib/event-visibility';
 import { takenSlotsByCategory } from '@/lib/slot-holds';
 
@@ -92,6 +93,13 @@ export type SlotLimited = {
    * reading a closed option as open.
    */
   closed: boolean;
+  /**
+   * The two facts a Bib + Medal schedule turns on (lib/bib-medal.ts), required
+   * for the same reason: a list read without them would sell a Full whose
+   * Bib + Medal has opened, or a Bib + Medal that has not.
+   */
+  bibMedalOfId: string | null;
+  opensAt: Date | string | null;
 };
 
 /** A category with its slot arithmetic already done. */
@@ -140,12 +148,19 @@ export function asSlotLimit(value: unknown): number | null {
   return limit;
 }
 
-/** Attaches the slot arithmetic to each category, leaving the rest untouched. */
+/**
+ * Attaches the slot arithmetic to each category. `closed` comes back as
+ * `closedNow` answers it, so a Bib + Medal that has not opened and a Full it
+ * has replaced read as closed everywhere this is used. Pass the event's whole
+ * list: a Full is closed by its Bib + Medal row, not by its own.
+ */
 export function withSlotCounts<T extends SlotLimited>(
   categories: T[],
   taken: Map<string, number>,
+  now: Date = new Date(),
 ): (T & CategorySlots)[] {
-  return categories.map(category => {
+  return categories.map(listed => {
+    const category = { ...listed, closed: closedNow(listed, categories, now) };
     const slotsTaken = taken.get(category.id) ?? 0;
     const limit = category.slotLimit;
     // A limit of zero or less would mean an option nobody can ever enter,
@@ -425,6 +440,8 @@ export async function lockEventRow(
  * lock, and by the time it counts, the first group's runners are there.
  *
  * `closed` is read from those same locked rows, not from the caller's copy,
+ * and it is `CLOSED_NOW_SQL`: the organizer's flag, a Bib + Medal that has not
+ * opened, and a Full whose Bib + Medal has. So a crafted order cannot buy either,
  * which a Close pressed in the same second can make stale. An uncapped option
  * this order wants is locked too, for that one question, but `FOR SHARE`: it has
  * no count to protect, so orders into it still run side by side and only a
@@ -436,7 +453,7 @@ export async function lockEventRow(
  */
 export async function reserveSlots(
   tx: any,
-  categories: (Omit<SlotLimited, 'closed'> & { name: string })[],
+  categories: (Pick<SlotLimited, 'id' | 'slotLimit'> & { name: string })[],
   participants: { categoryId?: string }[],
   { allowClosed = false }: { allowClosed?: boolean } = {},
 ): Promise<void> {
@@ -457,7 +474,7 @@ export async function reserveSlots(
     ids.length === 0
       ? Promise.resolve([])
       : tx.$queryRaw(
-          Prisma.sql`SELECT "id", "closed" FROM "Category" WHERE "id" IN (${Prisma.join(
+          Prisma.sql`SELECT "id", ${Prisma.raw(CLOSED_NOW_SQL)} AS "closed" FROM "Category" WHERE "id" IN (${Prisma.join(
             [...ids].sort(),
           )}) ORDER BY "id" ${lock}`,
         );
@@ -475,7 +492,9 @@ export async function reserveSlots(
     withSlotCounts(
       categories
         .filter(category => checked.has(category.id))
-        .map(category => ({ ...category, closed: closedIds.has(category.id) })),
+        // Already answered by the locked read, schedule included, so the two
+        // facts behind it are blanked rather than judged a second time.
+        .map(category => ({ ...category, closed: closedIds.has(category.id), bibMedalOfId: null, opensAt: null })),
       taken,
     ),
   );
@@ -501,7 +520,9 @@ export async function fullEventIds(
   const capped = events.filter(
     event =>
       event.categories.length > 0 &&
-      event.categories.every(category => category.closed || (category.slotLimit ?? 0) > 0),
+      event.categories.every(
+        category => closedNow(category, event.categories) || (category.slotLimit ?? 0) > 0,
+      ),
   );
   if (capped.length === 0) return new Set();
 

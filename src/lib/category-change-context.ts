@@ -1,6 +1,7 @@
 import 'server-only';
 import { Prisma } from '@prisma/client';
 import db from '@/lib/db';
+import { closedNow } from '@/lib/bib-medal';
 import { takenSlotsByCategory } from '@/lib/slot-holds';
 import { runnerRef } from '@/lib/order-ref';
 import { paymentChoicesForOrder } from '@/lib/category-change-hold';
@@ -47,6 +48,8 @@ const CATEGORY_SELECT = {
   inclusions: true,
   slotLimit: true,
   closed: true,
+  bibMedalOfId: true,
+  opensAt: true,
 } as const;
 
 /** Everything the quote, the eligibility check and the modal read about one runner. */
@@ -265,6 +268,8 @@ export async function previewCategoryChange(input: {
       const count = taken.get(category.id) ?? 0;
       return {
         ...category,
+        // As the write will judge it (claimSeat): the schedule counts too.
+        closed: closedNow(category, ctx.event.categories),
         taken: count,
         // The runner's own seat is in their current option, so a full current
         // option is not "full" to them; every other is full at its limit.

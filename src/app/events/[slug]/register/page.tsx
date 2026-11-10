@@ -30,6 +30,7 @@ import {
 import { EVENT_SITE_CLIENT, ensureEventHost, eventPageMetadata } from '@/lib/site-client';
 import { acceptsPromoCodes, automaticPromosFor, promoTerms } from '@/lib/promo-store';
 import { CATEGORY_ORDER } from '@/lib/category-order';
+import { shownToRunners } from '@/lib/bib-medal';
 import { publicAddOns } from '@/lib/add-on-stock';
 
 /** One URL per event, on the site it belongs to (CLIENT_SUBDOMAIN_PLAN.md). */
@@ -71,6 +72,11 @@ export default async function RegisterPage(props: {
   if (!event) {
     notFound();
   }
+
+  // A Bib + Medal option that has not reached its date is not shown at all
+  // (lib/bib-medal.ts). Dropped here, once, so the list, the prices, the promo
+  // strip and the add-ons below all read the same options.
+  event.categories = shownToRunners(event.categories);
 
   // The whole flow stays on the event's own site (CLIENT_SUBDOMAIN_PLAN.md
   // D3), and the query — PayMongo's success flag and order reference — goes

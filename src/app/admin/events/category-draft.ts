@@ -43,13 +43,18 @@ export interface BibMedalDraft {
   price: number | '';
   slotLimit: number | '';
   inclusions: string;
+  /**
+   * When it goes on sale: Manila wall time as the date picker holds it,
+   * `YYYY-MM-DDTHH:mm`. Blank means as soon as the event is saved.
+   */
+  opensOn: string;
   /** Present only for a saved option: what switching it off will do. */
   saved?: boolean;
   slotsTaken?: number;
 }
 
 export function blankBibMedal(): BibMedalDraft {
-  return { enabled: true, price: '', slotLimit: '', inclusions: 'Race Bib\nFinisher Medal' };
+  return { enabled: true, price: '', slotLimit: '', inclusions: 'Race Bib\nFinisher Medal', opensOn: '' };
 }
 
 export function blankCategory(): CategoryDraft {

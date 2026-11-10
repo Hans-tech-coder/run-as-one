@@ -1,5 +1,6 @@
 import 'server-only';
 import { Prisma } from '@prisma/client';
+import { CLOSED_NOW_SQL } from '@/lib/bib-medal';
 import { lockEventRow } from '@/lib/registration-gate';
 import { takenSlotsByCategory } from '@/lib/slot-holds';
 import {
@@ -35,14 +36,16 @@ import {
  * Also asked when an upgrade's own hold has lapsed before its payment landed:
  * the lapsed hold no longer counts, so the seat is taken only if one is free.
  *
- * A closed option has no seat for anyone new, cap or no cap. `closed` is read
+ * A closed option has no seat for anyone new, cap or no cap, and closed means
+ * `CLOSED_NOW_SQL`: a Bib + Medal not open yet and a Full it has replaced
+ * count, as they do at checkout. `closed` is read
  * from the locked row, not the caller's copy, as `reserveSlots` does; an
  * uncapped option has no count to protect, so `FOR SHARE` is enough.
  */
 export async function claimSeat(tx: Prisma.TransactionClient, to: Pick<CategoryRow, 'id' | 'name' | 'slotLimit'>) {
   const lock = to.slotLimit && to.slotLimit > 0 ? Prisma.sql`FOR UPDATE` : Prisma.sql`FOR SHARE`;
   const [row] = await tx.$queryRaw<{ closed: boolean }[]>(
-    Prisma.sql`SELECT "closed" FROM "Category" WHERE "id" = ${to.id} ${lock}`,
+    Prisma.sql`SELECT ${Prisma.raw(CLOSED_NOW_SQL)} AS "closed" FROM "Category" WHERE "id" = ${to.id} ${lock}`,
   );
   if (row?.closed) {
     throw new CategoryChangeRefused(

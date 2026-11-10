@@ -35,6 +35,7 @@ export async function syncBibMedalOption(
       price: wanted.price,
       inclusions: wanted.inclusions,
       slotLimit: asSlotLimit(wanted.slotLimit),
+      opensAt: wanted.opensAt,
       closed: false,
     };
     if (existingId) {

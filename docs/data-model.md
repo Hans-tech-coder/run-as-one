@@ -135,7 +135,11 @@ shape:
   the parent's `sortOrder` and lists directly after it. **`closed`** stops selling
   one option and keeps the runners in it: `withSlotCounts` reads it as full, and
   `reserveSlots` re-reads it under a lock at checkout. Its own flag because a slot
-  limit cannot stand in: a released seat would reopen the option.
+  limit cannot stand in: a released seat would reopen the option. **`opensAt`**
+  (nullable, set only on a Bib + Medal row) is when that option goes on sale,
+  null meaning as soon as it is saved. Read at request time, no cron, and left
+  as set once it passes: before it the option is neither shown nor sold, and
+  from it on the parent stops selling by itself (§5 `bib-medal.ts`, `closedNow`).
 - **BankAccount** — per event, not per organizer: bank/account name, number kept
   exactly as typed, optional QR image, `sortOrder`.
 - **Registration** — one order. `orderRef` unique; all amounts centavos

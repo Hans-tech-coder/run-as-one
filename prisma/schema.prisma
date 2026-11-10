@@ -317,6 +317,12 @@ model Category {
   /// current count would reopen the option the moment a seat was released.
   /// Read as full by withSlotCounts in src/lib/registration-gate.ts.
   closed         Boolean              @default(false)
+  /// When a Bib + Medal option goes on sale. Null means as soon as it is
+  /// saved, and it is null on every normal option. Read at request time
+  /// (`closedNow` in src/lib/bib-medal.ts), no cron: until it passes the
+  /// option is not sold or shown, and once it has, the option's parent stops
+  /// selling by itself. Left as set afterwards, like `registrationClosesAt`.
+  opensAt        DateTime?
   eventId        String
   event          Event                @relation(fields: [eventId], references: [id])
   raceResults    RaceResult[]

@@ -1,4 +1,5 @@
 import { toPesos } from '@/lib/money';
+import { eventInstantParts } from '@/lib/event-schedule';
 import { formatInclusions } from '@/lib/inclusions';
 import { asRegistrationForm } from '@/lib/registration-form';
 import { asEventType, type EventType } from '@/lib/event-type';
@@ -115,6 +116,7 @@ type EventResponse = {
     slotsTaken?: number;
     closed?: Maybe<boolean>;
     bibMedalOfId?: Maybe<string>;
+    opensAt?: Maybe<string>;
   }[];
 };
 
@@ -122,11 +124,13 @@ type LoadedCategory = NonNullable<EventResponse['categories']>[number];
 
 /** A Bib + Medal row, in the shape its parent's row edits it. */
 function bibMedalDraft(child: LoadedCategory): BibMedalDraft {
+  const opens = child.opensAt ? eventInstantParts(child.opensAt) : null;
   return {
     enabled: !child.closed,
     price: toPesos(child.price),
     slotLimit: child.slotLimit ?? '',
     inclusions: formatInclusions(child.inclusions),
+    opensOn: opens?.day ? `${opens.day}T${opens.time}` : '',
     saved: true,
     slotsTaken: child.slotsTaken ?? 0,
   };

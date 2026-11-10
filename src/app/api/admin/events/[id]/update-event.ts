@@ -506,7 +506,7 @@ export async function updateEvent(request: Request, { params }: { params: Promis
       // as wholes and recorded as "changed" — the summary says which, and the
       // edit screen itself is where their contents are read.
       const changes = changedFields(current, ev, EVENT_FIELDS);
-      const categoryFields = ['id', 'name', 'distance', 'price', 'imageUrl', 'inclusions', 'slotLimit', 'bibMedalOfId', 'closed'];
+      const categoryFields = ['id', 'name', 'distance', 'price', 'imageUrl', 'inclusions', 'slotLimit', 'bibMedalOfId', 'closed', 'opensAt'];
       if (saved && listKey(current.categories, categoryFields) !== listKey(saved.categories, categoryFields)) {
         changes.categories = CHANGED;
       }
