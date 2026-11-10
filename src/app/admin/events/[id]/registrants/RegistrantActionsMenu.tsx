@@ -362,6 +362,31 @@ export default function RegistrantActionsMenu({
           </>
         )}
 
+        {/* A pending order has no verified money to return, so the refund
+            stays refused (REFUND_PLAN.md D4). The item is shown switched off
+            with the way forward, because staff who saw nothing here took the
+            refund for missing (the owner, 2026-11-10). */}
+        {canRefund && status === 'PENDING' && (
+          <>
+            <div className="action-dropdown-divider"></div>
+            <button
+              className="action-dropdown-item flex items-start gap-3 px-4 py-2 text-sm text-left opacity-60 cursor-not-allowed"
+              role="menuitem"
+              disabled
+            >
+              <Undo2 size={16} aria-hidden="true" className="mt-0.5 shrink-0" />
+              <span className="flex flex-col">
+                <span>Refund Runner…</span>
+                {/* The one line in this menu allowed to wrap: it is a reason,
+                    not a label, and the menu's width is fixed (Admin.css). */}
+                <span className="text-xs text-secondary whitespace-normal">
+                  {isBankTransfer ? 'Validate the payment first.' : 'Nothing was paid yet.'}
+                </span>
+              </span>
+            </button>
+          </>
+        )}
+
         {canDelete && (
           <>
             <div className="action-dropdown-divider"></div>
