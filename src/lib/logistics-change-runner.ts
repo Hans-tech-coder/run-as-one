@@ -20,6 +20,7 @@ import {
 import { switchAwaitsAddress, switchHoldUntil, switchProofSubmitted } from '@/lib/logistics-change-proof';
 import { readSwitchForPayment, receiptOf, settleSwitchOnline } from '@/lib/logistics-change-payment';
 import { logisticsChangeProofReceivedEmail, sendLogisticsChangeEmail } from '@/lib/email-logistics-change';
+import { claimReference } from '@/lib/payment-reference';
 import { lookUpPaymongoPayment } from '@/lib/online-payment';
 import { retirePaymongoPage } from '@/lib/paymongo-session';
 
@@ -213,9 +214,12 @@ export async function submitSwitchProof(
     if (changePayableState({ status: change.status, holdUntil: switchHoldUntil(change) }, logisticsChangeDeadline(found.event), now) !== 'payable') {
       throw new LogisticsChangeRefused(409, 'This switch is no longer waiting for payment. Reload the page.');
     }
+    // One reference, one payment (lib/payment-reference.ts); this switch's
+    // own earlier proof does not count, so resubmitting the same one passes.
+    const transactionRef = await claimReference(tx, proof.transactionNumber, { except: { kind: 'switch', id: changeId } });
     const claim = await tx.logisticsChange.updateMany({
       where: { id: changeId, status: LOGISTICS_CHANGE_STATUSES.AWAITING_PAYMENT, proofOfPayment: change.proofOfPayment },
-      data: { proofOfPayment: proof.proofPathname, transactionNumber: proof.transactionNumber },
+      data: { proofOfPayment: proof.proofPathname, transactionNumber: proof.transactionNumber, transactionRef },
     });
     if (claim.count === 0) throw new LogisticsChangeRefused(409, 'This switch moved just now. Reload the page and try again.');
     await recordAudit(tx, runnerActor(found.event.organizerId, order), {

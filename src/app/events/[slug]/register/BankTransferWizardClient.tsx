@@ -263,6 +263,9 @@ export default function BankTransferWizardClient({
     null,
   );
   const [transactionNumber, setTransactionNumber] = useState("");
+  // The server's word on the reference itself (blank, too long, or already
+  // used for another payment), shown under the field rather than in an alert.
+  const [transactionError, setTransactionError] = useState("");
   const [showSizeGuideModal, setShowSizeGuideModal] = useState(false);
   // Required once per registration, not once per runner — the waiver this
   // is drawn from asks it the same way.
@@ -799,6 +802,12 @@ export default function BankTransferWizardClient({
         // send money twice.
         setPriceChange({ body: data, shownTotal: totalAmount });
         setIsProcessing(false);
+      } else if (data.field === "transactionNumber" && data.error) {
+        // One reference, one payment (lib/payment-reference.ts): the runner
+        // fixes the number in place, nothing else on the form is lost.
+        setTransactionError(data.error);
+        setIsProcessing(false);
+        document.getElementById("bank-transaction-number")?.focus();
       } else {
         alert(data.error || "Failed to submit registration. Please try again.");
         setIsProcessing(false);
@@ -1731,18 +1740,25 @@ export default function BankTransferWizardClient({
                 )}
 
                 <div className="input-group full-width mt-6 animate-fade-in">
-                  <label className="text-white font-bold">
+                  <label htmlFor="bank-transaction-number" className="text-white font-bold">
                     Transaction Number / Reference Number{" "}
                     <span className="text-red-500">*</span>
                   </label>
                   <input
+                    id="bank-transaction-number"
                     type="text"
                     value={transactionNumber}
-                    onChange={(e) => setTransactionNumber(e.target.value)}
+                    onChange={(e) => {
+                      setTransactionNumber(e.target.value);
+                      setTransactionError("");
+                    }}
                     placeholder="Enter the reference number from your bank receipt"
                     required
-                    className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-white placeholder-gray-500 focus:border-accent-blue transition-all"
+                    aria-invalid={transactionError ? true : undefined}
+                    aria-describedby={transactionError ? "bank-transaction-number-error" : undefined}
+                    className={`w-full bg-black/40 border rounded-xl p-4 text-white placeholder-gray-500 focus:border-accent-blue transition-all ${transactionError ? "border-red-500/60" : "border-white/10"}`}
                   />
+                  <FieldError id="bank-transaction-number-error" message={transactionError} />
                 </div>
                 </>
                 )}

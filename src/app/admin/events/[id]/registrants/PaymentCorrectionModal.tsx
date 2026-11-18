@@ -36,6 +36,7 @@ import ProofLightbox from './ProofLightbox';
 import { statusPillClass } from './registrant-display';
 import type { RegistrantRow } from './RegistrantsTable';
 import type { PaymentCorrected } from './registrant-row-patches';
+import { staffError } from './reference-held';
 
 /** Kept in step with the panel's closing transition (`.t-modal`). */
 const CLOSE_MS = 150;
@@ -78,7 +79,7 @@ export default function PaymentCorrectionModal({
   const [reason, setReason] = useState('');
   const [resend, setResend] = useState(false);
   const [errors, setErrors] = useState<{ proof?: string; reason?: string }>({});
-  const [formError, setFormError] = useState('');
+  const [formError, setFormError] = useState<React.ReactNode>('');
   const [saving, setSaving] = useState(false);
   const [stepUpOpen, setStepUpOpen] = useState(false);
   const [lightbox, setLightbox] = useState(false);
@@ -197,7 +198,7 @@ export default function PaymentCorrectionModal({
         setStepUpOpen(true);
       } else {
         // 400 / 404 / 409: the server's own sentence; a held token stays good.
-        setFormError(data.error || 'The correction could not be saved. Try again.');
+        setFormError(staffError(data, 'The correction could not be saved. Try again.'));
       }
     } catch {
       setFormError('Something went wrong while saving the correction. Try again.');

@@ -20,7 +20,7 @@
  * the change logic itself.
  */
 
-import { useMemo, useState, type Dispatch, type SetStateAction } from 'react';
+import { Fragment, createElement, useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import { useAlert } from '@/components/ui/AlertProvider';
 import { CATEGORY_CHANGE_STATUSES, quoteCategoryChange, readBasisAdjustment } from '@/lib/category-change';
 import { DOWNGRADES_ON_HOLD } from '@/lib/category-change-settings';
@@ -40,6 +40,7 @@ import type { CategoryChangeView } from '@/lib/category-change-view';
 import type { RenderedEmail } from './email-handoff';
 import type { RegistrantRow } from './RegistrantsTable';
 import type { ChangeEmailRequest } from './CategoryChangeEmailModal';
+import { staffError } from './reference-held';
 
 /** Kept in step with the panel's closing transition (`.t-modal`). */
 const CLOSE_MS = 150;
@@ -249,14 +250,14 @@ export function useCategoryChangeModal({
   };
 
   /** Records the payment of a change just opened as already paid. */
-  const recordPayment = async (changeId: string): Promise<AppliedChange | { error: string }> => {
+  const recordPayment = async (changeId: string): Promise<AppliedChange | { error: ReactNode }> => {
     const form = new FormData();
     form.set('transactionNumber', transactionNumber);
     if (proofFile) form.set('proofFile', await compressImage(proofFile, 'proof'));
     try {
       const res = await fetch(`/api/admin/category-changes/${changeId}/record-payment`, { method: 'POST', body: form });
       const data = await res.json().catch(() => ({}));
-      return res.ok ? (data as AppliedChange) : { error: data?.error || 'The payment could not be recorded.' };
+      return res.ok ? (data as AppliedChange) : { error: staffError(data, 'The payment could not be recorded.') };
     } catch {
       return { error: 'Could not reach the server to record the payment.' };
     }
@@ -313,7 +314,12 @@ export function useCategoryChangeModal({
           await alert({
             variant: 'error',
             title: 'Payment Not Recorded',
-            message: `${recorded.error} The change is open and the seat in ${target.name} is held for ${OUTSIDE_CHANGE_HOLD_DAYS} days. Record the payment from the runner's details.`,
+            message: createElement(
+              Fragment,
+              null,
+              recorded.error,
+              ` The change is open and the seat in ${target.name} is held for ${OUTSIDE_CHANGE_HOLD_DAYS} days. Record the payment from the runner's details.`,
+            ),
           });
           return;
         }

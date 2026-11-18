@@ -22,8 +22,10 @@
  * - **C4 — a reason is always written**, into the trail summary and changes.
  * - **C5 — the old proof is kept.** Its pathname stays in the trail as
  *   `changes.proofOfPayment = [old, new]`; nothing here deletes a blob.
- * - **C7** — item 16's `claimReference` (with `except: this order`) is added
- *   here when that item is built.
+ * - **C7 — one reference, one payment.** A new Transaction No. is claimed
+ *   through `claimReference` (lib/payment-reference.ts) with `except: this
+ *   order`, and its normalized `transactionRef` written beside it; one held by
+ *   another live order, upgrade or switch is refused (`ReferenceInUseError`).
  * - **C8 — not a status change.** `status` is never written; marking PAID is
  *   still the validator's separate press.
  *
@@ -36,6 +38,7 @@
 import { Prisma } from '@prisma/client';
 import type { Actor } from './actor';
 import { recordAudit, type AuditChanges } from './audit';
+import { claimReference } from './payment-reference';
 import { readTransactionNumber } from './category-change-hold';
 import { PAYMENT_METHODS, asPaymentMethod } from './registration-codes';
 import { CORRECTABLE_STATUSES, CORRECTION_REASON_MAX, isManualPaymentMethod } from './payment-correction-rules';
@@ -152,7 +155,12 @@ export async function correctPayment(
   const refused = refusalFor(order, input.expectedStatus);
   if (refused) throw refused;
 
-  const data: { transactionNumber?: string; proofOfPayment?: string; paymentMethod?: string } = {};
+  const data: {
+    transactionNumber?: string;
+    transactionRef?: string | null;
+    proofOfPayment?: string;
+    paymentMethod?: string;
+  } = {};
   const changes: AuditChanges = {};
 
   const rawRef = input.transactionNumber;
@@ -160,6 +168,9 @@ export async function correctPayment(
     const { value, error } = readTransactionNumber(rawRef);
     if (error || !value) throw new CorrectionRefused(error ?? 'Enter the reference number.', 400);
     if (value !== order.transactionNumber) {
+      // C7: refused when another live payment holds it; this order's own
+      // reference does not count.
+      data.transactionRef = await claimReference(tx, value, { except: { kind: 'order', id: order.id } });
       data.transactionNumber = value;
       changes.transactionNumber = [order.transactionNumber, value];
     }

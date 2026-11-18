@@ -15,6 +15,7 @@ import { PAY_LINK_RULE, allowRequest, callerKey } from '@/lib/rate-limit';
 import { readChangePaymentToken } from '@/lib/resume-payment';
 import { deletePrivateFile, uploadPrivateProof, UploadError } from '@/lib/blob';
 import { readTransactionNumber } from '@/lib/category-change-hold';
+import { REFERENCE_IN_USE_RUNNER, ReferenceInUseError, isReferenceIndexViolation } from '@/lib/payment-reference';
 import { CategoryChangeRefused } from '@/lib/category-change-context';
 import { submitChangeProof } from '@/lib/category-change-runner';
 
@@ -52,6 +53,13 @@ export async function POST(request: Request) {
     if (unclaimedProof) await deletePrivateFile(unclaimedProof).catch(() => undefined);
     if (error instanceof UploadError) {
       return NextResponse.json({ error: error.message, field: 'proofFile' }, { status: 400 });
+    }
+    // Another live payment already carries this reference (R5: not whose).
+    if (error instanceof ReferenceInUseError) {
+      return NextResponse.json(error.runnerBody(), { status: 409 });
+    }
+    if (isReferenceIndexViolation(error)) {
+      return NextResponse.json({ error: REFERENCE_IN_USE_RUNNER, field: 'transactionNumber' }, { status: 409 });
     }
     if (error instanceof CategoryChangeRefused) {
       return NextResponse.json({ error: error.message }, { status: error.status });

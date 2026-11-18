@@ -155,7 +155,7 @@ shape:
   (`register/delivery-split.ts` `shipmentsFor`). Stored explicitly, never
   inferred from a null address;
   `status` (`PAID`, `PENDING`…), `paymentMethod`, `proofOfPayment` (private blob
-  **pathname**, not URL), `transactionNumber`, `consentGiven` + `consentGivenAt` + `consentSignature`
+  **pathname**, not URL), `transactionNumber` + `transactionRef` (the reference normalized by §5 `payment-reference.ts`, indexed; a **partial unique index** `Registration_transactionRef_live_key` allows one PENDING / PAID / REFUNDED order per reference, declared with the `partialIndexes` preview feature so `migrate dev` keeps it), `consentGiven` + `consentGivenAt` + `consentSignature`
   (the name typed under the tick — any non-empty text is accepted, see
   `consent-signature.ts`), and `remarks` + `remarksBy` + `remarksAt` (the
   payment validator's **internal** notes; the runner never sees them and no
@@ -407,7 +407,9 @@ shape:
   `APPLIED`, `REFUND_DUE`, `REFUNDED`, `CANCELLED` or `EXPIRED`, guarded by
   `asCategoryChangeStatus` (§5 `category-change.ts`). Upgrade payment reuses the
   order's column names (`paymentMethod`, `checkoutSessionId`, `proofOfPayment`,
-  `transactionNumber`) plus `holdUntil`; the trail is names, like `remarksBy`;
+  `transactionNumber`, and `transactionRef` as on an order, with the partial
+  unique index `CategoryChange_transactionRef_live_key` over AWAITING_PAYMENT /
+  APPLIED / REFUND_DUE / REFUNDED) plus `holdUntil`; the trail is names, like `remarksBy`;
   `createdEmailSentAt`/`appliedEmailSentAt`/`lastEmailError` as on an order.
   Indexed on **`(toCategoryId, status)`** for the slot count (an awaiting
   upgrade holds a seat in its target, D11), on `runnerId` and on `eventId`.
@@ -453,7 +455,9 @@ shape:
   Revision 1. **Money after apply:** an online switch keeps the checkout's
   `transactionFee` and `totalCharged`; one paid by GCash or bank — recorded on
   a waiting switch, or *Already paid* as it is made — is `BANK_TRANSFER` with
-  `totalCharged = fee`, `transactionFee` 0, its `transactionNumber` and
+  `totalCharged = fee`, `transactionFee` 0, its `transactionNumber` (and
+  `transactionRef`, plainly indexed — no unique index, since two APPLIED
+  switches from 2026-10 share one and were left as they are) and
   optional `proofOfPayment` (a private-store pathname). Settlement reads only
   APPLIED rows with `totalCharged` above 0 on a PAID order: the fee to the
   organizer, the transaction fee to processing (§5 `settlement.ts`). Storage:

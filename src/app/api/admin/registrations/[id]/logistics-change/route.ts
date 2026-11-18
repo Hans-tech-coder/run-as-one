@@ -32,6 +32,7 @@
  */
 
 import { NextResponse } from 'next/server';
+import { REFERENCE_INDEX_REFUSED, ReferenceInUseError, isReferenceIndexViolation } from '@/lib/payment-reference';
 import { can, getActor } from '@/lib/actor';
 import { deletePrivateFile, uploadPrivateProof, UploadError } from '@/lib/blob';
 import {
@@ -148,6 +149,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (unclaimedProof) await deletePrivateFile(unclaimedProof).catch(() => undefined);
     if (error instanceof UploadError) {
       return NextResponse.json({ error: error.message, field: 'proofFile' }, { status: 400 });
+    }
+    // Another live payment already carries this reference: staff see which
+    // one, as a link (lib/payment-reference.ts R5).
+    if (error instanceof ReferenceInUseError) {
+      return NextResponse.json(error.staffBody(), { status: 409 });
+    }
+    if (isReferenceIndexViolation(error)) {
+      return NextResponse.json({ error: REFERENCE_INDEX_REFUSED }, { status: 409 });
     }
     if (error instanceof LogisticsChangeRefused) {
       return NextResponse.json({ error: error.message }, { status: error.status });

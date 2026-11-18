@@ -33,6 +33,7 @@ import { useAlert } from '@/components/ui/AlertProvider';
 import { formatPesos } from '@/lib/money';
 import type { LogisticsChangeView } from '@/lib/logistics-change-view';
 import type { RenderedEmail } from './email-handoff';
+import { staffError } from './reference-held';
 
 /** What this person may do here, decided on the server. */
 export type SwitchPermissions = {
@@ -106,7 +107,7 @@ export function useValidateSwitch({
       const res = await fetch(`/api/admin/logistics-changes/${change.id}/record-payment`, { method: 'POST', body: form });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        await alert({ variant: 'error', title: 'Payment Not Validated', message: data?.error || 'Try again.' });
+        await alert({ variant: 'error', title: 'Payment Not Validated', message: staffError(data, 'Try again.') });
         return;
       }
       const refused = refusedEmail(data.change, orderRef, 'applied', data.email);

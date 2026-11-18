@@ -7,6 +7,7 @@ import { changeHeldUntil, changePayableState, isOutsidePayment } from '@/lib/cat
 import { CategoryChangeRefused } from '@/lib/category-change-context';
 import { lockChange } from '@/lib/category-change-locks';
 import { readChangeForPayment } from '@/lib/category-change-payment';
+import { claimReference } from '@/lib/payment-reference';
 import { categoryChangeProofReceivedEmail, sendCategoryChangeEmail } from '@/lib/email-category-change';
 
 /**
@@ -57,9 +58,12 @@ export async function submitChangeProof(
     if (changePayableState(held, categoryChangeDeadline(change.event), new Date()) !== 'payable') {
       throw new CategoryChangeRefused(409, 'This change is no longer waiting for payment. Reload the page.');
     }
+    // One reference, one payment (lib/payment-reference.ts); this change's
+    // own earlier proof does not count, so resubmitting the same one passes.
+    const transactionRef = await claimReference(tx, proof.transactionNumber, { except: { kind: 'upgrade', id: changeId } });
     const claim = await tx.categoryChange.updateMany({
       where: { id: changeId, status: CATEGORY_CHANGE_STATUSES.AWAITING_PAYMENT, proofOfPayment: locked.proofOfPayment },
-      data: { proofOfPayment: proof.proofPathname, transactionNumber: proof.transactionNumber },
+      data: { proofOfPayment: proof.proofPathname, transactionNumber: proof.transactionNumber, transactionRef },
     });
     if (claim.count === 0) throw new CategoryChangeRefused(409, 'This change moved just now. Reload the page and try again.');
     await recordAudit(tx, runnerActor(change.event.organizerId, change.runner), {

@@ -39,6 +39,7 @@ import {
   refusalFor,
 } from '@/lib/payment-correction';
 import { consumeStepUp } from '@/lib/step-up';
+import { REFERENCE_INDEX_REFUSED, ReferenceInUseError, isReferenceIndexViolation } from '@/lib/payment-reference';
 
 const NOT_FOUND = { error: 'Registration not found' };
 const STEP_UP_REFUSED = "Confirm it's you again. Correcting a paid order's payment needs a fresh confirmation.";
@@ -161,6 +162,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     await discardUnclaimedProof(unclaimedProof, 'Payment correction');
     if (error instanceof CorrectionRefused) {
       return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    // C7: the new reference is on another live payment (lib/payment-reference.ts).
+    if (error instanceof ReferenceInUseError) {
+      return NextResponse.json(error.staffBody(), { status: 409 });
+    }
+    if (isReferenceIndexViolation(error)) {
+      return NextResponse.json({ error: REFERENCE_INDEX_REFUSED }, { status: 409 });
     }
     if (error instanceof UploadError) {
       return NextResponse.json({ error: error.message }, { status: 400 });

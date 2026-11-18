@@ -1,6 +1,7 @@
 import 'server-only';
 import type { Prisma } from '@prisma/client';
 import db from '@/lib/db';
+import { claimReference } from '@/lib/payment-reference';
 import { recordAudit, type AuditActor } from '@/lib/audit';
 import { formatPesos } from '@/lib/money';
 import { LOGISTICS_METHODS, PAYMENT_METHODS, paymentMethodLabel } from '@/lib/registration-codes';
@@ -219,6 +220,10 @@ export async function createLogisticsChange(actor: AuditActor, input: CreateSwit
     if (awaiting) requireOrderMethod(order.paymentMethod, method, peso(quote.fee));
     const holdUntil = awaiting ? changeHoldUntil(method, now, logisticsChangeDeadline(ctx.event)) : null;
 
+    // Already paid: its reference is claimed before the switch is written
+    // (lib/payment-reference.ts), so one transfer is not recorded twice.
+    const transactionRef = paid ? await claimReference(tx, paid.transactionNumber) : null;
+
     const change = await tx.logisticsChange.create({
       data: {
         changeRef: logisticsChangeRef(order.orderRef, ctx.changeNo),
@@ -235,6 +240,7 @@ export async function createLogisticsChange(actor: AuditActor, input: CreateSwit
         status: paid ? LOGISTICS_CHANGE_STATUSES.APPLIED : quote.status,
         paymentMethod: paid ? PAYMENT_METHODS.BANK_TRANSFER : awaiting ? method : null,
         transactionNumber: paid?.transactionNumber ?? null,
+        transactionRef,
         proofOfPayment: paid?.proofPathname ?? null,
         holdUntil,
         reason: input.reason?.trim() || null,

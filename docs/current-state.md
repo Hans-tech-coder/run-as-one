@@ -3,6 +3,31 @@
 
 ## 10. Current state
 
+**One payment reference, one payment (`PAYMENT_REFERENCE_UNIQUE_PLAN.md`), built on `dev` 2026-11-18, uncommitted when written, not yet on production:** a GCash or bank Transaction No. already on a live order, upgrade or switch anywhere in the app is refused, for runners and staff alike (§5 `payment-reference.ts`). Migration `20261118090000_payment_reference_unique` adds `transactionRef` to the three tables, backfills it, and puts partial unique indexes on `Registration` and `CategoryChange` (applied to `local-dev` only; see `ON_HOLD.md`). The manual checkout route was split first (`manual-checkout-form.ts`) and now reads the reference through `readTransactionNumber`.
+
+Why: on 2026-11-05 one ₱934 bank transfer (ref `8046902259946`, one receipt screenshotted twice) was submitted for two NEURUN 2027 orders, RM-FDCC85E7 (Joan Alvarez, PAID) and RM-8E151ABA (Roldan Alvarez). Nothing compared references.
+
+The plan is gitignored and is deleted once landed, so its decisions are kept here. **R1:** one reference, one payment, app-wide: every event, all three kinds. **R2:** compared normalized (uppercase, letters and digits only); the runner's spelling stays in `transactionNumber`. **R3:** an order that is PENDING, PAID or REFUNDED, and an upgrade or switch that is AWAITING_PAYMENT, APPLIED, REFUND_DUE or REFUNDED, holds its reference; EXPIRED and CANCELLED let go, so a runner whose order expired can register again with the same transfer; a refunded one stays taken. **R4:** no override (one transfer for several runners is a group order); if one is ever wanted it is an ADMIN-only permission with a required remark and an Activity row, as its own change. **R5:** the runner is never told whose record holds it; staff see the holder's reference as a link and nothing more. **R6:** old rows are not rewritten; the two APPLIED delivery switches that share `6046287195001` (RM-FF1E56E5-L1, RM-B95DADDC-L1, owner's call 2026-11-07) stay, which is why `LogisticsChange` has no unique index.
+
+**RM-8E151ABA (owner, 2026-11-18): left EXPIRED.** It expired on production on 2026-11-12 with Joan's reference, its proof never corrected (the registrant does not reply), so it no longer holds the reference and does not block the migration. It is not cancelled or edited: EXPIRED already gave back its slot, add-on stock, promo and reference, it is counted as paid nowhere, and its row stays open on the Unpaid checkouts tab for follow-up, where CANCELLED would close it and add a trail line for nothing. Reopening it is now refused by `claimReference` in the status route, naming RM-FDCC85E7. Staff may add a remark about the duplicate. If Roldan comes back he registers again with his own transfer. On `local-dev`, whose copy predates the expiry, it was set EXPIRED to match production so the migration could apply.
+
+**Run this read-only scan on the target branch before the migration** (it fails if two live orders or upgrades share a reference). On production, 2026-11-18, it returned exactly the R6 pair and RM-FDCC85E7 PAID + RM-8E151ABA EXPIRED:
+
+```sql
+WITH refs AS (
+  SELECT 'ORDER' kind, "orderRef" ref, status, upper(regexp_replace("transactionNumber",'[^A-Za-z0-9]','','g')) norm
+  FROM "Registration" WHERE coalesce(btrim("transactionNumber"),'') <> ''
+  UNION ALL SELECT 'UPGRADE', "changeRef", status, upper(regexp_replace("transactionNumber",'[^A-Za-z0-9]','','g'))
+  FROM "CategoryChange" WHERE coalesce(btrim("transactionNumber"),'') <> ''
+  UNION ALL SELECT 'SWITCH', "changeRef", status, upper(regexp_replace("transactionNumber",'[^A-Za-z0-9]','','g'))
+  FROM "LogisticsChange" WHERE coalesce(btrim("transactionNumber"),'') <> ''
+)
+SELECT * FROM refs WHERE norm IN (SELECT norm FROM refs GROUP BY norm HAVING count(*) > 1)
+ORDER BY norm;
+```
+
+Verified on `local-dev` 2026-11-18 by a script whose every write rolled back, against the real module: spaces-and-dashes spelling refused against the PAID order; an order's own reference passes (`except`); a switch's reference refused for an order (R1); reopening RM-8E151ABA refused; the same reference accepted once the holder is EXPIRED or CANCELLED; a second simultaneous claim of one reference waits on the first's lock, a different reference does not; the unique index answers P2002, which `isReferenceIndexViolation` recognises. Then checked on localhost against `local-dev`, 2026-11-18, on a throwaway event since removed (proof blobs deleted, every email to the owner only): the manual checkout refused a held reference in another spelling and on another event, refused a blank one, accepted it again after the holder was EXPIRED and after CANCELLED, and of two simultaneous submits with one reference saved exactly one; the bank-transfer wizard showed the sentence under the Transaction No. field. Signed in as the owner: *Validate Payment* on an expired order whose reference was taken, a payment correction to a held reference, and an upgrade opened as already paid with a held reference were each refused with "Reference … is already on RM-…", the holder a link to its registrants row.
+
 **Per-runner refund (`REFUND_PLAN.md`), built on `dev`, not yet on production:** an owner or admin refunds one runner of a solo or group PAID order from the row menu; the order stays PAID and a `RunnerRefund` row subtracts. Needs migration `20261108120000_runner_refund` before `main` is pushed.
 
 The plan is gitignored and is deleted once landed, so its decisions are kept here. **D1:** per runner; a solo order is an order of one. **D2:** entry as paid plus own add-ons; platform, transaction and delivery fees are not returned. **D3 / D8:** organizer approval required, attached by staff (name, date, proof); clients stay view only. **D4:** owner and admin only. **D5:** a promo goes back only while unpaused and inside its dates. **D6:** paid by hand, with an automatic email once recorded. **D7:** not yet remitted, Run As One pays; already remitted, the organizer pays and it comes off `remitted`. **D9:** delivery fee never returned; a runner with an awaiting category change or delivery switch, or a category change that moved price, is refused in v1. **D10:** Buy X get Y stays refundable, amount editable downward only, reason required; a free seat refunds only its add-ons.
@@ -125,7 +150,8 @@ rate limited; PENDING needs only a confirm and the reason. **C3** permission
 `AuditLog.changes.proofOfPayment = [old, new]` and opens through
 `admin/proof/[id]?path=`. **C6** the runner hears nothing unless staff tick
 the receipt resend, offered on PAID only. **C7** one reference, one payment:
-`claimReference` is added to this writer when `ON_HOLD.md` §16 is built.
+a new Transaction No. goes through `claimReference` with `except: this order`
+(built 2026-11-18, the payment reference entry above).
 **C8** correcting never moves the status; Mark PAID stays a separate press.
 
 **Free entry promotion (2026-10-30, uncommitted).** A sixth discount kind,

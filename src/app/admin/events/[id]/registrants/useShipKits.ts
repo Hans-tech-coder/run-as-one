@@ -74,6 +74,7 @@ import {
   zoneForProvince,
   zoneNoteFor,
 } from '@/app/events/[slug]/register/delivery';
+import { staffError } from './reference-held';
 
 const peso = (centavos: number) => `₱${formatPesos(centavos)}`;
 
@@ -210,7 +211,7 @@ export function useShipKits({
         await alert({
           variant: 'error',
           title: 'Receipt Not Switched',
-          message: data?.error || 'The receipt could not be switched. Try again.',
+          message: staffError(data, 'The receipt could not be switched. Try again.'),
         });
         onStale();
         return;

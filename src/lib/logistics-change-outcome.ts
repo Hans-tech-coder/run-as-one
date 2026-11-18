@@ -7,6 +7,7 @@ import { LogisticsChangeRefused, eligibilityFor, lockSwitch, SWITCH_EVENT_SELECT
 import { refsOf } from '@/lib/logistics-change-parcels';
 import { switchAwaitsAddress } from '@/lib/logistics-change-proof';
 import { by, moveOrder, peso } from '@/lib/logistics-change-store';
+import { claimReference } from '@/lib/payment-reference';
 
 /**
  * **How a waiting delivery switch ends** (LOGISTICS_CHANGE_PLAN.md Session 2,
@@ -109,9 +110,15 @@ export async function applyLogisticsChange(
   return db.$transaction(async tx => {
     await lockSwitch(tx, found.eventId, found.orders.map(link => link.registrationId));
     const now = new Date();
+    // A reference staff record (Record payment) is claimed for this switch
+    // (lib/payment-reference.ts). PayMongo's apply sends none.
+    const transactionRef =
+      typeof payment.transactionNumber === 'string'
+        ? { transactionRef: await claimReference(tx, payment.transactionNumber, { except: { kind: 'switch', id: changeId } }) }
+        : {};
     const claim = await tx.logisticsChange.updateMany({
       where: { id: changeId, status: LOGISTICS_CHANGE_STATUSES.AWAITING_PAYMENT, ...expected },
-      data: { ...payment, status: LOGISTICS_CHANGE_STATUSES.APPLIED, appliedAt: now },
+      data: { ...payment, ...transactionRef, status: LOGISTICS_CHANGE_STATUSES.APPLIED, appliedAt: now },
     });
     if (claim.count === 0) {
       const still = await tx.logisticsChange.findUnique({ where: { id: changeId }, select: { status: true } });

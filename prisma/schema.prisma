@@ -1,5 +1,10 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  /// partialIndexes: the one-reference-one-payment unique indexes below hold
+  /// only while a record is live (lib/payment-reference.ts R3), so they are
+  /// partial. Declared here so `migrate dev` keeps them instead of dropping
+  /// them as drift.
+  previewFeatures = ["partialIndexes"]
 }
 
 datasource db {
@@ -454,6 +459,11 @@ model Registration {
   updatedAt               DateTime               @updatedAt
   proofOfPayment          String?
   transactionNumber       String?
+  /// `transactionNumber` normalized (uppercase, letters and digits only) by
+  /// lib/payment-reference.ts `normalizeReference`, written beside it by every
+  /// writer through `claimReference`. What "one reference = one payment" (R1)
+  /// compares; the runner's own spelling stays in transactionNumber.
+  transactionRef          String?
   /// Whether the customer checked the liability & data-privacy consent box at
   /// submission. false on registrations made before this was required, since
   /// they were never actually asked — not a claim that they refused.
@@ -526,6 +536,13 @@ model Registration {
   logisticsChangeOrders   LogisticsChangeOrder[]
   /// Switches whose parcel joins this order's paid delivery at ₱0 (L6).
   logisticsRiders         LogisticsChange[]      @relation("LogisticsChangeRidesOn")
+
+  /// The last guard behind claimReference: one live order per reference
+  /// (PENDING, PAID, REFUNDED hold it; EXPIRED and CANCELLED let go, R3).
+  /// The predicate is written as Postgres renders it back, so `migrate diff`
+  /// sees no drift; the migration's own SQL uses IN (...), which is the same.
+  @@unique([transactionRef], map: "Registration_transactionRef_live_key", where: raw("((\"transactionRef\" IS NOT NULL) AND (status = ANY (ARRAY['PENDING'::text, 'PAID'::text, 'REFUNDED'::text])))"))
+  @@index([transactionRef])
 }
 
 model Runner {
@@ -750,6 +767,11 @@ model CategoryChange {
   checkoutSessionId  String?
   proofOfPayment     String?
   transactionNumber  String?
+  /// `transactionNumber` normalized (uppercase, letters and digits only) by
+  /// lib/payment-reference.ts `normalizeReference`, written beside it by every
+  /// writer through `claimReference`. What "one reference = one payment" (R1)
+  /// compares; the runner's own spelling stays in transactionNumber.
+  transactionRef     String?
   /// Until when an awaiting upgrade holds its seat in the target category
   /// (D11). Never later than the event's category change deadline.
   holdUntil          DateTime?
@@ -773,12 +795,15 @@ model CategoryChange {
   fromCategory       Category     @relation("CategoryChangeFrom", fields: [fromCategoryId], references: [id])
   toCategory         Category     @relation("CategoryChangeTo", fields: [toCategoryId], references: [id])
 
+  /// One live upgrade per reference, as on Registration (R3).
+  @@unique([transactionRef], map: "CategoryChange_transactionRef_live_key", where: raw("((\"transactionRef\" IS NOT NULL) AND (status = ANY (ARRAY['AWAITING_PAYMENT'::text, 'APPLIED'::text, 'REFUND_DUE'::text, 'REFUNDED'::text])))"))
   /// The slot count adds awaiting changes to their target category (D11),
   /// so it filters on exactly these two.
   @@index([toCategoryId, status])
   /// A runner's change history, and the one-open-change check (D10).
   @@index([runnerId])
   @@index([eventId])
+  @@index([transactionRef])
 }
 
 /// One switch of paid orders between kit pickup and delivery, paid once
@@ -819,6 +844,11 @@ model LogisticsChange {
   checkoutSessionId     String?
   proofOfPayment        String?
   transactionNumber     String?
+  /// `transactionNumber` normalized (uppercase, letters and digits only) by
+  /// lib/payment-reference.ts `normalizeReference`, written beside it by every
+  /// writer through `claimReference`. What "one reference = one payment" (R1)
+  /// compares; the runner's own spelling stays in transactionNumber.
+  transactionRef        String?
   /// Until when an awaiting switch waits for its money (L12). Never later
   /// than the event's delivery switch deadline. No seat is held.
   holdUntil             DateTime?
@@ -843,6 +873,10 @@ model LogisticsChange {
   @@index([eventId])
   /// The expiry sweep reads awaiting switches past their hold (L12).
   @@index([status, holdUntil])
+  /// A plain index only, no unique one: two APPLIED switches from 2026-10
+  /// (RM-FF1E56E5-L1, RM-B95DADDC-L1) share a reference and the owner left
+  /// them as they are (R6). claimReference still refuses a new duplicate.
+  @@index([transactionRef])
 }
 
 /// One order a LogisticsChange moves, with what it was before, so the

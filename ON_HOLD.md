@@ -11,8 +11,10 @@ the owner's choice. Start one only when the owner asks, and read its source plan
 before writing any code. When an item is picked up, give it its own plan file in
 `docs/plans/`, and delete it from this list once it has landed.
 
-**Pending for the next release: five migrations** (`event_add_ons` is already on `main`; `npx prisma migrate status` against production says whether it still needs running).
+**Pending for the next release: six migrations** (`event_add_ons` is already on `main`; `npx prisma migrate status` against production says whether it still needs running).
 `20261108120000_runner_refund` (runner refunds, 2026-11-08): creates `RunnerRefund`. The Remittances, Overview and registrants reads all query it, so run `npx prisma migrate deploy` with `DIRECT_URL` on the production endpoint **before** `main` is pushed.
+
+`20261118090000_payment_reference_unique` (one reference, one payment, 2026-11-18): a nullable `transactionRef` on `Registration`, `CategoryChange` and `LogisticsChange`, backfilled from `transactionNumber`, plain indexes, and partial unique indexes on `Registration` and `CategoryChange`. Applied to the local-dev database only. Additive; the old code ignores it, but the new code writes `transactionRef`, so run it **before** `main` is pushed. **It fails if two live orders share a reference:** run the scan in `docs/current-state.md` (payment reference entry) on the `production` branch first; on 2026-11-18 it was clear. Rollback is in the migration's header comment.
 
 `20261110090000_category_opens_at` (Bib + Medal schedule, 2026-11-10): one
 nullable `Category.opensAt`. Applied to the local-dev database only. Additive,
@@ -526,23 +528,6 @@ Not walked in a browser, worth one look after release:
   sent none.
 - **The stock count coming back when an unpaid checkout with a shirt
   expires** through the daily sweep.
-
-## 16. One payment reference, one payment
-
-*Source: `docs/plans/PAYMENT_REFERENCE_UNIQUE_PLAN.md` (gitignored), written
-2026-11-07; nothing built.*
-
-Two NEURUN 2027 orders (RM-FDCC85E7, RM-8E151ABA) went in on one GCash
-reference and one receipt, because nothing checks a Transaction No. against
-other payments. The plan normalizes the reference, refuses one already held by
-a live order, upgrade or switch anywhere in the app (an advisory lock per
-reference plus a partial unique index on `Registration`), and covers all eight
-writers, staff ones included.
-
-**Waits on:** staff verifying and resolving **RM-8E151ABA** (Roldan Alvarez):
-the migration's unique index fails while it is PENDING with Joan's reference.
-The owner left the two `6046287195001` delivery switches (RM-FF1E56E5-L1,
-RM-B95DADDC-L1) as they are; do not touch them.
 
 ## 17. Leftovers from the payment correction plan
 

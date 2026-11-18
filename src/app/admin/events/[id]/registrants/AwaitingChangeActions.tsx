@@ -45,6 +45,7 @@ import type { CategoryChangeView } from '@/lib/category-change-view';
 import type { RegistrantPermissions } from './RegistrantsTable';
 import type { AppliedChange } from './useCategoryChangeModal';
 import { ProofPicker } from './CategoryChangePaymentChoice';
+import { staffError } from './reference-held';
 
 /**
  * Validate Payment for an upgrade whose runner sent their proof on the link:
@@ -71,7 +72,7 @@ export function useValidateChange({
       const res = await fetch(`/api/admin/category-changes/${change.id}/record-payment`, { method: 'POST', body: form });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        await alert({ variant: 'error', title: 'Payment Not Validated', message: data?.error || 'Try again.' });
+        await alert({ variant: 'error', title: 'Payment Not Validated', message: staffError(data, 'Try again.') });
         return;
       }
       const result = data as AppliedChange;
@@ -120,7 +121,7 @@ function RecordPayment({
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         if (data?.field === 'transactionNumber' || data?.field === 'proofFile') setErrors({ [data.field]: data.error });
-        else await alert({ variant: 'error', title: 'Payment Not Recorded', message: data?.error || 'Try again.' });
+        else await alert({ variant: 'error', title: 'Payment Not Recorded', message: staffError(data, 'Try again.') });
         return;
       }
       onRecorded(data as AppliedChange);

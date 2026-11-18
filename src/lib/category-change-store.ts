@@ -1,6 +1,7 @@
 import 'server-only';
 import { Prisma } from '@prisma/client';
 import db from '@/lib/db';
+import { claimReference } from '@/lib/payment-reference';
 import { recordAudit, type AuditActor, type AuditEntry } from '@/lib/audit';
 import { formatPesos } from '@/lib/money';
 import { paymentMethodLabel } from '@/lib/registration-codes';
@@ -250,9 +251,16 @@ export async function applyCategoryChange(
       }
     }
 
+    // A reference staff record (Validate Payment, or an upgrade opened as
+    // already paid, which records the same way) is claimed for this change
+    // (lib/payment-reference.ts). PayMongo's apply sends none.
+    const transactionRef =
+      typeof payment.transactionNumber === 'string'
+        ? { transactionRef: await claimReference(tx, payment.transactionNumber, { except: { kind: 'upgrade', id: changeId } }) }
+        : {};
     const claim = await tx.categoryChange.updateMany({
       where: { id: changeId, status: CATEGORY_CHANGE_STATUSES.AWAITING_PAYMENT, ...expected },
-      data: { ...payment, status: CATEGORY_CHANGE_STATUSES.APPLIED, appliedAt: now } as Prisma.CategoryChangeUpdateManyMutationInput,
+      data: { ...payment, ...transactionRef, status: CATEGORY_CHANGE_STATUSES.APPLIED, appliedAt: now } as Prisma.CategoryChangeUpdateManyMutationInput,
     });
     if (claim.count === 0) {
       if (expected && before.status === CATEGORY_CHANGE_STATUSES.AWAITING_PAYMENT) {

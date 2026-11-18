@@ -14,6 +14,7 @@
 import { useState, type Dispatch, type SetStateAction } from 'react';
 import { useAlert } from '@/components/ui/AlertProvider';
 import type { RegistrantRow } from './RegistrantsTable';
+import { staffError } from './reference-held';
 
 export function usePaymentStatus({
   setRunners,
@@ -70,7 +71,7 @@ export function usePaymentStatus({
         // kept saying PENDING — the organizer had no way to know to retry.
         const data = await res.json().catch(() => ({}));
         status?.clear();
-        alert(data?.error || 'The payment status could not be changed. Please try again.');
+        alert({ message: staffError(data, 'The payment status could not be changed. Please try again.') });
       }
     } catch (e) {
       console.error(e);

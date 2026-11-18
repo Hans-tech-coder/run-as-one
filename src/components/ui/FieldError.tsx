@@ -23,7 +23,8 @@ export default function FieldError({
   message,
 }: {
   id: string;
-  message?: string;
+  /** Text, or text with a link in it (a staff refusal naming another record). */
+  message?: React.ReactNode;
 }) {
   if (!message) return null;
 

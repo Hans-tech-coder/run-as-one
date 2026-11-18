@@ -35,6 +35,11 @@
  * without this, PAID → PENDING (or PAID → CANCELLED → PENDING), a correction,
  * then back to PAID walks around it (Strix re-scan 6d50). No admin screen moves
  * an order out of PAID today; a button that does must mount `StepUpDialog`.
+ *
+ * **Reopening claims the reference again.** An EXPIRED or CANCELLED order let
+ * go of its Transaction No. (lib/payment-reference.ts R3), so moving it back
+ * to PENDING, PAID or REFUNDED runs `claimReference`, and is refused with the
+ * holder's reference when another live payment took it meanwhile.
  */
 
 import { NextResponse } from 'next/server';
@@ -49,6 +54,13 @@ import { AddOnStockError, retakeAddOnStock } from '@/lib/add-on-stock';
 import { EMAIL_RUNNER_INCLUDE } from '@/lib/email';
 import { ACTIVE_REFUND_STATUSES } from '@/lib/refund';
 import { consumeStepUp } from '@/lib/step-up';
+import {
+  REFERENCE_INDEX_REFUSED,
+  ReferenceInUseError,
+  claimReference,
+  isReferenceIndexViolation,
+  orderHoldsReference,
+} from '@/lib/payment-reference';
 
 /**
  * The statuses an organizer may set from the admin. Guarded rather than
@@ -205,9 +217,11 @@ export async function PATCH(
     const updatedRegistration = await prisma.$transaction(async tx => {
       // Locked so a refund opened this instant cannot land after the count, and
       // read under the lock so an order paid a moment ago needs the token too.
+      let lockedStatus: string | null = null;
       if (wantsStatus) {
         const [locked] = await tx.$queryRaw<{ status: string }[]>`
           SELECT "status" FROM "Registration" WHERE "id" = ${id} FOR UPDATE`;
+        lockedStatus = locked?.status ?? null;
         if (locked && locked.status !== status) {
           const refunds = await tx.runnerRefund.count({
             where: { registrationId: id, status: { in: ACTIVE_REFUND_STATUSES } },
@@ -221,6 +235,17 @@ export async function PATCH(
             throw new StepUpRefused();
           }
         }
+      }
+
+      // Back into a status that holds a reference (an expired or cancelled
+      // order reopened): its Transaction No. must not be on another live
+      // payment taken meanwhile (lib/payment-reference.ts R3). Claimed before
+      // anything else is spent, and read under the lock taken above.
+      let reclaimedRef: { transactionRef: string | null } | null = null;
+      if (wantsStatus && !orderHoldsReference(lockedStatus ?? existing.status) && orderHoldsReference(status)) {
+        reclaimedRef = {
+          transactionRef: await claimReference(tx, existing.transactionNumber, { except: { kind: 'order', id } }),
+        };
       }
 
       // Claimed with the same conditional write the sweep uses, so an order
@@ -272,7 +297,7 @@ export async function PATCH(
 
       const updated = await tx.registration.update({
         where: { id },
-        data,
+        data: { ...data, ...reclaimedRef },
       });
 
       const entries: AuditEntry[] = [];
@@ -361,6 +386,13 @@ export async function PATCH(
         { error: 'This order has a refunded runner, so its status cannot be changed. Void the refund first if it was a mistake.' },
         { status: 409 }
       );
+    }
+    // Reopening it would put its reference on two live payments.
+    if (error instanceof ReferenceInUseError) {
+      return NextResponse.json(error.staffBody(), { status: 409 });
+    }
+    if (isReferenceIndexViolation(error)) {
+      return NextResponse.json({ error: REFERENCE_INDEX_REFUSED }, { status: 409 });
     }
     if (error instanceof StatusMoved) {
       return NextResponse.json(

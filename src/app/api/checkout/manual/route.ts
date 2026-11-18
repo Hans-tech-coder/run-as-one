@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { isPublished } from '@/lib/event-visibility';
-import { participantCountError } from '@/lib/order-size';
 import prisma from '@/lib/db';
 import { newOrderRef } from '@/lib/order-ref';
 import { recordWriteInCommunities, runnerCommunity } from '@/lib/running-community-store';
@@ -11,11 +10,7 @@ import {
 } from '@/lib/registration-codes';
 import { storedShirtSize } from '@/lib/shirt-size';
 import { hasFinished } from '@/lib/event-schedule';
-import {
-  participantBirthdateError,
-  participantGuardianError,
-  storedGuardianConsent,
-} from '@/lib/minor-consent';
+import { participantGuardianError, storedGuardianConsent } from '@/lib/minor-consent';
 import {
   closedMessage,
   RESULTS_ONLY_MESSAGE,
@@ -34,13 +29,8 @@ import {
   optionalUpperCaseForStorage,
   upperCaseForStorage,
 } from '@/lib/text-case';
-import { consentSignatureError } from '@/lib/consent-signature';
 import { participantAddressError, storedRunnerAddress } from '@/lib/runner-address';
-import {
-  emailAddressError,
-  normalizeEmailAddress,
-  participantEmailError,
-} from '@/lib/email-address';
+import { normalizeEmailAddress } from '@/lib/email-address';
 import {
   PromoUnavailableError,
   categorySeatsClaimed,
@@ -53,6 +43,14 @@ import { logHeldPrice } from '@/lib/price-lock';
 import { priceChangedBody } from '@/lib/price-changed';
 import { CHECKOUT_RULE, allowRequest, callerKey } from '@/lib/rate-limit';
 import { EMAIL_RUNNER_INCLUDE } from '@/lib/email';
+import { readManualCheckoutForm } from '@/lib/manual-checkout-form';
+import { readTransactionNumber } from '@/lib/category-change-hold';
+import {
+  REFERENCE_IN_USE_RUNNER,
+  ReferenceInUseError,
+  claimReference,
+  isReferenceIndexViolation,
+} from '@/lib/payment-reference';
 
 export async function POST(request: Request) {
   // Same window as /api/checkout ('checkout' bucket): both spend the same
@@ -83,92 +81,31 @@ export async function POST(request: Request) {
       );
     }
 
-    const proofFile = formData.get('proofFile') as File | null;
-    const eventId = formData.get('eventId') as string;
-    const customerEmail = formData.get('customerEmail') as string;
-    const customerName = formData.get('customerName') as string;
-    const logisticsMethod = formData.get('logisticsMethod') as string;
-    const deliveryZone = formData.get('deliveryZone') as string;
-    const deliveryAddress = formData.get('deliveryAddress') as string;
-    // Amounts arrive as centavos. Round defensively — Prisma rejects a
-    // non-integer for an Int column, and a stray decimal here would 500.
-    const centavos = (field: string) => Math.round(Number(formData.get(field)) || 0);
-
-    const subtotal = centavos('subtotal');
-    const deliveryFee = centavos('deliveryFee');
-    const platformFee = centavos('platformFee');
-    const transactionFee = centavos('transactionFee');
-    const totalAmount = centavos('totalAmount');
-    const transactionNumber = formData.get('transactionNumber') as string;
-    const consentGiven = formData.get('consentGiven') === 'true';
-    const consentSignature = formData.get('consentSignature') as string;
-    const promoCode = formData.get('promoCode') as string;
-    // A string, or null when the wizard sent none; readPriceLock takes either.
-    const priceLock = formData.get('priceLock');
-
-    const participantsStr = formData.get('participants') as string;
-    const participants = JSON.parse(participantsStr || '[]');
-
-    // The proof is required a little further down instead of here: an order
-    // that costs nothing has no deposit slip to show, and whether it costs
-    // nothing is only knowable once the event and the promo code have been
-    // read. See lib/free-checkout.ts.
-
-    // The wizard already disables its submit button without this, but the
-    // waiver is a legal gate, not a data-completeness one — an unauthorized
-    // request that skips the UI must not be able to skip it either.
-    if (!consentGiven) {
-      return NextResponse.json(
-        { error: 'Please agree to the Disclaimer, Consent & Data Privacy Waiver to continue.' },
-        { status: 400 }
-      );
+    // The waiver, the signature, the order size, every email address and
+    // every birthdate, checked before the event is read (lib/manual-checkout-form.ts).
+    const read = readManualCheckoutForm(formData);
+    if (read.refusal) {
+      return NextResponse.json({ error: read.refusal.error }, { status: read.refusal.status });
     }
-
-    // The signature is the other half of that gate, and it is checked here for
-    // the same reason: a tick can be posted by anything, while a name someone
-    // typed is a person putting themselves on the record. Only its presence is
-    // required — see lib/consent-signature.ts, which both wizards share.
-    // Uppercased first so the check runs on the value that will be stored.
-    const storedConsentSignature = upperCaseForStorage(consentSignature);
-    const signatureProblem = consentSignatureError(storedConsentSignature);
-    if (signatureProblem) {
-      return NextResponse.json({ error: signatureProblem }, { status: 400 });
-    }
-
-    // One order reserves one slot per runner and an unpaid one holds them for
-    // a day, so its size is capped here as well as in the wizard: otherwise a
-    // single POST could hold a whole category. See lib/order-size.ts.
-    const sizeProblem = participantCountError(participants);
-    if (sizeProblem) {
-      return NextResponse.json({ error: sizeProblem }, { status: 400 });
-    }
-
-    // Every email this order will ever produce goes to the address below: the
-    // "registration received" mail sent a few lines down, the receipt when the
-    // payment clears, and anything an organizer sends by hand later. An
-    // address Resend refuses ("Invalid `to` field") makes all of that silent —
-    // and by then the runner has paid, so there is no screen left to tell them
-    // on. The wizards check the same rule as the runner types (see
-    // lib/email-address.ts), and this is the door that does not depend on the
-    // wizard having been the thing that posted.
-    const emailProblem =
-      participantEmailError(participants) ??
-      emailAddressError(customerEmail, { blank: 'Enter an email address for this order' });
-    if (emailProblem) {
-      return NextResponse.json({ error: emailProblem }, { status: 400 });
-    }
-
-    // A birthdate from the future is refused here as well as in the wizard, so
-    // a direct POST cannot store one. See lib/minor-consent.ts.
-    const birthdateProblem = participantBirthdateError(participants);
-    if (birthdateProblem) {
-      return NextResponse.json({ error: birthdateProblem }, { status: 400 });
-    }
-
-    // Trimmed, never cased: a space pasted in from a contact card is enough to
-    // stop the send on its own, while the local part of an address is
-    // case-sensitive on some mail servers.
-    const storedCustomerEmail = normalizeEmailAddress(customerEmail);
+    const {
+      proofFile,
+      eventId,
+      customerName,
+      logisticsMethod,
+      deliveryZone,
+      deliveryAddress,
+      subtotal,
+      deliveryFee,
+      platformFee,
+      transactionFee,
+      totalAmount,
+      transactionNumber,
+      promoCode,
+      priceLock,
+      participants,
+      storedConsentSignature,
+      storedCustomerEmail,
+    } = read.form;
 
     // The client sends both the zone and the fee. They are two ways of saying
     // the same thing, so the organizer's prices decide which pairs are legal —
@@ -309,6 +246,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Proof of payment is required' }, { status: 400 });
     }
 
+    // The reference the transfer was made under, trimmed and capped like every
+    // other route that takes one (lib/category-change-hold.ts). A free order
+    // keeps none. Whether another payment already holds it is checked inside
+    // the write below (claimReference), under its own lock.
+    let storedTransactionNumber: string | null = null;
+    if (!free) {
+      const { value, error } = readTransactionNumber(transactionNumber);
+      if (error) {
+        return NextResponse.json({ error, field: 'transactionNumber' }, { status: 400 });
+      }
+      storedTransactionNumber = value;
+    }
+
     // 1. Store the receipt as a private blob. This route is public — anyone can
     // reach it — so uploadPrivateProof() enforces the type and size limits.
     // What we keep is the blob pathname; admins view it through
@@ -334,6 +284,10 @@ export async function POST(request: Request) {
     // orders can both pass. See reserveSlots, which locks the capped options
     // first.
     const registration = await prisma.$transaction(async (tx) => {
+      // One reference, one payment (lib/payment-reference.ts): taken first, so
+      // a duplicate is refused before any slot, stock or promo is spent.
+      const transactionRef = await claimReference(tx, storedTransactionNumber);
+
       await lockEventForRegistration(tx, event.id);
       await reserveSlots(tx, event.categories, participants);
 
@@ -413,7 +367,8 @@ export async function POST(request: Request) {
           addOnRunAsOneTotal,
           paymentMethod: storedPaymentMethod,
           proofOfPayment: proofPathname,
-          transactionNumber: free ? null : transactionNumber,
+          transactionNumber: storedTransactionNumber,
+          transactionRef,
           status: 'PENDING', // Waiting for manual validation by admin
           // Nothing to transfer, so nothing to validate. Spread *after* the
           // two lines above so it has the last word: a free order is written
@@ -518,6 +473,14 @@ export async function POST(request: Request) {
     // already says what to do, so it goes back as it is.
     if (error instanceof PromoUnavailableError) {
       return NextResponse.json({ error: error.message }, { status: 409 });
+    }
+    // Another live payment already carries this reference. The runner is not
+    // told whose (R5).
+    if (error instanceof ReferenceInUseError) {
+      return NextResponse.json(error.runnerBody(), { status: 409 });
+    }
+    if (isReferenceIndexViolation(error)) {
+      return NextResponse.json({ error: REFERENCE_IN_USE_RUNNER, field: 'transactionNumber' }, { status: 409 });
     }
     console.error('Manual Checkout Error:', error);
     return NextResponse.json(
