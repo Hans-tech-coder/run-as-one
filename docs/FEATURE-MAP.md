@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-50 pages · 100 API routes · 164 modules in `src/lib` · 697 files · 122,688 lines
+50 pages · 100 API routes · 165 modules in `src/lib` · 698 files · 123,060 lines
 
 ---
 
@@ -288,6 +288,7 @@ the file itself.
 | [`pacer-results.ts`](../src/lib/pacer-results.ts) | Which finishers on a race's results are its pacers, and the ranks once they are left out — a pacer runs to a set pace for the field, so they are ke… |
 | [`pacer-store.ts`](../src/lib/pacer-store.ts) | A race's pacers are its pacer codes plus the bibs tagged under Results (`RESULTS_ROW_ACTIONS_PLAN.md` Batch 2): a results-only race has no codes, s… |
 | [`pacer.ts`](../src/lib/pacer.ts) | What a pacer code is, and when the dashboard has to nag about it (`PACER_DISCOUNT_PLAN.md`). |
+| [`paid-runners.ts`](../src/lib/paid-runners.ts) | Who an order charged for, at the price they checked out at: the one input `splitOrderMoney` is given (2026-11-18). |
 | [`password-reset.ts`](../src/lib/password-reset.ts) | "Forgot password?" — who may reset their own password from the sign-in page, and the link that lets them (LOGIN_UX_PLAN.md Batch 2). |
 | [`past-events.ts`](../src/lib/past-events.ts) | What counts as a past event and where its card goes (`PAST_EVENTS_PLAN.md` D2, D3). |
 | [`payment-correction-rules.ts`](../src/lib/payment-correction-rules.ts) | **Which orders a payment correction may touch, and how long its reason may be** (PAYMENT_CORRECTION_PLAN.md C1, C2, C4), with no Prisma import, so … |
@@ -378,15 +379,15 @@ when a task touches one, split it before editing rather than after.
 | 616 | [`src/app/api/checkout/route.ts`](../src/app/api/checkout/route.ts) |
 | 614 | [`src/app/admin/feedback/FeedbackClient.tsx`](../src/app/admin/feedback/FeedbackClient.tsx) |
 | 614 | [`src/lib/email-document.ts`](../src/lib/email-document.ts) |
+| 589 | [`src/lib/registration-gate.ts`](../src/lib/registration-gate.ts) |
 | 571 | [`src/lib/add-ons.ts`](../src/lib/add-ons.ts) |
-| 568 | [`src/lib/registration-gate.ts`](../src/lib/registration-gate.ts) |
 | 567 | [`src/app/admin/NotificationsCenter.tsx`](../src/app/admin/NotificationsCenter.tsx) |
-| 563 | [`src/app/api/checkout/manual/route.ts`](../src/app/api/checkout/manual/route.ts) |
 | 550 | [`src/app/api/admin/events/[id]/update-event.ts`](../src/app/api/admin/events/[id]/update-event.ts) |
+| 529 | [`src/app/api/checkout/manual/route.ts`](../src/app/api/checkout/manual/route.ts) |
+| 529 | [`src/app/s/[site]/events/[slug]/EventDetails.tsx`](../src/app/s/[site]/events/[slug]/EventDetails.tsx) |
 | 528 | [`src/app/admin/DashboardShell.tsx`](../src/app/admin/DashboardShell.tsx) |
-| 523 | [`src/app/s/[site]/events/[slug]/EventDetails.tsx`](../src/app/s/[site]/events/[slug]/EventDetails.tsx) |
 | 520 | [`src/lib/promo-input.ts`](../src/lib/promo-input.ts) |
-| 513 | [`src/lib/refund-store.ts`](../src/lib/refund-store.ts) |
+| 520 | [`src/lib/refund-store.ts`](../src/lib/refund-store.ts) |
 | 509 | [`src/app/admin/communities/CommunitiesClient.tsx`](../src/app/admin/communities/CommunitiesClient.tsx) |
 | 509 | [`src/app/admin/events/[id]/registrants/PaymentCorrectionModal.tsx`](../src/app/admin/events/[id]/registrants/PaymentCorrectionModal.tsx) |
 | 499 | [`src/app/admin/AdminRouteLoading.tsx`](../src/app/admin/AdminRouteLoading.tsx) |
@@ -400,6 +401,7 @@ when a task touches one, split it before editing rather than after.
 | 441 | [`src/lib/actor.ts`](../src/lib/actor.ts) |
 | 436 | [`src/app/admin/events/[id]/edit/page.tsx`](../src/app/admin/events/[id]/edit/page.tsx) |
 | 431 | [`src/lib/activity.ts`](../src/lib/activity.ts) |
+| 426 | [`src/app/admin/events/[id]/registrants/RegistrantActionsMenu.tsx`](../src/app/admin/events/[id]/registrants/RegistrantActionsMenu.tsx) |
 | 426 | [`src/app/admin/your-events/[id]/RaceReport.tsx`](../src/app/admin/your-events/[id]/RaceReport.tsx) |
 | 422 | [`src/lib/pacer.ts`](../src/lib/pacer.ts) |
 | 420 | [`src/app/admin/events/EventsTableClient.tsx`](../src/app/admin/events/EventsTableClient.tsx) |
@@ -412,6 +414,6 @@ when a task touches one, split it before editing rather than after.
 | 407 | [`src/app/events/[slug]/register/RunnerCard.tsx`](../src/app/events/[slug]/register/RunnerCard.tsx) |
 | 405 | [`src/app/admin/remittances/[eventId]/RecordRemittanceDialog.tsx`](../src/app/admin/remittances/[eventId]/RecordRemittanceDialog.tsx) |
 | 404 | [`src/app/admin/events/[id]/registrants/RunnerRefundModal.tsx`](../src/app/admin/events/[id]/registrants/RunnerRefundModal.tsx) |
+| 403 | [`src/app/api/admin/registrations/[id]/status/route.ts`](../src/app/api/admin/registrations/[id]/status/route.ts) |
 | 403 | [`src/lib/audit.ts`](../src/lib/audit.ts) |
 | 401 | [`src/app/admin/activity/ActivityClient.tsx`](../src/app/admin/activity/ActivityClient.tsx) |
-| 401 | [`src/app/admin/events/[id]/registrants/RegistrantActionsMenu.tsx`](../src/app/admin/events/[id]/registrants/RegistrantActionsMenu.tsx) |

@@ -43,7 +43,8 @@ import {
 } from './refund';
 import { consumeStepUp } from './step-up';
 import { isCalendarDay, today } from './event-schedule';
-import { MOVED_CHANGE_STATUSES, totalsByEvent } from './settlement-store';
+import { totalsByEvent } from './settlement-store';
+import { FIRST_MOVE, paidMoneyRunner } from './paid-runners';
 
 /** Refused with a sentence the screen shows as it is, under `field` when it has one. */
 export class RefundRefused extends Error {
@@ -74,12 +75,7 @@ const PAID_RUNNERS = {
     category: true,
     addOns: true,
     refund: { select: { status: true } },
-    categoryChanges: {
-      where: { status: { in: [...MOVED_CHANGE_STATUSES] } },
-      orderBy: { createdAt: 'asc' },
-      take: 1,
-      include: { fromCategory: true },
-    },
+    categoryChanges: FIRST_MOVE,
   },
 } satisfies Prisma.Registration$runnersArgs;
 
@@ -91,18 +87,7 @@ const ORDER_READ = {
 type OrderRead = Prisma.RegistrationGetPayload<{ include: typeof ORDER_READ }>;
 
 function quoteRunners(order: OrderRead): RefundQuoteRunner[] {
-  return order.runners.map(runner => {
-    const paidCategory = runner.categoryChanges[0]?.fromCategory ?? runner.category;
-    return {
-      id: runner.id,
-      listPrice: paidCategory.price,
-      promoPrice: runner.promoPrice,
-      category: paidCategory,
-      singletSize: runner.singletSize,
-      addOns: runner.addOns,
-      moved: runner.categoryChanges.length > 0,
-    };
-  });
+  return order.runners.map(paidMoneyRunner);
 }
 
 function quoteOf(order: OrderRead, runnerId: string): RefundQuote | null {

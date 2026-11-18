@@ -16,7 +16,7 @@ import { logisticsChangesByOrder } from '@/lib/logistics-change-view';
 import { readEventReceipts } from '@/lib/logistics-receipts';
 import { buildRegistrantRows } from './registrant-rows';
 import { ADD_ON_LINES_READ } from '@/lib/add-ons';
-import { ACTIVE_REFUND_STATUSES } from '@/lib/refund';
+import { FIRST_MOVE } from '@/lib/paid-runners';
 import { refundsForEvent } from '@/lib/refund-store';
 import RefundsList from './RefundsList';
 import DashboardHeader from '@/app/admin/DashboardHeader';
@@ -73,15 +73,21 @@ export default async function RegistrantsPage({
             // confirmation email has always sorted this way (byRunnerNo in
             // lib/email.ts); this screen was the one place that did not.
             orderBy: { runnerNo: 'asc' },
-            // A runner removed from an order stays in the table for the audit
-            // trail (Runner.deletedAt) and never on this screen. A refunded
-            // one is read too, only so the money split stays whole; the rows
-            // leave them out (registrant-rows.ts).
-            where: { OR: [{ deletedAt: null }, { refund: { status: { in: ACTIVE_REFUND_STATUSES } } }] },
+            // Every runner the order charged for, removed and refunded ones
+            // too, so the money split matches the refund quote's
+            // (lib/paid-runners.ts). A removed runner stays in the table for
+            // the audit trail (Runner.deletedAt) and never on this screen: the
+            // rows leave them out (registrant-rows.ts). Each one's first move
+            // says the category they checked out in.
             // Each runner's add-on lines (ADD_ONS_PLAN.md): the items for the
             // Add-ons column, filter, detail and CSV, and their money for the
             // per-runner split (runner-money.ts).
-            include: { category: true, addOns: ADD_ON_LINES_READ, refund: { select: { status: true } } }
+            include: {
+              category: true,
+              addOns: ADD_ON_LINES_READ,
+              refund: { select: { status: true } },
+              categoryChanges: FIRST_MOVE,
+            }
           }
         }
       }

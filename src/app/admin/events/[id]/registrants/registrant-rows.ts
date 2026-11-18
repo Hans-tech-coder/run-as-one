@@ -20,6 +20,7 @@ import { formatEventInstant } from '@/lib/event-schedule';
 import { bankTransferExpiresBy, isCancelledCheckout } from '@/lib/pending-expiry';
 import { formatRunnerAddress } from '@/lib/runner-address';
 import { splitOrderMoney } from '@/lib/runner-money';
+import { FIRST_MOVE, paidMoneyRunner } from '@/lib/paid-runners';
 import { ADD_ON_LINES_READ, addOnItemLabel, addOnItemsText } from '@/lib/add-ons';
 import { isActiveRefund } from '@/lib/refund';
 
@@ -33,13 +34,22 @@ import { isActiveRefund } from '@/lib/refund';
  * had to join the row. The page fetches; this decides what a row says.
  */
 
-/** The event as page.tsx fetches it: its listed orders, their live runners and categories. */
+/**
+ * The event as page.tsx fetches it: its listed orders, every runner each one
+ * charged for (removed and refunded ones too, for the split), their categories
+ * and first moves.
+ */
 export type RegistrantsEvent = Prisma.EventGetPayload<{
   include: {
     registrations: {
       include: {
         runners: {
-          include: { category: true; addOns: typeof ADD_ON_LINES_READ; refund: { select: { status: true } } };
+          include: {
+            category: true;
+            addOns: typeof ADD_ON_LINES_READ;
+            refund: { select: { status: true } };
+            categoryChanges: typeof FIRST_MOVE;
+          };
         };
       };
     };
@@ -68,11 +78,19 @@ export function buildRegistrantRows({
 }): Record<string, unknown>[] {
   const runners: Record<string, unknown>[] = [];
   event.registrations.forEach(order => {
-    // page.tsx reads refunded runners too, for the split alone (REFUND_PLAN.md
-    // trap 1): without them it would rescale everyone left. They get no row.
+    // page.tsx reads every runner the order charged for, for the split alone
+    // (lib/paid-runners.ts): without the removed and refunded ones it would
+    // rescale everyone left. Only live runners get a row.
     const paidRunners = order.runners;
-    const reg = { ...order, runners: paidRunners.filter(runner => !isActiveRefund(runner.refund?.status)) };
-    const runnerCount = paidRunners.length;
+    const reg = {
+      ...order,
+      runners: paidRunners.filter(runner => !runner.deletedAt && !isActiveRefund(runner.refund?.status)),
+    };
+    // The suffix count the screen has always used: live and refunded runners,
+    // never staff-removed ones, so a reference does not change with this read.
+    const runnerCount = paidRunners.filter(
+      runner => !runner.deletedAt || isActiveRefund(runner.refund?.status),
+    ).length;
     // An online checkout cancelled before it was paid was never a registrant;
     // it stays on the Unpaid checkouts tab (UNPAID_FOLLOWUP_PLAN.md Batch 2).
     if (isCancelledCheckout(reg, statusRecords.get(reg.id))) return;
@@ -87,19 +105,11 @@ export function buildRegistrantRows({
     // from the row menu (LOGISTICS_CHANGE_PLAN.md Revision 2).
     const logistics = orderLogisticsFields(event, reg, logisticsByOrder.get(reg.id) ?? []);
     // What each runner of the order cost, split so the export's per-runner
-    // columns sum to the order total (lib/runner-money.ts).
-    const money = splitOrderMoney(
-      reg,
-      paidRunners.map(runner => ({
-        listPrice: runner.category.price,
-        promoPrice: runner.promoPrice,
-        category: runner.category,
-        singletSize: runner.singletSize,
-        addOns: runner.addOns,
-      })),
-      event.shirtSizeUpcharge,
-    );
-    reg.runners.forEach(runner => {
+    // columns sum to the order total (lib/runner-money.ts), from the same input
+    // the refund quote reads (lib/paid-runners.ts), so the two agree.
+    const money = splitOrderMoney(reg, paidRunners.map(paidMoneyRunner), event.shirtSizeUpcharge);
+    reg.runners.forEach((runner, rowIndex) => {
+      // The split is over every paid runner; the logistics fields over the rows.
       const runnerIndex = paidRunners.findIndex(paid => paid.id === runner.id);
       runners.push({
         id: runner.id,
@@ -223,7 +233,7 @@ export function buildRegistrantRows({
         // which delivery fee they were charged; blank when both zones cost the
         // same), where this runner's kit goes, `isDelivery` decided from the
         // code rather than the label, and the order's delivery switches.
-        ...logistics[runnerIndex],
+        ...logistics[rowIndex],
         paymentMethod: paymentMethodLabel(reg.paymentMethod).toUpperCase(),
         // The branches the screen actually needs, decided from the code rather
         // than by matching the label back against a string.
