@@ -684,7 +684,7 @@ email, phone), a Filters chip (Status, Payment), the View chip
 (`ColumnsViewMenu`, shared with the registrants toolbar), mark / unmark
 checkboxes (`selectionColumn`, shared), a **No.** fixed per order oldest first
 (`listNo`), sortable headers, Sort below `lg`, **Export to CSV** (its own file,
-`unpaid_checkouts_<event-title>.csv` since 2026-10-23,
+`unpaid_checkouts_<event-title>_<YYYY-MM-DD_HHmm>.csv` (timestamp since 2026-11-18),
 `buildUnpaidCheckoutCsv`: one line per order with *Submitted At*, the marked
 rows or every filtered row), and `AdminTablePager`, all off one TanStack
 table. One row per order:
@@ -824,8 +824,8 @@ time>* under its Discount in the detail modal
 (`RegistrantTransactionFields.tsx`), and the CSV gains a **Promo Price Held
 From** column right after *Promo Code*, blank on every other order. The client
 viewer's runner list shows no discount, so it shows no lock either.
-**The export's file is `registrants_<event-title>.csv`** (2026-10-23, the
-owner; it was `registrants_event_<id>.csv`), slugged by `fileSlug` as the
+**The export's file is `registrants_<event-title>_<YYYY-MM-DD_HHmm>.csv`** (2026-10-23, the
+owner; local 24h `fileTimestamp` added 2026-11-18; it was `registrants_event_<id>.csv`), slugged by `fileSlug` as the
 client's `runners_<race>.csv` is, and its last column is **Payment Remarks**
 — the validator's `Registration.remarks`, on every runner of the order, which
 until then stayed on screen only.

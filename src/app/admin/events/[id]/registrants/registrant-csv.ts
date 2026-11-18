@@ -227,12 +227,13 @@ export function buildUnpaidCheckoutCsv(orders: UnpaidCheckout[]): string {
 }
 
 /**
- * Hands the built file to the browser as a download, named after the event
- * (`registrants_<title>.csv`) so an organizer with several races in their
+ * Hands the built file to the browser as a download, named after the event and
+ * stamped with when it was taken (`registrants_<title>_<YYYY-MM-DD_HHmm>.csv`)
+ * so an organizer with several races, or several pulls of one race, in their
  * Downloads folder can tell the files apart without opening them.
  */
 export function downloadRegistrantCsv(csv: string, eventTitle: string): void {
-  downloadCsv(csv, `registrants_${fileSlug(eventTitle, 'event')}.csv`);
+  downloadCsv(csv, `registrants_${fileSlug(eventTitle, 'event')}_${fileTimestamp()}.csv`);
 }
 
 /**
@@ -262,10 +263,21 @@ export function exportRegistrants(
 
 /**
  * The Unpaid checkouts file, named apart so the two are never confused, and
- * after the event the same way (`unpaid_checkouts_<title>.csv`).
+ * after the event and stamped the same way
+ * (`unpaid_checkouts_<title>_<YYYY-MM-DD_HHmm>.csv`).
  */
 export function downloadUnpaidCheckoutCsv(csv: string, eventTitle: string): void {
-  downloadCsv(csv, `unpaid_checkouts_${fileSlug(eventTitle, 'event')}.csv`);
+  downloadCsv(csv, `unpaid_checkouts_${fileSlug(eventTitle, 'event')}_${fileTimestamp()}.csv`);
+}
+
+/**
+ * The export moment for a filename: the organizer's local date and 24-hour
+ * time as `YYYY-MM-DD_HHmm`. No colons, which Windows refuses in filenames;
+ * this order also sorts the files by when they were taken.
+ */
+export function fileTimestamp(now: Date = new Date()): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`;
 }
 
 /** A title as a filename: lowercase words joined by `-`, `fallback` if nothing is left. */
