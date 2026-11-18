@@ -181,7 +181,7 @@ function sizeTable(groups: { categoryId: string; singletSize: string; _count: { 
   }
 
   // The chart's order, which is the order a supplier's order form is in; a
-  // size the chart does not list (a 5XL, a supplier's own code) goes after.
+  // size the chart does not list (a supplier's code on an older order) goes after.
   const rank = (size: string) => {
     const at = SHIRT_SIZES.indexOf(size);
     return at === -1 ? SHIRT_SIZES.length : at;
@@ -253,10 +253,12 @@ const SIZE_ALIASES: Record<string, string> = {
   MEDIUM: 'M',
   LARGE: 'L',
   'EXTRA LARGE': 'XL',
+  XXXS: '3XS',
   XXS: '2XS',
   XXL: '2XL',
   XXXL: '3XL',
   XXXXL: '4XL',
+  XXXXXL: '5XL',
 };
 
 export function chartSize(stored: string): string {

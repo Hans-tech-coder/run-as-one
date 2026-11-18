@@ -41,6 +41,7 @@ export default function SelectField({
   id,
   error,
   hideLabel = false,
+  headerRight,
 }: {
   label: string;
   value: string;
@@ -60,6 +61,8 @@ export default function SelectField({
    * layout already shows — the Month and Year pair heading BirthdatePicker.
    */
   hideLabel?: boolean;
+  /** Sits across from the label, such as a Size Guide link. */
+  headerRight?: React.ReactNode;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
@@ -167,9 +170,18 @@ export default function SelectField({
 
   return (
     <div className="input-group">
-      <label htmlFor={triggerId} className={hideLabel ? "sr-only" : undefined}>
-        {label}
-      </label>
+      {headerRight ? (
+        <div className="flex justify-between items-center mb-1">
+          <label htmlFor={triggerId} className={hideLabel ? "sr-only" : "mb-0"}>
+            {label}
+          </label>
+          {headerRight}
+        </div>
+      ) : (
+        <label htmlFor={triggerId} className={hideLabel ? "sr-only" : undefined}>
+          {label}
+        </label>
+      )}
 
       <div ref={wrapperRef} className="relative">
         <button

@@ -16,8 +16,12 @@ export interface ShirtSizeRow {
   length: number;
 }
 
-/** The chart runners are measured against. Order is the order they see. */
+/**
+ * The chart runners are measured against, and the only sizes they can pick:
+ * 3XS up to 5XL. Order is the order they see.
+ */
 export const SHIRT_SIZE_CHART: readonly ShirtSizeRow[] = [
+  { size: '3XS', width: 16, length: 23 },
   { size: '2XS', width: 17, length: 24 },
   { size: 'XS', width: 18, length: 25 },
   { size: 'S', width: 19, length: 26 },
@@ -27,6 +31,7 @@ export const SHIRT_SIZE_CHART: readonly ShirtSizeRow[] = [
   { size: '2XL', width: 23, length: 30 },
   { size: '3XL', width: 24, length: 31 },
   { size: '4XL', width: 25, length: 32 },
+  { size: '5XL', width: 26, length: 33 },
 ];
 
 export const SHIRT_SIZES: readonly string[] = SHIRT_SIZE_CHART.map(r => r.size);
@@ -41,9 +46,9 @@ export const MAX_SHIRT_SIZE_LENGTH = 12;
  * A size as it gets stored.
  *
  * Uppercased because sizes are conventionally written that way and because the
- * upcharge test below has to recognise what the runner typed. Runners may type
- * a size the chart does not list — a 5XL, or a supplier's own code — so nothing
- * is rejected here.
+ * upcharge test below has to recognise the size. Runners now pick from the
+ * chart only, but older orders and admin edits may hold a size the chart does
+ * not list, so nothing is rejected here.
  */
 export function normalizeShirtSize(value: unknown): string {
   if (typeof value !== 'string') return '';

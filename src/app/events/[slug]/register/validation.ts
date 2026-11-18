@@ -21,6 +21,7 @@ import {
 } from "@/lib/runner-address";
 import {
   shouldAskShirtSize,
+  SHIRT_SIZES,
   type SizableCategory,
 } from "@/lib/shirt-size";
 
@@ -250,7 +251,15 @@ export function validateRunner(
 
   for (const field of requiredFieldsFor(participant, event)) {
     const value = participant[field];
-    if (typeof value === "string" ? value.trim() !== "" : Boolean(value)) {
+    const answered =
+      typeof value === "string" ? value.trim() !== "" : Boolean(value);
+    // A size has to be one off the chart. A draft saved back when the field
+    // still took typing may hold one that is not; it is asked again.
+    const offChart =
+      field === "singletSize" &&
+      typeof value === "string" &&
+      !SHIRT_SIZES.includes(value);
+    if (answered && !offChart) {
       continue;
     }
 

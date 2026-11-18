@@ -1,26 +1,20 @@
 "use client";
 
 import React, { useMemo } from 'react';
-import { Check, Ruler, Shirt } from 'lucide-react';
+import { Ruler, Shirt } from 'lucide-react';
 import { formatPesos } from '@/lib/money';
-import {
-  SHIRT_SIZE_CHART,
-  MAX_SHIRT_SIZE_LENGTH,
-  isUpchargeShirtSize,
-  normalizeShirtSize,
-} from '@/lib/shirt-size';
-import Combobox, { type ComboboxRow } from './Combobox';
+import { SHIRT_SIZE_CHART, isUpchargeShirtSize } from '@/lib/shirt-size';
+import SelectField, { type SelectOption } from './SelectField';
 
 /**
- * The shirt size a runner wants, from the chart or typed in.
+ * The shirt size a runner wants, picked from the chart: 3XS up to 5XL.
  *
  * Called "Shirt Size" rather than "Singlet Size" because a package may include
  * a singlet, a shirt, or both — and when it includes both, the runner takes the
  * same size in each, so there is only one question worth asking.
  *
- * Typing is allowed. The chart stops at 4XL, but suppliers run larger and a
- * runner who needs a 5XL should be able to say so rather than pick the closest
- * wrong answer and sort it out over Messenger later.
+ * No typing. Every answer is one the supplier's order form has a row for, so
+ * the size count the organizer orders from never carries a stray spelling.
  *
  * Only rendered when the chosen category actually includes something to wear —
  * see categoryNeedsShirtSize. A band-only package is never asked.
@@ -49,79 +43,33 @@ export default function ShirtSizeField({
    */
   showMeasurements?: boolean;
 }) {
-  const typed = normalizeShirtSize(value);
-
-  const rows = useMemo<ComboboxRow[]>(() => {
-    const matches = SHIRT_SIZE_CHART.filter(
-      row => !typed || row.size.startsWith(typed)
-    );
-
-    const listed: ComboboxRow[] = matches.map(row => {
-      const isSelected = row.size === typed;
-      const costsMore = upcharge > 0 && isUpchargeShirtSize(row.size);
-      return {
-        key: `size-${row.size}`,
-        value: row.size,
-        selected: isSelected,
-        label: (
-          <>
-            {isSelected ? (
-              <Check size={16} className="shrink-0 text-accent-orange" />
-            ) : (
-              <Shirt size={16} className="shrink-0 text-white/30" />
-            )}
-            <span className="font-medium w-12 shrink-0">{row.size}</span>
-            {showMeasurements && (
-              <span className="text-secondary text-xs">
-                {row.width}&quot; W &times; {row.length}&quot; L
-              </span>
-            )}
-            {costsMore && (
-              <span className="ml-auto text-xs text-accent-orange shrink-0">
-                +&#8369;{formatPesos(upcharge)}
-              </span>
-            )}
-          </>
-        ),
-      };
-    });
-
-    // A size the chart does not carry. Offered as its own row so that typing
-    // one reads as a supported answer rather than a mistake.
-    const isCustom =
-      typed.length > 0 && !SHIRT_SIZE_CHART.some(row => row.size === typed);
-    if (!isCustom) return listed;
-
-    return [
-      {
-        key: `custom-${typed}`,
-        value: typed,
-        emphasis: true,
-        label: (
-          <>
-            <Ruler size={16} className="shrink-0" />
-            <span className="truncate">
-              Use &ldquo;{typed}&rdquo; &mdash; size not on the chart
-            </span>
-          </>
-        ),
-      },
-      ...listed,
-    ];
-  }, [typed, upcharge, showMeasurements]);
+  const options = useMemo<SelectOption[]>(
+    () =>
+      SHIRT_SIZE_CHART.map(row => {
+        const parts = [row.size];
+        if (showMeasurements) parts.push(`${row.width}″ W × ${row.length}″ L`);
+        if (upcharge > 0 && isUpchargeShirtSize(row.size)) {
+          parts.push(`+₱${formatPesos(upcharge)}`);
+        }
+        return {
+          value: row.size,
+          label: parts.join(' · '),
+          icon: <Shirt size={16} />,
+        };
+      }),
+    [upcharge, showMeasurements]
+  );
 
   return (
-    <Combobox
+    <SelectField
       label="Shirt Size"
       listboxLabel="Shirt sizes"
       id={id}
       error={error}
       value={value}
-      rows={rows}
-      maxLength={MAX_SHIRT_SIZE_LENGTH}
-      placeholder="Select or type a size"
+      options={options}
+      placeholder="Select a size"
       onChange={onChange}
-      onNormalize={normalizeShirtSize}
       headerRight={
         <button
           type="button"
