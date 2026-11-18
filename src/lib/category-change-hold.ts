@@ -192,5 +192,12 @@ export function readTransactionNumber(raw: unknown): { value: string | null; err
   if (value.length > MAX_TRANSACTION_NUMBER) {
     return { value: null, error: `Keep the reference number to ${MAX_TRANSACTION_NUMBER} characters` };
   }
+  // The same test as `normalizeReference` (lib/payment-reference.ts R2), kept
+  // here because that module pulls in @prisma/client and this one runs in the
+  // browser. A value with no letter or digit ("---") normalizes to null, which
+  // would save the order with no reference to lock or check for duplicates.
+  if (!/[A-Za-z0-9]/.test(value)) {
+    return { value: null, error: 'The reference number needs at least one letter or digit' };
+  }
   return { value, error: null };
 }
