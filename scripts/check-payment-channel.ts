@@ -1,4 +1,4 @@
-import { asPaidTo, channelOf, normalizePaidTo } from '../src/lib/payment-channel';
+import { STAFF_PAID_TO_REQUIRED, asPaidTo, channelOf, normalizePaidTo, staffPaidTo } from '../src/lib/payment-channel';
 import { PAID_TO_REQUIRED, checkoutPaidTo } from '../src/lib/manual-checkout-form';
 
 /**
@@ -69,6 +69,15 @@ same('checkout unknown is refused', checkoutPaidTo('Maya', accounts), refused);
 same('checkout blank with one is that one', checkoutPaidTo('  ', [{ bankName: 'GCash' }]), { ok: true, value: 'GCash' });
 same('checkout unknown with one is refused', checkoutPaidTo('Maya', [{ bankName: 'GCash' }]), refused);
 same('checkout with no accounts is refused', checkoutPaidTo('GCash', []), refused);
+
+// staffPaidTo (Batch 3): what a staff-recorded payment stores.
+const staffRefused = { ok: false, error: STAFF_PAID_TO_REQUIRED };
+same('staff picks one of several', staffPaidTo('GCASH', accounts), { ok: true, value: 'GCash' });
+same('staff blank with several is refused', staffPaidTo('', accounts), staffRefused);
+same('staff unknown is refused', staffPaidTo('Maya', accounts), staffRefused);
+same('staff blank with one is that one', staffPaidTo(null, [{ bankName: ' GCash ' }]), { ok: true, value: 'GCash' });
+same('staff blank with none stays untagged', staffPaidTo('', []), { ok: true, value: null });
+same('staff named with none is refused', staffPaidTo('GCash', []), staffRefused);
 
 if (failures > 0) {
   console.error(`${failures} check(s) failed.`);

@@ -25,6 +25,7 @@ import { deliveryZoneLabelFor, paymentMethodLabel } from '@/lib/registration-cod
 import { deliveryTiers } from '@/app/events/[slug]/register/delivery';
 import ShipKitsAddress from './ship-kits-address';
 import { ProofPicker } from './CategoryChangePaymentChoice';
+import { PaidToSelect } from './paid-to';
 import type { ShipKitsState } from './useShipKits';
 
 const peso = (centavos: number) => `₱${formatPesos(centavos)}`;
@@ -251,7 +252,15 @@ export function PaymentChoice(props: Props) {
 }
 
 /** Already paid: the reference and the proof *Record payment* asks for, asked up front. */
-function AlreadyPaidFields({ transactionNumber, setTransactionNumber, proofFile, setProofFile, paidErrors }: Props) {
+function AlreadyPaidFields({
+  transactionNumber,
+  setTransactionNumber,
+  proofFile,
+  setProofFile,
+  paidTo,
+  setPaidTo,
+  paidErrors,
+}: Props) {
   return (
     <div className="mt-3 space-y-3 rounded-lg border border-[var(--dash-border)] p-3">
       <div className="space-y-1.5">
@@ -271,6 +280,7 @@ function AlreadyPaidFields({ transactionNumber, setTransactionNumber, proofFile,
         />
         <FieldError id="ship-kits-transaction-error" message={paidErrors.transactionNumber} />
       </div>
+      <PaidToSelect id="ship-kits-paid-to" value={paidTo} onChange={setPaidTo} error={paidErrors.paidTo} />
       <ProofPicker id="ship-kits-proof" file={proofFile} onChange={setProofFile} error={paidErrors.proofFile} />
     </div>
   );

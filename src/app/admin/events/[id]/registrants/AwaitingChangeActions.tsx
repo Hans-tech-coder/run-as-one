@@ -46,6 +46,8 @@ import type { RegistrantPermissions } from './RegistrantsTable';
 import type { AppliedChange } from './useCategoryChangeModal';
 import { ProofPicker } from './CategoryChangePaymentChoice';
 import { staffError } from './reference-held';
+import { PaidToSelect, paidToMissing, usePaidToPick } from './paid-to';
+import { STAFF_PAID_TO_REQUIRED } from '@/lib/payment-channel';
 
 /**
  * Validate Payment for an upgrade whose runner sent their proof on the link:
@@ -62,13 +64,21 @@ export function useValidateChange({
 }) {
   const { alert, toast } = useAlert();
   const [validating, setValidating] = useState(false);
+  // *Paid to* (PAYMENT_CHANNELS_PLAN.md Batch 3): the runner's pick, which the
+  // validator confirms against the proof or corrects.
+  const paidTo = usePaidToPick(change?.paidTo);
 
   const validate = async () => {
     if (!change?.transactionNumber) return;
+    if (paidToMissing(paidTo.accounts, paidTo.value)) {
+      await alert({ variant: 'error', title: 'Payment Not Validated', message: STAFF_PAID_TO_REQUIRED });
+      return;
+    }
     setValidating(true);
     try {
       const form = new FormData();
       form.set('transactionNumber', change.transactionNumber);
+      form.set('paidTo', paidTo.value);
       const res = await fetch(`/api/admin/category-changes/${change.id}/record-payment`, { method: 'POST', body: form });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -87,7 +97,7 @@ export function useValidateChange({
     }
   };
 
-  return { validating, validate };
+  return { validating, validate, paidTo };
 }
 
 function RecordPayment({
@@ -102,26 +112,33 @@ function RecordPayment({
   const { alert } = useAlert();
   const [reference, setReference] = useState('');
   const [proof, setProof] = useState<File | null>(null);
-  const [errors, setErrors] = useState<{ transactionNumber?: string; proofFile?: string }>({});
+  const paidTo = usePaidToPick(null);
+  const [errors, setErrors] = useState<{ transactionNumber?: string; proofFile?: string; paidTo?: string }>({});
   const [saving, setSaving] = useState(false);
   const fieldId = `change-payment-${change.id}`;
 
   const save = async () => {
     const checked = readTransactionNumber(reference);
-    if (checked.error) {
-      setErrors({ transactionNumber: checked.error });
+    const missing = paidToMissing(paidTo.accounts, paidTo.value);
+    if (checked.error || missing) {
+      setErrors({
+        ...(checked.error ? { transactionNumber: checked.error } : {}),
+        ...(missing ? { paidTo: STAFF_PAID_TO_REQUIRED } : {}),
+      });
       return;
     }
     setSaving(true);
     try {
       const form = new FormData();
       form.set('transactionNumber', reference);
+      form.set('paidTo', paidTo.value);
       if (proof) form.set('proofFile', await compressImage(proof, 'proof'));
       const res = await fetch(`/api/admin/category-changes/${change.id}/record-payment`, { method: 'POST', body: form });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        if (data?.field === 'transactionNumber' || data?.field === 'proofFile') setErrors({ [data.field]: data.error });
-        else await alert({ variant: 'error', title: 'Payment Not Recorded', message: staffError(data, 'Try again.') });
+        if (data?.field === 'transactionNumber' || data?.field === 'proofFile' || data?.field === 'paidTo') {
+          setErrors({ [data.field]: data.error });
+        } else await alert({ variant: 'error', title: 'Payment Not Recorded', message: staffError(data, 'Try again.') });
         return;
       }
       onRecorded(data as AppliedChange);
@@ -155,6 +172,15 @@ function RecordPayment({
         />
         <FieldError id={`${fieldId}-error`} message={errors.transactionNumber} />
       </div>
+      <PaidToSelect
+        id={`${fieldId}-paid-to`}
+        value={paidTo.value}
+        onChange={value => {
+          paidTo.setValue(value);
+          setErrors(current => ({ ...current, paidTo: undefined }));
+        }}
+        error={errors.paidTo}
+      />
       <ProofPicker id={`${fieldId}-proof`} file={proof} onChange={setProof} error={errors.proofFile} />
       <div className="flex gap-2 max-sm:flex-col">
         <button

@@ -17,6 +17,7 @@ import { formatPesos } from '@/lib/money';
 import { orderActivityPath } from '@/lib/activity';
 import { formatInstantDay } from '@/lib/event-schedule';
 import type { RegistrantPermissions, RegistrantRow } from './RegistrantsTable';
+import { paidToLabel } from './paid-to';
 import {
   DeliveryParcels,
   StatusProvenanceNote,
@@ -30,11 +31,14 @@ export default function RegistrantTransactionFields({
   orderRunners,
   eventId,
   permissions,
+  paidToField,
 }: {
   runner: RegistrantRow;
   orderRunners: RegistrantRow[];
   eventId: string;
   permissions: RegistrantPermissions;
+  /** Validate's *Paid to* picker, shown in place of the plain line while it is offered. */
+  paidToField?: React.ReactNode;
 }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
@@ -111,6 +115,18 @@ export default function RegistrantTransactionFields({
       {runner.isBankTransfer && runner.transactionNumber && (
         <p className="flex flex-col"><span className="text-[var(--text-muted)]">Transaction No.</span> <span className="text-primary font-medium">{runner.transactionNumber}</span></p>
       )}
+      {/* The account the transfer went into (PAYMENT_CHANNELS_PLAN.md D1).
+          Untagged on orders from before checkout asked; *Tag account* on
+          the row menu sets it. */}
+      {runner.isBankTransfer &&
+        (paidToField ?? (
+          <p className="flex flex-col">
+            <span className="text-[var(--text-muted)]">Paid to</span>
+            <span className={runner.paidTo ? 'text-primary font-medium' : 'text-[var(--text-muted)] italic'}>
+              {paidToLabel(runner.paidTo)}
+            </span>
+          </p>
+        ))}
       {/* The Transaction No. or proof was corrected after checkout
           (PAYMENT_CORRECTION_PLAN.md Batch 2); the old values are in the
           trail, so the line points there. */}

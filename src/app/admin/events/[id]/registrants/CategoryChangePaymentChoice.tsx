@@ -26,6 +26,7 @@ import {
   type ChangePaymentChoice,
 } from '@/lib/category-change-hold';
 import { paymentMethodLabel } from '@/lib/registration-codes';
+import { PaidToSelect } from './paid-to';
 
 const peso = (centavos: number) => `₱${formatPesos(centavos)}`;
 
@@ -41,6 +42,8 @@ export default function CategoryChangePaymentChoice({
   setTransactionNumber,
   proofFile,
   setProofFile,
+  paidTo,
+  setPaidTo,
   errors,
 }: {
   amount: number;
@@ -57,7 +60,10 @@ export default function CategoryChangePaymentChoice({
   setTransactionNumber: (value: string) => void;
   proofFile: File | null;
   setProofFile: (file: File | null) => void;
-  errors: { choice?: string; transactionNumber?: string; proofFile?: string };
+  /** *Already paid*: the account it went into (PAYMENT_CHANNELS_PLAN.md Batch 3). */
+  paidTo: string;
+  setPaidTo: (value: string) => void;
+  errors: { choice?: string; transactionNumber?: string; proofFile?: string; paidTo?: string };
 }) {
   const all: { value: ChangePaymentChoice; icon: React.ReactNode; title: string; hint: string }[] = [
     {
@@ -150,6 +156,7 @@ export default function CategoryChangePaymentChoice({
             />
             <FieldError id="category-change-transaction-error" message={errors.transactionNumber} />
           </div>
+          <PaidToSelect id="category-change-paid-to" value={paidTo} onChange={setPaidTo} error={errors.paidTo} />
           <ProofPicker id="category-change-proof" file={proofFile} onChange={setProofFile} error={errors.proofFile} />
         </div>
       )}

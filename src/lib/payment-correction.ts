@@ -28,6 +28,12 @@
  *   another live order, upgrade or switch is refused (`ReferenceInUseError`).
  * - **C8 — not a status change.** `status` is never written; marking PAID is
  *   still the validator's separate press.
+ * - **Paid to** (PAYMENT_CHANNELS_PLAN.md Batch 3) is correctable too: the
+ *   account a bank transfer went into, which must name one of the event's
+ *   accounts (`asPaidTo`, lib/payment-channel.ts). It is never cleared back
+ *   to null here. An untagged order is tagged without a reason or step-up
+ *   (`api/admin/registrations/[id]/paid-to`), but correcting one already
+ *   tagged goes through the same reason and step-up rules as the rest.
  *
  * Only the fields that actually change are written, and a correction that
  * changes nothing is refused rather than writing an empty trail line. The
@@ -42,6 +48,7 @@ import { claimReference } from './payment-reference';
 import { readTransactionNumber } from './category-change-hold';
 import { PAYMENT_METHODS, asPaymentMethod } from './registration-codes';
 import { CORRECTABLE_STATUSES, CORRECTION_REASON_MAX, isManualPaymentMethod } from './payment-correction-rules';
+import { asPaidTo, normalizePaidTo } from './payment-channel';
 
 // The client-safe half of the rule (no Prisma), re-exported so server code
 // keeps one import.
@@ -68,6 +75,10 @@ export type CorrectionInput = {
   proofPathname?: string | null;
   /** Raw from the form; undefined or blank means "leave it". */
   paymentMethod?: unknown;
+  /** Raw from the form; undefined or blank means "leave it". */
+  paidTo?: unknown;
+  /** The event's accounts, which a new `paidTo` must name one of. */
+  eventAccounts?: readonly { bankName: string }[];
   reason: unknown;
   /** The status the screen showed, when it sent one. */
   expectedStatus?: unknown;
@@ -82,6 +93,7 @@ export type LockedOrder = {
   paymentMethod: string;
   transactionNumber: string | null;
   proofOfPayment: string | null;
+  paidTo: string | null;
   eventId: string;
 };
 
@@ -133,7 +145,7 @@ export function refusalFor(
 /** Lock the order row and read what a correction needs. */
 export async function lockOrder(tx: Prisma.TransactionClient, registrationId: string): Promise<LockedOrder | null> {
   const rows = await tx.$queryRaw<LockedOrder[]>(
-    Prisma.sql`SELECT "id", "orderRef", "status", "paymentMethod", "transactionNumber", "proofOfPayment", "eventId"
+    Prisma.sql`SELECT "id", "orderRef", "status", "paymentMethod", "transactionNumber", "proofOfPayment", "paidTo", "eventId"
       FROM "Registration" WHERE "id" = ${registrationId} FOR UPDATE`,
   );
   return rows[0] ?? null;
@@ -160,6 +172,7 @@ export async function correctPayment(
     transactionRef?: string | null;
     proofOfPayment?: string;
     paymentMethod?: string;
+    paidTo?: string;
   } = {};
   const changes: AuditChanges = {};
 
@@ -199,16 +212,31 @@ export async function correctPayment(
     }
   }
 
+  if (normalizePaidTo(input.paidTo)) {
+    const paidTo = asPaidTo(input.paidTo, input.eventAccounts ?? []);
+    if (!paidTo) throw new CorrectionRefused("Choose one of this race's accounts for Paid to.", 400);
+    if (paidTo !== order.paidTo) {
+      data.paidTo = paidTo;
+      changes.paidTo = [order.paidTo, paidTo];
+    }
+  }
+
   const fields = Object.keys(changes);
   if (fields.length === 0) {
-    throw new CorrectionRefused('Nothing would change. Enter a different reference number or attach a new proof.', 400);
+    throw new CorrectionRefused('Nothing would change. Enter a different reference number, attach a new proof or choose another account.', 400);
   }
 
   await tx.registration.update({ where: { id: order.id }, data });
 
   const what = fields
     .map(field =>
-      field === 'transactionNumber' ? 'Transaction No.' : field === 'proofOfPayment' ? 'proof of payment' : 'payment method',
+      field === 'transactionNumber'
+        ? 'Transaction No.'
+        : field === 'proofOfPayment'
+          ? 'proof of payment'
+          : field === 'paidTo'
+            ? 'account paid to'
+            : 'payment method',
     )
     .join(', ');
   await recordAudit(tx, actor, {

@@ -135,7 +135,7 @@ export type CreateSwitchInput = {
    * writes it, and no *payment needed* email is owed. The proof is already in
    * the private store; the caller deletes it if this throws.
    */
-  paidOutside?: { transactionNumber: string; proofPathname: string | null } | null;
+  paidOutside?: { transactionNumber: string; proofPathname: string | null; paidTo: string | null } | null;
 };
 
 /**
@@ -242,6 +242,8 @@ export async function createLogisticsChange(actor: AuditActor, input: CreateSwit
         transactionNumber: paid?.transactionNumber ?? null,
         transactionRef,
         proofOfPayment: paid?.proofPathname ?? null,
+        // The account it went into (PAYMENT_CHANNELS_PLAN.md Batch 3).
+        paidTo: paid?.paidTo ?? null,
         holdUntil,
         reason: input.reason?.trim() || null,
         createdBy: by(actor),
@@ -290,7 +292,7 @@ export async function createLogisticsChange(actor: AuditActor, input: CreateSwit
       await recordAudit(tx, actor, {
         ...trail,
         action: 'logistics_change.applied',
-        summary: `Switched ${which} from pickup to delivery to ${whereTo(quote)} (${change.changeRef}): ${peso(change.totalCharged)} already paid by ${paymentMethodLabel(change.paymentMethod)}, reference ${paid.transactionNumber}, recorded as the switch was made.`,
+        summary: `Switched ${which} from pickup to delivery to ${whereTo(quote)} (${change.changeRef}): ${peso(change.totalCharged)} already paid by ${paymentMethodLabel(change.paymentMethod)}, reference ${paid.transactionNumber}${paid.paidTo ? `, paid to ${paid.paidTo}` : ''}, recorded as the switch was made.`,
         changes: {
           ...changes,
           status: change.status,
@@ -299,6 +301,7 @@ export async function createLogisticsChange(actor: AuditActor, input: CreateSwit
           totalCharged: change.totalCharged,
           transactionFee: change.transactionFee,
           transactionNumber: paid.transactionNumber,
+          ...(paid.paidTo ? { paidTo: paid.paidTo } : {}),
           ...(paid.proofPathname ? { proofOfPayment: 'attached' } : {}),
         },
       });

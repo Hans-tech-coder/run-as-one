@@ -75,6 +75,8 @@ export default function CategoryChangeModal({
   setTransactionNumber,
   proofFile,
   setProofFile,
+  paidTo,
+  setPaidTo,
   paymentErrors,
   onClose,
   onSave,
@@ -255,6 +257,8 @@ export default function CategoryChangeModal({
                   setTransactionNumber={setTransactionNumber}
                   proofFile={proofFile}
                   setProofFile={setProofFile}
+                  paidTo={paidTo}
+                  setPaidTo={setPaidTo}
                   errors={paymentErrors}
                 />
               )}

@@ -40,6 +40,7 @@ import type { RegistrantPermissions } from './RegistrantsTable';
 import { changeMoneyLine, kitSummary } from './category-change-display';
 import AwaitingChangeActions from './AwaitingChangeActions';
 import ProofLightbox from './ProofLightbox';
+import { PaidToSelect, paidToLabel } from './paid-to';
 import ProofPreview from './ProofPreview';
 import type { AppliedChange } from './useCategoryChangeModal';
 import { formatEventInstant } from '@/lib/event-schedule';
@@ -150,7 +151,13 @@ export default function CategoryChangeHistory({
    * (one at most, D10), held by the modal so its footer, the card and the
    * full-screen viewer share one press.
    */
-  validation: { change: CategoryChangeView | null; validating: boolean; validate: () => void };
+  validation: {
+    change: CategoryChangeView | null;
+    validating: boolean;
+    validate: () => void;
+    /** The validator's *Paid to* pick, which Validate sends (PAYMENT_CHANNELS_PLAN.md Batch 3). */
+    paidTo: { value: string; setValue: (next: string) => void };
+  };
 }) {
   // The change whose screenshot is open full screen.
   const [proofOf, setProofOf] = useState<CategoryChangeView | null>(null);
@@ -220,12 +227,28 @@ export default function CategoryChangeHistory({
                   <ProofPreview src={proofSrc(change)} isPdf={change.proofIsPdf} onOpen={() => setProofOf(change)} />
                 </div>
               )}
+              {/* Paid to, confirmed or corrected against the proof before Validate. */}
+              {canValidate && change.id === waiting?.id && (
+                <div className="pt-1">
+                  <PaidToSelect
+                    id={`change-paid-to-${change.id}`}
+                    value={validation.paidTo.value}
+                    onChange={validation.paidTo.setValue}
+                    hint={
+                      change.paidTo
+                        ? `The runner chose ${change.paidTo}. Change it if the proof shows another account.`
+                        : 'The runner did not say. Pick the account the proof shows.'
+                    }
+                  />
+                </div>
+              )}
               {hasMoved(change.status) && change.totalCharged > 0 && method && (
                 <p className="m-0 text-xs text-secondary flex items-center gap-2 flex-wrap">
                   <span>
                     Paid by {method}
                     {change.transactionFee > 0 ? ` (₱${formatPesos(change.transactionFee)} transaction fee)` : ''}
                     {change.transactionNumber ? ` · ref ${change.transactionNumber}` : ''}
+                    {isOutsidePayment(change.paymentMethod) ? ` · paid to ${paidToLabel(change.paidTo)}` : ''}
                   </span>
                   {change.hasProof && permissions.proof && (
                     <button
@@ -300,6 +323,13 @@ export default function CategoryChangeHistory({
           isPdf={proofOf.proofIsPdf}
           canValidate={canValidate && proofOf.id === waiting?.id}
           isValidating={validation.validating}
+          paidTo={
+            !isOutsidePayment(proofOf.paymentMethod)
+              ? undefined
+              : canValidate && proofOf.id === waiting?.id
+                ? { value: validation.paidTo.value, onChange: validation.paidTo.setValue }
+                : { value: proofOf.paidTo }
+          }
           onValidate={() => {
             setProofOf(null);
             validation.validate();

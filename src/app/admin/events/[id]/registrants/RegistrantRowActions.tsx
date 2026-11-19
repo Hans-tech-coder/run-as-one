@@ -18,6 +18,7 @@ import RegistrantActionsMenu from './RegistrantActionsMenu';
 import type { RegistrantPermissions, RegistrantRow } from './RegistrantsTable';
 import type { OrderSwitchMenu } from './useOrderSwitch';
 import type { CategoryChangesMenu } from './useCategoryChanges';
+import { usePaidToAccounts } from './paid-to';
 
 export type RegistrantRowActionHandlers = {
   permissions: RegistrantPermissions;
@@ -41,6 +42,8 @@ export type RegistrantRowActionHandlers = {
   onLogisticsDetails: (registrationId: string) => void;
   /** Opens Correct payment (PAYMENT_CORRECTION_PLAN.md Batch 2). */
   onCorrectPayment: (runnerId: string) => void;
+  /** Opens Tag account (PAYMENT_CHANNELS_PLAN.md D3). */
+  onTagAccount: (runnerId: string) => void;
   /** Opens Refund runner (REFUND_PLAN.md). */
   onRefund: (runnerId: string) => void;
 };
@@ -65,8 +68,10 @@ export default function RegistrantRowActions({
   onSwitchLogistics,
   onLogisticsDetails,
   onCorrectPayment,
+  onTagAccount,
   onRefund,
 }: RegistrantRowActionHandlers & { runner: RegistrantRow; layout: 'table' | 'card' }) {
+  const accounts = usePaidToAccounts();
   // A different icon, not just a different colour: colour alone is the one
   // signal a colour-blind organizer cannot read.
   const remarksIcon = runner.remarks
@@ -103,6 +108,8 @@ export default function RegistrantRowActions({
       canValidate={permissions.validate}
       canCorrectPayment={permissions.correctPayment && runner.isManualPayment === true}
       onCorrectPayment={onCorrectPayment}
+      canTagAccount={permissions.validate && runner.isBankTransfer === true && !runner.paidTo && accounts.length > 0}
+      onTagAccount={onTagAccount}
       canRefund={permissions.refund}
       onRefund={onRefund}
     />

@@ -24,6 +24,7 @@ import { can, reachableEvents, type Actor } from './actor';
 import { mostRecentFirst } from './event-schedule';
 import { CATEGORY_CHANGE_STATUSES } from './category-change';
 import { LOGISTICS_CHANGE_STATUSES } from './logistics-change';
+import { PAYMENT_METHODS } from './registration-codes';
 import { ACTIVE_REFUND_STATUSES, REFUND_PAID_BY, REFUND_STATUSES } from './refund';
 import {
   NO_CHANGES,
@@ -37,6 +38,7 @@ import {
   type Settlement,
   type SwitchTotals,
 } from './settlement';
+import { channelBreakdown, type ChannelGroup } from './settlement-channels';
 
 /**
  * The category change statuses settlement reads: the runner has moved. An
@@ -222,7 +224,7 @@ export async function eventSettlement(actor: Actor, eventId: string) {
     return null;
   }
 
-  const [settlementOf, parts, remittances] = await Promise.all([
+  const [settlementOf, parts, remittances, channels] = await Promise.all([
     totalsByEvent([event.id]),
     // What the organizer's share is made of, for the breakdown panel. The
     // balance never reads these; they only explain it.
@@ -234,11 +236,14 @@ export async function eventSettlement(actor: Actor, eventId: string) {
       where: { eventId: event.id },
       orderBy: [{ paidOn: 'desc' }, { createdAt: 'desc' }],
     }),
+    channelGroups(event.id),
   ]);
 
+  const settlement = settlementOf(event.id);
   return {
     event: { id: event.id, title: event.title, date: event.date, clientName: event.client?.name ?? null },
-    settlement: settlementOf(event.id),
+    settlement,
+    channels: channelBreakdown(channels.paid, channels.awaiting, settlement),
     parts: {
       entries: parts._sum.subtotal ?? 0,
       discounts: parts._sum.discountAmount ?? 0,
@@ -261,6 +266,91 @@ export async function eventSettlement(actor: Actor, eventId: string) {
       voidReason: row.voidReason,
     })),
   };
+}
+
+/**
+ * The rows `channelBreakdown` folds, for one race (PAYMENT_CHANNELS_PLAN.md
+ * Batch 4): three grouped queries, by method and account, in the same
+ * `Promise.all` as the rest of the page's reads — no extra round trip, no
+ * poll. Each reads the **same rows `totalsByEvent` sums** (PAID orders, moved
+ * changes on a PAID order, APPLIED switches with a charge on a PAID order),
+ * so the breakdown ties to the settlement (D7), plus the unvalidated bank
+ * transfers (D6): a PENDING order not deleted (the validation queue's own
+ * rule), an upgrade or a switch AWAITING_PAYMENT with proof sent.
+ */
+async function channelGroups(eventId: string): Promise<{ paid: ChannelGroup[]; awaiting: ChannelGroup[] }> {
+  const pendingTransfer = {
+    status: CATEGORY_CHANGE_STATUSES.AWAITING_PAYMENT,
+    paymentMethod: PAYMENT_METHODS.BANK_TRANSFER,
+    proofOfPayment: { not: null },
+  };
+  const [orders, changes, switches] = await Promise.all([
+    prisma.registration.groupBy({
+      by: ['status', 'paymentMethod', 'paidTo'],
+      where: {
+        eventId,
+        OR: [
+          { status: 'PAID' },
+          {
+            status: 'PENDING',
+            deletedAt: null,
+            paymentMethod: { equals: PAYMENT_METHODS.BANK_TRANSFER, mode: 'insensitive' },
+          },
+        ],
+      },
+      _count: { _all: true },
+      _sum: { totalAmount: true, transactionFee: true },
+    }),
+    prisma.categoryChange.groupBy({
+      by: ['status', 'paymentMethod', 'paidTo'],
+      where: {
+        eventId,
+        OR: [{ status: { in: MOVED_CHANGE_STATUSES }, registration: { status: 'PAID' } }, pendingTransfer],
+      },
+      _count: { _all: true },
+      _sum: { totalCharged: true, transactionFee: true },
+    }),
+    prisma.logisticsChange.groupBy({
+      by: ['status', 'paymentMethod', 'paidTo'],
+      where: {
+        eventId,
+        OR: [
+          {
+            status: LOGISTICS_CHANGE_STATUSES.APPLIED,
+            totalCharged: { gt: 0 },
+            orders: { some: { registration: { status: 'PAID' } } },
+          },
+          pendingTransfer,
+        ],
+      },
+      _count: { _all: true },
+      _sum: { totalCharged: true, transactionFee: true },
+    }),
+  ]);
+
+  const paid: ChannelGroup[] = [];
+  const awaiting: ChannelGroup[] = [];
+  for (const row of orders) {
+    const group = {
+      paymentMethod: row.paymentMethod,
+      paidTo: row.paidTo,
+      count: row._count._all,
+      gross: row._sum.totalAmount ?? 0,
+      transactionFees: row._sum.transactionFee ?? 0,
+    };
+    (row.status === 'PAID' ? paid : awaiting).push(group);
+  }
+  for (const row of [...changes, ...switches]) {
+    const group = {
+      paymentMethod: row.paymentMethod,
+      paidTo: row.paidTo,
+      count: row._count._all,
+      gross: row._sum.totalCharged ?? 0,
+      transactionFees: row._sum.transactionFee ?? 0,
+    };
+    (row.status === CATEGORY_CHANGE_STATUSES.AWAITING_PAYMENT ? awaiting : paid).push(group);
+  }
+  return { paid, awaiting };
 }
 
 export type EventSettlementDetail = NonNullable<Awaited<ReturnType<typeof eventSettlement>>>;

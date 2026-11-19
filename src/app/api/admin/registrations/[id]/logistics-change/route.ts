@@ -46,6 +46,8 @@ import { createLogisticsChange } from '@/lib/logistics-change-store';
 import { readLogisticsChangeView } from '@/lib/logistics-change-view';
 import { LOGISTICS_CHANGE_STATUSES } from '@/lib/logistics-change';
 import { deliverSwitchEmail } from '@/lib/logistics-change-payment';
+import { staffPaidTo } from '@/lib/payment-channel';
+import db from '@/lib/db';
 
 /** The longest "what the runner asked for" kept, a sentence or two. */
 const MAX_REASON = 300;
@@ -57,6 +59,7 @@ type Body = {
   paymentChoice?: unknown;
   transactionNumber?: unknown;
   proofFile?: unknown;
+  paidTo?: unknown;
 };
 
 /** JSON from the panel, or a form when an already-paid switch carries its proof. */
@@ -71,6 +74,7 @@ async function readBody(request: Request): Promise<Body> {
       paymentChoice: form.get('paymentChoice') ?? undefined,
       transactionNumber: form.get('transactionNumber') ?? undefined,
       proofFile: form.get('proofFile') ?? undefined,
+      paidTo: form.get('paidTo') ?? undefined,
     };
   }
   return ((await request.json().catch(() => null)) ?? {}) as Body;
@@ -106,7 +110,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       );
     }
 
-    let paidOutside: { transactionNumber: string; proofPathname: string | null } | null = null;
+    let paidOutside: { transactionNumber: string; proofPathname: string | null; paidTo: string | null } | null = null;
     if (choice === CHANGE_PAYMENT_CHOICES.OUTSIDE_PAID) {
       if (!can(actor, 'registration:validate', reach)) {
         return NextResponse.json(
@@ -118,12 +122,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       if (reference.error || !reference.value) {
         return NextResponse.json({ error: reference.error, field: 'transactionNumber' }, { status: 400 });
       }
+      // The account it went into (PAYMENT_CHANNELS_PLAN.md Batch 3).
+      const accounts = await db.bankAccount.findMany({ where: { eventId: reach.eventId }, select: { bankName: true } });
+      const paidTo = staffPaidTo(body.paidTo, accounts);
+      if (!paidTo.ok) return NextResponse.json({ error: paidTo.error, field: 'paidTo' }, { status: 400 });
       // Uploaded before the switch exists, so the store can write it applied in
       // one transaction; deleted again below if anything refuses.
       if (body.proofFile instanceof File && body.proofFile.size > 0) {
         unclaimedProof = await uploadPrivateProof(body.proofFile);
       }
-      paidOutside = { transactionNumber: reference.value, proofPathname: unclaimedProof };
+      paidOutside = { transactionNumber: reference.value, proofPathname: unclaimedProof, paidTo: paidTo.value };
     }
 
     const change = await createLogisticsChange(actor, {

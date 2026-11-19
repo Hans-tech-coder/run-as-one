@@ -66,6 +66,29 @@ export function asPaidTo(
   return match ? tidy(match.bankName) : null;
 }
 
+/** The field error a staff record answers with when no account was chosen. */
+export const STAFF_PAID_TO_REQUIRED = 'Choose the account the payment went into.';
+
+/**
+ * The `paidTo` a **staff-recorded** bank payment stores (Batch 3: *Record
+ * payment*, *Already paid*, and Validate Payment on an upgrade or a switch),
+ * or the field error. The same rule as the runner's (`checkoutPaidTo`): one
+ * of this event's accounts, required when it has several, that one when it
+ * has one. An event that lists no account at all records none (*Untagged*),
+ * so a payment staff saw land is never refused for a missing account.
+ */
+export function staffPaidTo(
+  value: unknown,
+  eventAccounts: readonly { bankName: string }[],
+): { ok: true; value: string | null } | { ok: false; error: string } {
+  const named = asPaidTo(value, eventAccounts);
+  if (named) return { ok: true, value: named };
+  const blank = !normalizePaidTo(value);
+  if (blank && eventAccounts.length === 0) return { ok: true, value: null };
+  if (blank && eventAccounts.length === 1) return { ok: true, value: tidy(eventAccounts[0].bankName) };
+  return { ok: false, error: STAFF_PAID_TO_REQUIRED };
+}
+
 /** The channel a paid row's money came in through, or null for none (D4). */
 export function channelOf(row: {
   paymentMethod: string | null | undefined;

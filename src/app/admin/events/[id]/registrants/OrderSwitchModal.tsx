@@ -32,6 +32,7 @@ import type { Receipt } from '@/lib/logistics-receipts';
 import type { LogisticsChangeView } from '@/lib/logistics-change-view';
 import { openSwitch } from './logistics-change-display';
 import ProofLightbox from './ProofLightbox';
+import { PaidToSelect } from './paid-to';
 import ProofPreview from './ProofPreview';
 import { SwitchHistoryList } from './SwitchHistory';
 import WaitingSwitchActions, {
@@ -133,7 +134,7 @@ export default function OrderSwitchModal({
   const lines = shipsToLines(receipt);
   const runners = receipt.runners.length;
   const canValidate = permissions.validate && !!waiting?.proofSubmitted;
-  const { validating, validate } = useValidateSwitch({
+  const { validating, validate, paidTo } = useValidateSwitch({
     change: waiting,
     orderRef: receipt.orderRef,
     onValidated: () => {
@@ -194,6 +195,19 @@ export default function OrderSwitchModal({
               <WaitingSwitch change={waiting} />
               {permissions.proof && waiting.proofSubmitted && (
                 <ProofPreview src={proofSrc(waiting)} isPdf={waiting.proofIsPdf} onOpen={() => setProofOf(waiting)} />
+              )}
+              {/* Paid to, confirmed or corrected against the proof before Validate. */}
+              {canValidate && (
+                <PaidToSelect
+                  id={`switch-paid-to-${waiting.id}`}
+                  value={paidTo.value}
+                  onChange={paidTo.setValue}
+                  hint={
+                    waiting.paidTo
+                      ? `The runner chose ${waiting.paidTo}. Change it if the proof shows another account.`
+                      : 'The runner did not say. Pick the account the proof shows.'
+                  }
+                />
               )}
               <WaitingSwitchActions
                 change={waiting}
@@ -258,6 +272,13 @@ export default function OrderSwitchModal({
           isPdf={proofOf.proofIsPdf}
           canValidate={canValidate && proofOf.id === waiting?.id}
           isValidating={validating}
+          paidTo={
+            !isOutsidePayment(proofOf.paymentMethod)
+              ? undefined
+              : canValidate && proofOf.id === waiting?.id
+                ? { value: paidTo.value, onChange: paidTo.setValue }
+                : { value: proofOf.paidTo }
+          }
           onValidate={validate}
           onClose={() => setProofOf(null)}
         />

@@ -64,8 +64,10 @@ export type PaymentCorrected = {
 function paymentCorrectedRow(row: RegistrantRow, saved: PaymentCorrected): RegistrantRow {
   const ref = saved.changes.transactionNumber?.[1];
   const proof = saved.changes.proofOfPayment?.[1];
+  const paidTo = saved.changes.paidTo?.[1];
   return {
     ...row,
+    ...(typeof paidTo === 'string' ? { paidTo } : {}),
     ...(typeof ref === 'string' ? { transactionNumber: ref } : {}),
     ...(typeof proof === 'string' ? { proofOfPayment: proof, proofIsPdf: isPdfProof(proof) } : {}),
     paymentCorrection: { by: saved.by, at: saved.at },

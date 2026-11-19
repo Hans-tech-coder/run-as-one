@@ -177,7 +177,12 @@ export async function retireChangePage(change: { changeRef: string; checkoutSess
 }
 
 /** What staff record for a payment made outside the app. */
-export type OutsidePayment = { transactionNumber: string; proofPathname: string | null };
+export type OutsidePayment = {
+  transactionNumber: string;
+  proofPathname: string | null;
+  /** The account it went into, already checked by `staffPaidTo` (PAYMENT_CHANNELS_PLAN.md Batch 3). */
+  paidTo: string | null;
+};
 
 /**
  * A GCash or bank payment staff saw land, recorded against an awaiting
@@ -224,6 +229,7 @@ export async function recordChangePayment(actor: AuditActor, changeId: string, p
       paymentMethod: PAYMENT_METHODS.BANK_TRANSFER,
       transactionNumber: payment.transactionNumber,
       ...(payment.proofPathname ? { proofOfPayment: payment.proofPathname } : {}),
+      paidTo: payment.paidTo,
       transactionFee: 0,
       totalCharged: change.amount,
     },

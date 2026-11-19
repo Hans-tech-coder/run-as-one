@@ -10,6 +10,7 @@ import { SETTLEMENT_STATE_COPY, formatSignedPesos } from '@/lib/settlement';
 import AdminNotFound from '../../AdminNotFound';
 import SettlementBadge from '../SettlementBadge';
 import SettlementClient from './SettlementClient';
+import ChannelBreakdownPanel from './ChannelBreakdownPanel';
 import DashboardHeader from '@/app/admin/DashboardHeader';
 
 export const metadata: Metadata = {
@@ -47,7 +48,7 @@ export default async function Page({ params }: { params: Promise<{ eventId: stri
     return <AdminNotFound {...SETTLEMENT_NOT_FOUND} />;
   }
 
-  const { event, settlement, parts, remittances } = detail;
+  const { event, settlement, parts, remittances, channels } = detail;
   const changes = settlement.changes;
   const switches = settlement.switches;
   const addOns = settlement.addOns;
@@ -85,6 +86,10 @@ export default async function Page({ params }: { params: Promise<{ eventId: stri
             icon={<Landmark size={20} />}
           />
         </div>
+
+        {/* Where the money came in (PAYMENT_CHANNELS_PLAN.md Batch 4). It ends on
+            the same *Collected from runners* the breakdown below starts from. */}
+        <ChannelBreakdownPanel eventId={event.id} breakdown={channels} />
 
         <div className="admin-panel mb-8">
           <div className="admin-panel-header">

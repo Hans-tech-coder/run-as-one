@@ -45,7 +45,8 @@ import RegistrantsToolbar, { useRegistrantQueues } from './RegistrantsToolbar';
 import RemarksModal, { useRemarksModal } from './RemarksModal';
 import ManualEmailModal, { useManualEmailModal } from './ManualEmailModal';
 import { paymentCorrected, remarked, withEmailMark, withPaymentCorrection, withRemarks } from './registrant-row-patches';
-import { usePaymentCorrection } from './PaymentCorrectionModal';
+import { usePaymentCorrection } from './usePaymentCorrection';
+import { useTagAccount } from './TagAccountModal';
 import { useRunnerRefund } from './RunnerRefundModal';
 import CategoryChangeModal from './CategoryChangeModal';
 import { useCategoryChangeModal } from './useCategoryChangeModal';
@@ -143,7 +144,7 @@ export default function RegistrantsTable({
   const [proofRunner, setProofRunner] = useState<any | null>(null);
 
   // Validate Payment from the menu, the detail modal or the lightbox.
-  const { updatingId, handleStatusChange, validatePayment } = usePaymentStatus({
+  const { updatingId, handleStatusChange, validatePayment, paidToFor, pickPaidTo } = usePaymentStatus({
     setRunners,
     setViewingRunner,
     setProofRunner,
@@ -215,6 +216,19 @@ export default function RegistrantsTable({
     },
   });
 
+  // Tag account (PAYMENT_CHANNELS_PLAN.md D3): the account is the order's, so
+  // every one of its rows takes it, and the open detail modal too.
+  const tagAccount = useTagAccount({
+    runners,
+    canViewProof: permissions.proof,
+    onTagged: (registrationId, paidTo) => {
+      const tag = (row: RegistrantRow | null) =>
+        row && row.registrationId === registrationId ? { ...row, paidTo } : row;
+      setRunners(current => current.map(tag));
+      setViewingRunner(tag);
+    },
+  });
+
   // Refund runner (REFUND_PLAN.md): saving re-reads the page, which takes the
   // runner off this list.
   const refund = useRunnerRefund({ runners });
@@ -262,6 +276,7 @@ export default function RegistrantsTable({
     onSwitchLogistics: orderSwitch.startSwitch,
     onLogisticsDetails: orderSwitch.showDetails,
     onCorrectPayment: correction.open,
+    onTagAccount: tagAccount.open,
     onRefund: refund.open,
   };
 
@@ -357,6 +372,8 @@ export default function RegistrantsTable({
           updatingId={updatingId}
           onClose={() => setViewingRunner(null)}
           onValidate={validatePayment}
+          paidTo={paidToFor(viewingRunner)}
+          onPickPaidTo={value => pickPaidTo(viewingRunner.registrationId, value)}
           onOpenProof={setProofRunner}
           onOpenRemarks={remarks.open}
           onOpenEmail={email.open}
@@ -377,6 +394,13 @@ export default function RegistrantsTable({
           canValidate={permissions.validate && canValidatePayment(proofRunner)}
           isValidating={updatingId === proofRunner.registrationId}
           onValidate={() => validatePayment(proofRunner)}
+          paidTo={
+            proofRunner.isBankTransfer
+              ? permissions.validate && canValidatePayment(proofRunner)
+                ? { value: paidToFor(proofRunner), onChange: value => pickPaidTo(proofRunner.registrationId, value) }
+                : { value: proofRunner.paidTo }
+              : undefined
+          }
           onClose={() => setProofRunner(null)}
         />
       )}
@@ -393,6 +417,7 @@ export default function RegistrantsTable({
       {orderSwitch.element}
       {categoryChanges.element}
       {correction.element}
+      {tagAccount.element}
       {refund.element}
       {categoryChange.changeEmail && (
         <CategoryChangeEmailModal

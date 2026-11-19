@@ -19,6 +19,7 @@ import { ADD_ON_LINES_READ } from '@/lib/add-ons';
 import { FIRST_MOVE } from '@/lib/paid-runners';
 import { refundsForEvent } from '@/lib/refund-store';
 import RefundsList from './RefundsList';
+import { PaidToAccountsProvider } from './paid-to';
 import DashboardHeader from '@/app/admin/DashboardHeader';
 
 export default async function RegistrantsPage({
@@ -53,6 +54,9 @@ export default async function RegistrantsPage({
   const found = await prisma.event.findFirst({
     where: { id, organizerId: actor.orgId },
     include: {
+      // The race's account names, for *Paid to* (PAYMENT_CHANNELS_PLAN.md
+      // Batch 3): validating, recording, correcting and tagging offer these.
+      bankAccounts: { select: { bankName: true }, orderBy: { sortOrder: 'asc' } },
       registrations: {
         // Registration order, oldest first — fixed here rather than left to
         // the database. Without an ordering Postgres is free to hand back rows
@@ -253,6 +257,9 @@ export default async function RegistrantsPage({
           refundCount={refunds?.filter(refund => refund.active).length ?? null}
           refunds={refunds ? <RefundsList refunds={refunds} /> : null}
           registrants={
+            // The race's account names for *Paid to* (PAYMENT_CHANNELS_PLAN.md
+            // Batch 3), read by the table's hooks and every modal that asks.
+            <PaidToAccountsProvider accounts={event.bankAccounts.map(account => account.bankName)}>
             <RegistrantsTable
               runners={runners}
               eventId={id}
@@ -262,6 +269,7 @@ export default async function RegistrantsPage({
               permissions={permissions}
               switching={switching}
             />
+            </PaidToAccountsProvider>
           }
           unpaid={
             <UnpaidCheckoutsList

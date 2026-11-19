@@ -57,6 +57,8 @@ export function logisticsChangeView(change: ChangeWithOrders) {
     // A recorded payment (Session 3). The proof's pathname stays on the
     // server; the screen asks the proof route for a signed URL.
     transactionNumber: change.transactionNumber,
+    /** The account a GCash or bank payment went into (PAYMENT_CHANNELS_PLAN.md D1); null is *Untagged*. */
+    paidTo: change.paidTo,
     hasProof: change.proofOfPayment !== null,
     /** A PDF receipt rather than a picture: the modal shows a card for it, the viewer a frame. */
     proofIsPdf: isPdfProof(change.proofOfPayment),

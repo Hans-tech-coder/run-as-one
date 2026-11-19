@@ -52,7 +52,7 @@ export default function CategoryChangesModal({
   // Validate Payment, once the runner sent GCash or bank proof on the link:
   // the footer, the card and the full-screen viewer share this one press.
   const proofIn = waiting?.proofSubmitted ? waiting : null;
-  const { validating, validate } = useValidateChange({
+  const { validating, validate, paidTo } = useValidateChange({
     change: proofIn,
     onValidated: result => onUpdated(result.change, result),
   });
@@ -102,7 +102,7 @@ export default function CategoryChangesModal({
             permissions={permissions}
             onUpdated={onUpdated}
             onSendEmail={onSendEmail}
-            validation={{ change: proofIn, validating, validate }}
+            validation={{ change: proofIn, validating, validate, paidTo }}
           />
         </div>
 

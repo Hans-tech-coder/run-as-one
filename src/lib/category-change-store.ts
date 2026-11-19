@@ -194,7 +194,7 @@ export async function createCategoryChange(actor: AuditActor, input: CreateChang
 export type AppliedPayment = Partial<
   Pick<
     Prisma.CategoryChangeUncheckedUpdateInput,
-    'paymentMethod' | 'checkoutSessionId' | 'proofOfPayment' | 'transactionNumber' | 'transactionFee' | 'totalCharged'
+    'paymentMethod' | 'checkoutSessionId' | 'proofOfPayment' | 'transactionNumber' | 'paidTo' | 'transactionFee' | 'totalCharged'
   >
 >;
 
@@ -235,7 +235,7 @@ export async function applyCategoryChange(
     const now = new Date();
     const before = await tx.categoryChange.findUniqueOrThrow({
       where: { id: changeId },
-      select: { status: true, holdUntil: true, toCategoryId: true, paymentMethod: true, proofOfPayment: true },
+      select: { status: true, holdUntil: true, toCategoryId: true, paymentMethod: true, proofOfPayment: true, paidTo: true },
     });
     if (before.status === CATEGORY_CHANGE_STATUSES.AWAITING_PAYMENT) {
       if (ctx.registration.status !== 'PAID') {
@@ -287,6 +287,7 @@ export async function applyCategoryChange(
     const how = [
       change.paymentMethod ? ` by ${paymentMethodLabel(change.paymentMethod)}` : '',
       change.transactionNumber ? `, reference ${change.transactionNumber}` : '',
+      change.paidTo ? `, paid to ${change.paidTo}` : '',
     ].join('');
     await recordAudit(tx, actor, {
       action: 'category_change.applied',
@@ -308,6 +309,12 @@ export async function applyCategoryChange(
         transactionFee: change.transactionFee,
         ...(change.paymentMethod ? { paymentMethod: change.paymentMethod } : {}),
         ...(change.transactionNumber ? { transactionNumber: change.transactionNumber } : {}),
+        // Before and after when the validator corrected the runner's pick.
+        ...(change.paidTo !== before.paidTo && before.paidTo
+          ? { paidTo: [before.paidTo, change.paidTo] }
+          : change.paidTo
+            ? { paidTo: change.paidTo }
+            : {}),
         ...(change.proofOfPayment ? { proofOfPayment: 'attached' } : {}),
       },
     });

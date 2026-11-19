@@ -21,6 +21,7 @@ import {
   Maximize2, FileText
 } from 'lucide-react';
 import BusyLabel from '@/components/ui/BusyLabel';
+import { PaidToSelect } from './paid-to';
 import type { RegistrantPermissions, RegistrantRow } from './RegistrantsTable';
 import RegistrantTransactionFields from './RegistrantTransactionFields';
 import RegistrantGuardianConsent from './RegistrantGuardianConsent';
@@ -39,6 +40,8 @@ export default function RegistrantDetailModal({
   updatingId,
   onClose,
   onValidate,
+  paidTo,
+  onPickPaidTo,
   onOpenProof,
   onOpenRemarks,
   onOpenEmail,
@@ -56,6 +59,9 @@ export default function RegistrantDetailModal({
   updatingId: string | null;
   onClose: () => void;
   onValidate: (runner: RegistrantRow) => void;
+  /** The validator's *Paid to* pick for this order (`usePaymentStatus`). */
+  paidTo: string;
+  onPickPaidTo: (value: string) => void;
   onOpenProof: (runner: RegistrantRow) => void;
   onOpenRemarks: (runnerId: string) => void;
   onOpenEmail: (runnerId: string) => void;
@@ -179,6 +185,24 @@ export default function RegistrantDetailModal({
                 orderRunners={orderRunners}
                 eventId={eventId}
                 permissions={permissions}
+                paidToField={
+                  // Asked where Validate is offered: the validator confirms
+                  // the runner's pick against the proof, or corrects it.
+                  permissions.validate && canValidatePayment(runner) && runner.isBankTransfer ? (
+                    <div className="sm:col-span-2">
+                      <PaidToSelect
+                        id="registrant-paid-to"
+                        value={paidTo}
+                        onChange={onPickPaidTo}
+                        hint={
+                          runner.paidTo
+                            ? `The runner chose ${runner.paidTo}. Change it if the proof shows another account.`
+                            : 'The runner did not say. Pick the account the proof shows.'
+                        }
+                      />
+                    </div>
+                  ) : undefined
+                }
               />
 
               {/* The validator's notes. Internal - this block has no

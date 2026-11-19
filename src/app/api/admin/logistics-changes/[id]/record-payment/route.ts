@@ -10,6 +10,10 @@
  * `registration:validate`, the permission that settles an order's money,
  * scoped to the switch's own race; a refusal reads like a missing switch.
  *
+ * **Paid to** (PAYMENT_CHANNELS_PLAN.md Batch 3): the account the money went
+ * into, one of the event's own (`staffPaidTo`). *Validate Payment* sends the
+ * runner's pick, or the validator's correction of it.
+ *
  * Sent as a form so the proof can ride along. The proof goes to the private
  * store (lib/blob.ts), already shrunk in the browser (lib/image-compress.ts),
  * and is checked there for type and size again; a write that fails after the
@@ -19,6 +23,7 @@
 import { NextResponse } from 'next/server';
 import { REFERENCE_INDEX_REFUSED, ReferenceInUseError, isReferenceIndexViolation } from '@/lib/payment-reference';
 import db from '@/lib/db';
+import { staffPaidTo } from '@/lib/payment-channel';
 import { can, getActor } from '@/lib/actor';
 import { deletePrivateFile, uploadPrivateProof, UploadError } from '@/lib/blob';
 import { readTransactionNumber } from '@/lib/category-change-hold';
@@ -49,6 +54,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (reference.error || !reference.value) {
       return NextResponse.json({ error: reference.error, field: 'transactionNumber' }, { status: 400 });
     }
+    const accounts = await db.bankAccount.findMany({ where: { eventId: reach.eventId }, select: { bankName: true } });
+    const paidTo = staffPaidTo(form.get('paidTo'), accounts);
+    if (!paidTo.ok) return NextResponse.json({ error: paidTo.error, field: 'paidTo' }, { status: 400 });
 
     // Checked before the upload, so a refusal costs no blob write.
     const current = await db.logisticsChange.findUnique({ where: { id }, select: { status: true } });
@@ -61,7 +69,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       unclaimedProof = await uploadPrivateProof(proof);
     }
 
-    await recordSwitchPayment(actor, id, { transactionNumber: reference.value, proofPathname: unclaimedProof });
+    await recordSwitchPayment(actor, id, {
+      transactionNumber: reference.value,
+      proofPathname: unclaimedProof,
+      paidTo: paidTo.value,
+    });
     unclaimedProof = null;
 
     const email = await deliverSwitchEmail(id, 'applied').catch(error => {

@@ -41,6 +41,8 @@ import type { RenderedEmail } from './email-handoff';
 import type { RegistrantRow } from './RegistrantsTable';
 import type { ChangeEmailRequest } from './CategoryChangeEmailModal';
 import { staffError } from './reference-held';
+import { initialPaidTo, paidToMissing, usePaidToAccounts } from './paid-to';
+import { STAFF_PAID_TO_REQUIRED } from '@/lib/payment-channel';
 
 /** Kept in step with the panel's closing transition (`.t-modal`). */
 const CLOSE_MS = 150;
@@ -134,7 +136,16 @@ export function useCategoryChangeModal({
   const [pickedChoice, setPickedChoice] = useState<ChangePaymentChoice | null>(null);
   const [transactionNumber, setTransactionNumber] = useState('');
   const [proofFile, setProofFile] = useState<File | null>(null);
-  const [paymentErrors, setPaymentErrors] = useState<{ choice?: string; transactionNumber?: string; proofFile?: string }>({});
+  // *Already paid*: the account it went into (PAYMENT_CHANNELS_PLAN.md Batch 3).
+  const paidToAccounts = usePaidToAccounts();
+  const [paidToPicked, setPaidToPicked] = useState('');
+  const paidTo = paidToPicked || initialPaidTo(null, paidToAccounts);
+  const [paymentErrors, setPaymentErrors] = useState<{
+    choice?: string;
+    transactionNumber?: string;
+    proofFile?: string;
+    paidTo?: string;
+  }>({});
 
   const load = async (runnerId: string) => {
     setLoadError('');
@@ -169,6 +180,7 @@ export function useCategoryChangeModal({
     setPickedChoice(null);
     setTransactionNumber('');
     setProofFile(null);
+    setPaidToPicked('');
     setPaymentErrors({});
     setIsOpen(true);
     void load(runnerId);
@@ -253,6 +265,7 @@ export function useCategoryChangeModal({
   const recordPayment = async (changeId: string): Promise<AppliedChange | { error: ReactNode }> => {
     const form = new FormData();
     form.set('transactionNumber', transactionNumber);
+    form.set('paidTo', paidTo);
     if (proofFile) form.set('proofFile', await compressImage(proofFile, 'proof'));
     try {
       const res = await fetch(`/api/admin/category-changes/${changeId}/record-payment`, { method: 'POST', body: form });
@@ -275,6 +288,7 @@ export function useCategoryChangeModal({
       if (paymentChoice === CHANGE_PAYMENT_CHOICES.OUTSIDE_PAID) {
         const reference = readTransactionNumber(transactionNumber);
         if (reference.error) errors.transactionNumber = reference.error;
+        if (paidToMissing(paidToAccounts, paidTo)) errors.paidTo = STAFF_PAID_TO_REQUIRED;
       }
       setPaymentErrors(errors);
       if (Object.keys(errors).length > 0) return;
@@ -396,6 +410,11 @@ export function useCategoryChangeModal({
       },
       proofFile,
       setProofFile,
+      paidTo,
+      setPaidTo: (value: string) => {
+        setPaidToPicked(value);
+        setPaymentErrors(errors => ({ ...errors, paidTo: undefined }));
+      },
       paymentErrors,
       onClose: close,
       onSave: save,

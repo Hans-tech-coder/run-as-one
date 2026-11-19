@@ -34,6 +34,8 @@ import { formatPesos } from '@/lib/money';
 import type { LogisticsChangeView } from '@/lib/logistics-change-view';
 import type { RenderedEmail } from './email-handoff';
 import { staffError } from './reference-held';
+import { paidToMissing, usePaidToPick } from './paid-to';
+import { STAFF_PAID_TO_REQUIRED } from '@/lib/payment-channel';
 
 /** What this person may do here, decided on the server. */
 export type SwitchPermissions = {
@@ -97,13 +99,21 @@ export function useValidateSwitch({
 }) {
   const { alert, toast } = useAlert();
   const [validating, setValidating] = useState(false);
+  // *Paid to* (PAYMENT_CHANNELS_PLAN.md Batch 3): the runner's pick, which the
+  // validator confirms against the proof or corrects.
+  const paidTo = usePaidToPick(change?.paidTo);
 
   const validate = async () => {
     if (!change?.transactionNumber) return;
+    if (paidToMissing(paidTo.accounts, paidTo.value)) {
+      await alert({ variant: 'error', title: 'Payment Not Validated', message: STAFF_PAID_TO_REQUIRED });
+      return;
+    }
     setValidating(true);
     try {
       const form = new FormData();
       form.set('transactionNumber', change.transactionNumber);
+      form.set('paidTo', paidTo.value);
       const res = await fetch(`/api/admin/logistics-changes/${change.id}/record-payment`, { method: 'POST', body: form });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -121,7 +131,7 @@ export function useValidateSwitch({
     }
   };
 
-  return { validating, validate };
+  return { validating, validate, paidTo };
 }
 
 export default function WaitingSwitchActions({

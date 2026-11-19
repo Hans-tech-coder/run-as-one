@@ -10,6 +10,10 @@
  * `registration:validate`, the permission that settles an order's money,
  * scoped to the change's own race; a refusal reads like a missing change.
  *
+ * **Paid to** (PAYMENT_CHANNELS_PLAN.md Batch 3): the account the money went
+ * into, one of the event's own (`staffPaidTo`). *Validate Payment* sends the
+ * runner's pick, or the validator's correction of it.
+ *
  * Sent as a form so the proof can ride along. The proof goes to the private
  * store (lib/blob.ts), already shrunk in the browser (lib/image-compress.ts),
  * and is checked there for type and size again; a write that fails after the
@@ -25,6 +29,7 @@ import { CategoryChangeRefused, findChangeReachById } from '@/lib/category-chang
 import { recordChangePayment } from '@/lib/category-change-payment';
 import { deliverAppliedEmail, readCategoryChangeView } from '@/lib/category-change-view';
 import db from '@/lib/db';
+import { staffPaidTo } from '@/lib/payment-channel';
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   let unclaimedProof: string | null = null;
@@ -48,6 +53,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (reference.error || !reference.value) {
       return NextResponse.json({ error: reference.error, field: 'transactionNumber' }, { status: 400 });
     }
+    const accounts = await db.bankAccount.findMany({ where: { eventId: reach.eventId }, select: { bankName: true } });
+    const paidTo = staffPaidTo(form.get('paidTo'), accounts);
+    if (!paidTo.ok) return NextResponse.json({ error: paidTo.error, field: 'paidTo' }, { status: 400 });
 
     // Checked before the upload, so a refusal costs no blob write.
     const current = await db.categoryChange.findUnique({ where: { id }, select: { status: true } });
@@ -66,6 +74,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const change = await recordChangePayment(actor, id, {
       transactionNumber: reference.value,
       proofPathname: unclaimedProof,
+      paidTo: paidTo.value,
     });
     unclaimedProof = null;
 

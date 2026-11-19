@@ -18,6 +18,10 @@
  * - The runner hears nothing unless the resend tick is on (C6, paid only).
  * - The amount and the status are never touched (C8).
  *
+ * - **Paid to** (PAYMENT_CHANNELS_PLAN.md Batch 3), the account a transfer
+ *   went into, is corrected the same way, from one of the race's accounts.
+ *   Never cleared back to Untagged.
+ *
  * Mounted while an order is picked (`usePaymentCorrection`), so each one
  * starts from its own values.
  */
@@ -37,6 +41,8 @@ import { statusPillClass } from './registrant-display';
 import type { RegistrantRow } from './RegistrantsTable';
 import type { PaymentCorrected } from './registrant-row-patches';
 import { staffError } from './reference-held';
+import { CorrectionPaidTo, usePaidToAccounts } from './paid-to';
+import { normalizePaidTo } from '@/lib/payment-channel';
 
 /** Kept in step with the panel's closing transition (`.t-modal`). */
 const CLOSE_MS = 150;
@@ -47,6 +53,7 @@ const MAX_REFERENCE = 100;
 const FIELD_LABELS: Record<string, string> = {
   transactionNumber: 'Transaction No.',
   proofOfPayment: 'proof of payment',
+  paidTo: 'account paid to',
 };
 
 /** "the Transaction No. and proof of payment", for the toast. */
@@ -75,6 +82,9 @@ export default function PaymentCorrectionModal({
 
   const [visible, setVisible] = useState(false);
   const [reference, setReference] = useState(currentRef);
+  const accounts = usePaidToAccounts();
+  const currentPaidTo: string = runner.paidTo ?? '';
+  const [paidTo, setPaidTo] = useState(currentPaidTo);
   const [proof, setProof] = useState<File | null>(null);
   const [reason, setReason] = useState('');
   const [resend, setResend] = useState(false);
@@ -139,7 +149,13 @@ export default function PaymentCorrectionModal({
 
   const trimmedRef = reference.trim();
   const refChanged = trimmedRef !== '' && trimmedRef !== currentRef;
-  const nothingToSave = !refChanged && !proof;
+  const paidToChanged = paidTo !== '' && normalizePaidTo(paidTo) !== normalizePaidTo(currentPaidTo);
+  const nothingToSave = !refChanged && !proof && !paidToChanged;
+  const changing = [
+    ...(refChanged ? ['transactionNumber'] : []),
+    ...(proof ? ['proofOfPayment'] : []),
+    ...(paidToChanged ? ['paidTo'] : []),
+  ];
 
   const submit = async (stepUpToken: string | null) => {
     setSaving(true);
@@ -150,6 +166,7 @@ export default function PaymentCorrectionModal({
       form.set('expectedStatus', runner.status);
       if (refChanged) form.set('transactionNumber', trimmedRef);
       if (proof) form.set('proofFile', proof);
+      if (paidToChanged) form.set('paidTo', paidTo);
       if (isPaid) {
         if (stepUpToken) form.set('stepUpToken', stepUpToken);
         if (resend) form.set('resendReceipt', 'true');
@@ -213,7 +230,7 @@ export default function PaymentCorrectionModal({
       return;
     }
     if (nothingToSave) {
-      setFormError('Nothing would change. Enter a different Transaction No. or attach a new proof.');
+      setFormError('Nothing would change. Enter a different Transaction No., attach a new proof or choose another account.');
       return;
     }
     if (isPaid) {
@@ -224,7 +241,7 @@ export default function PaymentCorrectionModal({
     const ok = await confirm({
       variant: 'info',
       title: 'Save the correction?',
-      message: `This replaces the ${correctedWords([...(refChanged ? ['transactionNumber'] : []), ...(proof ? ['proofOfPayment'] : [])])} on ${runner.orderRef}. The old values stay in the activity trail. Nothing is sent to the runner.`,
+      message: `This replaces the ${correctedWords(changing)} on ${runner.orderRef}. The old values stay in the activity trail. Nothing is sent to the runner.`,
       confirmLabel: 'Save correction',
     });
     if (ok) await submit(null);
@@ -269,8 +286,8 @@ export default function PaymentCorrectionModal({
           <div className="admin-modal-body p-6 max-sm:p-4 space-y-6 overflow-y-auto">
             {/* No m-0: it would cancel the space-y gap below this line. */}
             <p className="text-sm text-[var(--ink-85)]">
-              Fix a wrong Transaction No. or proof of payment. The amount and the status stay as they are,
-              and the old values stay in the activity trail.
+              Fix a wrong Transaction No., proof of payment or account paid to. The amount and the status stay
+              as they are, and the old values stay in the activity trail.
             </p>
 
             {/* Transaction No.: on file, then the field that replaces it. */}
@@ -375,6 +392,18 @@ export default function PaymentCorrectionModal({
               </div>
             </section>
 
+            {accounts.length > 0 && (
+              <CorrectionPaidTo
+                current={runner.paidTo}
+                value={paidTo}
+                onChange={value => {
+                  setPaidTo(value);
+                  setFormError('');
+                }}
+                changed={paidToChanged}
+              />
+            )}
+
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="min-w-0">
                 <p className="m-0 text-sm text-secondary">Payment method</p>
@@ -440,7 +469,7 @@ export default function PaymentCorrectionModal({
               className="btn-light"
               onClick={save}
               disabled={disabled}
-              title={nothingToSave ? 'Change the Transaction No. or attach a new proof first' : !reason.trim() ? 'Write the reason first' : undefined}
+              title={nothingToSave ? 'Change the Transaction No., the proof or the account first' : !reason.trim() ? 'Write the reason first' : undefined}
             >
               <ReceiptText size={16} aria-hidden="true" />
               {saving ? <BusyLabel>Saving</BusyLabel> : isPaid ? 'Confirm and save' : 'Save correction'}
@@ -476,34 +505,4 @@ export default function PaymentCorrectionModal({
       )}
     </>
   );
-}
-
-/**
- * The modal's state for the registrants table: which order is open, and the
- * rows it patches after a save.
- */
-export function usePaymentCorrection({
-  runners,
-  onCorrected,
-}: {
-  runners: RegistrantRow[];
-  onCorrected: (registrationId: string, saved: PaymentCorrected) => void;
-}) {
-  const [runnerId, setRunnerId] = useState<string | null>(null);
-  const runner = runnerId ? runners.find(r => r.id === runnerId) ?? null : null;
-  const contact = runner
-    ? runners.filter(r => r.registrationId === runner.registrationId).sort((a, b) => a.runnerNo - b.runnerNo)[0]
-    : null;
-
-  const element = runner ? (
-    <PaymentCorrectionModal
-      key={runner.registrationId}
-      runner={runner}
-      contactEmail={contact?.email ?? null}
-      onClose={() => setRunnerId(null)}
-      onCorrected={onCorrected}
-    />
-  ) : null;
-
-  return { open: setRunnerId, element };
 }

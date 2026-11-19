@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { X, ZoomIn, ZoomOut, RotateCw, Undo2, ExternalLink, CheckCircle } from 'lucide-react';
 import { formatPesos } from '@/lib/money';
 import BusyLabel from '@/components/ui/BusyLabel';
+import { PaidToSelect, paidToLabel } from './paid-to';
 
 /**
  * A deposit slip at the size a human can actually read it.
@@ -56,6 +57,7 @@ export default function ProofLightbox({
   canValidate = false,
   isValidating = false,
   onValidate,
+  paidTo,
   onClose,
 }: {
   /** The registration whose deposit slip this is, read through `/api/admin/proof/[id]`. */
@@ -74,6 +76,12 @@ export default function ProofLightbox({
   canValidate?: boolean;
   isValidating?: boolean;
   onValidate?: () => void;
+  /**
+   * *Paid to* (PAYMENT_CHANNELS_PLAN.md Batch 3), for a bank payment: the
+   * account it went into, read beside the proof that shows it. With
+   * `onChange` it is the validator's pick, which Validate sends.
+   */
+  paidTo?: { value: string | null; onChange?: (next: string) => void };
   onClose: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -179,6 +187,9 @@ export default function ProofLightbox({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') { requestClose(); return; }
+      // Keys pressed in the Paid to picker are the picker's: an arrow there
+      // moves through the accounts, not the image.
+      if (e.target instanceof Element && e.target.closest('[data-lightbox-field]')) return;
       // A PDF is the embedded viewer's to zoom and scroll; taking its keys
       // away would leave the reader unable to page through the document.
       if (isPdf) return;
@@ -442,6 +453,19 @@ export default function ProofLightbox({
             <span className="text-xs text-[var(--text-muted)]">Status</span>
             <span className="text-primary font-medium">{status}</span>
           </p>
+          {paidTo &&
+            (paidTo.onChange ? (
+              <div data-lightbox-field className="min-w-[12rem] max-sm:w-full text-sm">
+                <PaidToSelect id="proof-paid-to" value={paidTo.value ?? ''} onChange={paidTo.onChange} />
+              </div>
+            ) : (
+              <p className="flex flex-col m-0 text-sm">
+                <span className="text-xs text-[var(--text-muted)]">Paid to</span>
+                <span className={paidTo.value ? 'text-primary font-medium' : 'text-[var(--text-muted)] italic'}>
+                  {paidToLabel(paidTo.value)}
+                </span>
+              </p>
+            ))}
 
           <div className="ml-auto flex items-center gap-4 max-sm:ml-0 max-sm:w-full max-sm:flex-col max-sm:items-stretch max-sm:gap-3">
             {isPdf ? (

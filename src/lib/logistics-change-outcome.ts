@@ -65,6 +65,8 @@ export type AppliedSwitchPayment = {
   paymentMethod?: string;
   transactionNumber?: string | null;
   proofOfPayment?: string | null;
+  /** The account it went into (PAYMENT_CHANNELS_PLAN.md D1); staff's record only. */
+  paidTo?: string | null;
   transactionFee?: number;
   totalCharged?: number;
 };
@@ -103,7 +105,8 @@ export async function applyLogisticsChange(
 ) {
   const found = await db.logisticsChange.findUnique({
     where: { id: changeId },
-    select: { eventId: true, orders: { select: { registrationId: true } } },
+    // `paidTo` is the runner's pick, for the trail when staff corrected it.
+    select: { eventId: true, paidTo: true, orders: { select: { registrationId: true } } },
   });
   if (!found) throw new LogisticsChangeRefused(404, 'Delivery switch not found');
 
@@ -158,6 +161,7 @@ export async function applyLogisticsChange(
     const how = [
       change.paymentMethod ? ` by ${paymentMethodLabel(change.paymentMethod)}` : '',
       change.transactionNumber ? `, reference ${change.transactionNumber}` : '',
+      change.paidTo ? `, paid to ${change.paidTo}` : '',
     ].join('');
     await recordAudit(tx, actor, {
       action: 'logistics_change.applied',
@@ -173,6 +177,12 @@ export async function applyLogisticsChange(
         transactionFee: change.transactionFee,
         ...(change.paymentMethod ? { paymentMethod: change.paymentMethod } : {}),
         ...(change.transactionNumber ? { transactionNumber: change.transactionNumber } : {}),
+        // Before and after when the validator corrected the runner's pick.
+        ...(change.paidTo !== found.paidTo && found.paidTo
+          ? { paidTo: [found.paidTo, change.paidTo] }
+          : change.paidTo
+            ? { paidTo: change.paidTo }
+            : {}),
         ...(change.proofOfPayment ? { proofOfPayment: 'attached' } : {}),
       },
     });

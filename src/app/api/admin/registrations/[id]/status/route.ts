@@ -40,6 +40,14 @@
  * go of its Transaction No. (lib/payment-reference.ts R3), so moving it back
  * to PENDING, PAID or REFUNDED runs `claimReference`, and is refused with the
  * holder's reference when another live payment took it meanwhile.
+ *
+ * **Paid to** (PAYMENT_CHANNELS_PLAN.md D2, Batch 3): validating a bank
+ * transfer may send `paidTo`, the account the proof shows the money went into,
+ * to confirm or correct the runner's pick. It must name one of the event's
+ * accounts (`asPaidTo`); blank keeps what is stored. Sent with anything other
+ * than validating a bank transfer, it is refused. A later change of account is
+ * *Correct Payment*'s (lib/payment-correction.ts), or *Tag account* for an
+ * order that never had one.
  */
 
 import { NextResponse } from 'next/server';
@@ -54,6 +62,8 @@ import { AddOnStockError, retakeAddOnStock } from '@/lib/add-on-stock';
 import { EMAIL_RUNNER_INCLUDE } from '@/lib/email';
 import { ACTIVE_REFUND_STATUSES } from '@/lib/refund';
 import { consumeStepUp } from '@/lib/step-up';
+import { asPaidTo, normalizePaidTo } from '@/lib/payment-channel';
+import { isBankTransfer } from '@/lib/registration-codes';
 import {
   REFERENCE_INDEX_REFUSED,
   ReferenceInUseError,
@@ -124,7 +134,7 @@ export async function PATCH(
 
     const { id } = await params;
     const body = await request.json();
-    const { status, remarks, reason: rawReason, expectedStatus, stepUpToken } = body;
+    const { status, remarks, reason: rawReason, expectedStatus, stepUpToken, paidTo: rawPaidTo } = body;
 
     // Two independent edits down one route: a status change, a remark, or
     // both. Requiring one of them means an empty body cannot silently stamp a
@@ -158,7 +168,7 @@ export async function PATCH(
 
     const existing = await prisma.registration.findUnique({
       where: { id },
-      include: { event: { select: { organizerId: true } } },
+      include: { event: { select: { organizerId: true, bankAccounts: { select: { bankName: true } } } } },
     });
 
     if (!existing) {
@@ -187,14 +197,36 @@ export async function PATCH(
       );
     }
 
+    // The account, only while validating a bank transfer (see the header).
+    let paidTo: string | null = null;
+    if (normalizePaidTo(rawPaidTo)) {
+      const validating =
+        wantsStatus && status === 'PAID' && existing.status !== 'PAID' && isBankTransfer(existing.paymentMethod);
+      if (!validating) {
+        return NextResponse.json(
+          { error: 'Paid to is set only when validating a bank transfer. Use Correct Payment to change it later.', field: 'paidTo' },
+          { status: 400 }
+        );
+      }
+      paidTo = asPaidTo(rawPaidTo, existing.event.bankAccounts);
+      if (!paidTo) {
+        return NextResponse.json(
+          { error: "Choose one of this race's accounts for Paid to.", field: 'paidTo' },
+          { status: 400 }
+        );
+      }
+    }
+
     const data: {
       status?: string;
+      paidTo?: string;
       remarks?: string | null;
       remarksBy?: string | null;
       remarksAt?: Date | null;
     } = {};
 
     if (wantsStatus) data.status = status;
+    if (paidTo && paidTo !== existing.paidTo) data.paidTo = paidTo;
 
     if (wantsRemarks) {
       const text = typeof remarks === 'string' ? remarks.trim() : '';
@@ -309,19 +341,28 @@ export async function PATCH(
       };
 
       if (wantsStatus && existing.status !== updated.status) {
+        const paidToChanged = data.paidTo !== undefined;
         entries.push({
           ...trail,
           action: 'registration.status.changed',
           summary: `Marked ${existing.orderRef} as ${updated.status} (was ${existing.status}).${
             reason ? ` Reason: ${reason.replace(/[.!?]+$/, '')}.` : ''
           }${
+            paidToChanged
+              ? existing.paidTo
+                ? ` Paid to changed from ${existing.paidTo} to ${updated.paidTo}.`
+                : ` Paid to ${updated.paidTo}.`
+              : ''
+          }${
             promoReleased
               ? ` Promo ${[existing.promoCode, existing.combinedPromoCode].filter(Boolean).join(' + ')} handed back.`
               : ''
           }`,
-          changes: reason
-            ? { status: [existing.status, updated.status], reason }
-            : { status: [existing.status, updated.status] },
+          changes: {
+            status: [existing.status, updated.status],
+            ...(reason ? { reason } : {}),
+            ...(paidToChanged ? { paidTo: [existing.paidTo, updated.paidTo] } : {}),
+          },
         });
       }
 

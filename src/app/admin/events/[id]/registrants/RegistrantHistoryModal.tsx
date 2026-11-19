@@ -69,7 +69,7 @@ export default function RegistrantHistoryModal({
   const switches = receipt?.logisticsChanges ?? [];
   const waiting = openUpgrade<CategoryChangeView>(runner);
   const proofIn = waiting?.proofSubmitted ? waiting : null;
-  const { validating, validate } = useValidateChange({
+  const { validating, validate, paidTo } = useValidateChange({
     change: proofIn,
     onValidated: result => onChangeUpdated(result.change, result),
   });
@@ -121,7 +121,7 @@ export default function RegistrantHistoryModal({
                 permissions={permissions}
                 onUpdated={onChangeUpdated}
                 onSendEmail={onSendChangeEmail}
-                validation={{ change: proofIn, validating, validate }}
+                validation={{ change: proofIn, validating, validate, paidTo }}
               />
             </section>
           )}

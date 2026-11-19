@@ -5,7 +5,8 @@
  * door to it.
  *
  * Multipart form: optional `proofFile`, optional `transactionNumber`,
- * optional `paymentMethod`, required `reason`, `expectedStatus` (the status
+ * optional `paymentMethod`, optional `paidTo` (one of the event's accounts,
+ * PAYMENT_CHANNELS_PLAN.md Batch 3), required `reason`, `expectedStatus` (the status
  * the screen showed, like the cancel flow), `stepUpToken` for a PAID order,
  * and `resendReceipt` ("true") to send a PAID order's receipt again (C6).
  *
@@ -75,7 +76,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         status: true,
         paymentMethod: true,
         eventId: true,
-        event: { select: { organizerId: true } },
+        event: { select: { organizerId: true, bankAccounts: { select: { bankName: true } } } },
       },
     });
     if (!existing) return NextResponse.json(NOT_FOUND, { status: 404 });
@@ -88,6 +89,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const expectedStatus = field(form, 'expectedStatus');
     const transactionNumber = field(form, 'transactionNumber');
     const paymentMethod = field(form, 'paymentMethod');
+    const paidTo = field(form, 'paidTo');
     const stepUpToken = field(form, 'stepUpToken');
     const resendReceipt = field(form, 'resendReceipt') === 'true';
     const proofEntry = form.get('proofFile');
@@ -97,8 +99,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     readCorrectionReason(field(form, 'reason'));
     const early = refusalFor(existing, expectedStatus);
     if (early) throw early;
-    if (!proofFile && !transactionNumber?.trim() && !paymentMethod?.trim()) {
-      throw new CorrectionRefused('Nothing to correct. Enter a reference number or attach a new proof.', 400);
+    if (!proofFile && !transactionNumber?.trim() && !paymentMethod?.trim() && !paidTo?.trim()) {
+      throw new CorrectionRefused('Nothing to correct. Enter a reference number, attach a new proof or choose an account.', 400);
     }
     if (existing.status === 'PAID' && !stepUpToken) throw new CorrectionRefused(STEP_UP_REFUSED, 403);
 
@@ -128,6 +130,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         transactionNumber,
         proofPathname: unclaimedProof,
         paymentMethod,
+        paidTo,
+        eventAccounts: existing.event.bankAccounts,
         reason: field(form, 'reason'),
         expectedStatus,
         actor,

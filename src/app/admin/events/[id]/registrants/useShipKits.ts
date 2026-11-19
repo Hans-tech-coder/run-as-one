@@ -75,6 +75,8 @@ import {
   zoneNoteFor,
 } from '@/app/events/[slug]/register/delivery';
 import { staffError } from './reference-held';
+import { initialPaidTo, paidToMissing, usePaidToAccounts } from './paid-to';
+import { STAFF_PAID_TO_REQUIRED } from '@/lib/payment-channel';
 
 const peso = (centavos: number) => `₱${formatPesos(centavos)}`;
 
@@ -124,7 +126,11 @@ export function useShipKits({
   // Already paid: what *Record payment* asks for, asked up front.
   const [transactionNumber, setTransactionNumber] = useState('');
   const [proofFile, setProofFile] = useState<File | null>(null);
-  const [paidErrors, setPaidErrors] = useState<{ transactionNumber?: string; proofFile?: string }>({});
+  // The account it went into (PAYMENT_CHANNELS_PLAN.md Batch 3).
+  const paidToAccounts = usePaidToAccounts();
+  const [paidToPicked, setPaidToPicked] = useState('');
+  const paidTo = paidToPicked || initialPaidTo(null, paidToAccounts);
+  const [paidErrors, setPaidErrors] = useState<{ transactionNumber?: string; proofFile?: string; paidTo?: string }>({});
   const [isSaving, setIsSaving] = useState(false);
 
   // Staff pick the zone only when the race's province is unknown and the two
@@ -181,8 +187,12 @@ export function useShipKits({
     }
     if (alreadyPaid) {
       const reference = readTransactionNumber(transactionNumber);
-      setPaidErrors(reference.error ? { transactionNumber: reference.error } : {});
-      if (reference.error) return;
+      const missing = paidToMissing(paidToAccounts, paidTo);
+      setPaidErrors({
+        ...(reference.error ? { transactionNumber: reference.error } : {}),
+        ...(missing ? { paidTo: STAFF_PAID_TO_REQUIRED } : {}),
+      });
+      if (reference.error || missing) return;
     }
     setIsSaving(true);
     try {
@@ -198,12 +208,12 @@ export function useShipKits({
         // Already paid sends its proof, shrunk here as *Record payment* does,
         // so it goes as a form; everything else is JSON.
         ...(alreadyPaid
-          ? { body: await paidForm(fields, transactionNumber, proofFile) }
+          ? { body: await paidForm(fields, transactionNumber, proofFile, paidTo) }
           : { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(fields) }),
       });
       const data = await res.json().catch(() => ({}));
       setIsSaving(false);
-      if (!res.ok && (data?.field === 'transactionNumber' || data?.field === 'proofFile')) {
+      if (!res.ok && (data?.field === 'transactionNumber' || data?.field === 'proofFile' || data?.field === 'paidTo')) {
         setPaidErrors({ [data.field]: data.error });
         return;
       }
@@ -284,6 +294,11 @@ export function useShipKits({
       setProofFile(file);
       setPaidErrors(current => ({ ...current, proofFile: undefined }));
     },
+    paidTo,
+    setPaidTo: (value: string) => {
+      setPaidToPicked(value);
+      setPaidErrors(current => ({ ...current, paidTo: undefined }));
+    },
     paidErrors,
     reason,
     setReason,
@@ -296,12 +311,14 @@ async function paidForm(
   fields: Record<string, string | boolean | null | undefined>,
   transactionNumber: string,
   proof: File | null,
+  paidTo: string,
 ): Promise<FormData> {
   const form = new FormData();
   for (const [name, value] of Object.entries(fields)) {
     if (value !== null && value !== undefined) form.set(name, String(value));
   }
   form.set('transactionNumber', transactionNumber);
+  form.set('paidTo', paidTo);
   if (proof) form.set('proofFile', await compressImage(proof, 'proof'));
   return form;
 }

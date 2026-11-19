@@ -62,6 +62,8 @@ export function categoryChangeView(change: ChangeWithNames) {
     paymentMethod: change.paymentMethod,
     transactionFee: change.transactionFee,
     transactionNumber: change.transactionNumber,
+    /** The account a GCash or bank payment went into (PAYMENT_CHANNELS_PLAN.md D1); null is *Untagged*. */
+    paidTo: change.paidTo,
     hasProof: change.proofOfPayment !== null,
     /** The runner sent GCash or bank proof on the link; it waits for staff to validate it. */
     proofSubmitted: changeProofSubmitted(change),
