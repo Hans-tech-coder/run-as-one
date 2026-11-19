@@ -117,10 +117,6 @@ export const AUDIT_ACTIONS = [
   // (lib/payment-correction.ts): `changes` holds [old, new] per field, the old
   // proof pathname included, plus the reason. Never a status change (C8).
   'registration.payment.corrected',
-  // *Tag account* (PAYMENT_CHANNELS_PLAN.md D3): the account an untagged bank
-  // transfer went into, set from null by hand from its proof. `changes` holds
-  // paidTo [null, new]. Moves no money, so no step-up.
-  'registration.paid_to_tagged',
   'registration.email.sent_by_hand',
   // A staff member's attempt to reach a runner who did not pay
   // (UNPAID_FOLLOWUP_PLAN.md Batch 1, lib/follow-up.ts): the trail is the log,

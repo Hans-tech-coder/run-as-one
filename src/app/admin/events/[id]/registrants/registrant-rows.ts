@@ -262,7 +262,7 @@ export function buildRegistrantRows({
         proofIsPdf: isPdfProof(reg.proofOfPayment),
         transactionNumber: reg.transactionNumber,
         // The account a bank transfer went into (PAYMENT_CHANNELS_PLAN.md D1),
-        // raw: null reads *Untagged* and offers *Tag account*.
+        // raw: null reads *Untagged*; Correct Payment tags it.
         paidTo: reg.paidTo,
         // The method's code beside its label, so the channel (PayMongo, the
         // account, Untagged) is decided by `channelOf` from the code, never by

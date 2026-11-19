@@ -46,7 +46,7 @@
  * to confirm or correct the runner's pick. It must name one of the event's
  * accounts (`asPaidTo`); blank keeps what is stored. Sent with anything other
  * than validating a bank transfer, it is refused. A later change of account is
- * *Correct Payment*'s (lib/payment-correction.ts), or *Tag account* for an
+ * *Correct Payment*'s (lib/payment-correction.ts), including tagging an
  * order that never had one.
  */
 

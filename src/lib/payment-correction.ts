@@ -31,9 +31,9 @@
  * - **Paid to** (PAYMENT_CHANNELS_PLAN.md Batch 3) is correctable too: the
  *   account a bank transfer went into, which must name one of the event's
  *   accounts (`asPaidTo`, lib/payment-channel.ts). It is never cleared back
- *   to null here. An untagged order is tagged without a reason or step-up
- *   (`api/admin/registrations/[id]/paid-to`), but correcting one already
- *   tagged goes through the same reason and step-up rules as the rest.
+ *   to null here. Tagging an untagged order (null to an account) is a
+ *   correction like any other, with the same reason and step-up rules: the
+ *   owner chose this over a separate row-menu item (2026-11-19, D3).
  *
  * Only the fields that actually change are written, and a correction that
  * changes nothing is refused rather than writing an empty trail line. The

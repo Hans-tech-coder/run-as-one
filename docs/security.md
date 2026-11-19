@@ -552,12 +552,10 @@
   forged one is a 403 and a refused correction keeps the token. A PENDING
   order needs no token: the reason and the confirm dialog are enough. Online
   (PayMongo) orders are never corrected.
-- **Tagging an untagged payment's account needs no step-up**
-  (`PAYMENT_CHANNELS_PLAN.md` D3). `POST /api/admin/registrations/[id]/paid-to`
-  asks `registration:validate` on the order's race, refused as a missing
-  order, and only sets `paidTo` from null on a bank transfer: it moves no
-  money and changes no status. Changing an account already set is *Correct
-  Payment*'s, under that route's permission, reason and step-up.
+- **Setting or changing a payment's account (`paidTo`) is a payment
+  correction** (`PAYMENT_CHANNELS_PLAN.md` D3), tagging an *Untagged* order
+  included: *Correct Payment*'s permission, reason and step-up apply. There is
+  no separate tagging route.
 - **Moving an order out of PAID needs a step-up too** (Strix re-scan 6d50).
   `PATCH /api/admin/registrations/[id]/status` spends a token for action
   `registration.leave-paid`, bound to the order id, for a move from PAID to

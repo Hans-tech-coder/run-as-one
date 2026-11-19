@@ -46,7 +46,6 @@ import RemarksModal, { useRemarksModal } from './RemarksModal';
 import ManualEmailModal, { useManualEmailModal } from './ManualEmailModal';
 import { paymentCorrected, remarked, withEmailMark, withPaymentCorrection, withRemarks } from './registrant-row-patches';
 import { usePaymentCorrection } from './usePaymentCorrection';
-import { useTagAccount } from './TagAccountModal';
 import { paidToFilterFromUrl } from './paid-to';
 import { useRunnerRefund } from './RunnerRefundModal';
 import CategoryChangeModal from './CategoryChangeModal';
@@ -224,19 +223,6 @@ export default function RegistrantsTable({
     },
   });
 
-  // Tag account (PAYMENT_CHANNELS_PLAN.md D3): the account is the order's, so
-  // every one of its rows takes it, and the open detail modal too.
-  const tagAccount = useTagAccount({
-    runners,
-    canViewProof: permissions.proof,
-    onTagged: (registrationId, paidTo) => {
-      const tag = (row: RegistrantRow | null) =>
-        row && row.registrationId === registrationId ? { ...row, paidTo } : row;
-      setRunners(current => current.map(tag));
-      setViewingRunner(tag);
-    },
-  });
-
   // Refund runner (REFUND_PLAN.md): saving re-reads the page, which takes the
   // runner off this list.
   const refund = useRunnerRefund({ runners });
@@ -284,7 +270,6 @@ export default function RegistrantsTable({
     onSwitchLogistics: orderSwitch.startSwitch,
     onLogisticsDetails: orderSwitch.showDetails,
     onCorrectPayment: correction.open,
-    onTagAccount: tagAccount.open,
     onRefund: refund.open,
   };
 
@@ -428,7 +413,6 @@ export default function RegistrantsTable({
       {orderSwitch.element}
       {categoryChanges.element}
       {correction.element}
-      {tagAccount.element}
       {refund.element}
       {categoryChange.changeEmail && (
         <CategoryChangeEmailModal

@@ -68,7 +68,6 @@ export const ACTION_LABELS: Record<AuditAction, string> = {
   'registration.status.changed': 'Changed payment status',
   'registration.remarks.changed': 'Changed remarks',
   'registration.payment.corrected': 'Corrected payment details',
-  'registration.paid_to_tagged': 'Tagged the account paid to',
   'registration.email.sent_by_hand': 'Sent an email by hand',
   'registration.followed_up': 'Followed up an unpaid checkout',
   // "copied" in the code, which the trail keeps; the label covers every
@@ -223,7 +222,6 @@ export const ACTION_GROUP: Record<AuditAction, ActivityGroupKey> = {
   'registration.status.changed': 'payments',
   'registration.remarks.changed': 'payments',
   'registration.payment.corrected': 'payments',
-  'registration.paid_to_tagged': 'payments',
   'registration.email.sent_by_hand': 'payments',
   'registration.followed_up': 'payments',
   'registration.payment_link.copied': 'payments',

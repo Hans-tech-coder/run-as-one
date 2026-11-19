@@ -116,8 +116,8 @@ export default function RegistrantTransactionFields({
         <p className="flex flex-col"><span className="text-[var(--text-muted)]">Transaction No.</span> <span className="text-primary font-medium">{runner.transactionNumber}</span></p>
       )}
       {/* The account the transfer went into (PAYMENT_CHANNELS_PLAN.md D1).
-          Untagged on orders from before checkout asked; *Tag account* on
-          the row menu sets it. */}
+          Untagged on orders from before checkout asked; *Correct Payment*
+          on the row menu sets it. */}
       {runner.isBankTransfer &&
         (paidToField ?? (
           <p className="flex flex-col">

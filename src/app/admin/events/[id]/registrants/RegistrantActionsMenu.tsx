@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { MoreVertical, CheckCircle, Trash2, Edit, Eye, ArrowLeftRight, Truck, Store, Wallet, History, ReceiptText, Undo2, Tag } from 'lucide-react';
+import { MoreVertical, CheckCircle, Trash2, Edit, Eye, ArrowLeftRight, Truck, Store, Wallet, History, ReceiptText, Undo2 } from 'lucide-react';
 import { placeRowMenu, type RowMenuPlacement } from '../../../row-menu-position';
 import BusyLabel from '@/components/ui/BusyLabel';
 import { cssDurationMs } from '@/lib/css-duration';
@@ -59,13 +59,6 @@ interface RegistrantActionsMenuProps {
    */
   canCorrectPayment: boolean;
   onCorrectPayment: (runnerId: string) => void;
-  /**
-   * Tag account (PAYMENT_CHANNELS_PLAN.md D3): a bank transfer with no
-   * account on file, for a role with `registration:validate`, on a race that
-   * lists at least one account.
-   */
-  canTagAccount: boolean;
-  onTagAccount: (runnerId: string) => void;
   /** Refund runner (REFUND_PLAN.md D4): owners and admins, a paid order only. */
   canRefund: boolean;
   onRefund: (runnerId: string) => void;
@@ -107,8 +100,6 @@ export default function RegistrantActionsMenu({
   onRefund,
   canCorrectPayment,
   onCorrectPayment,
-  canTagAccount,
-  onTagAccount,
 }: RegistrantActionsMenuProps) {
   // No "mounted" flag: the menu opens only on a click, which never happens
   // during server rendering, so `isOpen` alone guarantees `document` is there.
@@ -340,21 +331,6 @@ export default function RegistrantActionsMenu({
             }}
           >
             <ReceiptText size={16} aria-hidden="true" /> Correct Payment
-          </button>
-        )}
-
-        {/* Say which account an untagged bank transfer went into. Once set,
-            changing it is Correct Payment's. */}
-        {canTagAccount && (
-          <button
-            className="action-dropdown-item flex items-center gap-3 px-4 py-2 text-sm text-left"
-            role="menuitem"
-            onClick={() => {
-              onTagAccount(runnerId);
-              closeMenu();
-            }}
-          >
-            <Tag size={16} aria-hidden="true" /> Tag Account
           </button>
         )}
 
