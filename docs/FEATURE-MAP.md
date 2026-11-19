@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-50 pages · 100 API routes · 168 modules in `src/lib` · 702 files · 123,592 lines
+50 pages · 100 API routes · 168 modules in `src/lib` · 703 files · 123,833 lines
 
 ---
 
@@ -55,7 +55,7 @@ The route, the server component behind it, and the client components beside it.
 | `/admin/two-factor` | [`/admin/two-factor/page.tsx`](../src/app/admin/two-factor/page.tsx) | `TwoFactorClient.tsx` |
 | `/admin/your-events/[id]` | [`/admin/your-events/[id]/page.tsx`](../src/app/admin/your-events/[id]/page.tsx) | `PayoutSummary.tsx` `RaceReport.tsx` `RegistrationTrend.tsx` `runner-csv.ts` `RunnerCells.tsx` `RunnerList.tsx` |
 | `/coming-soon` | [`/coming-soon/page.tsx`](../src/app/coming-soon/page.tsx) | — |
-| `/events/[slug]/register` | [`/events/[slug]/register/page.tsx`](../src/app/events/[slug]/register/page.tsx) | `AddressPlaceFields.tsx` `BankDetailsModal.tsx` `BankTransferWizardClient.tsx` `BirthdatePicker.tsx` `CategoryPicker.tsx` `Combobox.tsx` `CommunityPicker.tsx` `ConsentWaiver.tsx` `delivery-address.ts` `delivery-split.ts` `delivery.ts` `DeliveryAddressFields.tsx` `DeliveryAreaPanel.tsx` `DeliveryStep.tsx` `FreeSlotOffer.tsx` `GenderField.tsx` `GroupLimitNotice.tsx` `GuardianConsent.tsx` `OrderSummary.tsx` `PhoneField.tsx` `PosterLightbox.tsx` `PriceLockNotices.tsx` `PromoCodeField.tsx` `RegistrationWizardClient.tsx` `RunnerAddOns.tsx` `RunnerAddressFields.tsx` `RunnerCard.tsx` `SelectField.tsx` `ShirtSizeField.tsx` `SizeGuideModal.tsx` `useAddOnTotals.ts` `useDeliveryPlan.ts` `usePriceLock.ts` `usePromoPricing.ts` `useStepReveal.ts` `validation.ts` `WizardEventHeader.tsx` |
+| `/events/[slug]/register` | [`/events/[slug]/register/page.tsx`](../src/app/events/[slug]/register/page.tsx) | `AddressPlaceFields.tsx` `BankDetailsModal.tsx` `BankTransferWizardClient.tsx` `BirthdatePicker.tsx` `CategoryPicker.tsx` `Combobox.tsx` `CommunityPicker.tsx` `ConsentWaiver.tsx` `delivery-address.ts` `delivery-split.ts` `delivery.ts` `DeliveryAddressFields.tsx` `DeliveryAreaPanel.tsx` `DeliveryStep.tsx` `FreeSlotOffer.tsx` `GenderField.tsx` `GroupLimitNotice.tsx` `GuardianConsent.tsx` `OrderSummary.tsx` `PaidToPicker.tsx` `PhoneField.tsx` `PosterLightbox.tsx` `PriceLockNotices.tsx` `PromoCodeField.tsx` `RegistrationWizardClient.tsx` `RunnerAddOns.tsx` `RunnerAddressFields.tsx` `RunnerCard.tsx` `SelectField.tsx` `ShirtSizeField.tsx` `SizeGuideModal.tsx` `useAddOnTotals.ts` `useDeliveryPlan.ts` `usePriceLock.ts` `usePromoPricing.ts` `useStepReveal.ts` `validation.ts` `WizardEventHeader.tsx` |
 | `/feedback` | [`/feedback/page.tsx`](../src/app/feedback/page.tsx) | `FeedbackForm.tsx` `FeedbackSent.tsx` `ScreenshotField.tsx` |
 | `/pay/[token]` | [`/pay/[token]/page.tsx`](../src/app/pay/[token]/page.tsx) | `PayNowButton.tsx` |
 | `/pay/change/[token]` | [`/pay/change/[token]/page.tsx`](../src/app/pay/change/[token]/page.tsx) | `ChangeBankProof.tsx` |
@@ -371,8 +371,8 @@ when a task touches one, split it before editing rather than after.
 | Lines | File |
 | --- | --- |
 | 2431 | [`src/app/admin/marketing/PromoCodesClient.tsx`](../src/app/admin/marketing/PromoCodesClient.tsx) |
-| 1846 | [`src/app/events/[slug]/register/RegistrationWizardClient.tsx`](../src/app/events/[slug]/register/RegistrationWizardClient.tsx) |
-| 1841 | [`src/app/events/[slug]/register/BankTransferWizardClient.tsx`](../src/app/events/[slug]/register/BankTransferWizardClient.tsx) |
+| 1872 | [`src/app/events/[slug]/register/RegistrationWizardClient.tsx`](../src/app/events/[slug]/register/RegistrationWizardClient.tsx) |
+| 1867 | [`src/app/events/[slug]/register/BankTransferWizardClient.tsx`](../src/app/events/[slug]/register/BankTransferWizardClient.tsx) |
 | 1571 | [`src/lib/discount.ts`](../src/lib/discount.ts) |
 | 1179 | [`src/app/admin/settings/SettingsPanels.tsx`](../src/app/admin/settings/SettingsPanels.tsx) |
 | 1017 | [`src/app/admin/team/TeamClient.tsx`](../src/app/admin/team/TeamClient.tsx) |
@@ -390,10 +390,10 @@ when a task touches one, split it before editing rather than after.
 | 528 | [`src/app/admin/DashboardShell.tsx`](../src/app/admin/DashboardShell.tsx) |
 | 520 | [`src/lib/promo-input.ts`](../src/lib/promo-input.ts) |
 | 520 | [`src/lib/refund-store.ts`](../src/lib/refund-store.ts) |
+| 511 | [`src/app/api/checkout/manual/route.ts`](../src/app/api/checkout/manual/route.ts) |
 | 510 | [`src/app/admin/events/[id]/registrants/PaymentCorrectionModal.tsx`](../src/app/admin/events/[id]/registrants/PaymentCorrectionModal.tsx) |
 | 509 | [`src/app/admin/communities/CommunitiesClient.tsx`](../src/app/admin/communities/CommunitiesClient.tsx) |
 | 499 | [`src/app/admin/AdminRouteLoading.tsx`](../src/app/admin/AdminRouteLoading.tsx) |
-| 492 | [`src/app/api/checkout/manual/route.ts`](../src/app/api/checkout/manual/route.ts) |
 | 478 | [`src/lib/settlement.ts`](../src/lib/settlement.ts) |
 | 477 | [`src/app/admin/events/AddOnFormModal.tsx`](../src/app/admin/events/AddOnFormModal.tsx) |
 | 476 | [`src/app/admin/events/[id]/registrants/ProofLightbox.tsx`](../src/app/admin/events/[id]/registrants/ProofLightbox.tsx) |

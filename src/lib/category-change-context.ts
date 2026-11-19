@@ -34,6 +34,8 @@ export class CategoryChangeRefused extends Error {
   constructor(
     readonly status: number,
     message: string,
+    /** The form field the refusal is about, when it is about one. */
+    readonly field?: string,
   ) {
     super(message);
     this.name = 'CategoryChangeRefused';

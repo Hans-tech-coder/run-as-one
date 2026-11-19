@@ -21,6 +21,7 @@ import { switchAwaitsAddress, switchHoldUntil, switchProofSubmitted } from '@/li
 import { readSwitchForPayment, receiptOf, settleSwitchOnline } from '@/lib/logistics-change-payment';
 import { logisticsChangeProofReceivedEmail, sendLogisticsChangeEmail } from '@/lib/email-logistics-change';
 import { claimReference } from '@/lib/payment-reference';
+import { checkoutPaidTo } from '@/lib/manual-checkout-form';
 import { lookUpPaymongoPayment } from '@/lib/online-payment';
 import { retirePaymongoPage } from '@/lib/paymongo-session';
 
@@ -48,8 +49,10 @@ import { retirePaymongoPage } from '@/lib/paymongo-session';
  * settled from that payment and the edit refused), closed, and the claim
  * written only if the switch still points at that page.
  *
- * **Proof** (T5, T7) lands on the switch's own `proofOfPayment` and
- * `transactionNumber` while it waits, replacing an earlier one, whose file is
+ * **Proof** (T5, T7) lands on the switch's own `proofOfPayment`,
+ * `transactionNumber` and `paidTo` (the account it went into, one of the
+ * event's own, as at checkout: `checkoutPaidTo`, PAYMENT_CHANNELS_PLAN.md D2)
+ * while it waits, replacing an earlier one, whose file is
  * deleted. Staff apply it with *Record payment*; nothing applies here. Once the
  * proof is in, the details are read-only (T3) and the hold no longer closes
  * the switch (T6, `logistics-change-proof.ts`).
@@ -192,7 +195,7 @@ export async function confirmSwitchDetails(
  */
 export async function submitSwitchProof(
   changeId: string,
-  proof: { transactionNumber: string; proofPathname: string },
+  proof: { transactionNumber: string; proofPathname: string; paidTo: unknown },
 ): Promise<void> {
   const found = await readSwitchForPayment(changeId);
   if (!found) throw new LogisticsChangeRefused(404, 'This link is not valid any more.');
@@ -203,13 +206,15 @@ export async function submitSwitchProof(
   if (switchAwaitsAddress(found)) {
     throw new LogisticsChangeRefused(409, 'Confirm the delivery address first. Reload the page.');
   }
+  const paidTo = checkoutPaidTo(proof.paidTo, found.event.bankAccounts);
+  if (!paidTo.ok) throw new LogisticsChangeRefused(400, paidTo.error, 'paidTo');
 
   const replaced = await db.$transaction(async tx => {
     await lockSwitch(tx, found.eventId, [order.id]);
     const now = new Date();
     const change = await tx.logisticsChange.findUniqueOrThrow({
       where: { id: changeId },
-      select: { status: true, paymentMethod: true, proofOfPayment: true, holdUntil: true, changeRef: true, transactionNumber: true },
+      select: { status: true, paymentMethod: true, proofOfPayment: true, holdUntil: true, changeRef: true, transactionNumber: true, paidTo: true },
     });
     if (changePayableState({ status: change.status, holdUntil: switchHoldUntil(change) }, logisticsChangeDeadline(found.event), now) !== 'payable') {
       throw new LogisticsChangeRefused(409, 'This switch is no longer waiting for payment. Reload the page.');
@@ -219,7 +224,7 @@ export async function submitSwitchProof(
     const transactionRef = await claimReference(tx, proof.transactionNumber, { except: { kind: 'switch', id: changeId } });
     const claim = await tx.logisticsChange.updateMany({
       where: { id: changeId, status: LOGISTICS_CHANGE_STATUSES.AWAITING_PAYMENT, proofOfPayment: change.proofOfPayment },
-      data: { proofOfPayment: proof.proofPathname, transactionNumber: proof.transactionNumber, transactionRef },
+      data: { proofOfPayment: proof.proofPathname, transactionNumber: proof.transactionNumber, transactionRef, paidTo: paidTo.value },
     });
     if (claim.count === 0) throw new LogisticsChangeRefused(409, 'This switch moved just now. Reload the page and try again.');
     await recordAudit(tx, runnerActor(found.event.organizerId, order), {
@@ -228,9 +233,10 @@ export async function submitSwitchProof(
       entityId: changeId,
       eventId: found.eventId,
       organizerId: found.event.organizerId,
-      summary: `The runner ${change.proofOfPayment ? 'replaced' : 'submitted'} the GCash or bank proof for order ${order.orderRef} (${change.changeRef}), reference ${proof.transactionNumber}. Check it, then record the payment.`,
+      summary: `The runner ${change.proofOfPayment ? 'replaced' : 'submitted'} the GCash or bank proof for order ${order.orderRef} (${change.changeRef}), reference ${proof.transactionNumber}, paid to ${paidTo.value}. Check it, then record the payment.`,
       changes: {
         transactionNumber: [change.transactionNumber, proof.transactionNumber] as [string | null, string],
+        paidTo: [change.paidTo, paidTo.value] as [string | null, string],
         proofOfPayment: change.proofOfPayment ? 'replaced' : 'attached',
       },
     });

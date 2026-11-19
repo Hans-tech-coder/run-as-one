@@ -46,7 +46,9 @@ export async function POST(request: Request) {
     }
 
     unclaimedProof = await uploadPrivateProof(proof);
-    await submitChangeProof(changeId, { transactionNumber: reference.value, proofPathname: unclaimedProof });
+    // The account it went into is checked against the event's own by the
+    // runner module (checkoutPaidTo), refused with field 'paidTo'.
+    await submitChangeProof(changeId, { transactionNumber: reference.value, proofPathname: unclaimedProof, paidTo: form.get('paidTo') });
     unclaimedProof = null;
     return NextResponse.json({ ok: true });
   } catch (error) {
@@ -62,7 +64,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: REFERENCE_IN_USE_RUNNER, field: 'transactionNumber' }, { status: 409 });
     }
     if (error instanceof CategoryChangeRefused) {
-      return NextResponse.json({ error: error.message }, { status: error.status });
+      return NextResponse.json({ error: error.message, field: error.field }, { status: error.status });
     }
     console.error('Category change proof failed:', error);
     return NextResponse.json({ error: 'Your proof could not be sent. Try again.' }, { status: 500 });

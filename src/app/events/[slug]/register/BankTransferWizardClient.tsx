@@ -42,6 +42,7 @@ import {
   type LogisticsMethod,
 } from "@/lib/registration-codes";
 import BankDetailsModal from "./BankDetailsModal";
+import PaidToPicker, { paidToFor, paidToMissing } from "./PaidToPicker";
 import SizeGuideModal from "./SizeGuideModal";
 import CategoryPicker from "./CategoryPicker";
 import CommunityPicker from "./CommunityPicker";
@@ -266,6 +267,10 @@ export default function BankTransferWizardClient({
   // The server's word on the reference itself (blank, too long, or already
   // used for another payment), shown under the field rather than in an alert.
   const [transactionError, setTransactionError] = useState("");
+  // Which account the transfer went into, asked only when the event has more
+  // than one (PaidToPicker). The server's refusal, if any, shows under it.
+  const [pickedPaidTo, setPickedPaidTo] = useState("");
+  const [paidToError, setPaidToError] = useState("");
   const [showSizeGuideModal, setShowSizeGuideModal] = useState(false);
   // Required once per registration, not once per runner — the waiver this
   // is drawn from asks it the same way.
@@ -767,6 +772,7 @@ export default function BankTransferWizardClient({
       // total is zero — this is only what the wizard believes.
       formData.append("paymentMethod", isFree ? "COMPLIMENTARY" : "BANK_TRANSFER");
       formData.append("transactionNumber", isFree ? "" : transactionNumber);
+      formData.append("paidTo", isFree ? "" : paidToFor(bankAccounts, pickedPaidTo));
       formData.append("consentGiven", String(consentGiven));
       formData.append("consentSignature", consentSignature);
       // The code the runner typed, and only that. The amount it is worth is
@@ -808,6 +814,10 @@ export default function BankTransferWizardClient({
         setTransactionError(data.error);
         setIsProcessing(false);
         document.getElementById("bank-transaction-number")?.focus();
+      } else if (data.field === "paidTo" && data.error) {
+        setPaidToError(data.error);
+        setIsProcessing(false);
+        document.getElementById("bank-paid-to")?.scrollIntoView({ block: "center" });
       } else {
         alert(data.error || "Failed to submit registration. Please try again.");
         setIsProcessing(false);
@@ -1739,6 +1749,21 @@ export default function BankTransferWizardClient({
                   </div>
                 )}
 
+                {bankAccounts.length > 1 && (
+                  <div className="mt-6 animate-fade-in">
+                    <PaidToPicker
+                      id="bank-paid-to"
+                      accounts={bankAccounts}
+                      value={pickedPaidTo}
+                      onChange={(bankName) => {
+                        setPickedPaidTo(bankName);
+                        setPaidToError("");
+                      }}
+                      error={paidToError}
+                    />
+                  </div>
+                )}
+
                 <div className="input-group full-width mt-6 animate-fade-in">
                   <label htmlFor="bank-transaction-number" className="text-white font-bold">
                     Transaction Number / Reference Number{" "}
@@ -1790,6 +1815,7 @@ export default function BankTransferWizardClient({
                     : isProcessing ||
                       !proofFile || proofCompression.optimizing ||
                       !transactionNumber.trim() ||
+                      paidToMissing(bankAccounts, pickedPaidTo) ||
                       !consentGiven ||
                       bankAccounts.length === 0;
                   return (

@@ -43,7 +43,7 @@ import { logHeldPrice } from '@/lib/price-lock';
 import { priceChangedBody } from '@/lib/price-changed';
 import { CHECKOUT_RULE, allowRequest, callerKey } from '@/lib/rate-limit';
 import { EMAIL_RUNNER_INCLUDE } from '@/lib/email';
-import { readManualCheckoutForm } from '@/lib/manual-checkout-form';
+import { checkoutPaidTo, readManualCheckoutForm } from '@/lib/manual-checkout-form';
 import { readTransactionNumber } from '@/lib/category-change-hold';
 import {
   REFERENCE_IN_USE_RUNNER,
@@ -100,6 +100,7 @@ export async function POST(request: Request) {
       transactionFee,
       totalAmount,
       transactionNumber,
+      paidTo,
       promoCode,
       priceLock,
       participants,
@@ -113,7 +114,12 @@ export async function POST(request: Request) {
     // inside rate. Same for the admin fee, which is now per event.
     const event = await prisma.event.findUnique({
       where: { id: eventId },
-      include: { categories: true, addOns: { orderBy: ADD_ON_ORDER } }
+      include: {
+        categories: true,
+        addOns: { orderBy: ADD_ON_ORDER },
+        // Which of them the runner paid into (checkoutPaidTo, below).
+        bankAccounts: { select: { bankName: true }, orderBy: { sortOrder: 'asc' } },
+      }
     });
     // A draft or scheduled event reads as missing: nothing is sold on an
     // event the public cannot see yet (lib/event-visibility.ts).
@@ -259,6 +265,18 @@ export async function POST(request: Request) {
       storedTransactionNumber = value;
     }
 
+    // The account the transfer went into, one of this event's own
+    // (PAYMENT_CHANNELS_PLAN.md D2, lib/manual-checkout-form.ts). A free order
+    // went into none.
+    let storedPaidTo: string | null = null;
+    if (!free) {
+      const checked = checkoutPaidTo(paidTo, event.bankAccounts);
+      if (!checked.ok) {
+        return NextResponse.json({ error: checked.error, field: 'paidTo' }, { status: 400 });
+      }
+      storedPaidTo = checked.value;
+    }
+
     // 1. Store the receipt as a private blob. This route is public — anyone can
     // reach it — so uploadPrivateProof() enforces the type and size limits.
     // What we keep is the blob pathname; admins view it through
@@ -369,6 +387,7 @@ export async function POST(request: Request) {
           proofOfPayment: proofPathname,
           transactionNumber: storedTransactionNumber,
           transactionRef,
+          paidTo: storedPaidTo,
           status: 'PENDING', // Waiting for manual validation by admin
           // Nothing to transfer, so nothing to validate. Spread *after* the
           // two lines above so it has the last word: a free order is written

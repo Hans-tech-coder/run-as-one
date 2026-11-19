@@ -41,6 +41,7 @@ import {
   type LogisticsMethod,
 } from "@/lib/registration-codes";
 import BankDetailsModal from "./BankDetailsModal";
+import PaidToPicker, { paidToFor, paidToMissing } from "./PaidToPicker";
 import SizeGuideModal from "./SizeGuideModal";
 import ConsentWaiver, { SIGNATURE_FIELD_ID } from "./ConsentWaiver";
 import { consentSignatureError } from "@/lib/consent-signature";
@@ -264,6 +265,10 @@ export default function RegistrationWizardClient({
     null,
   );
   const [transactionNumber, setTransactionNumber] = useState("");
+  // Which account the transfer went into, asked only when the event has more
+  // than one (PaidToPicker). The server's refusal, if any, shows under it.
+  const [pickedPaidTo, setPickedPaidTo] = useState("");
+  const [paidToError, setPaidToError] = useState("");
   const [showSizeGuideModal, setShowSizeGuideModal] = useState(false);
   // Required once per registration, not once per runner — the waiver this
   // is drawn from asks it the same way. Always starts unchecked, even when
@@ -874,6 +879,7 @@ export default function RegistrationWizardClient({
       formData.append("totalAmount", totalAmount.toString());
       formData.append("paymentMethod", paymentMethod);
       formData.append("transactionNumber", transactionNumber);
+      formData.append("paidTo", paidToFor(bankAccounts, pickedPaidTo));
       formData.append("consentGiven", String(consentGiven));
       formData.append("consentSignature", consentSignature);
       // The code the runner typed, and only that. The amount it is worth is
@@ -910,6 +916,10 @@ export default function RegistrationWizardClient({
         // send money twice.
         setPriceChange({ body: data, shownTotal: totalAmount });
         setIsProcessing(false);
+      } else if (data.field === "paidTo" && data.error) {
+        setPaidToError(data.error);
+        setIsProcessing(false);
+        document.getElementById("bank-paid-to")?.scrollIntoView({ block: "center" });
       } else {
         alert(data.error || "Failed to submit registration. Please try again.");
         setIsProcessing(false);
@@ -1749,6 +1759,21 @@ export default function RegistrationWizardClient({
                   </div>
                 )}
 
+                {bankAccounts.length > 1 && (
+                  <div className="mt-6 animate-fade-in">
+                    <PaidToPicker
+                      id="bank-paid-to"
+                      accounts={bankAccounts}
+                      value={pickedPaidTo}
+                      onChange={(bankName) => {
+                        setPickedPaidTo(bankName);
+                        setPaidToError("");
+                      }}
+                      error={paidToError}
+                    />
+                  </div>
+                )}
+
                 <div className="input-group full-width mt-6 animate-fade-in">
                   <label className="text-white font-bold">
                     Transaction Number / Reference Number{" "}
@@ -1784,12 +1809,13 @@ export default function RegistrationWizardClient({
 
                 <div className="form-actions mt-10 flex justify-end">
                   <button
-                    className={`btn-gradient flex items-center justify-center gap-2 px-10 py-4 text-lg group shadow-xl shadow-accent-orange/20 ${isProcessing || !proofFile || proofCompression.optimizing || !transactionNumber.trim() || !consentGiven ? "opacity-50 pointer-events-none" : ""}`}
+                    className={`btn-gradient flex items-center justify-center gap-2 px-10 py-4 text-lg group shadow-xl shadow-accent-orange/20 ${isProcessing || !proofFile || proofCompression.optimizing || !transactionNumber.trim() || paidToMissing(bankAccounts, pickedPaidTo) || !consentGiven ? "opacity-50 pointer-events-none" : ""}`}
                     onClick={handleManualSubmit}
                     disabled={
                       isProcessing ||
                       !proofFile || proofCompression.optimizing ||
                       !transactionNumber.trim() ||
+                      paidToMissing(bankAccounts, pickedPaidTo) ||
                       !consentGiven
                     }
                   >

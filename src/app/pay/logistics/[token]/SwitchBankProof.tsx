@@ -4,7 +4,9 @@
  * Paying a GCash or bank delivery switch on its link (LOGISTICS_CHANGE_PLAN.md
  * Revision 3 T5, T7): the event's accounts, each opening its number and QR
  * (`BankDetailsModal`, the wizard's), then the payment's screenshot and its
- * reference, posted to `api/logistics-change/proof`. The upload box and the
+ * reference, posted to `api/logistics-change/proof`. With more than one
+ * account the runner also says which one they paid into (`PaidToPicker`,
+ * PAYMENT_CHANNELS_PLAN.md D2), sent as `paidTo`. The upload box and the
  * reference field are the bank-transfer wizard's, at this page's size; the
  * screenshot is shrunk in the browser first (`image-compress.ts`), as staff's
  * *Record payment* does.
@@ -26,8 +28,10 @@ import { compressImage } from '@/lib/image-compress';
 import { MAX_UPLOAD_MB, PDF_TYPE, acceptAttribute, describeUploadTypes } from '@/lib/uploads';
 import { MAX_TRANSACTION_NUMBER, readTransactionNumber } from '@/lib/category-change-hold';
 import BankDetailsModal from '@/app/events/[slug]/register/BankDetailsModal';
+import PaidToPicker, { paidToFor, paidToMissing } from '@/app/events/[slug]/register/PaidToPicker';
+import { PAID_TO_REQUIRED } from '@/lib/manual-checkout-form';
 
-type Errors = { proofFile?: string; transactionNumber?: string; form?: string };
+type Errors = { proofFile?: string; transactionNumber?: string; paidTo?: string; form?: string };
 
 export default function SwitchBankProof({
   token,
@@ -51,6 +55,7 @@ export default function SwitchBankProof({
   const [bank, setBank] = useState<BankAccountView | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [reference, setReference] = useState('');
+  const [pickedPaidTo, setPickedPaidTo] = useState('');
   const [errors, setErrors] = useState<Errors>({});
   const [busy, setBusy] = useState(false);
 
@@ -59,20 +64,22 @@ export default function SwitchBankProof({
     const next: Errors = {
       ...(file ? {} : { proofFile: 'Add the screenshot of your payment.' }),
       ...(checked.error ? { transactionNumber: checked.error } : {}),
+      ...(paidToMissing(bankAccounts, pickedPaidTo) ? { paidTo: PAID_TO_REQUIRED } : {}),
     };
     setErrors(next);
-    if (next.proofFile || next.transactionNumber || !file) return;
+    if (next.proofFile || next.transactionNumber || next.paidTo || !file) return;
 
     setBusy(true);
     try {
       const form = new FormData();
       form.set('token', token);
       form.set('transactionNumber', reference);
+      form.set('paidTo', paidToFor(bankAccounts, pickedPaidTo));
       form.set('proofFile', await compressImage(file, 'proof'));
       const res = await fetch(endpoint, { method: 'POST', body: form });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        if (data?.field === 'proofFile' || data?.field === 'transactionNumber') setErrors({ [data.field]: data.error });
+        if (data?.field === 'proofFile' || data?.field === 'transactionNumber' || data?.field === 'paidTo') setErrors({ [data.field]: data.error });
         else setErrors({ form: data?.error || 'Your proof could not be sent. Try again.' });
         return;
       }
@@ -163,6 +170,17 @@ export default function SwitchBankProof({
         )}
         <FieldError id="switch-proof-error" message={errors.proofFile} />
       </div>
+
+      <PaidToPicker
+        id="switch-paid-to"
+        accounts={bankAccounts}
+        value={pickedPaidTo}
+        onChange={bankName => {
+          setPickedPaidTo(bankName);
+          setErrors({});
+        }}
+        error={errors.paidTo}
+      />
 
       <div className="input-group full-width">
         <label htmlFor="switch-reference">

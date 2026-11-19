@@ -12,6 +12,12 @@
  * the route, since they need the event row.
  *
  * Split out of the route unchanged (PAYMENT_REFERENCE_UNIQUE_PLAN.md Batch 1).
+ *
+ * It also owns **which account a paid order says it went into**
+ * (`checkoutPaidTo`, PAYMENT_CHANNELS_PLAN.md D2): one of the event's own
+ * accounts, required when there are several, the only one when there is one.
+ * That check needs the event's accounts, so the route calls it once it has
+ * them.
  */
 
 import { participantCountError } from './order-size';
@@ -19,6 +25,7 @@ import { participantBirthdateError } from './minor-consent';
 import { upperCaseForStorage } from './text-case';
 import { consentSignatureError } from './consent-signature';
 import { emailAddressError, normalizeEmailAddress, participantEmailError } from './email-address';
+import { asPaidTo } from './payment-channel';
 
 /** What the route reads off the form, after the checks above passed. */
 export type ManualCheckoutForm = {
@@ -36,6 +43,8 @@ export type ManualCheckoutForm = {
   totalAmount: number;
   /** Raw from the form; the route reads it through `readTransactionNumber`. */
   transactionNumber: string;
+  /** Raw from the form; the route reads it through `checkoutPaidTo`. */
+  paidTo: FormDataEntryValue | null;
   promoCode: string;
   /** A string, or null when the wizard sent none; readPriceLock takes either. */
   priceLock: FormDataEntryValue | null;
@@ -77,6 +86,7 @@ export function readManualCheckoutForm(formData: FormData): ManualCheckoutRead {
   const transactionFee = centavos('transactionFee');
   const totalAmount = centavos('totalAmount');
   const transactionNumber = formData.get('transactionNumber') as string;
+  const paidTo = formData.get('paidTo');
   const consentGiven = formData.get('consentGiven') === 'true';
   const consentSignature = formData.get('consentSignature') as string;
   const promoCode = formData.get('promoCode') as string;
@@ -145,6 +155,7 @@ export function readManualCheckoutForm(formData: FormData): ManualCheckoutRead {
       transactionFee,
       totalAmount,
       transactionNumber,
+      paidTo,
       promoCode,
       priceLock,
       participants,
@@ -155,4 +166,28 @@ export function readManualCheckoutForm(formData: FormData): ManualCheckoutRead {
       storedCustomerEmail: normalizeEmailAddress(customerEmail),
     },
   };
+}
+
+/** The field error a missing or unknown account answers with. */
+export const PAID_TO_REQUIRED = 'Choose the account you sent the payment to.';
+
+/**
+ * The `paidTo` to store on a paid bank-transfer order, or the field error
+ * (PAYMENT_CHANNELS_PLAN.md D2). The answer must name one of this event's
+ * accounts (`asPaidTo`), and is stored in that account's own spelling. When
+ * the event has exactly one account the wizard asks nothing, so a blank answer
+ * means that account; a value naming anything else is still refused.
+ */
+export function checkoutPaidTo(
+  value: unknown,
+  eventAccounts: readonly { bankName: string }[],
+): { ok: true; value: string } | { ok: false; error: string } {
+  const named = asPaidTo(value, eventAccounts);
+  if (named) return { ok: true, value: named };
+  const blank = typeof value !== 'string' || !value.trim();
+  if (blank && eventAccounts.length === 1) {
+    const only = asPaidTo(eventAccounts[0].bankName, eventAccounts);
+    if (only) return { ok: true, value: only };
+  }
+  return { ok: false, error: PAID_TO_REQUIRED };
 }

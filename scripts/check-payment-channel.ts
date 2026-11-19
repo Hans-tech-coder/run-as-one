@@ -1,4 +1,5 @@
 import { asPaidTo, channelOf, normalizePaidTo } from '../src/lib/payment-channel';
+import { PAID_TO_REQUIRED, checkoutPaidTo } from '../src/lib/manual-checkout-form';
 
 /**
  * A check of `src/lib/payment-channel.ts` (PAYMENT_CHANNELS_PLAN.md D1, D4).
@@ -57,6 +58,17 @@ same('account named "untagged" stays an account', key({ paymentMethod: 'BANK_TRA
 same('complimentary has no channel', channelOf({ paymentMethod: 'COMPLIMENTARY', paidTo: null }), null);
 same('no method has no channel', channelOf({ paymentMethod: null, paidTo: 'GCash' }), null);
 same('blank method has no channel', channelOf({ paymentMethod: '  ', paidTo: null }), null);
+
+// checkoutPaidTo (manual-checkout-form.ts, Batch 2): what the runner's answer stores.
+const refused = { ok: false, error: PAID_TO_REQUIRED };
+same('checkout picks one of several', checkoutPaidTo('gcash', accounts), { ok: true, value: 'GCash' });
+same('checkout stores the account spelling', checkoutPaidTo(' gotyme bank ', accounts), { ok: true, value: 'GoTyme Bank' });
+same('checkout blank with several is refused', checkoutPaidTo('', accounts), refused);
+same('checkout missing with several is refused', checkoutPaidTo(null, accounts), refused);
+same('checkout unknown is refused', checkoutPaidTo('Maya', accounts), refused);
+same('checkout blank with one is that one', checkoutPaidTo('  ', [{ bankName: 'GCash' }]), { ok: true, value: 'GCash' });
+same('checkout unknown with one is refused', checkoutPaidTo('Maya', [{ bankName: 'GCash' }]), refused);
+same('checkout with no accounts is refused', checkoutPaidTo('GCash', []), refused);
 
 if (failures > 0) {
   console.error(`${failures} check(s) failed.`);

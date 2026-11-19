@@ -8,6 +8,7 @@ import { CategoryChangeRefused } from '@/lib/category-change-context';
 import { lockChange } from '@/lib/category-change-locks';
 import { readChangeForPayment } from '@/lib/category-change-payment';
 import { claimReference } from '@/lib/payment-reference';
+import { checkoutPaidTo } from '@/lib/manual-checkout-form';
 import { categoryChangeProofReceivedEmail, sendCategoryChangeEmail } from '@/lib/email-category-change';
 
 /**
@@ -17,8 +18,9 @@ import { categoryChangeProofReceivedEmail, sendCategoryChangeEmail } from '@/lib
  * (`logistics-change-runner.ts`). The route is `api/category-change/proof`,
  * which trusts nothing but the signed token.
  *
- * The proof lands on the change's own `proofOfPayment` and `transactionNumber`
- * while it waits, replacing an earlier one, whose file is deleted. Nothing
+ * The proof lands on the change's own `proofOfPayment`, `transactionNumber`
+ * and `paidTo` (the account it went into, one of the event's own, as at
+ * checkout: `checkoutPaidTo`, PAYMENT_CHANNELS_PLAN.md D2) while it waits, replacing an earlier one, whose file is deleted. Nothing
  * applies here: staff press *Validate Payment*, which records the runner's own
  * reference and keeps their screenshot (`recordChangePayment`). Once the proof
  * is in, the row reads FOR VALIDATION and the hold no longer lets the seat go
@@ -42,13 +44,15 @@ function runnerActor(organizerId: string, runner: { firstName: string; lastName:
  */
 export async function submitChangeProof(
   changeId: string,
-  proof: { transactionNumber: string; proofPathname: string },
+  proof: { transactionNumber: string; proofPathname: string; paidTo: unknown },
 ): Promise<void> {
   const change = await readChangeForPayment(changeId);
   if (!change) throw new CategoryChangeRefused(404, 'This link is not valid any more.');
   if (!isOutsidePayment(change.paymentMethod)) {
     throw new CategoryChangeRefused(409, 'This change is paid online. Reload the page and press Pay now.');
   }
+  const paidTo = checkoutPaidTo(proof.paidTo, change.event.bankAccounts);
+  if (!paidTo.ok) throw new CategoryChangeRefused(400, paidTo.error, 'paidTo');
 
   // Judged again under the runner's lock, as staff's Validate Payment and the
   // sweep take it: the proof and hold read above may have moved since.
@@ -63,7 +67,7 @@ export async function submitChangeProof(
     const transactionRef = await claimReference(tx, proof.transactionNumber, { except: { kind: 'upgrade', id: changeId } });
     const claim = await tx.categoryChange.updateMany({
       where: { id: changeId, status: CATEGORY_CHANGE_STATUSES.AWAITING_PAYMENT, proofOfPayment: locked.proofOfPayment },
-      data: { proofOfPayment: proof.proofPathname, transactionNumber: proof.transactionNumber, transactionRef },
+      data: { proofOfPayment: proof.proofPathname, transactionNumber: proof.transactionNumber, transactionRef, paidTo: paidTo.value },
     });
     if (claim.count === 0) throw new CategoryChangeRefused(409, 'This change moved just now. Reload the page and try again.');
     await recordAudit(tx, runnerActor(change.event.organizerId, change.runner), {
@@ -72,9 +76,10 @@ export async function submitChangeProof(
       entityId: changeId,
       eventId: change.eventId,
       organizerId: change.event.organizerId,
-      summary: `The runner ${locked.proofOfPayment ? 'replaced' : 'submitted'} the GCash or bank proof for the move from ${change.fromCategory.name} to ${change.toCategory.name} (${change.changeRef}, order ${change.registration.orderRef}), reference ${proof.transactionNumber}. Check it, then validate the payment.`,
+      summary: `The runner ${locked.proofOfPayment ? 'replaced' : 'submitted'} the GCash or bank proof for the move from ${change.fromCategory.name} to ${change.toCategory.name} (${change.changeRef}, order ${change.registration.orderRef}), reference ${proof.transactionNumber}, paid to ${paidTo.value}. Check it, then validate the payment.`,
       changes: {
         transactionNumber: [locked.transactionNumber, proof.transactionNumber] as [string | null, string],
+        paidTo: [locked.paidTo, paidTo.value] as [string | null, string],
         proofOfPayment: locked.proofOfPayment ? 'replaced' : 'attached',
       },
     });
