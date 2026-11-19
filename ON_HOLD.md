@@ -11,55 +11,10 @@ the owner's choice. Start one only when the owner asks, and read its source plan
 before writing any code. When an item is picked up, give it its own plan file in
 `docs/plans/`, and delete it from this list once it has landed.
 
-**Pending for the next release: six migrations** (`event_add_ons` is already on `main`; `npx prisma migrate status` against production says whether it still needs running).
-`20261108120000_runner_refund` (runner refunds, 2026-11-08): creates `RunnerRefund`. The Remittances, Overview and registrants reads all query it, so run `npx prisma migrate deploy` with `DIRECT_URL` on the production endpoint **before** `main` is pushed.
+**No pending migrations:** every migration in `prisma/migrations` through `20261118090000_payment_reference_unique` (including `event_add_ons`, `step_up_used_at`, `registration_closes_at`, `category_bib_medal_closed`, `runner_refund`, `category_opens_at`, and `payment_reference_unique`) is applied in production (`ep-still-pine-b3n210bs`) and live on `main` (`89559e2`, 2026-11-18).
 
-`20261118090000_payment_reference_unique` (one reference, one payment, 2026-11-18): a nullable `transactionRef` on `Registration`, `CategoryChange` and `LogisticsChange`, backfilled from `transactionNumber`, plain indexes, and partial unique indexes on `Registration` and `CategoryChange`. Applied to the local-dev database only. Additive; the old code ignores it, but the new code writes `transactionRef`, so run it **before** `main` is pushed. **It fails if two live orders share a reference:** run the scan in `docs/current-state.md` (payment reference entry) on the `production` branch first; on 2026-11-18 it was clear. Rollback is in the migration's header comment.
-
-`20261110090000_category_opens_at` (Bib + Medal schedule, 2026-11-10): one
-nullable `Category.opensAt`. Applied to the local-dev database only. Additive,
-but the new code breaks without it: Prisma reads every `Category` column and
-`reserveSlots`' and `claimSeat`'s raw `SELECT` name it. Run it with the others,
-**before** `main` is pushed. Rollback: `ALTER TABLE "Category" DROP COLUMN "opensAt";`
-(a scheduled Bib + Medal then goes on sale at once and closes its Full).
-
-`20261108090000_category_bib_medal_closed` (Bib + Medal, 2026-11-08): a nullable
-`bibMedalOfId` (unique, foreign key to `Category`) and a `closed` boolean
-defaulting to false, both on `Category`. Applied to the local-dev database only.
-Additive, but the new code breaks without it, since Prisma reads every
-`Category` column and `reserveSlots`' raw `SELECT` names `closed`. Run
-`npx prisma migrate deploy` with `DIRECT_URL` on the production endpoint
-**before** `main` is pushed. Rollback: `ALTER TABLE "Category" DROP COLUMN "bibMedalOfId", DROP COLUMN "closed";` (only while no event has a Bib + Medal option, or those rows become normal options).
-
-`20261108063403_registration_closes_at` (scheduled close, 2026-11-08): one
-nullable `registrationClosesAt` timestamp on `Event`, the date sign-ups close
-on their own. Applied to the local-dev database only. Additive, but like the
-one below the new code breaks without it — Prisma reads every `Event` column,
-and `lockEventRow`'s raw `SELECT` names it — so run `npx prisma migrate deploy`
-**before** `main` is pushed. Rollback: `ALTER TABLE "Event" DROP COLUMN "registrationClosesAt";` (the SQL file is left as Prisma wrote it, since editing an applied migration changes its checksum).
-
-`20261107060151_step_up_used_at` (`PAYMENT_CORRECTION_PLAN.md` Batch 0,
-2026-11-07): one nullable `stepUpUsedAt` timestamp on `Organizer` and on
-`StaffAccount` (lib/step-up.ts spends a confirmation token once by moving it
-forward). Applied to the local-dev database only. Additive: the old code
-ignores it, but the new code breaks without it (Prisma reads every
-`Organizer` / `StaffAccount` column, so sign-in and every admin request
-fail), so run `npx prisma migrate deploy` **before** `main` is pushed.
-Rollback is in the migration's header comment.
-
-
-`20261028031230_event_add_ons` (`ADD_ONS_PLAN.md` Batch 1, 2026-10-28): two
-new tables, `EventAddOn` (an event's optional items) and `RunnerAddOn` (one
-runner's purchased line), and two Int columns on `Registration`,
-`addOnTotal` and `addOnRunAsOneTotal`, both defaulting to 0. Applied to the
-local-dev database. Additive: the old code ignores it, so run
-`npx prisma migrate deploy` with `DIRECT_URL` on the production endpoint
-before (or with) the deploy. Rollback is in the migration's header comment.
-
-Before that, every migration through
-`20261023031425_past_event_photo_albums` was applied in production
-(2026-10-23). Event publishing, virtual runs (Phase A), category changes,
-delivery switches, the promo price lock and the Past Events tab are all live
+Event publishing, virtual runs (Phase A), category changes,
+delivery switches, the promo price lock, the Past Events tab, event add-ons, step-up confirmation, payment corrections, scheduled registration close, Bib + Medal (with sale schedule), per-runner refunds, and unique payment references are all live
 (`docs/current-state.md`, top). Still to watch on production: the first
 online upgrade and the first online delivery switch settled by a real PayMongo
 webhook (only a signed script and the `?paid=1` return path have settled one),

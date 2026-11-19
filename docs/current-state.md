@@ -3,7 +3,9 @@
 
 ## 10. Current state
 
-**One payment reference, one payment (`PAYMENT_REFERENCE_UNIQUE_PLAN.md`), built on `dev` 2026-11-18, uncommitted when written, not yet on production:** a GCash or bank Transaction No. already on a live order, upgrade or switch anywhere in the app is refused, for runners and staff alike (§5 `payment-reference.ts`). Migration `20261118090000_payment_reference_unique` adds `transactionRef` to the three tables, backfills it, and puts partial unique indexes on `Registration` and `CategoryChange` (applied to `local-dev` only; see `ON_HOLD.md`). The manual checkout route was split first (`manual-checkout-form.ts`) and now reads the reference through `readTransactionNumber`.
+**Production is current as of 2026-11-18.** `main` equals `dev` at `89559e2`: everything below is live, including unique payment references across orders, upgrades and switches (`a96bf61`), the unified paid-runner money split (`f475c70`), the chart-only `3XS`–`5XL` shirt size picker (`5398a42`), timestamped registrant and unpaid checkout CSV exports (`89559e2`), Bib + Medal categories with scheduled openings (`56f1f97`), per-runner refunds (`288af02`), step-up authentication (including `registration.leave-paid`, `b7e1138`), payment corrections, scheduled registration closing, and event add-ons. Every migration in `prisma/migrations` through `20261118090000_payment_reference_unique` is applied in production (`ep-still-pine-b3n210bs`). Pre-deploy QA and Strix diff scans (`run-as-one-scan_9761` and `run-as-one-scan_8da2`) both completed with zero findings.
+
+**One payment reference, one payment (`PAYMENT_REFERENCE_UNIQUE_PLAN.md`), live on production (2026-11-18, `a96bf61`):** a GCash or bank Transaction No. already on a live order, upgrade or switch anywhere in the app is refused, for runners and staff alike (§5 `payment-reference.ts`). Migration `20261118090000_payment_reference_unique` adds `transactionRef` to the three tables, backfills it, and puts partial unique indexes on `Registration` and `CategoryChange` (applied in production). The manual checkout route was split first (`manual-checkout-form.ts`) and now reads the reference through `readTransactionNumber`.
 
 Why: on 2026-11-05 one ₱934 bank transfer (ref `8046902259946`, one receipt screenshotted twice) was submitted for two NEURUN 2027 orders, RM-FDCC85E7 (Joan Alvarez, PAID) and RM-8E151ABA (Roldan Alvarez). Nothing compared references.
 
@@ -28,15 +30,15 @@ ORDER BY norm;
 
 Verified on `local-dev` 2026-11-18 by a script whose every write rolled back, against the real module: spaces-and-dashes spelling refused against the PAID order; an order's own reference passes (`except`); a switch's reference refused for an order (R1); reopening RM-8E151ABA refused; the same reference accepted once the holder is EXPIRED or CANCELLED; a second simultaneous claim of one reference waits on the first's lock, a different reference does not; the unique index answers P2002, which `isReferenceIndexViolation` recognises. Then checked on localhost against `local-dev`, 2026-11-18, on a throwaway event since removed (proof blobs deleted, every email to the owner only): the manual checkout refused a held reference in another spelling and on another event, refused a blank one, accepted it again after the holder was EXPIRED and after CANCELLED, and of two simultaneous submits with one reference saved exactly one; the bank-transfer wizard showed the sentence under the Transaction No. field. Signed in as the owner: *Validate Payment* on an expired order whose reference was taken, a payment correction to a held reference, and an upgrade opened as already paid with a held reference were each refused with "Reference … is already on RM-…", the holder a link to its registrants row.
 
-**Per-runner refund (`REFUND_PLAN.md`), built on `dev`, not yet on production:** an owner or admin refunds one runner of a solo or group PAID order from the row menu; the order stays PAID and a `RunnerRefund` row subtracts. Needs migration `20261108120000_runner_refund` before `main` is pushed.
+**Per-runner refund (`REFUND_PLAN.md`), live on production (2026-11-10):** an owner or admin refunds one runner of a solo or group PAID order from the row menu; the order stays PAID and a `RunnerRefund` row subtracts (migration `20261108120000_runner_refund`).
 
 The plan is gitignored and is deleted once landed, so its decisions are kept here. **D1:** per runner; a solo order is an order of one. **D2:** entry as paid plus own add-ons; platform, transaction and delivery fees are not returned. **D3 / D8:** organizer approval required, attached by staff (name, date, proof); clients stay view only. **D4:** owner and admin only. **D5:** a promo goes back only while unpaused and inside its dates. **D6:** paid by hand, with an automatic email once recorded. **D7:** not yet remitted, Run As One pays; already remitted, the organizer pays and it comes off `remitted`. **D9:** delivery fee never returned; a runner with an awaiting category change or delivery switch, or a category change that moved price, is refused in v1. **D10:** Buy X get Y stays refundable, amount editable downward only, reason required; a free seat refunds only its add-ons.
 
 **Delete on a PAID order still keeps its money in revenue**; the delete dialog now points staff to Refund Runner.
 
-**Bib + Medal (`BIB_MEDAL_PLAN.md`), built on `dev`, not yet on production:** a per-category switch on race events offers a cheaper, shirtless option as a second `Category` row linked by `bibMedalOfId`; `Category.closed` stops selling one option and keeps its runners. Batch 1 (columns, gate, ordering), Batch 2 (the admin switch, its validation and the save), Batch 3 (results and pacers offer parents only, and the routes refuse a child id), Batch 4 (walkthrough of both wizards, no defects) and Batch 5 (docs and QA). Its migration, `20261108090000_category_bib_medal_closed`, is pending in `ON_HOLD.md`.
+**Bib + Medal (`BIB_MEDAL_PLAN.md`), live on production (2026-11-10):** a per-category switch on race events offers a cheaper, shirtless option as a second `Category` row linked by `bibMedalOfId`; `Category.closed` stops selling one option and keeps its runners. Batch 1 (columns, gate, ordering), Batch 2 (the admin switch, its validation and the save), Batch 3 (results and pacers offer parents only, and the routes refuse a child id), Batch 4 (walkthrough of both wizards, no defects) and Batch 5 (docs and QA). Migration `20261108090000_category_bib_medal_closed` is applied in production.
 
-**Bib + Medal schedule (2026-11-10, owner's revision of D1), on `dev`, uncommitted when written:** the option takes a *Goes On Sale* date (`Category.opensAt`, migration `20261110090000_category_opens_at`, pending in `ON_HOLD.md`), and **Full now stops selling by itself the moment Bib + Medal is on sale**, scheduled or not, so the two are never sold together. Before the date runners are not shown the option. One rule, `closedNow` / `CLOSED_NOW_SQL` in `lib/bib-medal.ts`, read by the slot counts, the listings' FULL badge, checkout's locked read and category change. Checked with a script against local-dev in rolled-back transactions (future, passed and no schedule, capped and uncapped, both options) and by `tsc`; **the admin form's new field was not viewed in a browser** (no staff sign-in in the session).
+**Bib + Medal schedule (2026-11-10, owner's revision of D1, `56f1f97`), live on production:** the option takes a *Goes On Sale* date (`Category.opensAt`, migration `20261110090000_category_opens_at`, applied in production), and **Full now stops selling by itself the moment Bib + Medal is on sale**, scheduled or not, so the two are never sold together. Before the date runners are not shown the option. One rule, `closedNow` / `CLOSED_NOW_SQL` in `lib/bib-medal.ts`, read by the slot counts, the listings' FULL badge, checkout's locked read and category change. Checked with a script against local-dev in rolled-back transactions (future, passed and no schedule, capped and uncapped, both options) and by `tsc`; **the admin form's new field was not viewed in a browser** (no staff sign-in in the session).
 
 The plan is gitignored and is deleted once landed, so its decisions are kept here. **D1:** the runner gets two choices (10K Full, 10K Bib + Medal), and Full can be closed once shirts run out, leaving Bib + Medal. **D2:** Bib + Medal has its own slot limit, blank meaning none; no shared pool. **D3:** sale prices do not carry over from Full: staff choose the child in the promo form, and a percent promo open to all categories still covers it. **D4:** same per-runner `Event.adminFee` as Full; settlement is unchanged. **D5:** staff may move a runner into a closed option through Category Change: `closed` stops new sign-ups only, the slot limit still applies to the move, and the flow deliberately does not read `closed`.
 
@@ -46,34 +48,12 @@ The plan is gitignored and is deleted once landed, so its decisions are kept her
 
 QA on `local-dev`, 2026-11-08, through the real routes on a throwaway event since removed, every email to the owner only: QR Ph order of Full + child + Full reached a PayMongo test session with the right lines (₱2,923.86), child's shirt size stored blank; bank transfer on a child PENDING then validated PAID, slip stored; a percent promo scoped to the child took ₱70 off the child and refused a Full-only order by name; a slot limit filled by a pending order showed FULL and refused the next order (409), as did `closed`; a results upload to the parent ranked, and one naming the child got a 400; D5's upgrade into a closed child was accepted. **Not exercised:** the PayMongo webhook settling the online order (no `PAYMONGO_WEBHOOK_SECRET` locally; that order was set PAID by hand to test the change flow) and the downgrade's apply, per the hold above.
 
-**Production is current as of 2026-10-23.** `main` equals `dev` at
-`918c567`: everything below is live, including the Past Events tab and its
-entry points, photo albums and the timing override, the CSV exports named
-after the event with Payment Remarks, and no results-only virtual run or
-certificate on a virtual run (`ca78e7d`). Every migration in
-`prisma/migrations` is applied in production, through
-`20261023031425_past_event_photo_albums` (checked on the `production` branch
-after the deploy: `photoAlbums` and `timedResults` present, `photosUrl` gone).
-The previous release was at `6757bcb` (2026-10-22). Which Neon branch each
-environment uses: runasone.ph runs on `production` (`ep-still-pine-…`);
-localhost and git `dev`'s Vercel Preview run on `local-dev`
-(`ep-shiny-sunset-…`).
-Pre-deploy QA passed on 2026-10-23 on `local-dev`, every email to the owner
-only: QR Ph RM-A2504098 (₱1,166.50, reached the PayMongo test checkout, left
-PENDING) and bank transfer RM-EE2CC449 (₱939, generated test receipt,
-PENDING); the Past tab, tab swap and back button, a finished race's panel, the
-home strip, the `/results` line and the Our Services link, and the Past tab at
-375px. Strix `run-as-one-scan_91bb` (diff scan, $5.98) found nothing. Left for
-later, none blocking: `/events` reads every past race on each request though
-it shows 12 at a time; the main event save still passes `certificateTemplate`
-and `certificateCoordinates` through without the certificate route's checks
-(Strix's note, older than this release); over-limit album errors point at row
-6; `RacePhotoLinks` uses a fixed heading id.
+**Previous production release (2026-10-23, `918c567`).** Included the Past Events tab and its entry points, photo albums and the timing override, the CSV exports named after the event with Payment Remarks, and no results-only virtual run or certificate on a virtual run (`ca78e7d`), with migrations through `20261023031425_past_event_photo_albums`. Which Neon branch each environment uses: runasone.ph runs on `production` (`ep-still-pine-…`); localhost and git `dev`'s Vercel Preview run on `local-dev` (`ep-shiny-sunset-…`). Pre-deploy QA passed on 2026-10-23 on `local-dev` (Strix `run-as-one-scan_91bb`, 0 findings). Left for later, none blocking: `/events` reads every past race on each request though it shows 12 at a time; the main event save still passes `certificateTemplate` and `certificateCoordinates` through without the certificate route's checks (Strix's note, older than this release); over-limit album errors point at row 6; `RacePhotoLinks` uses a fixed heading id.
 
-**Scheduled close and Manage Sign-Ups (2026-11-08, uncommitted on `dev`).**
+**Scheduled close and Manage Sign-Ups (2026-11-08, live on production).**
 A race can now close sign-ups on its own at a set date and time: new column
 `Event.registrationClosesAt` (migration `20261108063403_registration_closes_at`,
-one nullable column, applied to local-dev only). A passed closing date reads
+applied in production). A passed closing date reads
 CLOSED at request time everywhere `isClosed` is asked — the event page, the
 register page, listing cards, both checkout routes and the `FOR SHARE` lock
 (`lockEventRow` now selects the column) — with a runner sentence naming the
