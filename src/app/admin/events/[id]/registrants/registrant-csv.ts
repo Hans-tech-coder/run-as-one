@@ -33,6 +33,7 @@ import { formatPesos } from '@/lib/money';
 import { categoryMove, displayStatus, kitSummary, type MoveSource } from './category-change-display';
 import { logisticsNote } from './logistics-change-display';
 import type { UnpaidCheckout } from './UnpaidCheckoutsList';
+import { rowChannel } from './paid-to';
 
 /**
  * A cell a spreadsheet would run as a formula: Excel, Google Sheets and
@@ -72,7 +73,7 @@ export const REGISTRANT_CSV_HEADERS = [
   'Guardian Name', 'Guardian Relationship', 'Guardian Consent At',
   'Category', 'Changed From', 'Kit Changed', 'Distance', 'Shirt Size', 'Emergency Contact', 'Emergency Phone',
   'Running Community', 'Medical Conditions', 'Home Address', 'Province', 'Logistics Method', 'Delivery Area', 'Delivery Address', 'Logistics Note',
-  'Payment Method', 'Pacer', 'Promo Code', 'Promo Price Held From', 'Order Discount', 'Order Total',
+  'Payment Method', 'Paid To', 'Pacer', 'Promo Code', 'Promo Price Held From', 'Order Discount', 'Order Total',
   'Entry Price', 'Runner Discount', 'Registration Fee', 'Add-on Items', 'Add-ons', 'Admin Fee', 'Delivery Fee', 'Transaction Fee',
   'Runner Total', 'Free Entry', 'Status', 'Payment Remarks',
 ];
@@ -85,6 +86,12 @@ const pesosCell = (centavos: number | undefined) =>
 function kitChangedCell(runner: { categoryChanges?: MoveSource[] }): string {
   const move = categoryMove(runner);
   return move?.kit.changed ? kitSummary(move.kit) : '';
+}
+
+/** The Paid To cell: the channel's name, blank for Untagged and for no channel. */
+function paidToCell(runner: { paymentMethodCode?: string | null; paidTo?: string | null }): string {
+  const channel = rowChannel(runner);
+  return channel && channel.kind !== 'UNTAGGED' ? channel.label : '';
 }
 
 /** One runner's line, in the order of `REGISTRANT_CSV_HEADERS`. */
@@ -136,6 +143,11 @@ function registrantCsvRow(runner: any): string {
     // and a switch still waiting for its fee. Blank for an order never switched.
     csvField(logisticsNote(runner)),
     csvField(runner.paymentMethod),
+    // Where the money went (PAYMENT_CHANNELS_PLAN.md D4, Batch 5): PayMongo
+    // for an online payment, the account for a bank transfer, blank for an
+    // untagged one and for a free entry, which has no channel. The account is
+    // the order's, so a group's runners all carry it, like the money.
+    csvField(paidToCell(runner)),
     // A column of its own rather than a word folded into Payment Method
     // (PACER_DISCOUNT_PLAN.md Batch 3). The organizer sorts this sheet to
     // build the kit-claiming list, and a pacer needs a bib and a singlet like

@@ -501,3 +501,16 @@ and PAID orders (`lib/payment-correction.ts`). Left out on purpose:
   payments.** They keep their own *Record payment* doors; the correction
   route touches `Registration` only.
 - **Bulk correction** of several orders at once.
+
+## 18. Leftovers from the payment channels plan
+
+*Source: `docs/plans/PAYMENT_CHANNELS_PLAN.md` "Open, not in v1" (gitignored,
+written 2026-11-19, deleted after release). What it built and its decisions
+(D1–D7) are in `docs/current-state.md` under "Payment channels per event".*
+
+- **PayMongo's actual deduction can differ slightly** from the transaction fee
+  the app charged. v1 shows the app's figure; cross-check with the PayMongo
+  dashboard export (description *"Registration for <event>"*) before remitting.
+- **A cross-event "where is my money" view**: all events, per wallet. Easy on
+  top of `settlement-channels.ts`; on request.
+- **Importing GCash / GoTyme statements** to auto-match references.

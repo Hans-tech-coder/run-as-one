@@ -13,7 +13,7 @@
 
 import React, { createContext, useContext, useState } from 'react';
 import AdminSelect from '../../../AdminSelect';
-import { UNTAGGED_LABEL, normalizePaidTo } from '@/lib/payment-channel';
+import { PAYMONGO_LABEL, UNTAGGED_LABEL, channelOf, normalizePaidTo } from '@/lib/payment-channel';
 
 const PaidToAccounts = createContext<readonly string[]>([]);
 
@@ -29,6 +29,62 @@ export function paidToMissing(accounts: readonly string[], value: string): boole
 
 export function usePaidToAccounts(): readonly string[] {
   return useContext(PaidToAccounts);
+}
+
+/**
+ * The channel a registrant row's payment came in through (D4), read from the
+ * method code the row carries. The table's *Paid To* column and filter and the
+ * CSV's Paid To all ask this, so they can never disagree. Re-read on every
+ * render, so a row just tagged or corrected moves channel at once.
+ */
+export function rowChannel(row: { paymentMethodCode?: string | null; paidTo?: string | null }) {
+  return channelOf({ paymentMethod: row.paymentMethodCode, paidTo: row.paidTo });
+}
+
+/**
+ * `?paidTo=` as a *Paid to* filter value (a channel key: `paymongo`,
+ * `untagged` or `account:<name>`), or null for anything else. The remittance
+ * page's *Untagged* line links here with `?paidTo=untagged`.
+ */
+export function paidToFilterFromUrl(value: string | undefined): string | null {
+  const raw = (value ?? '').trim().toLowerCase();
+  if (raw === 'paymongo' || raw === 'untagged') return raw;
+  const name = raw.startsWith('account:') ? normalizePaidTo(raw.slice('account:'.length)) : '';
+  return name ? `account:${name}` : null;
+}
+
+/**
+ * The *Paid to* filter's choices: the race's accounts in the order the runner
+ * sees them, then any other account name a row carries (an account since
+ * renamed or removed), then PayMongo and Untagged when a row has one. A
+ * choice already selected stays listed so it can be unticked.
+ */
+export function paidToFilterOptions(
+  accounts: readonly string[],
+  rows: readonly { paymentMethodCode?: string | null; paidTo?: string | null }[],
+  selected: readonly string[],
+): { value: string; label: string }[] {
+  const options = new Map<string, string>();
+  for (const account of accounts) {
+    const key = normalizePaidTo(account);
+    if (key && !options.has(`account:${key}`)) options.set(`account:${key}`, account.trim());
+  }
+  const fixed = new Set<string>();
+  for (const row of rows) {
+    const channel = rowChannel(row);
+    if (!channel) continue;
+    if (channel.kind === 'ACCOUNT') {
+      if (!options.has(channel.key)) options.set(channel.key, channel.label);
+    } else {
+      fixed.add(channel.key);
+    }
+  }
+  if (fixed.has('paymongo') || selected.includes('paymongo')) options.set('paymongo', PAYMONGO_LABEL);
+  if (fixed.has('untagged') || selected.includes('untagged')) options.set('untagged', UNTAGGED_LABEL);
+  for (const value of selected) {
+    if (!options.has(value)) options.set(value, value.replace(/^account:/, ''));
+  }
+  return [...options].map(([value, label]) => ({ value, label }));
 }
 
 /** What a screen prints for an order's or a change's `paidTo`. */

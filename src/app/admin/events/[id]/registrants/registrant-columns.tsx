@@ -16,6 +16,7 @@ import { MinorBadge, RegistrantStatusBadges } from './registrant-display';
 import { CategoryWithChange } from './category-change-display';
 import { LogisticsWithSwitch } from './logistics-change-display';
 import type { RegistrantRow } from './RegistrantsTable';
+import { rowChannel } from './paid-to';
 
 /** The Province filter's choice for rows with no home address on file. */
 export const NO_PROVINCE = 'NOT ON FILE';
@@ -29,11 +30,12 @@ export const ANY_ADD_ON = '__ANY__';
 
 /**
  * The columns a race starts with hidden: Add-ons on a race where nobody
- * bought one, so a race without add-ons keeps the table it always had. The
- * View chip still offers it.
+ * bought one, so a race without add-ons keeps the table it always had, and
+ * Paid To always (it is there for its filter; the eleven columns that fit
+ * beside the sidebar stay eleven). The View chip still offers both.
  */
 export function initialColumnVisibility(rows: { addOnsText?: string }[]): Record<string, boolean> {
-  return rows.some(row => row.addOnsText) ? {} : { addOns: false };
+  return rows.some(row => row.addOnsText) ? { paidTo: false } : { addOns: false, paidTo: false };
 }
 
 /**
@@ -242,6 +244,27 @@ export function buildRegistrantColumns({
       filterFn: (row, columnId, filterValue) => {
         if (!filterValue || filterValue.length === 0) return true;
         return filterValue.includes(row.getValue(columnId));
+      }
+    },
+    {
+      // The channel the money came in through (PAYMENT_CHANNELS_PLAN.md D4,
+      // Batch 5): the account, PayMongo, or Untagged; a dash for a free entry.
+      // Hidden by default (`initialColumnVisibility`); the *Paid to* filter
+      // reads it by channel key, so "GCash" and "gcash" are one wallet.
+      id: "paidTo",
+      accessorFn: row => rowChannel(row)?.label ?? '',
+      header: "Paid To",
+      cell: ({ row }) => {
+        const channel = rowChannel(row.original);
+        if (!channel) return <span className="text-[var(--text-muted)]">—</span>;
+        return channel.kind === 'UNTAGGED'
+          ? <span className="text-secondary">{channel.label}</span>
+          : <span>{channel.label}</span>;
+      },
+      filterFn: (row, _columnId, filterValue) => {
+        if (!filterValue || filterValue.length === 0) return true;
+        const channel = rowChannel(row.original);
+        return !!channel && (filterValue as string[]).includes(channel.key);
       }
     },
     {

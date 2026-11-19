@@ -22,6 +22,7 @@ import { GUARDIAN_CONSENT_MAX_AGE } from '@/lib/minor-consent';
 import { compareCategoryNames } from '@/lib/category-distance';
 import { needsValidation } from './registrant-display';
 import { ANY_ADD_ON, NO_PROVINCE } from './registrant-columns';
+import { paidToFilterOptions, usePaidToAccounts } from './paid-to';
 import type { RegistrantRow } from './RegistrantsTable';
 
 /**
@@ -157,6 +158,17 @@ export default function RegistrantsToolbar({
   const selectedLogistics = (table.getColumn('logisticsMethod')?.getFilterValue() as string[]) || [];
   const selectedProvinces = (table.getColumn('province')?.getFilterValue() as string[]) || [];
   const selectedPayment = (table.getColumn('paymentMethod')?.getFilterValue() as string[]) || [];
+  const selectedPaidTo = (table.getColumn('paidTo')?.getFilterValue() as string[]) || [];
+
+  // *Paid to* (PAYMENT_CHANNELS_PLAN.md Batch 5): the race's accounts,
+  // PayMongo and Untagged, by channel key. Untagged is how staff find the old
+  // bank transfers still to tag; the remittance page links here with it on.
+  const paidToAccounts = usePaidToAccounts();
+  const selectedPaidToKey = selectedPaidTo.join('|');
+  const paidToOptions = useMemo(
+    () => paidToFilterOptions(paidToAccounts, runners, selectedPaidToKey ? selectedPaidToKey.split('|') : []),
+    [paidToAccounts, runners, selectedPaidToKey],
+  );
 
   const toggleCategory = (cat: string) => {
     const newSelected = selectedCategories.includes(cat)
@@ -193,12 +205,21 @@ export default function RegistrantsToolbar({
     table.getColumn('paymentMethod')?.setFilterValue(newSelected.length ? newSelected : undefined);
   };
 
+  const togglePaidTo = (value: string) => {
+    const newSelected = selectedPaidTo.includes(value)
+      ? selectedPaidTo.filter(v => v !== value)
+      : [...selectedPaidTo, value];
+    table.getColumn('paidTo')?.setFilterValue(newSelected.length ? newSelected : undefined);
+  };
+
   // The Filters chip's sheet: the three lists, each reading and writing its
   // own column filter.
   const filterGroups: FilterGroup[] = [
     { label: 'Category', options: uniqueCategories, selected: selectedCategories, onToggle: toggleCategory, capitalize: false },
     { label: 'Logistics', options: uniqueLogistics, selected: selectedLogistics, onToggle: toggleLogistics, capitalize: true },
     { label: 'Payment', options: uniquePayment, selected: selectedPayment, onToggle: togglePayment, capitalize: true },
+    // Account names as the organizer typed them, so not capitalized.
+    { label: 'Paid to', options: paidToOptions, selected: selectedPaidTo, onToggle: togglePaidTo, capitalize: false },
     { label: 'Province', options: uniqueProvinces, selected: selectedProvinces, onToggle: toggleProvince, capitalize: false },
     // Any add-on, or a runner with this item: one checked is enough, as in
     // the groups above.
@@ -228,7 +249,7 @@ export default function RegistrantsToolbar({
   const clearFilters = () => {
     setShowOnlyMinors(false);
     setShowOnlyPacers(false);
-    for (const id of ['category', 'province', 'logisticsMethod', 'paymentMethod', 'addOns']) {
+    for (const id of ['category', 'province', 'logisticsMethod', 'paymentMethod', 'paidTo', 'addOns']) {
       table.getColumn(id)?.setFilterValue(undefined);
     }
   };

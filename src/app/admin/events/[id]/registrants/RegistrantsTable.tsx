@@ -47,6 +47,7 @@ import ManualEmailModal, { useManualEmailModal } from './ManualEmailModal';
 import { paymentCorrected, remarked, withEmailMark, withPaymentCorrection, withRemarks } from './registrant-row-patches';
 import { usePaymentCorrection } from './usePaymentCorrection';
 import { useTagAccount } from './TagAccountModal';
+import { paidToFilterFromUrl } from './paid-to';
 import { useRunnerRefund } from './RunnerRefundModal';
 import CategoryChangeModal from './CategoryChangeModal';
 import { useCategoryChangeModal } from './useCategoryChangeModal';
@@ -111,6 +112,12 @@ interface RegistrantsTableProps {
    * shows everyone, and no filter is hidden from the person using it.
    */
   initialSearch?: string;
+  /**
+   * `?paidTo=` on the URL (PAYMENT_CHANNELS_PLAN.md Batch 5): the *Paid to*
+   * filter's starting choice. The remittance page's *Untagged* line links
+   * here with `untagged`, so tagging old orders starts on the ones left.
+   */
+  initialPaidTo?: string;
 }
 
 /** One row as page.tsx builds it; named so the files split from this one can say so. */
@@ -122,6 +129,7 @@ export default function RegistrantsTable({
   raceDay,
   runners: initialRunners,
   initialSearch = '',
+  initialPaidTo,
   permissions,
   switching,
 }: RegistrantsTableProps) {
@@ -291,6 +299,8 @@ export default function RegistrantsTable({
     [updatingId, runners]
   );
 
+  // Read once: it is the filter's starting value, not a lock, like the search.
+  const [initialPaidToFilter] = useState(() => paidToFilterFromUrl(initialPaidTo));
   const table = useReactTable({
     data: queues.visibleRunners,
     columns,
@@ -312,6 +322,7 @@ export default function RegistrantsTable({
     // Page 1 on new rows comes from useFirstPageOnNewRows below; TanStack's
     // own reset warns on this screen (see the hook).
     autoResetPageIndex: false,
+    initialState: { columnFilters: initialPaidToFilter ? [{ id: 'paidTo', value: [initialPaidToFilter] }] : [] },
   });
   useFirstPageOnNewRows(table);
 

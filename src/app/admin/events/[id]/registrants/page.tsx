@@ -32,10 +32,12 @@ export default async function RegistrantsPage({
   // discount back to the people who used it is one click.
   // `?tab=unpaid` opens the Unpaid checkouts tab: the "+N unpaid" on the
   // events table and the overview link straight to it.
-  searchParams: Promise<{ search?: string; tab?: string }>;
+  // `?paidTo=untagged` (or `paymongo`, `account:<name>`) starts the *Paid to*
+  // filter on: the remittance page's Untagged line links here with it.
+  searchParams: Promise<{ search?: string; tab?: string; paidTo?: string }>;
 }) {
   const { id } = await params;
-  const { search, tab } = await searchParams;
+  const { search, tab, paidTo } = await searchParams;
   const initialTab: RegistrantsTab = tab === 'unpaid' ? 'unpaid' : tab === 'refunds' ? 'refunds' : 'registrants';
 
   // Scoped to the signed-in organizer's own events, the way every admin route
@@ -266,6 +268,7 @@ export default async function RegistrantsPage({
               eventTitle={event.title}
               raceDay={event.date}
               initialSearch={search ?? ''}
+              initialPaidTo={paidTo}
               permissions={permissions}
               switching={switching}
             />

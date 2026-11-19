@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-50 pages · 101 API routes · 169 modules in `src/lib` · 709 files · 125,154 lines
+50 pages · 101 API routes · 169 modules in `src/lib` · 709 files · 125,286 lines
 
 ---
 
@@ -405,9 +405,9 @@ when a task touches one, split it before editing rather than after.
 | 472 | [`src/app/events/[slug]/register/BirthdatePicker.tsx`](../src/app/events/[slug]/register/BirthdatePicker.tsx) |
 | 451 | [`src/app/admin/events/[id]/registrants/RunnerEditModal.tsx`](../src/app/admin/events/[id]/registrants/RunnerEditModal.tsx) |
 | 450 | [`src/app/admin/events/[id]/registrants/RegistrantActionsMenu.tsx`](../src/app/admin/events/[id]/registrants/RegistrantActionsMenu.tsx) |
+| 444 | [`src/app/admin/events/[id]/registrants/RegistrantsTable.tsx`](../src/app/admin/events/[id]/registrants/RegistrantsTable.tsx) |
 | 441 | [`src/lib/actor.ts`](../src/lib/actor.ts) |
 | 436 | [`src/app/admin/events/[id]/edit/page.tsx`](../src/app/admin/events/[id]/edit/page.tsx) |
-| 433 | [`src/app/admin/events/[id]/registrants/RegistrantsTable.tsx`](../src/app/admin/events/[id]/registrants/RegistrantsTable.tsx) |
 | 431 | [`src/lib/activity.ts`](../src/lib/activity.ts) |
 | 426 | [`src/app/admin/your-events/[id]/RaceReport.tsx`](../src/app/admin/your-events/[id]/RaceReport.tsx) |
 | 425 | [`src/app/admin/events/[id]/registrants/useCategoryChangeModal.ts`](../src/app/admin/events/[id]/registrants/useCategoryChangeModal.ts) |

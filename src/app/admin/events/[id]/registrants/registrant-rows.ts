@@ -264,6 +264,10 @@ export function buildRegistrantRows({
         // The account a bank transfer went into (PAYMENT_CHANNELS_PLAN.md D1),
         // raw: null reads *Untagged* and offers *Tag account*.
         paidTo: reg.paidTo,
+        // The method's code beside its label, so the channel (PayMongo, the
+        // account, Untagged) is decided by `channelOf` from the code, never by
+        // reading the label back (PAYMENT_CHANNELS_PLAN.md D4, Batch 5).
+        paymentMethodCode: reg.paymentMethod,
         consentGiven: reg.consentGiven,
         consentGivenAt: reg.consentGivenAt,
         // The name the person submitting typed under the tick. Null on any

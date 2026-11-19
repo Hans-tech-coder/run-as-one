@@ -22,7 +22,9 @@ export default function ChannelBreakdownPanel({
   const { lines, awaiting } = breakdown;
   const nothing = lines.length === 0 && awaiting.length === 0;
   const untagged = lines.find(line => line.channel.kind === 'UNTAGGED');
-  const registrantsHref = `/admin/events/${eventId}/registrants`;
+  // With the *Paid to* filter on Untagged (Batch 5), so the link lands on the
+  // orders still to tag rather than on every runner.
+  const registrantsHref = `/admin/events/${eventId}/registrants?paidTo=untagged`;
 
   return (
     <div className="admin-panel mb-8">
