@@ -507,7 +507,7 @@ and PAID orders (`lib/payment-correction.ts`). Left out on purpose:
 ## 18. Leftovers from the payment channels plan
 
 *Source: `docs/plans/PAYMENT_CHANNELS_PLAN.md` "Open, not in v1" (gitignored,
-written 2026-11-19, deleted after release). What it built and its decisions
+written and deleted 2026-11-19). What it built and its decisions
 (D1–D7) are in `docs/current-state.md` under "Payment channels per event".*
 
 - **PayMongo's actual deduction can differ slightly** from the transaction fee
