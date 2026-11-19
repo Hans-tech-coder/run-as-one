@@ -464,6 +464,15 @@ model Registration {
   /// writer through `claimReference`. What "one reference = one payment" (R1)
   /// compares; the runner's own spelling stays in transactionNumber.
   transactionRef          String?
+  /// Which bank-transfer account the runner paid into, as a snapshot of that
+  /// account's `BankAccount.bankName` ("GCash", "GoTyme"), checked against the
+  /// event's own accounts by lib/payment-channel.ts `asPaidTo`
+  /// (PAYMENT_CHANNELS_PLAN.md D1). A name, not a FK: BankAccount rows are per
+  /// event, so "GCash" on two events is two rows but one wallet, and the
+  /// breakdown groups by the normalized name. Null on every order from before
+  /// it was asked, read as "Untagged" (D3); meaningless on online and
+  /// complimentary orders, whose channel comes from paymentMethod (D4).
+  paidTo                  String?
   /// Whether the customer checked the liability & data-privacy consent box at
   /// submission. false on registrations made before this was required, since
   /// they were never actually asked — not a claim that they refused.
@@ -772,6 +781,10 @@ model CategoryChange {
   /// writer through `claimReference`. What "one reference = one payment" (R1)
   /// compares; the runner's own spelling stays in transactionNumber.
   transactionRef     String?
+  /// Which bank-transfer account the runner paid into, the same snapshot and
+  /// meaning as Registration.paidTo (PAYMENT_CHANNELS_PLAN.md D1). Null on old
+  /// rows, read as "Untagged".
+  paidTo             String?
   /// Until when an awaiting upgrade holds its seat in the target category
   /// (D11). Never later than the event's category change deadline.
   holdUntil          DateTime?
@@ -849,6 +862,10 @@ model LogisticsChange {
   /// writer through `claimReference`. What "one reference = one payment" (R1)
   /// compares; the runner's own spelling stays in transactionNumber.
   transactionRef        String?
+  /// Which bank-transfer account the runner paid into, the same snapshot and
+  /// meaning as Registration.paidTo (PAYMENT_CHANNELS_PLAN.md D1). Null on old
+  /// rows, read as "Untagged".
+  paidTo                String?
   /// Until when an awaiting switch waits for its money (L12). Never later
   /// than the event's delivery switch deadline. No seat is held.
   holdUntil             DateTime?

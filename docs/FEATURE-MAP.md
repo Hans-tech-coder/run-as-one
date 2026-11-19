@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-50 pages · 100 API routes · 167 modules in `src/lib` · 701 files · 123,514 lines
+50 pages · 100 API routes · 168 modules in `src/lib` · 702 files · 123,592 lines
 
 ---
 
@@ -292,6 +292,7 @@ the file itself.
 | [`paid-runners.ts`](../src/lib/paid-runners.ts) | Who an order charged for, at the price they checked out at: the one input `splitOrderMoney` is given (2026-11-18). |
 | [`password-reset.ts`](../src/lib/password-reset.ts) | "Forgot password?" — who may reset their own password from the sign-in page, and the link that lets them (LOGIN_UX_PLAN.md Batch 2). |
 | [`past-events.ts`](../src/lib/past-events.ts) | What counts as a past event and where its card goes (`PAST_EVENTS_PLAN.md` D2, D3). |
+| [`payment-channel.ts`](../src/lib/payment-channel.ts) | **Which channel a payment came in through** (PAYMENT_CHANNELS_PLAN.md D1, D4): each bank-transfer account by name, PayMongo, or *Untagged*. |
 | [`payment-correction-rules.ts`](../src/lib/payment-correction-rules.ts) | **Which orders a payment correction may touch, and how long its reason may be** (PAYMENT_CORRECTION_PLAN.md C1, C2, C4), with no Prisma import, so … |
 | [`payment-correction.ts`](../src/lib/payment-correction.ts) | Correcting a manual order's payment details after checkout (PAYMENT_CORRECTION_PLAN.md C1–C8). |
 | [`payment-link.ts`](../src/lib/payment-link.ts) | Handing a payment link to staff, one path for every way it goes out (`UNPAID_FOLLOWUP_PLAN.md` Batches 3–4): `issuePaymentLink` checks `registratio… |
@@ -416,6 +417,7 @@ when a task touches one, split it before editing rather than after.
 | 407 | [`src/app/admin/events/[id]/registrants/UnpaidCheckoutsList.tsx`](../src/app/admin/events/[id]/registrants/UnpaidCheckoutsList.tsx) |
 | 407 | [`src/app/events/[slug]/register/RunnerCard.tsx`](../src/app/events/[slug]/register/RunnerCard.tsx) |
 | 406 | [`src/app/admin/events/[id]/registrants/useCategoryChangeModal.ts`](../src/app/admin/events/[id]/registrants/useCategoryChangeModal.ts) |
+| 406 | [`src/app/events/[slug]/register/validation.ts`](../src/app/events/[slug]/register/validation.ts) |
 | 405 | [`src/app/admin/remittances/[eventId]/RecordRemittanceDialog.tsx`](../src/app/admin/remittances/[eventId]/RecordRemittanceDialog.tsx) |
 | 404 | [`src/app/admin/events/[id]/registrants/RunnerRefundModal.tsx`](../src/app/admin/events/[id]/registrants/RunnerRefundModal.tsx) |
 | 403 | [`src/lib/audit.ts`](../src/lib/audit.ts) |
