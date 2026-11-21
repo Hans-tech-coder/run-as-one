@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-50 pages · 100 API routes · 169 modules in `src/lib` · 707 files · 124,925 lines
+50 pages · 100 API routes · 170 modules in `src/lib` · 709 files · 125,408 lines
 
 ---
 
@@ -250,6 +250,7 @@ the file itself.
 | [`event-preview.ts`](../src/lib/event-preview.ts) | Who may open an unpublished event page (D9): `canViewEventPage(event)` — anyone when published; otherwise only a signed-in team member (never a cli… |
 | [`event-schedule.ts`](../src/lib/event-schedule.ts) | The line between upcoming and finished. |
 | [`event-slug.ts`](../src/lib/event-slug.ts) | The piece of an event's URL a runner actually reads. |
+| [`event-structured-data.ts`](../src/lib/event-structured-data.ts) | What an event page tells Google about the race, as schema.org `SportsEvent` JSON-LD — the markup that lets a race show in Google's event listings. |
 | [`event-type.ts`](../src/lib/event-type.ts) | What an event sells to its runners. |
 | [`event-visibility.ts`](../src/lib/event-visibility.ts) | Whether the public may see an event yet (`EVENT_PUBLISH_PLAN.md`). |
 | [`expiry-sweep.ts`](../src/lib/expiry-sweep.ts) | The one daily sweep. |
@@ -385,15 +386,15 @@ when a task touches one, split it before editing rather than after.
 | 614 | [`src/lib/email-document.ts`](../src/lib/email-document.ts) |
 | 589 | [`src/lib/registration-gate.ts`](../src/lib/registration-gate.ts) |
 | 571 | [`src/lib/add-ons.ts`](../src/lib/add-ons.ts) |
+| 570 | [`src/app/admin/events/[id]/registrants/PaymentCorrectionModal.tsx`](../src/app/admin/events/[id]/registrants/PaymentCorrectionModal.tsx) |
 | 567 | [`src/app/admin/NotificationsCenter.tsx`](../src/app/admin/NotificationsCenter.tsx) |
 | 550 | [`src/app/api/admin/events/[id]/update-event.ts`](../src/app/api/admin/events/[id]/update-event.ts) |
-| 529 | [`src/app/s/[site]/events/[slug]/EventDetails.tsx`](../src/app/s/[site]/events/[slug]/EventDetails.tsx) |
+| 543 | [`src/app/s/[site]/events/[slug]/EventDetails.tsx`](../src/app/s/[site]/events/[slug]/EventDetails.tsx) |
 | 528 | [`src/app/admin/DashboardShell.tsx`](../src/app/admin/DashboardShell.tsx) |
 | 520 | [`src/lib/promo-input.ts`](../src/lib/promo-input.ts) |
 | 520 | [`src/lib/refund-store.ts`](../src/lib/refund-store.ts) |
 | 511 | [`src/app/api/checkout/manual/route.ts`](../src/app/api/checkout/manual/route.ts) |
 | 509 | [`src/app/admin/communities/CommunitiesClient.tsx`](../src/app/admin/communities/CommunitiesClient.tsx) |
-| 509 | [`src/app/admin/events/[id]/registrants/PaymentCorrectionModal.tsx`](../src/app/admin/events/[id]/registrants/PaymentCorrectionModal.tsx) |
 | 500 | [`src/app/admin/events/[id]/registrants/ProofLightbox.tsx`](../src/app/admin/events/[id]/registrants/ProofLightbox.tsx) |
 | 499 | [`src/app/admin/AdminRouteLoading.tsx`](../src/app/admin/AdminRouteLoading.tsx) |
 | 478 | [`src/lib/settlement.ts`](../src/lib/settlement.ts) |
@@ -402,7 +403,7 @@ when a task touches one, split it before editing rather than after.
 | 475 | [`src/app/feedback/FeedbackForm.tsx`](../src/app/feedback/FeedbackForm.tsx) |
 | 472 | [`src/app/admin/settings/TwoFactorPanel.tsx`](../src/app/admin/settings/TwoFactorPanel.tsx) |
 | 472 | [`src/app/events/[slug]/register/BirthdatePicker.tsx`](../src/app/events/[slug]/register/BirthdatePicker.tsx) |
-| 451 | [`src/app/admin/events/[id]/registrants/RunnerEditModal.tsx`](../src/app/admin/events/[id]/registrants/RunnerEditModal.tsx) |
+| 470 | [`src/app/admin/events/[id]/registrants/RunnerEditModal.tsx`](../src/app/admin/events/[id]/registrants/RunnerEditModal.tsx) |
 | 441 | [`src/lib/actor.ts`](../src/lib/actor.ts) |
 | 436 | [`src/app/admin/events/[id]/edit/page.tsx`](../src/app/admin/events/[id]/edit/page.tsx) |
 | 431 | [`src/lib/activity.ts`](../src/lib/activity.ts) |

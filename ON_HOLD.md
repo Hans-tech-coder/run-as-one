@@ -409,8 +409,6 @@ Left out on purpose (the plan's out-of-scope list):
   One's, D10).
 - Client viewers editing their own branding (D7: staff only).
 - Custom domains a client owns outright (`crcrunning.com`).
-- A sitemap or `robots` per host. The app has neither; the canonical URLs
-  on event pages are enough until one is added.
 
 Known and not done:
 

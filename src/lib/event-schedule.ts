@@ -38,7 +38,7 @@ const EVENT_TIME_ZONE = 'Asia/Manila';
  * so the conversion is a string concatenation rather than a zone lookup. Any
  * country where the offset moves twice a year would need a real one.
  */
-const EVENT_UTC_OFFSET = '+08:00';
+export const EVENT_UTC_OFFSET = '+08:00';
 
 /** The only shape `Event.date` is ever allowed to hold. */
 const CALENDAR_DAY = /^\d{4}-\d{2}-\d{2}$/;

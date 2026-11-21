@@ -33,6 +33,7 @@ import {
   withSlotCounts,
 } from '@/lib/registration-gate';
 import { EVENT_SITE_CLIENT, ensureEventSite, eventPageMetadata } from '@/lib/site-client';
+import { eventJsonLd, jsonLdScript } from '@/lib/event-structured-data';
 import './EventDetails.css';
 
 import EventHeroBanner from '@/components/EventHeroBanner';
@@ -74,7 +75,11 @@ export default async function EventDetails({ site, slug, staff }: { site: string
   // are still out there on posters and in group chats.
   const event = await db.event.findFirst({
     where: eventByParam(slug),
-    include: { categories: { orderBy: CATEGORY_ORDER }, client: EVENT_SITE_CLIENT }
+    // The client's name is the organizer in the page's structured data.
+    include: {
+      categories: { orderBy: CATEGORY_ORDER },
+      client: { select: { ...EVENT_SITE_CLIENT.select, name: true } },
+    },
   });
 
   if (!event) {
@@ -184,6 +189,11 @@ export default async function EventDetails({ site, slug, staff }: { site: string
 
   return (
     <div className="event-details-page">
+      {/* What Google's event listings read (lib/event-structured-data.ts). */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(eventJsonLd({ ...event, categories }, state, salePrices)) }}
+      />
       <EventHeroBanner event={event as any} />
 
       {/* Only the team ever sees this page unpublished, and they must not
