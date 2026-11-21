@@ -887,8 +887,11 @@ scroller that would clip it; `consent-sheet.css` is scoped to its own classes
 and its print rules fire only on a page carrying that copy
 (`body:has(> .consent-print-copy)`), so printing any other dashboard page is
 untouched. The paper's black-on-white is a deliberate literal, not theme
-tokens. The **detail modal has two doors** — the eye beside
-the Reference and *View Details* at the top of the row's actions menu — because
+tokens. The **detail modal has two doors** — a click anywhere on
+the row (`RegistrantsDataTable` `onRowClick`; the Reference is also a button for a
+keyboard; a click on a checkbox, button, link or the menu is left to it, and the
+eye that sat beside the Reference was dropped, owner 2026-11-21) and *View
+Details* at the top of the row's actions menu — because
 an organizer who has already opened the menu to edit or validate should not have
 to close it to read the order first; both open the same modal, and the menu's
 entry looks the runner up in the live list rather than carrying a captured row,
@@ -897,8 +900,8 @@ Batch 3): the Category, Logistics and Payment lists sit in the one *Filters* chi
 width (`FiltersMenu`; the two queue chips stay chips beside it), below `sm` selecting
 rows raises a bulk bar at the foot of the screen in place of the toolbar's red
 chip, and the detail modal is a full-height sheet whose footer carries Proof,
-Remarks and Email beside Validate. A card has no eye beside its reference (the
-owner's call); its ⋯ menu's *View Details* is the door there. The **proof of payment opens full screen**
+Remarks and Email beside Validate. A card does not open on a tap (the owner's
+call covered the table rows only); its ⋯ menu's *View Details* is the door there. The **proof of payment opens full screen**
 (`ProofLightbox.tsx`) — from the thumbnail itself or the *View fullscreen* link
 beside the heading — with zoom (buttons, wheel, pinch, double-click, anchored on
 the point being read), pan (drag or arrow keys, so the drag is never the only

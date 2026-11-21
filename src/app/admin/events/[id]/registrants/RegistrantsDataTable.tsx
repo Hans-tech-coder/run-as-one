@@ -11,6 +11,11 @@
  * while the registrants one centred them, so the checkbox and the No. sat
  * differently on the two tabs. Each tab keeps its own columns and data; how a
  * row looks is decided here once.
+ *
+ * With `onRowClick`, a click anywhere on a row opens it (the registrants tab:
+ * View Details, owner 2026-11-21). A click on something of its own inside the
+ * row — a button, a link, a checkbox, the ⋯ menu, anything portalled out of
+ * the row — and a drag that selected text are left alone.
  */
 
 import React from 'react';
@@ -26,13 +31,26 @@ import {
 } from '@/components/ui/table';
 import { columnInset } from './registrant-columns';
 
+/** What inside a row answers a click itself, so the row must not. */
+const OWN_CLICK = 'button, a, input, select, textarea, label, summary, [role="menu"], [role="menuitem"], [role="dialog"], [role="checkbox"]';
+
+function rowClickTarget(event: React.MouseEvent<HTMLElement>): boolean {
+  const target = event.target as Element | null;
+  if (!target || !event.currentTarget.contains(target)) return false;
+  if (target.closest(OWN_CLICK)) return false;
+  return !window.getSelection()?.toString();
+}
+
 export default function RegistrantsDataTable<T>({
   table,
   empty,
+  onRowClick,
 }: {
   table: TanStackTable<T>;
   /** The line shown when no row is left, e.g. "No registrants found." */
   empty: React.ReactNode;
+  /** Opens a row when it is clicked anywhere that is not a control of its own. */
+  onRowClick?: (row: T) => void;
 }) {
   const rows = table.getRowModel().rows;
 
@@ -63,7 +81,11 @@ export default function RegistrantsDataTable<T>({
         <TableBody>
           {rows.length > 0 ? (
             rows.map(row => (
-              <TableRow key={row.id} className="border-b border-[var(--dash-hairline)] hover:bg-[var(--ink-05)] transition-colors">
+              <TableRow
+                key={row.id}
+                onClick={onRowClick ? event => rowClickTarget(event) && onRowClick(row.original) : undefined}
+                className={`border-b border-[var(--dash-hairline)] hover:bg-[var(--ink-05)] transition-colors ${onRowClick ? 'cursor-pointer' : ''}`}
+              >
                 {row.getVisibleCells().map(cell => (
                   <TableCell key={cell.id} className={`py-4 px-2.5 text-primary ${columnInset(cell.column.id)}`}>
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}

@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * One registrant's order, opened from the Eye button on their row.
+ * One registrant's order, opened by clicking their row (or its reference).
  *
  * Split out of `RegistrantsTable.tsx`, which was the largest file in the
  * repository: this panel is four hundred lines of *reading* an order —

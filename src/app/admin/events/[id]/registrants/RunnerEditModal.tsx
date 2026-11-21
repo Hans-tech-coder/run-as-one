@@ -6,7 +6,7 @@ import AdminSelect from '../../../AdminSelect';
 import AdminDatePicker from '../../../AdminDatePicker';
 import BusyLabel from '@/components/ui/BusyLabel';
 import { useAlert } from '@/components/ui/AlertProvider';
-import { SHIRT_SIZES } from '@/lib/shirt-size';
+import { SHIRT_SIZE_CHART, normalizeShirtSize } from '@/lib/shirt-size';
 import { upperCaseAsTyped } from '@/lib/text-case';
 import { today } from '@/lib/event-schedule';
 import {
@@ -52,6 +52,33 @@ const GENDER_OPTIONS = [
  * demand one — but once staff start typing an address, a half of one would
  * be a worse record than none, so it has to be finished.
  */
+/**
+ * Shirt Size's choices, as the public registration's `ShirtSizeField` offers
+ * them: the chart's 3XS–5XL with each size's inches, then *No shirt* for a
+ * package with nothing to wear (stored blank). A size an older order holds
+ * that the chart does not list stays listed, so opening the modal never
+ * silently drops it; one the chart lists in another case ("m") reads as the
+ * chart's own ("M").
+ */
+function onChart(stored: string | null | undefined): string {
+  const size = normalizeShirtSize(stored);
+  return SHIRT_SIZE_CHART.some(row => row.size === size) ? size : stored ?? '';
+}
+
+function shirtSizeOptions(stored: string | null | undefined) {
+  const options: { value: string; label: string; hint?: string }[] = SHIRT_SIZE_CHART.map(row => ({
+    value: row.size,
+    label: row.size,
+    hint: `${row.width}″ W × ${row.length}″ L`,
+  }));
+  const current = stored ?? '';
+  if (current && !SHIRT_SIZE_CHART.some(row => row.size === normalizeShirtSize(current))) {
+    options.push({ value: current, label: current, hint: 'Not on the size chart; kept from the order.' });
+  }
+  options.push({ value: '', label: 'No shirt', hint: 'This package has nothing to wear.' });
+  return options;
+}
+
 function addressStarted(draft: Partial<RunnerAddress>): boolean {
   return RUNNER_ADDRESS_FIELDS.some(field => (draft[field] ?? '').trim() !== '');
 }
@@ -302,24 +329,16 @@ export default function RunnerEditModal({
                   dialogLabel="Choose the birthdate"
                   onChange={birthdate => setRunner({...runner, birthdate})}
                 />
-                <div className="form-group">
-                  <label className="form-label" htmlFor="edit-runner-size">Shirt Size</label>
-                  {/* Free text with suggestions rather than AdminSelect: a
-                      package with no shirt leaves it blank. */}
-                  <input
-                    id="edit-runner-size"
-                    type="text"
-                    list="shirt-size-options"
-                    value={runner.singletSize || ''}
-                    onChange={e => setRunner({...runner, singletSize: e.target.value})}
-                    placeholder="Blank if no shirt in this package"
-                    className="form-input"
-                  />
-                  <datalist id="shirt-size-options">
-                    {SHIRT_SIZES.map(size => <option key={size} value={size} />)}
-                  </datalist>
-                </div>
-                <div className="form-group sm:col-span-2">
+                <AdminSelect
+                  id="edit-runner-size"
+                  label="Shirt Size"
+                  listboxLabel="Shirt sizes"
+                  value={onChart(runner.singletSize)}
+                  options={shirtSizeOptions(runner.singletSize)}
+                  placeholder="Select a size"
+                  onChange={singletSize => setRunner({...runner, singletSize})}
+                />
+                <div className="form-group col-span-full">
                   <label className="form-label" htmlFor="edit-runner-community">Running Community</label>
                   <input
                     id="edit-runner-community"

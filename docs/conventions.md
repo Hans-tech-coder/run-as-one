@@ -511,8 +511,9 @@
   rather than one because they live in different design systems. The results
   uploader's seven column-mapping selects moved onto it in Mobile Batch 4, so
   the admin has no native select left. The registrants edit modal's Gender
-  field moved in Mobile Batch 3; its Shirt Size is still a free-text box with a `<datalist>`,
-  which AdminSelect cannot replace because a size may be left blank or typed.
+  field moved in Mobile Batch 3, and its Shirt Size on 2026-11-21: the
+  public registration's chart (3XS–5XL with each size's inches), then *No
+  shirt* (stored blank), plus any off-chart size an older order holds.
   **An option picks on pointerdown for a mouse and on click for a finger** —
   in AdminSelect, SelectField, Combobox and PhoneField alike. A touch's
   pointerdown is also where a scroll through the list starts, so committing

@@ -344,7 +344,7 @@ export default function RegistrantsTable({
       />
 
       {/* From `lg` up; the cards below take its place under it. */}
-      <RegistrantsDataTable table={table} empty="No registrants found." />
+      <RegistrantsDataTable table={table} empty="No registrants found." onRowClick={setViewingRunner} />
 
       {/* The same rows as cards, below `lg` (RegistrantCards). */}
       <RegistrantCards table={table} rowActions={rowActions} />

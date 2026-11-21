@@ -4,13 +4,14 @@
  * use these.
  *
  * Split out of `RegistrantsTable.tsx` (UNPAID_ORDERS_PLAN.md Batch 2). The
- * columns hold no state of their own; the eye on the Reference cell and the
- * Actions cell call back into the table through `onView` and `renderActions`,
+ * columns hold no state of their own; the Reference (a click on the row does
+ * the same) and the Actions cell call back into the table through `onView`
+ * and `renderActions`,
  * so the table still decides when the list is rebuilt.
  */
 
 import React from 'react';
-import { Eye, Check } from 'lucide-react';
+import { Check } from 'lucide-react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { MinorBadge, RegistrantStatusBadges } from './registrant-display';
 import { CategoryWithChange } from './category-change-display';
@@ -134,21 +135,19 @@ export function buildRegistrantColumns({
       header: "Reference",
       // The line under the reference is when the order was placed (page.tsx,
       // registeredAtLabel), worded as the Unpaid checkouts tab words its own.
-      // The eye sits beside the reference only and the date runs under both,
-      // so the column is as wide as the wider of the two lines rather than
-      // their sum: the table has eleven columns to fit beside the sidebar.
+      // The whole row opens View Details (RegistrantsDataTable onRowClick);
+      // the reference is also a button so a keyboard can reach it. The eye
+      // that sat beside it was dropped (owner, 2026-11-21).
       cell: ({ row }) => (
         <div className="text-secondary">
-          <div className="flex items-center gap-2">
-            <span className="whitespace-nowrap">{row.original.runnerRef}</span>
-            <button
-              onClick={() => onView(row.original)}
-              className="icon-btn"
-              title="View Details"
-            >
-              <Eye size={16} />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => onView(row.original)}
+            aria-label={`View details of ${row.original.name}, ${row.original.runnerRef}`}
+            className="whitespace-nowrap bg-transparent border-none p-0 cursor-pointer text-inherit [font:inherit] hover:text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ink)] rounded-sm"
+          >
+            {row.original.runnerRef}
+          </button>
           <span className="block whitespace-nowrap text-xs text-[var(--text-muted)]">{row.original.registeredAtLabel}</span>
         </div>
       ),
