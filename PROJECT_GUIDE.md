@@ -336,9 +336,10 @@ These are the user's own standing preferences. Follow them without being asked.
    one; build it with **`admin/AdminSwitch`**, not by hand). A **disabled** switch keeps its hint at full contrast and dims only the
    track: the person who may not use a control is exactly the person who has to
    read why not.
-3. **Consult the project's `ui-ux-pro-max` skill for UI/UX work** rather than
-   designing ad hoc. Skills stay project-scoped in `.claude/skills/` — nothing is
-   installed globally.
+3. **Consult the `ui-ux-pro-max` skill for UI/UX work** rather than designing
+   ad hoc; for the look of the public pages, `design-taste-frontend` leads. Both,
+   with `transitions-dev`, are installed globally because the owner uses them in
+   every project; every other skill stays project-scoped in `.claude/skills/`.
 4. **Validation messages must be specific.** Name exactly what is missing and
    highlight the offending fields; never a generic catch-all. See
    `app/events/[slug]/register/validation.ts` and `FieldError`.

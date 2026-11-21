@@ -2,6 +2,7 @@ import prisma, { publishCutoff } from '@/lib/public-db';
 import { publishedEvents } from '@/lib/event-visibility';
 import { RESULTS_EVENTS } from '@/lib/event-format';
 import Link from 'next/link';
+import type { ResolvingMetadata } from 'next';
 import { User, Hash, ChevronRight } from 'lucide-react';
 import RacePhotoLinks from '@/components/RacePhotoLinks';
 import { redirect } from 'next/navigation';
@@ -114,9 +115,12 @@ export function generateStaticParams() {
 }
 
 /** One URL per event, on the site it belongs to (CLIENT_SUBDOMAIN_PLAN.md). */
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+export async function generateMetadata(
+  { params }: { params: Promise<{ slug: string }> },
+  parent: ResolvingMetadata,
+) {
   const { slug } = await params;
-  return eventPageMetadata(slug, eventSlug => `/results/${eventSlug}`);
+  return eventPageMetadata(slug, eventSlug => `/results/${eventSlug}`, parent, 'results');
 }
 
 export default async function WinnersOverviewPage({

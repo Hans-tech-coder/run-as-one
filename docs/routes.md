@@ -155,8 +155,10 @@ per site cannot read it. Those pages stream
 under `loading.tsx`, so the move arrives as Next's in-stream redirect (the
 client router, with a meta-refresh fallback) rather than a header 307; same as
 the canonical-slug redirects they already made. Each sets
-`alternates.canonical` to the page on `eventOrigin(event)`
-(`eventPageMetadata`). **On the main site, event and result cards** (home,
+`alternates.canonical` to the page on `eventOrigin(event)`, and its own link
+preview — the event's title, date, venue, distances and lowest price, and its
+poster as `og:image` (`eventPageMetadata`, §5 `site-client.ts`; results pages
+read "<Event> — Official Results"). **On the main site, event and result cards** (home,
 `/events`, `/results`) link a client's race straight to its subdomain
 (`EventGrid`'s `siteOrigin`, from `eventLinkOrigin(site)`), with no redirect hop.
 Off production the site tree's origins come from `deploymentOrigin()`

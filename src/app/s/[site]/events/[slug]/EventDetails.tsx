@@ -8,6 +8,7 @@ import {
   Users,
 } from 'lucide-react';
 import Link from 'next/link';
+import type { ResolvingMetadata } from 'next';
 import db from '@/lib/public-db';
 import { formatPesos } from '@/lib/money';
 import { sellsPackages } from '@/lib/event-type';
@@ -51,9 +52,12 @@ import { publicAddOns } from '@/lib/add-on-stock';
 import { addOnSalesClosed, type PublicAddOn } from '@/lib/add-ons';
 
 /** One URL per event, on the site it belongs to (CLIENT_SUBDOMAIN_PLAN.md). */
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+export async function generateMetadata(
+  { params }: { params: Promise<{ slug: string }> },
+  parent: ResolvingMetadata,
+) {
   const { slug } = await params;
-  return eventPageMetadata(slug, eventSlug => `/events/${eventSlug}`);
+  return eventPageMetadata(slug, eventSlug => `/events/${eventSlug}`, parent);
 }
 
 /**

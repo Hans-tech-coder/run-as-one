@@ -4,6 +4,7 @@ import { RESULTS_EVENTS } from '@/lib/event-format';
 import prisma, { publishCutoff } from '@/lib/public-db';
 import { ArrowLeft, User, Trophy, Medal, Timer, Hash, Activity, Zap, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
+import type { ResolvingMetadata } from 'next';
 import { redirect } from 'next/navigation';
 import ECertificateGenerator from './ECertificateGenerator';
 import { genderDivision } from '@/lib/gender-division';
@@ -38,9 +39,12 @@ export function generateStaticParams() {
  * would show them somebody else.
  */
 /** One URL per runner, on the site the race belongs to (CLIENT_SUBDOMAIN_PLAN.md). */
-export async function generateMetadata({ params }: { params: Promise<{ slug: string; bib: string }> }) {
+export async function generateMetadata(
+  { params }: { params: Promise<{ slug: string; bib: string }> },
+  parent: ResolvingMetadata,
+) {
   const { slug, bib } = await params;
-  return eventPageMetadata(slug, eventSlug => `/results/${eventSlug}/${encodeURIComponent(bib)}`);
+  return eventPageMetadata(slug, eventSlug => `/results/${eventSlug}/${encodeURIComponent(bib)}`, parent, 'results');
 }
 
 export default async function RunnerAnalyticsPage({ 

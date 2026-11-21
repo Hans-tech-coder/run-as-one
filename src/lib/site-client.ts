@@ -2,10 +2,17 @@ import 'server-only';
 import { cache } from 'react';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
-import type { Metadata } from 'next';
+import type { Metadata, ResolvingMetadata } from 'next';
 import publicDb, { publishCutoff } from './public-db';
 import { eventByParam } from './event-slug';
 import { publishedEvents } from './event-visibility';
+import { CATEGORY_ORDER } from './category-order';
+import { shownToRunners } from './bib-medal';
+import { toPesos } from './money';
+import { VIRTUAL_RUN_WHERE, isVirtual } from './event-format';
+import { formatEventDay, formatEventRange } from './event-schedule';
+import { SITE_NAME } from './site-contact';
+import { rootCard } from './site-metadata';
 import {
   MAIN_SITE,
   SITE_LABEL_HEADER,
@@ -14,6 +21,7 @@ import {
   deploymentOrigin,
   eventOrigin,
   mainOrigin,
+  siteLabelOf,
   type SiteClientRef,
 } from './site-host';
 
@@ -195,22 +203,100 @@ export async function ensureEventHost(event: { client: SiteClientRef | null }): 
 }
 
 /**
- * An event page's `alternates.canonical`: `path(slug)` on the site the event
- * belongs to, so a search engine sees one URL per page however many hosts
- * could reach it. Nothing for an event that does not exist; the page itself
- * answers that.
+ * What an event page or a results page says about itself to a search engine
+ * and a link preview — the card a link shows when it is dropped in a Facebook
+ * group or a Messenger chat, which is how races travel here.
+ *
+ * - `alternates.canonical` and `og:url`: `path(slug)` on the site the event
+ *   belongs to, so a search engine sees one URL per page however many hosts
+ *   could reach it.
+ * - Title: the event's own, then the name of that site — the client's on a
+ *   client's race (lib/site-metadata.ts brands the rest of its pages the same).
+ *   A results page reads "<Event> — Official Results".
+ * - Description: only facts the page itself shows — the day (a virtual run's
+ *   window), the venue, the distances and the lowest price of the options
+ *   runners are shown (`shownToRunners`), never a hidden option's.
+ * - Image: the event's poster, or the site card (`rootCard`) when it has none.
+ *   Both `openGraph` and `twitter` are given it, because a child that names
+ *   either replaces the parent's whole, card included.
+ *
+ * Nothing for an event that does not exist or is not published: a draft has
+ * no public page to describe, and its title must not leak through a preview.
+ * Reads no cookie or header — the event page is a cached static page.
  */
 export async function eventPageMetadata(
   param: string,
   path: (slug: string) => string,
+  parent: ResolvingMetadata,
+  page: 'event' | 'results' = 'event',
 ): Promise<Metadata> {
   const event = await publicDb.event.findFirst({
     // An unpublished event has no public page to point search engines at.
     where: { AND: [eventByParam(param), publishedEvents(await publishCutoff())] },
-    select: { slug: true, client: EVENT_SITE_CLIENT },
+    select: {
+      slug: true,
+      title: true,
+      date: true,
+      location: true,
+      format: true,
+      virtualEndDate: true,
+      imageUrl: true,
+      client: { select: { ...EVENT_SITE_CLIENT.select, name: true } },
+      categories: {
+        orderBy: CATEGORY_ORDER,
+        select: { distance: true, price: true, closed: true, bibMedalOfId: true, opensAt: true },
+      },
+    },
   });
   if (!event) return {};
-  return { alternates: { canonical: `${eventOrigin(event, deploymentOrigin())}${path(event.slug)}` } };
+
+  const url = `${eventOrigin(event, deploymentOrigin())}${path(event.slug)}`;
+  const siteName = siteLabelOf(event.client) && event.client ? event.client.name : SITE_NAME;
+  const name = page === 'results' ? `${event.title} — Official Results` : event.title;
+  const title = `${name} | ${siteName}`;
+
+  const facts = isVirtual(event)
+    ? [formatEventRange(event.date, event.virtualEndDate), VIRTUAL_RUN_WHERE]
+    : [formatEventDay(event.date), event.location.trim()];
+  const description =
+    page === 'results'
+      ? `Official results of ${event.title} · ${facts.filter(Boolean).join(' · ')}. Find your time by name or bib number.`
+      : [...facts, ...offerFacts(shownToRunners(event.categories))].filter(Boolean).join(' · ');
+
+  const poster = event.imageUrl.trim();
+  const images = poster ? [{ url: poster, alt: event.title }] : await rootCard(parent);
+
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      type: 'website',
+      siteName,
+      title,
+      description,
+      url,
+      locale: 'en_PH',
+      images,
+    },
+    twitter: { card: 'summary_large_image', title, description, images },
+  };
+}
+
+/** "5K / 10K / 21K" and "From ₱800" — the distances on offer and the lowest price. */
+function offerFacts(categories: { distance: string; price: number }[]): string[] {
+  const distances = [...new Set(categories.map(category => category.distance.trim()).filter(Boolean))];
+  const prices = categories.map(category => category.price);
+  const lowest = prices.length ? Math.min(...prices) : null;
+  const price =
+    lowest == null
+      ? ''
+      : lowest > 0
+        ? `From ₱${toPesos(lowest).toLocaleString('en-PH', { maximumFractionDigits: 2 })}`
+        : prices.every(each => each === 0)
+          ? 'Free entry'
+          : '';
+  return [distances.join(' / '), price];
 }
 
 /** The two client columns `eventOrigin` reads, for a Prisma `select`/`include`. */

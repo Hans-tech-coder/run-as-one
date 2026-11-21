@@ -2,6 +2,7 @@ import prisma, { publishCutoff } from '@/lib/public-db';
 import { publishedEvents } from '@/lib/event-visibility';
 import { RESULTS_EVENTS } from '@/lib/event-format';
 import Link from 'next/link';
+import type { ResolvingMetadata } from 'next';
 import { ArrowLeft } from 'lucide-react';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
@@ -23,9 +24,12 @@ export function generateStaticParams() {
 }
 
 /** One URL per event, on the site it belongs to (CLIENT_SUBDOMAIN_PLAN.md). */
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+export async function generateMetadata(
+  { params }: { params: Promise<{ slug: string }> },
+  parent: ResolvingMetadata,
+) {
   const { slug } = await params;
-  return eventPageMetadata(slug, eventSlug => `/results/${eventSlug}/full`);
+  return eventPageMetadata(slug, eventSlug => `/results/${eventSlug}/full`, parent, 'results');
 }
 
 export default async function FullResultsPage({ 

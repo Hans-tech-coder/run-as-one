@@ -50,14 +50,18 @@ oriented" is the most expensive possible way to start, and it is never necessary
 
 # Which skill for which task
 
-The active skills live flat in `.claude/skills/` (Claude Code) and
-`.agents/skills/` (other agents). Pick from this table instead of browsing the
-list; one or two skills per task is the norm.
+The project's own skills live flat in `.claude/skills/` (Claude Code) and
+`.agents/skills/` (other agents). The three design skills — `ui-ux-pro-max`,
+`design-taste-frontend` and `transitions-dev` — are installed globally
+(`~/.agents/skills/`, linked from `~/.claude/skills/`) because the owner uses
+them in every project. Pick from this table instead of browsing the list; one
+or two skills per task is the norm.
 
 | Task | Skill |
 |---|---|
 | Bug fix or small behavior change | `surgical-patch`; `investigate-first` when the cause is unknown |
 | New feature | `lean-build`; plus `ui-ux-pro-max` (and `transitions-dev` if it animates) for UI |
+| Public pages' look (home, events, results, track) — redesign or "looks AI-made" | `design-taste-frontend` leads, `ui-ux-pro-max` checks UX and accessibility; admin screens stay with `ui-ux-pro-max` |
 | Refactor or splitting a large file | `safe-refactor` |
 | Prisma queries | `prisma-client-api` |
 | Prisma CLI / schema migration | `prisma-cli`, `migration` |

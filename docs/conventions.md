@@ -846,11 +846,13 @@
   navigation. Each snippet keeps
   its `@media (prefers-reduced-motion: reduce)` guard — never drop it — and its
   own token block in `:root` so a duration can be tuned in one place. The
-  reference for all 32 free transitions is installed as an agent skill at
-  `.claude/skills/transitions-dev/`; reach for one of those before hand-rolling
+  reference for all 32 free transitions is installed as the global agent skill
+  `transitions-dev` (`~/.agents/skills/transitions-dev/`, linked from
+  `~/.claude/skills/`); reach for one of those before hand-rolling
   an animation, and add the CSS at the bottom of `globals.css` next to its
-  siblings. (`.claude/` is gitignored, so the skill is per-checkout: reinstall
-  it from `github.com/Jakubantalik/transitions.dev` under `skills/`.)
+  siblings. (Reinstall it from `github.com/Jakubantalik/transitions.dev` under
+  `skills/` on a new machine.) On public pages, `design-taste-frontend`'s motion
+  rules win: no card tilt and no scroll-triggered reveals.
 - **The home hero stands under a dot arch** (`components/HeroArcBackground`,
   `.hero-arc` in `globals.css`). It is a Canvas 2D port of the "Predictive Arc"
   background, and only its core renderer — the package's iframe and Three.js

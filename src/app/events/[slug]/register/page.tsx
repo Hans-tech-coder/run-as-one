@@ -27,6 +27,7 @@ import {
   takenSlotsByCategory,
   withSlotCounts,
 } from '@/lib/registration-gate';
+import type { ResolvingMetadata } from 'next';
 import { EVENT_SITE_CLIENT, ensureEventHost, eventPageMetadata } from '@/lib/site-client';
 import { acceptsPromoCodes, automaticPromosFor, promoTerms } from '@/lib/promo-store';
 import { CATEGORY_ORDER } from '@/lib/category-order';
@@ -34,9 +35,9 @@ import { shownToRunners } from '@/lib/bib-medal';
 import { publicAddOns } from '@/lib/add-on-stock';
 
 /** One URL per event, on the site it belongs to (CLIENT_SUBDOMAIN_PLAN.md). */
-export async function generateMetadata(props: { params: Promise<{ slug: string }> }) {
+export async function generateMetadata(props: { params: Promise<{ slug: string }> }, parent: ResolvingMetadata) {
   const { slug } = await props.params;
-  return eventPageMetadata(slug, eventSlug => `/events/${eventSlug}/register`);
+  return eventPageMetadata(slug, eventSlug => `/events/${eventSlug}/register`, parent);
 }
 
 export default async function RegisterPage(props: { 
