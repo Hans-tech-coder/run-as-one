@@ -53,6 +53,26 @@ export function closesLater(
 }
 
 /**
+ * How near a closing date has to be before the event page stops listing it
+ * as one detail among many and puts it beside Register Now with a countdown.
+ * Three days is a weekend: long enough that a runner who sees it on Friday
+ * still has time to pay, short enough that a race closing next month does not
+ * shout about it.
+ */
+export const CLOSING_SOON_DAYS = 3;
+
+/** Whether a closing date is set, still ahead, and inside CLOSING_SOON_DAYS. */
+export function closesSoon(
+  event: { registrationClosesAt?: Instantish },
+  now: Date = new Date(),
+): boolean {
+  const closes = asInstant(event.registrationClosesAt);
+  if (closes === null) return false;
+  const left = closes.getTime() - now.getTime();
+  return left > 0 && left <= CLOSING_SOON_DAYS * 24 * 60 * 60 * 1000;
+}
+
+/**
  * Whether sign-ups on this event are closed — by the organizer's Close, or by
  * a closing date that has passed. Both are final in the same way (no note, no
  * "check back"), so every gate treats them as one state, CLOSED; only the

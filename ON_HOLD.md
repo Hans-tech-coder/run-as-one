@@ -512,3 +512,35 @@ written and deleted 2026-11-19). What it built and its decisions
 - **A cross-event "where is my money" view**: all events, per wallet. Easy on
   top of `settlement-channels.ts`; on request.
 - **Importing GCash / GoTyme statements** to auto-match references.
+
+## 19. Event page decision details: phase 2 (proposal, owner's call)
+
+*Source: the 2026-11-21 event-page task. Phase 1 (Race Details, change
+rules, closing countdown) is built from existing columns; this is what it
+left out. No migration until the owner says yes.*
+
+**Route map, cut-off per distance and an FAQ have no columns.** All three can
+be carried today without schema growth:
+
+- **Route map**: upload it as an *Event Highlight* captioned "Route Map" (the
+  32KM Beyond 21 page already does this with its size chart). It opens full
+  screen with zoom, which is what a route map needs.
+- **Cut-off times and FAQ**: write them in *About The Event* with the editor's
+  heading and list buttons ("Cut-off Times" heading, "21K - 3:30" list).
+
+What that costs: they are not structured, so the page cannot put a cut-off on
+its category row, a route map has no fixed spot, and Google gets no FAQ markup.
+If the owner wants them structured, the smallest change, in order of value:
+
+1. **`Category.cutoffMinutes Int?`**: one field per option row in the event
+   form ("Cut-off, h:mm"), shown as a pill on the category row and in Race
+   Details. 4 bytes a row: nothing on the 0.5 GB tier.
+2. **`Event.routeMapUrl String?`**: one upload in the event form (the highlight
+   uploader, public blob store), its own *Route Map* link in Race Details.
+   About 100 bytes a row; the image lives in Vercel Blob, not Neon.
+3. **`Event.faq Json @default("[]")`**: a question/answer repeater in the event
+   form, drawn as an accordion and as `FAQPage` JSON-LD. A few KB per event,
+   so under 1 MB at today's volume of races.
+
+Together well under 1 MB of Neon storage; the cost is the admin form work
+(three fields, one repeater) and one reversible additive migration.

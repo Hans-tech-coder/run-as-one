@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-50 pages · 100 API routes · 170 modules in `src/lib` · 709 files · 125,408 lines
+50 pages · 100 API routes · 171 modules in `src/lib` · 714 files · 125,876 lines
 
 ---
 
@@ -65,7 +65,7 @@ The route, the server component behind it, and the client components beside it.
 | `/s/[site]` | [`/s/[site]/(home)/page.tsx`](../src/app/s/[site]/%28home%29/page.tsx) | `RecentlyHeld.tsx` |
 | `/s/[site]/[...missing]` | [`/s/[site]/[...missing]/page.tsx`](../src/app/s/[site]/[...missing]/page.tsx) | — |
 | `/s/[site]/events` | [`/s/[site]/events/page.tsx`](../src/app/s/[site]/events/page.tsx) | `events-view.ts` `EventsEmptyStates.tsx` `EventsTabs.tsx` `PastEvents.tsx` |
-| `/s/[site]/events/[slug]` | [`/s/[site]/events/[slug]/page.tsx`](../src/app/s/[site]/events/[slug]/page.tsx) | `ClosedSidebarPanels.tsx` `EventDetails.tsx` |
+| `/s/[site]/events/[slug]` | [`/s/[site]/events/[slug]/page.tsx`](../src/app/s/[site]/events/[slug]/page.tsx) | `ClosedSidebarPanels.tsx` `ClosingCountdown.tsx` `EventDetails.tsx` `EventSections.tsx` `RaceDetails.tsx` `SizeChartButton.tsx` |
 | `/s/[site]/results` | [`/s/[site]/results/page.tsx`](../src/app/s/[site]/results/page.tsx) | — |
 | `/s/[site]/results/[slug]` | [`/s/[site]/results/[slug]/page.tsx`](../src/app/s/[site]/results/[slug]/page.tsx) | — |
 | `/s/[site]/results/[slug]/[bib]` | [`/s/[site]/results/[slug]/[bib]/page.tsx`](../src/app/s/[site]/results/[slug]/[bib]/page.tsx) | `ECertificateGenerator.tsx` |
@@ -361,6 +361,7 @@ the file itself.
 | [`two-factor.ts`](../src/lib/two-factor.ts) | Who has two-step sign-in on, and how a second-step code is checked (TWO_FACTOR_PLAN.md). |
 | [`uploads.ts`](../src/lib/uploads.ts) | What the app accepts from a file picker — the one list both sides read. |
 | [`utils.ts`](../src/lib/utils.ts) | — |
+| [`venue-map.ts`](../src/lib/venue-map.ts) | **Where a race's venue is on a map**: a plain Google Maps search for the venue the organizer typed, so a runner who has never been to the town can … |
 | [`voucher-codes.ts`](../src/lib/voucher-codes.ts) | Generating a batch of single-use voucher codes. |
 
 ---
@@ -384,12 +385,11 @@ when a task touches one, split it before editing rather than after.
 | 616 | [`src/app/api/checkout/route.ts`](../src/app/api/checkout/route.ts) |
 | 614 | [`src/app/admin/feedback/FeedbackClient.tsx`](../src/app/admin/feedback/FeedbackClient.tsx) |
 | 614 | [`src/lib/email-document.ts`](../src/lib/email-document.ts) |
-| 589 | [`src/lib/registration-gate.ts`](../src/lib/registration-gate.ts) |
+| 591 | [`src/lib/registration-gate.ts`](../src/lib/registration-gate.ts) |
 | 571 | [`src/lib/add-ons.ts`](../src/lib/add-ons.ts) |
 | 570 | [`src/app/admin/events/[id]/registrants/PaymentCorrectionModal.tsx`](../src/app/admin/events/[id]/registrants/PaymentCorrectionModal.tsx) |
 | 567 | [`src/app/admin/NotificationsCenter.tsx`](../src/app/admin/NotificationsCenter.tsx) |
 | 550 | [`src/app/api/admin/events/[id]/update-event.ts`](../src/app/api/admin/events/[id]/update-event.ts) |
-| 543 | [`src/app/s/[site]/events/[slug]/EventDetails.tsx`](../src/app/s/[site]/events/[slug]/EventDetails.tsx) |
 | 528 | [`src/app/admin/DashboardShell.tsx`](../src/app/admin/DashboardShell.tsx) |
 | 520 | [`src/lib/promo-input.ts`](../src/lib/promo-input.ts) |
 | 520 | [`src/lib/refund-store.ts`](../src/lib/refund-store.ts) |
@@ -404,6 +404,7 @@ when a task touches one, split it before editing rather than after.
 | 472 | [`src/app/admin/settings/TwoFactorPanel.tsx`](../src/app/admin/settings/TwoFactorPanel.tsx) |
 | 472 | [`src/app/events/[slug]/register/BirthdatePicker.tsx`](../src/app/events/[slug]/register/BirthdatePicker.tsx) |
 | 470 | [`src/app/admin/events/[id]/registrants/RunnerEditModal.tsx`](../src/app/admin/events/[id]/registrants/RunnerEditModal.tsx) |
+| 454 | [`src/app/s/[site]/events/[slug]/EventDetails.tsx`](../src/app/s/[site]/events/[slug]/EventDetails.tsx) |
 | 441 | [`src/lib/actor.ts`](../src/lib/actor.ts) |
 | 436 | [`src/app/admin/events/[id]/edit/page.tsx`](../src/app/admin/events/[id]/edit/page.tsx) |
 | 431 | [`src/lib/activity.ts`](../src/lib/activity.ts) |

@@ -61,6 +61,8 @@ export {
   asOpeningInstant,
   closedMessage,
   closesLater,
+  closesSoon,
+  CLOSING_SOON_DAYS,
   closingHasPassed,
   closingProblem,
   isClosed,

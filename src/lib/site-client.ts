@@ -10,7 +10,8 @@ import { CATEGORY_ORDER } from './category-order';
 import { shownToRunners } from './bib-medal';
 import { toPesos } from './money';
 import { VIRTUAL_RUN_WHERE, isVirtual } from './event-format';
-import { formatEventDay, formatEventRange } from './event-schedule';
+import { formatEventDay, formatEventInstantShort, formatEventRange, formatEventTime } from './event-schedule';
+import { closesLater } from './registration-window';
 import { SITE_NAME } from './site-contact';
 import { rootCard } from './site-metadata';
 import {
@@ -214,8 +215,11 @@ export async function ensureEventHost(event: { client: SiteClientRef | null }): 
  *   client's race (lib/site-metadata.ts brands the rest of its pages the same).
  *   A results page reads "<Event> — Official Results".
  * - Description: only facts the page itself shows — the day (a virtual run's
- *   window), the venue, the distances and the lowest price of the options
- *   runners are shown (`shownToRunners`), never a hidden option's.
+ *   window) with the start time when set, the venue, the distances and the
+ *   lowest price of the options runners are shown (`shownToRunners`), never a
+ *   hidden option's, and "Registration closes Dec 1" while a closing date the
+ *   page's Race Details names is still ahead. The page is cached for a minute,
+ *   so the description is never staler than the page beside it.
  * - Image: the event's poster, or the site card (`rootCard`) when it has none.
  *   Both `openGraph` and `twitter` are given it, because a child that names
  *   either replaces the parent's whole, card included.
@@ -237,8 +241,11 @@ export async function eventPageMetadata(
       slug: true,
       title: true,
       date: true,
+      startTime: true,
       location: true,
       format: true,
+      registrationClosedAt: true,
+      registrationClosesAt: true,
       virtualEndDate: true,
       imageUrl: true,
       client: { select: { ...EVENT_SITE_CLIENT.select, name: true } },
@@ -258,10 +265,18 @@ export async function eventPageMetadata(
   const facts = isVirtual(event)
     ? [formatEventRange(event.date, event.virtualEndDate), VIRTUAL_RUN_WHERE]
     : [formatEventDay(event.date), event.location.trim()];
+  // Only the event page shows these; a results page is about a race already run.
+  const start = !isVirtual(event) && event.startTime?.trim() ? `${formatEventTime(event.startTime)} start` : '';
+  const closes =
+    !event.registrationClosedAt && event.registrationClosesAt && closesLater(event)
+      ? `Registration closes ${formatEventInstantShort(event.registrationClosesAt)}`
+      : '';
   const description =
     page === 'results'
       ? `Official results of ${event.title} · ${facts.filter(Boolean).join(' · ')}. Find your time by name or bib number.`
-      : [...facts, ...offerFacts(shownToRunners(event.categories))].filter(Boolean).join(' · ');
+      : [...facts.slice(0, 1), start, ...facts.slice(1), ...offerFacts(shownToRunners(event.categories)), closes]
+          .filter(Boolean)
+          .join(' · ');
 
   const poster = event.imageUrl.trim();
   const images = poster ? [{ url: poster, alt: event.title }] : await rootCard(parent);

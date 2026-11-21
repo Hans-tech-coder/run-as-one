@@ -18,6 +18,10 @@
  *   runner register for it (an open race, or one opening on its schedule, and
  *   the option not full); every other state — closed, paused, full, over — is
  *   sold out, because a search result must not promise a slot the page refuses.
+ *   A closing date the page shows (`registrationClosesAt`) is each offer's
+ *   `validThrough`, so a listing stops selling when the page does.
+ * - An in-person venue carries `hasMap`, the same Google Maps search the
+ *   page's Race Details links to (`lib/venue-map.ts`).
  * - The organizer is the client on a client's race (they hire Run As One to
  *   run it), else Run As One.
  *
@@ -31,6 +35,7 @@ import { isVirtual } from './event-format';
 import { EVENT_UTC_OFFSET, isCalendarDay } from './event-schedule';
 import { registerPath } from './event-slug';
 import { toPesos } from './money';
+import { venueMapUrl } from './venue-map';
 import { parseInline, parseRichText } from './rich-text';
 import type { RegistrationState } from './registration-gate';
 import { SITE_NAME } from './site-contact';
@@ -49,6 +54,7 @@ export interface StructuredEvent {
   location: string;
   province: string | null;
   registrationOpensAt: Date | string | null;
+  registrationClosesAt: Date | string | null;
   client: (SiteClientRef & { name: string }) | null;
   /** Already narrowed to what runners are shown, with slot counts. */
   categories: { id: string; name: string; price: number; isFull: boolean }[];
@@ -107,6 +113,7 @@ export function eventJsonLd(
     : present({
         '@type': 'Place',
         name: event.location.trim(),
+        hasMap: venueMapUrl(event),
         address: present({
           '@type': 'PostalAddress',
           streetAddress: event.location.trim(),
@@ -126,6 +133,7 @@ export function eventJsonLd(
 
   const selling = state === 'OPEN' || state === 'SCHEDULED';
   const opensAt = event.registrationOpensAt ? new Date(event.registrationOpensAt) : null;
+  const closesAt = event.registrationClosesAt ? new Date(event.registrationClosesAt) : null;
   const offers = event.categories.map(category =>
     present({
       '@type': 'Offer',
@@ -136,6 +144,7 @@ export function eventJsonLd(
         selling && !category.isFull ? 'https://schema.org/InStock' : 'https://schema.org/SoldOut',
       url: `${origin}${registerPath(event, category)}`,
       validFrom: opensAt && !Number.isNaN(opensAt.getTime()) ? opensAt.toISOString() : undefined,
+      validThrough: closesAt && !Number.isNaN(closesAt.getTime()) ? closesAt.toISOString() : undefined,
     }),
   );
 
