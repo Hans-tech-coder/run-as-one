@@ -10,12 +10,15 @@
  *   after before they save. The method is shown, never picked: a manual order
  *   is always a bank transfer (Batch 1's hand-over).
  * - A reason is always written (C4) and goes into the trail line.
- * - **A paid order needs a fresh confirmation** (C2a): Save opens
- *   `StepUpDialog` first and sends its one-use token. The token is kept for a
+ * - **A paid order needs a fresh confirmation** (C2a) when its Transaction
+ *   No. or proof changes (`correctionNeedsStepUp`); a *Paid to* change alone
+ *   takes a plain confirm (owner, 2026-11-21). Save opens `StepUpDialog`
+ *   first and sends its one-use token. The token is kept for a
  *   retry after a 400 / 409 (the route spends it only when it saves), and
  *   dropped after a 200 or a 403; a 403 opens the dialog again. A pending
  *   order takes a plain confirm.
- * - The runner hears nothing unless the resend tick is on (C6, paid only).
+ * - The runner hears nothing unless the resend tick is on (C6, paid only,
+ *   offered with a Transaction No. or proof change: the receipt prints no Paid to).
  * - The amount and the status are never touched (C8).
  *
  * - **Paid to** (PAYMENT_CHANNELS_PLAN.md Batch 3), the account a transfer
@@ -27,21 +30,20 @@
  */
 
 import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { FileText, ReceiptText, UploadCloud, X } from 'lucide-react';
+import { FileText, Maximize2, ReceiptText, ShieldCheck, UploadCloud, X } from 'lucide-react';
 import BusyLabel from '@/components/ui/BusyLabel';
 import FieldError from '@/components/ui/FieldError';
 import { useAlert } from '@/components/ui/AlertProvider';
 import { MAX_UPLOAD_BYTES, MAX_UPLOAD_MB, PDF_TYPE, acceptAttribute, allowedTypes, describeUploadTypes } from '@/lib/uploads';
 import { useImageCompression } from '@/lib/image-compress';
-import { CORRECTION_REASON_MAX } from '@/lib/payment-correction-rules';
+import { CORRECTION_REASON_MAX, correctionNeedsStepUp } from '@/lib/payment-correction-rules';
 import StepUpDialog from '../../../StepUpDialog';
-import ProofPreview from './ProofPreview';
 import ProofLightbox from './ProofLightbox';
 import { statusPillClass } from './registrant-display';
 import type { RegistrantRow } from './RegistrantsTable';
 import type { PaymentCorrected } from './registrant-row-patches';
 import { staffError } from './reference-held';
-import { CorrectionPaidTo, usePaidToAccounts } from './paid-to';
+import { PaidToSelect, paidToLabel, usePaidToAccounts } from './paid-to';
 import { normalizePaidTo } from '@/lib/payment-channel';
 
 /** Kept in step with the panel's closing transition (`.t-modal`). */
@@ -62,6 +64,54 @@ function correctedWords(fields: string[]): string {
   return words.length > 1 ? `${words.slice(0, -1).join(', ')} and ${words[words.length - 1]}` : words[0] ?? 'payment';
 }
 
+/** Both proof tiles share one size, so the before and after line up. */
+const PROOF_TILE_SIZE = 'h-36 max-sm:h-44';
+const PROOF_TILE = `${PROOF_TILE_SIZE} w-full overflow-hidden rounded-lg border border-[var(--dash-border)] bg-[var(--dash-sunken)] flex items-center justify-center`;
+
+/** One correctable field: what is on file beside what replaces it. */
+function CorrectionRow({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="space-y-2">
+      <h4 className="m-0 text-sm font-semibold text-primary">{title}</h4>
+      <div className="grid gap-3 sm:grid-cols-2 items-start">{children}</div>
+    </section>
+  );
+}
+
+/** The value on file, drawn as a read-only field the same height as the input beside it. */
+function OnFile({ empty, children }: { empty: boolean; children: React.ReactNode }) {
+  return (
+    <div className="form-group min-w-0">
+      <span className="form-label">On file now</span>
+      <div
+        className={`form-input text-base sm:text-sm !bg-[var(--dash-sunken)] [overflow-wrap:anywhere] ${
+          empty ? 'italic text-[var(--text-muted)]' : 'font-medium text-primary'
+        }`}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/** Under a corrected field: whether saving would replace what is on file. */
+function ChangeHint({ changed }: { changed: boolean }) {
+  return (
+    <span className={`block text-xs ${changed ? 'text-accent-blue-ink font-medium' : 'text-[var(--text-muted)]'}`}>
+      {changed ? 'Will replace the one on file.' : 'Unchanged.'}
+    </span>
+  );
+}
+
+function PdfMark() {
+  return (
+    <span className="flex flex-col items-center gap-1.5 text-secondary">
+      <FileText size={26} className="text-accent-blue-ink" aria-hidden="true" />
+      <span className="text-sm font-medium text-primary">PDF receipt</span>
+    </span>
+  );
+}
+
 export default function PaymentCorrectionModal({
   runner,
   contactEmail,
@@ -76,7 +126,7 @@ export default function PaymentCorrectionModal({
   onCorrected: (registrationId: string, saved: PaymentCorrected) => void;
 }) {
   const { confirm, toast } = useAlert();
-  const ids = { title: useId(), ref: useId(), reason: useId(), resend: useId() };
+  const ids = { title: useId(), ref: useId(), paidTo: useId(), reason: useId(), resend: useId() };
   const isPaid = runner.status === 'PAID';
   const currentRef: string = runner.transactionNumber ?? '';
 
@@ -151,6 +201,11 @@ export default function PaymentCorrectionModal({
   const refChanged = trimmedRef !== '' && trimmedRef !== currentRef;
   const paidToChanged = paidTo !== '' && normalizePaidTo(paidTo) !== normalizePaidTo(currentPaidTo);
   const nothingToSave = !refChanged && !proof && !paidToChanged;
+  // C2a: a paid order's Transaction No. or proof needs the step-up; Paid to alone does not.
+  const needsStepUp = correctionNeedsStepUp(runner.status, {
+    transactionNumber: refChanged ? trimmedRef : null,
+    proof: Boolean(proof),
+  });
   const changing = [
     ...(refChanged ? ['transactionNumber'] : []),
     ...(proof ? ['proofOfPayment'] : []),
@@ -167,7 +222,7 @@ export default function PaymentCorrectionModal({
       if (refChanged) form.set('transactionNumber', trimmedRef);
       if (proof) form.set('proofFile', proof);
       if (paidToChanged) form.set('paidTo', paidTo);
-      if (isPaid) {
+      if (needsStepUp) {
         if (stepUpToken) form.set('stepUpToken', stepUpToken);
         if (resend) form.set('resendReceipt', 'true');
       }
@@ -233,7 +288,7 @@ export default function PaymentCorrectionModal({
       setFormError('Nothing would change. Enter a different Transaction No., attach a new proof or choose another account.');
       return;
     }
-    if (isPaid) {
+    if (needsStepUp) {
       if (token.current) await submit(token.current);
       else setStepUpOpen(true);
       return;
@@ -263,11 +318,11 @@ export default function PaymentCorrectionModal({
           aria-labelledby={ids.title}
           className={`t-modal admin-modal-panel w-full max-w-2xl bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-2xl max-sm:rounded-none shadow-2xl flex flex-col max-h-[calc(100dvh-2rem)] max-sm:max-h-[100dvh] max-sm:h-[100dvh] ${visible ? 'is-open' : 'is-closing'}`}
         >
-          <div className="p-6 max-sm:px-4 max-sm:py-3 border-b border-[var(--dash-border)] flex justify-between items-start gap-4 shrink-0">
+          <div className="px-6 py-4 max-sm:px-4 max-sm:py-3 border-b border-[var(--dash-border)] flex justify-between items-start gap-4 shrink-0">
             <div className="min-w-0">
-              <h3 id={ids.title} className="text-xl font-semibold text-primary m-0">Correct payment</h3>
+              <h3 id={ids.title} className="text-lg font-semibold text-primary m-0">Correct payment</h3>
               <p className="text-sm text-secondary mt-1 m-0 flex flex-wrap items-center gap-x-2 gap-y-1 [overflow-wrap:anywhere]">
-                <span>Order {runner.orderRef} &middot; {runner.name}</span>
+                <span>{runner.orderRef} &middot; {runner.name} &middot; Bank transfer</span>
                 <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${statusPillClass(runner.status)}`}>
                   {runner.status}
                 </span>
@@ -277,141 +332,140 @@ export default function PaymentCorrectionModal({
               type="button"
               onClick={close}
               aria-label="Close"
-              className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-full text-secondary hover:text-primary transition-colors bg-transparent border-none cursor-pointer p-0"
+              className="w-11 h-11 -m-2 shrink-0 flex items-center justify-center rounded-full text-secondary hover:text-primary transition-colors bg-transparent border-none cursor-pointer p-0"
             >
               <X size={20} />
             </button>
           </div>
 
-          <div className="admin-modal-body p-6 max-sm:p-4 space-y-6 overflow-y-auto">
+          <div className="admin-modal-body px-6 py-5 max-sm:p-4 space-y-5 overflow-y-auto">
             {/* No m-0: it would cancel the space-y gap below this line. */}
-            <p className="text-sm text-[var(--ink-85)]">
-              Fix a wrong Transaction No., proof of payment or account paid to. The amount and the status stay
-              as they are, and the old values stay in the activity trail.
+            <p className="text-sm text-secondary">
+              Change only what is wrong. The amount and the status stay as they are, and the old values stay in
+              the activity trail.
             </p>
 
             {/* Transaction No.: on file, then the field that replaces it. */}
-            <section className="space-y-3">
-              <h4 className="m-0 text-sm font-semibold text-primary">Transaction No.</h4>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="min-w-0 rounded-lg border border-[var(--dash-border)] bg-[var(--dash-sunken)] px-4 py-3">
-                  <p className="m-0 text-xs text-[var(--text-muted)]">On file now</p>
-                  <p className={`m-0 mt-1 font-medium [overflow-wrap:anywhere] ${currentRef ? 'text-primary' : 'text-[var(--text-muted)] italic'}`}>
-                    {currentRef || 'None on file'}
-                  </p>
-                </div>
-                <div className="form-group min-w-0 m-0">
-                  <label htmlFor={ids.ref} className="form-label">Corrected Transaction No.</label>
-                  <input
-                    id={ids.ref}
-                    className="form-input text-base sm:text-sm"
-                    value={reference}
-                    maxLength={MAX_REFERENCE}
-                    autoComplete="off"
-                    spellCheck={false}
-                    onChange={e => {
-                      setReference(e.target.value);
-                      setFormError('');
-                    }}
-                    disabled={saving}
-                  />
-                  <p className="m-0 text-xs text-[var(--text-muted)]">
-                    {refChanged ? 'Will replace the one on file.' : 'Unchanged. Edit it to correct it.'}
-                  </p>
-                </div>
+            <CorrectionRow title="Transaction No.">
+              <OnFile empty={!currentRef}>{currentRef || 'None on file'}</OnFile>
+              <div className="form-group min-w-0">
+                <label htmlFor={ids.ref} className="form-label">Corrected</label>
+                <input
+                  id={ids.ref}
+                  className="form-input text-base sm:text-sm"
+                  value={reference}
+                  maxLength={MAX_REFERENCE}
+                  autoComplete="off"
+                  spellCheck={false}
+                  onChange={e => {
+                    setReference(e.target.value);
+                    setFormError('');
+                  }}
+                  disabled={saving}
+                />
+                <ChangeHint changed={refChanged} />
               </div>
-            </section>
-
-            {/* Proof of payment: the slip on file beside the new one. */}
-            <section className="space-y-3">
-              <h4 className="m-0 text-sm font-semibold text-primary">Proof of payment</h4>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="min-w-0">
-                  {hasProof ? (
-                    <ProofPreview
-                      label="On file now"
-                      src={`/api/admin/proof/${runner.registrationId}`}
-                      isPdf={Boolean(runner.proofIsPdf)}
-                      onOpen={() => setLightbox(true)}
-                    />
-                  ) : (
-                    <div className="rounded-lg border border-[var(--dash-border)] bg-[var(--dash-sunken)] px-4 py-3">
-                      <p className="m-0 text-xs text-[var(--text-muted)]">On file now</p>
-                      <p className="m-0 mt-1 text-[var(--text-muted)] italic">No proof on file</p>
-                    </div>
-                  )}
-                </div>
-                <div className="form-group min-w-0 m-0">
-                  <span className="form-label">Replace with</span>
-                  {proof ? (
-                    <div className="rounded-lg border border-[var(--dash-border)] bg-[var(--dash-sunken)] overflow-hidden">
-                      {proofUrl ? (
-                        <img src={proofUrl} alt="The new proof of payment" className="block w-full max-h-[240px] object-contain bg-[var(--dash-sunken)]" />
-                      ) : (
-                        <span className="flex flex-col items-center gap-2 py-8 text-secondary">
-                          <FileText size={28} className="text-accent-blue-ink" aria-hidden="true" />
-                          <span className="text-sm font-medium text-primary">PDF receipt</span>
-                        </span>
-                      )}
-                      <div className="flex items-center justify-between gap-3 px-4 py-2 border-t border-[var(--dash-border)]">
-                        <span className="text-sm text-primary min-w-0 truncate">{proof.name}</span>
-                        <button type="button" className="btn-filter max-lg:min-h-11 shrink-0" onClick={removeFile} disabled={saving}>
-                          Remove
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="file-upload-wrapper" style={{ padding: '1.25rem' }}>
-                      <input
-                        ref={fileRef}
-                        type="file"
-                        accept={acceptAttribute('proof')}
-                        className="file-upload-input"
-                        onChange={e => pickFile(e.target.files?.[0] ?? null)}
-                        disabled={saving}
-                        aria-label="Upload the corrected proof of payment"
-                        aria-invalid={errors.proof ? true : undefined}
-                        aria-describedby={errors.proof ? 'correction-proof-error' : undefined}
-                      />
-                      <div className="file-upload-content">
-                        <UploadCloud size={24} className="text-accent-blue-ink" aria-hidden="true" />
-                        <div className="text-sm text-primary">Upload the correct proof</div>
-                        <div className="text-xs">
-                          {describeUploadTypes('proof')}, up to {MAX_UPLOAD_MB} MB. Optional.
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  {optimizing && (
-                    <p role="status" className="m-0 text-sm text-secondary">
-                      <BusyLabel>Optimizing image</BusyLabel>
-                    </p>
-                  )}
-                  <FieldError id="correction-proof-error" message={errors.proof} />
-                </div>
-              </div>
-            </section>
+            </CorrectionRow>
 
             {accounts.length > 0 && (
-              <CorrectionPaidTo
-                current={runner.paidTo}
-                value={paidTo}
-                onChange={value => {
-                  setPaidTo(value);
-                  setFormError('');
-                }}
-                changed={paidToChanged}
-              />
+              <CorrectionRow title="Paid to">
+                <OnFile empty={!runner.paidTo}>{paidToLabel(runner.paidTo)}</OnFile>
+                <div className="min-w-0">
+                  <PaidToSelect
+                    id={ids.paidTo}
+                    label="Corrected"
+                    value={paidTo}
+                    onChange={value => {
+                      setPaidTo(value);
+                      setFormError('');
+                    }}
+                    hint={<ChangeHint changed={paidToChanged} />}
+                  />
+                </div>
+              </CorrectionRow>
             )}
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="min-w-0">
-                <p className="m-0 text-sm text-secondary">Payment method</p>
-                <p className="m-0 mt-1 font-medium text-primary">Bank transfer</p>
+            {/* Proof of payment: the slip on file beside the new one, two tiles of one size. */}
+            <CorrectionRow title="Proof of payment">
+              <div className="form-group min-w-0">
+                <span className="form-label">On file now</span>
+                {hasProof ? (
+                  <button
+                    type="button"
+                    onClick={() => setLightbox(true)}
+                    aria-label="Open the proof on file full screen"
+                    className={`${PROOF_TILE} group relative cursor-zoom-in p-0 hover:border-[var(--ink-30)] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ink)]`}
+                  >
+                    {runner.proofIsPdf ? (
+                      <PdfMark />
+                    ) : (
+                      <img
+                        src={`/api/admin/proof/${runner.registrationId}`}
+                        alt="The proof of payment on file"
+                        className="max-w-full max-h-full object-contain"
+                      />
+                    )}
+                    <span className="absolute inset-0 flex items-center justify-center gap-2 bg-black/60 text-sm font-medium text-white opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity">
+                      <Maximize2 size={16} aria-hidden="true" /> View full screen
+                    </span>
+                  </button>
+                ) : (
+                  <div className={`${PROOF_TILE} text-sm italic text-[var(--text-muted)]`}>No proof on file</div>
+                )}
               </div>
-            </div>
+              <div className="form-group min-w-0">
+                <span className="form-label">Replace with</span>
+                {proof ? (
+                  <div className={`${PROOF_TILE} relative`}>
+                    {proofUrl ? (
+                      <img src={proofUrl} alt="The new proof of payment" className="max-w-full max-h-full object-contain" />
+                    ) : (
+                      <PdfMark />
+                    )}
+                    <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 pl-3 pr-1 bg-[var(--dash-panel-solid)] border-t border-[var(--dash-border)]">
+                      <span className="text-xs text-primary min-w-0 truncate">{proof.name}</span>
+                      <button
+                        type="button"
+                        className="shrink-0 min-h-9 max-lg:min-h-11 px-2 text-xs font-medium text-accent-blue-ink hover:underline bg-transparent border-none cursor-pointer"
+                        onClick={removeFile}
+                        disabled={saving}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className={`file-upload-wrapper ${PROOF_TILE_SIZE}`} style={{ padding: '0.75rem' }}>
+                    <input
+                      ref={fileRef}
+                      type="file"
+                      accept={acceptAttribute('proof')}
+                      className="file-upload-input"
+                      onChange={e => pickFile(e.target.files?.[0] ?? null)}
+                      disabled={saving}
+                      aria-label="Upload the corrected proof of payment"
+                      aria-invalid={errors.proof ? true : undefined}
+                      aria-describedby={errors.proof ? 'correction-proof-error' : undefined}
+                    />
+                    <div className="file-upload-content">
+                      <UploadCloud size={22} className="text-accent-blue-ink" aria-hidden="true" />
+                      <div className="text-sm text-primary">Upload the correct proof</div>
+                      <div className="text-xs">
+                        {describeUploadTypes('proof')}, up to {MAX_UPLOAD_MB} MB
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {optimizing && (
+                  <p role="status" className="m-0 text-xs text-secondary">
+                    <BusyLabel>Optimizing image</BusyLabel>
+                  </p>
+                )}
+                <FieldError id="correction-proof-error" message={errors.proof} />
+              </div>
+            </CorrectionRow>
 
-            <div className="form-group m-0">
+            <div className="form-group pt-4 border-t border-[var(--dash-border)]">
               <label htmlFor={ids.reason} className="form-label">Why is it being corrected?</label>
               <textarea
                 id={ids.reason}
@@ -423,7 +477,7 @@ export default function PaymentCorrectionModal({
                 maxLength={CORRECTION_REASON_MAX}
                 rows={2}
                 placeholder="e.g. Runner sent the correct GCash receipt on Messenger."
-                className="w-full bg-[var(--dash-surface)] border border-[var(--dash-border)] rounded-lg px-4 py-3 text-base sm:text-sm text-primary placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--ink-30)] resize-y"
+                className="form-input text-base sm:text-sm !min-h-[4.5rem]"
                 disabled={saving}
                 aria-invalid={errors.reason ? true : undefined}
                 aria-describedby={`${ids.reason}-hint${errors.reason ? ' correction-reason-error' : ''}`}
@@ -435,7 +489,7 @@ export default function PaymentCorrectionModal({
               <FieldError id="correction-reason-error" message={errors.reason} />
             </div>
 
-            {isPaid && (
+            {needsStepUp && (
               <label
                 htmlFor={ids.resend}
                 className="flex items-start gap-3 rounded-lg border border-[var(--dash-border)] bg-[var(--ink-02)] px-4 py-3 cursor-pointer min-h-11"
@@ -449,7 +503,7 @@ export default function PaymentCorrectionModal({
                   className="mt-0.5 h-4 w-4 shrink-0"
                 />
                 <span className="text-sm">
-                  <span className="block text-primary font-medium">Resend the receipt with the corrected reference</span>
+                  <span className="block text-primary font-medium">Resend the receipt with the corrected details</span>
                   <span className="block text-xs text-[var(--text-muted)] mt-0.5 [overflow-wrap:anywhere]">
                     {contactEmail ? `Sent to ${contactEmail}.` : 'Sent to the order’s contact email.'} Left off, the runner hears nothing.
                   </span>
@@ -457,10 +511,17 @@ export default function PaymentCorrectionModal({
               </label>
             )}
 
+            {needsStepUp && (
+              <p className="m-0 flex items-start gap-2 text-xs text-secondary">
+                <ShieldCheck size={14} className="mt-px shrink-0 text-accent-blue-ink" aria-hidden="true" />
+                This order is paid, so changing its Transaction No. or proof asks you to confirm it’s you.
+              </p>
+            )}
+
             {formError && <FieldError id="correction-form-error" message={formError} />}
           </div>
 
-          <div className="admin-modal-footer p-6 max-sm:p-4 border-t border-[var(--dash-border)] flex justify-end items-center gap-3 bg-[var(--dash-sunken)] shrink-0">
+          <div className="admin-modal-footer px-6 py-4 max-sm:p-4 border-t border-[var(--dash-border)] flex justify-end items-center gap-3 bg-[var(--dash-sunken)] shrink-0">
             <button type="button" onClick={close} disabled={saving} className="btn-cancel bg-transparent border-none cursor-pointer">
               Cancel
             </button>
@@ -472,7 +533,7 @@ export default function PaymentCorrectionModal({
               title={nothingToSave ? 'Change the Transaction No., the proof or the account first' : !reason.trim() ? 'Write the reason first' : undefined}
             >
               <ReceiptText size={16} aria-hidden="true" />
-              {saving ? <BusyLabel>Saving</BusyLabel> : isPaid ? 'Confirm and save' : 'Save correction'}
+              {saving ? <BusyLabel>Saving</BusyLabel> : needsStepUp ? 'Confirm and save' : 'Save correction'}
             </button>
           </div>
         </div>

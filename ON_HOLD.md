@@ -11,12 +11,10 @@ the owner's choice. Start one only when the owner asks, and read its source plan
 before writing any code. When an item is picked up, give it its own plan file in
 `docs/plans/`, and delete it from this list once it has landed.
 
-**Pending for the next release (2026-11-19): one migration.** `20261119074553_payment_paid_to` adds one nullable column, `paidTo`, to `Registration`, `CategoryChange` and `LogisticsChange` (the payment channels plan, §18 below). It is applied to the local-dev database only. Run `npx prisma migrate deploy` with `DIRECT_URL` on the production endpoint **before** the new code goes live. The new code reads and writes the column, so checkout, the payment screens and the remittance page fail without it. The old code ignores it, so migrating first is safe in both directions. **After release:** old bank-transfer orders read *Untagged* until staff tag them from the proof (Registrants → *Paid to* filter → Untagged → row menu → *Correct Payment*; a PAID order asks the step-up).
-
-Every earlier migration in `prisma/migrations` through `20261118090000_payment_reference_unique` (including `event_add_ons`, `step_up_used_at`, `registration_closes_at`, `category_bib_medal_closed`, `runner_refund`, `category_opens_at`, and `payment_reference_unique`) is applied in production (`ep-still-pine-b3n210bs`) and live on `main` (`89559e2`, 2026-11-18).
+**No pending migrations:** every migration in `prisma/migrations` through `20261119074553_payment_paid_to` (including `event_add_ons`, `step_up_used_at`, `registration_closes_at`, `category_bib_medal_closed`, `runner_refund`, `category_opens_at`, `payment_reference_unique`, and `payment_paid_to`) is applied in production (`ep-still-pine-b3n210bs`) and live on `main` (`1ea27c7`, 2026-11-19). Old bank-transfer orders from before `paidTo` read *Untagged* until staff tag them from the proof (Registrants → *Paid to* filter → Untagged → row menu → *Correct Payment*; a PAID order asks the step-up).
 
 Event publishing, virtual runs (Phase A), category changes,
-delivery switches, the promo price lock, the Past Events tab, event add-ons, step-up confirmation, payment corrections, scheduled registration close, Bib + Medal (with sale schedule), per-runner refunds, and unique payment references are all live
+delivery switches, the promo price lock, the Past Events tab, event add-ons, step-up confirmation, payment corrections, scheduled registration close, Bib + Medal (with sale schedule), per-runner refunds, unique payment references, and per-event payment channels are all live
 (`docs/current-state.md`, top). Still to watch on production: the first
 online upgrade and the first online delivery switch settled by a real PayMongo
 webhook (only a signed script and the `?paid=1` return path have settled one),

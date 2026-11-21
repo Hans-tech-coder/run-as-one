@@ -7,13 +7,16 @@
  * Multipart form: optional `proofFile`, optional `transactionNumber`,
  * optional `paymentMethod`, optional `paidTo` (one of the event's accounts,
  * PAYMENT_CHANNELS_PLAN.md Batch 3), required `reason`, `expectedStatus` (the status
- * the screen showed, like the cancel flow), `stepUpToken` for a PAID order,
+ * the screen showed, like the cancel flow), `stepUpToken` for a PAID order
+ * whose Transaction No., proof or method changes,
  * and `resendReceipt` ("true") to send a PAID order's receipt again (C6).
  *
  * **Auth** is `registration:correct-payment` on the order's race; a refusal
  * reads like a missing order, as the status route's does. **A PAID order needs
- * a step-up token** (C2a), spent inside the correction's transaction so a
- * refused correction leaves it good for the retry; a PENDING one does not.
+ * a step-up token** to change its Transaction No., proof or method (C2a,
+ * `correctionNeedsStepUp`), spent inside the correction's transaction so a
+ * refused correction leaves it good for the retry; a PENDING one, or a
+ * *Paid to* change alone, does not.
  *
  * **Cheap refusals come before the upload** (not found, no permission, online
  * or wrong-status order, missing reason, missing token on a PAID order,
@@ -35,6 +38,7 @@ import { deliverConfirmationEmail } from '@/lib/email-delivery';
 import {
   CorrectionRefused,
   correctPayment,
+  correctionNeedsStepUp,
   lockOrder,
   readCorrectionReason,
   refusalFor,
@@ -102,7 +106,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (!proofFile && !transactionNumber?.trim() && !paymentMethod?.trim() && !paidTo?.trim()) {
       throw new CorrectionRefused('Nothing to correct. Enter a reference number, attach a new proof or choose an account.', 400);
     }
-    if (existing.status === 'PAID' && !stepUpToken) throw new CorrectionRefused(STEP_UP_REFUSED, 403);
+    const guarded = { transactionNumber, proof: Boolean(proofFile), paymentMethod };
+    if (correctionNeedsStepUp(existing.status, guarded) && !stepUpToken) {
+      throw new CorrectionRefused(STEP_UP_REFUSED, 403);
+    }
 
     if (proofFile) {
       unclaimedProof = await uploadPrivateProof(proofFile);
@@ -117,7 +124,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
       // C2a. Read under the lock, so an order paid a moment ago needs the token too.
       if (
-        order.status === 'PAID' &&
+        correctionNeedsStepUp(order.status, guarded) &&
         !(await consumeStepUp(stepUpToken, { actor, action: 'registration.correct-payment', targetId: id }, tx))
       ) {
         throw new CorrectionRefused(STEP_UP_REFUSED, 403);

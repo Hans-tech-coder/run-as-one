@@ -17,8 +17,10 @@
  *   reopened through the status route first. `expectedStatus`, when sent, is
  *   the status the screen showed; an order that has moved is refused, as the
  *   cancel flow does.
- * - **C2a — PAID needs a step-up.** Enforced by the route, which spends the
- *   token inside the same transaction (`lib/step-up.ts` `consumeStepUp`).
+ * - **C2a — PAID needs a step-up** to change its Transaction No., proof or
+ *   method (`correctionNeedsStepUp`); a *Paid to* change alone does not
+ *   (owner, 2026-11-21). Enforced by the route, which spends the token inside
+ *   the same transaction (`lib/step-up.ts` `consumeStepUp`).
  * - **C4 — a reason is always written**, into the trail summary and changes.
  * - **C5 — the old proof is kept.** Its pathname stays in the trail as
  *   `changes.proofOfPayment = [old, new]`; nothing here deletes a blob.
@@ -32,8 +34,9 @@
  *   account a bank transfer went into, which must name one of the event's
  *   accounts (`asPaidTo`, lib/payment-channel.ts). It is never cleared back
  *   to null here. Tagging an untagged order (null to an account) is a
- *   correction like any other, with the same reason and step-up rules: the
- *   owner chose this over a separate row-menu item (2026-11-19, D3).
+ *   correction like any other, with the same reason: the owner chose this
+ *   over a separate row-menu item (2026-11-19, D3). On its own it needs no
+ *   step-up, even on a PAID order (2026-11-21).
  *
  * Only the fields that actually change are written, and a correction that
  * changes nothing is refused rather than writing an empty trail line. The
@@ -56,6 +59,7 @@ export {
   CORRECTABLE_STATUSES,
   CORRECTION_REASON_MAX,
   MANUAL_PAYMENT_METHODS,
+  correctionNeedsStepUp,
   isCorrectableStatus,
   isManualPaymentMethod,
 } from './payment-correction-rules';

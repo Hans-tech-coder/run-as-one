@@ -24,3 +24,19 @@ export function isManualPaymentMethod(value: unknown): boolean {
 export function isCorrectableStatus(status: unknown): boolean {
   return typeof status === 'string' && (CORRECTABLE_STATUSES as readonly string[]).includes(status);
 }
+
+/**
+ * C2a: whether a correction needs a fresh step-up. Only a PAID order's money
+ * evidence is guarded: its Transaction No., its proof and its method.
+ * Re-tagging *Paid to* alone, which only moves the payment between the race's
+ * own accounts in the channel breakdown, takes the reason and nothing more
+ * (owner, 2026-11-21). The screen asks this to decide whether to open the
+ * dialog; the route asks it to decide whether to demand the token.
+ */
+export function correctionNeedsStepUp(
+  status: unknown,
+  changes: { transactionNumber?: string | null; proof?: boolean; paymentMethod?: string | null },
+): boolean {
+  if (status !== 'PAID') return false;
+  return Boolean(changes.proof || changes.transactionNumber?.trim() || changes.paymentMethod?.trim());
+}
