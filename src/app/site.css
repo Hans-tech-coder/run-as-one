@@ -1,0 +1,562 @@
+/* The public site's look ("Paper", PUBLIC_REDESIGN — docs/conventions.md §9).
+
+   Why a file of its own: the redesign covers the runner-facing pages (home,
+   events, an event, results, track) and their navbar and footer, while the
+   register wizard, /pay and the other request-time pages keep the dark glass
+   look until they are redesigned too. Everything the new pages wear is here,
+   behind tokens, so neither side can repaint the other by accident.
+
+   How the two looks coexist: `ClientLayoutWrapper` puts `.site-paper` (with
+   `data-theme="light"`) on the frame of a redesigned page only. The
+   `data-theme` half re-runs globals.css's light block there — the logo's
+   deepened inks, the ink ramp, the status colours — so a shared component
+   that reads those names (StatusPanel, the runner loader, LinkPendingIcon)
+   turns light without being touched. The `.site-paper` half then sets the
+   Paper hues on top. The `--site-*` names below are what the redesigned
+   components read; their dark defaults on `:root` are what the shared navbar
+   and footer wear on the pages that are still dark.
+
+   Theme-ready on purpose (the owner asked, 2026-11-21): a dark Paper is one
+   more block that sets the same `--site-*` names (and drops `data-theme`), not
+   a second set of components. Never write a hex or a `white/…` utility in a
+   redesigned component; read a token.
+
+   Contrast, measured: action #c2530a under white text 4.6:1; accent text
+   #a8460a on the ground 5.2:1; muted #5d606c on the ground 5.6:1, on a card
+   6.2:1; ink on the ground 15.8:1. */
+
+:root {
+  /* Dark defaults: the navbar and footer on a page that is not redesigned yet. */
+  --site-bg: #050505;
+  --site-surface: #111114;
+  --site-card: #0d0d10;
+  --site-ink: #ffffff;
+  --site-muted: #a1a1aa;
+  --site-line: rgb(255 255 255 / 0.08);
+  --site-line-strong: rgb(255 255 255 / 0.18);
+  --site-action: #ff6b00;
+  --site-action-hover: #e85f00;
+  --site-action-ink: #ffffff;
+  --site-accent-text: #ff9a52;
+  --site-blue-text: #5aa9ff;
+  --site-focus: #5aa9ff;
+  --site-nav-h: 64px;
+  --site-display: var(--font-sans);
+  --site-text: var(--font-body);
+  --site-display-stretch: 100%;
+}
+
+@media (min-width: 768px) {
+  :root { --site-nav-h: 72px; }
+}
+
+.site-paper[data-theme] {
+  --site-bg: #f6f3ee;
+  --site-surface: #ebe5da;
+  --site-card: #fffdf9;
+  --site-ink: #14192b;
+  --site-muted: #5d606c;
+  --site-line: #e2dacd;
+  --site-line-strong: #cbc1b1;
+  --site-action: #c2530a;
+  --site-action-hover: #a8460a;
+  --site-action-ink: #ffffff;
+  --site-accent-text: #a8460a;
+  --site-blue-text: #0057c2;
+  --site-focus: #0057c2;
+  --site-display: var(--font-archivo), system-ui, sans-serif;
+  --site-text: var(--font-archivo), system-ui, sans-serif;
+  --site-display-stretch: 110%;
+
+  /* The names the rest of the app reads, pointed at Paper, so an untouched
+     shared component lands on this ground rather than on the dashboard's zinc. */
+  --bg-primary: var(--site-bg);
+  --bg-dark: var(--site-bg);
+  --ink: var(--site-ink);
+  --text-primary: var(--site-ink);
+  --text-secondary: var(--site-muted);
+  --text-muted: var(--site-muted);
+  --glass-border: var(--site-line);
+  --font-sans: var(--site-display);
+  --font-body: var(--site-text);
+
+  /* The floating navbar is gone: the bar is a solid strip at the top, so the
+     clearance under it is its own height. .event-hero still reads this. */
+  --nav-offset: var(--site-nav-h);
+
+  min-height: 100dvh;
+  background: var(--site-bg);
+  color: var(--site-ink);
+  font-family: var(--site-text);
+}
+
+/* The overscroll bounce shows <html>; on a Paper page it should be paper. */
+html:has(.site-paper) { background-color: #f6f3ee; }
+
+/* No page-arrival fade on a redesigned page: the hero has its own one entrance
+   (`data-enter`), and the audit caught whole sections blank mid-fade. */
+.site-paper .public-main > :not(.public-route-loading) { animation: none; }
+
+/* ── Type ─────────────────────────────────────────────────────
+   One heading scale, mixed case. Archivo's width axis does the work a heavy
+   weight used to: wide, not bold, reads as a race bib rather than a shout. */
+.site-h1,
+.site-h2,
+.site-h3 {
+  margin: 0;
+  font-family: var(--site-display);
+  font-stretch: var(--site-display-stretch);
+  font-weight: 500;
+  color: var(--site-ink);
+  text-wrap: balance;
+}
+.site-h1 { font-size: clamp(2.5rem, 1.6rem + 3.6vw, 4.25rem); line-height: 1.02; letter-spacing: -0.03em; }
+.site-h2 { font-size: clamp(1.75rem, 1.35rem + 1.6vw, 2.75rem); line-height: 1.08; letter-spacing: -0.025em; }
+.site-h3 { font-size: 1.375rem; line-height: 1.18; letter-spacing: -0.01em; }
+.site-lead { margin: 0; font-size: 1.0625rem; line-height: 1.6; color: var(--site-muted); }
+@media (min-width: 768px) { .site-lead { font-size: 1.125rem; } }
+
+/* ── Buttons: one pair ────────────────────────────────────────
+   Solid action and an outlined quiet one, the same box. They step up on hover
+   and press on click (taste rule 5); no gradient, no uppercase. */
+.site-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 48px;
+  padding: 0 1.375rem;
+  border-radius: 10px;
+  border: 1.5px solid transparent;
+  font-family: var(--site-text);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform var(--duration-quick) var(--ease-smooth-out, ease),
+    background-color var(--duration-quick) ease, border-color var(--duration-quick) ease,
+    color var(--duration-quick) ease;
+}
+.site-btn:hover { transform: translateY(-1px); }
+.site-btn:active { transform: translateY(0) scale(0.98); }
+.site-btn--action { background: var(--site-action); color: var(--site-action-ink); }
+.site-btn--action:hover { background: var(--site-action-hover); }
+.site-btn--quiet { border-color: var(--site-ink); color: var(--site-ink); background: transparent; }
+.site-btn--quiet:hover { background: var(--site-ink); color: var(--site-bg); }
+.site-btn:disabled,
+.site-btn[aria-disabled="true"] { opacity: 0.5; transform: none; cursor: not-allowed; }
+@media (max-width: 639px) { .site-btn--block-sm { width: 100%; } }
+
+/* A text link whose underline draws on hover: its label sits in a <span>. */
+.site-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: 44px;
+  font-weight: 600;
+  color: var(--site-accent-text);
+  text-decoration: none;
+}
+.site-link > span {
+  padding-bottom: 2px;
+  background: linear-gradient(currentColor, currentColor) 0 100% / 0 1.5px no-repeat;
+  transition: background-size var(--duration-fast) var(--ease-smooth-out, ease);
+}
+.site-link:hover > span { background-size: 100% 1.5px; }
+.site-link svg { transition: transform var(--duration-fast) var(--ease-smooth-out, ease); }
+.site-link:hover svg { transform: translateX(3px); }
+
+:where(.site-paper) :focus-visible {
+  outline: 2px solid var(--site-focus);
+  outline-offset: 2px;
+}
+
+/* ── Sections ─────────────────────────────────────────────────
+   The content column. Not `.container`: that sets the `padding` shorthand
+   unlayered, which silently beats every Tailwind `pt-*` / `pb-*` beside it.
+   This one owns only the inline edges, so vertical utilities still work.
+
+   One rhythm: every section on the same vertical step, and a section that
+   follows another drops its top, so no gap between two reads as a hole. */
+.site-wrap {
+  width: 100%;
+  max-width: 1280px;
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+.site-section { padding-block: 3rem; }
+@media (min-width: 768px) { .site-section { padding-block: 4rem; } }
+.site-section + .site-section { padding-top: 0; }
+.site-section__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  margin-bottom: 1.75rem;
+}
+@media (min-width: 768px) { .site-section__head { margin-bottom: 2.25rem; } }
+.site-section__sub { margin: 0.5rem 0 0; color: var(--site-muted); font-size: 1rem; }
+
+/* ── The hero entrance: once, on load ─────────────────────────
+   Short and from a nearly-there state, so the hero is never blank for long. */
+[data-enter] > * {
+  animation: site-enter 520ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+[data-enter] > :nth-child(2) { animation-delay: 60ms; }
+[data-enter] > :nth-child(3) { animation-delay: 120ms; }
+[data-enter] > :nth-child(4) { animation-delay: 180ms; }
+@keyframes site-enter {
+  from { opacity: 0; transform: translateY(14px); }
+}
+
+/* ── The event card ───────────────────────────────────────────
+   The poster whole on top (organizers' banners carry their own title, so
+   nothing is printed over them), the facts on the card under it. The frame is
+   the banners' common shape; a banner of another shape sits whole inside it
+   on the card's sunken tint rather than being cropped. */
+.site-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  border: 1px solid var(--site-line);
+  border-radius: 14px;
+  background: var(--site-card);
+  color: var(--site-ink);
+  transition: transform var(--duration-fast) var(--ease-smooth-out, ease),
+    border-color var(--duration-fast) ease, box-shadow var(--duration-fast) ease;
+}
+.site-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--site-line-strong);
+  box-shadow: 0 10px 24px -14px rgb(20 25 43 / 0.28);
+}
+.site-card__poster {
+  position: relative;
+  aspect-ratio: 12 / 5;
+  overflow: hidden;
+  background: var(--site-surface);
+}
+.site-card__poster img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  transition: transform var(--duration-medium) var(--ease-smooth-out, ease);
+}
+.site-card:hover .site-card__poster img { transform: scale(1.025); }
+.site-card__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1.125rem 1.25rem 1.25rem;
+}
+.site-card__date { font-size: 0.875rem; font-weight: 600; color: var(--site-accent-text); }
+.site-card__title {
+  margin: 0;
+  font-family: var(--site-display);
+  font-stretch: var(--site-display-stretch);
+  font-size: 1.3125rem;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+.site-card__where { margin: 0; font-size: 0.9375rem; color: var(--site-muted); overflow-wrap: anywhere; }
+.site-card__chips { display: flex; flex-wrap: wrap; gap: 0.375rem; margin: 0.25rem 0 0; padding: 0; list-style: none; }
+.site-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 999px;
+  background: var(--site-surface);
+  color: var(--site-ink);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+.site-card__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: auto;
+  padding-top: 0.875rem;
+  border-top: 1px solid var(--site-line);
+}
+.site-card__status { font-size: 0.875rem; font-weight: 600; color: var(--site-muted); }
+.site-card__go {
+  display: inline-flex;
+  min-height: 44px;
+  text-decoration: none;
+  align-items: center;
+  gap: 0.25rem;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--site-accent-text);
+}
+/* The whole card is the action link's target. */
+.site-card__go::after { content: ""; position: absolute; inset: 0; z-index: 1; border-radius: inherit; }
+.site-card__go:focus-visible { outline: none; }
+.site-card:has(.site-card__go:focus-visible) { outline: 2px solid var(--site-focus); outline-offset: 2px; }
+.site-card__go svg { transition: transform var(--duration-fast) var(--ease-smooth-out, ease); }
+.site-card:hover .site-card__go svg { transform: translateX(3px); }
+
+/* A race with no poster: a quiet paper tile, not the dark orbs. */
+.site-paper .event-image-fallback { background: var(--site-surface); }
+.site-paper .event-image-fallback > div { display: none; }
+.site-paper .event-image-fallback > svg { color: var(--site-line-strong); }
+
+/* The grid: four to a row when the count would otherwise leave one card alone
+   on the last row (the audit's lone fourth card). */
+.site-grid { display: grid; grid-template-columns: 1fr; gap: 1.25rem; }
+@media (min-width: 640px) { .site-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1024px) {
+  .site-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem; }
+  .site-grid[data-fit="4"] { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+/* A tablet: three cards stand in one row rather than two and a lone one. */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .site-grid[data-fit="3"] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+/* ── The /events tabs (EventsTabs, transitions.dev sliding pill) ──
+   Paper colours for the pill and its labels; the motion is globals.css's. */
+.site-tabs {
+  --tabs-pill-bg: var(--site-ink);
+  --tabs-pill-shadow: none;
+  background: var(--site-surface);
+}
+.site-tabs .t-tab { color: var(--site-muted); }
+.site-tabs .t-tab:hover { color: var(--site-ink); }
+.site-tabs .t-tab[aria-current="page"] { color: var(--site-bg); }
+.site-tabs .t-tab-count { background: color-mix(in srgb, currentColor 14%, transparent); }
+
+/* ── The older public buttons, on a Paper page ────────────────
+   `.btn-gradient` and `.btn-secondary` still serve the dark pages (the
+   wizard, /pay) and a few shared components (RacePhotoLinks, StatusPanel).
+   On Paper they take the `.site-btn` pair's look, so a shared component
+   cannot bring a gradient pill or uppercase back onto a redesigned page. */
+.site-paper .btn-gradient,
+.site-paper .btn-secondary {
+  min-height: 48px;
+  padding: 0 1.375rem;
+  border-radius: 10px;
+  font-family: var(--site-text);
+  font-size: 1rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  box-shadow: none;
+}
+.site-paper .btn-gradient { background: var(--site-action); color: var(--site-action-ink); }
+.site-paper .btn-gradient:hover { background: var(--site-action-hover); opacity: 1; transform: translateY(-1px); }
+.site-paper .btn-secondary { background: transparent; color: var(--site-ink); border: 1.5px solid var(--site-ink); }
+.site-paper .btn-secondary:hover { background: var(--site-ink); color: var(--site-bg); transform: translateY(-1px); }
+
+/* ── Shared panels, on a Paper page ───────────────────────────
+   StatusPanel (the "nothing here" surface) and `.glass-panel` still dress
+   the dark pages; on Paper they are a flat card with no orbs or glow. */
+.site-paper .status-panel,
+.site-paper .glass-panel {
+  background: var(--site-card);
+  border-color: var(--site-line);
+  border-radius: 14px;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.site-paper .status-panel > [aria-hidden="true"] { display: none; }
+.site-paper .status-icon {
+  width: 3rem;
+  height: 3rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--site-surface);
+  color: var(--site-ink);
+  box-shadow: none;
+}
+.site-paper .status-icon svg { width: 22px; height: 22px; }
+
+/* ── The public form field (.input-group, globals.css), on Paper ──
+   Its dark fill and white hairline read as a grey slab on paper. */
+.site-paper .input-group label { color: var(--site-ink); }
+.site-paper .input-group input,
+.site-paper .input-group select,
+.site-paper .input-group textarea {
+  background: var(--site-card);
+  border-color: var(--site-line-strong);
+  border-radius: 10px;
+  color: var(--site-ink);
+}
+.site-paper .input-group input::placeholder,
+.site-paper .input-group textarea::placeholder { color: color-mix(in srgb, var(--site-muted) 80%, transparent); }
+.site-paper .input-group input:focus,
+.site-paper .input-group select:focus,
+.site-paper .input-group textarea:focus {
+  background: var(--site-card);
+  border-color: var(--site-ink);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--site-ink) 12%, transparent);
+}
+
+/* ── Navbar ───────────────────────────────────────────────────
+   A solid strip, not a floating glass pill. */
+.site-nav {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 100;
+  height: var(--site-nav-h);
+  background: var(--site-bg);
+  border-bottom: 1px solid var(--site-line);
+  color: var(--site-ink);
+}
+.site-nav__row {
+  display: flex;
+  height: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.site-nav__link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 0.25rem;
+  font-family: var(--site-text);
+  font-size: 0.9875rem;
+  font-weight: 500;
+  color: var(--site-muted);
+  text-decoration: none;
+  transition: color var(--duration-quick) ease;
+}
+.site-nav__link::after {
+  content: "";
+  position: absolute;
+  left: 0.25rem;
+  right: 0.25rem;
+  bottom: 6px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--site-action);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--duration-fast) var(--ease-smooth-out, ease);
+}
+.site-nav__link:hover { color: var(--site-ink); }
+.site-nav__link:hover::after,
+.site-nav__link[aria-current="page"]::after { transform: scaleX(1); }
+.site-nav__link[aria-current="page"] { color: var(--site-ink); }
+.site-nav__toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-right: -0.5rem;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--site-ink);
+}
+.site-nav__toggle:hover { background: var(--site-surface); }
+@media (min-width: 768px) { .site-nav__toggle { display: none; } }
+/* The phone menu: a full-width sheet under the bar. */
+.site-nav__sheet {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--site-bg);
+  border-bottom: 1px solid var(--site-line);
+  box-shadow: 0 18px 30px -20px rgb(0 0 0 / 0.35);
+}
+.site-nav__sheet a {
+  display: flex;
+  align-items: center;
+  min-height: 52px;
+  padding: 0 var(--gutter);
+  border-top: 1px solid var(--site-line);
+  font-size: 1.0625rem;
+  font-weight: 500;
+  color: var(--site-ink);
+  text-decoration: none;
+}
+.site-nav__sheet a[aria-current="page"] { color: var(--site-accent-text); }
+
+/* ── Footer ───────────────────────────────────────────────────
+   The ink band that closes every page: the one inverted ground the site has. */
+.site-footer {
+  margin-top: 0;
+  background: var(--site-ink);
+  color: var(--site-bg);
+}
+/* The logo on the ink band: paper arcs, the brand pair lifted for the dark
+   ground. Only on Paper; a dark page's footer keeps the dark logo it had. */
+.site-paper .site-footer {
+  --logo-ink: var(--site-bg);
+  --logo-mid: #5aa9ff;
+  --logo-accent: #ff7a1a;
+}
+/* On a page that is still dark, the ink band would be a white slab: it keeps
+   a dark ground with a hairline instead. */
+:root:not(:has(.site-paper)) .site-footer {
+  background: #0a0a0c;
+  color: #ffffff;
+  border-top: 1px solid rgb(255 255 255 / 0.06);
+}
+/* A page that is still dark keeps the air it had above its footer. */
+:root:not(:has(.site-paper)) .site-footer { margin-top: 5rem; }
+@media (min-width: 640px) { :root:not(:has(.site-paper)) .site-footer { margin-top: 8rem; } }
+.site-footer__muted { color: color-mix(in srgb, currentColor 66%, transparent); }
+.site-footer__line { border-color: color-mix(in srgb, currentColor 14%, transparent); }
+.site-footer a { color: inherit; }
+.site-footer__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 0.95rem;
+  text-decoration: none;
+  color: color-mix(in srgb, currentColor 72%, transparent) !important;
+  transition: color var(--duration-quick) ease;
+}
+.site-footer__link:hover { color: inherit !important; }
+.site-footer__chip {
+  display: inline-flex;
+  max-width: 100%;
+  width: fit-content;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 44px;
+  padding: 0.625rem 1rem;
+  border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+  border-radius: 10px;
+  text-decoration: none;
+  transition: border-color var(--duration-quick) ease;
+}
+.site-footer__chip:hover { border-color: color-mix(in srgb, currentColor 45%, transparent); }
+.site-footer__social {
+  display: flex;
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+  border-radius: 999px;
+  transition: transform var(--duration-quick) ease, border-color var(--duration-quick) ease;
+}
+.site-footer__social:hover { transform: translateY(-2px); border-color: currentColor; }
+
+@media (prefers-reduced-motion: reduce) {
+  [data-enter] > * { animation: none; }
+  .site-btn, .site-card, .site-card__poster img, .site-link > span, .site-link svg, .site-nav__link::after,
+  .site-card__go svg, .site-footer__social { transition: none; }
+  .site-btn:hover, .site-card:hover, .site-footer__social:hover { transform: none; }
+  .site-card:hover .site-card__poster img { transform: none; }
+}

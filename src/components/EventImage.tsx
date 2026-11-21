@@ -33,7 +33,7 @@ export default function EventImage({ src, alt, className = '', iconSize = 32 }: 
   if (!src || failedSrc === src) {
     return (
       <div
-        className={`${className} relative flex items-center justify-center overflow-hidden bg-[#0f0f14]`}
+        className={`${className} event-image-fallback relative flex items-center justify-center overflow-hidden bg-[#0f0f14]`}
         role="img"
         aria-label={alt}
       >

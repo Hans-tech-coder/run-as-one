@@ -1,44 +1,19 @@
 import { notFound, redirect } from 'next/navigation';
-import {
-  CalendarClock,
-  ChevronRight,
-  Lock,
-  PauseCircle,
-  Users,
-} from 'lucide-react';
 import Link from 'next/link';
 import type { ResolvingMetadata } from 'next';
 import db from '@/lib/public-db';
-import { sellsPackages } from '@/lib/event-type';
-import { formatEventInstant, hasFinished } from '@/lib/event-schedule';
+import { hasFinished } from '@/lib/event-schedule';
 import { takesResults } from '@/lib/event-format';
 import { canViewEventPage } from '@/lib/event-preview';
 import { describePublish, isPublished } from '@/lib/event-visibility';
-import {
-  canonicalEventPath,
-  eventByParam,
-  registerPath,
-  resultsPath,
-} from '@/lib/event-slug';
-import {
-  EVENT_FULL_MESSAGE,
-  closedMessage,
-  closesSoon,
-  openingNote,
-  pauseNote,
-  registrationState,
-  takenSlotsByCategory,
-  withSlotCounts,
-} from '@/lib/registration-gate';
+import { canonicalEventPath, eventByParam, resultsPath } from '@/lib/event-slug';
+import { registrationState, takenSlotsByCategory, withSlotCounts } from '@/lib/registration-gate';
 import { EVENT_SITE_CLIENT, ensureEventSite, eventPageMetadata } from '@/lib/site-client';
 import { eventJsonLd, jsonLdScript } from '@/lib/event-structured-data';
 import './EventDetails.css';
 
-import EventHeroBanner from '@/components/EventHeroBanner';
-import { RaceIsOver, RegistrationOnHold } from './ClosedSidebarPanels';
 import PromoHighlights from '@/components/PromoHighlights';
-import CategoryPrice from '@/components/CategoryPrice';
-import LinkPendingIcon from '@/components/ui/LinkPendingIcon';
+import RaceHeader from '@/components/RaceHeader';
 import { automaticPromosFor, promoTerms } from '@/lib/promo-store';
 import { categorySalePrices } from '@/lib/discount';
 import { CATEGORY_ORDER } from '@/lib/category-order';
@@ -49,7 +24,7 @@ import EventHighlightsGallery from '@/components/EventHighlightsGallery';
 import { publicAddOns } from '@/lib/add-on-stock';
 import { AddOnsBlock, InclusionsGrid } from './EventSections';
 import { RaceDetails } from './RaceDetails';
-import ClosingCountdown from './ClosingCountdown';
+import { EventSidebar } from './EventSidebar';
 
 /** One URL per event, on the site it belongs to (CLIENT_SUBDOMAIN_PLAN.md). */
 export async function generateMetadata(
@@ -187,265 +162,105 @@ export default async function EventDetails({ site, slug, staff }: { site: string
     );
 
   return (
-    <div className="event-details-page">
+    <div className="event-details-page site-wrap">
       {/* What Google's event listings read (lib/event-structured-data.ts). */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScript(eventJsonLd({ ...event, categories }, state, salePrices)) }}
       />
-      <EventHeroBanner event={event as any} />
 
       {/* Only the team ever sees this page unpublished, and they must not
           mistake the preview for the live page. */}
       {access.preview && (
         <p
           role="status"
-          className="mt-6 mb-0 rounded-2xl border border-amber-400/30 bg-amber-400/10 px-5 py-3 text-sm font-medium text-amber-200"
+          className="mt-6 mb-0 rounded-[10px] border border-[var(--status-warning)] px-5 py-3 text-sm font-medium text-[var(--status-warning)]"
         >
           Preview. {describePublish(event)} Runners cannot open or register for it yet.
         </p>
       )}
 
-      {/* Main Content */}
-      <section className="mt-12 mb-20 t-stagger is-shown">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-          
-          {/* Left Column: About & Inclusions */}
-          <div className="lg:col-span-2 space-y-6 lg:space-y-8">
-            {/* First in the column, so on a phone it sits straight under the
-                categories and Register Now: the answers a runner needs before
-                paying, not after scrolling past the poster gallery. */}
+      <RaceHeader event={event} back={{ href: '/events', label: 'All races' }} />
+
+      {/* The poster and the details on the left, the decision column on the
+          right, beside the poster. On a phone the column comes first (order),
+          right under the race's name, so the prices and Register are on the
+          first screen there too; the poster and the details follow. */}
+      <div className="grid grid-cols-1 gap-8 pb-16 lg:grid-cols-12 lg:gap-10 md:pb-20">
+        <div className="lg:col-span-7 xl:col-span-8">
+          {event.imageUrl?.trim() && (
+            <div className="overflow-hidden rounded-[14px] bg-site-surface">
+              {/* Whole, never cropped or written over: the banner carries the
+                  race's own name and sponsors. */}
+              <img src={event.imageUrl} alt={`${event.title} poster`} className="block h-auto w-full" />
+            </div>
+          )}
+
+          <div className="event-blocks">
             <RaceDetails event={event} finished={finished} closed={state === 'CLOSED'} />
 
             {/* The organizer writes this now, so an empty one means they had
                 nothing to add — not that the page should invent a sentence. */}
             {event.description?.trim() && (
-              <div className="info-block glass-panel p-8 rounded-3xl border border-white/10 hover:border-accent-blue/30 transition-colors t-stagger-line t-stagger-line--3">
-                <h2 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 text-white tracking-tight">About The Event</h2>
+              <section className="event-block" aria-labelledby="about-race">
+                <h2 id="about-race" className="event-block__title">About the race</h2>
                 {/* Headings, lists and emphasis come from the admin editor's
                     toolbar; see src/lib/rich-text.ts for what it may contain. */}
-                <RichText
-                  source={event.description}
-                  className="text-base sm:text-lg text-secondary leading-relaxed"
-                />
-              </div>
+                <RichText source={event.description} className="event-prose" />
+              </section>
             )}
 
             <PromoHighlights promos={automaticPromos} categories={event.categories} />
 
             {withInclusions.length > 0 && (
-              <div className="info-block glass-panel p-8 rounded-3xl border border-white/10 hover:border-accent-blue/30 transition-colors t-stagger-line t-stagger-line--4">
-                <h2 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 text-white tracking-tight">What&apos;s Included</h2>
+              <section className="event-block" aria-labelledby="inclusions">
+                <h2 id="inclusions" className="event-block__title">What&apos;s included</h2>
 
                 {sharedInclusions ? (
                   <InclusionsGrid items={withInclusions[0].inclusions} />
                 ) : (
-                  <div className="flex flex-col gap-8">
+                  <div className="flex flex-col gap-7">
                     {withInclusions.map((cat) => (
                       <div key={cat.id}>
                         {/* Price stays out of here: the sidebar is where costs
-                            are compared, and repeating them beside every
-                            inclusions list only adds noise. */}
-                        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-2 mb-4 pb-3 border-b border-white/10">
-                          <h3 className="text-xl font-bold text-white uppercase tracking-wide">
-                            {cat.name}
-                          </h3>
-                          {cat.distance && (
-                            <span className="text-xs text-secondary bg-white/10 px-2.5 py-1 rounded-full">
-                              {cat.distance}
-                            </span>
-                          )}
+                            are compared. */}
+                        <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-2">
+                          <h3 className="m-0 text-lg font-semibold text-site-ink">{cat.name}</h3>
+                          {cat.distance && <span className="site-chip">{cat.distance}</span>}
                         </div>
                         <InclusionsGrid items={cat.inclusions} />
                       </div>
                     ))}
                   </div>
                 )}
-              </div>
+              </section>
             )}
 
-            {addOns.length > 0 && (
-              <AddOnsBlock addOns={addOns} categories={event.categories} />
-            )}
+            {addOns.length > 0 && <AddOnsBlock addOns={addOns} categories={event.categories} />}
 
             {/* Everything the organizer wants to show off — race kit, trophies,
                 the venue, an after party — as one gallery that opens full
                 screen with zoom, so small print on a poster can be read. */}
             {highlights.length > 0 && (
-               <div className="info-block glass-panel p-6 sm:p-8 rounded-3xl border border-white/10 hover:border-accent-blue/30 transition-colors t-stagger-line t-stagger-line--5">
-                 <h2 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 text-white tracking-tight">Event Highlights</h2>
-                 <EventHighlightsGallery highlights={highlights} title={event.title} />
-               </div>
+              <section className="event-block" aria-labelledby="highlights">
+                <h2 id="highlights" className="event-block__title">Race kit and highlights</h2>
+                <EventHighlightsGallery highlights={highlights} title={event.title} />
+              </section>
             )}
           </div>
-
-          {/* Right Column: Sidebar (Sticky) */}
-          <div className="order-first lg:order-none lg:col-span-1 t-stagger-line t-stagger-line--3">
-            <div className="lg:sticky lg:top-32 space-y-6">
-              
-              {/* Categories Bento */}
-              <div className="glass-panel p-5 sm:p-6 rounded-3xl border border-white/10 bg-gradient-to-b from-white/5 to-transparent">
-                <h2 className="text-xl sm:text-2xl font-bold mb-5 sm:mb-6 text-white">{sellsPackages(event) ? 'Packages' : 'Categories'}</h2>
-                <div className="flex flex-col gap-4">
-                  {categories.map((cat: any) => {
-                    // A row is a way in whenever Register Now would be: the
-                    // race is open and this option still has room. A full row,
-                    // or any row while the race is paused, full or over, stays
-                    // plain text — a link the wizard would only turn away is a
-                    // dead end dressed up as a button.
-                    const bookable = state === 'OPEN' && !cat.isFull;
-                    const body = (
-                      <>
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-accent-orange/10 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-accent-orange/20 transition-all"></div>
-                      <div className="relative z-10 min-w-0 flex-1 flex flex-col items-start gap-1">
-                        <div className={cat.isFull ? 'font-bold text-lg leading-snug break-words text-white/60' : 'font-bold text-lg leading-snug break-words text-white'}>{cat.name}</div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          {/* Packages have no distance; an empty pill is worse
-                              than no pill. */}
-                          {cat.distance && <div className="text-sm text-secondary bg-white/10 px-3 py-1 rounded-full">{cat.distance}</div>}
-                          {/* The whole point of a per-option cap: a full 10K
-                              says nothing about the 5K beside it, so it is this
-                              row that has to carry the news. */}
-                          {cat.isFull && (
-                            <div className="text-xs font-bold uppercase tracking-wide text-white/70 bg-white/10 border border-white/10 px-3 py-1 rounded-full">
-                              Full
-                            </div>
-                          )}
-                          {cat.isLastCall && (
-                            <div className="text-xs font-bold uppercase tracking-wide text-accent-orange bg-accent-orange/15 px-3 py-1 rounded-full">
-                              {cat.slotsLeft} slot{cat.slotsLeft === 1 ? '' : 's'} left
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <div className="relative z-10 shrink-0 flex items-center gap-2">
-                        <CategoryPrice
-                          price={cat.price}
-                          sale={salePrices.get(cat.id)}
-                          dimmed={cat.isFull}
-                          stacked
-                          className={
-                            cat.isFull
-                              ? 'text-lg sm:text-xl font-bold shrink-0 text-white/40'
-                              : 'text-lg sm:text-xl font-bold shrink-0 text-accent-orange'
-                          }
-                        />
-                        {/* The same chevron Register Now carries, so the row
-                            reads as the same kind of thing: a way into the
-                            wizard. It turns into the runner while the wizard
-                            loads, like every other call to action here. */}
-                        {bookable && (
-                          <LinkPendingIcon className="text-white/40 group-hover:text-accent-orange transition-colors">
-                            <ChevronRight size={18} className="group-hover:translate-x-0.5 transition-transform" />
-                          </LinkPendingIcon>
-                        )}
-                      </div>
-                      </>
-                    );
-
-                    return bookable ? (
-                      // Opens the wizard with this option already chosen for
-                      // the first runner — see registerPath.
-                      <Link
-                        key={cat.id}
-                        href={registerPath(event, cat)}
-                        className={CATEGORY_ROW(false, true)}
-                      >
-                        <span className="sr-only">Register for </span>
-                        {body}
-                      </Link>
-                    ) : (
-                      <div key={cat.id} className={CATEGORY_ROW(cat.isFull, false)}>
-                        {body}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex flex-col gap-4">
-                {finished ? (
-                  <RaceIsOver event={event} />
-                ) : state === 'CLOSED' ? (
-                  <RegistrationOnHold
-                    icon={<Lock size={20} />}
-                    heading="Registration Closed"
-                    message={closedMessage(event)}
-                  />
-                ) : state === 'PAUSED' ? (
-                  <RegistrationOnHold
-                    icon={<PauseCircle size={20} />}
-                    heading="Registration Paused"
-                    message={pauseNote(event)}
-                  />
-                ) : state === 'SCHEDULED' ? (
-                  /* The race is real and listed; it just has not opened yet.
-                     The panel carries the date instead of a button, because
-                     the date is the whole of what this visitor came to find
-                     out — see openingNote. The calendar-and-clock icon is
-                     this state's now, and Paused has taken the pause glyph. */
-                  <RegistrationOnHold
-                    icon={<CalendarClock size={20} />}
-                    heading="Registration Opens Soon"
-                    message={openingNote(event)}
-                  />
-                ) : state === 'FULL' ? (
-                  <RegistrationOnHold
-                    icon={<Users size={20} />}
-                    heading="Every Option Is Full"
-                    message={EVENT_FULL_MESSAGE}
-                  />
-                ) : (
-                  <>
-                    {/* A deadline days away is the reason to finish today,
-                        so it stands with the button it is a reason to press. */}
-                    {event.registrationClosesAt && closesSoon(event) && (
-                      <ClosingCountdown
-                        closesAt={event.registrationClosesAt.toISOString()}
-                        when={formatEventInstant(event.registrationClosesAt)}
-                      />
-                    )}
-                    <Link href={registerPath(event)} className="btn-gradient w-full text-center justify-center py-4 text-lg font-bold flex items-center gap-2 group shadow-xl shadow-accent-orange/20">
-                      Register Now{' '}
-                      <LinkPendingIcon className="ml-1">
-                        <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform inline-block" />
-                      </LinkPendingIcon>
-                    </Link>
-
-                    {resultsCount > 0 && (
-                      <Link href={resultsPath(event)} className="w-full bg-white/5 border border-white/10 text-white hover:bg-white/10 hover:border-white/30 transition-all py-4 px-6 rounded-[16px] font-bold text-center uppercase tracking-wider flex items-center justify-center gap-2">
-                        View Results
-                      </Link>
-                    )}
-                  </>
-                )}
-              </div>
-
-            </div>
-          </div>
-          
         </div>
-      </section>
-    </div>
-  );
-}
 
-/**
- * One row of the categories list, dimmed once that option has sold out.
- *
- * Only a `bookable` row — one that is a link into the wizard — lights its
- * border on hover and wears a focus ring; a row that cannot be pressed must not
- * look as though it can. A function rather than an inline template literal only
- * because this file's class strings are long enough already.
- */
-function CATEGORY_ROW(isFull: boolean, bookable: boolean) {
-  const base =
-    'group relative overflow-hidden bg-black/40 border border-white/5 rounded-2xl p-4 sm:p-5 transition-colors flex items-center justify-between gap-3';
-  if (isFull) return base + ' opacity-60';
-  if (!bookable) return base;
-  return (
-    base +
-    ' no-underline cursor-pointer hover:border-accent-orange/50 focus-visible:outline-none focus-visible:border-accent-orange focus-visible:ring-2 focus-visible:ring-accent-orange/40'
+        <aside className="order-first lg:order-none lg:col-span-5 xl:col-span-4 lg:row-span-2" aria-label="Register">
+          <EventSidebar
+            event={event}
+            categories={categories}
+            state={state}
+            finished={finished}
+            resultsCount={resultsCount}
+            salePrices={salePrices}
+          />
+        </aside>
+      </div>
+    </div>
   );
 }

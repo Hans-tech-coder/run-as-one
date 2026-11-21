@@ -17,9 +17,9 @@ export default function SizeChartButton({ imageUrl }: { imageUrl: string }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 min-h-11 text-sm font-semibold text-[var(--accent-blue-text)] hover:text-primary transition-colors bg-transparent border-none cursor-pointer p-0"
+        className="site-link border-none bg-transparent p-0 text-[0.9375rem]"
       >
-        <Ruler size={16} aria-hidden="true" /> View Size Chart
+        <Ruler size={16} aria-hidden="true" /> <span>See the size chart</span>
       </button>
       {open && (
         <ZoomLightbox

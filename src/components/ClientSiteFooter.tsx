@@ -27,20 +27,20 @@ export default function ClientSiteFooter({ site }: { site: SiteClient }) {
     {
       heading: 'Explore',
       links: [
-        { label: 'Browse Events', href: '/events' },
-        { label: 'Race Results', href: '/results' },
+        { label: 'Browse events', href: '/events' },
+        { label: 'Race results', href: '/results' },
         // The main footer's link too: a client's runners track their order
         // here, on the client's own site (lib/track.ts `trackHome`).
-        { label: 'Track My Registration', href: '/track' },
+        { label: 'Track my registration', href: '/track' },
       ],
     },
     {
-      heading: 'Legal & Support',
+      heading: 'Help and legal',
       links: [
-        { label: 'Send Feedback', href: '/feedback' },
-        { label: 'Terms of Service', href: '/terms' },
-        { label: 'Privacy Policy', href: '/privacy' },
-        { label: 'Payment Concerns', href: supportMailto(contactEmail), external: true },
+        { label: 'Send feedback', href: '/feedback' },
+        { label: 'Terms of service', href: '/terms' },
+        { label: 'Privacy policy', href: '/privacy' },
+        { label: 'Payment concerns', href: supportMailto(contactEmail), external: true },
       ],
     },
   ];
@@ -57,7 +57,7 @@ export default function ClientSiteFooter({ site }: { site: SiteClient }) {
             <ClientSiteLogo site={site} size="footer" />
           </Link>
 
-          <p className="m-0 max-w-[420px] text-base leading-relaxed text-secondary">
+          <p className="site-footer__muted m-0 max-w-[420px] text-base leading-relaxed">
             Official race registration and results for {site.name}. Sign your
             whole group up in one transaction, and collect your time and
             e-certificate once results are published.
@@ -94,12 +94,12 @@ export default function ClientSiteFooter({ site }: { site: SiteClient }) {
             heading={`Follow ${site.name}`}
           />
 
-          <p className="m-0 max-w-[420px] text-sm leading-relaxed text-secondary">
+          <p className="site-footer__muted m-0 max-w-[420px] text-sm leading-relaxed">
             Payments are taken and confirmed by {SITE_NAME}. For a payment
             concern, email{' '}
             <a
               href={supportMailto(contactEmail)}
-              className="break-words text-white underline-offset-4 hover:underline"
+              className="break-words underline underline-offset-4"
             >
               {contactEmail}
             </a>

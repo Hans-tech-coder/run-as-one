@@ -16,8 +16,7 @@ export type FooterColumn = { heading: string; links: FooterLink[] };
 
 /** One row in a link column. 44px tall so a thumb can hit it. */
 function FooterLinkRow({ link }: { link: FooterLink }) {
-  const className =
-    'group inline-flex min-h-[44px] w-fit items-center text-[0.95rem] text-secondary no-underline transition-colors duration-200 hover:text-white';
+  const className = 'site-footer__link group w-fit';
 
   const label = (
     <span className="transition-transform duration-200 group-hover:translate-x-0.5">
@@ -46,7 +45,7 @@ export function FooterNav({ columns }: { columns: FooterColumn[] }) {
     <nav aria-label="Footer" className="grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-3">
       {columns.map(column => (
         <div key={column.heading} className="flex flex-col">
-          <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-white/90">
+          <h2 className="mb-2 text-sm font-semibold">
             {column.heading}
           </h2>
           <ul className="m-0 flex list-none flex-col p-0">
@@ -85,7 +84,7 @@ export function FooterSocials({
 
   return (
     <div>
-      <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-secondary">
+      <h2 className="site-footer__muted mb-3 text-sm font-semibold">
         {heading}
       </h2>
       <ul className="m-0 flex list-none flex-wrap gap-3 p-0">
@@ -97,7 +96,7 @@ export function FooterSocials({
               rel="noopener noreferrer"
               aria-label={`${owner} on ${channel.name} (opens in a new tab)`}
               title={channel.name}
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-secondary transition-all duration-300 hover:-translate-y-0.5 hover:border-transparent hover:bg-gradient-to-r hover:from-accent-orange hover:to-accent-blue hover:text-white"
+              className="site-footer__social"
             >
               <BrandGlyph channel={channel.key} size={18} />
             </a>
@@ -121,9 +120,9 @@ export function FooterContactChip({
   return (
     <a
       href={href}
-      className="inline-flex w-fit max-w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white no-underline transition-colors duration-200 hover:border-accent-orange/40 hover:bg-white/[0.08] sm:text-base"
+      className="site-footer__chip text-sm sm:text-base"
     >
-      <span aria-hidden="true" className="flex shrink-0 text-accent-orange">{icon}</span>
+      <span aria-hidden="true" className="site-footer__muted flex shrink-0">{icon}</span>
       <span className="min-w-0 break-words">{children}</span>
     </a>
   );
@@ -144,29 +143,19 @@ export function FooterShell({
   bottomLeft: React.ReactNode;
   bottomRight: React.ReactNode;
 }) {
+  // The ink band that closes the page (site.css `.site-footer`): one flat
+  // inverted ground, no glass, orb or gradient hairline.
   return (
-    <footer className="relative mt-20 sm:mt-32 overflow-hidden rounded-t-[40px] border-t border-white/[0.06] bg-[#0a0a0c]/70 backdrop-blur-xl">
-      {/* The brand gradient as a hairline along the top edge, and one soft orb
-          behind the columns — the same two devices the pages above use, so the
-          footer reads as the end of this site rather than a slab under it. */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent-orange/50 to-transparent"
-      />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -top-48 left-1/2 h-[420px] w-[760px] -translate-x-1/2 rounded-full bg-accent-blue/10 blur-[150px]"
-      />
-
-      <div className="relative grid w-full max-w-7xl grid-cols-1 gap-10 px-4 pt-12 pb-10 sm:px-6 sm:pt-16 lg:grid-cols-[1.4fr_2fr] lg:gap-16 lg:px-8 mx-auto">
+    <footer className="site-footer">
+      <div className="site-wrap grid grid-cols-1 gap-10 pt-12 pb-10 sm:pt-16 lg:grid-cols-[1.4fr_2fr] lg:gap-16">
         <div className="flex min-w-0 flex-col gap-6">{brand}</div>
         {nav}
       </div>
 
-      <div className="relative border-t border-white/[0.06]">
-        <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-between gap-2 px-4 py-6 text-center sm:flex-row sm:px-6 sm:text-left lg:px-8">
-          <p className="m-0 text-sm text-secondary">{bottomLeft}</p>
-          <p className="m-0 text-xs text-secondary/70 sm:text-sm">{bottomRight}</p>
+      <div className="site-footer__line border-t">
+        <div className="site-wrap flex flex-col items-center justify-between gap-2 py-6 text-center sm:flex-row sm:text-left">
+          <p className="site-footer__muted m-0 text-sm">{bottomLeft}</p>
+          <p className="site-footer__muted m-0 text-sm">{bottomRight}</p>
         </div>
       </div>
     </footer>

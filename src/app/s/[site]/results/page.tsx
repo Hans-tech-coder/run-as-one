@@ -2,9 +2,8 @@ import React from 'react';
 import { publishedEvents } from '@/lib/event-visibility';
 import { RESULTS_EVENTS } from '@/lib/event-format';
 import Link from 'next/link';
-import { ChevronRight, History, Trophy } from 'lucide-react';
+import { ArrowRight, History, Trophy } from 'lucide-react';
 import db, { publishCutoff } from '@/lib/public-db';
-import ResultsClientOrchestrator from '@/components/ResultsClientOrchestrator';
 import EventGrid from '@/components/EventGrid';
 import { mostRecentFirst } from '@/lib/event-schedule';
 import { EVENT_SITE_CLIENT, eventLinkOrigin, getSiteClient } from '@/lib/site-client';
@@ -64,51 +63,40 @@ export default async function GlobalResultsPage({ params }: { params: Promise<{ 
   const events = rows.map(({ client, ...event }) => ({ ...event, siteOrigin: linkOrigin({ client }) }));
 
   return (
-    <div className="relative overflow-hidden w-full flex flex-col items-center">
-      <div className="w-full relative z-10 flex flex-col items-center gap-8 sm:gap-12">
-        
-        <div className="text-center w-full max-w-3xl mb-0 sm:mb-4 t-stagger is-shown">
-          <div className="flex flex-row w-fit mx-auto items-center justify-center gap-2 mb-4 t-stagger-line t-stagger-line--1">
-            <Trophy size={20} className="text-accent-blue" />
-            <span className="text-sm font-bold tracking-widest uppercase text-accent-orange">Official Rankings</span>
-          </div>
-          <h1 className="text-3xl sm:text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 uppercase tracking-tighter leading-tight mb-4 sm:mb-6 t-stagger-line t-stagger-line--2">
-            Race Results
-          </h1>
-          <p className="text-base sm:text-lg text-secondary leading-relaxed t-stagger-line t-stagger-line--3">
+    <section className="site-section site-wrap" aria-labelledby="results-title">
+      <div className="site-section__head">
+        <div>
+          <h1 id="results-title" className="site-h1">Race results</h1>
+          <p className="site-section__sub max-w-[60ch]">
             {site
-              ? `Official results from every ${site.name} race. Select an event to view the rankings and your runner analytics.`
-              : 'Select an event to view the official race results and your runner analytics.'}
+              ? `Official times from every ${site.name} race. Open one for the winners, the full leaderboard and your e-certificate.`
+              : 'Official times from every race with results. Open one for the winners, the full leaderboard and your e-certificate.'}
           </p>
         </div>
-
-        {events.length === 0 ? (
-          <NoResultsYet hasPastEvents={pastWithoutResults > 0} />
-        ) : (
-          <>
-            {/* Same card as /events, so an event looks like itself whether it
-                is open for registration or already run — only the button
-                changes. */}
-            <EventGrid events={events} action="results" />
-            {/* One quiet line rather than a button: it is for the runner who
-                did not find their race above, not a second thing to do. */}
-            {pastWithoutResults > 0 && (
-              <p className="m-0 -mt-2 sm:-mt-4 text-center text-sm sm:text-base text-secondary">
-                Looking for a race without timed results?{' '}
-                <Link
-                  href={PAST_EVENTS_HREF}
-                  className="inline-flex min-h-11 items-center gap-1 font-semibold text-white underline decoration-white/30 underline-offset-4 transition-colors hover:decoration-accent-orange"
-                >
-                  See past events
-                  <ChevronRight size={16} aria-hidden="true" className="shrink-0" />
-                </Link>
-              </p>
-            )}
-          </>
-        )}
-      <ResultsClientOrchestrator />
       </div>
-    </div>
+
+      {events.length === 0 ? (
+        <NoResultsYet hasPastEvents={pastWithoutResults > 0} />
+      ) : (
+        <>
+          {/* Same card as /events, so an event looks like itself whether it
+              is open for registration or already run — only the button
+              changes. */}
+          <EventGrid events={events} action="results" />
+          {/* One quiet line rather than a button: it is for the runner who
+              did not find their race above, not a second thing to do. */}
+          {pastWithoutResults > 0 && (
+            <p className="m-0 mt-6 text-center text-[0.9375rem] text-site-muted">
+              Looking for a race without timed results?{' '}
+              <Link href={PAST_EVENTS_HREF} className="site-link">
+                <span>See past races</span>
+                <ArrowRight size={16} aria-hidden="true" className="shrink-0" />
+              </Link>
+            </p>
+          )}
+        </>
+      )}
+    </section>
   );
 }
 
@@ -130,19 +118,13 @@ function NoResultsYet({ hasPastEvents }: { hasPastEvents: boolean }) {
   ];
 
   return (
-    <div className="relative w-full max-w-2xl mx-auto overflow-hidden rounded-[24px] border border-white/[0.08] bg-gradient-to-br from-white/[0.04] to-white/[0.01] p-6 sm:p-10 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)]">
-      <div className="pointer-events-none absolute -mr-32 -mt-32 right-0 top-0 h-[300px] w-[300px] rounded-full bg-accent-orange/10 blur-[80px]" />
-      <div className="pointer-events-none absolute -mb-32 -ml-32 bottom-0 left-0 h-[240px] w-[240px] rounded-full bg-accent-blue/10 blur-[80px]" />
-
-      <div className="relative z-10 flex flex-col items-center text-center">
-        <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-[20px] border border-accent-orange/20 bg-accent-orange/10 text-accent-orange shadow-[0_0_20px_rgba(255,107,0,0.15)]">
-          <Trophy size={30} />
+    <div className="w-full rounded-[14px] border border-site-line bg-site-card px-6 py-10 sm:px-10">
+      <div className="flex flex-col items-center text-center">
+        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-site-surface text-site-ink" aria-hidden="true">
+          <Trophy size={22} />
         </div>
-
-        <h2 className="mb-3 text-2xl sm:text-3xl font-black uppercase tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-white to-white/60">
-          No Results Published Yet
-        </h2>
-        <p className="max-w-md text-base text-secondary leading-relaxed">
+        <h2 className="site-h3 mb-2">No results published yet</h2>
+        <p className="site-lead max-w-md">
           Nothing has been posted here so far. Results go up after a race, once
           the organizer has uploaded the official times.
         </p>
@@ -150,37 +132,24 @@ function NoResultsYet({ hasPastEvents }: { hasPastEvents: boolean }) {
 
       {/* Numbered rather than iconised: these are three points in time, and the
           order is the whole message. */}
-      <ol className="relative z-10 mt-8 mb-8 flex list-none flex-col gap-3 p-0">
-        {steps.map((step, idx) => (
-          <li
-            key={idx}
-            className="flex items-center gap-4 rounded-[16px] border border-white/[0.05] bg-black/40 p-4 text-left"
-          >
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-sm font-bold text-white">
-              {idx + 1}
-            </span>
-            <span className="text-sm sm:text-base text-secondary leading-relaxed">
-              {step}
-            </span>
-          </li>
+      <ol className="mx-auto mt-6 mb-8 flex max-w-md list-decimal flex-col gap-2 pl-5 text-left text-[0.9375rem] text-site-muted marker:font-semibold marker:text-site-ink">
+        {steps.map((step) => (
+          <li key={step}>{step}</li>
         ))}
       </ol>
 
-      <div className="relative z-10 flex flex-col gap-3 sm:flex-row sm:justify-center">
-        <Link
-          href="/events"
-          className="btn-gradient w-full sm:w-auto justify-center rounded-[16px] px-8 py-4 text-base text-center group no-underline shadow-xl shadow-accent-orange/20"
-        >
-          <span>Browse Events</span>
-          <ChevronRight size={18} className="shrink-0 transition-transform group-hover:translate-x-1" />
+      <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
+        <Link href="/events" className="site-btn site-btn--action group w-full sm:w-auto">
+          <span>Browse races</span>
+          <ArrowRight size={18} className="shrink-0 transition-transform group-hover:translate-x-1" aria-hidden="true" />
         </Link>
         {/* The races already run without times are not missing — they are
             on the Past tab — and a runner looking for one should be told
             so (PAST_EVENTS_PLAN.md §3). Only when there is one. */}
         {hasPastEvents && (
-          <Link href={PAST_EVENTS_HREF} className="btn-secondary w-full sm:w-auto gap-2">
+          <Link href={PAST_EVENTS_HREF} className="site-btn site-btn--quiet w-full sm:w-auto">
             <History size={18} className="shrink-0" aria-hidden="true" />
-            See Past Events
+            See past races
           </Link>
         )}
       </div>

@@ -36,21 +36,21 @@ export default function TrackResult({
   return (
     <div className="flex w-full flex-col gap-5">
       <header className="flex flex-col gap-2 text-center">
-        <p className="m-0 font-mono text-xs font-bold uppercase tracking-[0.2em] text-secondary">{view.orderRef}</p>
+        <p className="m-0 font-mono text-xs font-bold tracking-[0.2em] text-secondary">{view.orderRef}</p>
         <h2
           ref={headingRef}
           tabIndex={-1}
-          className="m-0 break-words text-2xl font-black uppercase tracking-wide text-white outline-none sm:text-3xl"
+          className="m-0 break-words text-2xl font-semibold tracking-wide text-site-ink outline-none sm:text-3xl"
         >
           {event.title}
         </h2>
         <p className="m-0 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm text-secondary">
           <span className="inline-flex items-center gap-1.5">
-            <CalendarDays size={15} aria-hidden="true" className="shrink-0 text-accent-orange" />
+            <CalendarDays size={15} aria-hidden="true" className="shrink-0 text-site-accent" />
             {event.when}
           </span>
           <span className="inline-flex min-w-0 items-center gap-1.5 break-words">
-            <MapPin size={15} aria-hidden="true" className="shrink-0 text-accent-orange" />
+            <MapPin size={15} aria-hidden="true" className="shrink-0 text-site-accent" />
             {event.where}
           </span>
         </p>
@@ -59,9 +59,9 @@ export default function TrackResult({
       <TrackStatusCard view={view} />
 
       {event.finished && (event.resultsHref || event.resultsComing) && (
-        <section aria-labelledby="track-results-title" className="rounded-[20px] border border-white/[0.08] bg-white/[0.03] p-5 sm:p-6">
-          <h2 id="track-results-title" className="m-0 flex items-center gap-2 text-lg font-black uppercase tracking-wide text-white">
-            <Trophy size={20} aria-hidden="true" className="shrink-0 text-accent-orange" />
+        <section aria-labelledby="track-results-title" className="rounded-[14px] border border-site-line bg-site-surface p-5 sm:p-6">
+          <h2 id="track-results-title" className="m-0 flex items-center gap-2 text-lg font-semibold tracking-wide text-site-ink">
+            <Trophy size={20} aria-hidden="true" className="shrink-0 text-site-accent" />
             Results
           </h2>
           {event.resultsHref ? (
@@ -83,12 +83,12 @@ export default function TrackResult({
         </section>
       )}
 
-      <section aria-labelledby="track-kit-title" className="rounded-[20px] border border-white/[0.08] bg-white/[0.03] p-5 sm:p-6">
-        <h2 id="track-kit-title" className="m-0 flex items-center gap-2 text-lg font-black uppercase tracking-wide text-white">
+      <section aria-labelledby="track-kit-title" className="rounded-[14px] border border-site-line bg-site-surface p-5 sm:p-6">
+        <h2 id="track-kit-title" className="m-0 flex items-center gap-2 text-lg font-semibold tracking-wide text-site-ink">
           {logistics.method === 'pickup' ? (
-            <Package size={20} aria-hidden="true" className="shrink-0 text-accent-orange" />
+            <Package size={20} aria-hidden="true" className="shrink-0 text-site-accent" />
           ) : (
-            <Truck size={20} aria-hidden="true" className="shrink-0 text-accent-orange" />
+            <Truck size={20} aria-hidden="true" className="shrink-0 text-site-accent" />
           )}
           {logistics.method === 'pickup' ? logistics.label : 'Kit Delivery'}
         </h2>
@@ -99,21 +99,21 @@ export default function TrackResult({
                 {logistics.location && (
                   <div>
                     <dt className="text-xs text-secondary">Where</dt>
-                    <dd className="m-0 break-words font-semibold text-white">{logistics.location}</dd>
+                    <dd className="m-0 break-words font-semibold text-site-ink">{logistics.location}</dd>
                   </div>
                 )}
                 {logistics.schedule && (
                   <div>
                     <dt className="text-xs text-secondary">When</dt>
-                    <dd className="m-0 whitespace-pre-line break-words font-semibold text-white">{logistics.schedule}</dd>
+                    <dd className="m-0 whitespace-pre-line break-words font-semibold text-site-ink">{logistics.schedule}</dd>
                   </div>
                 )}
               </dl>
             ) : (
               <p className="m-0 mt-1 text-sm leading-relaxed text-secondary">{logistics.fallback}</p>
             )}
-            <p className="m-0 mt-4 rounded-[12px] border border-white/5 bg-black/30 px-4 py-3 text-xs leading-relaxed text-secondary">
-              <span className="font-bold text-white">Can’t claim it yourself? </span>
+            <p className="m-0 mt-4 rounded-[12px] border border-site-line bg-site-card px-4 py-3 text-xs leading-relaxed text-secondary">
+              <span className="font-bold text-site-ink">Can’t claim it yourself? </span>
               {PROXY_RULE}
             </p>
           </>
@@ -122,12 +122,12 @@ export default function TrackResult({
             {logistics.area && (
               <div>
                 <dt className="text-xs text-secondary">Area</dt>
-                <dd className="m-0 font-semibold text-white">{logistics.area}</dd>
+                <dd className="m-0 font-semibold text-site-ink">{logistics.area}</dd>
               </div>
             )}
             <div>
               <dt className="text-xs text-secondary">Ships to</dt>
-              <dd className="m-0 break-words font-semibold text-white">
+              <dd className="m-0 break-words font-semibold text-site-ink">
                 {logistics.perRunner
                   ? 'Each kit ships to its runner’s home address, shown below'
                   : logistics.shipsTo || 'The address given at registration'}
@@ -140,8 +140,8 @@ export default function TrackResult({
 
       <section aria-labelledby="track-runners-title" className="flex flex-col gap-3">
         <div>
-          <h2 id="track-runners-title" className="m-0 flex items-center gap-2 text-lg font-black uppercase tracking-wide text-white">
-            <Users size={20} aria-hidden="true" className="shrink-0 text-accent-orange" />
+          <h2 id="track-runners-title" className="m-0 flex items-center gap-2 text-lg font-semibold tracking-wide text-site-ink">
+            <Users size={20} aria-hidden="true" className="shrink-0 text-site-accent" />
             What you submitted
           </h2>
           <p className="m-0 mt-1 text-sm leading-relaxed text-secondary">

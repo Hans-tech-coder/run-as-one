@@ -104,7 +104,7 @@ export default function TrackLookup({ help }: { help: TrackHelp }) {
       <div className="flex w-full flex-col items-center gap-5">
         <TrackResult view={view} help={help} headingRef={headingRef} />
         <button type="button" onClick={lookUpAnother} className="btn-secondary w-full sm:w-auto">
-          <RotateCcw size={18} aria-hidden="true" className="shrink-0 text-accent-orange" />
+          <RotateCcw size={18} aria-hidden="true" className="shrink-0 text-site-accent" />
           Look Up Another
         </button>
       </div>
@@ -115,9 +115,8 @@ export default function TrackLookup({ help }: { help: TrackHelp }) {
     <form
       onSubmit={submit}
       noValidate
-      className="glass-panel relative w-full overflow-clip rounded-3xl border border-white/10 bg-gradient-to-b from-white/5 to-transparent p-5 sm:p-8"
+      className="glass-panel relative w-full overflow-clip rounded-[14px] border border-site-line bg-site-card p-5 sm:p-8"
     >
-      <div aria-hidden="true" className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-accent-orange/10 blur-[90px]" />
       <div className="relative z-10 flex flex-col gap-5">
         <div className="input-group">
           <label htmlFor={FIELD_ID.ref}>Registration reference</label>
@@ -130,7 +129,7 @@ export default function TrackLookup({ help }: { help: TrackHelp }) {
             autoComplete="off"
             autoCapitalize="characters"
             spellCheck={false}
-            className="font-mono uppercase"
+            className="font-mono"
             aria-invalid={errors.ref ? true : undefined}
             aria-describedby={`${errors.ref ? `${FIELD_ID.ref}-error ` : ''}${FIELD_ID.ref}-hint`}
             onChange={e => {
@@ -172,10 +171,10 @@ export default function TrackLookup({ help }: { help: TrackHelp }) {
             ref={missRef}
             role="status"
             tabIndex={-1}
-            className="flex flex-col gap-3 rounded-[12px] border border-accent-blue/25 bg-accent-blue/[0.08] px-4 py-3 text-sm text-white outline-none"
+            className="flex flex-col gap-3 rounded-[12px] border border-site-line bg-site-surface px-4 py-3 text-sm text-site-ink outline-none"
           >
             <p className="m-0 flex items-start gap-2.5">
-              <MapPinned size={18} aria-hidden="true" className="mt-0.5 shrink-0 text-accent-blue" />
+              <MapPinned size={18} aria-hidden="true" className="mt-0.5 shrink-0 text-site-accent" />
               <span>
                 This registration is for <strong>{elsewhere.eventTitle}</strong>, on {elsewhere.siteName}&rsquo;s
                 site. Open it there to see its status and details.
@@ -193,14 +192,14 @@ export default function TrackLookup({ help }: { help: TrackHelp }) {
             ref={missRef}
             role="alert"
             tabIndex={-1}
-            className="flex items-start gap-2.5 rounded-[12px] border border-red-400/25 bg-red-400/[0.08] px-4 py-3 text-sm text-red-200 outline-none"
+            className="flex items-start gap-2.5 rounded-[12px] border border-red-400/25 bg-red-400/[0.08] px-4 py-3 text-sm text-[var(--status-danger)] outline-none"
           >
-            <AlertCircle size={18} aria-hidden="true" className="mt-0.5 shrink-0 text-red-400" />
+            <AlertCircle size={18} aria-hidden="true" className="mt-0.5 shrink-0 text-[var(--status-danger)]" />
             <span>{miss}</span>
           </div>
         )}
 
-        <button type="submit" disabled={busy} className="btn-gradient w-full shadow-xl shadow-accent-orange/20">
+        <button type="submit" disabled={busy} className="btn-gradient w-full">
           {busy ? (
             <BusyLabel>Looking up</BusyLabel>
           ) : (

@@ -51,10 +51,10 @@ export default function PastEvents({ events }: { events: PastCard[] }) {
       {groups.map((group) => (
         <section key={group.year} aria-labelledby={`past-${group.year}`} className="flex w-full flex-col gap-5 sm:gap-6">
           <div className="flex items-center gap-4">
-            <h2 id={`past-${group.year}`} className="m-0 text-2xl sm:text-3xl font-black tabular-nums tracking-tight text-white">
+            <h2 id={`past-${group.year}`} className="site-h3 tabular-nums">
               {group.year}
             </h2>
-            <div className="h-px flex-1 bg-white/10" aria-hidden="true" />
+            <div className="h-px flex-1 bg-site-line" aria-hidden="true" />
           </div>
           <EventGrid
             events={group.events}
@@ -65,9 +65,9 @@ export default function PastEvents({ events }: { events: PastCard[] }) {
       ))}
 
       {left > 0 && (
-        <button type="button" onClick={showMore} className="btn-secondary mx-auto w-full sm:w-auto gap-2">
-          Show more past events
-          <span className="font-semibold text-secondary normal-case tracking-normal">· {left} left</span>
+        <button type="button" onClick={showMore} className="site-btn site-btn--quiet mx-auto w-full sm:w-auto">
+          Show more past races
+          <span className="font-normal text-site-muted">· {left} left</span>
           <ChevronDown size={18} aria-hidden="true" className="shrink-0" />
         </button>
       )}

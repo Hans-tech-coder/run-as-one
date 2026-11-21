@@ -67,42 +67,42 @@ export default function TrackHelpCard({ view, help }: { view: TrackView; help: T
   };
 
   return (
-    <section aria-labelledby="track-help-title" className="rounded-[20px] border border-white/[0.08] bg-white/[0.03] p-5 sm:p-6">
-      <h2 id="track-help-title" className="m-0 text-lg font-black uppercase tracking-wide text-white">
+    <section aria-labelledby="track-help-title" className="rounded-[14px] border border-site-line bg-site-surface p-5 sm:p-6">
+      <h2 id="track-help-title" className="m-0 text-lg font-semibold tracking-wide text-site-ink">
         Problem with your registration?
       </h2>
       <p className="m-0 mt-1 text-sm leading-relaxed text-secondary">
         Tell us what is wrong and what it should be. Quote
-        your reference, <span className="font-mono font-semibold text-white">{reference}</span>, so we can find it.
+        your reference, <span className="font-mono font-semibold text-site-ink">{reference}</span>, so we can find it.
       </p>
 
       <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <a href={mailto} className="btn-secondary w-full">
-          <Mail size={18} aria-hidden="true" className="shrink-0 text-accent-orange" />
+          <Mail size={18} aria-hidden="true" className="shrink-0 text-site-accent" />
           Email Us
         </a>
         {help.facebookUrl && (
           <a href={help.facebookUrl} target="_blank" rel="noopener noreferrer" className="btn-secondary w-full">
-            <span className="shrink-0 text-accent-orange"><BrandGlyph channel="facebook" size={18} /></span>
+            <span className="shrink-0 text-site-accent"><BrandGlyph channel="facebook" size={18} /></span>
             Message Us
           </a>
         )}
         {help.facebookUrl && (
           <button type="button" onClick={copyReference} className="btn-secondary w-full sm:col-span-2">
-            <Copy size={18} aria-hidden="true" className="shrink-0 text-accent-orange" />
+            <Copy size={18} aria-hidden="true" className="shrink-0 text-site-accent" />
             Copy Reference
           </button>
         )}
       </div>
 
       {view.resend && (
-        <div className="mt-5 border-t border-white/[0.06] pt-5">
+        <div className="mt-5 border-t border-site-line pt-5">
           <button type="button" onClick={resend} disabled={sending || sent} className="btn-secondary w-full">
             {sending ? (
               <BusyLabel>Sending</BusyLabel>
             ) : (
               <>
-                <Send size={18} aria-hidden="true" className="shrink-0 text-accent-orange" />
+                <Send size={18} aria-hidden="true" className="shrink-0 text-site-accent" />
                 {sent ? 'Email Sent' : 'Resend My Confirmation Email'}
               </>
             )}
@@ -117,7 +117,7 @@ export default function TrackHelpCard({ view, help }: { view: TrackView; help: T
         Problem with the website itself?{' '}
         <Link
           href="/feedback?from=/track"
-          className="text-white underline decoration-accent-orange/50 underline-offset-4 transition-colors hover:decoration-accent-orange"
+          className="text-site-ink underline decoration-accent-orange/50 underline-offset-4 transition-colors hover:decoration-accent-orange"
         >
           Send feedback
         </Link>

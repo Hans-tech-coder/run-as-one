@@ -49,10 +49,10 @@ export default function PromoHighlights({
   if (live.length === 0) return null;
 
   return (
-    <div className="info-block glass-panel p-6 sm:p-8 rounded-3xl border border-emerald-400/20 t-stagger-line t-stagger-line--3">
-      <h2 className="mb-5 flex items-center gap-2 text-xl font-bold tracking-tight text-white sm:text-2xl">
-        <Gift size={22} aria-hidden="true" className="text-emerald-400" />
-        Offers On This Race
+    <section className="event-block" aria-labelledby="race-offers">
+      <h2 id="race-offers" className="event-block__title flex items-center gap-2">
+        <Gift size={22} aria-hidden="true" className="text-[var(--status-success)]" />
+        Offers on this race
       </h2>
 
       <ul className="m-0 flex list-none flex-col gap-4 p-0">
@@ -62,10 +62,10 @@ export default function PromoHighlights({
           return (
             <li key={promo.code} className="flex flex-col gap-1">
               <span className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                <strong className="font-bold text-emerald-300">
+                <strong className="font-semibold text-[var(--status-success)]">
                   {describePromo(promo)}
                 </strong>
-                <span className="text-sm text-secondary">{promo.code}</span>
+                <span className="text-sm text-site-muted">{promo.code}</span>
               </span>
               {/* The prices themselves, once per option. The arrow rather than
                   a strikethrough here: this is a sentence about a change, and
@@ -74,12 +74,12 @@ export default function PromoHighlights({
               {repriced.length > 0 && (
                 <ul className="m-0 flex list-none flex-col gap-0.5 p-0">
                   {repriced.map(entry => (
-                    <li key={entry.id} className="text-sm text-secondary">
-                      <span className="font-semibold text-white">{entry.name}</span>
+                    <li key={entry.id} className="text-sm text-site-muted">
+                      <span className="font-semibold text-site-ink">{entry.name}</span>
                       {' — '}
                       <s>&#8369;{formatPesos(entry.listPrice)}</s>
                       {' '}
-                      <span className="font-bold text-emerald-300">
+                      <span className="font-semibold text-[var(--status-success)]">
                         &#8369;{formatPesos(entry.salePrice)}
                       </span>
                     </li>
@@ -87,7 +87,7 @@ export default function PromoHighlights({
                 </ul>
               )}
               {conditions.length > 0 && (
-                <span className="text-sm text-secondary">
+                <span className="text-sm text-site-muted">
                   {conditions.join(' · ')}
                 </span>
               )}
@@ -99,11 +99,11 @@ export default function PromoHighlights({
       {/* The whole point of an automatic promotion, said plainly. A runner who
           thinks they are missing a code they were never given is a runner who
           hesitates at the one moment this page exists to make easy. */}
-      <p className="m-0 mt-5 text-sm leading-relaxed text-secondary">
+      <p className="m-0 mt-5 text-sm leading-relaxed text-site-muted">
         Nothing to type — {live.length === 1 ? 'this is' : 'these are'} applied
         automatically at checkout if your registration qualifies.
       </p>
-    </div>
+    </section>
   );
 }
 

@@ -66,3 +66,6 @@ docs/plans/
 __pycache__/
 *.py[cod]
 
+
+# design-taste-frontend gate working folder (histories, build.json, shots)
+.taste-skill/

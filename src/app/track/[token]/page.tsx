@@ -39,7 +39,7 @@ export default async function TrackLinkPage({ params }: { params: Promise<{ toke
     return (
       <Notice
         icon={<Clock size={30} aria-hidden="true" />}
-        title="Too Many Tries"
+        title="Too many tries"
         body="Your registration was looked up many times from your connection in the last minute. Wait a minute, then open the link again."
       />
     );
@@ -53,7 +53,7 @@ export default async function TrackLinkPage({ params }: { params: Promise<{ toke
     return (
       <Notice
         icon={<Link2Off size={30} aria-hidden="true" />}
-        title="This Link Does Not Work"
+        title="This link does not work"
         body="The link may be old, or the registration it pointed to was removed. Look it up with your reference and email instead."
       />
     );
@@ -61,21 +61,24 @@ export default async function TrackLinkPage({ params }: { params: Promise<{ toke
 
   const { contactEmail, socialLinks } = await getSiteSettings();
   return (
+    <div className="site-wrap">
     <div className="mx-auto flex w-full max-w-2xl flex-col items-center pb-20 pt-8 sm:pt-12">
-      <p className="mb-6 text-xs font-bold uppercase tracking-[0.3em] text-secondary">Track my registration</p>
+      <p className="mb-6 text-sm font-semibold text-site-accent">Track my registration</p>
       <TrackResult view={view} help={{ contactEmail, facebookUrl: socialLinks.facebook }} />
+    </div>
     </div>
   );
 }
 
 function Notice({ icon, title, body }: { icon: React.ReactNode; title: string; body: string }) {
   return (
+    <div className="site-wrap">
     <div className="mx-auto flex w-full max-w-2xl flex-col items-center">
       <StatusPanel>
         <div className="flex flex-col items-center text-center">
           <IconBadge>{icon}</IconBadge>
-          <p className="mb-3 mt-6 text-xs font-bold uppercase tracking-[0.3em] text-secondary">Track my registration</p>
-          <h1 className="mb-3 bg-gradient-to-r from-white to-white/60 bg-clip-text text-2xl font-black uppercase tracking-wide text-transparent text-balance sm:text-3xl">
+          <p className="mb-3 mt-6 text-sm font-semibold text-site-accent">Track my registration</p>
+          <h1 className="mb-3 text-2xl font-semibold tracking-wide text-site-ink text-balance sm:text-3xl">
             {title}
           </h1>
           <p className="m-0 max-w-md text-base leading-relaxed text-secondary">{body}</p>
@@ -83,13 +86,14 @@ function Notice({ icon, title, body }: { icon: React.ReactNode; title: string; b
         <div className="mt-8 flex justify-center">
           <Link
             href="/track"
-            className="btn-gradient group w-full justify-center whitespace-nowrap rounded-[16px] px-8 py-4 text-center text-base no-underline shadow-xl shadow-accent-orange/20 sm:w-auto"
+            className="btn-gradient group w-full justify-center whitespace-nowrap rounded-[10px] px-8 py-4 text-center text-base no-underline sm:w-auto"
           >
-            <span>Look Up My Registration</span>
+            <span>Look up my registration</span>
             <ChevronRight size={18} aria-hidden="true" className="shrink-0 transition-transform group-hover:translate-x-1" />
           </Link>
         </div>
       </StatusPanel>
+    </div>
     </div>
   );
 }

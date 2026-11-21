@@ -25,34 +25,34 @@ import { useContactEmail, useSocialLinks } from './SiteContactProvider';
  * (ClientSiteFooter.tsx, CLIENT_SUBDOMAIN_PLAN.md D9).
  */
 
-/** Built per render: Contact Us follows the saved contact address. */
+/** Built per render: Contact us follows the saved contact address. */
 const columns = (contactEmail: string): FooterColumn[] => [
   {
     heading: 'Explore',
     links: [
       { label: 'Home', href: '/' },
-      { label: 'Browse Events', href: '/events' },
-      { label: 'Race Results', href: '/results' },
-      { label: 'Track My Registration', href: '/track' },
+      { label: 'Browse events', href: '/events' },
+      { label: 'Race results', href: '/results' },
+      { label: 'Track my registration', href: '/track' },
     ],
   },
   {
     heading: 'Organizers',
     links: [
-      { label: 'Our Services', href: '/admin/register' },
-      { label: 'Organizer Login', href: '/admin/login' },
+      { label: 'Our services', href: '/admin/register' },
+      { label: 'Organizer login', href: '/admin/login' },
     ],
   },
   {
-    heading: 'Legal & Support',
+    heading: 'Help and legal',
     links: [
-      // Above Contact Us on purpose: a form somebody can fill in here is a
+      // Above Contact us on purpose: a form somebody can fill in here is a
       // lower bar than composing an email, and most of what people want to
       // tell us about the app fits in it.
-      { label: 'Send Feedback', href: '/feedback' },
-      { label: 'Terms of Service', href: '/terms' },
-      { label: 'Privacy Policy', href: '/privacy' },
-      { label: 'Contact Us', href: supportMailto(contactEmail), external: true },
+      { label: 'Send feedback', href: '/feedback' },
+      { label: 'Terms of service', href: '/terms' },
+      { label: 'Privacy policy', href: '/privacy' },
+      { label: 'Contact us', href: supportMailto(contactEmail), external: true },
     ],
   },
 ];
@@ -69,10 +69,10 @@ export default function Footer({ site }: { site: SiteClient | null }) {
       brand={
         <>
           <Link href="/" className="w-fit no-underline" aria-label={`${SITE_NAME} home`}>
-            <RunAsOneLogo className="[--rao-logo-size:40px] sm:[--rao-logo-size:48px]" decorative />
+            <RunAsOneLogo className="[--rao-logo-size:36px] sm:[--rao-logo-size:42px]" decorative />
           </Link>
 
-          <p className="m-0 max-w-[420px] text-base leading-relaxed text-secondary">
+          <p className="site-footer__muted m-0 max-w-[420px] text-base leading-relaxed">
             Race registration for the running community. Browse open
             events, sign your whole group up in one transaction, and collect
             your official time and e-certificate once the organizer publishes

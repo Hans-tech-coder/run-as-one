@@ -164,6 +164,22 @@ export function formatEventDayShort(date: string): string {
   return formatDay(date, 'short');
 }
 
+/**
+ * "Sat, Sep 26, 2026" — the redesigned cards and the home hero's next-race
+ * line, where a runner planning a weekend reads the day of the week first.
+ */
+export function formatEventWeekdayShort(date: string): string {
+  if (!isCalendarDay(date)) return date;
+  const [year, monthNumber, day] = date.split('-').map(Number);
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: 'UTC',
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(new Date(Date.UTC(year, monthNumber - 1, day)));
+}
+
 /** "September 26, 2026" — for the event page and for prose about a race. */
 export function formatEventDay(date: string): string {
   return formatDay(date, 'long');

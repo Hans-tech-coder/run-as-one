@@ -1,12 +1,11 @@
 "use client";
 
-import React, { createContext, useContext } from 'react';
+import React, { createContext } from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
-import { Calendar, Camera, MapPin, ChevronRight, Globe } from 'lucide-react';
+import { Camera, ArrowRight } from 'lucide-react';
 import EventImage from './EventImage';
 import LinkPendingIcon from './ui/LinkPendingIcon';
-import { formatEventDayShort, formatEventInstantShort, formatEventRange } from '@/lib/event-schedule';
+import { formatEventInstantShort, formatEventRange, formatEventWeekdayShort } from '@/lib/event-schedule';
 import { VIRTUAL_RUN_WHERE, isVirtual } from '@/lib/event-format';
 
 // Using a type that matches the Prisma Event model payload
@@ -51,6 +50,12 @@ type DBEvent = {
   hasResults?: boolean;
   resultsSoon?: boolean;
   hasPhotos?: boolean;
+  /**
+   * The race's distances or options, as the organizer named them ("5KM",
+   * "Half Marathon"), soonest-listing pages only. Shown as chips under the
+   * venue because a distance is the first thing a runner filters on.
+   */
+  distances?: string[];
 }
 
 /**
@@ -67,13 +72,13 @@ type DBEvent = {
 export type EventCardAction = 'register' | 'results' | 'past';
 
 const ACTIONS: Record<Exclude<EventCardAction, 'past'>, { label: string; path: (slug: string) => string }> = {
-  register: { label: 'Register Now', path: (slug) => `/events/${slug}` },
-  results: { label: 'View Results', path: (slug) => `/results/${slug}` },
+  register: { label: 'Register', path: (slug) => `/events/${slug}` },
+  results: { label: 'See results', path: (slug) => `/results/${slug}` },
 };
 
-/** "Oct 5" — a past card sits under its year's heading, so the year is said once there. */
+/** "Sat, Oct 5" — a past card sits under its year's heading, so the year is said once there. */
 function dayInYear(date: string): string {
-  return formatEventDayShort(date).replace(/,\s*\d{4}$/, '');
+  return formatEventWeekdayShort(date).replace(/,\s*\d{4}$/, '');
 }
 
 /**
@@ -83,22 +88,22 @@ function dayInYear(date: string): string {
  * other says when it was held, which is all that is left to say.
  */
 function pastCard(event: DBEvent): { badge: string; quiet: boolean; label: string; path: (slug: string) => string } {
-  if (event.hasResults) return { badge: 'Results', quiet: false, ...ACTIONS.results };
-  const view = { quiet: true, label: 'View Event', path: ACTIONS.register.path };
+  if (event.hasResults) return { badge: 'Results are up', quiet: false, ...ACTIONS.results };
+  const view = { quiet: true, label: 'See event', path: ACTIONS.register.path };
   if (isVirtual(event)) return { badge: `Ended ${dayInYear(event.virtualEndDate ?? event.date)}`, ...view };
-  if (event.resultsSoon) return { badge: 'Results Soon', ...view };
+  if (event.resultsSoon) return { badge: 'Results soon', ...view };
   return { badge: `Held ${dayInYear(event.date)}`, ...view };
 }
 
 /** The corner chip, and the word the button uses instead of "Register Now". */
 const CLOSURES = {
-  CLOSED: { badge: 'Closed', label: 'View Event' },
-  FULL: { badge: 'Full', label: 'View Event' },
-  PAUSED: { badge: 'Paused', label: 'View Event' },
+  CLOSED: { badge: 'Sign-ups closed', label: 'See event' },
+  FULL: { badge: 'Full', label: 'See event' },
+  PAUSED: { badge: 'Sign-ups paused', label: 'See event' },
   // Overwritten with the date below when the card has one. The bare word is
   // the fallback for a row whose instant will not parse, which should not
   // happen and must still say something true if it does.
-  SCHEDULED: { badge: 'Opens Soon', label: 'View Event' },
+  SCHEDULED: { badge: 'Opens soon', label: 'See event' },
 } as const;
 
 function EventCard({ event, action }: { event: DBEvent; action: EventCardAction }) {
@@ -127,115 +132,90 @@ function EventCard({ event, action }: { event: DBEvent; action: EventCardAction 
   // event page, so the gradient stays the mark of a card that leads somewhere new.
   const quietLabel = past ? (past.quiet ? past.label : null) : closure?.label ?? null;
 
+  const when = isVirtual(event)
+    ? formatEventRange(event.date, event.virtualEndDate ?? null)
+    : formatEventWeekdayShort(event.date);
+  const where = isVirtual(event) ? VIRTUAL_RUN_WHERE : event.location;
+  const distances = event.distances ?? [];
+  const shownDistances = distances.slice(0, 4);
+
+  // The Paper card (site.css `.site-card`): the poster whole on top, nothing
+  // printed over it — an organizer's banner already carries the race's name
+  // in its own lettering, and a second title on top of it was the clutter the
+  // audit caught — and the facts on the card below. The action link in the
+  // foot stretches over the whole card, so the card is one target, named
+  // with the race ("Register: Pink Run 2026") for a screen reader.
   return (
-    <div className="relative flex flex-col overflow-hidden rounded-[20px] border border-white/5 aspect-[4/5] transition-all duration-300 cursor-pointer hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(0,0,0,0.5)] group">
-      <div className="absolute inset-0 z-10">
-        <EventImage src={event.imageUrl} alt={event.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" iconSize={48} />
-        <div className="absolute inset-0 z-20 bg-gradient-to-t from-[#0f0f14]/95 via-[#0f0f14]/70 to-[#0f0f14]/10"></div>
+    <article className="site-card">
+      <div className="site-card__poster">
+        <EventImage src={event.imageUrl} alt="" className="h-full w-full" iconSize={40} />
       </div>
-      {/* Over the image rather than down beside the title, so a runner
-          scanning a grid of six reads it without reading anything else. */}
-      {/* Left of the status chip, so both fit on the narrowest card. A sign
-          rather than a link: the albums open from the race's own page. */}
-      {past && event.hasPhotos && (
-        <span className="absolute left-4 top-4 z-30 inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-white/20 bg-black/70 px-3 py-1 text-xs font-bold uppercase tracking-widest text-white backdrop-blur-sm">
-          <Camera size={14} aria-hidden="true" className="shrink-0" />
-          Photos
-        </span>
-      )}
-      {badge && (
-        <span className="absolute right-4 top-4 z-30 whitespace-nowrap rounded-full border border-white/20 bg-black/70 px-3 py-1 text-xs font-bold uppercase tracking-widest text-white backdrop-blur-sm">
-          {badge}
-        </span>
-      )}
-      <div className="relative z-30 flex flex-col justify-end h-full p-5 sm:p-8">
-        <h2 className="font-sans text-2xl sm:text-3xl font-bold uppercase mb-4 leading-tight text-white tracking-tight">
-          {event.title}
-        </h2>
-        <div className="flex flex-col gap-2 mb-6">
-          {/* A virtual run keeps the on-site card's two rows — when, then
-              where — so its window gets the calendar icon like any race day,
-              and the globe stands for the place it is run instead of a venue. */}
-          {isVirtual(event) ? (
-            <>
-              <div className="flex items-center gap-3 text-white/80 font-body text-sm sm:text-base">
-                <Calendar size={18} className="shrink-0" />
-                <span className="whitespace-nowrap">{formatEventRange(event.date, event.virtualEndDate ?? null)}</span>
-              </div>
-              <div className="flex items-center gap-3 text-white/80 font-body text-sm sm:text-base">
-                <Globe size={18} className="shrink-0" /> <span>{VIRTUAL_RUN_WHERE}</span>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="flex items-center gap-3 text-white/80 font-body text-sm sm:text-base">
-                <Calendar size={18} /> <span>{formatEventDayShort(event.date)}</span>
-              </div>
-              <div className="flex items-center gap-3 text-white/80 font-body text-sm sm:text-base">
-                <MapPin size={18} /> <span>{event.location}</span>
-              </div>
-            </>
-          )}
-        </div>
-        {quietLabel ? (
-          <Link href={href} className="w-full flex items-center justify-center gap-2 py-4 text-base sm:text-lg rounded-[16px] border border-white/15 bg-white/[0.06] font-bold uppercase tracking-wider text-white no-underline transition-colors hover:border-white/30 hover:bg-white/10 group">
-            {quietLabel}{' '}
-            <LinkPendingIcon>
-              <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform inline-block" />
-            </LinkPendingIcon>
-          </Link>
-        ) : (
-          <Link href={href} className="btn-gradient w-full py-4 text-base sm:text-lg rounded-[16px] group shadow-xl shadow-accent-orange/20 no-underline">
-            {label}{' '}
-            <LinkPendingIcon className="ml-1">
-              <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform inline-block" />
-            </LinkPendingIcon>
-          </Link>
+      <div className="site-card__body">
+        <span className="site-card__date">{when}</span>
+        <h3 className="site-card__title">{event.title}</h3>
+        <p className="site-card__where">{where}</p>
+        {shownDistances.length > 0 && (
+          <ul className="site-card__chips" aria-label="Distances">
+            {shownDistances.map((name) => (
+              <li key={name} className="site-chip">{name}</li>
+            ))}
+            {distances.length > shownDistances.length && (
+              <li className="site-chip">+{distances.length - shownDistances.length} more</li>
+            )}
+          </ul>
         )}
+        <div className="site-card__foot">
+          {/* Where the race stands, said in words: why it cannot be entered,
+              when it opens, or where its times are. Absent on a race that is
+              simply open, which needs no label. */}
+          <span className="site-card__status">
+            {past && event.hasPhotos && (
+              <span className="mr-2 inline-flex items-center gap-1 align-middle">
+                <Camera size={14} aria-hidden="true" /> Photos
+              </span>
+            )}
+            {badge}
+          </span>
+          <Link href={href} className="site-card__go" aria-label={`${quietLabel ?? label}: ${event.title}`}>
+            {quietLabel ?? label}
+            <LinkPendingIcon>
+              <ArrowRight size={16} />
+            </LinkPendingIcon>
+          </Link>
+        </div>
       </div>
-    </div>
+    </article>
   );
 }
 
 /**
- * Whether cards mounting now rise in one by one. True everywhere but a tab
- * swap on /events (EventsTabSwitch), where the whole list eases in as one
- * panel and a card-by-card entrance on top of it would read as a second,
- * slower arrival. Only read on a card's mount, so cards that a later
- * "Show more" adds still rise in.
+ * Whether cards mounting now rise in one by one. Cards no longer rise in at
+ * all (the Paper redesign: no entrance on load or scroll), so nothing reads
+ * this; /events' tab switch still provides it until that page is rebuilt.
  */
 export const EventGridEntrance = createContext(true);
 
 export default function EventGrid({
   events,
   action = 'register',
-  staggerFrom = 0,
 }: {
   events: DBEvent[];
   action?: EventCardAction;
-  /**
-   * The first card whose entrance is staggered from zero. Cards before it are
-   * already on screen; after a "Show more" the new ones should not wait out a
-   * delay counted from the top of the list.
-   */
+  /** Kept for callers from before cards stopped rising in; ignored. */
   staggerFrom?: number;
 }) {
-  const entrance = useContext(EventGridEntrance);
+  // Nothing fades or rises in: the audit caught cards blank on a phone until
+  // their entrance ran. `data-fit="4"` puts four to a row on a wide screen
+  // whenever three would leave one card alone on the last row.
+  // `data-fit="3"` keeps exactly three in one row on a tablet.
+  const fit = events.length > 1 && events.length % 3 === 1 ? '4' : events.length === 3 ? '3' : undefined;
   return (
-    <section className="w-full">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 w-full">
-        {events.map((event, index) => (
-          <motion.div
-            key={event.id}
-            data-event-card
-            initial={entrance ? { opacity: 0, y: 30 } : false}
-            animate={{opacity:1, y:0}} 
-            transition={{ duration: 0.6, delay: Math.max(0, index - staggerFrom) * 0.1, ease: "easeOut" }}
-          >
-            <EventCard event={event} action={action} />
-          </motion.div>
-        ))}
-      </div>
-    </section>
+    <ul className="site-grid m-0 list-none p-0" data-fit={fit}>
+      {events.map((event) => (
+        <li key={event.id} data-event-card>
+          <EventCard event={event} action={action} />
+        </li>
+      ))}
+    </ul>
   );
 }

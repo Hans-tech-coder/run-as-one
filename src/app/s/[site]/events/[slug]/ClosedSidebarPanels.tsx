@@ -43,15 +43,15 @@ export function RaceIsOver({
   };
 }) {
   return (
-    <div className="rounded-3xl border border-white/10 bg-gradient-to-b from-white/5 to-transparent p-5 sm:p-6">
+    <div className="rounded-[14px] border border-site-line bg-site-card p-5 sm:p-6">
       <div className="flex items-center gap-3 mb-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] border border-white/10 bg-white/5 text-secondary">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-site-surface text-site-ink">
           <CalendarCheck2 size={20} />
         </div>
-        <h2 className="text-lg sm:text-xl font-bold text-white m-0">Registration Closed</h2>
+        <h2 className="site-h3 text-xl">Registration closed</h2>
       </div>
 
-      <p className="text-sm sm:text-base text-secondary leading-relaxed m-0">
+      <p className="m-0 text-[0.9375rem] leading-relaxed text-site-muted">
         {event.virtualEndDate
           ? `This virtual run ended on ${formatEventDay(event.virtualEndDate)}.`
           : `This race was held on ${formatEventDay(event.date)}.`}
@@ -61,11 +61,11 @@ export function RaceIsOver({
 
       <div className="mt-5 flex flex-col gap-3">
         <RacePhotoLinks albums={event.photoAlbums} />
-        <Link href="/events?view=past" className="btn-secondary w-full">
-          Back to Past Events
+        <Link href="/events?view=past" className="site-btn site-btn--quiet w-full">
+          Back to past races
         </Link>
-        <Link href="/events" className="btn-secondary w-full">
-          Find Another Race
+        <Link href="/events" className="site-btn site-btn--quiet w-full">
+          Find another race
         </Link>
       </div>
     </div>
@@ -93,23 +93,23 @@ export function RegistrationOnHold({
   message: string;
 }) {
   return (
-    <div className="rounded-3xl border border-white/10 bg-gradient-to-b from-white/5 to-transparent p-5 sm:p-6">
+    <div className="rounded-[14px] border border-site-line bg-site-card p-5 sm:p-6">
       <div className="flex items-center gap-3 mb-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] border border-white/10 bg-white/5 text-secondary">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-site-surface text-site-ink">
           {icon}
         </div>
-        <h2 className="text-lg sm:text-xl font-bold text-white m-0">{heading}</h2>
+        <h2 className="site-h3 text-xl">{heading}</h2>
       </div>
 
-      <p className="text-sm sm:text-base text-secondary leading-relaxed m-0">
+      <p className="m-0 text-[0.9375rem] leading-relaxed text-site-muted">
         {message}
       </p>
 
       <Link
         href="/events"
-        className="mt-5 w-full bg-white/5 border border-white/10 text-white hover:bg-white/10 hover:border-white/30 transition-all py-4 px-6 rounded-[16px] font-bold text-center uppercase tracking-wider flex items-center justify-center gap-2 no-underline"
+        className="site-btn site-btn--quiet mt-5 w-full"
       >
-        Browse Other Races
+        Browse other races
       </Link>
     </div>
   );

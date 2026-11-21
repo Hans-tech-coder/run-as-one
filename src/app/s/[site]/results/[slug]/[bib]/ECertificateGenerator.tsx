@@ -32,14 +32,14 @@ export default function ECertificateGenerator({ result, event }: Props) {
       <button
         onClick={generateCertificate}
         disabled={isGenerating}
-        className="btn-gradient w-full sm:w-fit sm:min-w-[20rem] sm:px-10 mx-auto py-4 text-base sm:text-lg flex items-center justify-center gap-3 mt-6 sm:mt-8 shadow-lg shadow-accent-blue/20 rounded-[16px] group"
+        className="btn-gradient w-full sm:w-fit sm:min-w-[20rem] sm:px-10 mx-auto py-4 text-base sm:text-lg flex items-center justify-center gap-3 mt-6 sm:mt-8 rounded-[10px] group"
       >
         {isGenerating ? (
-          <BusyLabel>Generating E-Certificate</BusyLabel>
+          <BusyLabel>Generating e-certificate</BusyLabel>
         ) : (
           <>
             <FileText size={22} className="group-hover:scale-110 transition-transform" />
-            View E-Certificate
+            View e-certificate
           </>
         )}
       </button>

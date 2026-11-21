@@ -28,7 +28,8 @@ export function ClientSiteLogo({
 
   const type = size === 'nav' ? 'text-lg sm:text-xl max-w-[180px] sm:max-w-[320px]' : 'text-xl sm:text-2xl max-w-full';
   return (
-    <span className={`block truncate font-sans font-black uppercase tracking-tight text-white ${type}`}>
+    // currentColor: ink on the paper navbar, paper on the footer's ink band.
+    <span className={`block truncate font-sans font-semibold tracking-tight text-current ${type}`}>
       {site.name}
     </span>
   );

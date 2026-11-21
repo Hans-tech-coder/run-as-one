@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { Calendar, CalendarCheck2, ChevronRight, History, Trophy } from 'lucide-react';
+import { ArrowRight, Calendar, CalendarCheck2, History, Trophy } from 'lucide-react';
 import { EventsTabLink } from './EventsTabs';
 
 /**
@@ -29,18 +29,14 @@ function EmptyPanel({
   actions?: React.ReactNode;
 }) {
   return (
-    <div className="relative w-full max-w-2xl mx-auto overflow-hidden rounded-[24px] border border-white/[0.08] bg-gradient-to-br from-white/[0.04] to-white/[0.01] p-6 sm:p-10 text-center shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)]">
-      <div className="pointer-events-none absolute -mr-32 -mt-32 right-0 top-0 h-[300px] w-[300px] rounded-full bg-accent-blue/10 blur-[80px]" />
-
-      <div className="relative z-10 flex flex-col items-center">
-        <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-[20px] border border-accent-blue/20 bg-accent-blue/10 text-accent-blue shadow-[0_0_20px_rgba(0,122,255,0.15)]">
+    <div className="w-full rounded-[14px] border border-site-line bg-site-card px-6 py-10 text-center sm:px-10">
+      <div className="flex flex-col items-center">
+        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-site-surface text-site-ink" aria-hidden="true">
           {icon}
         </div>
 
-        <h2 className="mb-3 text-xl sm:text-2xl font-black uppercase tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-white to-white/60">
-          {heading}
-        </h2>
-        <p className="max-w-md text-base text-secondary leading-relaxed">{children}</p>
+        <h2 className="site-h3 mb-2">{heading}</h2>
+        <p className="site-lead max-w-md">{children}</p>
 
         {actions && (
           <div className="mt-8 flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:justify-center">{actions}</div>
@@ -69,8 +65,8 @@ export function NothingUpcoming({
 }) {
   return (
     <EmptyPanel
-      icon={everHadEvents ? <CalendarCheck2 size={30} /> : <Calendar size={30} />}
-      heading={everHadEvents ? 'Every Race Has Been Run' : 'No Events Posted Yet'}
+      icon={everHadEvents ? <CalendarCheck2 size={22} /> : <Calendar size={22} />}
+      heading={everHadEvents ? 'Every race has been run' : 'No races posted yet'}
       actions={
         // Only offered when there is actually something to read. Sending
         // someone to an empty page, which would send them straight back
@@ -78,19 +74,16 @@ export function NothingUpcoming({
         (hasPublishedResults || hasPastEvents) && (
           <>
             {hasPublishedResults && (
-              <Link
-                href="/results"
-                className="btn-gradient w-full sm:w-auto justify-center rounded-[16px] px-8 py-4 text-base text-center group no-underline shadow-xl shadow-accent-orange/20"
-              >
-                <Trophy size={18} className="shrink-0" />
-                <span>View Race Results</span>
-                <ChevronRight size={18} className="shrink-0 transition-transform group-hover:translate-x-1" />
+              <Link href="/results" className="site-btn site-btn--action group w-full sm:w-auto">
+                <Trophy size={18} className="shrink-0" aria-hidden="true" />
+                <span>See race results</span>
+                <ArrowRight size={18} className="shrink-0 transition-transform group-hover:translate-x-1" aria-hidden="true" />
               </Link>
             )}
             {hasPastEvents && (
-              <EventsTabLink view="past" className="btn-secondary w-full sm:w-auto gap-2">
+              <EventsTabLink view="past" className="site-btn site-btn--quiet w-full sm:w-auto">
                 <History size={18} className="shrink-0" aria-hidden="true" />
-                See Past Events
+                See past races
               </EventsTabLink>
             )}
           </>
@@ -98,8 +91,8 @@ export function NothingUpcoming({
       }
     >
       {everHadEvents
-        ? 'Nothing is open for registration right now. A race moves to Past Events the day after it is held, and its official times go up on Results once the organizer uploads them.'
-        : 'Organizers have not published a race yet. Check back soon — this is where new events land first.'}
+        ? 'Nothing is open for registration right now. A race moves to Past races the day after it is held, and its official times go up on Results once the organizer uploads them.'
+        : 'Organizers have not published a race yet. New races show up here first.'}
     </EmptyPanel>
   );
 }
@@ -108,12 +101,12 @@ export function NothingUpcoming({
 export function NoPastEvents() {
   return (
     <EmptyPanel
-      icon={<History size={30} />}
-      heading="No Races Held Yet"
+      icon={<History size={22} />}
+      heading="No races held yet"
       actions={
-        <EventsTabLink view="upcoming" className="btn-secondary w-full sm:w-auto gap-2">
+        <EventsTabLink view="upcoming" className="site-btn site-btn--quiet w-full sm:w-auto">
           <Calendar size={18} className="shrink-0" aria-hidden="true" />
-          See Upcoming Events
+          See upcoming races
         </EventsTabLink>
       }
     >

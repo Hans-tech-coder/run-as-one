@@ -1,13 +1,11 @@
 import prisma, { publishCutoff } from '@/lib/public-db';
 import { publishedEvents } from '@/lib/event-visibility';
 import { RESULTS_EVENTS } from '@/lib/event-format';
-import Link from 'next/link';
 import type { ResolvingMetadata } from 'next';
-import { ArrowLeft } from 'lucide-react';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import FullResultsClient from './FullResultsClient';
-import EventHeroBanner from '@/components/EventHeroBanner';
+import RaceHeader from '@/components/RaceHeader';
 import { canonicalResultsPath, eventByParam } from '@/lib/event-slug';
 import { withPacerRanks } from '@/lib/pacer-store';
 import { genderDivision } from '@/lib/gender-division';
@@ -78,28 +76,11 @@ export default async function FullResultsPage({
   const tagged = ranked.map(result => ({ ...result, gender: genderDivision(result.gender) }));
 
   return (
-    <div className="relative w-full">
-      <EventHeroBanner event={event as any} />
-      <div className="w-full mt-12">
+    <div className="site-wrap pb-16 md:pb-20">
+      <RaceHeader event={event} back={{ href: `/results/${event.slug}`, label: 'Race winners' }} title="Full leaderboard" />
+      <div className="w-full">
         <div className="w-full">
-          {/* Back Button */}
-          <div className="mb-6">
-            <Link href={`/results/${event.slug}`} className="inline-flex items-center gap-2 text-secondary hover:text-white transition-colors no-underline text-sm font-medium">
-              <ArrowLeft size={16} /> Back to Winners
-            </Link>
-          </div>
-
-          <div className="text-center mb-12">
-            <h1 
-              className="text-4xl md:text-5xl font-bold mb-4 text-transparent bg-clip-text pb-1"
-              style={{ backgroundImage: 'var(--gradient-primary)' }}
-            >
-              Full Leaderboard
-            </h1>
-            <p className="text-secondary text-lg">{event.title}</p>
-          </div>
-
-          <Suspense fallback={<div className="text-center text-white py-12">Loading results...</div>}>
+          <Suspense fallback={<div className="py-12 text-center text-site-muted">Loading results…</div>}>
             <FullResultsClient results={tagged} event={event} />
           </Suspense>
         </div>

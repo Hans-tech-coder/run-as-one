@@ -1,233 +1,54 @@
+/* The event page in the Paper look (site.css, docs/conventions.md §9).
+
+   The details under the poster are flat blocks split by a hairline, not a
+   stack of glass cards: the page reads top to bottom like a race brief, and
+   the one boxed thing on it is the decision column (EventSidebar), so the eye
+   finds the prices and Register without hunting.
+
+   The class names are this page's own (`event-*`), never a Tailwind
+   utility's: this file is unlayered and Next keeps it loaded after a client
+   navigation, so a utility-named rule here would beat that utility on every
+   page visited afterwards (§9, "Page CSS never declares a class named like a
+   Tailwind utility"). */
+
 .event-details-page {
   position: relative;
-  min-height: 100vh;
 }
 
-/* Hero Section */
-.event-hero {
-  position: relative;
-  /* Break out of max-w-7xl container */
-  width: 100vw;
-  margin-left: calc(50% - 50vw);
-  /* Cancels the clearance <main> holds for the floating navbar, so the poster
-     runs under it. Reads the same token <main> pads with — the two numbers
-     have to stay equal, and a literal here drifted from it before. */
-  margin-top: calc(-1 * var(--nav-offset));
-  margin-bottom: 2rem;
-
-  /* min-height rather than height: a long race title wraps to three lines on a
-     phone, and a definite height would push the meta row out of the poster. */
-  min-height: 60svh;
-  display: flex;
-  align-items: flex-end;
-  /* Keeps the title clear of the navbar it is sliding under. */
-  padding-top: calc(var(--nav-offset) + 1rem);
-  padding-bottom: 2.5rem;
+.event-blocks {
+  margin-top: 0.5rem;
 }
 
+.event-block {
+  padding-block: 1.75rem;
+  border-top: 1px solid var(--site-line);
+}
+.event-blocks > .event-block:first-child { border-top: 0; }
 @media (min-width: 768px) {
-  .event-hero {
-    min-height: 500px;
-    padding-bottom: 4rem;
-  }
+  .event-block { padding-block: 2.25rem; }
 }
 
-.event-hero-bg {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-}
-
-.event-hero-bg img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.event-hero-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.4);
-  background-image: linear-gradient(to top, var(--bg-primary) 0%, rgba(10, 10, 12, 0.8) 50%, transparent 100%);
-}
-
-.event-hero-content {
-  position: relative;
-  z-index: 1;
-}
-
-.event-hero-title {
-  font-family: var(--font-sans);
-  /* The old 3rem floor never scaled down, so a two-word race name took three
-     lines of 48px type across a 375px screen. */
-  font-size: clamp(2rem, 8vw, 5rem);
-  font-weight: 800;
-  line-height: 1.1;
-  text-transform: uppercase;
-  letter-spacing: -0.02em;
-  margin-bottom: 1.5rem;
-  text-shadow: 0 4px 30px rgba(0,0,0,0.8), 0 2px 10px rgba(0,0,0,0.5);
-}
-
-.event-hero-meta {
-  display: flex;
-  gap: 0.75rem 1.5rem;
-  flex-wrap: wrap;
-}
-
-@media (min-width: 768px) {
-  .event-hero-meta { gap: 2rem; }
-}
-
-.meta-item {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  font-size: 1rem;
-  color: rgba(255, 255, 255, 0.9);
-}
-
-@media (min-width: 768px) {
-  .meta-item { font-size: 1.1rem; }
-}
-
-.meta-icon {
-  color: var(--accent-orange);
-}
-
-/* Main Content */
-.event-main-content {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 48px; /* 8dp rhythm */
-  padding-top: 64px;
-  padding-bottom: 96px;
-}
-
-.info-block {
-  /* Fluid rather than stepped: this panel sits inside the page gutter, so a
-     flat 48px was charging a phone a third of its width for chrome. */
-  padding: clamp(1.25rem, 4vw, 3rem);
-}
-
-.info-block h2 {
-  font-family: var(--font-sans);
-  font-size: 2rem;
-  margin-bottom: 24px;
-  color: var(--text-primary);
-}
-
-.info-block p {
-  color: var(--text-secondary);
-  line-height: 1.8;
-  font-size: 1.1rem;
-}
-
-.inclusions-list {
-  list-style: none;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 24px;
-}
-
-.inclusions-list li {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  color: var(--text-secondary);
-  font-size: 1.1rem;
-}
-
-/* Sidebar */
-.sticky-sidebar {
-  position: sticky;
-  top: 120px;
-  padding: 40px; /* 8dp rhythm */
-}
-
-.sticky-sidebar h2 {
-  font-family: var(--font-sans);
+.event-block__title {
+  margin: 0 0 1.125rem;
+  font-family: var(--site-display);
+  font-stretch: var(--site-display-stretch);
   font-size: 1.5rem;
-  margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  color: var(--site-ink);
+}
+@media (min-width: 768px) {
+  .event-block__title { font-size: 1.75rem; }
 }
 
-.categories-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  margin-bottom: 32px;
+/* The organizer's own description (RichText). Comfortable measure, ink for
+   headings and emphasis, muted body. */
+.event-prose {
+  max-width: 68ch;
+  font-size: 1.0625rem;
+  line-height: 1.7;
+  color: var(--site-muted);
 }
-
-.category-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px; /* 8dp rhythm */
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.category-name {
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 4px;
-}
-
-.category-distance {
-  font-size: 0.875rem;
-  color: var(--text-secondary);
-}
-
-.category-price {
-  font-family: var(--font-sans);
-  font-weight: 700;
-  font-size: 1.25rem;
-  color: var(--accent-orange);
-}
-
-.logistics-info {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  font-size: 0.875rem;
-  color: var(--text-secondary);
-  padding: 16px;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 8px;
-}
-
-.register-btn {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
-  font-size: 1.1rem;
-  padding: 16px;
-}
-
-/* Responsive (Mobile First adjustments) */
-@media (max-width: 1024px) {
-  .event-main-content {
-    grid-template-columns: 1fr;
-    gap: 32px;
-  }
-  
-  .sticky-sidebar {
-    position: static;
-  }
-}
-
-@media (max-width: 768px) {
-  .sticky-sidebar {
-    padding: 24px;
-  }
-}
+.event-prose { --rich-strong: var(--site-ink); }
+.event-prose a { color: var(--site-accent-text); text-underline-offset: 3px; }

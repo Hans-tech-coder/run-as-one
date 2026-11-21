@@ -22,9 +22,9 @@ export function AddOnsBlock({
   categories: { id: string; name: string }[];
 }) {
   return (
-    <div className="info-block glass-panel p-6 sm:p-8 rounded-3xl border border-white/10 hover:border-accent-blue/30 transition-colors t-stagger-line t-stagger-line--4">
-      <h2 className="text-2xl sm:text-3xl font-bold mb-2 text-white tracking-tight">Add-ons</h2>
-      <p className="m-0 mb-5 sm:mb-6 text-secondary">Optional extras, picked per runner when you register.</p>
+    <section className="event-block" aria-labelledby="add-ons">
+      <h2 id="add-ons" className="event-block__title mb-1">Add-ons</h2>
+      <p className="m-0 mb-5 text-site-muted">Optional extras, picked per runner when you register.</p>
       <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4 list-none p-0 m-0">
         {addOns.map((addOn) => {
           const status = addOn.soldOut ? 'Sold out' : addOnSalesClosed(addOn) ? 'Sales closed' : null;
@@ -35,40 +35,38 @@ export function AddOnsBlock({
           return (
             <li
               key={addOn.id}
-              className={`flex gap-4 rounded-2xl border border-white/5 bg-black/40 p-3 sm:p-4 ${status ? 'opacity-70' : ''}`}
+              className={`flex gap-4 rounded-[12px] border border-site-line bg-site-card p-3 sm:p-4 ${status ? 'opacity-70' : ''}`}
             >
               {poster && (
                 <img
                   src={poster}
                   alt={`${addOn.name} poster`}
                   loading="lazy"
-                  className="w-20 h-20 sm:w-24 sm:h-24 shrink-0 rounded-xl object-cover border border-white/10 bg-black/40"
+                  className="w-20 h-20 sm:w-24 sm:h-24 shrink-0 rounded-[10px] object-cover bg-site-surface"
                 />
               )}
               <div className="min-w-0 flex-1">
-                <div className="font-bold text-white uppercase tracking-wide leading-tight break-words">{addOn.name}</div>
+                <div className="font-semibold leading-tight text-site-ink break-words">{addOn.name}</div>
                 <div className="mt-1 flex flex-wrap items-center gap-2">
-                  <span className={`text-lg font-bold tabular-nums ${status ? 'text-white/50' : 'text-accent-orange'}`}>
+                  <span className={`text-lg font-semibold tabular-nums ${status ? 'text-site-muted' : 'text-site-ink'}`}>
                     ₱{formatPesos(addOn.price)}
                   </span>
                   {status && (
-                    <span className="text-xs font-bold uppercase tracking-wide text-white/70 bg-white/10 border border-white/10 px-2.5 py-0.5 rounded-full">
-                      {status}
-                    </span>
+                    <span className="site-chip">{status}</span>
                   )}
                 </div>
                 {addOn.description && (
-                  <p className="m-0 mt-1 text-sm text-secondary line-clamp-3">{addOn.description}</p>
+                  <p className="m-0 mt-1 text-sm text-site-muted line-clamp-3">{addOn.description}</p>
                 )}
                 {only.length > 0 && (
-                  <p className="m-0 mt-1 text-xs text-secondary">With {only.join(', ')} only</p>
+                  <p className="m-0 mt-1 text-xs text-site-muted">With {only.join(', ')} only</p>
                 )}
               </div>
             </li>
           );
         })}
       </ul>
-    </div>
+    </section>
   );
 }
 
@@ -92,10 +90,10 @@ export function InclusionsGrid({ items }: { items: string[] }) {
         return (
           <li key={idx} className="flex items-start gap-3">
             <Icon
-              className="text-accent-blue h-5 w-5 shrink-0 mt-0.5"
+              className="text-site-accent h-5 w-5 shrink-0 mt-0.5"
               aria-hidden="true"
             />
-            <span className="font-medium text-white/90 text-sm sm:text-base leading-relaxed">
+            <span className="font-medium text-site-ink text-[0.9375rem] sm:text-base leading-relaxed">
               {item}
             </span>
           </li>

@@ -1,91 +1,118 @@
-"use client";
-
 import React from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
-import { CheckCircle2, Flag } from 'lucide-react';
-import HeroArcBackground from '@/components/HeroArcBackground';
+import { ArrowRight } from 'lucide-react';
+import EventImage from '@/components/EventImage';
+import { formatEventRange, formatEventWeekdayShort } from '@/lib/event-schedule';
+import { VIRTUAL_RUN_WHERE, isVirtual } from '@/lib/event-format';
+
+export type HeroRace = {
+  slug: string;
+  title: string;
+  date: string;
+  location: string;
+  imageUrl: string;
+  format?: string;
+  virtualEndDate?: string | null;
+  /** Where the race's pages live when not on this host (lib/site-client.ts). */
+  siteOrigin?: string;
+};
 
 /**
- * The front door.
+ * The front door (the Paper redesign, docs/conventions.md §9).
  *
- * This used to be a search box and nothing else — no headline, no sentence
- * saying what Run As One is — so a first-time visitor landed on a control with
- * no idea what they were searching. The copy states the product; the events
- * below are still the thing the page is for, so this stays short enough that
- * the first race card is reachable without much scrolling.
+ * design-taste-frontend's product stage: one head row — what the site is on
+ * the left, what a runner does here and the two ways in on the right — and the
+ * next race's poster under it, whole, across the content width. The poster is
+ * the thing being sold, organizers' banners are wide and carry their own title,
+ * so nothing is printed over it and nothing crops it.
  *
- * The eyebrow, gradient headline and check-row are the same three parts the
- * /events and /results headers already use, at a larger size.
+ * Every word is a fact the page read: the headline names the provinces the
+ * upcoming races are in (`provinces`, most races first), and the line over the
+ * poster is that race's own date and place. With nothing upcoming the head
+ * row stands alone and says so plainly in the listing below.
  *
- * Behind it runs `HeroArcBackground`, the brand-coloured dot arch. The section
- * is `isolate` so the arch's `z-index: -1` stays inside it — behind the copy,
- * but in front of the page's own background orbs.
+ * It enters once on load (`data-enter`, site.css) and never on scroll.
  */
-export default function HeroSection() {
-  const assurances = [
-    'Secure online & bank transfer checkout',
-    'Race kit pickup or nationwide delivery',
-    'Official results & e-certificates',
-  ];
+export default function HeroSection({
+  provinces,
+  nextRace,
+}: {
+  provinces: string[];
+  nextRace: HeroRace | null;
+}) {
+  const href = nextRace ? `${nextRace.siteOrigin ?? ''}/events/${nextRace.slug}` : null;
+  const when = nextRace
+    ? isVirtual(nextRace)
+      ? formatEventRange(nextRace.date, nextRace.virtualEndDate ?? null)
+      : formatEventWeekdayShort(nextRace.date)
+    : '';
+  const where = nextRace ? (isVirtual(nextRace) ? VIRTUAL_RUN_WHERE : nextRace.location) : '';
 
   return (
-    <section className="relative isolate w-full flex justify-center sm:pt-6">
-      <HeroArcBackground />
-      <motion.div
-        className="w-full max-w-3xl text-center"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <div className="flex flex-row w-fit mx-auto items-center justify-center gap-2 mb-4">
-          <Flag size={20} className="text-accent-blue" />
-          <span className="text-sm font-bold tracking-widest uppercase text-accent-orange">
-            Running Events
-          </span>
-        </div>
-
-        <h1 className="text-4xl sm:text-5xl md:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 uppercase tracking-tighter leading-[1.05] mb-4 sm:mb-5">
-          Find Your Next
-          <br />
-          Finish Line
+    <section className="site-wrap pt-8 pb-12 sm:pt-12 md:pt-14 md:pb-16" aria-labelledby="home-title">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:items-end lg:gap-8" data-enter>
+        <h1 id="home-title" className="site-h1 lg:col-span-7 max-w-[15ch] lg:max-w-none">
+          {headline(provinces)}
         </h1>
+        <div className="lg:col-span-5 xl:col-start-9 xl:col-span-4">
+          <p className="site-lead mb-6">
+            Sign up your whole group in one checkout, pick up your race kit or
+            have it delivered, and find your official time here after race day.
+          </p>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Link href="/events" className="site-btn site-btn--action site-btn--block-sm">
+              See upcoming races
+            </Link>
+            <Link href="/results" className="site-btn site-btn--quiet site-btn--block-sm">
+              Look up results
+            </Link>
+          </div>
+        </div>
+      </div>
 
-        <p className="text-base sm:text-lg text-secondary leading-relaxed max-w-xl mx-auto mb-6 sm:mb-8">
-          Browse marathons, fun runs and virtual races, register your whole
-          group in one go, and pick up your official time when the results drop.
-        </p>
-
-        {/* Named rather than numbered: a young platform's counts read small,
-            and what actually reassures a runner handing over money is what the
-            product does, not how many people have used it. */}
-        <ul className="flex flex-col sm:flex-row sm:flex-wrap items-center justify-center gap-x-6 gap-y-2.5 list-none p-0 m-0">
-          {assurances.map((item) => (
-            <li
-              key={item}
-              className="flex items-center gap-2 text-sm text-secondary"
-            >
-              <CheckCircle2 size={16} className="text-accent-blue shrink-0" />
-              {item}
-            </li>
-          ))}
-        </ul>
-
-        <div className="mt-7 sm:mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+      {nextRace && href && nextRace.imageUrl.trim() && (
+        <div className="mt-10 md:mt-12" data-enter>
+          <p className="m-0 mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.9375rem] text-site-muted">
+            <span className="inline-flex items-center gap-2 font-semibold text-site-ink">
+              <span aria-hidden="true" className="h-2 w-2 rounded-full bg-site-action" />
+              Next race
+            </span>
+            <span>{nextRace.title}</span>
+            <span aria-hidden="true">·</span>
+            <span>{when}</span>
+            <span aria-hidden="true">·</span>
+            <span>{where}</span>
+          </p>
           <Link
-            href="/events"
-            className="btn-gradient w-full sm:w-auto justify-center rounded-[16px] px-8 py-4 text-base no-underline shadow-xl shadow-accent-orange/20"
+            href={href}
+            className="group block overflow-hidden rounded-[14px] bg-site-surface"
+            aria-label={`${nextRace.title}, ${when}, ${where}`}
           >
-            Browse All Events
+            <EventImage
+              src={nextRace.imageUrl}
+              alt={`${nextRace.title} poster`}
+              className="block h-auto w-full transition-transform duration-500 group-hover:scale-[1.02] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+              iconSize={56}
+            />
           </Link>
-          <Link
-            href="/results"
-            className="w-full sm:w-auto text-center bg-white/5 border border-white/10 text-white hover:bg-white/10 hover:border-white/30 transition-all py-4 px-8 rounded-[16px] font-bold uppercase tracking-wider text-base no-underline"
-          >
-            View Results
+          <Link href={href} className="site-link mt-2">
+            <span>See race details</span>
+            <ArrowRight size={18} aria-hidden="true" />
           </Link>
         </div>
-      </motion.div>
+      )}
     </section>
   );
+}
+
+/**
+ * "Road races in Tarlac and Pangasinan": the provinces the upcoming races are
+ * in, so the headline is true the day it renders and changes by itself when
+ * the calendar moves. Two named at most, then "and more".
+ */
+function headline(provinces: string[]): string {
+  if (provinces.length === 0) return 'Road races and fun runs in the Philippines';
+  if (provinces.length === 1) return `Road races and fun runs in ${provinces[0]}`;
+  if (provinces.length === 2) return `Road races in ${provinces[0]} and ${provinces[1]}`;
+  return `Road races in ${provinces[0]}, ${provinces[1]} and more`;
 }

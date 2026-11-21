@@ -40,7 +40,7 @@ export default function EventHighlightsGallery({
             <button
               type="button"
               onClick={() => setOpen(idx)}
-              className={`hl-tile relative block w-full ${single ? '' : 'aspect-[4/5] '}overflow-hidden rounded-2xl border border-white/10 bg-black/40 shadow-2xl cursor-zoom-in focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-blue`}
+              className={`hl-tile relative block w-full ${single ? '' : 'aspect-[4/5] '}overflow-hidden rounded-[12px] border border-site-line bg-site-surface cursor-zoom-in focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-blue`}
               aria-label={`View ${h.caption || `highlight ${idx + 1}`} full screen`}
             >
               <img

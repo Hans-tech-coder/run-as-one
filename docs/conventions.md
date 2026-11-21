@@ -486,6 +486,17 @@
   it appears. It differs only by its `action` prop (`'register'` → the event
   page, `'results'` → the winners board), a string rather than a callback
   because the pages rendering it are Server Components. Never fork a rival card.
+  **Its shape (Paper, `.site-card`):** the poster **whole** on top in a 12:5
+  frame (`object-fit: contain` on the sunken tint — organizers' banners run
+  2:1 to 2.8:1 and carry their own title, so nothing is printed over them),
+  then the day with its weekday (`formatEventWeekdayShort`), the title, the
+  venue, the race's **distance chips** (`distances`, the category names read
+  before `forListing` drops the categories; a Bib + Medal variant is not a
+  distance; four shown, then *+N more*) and a foot with the status in words
+  and the action link, which stretches over the whole card and is named with
+  the race (*Register: Pink Run 2026*). The grid (`.site-grid`) goes four
+  across from `lg` whenever three would leave one card alone on the last row,
+  and keeps exactly three in one row on a tablet.
 - **One option row at sign-up.** `events/[slug]/register/CategoryPicker` renders
   a race's distances and a fun run's packages with the *same* full-width radio
   row — poster thumbnail, name, price on a shared right edge — because to the
@@ -816,6 +827,10 @@
   registration wizard, and the `/admin/login` and `/admin/register` sign-in
   CTAs. Do not add Tailwind padding or flex utilities on top of
   `.btn-light` — sizing it per site is what made the admin uneven before.
+  **The redesigned public pages no longer wear the gradient** — they use
+  `.site-btn` (see "The public site is Paper" below); `.btn-gradient` stays on
+  the dark pages (the wizard, `/pay`, the sign-in cards) and is restyled solid
+  wherever it appears inside a Paper frame.
 - **The public site's quiet button is `.btn-secondary`** (`globals.css`).
   Wherever a runner is offered a second way forward beside the gradient —
   *Browse Other Races* on the registration gate and the event page's on-hold
@@ -832,8 +847,9 @@
   `font-medium normal-case tracking-normal` so it still reads as an address.
 - Styling: Tailwind utilities plus the CSS variables in `globals.css` (motion,
   spacing, radius, glass, gradient tokens). The admin has `Admin.css` and
-  `Auth.css`; the wizard and event page have their own CSS files. Dark,
-  glassmorphic, with an orange (`#FF6B00`) → blue (`#007AFF`) gradient.
+  `Auth.css`; the wizard and event page have their own CSS files. The dark
+  pages are glassmorphic with an orange (`#FF6B00`) → blue (`#007AFF`)
+  gradient; the redesigned public pages are Paper (`site.css`, below).
 - **Motion comes from transitions.dev.** The `--duration-*` / `--ease-*` /
   `--distance-*` scale at the top of `globals.css` is that library's shared
   motion scale, and the `t-*` classes below it are its snippets: `t-modal`,
@@ -852,27 +868,71 @@
   an animation, and add the CSS at the bottom of `globals.css` next to its
   siblings. (Reinstall it from `github.com/Jakubantalik/transitions.dev` under
   `skills/` on a new machine.) On public pages, `design-taste-frontend`'s motion
-  rules win: no card tilt and no scroll-triggered reveals.
-- **The home hero stands under a dot arch** (`components/HeroArcBackground`,
-  `.hero-arc` in `globals.css`). It is a Canvas 2D port of the "Predictive Arc"
-  background, and only its core renderer — the package's iframe and Three.js
-  variants were left behind, so no dependency came with it. It is recoloured to
-  be the logo's track bend, and reads as a finish gantry over "Find Your Next
-  Finish Line": **outer rim brand orange, inside brand blue, a warm white
-  core**, with the two accents read from `--accent-orange` / `--accent-blue` at
-  mount rather than typed. Blue goes on the inside because the copy sits under
-  the arch and blue is the darker accent. The rules it keeps are the ones any
-  later decorative loop should copy:
-  - The apex is **anchored to the hero copy** (`--nav-offset` plus the section's
-    top padding), not to a fraction of the layer. A fraction put the white core
-    through the headline at some widths.
-  - A scrim of `--bg-primary` pools behind the text.
-  - It redraws at **30fps**, one path per colour, with DPR capped at 1.5.
-  - It **pauses** off screen and in a hidden tab, and draws **one still frame
-    under reduced motion**.
-  - It fades in on the skeleton-reveal tokens once the first frame is drawn.
-  - It runs full-bleed and up under the navbar like the event page's poster.
-    That is why the home page wrapper does not clip its overflow.
+  rules win: no card tilt, no scroll-triggered reveals, and on Paper no entrance
+  but the hero's (see "The public site is Paper").
+- **The public site is "Paper"** (the 2026-11-21 redesign, `design-taste-frontend`
+  leading). A warm off-white ground (`#f6f3ee`), navy ink (`#14192b`), **one
+  solid orange action** (`#c2530a`, 4.6:1 under white text), Archivo for
+  everything (its width axis, ~110%, carries the headings instead of a heavy
+  weight), **mixed case everywhere** — no all-caps titles or buttons, no
+  gradients, no glass, no glow orbs. It replaced the dark glassmorphic look and
+  its gradient pills, which the public-site audit called out as template tells.
+  - **Where it applies is one list:** `isPaperPath()` in `lib/site-look.ts` —
+    `/`, `/events`, `/events/[slug]` (not its `/register`), `/results/**`,
+    `/track/**`. `ClientLayoutWrapper` puts `.site-paper` with
+    `data-theme="light"` on those pages' frame. The register wizard, `/pay`,
+    `/feedback`, the legal pages, `/coming-soon` and the 404 **stay dark** until
+    they are redesigned; adding one is a line in that list plus its page work.
+  - **Everything reads tokens** (`src/app/site.css`, imported by `SiteFrame`):
+    `--site-bg`, `--site-surface`, `--site-card`, `--site-ink`, `--site-muted`,
+    `--site-line(-strong)`, `--site-action(-hover/-ink)`, `--site-accent-text`,
+    as utilities `text-site-ink`, `bg-site-card`, `border-site-line`,
+    `bg-site-action`, `text-site-accent` (`@theme inline` in `globals.css`).
+    Their **dark defaults sit on `:root`**, which is what lets the one navbar and
+    footer serve both looks. **A dark Paper is one more token block**, not new
+    components (the owner asked for that to stay possible): never write a hex,
+    `text-white` or `white/…` in a redesigned component.
+  - The `data-theme="light"` half re-runs globals.css's light block on Paper —
+    the logo's deepened inks, the ink ramp, the status colours — so a shared
+    component reading those names (StatusPanel, RunnerLoader, LinkPendingIcon,
+    CategoryPrice's sale chip via `--status-success`) turns light untouched.
+  - **The furniture:** `.site-wrap` is the content column (it sets only the
+    inline edges — `.container` sets the `padding` shorthand unlayered and
+    silently beats every `pt-*`/`pb-*` beside it, so never pair the two);
+    `.site-section` the vertical step (a section after another drops its top);
+    `.site-h1/-h2/-h3` and `.site-lead` the type; **`.site-btn` with
+    `--action` or `--quiet`** the only button pair (steps up 1px on hover,
+    presses to 0.98); `.site-link` a text link whose underline draws (label in
+    a `<span>`); `.site-chip`; `.site-card` the event card. On Paper,
+    `.btn-gradient` / `.btn-secondary` / `.glass-panel` / StatusPanel /
+    `.input-group` fields are restyled in `site.css`, so a shared component
+    cannot bring a gradient pill or a grey slab back onto a redesigned page.
+  - **The navbar is a solid strip** (`.site-nav`, 64/72px, `--nav-offset` is its
+    height on Paper) with a drawn underline on the current link; the phone menu
+    is a full-width sheet under it. **The footer is the ink band**
+    (`.site-footer`) — the one inverted ground; on a dark page it stays near
+    black with a hairline and keeps its top margin.
+  - **Motion:** the hero enters once on load (`data-enter` on its parent: each
+    child rises 14px over 520ms, staggered 60ms) and nothing else animates in —
+    the page-arrival reveal is off on Paper, cards no longer rise in, the
+    leaderboard rows no longer stagger, the results tilt script is gone. Hover
+    micro-interactions only: a card lifts 2px and its poster zooms 1.025, an
+    arrow nudges 3px. All rest under reduced motion.
+- **The home hero is a product stage** (`components/HeroSection`, a Server
+  Component): the head row — the headline on the left, the lead and the two
+  buttons (*See upcoming races*, *Look up results*) on the right — and the
+  **next race's poster whole across the content width** under a *Next race* line
+  (its date and place). **The headline is data:** the provinces the upcoming
+  on-site races are in, most races first (`groupBy province` in the home page's
+  one `Promise.all`), "Road races in Tarlac and Pangasinan" — two named, then
+  "and more"; none gives a plain fallback. No poster, no stage. The page closes
+  on an **Organizing a race?** band → `/admin/register` (clients hire Run As
+  One), replacing the three numbered "How it works" cards.
+- **A race's head is `components/RaceHeader`**: one step back, the race's name
+  (or a page title such as *Race winners* with the race's name above it), its
+  date, time and venue, and an actions row. It is used by the event page and
+  all three results pages, and replaced `EventHeroBanner`, which printed the
+  title in white capitals over the organizer's poster behind a scrim.
 - **No decoration behind a page at a negative `z-index`.** The public pages
   used to float two blurred accent orbs (`-z-10`) behind their content. At rest
   those sit under `<body>`'s own background and cannot be seen at all, but the
@@ -904,7 +964,7 @@
   if it is missing); a page class gets a name of its own (`.event-meta-icon`,
   not `.text-blue`). If a utility-named class truly has to live in CSS, put it
   in `@layer components` so utilities still win.
-- Fonts: Outfit (`--font-sans`, headings), Inter (`--font-body`).
+- Fonts: Outfit (`--font-sans`, headings), Inter (`--font-body`) on the dashboard and the dark pages; **Archivo** (`--font-archivo`, loaded with its `wdth` axis in `SiteFrame`, so the dashboard never downloads it) for both on Paper pages.
 - **The logo is a component, not an image** (`components/RunAsOneLogo.tsx`,
   `.rao-logo` in `globals.css`, geometry in `lib/brand-mark.ts` — the one copy
   of the path data, which the component, the themed favicon and the icon

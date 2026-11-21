@@ -302,7 +302,7 @@ src/
                             #   permanent redirect in next.config.ts)
     api/                    # all route handlers — see §6
   components/               # public-site components (Navbar, Footer, EventGrid,
-                            #   StatusPanel, RunAsOneLogo, HeroArcBackground,
+                            #   StatusPanel, RunAsOneLogo, HeroSection, RaceHeader,
                             #   PublicRouteLoading…)
   components/ui/            # cross-app primitives: AlertProvider, AlertModal, Toast,
                             #   Skeleton, LinkPending, FieldError, table,

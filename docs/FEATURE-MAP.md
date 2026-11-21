@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-50 pages · 100 API routes · 171 modules in `src/lib` · 714 files · 125,876 lines
+50 pages · 100 API routes · 172 modules in `src/lib` · 715 files · 125,379 lines
 
 ---
 
@@ -65,11 +65,11 @@ The route, the server component behind it, and the client components beside it.
 | `/s/[site]` | [`/s/[site]/(home)/page.tsx`](../src/app/s/[site]/%28home%29/page.tsx) | `RecentlyHeld.tsx` |
 | `/s/[site]/[...missing]` | [`/s/[site]/[...missing]/page.tsx`](../src/app/s/[site]/[...missing]/page.tsx) | — |
 | `/s/[site]/events` | [`/s/[site]/events/page.tsx`](../src/app/s/[site]/events/page.tsx) | `events-view.ts` `EventsEmptyStates.tsx` `EventsTabs.tsx` `PastEvents.tsx` |
-| `/s/[site]/events/[slug]` | [`/s/[site]/events/[slug]/page.tsx`](../src/app/s/[site]/events/[slug]/page.tsx) | `ClosedSidebarPanels.tsx` `ClosingCountdown.tsx` `EventDetails.tsx` `EventSections.tsx` `RaceDetails.tsx` `SizeChartButton.tsx` |
+| `/s/[site]/events/[slug]` | [`/s/[site]/events/[slug]/page.tsx`](../src/app/s/[site]/events/[slug]/page.tsx) | `ClosedSidebarPanels.tsx` `ClosingCountdown.tsx` `EventDetails.tsx` `EventSections.tsx` `EventSidebar.tsx` `RaceDetails.tsx` `SizeChartButton.tsx` |
 | `/s/[site]/results` | [`/s/[site]/results/page.tsx`](../src/app/s/[site]/results/page.tsx) | — |
 | `/s/[site]/results/[slug]` | [`/s/[site]/results/[slug]/page.tsx`](../src/app/s/[site]/results/[slug]/page.tsx) | — |
 | `/s/[site]/results/[slug]/[bib]` | [`/s/[site]/results/[slug]/[bib]/page.tsx`](../src/app/s/[site]/results/[slug]/[bib]/page.tsx) | `ECertificateGenerator.tsx` |
-| `/s/[site]/results/[slug]/full` | [`/s/[site]/results/[slug]/full/page.tsx`](../src/app/s/[site]/results/[slug]/full/page.tsx) | `FullResultsClient.tsx` |
+| `/s/[site]/results/[slug]/full` | [`/s/[site]/results/[slug]/full/page.tsx`](../src/app/s/[site]/results/[slug]/full/page.tsx) | `FullResultsClient.tsx` `FullResultsMenus.tsx` |
 | `/terms` | [`/terms/page.tsx`](../src/app/terms/page.tsx) | — |
 | `/track` | [`/track/page.tsx`](../src/app/track/page.tsx) | `TrackHelpCard.tsx` `TrackLookup.tsx` `TrackResult.tsx` `TrackRunnerCard.tsx` `TrackStatusCard.tsx` |
 | `/track/[token]` | [`/track/[token]/page.tsx`](../src/app/track/[token]/page.tsx) | — |
@@ -343,6 +343,7 @@ the file itself.
 | [`site-client.ts`](../src/lib/site-client.ts) | Which client a public request is for (server-only). |
 | [`site-contact.ts`](../src/lib/site-contact.ts) | Who Run As One is, and how a runner reaches it. |
 | [`site-host.ts`](../src/lib/site-host.ts) | Which host is which (`CLIENT_SUBDOMAIN_PLAN.md` Batch 1). |
+| [`site-look.ts`](../src/lib/site-look.ts) | **Which public pages wear the Paper look** (site.css, docs/conventions.md §9). |
 | [`site-metadata.ts`](../src/lib/site-metadata.ts) | What a site's pages say about themselves to a link preview and a browser tab. |
 | [`site-settings.ts`](../src/lib/site-settings.ts) | The saved site-wide settings (server-only; reads the `SiteSettings` row). |
 | [`slot-holds.ts`](../src/lib/slot-holds.ts) | What holds a seat in a category, and how many each has taken. |
@@ -379,7 +380,6 @@ when a task touches one, split it before editing rather than after.
 | 1571 | [`src/lib/discount.ts`](../src/lib/discount.ts) |
 | 1179 | [`src/app/admin/settings/SettingsPanels.tsx`](../src/app/admin/settings/SettingsPanels.tsx) |
 | 1017 | [`src/app/admin/team/TeamClient.tsx`](../src/app/admin/team/TeamClient.tsx) |
-| 799 | [`src/app/s/[site]/results/[slug]/full/FullResultsClient.tsx`](../src/app/s/[site]/results/[slug]/full/FullResultsClient.tsx) |
 | 736 | [`src/lib/pending-expiry.ts`](../src/lib/pending-expiry.ts) |
 | 693 | [`src/app/admin/AdminDatePicker.tsx`](../src/app/admin/AdminDatePicker.tsx) |
 | 616 | [`src/app/api/checkout/route.ts`](../src/app/api/checkout/route.ts) |
@@ -390,6 +390,7 @@ when a task touches one, split it before editing rather than after.
 | 570 | [`src/app/admin/events/[id]/registrants/PaymentCorrectionModal.tsx`](../src/app/admin/events/[id]/registrants/PaymentCorrectionModal.tsx) |
 | 567 | [`src/app/admin/NotificationsCenter.tsx`](../src/app/admin/NotificationsCenter.tsx) |
 | 550 | [`src/app/api/admin/events/[id]/update-event.ts`](../src/app/api/admin/events/[id]/update-event.ts) |
+| 544 | [`src/app/s/[site]/results/[slug]/full/FullResultsClient.tsx`](../src/app/s/[site]/results/[slug]/full/FullResultsClient.tsx) |
 | 528 | [`src/app/admin/DashboardShell.tsx`](../src/app/admin/DashboardShell.tsx) |
 | 520 | [`src/lib/promo-input.ts`](../src/lib/promo-input.ts) |
 | 520 | [`src/lib/refund-store.ts`](../src/lib/refund-store.ts) |
@@ -404,7 +405,6 @@ when a task touches one, split it before editing rather than after.
 | 472 | [`src/app/admin/settings/TwoFactorPanel.tsx`](../src/app/admin/settings/TwoFactorPanel.tsx) |
 | 472 | [`src/app/events/[slug]/register/BirthdatePicker.tsx`](../src/app/events/[slug]/register/BirthdatePicker.tsx) |
 | 470 | [`src/app/admin/events/[id]/registrants/RunnerEditModal.tsx`](../src/app/admin/events/[id]/registrants/RunnerEditModal.tsx) |
-| 454 | [`src/app/s/[site]/events/[slug]/EventDetails.tsx`](../src/app/s/[site]/events/[slug]/EventDetails.tsx) |
 | 441 | [`src/lib/actor.ts`](../src/lib/actor.ts) |
 | 436 | [`src/app/admin/events/[id]/edit/page.tsx`](../src/app/admin/events/[id]/edit/page.tsx) |
 | 431 | [`src/lib/activity.ts`](../src/lib/activity.ts) |

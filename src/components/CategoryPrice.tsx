@@ -81,7 +81,7 @@ export default function CategoryPrice({
         <s
           aria-hidden="true"
           className={`${stacked ? 'text-xs' : 'text-sm'} font-semibold tabular-nums ${
-            dimmed ? 'text-white/25' : 'text-secondary'
+            dimmed ? 'text-secondary opacity-50' : 'text-secondary'
           }`}
         >
           &#8369;{formatPesos(price)}
@@ -97,7 +97,7 @@ export default function CategoryPrice({
       {scarce && (
         <span
           aria-hidden="true"
-          className="shrink-0 rounded-full bg-emerald-400/15 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-emerald-300"
+          className="shrink-0 rounded-full bg-[color-mix(in_srgb,var(--status-success)_15%,transparent)] px-2.5 py-0.5 text-[11px] font-bold tracking-wide text-[var(--status-success)]"
         >
           {sale.remaining} left at this price
         </span>

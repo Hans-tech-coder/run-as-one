@@ -4,7 +4,6 @@ import React, { Suspense, createContext, useContext, useEffect, useLayoutEffect,
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useReducedMotion } from 'framer-motion';
-import { EventGridEntrance } from '@/components/EventGrid';
 import { PAST_EVENTS_HREF, asEventsView, type EventsView } from './events-view';
 
 /**
@@ -122,11 +121,8 @@ export default function EventsTabs({
   }, []);
 
   return (
-    <nav aria-label="Events" className="flex w-full justify-center">
-      <div
-        ref={barRef}
-        className="t-tabs relative inline-flex rounded-full border border-white/10 bg-white/[0.04] p-1 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]"
-      >
+    <nav aria-label="Races" className="flex shrink-0">
+      <div ref={barRef} className="site-tabs t-tabs relative inline-flex rounded-full p-1">
         <span ref={pillRef} className="t-tabs-pill" aria-hidden="true" />
         {TABS.map((tab) => {
           const current = tab.view === view;
@@ -135,17 +131,11 @@ export default function EventsTabs({
               key={tab.view}
               view={tab.view}
               aria-current={current ? 'page' : undefined}
-              className={`t-tab inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-full px-5 sm:px-7 text-sm font-bold uppercase tracking-wider no-underline ${
-                current ? 'text-white' : 'text-secondary hover:bg-white/[0.06] hover:text-white'
-              }`}
+              className="t-tab inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-full px-5 sm:px-6 text-[0.9375rem] font-semibold no-underline"
             >
               {tab.label}
               {counts && (
-                <span
-                  className={`t-tab-count tabular-nums rounded-full px-2 py-0.5 text-xs ${
-                    current ? 'bg-accent-orange/20 text-accent-orange' : 'bg-white/[0.06] text-secondary'
-                  }`}
-                >
+                <span className="t-tab-count tabular-nums rounded-full px-2 py-0.5 text-xs">
                   {counts[tab.view]}
                 </span>
               )}
@@ -257,17 +247,18 @@ function TabSwitch({ counts, heading, panels, view }: TabSwitchProps & { view: E
 
   return (
     <SelectTab.Provider value={select}>
-      {heading && (
-        <div className="t-tab-panel w-full max-w-3xl" {...swap}>
-          {heading[shown]}
-        </div>
-      )}
-      <EventsTabs view={view} counts={counts} />
-      <EventGridEntrance.Provider value={phase !== 'enter'}>
-        <div className="t-tab-panel w-full" {...swap}>
-          {panels[shown]}
-        </div>
-      </EventGridEntrance.Provider>
+      {/* The heading on the left and the tabs on the right, in one row. */}
+      <div className="site-section__head">
+        {heading && (
+          <div className="t-tab-panel min-w-0" {...swap}>
+            {heading[shown]}
+          </div>
+        )}
+        <EventsTabs view={view} counts={counts} />
+      </div>
+      <div className="t-tab-panel w-full" {...swap}>
+        {panels[shown]}
+      </div>
     </SelectTab.Provider>
   );
 }
@@ -291,7 +282,7 @@ function LoadingTabs() {
   const params = useSearchParams();
   if (pathname !== '/events') return null;
   return (
-    <div className="w-full pt-2">
+    <div className="site-wrap pt-8">
       <EventsTabs view={asEventsView(params.get('view'))} />
     </div>
   );

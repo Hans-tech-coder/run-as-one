@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 import HeroSection from '@/components/HeroSection';
 import HomeEventBrowser from '@/components/HomeEventBrowser';
 import db, { publishCutoff } from '@/lib/public-db';
@@ -62,7 +63,10 @@ export default async function Home({ params }: { params: Promise<{ site: string 
   // page only ever renders on the main host, where /events is unscoped too.
   const published = publishedEvents(await publishCutoff());
   const upcoming = { ...upcomingEvents(), ...published, resultsOnly: false };
-  const [openForRegistration, totalEvents, recentlyHeld] = await Promise.all([
+  // The provinces the upcoming races are in, most races first, are the hero's
+  // headline ("Road races in Tarlac and Pangasinan"), so it stays true as the
+  // calendar moves without anyone editing copy. Read in the same pass.
+  const [openForRegistration, totalEvents, recentlyHeld, byProvince] = await Promise.all([
     db.event.findMany({
       where: upcoming,
       orderBy: soonestFirst,
@@ -72,7 +76,11 @@ export default async function Home({ params }: { params: Promise<{ site: string 
       // capacity is shipped to the browser.
       // The client only says which host a card links to (lib/site-client.ts).
       include: {
-        categories: { select: { id: true, slotLimit: true, closed: true, bibMedalOfId: true, opensAt: true } },
+        // `name` and `sortOrder` are for the card's distance chips only.
+        categories: {
+          select: { id: true, name: true, slotLimit: true, closed: true, bibMedalOfId: true, opensAt: true },
+          orderBy: { sortOrder: 'asc' },
+        },
         client: EVENT_SITE_CLIENT,
       },
     }),
@@ -83,87 +91,76 @@ export default async function Home({ params }: { params: Promise<{ site: string 
       take: RECENTLY_HELD_LIMIT,
       select: PAST_CARD,
     }),
+    db.event.groupBy({
+      by: ['province'],
+      where: { ...upcoming, format: 'ONSITE', province: { not: null } },
+      _count: { _all: true },
+    }),
   ]);
+  const provinces = byProvince
+    .filter((row): row is typeof row & { province: string } => Boolean(row.province?.trim()))
+    .sort((a, b) => b._count._all - a._count._all || a.province.localeCompare(b.province))
+    .map((row) => row.province.trim());
   const linkOrigin = eventLinkOrigin(site);
 
   // A race that is full or paused keeps its place here — it is still upcoming,
   // and this section is the site's front door to it.
   // A client's race links straight to its own site (CLIENT_SUBDOMAIN_PLAN.md).
+  // The distance chips are read before forListing drops the categories. A
+  // bib-and-medal variant (bibMedalOfId) is a package of a distance already
+  // listed, so it is not a distance of its own.
+  const distancesById = new Map(
+    openForRegistration.map((event) => [
+      event.id,
+      [...new Set(event.categories.filter((c) => !c.bibMedalOfId).map((c) => c.name.trim()))],
+    ]),
+  );
   const events = (await forListing(openForRegistration)).map(({ client, ...event }) => ({
     ...event,
     siteOrigin: linkOrigin({ client }),
+    distances: distancesById.get(event.id) ?? [],
   }));
   const pastCards = recentlyHeld.map((row) => toPastCard(row, linkOrigin));
 
   return (
-    // No overflow-hidden here: the hero's dot arch is full-bleed and runs up
-    // under the navbar, and a clipping wrapper would cut it off at the
-    // content column.
-    <div className="relative w-full flex flex-col items-center">
-      <div className="w-full relative z-10 flex flex-col items-center gap-10 sm:gap-20">
-        <HeroSection />
-        <HomeEventBrowser events={events} totalEvents={totalEvents} />
-        {pastCards.length > 0 && <RecentlyHeld events={pastCards} />}
-        <HowItWorks />
-      </div>
+    <div className="w-full">
+      <HeroSection provinces={provinces} nextRace={events[0] ?? null} />
+      <HomeEventBrowser events={events} totalEvents={totalEvents} />
+      {pastCards.length > 0 && <RecentlyHeld events={pastCards} />}
+      <OrganizerBand />
     </div>
   );
 }
 
 /**
- * Closes the page off.
+ * Closes the page off, for the other people who land here: organizers.
  *
- * Without it the last race card ran straight into the footer, which is what
- * made the page trail off rather than end. It sits deliberately quiet — one
- * column of muted rows — so it never competes with the cards above it.
+ * It replaced three numbered "How it works" cards, which restated what the
+ * hero already says and were one of the template tells the audit caught. The
+ * one thing the page did not yet say is that a race can be handed to Run As
+ * One, so this says that, framed as hiring (clients hire Run As One; they do
+ * not partner with it), and goes to Our Services.
+ *
+ * The home page only renders on the main host — a client's `/` is redirected
+ * to its /events (src/proxy.ts) — so this never shows on a client's site.
  */
-function HowItWorks() {
-  const steps = [
-    {
-      title: 'Pick your race',
-      body: 'Browse open events, compare distances or packages, and see exactly what each one includes before you commit.',
-    },
-    {
-      title: 'Register your group',
-      body: 'Add every runner in one transaction, choose kit pickup or delivery, and pay by card, e-wallet or bank transfer.',
-    },
-    {
-      title: 'Run, then collect your time',
-      body: 'Official results and your e-certificate are published here once the organizer uploads them.',
-    },
-  ];
-
+function OrganizerBand() {
   return (
-    <section className="w-full max-w-4xl mx-auto pb-4">
-      <div className="text-center mb-8 sm:mb-10">
-        <span className="text-xs sm:text-sm font-bold tracking-widest uppercase text-accent-orange">
-          How It Works
-        </span>
-        <h2 className="mt-2 text-2xl sm:text-3xl font-black uppercase tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-white/60">
-          From Sign-Up To Finish Line
-        </h2>
+    <section className="site-wrap pb-14 md:pb-20" aria-labelledby="organizers">
+      <div className="grid grid-cols-1 gap-6 rounded-[14px] bg-site-surface px-6 py-8 sm:px-10 sm:py-10 md:grid-cols-12 md:items-center md:gap-8">
+        <div className="md:col-span-8">
+          <h2 id="organizers" className="site-h2">Organizing a race?</h2>
+          <p className="site-lead mt-3 max-w-[56ch]">
+            Hire Run As One to take your sign-ups and payments online, release
+            race kits, and publish results and e-certificates after the race.
+          </p>
+        </div>
+        <div className="md:col-span-4 md:justify-self-end">
+          <Link href="/admin/register" className="site-btn site-btn--quiet site-btn--block-sm">
+            See our services
+          </Link>
+        </div>
       </div>
-
-      <ol className="flex flex-col gap-3 list-none p-0 m-0">
-        {steps.map((step, idx) => (
-          <li
-            key={step.title}
-            className="flex items-start gap-4 rounded-[16px] border border-white/[0.05] bg-black/40 p-4 sm:p-5"
-          >
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-sm font-bold text-white">
-              {idx + 1}
-            </span>
-            <div className="min-w-0">
-              <h3 className="text-base sm:text-lg font-bold text-white mb-1">
-                {step.title}
-              </h3>
-              <p className="text-sm sm:text-base text-secondary leading-relaxed m-0">
-                {step.body}
-              </p>
-            </div>
-          </li>
-        ))}
-      </ol>
     </section>
   );
 }

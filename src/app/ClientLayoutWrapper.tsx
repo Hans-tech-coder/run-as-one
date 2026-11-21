@@ -4,17 +4,24 @@ import { usePathname } from 'next/navigation';
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import type { SiteClient } from "@/lib/site-client";
+import { isPaperPath } from "@/lib/site-look";
 
 /**
  * `site` is the client whose subdomain this is, or null on the main site
  * (lib/site-client.ts). The layout drawing the frame (SiteFrame) reads it on
  * the server; the navbar and footer only wear it.
+ *
+ * A redesigned page (lib/site-look.ts) gets the Paper frame: `.site-paper`
+ * with `data-theme="light"`, which site.css explains. Every other public page
+ * keeps the dark look it was built in.
  */
 export default function ClientLayoutWrapper({
   site,
+  fontClass,
   children,
 }: {
   site: SiteClient | null;
+  fontClass: string;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -24,8 +31,13 @@ export default function ClientLayoutWrapper({
     return <>{children}</>;
   }
 
+  const paper = isPaperPath(pathname);
+
   return (
-    <>
+    <div
+      className={paper ? `site-paper ${fontClass}` : fontClass}
+      data-theme={paper ? 'light' : undefined}
+    >
       {/* The navbar is fixed, so it sits outside the column and contributes no
           height — the clearance under it comes from --nav-offset below. */}
       <Navbar site={site} />
@@ -39,15 +51,19 @@ export default function ClientLayoutWrapper({
           short page and sit one margin below the content of a long one. */}
       <div className="flex min-h-[100dvh] flex-col">
         {/* The gutter comes from .container and the clearance under the
-            floating navbar from --nav-offset, so this file never states either
-            number: a phone gets 16px and a desktop 32px. */}
+            navbar from --nav-offset, so this file never states either
+            number. A Paper page's sections run edge to edge and carry their
+            own .container, so its main drops the gutter. */}
         {/* `public-main` carries the page-arrival reveal — see the note on it
-            in globals.css. */}
-        <main className="public-main container grow" style={{ paddingTop: 'var(--nav-offset)' }}>
+            in globals.css (switched off on Paper pages, site.css). */}
+        <main
+          className={`public-main grow ${paper ? 'w-full' : 'container'}`}
+          style={{ paddingTop: 'var(--nav-offset)' }}
+        >
           {children}
         </main>
         <Footer site={site} />
       </div>
-    </>
+    </div>
   );
 }

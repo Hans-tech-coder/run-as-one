@@ -22,6 +22,7 @@ import {
   flexRender
 } from '@tanstack/react-table';
 import { cssDurationMs } from '@/lib/css-duration';
+import { useDismissableMenu, FilterDropdown, ActionMenu } from './FullResultsMenus';
 
 interface Result {
   id: string;
@@ -51,7 +52,7 @@ function rankLabel(rank: number | null | undefined): string {
 
 function PacerTag() {
   return (
-    <span className="shrink-0 whitespace-nowrap bg-accent-orange/10 text-accent-orange px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border border-accent-orange/30">
+    <span className="shrink-0 whitespace-nowrap bg-site-surface text-site-accent px-2 py-0.5 rounded-md text-[10px] font-bold border border-site-action">
       Pacer
     </span>
   );
@@ -60,260 +61,6 @@ function PacerTag() {
 interface Props {
   results: Result[];
   event: any;
-}
-
-/**
- * An open/close pair for the small menus on this page, with the dismissal they
- * all need: a press outside closes it, and so does Escape. The outside-press
- * listener is re-bound whenever the menu opens — it used to be bound once on
- * mount, closing over the first render's `isOpen` (false), so a press outside
- * never closed the filter menus and the only way out was the button itself.
- */
-function useDismissableMenu() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [isClosing, setIsClosing] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  const close = useCallback(() => {
-    setIsOpen(false);
-    setIsClosing(true);
-    setTimeout(() => setIsClosing(false), 150); // Matches --dropdown-close-dur
-  }, []);
-
-  const toggle = () => {
-    if (isOpen) {
-      close();
-    } else {
-      setIsClosing(false);
-      setIsOpen(true);
-    }
-  };
-
-  useEffect(() => {
-    if (!isOpen) return;
-    function handlePointer(event: MouseEvent) {
-      if (ref.current && !ref.current.contains(event.target as Node)) close();
-    }
-    function handleKey(event: KeyboardEvent) {
-      if (event.key === 'Escape') close();
-    }
-    document.addEventListener('mousedown', handlePointer);
-    document.addEventListener('keydown', handleKey);
-    return () => {
-      document.removeEventListener('mousedown', handlePointer);
-      document.removeEventListener('keydown', handleKey);
-    };
-  }, [isOpen, close]);
-
-  return { isOpen, isClosing, ref, toggle, close };
-}
-
-// Custom Dropdown Component using transitions-dev.
-// On a phone the two filters split the row between them, so the second one's
-// menu opens from its right edge — laid out from the left, a 224px menu
-// starting halfway across a 375px screen ran off it.
-function FilterDropdown({ title, options, selected, onToggle, align = 'left' }: { title: string, options: string[], selected: string[], onToggle: (val: string) => void, align?: 'left' | 'right' }) {
-  const { isOpen, isClosing, ref, toggle } = useDismissableMenu();
-
-  return (
-    <div className="relative flex-1 sm:flex-none" ref={ref}>
-      <button
-        type="button"
-        onClick={toggle}
-        aria-haspopup="true"
-        aria-expanded={isOpen}
-        className="w-full h-11 flex items-center justify-between sm:justify-start gap-2 bg-dark/50 border border-white/10 px-4 rounded-xl text-sm text-white hover:border-accent-blue/50 transition-colors"
-      >
-        <span className="flex items-center gap-2">
-          {title} {selected.length > 0 && <span className="bg-accent-blue text-white text-[10px] leading-none px-1.5 py-1 rounded-full">{selected.length}</span>}
-        </span>
-        <ChevronDown size={14} className={`shrink-0 transition-transform duration-[250ms] ${isOpen ? 'rotate-180' : ''}`} />
-      </button>
-
-      <div
-        className={`t-dropdown absolute top-full mt-2 w-56 max-w-[calc(100vw-2rem)] bg-[#1a1a20] border border-white/10 rounded-xl shadow-xl z-50 overflow-hidden ${align === 'right' ? 'right-0 sm:left-0 sm:right-auto' : 'left-0'} ${isOpen ? 'is-open' : ''} ${isClosing ? 'is-closing' : ''}`}
-        data-origin={align === 'right' ? 'top-right' : 'top-left'}
-      >
-        <div className="max-h-60 overflow-y-auto p-2 scrollbar-thin">
-          {options.length === 0 && <div className="p-2 text-xs text-secondary">No options</div>}
-          {options.map(opt => {
-            const isSelected = selected.includes(opt);
-            return (
-              <button
-                key={opt}
-                type="button"
-                onClick={() => onToggle(opt)}
-                aria-pressed={isSelected}
-                className="w-full text-left flex items-center justify-between gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-white/5 transition-colors"
-              >
-                <span className={`truncate ${isSelected ? 'text-accent-blue font-medium' : 'text-secondary'}`}>{opt}</span>
-                {isSelected && <Check size={14} className="text-accent-blue shrink-0" />}
-              </button>
-            )
-          })}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Custom Action Menu using transitions-dev.
-// The menu is rendered into <body> and positioned against the trigger's viewport
-// rect, because the results card and its horizontal scroller both clip their
-// overflow — a menu laid out inside the row was cut off on the last rows. It
-// also flips above the trigger when the space below it cannot hold the menu.
-// View E-Cert opens the certificate here, over the leaderboard: it used to be
-// a link to the runner's page with ?cert=1, so the reader lost their place in
-// the list for a dialog they could have had where they were. The menu stays
-// open, its item saying the certificate is being drawn, until it is ready.
-function ActionMenu({ path, onViewCert, isGenerating }: { path: string, onViewCert: () => Promise<void>, isGenerating: boolean }) {
-  const MENU_WIDTH = 160;   // matches w-40
-  const MENU_HEIGHT = 104;  // the two items plus padding, used before the first measure
-  const GAP = 8;            // the old mt-2
-  const EDGE = 8;           // breathing room against the viewport edges
-
-  const [isOpen, setIsOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const [placement, setPlacement] = useState<{ top: number, left: number, origin: 'top-right' | 'bottom-right' }>({
-    top: 0,
-    left: 0,
-    origin: 'top-right',
-  });
-
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => setMounted(true), []);
-
-  const updatePosition = useCallback(() => {
-    const button = buttonRef.current;
-    if (!button) return;
-
-    const rect = button.getBoundingClientRect();
-    const height = menuRef.current?.offsetHeight || MENU_HEIGHT;
-
-    const roomBelow = window.innerHeight - rect.bottom - GAP - EDGE;
-    const roomAbove = rect.top - GAP - EDGE;
-    const flipUp = height > roomBelow && roomAbove >= height;
-
-    setPlacement({
-      top: flipUp ? rect.top - GAP - height : rect.bottom + GAP,
-      left: Math.min(
-        Math.max(rect.right - MENU_WIDTH, EDGE),
-        Math.max(window.innerWidth - MENU_WIDTH - EDGE, EDGE)
-      ),
-      origin: flipUp ? 'bottom-right' : 'top-right',
-    });
-  }, []);
-
-  const close = useCallback(() => {
-    const el = menuRef.current;
-    if (!el) {
-      setIsOpen(false);
-      return;
-    }
-    const closeMs = cssDurationMs('--dropdown-close-dur', 150);
-
-    el.classList.remove('is-open');
-    el.classList.add('is-closing');
-    setTimeout(() => setIsOpen(false), closeMs);
-  }, []);
-
-  // Once the menu is in the DOM its real height is known, so measure again and
-  // play the open transition on the next frame.
-  useEffect(() => {
-    if (!isOpen) return;
-    updatePosition();
-    const frame = requestAnimationFrame(() => {
-      menuRef.current?.classList.remove('is-closing');
-      menuRef.current?.classList.add('is-open');
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [isOpen, updatePosition]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    function handleClickOutside(event: MouseEvent) {
-      const target = event.target as Node;
-      if (menuRef.current?.contains(target) || buttonRef.current?.contains(target)) return;
-      close();
-    }
-    function handleScrollOrResize() {
-      updatePosition();
-    }
-
-    document.addEventListener('mousedown', handleClickOutside);
-    window.addEventListener('scroll', handleScrollOrResize, true);
-    window.addEventListener('resize', handleScrollOrResize);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      window.removeEventListener('scroll', handleScrollOrResize, true);
-      window.removeEventListener('resize', handleScrollOrResize);
-    };
-  }, [isOpen, close, updatePosition]);
-
-  const toggle = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (isOpen) {
-      close();
-    } else {
-      updatePosition();
-      setIsOpen(true);
-    }
-  };
-
-  const menu = (
-    <div
-      ref={menuRef}
-      onClick={(e) => e.stopPropagation()}
-      className="t-dropdown fixed w-40 bg-[#1a1a20] border border-white/10 rounded-xl shadow-xl overflow-hidden"
-      data-origin={placement.origin}
-      style={{ top: placement.top, left: placement.left, zIndex: 9999 }}
-    >
-      <div className="p-1">
-        <Link
-          href={path}
-          onClick={(e) => e.stopPropagation()}
-          className="w-full text-left block px-3 py-2.5 text-sm text-white rounded-lg hover:bg-white/5 transition-colors"
-        >
-          View Details
-        </Link>
-        <button
-          type="button"
-          onClick={async (e) => {
-            e.stopPropagation();
-            await onViewCert();
-            close();
-          }}
-          disabled={isGenerating}
-          aria-busy={isGenerating || undefined}
-          className="w-full text-left flex items-center gap-2 px-3 py-2.5 text-sm text-accent-blue font-medium rounded-lg hover:bg-white/5 disabled:hover:bg-transparent disabled:cursor-wait transition-colors"
-        >
-          {isGenerating ? <BusyLabel>Generating</BusyLabel> : 'View E-Cert'}
-        </button>
-      </div>
-    </div>
-  );
-
-  return (
-    <>
-      <button
-        ref={buttonRef}
-        type="button"
-        onClick={toggle}
-        className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-white/10 transition-colors text-secondary hover:text-white"
-        title="Actions"
-        aria-label="Result actions"
-        aria-haspopup="true"
-        aria-expanded={isOpen}
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
-      </button>
-
-      {mounted && isOpen && createPortal(menu, document.body)}
-    </>
-  );
 }
 
 export default function FullResultsClient(props: Props) {
@@ -385,7 +132,7 @@ function FullResults({ results, event, categoryParam }: Props & { categoryParam:
       header: "Runner",
       cell: ({ row }) => (
         <div className="min-w-0 max-w-[16rem] xl:max-w-[20rem]">
-          <div className="font-bold text-white group-hover/row:text-accent-blue transition-colors truncate" title={row.original.name}>
+          <div className="font-bold text-site-ink group-hover/row:text-site-accent transition-colors truncate" title={row.original.name}>
             {row.original.name}
           </div>
           <div className="text-xs text-secondary mt-1 flex items-center gap-3">
@@ -401,7 +148,7 @@ function FullResults({ results, event, categoryParam }: Props & { categoryParam:
       accessorFn: (row) => row.category.name,
       header: "Category",
       cell: ({ row }) => (
-        <span className="inline-block max-w-[10rem] truncate whitespace-nowrap align-middle bg-accent-blue/10 text-accent-blue px-2 py-1 rounded-full text-xs font-bold border border-accent-blue/30" title={row.original.category.name}>
+        <span className="inline-block max-w-[10rem] truncate whitespace-nowrap align-middle bg-site-surface text-site-accent px-2 py-1 rounded-full text-xs font-bold border border-site-line" title={row.original.category.name}>
           {row.original.category.name}
         </span>
       ),
@@ -413,12 +160,12 @@ function FullResults({ results, event, categoryParam }: Props & { categoryParam:
     {
       accessorKey: "categoryRank",
       header: "Category Rank",
-      cell: ({ row }) => <span className="font-mono text-white">{rankLabel(row.original.categoryRank)}</span>,
+      cell: ({ row }) => <span className="font-mono text-site-ink">{rankLabel(row.original.categoryRank)}</span>,
     },
     {
       accessorKey: "genderRank",
       header: "Gender Rank",
-      cell: ({ row }) => <span className="font-mono text-white">{rankLabel(row.original.genderRank)}</span>,
+      cell: ({ row }) => <span className="font-mono text-site-ink">{rankLabel(row.original.genderRank)}</span>,
     },
     {
       accessorKey: "gender",
@@ -535,7 +282,7 @@ function FullResults({ results, event, categoryParam }: Props & { categoryParam:
     }
   };
 
-  const pagerButton = "w-10 h-10 flex items-center justify-center rounded-xl bg-dark border border-white/10 text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/5 transition-colors";
+  const pagerButton = "w-10 h-10 flex items-center justify-center rounded-xl bg-dark border border-site-line text-site-ink disabled:opacity-30 disabled:cursor-not-allowed hover:bg-site-surface transition-colors";
 
   return (
     <div className="w-full">
@@ -558,14 +305,14 @@ function FullResults({ results, event, categoryParam }: Props & { categoryParam:
             onChange={(e) => setGlobalFilter(e.target.value)}
             placeholder="Search runners or bib..."
             aria-label="Search runners by name or bib number"
-            className="w-full h-11 bg-dark/50 border border-white/10 rounded-xl pl-11 pr-11 text-white placeholder:text-secondary/70 focus:outline-none focus:border-accent-blue transition-colors text-base sm:text-sm [&::-webkit-search-cancel-button]:appearance-none"
+            className="w-full h-11 bg-dark/50 border border-site-line rounded-xl pl-11 pr-11 text-site-ink placeholder:text-secondary/70 focus:outline-none focus:border-accent-blue transition-colors text-base sm:text-sm [&::-webkit-search-cancel-button]:appearance-none"
           />
           {globalFilter && (
             <button
               type="button"
               onClick={() => setGlobalFilter('')}
               aria-label="Clear search"
-              className="absolute inset-y-0 right-0 w-11 flex items-center justify-center text-secondary hover:text-white transition-colors"
+              className="absolute inset-y-0 right-0 w-11 flex items-center justify-center text-secondary hover:text-site-ink transition-colors"
             >
               <X size={16} />
             </button>
@@ -586,13 +333,13 @@ function FullResults({ results, event, categoryParam }: Props & { categoryParam:
       <div className="flex items-center justify-between gap-3 mb-5 md:mb-6">
         <p ref={countRef} tabIndex={-1} className="text-sm text-secondary focus:outline-none" aria-live="polite">
           {matching === results.length
-            ? <><span className="font-medium text-white">{results.length.toLocaleString()}</span> finishers</>
-            : <><span className="font-medium text-white">{matching.toLocaleString()}</span> of {results.length.toLocaleString()} finishers</>}
+            ? <><span className="font-medium text-site-ink">{results.length.toLocaleString()}</span> finishers</>
+            : <><span className="font-medium text-site-ink">{matching.toLocaleString()}</span> of {results.length.toLocaleString()} finishers</>}
         </p>
         <button
           type="button"
           onClick={clearFilters}
-          className={`group -my-2.5 -mr-3 h-11 shrink-0 inline-flex items-center gap-1.5 px-3 rounded-xl text-sm font-medium text-accent-blue hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue/60 transition-[opacity,visibility,color] duration-200 motion-reduce:transition-none ${isFiltered ? 'opacity-100 visible' : 'opacity-0 invisible'}`}
+          className={`group -my-2.5 -mr-3 h-11 shrink-0 inline-flex items-center gap-1.5 px-3 rounded-xl text-sm font-medium text-site-accent hover:text-site-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue/60 transition-[opacity,visibility,color] duration-200 motion-reduce:transition-none ${isFiltered ? 'opacity-100 visible' : 'opacity-0 invisible'}`}
         >
           <X size={14} aria-hidden="true" className="transition-transform duration-200 group-hover:rotate-90 motion-reduce:transition-none" />
           Clear filters
@@ -603,24 +350,23 @@ function FullResults({ results, event, categoryParam }: Props & { categoryParam:
             and between md and lg the table overflowed its card behind a
             hidden scrollbar, cutting the Actions column off with nothing to
             say it was there. The cards cover those widths instead. */}
-        <div className="hidden lg:block relative rounded-[24px] bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.08] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)] mb-8 overflow-hidden group hover:border-white/[0.12] transition-colors duration-500">
-          <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-accent-blue/5 rounded-full blur-[100px] pointer-events-none"></div>
+        <div className="hidden lg:block relative rounded-[14px] bg-site-card border border-site-line mb-8 overflow-hidden group hover:border-site-ink transition-colors duration-500">
 
           <div className="relative z-10 overflow-x-auto overflow-y-hidden">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-white/[0.08] bg-black/40">
+                <tr className="border-b border-site-line bg-site-card">
                   {table.getFlatHeaders().map((header) => {
                     if (header.id === 'gender') return null; // Hide raw gender column on desktop (merged with name)
                     return (
-                      <th key={header.id} className="px-4 xl:px-5 py-5 text-xs font-bold text-secondary uppercase tracking-[0.1em] whitespace-nowrap">
+                      <th key={header.id} className="px-4 xl:px-5 py-5 text-sm font-semibold text-site-muted whitespace-nowrap">
                         {header.isPlaceholder ? null : header.column.columnDef.header as React.ReactNode}
                       </th>
                     );
                   })}
                 </tr>
               </thead>
-              <tbody className={`t-stagger ${mounted ? 'is-shown' : ''}`}>
+              <tbody>
                 {rows.length === 0 ? (
                   <tr>
                     <td colSpan={table.getVisibleLeafColumns().length - 1} className="p-12 text-center text-secondary/50 italic font-medium">
@@ -634,7 +380,7 @@ function FullResults({ results, event, categoryParam }: Props & { categoryParam:
                     return (
                       <tr
                         key={row.id}
-                        className="group/row border-b border-white/[0.03] hover:bg-white/[0.04] focus-visible:bg-white/[0.04] focus-visible:outline-none transition-colors duration-300 cursor-pointer"
+                        className="group/row border-b border-site-line hover:bg-site-surface focus-visible:bg-site-surface focus-visible:outline-none transition-colors duration-300 cursor-pointer"
                         onClick={() => openResult(path)}
                         onKeyDown={(e) => openOnKey(e, path)}
                         onMouseEnter={() => router.prefetch(path)}
@@ -662,9 +408,9 @@ function FullResults({ results, event, categoryParam }: Props & { categoryParam:
         </div>
 
       {/* Card View — phones in one column, tablets in two. */}
-      <div className={`lg:hidden grid grid-cols-1 md:grid-cols-2 gap-3 mb-6 t-stagger ${mounted ? 'is-shown' : ''}`}>
+      <div className="lg:hidden grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
         {rows.length === 0 ? (
-          <div className="md:col-span-2 bg-black/30 border border-white/5 p-8 rounded-[20px] text-center text-secondary/70 italic">No results found matching your filters.</div>
+          <div className="md:col-span-2 bg-site-card border border-site-line p-8 rounded-[14px] text-center text-secondary/70 italic">No results found matching your filters.</div>
         ) : (
           rows.map((row, i) => {
             const r = row.original;
@@ -677,16 +423,15 @@ function FullResults({ results, event, categoryParam }: Props & { categoryParam:
                 aria-label={`Open ${r.name}'s result`}
                 onClick={() => openResult(path)}
                 onKeyDown={(e) => openOnKey(e, path)}
-                className={`block no-underline rounded-[18px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue/60 t-stagger-line t-stagger-line--${(i % 4) + 1}`}
+                className={`block no-underline rounded-[18px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue/60`}
               >
-                <div className="relative h-full rounded-[18px] bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.08] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)] p-4 hover:border-accent-blue/30 hover:bg-white/[0.06] transition-all duration-300 group/row cursor-pointer overflow-hidden">
-                  <div className="absolute top-0 right-0 w-[150px] h-[150px] bg-accent-blue/5 rounded-full blur-[50px] -mr-16 -mt-16 pointer-events-none"></div>
+                <div className="relative h-full rounded-[18px] bg-site-card border border-site-line p-4 hover:border-site-line hover:bg-site-surface transition-all duration-300 group/row cursor-pointer overflow-hidden">
 
                   <div className="flex items-start gap-3 relative z-10">
                     {/* A runner's name is untrusted length: it truncates here
                         and is spelled out in full on their own result. */}
                     <div className="flex-1 min-w-0 pt-0.5">
-                      <h3 className="font-bold text-white text-base leading-snug truncate group-hover/row:text-accent-blue transition-colors" title={r.name}>{r.name}</h3>
+                      <h3 className="font-bold text-site-ink text-base leading-snug truncate group-hover/row:text-site-accent transition-colors" title={r.name}>{r.name}</h3>
                       {/* One line, always: the chip gives way and truncates
                           rather than wrapping, so every card is one height —
                           wrapping put it on a second line for some runners
@@ -695,7 +440,7 @@ function FullResults({ results, event, categoryParam }: Props & { categoryParam:
                         <span className="flex items-center gap-1 whitespace-nowrap tabular-nums shrink-0"><Hash size={12} className="text-accent-blue/70 shrink-0" /> {r.bibNumber}</span>
                         <span className="flex items-center gap-1 whitespace-nowrap shrink-0"><User size={12} className="text-accent-blue/70 shrink-0" /> {r.gender}</span>
                         {r.isPacer && <PacerTag />}
-                        <span className="min-w-0 truncate whitespace-nowrap bg-accent-blue/10 text-accent-blue px-2 py-0.5 rounded-md text-[10px] font-bold border border-accent-blue/30" title={r.category.name}>
+                        <span className="min-w-0 truncate whitespace-nowrap bg-site-surface text-site-accent px-2 py-0.5 rounded-md text-[10px] font-bold border border-site-line" title={r.category.name}>
                           {r.category.name}
                         </span>
                       </div>
@@ -707,21 +452,21 @@ function FullResults({ results, event, categoryParam }: Props & { categoryParam:
 
                   {/* The time is what a runner opens this list for, so it
                       leads the strip and is the largest figure on the card. */}
-                  <div className="grid grid-cols-[1.35fr_1fr_1fr] gap-3 mt-4 pt-3 border-t border-white/[0.06] relative z-10">
+                  <div className="grid grid-cols-[1.35fr_1fr_1fr] gap-3 mt-4 pt-3 border-t border-site-line relative z-10">
                     <div className="min-w-0">
-                      <span className="text-[10px] uppercase tracking-wider text-secondary block mb-1">Chip Time</span>
-                      <span className="font-mono font-bold text-lg leading-none text-accent-orange tabular-nums whitespace-nowrap">{toWholeSeconds(r.chipTime)}</span>
+                      <span className="text-[10px] text-secondary block mb-1">Chip Time</span>
+                      <span className="font-mono font-bold text-lg leading-none text-site-accent tabular-nums whitespace-nowrap">{toWholeSeconds(r.chipTime)}</span>
                       {r.gunTime && (
                         <span className="block mt-1.5 text-[11px] font-mono text-secondary tabular-nums whitespace-nowrap">Gun {toWholeSeconds(r.gunTime)}</span>
                       )}
                     </div>
                     <div className="min-w-0">
-                      <span className="text-[10px] uppercase tracking-wider text-secondary block mb-1 whitespace-nowrap">Cat. Rank</span>
-                      <span className="font-mono font-bold text-base leading-none text-white tabular-nums">{rankLabel(r.categoryRank)}</span>
+                      <span className="text-[10px] text-secondary block mb-1 whitespace-nowrap">Cat. Rank</span>
+                      <span className="font-mono font-bold text-base leading-none text-site-ink tabular-nums">{rankLabel(r.categoryRank)}</span>
                     </div>
                     <div className="min-w-0">
-                      <span className="text-[10px] uppercase tracking-wider text-secondary block mb-1 whitespace-nowrap">Gender Rank</span>
-                      <span className="font-mono font-bold text-base leading-none text-white tabular-nums">{rankLabel(r.genderRank)}</span>
+                      <span className="text-[10px] text-secondary block mb-1 whitespace-nowrap">Gender Rank</span>
+                      <span className="font-mono font-bold text-base leading-none text-site-ink tabular-nums">{rankLabel(r.genderRank)}</span>
                     </div>
                   </div>
                 </div>
@@ -741,13 +486,13 @@ function FullResults({ results, event, categoryParam }: Props & { categoryParam:
               onClick={pageSizeMenu.toggle}
               aria-haspopup="true"
               aria-expanded={pageSizeMenu.isOpen}
-              className="h-10 flex items-center gap-1.5 bg-dark px-3.5 rounded-xl border border-white/10 text-white hover:border-white/30 transition-colors"
+              className="h-10 flex items-center gap-1.5 bg-dark px-3.5 rounded-xl border border-site-line text-site-ink hover:border-site-ink transition-colors"
             >
               {pageSize}
               <ChevronDown size={14} className={`transition-transform ${pageSizeMenu.isOpen ? 'rotate-180' : ''}`} />
             </button>
             <div
-              className={`t-dropdown absolute bottom-full left-0 mb-2 w-24 bg-[#1a1a20] border border-white/10 rounded-xl shadow-xl z-50 overflow-hidden ${pageSizeMenu.isOpen ? 'is-open' : ''} ${pageSizeMenu.isClosing ? 'is-closing' : ''}`}
+              className={`t-dropdown absolute bottom-full left-0 mb-2 w-24 bg-[#1a1a20] border border-site-line rounded-xl shadow-xl z-50 overflow-hidden ${pageSizeMenu.isOpen ? 'is-open' : ''} ${pageSizeMenu.isClosing ? 'is-closing' : ''}`}
               data-origin="bottom-left"
             >
               {[10, 25, 50, 100].map(size => (
@@ -755,7 +500,7 @@ function FullResults({ results, event, categoryParam }: Props & { categoryParam:
                   key={size}
                   type="button"
                   onClick={() => { turnPage(() => table.setPageSize(size)); pageSizeMenu.close(); }}
-                  className={`w-full text-left px-3 py-2.5 text-sm hover:bg-white/5 ${pageSize === size ? 'text-accent-blue font-medium bg-white/5' : 'text-white'}`}
+                  className={`w-full text-left px-3 py-2.5 text-sm hover:bg-site-surface ${pageSize === size ? 'text-site-accent font-medium bg-site-surface' : 'text-site-ink'}`}
                 >
                   {size}
                 </button>
@@ -772,8 +517,8 @@ function FullResults({ results, event, categoryParam }: Props & { categoryParam:
             <ChevronLeft size={18} />
           </button>
           <span className="text-secondary px-1.5 sm:px-2 whitespace-nowrap tabular-nums">
-            Page <span className="font-medium text-white">{pageIndex + 1}</span> of{' '}
-            <span className="font-medium text-white">{table.getPageCount() || 1}</span>
+            Page <span className="font-medium text-site-ink">{pageIndex + 1}</span> of{' '}
+            <span className="font-medium text-site-ink">{table.getPageCount() || 1}</span>
           </span>
           <button type="button" onClick={() => turnPage(() => table.nextPage())} disabled={!table.getCanNextPage()} className={pagerButton} aria-label="Next page">
             <ChevronRight size={18} />

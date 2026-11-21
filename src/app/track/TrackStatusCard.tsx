@@ -17,10 +17,10 @@ import { formatPesos } from '@/lib/money';
 type Tone = 'success' | 'pending' | 'danger' | 'muted';
 
 const TONES: Record<Tone, string> = {
-  success: 'border-emerald-400/25 bg-emerald-400/10 text-emerald-300',
-  pending: 'border-amber-400/25 bg-amber-400/10 text-amber-300',
-  danger: 'border-red-400/25 bg-red-400/10 text-red-300',
-  muted: 'border-white/10 bg-white/[0.06] text-secondary',
+  success: 'border-emerald-400/25 bg-emerald-400/10 text-[var(--status-success)]',
+  pending: 'border-amber-400/25 bg-amber-400/10 text-[var(--status-warning)]',
+  danger: 'border-red-400/25 bg-red-400/10 text-[var(--status-danger)]',
+  muted: 'border-site-line bg-site-surface text-secondary',
 };
 
 const peso = (centavos: number) => `₱${formatPesos(centavos)}`;
@@ -104,16 +104,16 @@ export default function TrackStatusCard({ view }: { view: TrackView }) {
   const copy = copyFor(status, view.event.registerHref);
 
   return (
-    <section aria-labelledby="track-status-title" className="rounded-[20px] border border-white/[0.08] bg-white/[0.03] p-5 sm:p-6">
+    <section aria-labelledby="track-status-title" className="rounded-[14px] border border-site-line bg-site-surface p-5 sm:p-6">
       <div className="flex items-start gap-4">
         <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] border ${TONES[copy.tone]}`}>
           {copy.icon}
         </div>
         <div className="min-w-0 flex-1">
-          <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide ${TONES[copy.tone]}`}>
+          <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-bold tracking-wide ${TONES[copy.tone]}`}>
             {copy.badge}
           </span>
-          <h2 id="track-status-title" className="mb-1 mt-2 text-lg font-black uppercase tracking-wide text-white">
+          <h2 id="track-status-title" className="mb-1 mt-2 text-lg font-semibold tracking-wide text-site-ink">
             {copy.title}
           </h2>
           <p className="m-0 text-sm leading-relaxed text-secondary">{copy.body}</p>
@@ -126,7 +126,7 @@ export default function TrackStatusCard({ view }: { view: TrackView }) {
       {status.kind === 'unpaid' && status.payUrl && (
         <a
           href={status.payUrl}
-          className="btn-gradient group mt-5 w-full no-underline shadow-xl shadow-accent-orange/20"
+          className="btn-gradient group mt-5 w-full no-underline"
         >
           <span>Complete Payment</span>
           <ChevronRight size={18} aria-hidden="true" className="shrink-0 transition-transform group-hover:translate-x-1" />
@@ -139,14 +139,14 @@ export default function TrackStatusCard({ view }: { view: TrackView }) {
       )}
 
       {view.pending.length > 0 && (
-        <ul className="m-0 mt-5 flex list-none flex-col gap-3 border-t border-white/[0.06] p-0 pt-5">
+        <ul className="m-0 mt-5 flex list-none flex-col gap-3 border-t border-site-line p-0 pt-5">
           {view.pending.map(item => (
             <li key={`${item.kind}-${item.title}`} className="rounded-[14px] border border-amber-400/20 bg-amber-400/[0.05] p-4">
-              <p className="m-0 text-xs font-bold uppercase tracking-wide text-amber-300">
+              <p className="m-0 text-xs font-bold tracking-wide text-[var(--status-warning)]">
                 {item.kind === 'category' ? 'Category change' : 'Delivery switch'}
                 {item.proofSubmitted ? ' · for validation' : ' · awaiting payment'}
               </p>
-              <p className="m-0 mt-1 break-words text-sm font-semibold text-white">{item.title}</p>
+              <p className="m-0 mt-1 break-words text-sm font-semibold text-site-ink">{item.title}</p>
               <p className="m-0 mt-1 text-sm text-secondary">
                 {item.proofSubmitted
                   ? `We received your proof of payment for ${peso(item.amount)} and are checking it.`
