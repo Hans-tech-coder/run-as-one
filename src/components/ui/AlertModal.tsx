@@ -106,9 +106,11 @@ export default function AlertModal({
 
   return (
     <div
-      className={`fixed inset-0 flex items-center justify-center p-4 bg-[var(--dash-scrim)] backdrop-blur-sm transition-opacity duration-200 ${
+      className={`alert-modal fixed inset-0 flex items-center justify-center p-4 bg-[var(--dash-scrim)] backdrop-blur-sm transition-opacity duration-200 ${
         open && !closing ? "opacity-100" : "opacity-0"
       }`}
+      /* `alert-modal` is the hook checkout-paper.css lights it by on a checkout
+         page, where it renders outside the Paper frame. */
       /* Above .modal-overlay (9999/10000) so an alert raised from inside the
          size guide or a bank-details modal is not painted underneath it. */
       style={{ zIndex: 10050 }}

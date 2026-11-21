@@ -271,19 +271,19 @@ function RegistrationClosed({
   icon: React.ReactNode;
 }) {
   return (
-    <div className="relative flex w-full flex-col items-center overflow-hidden">
-      <div className="relative z-10 flex w-full max-w-2xl flex-col items-center">
+    <div className="checkout-notice flex w-full flex-col items-center py-10 sm:py-16">
+      <div className="flex w-full max-w-2xl flex-col items-center">
         <StatusPanel>
           <div className="flex flex-col items-center text-center">
             <IconBadge>{icon}</IconBadge>
 
-            <p className="mb-3 mt-6 text-xs font-bold uppercase tracking-[0.3em] text-secondary">
+            <p className="mb-2 mt-6 text-sm font-semibold text-site-accent">
               {event.title}
             </p>
-            <h1 className="mb-3 bg-gradient-to-r from-white to-white/60 bg-clip-text text-2xl font-black uppercase tracking-wide text-transparent text-balance sm:text-3xl">
+            <h1 className="site-h2 mb-3">
               {heading}
             </h1>
-            <p className="m-0 max-w-md text-base leading-relaxed text-secondary">
+            <p className="m-0 max-w-md text-base leading-relaxed text-site-muted">
               {message}
             </p>
           </div>
@@ -291,7 +291,7 @@ function RegistrationClosed({
           <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:flex-wrap">
             <Link
               href={`/events/${event.slug}`}
-              className="btn-gradient group w-full shrink-0 justify-center whitespace-nowrap rounded-[16px] px-8 py-4 text-center text-base no-underline shadow-xl shadow-accent-orange/20 sm:w-auto"
+              className="site-btn site-btn--action group w-full shrink-0 whitespace-nowrap no-underline sm:w-auto"
             >
               <span>Back To This Event</span>
               <ChevronRight
@@ -302,7 +302,7 @@ function RegistrationClosed({
             </Link>
             <Link
               href="/events"
-              className="btn-secondary w-full shrink-0 whitespace-nowrap text-center sm:w-auto"
+              className="site-btn site-btn--quiet w-full shrink-0 whitespace-nowrap sm:w-auto"
             >
               <span>Browse Other Races</span>
             </Link>

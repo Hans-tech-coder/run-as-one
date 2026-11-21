@@ -65,7 +65,7 @@ export default async function SwitchPayPage({
     requestHeaders.get('x-forwarded-for')?.split(',')[0]?.trim() ||
     requestHeaders.get('x-real-ip')?.trim() ||
     'unknown';
-  if (!allowRequest('switch-pay-page', caller, PAY_LINK_RULE)) {
+  if (!allowRequest('switch-checkout-notice', caller, PAY_LINK_RULE)) {
     return (
       <Notice
         icon={<Clock size={30} aria-hidden="true" />}
@@ -88,7 +88,7 @@ export default async function SwitchPayPage({
         title="This Link Has Expired"
         body="A kit delivery payment link lasts only as long as the switch waits for its payment. Email us if you still want your kits delivered, and we will help you."
         actions={
-          <SecondaryLink href={supportMailto(contactEmail)} icon={<Mail size={18} aria-hidden="true" className="shrink-0 text-accent-orange" />}>
+          <SecondaryLink href={supportMailto(contactEmail)} icon={<Mail size={18} aria-hidden="true" className="shrink-0" />}>
             Email Us
           </SecondaryLink>
         }
@@ -150,21 +150,21 @@ export default async function SwitchPayPage({
           <IconBadge>
             <Truck size={30} aria-hidden="true" />
           </IconBadge>
-          <p className="mb-3 mt-6 text-xs font-bold uppercase tracking-[0.3em] text-secondary">Kit delivery</p>
-          <h1 className="mb-3 bg-gradient-to-r from-white to-white/60 bg-clip-text text-2xl font-black uppercase tracking-wide text-transparent text-balance sm:text-3xl">
+          <p className="mb-2 mt-6 text-sm font-semibold text-site-accent">Kit delivery</p>
+          <h1 className="site-h2 mb-3">
             Ship Your Race Kits
           </h1>
-          <p className="m-0 max-w-md text-base leading-relaxed text-secondary">
+          <p className="m-0 max-w-md text-base leading-relaxed text-site-muted">
             Check where your kits go and who receives them, then pay the delivery fee. They stay for pickup until it is
             paid, and your confirmation comes by email.
           </p>
         </div>
 
-        <dl className="mx-auto mt-8 grid w-full max-w-md grid-cols-1 gap-0 overflow-hidden rounded-[16px] border border-white/[0.08]">
+        <dl className="mx-auto mt-8 grid w-full max-w-md grid-cols-1 gap-0 overflow-hidden rounded-[14px] border border-site-line bg-site-card">
           {rows.map(([label, value]) => (
-            <div key={label} className="flex items-baseline justify-between gap-4 border-b border-white/[0.06] px-4 py-3 last:border-b-0">
-              <dt className="shrink-0 text-sm text-secondary">{label}</dt>
-              <dd className="m-0 min-w-0 break-words text-right text-sm font-semibold text-white">{value}</dd>
+            <div key={label} className="flex items-baseline justify-between gap-4 border-b border-site-line px-4 py-3 last:border-b-0">
+              <dt className="shrink-0 text-sm text-site-muted">{label}</dt>
+              <dd className="m-0 min-w-0 break-words text-right text-sm font-semibold text-site-ink">{value}</dd>
             </div>
           ))}
         </dl>
@@ -253,8 +253,8 @@ function Closed({
 
 function Frame({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative flex w-full flex-col items-center overflow-hidden">
-      <div className="relative z-10 flex w-full max-w-2xl flex-col items-center">{children}</div>
+    <div className="checkout-notice flex w-full flex-col items-center py-10 sm:py-16">
+      <div className="flex w-full max-w-2xl flex-col items-center">{children}</div>
     </div>
   );
 }
@@ -277,11 +277,11 @@ function Notice({
       <StatusPanel>
         <div className="flex flex-col items-center text-center">
           <IconBadge>{icon}</IconBadge>
-          <p className="mb-3 mt-6 text-xs font-bold uppercase tracking-[0.3em] text-secondary">{eyebrow}</p>
-          <h1 className="mb-3 bg-gradient-to-r from-white to-white/60 bg-clip-text text-2xl font-black uppercase tracking-wide text-transparent text-balance sm:text-3xl">
+          <p className="mb-2 mt-6 text-sm font-semibold text-site-accent">{eyebrow}</p>
+          <h1 className="site-h2 mb-3">
             {title}
           </h1>
-          <p className="m-0 max-w-md text-base leading-relaxed text-secondary">{body}</p>
+          <p className="m-0 max-w-md text-base leading-relaxed text-site-muted">{body}</p>
         </div>
         {actions && (
           <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:flex-wrap">{actions}</div>
@@ -295,7 +295,7 @@ function PrimaryLink({ href, children }: { href: string; children: React.ReactNo
   return (
     <Link
       href={href}
-      className="btn-gradient group w-full shrink-0 justify-center whitespace-nowrap rounded-[16px] px-8 py-4 text-center text-base no-underline shadow-xl shadow-accent-orange/20 sm:w-auto"
+      className="site-btn site-btn--action group w-full shrink-0 whitespace-nowrap no-underline sm:w-auto"
     >
       <span>{children}</span>
       <ChevronRight size={18} aria-hidden="true" className="shrink-0 transition-transform group-hover:translate-x-1" />
@@ -305,7 +305,7 @@ function PrimaryLink({ href, children }: { href: string; children: React.ReactNo
 
 function SecondaryLink({ href, icon, children }: { href: string; icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <a href={href} className="btn-secondary w-full shrink-0 whitespace-nowrap text-center sm:w-auto">
+    <a href={href} className="site-btn site-btn--quiet w-full shrink-0 whitespace-nowrap sm:w-auto">
       {icon}
       {children}
     </a>

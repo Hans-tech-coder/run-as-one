@@ -3,6 +3,7 @@ import ClientLayoutWrapper from "./ClientLayoutWrapper";
 import ThemedFavicon from "@/components/ThemedFavicon";
 import type { SiteClient } from "@/lib/site-client";
 import "./site.css";
+import "./checkout-paper.css";
 
 /**
  * The redesigned public pages' face (site.css, docs/conventions.md §9): one

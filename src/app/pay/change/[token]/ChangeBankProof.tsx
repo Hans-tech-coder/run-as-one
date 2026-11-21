@@ -36,8 +36,8 @@ export default function ChangeBankProof({
       <div className="flex flex-col gap-4">
         <div className="flex items-start gap-3 rounded-[16px] border border-emerald-400/20 bg-emerald-400/5 p-4 text-left">
           <CircleCheck size={20} className="mt-0.5 shrink-0 text-emerald-400" aria-hidden="true" />
-          <p className="m-0 text-sm leading-relaxed text-secondary">
-            We received your proof, reference <strong className="text-white [overflow-wrap:anywhere]">{submittedReference}</strong>.
+          <p className="m-0 text-sm leading-relaxed text-site-muted">
+            We received your proof, reference <strong className="text-site-ink [overflow-wrap:anywhere]">{submittedReference}</strong>.
             We check it against our account, then move you to {toCategory} and email you. Your seat stays held meanwhile.
           </p>
         </div>

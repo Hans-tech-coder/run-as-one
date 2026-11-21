@@ -1,9 +1,10 @@
 /* The public site's look ("Paper", PUBLIC_REDESIGN — docs/conventions.md §9).
 
    Why a file of its own: the redesign covers the runner-facing pages (home,
-   events, an event, results, track) and their navbar and footer, while the
-   register wizard, /pay and the other request-time pages keep the dark glass
-   look until they are redesigned too. Everything the new pages wear is here,
+   events, an event, results, track, and the checkout behind them — the
+   register wizard and /pay, which checkout-paper.css bridges onto these
+   tokens) and their navbar and footer, while the legal, feedback and 404
+   pages keep the dark glass look until they are redesigned too. Everything the new pages wear is here,
    behind tokens, so neither side can repaint the other by accident.
 
    How the two looks coexist: `ClientLayoutWrapper` puts `.site-paper` (with
@@ -23,7 +24,8 @@
 
    Contrast, measured: action #c2530a under white text 4.6:1; accent text
    #a8460a on the ground 5.2:1; muted #5d606c on the ground 5.6:1, on a card
-   6.2:1; ink on the ground 15.8:1. */
+   6.2:1; ink on the ground 15.8:1; a field's edge #8f887d on a card 3.5:1
+   (the 3:1 a control's boundary needs — the hairline is only 1.8:1). */
 
 :root {
   /* Dark defaults: the navbar and footer on a page that is not redesigned yet. */
@@ -34,6 +36,7 @@
   --site-muted: #a1a1aa;
   --site-line: rgb(255 255 255 / 0.08);
   --site-line-strong: rgb(255 255 255 / 0.18);
+  --site-field-line: rgb(255 255 255 / 0.3);
   --site-action: #ff6b00;
   --site-action-hover: #e85f00;
   --site-action-ink: #ffffff;
@@ -58,6 +61,7 @@
   --site-muted: #5d606c;
   --site-line: #e2dacd;
   --site-line-strong: #cbc1b1;
+  --site-field-line: #8f887d;
   --site-action: #c2530a;
   --site-action-hover: #a8460a;
   --site-action-ink: #ffffff;
@@ -339,8 +343,9 @@ html:has(.site-paper) { background-color: #f6f3ee; }
 .site-tabs .t-tab-count { background: color-mix(in srgb, currentColor 14%, transparent); }
 
 /* ── The older public buttons, on a Paper page ────────────────
-   `.btn-gradient` and `.btn-secondary` still serve the dark pages (the
-   wizard, /pay) and a few shared components (RacePhotoLinks, StatusPanel).
+   `.btn-gradient` and `.btn-secondary` still serve the dark pages and a few
+   shared components (RacePhotoLinks, StatusPanel), and the checkout's
+   buttons are still written with them.
    On Paper they take the `.site-btn` pair's look, so a shared component
    cannot bring a gradient pill or uppercase back onto a redesigned page. */
 .site-paper .btn-gradient,
@@ -391,7 +396,7 @@ html:has(.site-paper) { background-color: #f6f3ee; }
 .site-paper .input-group select,
 .site-paper .input-group textarea {
   background: var(--site-card);
-  border-color: var(--site-line-strong);
+  border-color: var(--site-field-line);
   border-radius: 10px;
   color: var(--site-ink);
 }

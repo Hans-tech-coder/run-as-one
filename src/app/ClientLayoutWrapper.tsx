@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation';
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import type { SiteClient } from "@/lib/site-client";
-import { isPaperPath } from "@/lib/site-look";
+import { isCheckoutPath, isPaperPath } from "@/lib/site-look";
 
 /**
  * `site` is the client whose subdomain this is, or null on the main site
@@ -13,7 +13,9 @@ import { isPaperPath } from "@/lib/site-look";
  *
  * A redesigned page (lib/site-look.ts) gets the Paper frame: `.site-paper`
  * with `data-theme="light"`, which site.css explains. Every other public page
- * keeps the dark look it was built in.
+ * keeps the dark look it was built in. The checkout (the register wizard and
+ * /pay) is Paper as well and is also marked `.site-checkout`, the scope
+ * checkout-paper.css repoints its older palette utilities inside.
  */
 export default function ClientLayoutWrapper({
   site,
@@ -32,10 +34,11 @@ export default function ClientLayoutWrapper({
   }
 
   const paper = isPaperPath(pathname);
+  const checkout = paper && isCheckoutPath(pathname);
 
   return (
     <div
-      className={paper ? `site-paper ${fontClass}` : fontClass}
+      className={paper ? `site-paper${checkout ? ' site-checkout' : ''} ${fontClass}` : fontClass}
       data-theme={paper ? 'light' : undefined}
     >
       {/* The navbar is fixed, so it sits outside the column and contributes no

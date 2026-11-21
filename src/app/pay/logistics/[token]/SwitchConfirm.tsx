@@ -135,14 +135,14 @@ export default function SwitchConfirm(props: SwitchConfirmProps) {
           showErrors={showErrors}
           defaultCountry={DEFAULT_COUNTRY}
         />
-        <div className="flex items-baseline justify-between gap-4 rounded-[16px] border border-white/[0.08] px-4 py-3">
-          <span className="text-sm text-secondary">
+        <div className="flex items-baseline justify-between gap-4 rounded-[14px] border border-site-line bg-site-card px-4 py-3">
+          <span className="text-sm text-site-muted">
             {props.onlineMethod && plan.fee > 0 ? 'Delivery and transaction fee' : 'Delivery fee'}
           </span>
           {plan.fee > 0 ? (
-            <span className="text-lg font-black tabular-nums text-white">{peso(previewTotal)}</span>
+            <span className="text-lg font-semibold tabular-nums text-site-ink">{peso(previewTotal)}</span>
           ) : (
-            <span className="text-sm text-secondary">Fill in the address to see it</span>
+            <span className="text-sm text-site-muted">Fill in the address to see it</span>
           )}
         </div>
         {error && (
@@ -154,7 +154,7 @@ export default function SwitchConfirm(props: SwitchConfirmProps) {
           type="button"
           onClick={confirm}
           disabled={busy}
-          className="btn-gradient justify-center rounded-[16px] px-8 py-4 text-base shadow-xl shadow-accent-orange/20 disabled:opacity-60"
+          className="btn-gradient justify-center rounded-[16px] px-8 py-4 text-base disabled:opacity-60"
         >
           {busy ? <BusyLabel>Saving</BusyLabel> : 'Confirm Details'}
         </button>
@@ -169,7 +169,7 @@ export default function SwitchConfirm(props: SwitchConfirmProps) {
     <div className="flex flex-col gap-6 text-left">
       <StepLabel n={2} title={proofIn ? 'Payment proof submitted' : 'Pay for the delivery'} />
 
-      <dl className="m-0 grid grid-cols-1 overflow-hidden rounded-[16px] border border-white/[0.08]">
+      <dl className="m-0 grid grid-cols-1 overflow-hidden rounded-[14px] border border-site-line bg-site-card">
         <Row label="Ships to" value={details.place || 'The address on your order'} />
         {details.landmark && <Row label="Landmark" value={details.landmark} />}
         <Row
@@ -184,7 +184,7 @@ export default function SwitchConfirm(props: SwitchConfirmProps) {
                 setError(null);
                 setStep('details');
               }}
-              className="inline-flex min-h-[44px] items-center gap-2 text-sm font-semibold text-accent-orange transition-colors hover:text-white"
+              className="inline-flex min-h-[44px] items-center gap-2 text-sm font-semibold text-accent-orange transition-colors hover:text-site-ink"
             >
               <Pencil size={14} aria-hidden="true" /> Edit details
             </button>
@@ -192,12 +192,12 @@ export default function SwitchConfirm(props: SwitchConfirmProps) {
         )}
       </dl>
 
-      <dl className="m-0 grid grid-cols-1 overflow-hidden rounded-[16px] border border-white/[0.08]">
+      <dl className="m-0 grid grid-cols-1 overflow-hidden rounded-[14px] border border-site-line bg-site-card">
         <Row label="Delivery fee" value={peso(saved.fee)} />
         {saved.totalCharged > saved.fee && <Row label="Transaction fee" value={peso(saved.totalCharged - saved.fee)} />}
-        <div className="flex items-baseline justify-between gap-4 bg-white/[0.03] px-4 py-4">
-          <dt className="text-sm font-bold uppercase tracking-wide text-secondary">Amount due</dt>
-          <dd className="m-0 text-xl font-black tabular-nums text-white">{amount}</dd>
+        <div className="flex items-baseline justify-between gap-4 bg-site-surface px-4 py-4">
+          <dt className="text-sm font-semibold text-site-ink">Amount due</dt>
+          <dd className="m-0 text-xl font-semibold tabular-nums text-site-ink">{amount}</dd>
         </div>
       </dl>
 
@@ -205,7 +205,7 @@ export default function SwitchConfirm(props: SwitchConfirmProps) {
         props.onlineMethod ? (
           <div className="flex flex-col items-stretch gap-3">
             <PayNowButton token={props.token} amount={amount} kind="switch" />
-            <p className="m-0 text-center text-xs leading-relaxed text-secondary">
+            <p className="m-0 text-center text-xs leading-relaxed text-site-muted">
               You will be taken to PayMongo to pay. Any payment page opened for this switch before stops working once you
               press Pay now.
             </p>
@@ -219,8 +219,8 @@ export default function SwitchConfirm(props: SwitchConfirmProps) {
         <div className="flex flex-col gap-4">
           <div className="flex items-start gap-3 rounded-[16px] border border-emerald-400/20 bg-emerald-400/5 p-4">
             <CircleCheck size={20} className="mt-0.5 shrink-0 text-emerald-400" aria-hidden="true" />
-            <p className="m-0 text-sm leading-relaxed text-secondary">
-              We received your proof, reference <strong className="text-white">{props.submittedReference}</strong>. We
+            <p className="m-0 text-sm leading-relaxed text-site-muted">
+              We received your proof, reference <strong className="text-site-ink">{props.submittedReference}</strong>. We
               check it against our account, then switch your kits to delivery and email you.
             </p>
           </div>
@@ -239,7 +239,7 @@ export default function SwitchConfirm(props: SwitchConfirmProps) {
       )}
 
       {!proofIn && (
-        <p className="m-0 text-center text-xs leading-relaxed text-secondary">
+        <p className="m-0 text-center text-xs leading-relaxed text-site-muted">
           Changed your mind? Do nothing, or reply to our email. Your kits stay for pickup until this is paid.
         </p>
       )}
@@ -264,8 +264,8 @@ function StepLabel({ n, title }: { n: number; title: string }) {
   return (
     <div className="flex flex-col gap-5">
       <StepRail labels={STEP_LABELS} current={n - 1} ariaLabel="Delivery switch progress" />
-      <h2 className="m-0 text-lg font-bold text-white">
-        <span className="text-secondary">Step {n} of {STEP_LABELS.length} · </span>
+      <h2 className="m-0 text-lg font-bold text-site-ink">
+        <span className="text-site-muted">Step {n} of {STEP_LABELS.length} · </span>
         {title}
       </h2>
     </div>
@@ -274,9 +274,9 @@ function StepLabel({ n, title }: { n: number; title: string }) {
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-baseline justify-between gap-4 border-b border-white/[0.06] px-4 py-3 last:border-b-0">
-      <dt className="shrink-0 text-sm text-secondary">{label}</dt>
-      <dd className="m-0 min-w-0 break-words text-right text-sm font-semibold text-white">{value}</dd>
+    <div className="flex items-baseline justify-between gap-4 border-b border-site-line px-4 py-3 last:border-b-0">
+      <dt className="shrink-0 text-sm text-site-muted">{label}</dt>
+      <dd className="m-0 min-w-0 break-words text-right text-sm font-semibold text-site-ink">{value}</dd>
     </div>
   );
 }

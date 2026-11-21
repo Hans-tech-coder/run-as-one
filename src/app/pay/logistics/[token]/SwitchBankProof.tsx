@@ -94,7 +94,7 @@ export default function SwitchBankProof({
 
   if (bankAccounts.length === 0) {
     return (
-      <p role="alert" className="m-0 rounded-[16px] border border-accent-orange/30 bg-accent-orange/10 p-4 text-sm text-white">
+      <p role="alert" className="m-0 rounded-[16px] border border-accent-orange/30 bg-accent-orange/10 p-4 text-sm text-site-ink">
         The accounts to pay into are not ready yet. Reply to our email and we will send you where to pay.
       </p>
     );
@@ -104,8 +104,8 @@ export default function SwitchBankProof({
     <div className="flex flex-col gap-5">
       <div className="flex items-start gap-3 rounded-[16px] border border-accent-blue/20 bg-accent-blue/5 p-4">
         <Landmark size={20} className="mt-0.5 shrink-0 text-accent-blue" aria-hidden="true" />
-        <p className="m-0 text-sm leading-relaxed text-secondary">
-          Send exactly <strong className="text-white">{amount}</strong> by GCash or bank transfer to one of these
+        <p className="m-0 text-sm leading-relaxed text-site-muted">
+          Send exactly <strong className="text-site-ink">{amount}</strong> by GCash or bank transfer to one of these
           accounts, then upload the screenshot of your payment and its reference number.
         </p>
       </div>
@@ -116,10 +116,10 @@ export default function SwitchBankProof({
             key={account.id}
             type="button"
             onClick={() => setBank(account)}
-            className="min-h-[44px] rounded-[16px] border border-white/10 bg-black/40 p-4 text-center transition-colors hover:border-accent-blue hover:bg-white/5"
+            className="min-h-[44px] rounded-[14px] border border-site-line bg-site-card p-4 text-center transition-colors hover:border-accent-blue hover:bg-site-surface"
           >
-            <span className="block text-lg font-bold text-white">{account.bankName}</span>
-            <span className="block text-sm text-secondary">
+            <span className="block text-lg font-bold text-site-ink">{account.bankName}</span>
+            <span className="block text-sm text-site-muted">
               {account.qrImageUrl ? 'Tap for the number and QR' : 'Tap for the account number'}
             </span>
           </button>
@@ -128,7 +128,7 @@ export default function SwitchBankProof({
 
       <div>
         {!file ? (
-          <div className="relative rounded-[16px] border-2 border-dashed border-white/20 bg-black/20 p-6 text-center transition-colors hover:border-white/40 hover:bg-white/5">
+          <div className="relative rounded-[14px] border-2 border-dashed border-[var(--site-line-strong)] bg-site-card p-6 text-center transition-colors hover:border-site-ink hover:bg-site-surface">
             <input
               id="switch-proof"
               type="file"
@@ -143,26 +143,26 @@ export default function SwitchBankProof({
               className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
             />
             <UploadCloud size={30} className="mx-auto mb-2 text-accent-blue" aria-hidden="true" />
-            <p className="m-0 font-bold text-white">Upload the screenshot of your payment</p>
-            <p className="m-0 mt-1 text-xs text-secondary">
+            <p className="m-0 font-bold text-site-ink">Upload the screenshot of your payment</p>
+            <p className="m-0 mt-1 text-xs text-site-muted">
               {describeUploadTypes('proof')} (max {MAX_UPLOAD_MB}MB)
             </p>
           </div>
         ) : (
-          <div className="flex items-center justify-between gap-3 rounded-[16px] border border-white/10 bg-white/5 p-4">
+          <div className="flex items-center justify-between gap-3 rounded-[14px] border border-site-line bg-site-surface p-4">
             <div className="flex min-w-0 items-center gap-3">
               {file.type === PDF_TYPE ? (
                 <FileText size={22} className="shrink-0 text-accent-blue" aria-hidden="true" />
               ) : (
                 <FileImage size={22} className="shrink-0 text-accent-blue" aria-hidden="true" />
               )}
-              <span className="min-w-0 break-words text-sm font-semibold text-white">{file.name}</span>
+              <span className="min-w-0 break-words text-sm font-semibold text-site-ink">{file.name}</span>
             </div>
             <button
               type="button"
               onClick={() => setFile(null)}
               aria-label="Remove the screenshot"
-              className="inline-flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full text-secondary transition-colors hover:bg-red-500/10 hover:text-red-400"
+              className="inline-flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full text-site-muted transition-colors hover:bg-red-500/10 hover:text-red-400"
             >
               <X size={20} aria-hidden="true" />
             </button>
@@ -213,7 +213,7 @@ export default function SwitchBankProof({
           type="button"
           onClick={submit}
           disabled={busy}
-          className="btn-gradient justify-center rounded-[16px] px-8 py-4 text-base shadow-xl shadow-accent-orange/20 disabled:opacity-60"
+          className="btn-gradient justify-center rounded-[16px] px-8 py-4 text-base disabled:opacity-60"
         >
           {busy ? <BusyLabel>Sending</BusyLabel> : replacing ? 'Replace My Proof' : 'Submit My Proof'}
         </button>

@@ -823,14 +823,15 @@
   Export to CSV. Everything else in that row (Category, Logistics, Payment,
   View, Unsent Email) stays a dark `.btn-filter` chip, and a destructive one
   like Delete Selected keeps its red. The orange gradient
-  (`.btn-gradient`) keeps the surfaces a runner sees: the public site, the
-  registration wizard, and the `/admin/login` and `/admin/register` sign-in
-  CTAs. Do not add Tailwind padding or flex utilities on top of
+  (`.btn-gradient`) keeps the dark surfaces a runner sees: the legal,
+  feedback and 404 pages, and the `/admin/login` and `/admin/register`
+  sign-in CTAs. Do not add Tailwind padding or flex utilities on top of
   `.btn-light` — sizing it per site is what made the admin uneven before.
   **The redesigned public pages no longer wear the gradient** — they use
   `.site-btn` (see "The public site is Paper" below); `.btn-gradient` stays on
-  the dark pages (the wizard, `/pay`, the sign-in cards) and is restyled solid
-  wherever it appears inside a Paper frame.
+  the dark pages (legal, feedback, the 404, the sign-in cards) and is restyled
+  solid wherever it appears inside a Paper frame — which is how the checkout's
+  buttons (the wizard, `/pay`) wear the one solid action.
 - **The public site's quiet button is `.btn-secondary`** (`globals.css`).
   Wherever a runner is offered a second way forward beside the gradient —
   *Browse Other Races* on the registration gate and the event page's on-hold
@@ -878,11 +879,50 @@
   gradients, no glass, no glow orbs. It replaced the dark glassmorphic look and
   its gradient pills, which the public-site audit called out as template tells.
   - **Where it applies is one list:** `isPaperPath()` in `lib/site-look.ts` —
-    `/`, `/events`, `/events/[slug]` (not its `/register`), `/results/**`,
-    `/track/**`. `ClientLayoutWrapper` puts `.site-paper` with
-    `data-theme="light"` on those pages' frame. The register wizard, `/pay`,
-    `/feedback`, the legal pages, `/coming-soon` and the 404 **stay dark** until
-    they are redesigned; adding one is a line in that list plus its page work.
+    `/`, `/events`, `/events/[slug]`, its `/register` wizard, `/pay/**`,
+    `/results/**`, `/track/**`. `ClientLayoutWrapper` puts `.site-paper` with
+    `data-theme="light"` on those pages' frame. `/feedback`, the legal pages,
+    `/coming-soon` and the 404 **stay dark** until they are redesigned; adding
+    one is a line in that list plus its page work.
+  - **The checkout is Paper too** (2026-11-21), so a runner never walks off the
+    light event page into a dark checkout at the step where they pay.
+    `isCheckoutPath()` (the wizard and `/pay/**`) adds **`.site-checkout`** to
+    the frame, and **`src/app/checkout-paper.css`** does the work:
+    - **A palette bridge, not a rewrite.** The wizard's components were built
+      for the dark look in Tailwind's palette (`text-white`, `border-white/10`,
+      `bg-black/40`, `text-red-400`, `emerald`/`amber`), and the two wizards are
+      1,870-line split candidates. Inside `.site-checkout` those palette
+      variables point at Paper: *white* is the ink, *black* the card, red /
+      green / amber the light frame's deepened status colours, `--accent-orange`
+      the accent text (#a8460a) and `--accent-blue` Paper's link blue. A white
+      label meant to stay white on an orange fill is the one exception, named
+      there. **New checkout code reads `--site-*` tokens directly** — the
+      bridge is for the code already there, and it reaches nothing outside the
+      mark (the dashboard, which shares `PhoneField` and `StepRail`, never
+      carries `.site-paper`).
+    - **What a palette swap cannot reach is restyled by name:** the drawn
+      controls' `.control-shell` (the field edge, the ink focus ring, the red
+      invalid edge and fill), the `#0d0d0f` popovers (select lists, the
+      calendar, the country list), the glow orbs and coloured glows (gone),
+      the `uppercase` labels (mixed case; never a field, since names are stored
+      uppercase), the headings (Archivo 500 at its width), `.glass-panel`'s
+      radius, RegistrationWizard.css's rgba fills, the step rail, and the
+      modals (a card on a navy scrim, no blur).
+    - **Portals.** The poster lightbox, the phone's birthdate sheet, the
+      submitting overlay (`RunnerOverlay`) and the alert modal (`AlertModal`,
+      hooked by its `.alert-modal` class) render into `<body>`, outside the
+      frame; `body:has(.site-checkout)` gives them Paper's values for as long
+      as a checkout page is up.
+    - **Motion.** The columns' load stagger and the step's slide-down fade are
+      off (the fade ran as the page loaded); small reveals inside a step — the
+      guardian panel, a chosen file — keep theirs.
+    - **The `/pay` pages and the register gate** ("Registration paused" and
+      the like) read tokens outright: `.site-h2` title, the eyebrow in
+      `text-site-accent`, the details on a `bg-site-card` list with a
+      `bg-site-surface` total row, and the `.site-btn` pair.
+    - **A field's edge is `--site-field-line`** (#8f887d, 3.5:1 on a card —
+      the 3:1 a control's boundary needs; the hairline is 1.8:1). It is the
+      `.input-group` edge on every Paper page, not only the checkout.
   - **Everything reads tokens** (`src/app/site.css`, imported by `SiteFrame`):
     `--site-bg`, `--site-surface`, `--site-card`, `--site-ink`, `--site-muted`,
     `--site-line(-strong)`, `--site-action(-hover/-ink)`, `--site-accent-text`,
