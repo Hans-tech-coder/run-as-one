@@ -815,10 +815,179 @@ html:has(.site-paper) { background-color: #f6f3ee; }
 }
 .feedback-mail:hover { color: var(--site-accent-text); }
 
+/* The route loader and the running figure's caption on Paper: the paper
+   ground with no blue glow behind the figure, and a mixed-case caption. */
+.site-paper .public-route-loading__stage { background: var(--site-bg); }
+:is(.site-paper, .site-portal) .t-runner__caption {
+  font-family: var(--site-text);
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* ── Paper on portals ─────────────────────────────────────────
+   What a Paper page opens into <body> sits outside the frame, so it would get
+   the dark `:root` defaults: the e-certificate (`.site-portal`), the alert
+   modal (`.alert-modal`), the toast rail (`.toast-rail`) and the photo viewer
+   (`.zoom-lightbox` — the poster, the highlights, the size chart). They get
+   Paper's values here for as long as a Paper page is up. The dashboard never
+   carries `.site-paper`, so its alerts keep their own look. Archivo's
+   variable reaches <body> from ClientLayoutWrapper. checkout-paper.css's
+   older bridge still covers the checkout's own modals on top of this. */
+body:has(.site-paper[data-theme]) :is(.site-portal, .alert-modal, .toast-rail, .zoom-lightbox) {
+  --site-bg: #f6f3ee;
+  --site-surface: #ebe5da;
+  --site-card: #fffdf9;
+  --site-ink: #14192b;
+  --site-muted: #5d606c;
+  --site-line: #e2dacd;
+  --site-line-strong: #cbc1b1;
+  --site-field-line: #8f887d;
+  --site-action: #c2530a;
+  --site-action-hover: #a8460a;
+  --site-action-ink: #ffffff;
+  --site-accent-text: #a8460a;
+  --site-blue-text: #0057c2;
+  --site-focus: #0057c2;
+  --site-display: var(--font-archivo), system-ui, sans-serif;
+  --site-text: var(--font-archivo), system-ui, sans-serif;
+  --site-display-stretch: 110%;
+  --site-scrim: rgb(20 25 43 / 0.42);
+  --site-lift: 0 24px 50px -20px rgb(20 25 43 / 0.4);
+  --status-success: #2f7d0f;
+  --status-warning: #9a5b00;
+  --status-danger: #c8282b;
+  /* The names the shared alert and toast read (AlertModal's variant table). */
+  --ink: var(--site-ink);
+  --text-primary: var(--site-ink);
+  --text-secondary: var(--site-muted);
+  --text-muted: var(--site-muted);
+  --glass-border: var(--site-line);
+  --accent-blue: var(--site-blue-text);
+  --accent-orange: var(--site-accent-text);
+  --color-red-500: var(--status-danger);
+  --color-red-600: #a31f22;
+  --color-green-500: var(--status-success);
+  --color-green-600: #256509;
+  --dash-panel-solid: var(--site-card);
+  --dash-scrim: var(--site-scrim);
+  --dash-hairline: var(--site-line);
+  --dash-border: var(--site-line-strong);
+  --ink-05: color-mix(in srgb, var(--site-ink) 5%, transparent);
+  --ink-10: color-mix(in srgb, var(--site-ink) 10%, transparent);
+  --ink-85: color-mix(in srgb, var(--site-ink) 85%, transparent);
+  color-scheme: light;
+  font-family: var(--site-text);
+}
+
+/* A modal on Paper: a card on a navy scrim, no blur, no glow. The
+   e-certificate wears it (components/ECertificate.tsx); a bottom sheet on a
+   phone, a centred card from sm up. */
+.site-scrim { position: absolute; inset: 0; background: var(--site-scrim); }
+.site-modal {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  overflow: clip;
+  background: var(--site-card);
+  color: var(--site-ink);
+  border: 1px solid var(--site-line);
+  border-bottom: 0;
+  border-radius: 14px 14px 0 0;
+  box-shadow: var(--site-lift);
+}
+@media (min-width: 640px) {
+  .site-modal { border-bottom: 1px solid var(--site-line); border-radius: 14px; }
+}
+.site-modal__head,
+.site-modal__foot { display: flex; gap: 0.75rem; padding: 1rem 1.25rem; }
+.site-modal__head { align-items: center; justify-content: space-between; border-bottom: 1px solid var(--site-line); }
+.site-modal__foot {
+  flex-direction: column;
+  border-top: 1px solid var(--site-line);
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+@media (min-width: 640px) {
+  /* The action reads first in the markup and sits rightmost on a wide screen. */
+  .site-modal__foot { flex-direction: row-reverse; justify-content: flex-start; padding-bottom: 1rem; }
+}
+.site-modal__title {
+  margin: 0;
+  min-width: 0;
+  font-family: var(--site-display);
+  font-stretch: var(--site-display-stretch);
+  font-size: 1.25rem;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+.site-modal__close {
+  display: inline-flex;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--site-muted);
+  cursor: pointer;
+  transition: background-color var(--duration-quick) ease, color var(--duration-quick) ease;
+}
+.site-modal__close:hover { background: var(--site-surface); color: var(--site-ink); }
+.site-portal :focus-visible { outline: 2px solid var(--site-focus); outline-offset: 2px; }
+
+/* The shared alert and toasts (components/ui/AlertModal, Toast) on Paper. */
+body:has(.site-paper[data-theme]) .alert-modal {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+body:has(.site-paper[data-theme]) .alert-modal .t-modal {
+  border-color: var(--site-line);
+  border-radius: 14px;
+  box-shadow: var(--site-lift);
+}
+body:has(.site-paper[data-theme]) .alert-modal h3 {
+  font-family: var(--site-display);
+  font-stretch: var(--site-display-stretch);
+  font-weight: 500;
+}
+body:has(.site-paper[data-theme]) .toast-rail .t-toast {
+  border-color: var(--site-line);
+  box-shadow: 0 16px 36px -18px rgb(20 25 43 / 0.35);
+}
+
+/* The photo viewer (components/ui/ZoomLightbox) on Paper: the photo on the
+   paper ground, the controls quiet cards, the current thumbnail in the action
+   colour. */
+body:has(.site-paper[data-theme]) .zoom-lightbox {
+  background: var(--site-bg);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+body:has(.site-paper[data-theme]) .zoom-lightbox-title { color: var(--site-ink); }
+body:has(.site-paper[data-theme]) .zoom-lightbox-count { color: var(--site-muted); }
+body:has(.site-paper[data-theme]) :is(.zoom-lightbox-btn, .zoom-lightbox-level) {
+  border-color: var(--site-line-strong);
+  background: var(--site-card);
+  color: var(--site-ink);
+}
+body:has(.site-paper[data-theme]) :is(.zoom-lightbox-btn, .zoom-lightbox-level):hover:not(:disabled) {
+  background: var(--site-surface);
+}
+body:has(.site-paper[data-theme]) .zoom-lightbox-dot {
+  border-color: var(--site-line-strong);
+  background: var(--site-surface);
+}
+body:has(.site-paper[data-theme]) .zoom-lightbox-dot.is-active { border-color: var(--site-action); }
+body:has(.site-paper[data-theme]) .zoom-lightbox-hint { background: var(--site-ink); color: var(--site-card); }
+
 @media (prefers-reduced-motion: reduce) {
   [data-enter] > * { animation: none; }
   .site-btn, .site-card, .site-card__poster img, .site-link > span, .site-link svg, .site-nav__link::after,
-  .site-card__go svg, .site-footer__social, .site-notice__more strong svg { transition: none; }
+  .site-card__go svg, .site-footer__social, .site-notice__more strong svg, .site-modal__close { transition: none; }
   .site-btn:hover, .site-card:hover, .site-footer__social:hover { transform: none; }
   .site-card:hover .site-card__poster img, .site-notice__more a:hover strong svg { transform: none; }
 }

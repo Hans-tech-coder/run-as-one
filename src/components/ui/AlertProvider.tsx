@@ -256,12 +256,14 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
         />
       )}
 
-      {/* Above the dialog (10050): a toast raised from inside a modal — a
+      {/* `toast-rail` is the hook site.css lights the toasts by on a Paper
+          page, where the rail renders outside the frame.
+          Above the dialog (10050): a toast raised from inside a modal — a
           batch generated, a code copied — is about the thing on top. The rail
           itself never takes clicks; only the toasts sitting on it do. */}
       {toasts.length > 0 && (
         <div
-          className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:bottom-6 flex flex-col items-end gap-3 pointer-events-none"
+          className="toast-rail fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:bottom-6 flex flex-col items-end gap-3 pointer-events-none"
           style={{ zIndex: 10100 }}
           aria-live="polite"
         >

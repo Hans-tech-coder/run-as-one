@@ -29,20 +29,24 @@ export default function ECertificateGenerator({ result, event }: Props) {
 
   return (
     <>
-      <button
-        onClick={generateCertificate}
-        disabled={isGenerating}
-        className="btn-gradient w-full sm:w-fit sm:min-w-[20rem] sm:px-10 mx-auto py-4 text-base sm:text-lg flex items-center justify-center gap-3 mt-6 sm:mt-8 rounded-[10px] group"
-      >
-        {isGenerating ? (
-          <BusyLabel>Generating e-certificate</BusyLabel>
-        ) : (
-          <>
-            <FileText size={22} className="group-hover:scale-110 transition-transform" />
-            View e-certificate
-          </>
-        )}
-      </button>
+      {/* A wrapper centres it: `.site-btn` is inline-flex, so mx-auto alone
+          would leave it on the left. */}
+      <div className="mt-6 sm:mt-8 text-center">
+        <button
+          onClick={generateCertificate}
+          disabled={isGenerating}
+          className="site-btn site-btn--action w-full sm:w-fit sm:min-w-[20rem]"
+        >
+          {isGenerating ? (
+            <BusyLabel>Generating e-certificate</BusyLabel>
+          ) : (
+            <>
+              <FileText size={20} aria-hidden="true" />
+              View e-certificate
+            </>
+          )}
+        </button>
+      </div>
 
       {cert.open && (
         <ECertificateModal

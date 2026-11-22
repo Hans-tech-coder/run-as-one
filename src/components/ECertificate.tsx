@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Download, Share2, FileText, X, CheckCircle2 } from 'lucide-react';
 import { useAlert } from '@/components/ui/AlertProvider';
+import RunnerLoader from '@/components/ui/RunnerLoader';
 import { toWholeSeconds } from '@/lib/race-time';
 import type { CertificateEvent, CertificateResult } from '@/lib/e-certificate';
 
@@ -59,6 +60,9 @@ export function useECertificate<R extends CertificateResult>(event: CertificateE
 
   return { open, generating, show, close };
 }
+
+/** Set once a preview has painted in this visit: the PDF viewer is started. */
+let viewerWarm = false;
 
 interface ModalProps {
   result: CertificateResult;
@@ -125,6 +129,24 @@ export function ECertificateModal({ result, event, pdfUrl, sharePath, onClose }:
     navigator.pdfViewerEnabled === true &&
     window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 
+  // The browser's PDF viewer paints inside the iframe a second or more after
+  // the iframe reports `load` (measured: `load` at ~90ms, the page visible at
+  // ~2–3s on a cold viewer), and until then the frame is a blank grey box that
+  // reads as broken. Nothing the page can listen to says the viewer has
+  // painted, so the runner figure covers the frame until it has loaded *and*
+  // a floor has passed: long on the first preview of the visit, while the
+  // viewer starts up, short once it is warm.
+  const [loaded, setLoaded] = useState(false);
+  const [floorPassed, setFloorPassed] = useState(false);
+  useEffect(() => {
+    const floor = window.setTimeout(() => setFloorPassed(true), viewerWarm ? 400 : 2800);
+    return () => window.clearTimeout(floor);
+  }, [pdfUrl]);
+  const previewReady = loaded && floorPassed;
+  useEffect(() => {
+    if (previewReady) viewerWarm = true;
+  }, [previewReady]);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -138,76 +160,78 @@ export function ECertificateModal({ result, event, pdfUrl, sharePath, onClose }:
     };
   }, [onClose]);
 
+  // Paper (site.css, "Paper on portals"): `.site-portal` gives this its
+  // tokens though it renders outside the frame. Both screens that open it are
+  // public pages.
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-6 animate-fade-in"
+      className="site-portal fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-6 animate-fade-in"
       role="dialog"
       aria-modal="true"
       aria-labelledby="ecert-title"
     >
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/90 backdrop-blur-md"
-        onClick={onClose}
-      ></div>
+      <div className="site-scrim" onClick={onClose}></div>
 
-      {/* Modal Content */}
-      <div className="relative w-full max-w-4xl rounded-t-[24px] sm:rounded-[24px] bg-dark border border-white/10 border-b-0 sm:border-b shadow-2xl overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[85dvh] animate-scale-in">
-        {/* Modal Header */}
-        <div className="flex items-center justify-between gap-3 px-5 py-4 sm:p-5 border-b border-white/[0.05] bg-black/40">
-          <h3 id="ecert-title" className="text-lg sm:text-xl font-bold text-white flex items-center gap-2 min-w-0">
-            <FileText className="text-accent-blue shrink-0" size={20} /> <span className="truncate">Official E-Certificate</span>
+      <div className="site-modal max-w-4xl max-h-[92dvh] sm:max-h-[85dvh] animate-scale-in">
+        <div className="site-modal__head">
+          <h3 id="ecert-title" className="site-modal__title flex items-center gap-2.5">
+            <FileText className="text-site-accent shrink-0" size={20} aria-hidden="true" />
+            <span className="truncate">Your e-certificate</span>
           </h3>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close certificate"
-            className="w-10 h-10 shrink-0 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-secondary hover:text-white hover:bg-white/10 transition-colors"
-          >
-            <X size={18} />
+          <button type="button" onClick={onClose} aria-label="Close certificate" className="site-modal__close">
+            <X size={20} />
           </button>
         </div>
 
-        {/* Modal Body */}
-        <div className="flex-1 p-4 md:p-6 bg-black/60 overflow-y-auto relative flex flex-col justify-center items-center min-h-0">
+        <div className="flex-1 min-h-0 overflow-y-auto bg-site-surface p-4 md:p-6 flex flex-col justify-center items-center">
           {canPreviewInline ? (
-            <iframe
-              src={`${pdfUrl}#toolbar=0&navpanes=0&view=Fit`}
-              className="w-full aspect-[1.414] max-h-full rounded-lg shadow-xl bg-white relative z-10"
-              style={{ maxHeight: 'calc(85dvh - 180px)' }}
-              title="E-Certificate Preview"
-            />
+            // Sized by the room's height so the page fills the frame: an
+            // iframe wider than the page shows the PDF viewer's own grey
+            // either side, which no page style can reach.
+            <div
+              className="relative aspect-[1.414]"
+              style={{ width: 'min(100%, calc((85dvh - 220px) * 1.414))' }}
+            >
+              <iframe
+                src={`${pdfUrl}#toolbar=0&navpanes=0&view=Fit`}
+                onLoad={() => setLoaded(true)}
+                className="block h-full w-full rounded-[6px] border border-site-line bg-site-card"
+                title="E-certificate preview"
+                aria-busy={!previewReady}
+              />
+              {!previewReady && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 rounded-[6px] border border-site-line bg-site-card px-6 text-center">
+                  <RunnerLoader
+                    size="lg"
+                    caption="Preparing your certificate"
+                    slowCaption="Almost there, the preview is still loading"
+                  />
+                  <p className="max-w-[28rem] text-sm text-site-muted text-balance">
+                    You can already download the PDF while the preview loads.
+                  </p>
+                </div>
+              )}
+            </div>
           ) : (
-            <div className="w-full rounded-[18px] border border-white/10 bg-gradient-to-br from-white/[0.06] to-white/[0.02] px-5 py-7 text-center">
-              <div className="mx-auto mb-4 w-12 h-12 rounded-[14px] bg-accent-blue/10 border border-accent-blue/20 flex items-center justify-center text-accent-blue">
-                <CheckCircle2 size={24} />
-              </div>
-              <p className="text-[11px] uppercase tracking-[0.2em] text-secondary font-bold mb-2">Certificate of Completion</p>
-              <p className="text-xl font-black text-white uppercase leading-tight text-balance break-words">{result.name}</p>
-              <p className="mt-3 font-mono text-2xl font-bold text-accent-orange tabular-nums">{toWholeSeconds(result.chipTime)}</p>
-              <p className="mt-1 text-sm text-secondary break-words">{result.category.name} · {event.title}</p>
-              <p className="mt-5 text-xs text-secondary/80 leading-relaxed text-balance">
+            <div className="w-full rounded-[12px] border border-site-line bg-site-card px-5 py-7 text-center">
+              <CheckCircle2 size={28} className="mx-auto mb-3 text-[var(--status-success)]" aria-hidden="true" />
+              <p className="text-sm font-semibold text-site-muted mb-2">Certificate of completion</p>
+              <p className="site-modal__title text-[1.375rem] text-balance break-words">{result.name}</p>
+              <p className="mt-3 font-mono text-2xl font-bold text-site-ink tabular-nums">{toWholeSeconds(result.chipTime)}</p>
+              <p className="mt-1 text-sm text-site-muted break-words">{result.category.name} · {event.title}</p>
+              <p className="mt-5 text-sm text-site-muted leading-relaxed text-balance">
                 Your certificate is ready. Download the PDF to open it in full and save it to your phone.
               </p>
             </div>
           )}
         </div>
 
-        {/* Modal Footer (Actions) */}
-        <div className="p-4 sm:p-5 pb-[max(1rem,env(safe-area-inset-bottom))] sm:pb-5 border-t border-white/[0.05] bg-black/40 flex flex-col sm:flex-row gap-3">
-          <button
-            type="button"
-            onClick={handleDownload}
-            className="btn-gradient flex-1 py-3.5 rounded-[16px] text-white font-bold flex items-center justify-center gap-2"
-          >
-            <Download size={20} /> Download PDF
+        <div className="site-modal__foot">
+          <button type="button" onClick={handleDownload} className="site-btn site-btn--action w-full sm:w-auto">
+            <Download size={18} aria-hidden="true" /> Download PDF
           </button>
-          <button
-            type="button"
-            onClick={handleShare}
-            className="flex-1 py-3.5 rounded-[16px] bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold flex items-center justify-center gap-2 transition-all duration-300"
-          >
-            <Share2 size={20} /> Share Result
+          <button type="button" onClick={handleShare} className="site-btn site-btn--quiet w-full sm:w-auto">
+            <Share2 size={18} aria-hidden="true" /> Share result
           </button>
         </div>
       </div>

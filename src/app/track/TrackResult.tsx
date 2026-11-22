@@ -36,7 +36,7 @@ export default function TrackResult({
   return (
     <div className="flex w-full flex-col gap-5">
       <header className="flex flex-col gap-2 text-center">
-        <p className="m-0 font-mono text-xs font-bold tracking-[0.2em] text-secondary">{view.orderRef}</p>
+        <p className="m-0 font-mono text-xs font-bold tracking-[0.08em] text-site-muted">{view.orderRef}</p>
         <h2
           ref={headingRef}
           tabIndex={-1}

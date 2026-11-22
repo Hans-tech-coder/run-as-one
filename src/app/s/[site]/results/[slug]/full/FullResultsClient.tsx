@@ -4,7 +4,7 @@ import React, { Suspense, useState, useMemo, useEffect, useRef, useCallback, use
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Search, User, Hash, ChevronDown, Check, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, X } from 'lucide-react';
+import { Search, User, Hash, Check, X } from 'lucide-react';
 import { toWholeSeconds } from '@/lib/race-time';
 import { runnerResultPath } from '@/lib/event-slug';
 import { compareCategoryNames } from '@/lib/category-distance';
@@ -22,7 +22,8 @@ import {
   flexRender
 } from '@tanstack/react-table';
 import { cssDurationMs } from '@/lib/css-duration';
-import { useDismissableMenu, FilterDropdown, ActionMenu } from './FullResultsMenus';
+import { FilterDropdown, ActionMenu } from './FullResultsMenus';
+import FullResultsPager from './FullResultsPager';
 
 interface Result {
   id: string;
@@ -253,7 +254,6 @@ function FullResults({ results, event, categoryParam }: Props & { categoryParam:
     countRef.current?.focus({ preventScroll: true });
   };
 
-  const pageSizeMenu = useDismissableMenu();
 
   const { pageIndex, pageSize } = table.getState().pagination;
   const rows = table.getRowModel().rows;
@@ -282,7 +282,6 @@ function FullResults({ results, event, categoryParam }: Props & { categoryParam:
     }
   };
 
-  const pagerButton = "w-10 h-10 flex items-center justify-center rounded-xl bg-dark border border-site-line text-site-ink disabled:opacity-30 disabled:cursor-not-allowed hover:bg-site-surface transition-colors";
 
   return (
     <div className="w-full">
@@ -305,7 +304,7 @@ function FullResults({ results, event, categoryParam }: Props & { categoryParam:
             onChange={(e) => setGlobalFilter(e.target.value)}
             placeholder="Search runners or bib..."
             aria-label="Search runners by name or bib number"
-            className="w-full h-11 bg-dark/50 border border-site-line rounded-xl pl-11 pr-11 text-site-ink placeholder:text-secondary/70 focus:outline-none focus:border-accent-blue transition-colors text-base sm:text-sm [&::-webkit-search-cancel-button]:appearance-none"
+            className="w-full h-11 bg-site-card border border-[var(--site-field-line)] rounded-xl pl-11 pr-11 text-site-ink placeholder:text-site-muted focus:outline-none focus:border-site-ink focus:ring-2 focus:ring-[var(--site-focus)]/25 transition-colors text-base sm:text-sm [&::-webkit-search-cancel-button]:appearance-none"
           />
           {globalFilter && (
             <button
@@ -339,7 +338,7 @@ function FullResults({ results, event, categoryParam }: Props & { categoryParam:
         <button
           type="button"
           onClick={clearFilters}
-          className={`group -my-2.5 -mr-3 h-11 shrink-0 inline-flex items-center gap-1.5 px-3 rounded-xl text-sm font-medium text-site-accent hover:text-site-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue/60 transition-[opacity,visibility,color] duration-200 motion-reduce:transition-none ${isFiltered ? 'opacity-100 visible' : 'opacity-0 invisible'}`}
+          className={`group -my-2.5 -mr-3 h-11 shrink-0 inline-flex items-center gap-1.5 px-3 rounded-xl text-sm font-medium text-site-accent hover:text-site-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--site-focus)] transition-[opacity,visibility,color] duration-200 motion-reduce:transition-none ${isFiltered ? 'opacity-100 visible' : 'opacity-0 invisible'}`}
         >
           <X size={14} aria-hidden="true" className="transition-transform duration-200 group-hover:rotate-90 motion-reduce:transition-none" />
           Clear filters
@@ -423,7 +422,7 @@ function FullResults({ results, event, categoryParam }: Props & { categoryParam:
                 aria-label={`Open ${r.name}'s result`}
                 onClick={() => openResult(path)}
                 onKeyDown={(e) => openOnKey(e, path)}
-                className={`block no-underline rounded-[18px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue/60`}
+                className={`block no-underline rounded-[18px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--site-focus)]`}
               >
                 <div className="relative h-full rounded-[18px] bg-site-card border border-site-line p-4 hover:border-site-line hover:bg-site-surface transition-all duration-300 group/row cursor-pointer overflow-hidden">
 
@@ -437,8 +436,8 @@ function FullResults({ results, event, categoryParam }: Props & { categoryParam:
                           wrapping put it on a second line for some runners
                           and not others. */}
                       <div className="flex items-center gap-2.5 mt-1.5 text-xs text-secondary min-w-0">
-                        <span className="flex items-center gap-1 whitespace-nowrap tabular-nums shrink-0"><Hash size={12} className="text-accent-blue/70 shrink-0" /> {r.bibNumber}</span>
-                        <span className="flex items-center gap-1 whitespace-nowrap shrink-0"><User size={12} className="text-accent-blue/70 shrink-0" /> {r.gender}</span>
+                        <span className="flex items-center gap-1 whitespace-nowrap tabular-nums shrink-0"><Hash size={12} className="text-site-muted shrink-0" /> {r.bibNumber}</span>
+                        <span className="flex items-center gap-1 whitespace-nowrap shrink-0"><User size={12} className="text-site-muted shrink-0" /> {r.gender}</span>
                         {r.isPacer && <PacerTag />}
                         <span className="min-w-0 truncate whitespace-nowrap bg-site-surface text-site-accent px-2 py-0.5 rounded-md text-[10px] font-bold border border-site-line" title={r.category.name}>
                           {r.category.name}
@@ -476,58 +475,7 @@ function FullResults({ results, event, categoryParam }: Props & { categoryParam:
         )}
       </div>
 
-      {/* Pagination Footer */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-12">
-        <div className="flex items-center gap-3 text-sm text-secondary">
-          <span>Rows per page:</span>
-          <div className="relative" ref={pageSizeMenu.ref}>
-            <button
-              type="button"
-              onClick={pageSizeMenu.toggle}
-              aria-haspopup="true"
-              aria-expanded={pageSizeMenu.isOpen}
-              className="h-10 flex items-center gap-1.5 bg-dark px-3.5 rounded-xl border border-site-line text-site-ink hover:border-site-ink transition-colors"
-            >
-              {pageSize}
-              <ChevronDown size={14} className={`transition-transform ${pageSizeMenu.isOpen ? 'rotate-180' : ''}`} />
-            </button>
-            <div
-              className={`t-dropdown absolute bottom-full left-0 mb-2 w-24 bg-[#1a1a20] border border-site-line rounded-xl shadow-xl z-50 overflow-hidden ${pageSizeMenu.isOpen ? 'is-open' : ''} ${pageSizeMenu.isClosing ? 'is-closing' : ''}`}
-              data-origin="bottom-left"
-            >
-              {[10, 25, 50, 100].map(size => (
-                <button
-                  key={size}
-                  type="button"
-                  onClick={() => { turnPage(() => table.setPageSize(size)); pageSizeMenu.close(); }}
-                  className={`w-full text-left px-3 py-2.5 text-sm hover:bg-site-surface ${pageSize === size ? 'text-site-accent font-medium bg-site-surface' : 'text-site-ink'}`}
-                >
-                  {size}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <nav className="flex items-center gap-1 sm:gap-2 text-sm" aria-label="Results pages">
-          <button type="button" onClick={() => turnPage(() => table.setPageIndex(0))} disabled={!table.getCanPreviousPage()} className={pagerButton} aria-label="First page">
-            <ChevronsLeft size={18} />
-          </button>
-          <button type="button" onClick={() => turnPage(() => table.previousPage())} disabled={!table.getCanPreviousPage()} className={pagerButton} aria-label="Previous page">
-            <ChevronLeft size={18} />
-          </button>
-          <span className="text-secondary px-1.5 sm:px-2 whitespace-nowrap tabular-nums">
-            Page <span className="font-medium text-site-ink">{pageIndex + 1}</span> of{' '}
-            <span className="font-medium text-site-ink">{table.getPageCount() || 1}</span>
-          </span>
-          <button type="button" onClick={() => turnPage(() => table.nextPage())} disabled={!table.getCanNextPage()} className={pagerButton} aria-label="Next page">
-            <ChevronRight size={18} />
-          </button>
-          <button type="button" onClick={() => turnPage(() => table.setPageIndex(table.getPageCount() - 1))} disabled={!table.getCanNextPage()} className={pagerButton} aria-label="Last page">
-            <ChevronsRight size={18} />
-          </button>
-        </nav>
-      </div>
+      <FullResultsPager table={table} pageIndex={pageIndex} pageSize={pageSize} turnPage={turnPage} />
 
       {cert.open && (
         <ECertificateModal

@@ -7,9 +7,9 @@ import { albumNames, cleanPhotoAlbums, type PhotoAlbum } from '@/lib/photo-album
  * event page (`RaceIsOver`) and on /results/[slug] — one component so the two
  * places a runner looks for photos always read the same.
  *
- * One album is the plain **View Race Photos**. Several sit under a *Race
+ * One album is the plain **View race photos**. Several sit under a *Race
  * Photos* heading, one button each, named by the organizer or by their site
- * (`albumNames`), because "View Race Photos" five times over would leave a
+ * (`albumNames`), because "View race photos" five times over would leave a
  * runner guessing which one holds the finish line.
  *
  * Each opens in a new tab with no window.opener: these are the organizer's
@@ -37,16 +37,16 @@ export default function RacePhotoLinks({
     </a>
   );
 
-  if (list.length === 1) return link(list[0], 'View Race Photos', true);
+  if (list.length === 1) return link(list[0], 'View race photos', true);
 
   const names = albumNames(list);
   return (
     <div role="group" aria-labelledby="race-photos-heading" className="flex w-full flex-col gap-3">
       <p
         id="race-photos-heading"
-        className={`m-0 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-secondary ${align === 'center' ? 'justify-center' : ''}`}
+        className={`m-0 flex items-center gap-2 text-sm font-semibold text-site-muted ${align === 'center' ? 'justify-center' : ''}`}
       >
-        <Camera size={14} aria-hidden="true" /> Race Photos
+        <Camera size={16} aria-hidden="true" /> Race photos
       </p>
       <div className={align === 'stretch' ? 'flex flex-col gap-3' : 'flex flex-wrap justify-center gap-3'}>
         {list.map((album, i) => link(album, names[i], false))}

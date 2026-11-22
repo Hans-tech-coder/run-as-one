@@ -960,6 +960,23 @@
     - **A field's edge is `--site-field-line`** (#8f887d, 3.5:1 on a card —
       the 3:1 a control's boundary needs; the hairline is 1.8:1). It is the
       `.input-group` edge on every Paper page, not only the checkout.
+  - **Portals on Paper** (2026-11-22). What a Paper page renders into `<body>`
+    sits outside the frame and would get the dark `:root` defaults, so
+    site.css's "Paper on portals" block gives Paper's tokens (and the light
+    names the shared alert reads: `--dash-panel-solid`, `--dash-scrim`, the ink
+    ramp, red/green as the status colours) to **`.site-portal`**, the alert
+    modal (`.alert-modal`), the toast rail (`.toast-rail`, AlertProvider) and
+    the photo viewer (`.zoom-lightbox`) under `body:has(.site-paper[data-theme])`
+    — so on a dashboard page nothing changes. `ClientLayoutWrapper` copies
+    Archivo's variable onto `<body>` while a Paper page is up, so the portals
+    get the font too. **A new public modal portalled to `<body>` carries
+    `.site-portal`** and is built from `.site-scrim` + `.site-modal`
+    (`__head`, `__title`, `__close`, `__foot`) with the `.site-btn` pair — the
+    e-certificate is the worked example. A menu that portals into
+    `.site-paper` instead (the leaderboard's Actions) needs nothing. The photo
+    viewer is the paper ground with card controls and the current thumbnail
+    ringed in the action colour; the route loader drops its blue glow and the
+    running figure's caption goes mixed case.
   - **Everything reads tokens** (`src/app/site.css`, imported by `SiteFrame`):
     `--site-bg`, `--site-surface`, `--site-card`, `--site-ink`, `--site-muted`,
     `--site-line(-strong)`, `--site-action(-hover/-ink)`, `--site-accent-text`,

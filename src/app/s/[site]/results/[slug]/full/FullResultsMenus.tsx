@@ -76,16 +76,16 @@ export function FilterDropdown({ title, options, selected, onToggle, align = 'le
         onClick={toggle}
         aria-haspopup="true"
         aria-expanded={isOpen}
-        className="w-full h-11 flex items-center justify-between sm:justify-start gap-2 bg-dark/50 border border-site-line px-4 rounded-xl text-sm text-site-ink hover:border-site-line transition-colors"
+        className="w-full h-11 flex items-center justify-between sm:justify-start gap-2 bg-site-card border border-[var(--site-field-line)] px-4 rounded-xl text-sm text-site-ink hover:border-site-ink transition-colors"
       >
         <span className="flex items-center gap-2">
-          {title} {selected.length > 0 && <span className="bg-accent-blue text-site-ink text-[10px] leading-none px-1.5 py-1 rounded-full">{selected.length}</span>}
+          {title} {selected.length > 0 && <span className="bg-site-action text-[var(--site-action-ink)] text-[10px] leading-none px-1.5 py-1 rounded-full">{selected.length}</span>}
         </span>
         <ChevronDown size={14} className={`shrink-0 transition-transform duration-[250ms] ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       <div
-        className={`t-dropdown absolute top-full mt-2 w-56 max-w-[calc(100vw-2rem)] bg-[#1a1a20] border border-site-line rounded-xl shadow-xl z-50 overflow-hidden ${align === 'right' ? 'right-0 sm:left-0 sm:right-auto' : 'left-0'} ${isOpen ? 'is-open' : ''} ${isClosing ? 'is-closing' : ''}`}
+        className={`t-dropdown absolute top-full mt-2 w-56 max-w-[calc(100vw-2rem)] bg-site-card border border-site-line rounded-xl shadow-[0_16px_36px_-18px_rgb(20_25_43/0.35)] z-50 overflow-hidden ${align === 'right' ? 'right-0 sm:left-0 sm:right-auto' : 'left-0'} ${isOpen ? 'is-open' : ''} ${isClosing ? 'is-closing' : ''}`}
         data-origin={align === 'right' ? 'top-right' : 'top-left'}
       >
         <div className="max-h-60 overflow-y-auto p-2 scrollbar-thin">
@@ -222,7 +222,7 @@ export function ActionMenu({ path, onViewCert, isGenerating }: { path: string, o
     <div
       ref={menuRef}
       onClick={(e) => e.stopPropagation()}
-      className="t-dropdown fixed w-40 bg-[#1a1a20] border border-site-line rounded-xl shadow-xl overflow-hidden"
+      className="t-dropdown fixed w-40 bg-site-card border border-site-line rounded-xl shadow-[0_16px_36px_-18px_rgb(20_25_43/0.35)] overflow-hidden"
       data-origin={placement.origin}
       style={{ top: placement.top, left: placement.left, zIndex: 9999 }}
     >

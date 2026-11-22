@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -32,6 +33,17 @@ export default function ClientLayoutWrapper({
   const pathname = usePathname();
   const isAdmin = pathname?.startsWith('/admin');
   const paper = isPaperPath(pathname);
+
+  // What a Paper page renders into <body> — the e-certificate, the alert and
+  // toasts, the photo viewer — sits outside this frame, so it would not see
+  // Archivo's variable. Carry the variable on <body> while a Paper page is up
+  // (site.css, "Paper on portals"); the dashboard never gets it.
+  useEffect(() => {
+    if (!paper) return;
+    const classes = fontClass.split(' ').filter(Boolean);
+    document.body.classList.add(...classes);
+    return () => document.body.classList.remove(...classes);
+  }, [paper, fontClass]);
 
   if (isAdmin && !paper) {
     return <>{children}</>;

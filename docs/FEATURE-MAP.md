@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-50 pages · 100 API routes · 172 modules in `src/lib` · 719 files · 125,373 lines
+50 pages · 100 API routes · 172 modules in `src/lib` · 720 files · 125,410 lines
 
 ---
 
@@ -69,7 +69,7 @@ The route, the server component behind it, and the client components beside it.
 | `/s/[site]/results` | [`/s/[site]/results/page.tsx`](../src/app/s/[site]/results/page.tsx) | — |
 | `/s/[site]/results/[slug]` | [`/s/[site]/results/[slug]/page.tsx`](../src/app/s/[site]/results/[slug]/page.tsx) | — |
 | `/s/[site]/results/[slug]/[bib]` | [`/s/[site]/results/[slug]/[bib]/page.tsx`](../src/app/s/[site]/results/[slug]/[bib]/page.tsx) | `ECertificateGenerator.tsx` |
-| `/s/[site]/results/[slug]/full` | [`/s/[site]/results/[slug]/full/page.tsx`](../src/app/s/[site]/results/[slug]/full/page.tsx) | `FullResultsClient.tsx` `FullResultsMenus.tsx` |
+| `/s/[site]/results/[slug]/full` | [`/s/[site]/results/[slug]/full/page.tsx`](../src/app/s/[site]/results/[slug]/full/page.tsx) | `FullResultsClient.tsx` `FullResultsMenus.tsx` `FullResultsPager.tsx` |
 | `/terms` | [`/terms/page.tsx`](../src/app/terms/page.tsx) | — |
 | `/track` | [`/track/page.tsx`](../src/app/track/page.tsx) | `TrackHelpCard.tsx` `TrackLookup.tsx` `TrackResult.tsx` `TrackRunnerCard.tsx` `TrackStatusCard.tsx` |
 | `/track/[token]` | [`/track/[token]/page.tsx`](../src/app/track/[token]/page.tsx) | — |
@@ -390,7 +390,6 @@ when a task touches one, split it before editing rather than after.
 | 570 | [`src/app/admin/events/[id]/registrants/PaymentCorrectionModal.tsx`](../src/app/admin/events/[id]/registrants/PaymentCorrectionModal.tsx) |
 | 567 | [`src/app/admin/NotificationsCenter.tsx`](../src/app/admin/NotificationsCenter.tsx) |
 | 550 | [`src/app/api/admin/events/[id]/update-event.ts`](../src/app/api/admin/events/[id]/update-event.ts) |
-| 544 | [`src/app/s/[site]/results/[slug]/full/FullResultsClient.tsx`](../src/app/s/[site]/results/[slug]/full/FullResultsClient.tsx) |
 | 528 | [`src/app/admin/DashboardShell.tsx`](../src/app/admin/DashboardShell.tsx) |
 | 520 | [`src/lib/promo-input.ts`](../src/lib/promo-input.ts) |
 | 520 | [`src/lib/refund-store.ts`](../src/lib/refund-store.ts) |
@@ -398,6 +397,7 @@ when a task touches one, split it before editing rather than after.
 | 509 | [`src/app/admin/communities/CommunitiesClient.tsx`](../src/app/admin/communities/CommunitiesClient.tsx) |
 | 500 | [`src/app/admin/events/[id]/registrants/ProofLightbox.tsx`](../src/app/admin/events/[id]/registrants/ProofLightbox.tsx) |
 | 499 | [`src/app/admin/AdminRouteLoading.tsx`](../src/app/admin/AdminRouteLoading.tsx) |
+| 492 | [`src/app/s/[site]/results/[slug]/full/FullResultsClient.tsx`](../src/app/s/[site]/results/[slug]/full/FullResultsClient.tsx) |
 | 478 | [`src/lib/settlement.ts`](../src/lib/settlement.ts) |
 | 477 | [`src/app/admin/events/AddOnFormModal.tsx`](../src/app/admin/events/AddOnFormModal.tsx) |
 | 476 | [`src/app/api/admin/registrations/[id]/status/route.ts`](../src/app/api/admin/registrations/[id]/status/route.ts) |

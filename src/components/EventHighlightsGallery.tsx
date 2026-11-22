@@ -40,7 +40,7 @@ export default function EventHighlightsGallery({
             <button
               type="button"
               onClick={() => setOpen(idx)}
-              className={`hl-tile relative block w-full ${single ? '' : 'aspect-[4/5] '}overflow-hidden rounded-[12px] border border-site-line bg-site-surface cursor-zoom-in focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-blue`}
+              className={`hl-tile relative block w-full ${single ? '' : 'aspect-[4/5] '}overflow-hidden rounded-[12px] border border-site-line bg-site-surface cursor-zoom-in focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--site-focus)]`}
               aria-label={`View ${h.caption || `highlight ${idx + 1}`} full screen`}
             >
               <img
@@ -50,18 +50,18 @@ export default function EventHighlightsGallery({
                 className={single ? 'hl-tile-img block w-full h-auto' : 'hl-tile-img absolute inset-0 h-full w-full object-cover'}
               />
               {/* Hover notice; see EventHighlightsGallery.css for why not hover:. */}
-              <span className="hl-tile-notice pointer-events-none absolute inset-0 flex items-center justify-center bg-black/35">
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-black/70 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-md shadow-lg">
-                  <Maximize2 size={14} /> Click to view full screen
+              <span className="hl-tile-notice pointer-events-none absolute inset-0 flex items-center justify-center bg-site-ink/35">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-site-card px-3 py-1.5 text-xs font-semibold text-site-ink">
+                  <Maximize2 size={14} aria-hidden="true" /> Click to view full screen
                 </span>
               </span>
               {/* Touch screens cannot hover: a standing badge says it opens. */}
-              <span className="hl-tile-badge pointer-events-none absolute bottom-2.5 right-2.5 h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-black/65 text-white backdrop-blur-md shadow-lg">
+              <span className="hl-tile-badge pointer-events-none absolute bottom-2.5 right-2.5 h-8 w-8 items-center justify-center rounded-full border border-site-line bg-site-card text-site-ink">
                 <Maximize2 size={14} />
               </span>
             </button>
             {h.caption && (
-              <figcaption className="pointer-events-none absolute top-2.5 right-2.5 max-w-[calc(100%-1.25rem)] truncate rounded-full border border-white/15 bg-black/65 backdrop-blur-md px-2.5 py-1 text-[11px] sm:text-xs font-semibold text-white shadow-lg">
+              <figcaption className="pointer-events-none absolute top-2.5 right-2.5 max-w-[calc(100%-1.25rem)] truncate rounded-full bg-site-ink px-2.5 py-1 text-[11px] sm:text-xs font-semibold text-site-card">
                 {h.caption}
               </figcaption>
             )}
