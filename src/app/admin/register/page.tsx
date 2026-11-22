@@ -5,11 +5,14 @@ import { publishedEvents } from '@/lib/event-visibility';
 import { pastEventsWhere } from '@/lib/past-events';
 import { FORM_SUBTITLE, FORM_TITLE } from './apply-steps';
 import RegisterClient from './RegisterClient';
+import SiteFrame from '@/app/SiteFrame';
 
 /**
  * The service inquiry, server half: only here so the page has a title of its
  * own (SERVICE_INQUIRY_PLAN.md O2). The form is `RegisterClient`. The URL
- * stays `/admin/register`, so links already shared still work.
+ * stays `/admin/register`, so links already shared still work. It wears the
+ * public site's frame (`SiteFrame`, Paper) rather than the sign-in card: it is
+ * where a prospective client lands from the home page.
  */
 export const metadata: Metadata = {
   title: `${FORM_TITLE} | ${SITE_NAME}`,
@@ -25,5 +28,10 @@ export const metadata: Metadata = {
  */
 export default async function RegisterPage() {
   const pastEvents = await db.event.count({ where: pastEventsWhere(publishedEvents(await publishCutoff())) });
-  return <RegisterClient hasPastEvents={pastEvents > 0} />;
+  // The main site's frame: `/admin/**` only ever answers on the main host.
+  return (
+    <SiteFrame site={null}>
+      <RegisterClient hasPastEvents={pastEvents > 0} />
+    </SiteFrame>
+  );
 }

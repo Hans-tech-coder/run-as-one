@@ -878,12 +878,29 @@
   weight), **mixed case everywhere** — no all-caps titles or buttons, no
   gradients, no glass, no glow orbs. It replaced the dark glassmorphic look and
   its gradient pills, which the public-site audit called out as template tells.
-  - **Where it applies is one list:** `isPaperPath()` in `lib/site-look.ts` —
-    `/`, `/events`, `/events/[slug]`, its `/register` wizard, `/pay/**`,
-    `/results/**`, `/track/**`. `ClientLayoutWrapper` puts `.site-paper` with
-    `data-theme="light"` on those pages' frame. `/feedback`, the legal pages,
-    `/coming-soon` and the 404 **stay dark** until they are redesigned; adding
-    one is a line in that list plus its page work.
+  - **Where it applies is one rule:** `isPaperPath()` in `lib/site-look.ts` —
+    **every public page** (since 2026-11-21: every path outside `/admin`, so a
+    404 at any address is Paper too) **plus the Our Services inquiry**
+    (`/admin/register`, `isInquiryPath`), which renders `SiteFrame` itself.
+    `ClientLayoutWrapper` puts `.site-paper` with `data-theme="light"` on the
+    frame. Every other `/admin` page — sign-in, invitation, password reset,
+    the dashboard — keeps its own look. **No public page is dark any more.**
+  - **The last pages (2026-11-21):** the legal pages (`LegalPage`: a 68ch
+    column of ink at 17px/1.7, numbered clauses on hairlines, the jump list
+    sticky beside the text from `lg`, `.legal-*` in site.css); `/coming-soon`
+    and the 404 (`.site-notice`: code line, `.site-h1`, lead, the button
+    pair; the 404's three onward links are relative, so a client's subdomain
+    keeps its own pages); `/feedback` and the inquiry (heading and lead beside
+    a `.site-form-card` from `lg`). **Form furniture on Paper** (site.css):
+    `.site-form-card`; `.site-choice` (a choice card: action edge and tint when
+    chosen, red edge when missing); `.site-drop` (file drop zone);
+    `.site-icon-btn`; `.site-done-mark`; FieldError's `.field-error` hook and
+    the `.input-group` invalid edge, both `--status-danger`. A page intro's
+    lead is spaced by its named parent (`.site-lead` resets margin unlayered,
+    so a `mt-*` beside it does nothing). The inquiry's steps keep their
+    Auth.css markup and `register/inquiry-paper.css` restyles it inside
+    `.inquiry`; the frame marks it `.site-checkout` (`wearsPaletteBridge`), so
+    the bridge below turns its shared controls light too.
   - **The checkout is Paper too** (2026-11-21), so a runner never walks off the
     light event page into a dark checkout at the step where they pay.
     `isCheckoutPath()` (the wizard and `/pay/**`) adds **`.site-checkout`** to
@@ -899,7 +916,11 @@
       there. **New checkout code reads `--site-*` tokens directly** — the
       bridge is for the code already there, and it reaches nothing outside the
       mark (the dashboard, which shares `PhoneField` and `StepRail`, never
-      carries `.site-paper`).
+      carries `.site-paper`). The Our Services inquiry wears the bridge as
+      well, for the same controls; the bridge also repoints `--ink-15/30/50`,
+      `--dash-shadow` and `--dash-field(-focus)` for the dashboard pickers it uses,
+      and `body:has(.site-checkout) > .t-dropdown` (AdminDatePicker's portalled
+      calendar) is one of its portals.
     - **What a palette swap cannot reach is restyled by name:** the drawn
       controls' `.control-shell` (the field edge, the ink focus ring, the red
       invalid edge and fill), the `#0d0d0f` popovers (select lists, the

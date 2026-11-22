@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-50 pages · 100 API routes · 172 modules in `src/lib` · 715 files · 125,405 lines
+50 pages · 100 API routes · 172 modules in `src/lib` · 717 files · 125,324 lines
 
 ---
 
@@ -56,7 +56,7 @@ The route, the server component behind it, and the client components beside it.
 | `/admin/your-events/[id]` | [`/admin/your-events/[id]/page.tsx`](../src/app/admin/your-events/[id]/page.tsx) | `PayoutSummary.tsx` `RaceReport.tsx` `RegistrationTrend.tsx` `runner-csv.ts` `RunnerCells.tsx` `RunnerList.tsx` |
 | `/coming-soon` | [`/coming-soon/page.tsx`](../src/app/coming-soon/page.tsx) | — |
 | `/events/[slug]/register` | [`/events/[slug]/register/page.tsx`](../src/app/events/[slug]/register/page.tsx) | `AddressPlaceFields.tsx` `BankDetailsModal.tsx` `BankTransferWizardClient.tsx` `BirthdatePicker.tsx` `CategoryPicker.tsx` `Combobox.tsx` `CommunityPicker.tsx` `ConsentWaiver.tsx` `delivery-address.ts` `delivery-split.ts` `delivery.ts` `DeliveryAddressFields.tsx` `DeliveryAreaPanel.tsx` `DeliveryStep.tsx` `FreeSlotOffer.tsx` `GenderField.tsx` `GroupLimitNotice.tsx` `GuardianConsent.tsx` `OrderSummary.tsx` `PaidToPicker.tsx` `PhoneField.tsx` `PosterLightbox.tsx` `PriceLockNotices.tsx` `PromoCodeField.tsx` `RegistrationWizardClient.tsx` `RunnerAddOns.tsx` `RunnerAddressFields.tsx` `RunnerCard.tsx` `SelectField.tsx` `ShirtSizeField.tsx` `SizeGuideModal.tsx` `useAddOnTotals.ts` `useDeliveryPlan.ts` `usePriceLock.ts` `usePromoPricing.ts` `useStepReveal.ts` `validation.ts` `WizardEventHeader.tsx` |
-| `/feedback` | [`/feedback/page.tsx`](../src/app/feedback/page.tsx) | `FeedbackForm.tsx` `FeedbackSent.tsx` `ScreenshotField.tsx` |
+| `/feedback` | [`/feedback/page.tsx`](../src/app/feedback/page.tsx) | `FeedbackForm.tsx` `FeedbackSent.tsx` `KindPicker.tsx` `ScreenshotField.tsx` `useFeedbackForm.ts` |
 | `/pay/[token]` | [`/pay/[token]/page.tsx`](../src/app/pay/[token]/page.tsx) | `PayNowButton.tsx` |
 | `/pay/change/[token]` | [`/pay/change/[token]/page.tsx`](../src/app/pay/change/[token]/page.tsx) | `ChangeBankProof.tsx` |
 | `/pay/logistics/[token]` | [`/pay/logistics/[token]/page.tsx`](../src/app/pay/logistics/[token]/page.tsx) | `SwitchBankProof.tsx` `SwitchConfirm.tsx` |
@@ -343,7 +343,7 @@ the file itself.
 | [`site-client.ts`](../src/lib/site-client.ts) | Which client a public request is for (server-only). |
 | [`site-contact.ts`](../src/lib/site-contact.ts) | Who Run As One is, and how a runner reaches it. |
 | [`site-host.ts`](../src/lib/site-host.ts) | Which host is which (`CLIENT_SUBDOMAIN_PLAN.md` Batch 1). |
-| [`site-look.ts`](../src/lib/site-look.ts) | **Which public pages wear the Paper look** (site.css, docs/conventions.md §9). |
+| [`site-look.ts`](../src/lib/site-look.ts) | **Which pages wear the Paper look** (site.css, docs/conventions.md §9). |
 | [`site-metadata.ts`](../src/lib/site-metadata.ts) | What a site's pages say about themselves to a link preview and a browser tab. |
 | [`site-settings.ts`](../src/lib/site-settings.ts) | The saved site-wide settings (server-only; reads the `SiteSettings` row). |
 | [`slot-holds.ts`](../src/lib/slot-holds.ts) | What holds a seat in a category, and how many each has taken. |
@@ -401,7 +401,6 @@ when a task touches one, split it before editing rather than after.
 | 478 | [`src/lib/settlement.ts`](../src/lib/settlement.ts) |
 | 477 | [`src/app/admin/events/AddOnFormModal.tsx`](../src/app/admin/events/AddOnFormModal.tsx) |
 | 476 | [`src/app/api/admin/registrations/[id]/status/route.ts`](../src/app/api/admin/registrations/[id]/status/route.ts) |
-| 475 | [`src/app/feedback/FeedbackForm.tsx`](../src/app/feedback/FeedbackForm.tsx) |
 | 472 | [`src/app/admin/settings/TwoFactorPanel.tsx`](../src/app/admin/settings/TwoFactorPanel.tsx) |
 | 472 | [`src/app/events/[slug]/register/BirthdatePicker.tsx`](../src/app/events/[slug]/register/BirthdatePicker.tsx) |
 | 470 | [`src/app/admin/events/[id]/registrants/RunnerEditModal.tsx`](../src/app/admin/events/[id]/registrants/RunnerEditModal.tsx) |

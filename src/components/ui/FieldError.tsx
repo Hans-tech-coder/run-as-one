@@ -17,6 +17,9 @@ import { AlertCircle } from "lucide-react";
  * The id is what the input points its aria-describedby at, so a screen reader
  * reads the label, the value, and then this — rather than announcing a bare
  * "invalid entry" with no way to find out why.
+ *
+ * `.field-error` is the hook Paper pages recolour it by (site.css): red-400 is
+ * the dark look's red and nearly vanishes on paper.
  */
 export default function FieldError({
   id,
@@ -31,7 +34,7 @@ export default function FieldError({
   return (
     <p
       id={id}
-      className="flex items-center gap-1.5 text-xs font-medium text-red-400"
+      className="field-error flex items-center gap-1.5 text-xs font-medium text-red-400"
     >
       <AlertCircle size={13} className="shrink-0" aria-hidden="true" />
       {message}

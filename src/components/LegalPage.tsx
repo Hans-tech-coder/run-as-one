@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { ChevronRight, Mail } from 'lucide-react';
+import { ArrowRight, Mail } from 'lucide-react';
 import { LEGAL_LAST_UPDATED, supportMailto } from '@/lib/site-contact';
 
 export type LegalSection = {
@@ -12,16 +12,20 @@ export type LegalSection = {
 };
 
 /**
- * The shared shell for /terms and /privacy.
+ * The shared shell for /terms and /privacy, on Paper (docs/conventions.md §9).
  *
  * Two documents with the same job should not be two different-looking pages,
- * and neither should look like a plain-text dump bolted onto a designed site.
- * The header is the eyebrow-plus-gradient-headline used by /events and
- * /results; the body is the same glass panel the rest of the app reads on.
+ * and they are read, not scanned: so the page is set for reading rather than
+ * dressed up. The text column is held to about 68 characters, the body is ink
+ * on paper at 17px with generous leading, and each clause is a numbered
+ * heading on a hairline, so the rhythm down the page is the same every time.
+ * The bullets are a plain list, not a stack of boxed cards — a card per
+ * sentence turned a list into a wall of tiles.
  *
- * Sections carry anchor ids so a support reply can link straight at the clause
- * it is answering about, and scroll-mt clears the floating navbar when one is
- * followed.
+ * The jump list sits beside the text on a wide screen (sticky, so it is there
+ * at the twelfth clause too) and above it on a phone. Sections carry anchor
+ * ids so a support reply can link straight at the clause it is answering
+ * about, and scroll-mt clears the navbar when one is followed.
  */
 export default function LegalPage({
   eyebrow,
@@ -40,128 +44,86 @@ export default function LegalPage({
   contactEmail: string;
 }) {
   return (
-    <div className="relative flex w-full flex-col items-center overflow-hidden">
-      <div className="relative z-10 flex w-full flex-col items-center gap-8 sm:gap-12">
-        <header className="t-stagger is-shown mb-0 w-full max-w-3xl text-center sm:mb-4">
-          <div className="t-stagger-line t-stagger-line--1 mx-auto mb-4 flex w-fit flex-row items-center justify-center gap-2">
-            <span className="text-accent-blue">{icon}</span>
-            <span className="text-sm font-bold uppercase tracking-widest text-accent-orange">
-              {eyebrow}
-            </span>
-          </div>
-          <h1 className="t-stagger-line t-stagger-line--2 mb-4 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-3xl font-black uppercase leading-tight tracking-tighter text-transparent text-balance sm:mb-6 sm:text-4xl md:text-6xl">
-            {title}
-          </h1>
-          <p className="t-stagger-line t-stagger-line--3 m-0 text-base leading-relaxed text-secondary sm:text-lg">
-            {intro}
-          </p>
-          <p className="mt-6 inline-flex items-center rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-bold uppercase tracking-widest text-secondary">
-            Last updated {LEGAL_LAST_UPDATED}
-          </p>
-        </header>
+    <>
+      <section className="legal-intro site-section site-wrap" data-enter>
+        <p className="m-0 mb-4 flex items-center gap-2 text-[0.9375rem] font-semibold text-site-accent">
+          {icon}
+          {eyebrow}
+        </p>
+        <h1 className="site-h1 max-w-[16ch]">{title}</h1>
+        <p className="site-lead max-w-[60ch]">{intro}</p>
+        <p className="m-0 mt-5 text-sm text-site-muted">Last updated {LEGAL_LAST_UPDATED}</p>
+      </section>
 
-        {/* Jump list. A runner arriving from a support reply usually wants one
-            clause, not the whole document. */}
-        <nav
-          aria-label="On this page"
-          className="w-full max-w-3xl rounded-[20px] border border-white/[0.06] bg-white/[0.02] p-4 sm:p-5"
-        >
-          <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-secondary">
-            On this page
-          </h2>
-          <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
-            {sections.map((section, index) => (
-              <li key={section.heading}>
-                <a
-                  href={`#${anchorFor(section.heading)}`}
-                  className="inline-flex min-h-[36px] items-center rounded-full border border-white/[0.08] bg-black/40 px-3.5 text-[0.8rem] text-secondary no-underline transition-colors duration-200 hover:border-accent-orange/40 hover:text-white"
+      <div className="site-section site-wrap">
+        <div className="legal-layout">
+          {/* Jump list. A runner arriving from a support reply usually wants
+              one clause, not the whole document. */}
+          <nav aria-label="On this page" className="legal-toc">
+            <h2 className="legal-toc__title">On this page</h2>
+            <ol className="legal-toc__list">
+              {sections.map((section, index) => (
+                <li key={section.heading}>
+                  <a href={`#${anchorFor(section.heading)}`} className="legal-toc__link">
+                    <span className="legal-toc__num" aria-hidden="true">{index + 1}</span>
+                    {section.heading}
+                  </a>
+                </li>
+              ))}
+            </ol>
+          </nav>
+
+          <div className="min-w-0">
+            <ol className="legal-body">
+              {sections.map((section, index) => (
+                <li
+                  key={section.heading}
+                  id={anchorFor(section.heading)}
+                  className="legal-clause scroll-mt-[calc(var(--nav-offset)+1rem)]"
                 >
-                  <span className="mr-1.5 text-white/40">{index + 1}</span>
-                  {section.heading}
+                  <h2 className="legal-clause__head">
+                    <span className="legal-clause__num">{String(index + 1).padStart(2, '0')}</span>
+                    <span>{section.heading}</span>
+                  </h2>
+
+                  {section.body?.map(paragraph => (
+                    <p key={paragraph}>{paragraph}</p>
+                  ))}
+
+                  {section.bullets && (
+                    <ul>
+                      {section.bullets.map(bullet => (
+                        <li key={bullet}>{bullet}</li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              ))}
+            </ol>
+
+            <aside className="legal-ask">
+              <h2 className="site-h3">Questions about this page?</h2>
+              <p className="m-0 mt-3 max-w-[56ch] leading-relaxed text-site-muted">
+                Email us and a real person will answer. For anything specific to a
+                single race — refunds, kit collection, start times — the organizer
+                of that event is the fastest route, and their details are on the
+                event page.
+              </p>
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                <a href={supportMailto(contactEmail)} className="site-btn site-btn--quiet site-btn--block-sm">
+                  <Mail size={18} aria-hidden="true" className="shrink-0" />
+                  <span className="min-w-0 break-all">{contactEmail}</span>
                 </a>
-              </li>
-            ))}
-          </ul>
-        </nav>
-
-        <article className="w-full max-w-3xl overflow-hidden rounded-[24px] border border-white/[0.08] bg-gradient-to-br from-white/[0.04] to-white/[0.01] p-5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)] sm:p-10">
-          <ol className="m-0 flex list-none flex-col gap-10 p-0">
-            {sections.map((section, index) => (
-              <li
-                key={section.heading}
-                id={anchorFor(section.heading)}
-                className="scroll-mt-[var(--nav-offset)]"
-              >
-                <h2 className="mb-3 flex items-baseline gap-3 text-lg font-bold text-white sm:text-xl">
-                  <span className="bg-gradient-to-r from-accent-orange to-accent-blue bg-clip-text text-sm font-black text-transparent tabular-nums">
-                    {String(index + 1).padStart(2, '0')}
-                  </span>
-                  <span>{section.heading}</span>
-                </h2>
-
-                {section.body?.map(paragraph => (
-                  <p
-                    key={paragraph}
-                    className="mb-3 text-[0.95rem] leading-relaxed text-secondary last:mb-0 sm:text-base"
-                  >
-                    {paragraph}
-                  </p>
-                ))}
-
-                {section.bullets && (
-                  <ul className="mt-3 mb-0 flex list-none flex-col gap-2 p-0">
-                    {section.bullets.map(bullet => (
-                      <li
-                        key={bullet}
-                        className="flex items-start gap-3 rounded-[14px] border border-white/[0.05] bg-black/40 p-3 text-[0.95rem] leading-relaxed text-secondary"
-                      >
-                        <span
-                          aria-hidden="true"
-                          className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-accent-orange"
-                        />
-                        <span>{bullet}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </li>
-            ))}
-          </ol>
-        </article>
-
-        <aside className="flex w-full max-w-3xl flex-col items-center gap-4 rounded-[24px] border border-white/[0.08] bg-white/[0.02] p-6 text-center sm:p-8">
-          <h2 className="m-0 text-lg font-bold text-white sm:text-xl">
-            Questions about this page?
-          </h2>
-          <p className="m-0 max-w-md text-[0.95rem] leading-relaxed text-secondary">
-            Email us and a real person will answer. For anything specific to a
-            single race — refunds, kit collection, start times — the organizer
-            of that event is the fastest route, and their details are on the
-            event page.
-          </p>
-          <div className="flex w-full flex-col items-stretch justify-center gap-3 sm:w-auto sm:flex-row sm:flex-wrap">
-            <a
-              href={supportMailto(contactEmail)}
-              className="btn-secondary shrink-0 whitespace-nowrap"
-            >
-              <Mail size={18} aria-hidden="true" className="shrink-0 text-accent-orange" />
-              <span className="font-medium normal-case tracking-normal">{contactEmail}</span>
-            </a>
-            <Link
-              href="/events"
-              className="btn-gradient group shrink-0 justify-center whitespace-nowrap rounded-[16px] px-6 py-3 text-[0.95rem] no-underline"
-            >
-              <span>Browse Events</span>
-              <ChevronRight
-                size={18}
-                aria-hidden="true"
-                className="shrink-0 transition-transform group-hover:translate-x-1"
-              />
-            </Link>
+                <Link href="/events" className="site-btn site-btn--action site-btn--block-sm">
+                  Browse events
+                  <ArrowRight size={18} aria-hidden="true" className="shrink-0" />
+                </Link>
+              </div>
+            </aside>
           </div>
-        </aside>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 

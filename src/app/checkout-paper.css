@@ -19,16 +19,22 @@
 
    Nothing here reaches outside the checkout: the other Paper pages never carry
    `.site-checkout`, and the dashboard (which shares PhoneField) never carries
-   `.site-paper` at all. New checkout code should still read `--site-*` tokens
+   `.site-paper` at all. The one other page that carries the mark is the Our
+   Services inquiry (`/admin/register`, lib/site-look.ts `wearsPaletteBridge`),
+   built from the same dark-era controls — PhoneField, StepRail, and the
+   dashboard's AdminSelect / AdminDatePicker, which read the ink ramp and the
+   `--dash-*` panel names repointed below. New checkout code should still read `--site-*` tokens
    directly, never `text-white`; the bridge is for the code already there. */
 
 /* ── Paper on the checkout's portals ─────────────────────────
    A few overlays render straight into <body>, outside the frame: the poster
    lightbox, the birthdate sheet on a phone, the "submitting" overlay and the
-   alert modal. They get Paper's values here (the same as site.css's
+   alert modal — and, on the Our Services inquiry, AdminDatePicker's calendar
+   (a `.t-dropdown` portalled to <body> on a wide screen). They get Paper's values here (the same as site.css's
    `.site-paper[data-theme]` block and globals.css's light block) so the
    bridge below has something to point at. Only while a checkout page is up. */
-body:has(.site-checkout) :is(.modal-overlay, .date-sheet, .date-sheet-backdrop, .runner-overlay, .alert-modal) {
+body:has(.site-checkout) :is(.modal-overlay, .date-sheet, .date-sheet-backdrop, .runner-overlay, .alert-modal),
+body:has(.site-checkout) > .t-dropdown {
   --site-bg: #f6f3ee;
   --site-surface: #ebe5da;
   --site-card: #fffdf9;
@@ -57,7 +63,8 @@ body:has(.site-checkout) :is(.modal-overlay, .date-sheet, .date-sheet-backdrop, 
 
 /* ── The palette bridge ──────────────────────────────────────── */
 .site-checkout,
-body:has(.site-checkout) :is(.modal-overlay, .date-sheet, .date-sheet-backdrop, .runner-overlay, .alert-modal) {
+body:has(.site-checkout) :is(.modal-overlay, .date-sheet, .date-sheet-backdrop, .runner-overlay, .alert-modal),
+body:has(.site-checkout) > .t-dropdown {
   --color-white: var(--site-ink);
   --color-black: var(--site-card);
   --color-gray-500: var(--site-muted);
@@ -88,10 +95,19 @@ body:has(.site-checkout) :is(.modal-overlay, .date-sheet, .date-sheet-backdrop, 
   --ink-08: color-mix(in srgb, var(--site-ink) 8%, transparent);
   --ink-10: color-mix(in srgb, var(--site-ink) 10%, transparent);
   --ink-12: color-mix(in srgb, var(--site-ink) 12%, transparent);
+  /* The dashboard pickers' list edge, placeholder and chevron (the inquiry). */
+  --ink-15: color-mix(in srgb, var(--site-ink) 15%, transparent);
+  --ink-30: color-mix(in srgb, var(--site-ink) 45%, transparent);
+  --ink-50: color-mix(in srgb, var(--site-ink) 55%, transparent);
+  --dash-shadow: rgb(20 25 43 / 0.16);
   --ink-85: color-mix(in srgb, var(--site-ink) 85%, transparent);
   --dash-hairline: var(--ink-08);
   --dash-border: var(--ink-12);
   --dash-panel-solid: var(--site-card);
+  /* The dashboard field's fill (Admin.css `.form-input`): the inquiry's date
+     picker draws its month and year triggers with it. */
+  --dash-field: var(--site-card);
+  --dash-field-focus: var(--site-card);
   --dash-scrim: rgb(20 25 43 / 0.42);
 }
 
@@ -206,7 +222,8 @@ body:has(.site-checkout) .bg-\[\#0d0d0f\] {
 }
 
 /* ── The step rail (components/ui/StepRail.css) ─────────────────
-   Shared with the dark Our Services form, so restyled here, not there. The
+   Shared with the dashboard's look, so restyled here, not there (the Our
+   Services inquiry wears these rules too). The
    steps still to come were white-at-18% rings, which on paper vanish: they
    take the strong line and the muted ink, readable as "not yet". */
 .site-checkout .step-rail__step + .step-rail__step::before { background: var(--site-line-strong); }

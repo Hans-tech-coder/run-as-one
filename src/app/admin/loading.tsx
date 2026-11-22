@@ -4,6 +4,8 @@ import { usePathname } from 'next/navigation';
 import AdminRouteLoading from './AdminRouteLoading';
 import AuthRouteLoading from './AuthRouteLoading';
 import { isBarePath } from './bare-paths';
+import { isInquiryPath } from '@/lib/site-look';
+import RunnerLoader from '@/components/ui/RunnerLoader';
 import { useDashboardNav } from './dashboard-nav';
 import { routeShape } from './route-loading-shape';
 
@@ -27,6 +29,15 @@ export default function Loading() {
   const pathname = usePathname();
   const nav = useDashboardNav();
 
+  // The Our Services inquiry is a public Paper page (lib/site-look.ts): its
+  // wait is the paper ground and the runner, never the dark sign-in card.
+  if (isInquiryPath(pathname)) {
+    return (
+      <div className="site-paper flex items-center justify-center" data-theme="light">
+        <RunnerLoader size="lg" />
+      </div>
+    );
+  }
   if (isBarePath(pathname)) return <AuthRouteLoading />;
 
   return (

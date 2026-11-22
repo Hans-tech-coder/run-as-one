@@ -1,8 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { Calendar, ChevronRight, Compass, Mail, Trophy } from 'lucide-react';
-import { IconBadge, StatusPanel } from '@/components/StatusPanel';
+import { ArrowRight } from 'lucide-react';
 import { SITE_NAME, supportMailto } from '@/lib/site-contact';
 import { getContactEmail } from '@/lib/site-settings';
 
@@ -31,132 +30,78 @@ export default async function NotFoundContent() {
   const contactEmail = await getContactEmail();
 
   return (
-    <div className="relative flex w-full flex-col items-center overflow-hidden">
-      <div className="relative z-10 flex w-full max-w-3xl flex-col items-center">
-        <StatusPanel>
-          <div className="flex flex-col items-center text-center">
-            <IconBadge>
-              <Compass size={30} aria-hidden="true" />
-            </IconBadge>
-
-            {/* The numeral is the fastest way to say which failure this is, so
-                it is set as display type rather than buried in a sentence. */}
-            <p
-              aria-hidden="true"
-              className="mt-6 mb-1 bg-gradient-to-r from-accent-orange to-accent-blue bg-clip-text text-[4.5rem] font-black leading-none tracking-tighter text-transparent sm:text-[7rem]"
-            >
-              404
-            </p>
-            <p className="mb-6 text-xs font-bold uppercase tracking-[0.3em] text-secondary">
-              Page Not Found
-            </p>
-
-            <h1 className="mb-3 bg-gradient-to-r from-white to-white/60 bg-clip-text text-2xl font-black uppercase tracking-wide text-transparent text-balance sm:text-3xl">
-              You&apos;ve Gone Off Course
-            </h1>
-            <p className="m-0 max-w-md text-base leading-relaxed text-secondary">
-              This page isn&apos;t here. The link may be an old one, the event
-              may have been taken down by its organizer, or the address may have
-              a typo in it.
-            </p>
-          </div>
-
-          <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:flex-wrap">
-            <Link
-              href="/events"
-              className="btn-gradient group w-full shrink-0 justify-center whitespace-nowrap rounded-[16px] px-8 py-4 text-center text-base no-underline shadow-xl shadow-accent-orange/20 sm:w-auto"
-            >
-              <span>Browse Events</span>
-              <ChevronRight
-                size={18}
-                aria-hidden="true"
-                className="shrink-0 transition-transform group-hover:translate-x-1"
-              />
-            </Link>
-            <Link
-              href="/"
-              className="btn-secondary w-full shrink-0 whitespace-nowrap text-center sm:w-auto"
-            >
-              Back to Home
-            </Link>
-          </div>
-        </StatusPanel>
-
-        <p className="mb-4 mt-10 text-xs font-bold uppercase tracking-widest text-secondary">
-          Or pick up from here
+    <section className="site-section site-wrap">
+      <div className="site-notice" data-enter>
+        <p className="site-notice__code">Error 404 · Page not found</p>
+        <h1 className="site-h1">You&apos;ve gone off course</h1>
+        <p className="site-lead max-w-[56ch]">
+          This page isn&apos;t here. The link may be an old one, the event may
+          have been taken down by its organizer, or the address may have a typo
+          in it.
         </p>
-        <ul className="m-0 grid w-full list-none grid-cols-1 gap-3 p-0 sm:grid-cols-3">
-          {destinations(contactEmail).map(destination => (
-            <li key={destination.label}>
-              <DestinationCard {...destination} />
-            </li>
-          ))}
-        </ul>
+        <div className="site-notice__actions">
+          <Link href="/events" className="site-btn site-btn--action site-btn--block-sm">
+            Browse events
+            <ArrowRight size={18} aria-hidden="true" />
+          </Link>
+          <Link href="/" className="site-btn site-btn--quiet site-btn--block-sm">
+            Back to home
+          </Link>
+        </div>
       </div>
-    </div>
+
+      <h2 className="sr-only">Or pick up from here</h2>
+      <ul className="site-notice__more">
+        {destinations(contactEmail).map(destination => (
+          <li key={destination.label}>
+            <DestinationLink {...destination} />
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
 /** Built per request: the contact address is a platform setting. */
 const destinations = (contactEmail: string) => [
   {
-    label: 'Upcoming Events',
+    label: 'Upcoming races',
     body: 'Every race and fun run open for registration.',
     href: '/events',
-    icon: Calendar,
   },
   {
-    label: 'Race Results',
+    label: 'Race results',
     body: 'Official times, rankings and e-certificates.',
     href: '/results',
-    icon: Trophy,
   },
   {
-    label: 'Contact Us',
+    label: 'Contact us',
     body: 'Tell us which link sent you here.',
     href: supportMailto(contactEmail),
-    icon: Mail,
     external: true,
   },
 ] as const;
 
-function DestinationCard({
+function DestinationLink({
   label,
   body,
   href,
-  icon: Icon,
   external,
 }: {
   label: string;
   body: string;
   href: string;
-  icon: React.ComponentType<{ size?: number; className?: string; 'aria-hidden'?: boolean }>;
   external?: boolean;
 }) {
-  const className =
-    'group flex h-full flex-col gap-2 rounded-[16px] border border-white/[0.05] bg-black/40 p-4 no-underline transition-colors duration-200 hover:border-white/15 hover:bg-black/60';
-
   const inner = (
     <>
-      <span className="flex items-center gap-2 text-sm font-bold text-white">
-        <Icon size={16} aria-hidden={true} className="shrink-0 text-accent-orange" />
+      <strong>
         {label}
-      </span>
-      <span className="text-sm leading-relaxed text-secondary">{body}</span>
+        <ArrowRight size={16} aria-hidden="true" />
+      </strong>
+      <span>{body}</span>
     </>
   );
 
-  if (external) {
-    return (
-      <a href={href} className={className}>
-        {inner}
-      </a>
-    );
-  }
-
-  return (
-    <Link href={href} className={className}>
-      {inner}
-    </Link>
-  );
+  return external ? <a href={href}>{inner}</a> : <Link href={href}>{inner}</Link>;
 }

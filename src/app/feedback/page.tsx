@@ -1,6 +1,5 @@
 import React from 'react';
 import type { Metadata } from 'next';
-import { MessageSquareHeart } from 'lucide-react';
 import FeedbackForm from './FeedbackForm';
 import { SITE_NAME, supportMailto } from '@/lib/site-contact';
 import { getContactEmail } from '@/lib/site-settings';
@@ -35,6 +34,9 @@ export const metadata: Metadata = {
  * query string, so `asSitePath` treats it as somebody else's text until it has
  * been checked, and the form shows the sender what is about to be attached
  * rather than collecting it quietly.
+ *
+ * On Paper (docs/conventions.md §9): the heading and the lead beside the form
+ * on a wide screen, above it on a phone, so the form is on the first screen.
  */
 export default async function FeedbackPage({
   searchParams,
@@ -46,40 +48,31 @@ export default async function FeedbackPage({
   const contactEmail = await getContactEmail();
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col items-center pb-20 pt-8 sm:pt-12">
-      <header className="mb-8 flex flex-col items-center text-center sm:mb-10">
-        <div className="flex h-16 w-16 items-center justify-center rounded-[20px] border border-accent-orange/20 bg-accent-orange/10 text-accent-orange shadow-[0_0_20px_rgba(255,107,0,0.15)]">
-          <MessageSquareHeart size={30} aria-hidden="true" />
-        </div>
+    <section className="site-section site-wrap">
+      <div className="feedback-layout">
+        <header className="feedback-layout__intro" data-enter>
+          <p className="m-0 mb-4 text-[0.9375rem] font-semibold text-site-accent">Feedback</p>
+          <h1 className="site-h1">Tell us what to fix</h1>
+          <p className="site-lead">
+            Something not working, something that could be easier, or something
+            you wish this app could do — all three belong here. A real person
+            reads every message, and nothing you send goes to a mailing list.
+          </p>
 
-        <p className="mb-3 mt-6 text-xs font-bold uppercase tracking-[0.3em] text-secondary">
-          Feedback
-        </p>
-        <h1 className="mb-3 bg-gradient-to-r from-white to-white/60 bg-clip-text text-2xl font-black uppercase tracking-wide text-transparent text-balance sm:text-3xl">
-          Tell Us What To Fix
-        </h1>
-        <p className="m-0 max-w-lg text-base leading-relaxed text-secondary">
-          Something not working, something that could be easier, or something
-          you wish this app could do — all three belong here. A real person
-          reads every message, and nothing you send goes to a mailing list.
-        </p>
-      </header>
+          {/* The address stays on the page on purpose. The form takes one
+              screenshot, but some things need several files or a thread, and
+              a form is the wrong shape for those — offering only the form
+              would send that person away with nothing. */}
+          <p className="m-0 mt-6 text-[0.9375rem] leading-relaxed text-site-muted">
+            Need to send more files or talk it through?{' '}
+            <a href={supportMailto(contactEmail)} className="feedback-mail">
+              {contactEmail}
+            </a>
+          </p>
+        </header>
 
-      <FeedbackForm pagePath={pagePath} />
-
-      {/* The address stays on the page on purpose. The form takes one
-          screenshot, but some things need several files or a thread, and a
-          form is the wrong shape for those — offering only the form would
-          send that person away with nothing. */}
-      <p className="mt-6 text-center text-sm text-secondary">
-        Need to send more files or talk it through?{' '}
-        <a
-          href={supportMailto(contactEmail)}
-          className="text-white underline decoration-accent-orange/50 underline-offset-4 transition-colors hover:decoration-accent-orange"
-        >
-          {contactEmail}
-        </a>
-      </p>
-    </div>
+        <FeedbackForm pagePath={pagePath} />
+      </div>
+    </section>
   );
 }

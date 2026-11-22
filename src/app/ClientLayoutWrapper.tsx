@@ -4,18 +4,21 @@ import { usePathname } from 'next/navigation';
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import type { SiteClient } from "@/lib/site-client";
-import { isCheckoutPath, isPaperPath } from "@/lib/site-look";
+import { isPaperPath, wearsPaletteBridge } from "@/lib/site-look";
 
 /**
  * `site` is the client whose subdomain this is, or null on the main site
  * (lib/site-client.ts). The layout drawing the frame (SiteFrame) reads it on
  * the server; the navbar and footer only wear it.
  *
- * A redesigned page (lib/site-look.ts) gets the Paper frame: `.site-paper`
- * with `data-theme="light"`, which site.css explains. Every other public page
- * keeps the dark look it was built in. The checkout (the register wizard and
- * /pay) is Paper as well and is also marked `.site-checkout`, the scope
- * checkout-paper.css repoints its older palette utilities inside.
+ * Every public page (lib/site-look.ts) gets the Paper frame: `.site-paper`
+ * with `data-theme="light"`, which site.css explains. The checkout (the
+ * register wizard and /pay) and the Our Services inquiry are also marked
+ * `.site-checkout`, the scope checkout-paper.css repoints their older palette
+ * utilities inside.
+ *
+ * `/admin` draws no frame of its own here — except the inquiry, a public page
+ * that lives under `/admin` for its URL and renders this frame itself.
  */
 export default function ClientLayoutWrapper({
   site,
@@ -28,13 +31,13 @@ export default function ClientLayoutWrapper({
 }) {
   const pathname = usePathname();
   const isAdmin = pathname?.startsWith('/admin');
+  const paper = isPaperPath(pathname);
 
-  if (isAdmin) {
+  if (isAdmin && !paper) {
     return <>{children}</>;
   }
 
-  const paper = isPaperPath(pathname);
-  const checkout = paper && isCheckoutPath(pathname);
+  const checkout = paper && wearsPaletteBridge(pathname);
 
   return (
     <div

@@ -2,9 +2,7 @@
 
 import Link from 'next/link';
 import { AlertCircle, ArrowLeft, ArrowRight, ArrowUpRight, Send } from 'lucide-react';
-import { RunAsOneLogo } from '@/components/RunAsOneLogo';
 import BusyLabel from '@/components/ui/BusyLabel';
-import AuthHomeLink from '../AuthHomeLink';
 import { PAST_EVENTS_HREF } from '@/app/s/[site]/events/events-view';
 import { FORM_SUBTITLE, FORM_TITLE, STEPS } from './apply-steps';
 import { useApplicationForm } from './useApplicationForm';
@@ -14,6 +12,7 @@ import EventStep from './EventStep';
 import ThankYouPanel from './ThankYouPanel';
 
 import './../Auth.css';
+import './inquiry-paper.css';
 import StepRail from '@/components/ui/StepRail';
 
 /**
@@ -31,6 +30,17 @@ import StepRail from '@/components/ui/StepRail';
  * what Run As One needs before taking on a race — who the human is, whether
  * the organization can be found anywhere outside this form, what they have run
  * before, and what they are about to run.
+ *
+ * **It is a public page, on Paper** (2026-11-21, docs/conventions.md §9). The
+ * home page's "Organizing a race?" band links here, and a prospective client
+ * used to go from a light page into a dark, admin-looking sign-in card.
+ * `page.tsx` now draws the site frame round it (the navbar and footer), the
+ * heading and lead sit beside the form on a wide screen, and the form is a
+ * Paper card. The steps keep their own markup: `inquiry-paper.css` restyles
+ * Auth.css's form and `apply-*` classes inside `.inquiry`, and the frame's
+ * `.site-checkout` mark (lib/site-look.ts `wearsPaletteBridge`) turns the
+ * shared controls — PhoneField, StepRail, AdminSelect, AdminDatePicker — light
+ * the way the checkout does. The sign-in page and the dashboard are untouched.
  *
  * This file is the frame: the header, the rail, the step's heading and the
  * buttons. The steps and their fields are `apply-steps.ts`; each step's
@@ -74,48 +84,45 @@ export default function RegisterClient({ hasPastEvents }: { hasPastEvents: boole
   } = useApplicationForm();
 
   return (
-    <div className="auth-container">
-      <div className="auth-bg-shape orange"></div>
-      <div className="auth-bg-shape blue"></div>
-
-      <div className="auth-shell auth-shell--wide">
-        <AuthHomeLink />
-
-        <div className="auth-card">
-          <div className="auth-header">
-            <Link href="/" className="auth-logo-link mb-5" aria-label="Run As One home page">
-              <RunAsOneLogo variant="stacked" className="[--rao-logo-size:64px]" decorative />
-            </Link>
-            <h1 className="auth-title">
-              {isSent ? 'Inquiry received' : FORM_TITLE}
-            </h1>
-            <p className="auth-subtitle">
-              {isSent
-                ? 'Thank you. Here is what happens next.'
-                : FORM_SUBTITLE}
+    <section className="site-section site-wrap">
+      <div className="inquiry">
+        <header className="inquiry__intro" data-enter>
+          <p className="m-0 mb-4 text-[0.9375rem] font-semibold text-site-accent">Our Services</p>
+          <h1 className="site-h1">{isSent ? 'Inquiry received' : FORM_TITLE}</h1>
+          <p className="site-lead">
+            {isSent ? 'Thank you. Here is what happens next.' : FORM_SUBTITLE}
+          </p>
+          {/* The track record, for an organization deciding whether to hire
+              us (PAST_EVENTS_PLAN.md §3): one quiet link under the lead,
+              gone once the inquiry is sent. A new tab, because nothing typed
+              here is kept until the last step, and a look at our races must
+              not cost a half-written inquiry. Only when there is a race to
+              show. */}
+          {hasPastEvents && !isSent && (
+            <p className="m-0 mt-4">
+              <Link
+                href={PAST_EVENTS_HREF}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="site-link"
+              >
+                <span>See races we have run</span>
+                <ArrowUpRight size={16} aria-hidden="true" />
+                <span className="sr-only"> (opens in a new tab)</span>
+              </Link>
             </p>
-            {/* The track record, for an organization deciding whether to
-                hire us (PAST_EVENTS_PLAN.md §3): one quiet line under the
-                subtitle, gone once the inquiry is sent. A new tab, because
-                nothing typed here is kept until the last step, and a look
-                at our races must not cost a half-written inquiry. Only when
-                there is a race to show. */}
-            {hasPastEvents && !isSent && (
-              <p className="apply-proof">
-                <Link
-                  href={PAST_EVENTS_HREF}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="auth-link"
-                >
-                  See races we have run
-                  <ArrowUpRight size={14} aria-hidden="true" />
-                  <span className="sr-only"> (opens in a new tab)</span>
-                </Link>
-              </p>
-            )}
-          </div>
+          )}
+          {!isSent && (
+            <p className="m-0 mt-6 text-[0.9375rem] leading-relaxed text-site-muted">
+              Already working with us?{' '}
+              <Link href="/admin/login" className="feedback-mail">
+                Sign in
+              </Link>
+            </p>
+          )}
+        </header>
 
+        <div className="site-form-card">
           {isSent ? (
             <ThankYouPanel form={form} headingRef={headingRef} />
           ) : (
@@ -193,14 +200,14 @@ export default function RegisterClient({ hasPastEvents }: { hasPastEvents: boole
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="btn-gradient text-white font-medium"
+                    className="btn-gradient"
                   >
                     {isSubmitting ? (
                       <BusyLabel>Submitting</BusyLabel>
                     ) : isLast ? (
                       <>
                         <Send size={16} aria-hidden="true" />
-                        Submit Application
+                        Submit inquiry
                       </>
                     ) : (
                       <>
@@ -211,17 +218,10 @@ export default function RegisterClient({ hasPastEvents }: { hasPastEvents: boole
                   </button>
                 </div>
               </form>
-
-              <div className="auth-footer">
-                Already have an account?{' '}
-                <Link href="/admin/login" className="auth-link">
-                  Sign In
-                </Link>
-              </div>
             </>
           )}
         </div>
       </div>
-    </div>
+    </section>
   );
 }

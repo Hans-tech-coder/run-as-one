@@ -19,6 +19,8 @@ import type { FormState } from './apply-steps';
  * works in, because Run As One staff run everything on it (O2). Anything else
  * is an inquiry for a service staff fulfil, so the third step says no sign-in
  * is needed. Neither promises a price or a date (S2).
+ *
+ * On Paper, inside the form card (`inquiry-paper.css` draws `.apply-done`).
  */
 export default function ThankYouPanel({
   form,
@@ -39,14 +41,14 @@ export default function ThankYouPanel({
       <h2
         ref={headingRef}
         tabIndex={-1}
-        className="text-lg font-bold text-white outline-none"
+        className="site-h3 outline-none"
       >
         We have your inquiry, {form.contactFirstName || 'thank you'}.
       </h2>
-      <p className="mt-2 text-sm leading-relaxed text-secondary">
+      <p className="mt-3 leading-relaxed text-site-muted">
         It is in the queue under{' '}
-        <strong className="text-white">{form.name}</strong>. We will write to{' '}
-        <strong className="text-white">{form.email}</strong>, so keep an eye on
+        <strong className="text-site-ink">{form.name}</strong>. We will write to{' '}
+        <strong className="text-site-ink">{form.email}</strong>, so keep an eye on
         that inbox — the spam folder included.
       </p>
 
@@ -87,12 +89,12 @@ export default function ThankYouPanel({
       </ol>
 
       <div className="apply-nav apply-nav--end">
-        <Link href="/" className="btn-gradient text-white">
+        <Link href="/" className="site-btn site-btn--action site-btn--block-sm">
           Back to Run As One
         </Link>
       </div>
 
-      <p className="mt-6 text-xs text-secondary">
+      <p className="mt-6 text-sm text-site-muted">
         Something to add, or a question in the meantime? Write to{' '}
         <a href={supportMailto(contactEmail)} className="auth-link">
           {contactEmail}
