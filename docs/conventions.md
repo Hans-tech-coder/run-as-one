@@ -487,8 +487,9 @@
   page, `'results'` → the winners board), a string rather than a callback
   because the pages rendering it are Server Components. Never fork a rival card.
   **Its shape (Paper, `.site-card`):** the poster **whole** on top in a 12:5
-  frame (`object-fit: contain` on the sunken tint — organizers' banners run
-  2:1 to 2.8:1 and carry their own title, so nothing is printed over them),
+  frame (`object-fit: contain` — organizers' banners run 2:1 to 2.8:1, some
+  posters are square or portrait, and they carry their own title, so nothing
+  is printed over them) inside the shared **poster frame** below,
   then the day with its weekday (`formatEventWeekdayShort`), the title, the
   venue, the race's **distance chips** (`distances`, the category names read
   before `forListing` drops the categories; a Bib + Medal variant is not a
@@ -497,6 +498,23 @@
   the race (*Register: Pink Run 2026*). The grid (`.site-grid`) goes four
   across from `lg` whenever three would leave one card alone on the last row,
   and keeps exactly three in one row on a tablet.
+- **One poster frame (`components/PosterFrame`, site.css `.poster-frame`).**
+  Any public surface that shows an event poster in a frame of **fixed shape**
+  uses it — today the `.site-card` poster on every listing (`/`, *Recently
+  held*, `/events` upcoming and past, `/results`, and the same pages on client
+  subdomains). The poster sits whole on top (`object-fit: contain`); behind it
+  the **same image** at `object-fit: cover`, blurred (`filter: blur(20px)`,
+  scaled 1.2 so the blur's soft edge falls outside the clip) under a light
+  `--site-surface` wash, so no poster shape leaves empty bands. The backdrop
+  is the poster's own URL, so the browser downloads the file once and paints
+  it twice; it is decorative (`alt=""`, `aria-hidden`), never preloaded, CSS
+  only (no canvas, no JS) and never animated — the hover zoom moves only the
+  sharp poster. If the poster fails, the backdrop goes with it and
+  `EventImage`'s placeholder stands alone. The surface's own class sets the
+  ratio and corners (`className`). **A new poster surface with a fixed frame
+  must use it**, never a bare `object-fit: contain` on a tint. Posters shown
+  at their natural height (the home hero's *Next race*, the event page) have
+  no bands and do not need it.
 - **One option row at sign-up.** `events/[slug]/register/CategoryPicker` renders
   a race's distances and a fun run's packages with the *same* full-width radio
   row — poster thumbnail, name, price on a shared right edge — because to the

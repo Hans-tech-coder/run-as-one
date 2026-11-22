@@ -281,20 +281,50 @@ button.site-link:disabled { opacity: 0.5; cursor: not-allowed; }
   border-color: var(--site-line-strong);
   box-shadow: 0 10px 24px -14px rgb(20 25 43 / 0.28);
 }
-.site-card__poster {
+/* The shared poster frame (components/PosterFrame, docs/conventions.md §9):
+   the poster whole on top, and behind it the same image cover-fit and blurred,
+   so a frame of one ratio never shows empty bands around a poster of another.
+   The surface's own class sets the ratio and the corners; the frame clips. */
+.poster-frame {
   position: relative;
-  aspect-ratio: 12 / 5;
   overflow: hidden;
+  isolation: isolate;
   background: var(--site-surface);
 }
-.site-card__poster img {
+.poster-frame__fill {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* Scaled past the frame so the blur's soft edge falls outside the clip. */
+  transform: scale(1.2);
+  filter: blur(20px) saturate(1.1);
+  pointer-events: none;
+}
+/* A light paper wash over the blur, so the sharp poster reads as the subject. */
+.poster-frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: color-mix(in srgb, var(--site-surface) 28%, transparent);
+  pointer-events: none;
+}
+.poster-frame__img {
+  position: relative;
+  z-index: 2;
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: contain;
-  display: block;
+}
+.site-card__poster { aspect-ratio: 12 / 5; }
+.site-card__poster .poster-frame__img {
   transition: transform var(--duration-medium) var(--ease-smooth-out, ease);
 }
-.site-card:hover .site-card__poster img { transform: scale(1.025); }
+.site-card:hover .site-card__poster .poster-frame__img { transform: scale(1.025); }
 .site-card__body {
   display: flex;
   flex: 1;
@@ -1016,9 +1046,9 @@ body:has(.site-paper[data-theme]) .zoom-lightbox-hint { background: var(--site-i
 
 @media (prefers-reduced-motion: reduce) {
   [data-enter] > * { animation: none; }
-  .site-btn, .site-card, .site-card__poster img, .site-link, .site-link--arrow > span:not(:has(svg)), .site-link--arrow svg, .site-nav__link::after,
+  .site-btn, .site-card, .site-card__poster .poster-frame__img, .site-link, .site-link--arrow > span:not(:has(svg)), .site-link--arrow svg, .site-nav__link::after,
   .site-card__go svg, .site-footer__social, .site-notice__more strong svg, .site-modal__close { transition: none; }
   .site-btn:hover, .site-card:hover, .site-footer__social:hover { transform: none; }
-  .site-card:hover .site-card__poster img, .site-notice__more a:hover strong svg,
+  .site-card:hover .site-card__poster .poster-frame__img, .site-notice__more a:hover strong svg,
   .site-link--arrow:is(:hover, :focus-visible, :active) svg { transform: none; }
 }

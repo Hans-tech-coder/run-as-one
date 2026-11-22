@@ -3,7 +3,7 @@
 import React, { createContext } from 'react';
 import Link from 'next/link';
 import { Camera, ArrowRight } from 'lucide-react';
-import EventImage from './EventImage';
+import PosterFrame from './PosterFrame';
 import LinkPendingIcon from './ui/LinkPendingIcon';
 import { formatEventInstantShort, formatEventRange, formatEventWeekdayShort } from '@/lib/event-schedule';
 import { VIRTUAL_RUN_WHERE, isVirtual } from '@/lib/event-format';
@@ -147,9 +147,7 @@ function EventCard({ event, action }: { event: DBEvent; action: EventCardAction 
   // with the race ("Register: Pink Run 2026") for a screen reader.
   return (
     <article className="site-card">
-      <div className="site-card__poster">
-        <EventImage src={event.imageUrl} alt="" className="h-full w-full" iconSize={40} />
-      </div>
+      <PosterFrame src={event.imageUrl} alt="" className="site-card__poster" iconSize={40} />
       <div className="site-card__body">
         <span className="site-card__date">{when}</span>
         <h3 className="site-card__title">{event.title}</h3>
