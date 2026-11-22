@@ -106,7 +106,7 @@ const CLOSURES = {
   SCHEDULED: { badge: 'Opens soon', label: 'See event' },
 } as const;
 
-function EventCard({ event, action }: { event: DBEvent; action: EventCardAction }) {
+function EventCard({ event, action, eager }: { event: DBEvent; action: EventCardAction; eager: boolean }) {
   const past = action === 'past' ? pastCard(event) : null;
   const { label, path } = past ?? ACTIONS[action as Exclude<EventCardAction, 'past'>];
   const href = `${event.siteOrigin ?? ''}${path(event.slug)}`;
@@ -147,7 +147,13 @@ function EventCard({ event, action }: { event: DBEvent; action: EventCardAction 
   // with the race ("Register: Pink Run 2026") for a screen reader.
   return (
     <article className="site-card">
-      <PosterFrame src={event.imageUrl} alt="" className="site-card__poster" iconSize={40} />
+      <PosterFrame
+        src={event.imageUrl}
+        alt=""
+        className="site-card__poster"
+        iconSize={40}
+        loading={eager ? 'eager' : 'lazy'}
+      />
       <div className="site-card__body">
         <span className="site-card__date">{when}</span>
         <h3 className="site-card__title">{event.title}</h3>
@@ -196,9 +202,17 @@ export const EventGridEntrance = createContext(true);
 export default function EventGrid({
   events,
   action = 'register',
+  eagerCount = 0,
 }: {
   events: DBEvent[];
   action?: EventCardAction;
+  /**
+   * How many leading cards load their poster at once: the first row, on a
+   * page where the grid opens the first screen (/events, /results). Every
+   * other poster is lazy, so the rows below wait for a scroll. Four is one
+   * full row at the widest layout.
+   */
+  eagerCount?: number;
   /** Kept for callers from before cards stopped rising in; ignored. */
   staggerFrom?: number;
 }) {
@@ -209,9 +223,9 @@ export default function EventGrid({
   const fit = events.length > 1 && events.length % 3 === 1 ? '4' : events.length === 3 ? '3' : undefined;
   return (
     <ul className="site-grid m-0 list-none p-0" data-fit={fit}>
-      {events.map((event) => (
+      {events.map((event, index) => (
         <li key={event.id} data-event-card>
-          <EventCard event={event} action={action} />
+          <EventCard event={event} action={action} eager={index < eagerCount} />
         </li>
       ))}
     </ul>

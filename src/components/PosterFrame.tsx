@@ -30,11 +30,18 @@ export default function PosterFrame({
   alt,
   className = '',
   iconSize,
+  loading = 'lazy',
 }: {
   src?: string | null;
   alt: string;
   className?: string;
   iconSize?: number;
+  /**
+   * Applied to both layers alike. They share one URL, so an eager backdrop
+   * under a lazy poster would download the file early anyway — the two must
+   * never disagree. `"eager"` only for a frame on the first screen.
+   */
+  loading?: 'lazy' | 'eager';
 }) {
   // Which URL failed, as in EventImage: a mounted card can be re-pointed at
   // another event, and the old poster's failure must not hide the new one.
@@ -49,12 +56,13 @@ export default function PosterFrame({
           src={src as string}
           alt=""
           aria-hidden="true"
+          loading={loading}
           decoding="async"
           className="poster-frame__fill"
           onError={() => setFailedSrc(src ?? null)}
         />
       )}
-      <EventImage src={src} alt={alt} className="poster-frame__img" iconSize={iconSize} />
+      <EventImage src={src} alt={alt} className="poster-frame__img" iconSize={iconSize} loading={loading} />
     </div>
   );
 }

@@ -134,7 +134,7 @@ export default async function EventsPage({ params }: { params: Promise<{ site: s
           panels={{
             upcoming:
               events.length > 0 ? (
-                <EventGrid events={events} />
+                <EventGrid events={events} eagerCount={4} />
               ) : (
                 <NothingUpcoming
                   everHadEvents={totalEvents > 0}

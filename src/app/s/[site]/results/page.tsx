@@ -82,7 +82,7 @@ export default async function GlobalResultsPage({ params }: { params: Promise<{ 
           {/* Same card as /events, so an event looks like itself whether it
               is open for registration or already run — only the button
               changes. */}
-          <EventGrid events={events} action="results" />
+          <EventGrid events={events} action="results" eagerCount={4} />
           {/* One quiet line rather than a button: it is for the runner who
               did not find their race above, not a second thing to do. */}
           {pastWithoutResults > 0 && (

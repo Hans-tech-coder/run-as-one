@@ -91,6 +91,9 @@ export default function HeroSection({
             <EventImage
               src={nextRace.imageUrl}
               alt={`${nextRace.title} poster`}
+              // The home page's largest image, on the first screen.
+              loading="eager"
+              fetchPriority="high"
               className="block h-auto w-full transition-transform duration-500 group-hover:scale-[1.02] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
               iconSize={56}
             />

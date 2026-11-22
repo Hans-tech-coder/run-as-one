@@ -510,7 +510,13 @@
   it twice; it is decorative (`alt=""`, `aria-hidden`), never preloaded, CSS
   only (no canvas, no JS) and never animated — the hover zoom moves only the
   sharp poster. If the poster fails, the backdrop goes with it and
-  `EventImage`'s placeholder stands alone. The surface's own class sets the
+  `EventImage`'s placeholder stands alone. **Posters load lazily by default**
+  (`loading` on `EventImage` and `PosterFrame`, applied to both layers alike —
+  they share one URL, so an eager backdrop under a lazy poster would fetch it
+  early anyway). Only a poster on the first screen is eager: the first row of
+  `/events` and `/results` (`EventGrid`'s `eagerCount={4}`), the wizard
+  header, and the home "Next race" hero, which also gets
+  `fetchPriority="high"` as the page's main image. The surface's own class sets the
   ratio and corners (`className`). **A new poster surface with a fixed frame
   must use it**, never a bare `object-fit: contain` on a tint. Posters shown
   at their natural height (the home hero's *Next race*, the event page) have

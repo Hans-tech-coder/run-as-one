@@ -8,6 +8,14 @@ interface EventImageProps {
   alt: string;
   className?: string;
   iconSize?: number;
+  /**
+   * Lazy by default: posters fill long grids, and a grid's lower rows should
+   * not download before anyone scrolls to them. Pass `"eager"` (with
+   * `fetchPriority="high"` for the page's main image) only for a poster that
+   * is on the first screen.
+   */
+  loading?: 'lazy' | 'eager';
+  fetchPriority?: 'high' | 'low' | 'auto';
 }
 
 /**
@@ -23,7 +31,14 @@ interface EventImageProps {
  * Rendering <img src=""> makes the browser re-request the page, so the empty
  * case must never reach the <img> at all.
  */
-export default function EventImage({ src, alt, className = '', iconSize = 32 }: EventImageProps) {
+export default function EventImage({
+  src,
+  alt,
+  className = '',
+  iconSize = 32,
+  loading = 'lazy',
+  fetchPriority,
+}: EventImageProps) {
   // Which URL failed, rather than a bare "it failed" flag: a card can be
   // re-pointed at another event while it stays mounted — the home page filter
   // does exactly that — and the previous poster's failure must not carry over
@@ -55,6 +70,9 @@ export default function EventImage({ src, alt, className = '', iconSize = 32 }: 
       src={src}
       alt={alt}
       className={className}
+      loading={loading}
+      fetchPriority={fetchPriority}
+      decoding="async"
       onError={() => setFailedSrc(src)}
     />
   );

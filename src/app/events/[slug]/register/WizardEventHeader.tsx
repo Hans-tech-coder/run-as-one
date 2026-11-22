@@ -31,6 +31,7 @@ export default function WizardEventHeader({
       <EventImage
         src={event.imageUrl}
         alt={event.title}
+        loading="eager"
         className="mini-image w-20 h-20 rounded-[16px] object-cover shadow-lg"
         iconSize={24}
       />
