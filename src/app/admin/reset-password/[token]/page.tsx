@@ -50,7 +50,7 @@ export default async function ResetPasswordPage({ params }: { params: Promise<{ 
         </div>
 
         <Link href="/admin/forgot-password" className="btn-gradient auth-submit text-white font-medium">
-          Request a New Link
+          Request a new link
         </Link>
 
         <div className="auth-footer">

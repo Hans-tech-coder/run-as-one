@@ -143,13 +143,13 @@ export default function InviteAcceptClient({
             {events.map(event => (
               <li
                 key={`${event.title}-${event.roleLabel}`}
-                className="flex items-center gap-3 rounded-[10px] border border-white/10 bg-black/30 px-4 py-3"
+                className="flex items-center gap-3 rounded-[10px] border border-site-line bg-site-bg px-4 py-3"
               >
-                <CalendarCheck size={16} className="shrink-0 text-accent-orange" aria-hidden="true" />
-                <span className="min-w-0 flex-1 truncate text-sm font-semibold text-white">
+                <CalendarCheck size={16} className="shrink-0 text-site-accent" aria-hidden="true" />
+                <span className="min-w-0 flex-1 truncate text-sm font-semibold text-site-ink">
                   {event.title}
                 </span>
-                <span className="shrink-0 whitespace-nowrap rounded-full bg-white/10 px-2.5 py-0.5 text-xs font-semibold text-secondary">
+                <span className="shrink-0 whitespace-nowrap rounded-full bg-site-card px-2.5 py-0.5 text-xs font-semibold text-secondary">
                   {event.roleLabel}
                 </span>
               </li>
@@ -166,7 +166,7 @@ export default function InviteAcceptClient({
         <form onSubmit={handleSubmit} className="auth-form" noValidate>
           {hasAccount ? (
             <p className="text-sm text-secondary m-0">
-              You already sign in as <strong className="text-white">{email}</strong>. Enter that
+              You already sign in as <strong className="text-site-ink">{email}</strong>. Enter that
               password to add {viewer ? clientName : organizerName} to your account
               {viewer ? '.' : ' — your other organizers stay as they are.'}
             </p>
@@ -204,7 +204,7 @@ export default function InviteAcceptClient({
                 <span className="form-label">Email Address</span>
                 {/* Shown, not editable: it is the address the invitation was
                     sent to, and the one this account will sign in with. */}
-                <p className="m-0 text-sm text-white">{email}</p>
+                <p className="m-0 text-sm text-site-ink">{email}</p>
               </div>
             </>
           )}
@@ -242,7 +242,7 @@ export default function InviteAcceptClient({
             disabled={isSubmitting}
             className="btn-gradient auth-submit text-white font-medium"
           >
-            {isSubmitting ? <BusyLabel>Joining</BusyLabel> : 'Accept and Sign In'}
+            {isSubmitting ? <BusyLabel>Joining</BusyLabel> : 'Accept and sign in'}
           </button>
         </form>
       </div>

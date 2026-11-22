@@ -6,8 +6,10 @@
  * 404 — plus one page under `/admin`, the "Our Services" inquiry
  * (`/admin/register`), which a prospective client reaches from the home
  * page's "Organizing a race?" band and must not walk from a light page into a
- * dark admin-looking form. Every other `/admin` page (sign-in, invitation,
- * password reset, the dashboard) keeps its own look.
+ * dark admin-looking form. The sign-in pages (sign in, invitation, password
+ * reset, two-step) are Paper too since 2026-11-22, but not through this rule:
+ * they need no navbar or footer, so `AdminShell` draws `AuthPaperFrame` round
+ * them. Only the dashboard keeps its own look.
  *
  * "Every public path" rather than a list of them, because a 404 answers at
  * any address: listing the pages that exist left a typo the one dark page on

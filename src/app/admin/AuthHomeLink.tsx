@@ -16,14 +16,13 @@ import { SITE_NAME } from '@/lib/site-contact';
  *
  * So the pages carry two ways home, for the two ways people look for one:
  *
- * - **This link, above the card**, for the person scanning for a control. It
- *   sits in the flow of `.auth-shell` rather than pinned to the corner of the
- *   viewport, because an absolutely-positioned corner link lands underneath
- *   the card on a short screen — a phone with its keyboard open, where the
- *   card already starts at the top. It is **bare text and an arrow**, with no
- *   fill and no border: drawn as a pill it read as a third button on a page
- *   whose whole job is to get one button pressed, and it pulled the eye before
- *   Sign In did.
+ * - **This link, at the foot of the card** (owner, 2026-11-22; it stood above
+ *   the card before), for the person scanning for a control. It is the last
+ *   line inside `.auth-card`, centred, no rule above it (auth-paper.css), so
+ *   it stays in the flow on a short screen — a phone with its keyboard open —
+ *   and reads as part of the sheet rather than as page chrome. It is **bare
+ *   text and an arrow**, with no fill and no border: drawn as a pill it read
+ *   as a third button on a page whose whole job is to get one button pressed.
  * - **The lockup at the head of the card**, for the person who clicks a logo
  *   without reading it. That is `.auth-logo-link`, wired in each page beside
  *   its own heading; it mirrors the public navbar, where the same lockup is

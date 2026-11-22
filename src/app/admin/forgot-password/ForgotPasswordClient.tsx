@@ -58,8 +58,6 @@ export default function ForgotPasswordClient() {
       <div className="auth-bg-shape blue"></div>
 
       <div className="auth-shell">
-        <AuthHomeLink />
-
         <div className="auth-card">
           <div className="auth-header">
             <Link href="/" className="auth-logo-link mb-5" aria-label="Run As One home page">
@@ -69,7 +67,7 @@ export default function ForgotPasswordClient() {
             <p className="auth-subtitle">
               {sentTo ? (
                 <>
-                  If <strong className="text-white break-all">{sentTo}</strong> signs in to Run As
+                  If <strong className="text-site-ink break-all">{sentTo}</strong> signs in to Run As
                   One, a link to choose a new password is on its way. It works once, for 60
                   minutes.
                 </>
@@ -95,7 +93,7 @@ export default function ForgotPasswordClient() {
                 href="/admin/login"
                 className="btn-gradient auth-submit text-white font-medium mt-6"
               >
-                Back to Sign In
+                Back to sign in
               </Link>
             </>
           ) : (
@@ -127,7 +125,7 @@ export default function ForgotPasswordClient() {
                 disabled={isSubmitting}
                 className="btn-gradient auth-submit text-white font-medium"
               >
-                {isSubmitting ? <BusyLabel>Sending</BusyLabel> : 'Send Reset Link'}
+                {isSubmitting ? <BusyLabel>Sending</BusyLabel> : 'Send reset link'}
               </button>
             </form>
           )}
@@ -140,6 +138,9 @@ export default function ForgotPasswordClient() {
               </Link>
             </div>
           )}
+
+          {/* The way home, last and quietest on the card (AuthHomeLink.tsx). */}
+          <AuthHomeLink />
         </div>
       </div>
     </div>

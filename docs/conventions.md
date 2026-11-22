@@ -883,8 +883,24 @@
     404 at any address is Paper too) **plus the Our Services inquiry**
     (`/admin/register`, `isInquiryPath`), which renders `SiteFrame` itself.
     `ClientLayoutWrapper` puts `.site-paper` with `data-theme="light"` on the
-    frame. Every other `/admin` page — sign-in, invitation, password reset,
-    the dashboard — keeps its own look. **No public page is dark any more.**
+    frame. **No public page is dark any more.**
+  - **The sign-in pages are Paper too** (2026-11-22): sign in, two-step,
+    forgot / reset password, the invitation, and `AuthRouteLoading`.
+    `AdminShell` draws `admin/AuthPaperFrame.tsx` round every bare path
+    (bare-paths.ts) except the inquiry: `.site-paper.auth-paper` with
+    `data-theme="light"` and Archivo (`src/app/archivo-font.ts`, shared with
+    `SiteFrame`), no navbar or footer. Their markup keeps Auth.css's classes;
+    **`admin/auth-paper.css` restyles them inside `.auth-paper` only**, every
+    selector starting `.site-paper.auth-paper` so it outranks Admin.css's
+    `.form-input` and site.css's `.btn-gradient` in any bundle order. Auth.css
+    is not edited for Paper — the dashboard loads it (admin/loading) and the
+    inquiry's steps use it. The card is a `--site-card` sheet on a hairline,
+    the title Archivo 500 at its width, fields the inquiry's (field-line edge,
+    ink focus ring, red invalid edge), messages a box with one even 1px edge in the
+    light status colours (`--status-danger` #c8282b, 5.5:1) — **no thicker
+    left rule on a box**, owner 2026-11-22; *Back to Run As One* is the
+    last line inside the card, with no rule above it, Google's **light**
+    button, the keep box on tokens. Only the dashboard keeps the dark look.
   - **The last pages (2026-11-21):** the legal pages (`LegalPage`: a 68ch
     column of ink at 17px/1.7, numbered clauses on hairlines, the jump list
     sticky beside the text from `lg`, `.legal-*` in site.css); `/coming-soon`
@@ -1025,7 +1041,7 @@
   if it is missing); a page class gets a name of its own (`.event-meta-icon`,
   not `.text-blue`). If a utility-named class truly has to live in CSS, put it
   in `@layer components` so utilities still win.
-- Fonts: Outfit (`--font-sans`, headings), Inter (`--font-body`) on the dashboard and the dark pages; **Archivo** (`--font-archivo`, loaded with its `wdth` axis in `SiteFrame`, so the dashboard never downloads it) for both on Paper pages.
+- Fonts: Outfit (`--font-sans`, headings), Inter (`--font-body`) on the dashboard and the dark pages; **Archivo** (`--font-archivo`, loaded with its `wdth` axis in `src/app/archivo-font.ts`, imported by `SiteFrame` and `admin/AuthPaperFrame`, so the dashboard proper never uses it) for both on Paper pages.
 - **The logo is a component, not an image** (`components/RunAsOneLogo.tsx`,
   `.rao-logo` in `globals.css`, geometry in `lib/brand-mark.ts` — the one copy
   of the path data, which the component, the themed favicon and the icon

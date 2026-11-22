@@ -82,7 +82,7 @@ export default function ResetPasswordClient({ token }: { token: string }) {
 
         {gone ? (
           <Link href="/admin/forgot-password" className="btn-gradient auth-submit text-white font-medium">
-            Request a New Link
+            Request a new link
           </Link>
         ) : (
           <form onSubmit={handleSubmit} className="auth-form" noValidate>
@@ -117,7 +117,7 @@ export default function ResetPasswordClient({ token }: { token: string }) {
               disabled={isSubmitting}
               className="btn-gradient auth-submit text-white font-medium"
             >
-              {isSubmitting ? <BusyLabel>Saving</BusyLabel> : 'Set New Password'}
+              {isSubmitting ? <BusyLabel>Saving</BusyLabel> : 'Set new password'}
             </button>
           </form>
         )}

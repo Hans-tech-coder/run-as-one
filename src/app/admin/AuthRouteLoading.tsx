@@ -17,7 +17,9 @@ import './Auth.css';
  * where the card is about to, rather than in a content area that is not there.
  * The background's drifting blobs are left out: they are decoration that only
  * the arriving page needs, and a wait is not the moment to start two more
- * animations.
+ * animations. Since 2026-11-22 it stands inside AuthPaperFrame like the page
+ * does (AdminShell draws the frame round every bare path), so the wait is the
+ * paper ground and the light runner, not a dark flash before a light page.
  */
 export default function AuthRouteLoading() {
   return (

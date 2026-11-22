@@ -68,7 +68,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
           </div>
 
           <Link href="/admin/login" className="btn-gradient auth-submit text-white font-medium">
-            Go to Sign In
+            Go to sign in
           </Link>
         </div>
       </div>

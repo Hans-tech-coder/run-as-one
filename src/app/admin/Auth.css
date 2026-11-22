@@ -1,4 +1,10 @@
-/* Auth Pages Styles */
+/* Auth Pages Styles
+
+   The sign-in pages no longer show this file's dark glass look: they stand in
+   AuthPaperFrame, and auth-paper.css restyles these classes inside its
+   `.auth-paper` scope (docs/conventions.md §9, 2026-11-22). The rules here
+   stay as the base the scope overrides, and for the inquiry's `apply-*`
+   steps, which register/inquiry-paper.css restyles inside `.inquiry`. */
 .auth-container {
   min-height: 100vh;
   /* dvh where it exists: 100vh on a phone counts the strip under the browser

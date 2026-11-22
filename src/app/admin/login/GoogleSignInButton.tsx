@@ -2,9 +2,9 @@ import { Roboto } from 'next/font/google';
 
 /**
  * "Continue with Google", drawn to Google's sign-in branding guidelines: the
- * full-colour "G" on its own, unaltered, Roboto Medium, and the dark theme's
- * colours (#131314 fill, #8E918F edge, #E3E3E3 text) because the sign-in card
- * is dark. A plain link, not a fetch: the flow is a chain of full-page
+ * full-colour "G" on its own, unaltered, Roboto Medium. Auth.css holds the
+ * dark theme's colours; on the Paper sign-in card (auth-paper.css) it wears
+ * the light theme's (#FFFFFF fill, #747775 edge, #1F1F1F text). A plain link, not a fetch: the flow is a chain of full-page
  * redirects through Google and back (`/api/auth/google`), so the "Keep me
  * signed in" box rides along as `?keep=1`.
  */

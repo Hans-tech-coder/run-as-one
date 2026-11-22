@@ -100,8 +100,6 @@ export default function TwoFactorClient() {
       <div className="auth-bg-shape blue"></div>
 
       <div className="auth-shell">
-        <AuthHomeLink />
-
         <div className="auth-card">
           <div className="auth-header">
             <Link href="/" className="auth-logo-link mb-5" aria-label="Run As One home page">
@@ -189,7 +187,7 @@ export default function TwoFactorClient() {
                   disabled={isSubmitting}
                   className="btn-gradient auth-submit text-white font-medium"
                 >
-                  {isSubmitting ? <BusyLabel>Checking</BusyLabel> : 'Sign In'}
+                  {isSubmitting ? <BusyLabel>Checking</BusyLabel> : 'Sign in'}
                 </button>
               </form>
 
@@ -203,6 +201,9 @@ export default function TwoFactorClient() {
               </div>
             </>
           )}
+
+          {/* The way home, last and quietest on the card (AuthHomeLink.tsx). */}
+          <AuthHomeLink />
         </div>
       </div>
     </div>

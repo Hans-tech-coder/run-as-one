@@ -88,8 +88,6 @@ export default function LoginClient({
       <div className="auth-bg-shape blue"></div>
       
       <div className="auth-shell">
-        <AuthHomeLink />
-
         <div className="auth-card">
           <div className="auth-header">
             <Link href="/" className="auth-logo-link mb-5" aria-label="Run As One home page">
@@ -100,7 +98,7 @@ export default function LoginClient({
           </div>
 
           {error ? (
-            <div className="auth-message auth-error">
+            <div className="auth-message auth-error" role="alert">
               {error}
             </div>
           ) : passwordReset ? (
@@ -158,13 +156,13 @@ export default function LoginClient({
                 />
                 <span
                   aria-hidden="true"
-                  className={`shrink-0 w-5 h-5 rounded-[6px] border-2 flex items-center justify-center transition-all peer-focus-visible:ring-2 peer-focus-visible:ring-accent-orange peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-black ${
+                  className={`shrink-0 w-5 h-5 rounded-[6px] border-2 flex items-center justify-center transition-all peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--site-focus)] peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-site-card ${
                     keep
-                      ? 'border-accent-orange bg-accent-orange'
-                      : 'border-white/30 group-hover:border-white/50'
+                      ? 'border-site-action bg-site-action'
+                      : 'border-[var(--site-field-line)] bg-site-card group-hover:border-site-ink'
                   }`}
                 >
-                  {keep && <Check size={14} strokeWidth={3} className="text-black" />}
+                  {keep && <Check size={14} strokeWidth={3} className="text-[var(--site-action-ink)]" />}
                 </span>
                 <span>Keep me signed in</span>
               </label>
@@ -181,7 +179,7 @@ export default function LoginClient({
               disabled={isLoading}
               className="btn-gradient auth-submit text-white font-medium"
             >
-              {isLoading ? <BusyLabel>Signing In</BusyLabel> : 'Sign In'}
+              {isLoading ? <BusyLabel>Signing in</BusyLabel> : 'Sign in'}
             </button>
           </form>
 
@@ -191,6 +189,9 @@ export default function LoginClient({
               Our Services
             </Link>
           </div>
+
+          {/* The way home, last and quietest on the card (AuthHomeLink.tsx). */}
+          <AuthHomeLink />
         </div>
       </div>
     </div>

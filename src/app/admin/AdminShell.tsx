@@ -24,6 +24,8 @@ import { SETTINGS_SECTIONS } from './settings/sections';
 import NotificationsCenter from './NotificationsCenter';
 import { DashboardNavProvider } from './dashboard-nav';
 import { isBarePath } from './bare-paths';
+import { isInquiryPath } from '@/lib/site-look';
+import AuthPaperFrame from './AuthPaperFrame';
 import { rememberDashboardTheme, type DashboardTheme } from './dashboard-theme';
 import './Admin.css';
 
@@ -63,9 +65,12 @@ export default function AdminShell({
   };
 
   // The sign-in pages, drawn without the sidebar (bare-paths.ts, which
-  // `admin/loading.tsx` reads too so the wait matches the page).
+  // `admin/loading.tsx` reads too so the wait matches the page), on the
+  // public site's Paper ground (AuthPaperFrame). The Our Services inquiry is
+  // bare too, but it renders the whole public frame itself.
   if (isBarePath(pathname)) {
-    return <>{children}</>;
+    if (isInquiryPath(pathname)) return <>{children}</>;
+    return <AuthPaperFrame>{children}</AuthPaperFrame>;
   }
 
   const handleLogout = async () => {

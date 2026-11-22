@@ -1,17 +1,10 @@
-import { Archivo } from "next/font/google";
 import ClientLayoutWrapper from "./ClientLayoutWrapper";
+// The Paper face, shared with the sign-in pages' frame (admin/AuthPaperFrame).
+import { archivo } from "./archivo-font";
 import ThemedFavicon from "@/components/ThemedFavicon";
 import type { SiteClient } from "@/lib/site-client";
 import "./site.css";
 import "./checkout-paper.css";
-
-/**
- * The redesigned public pages' face (site.css, docs/conventions.md §9): one
- * family, its width axis carrying the headings. Loaded here rather than in the
- * root layout so the dashboard, which never renders this frame, does not pay
- * for it.
- */
-const archivo = Archivo({ subsets: ["latin"], variable: "--font-archivo", axes: ["wdth"] });
 
 /**
  * A public page's frame: the navbar and footer, wearing the client's branding

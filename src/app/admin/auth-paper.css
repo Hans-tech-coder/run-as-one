@@ -1,0 +1,298 @@
+/* The sign-in pages on Paper (docs/conventions.md §9, 2026-11-22).
+
+   Sign in, the invitation, forgot / reset password, the two-step code, and
+   the wait before each (AuthRouteLoading). Their markup is Auth.css's —
+   `.auth-container`, `.auth-card`, the `.form-*` fields, `.google-sign-in` —
+   and stays as it is; this file gives those classes Paper's values inside
+   `.auth-paper` only, the frame AuthPaperFrame draws round them.
+
+   Why a scope and not an edit to Auth.css: the dashboard loads Auth.css too
+   (admin/loading imports AuthRouteLoading), and the Our Services inquiry is
+   written in its step classes (register/inquiry-paper.css restyles those).
+   Neither ever carries `.auth-paper`, so nothing here reaches them.
+
+   Every selector starts `.site-paper.auth-paper` — three classes against
+   Admin.css's one (`.form-input`), Auth.css's two (`.auth-container
+   .form-input`) and site.css's two (`.site-paper .btn-gradient`), so these
+   win whatever order the bundles land in. */
+
+/* ── The page: paper, no blobs ─────────────────────────────────── */
+.site-paper.auth-paper .auth-container {
+  background: var(--site-bg);
+}
+
+.site-paper.auth-paper .auth-bg-shape {
+  display: none;
+}
+
+/* ── The card: a sheet on the paper, no glass ──────────────────── */
+.site-paper.auth-paper .auth-card {
+  padding: 2.5rem 2.25rem;
+  border: 1px solid var(--site-line);
+  border-radius: 14px;
+  background: var(--site-card);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+  transform: none;
+  transition: none;
+}
+
+@media (hover: hover) {
+  .site-paper.auth-paper .auth-card:hover {
+    transform: none;
+    border-color: var(--site-line);
+  }
+}
+
+/* ── The head: the lockup, the title in Archivo at its width ───── */
+.site-paper.auth-paper .auth-header {
+  margin-bottom: 1.75rem;
+}
+
+.site-paper.auth-paper .auth-title {
+  margin-bottom: 0.5rem;
+  font-family: var(--site-display);
+  font-stretch: var(--site-display-stretch);
+  font-size: 1.875rem;
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  color: var(--site-ink);
+  text-wrap: balance;
+}
+
+.site-paper.auth-paper .auth-subtitle {
+  margin: 0;
+  font-family: var(--site-text);
+  font-size: 1rem;
+  line-height: 1.55;
+  color: var(--site-muted);
+  text-wrap: pretty;
+}
+
+/* ── The ways home ──────────────────────────────────────────────
+   *Back to Run As One* sits at the foot of the card (owner, 2026-11-22): the
+   last, quietest line on the sheet, centred, no rule above it (the owner
+   dropped it to keep the card short), still a 44px target sized to its text. */
+.site-paper.auth-paper .auth-home-link {
+  display: flex;
+  justify-content: center;
+  width: fit-content;
+  margin: 0.5rem auto 0;
+  padding: 0 0.5rem;
+  font-family: var(--site-text);
+  font-size: 0.9375rem;
+  color: var(--site-muted);
+}
+
+@media (hover: hover) {
+  .site-paper.auth-paper .auth-home-link:hover {
+    color: var(--site-ink);
+  }
+}
+
+.site-paper.auth-paper .auth-home-link:focus-visible,
+.site-paper.auth-paper .auth-logo-link:focus-visible {
+  outline-color: var(--site-focus);
+  outline-offset: 2px;
+}
+
+/* ── Fields: the inquiry's, so every Paper form is one control ── */
+.site-paper.auth-paper .form-label {
+  font-family: var(--site-text);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--site-ink);
+}
+
+.site-paper.auth-paper .form-input {
+  min-height: 48px;
+  padding: 0.75rem 1rem;
+  background: var(--site-card);
+  border: 1px solid var(--site-field-line);
+  border-radius: 10px;
+  color: var(--site-ink);
+  font-family: var(--site-text);
+  font-size: 1rem;
+  transition: border-color var(--duration-quick) ease, box-shadow var(--duration-quick) ease;
+}
+
+.site-paper.auth-paper .form-input:hover:not(:disabled, [aria-invalid="true"]) {
+  border-color: color-mix(in srgb, var(--site-ink) 55%, var(--site-field-line));
+}
+
+.site-paper.auth-paper .form-input:focus {
+  background: var(--site-card);
+  border-color: var(--site-ink);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--site-ink) 12%, transparent);
+}
+
+.site-paper.auth-paper .form-input::placeholder {
+  color: color-mix(in srgb, var(--site-muted) 80%, transparent);
+}
+
+.site-paper.auth-paper .form-input[aria-invalid="true"] {
+  border-color: var(--status-danger);
+  background: color-mix(in srgb, var(--status-danger) 5%, var(--site-card));
+}
+
+.site-paper.auth-paper .form-input[aria-invalid="true"]:focus {
+  border-color: var(--status-danger);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--status-danger) 18%, transparent);
+}
+
+.site-paper.auth-paper .password-field .form-input {
+  padding-right: 3.25rem;
+}
+
+/* The reveal button inside the password box (PasswordField, Admin.css). */
+.site-paper.auth-paper .password-toggle {
+  right: 2px;
+  border-radius: 8px;
+  color: var(--site-muted);
+}
+
+.site-paper.auth-paper .password-toggle:hover:not(:disabled) {
+  background: var(--site-surface);
+  color: var(--site-ink);
+}
+
+.site-paper.auth-paper .password-toggle:focus-visible {
+  outline: 2px solid var(--site-focus);
+  outline-offset: -2px;
+}
+
+/* ── The one action: site.css already makes .btn-gradient solid ─ */
+.site-paper.auth-paper .auth-submit {
+  margin-top: 0.5rem;
+  letter-spacing: 0;
+  box-shadow: none;
+}
+
+.site-paper.auth-paper .auth-submit:focus-visible {
+  outline: 2px solid var(--site-focus);
+  outline-offset: 2px;
+}
+
+/* ── Text links: the accent text, an underline that draws ──────── */
+.site-paper.auth-paper .auth-footer {
+  margin-top: 1.5rem;
+  font-size: 0.9375rem;
+  color: var(--site-muted);
+}
+
+.site-paper.auth-paper .auth-link {
+  font-weight: 600;
+  color: var(--site-accent-text);
+}
+
+.site-paper.auth-paper .auth-link::after {
+  height: 1.5px;
+  bottom: -1px;
+  background-color: currentColor;
+}
+
+.site-paper.auth-paper .auth-link:hover {
+  color: var(--site-accent-text);
+}
+
+.site-paper.auth-paper .auth-link:focus-visible {
+  outline: 2px solid var(--site-focus);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* The two-step page's "Use a recovery code instead" is a <button>. */
+.site-paper.auth-paper button.auth-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.site-paper.auth-paper button.auth-link:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Messages: the light frame's status colours, read left to right ─
+   The dark look's #ff4d4f on paper is 3.3:1; --status-danger here is the
+   light block's #c8282b (5.5:1 on white, 5.1:1 on the tint), and the success
+   green #2f7d0f (5.2:1). One even 1px edge all round, no thicker left rule
+   (owner, 2026-11-22); the text carries the colour, the fill only hints. */
+.site-paper.auth-paper .auth-message {
+  margin-bottom: 1.5rem;
+  padding: 0.875rem 1rem;
+  border-radius: 10px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.site-paper.auth-paper .auth-error {
+  background: color-mix(in srgb, var(--status-danger) 6%, var(--site-card));
+  border: 1px solid color-mix(in srgb, var(--status-danger) 45%, var(--site-card));
+  color: var(--status-danger);
+}
+
+.site-paper.auth-paper .auth-success {
+  background: color-mix(in srgb, var(--status-success) 6%, var(--site-card));
+  border: 1px solid color-mix(in srgb, var(--status-success) 40%, var(--site-card));
+  color: var(--status-success);
+}
+
+/* ── "Continue with Google": Google's light-theme button ──────────
+   The colours are Google's (#FFFFFF fill, #747775 edge, #1F1F1F text), not
+   ours, and the light set is the one for a light card. */
+.site-paper.auth-paper .google-sign-in {
+  background: #ffffff;
+  border-color: #747775;
+  border-radius: 10px;
+  color: #1f1f1f;
+}
+
+.site-paper.auth-paper .google-sign-in:hover {
+  background: #f2f2f2;
+}
+
+.site-paper.auth-paper .google-sign-in:focus-visible {
+  outline: 2px solid var(--site-focus);
+}
+
+.site-paper.auth-paper .auth-divider {
+  color: var(--site-muted);
+  font-size: 0.875rem;
+}
+
+.site-paper.auth-paper .auth-divider::before,
+.site-paper.auth-paper .auth-divider::after {
+  background: var(--site-line);
+}
+
+/* ── Keep me signed in ─────────────────────────────────────────── */
+.site-paper.auth-paper .auth-keep {
+  font-size: 0.9375rem;
+  color: var(--site-ink);
+}
+
+.site-paper.auth-paper .auth-keep-hint {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--site-muted);
+}
+
+/* ── A phone: the card fills the column, a 24px inset ──────────── */
+@media (width < 40rem) {
+  .site-paper.auth-paper .auth-card {
+    padding: 1.5rem;
+    border-radius: 12px;
+  }
+
+  .site-paper.auth-paper .auth-title {
+    font-size: 1.625rem;
+  }
+}
