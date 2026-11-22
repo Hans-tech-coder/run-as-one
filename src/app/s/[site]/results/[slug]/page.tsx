@@ -204,7 +204,7 @@ export default async function WinnersOverviewPage({
                           would read "( )". */}
                       {cat.name}{cat.distance ? ` (${cat.distance})` : ''} winners
                     </h2>
-                    <Link href={`/results/${event.slug}/full?category=${cat.id}`} className="site-link shrink-0">
+                    <Link href={`/results/${event.slug}/full?category=${cat.id}`} className="site-link site-link--arrow shrink-0">
                       <span>All {cat.distance || cat.name} times</span>
                       <LinkPendingIcon>
                         <ArrowRight size={16} />

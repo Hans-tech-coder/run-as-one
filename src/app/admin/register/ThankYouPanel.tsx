@@ -96,7 +96,7 @@ export default function ThankYouPanel({
 
       <p className="mt-6 text-sm text-site-muted">
         Something to add, or a question in the meantime? Write to{' '}
-        <a href={supportMailto(contactEmail)} className="auth-link">
+        <a href={supportMailto(contactEmail)} className="site-link">
           {contactEmail}
         </a>
         .

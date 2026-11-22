@@ -95,7 +95,7 @@ export default function HeroSection({
               iconSize={56}
             />
           </Link>
-          <Link href={href} className="site-link mt-2">
+          <Link href={href} className="site-link site-link--arrow mt-2">
             <span>See race details</span>
             <ArrowRight size={18} aria-hidden="true" />
           </Link>

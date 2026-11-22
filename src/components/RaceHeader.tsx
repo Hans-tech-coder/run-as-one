@@ -44,7 +44,7 @@ export default function RaceHeader({
     .map(formatEventTime);
   return (
     <header className="pt-6 pb-6 md:pt-10 md:pb-8" data-enter>
-      <Link href={back.href} className="site-link mb-2 text-[0.9375rem] text-site-muted">
+      <Link href={back.href} className="site-link site-link--arrow site-link--back mb-2 text-[0.9375rem]">
         <ArrowLeft size={16} aria-hidden="true" />
         <span>{back.label}</span>
       </Link>

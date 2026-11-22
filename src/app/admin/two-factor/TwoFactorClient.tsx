@@ -134,7 +134,7 @@ export default function TwoFactorClient() {
               </button>
               {fewLeft && (
                 <div className="auth-footer">
-                  <Link href="/admin/settings/security" className="auth-link">
+                  <Link href="/admin/settings/security" className="site-link">
                     Make new recovery codes
                   </Link>
                 </div>
@@ -192,10 +192,10 @@ export default function TwoFactorClient() {
               </form>
 
               <div className="auth-footer flex flex-col items-center gap-3">
-                <button type="button" onClick={switchMode} className="auth-link" disabled={isSubmitting}>
+                <button type="button" onClick={switchMode} className="site-link" disabled={isSubmitting}>
                   {useRecovery ? 'Use the code from my authenticator app' : 'Use a recovery code instead'}
                 </button>
-                <Link href="/admin/login" className="auth-link">
+                <Link href="/admin/login" className="site-link">
                   Back to sign in
                 </Link>
               </div>

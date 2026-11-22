@@ -65,7 +65,7 @@ export default async function FeedbackPage({
               would send that person away with nothing. */}
           <p className="m-0 mt-6 text-[0.9375rem] leading-relaxed text-site-muted">
             Need to send more files or talk it through?{' '}
-            <a href={supportMailto(contactEmail)} className="feedback-mail">
+            <a href={supportMailto(contactEmail)} className="site-link [overflow-wrap:anywhere]">
               {contactEmail}
             </a>
           </p>

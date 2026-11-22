@@ -20,7 +20,7 @@ export default function ReachUs() {
   return (
     <p className="mt-1.5 text-xs leading-relaxed text-secondary">
       Email{' '}
-      <a href={supportMailto(contactEmail)} className="auth-link">
+      <a href={supportMailto(contactEmail)} className="site-link">
         {contactEmail}
       </a>
       {channels.length > 0 && (
@@ -33,7 +33,7 @@ export default function ReachUs() {
                 href={channel.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="auth-link"
+                className="site-link"
               >
                 {channel.name}
               </a>

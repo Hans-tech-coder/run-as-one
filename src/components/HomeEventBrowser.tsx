@@ -101,7 +101,7 @@ export default function HomeEventBrowser({
           {/* Only worth offering when the home page is not already showing
               everything there is. */}
           {totalEvents > events.length && (
-            <Link href="/events" className="site-link shrink-0">
+            <Link href="/events" className="site-link site-link--arrow shrink-0">
               <span>See all {totalEvents} races</span>
               <LinkPendingIcon>
                 <ArrowRight size={18} />

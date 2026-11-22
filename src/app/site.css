@@ -156,24 +156,63 @@ html:has(.site-paper) { background-color: #f6f3ee; }
 .site-btn[aria-disabled="true"] { opacity: 0.5; transform: none; cursor: not-allowed; }
 @media (max-width: 639px) { .site-btn--block-sm { width: 100%; } }
 
-/* A text link whose underline draws on hover: its label sits in a <span>. */
+/* ── The text link: the one style for every orange text link on Paper ──
+   Accent text, no line at rest. On hover or keyboard focus a 1.5px underline
+   draws in from left to right and the colour deepens toward the ink; on press
+   it goes to the ink. One timing. The line is a background, not
+   `text-decoration`, so it can draw — and on an inline link it runs along
+   every line a wrapped link takes.
+   `.site-link` alone stays inline, so it wraps inside a sentence. Add
+   `.site-link--arrow` for a standalone link with an icon (label in a <span>,
+   which carries the line — a <span> holding the icon, as LinkPendingIcon
+   renders, does not; a 44px target; the arrow nudging right);
+   `.site-link--back` nudges a leading back arrow left instead. */
+.site-link,
+.site-link--arrow > span:not(:has(svg)) {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+  background-size: 0 1.5px;
+  transition: background-size var(--duration-fast) var(--ease-smooth-out, ease),
+    color var(--duration-fast) var(--ease-smooth-out, ease);
+}
 .site-link {
+  padding-bottom: 2px;
+  color: var(--site-accent-text);
+  font-weight: 600;
+  text-decoration: none;
+}
+.site-link:not(.site-link--arrow):is(:hover, :focus-visible),
+.site-link--arrow:is(:hover, :focus-visible) > span:not(:has(svg)) { background-size: 100% 1.5px; }
+.site-link:hover,
+.site-link:focus-visible { color: color-mix(in srgb, var(--site-accent-text) 78%, var(--site-ink)); }
+.site-link:active { color: var(--site-ink); }
+.site-link:focus-visible { outline: 2px solid var(--site-focus); outline-offset: 3px; border-radius: 2px; }
+button.site-link {
+  padding-inline: 0;
+  padding-top: 0;
+  border: 0;
+  background-color: transparent;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+button.site-link:disabled { opacity: 0.5; cursor: not-allowed; }
+.site-link--arrow {
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
   min-height: 44px;
-  font-weight: 600;
-  color: var(--site-accent-text);
-  text-decoration: none;
+  padding-bottom: 0;
+  background-image: none;
 }
-.site-link > span {
-  padding-bottom: 2px;
-  background: linear-gradient(currentColor, currentColor) 0 100% / 0 1.5px no-repeat;
-  transition: background-size var(--duration-fast) var(--ease-smooth-out, ease);
-}
-.site-link:hover > span { background-size: 100% 1.5px; }
-.site-link svg { transition: transform var(--duration-fast) var(--ease-smooth-out, ease); }
-.site-link:hover svg { transform: translateX(3px); }
+.site-link--arrow > span:not(:has(svg)) { padding-bottom: 2px; }
+.site-link--arrow svg { flex-shrink: 0; transition: transform var(--duration-fast) var(--ease-smooth-out, ease); }
+.site-link--arrow:hover svg,
+.site-link--arrow:focus-visible svg { transform: translateX(3px); }
+.site-link--back:hover svg,
+.site-link--back:focus-visible svg { transform: translateX(-3px); }
+.site-link--arrow:active svg { transform: translateX(1px); }
 
 :where(.site-paper) :focus-visible {
   outline: 2px solid var(--site-focus);
@@ -805,15 +844,6 @@ html:has(.site-paper) { background-color: #f6f3ee; }
   .feedback-layout { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 4rem; align-items: start; }
   .feedback-layout__intro { position: sticky; top: calc(var(--nav-offset) + 2rem); }
 }
-.feedback-mail {
-  color: var(--site-ink);
-  font-weight: 600;
-  text-decoration: underline;
-  text-decoration-color: var(--site-action);
-  text-underline-offset: 4px;
-  overflow-wrap: anywhere;
-}
-.feedback-mail:hover { color: var(--site-accent-text); }
 
 /* The route loader and the running figure's caption on Paper: the paper
    ground with no blue glow behind the figure, and a mixed-case caption. */
@@ -986,8 +1016,9 @@ body:has(.site-paper[data-theme]) .zoom-lightbox-hint { background: var(--site-i
 
 @media (prefers-reduced-motion: reduce) {
   [data-enter] > * { animation: none; }
-  .site-btn, .site-card, .site-card__poster img, .site-link > span, .site-link svg, .site-nav__link::after,
+  .site-btn, .site-card, .site-card__poster img, .site-link, .site-link--arrow > span:not(:has(svg)), .site-link--arrow svg, .site-nav__link::after,
   .site-card__go svg, .site-footer__social, .site-notice__more strong svg, .site-modal__close { transition: none; }
   .site-btn:hover, .site-card:hover, .site-footer__social:hover { transform: none; }
-  .site-card:hover .site-card__poster img, .site-notice__more a:hover strong svg { transform: none; }
+  .site-card:hover .site-card__poster img, .site-notice__more a:hover strong svg,
+  .site-link--arrow:is(:hover, :focus-visible, :active) svg { transform: none; }
 }

@@ -54,7 +54,7 @@ export default async function ResetPasswordPage({ params }: { params: Promise<{ 
         </Link>
 
         <div className="auth-footer">
-          <Link href="/admin/login" className="auth-link">
+          <Link href="/admin/login" className="site-link">
             Back to sign in
           </Link>
         </div>

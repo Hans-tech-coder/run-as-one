@@ -88,7 +88,7 @@ export default async function GlobalResultsPage({ params }: { params: Promise<{ 
           {pastWithoutResults > 0 && (
             <p className="m-0 mt-6 text-center text-[0.9375rem] text-site-muted">
               Looking for a race without timed results?{' '}
-              <Link href={PAST_EVENTS_HREF} className="site-link">
+              <Link href={PAST_EVENTS_HREF} className="site-link site-link--arrow">
                 <span>See past races</span>
                 <ArrowRight size={16} aria-hidden="true" className="shrink-0" />
               </Link>

@@ -117,7 +117,7 @@ export default function TrackHelpCard({ view, help }: { view: TrackView; help: T
         Problem with the website itself?{' '}
         <Link
           href="/feedback?from=/track"
-          className="text-site-ink underline decoration-accent-orange/50 underline-offset-4 transition-colors hover:decoration-accent-orange"
+          className="site-link"
         >
           Send feedback
         </Link>

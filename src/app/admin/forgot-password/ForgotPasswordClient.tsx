@@ -133,7 +133,7 @@ export default function ForgotPasswordClient() {
           {!sentTo && (
             <div className="auth-footer">
               Remembered it?{' '}
-              <Link href="/admin/login" className="auth-link">
+              <Link href="/admin/login" className="site-link">
                 Back to sign in
               </Link>
             </div>

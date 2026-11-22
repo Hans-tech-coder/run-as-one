@@ -166,7 +166,7 @@ export default function LoginClient({
                 </span>
                 <span>Keep me signed in</span>
               </label>
-              <Link href="/admin/forgot-password" className="auth-link text-sm">
+              <Link href="/admin/forgot-password" className="site-link text-sm">
                 Forgot password?
               </Link>
             </div>
@@ -185,7 +185,7 @@ export default function LoginClient({
 
           <div className="auth-footer">
             Need race services?{' '}
-            <Link href="/admin/register" className="auth-link">
+            <Link href="/admin/register" className="site-link">
               Our Services
             </Link>
           </div>

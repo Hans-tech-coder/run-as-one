@@ -104,7 +104,7 @@ export default function RegisterClient({ hasPastEvents }: { hasPastEvents: boole
                 href={PAST_EVENTS_HREF}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="site-link"
+                className="site-link site-link--arrow"
               >
                 <span>See races we have run</span>
                 <ArrowUpRight size={16} aria-hidden="true" />
@@ -115,7 +115,7 @@ export default function RegisterClient({ hasPastEvents }: { hasPastEvents: boole
           {!isSent && (
             <p className="m-0 mt-6 text-[0.9375rem] leading-relaxed text-site-muted">
               Already working with us?{' '}
-              <Link href="/admin/login" className="feedback-mail">
+              <Link href="/admin/login" className="site-link">
                 Sign in
               </Link>
             </p>

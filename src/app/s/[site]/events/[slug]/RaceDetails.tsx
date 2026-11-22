@@ -115,7 +115,7 @@ export function RaceDetails({
           href={map}
           target="_blank"
           rel="noopener noreferrer"
-          className="site-link text-[0.9375rem]"
+          className="site-link site-link--arrow text-[0.9375rem]"
         >
           <span>Open in Google Maps</span> <ExternalLink size={14} aria-hidden="true" />
           <span className="sr-only">(opens in a new tab)</span>

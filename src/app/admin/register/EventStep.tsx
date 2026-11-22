@@ -174,11 +174,11 @@ export default function EventStep({
             <span className="apply-choice__hint">
               We use these details to reply to your inquiry and to
               contact you about it. See our{' '}
-              <Link href="/privacy" className="auth-link">
+              <Link href="/privacy" className="site-link">
                 Privacy Policy
               </Link>{' '}
               and{' '}
-              <Link href="/terms" className="auth-link">
+              <Link href="/terms" className="site-link">
                 Terms
               </Link>
               .

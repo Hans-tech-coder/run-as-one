@@ -17,7 +17,7 @@ export default function SizeChartButton({ imageUrl }: { imageUrl: string }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="site-link border-none bg-transparent p-0 text-[0.9375rem]"
+        className="site-link site-link--arrow text-[0.9375rem]"
       >
         <Ruler size={16} aria-hidden="true" /> <span>See the size chart</span>
       </button>

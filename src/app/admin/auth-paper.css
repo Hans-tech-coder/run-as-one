@@ -175,47 +175,11 @@
   outline-offset: 2px;
 }
 
-/* ── Text links: the accent text, an underline that draws ──────── */
+/* ── The footer under a form; its links are `.site-link` (site.css) ─ */
 .site-paper.auth-paper .auth-footer {
   margin-top: 1.5rem;
   font-size: 0.9375rem;
   color: var(--site-muted);
-}
-
-.site-paper.auth-paper .auth-link {
-  font-weight: 600;
-  color: var(--site-accent-text);
-}
-
-.site-paper.auth-paper .auth-link::after {
-  height: 1.5px;
-  bottom: -1px;
-  background-color: currentColor;
-}
-
-.site-paper.auth-paper .auth-link:hover {
-  color: var(--site-accent-text);
-}
-
-.site-paper.auth-paper .auth-link:focus-visible {
-  outline: 2px solid var(--site-focus);
-  outline-offset: 3px;
-  border-radius: 2px;
-}
-
-/* The two-step page's "Use a recovery code instead" is a <button>. */
-.site-paper.auth-paper button.auth-link {
-  background: none;
-  border: 0;
-  padding: 0;
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.site-paper.auth-paper button.auth-link:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 /* ── Messages: the light frame's status colours, read left to right ─

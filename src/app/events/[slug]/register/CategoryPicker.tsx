@@ -361,7 +361,7 @@ function ViewInclusionsButton({
         onOpen();
       }}
       aria-label={`View ${name} inclusions`}
-      className={`self-start text-xs font-medium text-accent-blue hover:text-white underline underline-offset-2 py-2 pr-2 transition-colors ${className}`}
+      className={`site-link self-start text-xs py-2 pr-2 ${className}`}
     >
       View inclusions
     </button>

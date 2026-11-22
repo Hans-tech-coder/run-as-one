@@ -144,15 +144,6 @@
 }
 .site-paper .inquiry .apply-problem:focus-visible { outline-color: var(--site-focus); }
 .site-paper .inquiry .apply-nav { border-top-color: var(--site-line); }
-.site-paper .inquiry .auth-link {
-  color: var(--site-ink);
-  font-weight: 600;
-  text-decoration: underline;
-  text-decoration-color: var(--site-action);
-  text-underline-offset: 3px;
-}
-.site-paper .inquiry .auth-link::after { display: none; }
-.site-paper .inquiry .auth-link:hover { color: var(--site-accent-text); }
 
 /* ── The thank-you (ThankYouPanel) ───────────────────────────────
    Left-aligned like the rest of Paper; the mark a solid success circle. */

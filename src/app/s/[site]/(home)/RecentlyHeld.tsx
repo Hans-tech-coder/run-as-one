@@ -24,7 +24,7 @@ export default function RecentlyHeld({ events }: { events: React.ComponentProps<
           <h2 id="recently-held" className="site-h2">Recently held</h2>
           <p className="site-section__sub">The last races run, with their times once they are up.</p>
         </div>
-        <Link href={PAST_EVENTS_HREF} className="site-link shrink-0">
+        <Link href={PAST_EVENTS_HREF} className="site-link site-link--arrow shrink-0">
           <span>See all past races</span>
           <LinkPendingIcon>
             <ArrowRight size={18} />

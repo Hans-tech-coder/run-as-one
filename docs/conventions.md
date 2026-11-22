@@ -996,11 +996,27 @@
     `.site-section` the vertical step (a section after another drops its top);
     `.site-h1/-h2/-h3` and `.site-lead` the type; **`.site-btn` with
     `--action` or `--quiet`** the only button pair (steps up 1px on hover,
-    presses to 0.98); `.site-link` a text link whose underline draws (label in
-    a `<span>`); `.site-chip`; `.site-card` the event card. On Paper,
+    presses to 0.98); **`.site-link` the one text link** (below); `.site-chip`;
+    `.site-card` the event card. On Paper,
     `.btn-gradient` / `.btn-secondary` / `.glass-panel` / StatusPanel /
     `.input-group` fields are restyled in `site.css`, so a shared component
     cannot bring a gradient pill or a grey slab back onto a redesigned page.
+  - **One text link: `.site-link`** (`site.css`). Every orange text link on a
+    Paper page — the home's "See all past races", an event card's "See race
+    details", the sign-in footer's "Our Services", a mail address in a
+    sentence, the inquiry's Privacy and Terms — uses it, and **a new one must
+    too**; never a hand-rolled `underline hover:…` utility or a per-page
+    `.x-link:hover` rule. Rest: accent text, no line (the owner's call). Hover
+    and keyboard focus: a 1.5px underline draws in left to right and the
+    colour deepens toward the ink; press: the ink; focus also gets the blue ring. One
+    timing, `--duration-fast` on `--ease-smooth-out`, off under
+    `prefers-reduced-motion`. `.site-link` alone stays inline so it wraps in
+    running text; **`.site-link--arrow`** is the standalone form (label in a
+    `<span>`, icon beside it, a 44px target, the icon nudging 3px right) and
+    **`--back`** nudges a leading back arrow left. A `<button>` that reads as
+    a link takes the class too (its chrome is reset). Nav links, the legal
+    jump list and the 404's onward cards are not text links and keep their
+    own looks; the old `.auth-link` and `.feedback-mail` are gone.
   - **The navbar is a solid strip** (`.site-nav`, 64/72px, `--nav-offset` is its
     height on Paper) with a drawn underline on the current link; the phone menu
     is a full-width sheet under it. **The footer is the ink band**
