@@ -11,10 +11,10 @@ the owner's choice. Start one only when the owner asks, and read its source plan
 before writing any code. When an item is picked up, give it its own plan file in
 `docs/plans/`, and delete it from this list once it has landed.
 
-**No pending migrations:** every migration in `prisma/migrations` through `20261119074553_payment_paid_to` (including `event_add_ons`, `step_up_used_at`, `registration_closes_at`, `category_bib_medal_closed`, `runner_refund`, `category_opens_at`, `payment_reference_unique`, and `payment_paid_to`) is applied in production (`ep-still-pine-b3n210bs`) and live on `main` (`1ea27c7`, 2026-11-19). Old bank-transfer orders from before `paidTo` read *Untagged* until staff tag them from the proof (Registrants → *Paid to* filter → Untagged → row menu → *Correct Payment*; a PAID order asks the step-up).
+**No pending migrations:** every migration in `prisma/migrations` through `20261119074553_payment_paid_to` (including `event_add_ons`, `step_up_used_at`, `registration_closes_at`, `category_bib_medal_closed`, `runner_refund`, `category_opens_at`, `payment_reference_unique`, and `payment_paid_to`) is applied in production (`ep-still-pine-b3n210bs`) and live on `main` (`a1415b9`, 2026-11-22). Old bank-transfer orders from before `paidTo` read *Untagged* until staff tag them from the proof (Registrants → *Paid to* filter → Untagged → row menu → *Correct Payment*; tagging *Paid to* alone needs no step-up, `9e9833c`).
 
 Event publishing, virtual runs (Phase A), category changes,
-delivery switches, the promo price lock, the Past Events tab, event add-ons, step-up confirmation, payment corrections, scheduled registration close, Bib + Medal (with sale schedule), per-runner refunds, unique payment references, and per-event payment channels are all live
+delivery switches, the promo price lock, the Past Events tab, event add-ons, step-up confirmation, payment corrections, scheduled registration close, Bib + Medal (with sale schedule), per-runner refunds, unique payment references, per-event payment channels, per-host SEO sitemaps / link previews / SportsEvent JSON-LD, and the full Paper public + sign-in redesign are all live
 (`docs/current-state.md`, top). Still to watch on production: the first
 online upgrade and the first online delivery switch settled by a real PayMongo
 webhook (only a signed script and the `?paid=1` return path have settled one),
