@@ -1064,9 +1064,10 @@
   One), replacing the three numbered "How it works" cards.
 - **A race's head is `components/RaceHeader`**: one step back, the race's name
   (or a page title such as *Race winners* with the race's name above it), its
-  date, time and venue, and an actions row. It is used by the event page and
-  all three results pages, and replaced `EventHeroBanner`, which printed the
-  title in white capitals over the organizer's poster behind a scrim.
+  date, time and venue, an optional plain-language `lead`, and an actions row.
+  It is used by the event page and all three results pages, and replaced
+  `EventHeroBanner`, which printed the title in white capitals over the
+  organizer's poster behind a scrim.
 - **No decoration behind a page at a negative `z-index`.** The public pages
   used to float two blurred accent orbs (`-z-10`) behind their content. At rest
   those sit under `<body>`'s own background and cannot be seen at all, but the

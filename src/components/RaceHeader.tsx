@@ -22,6 +22,7 @@ export default function RaceHeader({
   event,
   back,
   title,
+  lead,
   children,
 }: {
   event: {
@@ -35,6 +36,8 @@ export default function RaceHeader({
   };
   back: { href: string; label: string };
   title?: string;
+  /** Optional plain-language summary of what this page shows and where else to go. */
+  lead?: React.ReactNode;
   /** Actions under the facts (the leaderboard link, photo albums). */
   children?: React.ReactNode;
 }) {
@@ -70,6 +73,7 @@ export default function RaceHeader({
           <span className="min-w-0 break-words">{virtual ? VIRTUAL_RUN_WHERE : event.location}</span>
         </li>
       </ul>
+      {lead && <p className="m-0 mt-4 max-w-[62ch] text-[0.9375rem] leading-relaxed text-site-muted sm:text-base">{lead}</p>}
       {children && <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">{children}</div>}
     </header>
   );

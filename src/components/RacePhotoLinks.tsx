@@ -21,8 +21,8 @@ export default function RacePhotoLinks({
 }: {
   /** The stored column as it comes; cleaned here (lib/photo-albums.ts). */
   albums: unknown;
-  /** `stretch` fills a sidebar; `center` wraps them in a centred row on a page. */
-  align?: 'stretch' | 'center';
+  /** `stretch` fills a sidebar; `start` or `center` wraps them in a row on a page. */
+  align?: 'stretch' | 'start' | 'center';
 }) {
   const list = cleanPhotoAlbums(albums);
   if (list.length === 0) return null;
@@ -40,6 +40,12 @@ export default function RacePhotoLinks({
   if (list.length === 1) return link(list[0], 'View race photos', true);
 
   const names = albumNames(list);
+  const rowClass =
+    align === 'stretch'
+      ? 'flex flex-col gap-3'
+      : align === 'center'
+        ? 'flex flex-wrap justify-center gap-3'
+        : 'flex flex-wrap gap-3';
   return (
     <div role="group" aria-labelledby="race-photos-heading" className="flex w-full flex-col gap-3">
       <p
@@ -48,7 +54,7 @@ export default function RacePhotoLinks({
       >
         <Camera size={16} aria-hidden="true" /> Race photos
       </p>
-      <div className={align === 'stretch' ? 'flex flex-col gap-3' : 'flex flex-wrap justify-center gap-3'}>
+      <div className={rowClass}>
         {list.map((album, i) => link(album, names[i], false))}
       </div>
     </div>

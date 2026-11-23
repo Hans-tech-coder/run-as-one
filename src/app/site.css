@@ -254,6 +254,8 @@ button.site-link:disabled { opacity: 0.5; cursor: not-allowed; }
 [data-enter] > :nth-child(2) { animation-delay: 60ms; }
 [data-enter] > :nth-child(3) { animation-delay: 120ms; }
 [data-enter] > :nth-child(4) { animation-delay: 180ms; }
+[data-enter] > :nth-child(5) { animation-delay: 240ms; }
+[data-enter] > :nth-child(6) { animation-delay: 300ms; }
 @keyframes site-enter {
   from { opacity: 0; transform: translateY(14px); }
 }
@@ -875,6 +877,200 @@ button.site-link:disabled { opacity: 0.5; cursor: not-allowed; }
   .feedback-layout__intro { position: sticky; top: calc(var(--nav-offset) + 2rem); }
 }
 
+/* ── Race winners (/results/[slug]) ───────────────────────────
+   Top-three podium per category and division, kept compact so a runner
+   scanning several distances sees the podium at a glance instead of scrolling
+   past nested cards. Categories separate on hairlines; each division is one
+   flat list card whose rows are the links. */
+.winners-board { padding-bottom: 4rem; }
+@media (min-width: 768px) { .winners-board { padding-bottom: 5rem; } }
+.winners-category {
+  padding-block: 1.5rem;
+  border-top: 1px solid var(--site-line);
+}
+@media (min-width: 640px) { .winners-category { padding-block: 2rem; } }
+.winners-category__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 1.25rem;
+  margin-bottom: 0.875rem;
+}
+@media (min-width: 640px) { .winners-category__head { margin-bottom: 1rem; } }
+.winners-category__title {
+  margin: 0;
+  min-width: 0;
+  font-family: var(--site-display);
+  font-stretch: var(--site-display-stretch);
+  font-size: 1.25rem;
+  font-weight: 500;
+  line-height: 1.18;
+  letter-spacing: -0.015em;
+  color: var(--site-ink);
+  overflow-wrap: anywhere;
+}
+@media (min-width: 640px) { .winners-category__title { font-size: 1.5rem; } }
+.winners-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.875rem;
+  align-items: start;
+}
+@media (min-width: 1024px) {
+  .winners-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem; }
+}
+.winners-division {
+  overflow: hidden;
+  border: 1px solid var(--site-line);
+  border-radius: 12px;
+  background: var(--site-card);
+}
+.winners-division__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.625rem 0.875rem;
+  border-bottom: 1px solid var(--site-line);
+  background: color-mix(in srgb, var(--site-surface) 55%, var(--site-card));
+}
+@media (min-width: 640px) { .winners-division__head { padding: 0.6875rem 1rem; } }
+.winners-division__title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--site-ink);
+}
+.winners-division__col {
+  /* Aligns with .winners-row__time, sitting left of the 16px chevron + gap. */
+  padding-right: 1.625rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--site-muted);
+}
+@media (min-width: 640px) {
+  .winners-division__col { padding-right: 1.875rem; }
+}
+.winners-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.winners-list > li + li { border-top: 1px solid var(--site-line); }
+/* One link row: medal, runner (name over bib), chip time and trailing chevron
+   all share one horizontal centreline at every width. */
+.winners-row {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-height: 52px;
+  padding: 0.625rem 0.875rem;
+  color: var(--site-ink);
+  text-decoration: none;
+  transition: background-color var(--duration-quick) ease;
+}
+@media (min-width: 640px) {
+  .winners-row { padding: 0.6875rem 1rem; gap: 0.875rem; }
+}
+.winners-row:hover { background: var(--site-surface); }
+.winners-row:active { background: color-mix(in srgb, var(--site-ink) 7%, var(--site-surface)); }
+.winners-row:focus-visible {
+  background: var(--site-surface);
+  outline: 2px solid var(--site-focus);
+  outline-offset: -2px;
+}
+/* Gold, silver and bronze as flat medal fills (Paper has no gradients), each
+   with a dark numeral clearing 4.5:1 on it. */
+.winners-medal {
+  display: inline-flex;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.winners-medal[data-place="1"] { background: #e8bb3a; color: #3d2c00; }
+.winners-medal[data-place="2"] { background: #cfd5dd; color: #1f2933; }
+.winners-medal[data-place="3"] { background: #d39a62; color: #3b1f05; }
+.winners-row__who {
+  display: flex;
+  flex: 1 1 0%;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+.winners-row__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--site-ink);
+  transition: color var(--duration-quick) ease;
+}
+.winners-row:is(:hover, :focus-visible) .winners-row__name { color: var(--site-accent-text); }
+.winners-row__bib {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.35;
+  color: var(--site-muted);
+}
+.winners-row__time {
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--site-ink);
+}
+@media (min-width: 640px) {
+  .winners-row__name { font-size: 0.9875rem; }
+  .winners-row__time { font-size: 0.9375rem; }
+}
+.winners-row__go {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  color: var(--site-muted);
+  transition: color var(--duration-quick) ease, transform var(--duration-fast) var(--ease-smooth-out, ease);
+}
+.winners-row:is(:hover, :focus-visible) .winners-row__go {
+  color: var(--site-accent-text);
+  transform: translateX(2px);
+}
+.winners-empty {
+  margin: 0;
+  padding: 1.125rem 1rem;
+  font-size: 0.875rem;
+  color: var(--site-muted);
+}
+.winners-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--site-line);
+}
+
 /* The route loader and the running figure's caption on Paper: the paper
    ground with no blue glow behind the figure, and a mixed-case caption. */
 .site-paper .public-route-loading__stage { background: var(--site-bg); }
@@ -1047,8 +1243,10 @@ body:has(.site-paper[data-theme]) .zoom-lightbox-hint { background: var(--site-i
 @media (prefers-reduced-motion: reduce) {
   [data-enter] > * { animation: none; }
   .site-btn, .site-card, .site-card__poster .poster-frame__img, .site-link, .site-link--arrow > span:not(:has(svg)), .site-link--arrow svg, .site-nav__link::after,
-  .site-card__go svg, .site-footer__social, .site-notice__more strong svg, .site-modal__close { transition: none; }
+  .site-card__go svg, .site-footer__social, .site-notice__more strong svg, .site-modal__close,
+  .winners-row, .winners-row__name, .winners-row__go { transition: none; }
   .site-btn:hover, .site-card:hover, .site-footer__social:hover { transform: none; }
   .site-card:hover .site-card__poster .poster-frame__img, .site-notice__more a:hover strong svg,
-  .site-link--arrow:is(:hover, :focus-visible, :active) svg { transform: none; }
+  .site-link--arrow:is(:hover, :focus-visible, :active) svg,
+  .winners-row:is(:hover, :focus-visible) .winners-row__go { transform: none; }
 }
