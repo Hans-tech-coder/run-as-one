@@ -197,8 +197,8 @@ export default async function WinnersOverviewPage({
               const distanceLabel = cat.distance || cat.name;
               const linkText =
                 cat.finisherCount > 0
-                  ? `All ${distanceLabel} Times (${cat.finisherCount.toLocaleString()})`
-                  : `All ${distanceLabel} Times`;
+                  ? `All ${distanceLabel} Finishers (${cat.finisherCount.toLocaleString()})`
+                  : `All ${distanceLabel} Finishers`;
               return (
                 <section key={cat.id} className="winners-category" aria-labelledby={`winners-${cat.id}`}>
                   <div className="winners-category__head">
