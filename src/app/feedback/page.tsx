@@ -52,7 +52,7 @@ export default async function FeedbackPage({
       <div className="feedback-layout">
         <header className="feedback-layout__intro" data-enter>
           <p className="m-0 mb-4 text-[0.9375rem] font-semibold text-site-accent">Feedback</p>
-          <h1 className="site-h1">Tell us what to fix</h1>
+          <h1 className="site-h1">Tell Us What to Fix</h1>
           <p className="site-lead">
             Something not working, something that could be easier, or something
             you wish this app could do — all three belong here. A real person

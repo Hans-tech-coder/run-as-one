@@ -108,7 +108,7 @@ export function twoStepOffEmail(input: TwoStepOffEmailInput): Promise<EmailMessa
   return renderMessage({
     to: input.to,
     subject: `Two-step sign-in was turned off on your ${SITE_NAME} account`,
-    status: { label: 'Two-Step Sign-in Off', tone: 'pending' },
+    status: { label: 'Two-Step Sign-In Off', tone: 'pending' },
     footerTopic: 'two-step sign-in',
     blocks: [
       {
@@ -148,7 +148,7 @@ export function twoStepResetEmail(input: TwoStepResetEmailInput): Promise<EmailM
   return renderMessage({
     to: input.to,
     subject: `Two-step sign-in was reset on your ${SITE_NAME} account`,
-    status: { label: 'Two-Step Sign-in Reset', tone: 'pending' },
+    status: { label: 'Two-Step Sign-In Reset', tone: 'pending' },
     footerTopic: 'two-step sign-in',
     blocks: [
       {

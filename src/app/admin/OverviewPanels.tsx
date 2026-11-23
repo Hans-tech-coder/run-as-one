@@ -212,7 +212,7 @@ export function RecentPanel({ recent, canCreate }: { recent: OverviewOrder[]; ca
 
         <div className="dash-mobile-only">
           <AdminCardList
-            label="Recent registrations"
+            label="Recent Registrations"
             items={recent}
             getKey={reg => reg.id}
             title={reg => reg.customerName}

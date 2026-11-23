@@ -42,7 +42,7 @@ export default function ChangeBankProof({
           </p>
         </div>
         <button type="button" onClick={() => setReplacing(true)} className="btn-secondary justify-center">
-          Replace proof
+          Replace Proof
         </button>
       </div>
     );

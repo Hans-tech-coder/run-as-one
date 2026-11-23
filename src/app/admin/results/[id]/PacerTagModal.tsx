@@ -85,7 +85,7 @@ export default function PacerTagModal({
       >
         <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-2 max-sm:px-4 max-sm:pt-3 shrink-0">
           <h2 id="pacer-tag-title" className="text-xl font-bold m-0 min-w-0">
-            {mode === 'mark' ? 'Mark as pacer' : 'Edit pace group'}
+            {mode === 'mark' ? 'Mark as Pacer' : 'Edit Pace Group'}
           </h2>
           <button
             type="button"
@@ -120,7 +120,7 @@ export default function PacerTagModal({
 
             <div className="form-group">
               <label className="form-label" htmlFor="pacer-tag-pace-group">
-                Pace group <span className="text-secondary font-normal">(optional)</span>
+                Pace Group <span className="text-secondary font-normal">(Optional)</span>
               </label>
               <input
                 id="pacer-tag-pace-group"
@@ -158,7 +158,7 @@ export default function PacerTagModal({
             className="btn-light w-full"
             disabled={isSubmitting}
           >
-            {isSubmitting ? 'Saving' : mode === 'mark' ? 'Mark as pacer' : 'Save pace group'}
+            {isSubmitting ? 'Saving' : mode === 'mark' ? 'Mark as Pacer' : 'Save Pace Group'}
           </button>
         </div>
       </div>

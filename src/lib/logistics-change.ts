@@ -79,7 +79,7 @@ export function isOpenSwitch(status: unknown): boolean {
 }
 
 export const LOGISTICS_CHANGE_STATUS_LABELS: Record<LogisticsChangeStatus, string> = {
-  AWAITING_PAYMENT: 'Awaiting payment',
+  AWAITING_PAYMENT: 'Awaiting Payment',
   APPLIED: 'Switched',
   CANCELLED: 'Cancelled',
   EXPIRED: 'Expired',

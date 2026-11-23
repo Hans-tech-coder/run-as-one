@@ -34,7 +34,7 @@ import {
 export default function ResultsUploaderClient({
   event,
   onPrepared,
-  triggerLabel = 'Upload results',
+  triggerLabel = 'Upload Results',
   byHand = { added: 0, edited: 0 },
 }: {
   /** No id while the race is still unsaved; only `onPrepared` mode allows that. */

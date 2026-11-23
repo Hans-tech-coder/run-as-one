@@ -129,7 +129,7 @@ export default function EventOptionsPanel({
         {!resultsOnly && (
           <div className="form-group form-group-full mb-6">
             <label className="form-label">
-              What do runners choose between?
+              What Do Runners Choose Between?
             </label>
             <div className="grid gap-4 md:grid-cols-2">
               {TYPE_OPTIONS.map(option => {

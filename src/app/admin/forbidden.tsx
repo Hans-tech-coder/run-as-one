@@ -21,7 +21,7 @@ export default function AdminForbiddenPage() {
     <AdminNotFound
       icon={EyeOff}
       title="Not Part of Your View"
-      heading="This screen is for the Run As One team"
+      heading="This Screen Is for the Run As One Team"
       body="Your sign-in shows your organization's events and how many runners have registered for each. Payments, runner details and results are handled by Run As One. Contact Run As One if you need anything more."
       homeHref="/admin"
       homeLabel="Back to Your Events"

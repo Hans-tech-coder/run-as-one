@@ -153,7 +153,7 @@ export default function AddPacerModal({
 
             <div className="form-group">
               <label className="form-label" htmlFor="pacer-name">
-                Pacer name <span className="text-[var(--status-danger)]">*</span>
+                Pacer Name <span className="text-[var(--status-danger)]">*</span>
               </label>
               <input
                 id="pacer-name"
@@ -182,7 +182,7 @@ export default function AddPacerModal({
                 can be filled in later through Edit. */}
             <div className="form-group">
               <label className="form-label" htmlFor="pacer-bib">
-                Bib number <span className="text-secondary font-normal">(optional)</span>
+                Bib Number <span className="text-secondary font-normal">(Optional)</span>
               </label>
               <input
                 id="pacer-bib"
@@ -210,7 +210,7 @@ export default function AddPacerModal({
 
             <div className="form-group">
               <label className="form-label" htmlFor="pacer-pace-group">
-                Pace group <span className="text-secondary font-normal">(optional)</span>
+                Pace Group <span className="text-secondary font-normal">(Optional)</span>
               </label>
               <input
                 id="pacer-pace-group"
@@ -251,7 +251,7 @@ export default function AddPacerModal({
                 className="admin-switch-row"
               >
                 <span className="admin-switch-label">
-                  <span>Include admin fee in discount</span>
+                  <span>Include Admin Fee in Discount</span>
                   <span className="admin-switch-hint">
                     {canWaiveAdminFee
                       ? 'On, the pacer pays nothing at all and skips the payment step. Off, they still pay the admin fee.'

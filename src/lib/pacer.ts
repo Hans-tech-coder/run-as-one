@@ -228,7 +228,7 @@ export function codeSentReminder(pacers: PacerTerms[]): string | null {
  * forgotten pacer is visible without opening the screen.
  */
 export function pacerMenuLabel(notSent: number): string {
-  return notSent > 0 ? `Pacers · ${notSent} not sent` : 'Pacers';
+  return notSent > 0 ? `Pacers · ${notSent} Not Sent` : 'Pacers';
 }
 
 /** A refusal, naming the field that caused it — the shape every admin route answers with. */

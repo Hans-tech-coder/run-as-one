@@ -384,7 +384,7 @@ export default function DashboardShell({
           first thing Tab reaches on any dashboard page; invisible until it
           has focus (Admin.css). */}
       <a href={`#${MAIN_ID}`} className="dash-skip-link">
-        Skip to content
+        Skip to Content
       </a>
 
       {/* A phone's open menu lies over the page; this is the thumb's way out.
@@ -418,12 +418,12 @@ export default function DashboardShell({
           className="dash-jump-trigger"
           aria-haspopup="dialog"
           aria-label="Jump to a page"
-          data-tip="Jump to a page"
+          data-tip="Jump to a Page"
           data-tip-key={`${modKey}K`}
           onClick={() => setJump('open')}
         >
           <span className="admin-nav-icon" aria-hidden="true"><Search size={20} /></span>
-          <span className="admin-nav-label">Jump to…</span>
+          <span className="admin-nav-label">Jump To…</span>
           <kbd className="dash-jump-hint" aria-hidden="true">{modKey}K</kbd>
         </button>
 
@@ -436,7 +436,7 @@ export default function DashboardShell({
             aria-label={expanded ? 'Collapse menu' : 'Expand menu'}
             aria-expanded={expanded}
             aria-controls={MENU_ID}
-            data-tip={expanded ? 'Collapse menu' : 'Expand menu'}
+            data-tip={expanded ? 'Collapse Menu' : 'Expand Menu'}
             // Its knob hangs 12px out past the rail, so its tooltip needs the
             // wider gap to clear it rather than sit against it.
             data-tip-gap="28"
@@ -472,10 +472,10 @@ export default function DashboardShell({
             target="_blank"
             rel="noopener noreferrer"
             className="admin-nav-item"
-            data-tip="View public site"
+            data-tip="View Public Site"
           >
             <span className="admin-nav-icon" aria-hidden="true"><ExternalLink size={20} /></span>
-            <span className="admin-nav-label">View public site</span>
+            <span className="admin-nav-label">View Public Site</span>
           </a>
         </div>
       </aside>

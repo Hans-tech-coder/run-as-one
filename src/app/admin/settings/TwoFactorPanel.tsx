@@ -154,7 +154,7 @@ export default function TwoFactorPanel({ twoFactor }: { twoFactor: TwoFactorSumm
       <div className="admin-panel-header">
         <h2 id="two-step-title" className="admin-panel-title flex items-center gap-2">
           <ShieldCheck size={18} className="text-accent-orange-ink" aria-hidden="true" />
-          Two-step Sign-in
+          Two-Step Sign-In
         </h2>
       </div>
 
@@ -165,7 +165,7 @@ export default function TwoFactorPanel({ twoFactor }: { twoFactor: TwoFactorSumm
           <form onSubmit={confirm} noValidate>
             <ol className="two-step-steps">
               <li>
-                <p className="two-step-step-title">Step 1 of 2 — Scan this with your authenticator app</p>
+                <p className="two-step-step-title">Step 1 of 2 — Scan This with Your Authenticator App</p>
                 <p className="text-xs text-secondary">
                   Google Authenticator, Microsoft Authenticator, 1Password or any app
                   that shows 6-digit codes. Choose to add an account, then scan.
@@ -185,7 +185,7 @@ export default function TwoFactorPanel({ twoFactor }: { twoFactor: TwoFactorSumm
                 </div>
               </li>
               <li>
-                <p className="two-step-step-title">Step 2 of 2 — Enter the code it shows</p>
+                <p className="two-step-step-title">Step 2 of 2 — Enter the Code It Shows</p>
                 <div className="form-grid mt-3">
                   <CodeField
                     label="6-Digit Code"
@@ -209,11 +209,11 @@ export default function TwoFactorPanel({ twoFactor }: { twoFactor: TwoFactorSumm
           <>
             <dl className="settings-facts">
               <div>
-                <dt>Two-step sign-in</dt>
+                <dt>Two-Step Sign-In</dt>
                 <dd>On since {twoFactor.since}</dd>
               </div>
               <div>
-                <dt>Recovery codes left</dt>
+                <dt>Recovery Codes Left</dt>
                 <dd>{twoFactor.codesLeft} of 10</dd>
               </div>
             </dl>
@@ -231,7 +231,7 @@ export default function TwoFactorPanel({ twoFactor }: { twoFactor: TwoFactorSumm
                 </p>
                 <div className="form-grid mt-4">
                   <CodeField
-                    label="Code from your app or a recovery code"
+                    label="Code from Your App or a Recovery Code"
                     value={code}
                     onChange={editCode}
                     error={errors.code}
@@ -266,7 +266,7 @@ export default function TwoFactorPanel({ twoFactor }: { twoFactor: TwoFactorSumm
                     />
                   </div>
                   <CodeField
-                    label="Code from your app or a recovery code"
+                    label="Code from Your App or a Recovery Code"
                     value={code}
                     onChange={editCode}
                     error={errors.code}
@@ -313,7 +313,7 @@ export default function TwoFactorPanel({ twoFactor }: { twoFactor: TwoFactorSumm
           <>
             <dl className="settings-facts">
               <div>
-                <dt>Two-step sign-in</dt>
+                <dt>Two-Step Sign-In</dt>
                 <dd>Off</dd>
               </div>
             </dl>
@@ -330,7 +330,7 @@ export default function TwoFactorPanel({ twoFactor }: { twoFactor: TwoFactorSumm
                 ) : (
                   <>
                     <ShieldCheck size={16} aria-hidden="true" />
-                    Turn On Two-Step Sign-in
+                    Turn On Two-Step Sign-In
                   </>
                 )}
               </button>

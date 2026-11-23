@@ -1,16 +1,13 @@
 'use client';
 
-import React, { Suspense, useState, useMemo, useEffect, useRef, useCallback, useTransition } from 'react';
-import { createPortal } from 'react-dom';
-import Link from 'next/link';
+import React, { Suspense, useState, useMemo, useEffect, useRef, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Search, User, Hash, Check, X } from 'lucide-react';
+import { Search, User, Hash, X } from 'lucide-react';
 import { toWholeSeconds } from '@/lib/race-time';
 import { runnerResultPath } from '@/lib/event-slug';
 import { compareCategoryNames } from '@/lib/category-distance';
 import RunnerLoader from '@/components/ui/RunnerLoader';
 import { ECertificateModal, useECertificate } from '@/components/ECertificate';
-import BusyLabel from '@/components/ui/BusyLabel';
 import {
   useReactTable,
   getCoreRowModel,
@@ -21,43 +18,9 @@ import {
   ColumnDef,
   flexRender
 } from '@tanstack/react-table';
-import { cssDurationMs } from '@/lib/css-duration';
 import { FilterDropdown, ActionMenu } from './FullResultsMenus';
+import FullResultsCards, { PacerTag, rankLabel, type Result } from './FullResultsCards';
 import FullResultsPager from './FullResultsPager';
-
-interface Result {
-  id: string;
-  name: string;
-  bibNumber: string;
-  gender: string;
-  category: { id: string, name: string };
-  chipTime: string;
-  gunTime?: string | null;
-  /** Without pacers (`ranksWithoutPacers`); null for a pacer, shown as "-". */
-  categoryRank?: number | null;
-  genderRank?: number | null;
-  /** Whether this finisher is one of the race's pacers (see pacerResultMatcher). */
-  isPacer?: boolean;
-  /** A pacer's pace group, for their certificate; null for everyone else. */
-  paceGroup?: string | null;
-}
-
-/**
- * The tag beside a pacer's bib. Their rank is real and stays; the tag says why
- * they are not on the Race Winners podium.
- */
-/** A rank as printed: "#3", or "-" for a pacer, who holds no place. */
-function rankLabel(rank: number | null | undefined): string {
-  return rank == null ? '-' : `#${rank}`;
-}
-
-function PacerTag() {
-  return (
-    <span className="shrink-0 whitespace-nowrap bg-site-surface text-site-accent px-2 py-0.5 rounded-md text-[10px] font-bold border border-site-action">
-      Pacer
-    </span>
-  );
-}
 
 interface Props {
   results: Result[];
@@ -341,7 +304,7 @@ function FullResults({ results, event, categoryParam }: Props & { categoryParam:
           className={`group -my-2.5 -mr-3 h-11 shrink-0 inline-flex items-center gap-1.5 px-3 rounded-xl text-sm font-medium text-site-accent hover:text-site-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--site-focus)] transition-[opacity,visibility,color] duration-200 motion-reduce:transition-none ${isFiltered ? 'opacity-100 visible' : 'opacity-0 invisible'}`}
         >
           <X size={14} aria-hidden="true" className="transition-transform duration-200 group-hover:rotate-90 motion-reduce:transition-none" />
-          Clear filters
+          Clear Filters
         </button>
       </div>
 
@@ -406,74 +369,13 @@ function FullResults({ results, event, categoryParam }: Props & { categoryParam:
           </div>
         </div>
 
-      {/* Card View — phones in one column, tablets in two. */}
-      <div className="lg:hidden grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
-        {rows.length === 0 ? (
-          <div className="md:col-span-2 bg-site-card border border-site-line p-8 rounded-[14px] text-center text-secondary/70 italic">No results found matching your filters.</div>
-        ) : (
-          rows.map((row, i) => {
-            const r = row.original;
-            const path = runnerResultPath(event, r);
-            return (
-              <div
-                key={row.id}
-                role="link"
-                tabIndex={0}
-                aria-label={`Open ${r.name}'s result`}
-                onClick={() => openResult(path)}
-                onKeyDown={(e) => openOnKey(e, path)}
-                className={`block no-underline rounded-[18px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--site-focus)]`}
-              >
-                <div className="relative h-full rounded-[18px] bg-site-card border border-site-line p-4 hover:border-site-line hover:bg-site-surface transition-all duration-300 group/row cursor-pointer overflow-hidden">
-
-                  <div className="flex items-start gap-3 relative z-10">
-                    {/* A runner's name is untrusted length: it truncates here
-                        and is spelled out in full on their own result. */}
-                    <div className="flex-1 min-w-0 pt-0.5">
-                      <h3 className="font-bold text-site-ink text-base leading-snug truncate group-hover/row:text-site-accent transition-colors" title={r.name}>{r.name}</h3>
-                      {/* One line, always: the chip gives way and truncates
-                          rather than wrapping, so every card is one height —
-                          wrapping put it on a second line for some runners
-                          and not others. */}
-                      <div className="flex items-center gap-2.5 mt-1.5 text-xs text-secondary min-w-0">
-                        <span className="flex items-center gap-1 whitespace-nowrap tabular-nums shrink-0"><Hash size={12} className="text-site-muted shrink-0" /> {r.bibNumber}</span>
-                        <span className="flex items-center gap-1 whitespace-nowrap shrink-0"><User size={12} className="text-site-muted shrink-0" /> {r.gender}</span>
-                        {r.isPacer && <PacerTag />}
-                        <span className="min-w-0 truncate whitespace-nowrap bg-site-surface text-site-accent px-2 py-0.5 rounded-md text-[10px] font-bold border border-site-line" title={r.category.name}>
-                          {r.category.name}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="-mt-1 -mr-1.5 shrink-0">
-                      {actionsFor(r, path)}
-                    </div>
-                  </div>
-
-                  {/* The time is what a runner opens this list for, so it
-                      leads the strip and is the largest figure on the card. */}
-                  <div className="grid grid-cols-[1.35fr_1fr_1fr] gap-3 mt-4 pt-3 border-t border-site-line relative z-10">
-                    <div className="min-w-0">
-                      <span className="text-[10px] text-secondary block mb-1">Chip Time</span>
-                      <span className="font-mono font-bold text-lg leading-none text-site-accent tabular-nums whitespace-nowrap">{toWholeSeconds(r.chipTime)}</span>
-                      {r.gunTime && (
-                        <span className="block mt-1.5 text-[11px] font-mono text-secondary tabular-nums whitespace-nowrap">Gun {toWholeSeconds(r.gunTime)}</span>
-                      )}
-                    </div>
-                    <div className="min-w-0">
-                      <span className="text-[10px] text-secondary block mb-1 whitespace-nowrap">Cat. Rank</span>
-                      <span className="font-mono font-bold text-base leading-none text-site-ink tabular-nums">{rankLabel(r.categoryRank)}</span>
-                    </div>
-                    <div className="min-w-0">
-                      <span className="text-[10px] text-secondary block mb-1 whitespace-nowrap">Gender Rank</span>
-                      <span className="font-mono font-bold text-base leading-none text-site-ink tabular-nums">{rankLabel(r.genderRank)}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })
-        )}
-      </div>
+      <FullResultsCards
+        rows={rows}
+        event={event}
+        openResult={openResult}
+        openOnKey={openOnKey}
+        actionsFor={actionsFor}
+      />
 
       <FullResultsPager table={table} pageIndex={pageIndex} pageSize={pageSize} turnPage={turnPage} />
 

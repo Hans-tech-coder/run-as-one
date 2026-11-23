@@ -95,7 +95,7 @@ export function SwitchHistoryList({
                     }}
                     className="btn-filter is-compact gap-1.5"
                   >
-                    <ImageIcon size={14} aria-hidden="true" /> View proof
+                    <ImageIcon size={14} aria-hidden="true" /> View Proof
                   </button>
                 )}
                 {onSendEmail && emailNotSent(change) && (
@@ -107,7 +107,7 @@ export function SwitchHistoryList({
                     }}
                     className="btn-filter is-compact gap-1.5"
                   >
-                    <Mail size={14} aria-hidden="true" /> Send email by hand
+                    <Mail size={14} aria-hidden="true" /> Send Email by Hand
                   </button>
                 )}
               </div>

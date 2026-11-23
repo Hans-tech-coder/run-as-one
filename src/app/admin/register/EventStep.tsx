@@ -77,7 +77,7 @@ export default function EventStep({
           }
           value={form.firstEventDate}
           clearable
-          dialogLabel="Choose the target date"
+          dialogLabel="Choose the Target Date"
           onChange={(day) => set('firstEventDate', day)}
           error={errors.firstEventDate}
         />
@@ -111,7 +111,7 @@ export default function EventStep({
         id={FIELD_ID.expectedRunners}
         label={
           <>
-            How many runners do you expect?
+            How Many Runners Do You Expect?
             <Optional />
           </>
         }

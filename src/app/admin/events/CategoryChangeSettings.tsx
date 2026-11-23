@@ -131,7 +131,7 @@ export default function CategoryChangeSettings({
         max={draft.date || undefined}
         clearable
         placeholder="The day before race day"
-        dialogLabel="Choose the last day category changes are allowed"
+        dialogLabel="Choose the Last Day Category Changes Are Allowed"
         hint="Philippine time. Leave blank to allow changes until the day before race day, when bibs and kits are final."
       />
     </div>

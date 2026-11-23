@@ -37,7 +37,7 @@ export default function ActivityTable({
           <TableRow className="border-b border-[var(--dash-border)] hover:bg-transparent">
             <TableHead className="py-4 px-4 pl-8 text-secondary font-medium h-auto w-28">Time</TableHead>
             <TableHead className="py-4 px-4 text-secondary font-medium h-auto w-[16rem]">Person</TableHead>
-            <TableHead className="py-4 px-4 text-secondary font-medium h-auto">What happened</TableHead>
+            <TableHead className="py-4 px-4 text-secondary font-medium h-auto">What Happened</TableHead>
             <TableHead className="py-4 px-4 text-secondary font-medium h-auto w-[14rem]">Event</TableHead>
             <TableHead className="py-4 px-4 text-secondary font-medium h-auto w-28">Details</TableHead>
           </TableRow>

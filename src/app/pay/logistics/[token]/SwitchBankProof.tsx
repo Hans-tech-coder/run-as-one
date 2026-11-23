@@ -143,7 +143,7 @@ export default function SwitchBankProof({
               className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
             />
             <UploadCloud size={30} className="mx-auto mb-2 text-accent-blue" aria-hidden="true" />
-            <p className="m-0 font-bold text-site-ink">Upload the screenshot of your payment</p>
+            <p className="m-0 font-bold text-site-ink">Upload the Screenshot of Your Payment</p>
             <p className="m-0 mt-1 text-xs text-site-muted">
               {describeUploadTypes('proof')} (max {MAX_UPLOAD_MB}MB)
             </p>
@@ -184,7 +184,7 @@ export default function SwitchBankProof({
 
       <div className="input-group full-width">
         <label htmlFor="switch-reference">
-          Reference number <span className="text-red-500">*</span>
+          Reference Number <span className="text-red-500">*</span>
         </label>
         <input
           id="switch-reference"
@@ -219,7 +219,7 @@ export default function SwitchBankProof({
         </button>
         {replacing && onCancel && (
           <button type="button" onClick={onCancel} disabled={busy} className="btn-secondary justify-center">
-            Keep the proof I sent
+            Keep the Proof I Sent
           </button>
         )}
       </div>

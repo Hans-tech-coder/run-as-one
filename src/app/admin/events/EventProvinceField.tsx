@@ -38,8 +38,8 @@ export default function EventProvinceField({
   // never reads "Not set" while the hint says Tarlac is being used.
   const options: AdminSelectOption[] = [
     detected
-      ? { value: "", label: `${detected} (from location)`, hint: "Read from the location, and saved as the province when you save" }
-      : { value: "", label: "Not set", hint: "Runners choose Inside or Outside themselves" },
+      ? { value: "", label: `${detected} (from Location)`, hint: "Read from the location, and saved as the province when you save" }
+      : { value: "", label: "Not Set", hint: "Runners choose Inside or Outside themselves" },
     ...PROVINCE_OPTIONS,
   ];
   return (

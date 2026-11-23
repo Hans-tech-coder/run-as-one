@@ -42,7 +42,7 @@ function DivisionPanel({
     <div className="winners-division">
       <div className="winners-division__head">
         <h3 className="winners-division__title">{title}</h3>
-        {winners.length > 0 && <span className="winners-division__col">Chip time</span>}
+        {winners.length > 0 && <span className="winners-division__col">Chip Time</span>}
       </div>
 
       {winners.length === 0 ? (
@@ -68,7 +68,7 @@ function DivisionPanel({
                       {winner.name}
                     </span>
                     <span className="winners-row__bib">
-                      {bib ? `Bib #${bib}` : 'Official finisher'}
+                      {bib ? `Bib #${bib}` : 'Official Finisher'}
                     </span>
                   </span>
                   <span className="winners-row__time">{time}</span>
@@ -176,9 +176,9 @@ export default async function WinnersOverviewPage({
           own time and e-certificate rather than the podium — so the lead says
           both what this board shows and where to search by name or bib, right
           above the leaderboard button and the race's photo albums (D7). */}
-      <RaceHeader event={event} back={{ href: '/results', label: 'All results' }} title="Race winners" lead={lead}>
+      <RaceHeader event={event} back={{ href: '/results', label: 'All Results' }} title="Race Winners" lead={lead}>
         <Link href={fullHref} className="site-btn site-btn--action group">
-          See the full leaderboard
+          See the Full Leaderboard
           <LinkPendingIcon>
             <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
           </LinkPendingIcon>
@@ -197,14 +197,14 @@ export default async function WinnersOverviewPage({
               const distanceLabel = cat.distance || cat.name;
               const linkText =
                 cat.finisherCount > 0
-                  ? `All ${distanceLabel} times (${cat.finisherCount.toLocaleString()})`
-                  : `All ${distanceLabel} times`;
+                  ? `All ${distanceLabel} Times (${cat.finisherCount.toLocaleString()})`
+                  : `All ${distanceLabel} Times`;
               return (
                 <section key={cat.id} className="winners-category" aria-labelledby={`winners-${cat.id}`}>
                   <div className="winners-category__head">
                     <h2 id={`winners-${cat.id}`} className="winners-category__title">
                       {/* A package has no distance, so the parenthetical would read "( )". */}
-                      {cat.name}{cat.distance ? ` (${cat.distance})` : ''} winners
+                      {cat.name}{cat.distance ? ` (${cat.distance})` : ''} Winners
                     </h2>
                     <Link href={`${fullHref}?category=${cat.id}`} className="site-link site-link--arrow shrink-0 text-[0.9375rem]">
                       <span>{linkText}</span>
@@ -228,7 +228,7 @@ export default async function WinnersOverviewPage({
                   Looking for your own finish time or e-certificate?
                 </p>
                 <Link href={fullHref} className="site-link site-link--arrow shrink-0 text-[0.9375rem]">
-                  <span>Search the full leaderboard</span>
+                  <span>Search the Full Leaderboard</span>
                   <LinkPendingIcon>
                     <ArrowRight size={16} />
                   </LinkPendingIcon>

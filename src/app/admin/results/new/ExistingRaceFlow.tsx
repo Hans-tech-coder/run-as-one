@@ -26,7 +26,7 @@ export default function ExistingRaceFlow({ events }: { events: PickableEvent[] }
         <ExistingRaceSteps key={selected.id} race={selected} />
       ) : (
         <>
-          <LockedStep n={2} label="Upload results" reason="Choose the race first." />
+          <LockedStep n={2} label="Upload Results" reason="Choose the race first." />
           <LockedStep n={3} label="E-Certificate" reason="Choose the race first." />
           <SaveBar label={null} stage={null} busy={false} onSave={() => {}} />
         </>

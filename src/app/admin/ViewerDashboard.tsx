@@ -79,13 +79,13 @@ export default function ViewerDashboard({
               <BookOpen size={20} />
             </span>
             <span className="overview-row-main">
-              <span className="overview-row-title">Preparing your e-certificate?</span>
+              <span className="overview-row-title">Preparing Your E-Certificate?</span>
               <span className="overview-row-meta">
                 Where things go on the page, the file specs and a checklist to hand your designer.
               </span>
             </span>
             <span className="viewer-guide-go">
-              Read the template guide <ArrowRight size={16} aria-hidden="true" />
+              Read the Template Guide <ArrowRight size={16} aria-hidden="true" />
             </span>
           </Link>
         </div>
@@ -95,7 +95,7 @@ export default function ViewerDashboard({
             <div className="empty-state">
               <CalendarDays size={48} className="empty-icon" aria-hidden="true" />
               <div>
-                <p className="mb-2 text-lg font-bold text-primary">No events linked yet</p>
+                <p className="mb-2 text-lg font-bold text-primary">No Events Linked Yet</p>
                 <p className="m-0 max-w-md text-sm leading-relaxed">
                   When Run As One links a race to {clientName || 'your organization'}, it appears
                   here with how many runners have registered — paid and awaiting verification,
@@ -140,9 +140,9 @@ function EventSections({ events }: { events: ViewerEventSummary[] }) {
       {upcoming.length > 0 && (
         <section aria-labelledby="viewer-upcoming-title">
           <h2 id="viewer-upcoming-title" className="viewer-section-title">
-            Upcoming events <span className="viewer-section-count">{upcoming.length}</span>
+            Upcoming Events <span className="viewer-section-count">{upcoming.length}</span>
           </h2>
-          <EventGrid events={upcoming} label="Upcoming events" />
+          <EventGrid events={upcoming} label="Upcoming Events" />
         </section>
       )}
 
@@ -151,7 +151,7 @@ function EventSections({ events }: { events: ViewerEventSummary[] }) {
         // over a fold the viewer opened before the page finished loading.
         <details className="viewer-past" open={upcoming.length === 0 || undefined}>
           <summary className="viewer-section-title viewer-past-toggle">
-            Past events <span className="viewer-section-count">{past.length}</span>
+            Past Events <span className="viewer-section-count">{past.length}</span>
             <ChevronDown size={18} className="viewer-fold-chevron" aria-hidden="true" />
           </summary>
           <PastEventsGrid cards={past.map(event => <EventSummaryCard key={event.id} event={event} />)} />
@@ -223,10 +223,10 @@ function EventSummaryCard({ event }: { event: ViewerEventSummary }) {
         <SplitBar counts={event.counts} />
         <p className="viewer-split-legend">
           <span className="is-paid">{event.counts.paid.toLocaleString('en-US')} Paid</span>
-          <span className="is-pending">{event.counts.awaiting.toLocaleString('en-US')} Awaiting verification</span>
+          <span className="is-pending">{event.counts.awaiting.toLocaleString('en-US')} Awaiting Verification</span>
           {event.counts.unpaid > 0 && (
             <span className="is-unpaid">
-              {event.counts.unpaid.toLocaleString('en-US')} Unpaid checkout{event.counts.unpaid === 1 ? '' : 's'}
+              {event.counts.unpaid.toLocaleString('en-US')} Unpaid Checkout{event.counts.unpaid === 1 ? '' : 's'}
             </span>
           )}
         </p>
@@ -241,7 +241,7 @@ function EventSummaryCard({ event }: { event: ViewerEventSummary }) {
           <details className="viewer-categories">
             <summary className="viewer-categories-toggle">
               <span>
-                By category <span className="viewer-categories-count">{event.categories.length}</span>
+                By Category <span className="viewer-categories-count">{event.categories.length}</span>
               </span>
               <ChevronDown size={16} className="viewer-fold-chevron" aria-hidden="true" />
             </summary>
@@ -274,7 +274,7 @@ function EventSummaryCard({ event }: { event: ViewerEventSummary }) {
         className="viewer-event-open"
         aria-describedby={headingId}
       >
-        <span>View race details and report</span>
+        <span>View Race Details and Report</span>
         <span className="viewer-event-open-arrow" aria-hidden="true">
           <ArrowRight size={16} />
         </span>

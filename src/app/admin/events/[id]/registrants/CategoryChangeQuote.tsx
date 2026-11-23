@@ -68,7 +68,7 @@ export default function CategoryChangeQuote({
       <QuoteLine
         label={
           <>
-            Already paid for {current.name}
+            Already Paid for {current.name}
             {quote.basisEstimated && (
               <span className="status-badge pending ml-2 align-middle" style={{ padding: '1px 8px' }}>Estimated</span>
             )}
@@ -91,28 +91,28 @@ export default function CategoryChangeQuote({
           {BASIS_ESTIMATE_COPY[quote.estimateReason]}
         </p>
       )}
-      <QuoteLine label={`${target.name} list price`} value={peso(quote.toPrice)} />
-      {quote.changeFee > 0 && <QuoteLine label="Change fee" value={peso(quote.changeFee)} />}
+      <QuoteLine label={`${target.name} List Price`} value={peso(quote.toPrice)} />
+      {quote.changeFee > 0 && <QuoteLine label="Change Fee" value={peso(quote.changeFee)} />}
       {needsPayment && quote.transactionFee > 0 && (
-        <QuoteLine label="Transaction fee" value={peso(quote.transactionFee)} note="PayMongo's, paid by the runner on top" />
+        <QuoteLine label="Transaction Fee" value={peso(quote.transactionFee)} note="PayMongo's, paid by the runner on top" />
       )}
       <div className="my-1.5 border-t border-[var(--dash-border)]" />
       {needsPayment ? (
-        <QuoteLine label={<span className="font-semibold text-primary">Runner pays</span>} value={peso(quote.totalCharged)} />
+        <QuoteLine label={<span className="font-semibold text-primary">Runner Pays</span>} value={peso(quote.totalCharged)} />
       ) : quote.refundAmount > 0 ? (
         <QuoteLine
-          label={<span className="font-semibold text-primary">Refund due</span>}
+          label={<span className="font-semibold text-primary">Refund Due</span>}
           value={peso(quote.refundAmount)}
           note="Paid by hand by GCash or bank, then recorded from the runner's details."
         />
       ) : quote.forfeited > 0 ? (
         <QuoteLine
-          label={<span className="font-semibold text-primary">Not refunded</span>}
+          label={<span className="font-semibold text-primary">Not Refunded</span>}
           value={peso(quote.forfeited)}
           note="This race does not refund a move to a cheaper category."
         />
       ) : (
-        <QuoteLine label={<span className="font-semibold text-primary">Nothing to pay</span>} value={peso(0)} />
+        <QuoteLine label={<span className="font-semibold text-primary">Nothing to Pay</span>} value={peso(0)} />
       )}
       <p className="sr-only" aria-live="polite">{announce}</p>
 

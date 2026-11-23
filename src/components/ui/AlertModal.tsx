@@ -49,7 +49,7 @@ export const ALERT_VARIANTS: Record<
     panel: "border-red-500/20",
     badge: "bg-red-500/10 text-red-500",
     confirmBtn: "bg-red-500 hover:bg-red-600 text-white",
-    title: "Are you sure?",
+    title: "Are You Sure?",
     confirmLabel: "Confirm",
   },
   success: {
@@ -66,8 +66,8 @@ export const ALERT_VARIANTS: Record<
     badge: "bg-accent-blue/10 text-accent-blue",
     confirmBtn:
       "bg-[var(--ink-05)] hover:bg-[var(--ink-10)] border border-[var(--dash-border)] text-primary",
-    title: "Heads up",
-    confirmLabel: "Got it",
+    title: "Heads Up",
+    confirmLabel: "Got It",
   },
 };
 

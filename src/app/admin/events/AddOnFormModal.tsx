@@ -220,7 +220,7 @@ export default function AddOnFormModal({
         <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-2 max-sm:px-4 max-sm:pt-3 shrink-0">
           <h2 id="add-on-form-title" className="text-xl font-bold m-0 flex items-center gap-2 min-w-0">
             <ShoppingBag size={20} className="text-accent-orange-ink shrink-0" />
-            {addOn ? 'Edit Add-on' : 'Add Add-on'}
+            {addOn ? 'Edit Add-On' : 'Add Add-On'}
           </h2>
           <button
             type="button"
@@ -256,7 +256,7 @@ export default function AddOnFormModal({
 
             <div className="form-group">
               <label className="form-label" htmlFor="add-on-description">
-                Description <span className="text-secondary font-normal">(optional)</span>
+                Description <span className="text-secondary font-normal">(Optional)</span>
               </label>
               <textarea
                 id="add-on-description"
@@ -307,7 +307,7 @@ export default function AddOnFormModal({
             <FieldError id="add-on-images-error" message={errorFor('imageUrls')} />
 
             <AdminSelect
-              label="What the runner picks"
+              label="What the Runner Picks"
               value={draft.optionKind}
               options={KIND_OPTIONS}
               listboxLabel="What the runner picks"
@@ -347,7 +347,7 @@ export default function AddOnFormModal({
             <div className="grid grid-cols-2 gap-4 max-sm:grid-cols-1">
               <div className="form-group">
                 <label className="form-label" htmlFor="add-on-max">
-                  Most per runner
+                  Most per Runner
                 </label>
                 <input
                   id="add-on-max"
@@ -368,7 +368,7 @@ export default function AddOnFormModal({
 
               <div className="form-group">
                 <label className="form-label" htmlFor="add-on-stock">
-                  Stock <span className="text-secondary font-normal">(optional)</span>
+                  Stock <span className="text-secondary font-normal">(Optional)</span>
                 </label>
                 <input
                   id="add-on-stock"
@@ -392,7 +392,7 @@ export default function AddOnFormModal({
               id="add-on-closes"
               label={
                 <>
-                  Sales close <span className="text-secondary font-normal">(optional)</span>
+                  Sales Close <span className="text-secondary font-normal">(Optional)</span>
                 </>
               }
               value={draft.salesCloseAt}
@@ -408,7 +408,7 @@ export default function AddOnFormModal({
             {categories.length > 1 && (
               <div className="form-group">
                 <span className="form-label" id="add-on-scope-label">
-                  Who can buy it
+                  Who Can Buy It
                 </span>
                 <div
                   role="group"
@@ -416,7 +416,7 @@ export default function AddOnFormModal({
                   className="flex flex-wrap gap-1 rounded-[10px] border border-[var(--dash-border)] bg-[var(--dash-surface)] p-1"
                 >
                   <Segment on={draft.categoryIds.length === 0} onClick={() => set({ categoryIds: [] })}>
-                    All categories
+                    All Categories
                   </Segment>
                   {categories.map(category => (
                     <Segment
@@ -440,7 +440,7 @@ export default function AddOnFormModal({
 
             <div className="form-group">
               <span className="form-label" id="add-on-seller-label">
-                Sold by
+                Sold By
               </span>
               <div
                 role="group"
@@ -466,7 +466,7 @@ export default function AddOnFormModal({
           {/* Saving mid-upload would store the item without its poster. */}
           <button type="submit" form="add-on-form" className="btn-light w-full" disabled={saving || uploading > 0}>
             {addOn ? <Pencil size={16} /> : <Plus size={16} />}
-            {saving ? <BusyLabel>Saving</BusyLabel> : addOn ? 'Save Changes' : 'Add Add-on'}
+            {saving ? <BusyLabel>Saving</BusyLabel> : addOn ? 'Save Changes' : 'Add Add-On'}
           </button>
         </div>
       </div>

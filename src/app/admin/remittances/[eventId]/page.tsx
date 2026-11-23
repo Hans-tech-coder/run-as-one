@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 /** A missing race and one this person may not settle read alike (PROJECT_GUIDE §7). */
 const SETTLEMENT_NOT_FOUND = {
   title: 'Event Not Found',
-  heading: 'Event not found.',
+  heading: 'Event Not Found',
   body: 'The link may be an old one, or the event may have been deleted. The other settlements are where you left them.',
   homeHref: '/admin/remittances',
   homeLabel: 'Back to Remittances',
@@ -107,58 +107,58 @@ export default async function Page({ params }: { params: Promise<{ eventId: stri
                 payment, cancelled or expired does not.`}
             </p>
             <dl className="settlement-lines">
-              <Line label="Collected from runners" value={settlement.collected} strong />
+              <Line label="Collected from Runners" value={settlement.collected} strong />
               {/* The Category changes line (CATEGORY_CHANGE_PLAN.md): only when
                   there are any, so a race without one reads as it always has. */}
               {splitCollected && (
-                <Line label="Paid on orders" value={settlement.collected - changes.collected - switches.charged + refunds.amount} muted />
+                <Line label="Paid on Orders" value={settlement.collected - changes.collected - switches.charged + refunds.amount} muted />
               )}
               {changes.changes > 0 && (
                 <>
-                  <Line label="Paid for category changes" value={changes.charged} muted />
+                  <Line label="Paid for Category Changes" value={changes.charged} muted />
                   {changes.refunded > 0 && (
-                    <Line label="Less category change refunds paid" value={-changes.refunded} muted />
+                    <Line label="Less Category Change Refunds Paid" value={-changes.refunded} muted />
                   )}
                   {changes.toRefund > 0 && (
-                    <Line label="Less category change refunds still to refund" value={-changes.toRefund} muted />
+                    <Line label="Less Category Change Refunds Still to Refund" value={-changes.toRefund} muted />
                   )}
                 </>
               )}
               {/* The Delivery switches line (LOGISTICS_CHANGE_PLAN.md L8): the
                   receipt is never edited, so its fee is named here instead. */}
-              {switches.switches > 0 && <Line label="Paid for delivery switches" value={switches.charged} muted />}
+              {switches.switches > 0 && <Line label="Paid for Delivery Switches" value={switches.charged} muted />}
               {/* Below what was paid, so these lines add up to *Collected*, which is net of them. */}
               {refunds.refunds > 0 && (
-                <Line label={`Less runner refunds (${refunds.refunds})`} value={-refunds.amount} muted />
+                <Line label={`Less Runner Refunds (${refunds.refunds})`} value={-refunds.amount} muted />
               )}
-              {refunds.toRefund > 0 && <Line label="Of those, still to send to runners" value={refunds.toRefund} muted />}
+              {refunds.toRefund > 0 && <Line label="Of Those, Still to Send to Runners" value={refunds.toRefund} muted />}
               {/* Add-ons (ADD_ONS_PLAN.md D1): inside what orders paid, named
                   so staff see the item money apart from the entries. */}
-              {addOns.sales > 0 && <Line label="Of which add-on sales" value={addOns.sales} muted />}
+              {addOns.sales > 0 && <Line label="Of Which Add-On Sales" value={addOns.sales} muted />}
               <Line
-                label={changes.changeFees > 0 ? 'Platform and change fees (Run As One)' : 'Platform fees (Run As One)'}
+                label={changes.changeFees > 0 ? 'Platform and Change Fees (Run As One)' : 'Platform Fees (Run As One)'}
                 value={-settlement.platformFees}
               />
               {/* Run As One's own merchandise: kept, so off what is owed, and
                   never inside the platform fee line above (D1, D2). */}
-              {addOns.runAsOne > 0 && <Line label="Add-ons sold by Run As One" value={-addOns.runAsOne} />}
-              <Line label="Payment processing fees (PayMongo)" value={-settlement.transactionFees} />
-              <Line label="Owed to the organizer" value={settlement.owed} strong rule />
-              <Line label="Race entries at list price" value={parts.entries} muted />
-              <Line label="Less discounts from promotions" value={-parts.discounts} muted />
+              {addOns.runAsOne > 0 && <Line label="Add-Ons Sold by Run As One" value={-addOns.runAsOne} />}
+              <Line label="Payment Processing Fees (PayMongo)" value={-settlement.transactionFees} />
+              <Line label="Owed to the Organizer" value={settlement.owed} strong rule />
+              <Line label="Race Entries at List Price" value={parts.entries} muted />
+              <Line label="Less Discounts from Promotions" value={-parts.discounts} muted />
               {/* The add-on part of a refund is already off the add-on lines. */}
               {refunds.refunds > 0 && (
-                <Line label="Less entries refunded to runners" value={refunds.addOnSales - refunds.amount} muted />
+                <Line label="Less Entries Refunded to Runners" value={refunds.addOnSales - refunds.amount} muted />
               )}
-              {addOns.organizer > 0 && <Line label="Add-ons sold by the organizer" value={addOns.organizer} muted />}
-              <Line label="Delivery fees" value={parts.delivery} muted />
+              {addOns.organizer > 0 && <Line label="Add-Ons Sold by the Organizer" value={addOns.organizer} muted />}
+              <Line label="Delivery Fees" value={parts.delivery} muted />
               {changes.changes > 0 && (
-                <Line label="Category changes, after their fees and refunds" value={changes.owed} muted />
+                <Line label="Category Changes, After Their Fees and Refunds" value={changes.owed} muted />
               )}
-              {switches.switches > 0 && <Line label="Delivery switches" value={switches.owed} muted />}
-              <Line label="Remitted so far (payouts less returns)" value={-settlement.remitted} rule />
+              {switches.switches > 0 && <Line label="Delivery Switches" value={switches.owed} muted />}
+              <Line label="Remitted So Far (Payouts Less Returns)" value={-settlement.remitted} rule />
               {refunds.organizerPaid > 0 && (
-                <Line label="Refunded by organizer (already off remitted)" value={refunds.organizerPaid} muted />
+                <Line label="Refunded by Organizer (Already Off Remitted)" value={refunds.organizerPaid} muted />
               )}
               <Line label="Balance" value={settlement.balance} strong rule />
             </dl>

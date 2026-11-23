@@ -50,11 +50,11 @@ export default function TargetCategoryPicker({
         onChange={onChange}
         error={categoryError}
         options={[
-          { value: '', label: 'Do not import this sheet' },
+          { value: '', label: 'Do Not Import This Sheet' },
           ...(canCreate
             ? [{
                 value: NEW_CATEGORY,
-                label: 'Create category from sheet name',
+                label: 'Create Category from Sheet Name',
                 // The name as it will be stored: category names are uppercase.
                 hint: `Adds ${upperCaseForStorage(sheetName)} to this event`,
               }]

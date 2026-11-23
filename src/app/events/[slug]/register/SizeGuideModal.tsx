@@ -120,7 +120,7 @@ export default function SizeGuideModal({
         </div>
 
         <button className="btn-gradient w-full mt-4 py-2.5" onClick={onClose}>
-          Got it
+          Got It
         </button>
 
         {imageUrl && zoomOpen && (

@@ -99,7 +99,7 @@ export default function CategoryPrice({
           aria-hidden="true"
           className="shrink-0 rounded-full bg-[color-mix(in_srgb,var(--status-success)_15%,transparent)] px-2.5 py-0.5 text-[11px] font-bold tracking-wide text-[var(--status-success)]"
         >
-          {sale.remaining} left at this price
+          {sale.remaining} Left at This Price
         </span>
       )}
     </span>

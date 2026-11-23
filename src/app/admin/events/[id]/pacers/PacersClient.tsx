@@ -96,7 +96,7 @@ export default function PacersClient({
     if (orphans.length > 0) {
       byCategory.push({
         key: '__orphans__',
-        name: 'No category',
+        name: 'No Category',
         distance: null,
         rows: orphans,
       });
@@ -156,17 +156,17 @@ export default function PacersClient({
       ) : pacer.paused ? (
         <span className="status-badge neutral">Paused</span>
       ) : (
-        <span className="status-badge neutral">Not yet used</span>
+        <span className="status-badge neutral">Not Yet Used</span>
       )}
 
       {needsCodeSent(pacer) && (
         <span className="status-badge pending inline-flex items-center gap-1.5">
           <MailX size={12} aria-hidden="true" />
-          Code not sent
+          Code Not Sent
         </span>
       )}
 
-      {pacer.waiveAdminFee && <span className="status-badge info">Admin fee waived</span>}
+      {pacer.waiveAdminFee && <span className="status-badge info">Admin Fee Waived</span>}
 
       {/* Who the entry actually belongs to now, and one click to their row on
           the registrants list — the same `?search=` link the marketing screen's
@@ -210,7 +210,7 @@ export default function PacersClient({
           ) : (
             <Copy size={16} aria-hidden="true" />
           )}
-          {copiedId === pacer.id ? 'Copied' : 'Copy code'}
+          {copiedId === pacer.id ? 'Copied' : 'Copy Code'}
         </button>
       )}
       <div className={variant === 'card' ? 'flex ml-auto' : 'flex'}>
@@ -304,7 +304,7 @@ export default function PacersClient({
                       Pacer
                     </TableHead>
                     <TableHead className="py-4 px-4 text-secondary font-medium h-auto">Bib</TableHead>
-                    <TableHead className="py-4 px-4 text-secondary font-medium h-auto">Pace group</TableHead>
+                    <TableHead className="py-4 px-4 text-secondary font-medium h-auto">Pace Group</TableHead>
                     <TableHead className="py-4 px-4 text-secondary font-medium h-auto">Code</TableHead>
                     <TableHead className="py-4 px-4 text-secondary font-medium h-auto">
                       Status
@@ -343,13 +343,13 @@ export default function PacersClient({
               <AdminCardList
                 items={group.rows}
                 getKey={pacer => pacer.id}
-                label={`${group.name} pacers`}
+                label={`${group.name} Pacers`}
                 className="is-flush"
                 title={pacer => <span className="font-bold">{nameOf(pacer)}</span>}
                 badges={pacer => renderStatus(pacer)}
                 fields={pacer => [
                   { label: 'Bib', value: renderBib(pacer) },
-                  { label: 'Pace group', value: renderPaceGroup(pacer) },
+                  { label: 'Pace Group', value: renderPaceGroup(pacer) },
                   { label: 'Code', value: renderCode(pacer), full: true },
                 ]}
                 actions={pacer => renderActions(pacer, 'card')}

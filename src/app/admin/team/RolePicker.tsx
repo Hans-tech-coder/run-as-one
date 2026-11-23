@@ -166,7 +166,7 @@ export default function RolePicker() {
                 {/* Said in words as well as by the icon, so the answer never rests
                     on colour alone. */}
                 <span className={`shrink-0 whitespace-nowrap text-xs ${yes ? 'text-secondary' : 'text-[var(--ink-35)]'}`}>
-                  {yes ? 'Allowed' : 'Not allowed'}
+                  {yes ? 'Allowed' : 'Not Allowed'}
                 </span>
               </li>
             );

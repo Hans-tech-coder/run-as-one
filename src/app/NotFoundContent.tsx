@@ -32,8 +32,8 @@ export default async function NotFoundContent() {
   return (
     <section className="site-section site-wrap">
       <div className="site-notice" data-enter>
-        <p className="site-notice__code">Error 404 · Page not found</p>
-        <h1 className="site-h1">You&apos;ve gone off course</h1>
+        <p className="site-notice__code">Error 404 · Page Not Found</p>
+        <h1 className="site-h1">You&apos;ve Gone Off Course</h1>
         <p className="site-lead max-w-[56ch]">
           This page isn&apos;t here. The link may be an old one, the event may
           have been taken down by its organizer, or the address may have a typo
@@ -41,16 +41,16 @@ export default async function NotFoundContent() {
         </p>
         <div className="site-notice__actions">
           <Link href="/events" className="site-btn site-btn--action site-btn--block-sm">
-            Browse events
+            Browse Events
             <ArrowRight size={18} aria-hidden="true" />
           </Link>
           <Link href="/" className="site-btn site-btn--quiet site-btn--block-sm">
-            Back to home
+            Back to Home
           </Link>
         </div>
       </div>
 
-      <h2 className="sr-only">Or pick up from here</h2>
+      <h2 className="sr-only">Or Pick Up from Here</h2>
       <ul className="site-notice__more">
         {destinations(contactEmail).map(destination => (
           <li key={destination.label}>
@@ -65,17 +65,17 @@ export default async function NotFoundContent() {
 /** Built per request: the contact address is a platform setting. */
 const destinations = (contactEmail: string) => [
   {
-    label: 'Upcoming races',
+    label: 'Upcoming Races',
     body: 'Every race and fun run open for registration.',
     href: '/events',
   },
   {
-    label: 'Race results',
+    label: 'Race Results',
     body: 'Official times, rankings and e-certificates.',
     href: '/results',
   },
   {
-    label: 'Contact us',
+    label: 'Contact Us',
     body: 'Tell us which link sent you here.',
     href: supportMailto(contactEmail),
     external: true,

@@ -221,7 +221,7 @@ export default function ResultsTableClient({ results, event, canManage = false }
                         />
                         {column.getIsVisible() && <div className="w-2 h-2 bg-[var(--ink)] rounded-sm" />}
                       </div>
-                      <span className="capitalize">{column.id}</span>
+                      <span className="capitalize">{typeof column.columnDef.header === 'string' ? column.columnDef.header : column.id}</span>
                     </label>
                   );
                 })}
@@ -304,7 +304,7 @@ export default function ResultsTableClient({ results, event, canManage = false }
           selectAll={{
             checked: table.getIsAllPageRowsSelected(),
             toggle: () => table.toggleAllPageRowsSelected(!table.getIsAllPageRowsSelected()),
-            label: `Select all ${table.getRowModel().rows.length} on this page`,
+            label: `Select All ${table.getRowModel().rows.length} on This Page`,
           }}
         />
       </div>

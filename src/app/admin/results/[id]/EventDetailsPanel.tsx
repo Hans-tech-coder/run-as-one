@@ -37,7 +37,7 @@ export default function EventDetailsPanel({
         {editHref && (
           <Link href={editHref} className="btn-light inline-flex min-h-11 items-center gap-2">
             <Pencil size={16} aria-hidden="true" />
-            {event.resultsOnly ? 'Edit details' : 'Edit Event'}
+            {event.resultsOnly ? 'Edit Details' : 'Edit Event'}
           </Link>
         )}
       </div>

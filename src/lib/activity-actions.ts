@@ -150,7 +150,7 @@ export function isWarningAction(action: string): boolean {
 export const ACTIVITY_GROUPS = [
   { key: 'payments', label: 'Payments', hint: 'Status changes, remarks, emails sent by hand, unpaid checkouts followed up and category change refunds' },
   { key: 'runners', label: 'Runners', hint: 'Runner edits, removals and category changes' },
-  { key: 'data', label: 'Personal data', hint: 'Payment proofs opened and registrant lists exported' },
+  { key: 'data', label: 'Personal Data', hint: 'Payment proofs opened and registrant lists exported' },
   { key: 'events', label: 'Events', hint: 'Events created, edited, paused, scheduled or deleted, and results uploaded or corrected' },
   { key: 'promotions', label: 'Promotions', hint: 'Promotions created, edited, paused or deleted' },
   // Its own shelf rather than a corner of Promotions, because a pacer code is
@@ -159,11 +159,11 @@ export const ACTIVITY_GROUPS = [
   // waived) must not be lost among a race's campaigns.
   { key: 'pacers', label: 'Pacers', hint: "Pacers added, renamed, marked as sent, paused or removed, and admin fees waived" },
   { key: 'team', label: 'Team', hint: 'Invitations, access changes, suspensions and removals' },
-  { key: 'access', label: 'Sign-ins', hint: 'Sign-ins, failed sign-ins, other devices signed out, password resets, Google sign-in linked or unlinked, two-step sign-in turned on, off or reset, security checks before a dangerous action, and profile or password changes' },
+  { key: 'access', label: 'Sign-Ins', hint: 'Sign-ins, failed sign-ins, other devices signed out, password resets, Google sign-in linked or unlinked, two-step sign-in turned on, off or reset, security checks before a dangerous action, and profile or password changes' },
   { key: 'remittances', label: 'Remittances', hint: 'Payouts to organizers and returns recorded or voided, and receipts opened' },
   { key: 'clients', label: 'Clients', hint: 'Submissions invited or archived, and invitations accepted' },
-  { key: 'organizers', label: 'Organizer decisions', hint: 'Applications approved or rejected, accounts suspended or reinstated' },
-  { key: 'settings', label: 'Site settings', hint: 'The admin email, the social links and the default platform fee' },
+  { key: 'organizers', label: 'Organizer Decisions', hint: 'Applications approved or rejected, accounts suspended or reinstated' },
+  { key: 'settings', label: 'Site Settings', hint: 'The admin email, the social links and the default platform fee' },
 ] as const;
 
 export type ActivityGroupKey = (typeof ACTIVITY_GROUPS)[number]['key'];

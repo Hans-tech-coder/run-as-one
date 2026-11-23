@@ -35,8 +35,8 @@ export function correctionProofs(row: ActivityRow): { label: string; href: strin
   if (!Array.isArray(pair) || pair.length !== 2) return [];
   const href = (path: string) => `/api/admin/proof/${row.entityId}?${new URLSearchParams({ path }).toString()}`;
   return [
-    typeof pair[0] === 'string' && pair[0] ? { label: 'Open old proof', href: href(pair[0]) } : null,
-    typeof pair[1] === 'string' && pair[1] ? { label: 'Open new proof', href: href(pair[1]) } : null,
+    typeof pair[0] === 'string' && pair[0] ? { label: 'Open Old Proof', href: href(pair[0]) } : null,
+    typeof pair[1] === 'string' && pair[1] ? { label: 'Open New Proof', href: href(pair[1]) } : null,
   ].filter((link): link is { label: string; href: string } => link !== null);
 }
 
@@ -113,7 +113,7 @@ export function EntryDetails({ row }: { row: ActivityRow }) {
   return (
     <div className="flex flex-col gap-4 text-sm">
       <div>
-        <p className="m-0 mb-2 text-xs font-semibold uppercase tracking-wider text-secondary">What changed</p>
+        <p className="m-0 mb-2 text-xs font-semibold uppercase tracking-wider text-secondary">What Changed</p>
         {lines.length > 0 ? (
           <dl className="m-0 grid gap-2">
             {lines.map(line => (
@@ -142,7 +142,7 @@ export function EntryDetails({ row }: { row: ActivityRow }) {
           <dd className="m-0 text-primary">{group ?? 'Other'}</dd>
         </div>
         <div className="min-w-0">
-          <dt className="text-xs text-secondary">IP address</dt>
+          <dt className="text-xs text-secondary">IP Address</dt>
           <dd className="m-0 font-mono text-primary [overflow-wrap:anywhere]">{row.ip ?? 'Not recorded'}</dd>
         </div>
         <div className="min-w-0">
@@ -160,15 +160,15 @@ export function EntryDetails({ row }: { row: ActivityRow }) {
 export function ActivityEmpty({ filtered, onClear }: { filtered: boolean; onClear: () => void }) {
   return filtered ? (
     <>
-      <p className="m-0 text-primary font-medium">Nothing in the trail matches these filters.</p>
+      <p className="m-0 text-primary font-medium">Nothing in the Trail Matches These Filters</p>
       <p className="m-0 mt-1">Widen the dates or clear a filter to see more.</p>
       <button type="button" onClick={onClear} className="btn-filter mt-4 max-lg:min-h-11">
-        <RotateCcw size={16} aria-hidden="true" /> Clear filters
+        <RotateCcw size={16} aria-hidden="true" /> Clear Filters
       </button>
     </>
   ) : (
     <>
-      <p className="m-0 text-primary font-medium">Nothing has been recorded yet.</p>
+      <p className="m-0 text-primary font-medium">Nothing Has Been Recorded Yet</p>
       <p className="m-0 mt-1">
         Every validated payment, edited runner, opened proof, organizer decision and sign-in will appear here under the name of the person who did it.
       </p>

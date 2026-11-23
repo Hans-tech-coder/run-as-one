@@ -47,7 +47,7 @@ export default function GuideDiagram({ idPrefix }: { idPrefix: string }) {
 
         {/* Branding, from the margin down to the content area. */}
         <rect className="cg-brand" x="42" y="30" width="758" height={contentTop - 36} />
-        <text className="cg-ink" x="421" y="80" textAnchor="middle" fontSize="19" fontWeight="600">Your branding</text>
+        <text className="cg-ink" x="421" y="80" textAnchor="middle" fontSize="19" fontWeight="600">Your Branding</text>
         <text className="cg-ink cg-soft" x="421" y="104" textAnchor="middle" fontSize="13">
           Event logo, organizer logo, event name artwork
         </text>

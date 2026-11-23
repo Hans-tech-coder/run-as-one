@@ -250,7 +250,7 @@ export default function RemittancesClient({ rows }: { rows: EventSettlementRow[]
         <AdminCardList
           items={table.getRowModel().rows}
           getKey={row => row.id}
-          label="Remittances by event"
+          label="Remittances by Event"
           className="is-flush"
           title={({ original }) => original.title}
           subtitle={({ original }) => `${formatEventDayShort(original.date)} · ${clientLine(original)}`}

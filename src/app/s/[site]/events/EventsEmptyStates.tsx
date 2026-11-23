@@ -66,7 +66,7 @@ export function NothingUpcoming({
   return (
     <EmptyPanel
       icon={everHadEvents ? <CalendarCheck2 size={22} /> : <Calendar size={22} />}
-      heading={everHadEvents ? 'Every race has been run' : 'No races posted yet'}
+      heading={everHadEvents ? 'Every Race Has Been Run' : 'No Races Posted Yet'}
       actions={
         // Only offered when there is actually something to read. Sending
         // someone to an empty page, which would send them straight back
@@ -76,14 +76,14 @@ export function NothingUpcoming({
             {hasPublishedResults && (
               <Link href="/results" className="site-btn site-btn--action group w-full sm:w-auto">
                 <Trophy size={18} className="shrink-0" aria-hidden="true" />
-                <span>See race results</span>
+                <span>See Race Results</span>
                 <ArrowRight size={18} className="shrink-0 transition-transform group-hover:translate-x-1" aria-hidden="true" />
               </Link>
             )}
             {hasPastEvents && (
               <EventsTabLink view="past" className="site-btn site-btn--quiet w-full sm:w-auto">
                 <History size={18} className="shrink-0" aria-hidden="true" />
-                See past races
+                See Past Races
               </EventsTabLink>
             )}
           </>
@@ -102,11 +102,11 @@ export function NoPastEvents() {
   return (
     <EmptyPanel
       icon={<History size={22} />}
-      heading="No races held yet"
+      heading="No Races Held Yet"
       actions={
         <EventsTabLink view="upcoming" className="site-btn site-btn--quiet w-full sm:w-auto">
           <Calendar size={18} className="shrink-0" aria-hidden="true" />
-          See upcoming races
+          See Upcoming Races
         </EventsTabLink>
       }
     >

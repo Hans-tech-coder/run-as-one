@@ -150,7 +150,7 @@ export default function RegistrantsToolbar({
   // "Any add-on". Offered only when somebody bought one, like Age below.
   const addOnOptions = useMemo(() => {
     const names = Array.from(new Set(runners.flatMap(r => r.addOnNames ?? []))).sort() as string[];
-    return names.length === 0 ? [] : [{ value: ANY_ADD_ON, label: 'Any add-on' }, ...names.map(name => ({ value: name, label: name }))];
+    return names.length === 0 ? [] : [{ value: ANY_ADD_ON, label: 'Any Add-On' }, ...names.map(name => ({ value: name, label: name }))];
   }, [runners]);
 
   const selectedCategories = (table.getColumn('category')?.getFilterValue() as string[]) || [];
@@ -219,17 +219,17 @@ export default function RegistrantsToolbar({
     { label: 'Logistics', options: uniqueLogistics, selected: selectedLogistics, onToggle: toggleLogistics, capitalize: true },
     { label: 'Payment', options: uniquePayment, selected: selectedPayment, onToggle: togglePayment, capitalize: true },
     // Account names as the organizer typed them, so not capitalized.
-    { label: 'Paid to', options: paidToOptions, selected: selectedPaidTo, onToggle: togglePaidTo, capitalize: false },
+    { label: 'Paid To', options: paidToOptions, selected: selectedPaidTo, onToggle: togglePaidTo, capitalize: false },
     { label: 'Province', options: uniqueProvinces, selected: selectedProvinces, onToggle: toggleProvince, capitalize: false },
     // Any add-on, or a runner with this item: one checked is enough, as in
     // the groups above.
-    { label: 'Add-ons', options: addOnOptions, selected: selectedAddOns, onToggle: toggleAddOn, capitalize: false },
+    { label: 'Add-Ons', options: addOnOptions, selected: selectedAddOns, onToggle: toggleAddOn, capitalize: false },
     // Offered only on a race that has a minor, so the sheet never lists an
     // option that could only ever empty the table.
     {
       label: 'Age',
       options: hasMinors
-        ? [{ value: 'MINOR', label: `Minors (${GUARDIAN_CONSENT_MAX_AGE} and under)` }]
+        ? [{ value: 'MINOR', label: `Minors (${GUARDIAN_CONSENT_MAX_AGE} and Under)` }]
         : [],
       selected: showOnlyMinors ? ['MINOR'] : [],
       onToggle: () => setShowOnlyMinors(on => !on),

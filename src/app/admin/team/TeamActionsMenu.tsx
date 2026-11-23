@@ -192,7 +192,7 @@ export default function TeamActionsMenu({
             role="menuitem"
           >
             <ShieldOff size={16} />
-            {busy === 'twoFactor' ? 'Resetting' : 'Reset Two-Step Sign-in'}
+            {busy === 'twoFactor' ? 'Resetting' : 'Reset Two-Step Sign-In'}
           </button>
         )}
 

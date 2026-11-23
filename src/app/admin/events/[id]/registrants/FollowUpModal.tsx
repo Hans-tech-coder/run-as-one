@@ -103,7 +103,7 @@ export default function FollowUpModal({
         const { error } = await res.json().catch(() => ({ error: '' }));
         await alert({
           variant: 'error',
-          title: 'Follow-up not saved',
+          title: 'Follow-Up Not Saved',
           message: error || 'The follow-up could not be saved. Try again.',
         });
         return;
@@ -115,7 +115,7 @@ export default function FollowUpModal({
     } catch {
       await alert({
         variant: 'error',
-        title: 'Follow-up not saved',
+        title: 'Follow-Up Not Saved',
         message: 'Something went wrong while saving the follow-up. Try again.',
       });
     } finally {
@@ -141,7 +141,7 @@ export default function FollowUpModal({
       >
         <div className="p-6 max-sm:px-4 max-sm:py-3 border-b border-[var(--dash-border)] flex justify-between items-start gap-4 shrink-0">
           <div className="min-w-0">
-            <h3 id="follow-up-modal-title" className="text-xl font-semibold text-primary m-0">Log follow-up</h3>
+            <h3 id="follow-up-modal-title" className="text-xl font-semibold text-primary m-0">Log Follow-Up</h3>
             <p className="text-sm text-secondary mt-1 m-0 [overflow-wrap:anywhere]">
               Order {order.orderRef} &middot; {order.contactName}
             </p>
@@ -158,7 +158,7 @@ export default function FollowUpModal({
 
         <div className="admin-modal-body p-6 max-sm:p-4 space-y-4">
           <fieldset className="p-0 border-none">
-            <legend className="block text-sm text-secondary mb-2 p-0">How did it go?</legend>
+            <legend className="block text-sm text-secondary mb-2 p-0">How Did It Go?</legend>
             <div className="grid grid-cols-2 gap-2">
               {LOGGABLE_OUTCOMES.map(value => {
                 const selected = outcome === value;
@@ -194,7 +194,7 @@ export default function FollowUpModal({
 
           <div className="space-y-2">
             <label htmlFor="follow-up-note" className="block text-sm text-secondary">
-              Note <span className="text-[var(--text-muted)]">(optional)</span>
+              Note <span className="text-[var(--text-muted)]">(Optional)</span>
             </label>
             <textarea
               id="follow-up-note"
@@ -233,7 +233,7 @@ export default function FollowUpModal({
             title={outcome ? undefined : 'Choose how it went first'}
             className="px-6 py-2 bg-[var(--dash-inverse-bg)] text-[var(--dash-inverse-fg)] rounded-lg text-sm font-medium hover:bg-[var(--dash-inverse-hover)] transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
           >
-            {saving ? <BusyLabel>Saving</BusyLabel> : 'Save follow-up'}
+            {saving ? <BusyLabel>Saving</BusyLabel> : 'Save Follow-Up'}
           </button>
         </div>
       </div>

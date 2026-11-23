@@ -62,7 +62,7 @@ export default function EventClientField({
   if (!clients) return null;
 
   const options: AdminSelectOption[] = [
-    { value: '', label: 'No client yet', hint: 'Only Run As One sees this race in the dashboard' },
+    { value: '', label: 'No Client Yet', hint: 'Only Run As One sees this race in the dashboard' },
     ...clients
       .filter(client => client.status !== 'ARCHIVED' || client.id === value)
       .map(client => ({

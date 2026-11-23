@@ -28,7 +28,7 @@ export function StepTitle({ n, label, optional = false }: { n: number; label: st
   return (
     <>
       {n}. {label}
-      {optional && <span className="ml-2 text-xs font-normal opacity-70">- optional</span>}
+      {optional && <span className="ml-2 text-xs font-normal opacity-70">(Optional)</span>}
     </>
   );
 }
@@ -77,7 +77,7 @@ export function UploadStep({
     <section className="admin-panel">
       <div className="admin-panel-header">
         <h2 className="admin-panel-title">
-          <StepTitle n={2} label="Upload results" optional />
+          <StepTitle n={2} label="Upload Results" optional />
         </h2>
       </div>
       <div className="admin-panel-content flex flex-col items-start gap-4">
@@ -116,7 +116,7 @@ export function UploadStep({
           <ResultsUploaderClient
             event={{ categories, resultsOnly }}
             onPrepared={onPrepared}
-            triggerLabel={prepared ? 'Change file' : 'Choose results file'}
+            triggerLabel={prepared ? 'Change File' : 'Choose Results File'}
           />
           {prepared && (
             <button type="button" onClick={onRemove} className="btn-filter min-h-11">

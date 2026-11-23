@@ -32,7 +32,7 @@ export default function DeliveryStep({
   defaultCountry: string;
 }) {
   const v = plan.view;
-  const homeLabel = runners.length === 1 ? "Your home address" : "Runner 1's home address";
+  const homeLabel = runners.length === 1 ? "Your Home Address" : "Runner 1's Home Address";
 
   return (
     <div className="animate-fade-in flex flex-col gap-6">
@@ -62,7 +62,7 @@ export default function DeliveryStep({
               className="inline-flex items-center gap-1.5 min-h-[44px] text-sm font-semibold text-accent-orange hover:text-white transition-colors"
             >
               <Home size={14} aria-hidden="true" />
-              Use {runners.length === 1 ? "my" : "Runner 1's"} home address
+              Use {runners.length === 1 ? "My" : "Runner 1's"} Home Address
             </button>
           ) : undefined
         }

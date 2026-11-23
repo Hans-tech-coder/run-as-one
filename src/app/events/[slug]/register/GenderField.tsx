@@ -59,7 +59,7 @@ export default function GenderField({
       error={error}
       value={value}
       options={GENDER_OPTIONS}
-      placeholder="Select Gender"
+      placeholder="Select gender"
       onChange={onChange}
       hint="Biological gender, for race categories."
     />

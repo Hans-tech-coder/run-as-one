@@ -61,7 +61,7 @@ export default async function PacersPage({ params }: { params: Promise<{ id: str
     return (
       <AdminNotFound
         title="No Pacers"
-        heading="Virtual runs have no pacers."
+        heading="Virtual Runs Have No Pacers"
         body={`${event.title} is a virtual run: runners run on their own, anywhere in the run window, so there is no field to pace.`}
         homeHref="/admin/events"
         homeLabel="Back to Events"

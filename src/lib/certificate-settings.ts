@@ -107,8 +107,8 @@ export const MIN_CONTENT_SPAN = 20;
  * 595pt page, so about 18%..81%).
  */
 export const CONTENT_AREA_PRESETS = [
-  { id: 'sponsors', label: 'With sponsors', hint: 'Logos along the bottom', top: 24, bottom: 72 },
-  { id: 'clean', label: 'Clean template', hint: 'No sponsor band', top: 18, bottom: 82 },
+  { id: 'sponsors', label: 'With Sponsors', hint: 'Logos along the bottom', top: 24, bottom: 72 },
+  { id: 'clean', label: 'Clean Template', hint: 'No sponsor band', top: 18, bottom: 82 },
 ] as const;
 
 const LEGACY_DEFAULTS: LegacyCertificateSettings = { v: 1, nameY: 50, timeY: 60, catY: 70 };

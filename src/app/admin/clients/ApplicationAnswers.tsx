@@ -43,11 +43,11 @@ export default function ApplicationAnswers({
   return (
     <>
       {hasDetails && (
-        <Section title="The organization">
-          <Detail label="Organizer type" value={organizerTypeLabel(client.orgType)} />
-          <Detail label="Based in" value={basedIn} />
+        <Section title="The Organization">
+          <Detail label="Organizer Type" value={organizerTypeLabel(client.orgType)} />
+          <Detail label="Based In" value={basedIn} />
           <Detail
-            label="Website or page"
+            label="Website or Page"
             value={
               website ? (
                 <a
@@ -66,13 +66,13 @@ export default function ApplicationAnswers({
             }
           />
           <Detail
-            label="Events organized before"
+            label="Events Organized Before"
             value={organizerExperienceLabel(client.experience)}
           />
         </Section>
       )}
 
-      <Section title={hasDetails ? 'The person' : 'The contact'}>
+      <Section title={hasDetails ? 'The Person' : 'The Contact'}>
         {hasDetails && <Detail label="Name" value={contactName} />}
         {hasDetails && <Detail label="Role" value={client.contactRole} />}
         <Detail
@@ -92,7 +92,7 @@ export default function ApplicationAnswers({
         />
         {hasDetails && (
           <Detail
-            label="Mobile number"
+            label="Mobile Number"
             value={
               client.phone && (
                 <a
@@ -109,24 +109,24 @@ export default function ApplicationAnswers({
       </Section>
 
       {hasDetails && (
-        <Section title="What they are planning">
+        <Section title="What They Are Planning">
           <Detail
-            label="Needs Run As One for"
+            label="Needs Run As One For"
             full
             value={client.services.length > 0 && <ServiceGroups services={client.services} />}
           />
-          <Detail label="First event" value={client.firstEventName} />
+          <Detail label="First Event" value={client.firstEventName} />
           <Detail
             label="Date"
             value={client.firstEventDate && formatEventDay(client.firstEventDate)}
           />
           <Detail label="Location" value={client.firstEventLocation} />
           <Detail
-            label="Expected runners"
+            label="Expected Runners"
             value={expectedParticipantsLabel(client.expectedRunners)}
           />
           <Detail
-            label="Anything else they told us"
+            label="Anything Else They Told Us"
             full
             value={
               client.applicationNote && (

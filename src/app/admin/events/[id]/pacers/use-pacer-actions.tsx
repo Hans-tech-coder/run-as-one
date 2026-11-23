@@ -106,7 +106,7 @@ export function usePacerActions(eventId: string) {
   const handleDelete = async (pacer: PacerRow) => {
     const ok = await confirm({
       variant: 'danger',
-      title: 'Remove this pacer?',
+      title: 'Remove This Pacer?',
       message: (
         <>
           <strong>{nameOf(pacer)}</strong>&rsquo;s code <strong>{pacer.code}</strong> will stop
@@ -114,7 +114,7 @@ export function usePacerActions(eventId: string) {
           the code for now, pause it instead.
         </>
       ),
-      confirmLabel: 'Remove pacer',
+      confirmLabel: 'Remove Pacer',
     });
     if (!ok) return;
 

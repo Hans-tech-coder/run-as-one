@@ -73,7 +73,7 @@ export type EventCardAction = 'register' | 'results' | 'past';
 
 const ACTIONS: Record<Exclude<EventCardAction, 'past'>, { label: string; path: (slug: string) => string }> = {
   register: { label: 'Register', path: (slug) => `/events/${slug}` },
-  results: { label: 'See results', path: (slug) => `/results/${slug}` },
+  results: { label: 'See Results', path: (slug) => `/results/${slug}` },
 };
 
 /** "Sat, Oct 5" — a past card sits under its year's heading, so the year is said once there. */
@@ -88,22 +88,22 @@ function dayInYear(date: string): string {
  * other says when it was held, which is all that is left to say.
  */
 function pastCard(event: DBEvent): { badge: string; quiet: boolean; label: string; path: (slug: string) => string } {
-  if (event.hasResults) return { badge: 'Results are up', quiet: false, ...ACTIONS.results };
-  const view = { quiet: true, label: 'See event', path: ACTIONS.register.path };
+  if (event.hasResults) return { badge: 'Results Are Up', quiet: false, ...ACTIONS.results };
+  const view = { quiet: true, label: 'See Event', path: ACTIONS.register.path };
   if (isVirtual(event)) return { badge: `Ended ${dayInYear(event.virtualEndDate ?? event.date)}`, ...view };
-  if (event.resultsSoon) return { badge: 'Results soon', ...view };
+  if (event.resultsSoon) return { badge: 'Results Soon', ...view };
   return { badge: `Held ${dayInYear(event.date)}`, ...view };
 }
 
 /** The corner chip, and the word the button uses instead of "Register Now". */
 const CLOSURES = {
-  CLOSED: { badge: 'Sign-ups closed', label: 'See event' },
-  FULL: { badge: 'Full', label: 'See event' },
-  PAUSED: { badge: 'Sign-ups paused', label: 'See event' },
+  CLOSED: { badge: 'Sign-Ups Closed', label: 'See Event' },
+  FULL: { badge: 'Full', label: 'See Event' },
+  PAUSED: { badge: 'Sign-Ups Paused', label: 'See Event' },
   // Overwritten with the date below when the card has one. The bare word is
   // the fallback for a row whose instant will not parse, which should not
   // happen and must still say something true if it does.
-  SCHEDULED: { badge: 'Opens soon', label: 'See event' },
+  SCHEDULED: { badge: 'Opens Soon', label: 'See Event' },
 } as const;
 
 function EventCard({ event, action, eager }: { event: DBEvent; action: EventCardAction; eager: boolean }) {
@@ -164,7 +164,7 @@ function EventCard({ event, action, eager }: { event: DBEvent; action: EventCard
               <li key={name} className="site-chip">{name}</li>
             ))}
             {distances.length > shownDistances.length && (
-              <li className="site-chip">+{distances.length - shownDistances.length} more</li>
+              <li className="site-chip">+{distances.length - shownDistances.length} More</li>
             )}
           </ul>
         )}

@@ -113,7 +113,7 @@ export type UnpaidCheckout = {
 };
 
 const STATUS_OPTIONS: { value: UnpaidCheckout['status']; label: string }[] = [
-  { value: 'PENDING', label: 'Awaiting payment' },
+  { value: 'PENDING', label: 'Awaiting Payment' },
   { value: 'EXPIRED', label: 'Expired' },
   { value: 'CANCELLED', label: 'Cancelled' },
 ];
@@ -197,10 +197,10 @@ export default function UnpaidCheckoutsList({
     {
       // Every outcome is offered, not only those on the list: "who still
       // has not been called?" is asked before anyone has been.
-      label: 'Follow-up',
+      label: 'Follow-Up',
       options: orders.length > 0
         ? [
-            { value: NOT_CONTACTED, label: 'Not contacted yet' },
+            { value: NOT_CONTACTED, label: 'Not Contacted Yet' },
             ...FOLLOW_UP_OUTCOMES.map(value => ({ value, label: FOLLOW_UP_LABELS[value] })),
           ]
         : [],

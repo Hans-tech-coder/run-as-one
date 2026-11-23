@@ -44,11 +44,11 @@ export const ACTIVITY_RANGES = ['all', 'today', '7d', '30d', 'custom'] as const;
 export type ActivityRange = (typeof ACTIVITY_RANGES)[number];
 
 export const ACTIVITY_RANGE_LABELS: Record<ActivityRange, string> = {
-  all: 'Any time',
+  all: 'Any Time',
   today: 'Today',
-  '7d': 'Last 7 days',
-  '30d': 'Last 30 days',
-  custom: 'Choose dates',
+  '7d': 'Last 7 Days',
+  '30d': 'Last 30 Days',
+  custom: 'Choose Dates',
 };
 
 export const ACTIVITY_PAGE_SIZES = [25, 50, 100] as const;

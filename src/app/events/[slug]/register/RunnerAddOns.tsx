@@ -76,7 +76,7 @@ export default function RunnerAddOns({
 
   return (
     <div id={sectionId} tabIndex={-1} className="mt-6 focus:outline-none">
-      <h4 className="mb-1 text-secondary">Add-ons (optional)</h4>
+      <h4 className="mb-1 text-secondary">Add-Ons (Optional)</h4>
       <p className="m-0 mb-3 text-sm text-secondary/80">
         Packed with this runner&apos;s race kit.
       </p>
@@ -98,7 +98,7 @@ export default function RunnerAddOns({
           // still take the last ones first; the checkout counts under its lock.
           const most = Math.max(1, Math.min(addOn.maxPerRunner, addOn.left ?? Infinity));
           const poster = addOn.imageUrls[0];
-          const status = addOn.soldOut ? "Sold out" : closed ? "Sales closed" : null;
+          const status = addOn.soldOut ? "Sold Out" : closed ? "Sales Closed" : null;
 
           return (
             <div
@@ -140,7 +140,7 @@ export default function RunnerAddOns({
                     )}
                     {!status && addOn.left !== null && addOn.left <= 10 && (
                       <span className="text-xs font-bold text-accent-orange bg-accent-orange/15 px-2.5 py-0.5 rounded-full uppercase tracking-wide">
-                        {addOn.left} left
+                        {addOn.left} Left
                       </span>
                     )}
                   </div>
@@ -207,7 +207,7 @@ export default function RunnerAddOns({
       {posterFor && (
         <PosterLightbox
           category={{ ...posterFor, imageUrl: posterFor.imageUrls[0] ?? null }}
-          subtitle="Add-on"
+          subtitle="Add-On"
           isSelected={Boolean(pickOf(posterFor.id))}
           isFull={!addOnPickable(posterFor)}
           labels={{

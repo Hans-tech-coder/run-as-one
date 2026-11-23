@@ -30,7 +30,7 @@ export default function RegistrantGuardianConsent({ runner, eventId }: { runner:
           rel="noopener"
           className="inline-flex items-center gap-1.5 text-xs font-medium text-accent-blue-ink hover:underline min-h-11 -my-3"
         >
-          <Printer size={14} aria-hidden="true" /> Print guardian consent
+          <Printer size={14} aria-hidden="true" /> Print Guardian Consent
         </Link>
       </div>
       {runner.guardianName ? (

@@ -88,7 +88,7 @@ export default function RegisterClient({ hasPastEvents }: { hasPastEvents: boole
       <div className="inquiry">
         <header className="inquiry__intro" data-enter>
           <p className="m-0 mb-4 text-[0.9375rem] font-semibold text-site-accent">Our Services</p>
-          <h1 className="site-h1">{isSent ? 'Inquiry received' : FORM_TITLE}</h1>
+          <h1 className="site-h1">{isSent ? 'Inquiry Received' : FORM_TITLE}</h1>
           <p className="site-lead">
             {isSent ? 'Thank you. Here is what happens next.' : FORM_SUBTITLE}
           </p>
@@ -106,7 +106,7 @@ export default function RegisterClient({ hasPastEvents }: { hasPastEvents: boole
                 rel="noopener noreferrer"
                 className="site-link site-link--arrow"
               >
-                <span>See races we have run</span>
+                <span>See Races We Have Run</span>
                 <ArrowUpRight size={16} aria-hidden="true" />
                 <span className="sr-only"> (opens in a new tab)</span>
               </Link>
@@ -116,7 +116,7 @@ export default function RegisterClient({ hasPastEvents }: { hasPastEvents: boole
             <p className="m-0 mt-6 text-[0.9375rem] leading-relaxed text-site-muted">
               Already working with us?{' '}
               <Link href="/admin/login" className="site-link">
-                Sign in
+                Sign In
               </Link>
             </p>
           )}
@@ -207,7 +207,7 @@ export default function RegisterClient({ hasPastEvents }: { hasPastEvents: boole
                     ) : isLast ? (
                       <>
                         <Send size={16} aria-hidden="true" />
-                        Submit inquiry
+                        Submit Inquiry
                       </>
                     ) : (
                       <>

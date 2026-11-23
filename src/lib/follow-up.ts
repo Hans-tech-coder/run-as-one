@@ -39,11 +39,11 @@ export type FollowUpOutcome = (typeof FOLLOW_UP_OUTCOMES)[number];
 
 export const FOLLOW_UP_LABELS: Record<FollowUpOutcome, string> = {
   CONTACTED: 'Contacted',
-  NO_ANSWER: 'No answer',
-  WILL_PAY: 'Will pay',
-  NOT_INTERESTED: 'Not interested',
-  WRONG_NUMBER: 'Wrong number',
-  LINK_SENT: 'Link sent',
+  NO_ANSWER: 'No Answer',
+  WILL_PAY: 'Will Pay',
+  NOT_INTERESTED: 'Not Interested',
+  WRONG_NUMBER: 'Wrong Number',
+  LINK_SENT: 'Link Sent',
 };
 
 /** The outcomes a staff member picks in Log follow-up…: every one but "Link sent". */

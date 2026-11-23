@@ -324,7 +324,7 @@ export default function ClientsClient() {
               actions={({ original }) => (
                 <>
                   <button type="button" className="btn-filter" onClick={() => setOpenId(original.id)}>
-                    <FileText size={16} aria-hidden="true" /> Read application
+                    <FileText size={16} aria-hidden="true" /> Read Application
                   </button>
                   {menuFor(original, 'ml-auto')}
                 </>

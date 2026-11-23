@@ -110,7 +110,7 @@ export default function CategoryChangeEmailModal({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        await alert({ variant: 'error', title: 'Not Marked As Sent', message: data?.error || 'Try again.' });
+        await alert({ variant: 'error', title: 'Not Marked as Sent', message: data?.error || 'Try again.' });
         return;
       }
       onMarked(request.runnerId, data.change);
@@ -119,7 +119,7 @@ export default function CategoryChangeEmailModal({
       setClosing(true);
       setTimeout(onClose, CLOSE_MS);
     } catch {
-      await alert({ variant: 'error', title: 'Not Marked As Sent', message: 'Could not reach the server. Try again.' });
+      await alert({ variant: 'error', title: 'Not Marked as Sent', message: 'Could not reach the server. Try again.' });
     } finally {
       setMarking(false);
     }

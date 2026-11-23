@@ -55,7 +55,7 @@ export function shipsToLines(receipt: Receipt): { label: string; value: React.Re
   const split = receipt.parcels.length > 1;
   return [
     ...receipt.parcels.map((parcel, index) => ({
-      label: split ? `Parcel ${index + 1}` : 'Ships to',
+      label: split ? `Parcel ${index + 1}` : 'Ships To',
       value: (
         <>
           {parcel.address}
@@ -220,7 +220,7 @@ export default function OrderSwitchModal({
           )}
 
           <div>
-            <p className="m-0 text-xs font-semibold uppercase tracking-wider text-secondary">Switch history</p>
+            <p className="m-0 text-xs font-semibold uppercase tracking-wider text-secondary">Switch History</p>
             <SwitchHistoryList
               changes={receipt.logisticsChanges}
               onViewProof={permissions.proof ? setProofOf : undefined}

@@ -129,7 +129,7 @@ export default function UnpaidCheckoutActions({
       await navigator.clipboard.writeText(url);
       toast(done);
     } catch {
-      await alert({ title: 'Copy this link', message: url });
+      await alert({ title: 'Copy This Link', message: url });
     }
   };
 
@@ -138,7 +138,7 @@ export default function UnpaidCheckoutActions({
       const res = await fetch(`/api/admin/registrations/${order.id}/payment-link`, { method: 'POST' });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        await alert({ variant: 'error', title: 'No payment link', message: body.error ?? 'The payment link could not be made. Try again.' });
+        await alert({ variant: 'error', title: 'No Payment Link', message: body.error ?? 'The payment link could not be made. Try again.' });
         // A paid or expired order belongs elsewhere now.
         if (res.status === 409) router.refresh();
         return;
@@ -147,20 +147,20 @@ export default function UnpaidCheckoutActions({
       // The first link moves the hold, and the row's "Expires by" with it.
       router.refresh();
     } catch {
-      await alert({ variant: 'error', title: 'No payment link', message: 'The server could not be reached. Try again.' });
+      await alert({ variant: 'error', title: 'No Payment Link', message: 'The server could not be reached. Try again.' });
     }
   };
 
   /** A refusal (paid, expired meanwhile) is said, and the page read again. */
   const refused = async (reply: Extract<PaymentLinkReply, { ok: false }>) => {
-    await alert({ variant: 'error', title: 'No payment link', message: reply.error });
+    await alert({ variant: 'error', title: 'No Payment Link', message: reply.error });
     if (reply.status === 409) router.refresh();
   };
 
   const sendPaymentLink = async () => {
     const go = await confirm({
       variant: 'info',
-      title: 'Email the payment link?',
+      title: 'Email the Payment Link?',
       message: `${order.contactName} gets an email with a link to finish paying ${order.orderRef}. It uses 1 of the 100 emails the site can send a day.`,
       confirmLabel: 'Send Email',
     });
@@ -200,24 +200,24 @@ export default function UnpaidCheckoutActions({
       const res = await fetch(`/api/admin/registrations/${order.id}/payment-check`, { method: 'POST' });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        await alert({ variant: 'error', title: 'Could not check', message: body.error ?? 'The check could not be finished. Try again.' });
+        await alert({ variant: 'error', title: 'Could Not Check', message: body.error ?? 'The check could not be finished. Try again.' });
         return;
       }
       const settled = body.result === 'marked_paid' || body.result === 'already_paid';
       await alert({
         variant: settled ? 'success' : body.result === 'paid_after_expiry' ? 'error' : 'info',
         title: settled
-          ? 'Payment found'
+          ? 'Payment Found'
           : body.result === 'paid_after_expiry'
-            ? 'Paid after it expired'
-            : 'No payment found',
+            ? 'Paid After It Expired'
+            : 'No Payment Found',
         message: body.message,
       });
       // A paid order leaves this tab for the Registrants tab, and both counts
       // move, so the page is read again rather than patched here.
       if (settled) router.refresh();
     } catch {
-      await alert({ variant: 'error', title: 'Could not check', message: 'PayMongo could not be reached. Try again in a minute.' });
+      await alert({ variant: 'error', title: 'Could Not Check', message: 'PayMongo could not be reached. Try again in a minute.' });
     } finally {
       setChecking(false);
     }
@@ -229,7 +229,7 @@ export default function UnpaidCheckoutActions({
     ...(canValidate && open
       ? [{
           key: 'check',
-          label: checking ? 'Checking payment…' : 'Check payment',
+          label: checking ? 'Checking Payment…' : 'Check Payment',
           icon: <SearchCheck size={16} aria-hidden="true" />,
           onSelect: checkPayment,
           disabled: checking,
@@ -249,24 +249,24 @@ export default function UnpaidCheckoutActions({
       href: `mailto:${order.contactEmail}?subject=${encodeURIComponent(`Your registration ${order.orderRef}`)}`,
       sameTab: true,
     },
-    { key: 'copy', label: 'Copy contact', icon: <Copy size={16} aria-hidden="true" />, onSelect: copyContact },
+    { key: 'copy', label: 'Copy Contact', icon: <Copy size={16} aria-hidden="true" />, onSelect: copyContact },
     ...(canEmail && order.status === 'PENDING'
       ? [
-          { key: 'pay-link', label: 'Copy payment link', icon: <Link2 size={16} aria-hidden="true" />, onSelect: copyPaymentLink },
-          { key: 'send-link', label: 'Send payment link', icon: <Send size={16} aria-hidden="true" />, onSelect: sendPaymentLink, disabled: preparing !== null },
-          { key: 'send-by-hand', label: 'Send by hand…', icon: <MailOpen size={16} aria-hidden="true" />, onSelect: sendByHand, disabled: preparing !== null },
+          { key: 'pay-link', label: 'Copy Payment Link', icon: <Link2 size={16} aria-hidden="true" />, onSelect: copyPaymentLink },
+          { key: 'send-link', label: 'Send Payment Link', icon: <Send size={16} aria-hidden="true" />, onSelect: sendPaymentLink, disabled: preparing !== null },
+          { key: 'send-by-hand', label: 'Send by Hand…', icon: <MailOpen size={16} aria-hidden="true" />, onSelect: sendByHand, disabled: preparing !== null },
         ]
       : []),
     ...(canEmail && order.status === 'EXPIRED'
-      ? [{ key: 'register-link', label: 'Copy registration link', icon: <Link2 size={16} aria-hidden="true" />, onSelect: copyRegistrationLink }]
+      ? [{ key: 'register-link', label: 'Copy Registration Link', icon: <Link2 size={16} aria-hidden="true" />, onSelect: copyRegistrationLink }]
       : []),
     ...(open
-      ? [{ key: 'follow-up', label: 'Log follow-up…', icon: <NotebookPen size={16} aria-hidden="true" />, onSelect: () => onLogFollowUp(order) }]
+      ? [{ key: 'follow-up', label: 'Log Follow-Up…', icon: <NotebookPen size={16} aria-hidden="true" />, onSelect: () => onLogFollowUp(order) }]
       : []),
     ...(canValidate && order.status === 'PENDING'
       ? [{
           key: 'cancel',
-          label: 'Cancel order…',
+          label: 'Cancel Order…',
           icon: <Ban size={16} aria-hidden="true" />,
           onSelect: () => onCancel(order),
           danger: true,

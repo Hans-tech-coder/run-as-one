@@ -48,7 +48,7 @@ export function RegisteredCount({ event, alignEnd = false }: { event: EventRow; 
             <span className="reg-count-dot is-paid" />Paid / Validated<b>{paid}</b>
           </span>
           <span className="reg-count-tip-row">
-            <span className="reg-count-dot is-pending" />Awaiting verification<b>{awaiting}</b>
+            <span className="reg-count-dot is-pending" />Awaiting Verification<b>{awaiting}</b>
           </span>
         </span>
       </span>

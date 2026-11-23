@@ -226,11 +226,11 @@ export default function HighlightsModal({
                 </div>
                 <div className="file-upload-title">
                   {uploading > 0 ? (
-                    <BusyLabel>{`Uploading ${uploading} ${uploading === 1 ? 'image' : 'images'}`}</BusyLabel>
+                    <BusyLabel>{`Uploading ${uploading} ${uploading === 1 ? 'Image' : 'Images'}`}</BusyLabel>
                   ) : value.length ? (
-                    'Add more images'
+                    'Add More Images'
                   ) : (
-                    'Click to upload images'
+                    'Click to Upload Images'
                   )}
                 </div>
                 <div className="file-upload-desc">

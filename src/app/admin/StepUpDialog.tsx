@@ -195,7 +195,7 @@ function StepUpPanel({
               <ShieldCheck size={24} strokeWidth={2} aria-hidden="true" />
             </div>
             <div className="flex flex-col gap-1 min-w-0 flex-1">
-              <h3 id={titleId} className="text-xl font-semibold text-primary">Confirm it&apos;s you</h3>
+              <h3 id={titleId} className="text-xl font-semibold text-primary">Confirm It&apos;s You</h3>
               <p className="text-secondary text-sm leading-relaxed">
                 {usesCode
                   ? `Enter the code from your authenticator app before ${what}.`
@@ -214,7 +214,7 @@ function StepUpPanel({
           </div>
           <div className="admin-modal-body flex flex-col gap-5">
 
-            {methods === 'loading' && <BusyLabel>Checking how you sign in</BusyLabel>}
+            {methods === 'loading' && <BusyLabel>Checking How You Sign In</BusyLabel>}
             {methods === 'failed' && (
               <p className="text-sm text-[var(--status-danger)]" role="alert">
                 Could not load this check. Close it and try again.

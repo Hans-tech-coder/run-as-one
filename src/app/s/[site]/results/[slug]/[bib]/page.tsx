@@ -185,7 +185,7 @@ export default async function RunnerAnalyticsPage({
 
   return (
     <div className="site-wrap relative pb-16 sm:pb-20">
-      <RaceHeader event={result.event} back={{ href: `/results/${result.event.slug}/full`, label: 'Back to the leaderboard' }} />
+      <RaceHeader event={result.event} back={{ href: `/results/${result.event.slug}/full`, label: 'Back to the Leaderboard' }} />
       <div className="pb-6 sm:pb-8">
         {/* Wide enough that the four analytics tiles each get a real column
             instead of squeezing their labels onto two lines. */}
@@ -238,14 +238,14 @@ export default async function RunnerAnalyticsPage({
                   runner's card no matter how long the name beside it is. */}
               <div className="shrink-0 text-center w-full md:w-auto md:min-w-[17rem] bg-site-card border border-site-line px-5 sm:px-6 py-4 sm:py-5 rounded-[14px] sm:rounded-[14px]">
                 <div className="text-site-muted text-sm mb-2 font-semibold flex items-center justify-center gap-2">
-                  <Timer size={14} className="text-site-accent shrink-0" /> Official chip time
+                  <Timer size={14} className="text-site-accent shrink-0" /> Official Chip Time
                 </div>
                 <div className="text-[clamp(2.75rem,7.5vw,4.5rem)] leading-[1.1] font-mono font-semibold text-site-ink tracking-tighter tabular-nums">
                   {toWholeSeconds(result.chipTime)}
                 </div>
                 {result.gunTime && (
                   <div className="text-xs text-site-muted font-mono mt-2">
-                    Gun time: {toWholeSeconds(result.gunTime)}
+                    Gun Time: {toWholeSeconds(result.gunTime)}
                   </div>
                 )}
               </div>
@@ -259,7 +259,7 @@ export default async function RunnerAnalyticsPage({
               {/* Overall Rank */}
               <div className="bg-site-surface border border-site-line p-3.5 sm:p-5 rounded-[10px] sm:rounded-[14px] cursor-default">
                 <div className="text-secondary text-[11px] tracking-wide mb-2 sm:mb-3 font-medium flex items-center gap-1 min-[360px]:gap-1.5 sm:gap-2 whitespace-nowrap">
-                  <Trophy size={14} className="text-site-accent" /> Overall rank
+                  <Trophy size={14} className="text-site-accent" /> Overall Rank
                 </div>
                 <div className="text-2xl sm:text-3xl font-bold text-site-ink mb-1 flex items-baseline gap-2">
                   {formatRank(ranks.categoryRank)}
@@ -273,7 +273,7 @@ export default async function RunnerAnalyticsPage({
               {/* Gender Rank */}
               <div className="bg-site-surface border border-site-line p-3.5 sm:p-5 rounded-[10px] sm:rounded-[14px] cursor-default">
                 <div className="text-secondary text-[11px] tracking-wide mb-2 sm:mb-3 font-medium flex items-center gap-1 min-[360px]:gap-1.5 sm:gap-2 whitespace-nowrap">
-                  <Medal size={14} className="text-site-accent" /> Gender rank
+                  <Medal size={14} className="text-site-accent" /> Gender Rank
                 </div>
                 <div className="text-2xl sm:text-3xl font-bold text-site-ink mb-1 flex items-baseline gap-2">
                   {formatRank(ranks.genderRank)}
@@ -287,7 +287,7 @@ export default async function RunnerAnalyticsPage({
               {/* Average Pace */}
               <div className="bg-site-surface border border-site-line p-3.5 sm:p-5 rounded-[10px] sm:rounded-[14px] cursor-default relative overflow-hidden">
                                 <div className="text-secondary text-[11px] tracking-wide mb-2 sm:mb-3 font-medium flex items-center gap-1 min-[360px]:gap-1.5 sm:gap-2 whitespace-nowrap relative z-10">
-                  <Activity size={14} className="text-[var(--status-success)]" /> Average pace
+                  <Activity size={14} className="text-[var(--status-success)]" /> Average Pace
                 </div>
                 <div className="text-2xl sm:text-3xl font-mono font-bold text-site-ink mb-1 relative z-10">
                   {averagePace}
@@ -298,7 +298,7 @@ export default async function RunnerAnalyticsPage({
               {/* Estimated Speed */}
               <div className="bg-site-surface border border-site-line p-3.5 sm:p-5 rounded-[10px] sm:rounded-[14px] cursor-default relative overflow-hidden">
                                 <div className="text-secondary text-[11px] tracking-wide mb-2 sm:mb-3 font-medium flex items-center gap-1 min-[360px]:gap-1.5 sm:gap-2 whitespace-nowrap relative z-10">
-                  <Zap size={14} className="text-[var(--status-warning)]" /> Average speed
+                  <Zap size={14} className="text-[var(--status-warning)]" /> Average Speed
                 </div>
                 <div className="text-2xl sm:text-3xl font-mono font-bold text-site-ink mb-1 relative z-10">
                   {speedKmH}

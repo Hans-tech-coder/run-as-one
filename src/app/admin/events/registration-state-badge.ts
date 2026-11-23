@@ -26,5 +26,5 @@ export const REGISTRATION_STATES = {
   FINISHED: { label: 'Race Over', tone: 'neutral' },
   // Neutral too: registration runs elsewhere, which is neither good news nor a
   // warning — Run As One only publishes this race's results.
-  EXTERNAL: { label: 'Results only', tone: 'neutral' },
+  EXTERNAL: { label: 'Results Only', tone: 'neutral' },
 } as const;

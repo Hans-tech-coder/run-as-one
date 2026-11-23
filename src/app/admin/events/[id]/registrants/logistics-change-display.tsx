@@ -128,17 +128,17 @@ export function LogisticsWithSwitch({ runner }: { runner: WithSwitches }) {
       )}
       {waiting?.proofSubmitted && (
         <span className="status-badge info" title={`The runner sent the payment proof for ${waiting.changeRef}. Validate it in Delivery Payment.`}>
-          Proof submitted · to delivery
+          Proof Submitted · To Delivery
         </span>
       )}
       {waiting?.awaitsAddress && (
         <span className="status-badge pending" title={`The runner was sent the link to give the address and pay (${waiting.changeRef}).`}>
-          Waiting for address · to delivery
+          Waiting for Address · To Delivery
         </span>
       )}
       {waiting && !waiting.proofSubmitted && !waiting.awaitsAddress && (
         <span className="status-badge pending" title={`Waiting for payment to switch to delivery (${waiting.changeRef}).`}>
-          {peso(waiting.totalCharged || waiting.fee)} due · to delivery
+          {peso(waiting.totalCharged || waiting.fee)} Due · To Delivery
         </span>
       )}
     </span>

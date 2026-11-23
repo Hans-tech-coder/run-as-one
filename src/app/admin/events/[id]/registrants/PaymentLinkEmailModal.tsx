@@ -86,7 +86,7 @@ export default function PaymentLinkEmailModal({
         const { error: reason } = await res.json().catch(() => ({ error: '' }));
         await alert({
           variant: 'error',
-          title: 'Not Marked As Sent',
+          title: 'Not Marked as Sent',
           message: reason || 'The follow-up could not be saved. Try again.',
         });
         return;
@@ -99,7 +99,7 @@ export default function PaymentLinkEmailModal({
     } catch {
       await alert({
         variant: 'error',
-        title: 'Not Marked As Sent',
+        title: 'Not Marked as Sent',
         message: 'Something went wrong while marking the link sent. Try again.',
       });
     } finally {

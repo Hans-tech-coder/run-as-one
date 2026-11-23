@@ -32,6 +32,21 @@
 - Registrant text is stored **UPPERCASE**, email excepted (§5, `text-case.ts`).
   A field whose value is stored uppercase shows an uppercase *sample*
   placeholder; a placeholder that is an instruction stays sentence case.
+- **Title Case on UI chrome, Sentence case on prose** (owner, 2026-11-23; §8
+  rule 13, overriding `design-taste-frontend`'s sentence-case rule). Every
+  navigation link (including *Track Registration* in the public header), page
+  and section heading (`h1`–`h4`), short eyebrow/kicker subheading, modal and
+  alert title, button, standalone action link, `BusyLabel` gerund, form `<label>`
+  / `<legend>`, choice-card title, switch title, table header, filter heading /
+  short option, metric title and status badge/chip wears Title Case across both
+  Paper and `/admin` — principal words, phrasal-verb particles (*Look Up*, *Sign
+  In*, *Pick Up*) and both halves of hyphenated compounds (*Sign-Ups*, *Add-Ons*,
+  *E-Certificate*, *Two-Step*, *On-Site*) capitalized; short articles,
+  coordinating conjunctions and short prepositions lowercase unless first, last
+  or after `:`, `—`, `/`, `·`. Supporting prose — `.site-lead`,
+  `.site-section__sub`, `.auth-subtitle`, panel/empty-state descriptions, form
+  hints, instructional placeholders, `FieldError` messages, alert/toast body
+  sentences and full-sentence consent checkboxes — stays Sentence case.
 - **An email address is checked on both sides of the wire** (§5,
   `email-address.ts`) and stored trimmed. `type="email"` on the input is not a
   check — a browser only enforces it on a form submit, and the wizards advance
@@ -899,7 +914,8 @@
   leading). A warm off-white ground (`#f6f3ee`), navy ink (`#14192b`), **one
   solid orange action** (`#c2530a`, 4.6:1 under white text), Archivo for
   everything (its width axis, ~110%, carries the headings instead of a heavy
-  weight), **mixed case everywhere** — no all-caps titles or buttons, no
+  weight), **Title Case on UI chrome and Sentence case on prose** (§8 rule 13 —
+  no all-caps titles or buttons), no
   gradients, no glass, no glow orbs. It replaced the dark glassmorphic look and
   its gradient pills, which the public-site audit called out as template tells.
   - **Where it applies is one rule:** `isPaperPath()` in `lib/site-look.ts` —
@@ -1054,16 +1070,16 @@
     arrow nudges 3px. All rest under reduced motion.
 - **The home hero is a product stage** (`components/HeroSection`, a Server
   Component): the head row — the headline on the left, the lead and the two
-  buttons (*See upcoming races*, *Look up results*) on the right — and the
-  **next race's poster whole across the content width** under a *Next race* line
+  buttons (*See Upcoming Races*, *Look Up Results*) on the right — and the
+  **next race's poster whole across the content width** under a *Next Race* line
   (its date and place). **The headline is data:** the provinces the upcoming
   on-site races are in, most races first (`groupBy province` in the home page's
-  one `Promise.all`), "Road races in Tarlac and Pangasinan" — two named, then
-  "and more"; none gives a plain fallback. No poster, no stage. The page closes
-  on an **Organizing a race?** band → `/admin/register` (clients hire Run As
+  one `Promise.all`), "Road Races in Tarlac and Pangasinan" — two named, then
+  "and More"; none gives a plain fallback. No poster, no stage. The page closes
+  on an **Organizing a Race?** band → `/admin/register` (clients hire Run As
   One), replacing the three numbered "How it works" cards.
 - **A race's head is `components/RaceHeader`**: one step back, the race's name
-  (or a page title such as *Race winners* with the race's name above it), its
+  (or a page title such as *Race Winners* with the race's name above it), its
   date, time and venue, an optional plain-language `lead`, and an actions row.
   It is used by the event page and all three results pages, and replaced
   `EventHeroBanner`, which printed the title in white capitals over the

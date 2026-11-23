@@ -37,7 +37,7 @@ export default function RacePhotoLinks({
     </a>
   );
 
-  if (list.length === 1) return link(list[0], 'View race photos', true);
+  if (list.length === 1) return link(list[0], 'View Race Photos', true);
 
   const names = albumNames(list);
   const rowClass =
@@ -52,7 +52,7 @@ export default function RacePhotoLinks({
         id="race-photos-heading"
         className={`m-0 flex items-center gap-2 text-sm font-semibold text-site-muted ${align === 'center' ? 'justify-center' : ''}`}
       >
-        <Camera size={16} aria-hidden="true" /> Race photos
+        <Camera size={16} aria-hidden="true" /> Race Photos
       </p>
       <div className={rowClass}>
         {list.map((album, i) => link(album, names[i], false))}

@@ -17,9 +17,9 @@ export type ResultRow = EventRow & {
 
 /** R1's badge: where the race's runners signed up. */
 export const RESULT_KINDS = {
-  REGISTERED: { label: 'Registered here', tone: 'info' },
-  // Neutral, like the Events table's Results only badge (registration-state-badge.ts).
-  RESULTS_ONLY: { label: 'Results only', tone: 'neutral' },
+  REGISTERED: { label: 'Registered Here', tone: 'info' },
+  // Neutral, like the Events table's Results Only badge (registration-state-badge.ts).
+  RESULTS_ONLY: { label: 'Results Only', tone: 'neutral' },
 } as const;
 
 export function resultKind(row: ResultRow): keyof typeof RESULT_KINDS {

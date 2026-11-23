@@ -43,7 +43,7 @@ export default function ThankYouPanel({
         tabIndex={-1}
         className="site-h3 outline-none"
       >
-        We have your inquiry, {form.contactFirstName || 'thank you'}.
+        We Have Your Inquiry, {form.contactFirstName || 'Thank You'}
       </h2>
       <p className="mt-3 leading-relaxed text-site-muted">
         It is in the queue under{' '}

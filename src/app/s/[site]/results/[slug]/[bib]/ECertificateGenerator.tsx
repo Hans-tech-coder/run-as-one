@@ -38,11 +38,11 @@ export default function ECertificateGenerator({ result, event }: Props) {
           className="site-btn site-btn--action w-full sm:w-fit sm:min-w-[20rem]"
         >
           {isGenerating ? (
-            <BusyLabel>Generating e-certificate</BusyLabel>
+            <BusyLabel>Generating E-Certificate</BusyLabel>
           ) : (
             <>
               <FileText size={20} aria-hidden="true" />
-              View e-certificate
+              View E-Certificate
             </>
           )}
         </button>

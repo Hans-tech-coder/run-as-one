@@ -27,20 +27,20 @@ export default function ClientSiteFooter({ site }: { site: SiteClient }) {
     {
       heading: 'Explore',
       links: [
-        { label: 'Browse events', href: '/events' },
-        { label: 'Race results', href: '/results' },
+        { label: 'Browse Events', href: '/events' },
+        { label: 'Race Results', href: '/results' },
         // The main footer's link too: a client's runners track their order
         // here, on the client's own site (lib/track.ts `trackHome`).
-        { label: 'Track my registration', href: '/track' },
+        { label: 'Track My Registration', href: '/track' },
       ],
     },
     {
-      heading: 'Help and legal',
+      heading: 'Help and Legal',
       links: [
-        { label: 'Send feedback', href: '/feedback' },
-        { label: 'Terms of service', href: '/terms' },
-        { label: 'Privacy policy', href: '/privacy' },
-        { label: 'Payment concerns', href: supportMailto(contactEmail), external: true },
+        { label: 'Send Feedback', href: '/feedback' },
+        { label: 'Terms of Service', href: '/terms' },
+        { label: 'Privacy Policy', href: '/privacy' },
+        { label: 'Payment Concerns', href: supportMailto(contactEmail), external: true },
       ],
     },
   ];

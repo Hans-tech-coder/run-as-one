@@ -24,9 +24,9 @@ import { listPhrase } from '../[id]/results-sheet';
 export type SaveStage = 'race' | 'results' | 'certificate';
 
 export const SAVE_STAGE_LABEL: Record<SaveStage, string> = {
-  race: 'Saving race',
-  results: 'Uploading results',
-  certificate: 'Saving certificate',
+  race: 'Saving Race',
+  results: 'Uploading Results',
+  certificate: 'Saving Certificate',
 };
 
 const STAGE_NAME: Record<SaveStage, string> = {

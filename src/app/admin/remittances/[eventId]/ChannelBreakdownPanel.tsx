@@ -46,15 +46,15 @@ export default function ChannelBreakdownPanel({
                   <ChannelRow line={line} />
                   {line.channel.kind === 'PAYMONGO' && line.fees > 0 && (
                     <>
-                      <Row label="Less PayMongo fees" value={-line.fees} muted />
-                      <Row label="PayMongo net" value={line.net} muted />
+                      <Row label="Less PayMongo Fees" value={-line.fees} muted />
+                      <Row label="PayMongo Net" value={line.net} muted />
                     </>
                   )}
                 </React.Fragment>
               ))}
-              <Row label="Total received" value={breakdown.gross} rule />
-              {breakdown.refunds > 0 && <Row label="Less refunds to runners" value={-breakdown.refunds} />}
-              <Row label="Collected from runners" value={breakdown.collected} strong rule />
+              <Row label="Total Received" value={breakdown.gross} rule />
+              {breakdown.refunds > 0 && <Row label="Less Refunds to Runners" value={-breakdown.refunds} />}
+              <Row label="Collected from Runners" value={breakdown.collected} strong rule />
             </dl>
 
             {untagged && (
@@ -102,7 +102,7 @@ export default function ChannelBreakdownPanel({
 }
 
 function ChannelRow({ line }: { line: ChannelLine }) {
-  const label = line.channel.kind === 'UNTAGGED' ? 'Untagged bank transfers' : line.channel.label;
+  const label = line.channel.kind === 'UNTAGGED' ? 'Untagged Bank Transfers' : line.channel.label;
   return <Row label={label} count={line.count} value={line.gross} />;
 }
 

@@ -169,7 +169,7 @@ export function runnerDetailRows(registration: RegistrationWithDetails): Row[] {
       ...(runner.singletSize ? [{ kind: 'info' as const, label: 'Shirt Size', value: runner.singletSize }] : []),
       // Beside the shirt size, so a wrong size on a shirt they paid for is
       // caught here too.
-      ...runner.addOns.map(line => ({ kind: 'info' as const, label: 'Add-on', value: addOnItemLabel(line) })),
+      ...runner.addOns.map(line => ({ kind: 'info' as const, label: 'Add-On', value: addOnItemLabel(line) })),
       { kind: 'info', label: 'Gender', value: runner.gender },
       { kind: 'info', label: 'Birthdate', value: runner.birthdate },
       // The guardian who consented, under the details of the minor they
@@ -271,7 +271,7 @@ export function summaryRows(registration: RegistrationWithDetails, totalLabel: s
       ? [
           {
             kind: 'info' as const,
-            label: 'You saved',
+            label: 'You Saved',
             value: `${PESO_SIGN}${formatPesos(ownOff)} on ${promoName}`,
           },
         ]

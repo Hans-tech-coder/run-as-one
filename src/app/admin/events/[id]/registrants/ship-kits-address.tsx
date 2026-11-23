@@ -27,7 +27,7 @@ import type { ShipKitsState } from './useShipKits';
 
 export default function ShipKitsAddress(props: ShipKitsState) {
   const { receipt, address, setAddress, ownAddress, hasHome, homeText, zoneNote } = props;
-  const homeLabel = receipt.runners.length === 1 ? "the runner's home address" : "Runner 1's home address";
+  const homeLabel = receipt.runners.length === 1 ? "the Runner's Home Address" : "Runner 1's Home Address";
   const note = zoneNote?.error ? (
     <p className="text-xs text-[var(--status-warning)]" role="status">{zoneNote.error}</p>
   ) : zoneNote?.text ? (
@@ -46,7 +46,7 @@ export default function ShipKitsAddress(props: ShipKitsState) {
               className="inline-flex items-center gap-1.5 min-h-11 text-sm font-semibold text-[var(--accent-blue-text)] hover:text-primary transition-colors bg-transparent border-none cursor-pointer p-0"
             >
               <Home size={14} aria-hidden="true" />
-              Use {homeLabel}
+              Use {receipt.runners.length === 1 ? "the Runner's Home Address" : "Runner 1's Home Address"}
             </button>
           )}
         </div>

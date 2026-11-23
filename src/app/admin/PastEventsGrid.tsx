@@ -32,7 +32,7 @@ export default function PastEventsGrid({ cards }: { cards: React.ReactNode[] }) 
 
   return (
     <>
-      <ul ref={listRef} className="viewer-event-grid" aria-label="Past events">
+      <ul ref={listRef} className="viewer-event-grid" aria-label="Past Events">
         {cards.slice(0, shown).map((card, i) => (
           <li key={i}>{card}</li>
         ))}
@@ -40,8 +40,8 @@ export default function PastEventsGrid({ cards }: { cards: React.ReactNode[] }) 
 
       {left > 0 && (
         <button type="button" className="viewer-show-more" onClick={showMore}>
-          Show {next} more past {next === 1 ? 'event' : 'events'}
-          <span className="viewer-show-more-left">{left} left</span>
+          Show {next} More Past {next === 1 ? 'Event' : 'Events'}
+          <span className="viewer-show-more-left">{left} Left</span>
           <ChevronDown size={16} aria-hidden="true" />
         </button>
       )}

@@ -67,8 +67,8 @@ export default function GuideToc({ items }: { items: { id: string; label: string
   };
 
   return (
-    <nav className="cert-guide-toc" aria-label="On this page">
-      <p className="cert-guide-toc-title">On this page</p>
+    <nav className="cert-guide-toc" aria-label="On This Page">
+      <p className="cert-guide-toc-title">On This Page</p>
       <ol>
         {items.map(({ id, label }) => (
           <li key={id}>

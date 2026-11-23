@@ -31,7 +31,7 @@ export default function ProofPreview({
           onClick={onOpen}
           className="text-xs font-medium text-accent-blue-ink hover:underline bg-transparent border-none cursor-pointer p-0"
         >
-          View fullscreen
+          View Fullscreen
         </button>
       </div>
       <button
@@ -43,7 +43,7 @@ export default function ProofPreview({
         {isPdf ? (
           <span className="flex flex-col items-center gap-2 py-10 text-secondary">
             <FileText size={32} className="text-accent-blue-ink" aria-hidden="true" />
-            <span className="text-sm font-medium text-primary">PDF receipt</span>
+            <span className="text-sm font-medium text-primary">PDF Receipt</span>
             <span className="text-xs">Click to read it full screen</span>
           </span>
         ) : (
@@ -54,7 +54,7 @@ export default function ProofPreview({
           />
         )}
         <span className="absolute inset-0 flex items-center justify-center gap-2 bg-black/60 text-sm font-medium text-white opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity">
-          <Maximize2 size={16} aria-hidden="true" /> Click to enlarge
+          <Maximize2 size={16} aria-hidden="true" /> Click to Enlarge
         </span>
       </button>
     </div>

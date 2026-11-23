@@ -116,7 +116,7 @@ export default function RegistrantHistoryModal({
                 </dd>
               </dl>
               <CategoryChangeHistory
-                title="Category changes"
+                title="Category Changes"
                 changes={changes}
                 permissions={permissions}
                 onUpdated={onChangeUpdated}
@@ -140,8 +140,8 @@ export default function RegistrantHistoryModal({
               </dl>
               <div>
                 <p className="m-0 text-xs font-semibold uppercase tracking-wider text-secondary">
-                  Pickup &amp; delivery switches
-                  {receipt.runners.length > 1 ? ` · whole receipt, ${receipt.runners.length} runners` : ''}
+                  Pickup &amp; Delivery Switches
+                  {receipt.runners.length > 1 ? ` · Whole Receipt, ${receipt.runners.length} Runners` : ''}
                 </p>
                 <SwitchHistoryList
                   changes={switches}

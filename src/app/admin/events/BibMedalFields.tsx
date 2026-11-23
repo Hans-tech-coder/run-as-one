@@ -129,7 +129,7 @@ export default function BibMedalFields({
             className="form-group-full"
             label={
               <>
-                Goes On Sale <span className="text-xs opacity-70">- leave blank to start when you save</span>
+                Goes on Sale <span className="text-xs opacity-70">- leave blank to start when you save</span>
               </>
             }
             value={draft.opensOn}
@@ -138,7 +138,7 @@ export default function BibMedalFields({
             defaultTime="08:00"
             clearable
             placeholder="As soon as you save"
-            dialogLabel="Choose when Bib + Medal goes on sale"
+            dialogLabel="Choose When Bib + Medal Goes on Sale"
             error={fieldFault('opensOn')}
             hint="Philippine time. Nobody has to come back and switch it on."
           />

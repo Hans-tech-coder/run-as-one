@@ -156,7 +156,7 @@ function RecordPayment({
         {change.toCategory} at once and emails them.
       </p>
       <div className="space-y-1.5">
-        <label htmlFor={fieldId} className="block text-secondary">GCash or bank reference number</label>
+        <label htmlFor={fieldId} className="block text-secondary">GCash or Bank Reference Number</label>
         <input
           id={fieldId}
           autoComplete="off"
@@ -189,7 +189,7 @@ function RecordPayment({
           disabled={saving}
           className="px-4 min-h-11 bg-[var(--dash-inverse-bg)] text-[var(--dash-inverse-fg)] rounded-lg text-sm font-medium hover:bg-[var(--dash-inverse-hover)] disabled:opacity-50 inline-flex items-center justify-center"
         >
-          {saving ? <BusyLabel>Recording</BusyLabel> : `Record ₱${formatPesos(change.amount)} and move`}
+          {saving ? <BusyLabel>Recording</BusyLabel> : `Record ₱${formatPesos(change.amount)} and Move`}
         </button>
         <button
           type="button"
@@ -197,7 +197,7 @@ function RecordPayment({
           disabled={saving}
           className="px-4 min-h-11 text-sm text-secondary hover:text-primary bg-transparent border-none cursor-pointer"
         >
-          Never mind
+          Never Mind
         </button>
       </div>
     </div>
@@ -245,7 +245,7 @@ export default function AwaitingChangeActions({
           await navigator.clipboard.writeText(data.url);
           toast(`Copied the payment link. It works until ${data.untilLabel}.`);
         } catch {
-          await alert({ title: 'Copy this link', message: data.url });
+          await alert({ title: 'Copy This Link', message: data.url });
         }
         return;
       }
@@ -262,13 +262,13 @@ export default function AwaitingChangeActions({
   const cancel = async () => {
     const ok = await confirm({
       variant: 'danger',
-      title: 'Cancel this change?',
+      title: 'Cancel This Change?',
       message: proofIn
         ? `The runner already sent ₱${formatPesos(change.totalCharged || change.amount)} by GCash or bank (reference ${change.transactionNumber}). Cancelling keeps them in ${change.fromCategory} and releases the seat in ${change.toCategory}, but does not refund them; refund them yourself.`
         : `The runner stays in ${change.fromCategory}, the seat held in ${change.toCategory} is released, and the payment link stops working.`,
-      confirmLabel: 'Cancel change',
+      confirmLabel: 'Cancel Change',
       // "Cancel" beside "Cancel change" would read as the same thing twice.
-      cancelLabel: 'Keep it',
+      cancelLabel: 'Keep It',
     });
     if (!ok) return;
     setBusy('cancel');
@@ -305,7 +305,7 @@ export default function AwaitingChangeActions({
     <div className="flex items-center gap-2 flex-wrap">
       {permissions.email && !outside && (
         <button type="button" onClick={() => link('copy')} disabled={busy !== null} className="btn-filter is-compact gap-1.5">
-          <Copy size={14} aria-hidden="true" /> {busy === 'copy' ? <BusyLabel>Copying</BusyLabel> : 'Copy payment link'}
+          <Copy size={14} aria-hidden="true" /> {busy === 'copy' ? <BusyLabel>Copying</BusyLabel> : 'Copy Payment Link'}
         </button>
       )}
       {permissions.validate && proofIn && (
@@ -322,17 +322,17 @@ export default function AwaitingChangeActions({
       {permissions.email && !proofIn && (
         <button type="button" onClick={() => link('email')} disabled={busy !== null} className="btn-filter is-compact gap-1.5">
           <Mail size={14} aria-hidden="true" />{' '}
-          {busy === 'email' ? <BusyLabel>Sending</BusyLabel> : outside ? 'Email how to pay' : 'Email payment link'}
+          {busy === 'email' ? <BusyLabel>Sending</BusyLabel> : outside ? 'Email How to Pay' : 'Email Payment Link'}
         </button>
       )}
       {permissions.validate && outside && !proofIn && (
         <button type="button" onClick={() => setRecording(true)} disabled={busy !== null} className="btn-filter is-compact gap-1.5">
-          <Receipt size={14} aria-hidden="true" /> Record payment
+          <Receipt size={14} aria-hidden="true" /> Record Payment
         </button>
       )}
       {permissions.edit && (
         <button type="button" onClick={cancel} disabled={busy !== null} className="btn-filter is-compact gap-1.5">
-          <XCircle size={14} aria-hidden="true" /> {busy === 'cancel' ? <BusyLabel>Cancelling</BusyLabel> : 'Cancel change'}
+          <XCircle size={14} aria-hidden="true" /> {busy === 'cancel' ? <BusyLabel>Cancelling</BusyLabel> : 'Cancel Change'}
         </button>
       )}
     </div>

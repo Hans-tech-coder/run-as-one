@@ -84,7 +84,7 @@ export default function RegistrantTransactionFields({
             href={orderActivityPath(runner.orderRef, eventId)}
             className="text-xs font-medium text-accent-blue-ink hover:underline mt-1.5 w-fit"
           >
-            See this order&rsquo;s activity
+            See This Order&rsquo;s Activity
           </Link>
         )}
       </p>
@@ -121,7 +121,7 @@ export default function RegistrantTransactionFields({
       {runner.isBankTransfer &&
         (paidToField ?? (
           <p className="flex flex-col">
-            <span className="text-[var(--text-muted)]">Paid to</span>
+            <span className="text-[var(--text-muted)]">Paid To</span>
             <span className={runner.paidTo ? 'text-primary font-medium' : 'text-[var(--text-muted)] italic'}>
               {paidToLabel(runner.paidTo)}
             </span>
@@ -174,7 +174,7 @@ export default function RegistrantTransactionFields({
           part of the total that is not entries or fees. Each runner's own
           lines are under Race Details. */}
       {runner.orderAddOnTotal > 0 && (
-        <p className="flex flex-col"><span className="text-[var(--text-muted)]">Add-ons (whole order)</span> <span className="text-primary font-medium">₱{formatPesos(runner.orderAddOnTotal)}</span></p>
+        <p className="flex flex-col"><span className="text-[var(--text-muted)]">Add-Ons (Whole Order)</span> <span className="text-primary font-medium">₱{formatPesos(runner.orderAddOnTotal)}</span></p>
       )}
       <p className="flex flex-col"><span className="text-[var(--text-muted)]">Order Total</span> <span className="text-primary font-medium">₱{formatPesos(runner.totalAmount)}</span></p>
       <p className="flex flex-col">

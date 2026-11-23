@@ -125,7 +125,7 @@ export function PaidToSelect({
   onChange,
   error,
   hint,
-  label = 'Paid to',
+  label = 'Paid To',
 }: {
   id: string;
   value: string;

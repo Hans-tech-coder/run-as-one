@@ -40,9 +40,9 @@ export default async function ComingSoonPage({
   return (
     <section className="site-section site-wrap">
       <div className="site-notice" data-enter>
-        <p className="site-notice__code">Coming soon</p>
+        <p className="site-notice__code">Coming Soon</p>
         <h1 className="site-h1">
-          {channel ? `Our ${channel.name} isn't live yet` : 'Our social channels are on the way'}
+          {channel ? `Our ${channel.name} Isn't Live Yet` : 'Our Social Channels Are on the Way'}
         </h1>
         <p className="site-lead max-w-[56ch]">
           We&apos;re still setting this one up. Nothing about registering is
@@ -51,7 +51,7 @@ export default async function ComingSoonPage({
         </p>
         <div className="site-notice__actions">
           <Link href="/events" className="site-btn site-btn--action site-btn--block-sm">
-            Browse events
+            Browse Events
             <ArrowRight size={18} aria-hidden="true" />
           </Link>
           <a href={supportMailto(contactEmail)} className="site-btn site-btn--quiet site-btn--block-sm">

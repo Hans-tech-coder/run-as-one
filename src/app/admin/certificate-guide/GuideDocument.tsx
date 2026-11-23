@@ -41,11 +41,11 @@ const [SPONSORS, CLEAN] = CONTENT_AREA_PRESETS;
 
 /** The sections, in page order, as the contents list names them. */
 const CONTENTS = [
-  { key: 'layout', label: 'Where things go' },
-  { key: 'file', label: 'File specifications' },
-  { key: 'what-we-print', label: 'What we print' },
-  { key: 'do-and-dont', label: "Do and don't" },
-  { key: 'send', label: 'Send with your file' },
+  { key: 'layout', label: 'Where Things Go' },
+  { key: 'file', label: 'File Specifications' },
+  { key: 'what-we-print', label: 'What We Print' },
+  { key: 'do-and-dont', label: "Do and Don't" },
+  { key: 'send', label: 'Send with Your File' },
   { key: 'checklist', label: 'Checklist' },
 ] as const;
 
@@ -70,7 +70,7 @@ export default function GuideDocument({ idPrefix, printedOn }: { idPrefix: strin
       )}
 
       <section className="cert-guide-intro">
-        <span className="cert-guide-eyebrow">For race organizers and their designers</span>
+        <span className="cert-guide-eyebrow">For Race Organizers and Their Designers</span>
         <p className="cert-guide-lede">
           You design the artwork. We print every finisher&apos;s details on it: their name, finish
           time, category and bib, laid out in the same finished style as the {SITE_NAME} certificate.
@@ -79,7 +79,7 @@ export default function GuideDocument({ idPrefix, printedOn }: { idPrefix: strin
         </p>
       </section>
 
-      <Section id={id('layout')} eyebrow="The layout" title="Where things go on the page">
+      <Section id={id('layout')} eyebrow="The Layout" title="Where Things Go on the Page">
         <GuideDiagram idPrefix={idPrefix} />
         <ul className="cert-guide-legend">
           <li><span className="cert-guide-swatch is-brand" /><span><strong>Top quarter:</strong> your branding and event artwork.</span></li>
@@ -97,20 +97,20 @@ export default function GuideDocument({ idPrefix, printedOn }: { idPrefix: strin
         </p>
       </Section>
 
-      <Section id={id('file')} eyebrow="The file" title="File specifications">
+      <Section id={id('file')} eyebrow="The File" title="File Specifications">
         <table className="cert-guide-specs">
           <tbody>
             <tr><th scope="row">Page</th><td><strong>A4 landscape</strong> (297 × 210 mm). Letter size also works and is never stretched, but A4 is preferred.</td></tr>
             <tr><th scope="row">Size</th><td><strong className="font-mono">3508 × 2480 px</strong> at 300 dpi. For a sharp result, don&apos;t go below <span className="font-mono">1754 × 1240 px</span>.</td></tr>
             <tr><th scope="row">Format</th><td><strong>PNG or JPG</strong>, or a <strong>PDF</strong> exported from Illustrator, Canva or similar. Send one page only.</td></tr>
-            <tr><th scope="row">File size</th><td>Up to <strong>{MAX_UPLOAD_MB} MB</strong>. A high-quality JPG of a full A4 design is usually 1 to 3 MB.</td></tr>
+            <tr><th scope="row">File Size</th><td>Up to <strong>{MAX_UPLOAD_MB} MB</strong>. A high-quality JPG of a full A4 design is usually 1 to 3 MB.</td></tr>
             <tr><th scope="row">Color</th><td>RGB. Runners mostly view and share the certificate on screen.</td></tr>
-            <tr><th scope="row">Text in your art</th><td>Convert fonts to outlines or flatten them, so your titles look the same on every device.</td></tr>
+            <tr><th scope="row">Text in Your Art</th><td>Convert fonts to outlines or flatten them, so your titles look the same on every device.</td></tr>
           </tbody>
         </table>
       </Section>
 
-      <Section id={id('what-we-print')} eyebrow="What we add" title="What we print for each runner">
+      <Section id={id('what-we-print')} eyebrow="What We Add" title="What We Print for Each Runner">
         <p className="cert-guide-note">
           These are drawn automatically for every finisher. Don&apos;t put any of them in your template.
         </p>
@@ -137,7 +137,7 @@ export default function GuideDocument({ idPrefix, printedOn }: { idPrefix: strin
         </p>
       </Section>
 
-      <Section id={id('do-and-dont')} eyebrow="Design rules" title="Do and don't">
+      <Section id={id('do-and-dont')} eyebrow="Design Rules" title="Do and Don't">
         <div className="cert-guide-dodont">
           <div className="cert-guide-col is-do">
             <h3><CircleCheck size={18} aria-hidden="true" /> Do</h3>
@@ -162,7 +162,7 @@ export default function GuideDocument({ idPrefix, printedOn }: { idPrefix: strin
         </div>
       </Section>
 
-      <Section id={id('send')} eyebrow="Your reply" title="Send these with your file">
+      <Section id={id('send')} eyebrow="Your Reply" title="Send These with Your File">
         <ol className="cert-guide-send">
           <li><span><strong>Your brand color as a hex code</strong>, for example <span className="font-mono">#C2410C</span>. It is used for the finish time and the accents.</span></li>
           <li><span><strong>Whether your artwork already says &ldquo;Certificate of Completion&rdquo; or the event name</strong>, so we don&apos;t print them twice.</span></li>
@@ -171,7 +171,7 @@ export default function GuideDocument({ idPrefix, printedOn }: { idPrefix: strin
         </ol>
       </Section>
 
-      <Section id={id('checklist')} eyebrow="Before you send" title="Checklist">
+      <Section id={id('checklist')} eyebrow="Before You Send" title="Checklist">
         {printed ? (
           <ul className="cert-guide-checklist">
             {CHECKLIST.map(item => (
@@ -201,7 +201,7 @@ export default function GuideDocument({ idPrefix, printedOn }: { idPrefix: strin
         <SavePdfAside />
         <GuideToc items={CONTENTS.map(({ key, label }) => ({ id: id(key), label }))} />
       </aside>
-      <SavePdfPanel id="guide-save-title" title="Sending this to a designer?" />
+      <SavePdfPanel id="guide-save-title" title="Sending This to a Designer?" />
     </div>
   );
 }

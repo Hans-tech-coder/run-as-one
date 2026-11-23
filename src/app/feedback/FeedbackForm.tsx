@@ -78,7 +78,7 @@ export default function FeedbackForm({ pagePath }: { pagePath: string | null }) 
 
         {/* 2 — the message */}
         <div className="input-group">
-          <label htmlFor={FIELD_ID.message}>Your message</label>
+          <label htmlFor={FIELD_ID.message}>Your Message</label>
           <textarea
             id={FIELD_ID.message}
             rows={7}
@@ -128,7 +128,7 @@ export default function FeedbackForm({ pagePath }: { pagePath: string | null }) 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <div className="input-group">
             <label htmlFor={FIELD_ID.name}>
-              Your name <span className="font-normal text-site-muted">(optional)</span>
+              Your Name <span className="font-normal text-site-muted">(Optional)</span>
             </label>
             <input
               id={FIELD_ID.name}
@@ -149,7 +149,7 @@ export default function FeedbackForm({ pagePath }: { pagePath: string | null }) 
 
           <div className="input-group">
             <label htmlFor={FIELD_ID.email}>
-              Your email <span className="font-normal text-site-muted">(optional)</span>
+              Your Email <span className="font-normal text-site-muted">(Optional)</span>
             </label>
             <input
               id={FIELD_ID.email}
@@ -194,7 +194,7 @@ export default function FeedbackForm({ pagePath }: { pagePath: string | null }) 
           ) : (
             <>
               <Send size={18} aria-hidden="true" className="shrink-0" />
-              <span>Send feedback</span>
+              <span>Send Feedback</span>
             </>
           )}
         </button>

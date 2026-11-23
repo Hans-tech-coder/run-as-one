@@ -93,14 +93,14 @@ export default function SwitchEmailModal({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        await alert({ variant: 'error', title: 'Not Marked As Sent', message: data?.error || 'Try again.' });
+        await alert({ variant: 'error', title: 'Not Marked as Sent', message: data?.error || 'Try again.' });
         return;
       }
       onMarked();
       toast(`Marked the ${request.changeRef} email as sent.`);
       leave();
     } catch {
-      await alert({ variant: 'error', title: 'Not Marked As Sent', message: 'Could not reach the server. Try again.' });
+      await alert({ variant: 'error', title: 'Not Marked as Sent', message: 'Could not reach the server. Try again.' });
     } finally {
       setMarking(false);
     }

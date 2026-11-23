@@ -24,19 +24,19 @@ export const STEPS = [
   {
     /** What the rail calls it — short enough for three to sit across 640px. */
     rail: 'Organization',
-    title: 'Your organization',
+    title: 'Your Organization',
     blurb:
       'The name your races are run under, and where to find you. This is what the Run As One team reads first.',
   },
   {
     rail: 'Contact',
-    title: 'You and how to reach you',
+    title: 'You and How to Reach You',
     blurb:
       'Who we talk to, and where. There is no password to choose: we reply by email or phone.',
   },
   {
-    rail: 'Your events',
-    title: 'What you need',
+    rail: 'Your Events',
+    title: 'What You Need',
     blurb:
       'The services you need from us, and the event they are for. Everything here is optional except the first question.',
   },

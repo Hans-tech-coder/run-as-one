@@ -58,7 +58,7 @@ export default function PaidToPicker({
       aria-describedby={error ? errorId : undefined}
     >
       <legend className="mb-2 p-0 font-bold text-white">
-        Where did you send the payment? <span className="text-red-500">*</span>
+        Where Did You Send the Payment? <span className="text-red-500">*</span>
       </legend>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3">
         {accounts.map((account, index) => {

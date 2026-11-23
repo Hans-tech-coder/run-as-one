@@ -38,7 +38,7 @@ export default function PublishPicker({
     {
       mode: 'DRAFT',
       icon: FilePen,
-      title: 'Save As Draft',
+      title: 'Save as Draft',
       description: 'Only your team can see it. Publish it from the events list once it is ready.',
     },
     {
@@ -109,7 +109,7 @@ export default function PublishPicker({
               label="Publish Date"
               className="min-w-0"
               value={value.day}
-              dialogLabel="Choose the publish date"
+              dialogLabel="Choose the Publish Date"
               onChange={day => onChange({ ...value, day })}
               invalid={Boolean(error)}
               describedBy={error ? errorId : undefined}

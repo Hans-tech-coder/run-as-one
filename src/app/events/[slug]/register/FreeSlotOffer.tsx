@@ -28,8 +28,6 @@ export default function FreeSlotOffer({
   free: number;
   onAdd: () => void;
 }) {
-  const runnerWord = (n: number) => (n === 1 ? "runner" : "runners");
-
   return (
     <div className="mt-4 flex flex-col gap-4 rounded-[16px] border border-emerald-400/30 bg-emerald-400/[0.07] p-5 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-start gap-3">
@@ -41,8 +39,8 @@ export default function FreeSlotOffer({
         <div>
           <p className="m-0 font-bold text-white">
             {needed === free
-              ? `Your next ${runnerWord(needed)} ${needed === 1 ? "is" : "are"} free`
-              : `Add ${needed} more ${runnerWord(needed)} and ${free} ${free === 1 ? "is" : "are"} free`}
+              ? `Your Next ${needed === 1 ? "Runner Is" : "Runners Are"} Free`
+              : `Add ${needed} More ${needed === 1 ? "Runner" : "Runners"} and ${free} ${free === 1 ? "Is" : "Are"} Free`}
           </p>
           <p className="m-0 mt-1 text-sm leading-relaxed text-secondary">
             This event&apos;s group promotion is already on your order — nothing to
@@ -58,7 +56,7 @@ export default function FreeSlotOffer({
         className="flex shrink-0 items-center justify-center gap-2 rounded-[12px] border border-emerald-400/40 bg-emerald-400/10 px-5 py-3 font-bold text-emerald-300 transition-colors hover:bg-emerald-400/20"
       >
         <Plus size={18} aria-hidden="true" />
-        Add {needed === 1 ? "runner" : `${needed} runners`}
+        Add {needed === 1 ? "Runner" : `${needed} Runners`}
       </button>
     </div>
   );

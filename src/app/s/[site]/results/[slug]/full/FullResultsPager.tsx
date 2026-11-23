@@ -31,7 +31,7 @@ export default function FullResultsPager<T>({
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-12">
       <div className="flex items-center gap-3 text-sm text-secondary">
-        <span>Rows per page:</span>
+        <span>Rows per Page:</span>
         <div className="relative" ref={menuRef}>
           <button
             type="button"

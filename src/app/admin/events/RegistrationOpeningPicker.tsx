@@ -45,14 +45,14 @@ const COPY = {
       {
         scheduled: true,
         icon: CalendarClock,
-        title: 'On A Later Date',
+        title: 'On a Later Date',
         description:
           'Runners can see the event and plan for it, but the Register button only turns on at the date you set. Good for announcing a launch.',
       },
     ],
     dateLabel: 'Opening Date',
     timeLabel: 'Opening Time',
-    dialogLabel: 'Choose the opening date',
+    dialogLabel: 'Choose the Opening Date',
     defaultTime: DEFAULT_OPENING_TIME,
     note: 'Philippine time. Until it passes, the event page shows the opening date in place of the Register button — nobody has to come back and switch it on. A date already gone means sign-ups are open now.',
   },
@@ -68,14 +68,14 @@ const COPY = {
       {
         scheduled: true,
         icon: CalendarX,
-        title: 'On A Set Date',
+        title: 'On a Set Date',
         description:
           'The Register button turns off by itself at the date you set — a deadline runners can see and plan around.',
       },
     ],
     dateLabel: 'Closing Date',
     timeLabel: 'Closing Time',
-    dialogLabel: 'Choose the closing date',
+    dialogLabel: 'Choose the Closing Date',
     defaultTime: DEFAULT_CLOSING_TIME,
     note: 'Philippine time. It must fall after the opening and on or before race day. Once it passes, runners are told registration closed on that date — nobody has to press Close.',
   },

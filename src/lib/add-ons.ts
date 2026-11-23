@@ -34,7 +34,7 @@ import { SHIRT_SIZES } from './shirt-size';
 export const ADD_ON_OPTION_KINDS = ['NONE', 'SHIRT_SIZES', 'CUSTOM'] as const;
 export type AddOnOptionKind = (typeof ADD_ON_OPTION_KINDS)[number];
 
-export const ADD_ON_OPTION_KIND_LABELS: Record<AddOnOptionKind, string> = { NONE: 'No options', SHIRT_SIZES: 'Shirt sizes', CUSTOM: 'Custom options' };
+export const ADD_ON_OPTION_KIND_LABELS: Record<AddOnOptionKind, string> = { NONE: 'No Options', SHIRT_SIZES: 'Shirt Sizes', CUSTOM: 'Custom Options' };
 
 /**
  * Whose money the item is (D1). ORGANIZER is owed through the remittance like

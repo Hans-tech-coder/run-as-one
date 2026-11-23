@@ -392,6 +392,19 @@ These are the user's own standing preferences. Follow them without being asked.
       called done.
     - The full checklist and the overflow-check script are in §9, under
       "One responsive dashboard" → "Checking a screen".
+13. **UI chrome wears Title Case; body and supporting prose keep Sentence case.**
+    Across the entire web app — public pages, checkout, sign-in screens and
+    `/admin` alike (overriding `design-taste-frontend`'s sentence-case default) —
+    navigation links, headings, section subheadings and eyebrows, modal titles,
+    buttons, standalone action links, `BusyLabel` gerunds, form field labels,
+    table column headers, filter headings/options, metric titles and status
+    badges use standard Title Case (capitalize principal words, phrasal-verb
+    particles like *Look Up* / *Sign In* and both halves of hyphenated words like
+    *Sign-Ups* / *Add-Ons* / *E-Certificate* / *Two-Step*; lowercase short
+    articles, coordinating conjunctions and short prepositions unless first, last
+    or after punctuation). Multi-word lead paragraphs, explanatory descriptions,
+    field hints, instructional placeholders, validation errors, toast/alert body
+    copy and full-sentence consent checkboxes stay Sentence case for readability.
 
 ---
 

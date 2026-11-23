@@ -58,7 +58,7 @@ export default function OrganizationStep({
 
       <AdminSelect
         id={FIELD_ID.orgType}
-        label="What kind of organizer are you?"
+        label="What Kind of Organizer Are You?"
         listboxLabel="Kinds of organizer"
         placeholder="Choose one"
         value={form.orgType}
@@ -136,7 +136,7 @@ export default function OrganizationStep({
 
       <AdminSelect
         id={FIELD_ID.experience}
-        label="How many running events have you organized?"
+        label="How Many Running Events Have You Organized?"
         listboxLabel="Events organized before"
         placeholder="Choose one"
         value={form.experience}

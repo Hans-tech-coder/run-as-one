@@ -235,7 +235,7 @@ async function teamNotifications(actor: Actor, now: Date): Promise<AppNotificati
     items.push({
       id: `payment.validate:${order.id}`,
       kind: 'payment.validate',
-      title: 'Payment to validate',
+      title: 'Payment to Validate',
       body: `${runnerName(order.runners[0])} sent a bank transfer for ${order.event.title} (${order.orderRef}).`,
       href: registrantsHref(order.eventId, order.orderRef),
       at: order.createdAt.toISOString(),
@@ -249,7 +249,7 @@ async function teamNotifications(actor: Actor, now: Date): Promise<AppNotificati
     items.push({
       id: `payment.validate:switch:${change.id}`,
       kind: 'payment.validate',
-      title: 'Delivery fee to validate',
+      title: 'Delivery Fee to Validate',
       body: `${runnerName(order.runners[0])} sent proof for the ₱${formatPesos(change.totalCharged || change.fee)} delivery fee for ${change.event.title} (${change.changeRef}).`,
       href: registrantsHref(change.eventId, order.orderRef),
       at: change.updatedAt.toISOString(),
@@ -262,7 +262,7 @@ async function teamNotifications(actor: Actor, now: Date): Promise<AppNotificati
     items.push({
       id: `payment.validate:change:${change.id}`,
       kind: 'payment.validate',
-      title: 'Category change to validate',
+      title: 'Category Change to Validate',
       body: `${runnerName(change.runner)} sent proof for the ₱${formatPesos(change.totalCharged || change.amount)} move to ${change.toCategory.name} for ${change.event.title} (${change.changeRef}).`,
       href: registrantsHref(change.eventId, change.registration.orderRef),
       at: change.updatedAt.toISOString(),
@@ -275,7 +275,7 @@ async function teamNotifications(actor: Actor, now: Date): Promise<AppNotificati
     items.push({
       id: `registration.paid:${order.id}`,
       kind: 'registration.paid',
-      title: 'New paid registration',
+      title: 'New Paid Registration',
       body:
         count > 1
           ? `${runnerName(order.runners[0])} and ${plural(count - 1, 'other')} are in for ${order.event.title} (${order.orderRef}).`
@@ -292,7 +292,7 @@ async function teamNotifications(actor: Actor, now: Date): Promise<AppNotificati
     items.push({
       id: `email.unsent:${order.id}:${kind}`,
       kind: 'email.unsent',
-      title: 'Email not delivered',
+      title: 'Email Not Delivered',
       body: `${runnerName(order.runners[0])} never got the ${EMAIL_KIND_LABELS[kind]} email for ${order.event.title} (${order.orderRef}).`,
       href: registrantsHref(order.eventId, order.orderRef),
       at: order.createdAt.toISOString(),
@@ -304,7 +304,7 @@ async function teamNotifications(actor: Actor, now: Date): Promise<AppNotificati
     items.push({
       id: `client.new:${client.id}`,
       kind: 'client.new',
-      title: 'New client application',
+      title: 'New Client Application',
       body: `${client.name} applied to have Run As One run their race.`,
       href: '/admin/clients',
       at: client.createdAt.toISOString(),
@@ -317,7 +317,7 @@ async function teamNotifications(actor: Actor, now: Date): Promise<AppNotificati
     items.push({
       id: `feedback.new:${message.id}`,
       kind: 'feedback.new',
-      title: `New feedback · ${feedbackKindLabel(message.kind)}`,
+      title: `New Feedback · ${feedbackKindLabel(message.kind)}`,
       body: `${message.name?.trim() || 'Someone'}: “${excerpt}”`,
       href: '/admin/feedback',
       at: message.createdAt.toISOString(),
@@ -329,7 +329,7 @@ async function teamNotifications(actor: Actor, now: Date): Promise<AppNotificati
     items.push({
       id: `community.pending:${club.id}`,
       kind: 'community.pending',
-      title: 'Club waiting for review',
+      title: 'Club Waiting for Review',
       body: `A runner wrote in ${club.name}. Approve it to add it to the club list.`,
       href: '/admin/communities',
       at: club.createdAt.toISOString(),
@@ -342,7 +342,7 @@ async function teamNotifications(actor: Actor, now: Date): Promise<AppNotificati
     items.push({
       id: `team.joined:${member.id}`,
       kind: 'team.joined',
-      title: 'Joined the team',
+      title: 'Joined the Team',
       body: `${member.staff.name} accepted the invitation as ${ROLE_LABELS[member.role as 'ADMIN' | 'STAFF'] ?? member.role}.`,
       href: '/admin/team',
       at: member.acceptedAt.toISOString(),
@@ -400,7 +400,7 @@ async function viewerNotifications(actor: Actor, now: Date): Promise<AppNotifica
     // The count is in the id, so a day that gains runners reads as news again.
     id: `viewer.registrations:${entry.eventId}:${entry.day}:${entry.count}`,
     kind: 'viewer.registrations',
-    title: 'New registrations',
+    title: 'New Registrations',
     body: `${plural(entry.count, 'runner')} registered for ${entry.title}.`,
     href: '/admin',
     at: entry.latest.toISOString(),

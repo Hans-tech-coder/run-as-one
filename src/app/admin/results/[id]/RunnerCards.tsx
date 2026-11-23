@@ -31,7 +31,7 @@ export default function RunnerCards({
     <AdminCardList
       items={rows}
       getKey={row => row.id}
-      label="Race results"
+      label="Race Results"
       className="is-flush"
       selection={{
         isSelected: row => row.getIsSelected(),

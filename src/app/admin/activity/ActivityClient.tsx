@@ -209,7 +209,7 @@ export default function ActivityClient({
   const actionOptions = useMemo(() => {
     const shelves = ACTIVITY_GROUPS.map(group => group.key);
     return [
-      ...ACTIVITY_GROUPS.map(group => ({ value: groupFilterValue(group.key), label: `All ${group.label.toLowerCase()}`, hint: group.hint })),
+      ...ACTIVITY_GROUPS.map(group => ({ value: groupFilterValue(group.key), label: `All ${group.label}`, hint: group.hint })),
       ...(Object.keys(ACTION_LABELS) as AuditAction[])
         .sort((a, b) => shelves.indexOf(ACTION_GROUP[a]) - shelves.indexOf(ACTION_GROUP[b]))
         .map(action => ({
@@ -328,7 +328,7 @@ export default function ActivityClient({
             groups={filterGroups}
             onClear={() => go({ person: [], event: [], action: [], range: 'all', from: '', to: '' })}
           />
-          {isPending && <RunnerLoader size="sm" tone="current" label="Loading activity" />}
+          {isPending && <RunnerLoader size="sm" tone="current" label="Loading Activity" />}
         </div>
       </div>
 
@@ -344,7 +344,7 @@ export default function ActivityClient({
             value={from}
             max={to || undefined}
             clearable
-            dialogLabel="Choose the first day"
+            dialogLabel="Choose the First Day"
             onChange={next => setDates(next, to)}
             error={shownErrors.from}
           />
@@ -355,7 +355,7 @@ export default function ActivityClient({
             value={to}
             min={from || undefined}
             clearable
-            dialogLabel="Choose the last day"
+            dialogLabel="Choose the Last Day"
             onChange={next => setDates(from, next)}
             error={shownErrors.to}
           />
@@ -378,7 +378,7 @@ export default function ActivityClient({
             onClick={() => go({ page: 1, asOf: null }, true)}
             className="btn-filter is-primary max-lg:min-h-11"
           >
-            {newer === 1 ? '1 newer entry' : `${newer} newer entries`} &middot; Show
+            {newer === 1 ? '1 Newer Entry' : `${newer} Newer Entries`} &middot; Show
           </button>
         )}
       </div>

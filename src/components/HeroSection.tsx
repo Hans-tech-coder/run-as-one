@@ -61,10 +61,10 @@ export default function HeroSection({
           </p>
           <div className="flex flex-col gap-3 sm:flex-row">
             <Link href="/events" className="site-btn site-btn--action site-btn--block-sm">
-              See upcoming races
+              See Upcoming Races
             </Link>
             <Link href="/results" className="site-btn site-btn--quiet site-btn--block-sm">
-              Look up results
+              Look Up Results
             </Link>
           </div>
         </div>
@@ -75,7 +75,7 @@ export default function HeroSection({
           <p className="m-0 mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.9375rem] text-site-muted">
             <span className="inline-flex items-center gap-2 font-semibold text-site-ink">
               <span aria-hidden="true" className="h-2 w-2 rounded-full bg-site-action" />
-              Next race
+              Next Race
             </span>
             <span>{nextRace.title}</span>
             <span aria-hidden="true">·</span>
@@ -99,7 +99,7 @@ export default function HeroSection({
             />
           </Link>
           <Link href={href} className="site-link site-link--arrow mt-2">
-            <span>See race details</span>
+            <span>See Race Details</span>
             <ArrowRight size={18} aria-hidden="true" />
           </Link>
         </div>
@@ -109,13 +109,13 @@ export default function HeroSection({
 }
 
 /**
- * "Road races in Tarlac and Pangasinan": the provinces the upcoming races are
+ * "Road Races in Tarlac and Pangasinan": the provinces the upcoming races are
  * in, so the headline is true the day it renders and changes by itself when
- * the calendar moves. Two named at most, then "and more".
+ * the calendar moves. Two named at most, then "and More".
  */
 function headline(provinces: string[]): string {
-  if (provinces.length === 0) return 'Road races and fun runs in the Philippines';
-  if (provinces.length === 1) return `Road races and fun runs in ${provinces[0]}`;
-  if (provinces.length === 2) return `Road races in ${provinces[0]} and ${provinces[1]}`;
-  return `Road races in ${provinces[0]}, ${provinces[1]} and more`;
+  if (provinces.length === 0) return 'Road Races and Fun Runs in the Philippines';
+  if (provinces.length === 1) return `Road Races and Fun Runs in ${provinces[0]}`;
+  if (provinces.length === 2) return `Road Races in ${provinces[0]} and ${provinces[1]}`;
+  return `Road Races in ${provinces[0]}, ${provinces[1]} and More`;
 }

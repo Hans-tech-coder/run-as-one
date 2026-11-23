@@ -14,7 +14,7 @@ import '../Auth.css';
  * there is nothing to finish here, so it goes back to the sign-in page.
  */
 export const metadata: Metadata = {
-  title: `Two-Step Sign-in | ${SITE_NAME}`,
+  title: `Two-Step Sign-In | ${SITE_NAME}`,
   robots: { index: false, follow: false },
 };
 

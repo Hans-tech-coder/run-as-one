@@ -658,11 +658,11 @@ export default function RegistrationWizardClient({
       await alert({
         variant: "info",
         title: untouched
-          ? "Let's get you registered"
+          ? "Let's Get You Registered"
           : missing === 1
-            ? "One detail needs your attention"
-            : `${missing} details need your attention`,
-        confirmLabel: untouched ? "Get started" : "Take me there",
+            ? "One Detail Needs Your Attention"
+            : `${missing} Details Need Your Attention`,
+        confirmLabel: untouched ? "Get Started" : "Take Me There",
         message: untouched ? (
           <>
             Select a {choice} first, then fill in the runner details below.
@@ -1621,7 +1621,7 @@ export default function RegistrationWizardClient({
                     {isProcessing ? (
                       <BusyLabel>
                         {isFree
-                          ? "Completing your registration"
+                          ? "Completing Your Registration"
                           : paymentMethod !== "BANK_TRANSFER"
                             ? "Connecting to PayMongo"
                             : "Processing"}
@@ -1705,7 +1705,7 @@ export default function RegistrationWizardClient({
                       <UploadCloud size={36} className="text-accent-blue" />
                     </div>
                     <div className="text-2xl font-bold text-white">
-                      Drag & Drop your receipt here
+                      Drag & Drop Your Receipt Here
                     </div>
                     <div className="text-secondary mb-2">
                       or click to browse from your device
@@ -1718,7 +1718,7 @@ export default function RegistrationWizardClient({
 
                 {proofCompression.optimizing ? (
                   <div role="status" className="animate-fade-in p-4 bg-white/5 border border-white/10 rounded-[16px] mt-4 text-sm text-secondary">
-                    <BusyLabel>Optimizing image</BusyLabel>
+                    <BusyLabel>Optimizing Image</BusyLabel>
                   </div>
                 ) : proofFile && (
                   <div className="file-preview animate-fade-in p-4 bg-white/5 border border-white/10 rounded-[16px] mt-4 flex items-center justify-between">
@@ -1852,13 +1852,13 @@ export default function RegistrationWizardClient({
         open={isProcessing}
         title={
           paymentMethod === "BANK_TRANSFER"
-            ? "Submitting your registration"
-            : "Preparing your secure payment"
+            ? "Submitting Your Registration"
+            : "Preparing Your Secure Payment"
         }
         slowTitle={
           paymentMethod === "BANK_TRANSFER"
-            ? "Still uploading, almost there"
-            : "Still connecting to PayMongo"
+            ? "Still Uploading, Almost There"
+            : "Still Connecting to PayMongo"
         }
         hint={
           paymentMethod === "BANK_TRANSFER"

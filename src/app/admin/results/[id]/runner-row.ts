@@ -57,7 +57,7 @@ export function handMade(createdAt: Date, editedAt: Date | null): HandMade {
  * this table offers nothing on their row (O5); a tag made here is plain.
  */
 export function pacerBadgeLabel(row: Pick<RunnerRow, 'pacerSource'>): string {
-  return row.pacerSource === 'EVENTS' ? 'Pacer · from Events' : 'Pacer';
+  return row.pacerSource === 'EVENTS' ? 'Pacer · From Events' : 'Pacer';
 }
 
 /**

@@ -171,7 +171,7 @@ export function useManualEmailModal({
         const { error } = await res.json().catch(() => ({ error: '' }));
         alert({
           variant: 'error',
-          title: 'Not Marked As Sent',
+          title: 'Not Marked as Sent',
           message: error || 'The registration could not be marked. Please try again.',
         });
       }
@@ -179,7 +179,7 @@ export function useManualEmailModal({
       console.error(e);
       alert({
         variant: 'error',
-        title: 'Not Marked As Sent',
+        title: 'Not Marked as Sent',
         message: 'Something went wrong while marking this email as sent. Please try again.',
       });
     } finally {
@@ -245,7 +245,7 @@ export default function ManualEmailModal({
         <div className="p-6 max-sm:px-4 max-sm:py-3 border-b border-[var(--dash-border)] flex justify-between items-start gap-4 shrink-0">
           <div className="min-w-0">
             <h3 id="email-modal-title" className="text-xl font-semibold text-primary m-0">
-              {emailMessage && !emailMessage.outstanding ? 'Email Already Sent' : 'Send This Email By Hand'}
+              {emailMessage && !emailMessage.outstanding ? 'Email Already Sent' : 'Send This Email by Hand'}
             </h3>
             {emailRunner && (
               <p className="text-sm text-secondary mt-1 m-0 [overflow-wrap:anywhere]">
@@ -321,9 +321,9 @@ export default function ManualEmailModal({
                 >
                   <Copy size={16} />
                   {copyState === 'copied'
-                    ? 'Copied — paste into Gmail'
+                    ? 'Copied — Paste into Gmail'
                     : copyState === 'text-only'
-                      ? 'Copied as plain text only'
+                      ? 'Copied as Plain Text Only'
                       : 'Copy Formatted Email'}
                 </button>
                 <button
@@ -331,7 +331,7 @@ export default function ManualEmailModal({
                   onClick={handleOpenInMailApp}
                   className="flex items-center gap-2 px-4 py-2 border border-[var(--dash-border)] text-primary rounded-lg text-sm font-medium hover:bg-[var(--ink-05)] transition-colors bg-transparent cursor-pointer max-sm:flex-1 max-sm:basis-full max-sm:justify-center max-sm:min-h-11"
                 >
-                  <ExternalLink size={16} /> Open In My Email App
+                  <ExternalLink size={16} /> Open in My Email App
                 </button>
               </div>
 
@@ -361,7 +361,7 @@ export default function ManualEmailModal({
               // inside the admin (PROJECT_GUIDE §9).
               className="btn-light"
             >
-              {isMarkingSent ? <BusyLabel>Marking</BusyLabel> : 'Mark As Sent'}
+              {isMarkingSent ? <BusyLabel>Marking</BusyLabel> : 'Mark as Sent'}
             </button>
           )}
         </div>

@@ -99,7 +99,7 @@ export function RenewedPriceNotice({
     >
       <RefreshCw size={18} aria-hidden="true" className="mt-0.5 shrink-0 text-amber-300" />
       <div className="min-w-0 flex-1">
-        <p className="m-0 text-sm font-bold text-white">Your price was updated</p>
+        <p className="m-0 text-sm font-bold text-white">Your Price Was Updated</p>
         <p className="m-0 mt-1 text-xs leading-relaxed text-secondary">
           The time your price was held for ran out, so your total changed from{" "}
           <span className="whitespace-nowrap text-white">₱{formatPesos(notice.from)}</span> to{" "}
@@ -151,7 +151,7 @@ export function PriceChangedNotice({
     >
       <AlertTriangle size={22} aria-hidden="true" className="mt-0.5 shrink-0 text-amber-300" />
       <div className="min-w-0">
-        <p className="m-0 font-bold text-white">The price changed</p>
+        <p className="m-0 font-bold text-white">The Price Changed</p>
         <p className="m-0 mt-1 text-sm leading-relaxed text-secondary">
           {change.total !== undefined ? (
             <>
@@ -180,7 +180,7 @@ export function PriceChangedNotice({
           className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-full border border-white/15 px-4 text-sm font-semibold text-white transition-colors hover:bg-white/5"
         >
           <RefreshCw size={16} aria-hidden="true" />
-          Reload page
+          Reload Page
         </button>
       </div>
     </div>
@@ -200,7 +200,7 @@ export function WaitForFreshPrice() {
       <Clock size={22} aria-hidden="true" className="mt-0.5 shrink-0 text-amber-300" />
       <div>
         <p className="m-0 font-bold text-white">
-          Wait for a fresh price before you send payment
+          Wait for a Fresh Price Before You Send Payment
         </p>
         <p className="m-0 mt-1 text-sm leading-relaxed text-secondary">
           The price held for you ends in under five minutes. Send the amount

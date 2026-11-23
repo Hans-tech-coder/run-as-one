@@ -53,7 +53,7 @@ export default function ServicesQuestion({
         <span>
           <span className="apply-choice__label">
             {copy.label}
-            {soon && <span className="apply-choice__tag">Coming soon</span>}
+            {soon && <span className="apply-choice__tag">Coming Soon</span>}
           </span>
           <span className="apply-choice__hint">{copy.hint}</span>
         </span>
@@ -81,7 +81,7 @@ export default function ServicesQuestion({
   return (
     <div className="form-group">
       <span className="form-label" id={`${FIELD_ID.services}-label`}>
-        Which services do you need?
+        Which Services Do You Need?
       </span>
       <p className="form-hint">
         Pick as many as you need. This is an inquiry, not an order: we reply

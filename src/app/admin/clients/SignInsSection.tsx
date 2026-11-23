@@ -22,7 +22,7 @@ export default function SignInsSection({
   onResetTwoFactor: (viewer: ClientViewerRow) => void;
 }) {
   return (
-    <Section title="Sign-ins" list>
+    <Section title="Sign-Ins" list>
       {viewers.map(viewer => {
         const state = memberState({
           acceptedAt: viewer.acceptedAt,
@@ -55,7 +55,7 @@ export default function SignInsSection({
                 aria-label={`Reset two-step sign-in for ${viewer.staff.name}`}
               >
                 <ShieldOff size={16} aria-hidden="true" />
-                Reset Two-Step Sign-in
+                Reset Two-Step Sign-In
               </button>
             )}
           </li>

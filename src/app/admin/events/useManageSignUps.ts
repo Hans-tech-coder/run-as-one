@@ -138,7 +138,7 @@ export function useManageSignUps(setTableEvents: React.Dispatch<React.SetStateAc
       toast(`Sign-ups on ${event.title} saved.`);
     } catch (error) {
       await alert({
-        title: 'Sign-ups not saved',
+        title: 'Sign-Ups Not Saved',
         message: `${event.title} is unchanged. ${
           error instanceof Error ? error.message : 'The request did not reach the server.'
         }`,
@@ -164,7 +164,7 @@ export function useManageSignUps(setTableEvents: React.Dispatch<React.SetStateAc
       nextClosed &&
       !(await confirm({
         variant: 'danger',
-        title: 'Close sign-ups?',
+        title: 'Close Sign-Ups?',
         message: `Runners will see that registration for ${event.title} is closed. Orders already placed are not affected. You can reopen it later from Manage Sign-Ups.`,
         confirmLabel: 'Close Sign-Ups',
       }))
@@ -188,7 +188,7 @@ export function useManageSignUps(setTableEvents: React.Dispatch<React.SetStateAc
       toast(`Sign-ups on ${event.title} ${nextClosed ? 'closed' : 'reopened'}.`);
     } catch (error) {
       await alert({
-        title: nextClosed ? 'Registration not closed' : 'Registration not reopened',
+        title: nextClosed ? 'Registration Not Closed' : 'Registration Not Reopened',
         message: `${event.title} is unchanged. ${
           error instanceof Error ? error.message : 'The request did not reach the server.'
         }`,

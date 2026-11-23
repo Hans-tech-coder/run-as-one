@@ -51,7 +51,7 @@ export default async function PayPage({ params }: { params: Promise<{ token: str
     return (
       <Notice
         icon={<Clock size={30} aria-hidden="true" />}
-        eyebrow="Please wait"
+        eyebrow="Please Wait"
         title="Too Many Tries"
         body="This link was opened many times from your connection in the last minute. Wait a minute, then open it again."
       />
@@ -81,7 +81,7 @@ export default async function PayPage({ params }: { params: Promise<{ token: str
     return (
       <Notice
         icon={<Link2Off size={30} aria-hidden="true" />}
-        eyebrow="Payment link"
+        eyebrow="Payment Link"
         title="This Link Has Expired"
         body="Payment links last only as long as the order holds its slot. If you still want to run, register again, or email us and we will help you finish."
         actions={
@@ -114,11 +114,11 @@ export default async function PayPage({ params }: { params: Promise<{ token: str
 
   const rows: [string, string][] = [
     ['Race', order.event.title],
-    ['Race day', formatEventDay(order.event.date)],
+    ['Race Day', formatEventDay(order.event.date)],
     ['Runners', `${runners} runner${runners === 1 ? '' : 's'}`],
-    ['Payment method', paymentMethodLabel(order.paymentMethod)],
+    ['Payment Method', paymentMethodLabel(order.paymentMethod)],
     ['Order', order.orderRef],
-    ['Pay by', formatEventInstant(expiresBy(order.createdAt, order.holdUntil))],
+    ['Pay By', formatEventInstant(expiresBy(order.createdAt, order.holdUntil))],
   ];
 
   return (
@@ -129,7 +129,7 @@ export default async function PayPage({ params }: { params: Promise<{ token: str
             <CreditCard size={30} aria-hidden="true" />
           </IconBadge>
           <p className="mb-2 mt-6 text-sm font-semibold text-site-accent">
-            Finish your registration
+            Finish Your Registration
           </p>
           <h1 className="site-h2 mb-3">
             Your Slot Is Still Held
@@ -149,7 +149,7 @@ export default async function PayPage({ params }: { params: Promise<{ token: str
             </div>
           ))}
           <div className="flex items-baseline justify-between gap-4 bg-site-surface px-4 py-4">
-            <dt className="text-sm font-semibold text-site-ink">Amount due</dt>
+            <dt className="text-sm font-semibold text-site-ink">Amount Due</dt>
             <dd className="m-0 text-xl font-semibold text-site-ink">₱{formatPesos(order.totalAmount)}</dd>
           </div>
         </dl>

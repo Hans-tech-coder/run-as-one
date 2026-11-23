@@ -804,7 +804,7 @@ export function SignInActivityPanel({ lastSignIn }: { lastSignIn: string | null 
   const handleSignOutOthers = async () => {
     const confirmed = await confirm({
       variant: 'info',
-      title: 'Sign out other devices?',
+      title: 'Sign Out Other Devices?',
       message:
         'Every other browser and phone signed in to this account will be signed out on its next click. You stay signed in here.',
       confirmLabel: 'Sign Out Other Devices',
@@ -835,13 +835,13 @@ export function SignInActivityPanel({ lastSignIn }: { lastSignIn: string | null 
       <div className="admin-panel-header">
         <h2 id="sign-in-activity-title" className="admin-panel-title flex items-center gap-2">
           <History size={18} className="text-accent-blue-ink" aria-hidden="true" />
-          Sign-in Activity
+          Sign-In Activity
         </h2>
       </div>
       <div className="admin-panel-content">
         <dl className="settings-facts">
           <div>
-            <dt>Last sign-in</dt>
+            <dt>Last Sign-In</dt>
             <dd>{lastSignIn ?? 'Not recorded yet'}</dd>
           </div>
         </dl>

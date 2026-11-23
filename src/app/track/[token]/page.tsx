@@ -39,7 +39,7 @@ export default async function TrackLinkPage({ params }: { params: Promise<{ toke
     return (
       <Notice
         icon={<Clock size={30} aria-hidden="true" />}
-        title="Too many tries"
+        title="Too Many Tries"
         body="Your registration was looked up many times from your connection in the last minute. Wait a minute, then open the link again."
       />
     );
@@ -53,7 +53,7 @@ export default async function TrackLinkPage({ params }: { params: Promise<{ toke
     return (
       <Notice
         icon={<Link2Off size={30} aria-hidden="true" />}
-        title="This link does not work"
+        title="This Link Does Not Work"
         body="The link may be old, or the registration it pointed to was removed. Look it up with your reference and email instead."
       />
     );
@@ -63,7 +63,7 @@ export default async function TrackLinkPage({ params }: { params: Promise<{ toke
   return (
     <div className="site-wrap">
     <div className="mx-auto flex w-full max-w-2xl flex-col items-center pb-20 pt-8 sm:pt-12">
-      <p className="mb-6 text-sm font-semibold text-site-accent">Track my registration</p>
+      <p className="mb-6 text-sm font-semibold text-site-accent">Track My Registration</p>
       <TrackResult view={view} help={{ contactEmail, facebookUrl: socialLinks.facebook }} />
     </div>
     </div>
@@ -77,7 +77,7 @@ function Notice({ icon, title, body }: { icon: React.ReactNode; title: string; b
       <StatusPanel>
         <div className="flex flex-col items-center text-center">
           <IconBadge>{icon}</IconBadge>
-          <p className="mb-3 mt-6 text-sm font-semibold text-site-accent">Track my registration</p>
+          <p className="mb-3 mt-6 text-sm font-semibold text-site-accent">Track My Registration</p>
           <h1 className="mb-3 text-2xl font-semibold tracking-wide text-site-ink text-balance sm:text-3xl">
             {title}
           </h1>
@@ -88,7 +88,7 @@ function Notice({ icon, title, body }: { icon: React.ReactNode; title: string; b
             href="/track"
             className="btn-gradient group w-full justify-center whitespace-nowrap rounded-[10px] px-8 py-4 text-center text-base no-underline sm:w-auto"
           >
-            <span>Look up my registration</span>
+            <span>Look Up My Registration</span>
             <ChevronRight size={18} aria-hidden="true" className="shrink-0 transition-transform group-hover:translate-x-1" />
           </Link>
         </div>

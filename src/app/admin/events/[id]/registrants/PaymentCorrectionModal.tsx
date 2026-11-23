@@ -82,7 +82,7 @@ function CorrectionRow({ title, children }: { title: string; children: React.Rea
 function OnFile({ empty, children }: { empty: boolean; children: React.ReactNode }) {
   return (
     <div className="form-group min-w-0">
-      <span className="form-label">On file now</span>
+      <span className="form-label">On File Now</span>
       <div
         className={`form-input text-base sm:text-sm !bg-[var(--dash-sunken)] [overflow-wrap:anywhere] ${
           empty ? 'italic text-[var(--text-muted)]' : 'font-medium text-primary'
@@ -107,7 +107,7 @@ function PdfMark() {
   return (
     <span className="flex flex-col items-center gap-1.5 text-secondary">
       <FileText size={26} className="text-accent-blue-ink" aria-hidden="true" />
-      <span className="text-sm font-medium text-primary">PDF receipt</span>
+      <span className="text-sm font-medium text-primary">PDF Receipt</span>
     </span>
   );
 }
@@ -295,9 +295,9 @@ export default function PaymentCorrectionModal({
     }
     const ok = await confirm({
       variant: 'info',
-      title: 'Save the correction?',
+      title: 'Save the Correction?',
       message: `This replaces the ${correctedWords(changing)} on ${runner.orderRef}. The old values stay in the activity trail. Nothing is sent to the runner.`,
-      confirmLabel: 'Save correction',
+      confirmLabel: 'Save Correction',
     });
     if (ok) await submit(null);
   };
@@ -320,7 +320,7 @@ export default function PaymentCorrectionModal({
         >
           <div className="px-6 py-4 max-sm:px-4 max-sm:py-3 border-b border-[var(--dash-border)] flex justify-between items-start gap-4 shrink-0">
             <div className="min-w-0">
-              <h3 id={ids.title} className="text-lg font-semibold text-primary m-0">Correct payment</h3>
+              <h3 id={ids.title} className="text-lg font-semibold text-primary m-0">Correct Payment</h3>
               <p className="text-sm text-secondary mt-1 m-0 flex flex-wrap items-center gap-x-2 gap-y-1 [overflow-wrap:anywhere]">
                 <span>{runner.orderRef} &middot; {runner.name} &middot; Bank transfer</span>
                 <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${statusPillClass(runner.status)}`}>
@@ -368,7 +368,7 @@ export default function PaymentCorrectionModal({
             </CorrectionRow>
 
             {accounts.length > 0 && (
-              <CorrectionRow title="Paid to">
+              <CorrectionRow title="Paid To">
                 <OnFile empty={!runner.paidTo}>{paidToLabel(runner.paidTo)}</OnFile>
                 <div className="min-w-0">
                   <PaidToSelect
@@ -386,9 +386,9 @@ export default function PaymentCorrectionModal({
             )}
 
             {/* Proof of payment: the slip on file beside the new one, two tiles of one size. */}
-            <CorrectionRow title="Proof of payment">
+            <CorrectionRow title="Proof of Payment">
               <div className="form-group min-w-0">
-                <span className="form-label">On file now</span>
+                <span className="form-label">On File Now</span>
                 {hasProof ? (
                   <button
                     type="button"
@@ -406,7 +406,7 @@ export default function PaymentCorrectionModal({
                       />
                     )}
                     <span className="absolute inset-0 flex items-center justify-center gap-2 bg-black/60 text-sm font-medium text-white opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity">
-                      <Maximize2 size={16} aria-hidden="true" /> View full screen
+                      <Maximize2 size={16} aria-hidden="true" /> View Full Screen
                     </span>
                   </button>
                 ) : (
@@ -414,7 +414,7 @@ export default function PaymentCorrectionModal({
                 )}
               </div>
               <div className="form-group min-w-0">
-                <span className="form-label">Replace with</span>
+                <span className="form-label">Replace With</span>
                 {proof ? (
                   <div className={`${PROOF_TILE} relative`}>
                     {proofUrl ? (
@@ -449,7 +449,7 @@ export default function PaymentCorrectionModal({
                     />
                     <div className="file-upload-content">
                       <UploadCloud size={22} className="text-accent-blue-ink" aria-hidden="true" />
-                      <div className="text-sm text-primary">Upload the correct proof</div>
+                      <div className="text-sm text-primary">Upload the Correct Proof</div>
                       <div className="text-xs">
                         {describeUploadTypes('proof')}, up to {MAX_UPLOAD_MB} MB
                       </div>
@@ -458,7 +458,7 @@ export default function PaymentCorrectionModal({
                 )}
                 {optimizing && (
                   <p role="status" className="m-0 text-xs text-secondary">
-                    <BusyLabel>Optimizing image</BusyLabel>
+                    <BusyLabel>Optimizing Image</BusyLabel>
                   </p>
                 )}
                 <FieldError id="correction-proof-error" message={errors.proof} />
@@ -466,7 +466,7 @@ export default function PaymentCorrectionModal({
             </CorrectionRow>
 
             <div className="form-group pt-4 border-t border-[var(--dash-border)]">
-              <label htmlFor={ids.reason} className="form-label">Why is it being corrected?</label>
+              <label htmlFor={ids.reason} className="form-label">Why Is It Being Corrected?</label>
               <textarea
                 id={ids.reason}
                 value={reason}
@@ -503,7 +503,7 @@ export default function PaymentCorrectionModal({
                   className="mt-0.5 h-4 w-4 shrink-0"
                 />
                 <span className="text-sm">
-                  <span className="block text-primary font-medium">Resend the receipt with the corrected details</span>
+                  <span className="block text-primary font-medium">Resend the Receipt with the Corrected Details</span>
                   <span className="block text-xs text-[var(--text-muted)] mt-0.5 [overflow-wrap:anywhere]">
                     {contactEmail ? `Sent to ${contactEmail}.` : 'Sent to the order’s contact email.'} Left off, the runner hears nothing.
                   </span>
@@ -533,7 +533,7 @@ export default function PaymentCorrectionModal({
               title={nothingToSave ? 'Change the Transaction No., the proof or the account first' : !reason.trim() ? 'Write the reason first' : undefined}
             >
               <ReceiptText size={16} aria-hidden="true" />
-              {saving ? <BusyLabel>Saving</BusyLabel> : needsStepUp ? 'Confirm and save' : 'Save correction'}
+              {saving ? <BusyLabel>Saving</BusyLabel> : needsStepUp ? 'Confirm and Save' : 'Save Correction'}
             </button>
           </div>
         </div>

@@ -66,8 +66,8 @@ export default function PastEvents({ events }: { events: PastCard[] }) {
 
       {left > 0 && (
         <button type="button" onClick={showMore} className="site-btn site-btn--quiet mx-auto w-full sm:w-auto">
-          Show more past races
-          <span className="font-normal text-site-muted">· {left} left</span>
+          Show More Past Races
+          <span className="font-normal text-site-muted">· {left} Left</span>
           <ChevronDown size={18} aria-hidden="true" className="shrink-0" />
         </button>
       )}

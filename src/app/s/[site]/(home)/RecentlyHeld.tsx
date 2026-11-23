@@ -21,11 +21,11 @@ export default function RecentlyHeld({ events }: { events: React.ComponentProps<
     <section aria-labelledby="recently-held" className="site-section site-wrap">
       <div className="site-section__head">
         <div>
-          <h2 id="recently-held" className="site-h2">Recently held</h2>
+          <h2 id="recently-held" className="site-h2">Recently Held</h2>
           <p className="site-section__sub">The last races run, with their times once they are up.</p>
         </div>
         <Link href={PAST_EVENTS_HREF} className="site-link site-link--arrow shrink-0">
-          <span>See all past races</span>
+          <span>See All Past Races</span>
           <LinkPendingIcon>
             <ArrowRight size={18} />
           </LinkPendingIcon>

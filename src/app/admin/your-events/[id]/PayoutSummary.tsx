@@ -29,14 +29,14 @@ export default function PayoutSummary({ payout }: { payout: ClientPayout }) {
           note={payout.leavesOutRunAsOneAddOns ? "What runners paid, less Run As One's own add-ons" : 'What runners paid'}
         />
         <Figure
-          label="Run As One fees"
+          label="Run As One Fees"
           value={payout.fees}
           note={payout.categoryChanges?.changeFees ? 'Platform and category change fees' : 'Platform fees'}
         />
-        <Figure label="Payment processing fees" value={payout.processingFees} note="Charged by the payment provider" />
-        <Figure label="Paid out to you" value={payout.paidOut} note="Payouts sent so far" />
+        <Figure label="Payment Processing Fees" value={payout.processingFees} note="Charged by the payment provider" />
+        <Figure label="Paid Out to You" value={payout.paidOut} note="Payouts sent so far" />
         <Figure
-          label={overpaid ? 'Overpaid' : 'Still owed'}
+          label={overpaid ? 'Overpaid' : 'Still Owed'}
           value={overpaid ? -payout.stillOwed : payout.stillOwed}
           note={overpaid ? 'Paid out over what is owed' : 'Still to be paid out'}
           strong

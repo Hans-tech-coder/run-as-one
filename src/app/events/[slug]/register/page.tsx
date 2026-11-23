@@ -293,7 +293,7 @@ function RegistrationClosed({
               href={`/events/${event.slug}`}
               className="site-btn site-btn--action group w-full shrink-0 whitespace-nowrap no-underline sm:w-auto"
             >
-              <span>Back To This Event</span>
+              <span>Back to This Event</span>
               <ChevronRight
                 size={18}
                 aria-hidden="true"

@@ -128,7 +128,7 @@ function RefundActionModal({
       >
         <div className="p-6 max-sm:px-4 max-sm:py-3 border-b border-[var(--dash-border)] flex justify-between items-start gap-4 shrink-0">
           <div className="min-w-0">
-            <h3 id={ids.title} className="text-xl font-semibold text-primary m-0">{recording ? 'Record refund' : 'Void refund'}</h3>
+            <h3 id={ids.title} className="text-xl font-semibold text-primary m-0">{recording ? 'Record Refund' : 'Void Refund'}</h3>
             <p className="text-sm text-secondary mt-1 m-0 [overflow-wrap:anywhere]">{refund.name} &middot; ₱{formatPesos(refund.amount)}</p>
           </div>
           <button type="button" onClick={close} aria-label="Close" className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-full text-secondary hover:text-primary">
@@ -140,7 +140,7 @@ function RefundActionModal({
             <p className="m-0 text-sm text-[var(--ink-85)]">Nothing to send for a ₱0.00 refund. Saving closes it and emails the runner.</p>
           ) : (
             <div className="form-group min-w-0 m-0">
-              <label htmlFor={ids.field} className="form-label">{recording ? 'GCash or bank reference' : 'Reason'}</label>
+              <label htmlFor={ids.field} className="form-label">{recording ? 'GCash or Bank Reference' : 'Reason'}</label>
               <input
                 id={ids.field}
                 className="form-input text-base sm:text-sm"
@@ -153,7 +153,7 @@ function RefundActionModal({
           )}
           {needsMoney && (
             <div className="min-w-0">
-              <label className="form-label" htmlFor={`${ids.field}-proof`}>Proof it was sent</label>
+              <label className="form-label" htmlFor={`${ids.field}-proof`}>Proof It Was Sent</label>
               <input
                 id={`${ids.field}-proof`}
                 type="file"
@@ -173,7 +173,7 @@ function RefundActionModal({
         <div className="admin-modal-footer p-6 max-sm:p-4 border-t border-[var(--dash-border)] flex justify-end items-center gap-3 bg-[var(--dash-sunken)] shrink-0">
           <button type="button" onClick={close} disabled={saving} className="btn-cancel bg-transparent border-none cursor-pointer">Cancel</button>
           <button type="button" className="btn-light" onClick={save} disabled={saving}>
-            {saving ? <BusyLabel>Saving</BusyLabel> : recording ? 'Record and email' : 'Void refund'}
+            {saving ? <BusyLabel>Saving</BusyLabel> : recording ? 'Record and Email' : 'Void Refund'}
           </button>
         </div>
       </div>
@@ -205,7 +205,7 @@ export default function RefundsList({ refunds }: { refunds: RefundRow[] }) {
               <Fact label="Refunded" value={`₱${formatPesos(refund.amount)}`} />
               <Fact label="Of" value={`₱${formatPesos(refund.of)}`} />
               <Fact label="Kept" value={`₱${formatPesos(refund.kept)}`} />
-              <Fact label="Paid by" value={REFUND_PAID_BY_LABELS[refund.paidBy as RefundPaidBy] ?? refund.paidBy} />
+              <Fact label="Paid By" value={REFUND_PAID_BY_LABELS[refund.paidBy as RefundPaidBy] ?? refund.paidBy} />
               <Fact label="Reference" value={refund.paymentReference ?? 'Not yet paid'} />
             </dl>
             <p className="m-0 text-xs text-[var(--text-muted)] [overflow-wrap:anywhere]">

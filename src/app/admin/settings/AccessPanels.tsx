@@ -70,7 +70,7 @@ export default async function AccessPanels({ actor }: { actor: Actor }) {
               <dd>{roleLabel}</dd>
             </div>
             <div>
-              <dt>{client ? 'Organization' : 'Works for'}</dt>
+              <dt>{client ? 'Organization' : 'Works For'}</dt>
               <dd>{client?.name ?? SITE_NAME}</dd>
             </div>
             <div>
@@ -140,7 +140,7 @@ export default async function AccessPanels({ actor }: { actor: Actor }) {
                         href={`/admin/events/${event.id}/registrants`}
                         className="settings-inline-link text-sm self-start"
                       >
-                        Open registrants
+                        Open Registrants
                       </Link>
                     </li>
                   );

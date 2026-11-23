@@ -64,7 +64,7 @@ export default function MessageDetail({
             className="max-h-64 w-auto max-w-full rounded-[12px] border border-[var(--dash-hairline)] object-contain transition-opacity group-hover:opacity-90"
           />
           <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-accent-blue-ink">
-            <ImageIcon size={14} aria-hidden="true" /> Open screenshot full size
+            <ImageIcon size={14} aria-hidden="true" /> Open Screenshot Full Size
           </span>
         </a>
       )}
@@ -72,7 +72,7 @@ export default function MessageDetail({
       <dl className="mt-4 grid grid-cols-1 gap-3 border-t border-[var(--dash-hairline)] pt-4 text-xs sm:grid-cols-2">
         <div className="min-w-0">
           <dt className="mb-1 font-bold uppercase tracking-wider text-secondary">
-            Page they were on
+            Page They Were On
           </dt>
           <dd className="m-0 break-all font-mono text-[var(--ink-85)]">
             {row.pagePath || 'Not recorded'}
@@ -104,7 +104,7 @@ export default function MessageDetail({
               )}`}
               className="btn-filter no-underline max-lg:min-h-11"
             >
-              <Mail size={16} /> Reply by email
+              <Mail size={16} /> Reply by Email
             </a>
           )}
           {showReview && row.status === 'NEW' && (
@@ -113,7 +113,7 @@ export default function MessageDetail({
               disabled={saving}
               className="btn-filter max-lg:min-h-11"
             >
-              <CheckCircle size={16} /> Mark reviewed
+              <CheckCircle size={16} /> Mark Reviewed
             </button>
           )}
         </div>

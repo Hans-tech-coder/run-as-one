@@ -85,7 +85,7 @@ export default function EditPacerModal({
       >
         <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-2 max-sm:px-4 max-sm:pt-3 shrink-0">
           <h2 id="pacer-edit-title" className="text-xl font-bold m-0 min-w-0">
-            Edit pacer
+            Edit Pacer
           </h2>
           <button
             type="button"
@@ -106,7 +106,7 @@ export default function EditPacerModal({
 
             <div className="form-group">
               <label className="form-label" htmlFor="pacer-edit-name">
-                Pacer name <span className="text-[var(--status-danger)]">*</span>
+                Pacer Name <span className="text-[var(--status-danger)]">*</span>
               </label>
               <input
                 id="pacer-edit-name"
@@ -129,7 +129,7 @@ export default function EditPacerModal({
 
             <div className="form-group">
               <label className="form-label" htmlFor="pacer-edit-bib">
-                Bib number <span className="text-secondary font-normal">(optional)</span>
+                Bib Number <span className="text-secondary font-normal">(Optional)</span>
               </label>
               <input
                 id="pacer-edit-bib"
@@ -158,7 +158,7 @@ export default function EditPacerModal({
 
             <div className="form-group">
               <label className="form-label" htmlFor="pacer-edit-pace-group">
-                Pace group <span className="text-secondary font-normal">(optional)</span>
+                Pace Group <span className="text-secondary font-normal">(Optional)</span>
               </label>
               <input
                 id="pacer-edit-pace-group"
@@ -194,7 +194,7 @@ export default function EditPacerModal({
             className="btn-light w-full"
             disabled={isSubmitting}
           >
-            {isSubmitting ? 'Saving' : 'Save changes'}
+            {isSubmitting ? 'Saving' : 'Save Changes'}
           </button>
         </div>
       </div>

@@ -51,7 +51,7 @@ export function useClientActions(refresh: () => void) {
         window.setTimeout(() => {
           alert({
             variant: 'error',
-            title: 'Invitation saved, but the email did not go out',
+            title: 'Invitation Saved, but the Email Did Not Go Out',
             message: `${data.emailError ?? 'The email could not be sent.'} Use Resend invite to try again, or let ${data.name} know at ${invitee.email}.`,
           });
         }, 200);
@@ -69,7 +69,7 @@ export function useClientActions(refresh: () => void) {
     const name = viewer.staff.name;
     const confirmed = await confirm({
       variant: 'danger',
-      title: `Reset two-step sign-in for ${name}?`,
+      title: `Reset Two-Step Sign-In for ${name}?`,
       message: `Do this only when you are sure it is ${name} asking — usually a lost phone with no recovery codes left. Two-step sign-in is turned off on their account, they are signed out everywhere, and they get an email saying you did it. Until they turn it on again in Settings › Security, their password alone signs them in.`,
       confirmLabel: 'Reset',
     });

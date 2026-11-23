@@ -118,7 +118,7 @@ export default function BasicInfoPanel<D extends EventFormDraft>({
                 id="event-date"
                 label="Run Window Starts"
                 value={draft.date}
-                dialogLabel="Choose the first day runners may run"
+                dialogLabel="Choose the First Day Runners May Run"
                 onChange={date => patch({ date })}
                 error={dateError}
               />
@@ -127,7 +127,7 @@ export default function BasicInfoPanel<D extends EventFormDraft>({
                 label="Run Window Ends"
                 value={draft.virtualEndDate}
                 min={draft.date || undefined}
-                dialogLabel="Choose the last day runners may run"
+                dialogLabel="Choose the Last Day Runners May Run"
                 onChange={virtualEndDate => patch({ virtualEndDate })}
                 error={windowError}
                 hint="Runners run any day in this window, anywhere. The event stays listed and open through the last day."
@@ -139,7 +139,7 @@ export default function BasicInfoPanel<D extends EventFormDraft>({
                 id="event-date"
                 label="Date"
                 value={draft.date}
-                dialogLabel="Choose the race date"
+                dialogLabel="Choose the Race Date"
                 onChange={date => patch({ date })}
                 error={dateError}
               />
@@ -194,7 +194,7 @@ export default function BasicInfoPanel<D extends EventFormDraft>({
             anyUploading={uploadingField !== null}
             onFile={e => onImageFile(e, 'imageUrl')}
             onRemove={() => patch({ imageUrl: '' })}
-            prompt="Click to upload cover image"
+            prompt="Click to Upload Cover Image"
             hint={
               resultsOnly
                 ? 'Optional • PNG, JPG. Leave empty and the Results card shows the default image.'
@@ -225,7 +225,7 @@ export default function BasicInfoPanel<D extends EventFormDraft>({
                 anyUploading={uploadingField !== null}
                 onFile={e => onImageFile(e, 'sizeChartImageUrl')}
                 onRemove={() => patch({ sizeChartImageUrl: '' })}
-                prompt="Click to upload size chart"
+                prompt="Click to Upload Size Chart"
                 hint="Optional • PNG, JPG. Leave empty to use the default size chart."
                 alt="Size Chart Preview"
                 removeLabel="Remove Size Chart"

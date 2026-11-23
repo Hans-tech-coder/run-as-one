@@ -65,7 +65,7 @@ export default function ActivityCards({
                         aria-expanded={isOpen}
                         className="t-acc-head btn-filter w-full justify-between min-h-11"
                       >
-                        <span>{isOpen ? 'Hide details' : 'Show details'}</span>
+                        <span>{isOpen ? 'Hide Details' : 'Show Details'}</span>
                         <span className="t-acc-chevron" aria-hidden="true">
                           <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M4 6.5L8 10.5L12 6.5" />

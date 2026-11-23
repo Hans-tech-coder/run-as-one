@@ -90,14 +90,14 @@ export function categoryChangeAppliedEmail(change: AppliedChangeForEmail): Promi
   const kit = kitDifference(change.fromInclusions, change.toInclusions);
 
   const money: Row[] = [
-    { kind: 'amount', label: 'Paid for your entry', centavos: change.basis },
-    { kind: 'amount', label: `${change.toCategory.name} price`, centavos: change.toPrice },
+    { kind: 'amount', label: 'Paid for Your Entry', centavos: change.basis },
+    { kind: 'amount', label: `${change.toCategory.name} Price`, centavos: change.toPrice },
     ...(change.changeFee > 0
-      ? [{ kind: 'amount' as const, label: 'Change fee', centavos: change.changeFee }]
+      ? [{ kind: 'amount' as const, label: 'Change Fee', centavos: change.changeFee }]
       : []),
     // Without it an online upgrade's rows would not add up to what was paid.
     ...((change.transactionFee ?? 0) > 0
-      ? [{ kind: 'amount' as const, label: 'Transaction fee', centavos: change.transactionFee ?? 0 }]
+      ? [{ kind: 'amount' as const, label: 'Transaction Fee', centavos: change.transactionFee ?? 0 }]
       : []),
     { kind: 'rule' },
     change.status === 'REFUND_DUE' || change.status === 'REFUNDED'
@@ -106,9 +106,9 @@ export function categoryChangeAppliedEmail(change: AppliedChangeForEmail): Promi
   ];
 
   const kitRows: Row[] = [
-    ...(kit.added.length > 0 ? [{ kind: 'info' as const, label: 'Now included', value: kit.added.join(', ') }] : []),
+    ...(kit.added.length > 0 ? [{ kind: 'info' as const, label: 'Now Included', value: kit.added.join(', ') }] : []),
     ...(kit.removed.length > 0
-      ? [{ kind: 'info' as const, label: 'No longer included', value: kit.removed.join(', ') }]
+      ? [{ kind: 'info' as const, label: 'No Longer Included', value: kit.removed.join(', ') }]
       : []),
   ];
 
@@ -179,11 +179,11 @@ export function categoryChangeCreatedEmail(change: CreatedChangeForEmail, url: s
   const until = change.holdUntil ? `${formatEventInstant(change.holdUntil)}, Manila time` : null;
 
   const money: Row[] = [
-    { kind: 'amount', label: 'Paid for your entry', centavos: change.basis },
-    { kind: 'amount', label: `${change.toCategory.name} price`, centavos: change.toPrice },
-    ...(change.changeFee > 0 ? [{ kind: 'amount' as const, label: 'Change fee', centavos: change.changeFee }] : []),
+    { kind: 'amount', label: 'Paid for Your Entry', centavos: change.basis },
+    { kind: 'amount', label: `${change.toCategory.name} Price`, centavos: change.toPrice },
+    ...(change.changeFee > 0 ? [{ kind: 'amount' as const, label: 'Change Fee', centavos: change.changeFee }] : []),
     ...(change.transactionFee > 0
-      ? [{ kind: 'amount' as const, label: 'Transaction fee', centavos: change.transactionFee }]
+      ? [{ kind: 'amount' as const, label: 'Transaction Fee', centavos: change.transactionFee }]
       : []),
     { kind: 'rule' },
     { kind: 'total', label: 'To Pay', centavos: change.totalCharged },
@@ -240,7 +240,7 @@ export function categoryChangeCreatedEmail(change: CreatedChangeForEmail, url: s
           { kind: 'info', label: 'From', value: categoryLabel(change.fromCategory) },
           { kind: 'info', label: 'To', value: categoryLabel(change.toCategory) },
           ...(change.paymentMethod
-            ? [{ kind: 'info' as const, label: 'Payment', value: outside ? 'GCash or bank transfer' : paymentMethodLabel(change.paymentMethod) }]
+            ? [{ kind: 'info' as const, label: 'Payment', value: outside ? 'GCash or Bank Transfer' : paymentMethodLabel(change.paymentMethod) }]
             : []),
         ],
       },
@@ -250,9 +250,9 @@ export function categoryChangeCreatedEmail(change: CreatedChangeForEmail, url: s
             {
               kind: 'card' as const,
               rows: [
-                ...(kit.added.length > 0 ? [{ kind: 'info' as const, label: 'Now included', value: kit.added.join(', ') }] : []),
+                ...(kit.added.length > 0 ? [{ kind: 'info' as const, label: 'Now Included', value: kit.added.join(', ') }] : []),
                 ...(kit.removed.length > 0
-                  ? [{ kind: 'info' as const, label: 'No longer included', value: kit.removed.join(', ') }]
+                  ? [{ kind: 'info' as const, label: 'No Longer Included', value: kit.removed.join(', ') }]
                   : []),
               ],
             },

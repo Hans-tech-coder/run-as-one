@@ -20,7 +20,7 @@ import RunnerList from './RunnerList';
 const ALMOST_FULL = 0.9;
 
 /** Names the report, not the page: the page also shows payouts and runners, which never print. */
-const SAVE_LABEL = 'Save report as PDF';
+const SAVE_LABEL = 'Save Report as PDF';
 
 /**
  * The race page's sections, once for the screen and once for the printer
@@ -113,7 +113,7 @@ export default function RaceReport({
 
       <Panel
         {...panel}
-        title="Registrations over Time"
+        title="Registrations Over Time"
         icon={<TrendingUp size={18} />}
         hint="Paid and awaiting-verification runners, by the day they signed up."
       >
@@ -134,7 +134,7 @@ export default function RaceReport({
       {addOns && (
         <Panel
           {...panel}
-          title="Add-ons"
+          title="Add-Ons"
           icon={<ShoppingBag size={18} />}
           hint="Pieces to order and pack: every add-on runners bought with their entry, per size or option, for paid and awaiting-verification runners. Each one goes in that runner's kit."
         >
@@ -152,7 +152,7 @@ export default function RaceReport({
         <div className="race-save-end">
           <SavePdfPanel
             id={`${idPrefix}race-save-title`}
-            title="Sending this to your supplier or team?"
+            title="Sending This to Your Supplier or Team?"
             note={`The PDF has the race report above: the runner counts, slots per category, registrations over time, shirt sizes${addOns ? ', add-ons' : ''} and race kits.`}
             label={SAVE_LABEL}
           />
@@ -247,7 +247,7 @@ function SlotRow({ category }: { category: ViewerCategorySummary }) {
           {category.distance ? ` (${category.distance})` : ''}
         </span>
         {flag === 'full' && <span className="status-badge danger whitespace-nowrap">Full</span>}
-        {flag === 'almost' && <span className="status-badge pending whitespace-nowrap">Almost full</span>}
+        {flag === 'almost' && <span className="status-badge pending whitespace-nowrap">Almost Full</span>}
       </div>
       {limit !== null && (
         <div className={`race-slot-bar ${flag ? `is-${flag}` : ''}`} aria-hidden="true">
@@ -273,8 +273,8 @@ function SlotRow({ category }: { category: ViewerCategorySummary }) {
 /** What a garment type is called on the tag, and counted as in the totals line. */
 const GARMENT_WORDS: Record<GarmentType | 'NONE', { tag: string; one: string; many: string }> = {
   SINGLET: { tag: 'Singlet', one: 'singlet', many: 'singlets' },
-  TSHIRT: { tag: 'T-shirt', one: 'T-shirt', many: 'T-shirts' },
-  NONE: { tag: 'Type not listed', one: 'not listed', many: 'not listed' },
+  TSHIRT: { tag: 'T-Shirt', one: 'T-shirt', many: 'T-shirts' },
+  NONE: { tag: 'Type Not Listed', one: 'not listed', many: 'not listed' },
 };
 
 function count(n: number, one: string, many: string) {
@@ -363,7 +363,7 @@ function AddOnSection({ addOns }: { addOns: AddOnTally[] }) {
             <li key={item.name} className="race-garment">
               <div className="race-garment-head">
                 <h3 className="race-sub race-garment-name">{item.name}</h3>
-                <span className="race-garment-tag">Add-on</span>
+                <span className="race-garment-tag">Add-On</span>
                 <span className="race-garment-count">{count(item.total, 'piece', 'pieces')}</span>
               </div>
               {options.length > 0 && (

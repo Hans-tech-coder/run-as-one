@@ -126,7 +126,7 @@ export default function TrackResult({
               </div>
             )}
             <div>
-              <dt className="text-xs text-secondary">Ships to</dt>
+              <dt className="text-xs text-secondary">Ships To</dt>
               <dd className="m-0 break-words font-semibold text-site-ink">
                 {logistics.perRunner
                   ? 'Each kit ships to its runner’s home address, shown below'
@@ -142,7 +142,7 @@ export default function TrackResult({
         <div>
           <h2 id="track-runners-title" className="m-0 flex items-center gap-2 text-lg font-semibold tracking-wide text-site-ink">
             <Users size={20} aria-hidden="true" className="shrink-0 text-site-accent" />
-            What you submitted
+            What You Submitted
           </h2>
           <p className="m-0 mt-1 text-sm leading-relaxed text-secondary">
             {showsAll

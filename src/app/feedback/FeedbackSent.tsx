@@ -33,7 +33,7 @@ export default function FeedbackSent({
       {/* role="status" so a screen reader is told the send worked without
           having to go looking for the heading that replaced the form. */}
       <h2 role="status" className="site-h3">
-        Thank you — we have it
+        Thank You — We Have It
       </h2>
       <p className="m-0 mt-3 max-w-[52ch] leading-relaxed text-site-muted">
         {hasEmail
@@ -43,7 +43,7 @@ export default function FeedbackSent({
 
       <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
         <Link href="/events" className="site-btn site-btn--action site-btn--block-sm">
-          <span>Browse events</span>
+          <span>Browse Events</span>
           <LinkPendingIcon>
             <ArrowRight size={18} aria-hidden="true" className="shrink-0" />
           </LinkPendingIcon>
@@ -53,7 +53,7 @@ export default function FeedbackSent({
           onClick={onSendAnother}
           className="site-btn site-btn--quiet site-btn--block-sm"
         >
-          Send another
+          Send Another
         </button>
       </div>
     </div>

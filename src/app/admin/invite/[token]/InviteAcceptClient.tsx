@@ -127,7 +127,7 @@ export default function InviteAcceptClient({
         <div className="auth-header">
           <RunAsOneLogo variant="stacked" className="[--rao-logo-size:64px] mb-5" />
           <h1 className="auth-title">
-            {viewer ? `Your sign-in for ${clientName}` : `Join ${organizerName}`}
+            {viewer ? `Your Sign-In for ${clientName}` : `Join ${organizerName}`}
           </h1>
           <p className="auth-subtitle">
             {viewer
@@ -242,7 +242,7 @@ export default function InviteAcceptClient({
             disabled={isSubmitting}
             className="btn-gradient auth-submit text-white font-medium"
           >
-            {isSubmitting ? <BusyLabel>Joining</BusyLabel> : 'Accept and sign in'}
+            {isSubmitting ? <BusyLabel>Joining</BusyLabel> : 'Accept and Sign In'}
           </button>
         </form>
       </div>

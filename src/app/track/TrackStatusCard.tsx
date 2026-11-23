@@ -40,14 +40,14 @@ function copyFor(status: TrackView['status'], registerHref: string | null): {
       tone: 'success',
       badge: 'Validated',
       icon: <CircleCheck {...iconProps} />,
-      title: 'Payment validated',
+      title: 'Payment Validated',
       body: `${by ? `${by}'s bank transfer` : 'Your bank transfer'} was confirmed${at ? ` on ${at}` : ''}. You are officially registered.`,
     }),
     paid: () => ({
       tone: 'success',
       badge: 'Paid',
       icon: <CircleCheck {...iconProps} />,
-      title: status.method === 'Complimentary' ? 'Entry confirmed' : 'Payment confirmed',
+      title: status.method === 'Complimentary' ? 'Entry Confirmed' : 'Payment Confirmed',
       body:
         status.method === 'Complimentary'
           ? 'This is a complimentary entry, so there is nothing to pay. You are officially registered.'
@@ -55,44 +55,44 @@ function copyFor(status: TrackView['status'], registerHref: string | null): {
     }),
     'for-validation': () => ({
       tone: 'pending',
-      badge: 'For validation',
+      badge: 'For Validation',
       icon: <Hourglass {...iconProps} />,
-      title: 'Payment for validation',
+      title: 'Payment for Validation',
       body: `We received ${by ? `${by}'s` : 'your'} proof of payment${at ? ` on ${at}` : ''} and are checking it against our bank. No need to upload it again. You will get an email once it is validated.`,
     }),
     unpaid: () => ({
       tone: 'pending',
-      badge: 'Not paid yet',
+      badge: 'Not Paid Yet',
       icon: <CreditCard {...iconProps} />,
-      title: 'Not paid yet',
+      title: 'Not Paid Yet',
       body: `This registration is saved but not confirmed. We are holding the slot until ${status.holdUntil}, Manila time. Complete the payment to keep it.`,
     }),
     'unpaid-closed': () => ({
       tone: 'pending',
-      badge: 'Not paid yet',
+      badge: 'Not Paid Yet',
       icon: <Clock {...iconProps} />,
-      title: 'Not paid yet',
+      title: 'Not Paid Yet',
       body: 'This registration is not paid, and it can no longer be paid online. Contact us below and we will help you finish.',
     }),
     expired: () => ({
       tone: 'danger',
       badge: 'Expired',
       icon: <CalendarX {...iconProps} />,
-      title: 'Registration expired',
+      title: 'Registration Expired',
       body: `This registration expired because the payment was not ${status.method === 'Bank Transfer' ? 'validated' : 'completed'}${at ? ` by ${at}` : ' in time'}, and its slot was released.${registerHref ? ' If you still want to run, register again.' : ''}`,
     }),
     cancelled: () => ({
       tone: 'muted',
       badge: 'Cancelled',
       icon: <XCircle {...iconProps} />,
-      title: 'Registration cancelled',
+      title: 'Registration Cancelled',
       body: 'This registration was cancelled, so it no longer holds a slot. If you think this is a mistake, contact us below.',
     }),
     refunded: () => ({
       tone: 'muted',
       badge: 'Refunded',
       icon: <Undo2 {...iconProps} />,
-      title: 'Registration refunded',
+      title: 'Registration Refunded',
       body: 'This registration was refunded and no longer holds a slot. Contact us below if you have a question about the refund.',
     }),
   };
@@ -143,8 +143,8 @@ export default function TrackStatusCard({ view }: { view: TrackView }) {
           {view.pending.map(item => (
             <li key={`${item.kind}-${item.title}`} className="rounded-[14px] border border-amber-400/20 bg-amber-400/[0.05] p-4">
               <p className="m-0 text-xs font-bold tracking-wide text-[var(--status-warning)]">
-                {item.kind === 'category' ? 'Category change' : 'Delivery switch'}
-                {item.proofSubmitted ? ' · for validation' : ' · awaiting payment'}
+                {item.kind === 'category' ? 'Category Change' : 'Delivery Switch'}
+                {item.proofSubmitted ? ' · For Validation' : ' · Awaiting Payment'}
               </p>
               <p className="m-0 mt-1 break-words text-sm font-semibold text-site-ink">{item.title}</p>
               <p className="m-0 mt-1 text-sm text-secondary">

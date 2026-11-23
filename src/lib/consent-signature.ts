@@ -35,7 +35,7 @@ export function normalizeSignature(value: unknown): string {
 }
 
 /** The label above the box. */
-export const SIGNATURE_LABEL = 'Type your full name as your digital signature';
+export const SIGNATURE_LABEL = 'Type Your Full Name as Your Digital Signature';
 
 /**
  * The placeholder. A sample rather than an instruction, so it is uppercase —

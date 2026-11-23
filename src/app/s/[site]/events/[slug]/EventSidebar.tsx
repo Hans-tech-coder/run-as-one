@@ -65,7 +65,7 @@ export function EventSidebar({
   return (
     <div className="flex flex-col gap-4 lg:sticky lg:top-[calc(var(--nav-offset)+1.5rem)]">
       <div className="rounded-[14px] border border-site-line bg-site-card p-5 sm:p-6">
-        <h2 className="site-h3 mb-4">{sellsPackages(event) ? 'Packages' : 'Distances and fees'}</h2>
+        <h2 className="site-h3 mb-4">{sellsPackages(event) ? 'Packages' : 'Distances and Fees'}</h2>
         <ul className="m-0 flex list-none flex-col gap-2.5 p-0">
           {categories.map((cat) => {
             // A row is a way in whenever Register would be: the race is open
@@ -87,7 +87,7 @@ export function EventSidebar({
                     {cat.isFull && <span className="site-chip">Full</span>}
                     {cat.isLastCall && (
                       <span className="site-chip text-site-accent">
-                        {cat.slotsLeft} slot{cat.slotsLeft === 1 ? '' : 's'} left
+                        {cat.slotsLeft} Slot{cat.slotsLeft === 1 ? '' : 's'} Left
                       </span>
                     )}
                   </span>
@@ -132,16 +132,16 @@ export function EventSidebar({
       {finished ? (
         <RaceIsOver event={event} />
       ) : state === 'CLOSED' ? (
-        <RegistrationOnHold icon={<Lock size={20} />} heading="Registration closed" message={closedMessage(event)} />
+        <RegistrationOnHold icon={<Lock size={20} />} heading="Registration Closed" message={closedMessage(event)} />
       ) : state === 'PAUSED' ? (
-        <RegistrationOnHold icon={<PauseCircle size={20} />} heading="Registration paused" message={pauseNote(event)} />
+        <RegistrationOnHold icon={<PauseCircle size={20} />} heading="Registration Paused" message={pauseNote(event)} />
       ) : state === 'SCHEDULED' ? (
         /* The race is real and listed; it just has not opened yet. The panel
            carries the date instead of a button, because the date is the whole
            of what this visitor came to find out — see openingNote. */
-        <RegistrationOnHold icon={<CalendarClock size={20} />} heading="Registration opens soon" message={openingNote(event)} />
+        <RegistrationOnHold icon={<CalendarClock size={20} />} heading="Registration Opens Soon" message={openingNote(event)} />
       ) : state === 'FULL' ? (
-        <RegistrationOnHold icon={<Users size={20} />} heading="Every option is full" message={EVENT_FULL_MESSAGE} />
+        <RegistrationOnHold icon={<Users size={20} />} heading="Every Option Is Full" message={EVENT_FULL_MESSAGE} />
       ) : (
         <>
           {/* A deadline days away is the reason to finish today, so it stands
@@ -153,14 +153,14 @@ export function EventSidebar({
             />
           )}
           <Link href={registerPath(event)} className="site-btn site-btn--action group w-full min-h-[52px] text-[1.0625rem]">
-            Register now
+            Register Now
             <LinkPendingIcon>
               <ArrowRight size={20} className="transition-transform group-hover:translate-x-1" />
             </LinkPendingIcon>
           </Link>
           {resultsCount > 0 && (
             <Link href={resultsPath(event)} className="site-btn site-btn--quiet w-full">
-              See results
+              See Results
             </Link>
           )}
         </>

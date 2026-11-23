@@ -73,7 +73,7 @@ export default async function GuardianConsentSheetPage({
     return (
       <AdminNotFound
         title="Runner Not Found"
-        heading="Runner not found."
+        heading="Runner Not Found"
         body="The runner may have been removed from this order, or the link may be an old one. The rest of the registrants are where you left them."
         homeHref={registrantsHref}
         homeLabel="Back to Registrants"
@@ -136,7 +136,7 @@ export default async function GuardianConsentSheetPage({
         <h2>Parent or Legal Guardian</h2>
         <div className="consent-sheet-grid">
           <div>
-            <span className="consent-sheet-label">Full name</span>
+            <span className="consent-sheet-label">Full Name</span>
             {runner.guardianName ? (
               <span className="consent-sheet-value">{runner.guardianName}</span>
             ) : (
@@ -154,7 +154,7 @@ export default async function GuardianConsentSheetPage({
             )}
           </div>
           <div style={{ gridColumn: '1 / -1' }}>
-            <span className="consent-sheet-label">Consent given online</span>
+            <span className="consent-sheet-label">Consent Given Online</span>
             <span className="consent-sheet-value">
               {runner.guardianConsentAt
                 ? formatEventInstant(runner.guardianConsentAt)
@@ -178,10 +178,10 @@ export default async function GuardianConsentSheetPage({
 
       <section className="consent-sheet-signatures">
         <div className="consent-sheet-signature">
-          Signature of parent or guardian over printed name
+          Signature of Parent or Guardian Over Printed Name
         </div>
         <div className="consent-sheet-signature">Date</div>
-        <div className="consent-sheet-signature">Received by (staff) at kit claiming</div>
+        <div className="consent-sheet-signature">Received By (Staff) at Kit Claiming</div>
         <div className="consent-sheet-signature">Date</div>
       </section>
 

@@ -104,7 +104,7 @@ export default async function AdminResultsWorkspacePage({ params }: { params: Pr
 
             <section className="admin-panel">
               <div className="admin-panel-header">
-                <h2 className="admin-panel-title">2. Upload results</h2>
+                <h2 className="admin-panel-title">2. Upload Results</h2>
               </div>
               <div className="admin-panel-content flex flex-col items-start gap-4">
                 <p className="m-0 text-sm text-secondary">

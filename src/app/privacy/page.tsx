@@ -26,14 +26,14 @@ export const metadata: Metadata = {
 /** The contact address is a platform setting, so the sections are built per request. */
 const sections = (contactEmail: string): LegalSection[] => [
   {
-    heading: 'Who this covers',
+    heading: 'Who This Covers',
     body: [
       `This notice explains what ${SITE_NAME} does with personal data collected through this website, and applies to runners who register for events, people registered as part of someone else's group, and organizers who hold accounts here.`,
       'It is written to meet the Data Privacy Act of 2012 (Republic Act No. 10173) and its implementing rules.',
     ],
   },
   {
-    heading: 'What we collect',
+    heading: 'What We Collect',
     body: [
       'Only what a race actually needs. Nothing on this list is optional decoration — each field ends up on a bib, in a kit order, in a results table, or in the hands of a marshal if something goes wrong on the course.',
     ],
@@ -47,7 +47,7 @@ const sections = (contactEmail: string): LegalSection[] => [
     ],
   },
   {
-    heading: 'Why we collect it',
+    heading: 'Why We Collect It',
     body: ['Each purpose below is the reason a specific field exists.'],
     bullets: [
       'To process your registration and payment, and to send you confirmation of both.',
@@ -58,13 +58,13 @@ const sections = (contactEmail: string): LegalSection[] => [
     ],
   },
   {
-    heading: 'Health information',
+    heading: 'Health Information',
     body: [
       'The medical conditions field is optional and is treated as sensitive personal information. It exists so that event medical staff can respond appropriately to a runner they are treating. It is visible only to the organizer of the event you entered, and is never used for marketing, profiling, or shared with anyone else.',
     ],
   },
   {
-    heading: 'Who sees your data',
+    heading: 'Who Sees Your Data',
     bullets: [
       'The organizer of the event you registered for. They receive the details of every runner in your registration, because they are the ones running the race.',
       'When we run a race on behalf of another organization, that organization releases and ships the race kits, so its own account on this site shows it, for each registered runner, the name, registration reference, category, shirt size, whether the payment is confirmed or still being verified, whether the kit is picked up or delivered, and the phone number, email, home address and delivery address needed to hand it over. It can download that list for the same purpose. It does not see your birthdate, gender, emergency contact, medical notes or payment details.',
@@ -74,13 +74,13 @@ const sections = (contactEmail: string): LegalSection[] => [
     ],
   },
   {
-    heading: 'What we never do',
+    heading: 'What We Never Do',
     body: [
       'We do not sell your personal data. We do not rent or trade contact lists. We do not pass your details to advertisers, and we do not use the medical field for anything other than the safety purpose it was collected for.',
     ],
   },
   {
-    heading: 'How long we keep it',
+    heading: 'How Long We Keep It',
     body: [
       'Registration and payment records are kept for as long as the organizer may need them to settle the event and for as long as tax and dispute-resolution obligations require.',
       'Race results and e-certificates are kept indefinitely, because a finishing time is a public record a runner expects to be able to look up years later. Only the fields listed above as public are held that way.',
@@ -88,20 +88,20 @@ const sections = (contactEmail: string): LegalSection[] => [
     ],
   },
   {
-    heading: 'How it is protected',
+    heading: 'How It Is Protected',
     body: [
       'Data is held on managed infrastructure and transmitted over encrypted connections. Organizer passwords are stored hashed, never in readable form. Access to the admin areas is restricted to authenticated organizer accounts, and an organizer can only see registrations for their own events.',
       'No system is perfect. If a breach occurs that puts your data at serious risk, we will notify you and the National Privacy Commission as the law requires.',
     ],
   },
   {
-    heading: 'Registering someone else',
+    heading: 'Registering Someone Else',
     body: [
       'When you enter another person into a race, you are giving us their personal data. You must have their permission to do so, and you must have shown them the event waiver before you accept it on their behalf. They hold the same rights over their data as you do over yours, and can exercise them directly with us.',
     ],
   },
   {
-    heading: 'Your rights',
+    heading: 'Your Rights',
     body: [
       'Under the Data Privacy Act you may ask to see the personal data we hold about you, have it corrected if it is wrong, object to how it is being processed, ask for it to be erased or blocked where the law allows, receive a copy in a portable form, and complain to the National Privacy Commission.',
       `To exercise any of these, email ${contactEmail} from the address on your registration and tell us what you need. We will respond within a reasonable period.`,
@@ -115,7 +115,7 @@ const sections = (contactEmail: string): LegalSection[] => [
     ],
   },
   {
-    heading: 'Changes and contact',
+    heading: 'Changes and Contact',
     body: [
       'We will update this notice as the platform changes, and the date at the top always tells you when it was last rewritten.',
       `For anything on this page — a question, a request, or a complaint — write to ${contactEmail}.`,

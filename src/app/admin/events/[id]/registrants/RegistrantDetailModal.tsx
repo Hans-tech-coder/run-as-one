@@ -132,7 +132,7 @@ export default function RegistrantDetailModal({
                       out for a runner who bought none. */}
                   {runner.addOnLines?.length > 0 && (
                     <div className="flex flex-col">
-                      <span className="text-[var(--text-muted)]">Add-ons</span>
+                      <span className="text-[var(--text-muted)]">Add-Ons</span>
                       <ul className="m-0 p-0 list-none">
                         {runner.addOnLines.map((line: string, index: number) => (
                           <li key={index} className="text-primary font-medium">{line}</li>
@@ -210,13 +210,13 @@ export default function RegistrantDetailModal({
                   emails them. */}
               <div className="mt-6">
                 <div className="flex items-center justify-between gap-4 mb-2">
-                  <p className="text-[var(--text-muted)] text-sm m-0">Remarks (internal)</p>
+                  <p className="text-[var(--text-muted)] text-sm m-0">Remarks (Internal)</p>
                   {permissions.remark && (
                     <button
                       onClick={() => onOpenRemarks(runner.id)}
                       className="text-xs font-medium text-accent-blue-ink hover:underline bg-transparent border-none cursor-pointer p-0"
                     >
-                      {runner.remarks ? 'Edit remarks' : 'Add remarks'}
+                      {runner.remarks ? 'Edit Remarks' : 'Add Remarks'}
                     </button>
                   )}
                 </div>
@@ -247,7 +247,7 @@ export default function RegistrantDetailModal({
                       onClick={() => onOpenEmail(runner.id)}
                       className="text-xs font-medium text-accent-blue-ink hover:underline bg-transparent border-none cursor-pointer p-0"
                     >
-                      {runner.emailPending ? 'Send by hand' : 'View email'}
+                      {runner.emailPending ? 'Send by Hand' : 'View Email'}
                     </button>
                   )}
                 </div>
@@ -282,7 +282,7 @@ export default function RegistrantDetailModal({
                         onClick={() => onOpenProof(runner)}
                         className="text-xs font-medium text-accent-blue-ink hover:underline bg-transparent border-none cursor-pointer p-0"
                       >
-                        View fullscreen
+                        View Fullscreen
                       </button>
                     )}
                   </div>
@@ -311,7 +311,7 @@ export default function RegistrantDetailModal({
                       {runner.proofIsPdf ? (
                         <span className="flex flex-col items-center gap-2 py-10 text-secondary">
                           <FileText size={32} className="text-accent-blue-ink" aria-hidden="true" />
-                          <span className="text-sm font-medium text-primary">PDF receipt</span>
+                          <span className="text-sm font-medium text-primary">PDF Receipt</span>
                           <span className="text-xs">Click to read it full screen</span>
                         </span>
                       ) : (
@@ -322,7 +322,7 @@ export default function RegistrantDetailModal({
                         />
                       )}
                       <span className="absolute inset-0 flex items-center justify-center gap-2 bg-black/60 text-sm font-medium text-white opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity">
-                        <Maximize2 size={16} aria-hidden="true" /> Click to enlarge
+                        <Maximize2 size={16} aria-hidden="true" /> Click to Enlarge
                       </span>
                     </button>
                   ) : (

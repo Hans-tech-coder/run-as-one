@@ -161,7 +161,7 @@ export default function RunnerList({
       <p className="m-0">No one has registered yet. Runners appear here once they pay or send a bank transfer.</p>
     ) : (
       <>
-        <p className="m-0 text-primary font-medium">No runner matches.</p>
+        <p className="m-0 text-primary font-medium">No Runner Matches</p>
         <p className="m-0 mt-1">Check the spelling, or clear a filter.</p>
       </>
     );
@@ -294,7 +294,7 @@ export default function RunnerList({
           selectAll={{
             checked: table.getIsAllPageRowsSelected(),
             toggle: () => table.toggleAllPageRowsSelected(!table.getIsAllPageRowsSelected()),
-            label: `Mark all ${pageRows.length} on this page`,
+            label: `Mark All ${pageRows.length} on This Page`,
           }}
           title={runner => `${runner.firstName} ${runner.lastName}`}
           subtitle={runner => <span className="font-mono">{runner.ref}</span>}

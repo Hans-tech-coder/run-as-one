@@ -229,7 +229,7 @@ export default function CategoryPicker({
                       )}
                       {slotsLeft !== null && (
                         <span className="shrink-0 text-xs font-bold text-accent-orange bg-accent-orange/15 px-2.5 py-0.5 rounded-full uppercase tracking-wide">
-                          {slotsLeft} slot{slotsLeft === 1 ? '' : 's'} left
+                          {slotsLeft} Slot{slotsLeft === 1 ? '' : 's'} Left
                         </span>
                       )}
                     </span>
@@ -363,7 +363,7 @@ function ViewInclusionsButton({
       aria-label={`View ${name} inclusions`}
       className={`site-link self-start text-xs py-2 pr-2 ${className}`}
     >
-      View inclusions
+      View Inclusions
     </button>
   );
 }

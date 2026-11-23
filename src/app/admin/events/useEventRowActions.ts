@@ -57,7 +57,7 @@ export function useEventRowActions(setTableEvents: React.Dispatch<React.SetState
       // The confirmation modal stays open underneath: the event is still
       // there, and the organizer can read the reason and try again.
       await alert({
-        title: 'Event not deleted',
+        title: 'Event Not Deleted',
         message: `${deletingEvent.title} is still here. ${
           error instanceof Error ? error.message : 'The request did not reach the server.'
         }`,

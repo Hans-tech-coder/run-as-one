@@ -103,7 +103,7 @@ export default function ScreenshotField({
   return (
     <div className="input-group">
       <label htmlFor={id}>
-        Screenshot <span className="font-normal text-site-muted">(optional)</span>
+        Screenshot <span className="font-normal text-site-muted">(Optional)</span>
       </label>
 
       {file ? (
@@ -169,7 +169,7 @@ export default function ScreenshotField({
               <ImagePlus size={20} aria-hidden="true" />
             </div>
             <div className="text-[0.9375rem] font-semibold text-site-ink">
-              Attach a screenshot of what you saw
+              Attach a Screenshot of What You Saw
             </div>
             <div className="text-sm text-site-muted">
               Drag it here, or tap to choose one from your device
@@ -180,7 +180,7 @@ export default function ScreenshotField({
 
       {optimizing && (
         <p role="status" className="m-0 text-sm text-site-muted">
-          <BusyLabel>Optimizing image</BusyLabel>
+          <BusyLabel>Optimizing Image</BusyLabel>
         </p>
       )}
       <FieldError id={`${id}-error`} message={error} />

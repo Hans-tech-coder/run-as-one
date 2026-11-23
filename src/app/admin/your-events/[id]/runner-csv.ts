@@ -14,7 +14,7 @@ import { kitSummary } from '../../events/[id]/registrants/category-change-displa
 import { kitNote } from './RunnerCells';
 
 const HEADERS = [
-  'Runner Ref', 'First Name', 'Last Name', 'Category', 'Changed From', 'Kit Changed', 'Shirt Size', 'Add-ons', 'Status', 'Race Kit',
+  'Runner Ref', 'First Name', 'Last Name', 'Category', 'Changed From', 'Kit Changed', 'Shirt Size', 'Add-Ons', 'Status', 'Race Kit',
   'Kit Note', 'Phone', 'Email', 'Home Address', 'Province', 'Delivery Area', 'Delivery Address',
 ];
 

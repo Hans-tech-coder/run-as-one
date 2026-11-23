@@ -148,7 +148,7 @@ export const RESULTS_ONLY_VIRTUAL_ERROR =
  * apart — a card keeps "Oct 15–31" on one line rather than breaking at the
  * dash — and for the emails' *Where* row.
  */
-export const VIRTUAL_RUN_WHERE = 'Virtual · Run anywhere';
+export const VIRTUAL_RUN_WHERE = 'Virtual · Run Anywhere';
 
 /**
  * The format-dependent columns of a create or edit, read from the request

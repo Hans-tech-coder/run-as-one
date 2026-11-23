@@ -149,7 +149,7 @@ function OrganizerBand() {
     <section className="site-wrap pb-14 md:pb-20" aria-labelledby="organizers">
       <div className="grid grid-cols-1 gap-6 rounded-[14px] bg-site-surface px-6 py-8 sm:px-10 sm:py-10 md:grid-cols-12 md:items-center md:gap-8">
         <div className="md:col-span-8">
-          <h2 id="organizers" className="site-h2">Organizing a race?</h2>
+          <h2 id="organizers" className="site-h2">Organizing a Race?</h2>
           <p className="site-lead mt-3 max-w-[56ch]">
             Hire Run As One to take your sign-ups and payments online, release
             race kits, and publish results and e-certificates after the race.
@@ -157,7 +157,7 @@ function OrganizerBand() {
         </div>
         <div className="md:col-span-4 md:justify-self-end">
           <Link href="/admin/register" className="site-btn site-btn--quiet site-btn--block-sm">
-            See our services
+            See Our Services
           </Link>
         </div>
       </div>

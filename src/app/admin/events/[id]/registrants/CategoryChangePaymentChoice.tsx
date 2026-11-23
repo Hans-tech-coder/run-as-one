@@ -69,19 +69,19 @@ export default function CategoryChangePaymentChoice({
     {
       value: CHANGE_PAYMENT_CHOICES.ONLINE,
       icon: <Link2 size={16} aria-hidden="true" />,
-      title: 'Send a payment link',
+      title: 'Send a Payment Link',
       hint: `Runner pays ${peso(amount + onlineFee)} online by ${paymentMethodLabel(onlineMethod)}, ${peso(onlineFee)} transaction fee included. Seat held ${ONLINE_CHANGE_HOLD_HOURS} hours.`,
     },
     {
       value: CHANGE_PAYMENT_CHOICES.OUTSIDE_LATER,
       icon: <Landmark size={16} aria-hidden="true" />,
-      title: 'Will pay by GCash or bank',
+      title: 'Will Pay by GCash or Bank',
       hint: `Runner sends ${peso(amount)}, no fee. Seat held ${OUTSIDE_CHANGE_HOLD_DAYS} days; record the payment once it lands.`,
     },
     {
       value: CHANGE_PAYMENT_CHOICES.OUTSIDE_PAID,
       icon: <CircleCheck size={16} aria-hidden="true" />,
-      title: 'Already paid by GCash or bank',
+      title: 'Already Paid by GCash or Bank',
       hint: `Record the ${peso(amount)} now and move the runner at once.`,
     },
   ];
@@ -91,7 +91,7 @@ export default function CategoryChangePaymentChoice({
   return (
     <div className="space-y-3">
       <fieldset className="p-0 border-none mx-0" aria-describedby="category-change-payment-error">
-        <legend className="block text-secondary mb-1 p-0">How does the runner pay?</legend>
+        <legend className="block text-secondary mb-1 p-0">How Does the Runner Pay?</legend>
         {methodLabel && (
           <p className="m-0 mb-2 text-xs text-[var(--text-muted)]">
             Paid the registration {methodLabel === 'Online' ? 'online' : `by ${methodLabel}`}, so the difference is paid
@@ -141,7 +141,7 @@ export default function CategoryChangePaymentChoice({
         <div className="space-y-3 rounded-lg border border-[var(--dash-border)] p-3">
           <div className="space-y-1.5">
             <label htmlFor="category-change-transaction" className="block text-secondary">
-              GCash or bank reference number
+              GCash or Bank Reference Number
             </label>
             <input
               id="category-change-transaction"
@@ -185,7 +185,7 @@ export function ProofPicker({
   return (
     <div className="space-y-1.5">
       <label htmlFor={id} className="block text-secondary">
-        Screenshot of the payment <span className="text-[var(--text-muted)]">(optional)</span>
+        Screenshot of the Payment <span className="text-[var(--text-muted)]">(Optional)</span>
       </label>
       {!file ? (
         <div className="file-upload-wrapper">
@@ -202,7 +202,7 @@ export function ProofPicker({
             <div className="file-upload-icon">
               <UploadCloud size={28} aria-hidden="true" />
             </div>
-            <div className="file-upload-title">Click to attach the screenshot</div>
+            <div className="file-upload-title">Click to Attach the Screenshot</div>
             <div className="file-upload-desc">{describeUploadTypes('proof')} · made smaller before it is saved</div>
           </div>
         </div>

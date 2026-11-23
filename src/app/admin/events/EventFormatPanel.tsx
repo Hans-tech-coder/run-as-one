@@ -28,7 +28,7 @@ const FORMAT_OPTIONS: {
   {
     value: EVENT_FORMATS.ONSITE,
     icon: MapPin,
-    title: 'On-site Race',
+    title: 'On-Site Race',
     description: 'One race day at a venue, with a start time. Runners meet and run together.',
   },
   {
@@ -58,7 +58,7 @@ export default function EventFormatPanel({
       </div>
       <div className="admin-panel-content">
         <div className="form-group form-group-full">
-          <label className="form-label">Where do runners run?</label>
+          <label className="form-label">Where Do Runners Run?</label>
           <div className="grid gap-4 md:grid-cols-2">
             {FORMAT_OPTIONS.map(option => {
               const Icon = option.icon;

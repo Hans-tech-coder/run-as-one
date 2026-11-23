@@ -84,9 +84,9 @@ export function hasMoved(status: unknown): boolean {
 }
 
 export const CATEGORY_CHANGE_STATUS_LABELS: Record<CategoryChangeStatus, string> = {
-  AWAITING_PAYMENT: 'Awaiting payment',
+  AWAITING_PAYMENT: 'Awaiting Payment',
   APPLIED: 'Changed',
-  REFUND_DUE: 'Refund due',
+  REFUND_DUE: 'Refund Due',
   REFUNDED: 'Refunded',
   CANCELLED: 'Cancelled',
   EXPIRED: 'Expired',

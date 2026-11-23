@@ -146,7 +146,7 @@ export default function RunnerAddressFields({
         {index > 0 && (
           <div className="input-group full-width">
             <SelectField
-              label="Same address as"
+              label="Same Address As"
               listboxLabel="Whose address this runner shares"
               value={runner.addressSameAs === null ? NEW_ADDRESS : String(runner.addressSameAs)}
               options={[
@@ -154,7 +154,7 @@ export default function RunnerAddressFields({
                   value: String(j),
                   label: runnerName(r, j),
                 })),
-                { value: NEW_ADDRESS, label: "New address" },
+                { value: NEW_ADDRESS, label: "New Address" },
               ]}
               onChange={(next) =>
                 onChange({ addressSameAs: next === NEW_ADDRESS ? null : Number(next) })

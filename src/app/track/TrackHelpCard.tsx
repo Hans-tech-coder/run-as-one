@@ -40,7 +40,7 @@ export default function TrackHelpCard({ view, help }: { view: TrackView; help: T
       await navigator.clipboard.writeText(reference);
       toast(`Copied ${reference}. Paste it in your message.`);
     } catch {
-      alert({ variant: 'danger', title: 'Could not copy', message: `Your reference is ${reference}. Type it into your message.` });
+      alert({ variant: 'danger', title: 'Could Not Copy', message: `Your reference is ${reference}. Type it into your message.` });
     }
   };
 
@@ -54,13 +54,13 @@ export default function TrackHelpCard({ view, help }: { view: TrackView; help: T
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        alert({ variant: 'danger', title: 'We could not resend it', message: data?.error || 'Please try again in a moment.' });
+        alert({ variant: 'danger', title: 'We Could Not Resend It', message: data?.error || 'Please try again in a moment.' });
         return;
       }
       setSent(true);
-      toast({ title: 'Email sent', message: `Sent to ${data.sentTo}. Check your spam folder if it is not in your inbox in a few minutes.` });
+      toast({ title: 'Email Sent', message: `Sent to ${data.sentTo}. Check your spam folder if it is not in your inbox in a few minutes.` });
     } catch {
-      alert({ variant: 'danger', title: 'We could not resend it', message: 'Check your connection and try again.' });
+      alert({ variant: 'danger', title: 'We Could Not Resend It', message: 'Check your connection and try again.' });
     } finally {
       setSending(false);
     }
@@ -69,7 +69,7 @@ export default function TrackHelpCard({ view, help }: { view: TrackView; help: T
   return (
     <section aria-labelledby="track-help-title" className="rounded-[14px] border border-site-line bg-site-surface p-5 sm:p-6">
       <h2 id="track-help-title" className="m-0 text-lg font-semibold tracking-wide text-site-ink">
-        Problem with your registration?
+        Problem with Your Registration?
       </h2>
       <p className="m-0 mt-1 text-sm leading-relaxed text-secondary">
         Tell us what is wrong and what it should be. Quote
@@ -119,7 +119,7 @@ export default function TrackHelpCard({ view, help }: { view: TrackView; help: T
           href="/feedback?from=/track"
           className="site-link"
         >
-          Send feedback
+          Send Feedback
         </Link>
       </p>
     </section>

@@ -78,7 +78,7 @@ export default function RegistrantsTabs({
 
   const options: { value: RegistrantsTab; label: string }[] = [
     { value: 'registrants', label: `Registrants (${registrantCount.toLocaleString('en-US')})` },
-    { value: 'unpaid', label: `Unpaid checkouts (${unpaidCount.toLocaleString('en-US')})` },
+    { value: 'unpaid', label: `Unpaid Checkouts (${unpaidCount.toLocaleString('en-US')})` },
     ...(refundCount === null
       ? []
       : [{ value: 'refunds' as const, label: `Refunds (${refundCount.toLocaleString('en-US')})` }]),

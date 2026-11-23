@@ -30,7 +30,7 @@ export default function PosterLightbox({
   isSelected,
   isFull = false,
   sale,
-  subtitle = "What's included",
+  subtitle = "What's Included",
   labels,
   onSelect,
   onClose,

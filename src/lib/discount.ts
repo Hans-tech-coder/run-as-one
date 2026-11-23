@@ -99,15 +99,15 @@ export function asDiscountType(value: unknown): DiscountType | null {
 
 /** What an organizer picking a kind of promotion reads. */
 export const DISCOUNT_TYPE_LABELS: Record<DiscountType, string> = {
-  CATEGORY_PRICE: 'Discounted category price',
-  BUY_X_GET_Y: 'Buy X, get Y free',
-  PERCENTAGE: 'Percentage off',
-  FIXED: 'Fixed amount off',
-  FREE_ENTRY: 'Free entry (incl. admin fee)',
+  CATEGORY_PRICE: 'Discounted Category Price',
+  BUY_X_GET_Y: 'Buy X, Get Y Free',
+  PERCENTAGE: 'Percentage Off',
+  FIXED: 'Fixed Amount Off',
+  FREE_ENTRY: 'Free Entry (Incl. Admin Fee)',
   // Never offered in the marketing form's kind picker: a pacer code is created
   // on the event's Pacers screen, which knows the category it is locked to.
   // The label exists for the places that print a stored kind back.
-  PACER: 'Pacer free entry',
+  PACER: 'Pacer Free Entry',
 };
 
 /**

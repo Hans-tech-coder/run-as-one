@@ -66,7 +66,7 @@ export default async function GlobalResultsPage({ params }: { params: Promise<{ 
     <section className="site-section site-wrap" aria-labelledby="results-title">
       <div className="site-section__head">
         <div>
-          <h1 id="results-title" className="site-h1">Race results</h1>
+          <h1 id="results-title" className="site-h1">Race Results</h1>
           <p className="site-section__sub max-w-[60ch]">
             {site
               ? `Official times from every ${site.name} race. Open one for the winners, the full leaderboard and your e-certificate.`
@@ -89,7 +89,7 @@ export default async function GlobalResultsPage({ params }: { params: Promise<{ 
             <p className="m-0 mt-6 text-center text-[0.9375rem] text-site-muted">
               Looking for a race without timed results?{' '}
               <Link href={PAST_EVENTS_HREF} className="site-link site-link--arrow">
-                <span>See past races</span>
+                <span>See Past Races</span>
                 <ArrowRight size={16} aria-hidden="true" className="shrink-0" />
               </Link>
             </p>
@@ -123,7 +123,7 @@ function NoResultsYet({ hasPastEvents }: { hasPastEvents: boolean }) {
         <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-site-surface text-site-ink" aria-hidden="true">
           <Trophy size={22} />
         </div>
-        <h2 className="site-h3 mb-2">No results published yet</h2>
+        <h2 className="site-h3 mb-2">No Results Published Yet</h2>
         <p className="site-lead max-w-md">
           Nothing has been posted here so far. Results go up after a race, once
           the organizer has uploaded the official times.
@@ -140,7 +140,7 @@ function NoResultsYet({ hasPastEvents }: { hasPastEvents: boolean }) {
 
       <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
         <Link href="/events" className="site-btn site-btn--action group w-full sm:w-auto">
-          <span>Browse races</span>
+          <span>Browse Races</span>
           <ArrowRight size={18} className="shrink-0 transition-transform group-hover:translate-x-1" aria-hidden="true" />
         </Link>
         {/* The races already run without times are not missing — they are
@@ -149,7 +149,7 @@ function NoResultsYet({ hasPastEvents }: { hasPastEvents: boolean }) {
         {hasPastEvents && (
           <Link href={PAST_EVENTS_HREF} className="site-btn site-btn--quiet w-full sm:w-auto">
             <History size={18} className="shrink-0" aria-hidden="true" />
-            See past races
+            See Past Races
           </Link>
         )}
       </div>

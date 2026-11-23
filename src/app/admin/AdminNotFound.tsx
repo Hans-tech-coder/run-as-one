@@ -28,7 +28,7 @@ export default function AdminNotFound({
   homeHref,
   homeLabel,
   title = 'Page Not Found',
-  heading = 'There is nothing at this address',
+  heading = 'There Is Nothing at This Address',
   body = 'The link may be an old one, or the record it pointed at may have been deleted. Nothing else has moved — carry on from your dashboard.',
   icon: Icon = Compass,
 }: {

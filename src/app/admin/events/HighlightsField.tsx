@@ -55,7 +55,7 @@ export default function HighlightsField({
             <div className="file-upload-icon">
               <Images size={32} />
             </div>
-            <div className="file-upload-title">Add event highlights</div>
+            <div className="file-upload-title">Add Event Highlights</div>
             <div className="file-upload-desc">Race kit, trophies, venue, after party — several images</div>
           </div>
         ) : (

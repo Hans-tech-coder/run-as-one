@@ -123,7 +123,7 @@ export default function ResultsListClient({
     const options = [...byId]
       .map(([value, label]) => ({ value, label }))
       .sort((a, b) => a.label.localeCompare(b.label));
-    return unlinked ? [...options, { value: NO_CLIENT, label: 'No client yet' }] : options;
+    return unlinked ? [...options, { value: NO_CLIENT, label: 'No Client Yet' }] : options;
   }, [rows]);
   const kindOptions = (Object.keys(RESULT_KINDS) as (keyof typeof RESULT_KINDS)[])
     .map(key => ({ value: key, label: RESULT_KINDS[key].label }));

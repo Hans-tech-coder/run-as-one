@@ -134,7 +134,7 @@ export default function OrderSummary({
 
       {addOnLines.length > 0 && (
         <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-white/5 text-sm">
-          <div className="text-xs font-bold uppercase tracking-wide text-secondary">Add-ons</div>
+          <div className="text-xs font-bold uppercase tracking-wide text-secondary">Add-Ons</div>
           {addOnLines.map((line) => (
             <div key={line.key} className="flex justify-between items-start gap-3">
               <span className="text-white min-w-0 break-words">{line.label}</span>
@@ -148,7 +148,7 @@ export default function OrderSummary({
 
       <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-white/5 text-sm">
         {sizeUpcharge > 0 && (
-          <FeeLine label="Large size surcharge (4XL+)" amount={sizeUpcharge} />
+          <FeeLine label="Large Size Surcharge (4XL+)" amount={sizeUpcharge} />
         )}
         {deliveryFee && (
           <FeeLine

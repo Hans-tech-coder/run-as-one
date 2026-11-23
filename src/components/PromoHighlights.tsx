@@ -52,7 +52,7 @@ export default function PromoHighlights({
     <section className="event-block" aria-labelledby="race-offers">
       <h2 id="race-offers" className="event-block__title flex items-center gap-2">
         <Gift size={22} aria-hidden="true" className="text-[var(--status-success)]" />
-        Offers on this race
+        Offers on This Race
       </h2>
 
       <ul className="m-0 flex list-none flex-col gap-4 p-0">

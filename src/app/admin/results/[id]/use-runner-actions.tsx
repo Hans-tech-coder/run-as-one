@@ -39,14 +39,14 @@ export function useRunnerActions(event: {
   const removeTag = async (runner: RunnerRow) => {
     const ok = await confirm({
       variant: 'danger',
-      title: 'Remove this pacer tag?',
+      title: 'Remove This Pacer Tag?',
       message: (
         <>
           <strong>{runner.name}</strong> (bib {runner.bibNumber}) will be ranked again, so the
           runners behind them in {runner.category.name} move back down a place.
         </>
       ),
-      confirmLabel: 'Remove pacer tag',
+      confirmLabel: 'Remove Pacer Tag',
     });
     if (!ok) return;
 
@@ -81,7 +81,7 @@ export function useRunnerActions(event: {
     const one = runners.length === 1 ? runners[0] : null;
     const ok = await confirm({
       variant: 'danger',
-      title: one ? 'Delete this result?' : `Delete ${runners.length} results?`,
+      title: one ? 'Delete This Result?' : `Delete ${runners.length} Results?`,
       message: (
         <>
           {one
@@ -91,7 +91,7 @@ export function useRunnerActions(event: {
           Uploading the sheet again brings back anyone still in it.
         </>
       ),
-      confirmLabel: one ? 'Delete result' : `Delete ${runners.length} results`,
+      confirmLabel: one ? 'Delete Result' : `Delete ${runners.length} Results`,
     });
     if (!ok) return false;
 
@@ -124,14 +124,14 @@ export function useRunnerActions(event: {
   const actionsFor = (runner: RunnerRow): RowAction[] => [
     {
       key: 'edit-details',
-      label: 'Edit details',
+      label: 'Edit Details',
       icon: <UserPen size={16} />,
       onSelect: () => setOpen({ runner, mode: 'details' }),
     },
     ...pacerActionsFor(runner),
     {
       key: 'delete-result',
-      label: 'Delete result',
+      label: 'Delete Result',
       icon: <Trash2 size={16} />,
       danger: true,
       onSelect: () => { void deleteResults([runner]); },
@@ -144,14 +144,14 @@ export function useRunnerActions(event: {
         ...(resultsOnly
           ? [{
               key: 'pace-group',
-              label: 'Edit pace group',
+              label: 'Edit Pace Group',
               icon: <Pencil size={16} />,
               onSelect: () => setOpen({ runner, mode: 'edit' }),
             }]
           : []),
         {
           key: 'remove-tag',
-          label: 'Remove pacer tag',
+          label: 'Remove Pacer Tag',
           icon: <FlagOff size={16} />,
           danger: true,
           onSelect: () => removeTag(runner),
@@ -161,7 +161,7 @@ export function useRunnerActions(event: {
     if (!runner.isPacer && resultsOnly) {
       return [{
         key: 'mark-pacer',
-        label: 'Mark as pacer',
+        label: 'Mark as Pacer',
         icon: <Flag size={16} />,
         onSelect: () => setOpen({ runner, mode: 'mark' }),
       }];

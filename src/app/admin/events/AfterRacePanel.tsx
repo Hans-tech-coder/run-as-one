@@ -166,7 +166,7 @@ export default function AfterRacePanel({
             <AdminSwitch
               on={timed}
               onToggle={() => onChange({ timedResults: !timed })}
-              label="This race has timed results"
+              label="This Race Has Timed Results"
               hint={
                 draft.timedResults === null
                   ? `${timed ? 'On' : 'Off'} because this is a ${kind}. Switch it if this one is ${timed ? 'not timed' : 'timed'}: while it is on, the finished race's page tells runners official times are coming, for ${RESULTS_PROMISE_DAYS} days after race day.`

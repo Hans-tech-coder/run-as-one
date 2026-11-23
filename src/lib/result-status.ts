@@ -13,8 +13,8 @@ export type ResultStatus = (typeof RESULT_STATUSES)[number];
 
 export const RESULT_STATUS_LABELS: Record<ResultStatus, string> = {
   FINISHED: 'Finished',
-  DNF: 'Did not finish (DNF)',
-  DNS: 'Did not start (DNS)',
+  DNF: 'Did Not Finish (DNF)',
+  DNS: 'Did Not Start (DNS)',
   DQ: 'Disqualified (DQ)',
 };
 

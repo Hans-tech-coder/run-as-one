@@ -642,11 +642,11 @@ export default function BankTransferWizardClient({
       await alert({
         variant: "info",
         title: untouched
-          ? "Let's get you registered"
+          ? "Let's Get You Registered"
           : missing === 1
-            ? "One detail needs your attention"
-            : `${missing} details need your attention`,
-        confirmLabel: untouched ? "Get started" : "Take me there",
+            ? "One Detail Needs Your Attention"
+            : `${missing} Details Need Your Attention`,
+        confirmLabel: untouched ? "Get Started" : "Take Me There",
         message: untouched ? (
           <>
             Select a {choice} first, then fill in the runner details below.
@@ -1630,7 +1630,7 @@ export default function BankTransferWizardClient({
                 {bankAccounts.length === 0 && (
                   <div className="mb-8 p-5 rounded-[16px] border border-accent-orange/30 bg-accent-orange/10">
                     <p className="text-white font-bold m-0 mb-1">
-                      Payment details are not ready yet
+                      Payment Details Are Not Ready Yet
                     </p>
                     <p className="text-secondary m-0">
                       The organizer has not published an account for this event
@@ -1695,7 +1695,7 @@ export default function BankTransferWizardClient({
                       <UploadCloud size={36} className="text-accent-blue" />
                     </div>
                     <div className="text-2xl font-bold text-white">
-                      Drag &amp; Drop your receipt here
+                      Drag &amp; Drop Your Receipt Here
                     </div>
                     <div className="text-secondary mb-2">
                       or click to browse from your device
@@ -1708,7 +1708,7 @@ export default function BankTransferWizardClient({
 
                 {proofCompression.optimizing ? (
                   <div role="status" className="animate-fade-in p-4 bg-white/5 border border-white/10 rounded-[16px] mt-4 text-sm text-secondary">
-                    <BusyLabel>Optimizing image</BusyLabel>
+                    <BusyLabel>Optimizing Image</BusyLabel>
                   </div>
                 ) : proofFile && (
                   <div className="file-preview animate-fade-in p-4 bg-white/5 border border-white/10 rounded-[16px] mt-4 flex items-center justify-between">
@@ -1857,8 +1857,8 @@ export default function BankTransferWizardClient({
 
       <RunnerOverlay
         open={isProcessing}
-        title="Submitting your registration"
-        slowTitle="Still uploading, almost there"
+        title="Submitting Your Registration"
+        slowTitle="Still Uploading, Almost There"
         hint="Uploading your proof of payment. This can take a few seconds on mobile data, so please keep this page open."
       />
     </div>

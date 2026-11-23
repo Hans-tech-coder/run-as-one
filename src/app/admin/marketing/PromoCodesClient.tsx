@@ -213,12 +213,12 @@ type Claim = 'CODE' | 'VOUCHERS' | 'AUTOMATIC';
 const CLAIMS: { value: Claim; label: string; hint: string }[] = [
   {
     value: 'CODE',
-    label: 'One shared code',
+    label: 'One Shared Code',
     hint: 'One code you publish, redeemable by anyone who has it, up to the limit you set.',
   },
   {
     value: 'VOUCHERS',
-    label: 'Single-use vouchers',
+    label: 'Single-Use Vouchers',
     hint: 'A batch of distinct codes, each good for exactly one order. For invites and prizes.',
   },
   {
@@ -443,7 +443,7 @@ function VoucherCodes({
           className="shrink-0 flex items-center gap-2 text-xs font-bold text-primary hover:text-accent-orange-ink transition-colors max-lg:min-h-11 max-lg:px-2 max-lg:-mr-2"
         >
           {copied ? <Check size={14} /> : <Copy size={14} />}
-          {copied ? 'Copied' : 'Copy all codes'}
+          {copied ? 'Copied' : 'Copy All Codes'}
         </button>
       </div>
       <div className="flex flex-wrap gap-2">
@@ -930,10 +930,10 @@ export default function PromoCodesClient({
     {
       id: "event",
       header: "Applies To",
-      accessorFn: row => row.terms.event ? row.terms.event.title : 'All my events',
+      accessorFn: row => row.terms.event ? row.terms.event.title : 'All My Events',
       cell: ({ row }) => (
         <span className="text-secondary">
-          {row.original.terms.event ? row.original.terms.event.title : 'All my events'}
+          {row.original.terms.event ? row.original.terms.event.title : 'All My Events'}
         </span>
       ),
     },
@@ -1305,7 +1305,7 @@ export default function PromoCodesClient({
               { label: 'Discount', value: discountLine(row.original.terms) },
               {
                 label: 'Applies To',
-                value: row.original.terms.event ? row.original.terms.event.title : 'All my events',
+                value: row.original.terms.event ? row.original.terms.event.title : 'All My Events',
               },
               {
                 label: 'Conditions',
@@ -1332,7 +1332,7 @@ export default function PromoCodesClient({
                     aria-expanded={isOpen}
                     className="t-acc-head btn-filter w-full justify-between min-h-11"
                   >
-                    <span>{isOpen ? 'Hide codes' : `Show ${group.codes.length} codes`}</span>
+                    <span>{isOpen ? 'Hide Codes' : `Show ${group.codes.length} Codes`}</span>
                     <span className="t-acc-chevron" aria-hidden="true">
                       <svg
                         viewBox="0 0 16 16"
@@ -1517,7 +1517,7 @@ export default function PromoCodesClient({
                       <span
                         className={`status-badge ${order.status === 'PAID' ? 'success' : 'pending'}`}
                       >
-                        {order.status}
+                        {order.status === 'PAID' ? 'Paid' : 'Pending'}
                       </span>
                     </span>
                   </Link>
@@ -1614,7 +1614,7 @@ export default function PromoCodesClient({
                   inside its column instead of widening it. */}
               <div className="grid gap-5 @min-[30rem]:grid-cols-2 [&>*]:min-w-0">
                 <AdminSelect
-                  label="Discount type"
+                  label="Discount Type"
                   listboxLabel="Kind of discount"
                   value={type}
                   onChange={next => chooseType(next as DiscountType)}
@@ -1661,7 +1661,7 @@ export default function PromoCodesClient({
                   onChange={chooseEvent}
                   error={errorFor('eventId')}
                   options={[
-                    { value: ALL_EVENTS, label: 'All my events', hint: 'Every event you run, now and later' },
+                    { value: ALL_EVENTS, label: 'All My Events', hint: 'Every event you run, now and later' },
                     ...events.map(event => ({
                       value: event.id,
                       label: event.title,
@@ -1677,7 +1677,7 @@ export default function PromoCodesClient({
               {hasValue && (
                 <div className="form-group">
                   <label className="form-label" htmlFor="promo-value">
-                    {type === DISCOUNT_TYPES.PERCENTAGE ? 'Percentage off' : 'Amount off'}
+                    {type === DISCOUNT_TYPES.PERCENTAGE ? 'Percentage Off' : 'Amount Off'}
                   </label>
                   {/* As wide as the Discount type box above it: half the form less
                       half the grid's gap-5, from the width the two columns
@@ -1741,14 +1741,14 @@ export default function PromoCodesClient({
                   as its fill, so being on is never told by colour alone. */}
               {perRunner && form.eventId && scopedCategories.length > 0 && (
                 <div className="form-group">
-                  <span className="form-label" id="promo-scope-label">Applies to</span>
+                  <span className="form-label" id="promo-scope-label">Applies To</span>
                   <div
                     role="group"
                     aria-labelledby="promo-scope-label"
                     className="flex flex-wrap gap-1 rounded-[10px] border border-[var(--dash-border)] bg-[var(--dash-surface)] p-1"
                   >
                     {[
-                      { id: null as string | null, label: 'All categories', distance: '' },
+                      { id: null as string | null, label: 'All Categories', distance: '' },
                       ...scopedCategories.map(category => ({
                         id: category.id as string | null,
                         label: category.name,
@@ -1808,7 +1808,7 @@ export default function PromoCodesClient({
                   five identical inputs names none of them. */}
               {type === DISCOUNT_TYPES.CATEGORY_PRICE && (
                 <div className="form-group">
-                  <span className="form-label">Promotion prices</span>
+                  <span className="form-label">Promotion Prices</span>
 
                   {!form.eventId ? (
                     /* Not an error — nothing has been submitted — but the panel
@@ -1857,7 +1857,7 @@ export default function PromoCodesClient({
                                   a price to replace it, which is the same thing
                                   the event page will do. */}
                               <span className="shrink-0 text-sm tabular-nums text-secondary max-sm:col-span-2">
-                                <span className="dash-phone-only">List price </span>
+                                <span className="dash-phone-only">List Price </span>
                                 <span className={typed.trim() ? 'line-through' : ''}>
                                   &#8369;{formatPesos(category.price)}
                                 </span>
@@ -1868,7 +1868,7 @@ export default function PromoCodesClient({
                                   is still what a screen reader hears. */}
                               <span className="contents max-sm:flex max-sm:flex-col max-sm:gap-1 max-sm:min-w-0">
                                 <span className="dash-phone-only text-xs text-secondary" aria-hidden="true">
-                                  Promotion price
+                                  Promotion Price
                                 </span>
                                 <label className="sr-only" htmlFor={`promo-price-${category.id}`}>
                                   {`Promotion price for ${category.name}`}
@@ -1898,7 +1898,7 @@ export default function PromoCodesClient({
                                 <>
                                   <span className="contents max-sm:flex max-sm:flex-col max-sm:gap-1 max-sm:min-w-0">
                                     <span className="dash-phone-only text-xs text-secondary" aria-hidden="true">
-                                      Runners at it
+                                      Runners at It
                                     </span>
                                     <label
                                       className="sr-only"
@@ -1970,7 +1970,7 @@ export default function PromoCodesClient({
                       <FieldError id="promo-buy-error" message={errorFor('buyQuantity')} />
                     </div>
                     <div className="form-group flex-1">
-                      <label className="form-label" htmlFor="promo-get">Get free</label>
+                      <label className="form-label" htmlFor="promo-get">Get Free</label>
                       <input
                         id="promo-get"
                         type="number"
@@ -2003,7 +2003,7 @@ export default function PromoCodesClient({
                   was ever told about. Creating the other one is the honest
                   way, and the route refuses the change too. */}
               <div className="form-group @container" hidden={Boolean(editing)}>
-                <span className="form-label">How runners get it</span>
+                <span className="form-label">How Runners Get It</span>
                 {/* One line per label, never two: each option is as wide as
                     its words (`flex-auto`, `nowrap`). Where the modal itself
                     is too narrow for all three on one row — measured on the
@@ -2065,7 +2065,7 @@ export default function PromoCodesClient({
               <div className="form-group" hidden={type === DISCOUNT_TYPES.FREE_ENTRY}>
                 <AdminSwitch
                   on={form.combinable}
-                  label="Combine with other promotions"
+                  label="Combine with Other Promotions"
                   hint={
                     type === DISCOUNT_TYPES.BUY_X_GET_Y
                       ? 'Applies on top of a discounted price, percentage or fixed amount that is also set to combine. The free runners are taken at their discounted price.'
@@ -2080,7 +2080,7 @@ export default function PromoCodesClient({
                   group of five uses five. */}
               {perRunner && claim === 'CODE' && (
                 <div className="form-group">
-                  <label className="form-label" htmlFor="promo-limit">Runner limit (optional)</label>
+                  <label className="form-label" htmlFor="promo-limit">Runner Limit (Optional)</label>
                   <input
                     id="promo-limit"
                     type="number"
@@ -2115,7 +2115,7 @@ export default function PromoCodesClient({
 
               {claim === 'AUTOMATIC' ? (
                 <div className="form-group">
-                  <label className="form-label" htmlFor="promo-name">Promotion name</label>
+                  <label className="form-label" htmlFor="promo-name">Promotion Name</label>
                   <input
                     id="promo-name"
                     type="text"
@@ -2135,7 +2135,7 @@ export default function PromoCodesClient({
               ) : claim === 'VOUCHERS' ? (
                 <>
                   <div className="form-group">
-                    <label className="form-label" htmlFor="promo-batch">Batch name</label>
+                    <label className="form-label" htmlFor="promo-batch">Batch Name</label>
                     <input
                       id="promo-batch"
                       type="text"
@@ -2153,7 +2153,7 @@ export default function PromoCodesClient({
                   </div>
                   <div className="flex max-sm:flex-col gap-4" hidden={Boolean(editing)}>
                     <div className="form-group flex-1">
-                      <label className="form-label" htmlFor="promo-prefix">Code prefix (optional)</label>
+                      <label className="form-label" htmlFor="promo-prefix">Code Prefix (Optional)</label>
                       <input
                         id="promo-prefix"
                         type="text"
@@ -2164,7 +2164,7 @@ export default function PromoCodesClient({
                       />
                     </div>
                     <div className="form-group flex-1">
-                      <label className="form-label" htmlFor="promo-count">How many</label>
+                      <label className="form-label" htmlFor="promo-count">How Many</label>
                       <input
                         id="promo-count"
                         type="number"
@@ -2218,7 +2218,7 @@ export default function PromoCodesClient({
                   runs until it is paused — which is what an uncapped one
                   always did. */}
               <div className="form-group">
-                <span className="form-label">When it runs</span>
+                <span className="form-label">When It Runs</span>
 
                 {claim === 'VOUCHERS' && (
                   <p className="m-0 mb-1 text-xs text-secondary">

@@ -190,7 +190,7 @@ export async function pendingFor(
     const link = payable && !proofSubmitted ? await switchLinkFor(change, requestUrl) : null;
     pending.push({
       kind: 'delivery',
-      title: change.direction === LOGISTICS_DIRECTIONS.TO_DELIVERY ? 'Pickup → delivery' : 'Delivery → pickup',
+      title: change.direction === LOGISTICS_DIRECTIONS.TO_DELIVERY ? 'Pickup → Delivery' : 'Delivery → Pickup',
       amount: change.fee,
       proofSubmitted,
       payUrl: link?.url ?? null,

@@ -67,7 +67,7 @@ export default function ResetPasswordClient({ token }: { token: string }) {
       <div className="auth-card">
         <div className="auth-header">
           <RunAsOneLogo variant="stacked" className="[--rao-logo-size:64px] mb-5" />
-          <h1 className="auth-title">Choose a new password</h1>
+          <h1 className="auth-title">Choose a New Password</h1>
           <p className="auth-subtitle">
             Every device signed in to your account will be signed out. You will sign in again with
             the new password.
@@ -82,7 +82,7 @@ export default function ResetPasswordClient({ token }: { token: string }) {
 
         {gone ? (
           <Link href="/admin/forgot-password" className="btn-gradient auth-submit text-white font-medium">
-            Request a new link
+            Request a New Link
           </Link>
         ) : (
           <form onSubmit={handleSubmit} className="auth-form" noValidate>
@@ -117,7 +117,7 @@ export default function ResetPasswordClient({ token }: { token: string }) {
               disabled={isSubmitting}
               className="btn-gradient auth-submit text-white font-medium"
             >
-              {isSubmitting ? <BusyLabel>Saving</BusyLabel> : 'Set new password'}
+              {isSubmitting ? <BusyLabel>Saving</BusyLabel> : 'Set New Password'}
             </button>
           </form>
         )}

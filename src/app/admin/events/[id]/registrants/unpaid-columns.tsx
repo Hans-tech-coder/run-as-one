@@ -14,7 +14,7 @@ import { formatPesos } from '@/lib/money';
 import type { UnpaidCheckout } from './UnpaidCheckoutsList';
 
 const STATUS_BADGES: Record<UnpaidCheckout['status'], { label: string; tone: string }> = {
-  PENDING: { label: 'Awaiting payment', tone: 'pending' },
+  PENDING: { label: 'Awaiting Payment', tone: 'pending' },
   EXPIRED: { label: 'Expired', tone: 'neutral' },
   CANCELLED: { label: 'Cancelled', tone: 'danger' },
 };
@@ -114,7 +114,7 @@ export function unpaidColumns(
       // Sorted by when it was last logged; never-contacted orders first.
       id: 'followUp',
       accessorFn: order => order.followUp?.at ?? '',
-      header: 'Follow-up',
+      header: 'Follow-Up',
       cell: ({ row }) => <FollowUpSummary followUp={row.original.followUp} />,
     },
     {

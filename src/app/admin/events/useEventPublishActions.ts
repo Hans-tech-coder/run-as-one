@@ -67,7 +67,7 @@ export function useEventPublishActions(setTableEvents: React.Dispatch<React.SetS
       router.refresh();
     } catch (error) {
       await alert({
-        title: 'Publishing not saved',
+        title: 'Publishing Not Saved',
         message: `${event.title} is unchanged. ${
           error instanceof Error ? error.message : 'The request did not reach the server.'
         }`,

@@ -49,11 +49,11 @@ export default function EventPicker({
     <section className="admin-panel">
       <div className="admin-panel-header">
         <h2 className="admin-panel-title">
-          <StepTitle n={1} label="Choose the race" />
+          <StepTitle n={1} label="Choose the Race" />
         </h2>
         {selected && (
           <button type="button" onClick={() => onSelect(null)} className="btn-filter min-h-11">
-            Change race
+            Change Race
           </button>
         )}
       </div>
@@ -73,7 +73,7 @@ export default function EventPicker({
           <div className="empty-state">
             <CalendarCheck size={40} className="empty-icon" aria-hidden="true" />
             <div>
-              <p className="mb-2 font-bold text-primary">No race is waiting for results</p>
+              <p className="mb-2 font-bold text-primary">No Race Is Waiting for Results</p>
               <p className="m-0 max-w-md text-sm leading-relaxed">
                 A race shows here once its day has come, until its results are uploaded. Races still to
                 come are not listed, and a race that already has results is opened from the Results list.

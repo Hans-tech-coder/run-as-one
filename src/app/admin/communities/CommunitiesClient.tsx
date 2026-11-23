@@ -243,7 +243,7 @@ export default function CommunitiesClient() {
               <Clock size={20} className="text-accent-orange-ink shrink-0" />
               <div className="text-sm">
                 <strong className="text-primary">
-                  {pendingCount} club{pendingCount === 1 ? '' : 's'} awaiting review
+                  {pendingCount} Club{pendingCount === 1 ? '' : 's'} Awaiting Review
                 </strong>
                 <div className="text-secondary">
                   Runners wrote these in during registration. They stay out of the
@@ -304,7 +304,7 @@ export default function CommunitiesClient() {
             <AdminCardList
               items={isLoading ? [] : table.getRowModel().rows.map(row => row.original)}
               getKey={c => c.id}
-              label="Running clubs"
+              label="Running Clubs"
               className="is-flush"
               title={c => c.name}
               badges={c => <ClubStatus status={c.status} />}
@@ -312,7 +312,7 @@ export default function CommunitiesClient() {
               expanded={c =>
                 editingId === c.id && (
                   <AdminCardEdit
-                    label="New name"
+                    label="New Name"
                     // A sample, so uppercase — the way a club reads on a
                     // runner's registration.
                     placeholder="TEAM ARMY"
@@ -462,7 +462,7 @@ const COLUMNS: ColumnDef<Community>[] = [
 function ClubStatus({ status }: { status: string }) {
   return (
     <span className={`status-badge ${status === 'APPROVED' ? 'success' : 'pending'}`}>
-      {status}
+      {status === 'APPROVED' ? 'Approved' : 'Pending'}
     </span>
   );
 }

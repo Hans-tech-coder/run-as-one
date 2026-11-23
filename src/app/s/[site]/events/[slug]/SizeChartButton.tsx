@@ -19,7 +19,7 @@ export default function SizeChartButton({ imageUrl }: { imageUrl: string }) {
         onClick={() => setOpen(true)}
         className="site-link site-link--arrow text-[0.9375rem]"
       >
-        <Ruler size={16} aria-hidden="true" /> <span>See the size chart</span>
+        <Ruler size={16} aria-hidden="true" /> <span>See the Size Chart</span>
       </button>
       {open && (
         <ZoomLightbox

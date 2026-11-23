@@ -86,7 +86,7 @@ export default function TrackLookup({ help }: { help: TrackHelp }) {
       setMiss(data?.error || 'Something went wrong. Please try again in a moment.');
       window.setTimeout(() => missRef.current?.focus(), 0);
     } catch {
-      alert({ variant: 'danger', title: 'We could not look that up', message: 'Check your connection and try again.' });
+      alert({ variant: 'danger', title: 'We Could Not Look That Up', message: 'Check your connection and try again.' });
     } finally {
       setBusy(false);
     }
@@ -119,7 +119,7 @@ export default function TrackLookup({ help }: { help: TrackHelp }) {
     >
       <div className="relative z-10 flex flex-col gap-5">
         <div className="input-group">
-          <label htmlFor={FIELD_ID.ref}>Registration reference</label>
+          <label htmlFor={FIELD_ID.ref}>Registration Reference</label>
           <input
             id={FIELD_ID.ref}
             type="text"
@@ -144,7 +144,7 @@ export default function TrackLookup({ help }: { help: TrackHelp }) {
         </div>
 
         <div className="input-group">
-          <label htmlFor={FIELD_ID.email}>Email you registered with</label>
+          <label htmlFor={FIELD_ID.email}>Email You Registered With</label>
           <input
             id={FIELD_ID.email}
             type="email"
@@ -201,11 +201,11 @@ export default function TrackLookup({ help }: { help: TrackHelp }) {
 
         <button type="submit" disabled={busy} className="btn-gradient w-full">
           {busy ? (
-            <BusyLabel>Looking up</BusyLabel>
+            <BusyLabel>Looking Up</BusyLabel>
           ) : (
             <>
               <Search size={18} aria-hidden="true" className="shrink-0" />
-              <span>Track</span>
+              <span>Track Registration</span>
             </>
           )}
         </button>

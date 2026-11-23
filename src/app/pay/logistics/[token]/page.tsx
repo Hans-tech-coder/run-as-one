@@ -69,7 +69,7 @@ export default async function SwitchPayPage({
     return (
       <Notice
         icon={<Clock size={30} aria-hidden="true" />}
-        eyebrow="Please wait"
+        eyebrow="Please Wait"
         title="Too Many Tries"
         body="This link was opened many times from your connection in the last minute. Wait a minute, then open it again."
       />
@@ -84,7 +84,7 @@ export default async function SwitchPayPage({
     return (
       <Notice
         icon={<Link2Off size={30} aria-hidden="true" />}
-        eyebrow="Payment link"
+        eyebrow="Payment Link"
         title="This Link Has Expired"
         body="A kit delivery payment link lasts only as long as the switch waits for its payment. Email us if you still want your kits delivered, and we will help you."
         actions={
@@ -134,13 +134,13 @@ export default async function SwitchPayPage({
 
   const rows: [string, React.ReactNode][] = [
     ['Race', change.event.title],
-    ['Race day', formatEventDay(change.event.date)],
+    ['Race Day', formatEventDay(change.event.date)],
     ['Order', order.orderRef],
     ['Switch', change.changeRef],
     ['Kits', `${kits} ${kits === 1 ? 'kit' : 'kits'}`],
-    ['Payment method', outside ? 'GCash or bank transfer' : method ? paymentMethodLabel(method) : 'Online'],
+    ['Payment Method', outside ? 'GCash or Bank Transfer' : method ? paymentMethodLabel(method) : 'Online'],
     // With the proof in, the hold no longer closes it (T6).
-    ...(change.holdUntil && !proofIn ? [['Pay by', formatEventInstant(change.holdUntil)] as [string, string]] : []),
+    ...(change.holdUntil && !proofIn ? [['Pay By', formatEventInstant(change.holdUntil)] as [string, string]] : []),
   ];
 
   return (
@@ -150,7 +150,7 @@ export default async function SwitchPayPage({
           <IconBadge>
             <Truck size={30} aria-hidden="true" />
           </IconBadge>
-          <p className="mb-2 mt-6 text-sm font-semibold text-site-accent">Kit delivery</p>
+          <p className="mb-2 mt-6 text-sm font-semibold text-site-accent">Kit Delivery</p>
           <h1 className="site-h2 mb-3">
             Ship Your Race Kits
           </h1>

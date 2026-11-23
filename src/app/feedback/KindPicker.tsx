@@ -38,13 +38,13 @@ export default function KindPicker({
   return (
     <fieldset className="m-0 border-0 p-0">
       <legend className="mb-1 block p-0 text-[0.9375rem] font-semibold text-site-ink">
-        What is this about?
+        What Is This About?
       </legend>
 
       <div
         id={id}
         role="radiogroup"
-        aria-label="What is this about?"
+        aria-label="What Is This About?"
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? `${id}-error` : undefined}
         tabIndex={-1}

@@ -180,7 +180,7 @@ export default async function EventDetails({ site, slug, staff }: { site: string
         </p>
       )}
 
-      <RaceHeader event={event} back={{ href: '/events', label: 'All races' }} />
+      <RaceHeader event={event} back={{ href: '/events', label: 'All Races' }} />
 
       {/* The poster and the details on the left, the decision column on the
           right, beside the poster. On a phone the column comes first (order),
@@ -203,7 +203,7 @@ export default async function EventDetails({ site, slug, staff }: { site: string
                 nothing to add — not that the page should invent a sentence. */}
             {event.description?.trim() && (
               <section className="event-block" aria-labelledby="about-race">
-                <h2 id="about-race" className="event-block__title">About the race</h2>
+                <h2 id="about-race" className="event-block__title">About the Race</h2>
                 {/* Headings, lists and emphasis come from the admin editor's
                     toolbar; see src/lib/rich-text.ts for what it may contain. */}
                 <RichText source={event.description} className="event-prose" />
@@ -214,7 +214,7 @@ export default async function EventDetails({ site, slug, staff }: { site: string
 
             {withInclusions.length > 0 && (
               <section className="event-block" aria-labelledby="inclusions">
-                <h2 id="inclusions" className="event-block__title">What&apos;s included</h2>
+                <h2 id="inclusions" className="event-block__title">What&apos;s Included</h2>
 
                 {sharedInclusions ? (
                   <InclusionsGrid items={withInclusions[0].inclusions} />
@@ -243,7 +243,7 @@ export default async function EventDetails({ site, slug, staff }: { site: string
                 screen with zoom, so small print on a poster can be read. */}
             {highlights.length > 0 && (
               <section className="event-block" aria-labelledby="highlights">
-                <h2 id="highlights" className="event-block__title">Race kit and highlights</h2>
+                <h2 id="highlights" className="event-block__title">Race Kit and Highlights</h2>
                 <EventHighlightsGallery highlights={highlights} title={event.title} />
               </section>
             )}

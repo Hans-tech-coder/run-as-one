@@ -56,7 +56,7 @@ export const ORGANIZER_TYPE_COPY: Record<OrganizerType, { label: string; hint: s
     hint: 'A city, municipal or provincial event',
   },
   NONPROFIT: {
-    label: 'Non-profit or Foundation',
+    label: 'Non-Profit or Foundation',
     hint: 'A charity run or a fundraising event',
   },
   INDIVIDUAL: {
@@ -85,11 +85,11 @@ export type OrganizerExperience = (typeof ORGANIZER_EXPERIENCE)[number];
  * have been read is one that hands them to somebody else's platform.
  */
 export const ORGANIZER_EXPERIENCE_LABEL: Record<OrganizerExperience, string> = {
-  FIRST: 'This will be our first event',
-  ONE_TO_TWO: '1 to 2 events',
-  THREE_TO_FIVE: '3 to 5 events',
-  SIX_TO_TEN: '6 to 10 events',
-  OVER_TEN: 'More than 10 events',
+  FIRST: 'This Will Be Our First Event',
+  ONE_TO_TWO: '1 to 2 Events',
+  THREE_TO_FIVE: '3 to 5 Events',
+  SIX_TO_TEN: '6 to 10 Events',
+  OVER_TEN: 'More Than 10 Events',
 };
 
 /**
@@ -145,8 +145,8 @@ export type ServiceGroup = 'ONLINE' | 'RACE_DAY' | 'COMING_SOON';
 
 export const SERVICE_GROUP_LABEL: Record<ServiceGroup, string> = {
   ONLINE: 'Online',
-  RACE_DAY: 'Race day',
-  COMING_SOON: 'Coming soon',
+  RACE_DAY: 'Race Day',
+  COMING_SOON: 'Coming Soon',
 };
 
 export const ORGANIZER_SERVICE_COPY: Record<
@@ -255,11 +255,11 @@ export const EXPECTED_PARTICIPANTS = [
 export type ExpectedParticipants = (typeof EXPECTED_PARTICIPANTS)[number];
 
 export const EXPECTED_PARTICIPANTS_LABEL: Record<ExpectedParticipants, string> = {
-  UNDER_100: 'Under 100 runners',
-  FROM_100_TO_300: '100 to 300 runners',
-  FROM_300_TO_500: '300 to 500 runners',
-  FROM_500_TO_1000: '500 to 1,000 runners',
-  OVER_1000: 'More than 1,000 runners',
+  UNDER_100: 'Under 100 Runners',
+  FROM_100_TO_300: '100 to 300 Runners',
+  FROM_300_TO_500: '300 to 500 Runners',
+  FROM_500_TO_1000: '500 to 1,000 Runners',
+  OVER_1000: 'More Than 1,000 Runners',
 };
 
 /* ─────────────────────────────── Readers ──────────────────────────────── */

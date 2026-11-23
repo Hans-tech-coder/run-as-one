@@ -9,7 +9,7 @@
  */
 export const EVENT_NOT_FOUND = {
   title: 'Event Not Found',
-  heading: 'Event not found.',
+  heading: 'Event Not Found',
   body: 'The link may be an old one, or the event may have been deleted. Your other events are where you left them.',
   homeHref: '/admin/events',
   homeLabel: 'Back to Events',

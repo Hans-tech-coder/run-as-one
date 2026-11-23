@@ -114,7 +114,7 @@ export default function BrandImageField({
               <UploadCloud size={28} aria-hidden="true" />
             </div>
             <div className="file-upload-title">
-              {uploading ? <BusyLabel>Uploading</BusyLabel> : `Upload ${label.toLowerCase()}`}
+              {uploading ? <BusyLabel>Uploading</BusyLabel> : `Upload ${label}`}
             </div>
             <div className="file-upload-desc">
               {listUploadTypes('image')} • {hint}

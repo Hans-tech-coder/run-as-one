@@ -87,7 +87,7 @@ export function RaceDetails({
   // date here would be a second, quieter answer to the same question.
   if (!finished && !closed && event.registrationClosesAt && closesLater(event, now)) {
     facts.push(
-      <Fact key="closes" icon={<CalendarX2 size={ICON} />} label="Registration closes">
+      <Fact key="closes" icon={<CalendarX2 size={ICON} />} label="Registration Closes">
         {formatEventInstant(event.registrationClosesAt)}
       </Fact>,
     );
@@ -96,7 +96,7 @@ export function RaceDetails({
   // A virtual run has no gun: its window is in the hero.
   if (!virtual && (event.startTime || event.endTime)) {
     facts.push(
-      <Fact key="start" icon={<Clock size={ICON} />} label={event.startTime ? 'Race start' : 'Race ends'}>
+      <Fact key="start" icon={<Clock size={ICON} />} label={event.startTime ? 'Race Start' : 'Race Ends'}>
         {formatEventTime(event.startTime || event.endTime!)}
         {event.startTime && event.endTime && (
           <span className="block text-sm font-normal text-site-muted">Ends {formatEventTime(event.endTime)}</span>
@@ -149,7 +149,7 @@ export function RaceDetails({
   ].filter((tier): tier is string => Boolean(tier));
   if (!finished && tiers.length > 0) {
     facts.push(
-      <Fact key="delivery" icon={<Truck size={ICON} />} label="Kit delivery">
+      <Fact key="delivery" icon={<Truck size={ICON} />} label="Kit Delivery">
         {tiers.map((tier) => (
           <span key={tier} className="block">{tier}</span>
         ))}
@@ -171,7 +171,7 @@ export function RaceDetails({
   return (
     <section className="event-block" aria-labelledby="race-details">
       <h2 id="race-details" className="event-block__title">
-        {virtual ? 'Run details' : 'Race details'}
+        {virtual ? 'Run Details' : 'Race Details'}
       </h2>
       <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5 m-0">{facts}</dl>
       {event.sizeChartImageUrl?.trim() && (

@@ -77,7 +77,7 @@ export default async function FullResultsPage({
 
   return (
     <div className="site-wrap pb-16 md:pb-20">
-      <RaceHeader event={event} back={{ href: `/results/${event.slug}`, label: 'Race winners' }} title="Full leaderboard" />
+      <RaceHeader event={event} back={{ href: `/results/${event.slug}`, label: 'Race Winners' }} title="Full Leaderboard" />
       <div className="w-full">
         <div className="w-full">
           <Suspense fallback={<div className="py-12 text-center text-site-muted">Loading results…</div>}>

@@ -127,7 +127,7 @@ export default function SwitchConfirm(props: SwitchConfirmProps) {
   if (step === 'details') {
     return (
       <div className="flex flex-col gap-6 text-left">
-        <StepLabel n={1} title="Confirm your delivery details" />
+        <StepLabel n={1} title="Confirm Your Delivery Details" />
         <DeliveryStep
           plan={plan}
           event={props.event}
@@ -137,7 +137,7 @@ export default function SwitchConfirm(props: SwitchConfirmProps) {
         />
         <div className="flex items-baseline justify-between gap-4 rounded-[14px] border border-site-line bg-site-card px-4 py-3">
           <span className="text-sm text-site-muted">
-            {props.onlineMethod && plan.fee > 0 ? 'Delivery and transaction fee' : 'Delivery fee'}
+            {props.onlineMethod && plan.fee > 0 ? 'Delivery and Transaction Fee' : 'Delivery Fee'}
           </span>
           {plan.fee > 0 ? (
             <span className="text-lg font-semibold tabular-nums text-site-ink">{peso(previewTotal)}</span>
@@ -167,10 +167,10 @@ export default function SwitchConfirm(props: SwitchConfirmProps) {
 
   return (
     <div className="flex flex-col gap-6 text-left">
-      <StepLabel n={2} title={proofIn ? 'Payment proof submitted' : 'Pay for the delivery'} />
+      <StepLabel n={2} title={proofIn ? 'Payment Proof Submitted' : 'Pay for the Delivery'} />
 
       <dl className="m-0 grid grid-cols-1 overflow-hidden rounded-[14px] border border-site-line bg-site-card">
-        <Row label="Ships to" value={details.place || 'The address on your order'} />
+        <Row label="Ships To" value={details.place || 'The address on your order'} />
         {details.landmark && <Row label="Landmark" value={details.landmark} />}
         <Row
           label="Receiver"
@@ -186,17 +186,17 @@ export default function SwitchConfirm(props: SwitchConfirmProps) {
               }}
               className="inline-flex min-h-[44px] items-center gap-2 text-sm font-semibold text-accent-orange transition-colors hover:text-site-ink"
             >
-              <Pencil size={14} aria-hidden="true" /> Edit details
+              <Pencil size={14} aria-hidden="true" /> Edit Details
             </button>
           </div>
         )}
       </dl>
 
       <dl className="m-0 grid grid-cols-1 overflow-hidden rounded-[14px] border border-site-line bg-site-card">
-        <Row label="Delivery fee" value={peso(saved.fee)} />
-        {saved.totalCharged > saved.fee && <Row label="Transaction fee" value={peso(saved.totalCharged - saved.fee)} />}
+        <Row label="Delivery Fee" value={peso(saved.fee)} />
+        {saved.totalCharged > saved.fee && <Row label="Transaction Fee" value={peso(saved.totalCharged - saved.fee)} />}
         <div className="flex items-baseline justify-between gap-4 bg-site-surface px-4 py-4">
-          <dt className="text-sm font-semibold text-site-ink">Amount due</dt>
+          <dt className="text-sm font-semibold text-site-ink">Amount Due</dt>
           <dd className="m-0 text-xl font-semibold tabular-nums text-site-ink">{amount}</dd>
         </div>
       </dl>
@@ -225,7 +225,7 @@ export default function SwitchConfirm(props: SwitchConfirmProps) {
             </p>
           </div>
           <button type="button" onClick={() => setReplacing(true)} className="btn-secondary justify-center">
-            Replace proof
+            Replace Proof
           </button>
         </div>
       ) : (
@@ -257,7 +257,7 @@ function homeParts(runner: AddressedRunner) {
   };
 }
 
-const STEP_LABELS = ['Delivery details', 'Payment'];
+const STEP_LABELS = ['Delivery Details', 'Payment'];
 
 /** The two-step rail, then the step's title (the rail's labels show from `sm` up only). */
 function StepLabel({ n, title }: { n: number; title: string }) {

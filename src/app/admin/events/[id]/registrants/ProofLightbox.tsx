@@ -460,7 +460,7 @@ export default function ProofLightbox({
               </div>
             ) : (
               <p className="flex flex-col m-0 text-sm">
-                <span className="text-xs text-[var(--text-muted)]">Paid to</span>
+                <span className="text-xs text-[var(--text-muted)]">Paid To</span>
                 <span className={paidTo.value ? 'text-primary font-medium' : 'text-[var(--text-muted)] italic'}>
                   {paidToLabel(paidTo.value)}
                 </span>

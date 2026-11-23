@@ -143,7 +143,7 @@ export const FREE_ORDER_EMAIL_NOTE =
   'A free order is confirmed on placement, so it is sent the receipt rather than the acknowledgement.';
 
 /** What the wizard's last button says when there is nothing to pay. */
-export const FREE_ORDER_SUBMIT_LABEL = 'Complete registration';
+export const FREE_ORDER_SUBMIT_LABEL = 'Complete Registration';
 
 /** And what the summary calls a total of zero, instead of "Total Amount to Pay". */
 export const FREE_ORDER_TOTAL_LABEL = 'Nothing to Pay';

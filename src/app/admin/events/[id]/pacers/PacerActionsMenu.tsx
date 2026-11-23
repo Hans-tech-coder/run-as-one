@@ -193,7 +193,7 @@ export default function PacerActionsMenu({
           role="menuitem"
         >
           {copied ? <Check size={16} /> : <Copy size={16} />}
-          {copied ? 'Copied' : 'Copy code'}
+          {copied ? 'Copied' : 'Copy Code'}
         </button>
         {/* Straight after it, and deliberately a separate act. Copying is not
             sending: a mark set by the copy button would hide exactly the pacer
@@ -209,7 +209,7 @@ export default function PacerActionsMenu({
           role="menuitem"
         >
           {isCodeSent ? <MailX size={16} /> : <MailCheck size={16} />}
-          {isCodeSent ? 'Mark as not sent' : 'Mark as sent'}
+          {isCodeSent ? 'Mark as Not Sent' : 'Mark as Sent'}
         </button>
         <button
           onClick={() => {
@@ -220,7 +220,7 @@ export default function PacerActionsMenu({
           role="menuitem"
         >
           <PencilLine size={16} />
-          Edit details
+          Edit Details
         </button>
         {/* The reversible answer to "stop this", between the edits and the
             deletion — and the only answer once a pacer has registered. */}
@@ -250,7 +250,7 @@ export default function PacerActionsMenu({
             role="menuitem"
           >
             <BadgeDollarSign size={16} />
-            {isFeeWaived ? 'Charge admin fee' : 'Waive admin fee'}
+            {isFeeWaived ? 'Charge Admin Fee' : 'Waive Admin Fee'}
           </button>
         )}
         {!isRegistered && (

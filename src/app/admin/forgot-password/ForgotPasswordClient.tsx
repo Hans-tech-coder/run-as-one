@@ -63,7 +63,7 @@ export default function ForgotPasswordClient() {
             <Link href="/" className="auth-logo-link mb-5" aria-label="Run As One home page">
               <RunAsOneLogo variant="stacked" className="[--rao-logo-size:64px]" decorative />
             </Link>
-            <h1 className="auth-title">{sentTo ? 'Check your email' : 'Reset your password'}</h1>
+            <h1 className="auth-title">{sentTo ? 'Check Your Email' : 'Reset Your Password'}</h1>
             <p className="auth-subtitle">
               {sentTo ? (
                 <>
@@ -93,7 +93,7 @@ export default function ForgotPasswordClient() {
                 href="/admin/login"
                 className="btn-gradient auth-submit text-white font-medium mt-6"
               >
-                Back to sign in
+                Back to Sign In
               </Link>
             </>
           ) : (
@@ -125,7 +125,7 @@ export default function ForgotPasswordClient() {
                 disabled={isSubmitting}
                 className="btn-gradient auth-submit text-white font-medium"
               >
-                {isSubmitting ? <BusyLabel>Sending</BusyLabel> : 'Send reset link'}
+                {isSubmitting ? <BusyLabel>Sending</BusyLabel> : 'Send Reset Link'}
               </button>
             </form>
           )}
@@ -134,7 +134,7 @@ export default function ForgotPasswordClient() {
             <div className="auth-footer">
               Remembered it?{' '}
               <Link href="/admin/login" className="site-link">
-                Back to sign in
+                Back to Sign In
               </Link>
             </div>
           )}

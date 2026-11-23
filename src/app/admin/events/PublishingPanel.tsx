@@ -74,7 +74,7 @@ export default function PublishingPanel({
   return (
     <div className="admin-panel">
       <div className="admin-panel-header">
-        <h2 className="admin-panel-title">Publishing & Sign-ups</h2>
+        <h2 className="admin-panel-title">Publishing & Sign-Ups</h2>
       </div>
       <div className="admin-panel-content">
         <div className="flex flex-col gap-8">
@@ -86,7 +86,7 @@ export default function PublishingPanel({
           <section className="flex flex-col gap-3" aria-labelledby={`${idPrefix}-see`}>
             <h3 id={`${idPrefix}-see`} className="flex items-center gap-2 text-base font-semibold text-primary m-0">
               <Eye size={18} aria-hidden="true" className="text-secondary" />
-              1. When can runners see this event?
+              1. When Can Runners See This Event?
             </h3>
             {editing ? (
               publishStatus
@@ -103,7 +103,7 @@ export default function PublishingPanel({
           <section className="flex flex-col gap-3" aria-labelledby={`${idPrefix}-register`}>
             <h3 id={`${idPrefix}-register`} className="flex items-center gap-2 text-base font-semibold text-primary m-0">
               <UserPlus size={18} aria-hidden="true" className="text-secondary" />
-              2. When can runners register?
+              2. When Can Runners Register?
             </h3>
             <RegistrationOpeningPicker
               value={opening}
@@ -116,7 +116,7 @@ export default function PublishingPanel({
           <section className="flex flex-col gap-3" aria-labelledby={`${idPrefix}-close`}>
             <h3 id={`${idPrefix}-close`} className="flex items-center gap-2 text-base font-semibold text-primary m-0">
               <CalendarX size={18} aria-hidden="true" className="text-secondary" />
-              3. When does registration close?
+              3. When Does Registration Close?
             </h3>
             <RegistrationOpeningPicker
               kind="closing"

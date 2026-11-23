@@ -32,9 +32,9 @@ export default async function TrackPage() {
         <IconBadge>
           <ClipboardCheck size={30} aria-hidden="true" />
         </IconBadge>
-        <p className="mb-3 mt-6 text-sm font-semibold text-site-accent">Your registration</p>
+        <p className="mb-3 mt-6 text-sm font-semibold text-site-accent">Your Registration</p>
         <h1 className="mb-3 text-2xl font-semibold tracking-wide text-site-ink text-balance sm:text-3xl">
-          Track my registration
+          Track My Registration
         </h1>
         <p className="m-0 max-w-lg text-base leading-relaxed text-secondary">
           See whether your registration is paid or your bank transfer is

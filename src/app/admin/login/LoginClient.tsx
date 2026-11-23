@@ -93,7 +93,7 @@ export default function LoginClient({
             <Link href="/" className="auth-logo-link mb-5" aria-label="Run As One home page">
               <RunAsOneLogo variant="stacked" className="[--rao-logo-size:64px]" decorative />
             </Link>
-            <h1 className="auth-title">Sign in</h1>
+            <h1 className="auth-title">Sign In</h1>
             <p className="auth-subtitle">For Run As One staff and client organizations.</p>
           </div>
 
@@ -164,10 +164,10 @@ export default function LoginClient({
                 >
                   {keep && <Check size={14} strokeWidth={3} className="text-[var(--site-action-ink)]" />}
                 </span>
-                <span>Keep me signed in</span>
+                <span>Keep Me Signed In</span>
               </label>
               <Link href="/admin/forgot-password" className="site-link text-sm">
-                Forgot password?
+                Forgot Password?
               </Link>
             </div>
             <p id="login-keep-hint" className="auth-keep-hint">
@@ -179,7 +179,7 @@ export default function LoginClient({
               disabled={isLoading}
               className="btn-gradient auth-submit text-white font-medium"
             >
-              {isLoading ? <BusyLabel>Signing in</BusyLabel> : 'Sign in'}
+              {isLoading ? <BusyLabel>Signing In</BusyLabel> : 'Sign In'}
             </button>
           </form>
 

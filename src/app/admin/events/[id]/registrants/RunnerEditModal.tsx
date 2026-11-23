@@ -75,7 +75,7 @@ function shirtSizeOptions(stored: string | null | undefined) {
   if (current && !SHIRT_SIZE_CHART.some(row => row.size === normalizeShirtSize(current))) {
     options.push({ value: current, label: current, hint: 'Not on the size chart; kept from the order.' });
   }
-  options.push({ value: '', label: 'No shirt', hint: 'This package has nothing to wear.' });
+  options.push({ value: '', label: 'No Shirt', hint: 'This package has nothing to wear.' });
   return options;
 }
 
@@ -326,7 +326,7 @@ export default function RunnerEditModal({
                   min={`${Number(today().slice(0, 4)) - 100}-01-01`}
                   value={runner.birthdate || ''}
                   placeholder="Select the birthdate"
-                  dialogLabel="Choose the birthdate"
+                  dialogLabel="Choose the Birthdate"
                   onChange={birthdate => setRunner({...runner, birthdate})}
                 />
                 <AdminSelect

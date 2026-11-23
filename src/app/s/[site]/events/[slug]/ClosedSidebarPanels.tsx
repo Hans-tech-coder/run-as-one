@@ -48,7 +48,7 @@ export function RaceIsOver({
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-site-surface text-site-ink">
           <CalendarCheck2 size={20} />
         </div>
-        <h2 className="site-h3 text-xl">Registration closed</h2>
+        <h2 className="site-h3 text-xl">Registration Closed</h2>
       </div>
 
       <p className="m-0 text-[0.9375rem] leading-relaxed text-site-muted">
@@ -62,10 +62,10 @@ export function RaceIsOver({
       <div className="mt-5 flex flex-col gap-3">
         <RacePhotoLinks albums={event.photoAlbums} />
         <Link href="/events?view=past" className="site-btn site-btn--quiet w-full">
-          Back to past races
+          Back to Past Races
         </Link>
         <Link href="/events" className="site-btn site-btn--quiet w-full">
-          Find another race
+          Find Another Race
         </Link>
       </div>
     </div>
@@ -109,7 +109,7 @@ export function RegistrationOnHold({
         href="/events"
         className="site-btn site-btn--quiet mt-5 w-full"
       >
-        Browse other races
+        Browse Other Races
       </Link>
     </div>
   );

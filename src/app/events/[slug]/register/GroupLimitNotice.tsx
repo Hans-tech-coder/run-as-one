@@ -58,8 +58,8 @@ export default function GroupLimitNotice({
       <div>
         <p className="m-0 font-bold text-white">
           {runners > limit
-            ? `This promotion covers ${limit} runners`
-            : `That's the whole group — ${limit} runners`}
+            ? `This Promotion Covers ${limit} Runners`
+            : `That's the Whole Group — ${limit} Runners`}
         </p>
         <p className="m-0 mt-1 text-sm leading-relaxed text-secondary">
           <span className="font-semibold text-white">{label}</span> covers{" "}

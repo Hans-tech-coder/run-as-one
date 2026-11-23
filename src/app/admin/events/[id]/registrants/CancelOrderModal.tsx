@@ -36,6 +36,12 @@ const REASON_MAX = 200;
 const OTHER = 'Other';
 const REASONS = ['Runner declined', 'Duplicate order', 'Test order', OTHER] as const;
 type Reason = (typeof REASONS)[number];
+const REASON_LABELS: Record<Reason, string> = {
+  'Runner declined': 'Runner Declined',
+  'Duplicate order': 'Duplicate Order',
+  'Test order': 'Test Order',
+  Other: 'Other',
+};
 
 /**
  * Mounted when an order is picked and unmounted after it closes, so each
@@ -96,7 +102,7 @@ export default function CancelOrderModal({
         const { error } = await res.json().catch(() => ({ error: '' }));
         await alert({
           variant: 'error',
-          title: 'Order not cancelled',
+          title: 'Order Not Cancelled',
           message: error || 'The order could not be cancelled. Try again.',
         });
         // A 409 means the order moved (paid or expired); the page is read
@@ -111,7 +117,7 @@ export default function CancelOrderModal({
     } catch {
       await alert({
         variant: 'error',
-        title: 'Order not cancelled',
+        title: 'Order Not Cancelled',
         message: 'Something went wrong while cancelling the order. Try again.',
       });
     } finally {
@@ -137,7 +143,7 @@ export default function CancelOrderModal({
       >
         <div className="p-6 max-sm:px-4 max-sm:py-3 border-b border-[var(--dash-border)] flex justify-between items-start gap-4 shrink-0">
           <div className="min-w-0">
-            <h3 id="cancel-order-modal-title" className="text-xl font-semibold text-primary m-0">Cancel order</h3>
+            <h3 id="cancel-order-modal-title" className="text-xl font-semibold text-primary m-0">Cancel Order</h3>
             <p className="text-sm text-secondary mt-1 m-0 [overflow-wrap:anywhere]">
               Order {order.orderRef} &middot; {order.contactName}
             </p>
@@ -161,7 +167,7 @@ export default function CancelOrderModal({
           </p>
 
           <fieldset className="p-0 border-none">
-            <legend className="block text-sm text-secondary mb-2 p-0">Why is it being cancelled?</legend>
+            <legend className="block text-sm text-secondary mb-2 p-0">Why Is It Being Cancelled?</legend>
             <div className="grid grid-cols-2 gap-2">
               {REASONS.map(value => {
                 const selected = choice === value;
@@ -188,7 +194,7 @@ export default function CancelOrderModal({
                         selected ? 'border-accent-blue bg-accent-blue shadow-[inset_0_0_0_2px_var(--dash-panel-solid)]' : 'border-[var(--ink-30)]'
                       }`}
                     />
-                    {value}
+                    {REASON_LABELS[value]}
                   </label>
                 );
               })}
@@ -198,7 +204,7 @@ export default function CancelOrderModal({
           {choice === OTHER && (
             <div className="space-y-2">
               <label htmlFor="cancel-order-other" className="block text-sm text-secondary">
-                The reason
+                The Reason
               </label>
               <textarea
                 id="cancel-order-other"
@@ -224,7 +230,7 @@ export default function CancelOrderModal({
             onClick={close}
             className="px-4 py-2 text-sm font-medium text-[var(--ink-85)] hover:text-primary transition-colors bg-transparent border-none cursor-pointer"
           >
-            Keep order
+            Keep Order
           </button>
           <button
             type="button"
@@ -233,7 +239,7 @@ export default function CancelOrderModal({
             title={missing ?? undefined}
             className="px-5 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
           >
-            {saving ? <BusyLabel>Cancelling</BusyLabel> : 'Cancel order'}
+            {saving ? <BusyLabel>Cancelling</BusyLabel> : 'Cancel Order'}
           </button>
         </div>
       </div>

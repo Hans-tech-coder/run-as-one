@@ -44,7 +44,7 @@ export default function SendLinksButton({
     const skipped = selected.length - n;
     const go = await confirm({
       variant: 'info',
-      title: `Email the payment link to ${n} ${n === 1 ? 'runner' : 'runners'}?`,
+      title: `Email the Payment Link to ${n} ${n === 1 ? 'Runner' : 'Runners'}?`,
       message: `Each gets an email with a link to finish paying. This uses ${n} of the 100 emails the site can send a day, the same allowance registration receipts use.${
         skipped > 0 ? ` ${skipped} marked ${skipped === 1 ? 'order is' : 'orders are'} not awaiting payment and will be skipped.` : ''
       }`,
@@ -66,9 +66,9 @@ export default function SendLinksButton({
     const sentCount = n - notSent.length;
     await alert({
       variant: notSent.length === 0 ? 'success' : sentCount === 0 ? 'error' : 'info',
-      title: notSent.length === 0 ? 'Payment links sent' : `Sent ${sentCount} of ${n}`,
+      title: notSent.length === 0 ? 'Payment Links Sent' : `Sent ${sentCount} of ${n}`,
       message: notSent.length === 0
-        ? `Emailed the payment link to ${n} ${n === 1 ? 'runner' : 'runners'}. Their rows now read "Link sent".`
+        ? `Emailed the payment link to ${n} ${n === 1 ? 'runner' : 'runners'}. Their rows now read "Link Sent".`
         : (
           <>
             <span className="block">Not sent, so send these by hand from each row&apos;s menu:</span>
@@ -86,7 +86,7 @@ export default function SendLinksButton({
         <BusyLabel>{`Sending ${Math.min(progress.done + 1, progress.total)} of ${progress.total}`}</BusyLabel>
       ) : (
         <>
-          <Send size={16} /> Send payment link to {targets.length}
+          <Send size={16} /> Send Payment Link to {targets.length}
         </>
       )}
     </button>

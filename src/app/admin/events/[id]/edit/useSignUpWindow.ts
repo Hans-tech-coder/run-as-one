@@ -74,7 +74,7 @@ export function useSignUpWindow() {
     if (formData.registrationClosed && !saved.closed) {
       return confirm({
         variant: 'danger',
-        title: 'Close sign-ups?',
+        title: 'Close Sign-Ups?',
         message: `Runners will see that registration for ${formData.title || 'this event'} is closed. Orders already placed are not affected. You can reopen it later.`,
         confirmLabel: 'Close Sign-Ups',
       });

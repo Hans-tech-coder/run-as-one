@@ -72,7 +72,7 @@ export default function AdminTablePager<T>({
   return (
     <div className="flex justify-between items-center flex-wrap gap-4 mt-1">
       <div className="flex items-center gap-3 text-primary text-sm font-medium">
-        <span className="text-secondary">Rows per page</span>
+        <span className="text-secondary">Rows per Page</span>
 
         <div ref={pageSizeRef} className="relative">
           <button

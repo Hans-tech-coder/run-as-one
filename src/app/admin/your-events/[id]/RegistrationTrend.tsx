@@ -49,11 +49,11 @@ export default function RegistrationTrend({ trend, printed }: { trend: Trend; pr
     <div className="race-trend">
       <dl className="race-trend-stats">
         <div>
-          <dt>Last 7 days</dt>
+          <dt>Last 7 Days</dt>
           <dd>{runners(lastSevenDays)}</dd>
         </div>
         <div>
-          <dt>Busiest day</dt>
+          <dt>Busiest Day</dt>
           <dd>
             {shortDay(busiest.day)} · {runners(busiest.count)}
           </dd>
@@ -96,12 +96,12 @@ export default function RegistrationTrend({ trend, printed }: { trend: Trend; pr
 
       {printed ? (
         <div className="race-trend-table">
-          <p className="race-trend-days-title">Runners {weekly ? 'per week' : 'per day'}</p>
+          <p className="race-trend-days-title">Runners {weekly ? 'per Week' : 'per Day'}</p>
           {days}
         </div>
       ) : (
         <details className="race-trend-table">
-          <summary>Show the numbers</summary>
+          <summary>Show the Numbers</summary>
           {days}
         </details>
       )}

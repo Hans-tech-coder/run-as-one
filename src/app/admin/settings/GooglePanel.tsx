@@ -61,7 +61,7 @@ export default function GooglePanel({ linked, email }: { linked: boolean; email:
       <div className="admin-panel-header">
         <h2 id="google-sign-in-title" className="admin-panel-title flex items-center gap-2">
           <Link2 size={18} className="text-accent-blue-ink" aria-hidden="true" />
-          Google Sign-in
+          Google Sign-In
         </h2>
       </div>
       <div className="admin-panel-content">

@@ -62,7 +62,7 @@ const MIN_QUERY = 2;
 const SEARCH_DEBOUNCE_MS = 180;
 
 /** Says where the rows go, and does not collide with the sidebar's "Races". */
-const EVENTS_GROUP = 'Event registrants';
+const EVENTS_GROUP = 'Event Registrants';
 
 /** One race as the search route answers with it. */
 type EventHit = { id: string; title: string; day: string; href: string };
@@ -263,7 +263,7 @@ export default function DashboardQuickJump({
         onKeyDown={onKeyDown}
       >
         <h2 id={titleId} className="sr-only">
-          Jump to a page
+          Jump to a Page
         </h2>
 
         <div className="dash-jump-field">

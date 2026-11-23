@@ -105,7 +105,7 @@ export default function TwoFactorClient() {
             <Link href="/" className="auth-logo-link mb-5" aria-label="Run As One home page">
               <RunAsOneLogo variant="stacked" className="[--rao-logo-size:64px]" decorative />
             </Link>
-            <h1 className="auth-title">{recoveryDone ? 'You are signed in' : 'Two-step sign-in'}</h1>
+            <h1 className="auth-title">{recoveryDone ? 'You Are Signed In' : 'Two-Step Sign-In'}</h1>
             <p className="auth-subtitle">
               {recoveryDone
                 ? 'You used a recovery code. Each one works only once.'
@@ -135,7 +135,7 @@ export default function TwoFactorClient() {
               {fewLeft && (
                 <div className="auth-footer">
                   <Link href="/admin/settings/security" className="site-link">
-                    Make new recovery codes
+                    Make New Recovery Codes
                   </Link>
                 </div>
               )}
@@ -151,7 +151,7 @@ export default function TwoFactorClient() {
               <form onSubmit={handleSubmit} className="auth-form" noValidate>
                 <div className="form-group">
                   <label className="form-label" htmlFor={inputId}>
-                    {useRecovery ? 'Recovery code' : 'Code'}
+                    {useRecovery ? 'Recovery Code' : 'Code'}
                   </label>
                   <input
                     key={useRecovery ? 'recovery' : 'totp'}
@@ -187,16 +187,16 @@ export default function TwoFactorClient() {
                   disabled={isSubmitting}
                   className="btn-gradient auth-submit text-white font-medium"
                 >
-                  {isSubmitting ? <BusyLabel>Checking</BusyLabel> : 'Sign in'}
+                  {isSubmitting ? <BusyLabel>Checking</BusyLabel> : 'Sign In'}
                 </button>
               </form>
 
               <div className="auth-footer flex flex-col items-center gap-3">
                 <button type="button" onClick={switchMode} className="site-link" disabled={isSubmitting}>
-                  {useRecovery ? 'Use the code from my authenticator app' : 'Use a recovery code instead'}
+                  {useRecovery ? 'Use the Code from My Authenticator App' : 'Use a Recovery Code Instead'}
                 </button>
                 <Link href="/admin/login" className="site-link">
-                  Back to sign in
+                  Back to Sign In
                 </Link>
               </div>
             </>

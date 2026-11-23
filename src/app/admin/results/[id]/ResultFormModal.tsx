@@ -153,7 +153,7 @@ export default function ResultFormModal({
         className="admin-modal-panel bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-xl w-full max-w-lg overflow-clip"
       >
         <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-2 max-sm:px-4 max-sm:pt-3 shrink-0">
-          <h2 id="edit-result-title" className="text-xl font-bold m-0 min-w-0">{runner ? 'Edit details' : 'Add runner'}</h2>
+          <h2 id="edit-result-title" className="text-xl font-bold m-0 min-w-0">{runner ? 'Edit Details' : 'Add Runner'}</h2>
           <button
             type="button"
             onClick={onClose}
@@ -180,7 +180,7 @@ export default function ResultFormModal({
             {textField('name', 'Name', { transform: upperCaseAsTyped, autoFocus: true })}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              {textField('bibNumber', 'Bib number')}
+              {textField('bibNumber', 'Bib Number')}
               <AdminSelect
                 label="Gender"
                 value={form.gender}
@@ -219,8 +219,8 @@ export default function ResultFormModal({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              {textField('chipTime', 'Chip time', { placeholder: '1:18:56' })}
-              {textField('gunTime', 'Gun time (optional)', { placeholder: '1:19:30' })}
+              {textField('chipTime', 'Chip Time', { placeholder: '1:18:56' })}
+              {textField('gunTime', 'Gun Time (Optional)', { placeholder: '1:19:30' })}
             </div>
           </form>
         </div>
@@ -230,7 +230,7 @@ export default function ResultFormModal({
             Cancel
           </button>
           <button type="submit" form="edit-result-form" className="btn-light flex-1" disabled={isSubmitting}>
-            {isSubmitting ? (runner ? 'Saving' : 'Adding') : runner ? 'Save details' : 'Add runner'}
+            {isSubmitting ? (runner ? 'Saving' : 'Adding') : runner ? 'Save Details' : 'Add Runner'}
           </button>
         </div>
       </div>

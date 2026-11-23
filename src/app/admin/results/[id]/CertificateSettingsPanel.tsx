@@ -32,23 +32,23 @@ import {
 
 const FIELD_LABELS: [keyof CertificateFields, string][] = [
   ['title', 'Certificate of Completion'],
-  ['eventTitle', 'Event title'],
-  ['eventDetails', 'Event date & location'],
+  ['eventTitle', 'Event Title'],
+  ['eventDetails', 'Event Date & Location'],
   ['category', 'Category'],
-  ['bib', 'Bib number'],
-  ['rank', 'Rank (gender, with overall under it)'],
+  ['bib', 'Bib Number'],
+  ['rank', 'Rank (Gender, with Overall Under It)'],
 ];
 
 const INK_OPTIONS = [
   { value: 'auto', label: 'Auto', hint: 'Reads the template and picks dark or light text' },
-  { value: 'dark', label: 'Dark text', hint: 'For a light template' },
-  { value: 'light', label: 'Light text', hint: 'For a dark template' },
+  { value: 'dark', label: 'Dark Text', hint: 'For a light template' },
+  { value: 'light', label: 'Light Text', hint: 'For a dark template' },
 ] as const;
 
 const BYLINE_OPTIONS = [
-  { value: 'center', label: 'Bottom center' },
-  { value: 'right', label: 'Bottom right' },
-  { value: 'left', label: 'Bottom left' },
+  { value: 'center', label: 'Bottom Center' },
+  { value: 'right', label: 'Bottom Right' },
+  { value: 'left', label: 'Bottom Left' },
 ] as const;
 
 const SAMPLE_RUNNERS = {
@@ -119,7 +119,7 @@ export default function CertificateSettingsPanel({
             rel="noopener"
             className="mt-2 inline-flex min-h-11 items-center gap-2 text-sm text-accent-blue-ink"
           >
-            <ExternalLink size={16} aria-hidden="true" /> Template guide
+            <ExternalLink size={16} aria-hidden="true" /> Template Guide
             <span className="sr-only">(opens in a new tab)</span>
           </a>
         </div>
@@ -177,7 +177,7 @@ function DesignedControls({ settings, onChange }: {
   return (
     <>
       <div>
-        <h3 className="text-base font-bold text-primary">Content area</h3>
+        <h3 className="text-base font-bold text-primary">Content Area</h3>
         <p className="text-secondary text-sm mt-1">
           The clear space on the template. The certificate&apos;s text is fitted inside it.
         </p>
@@ -200,16 +200,16 @@ function DesignedControls({ settings, onChange }: {
         })}
       </div>
       <Range
-        label="Top edge" value={settings.top} max={100 - MIN_CONTENT_SPAN}
+        label="Top Edge" value={settings.top} max={100 - MIN_CONTENT_SPAN}
         onChange={(top) => set({ top, bottom: Math.max(settings.bottom, top + MIN_CONTENT_SPAN) })}
       />
       <Range
-        label="Bottom edge" value={settings.bottom} min={MIN_CONTENT_SPAN}
+        label="Bottom Edge" value={settings.bottom} min={MIN_CONTENT_SPAN}
         onChange={(bottom) => set({ bottom, top: Math.min(settings.top, bottom - MIN_CONTENT_SPAN) })}
       />
 
       <AdminSelect
-        label="Text color"
+        label="Text Color"
         listboxLabel="Text color"
         value={settings.ink}
         options={INK_OPTIONS}
@@ -218,7 +218,7 @@ function DesignedControls({ settings, onChange }: {
       />
 
       <div className="form-group">
-        <label className="form-label" htmlFor="certificateAccent">Accent color</label>
+        <label className="form-label" htmlFor="certificateAccent">Accent Color</label>
         <div className="flex items-center gap-3">
           <input
             id="certificateAccent"
@@ -230,7 +230,7 @@ function DesignedControls({ settings, onChange }: {
           <span className="font-mono text-sm text-primary">{accent.toUpperCase()}</span>
           {settings.accent && (
             <button type="button" onClick={() => set({ accent: '' })} className="ml-auto min-h-11 text-sm text-accent-blue-ink">
-              Use Run As One orange
+              Use Run As One Orange
             </button>
           )}
         </div>
@@ -238,7 +238,7 @@ function DesignedControls({ settings, onChange }: {
       </div>
 
       <fieldset className="form-group">
-        <legend className="form-label">Show on the certificate</legend>
+        <legend className="form-label">Show on the Certificate</legend>
         <p className="text-secondary text-sm mb-2">The runner&apos;s name and finish time are always shown.</p>
         <div className="flex flex-col">
           {FIELD_LABELS.map(([key, label]) => (
@@ -257,7 +257,7 @@ function DesignedControls({ settings, onChange }: {
       </fieldset>
 
       <AdminSelect
-        label="Run As One byline"
+        label="Run As One Byline"
         listboxLabel="Run As One byline"
         value={settings.byline}
         options={BYLINE_OPTIONS}
@@ -265,7 +265,7 @@ function DesignedControls({ settings, onChange }: {
         hint="The small “e-certificate by Run As One” mark. Put it where the template is clear."
       />
       <Range
-        label="Byline height from the bottom"
+        label="Byline Height from the Bottom"
         value={settings.bylineBottom}
         min={BYLINE_BOTTOM_RANGE.min}
         max={BYLINE_BOTTOM_RANGE.max}
@@ -284,13 +284,13 @@ function LegacyControls({ settings, onChange, onUpgrade }: {
   return (
     <>
       <div className="rounded-lg border border-[var(--dash-border)] p-4">
-        <h3 className="text-base font-bold text-primary">Old three-line layout</h3>
+        <h3 className="text-base font-bold text-primary">Old Three-Line Layout</h3>
         <p className="text-secondary text-sm mt-1 mb-4">
           This event still prints only the name, time and category in plain text. The designed layout adds the
           full Run As One certificate design on top of the template, in the organizer&apos;s colors.
         </p>
         <button type="button" onClick={onUpgrade} className="btn-light w-full">
-          Switch to designed layout
+          Switch to Designed Layout
         </button>
       </div>
       <Range label="Name Position (Y%)" value={settings.nameY} onChange={(nameY) => onChange({ ...settings, nameY })} />
@@ -356,7 +356,7 @@ function CertificatePreview({ template, settings, event }: {
               onClick={() => setSample(key)}
               className={`min-h-9 rounded-md px-3 text-sm ${sample === key ? 'bg-[var(--dash-hover)] text-primary font-semibold' : 'text-secondary'}`}
             >
-              {key === 'typical' ? 'Sample runner' : 'Long name'}
+              {key === 'typical' ? 'Sample Runner' : 'Long Name'}
             </button>
           ))}
         </div>
@@ -371,7 +371,7 @@ function CertificatePreview({ template, settings, event }: {
         )}
         {(busy || !pdfUrl) && !failed && (
           <div className="absolute inset-0 flex items-center justify-center text-secondary text-sm">
-            <BusyLabel>Drawing preview</BusyLabel>
+            <BusyLabel>Drawing Preview</BusyLabel>
           </div>
         )}
         {failed && (
@@ -382,7 +382,7 @@ function CertificatePreview({ template, settings, event }: {
       </div>
       {pdfUrl && (
         <a href={pdfUrl} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center gap-2 self-start text-sm text-accent-blue-ink">
-          <ExternalLink size={16} /> Open the sample PDF
+          <ExternalLink size={16} /> Open the Sample PDF
         </a>
       )}
     </div>

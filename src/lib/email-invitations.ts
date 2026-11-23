@@ -142,7 +142,7 @@ export function clientInvitationEmail(input: ClientInvitationInput): Promise<Ema
       {
         kind: 'card',
         rows: [
-          { kind: 'info', label: 'Your events', value: 'Every race we run for you' },
+          { kind: 'info', label: 'Your Events', value: 'Every race we run for you' },
           { kind: 'info', label: 'Registrations', value: 'How many runners, paid and pending' },
         ],
       },

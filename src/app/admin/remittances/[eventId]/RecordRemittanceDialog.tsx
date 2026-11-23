@@ -290,7 +290,7 @@ export default function RecordRemittanceDialog({
 
           <div className="form-group">
             <label className="form-label" htmlFor="remittance-reference">
-              Reference Number <span className="text-secondary font-normal">(optional)</span>
+              Reference Number <span className="text-secondary font-normal">(Optional)</span>
             </label>
             <input
               id="remittance-reference"
@@ -312,7 +312,7 @@ export default function RecordRemittanceDialog({
 
           <div className="form-group">
             <label className="form-label" htmlFor="remittance-note">
-              Note <span className="text-secondary font-normal">(optional)</span>
+              Note <span className="text-secondary font-normal">(Optional)</span>
             </label>
             <textarea
               id="remittance-note"
@@ -334,7 +334,7 @@ export default function RecordRemittanceDialog({
 
           <div className="form-group">
             <span className="form-label">
-              Receipt <span className="text-secondary font-normal">(optional)</span>
+              Receipt <span className="text-secondary font-normal">(Optional)</span>
             </span>
             {proof ? (
               <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--dash-border)] bg-[var(--dash-sunken)] px-4 py-3">
@@ -366,7 +366,7 @@ export default function RecordRemittanceDialog({
                 />
                 <div className="file-upload-content">
                   <UploadCloud size={24} className="text-accent-blue-ink" aria-hidden="true" />
-                  <div className="text-sm text-primary">Upload the transfer receipt</div>
+                  <div className="text-sm text-primary">Upload the Transfer Receipt</div>
                   <div className="text-xs">
                     {describeUploadTypes('proof')}, up to {MAX_UPLOAD_MB} MB
                   </div>
@@ -375,7 +375,7 @@ export default function RecordRemittanceDialog({
             )}
             {optimizing && (
               <p role="status" className="m-0 text-sm text-secondary">
-                <BusyLabel>Optimizing image</BusyLabel>
+                <BusyLabel>Optimizing Image</BusyLabel>
               </p>
             )}
             <FieldError id="remittance-proof-error" message={errors.proof} />

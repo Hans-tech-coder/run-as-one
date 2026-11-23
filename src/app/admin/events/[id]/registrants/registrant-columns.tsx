@@ -197,7 +197,7 @@ export function buildRegistrantColumns({
       // filter reads the item names (`addOnNames`), never the sizes.
       id: "addOns",
       accessorFn: row => row.addOnsText || '',
-      header: "Add-ons",
+      header: "Add-Ons",
       cell: ({ row }) => row.original.addOnsText
         ? <span className="text-xs text-primary">{row.original.addOnsText}</span>
         : <span className="text-[var(--text-muted)]">—</span>,

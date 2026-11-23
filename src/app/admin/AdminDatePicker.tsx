@@ -133,7 +133,7 @@ export default function AdminDatePicker({
   max,
   clearable = false,
   disabled = false,
-  dialogLabel = "Choose a date",
+  dialogLabel = "Choose a Date",
   className = "",
   invalid = false,
   describedBy: extraDescribedBy,
@@ -505,7 +505,7 @@ export default function AdminDatePicker({
 
       {withTime && (
         <div className="mt-2 border-t border-[var(--dash-hairline)] pt-3">
-          <span className="mb-2 block text-xs font-medium text-secondary">Time (Philippine time)</span>
+          <span className="mb-2 block text-xs font-medium text-secondary">Time (Philippine Time)</span>
           <div className="grid grid-cols-3 gap-2">
             <AdminSelect
               label="Hour"

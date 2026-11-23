@@ -137,7 +137,7 @@ export default function ShipKitsPanel({ isClosing, onClose, ...input }: Props) {
           {!refused && (
             <div className="space-y-1.5">
               <label htmlFor="ship-kits-reason" className="block text-secondary">
-                What the runner asked for <span className="text-[var(--text-muted)]">(optional)</span>
+                What the Runner Asked For <span className="text-[var(--text-muted)]">(Optional)</span>
               </label>
               <input
                 id="ship-kits-reason"

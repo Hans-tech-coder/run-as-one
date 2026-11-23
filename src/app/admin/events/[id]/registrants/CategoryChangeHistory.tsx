@@ -93,14 +93,14 @@ function RecordRefund({
   if (!open) {
     return (
       <button type="button" onClick={() => setOpen(true)} className="btn-filter is-compact w-fit">
-        Record refund
+        Record Refund
       </button>
     );
   }
   return (
     <div className="space-y-1.5">
       <label htmlFor={fieldId} className="block text-xs text-secondary">
-        GCash or bank reference of the ₱{formatPesos(change.refundAmount)} refund
+        GCash or Bank Reference of the ₱{formatPesos(change.refundAmount)} Refund
       </label>
       <div className="flex gap-2 max-sm:flex-col">
         <input
@@ -122,7 +122,7 @@ function RecordRefund({
           disabled={saving}
           className="px-4 min-h-11 bg-[var(--dash-inverse-bg)] text-[var(--dash-inverse-fg)] rounded-lg text-sm font-medium hover:bg-[var(--dash-inverse-hover)] disabled:opacity-50 inline-flex items-center justify-center"
         >
-          {saving ? <BusyLabel>Saving</BusyLabel> : 'Save refund'}
+          {saving ? <BusyLabel>Saving</BusyLabel> : 'Save Refund'}
         </button>
       </div>
       <FieldError id={`${fieldId}-error`} message={error} />
@@ -136,7 +136,7 @@ export default function CategoryChangeHistory({
   onUpdated,
   onSendEmail,
   validation,
-  title = 'Change history',
+  title = 'Change History',
 }: {
   /** The list's label: its own modal's "Change history", or a section of the row's *History*. */
   title?: string;
@@ -256,7 +256,7 @@ export default function CategoryChangeHistory({
                       onClick={() => setProofOf(change)}
                       className="inline-flex items-center gap-1 min-h-11 text-accent-blue-ink hover:underline bg-transparent border-none cursor-pointer p-0 text-xs"
                     >
-                      View screenshot <Maximize2 size={12} aria-hidden="true" />
+                      View Screenshot <Maximize2 size={12} aria-hidden="true" />
                     </button>
                   )}
                 </p>
@@ -292,7 +292,7 @@ export default function CategoryChangeHistory({
                   {emailOwed && (
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="status-badge danger gap-1" title={change.lastEmailError ?? undefined}>
-                        <MailWarning size={12} aria-hidden="true" /> Email unsent
+                        <MailWarning size={12} aria-hidden="true" /> Email Unsent
                       </span>
                       {permissions.email && (
                         <button
@@ -300,7 +300,7 @@ export default function CategoryChangeHistory({
                           onClick={() => onSendEmail(change, awaiting ? 'created' : 'applied')}
                           className="btn-filter is-compact"
                         >
-                          Send by hand
+                          Send by Hand
                         </button>
                       )}
                     </div>

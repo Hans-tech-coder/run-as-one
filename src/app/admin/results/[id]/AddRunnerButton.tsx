@@ -26,7 +26,7 @@ export default function AddRunnerButton({
     <>
       <button type="button" onClick={() => setIsOpen(true)} className="btn-filter min-h-11">
         <UserPlus size={16} />
-        Add runner
+        Add Runner
       </button>
       {isOpen && createPortal(
         <ResultFormModal

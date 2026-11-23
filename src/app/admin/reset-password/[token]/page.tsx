@@ -40,7 +40,7 @@ export default async function ResetPasswordPage({ params }: { params: Promise<{ 
         <div className="auth-header">
           <RunAsOneLogo variant="stacked" className="[--rao-logo-size:64px] mb-5" />
           <h1 className="auth-title">
-            {used ? 'This link was already used' : 'This link has expired'}
+            {used ? 'This Link Was Already Used' : 'This Link Has Expired'}
           </h1>
           <p className="auth-subtitle">
             {used
@@ -50,12 +50,12 @@ export default async function ResetPasswordPage({ params }: { params: Promise<{ 
         </div>
 
         <Link href="/admin/forgot-password" className="btn-gradient auth-submit text-white font-medium">
-          Request a new link
+          Request a New Link
         </Link>
 
         <div className="auth-footer">
           <Link href="/admin/login" className="site-link">
-            Back to sign in
+            Back to Sign In
           </Link>
         </div>
       </div>

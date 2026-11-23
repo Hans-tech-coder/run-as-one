@@ -129,7 +129,7 @@ export function KitChangedChip({
   return (
     <>
       <span className="status-badge info gap-1" title={summary} aria-label={`Kit changed. ${summary}`}>
-        <Shirt size={12} aria-hidden="true" /> Kit changed
+        <Shirt size={12} aria-hidden="true" /> Kit Changed
       </span>
       {detailed && (
         <span className="block text-xs text-[var(--text-muted)] mt-1 [overflow-wrap:anywhere]">{summary}</span>
@@ -156,12 +156,12 @@ export function CategoryWithChange({ runner, detailed = false }: { runner: WithC
       {move?.kit.changed && <KitChangedChip kit={move.kit} detailed={detailed} />}
       {upgrade && (
         <span className="status-badge pending" title={`Waiting for payment to move to ${upgrade.toCategory} (${upgrade.changeRef}).`}>
-          ₱{formatPesos(upgrade.totalCharged || upgrade.amount)} due · to {upgrade.toCategory}
+          ₱{formatPesos(upgrade.totalCharged || upgrade.amount)} Due · To {upgrade.toCategory}
         </span>
       )}
       {owed > 0 && (
         <span className="status-badge pending" title="A downgrade's refund has not been recorded as paid.">
-          ₱{formatPesos(owed)} to refund
+          ₱{formatPesos(owed)} to Refund
         </span>
       )}
     </span>

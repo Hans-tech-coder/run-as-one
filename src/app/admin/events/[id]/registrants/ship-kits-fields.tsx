@@ -103,12 +103,12 @@ export function SwitchQuote({ quote, onlineFee, needsPayment, paymentChoice }: {
       </ol>
       {needsPayment && paymentChoice === CHANGE_PAYMENT_CHOICES.ONLINE && onlineFee > 0 && (
         <p className="m-0 flex justify-between text-xs text-[var(--text-muted)]">
-          <span>Transaction fee</span>
+          <span>Transaction Fee</span>
           <span className="tabular-nums">{peso(onlineFee)}</span>
         </p>
       )}
       <p className="m-0 flex justify-between border-t border-[var(--dash-border)] pt-2 font-semibold text-primary">
-        <span>{quote.fee > 0 ? 'Runner pays' : 'Nothing to pay'}</span>
+        <span>{quote.fee > 0 ? 'Runner Pays' : 'Nothing to Pay'}</span>
         <span className="tabular-nums">{peso(quote.totalCharged || quote.fee)}</span>
       </p>
       <p className="m-0 text-xs text-[var(--text-muted)]">
@@ -164,7 +164,7 @@ export function DeliveryFields(props: Props) {
 
       {props.zoneChoice && (
         <fieldset className="p-0 border-none mx-0">
-          <legend className="block text-secondary mb-2 p-0">Delivery area</legend>
+          <legend className="block text-secondary mb-2 p-0">Delivery Area</legend>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {deliveryTiers(props.event).map(tier => (
               <Tile
@@ -208,7 +208,7 @@ export function PaymentChoice(props: Props) {
   const fee = known ? peso(known.fee) : 'the fee';
   return (
     <fieldset className="p-0 border-none mx-0">
-      <legend className="block text-secondary mb-2 p-0">How the runner pays</legend>
+      <legend className="block text-secondary mb-2 p-0">How the Runner Pays</legend>
       <div className="grid grid-cols-1 gap-2">
         {paymentChoices.includes(CHANGE_PAYMENT_CHOICES.ONLINE) && (
           <Tile
@@ -230,7 +230,7 @@ export function PaymentChoice(props: Props) {
             checked={paymentChoice === CHANGE_PAYMENT_CHOICES.OUTSIDE_LATER}
             onChange={() => setPaymentChoice(CHANGE_PAYMENT_CHOICES.OUTSIDE_LATER)}
             icon={<Landmark size={16} aria-hidden="true" />}
-            title="GCash or bank"
+            title="GCash or Bank"
             hint={`Runner sends ${fee}, no transaction fee. Waits ${OUTSIDE_CHANGE_HOLD_DAYS} days.`}
           />
         )}
@@ -240,7 +240,7 @@ export function PaymentChoice(props: Props) {
             checked={paymentChoice === CHANGE_PAYMENT_CHOICES.OUTSIDE_PAID}
             onChange={() => setPaymentChoice(CHANGE_PAYMENT_CHOICES.OUTSIDE_PAID)}
             icon={<CircleCheck size={16} aria-hidden="true" />}
-            title="Already paid, record it now"
+            title="Already Paid, Record It Now"
             hint={`Runner already sent ${fee} by GCash or bank. Type the address; switches at once, no payment request is emailed.`}
           />
         )}
@@ -265,7 +265,7 @@ function AlreadyPaidFields({
     <div className="mt-3 space-y-3 rounded-lg border border-[var(--dash-border)] p-3">
       <div className="space-y-1.5">
         <label htmlFor="ship-kits-transaction" className="block text-secondary">
-          GCash or bank reference number
+          GCash or Bank Reference Number
         </label>
         <input
           id="ship-kits-transaction"

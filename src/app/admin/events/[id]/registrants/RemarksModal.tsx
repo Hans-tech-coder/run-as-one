@@ -170,7 +170,7 @@ export default function RemarksModal({
 
         <div className="admin-modal-body p-6 max-sm:p-4 space-y-3">
           <label htmlFor="registration-remarks" className="block text-sm text-secondary">
-            What did you find when you checked this payment?
+            What Did You Find When You Checked This Payment?
           </label>
           <textarea
             id="registration-remarks"

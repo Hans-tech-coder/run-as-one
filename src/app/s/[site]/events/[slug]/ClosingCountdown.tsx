@@ -44,10 +44,10 @@ export default function ClosingCountdown({ closesAt, when }: { closesAt: string;
   const remaining = now === null ? null : new Date(closesAt).getTime() - now;
   const heading =
     remaining === null
-      ? 'Registration closes soon'
+      ? 'Registration Closes Soon'
       : remaining <= 0
-        ? 'Registration has closed'
-        : `Registration closes in ${left(remaining)}`;
+        ? 'Registration Has Closed'
+        : `Registration Closes in ${left(remaining)}`;
 
   return (
     <div className="flex items-start gap-3 rounded-[10px] border border-site-action px-4 py-3">

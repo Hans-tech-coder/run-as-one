@@ -31,28 +31,28 @@ const columns = (contactEmail: string): FooterColumn[] => [
     heading: 'Explore',
     links: [
       { label: 'Home', href: '/' },
-      { label: 'Browse events', href: '/events' },
-      { label: 'Race results', href: '/results' },
-      { label: 'Track my registration', href: '/track' },
+      { label: 'Browse Events', href: '/events' },
+      { label: 'Race Results', href: '/results' },
+      { label: 'Track My Registration', href: '/track' },
     ],
   },
   {
     heading: 'Organizers',
     links: [
-      { label: 'Our services', href: '/admin/register' },
-      { label: 'Organizer login', href: '/admin/login' },
+      { label: 'Our Services', href: '/admin/register' },
+      { label: 'Organizer Login', href: '/admin/login' },
     ],
   },
   {
-    heading: 'Help and legal',
+    heading: 'Help and Legal',
     links: [
       // Above Contact us on purpose: a form somebody can fill in here is a
       // lower bar than composing an email, and most of what people want to
       // tell us about the app fits in it.
-      { label: 'Send feedback', href: '/feedback' },
-      { label: 'Terms of service', href: '/terms' },
-      { label: 'Privacy policy', href: '/privacy' },
-      { label: 'Contact us', href: supportMailto(contactEmail), external: true },
+      { label: 'Send Feedback', href: '/feedback' },
+      { label: 'Terms of Service', href: '/terms' },
+      { label: 'Privacy Policy', href: '/privacy' },
+      { label: 'Contact Us', href: supportMailto(contactEmail), external: true },
     ],
   },
 ];
@@ -83,7 +83,7 @@ export default function Footer({ site }: { site: SiteClient | null }) {
             {contactEmail}
           </FooterContactChip>
 
-          <FooterSocials links={socialLinks} owner={SITE_NAME} heading="Follow the community" />
+          <FooterSocials links={socialLinks} owner={SITE_NAME} heading="Follow the Community" />
         </>
       }
       nav={<FooterNav columns={columns(contactEmail)} />}

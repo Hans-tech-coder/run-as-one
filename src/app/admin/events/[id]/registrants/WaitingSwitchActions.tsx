@@ -155,13 +155,13 @@ export default function WaitingSwitchActions({
   const cancel = async () => {
     const ok = await confirm({
       variant: 'danger',
-      title: 'Cancel this switch?',
+      title: 'Cancel This Switch?',
       message: change.proofSubmitted
         ? `The runner already sent ${peso(change.totalCharged || change.fee)} by GCash or bank (reference ${change.transactionNumber}). Cancelling keeps ${orderRef} on pickup but does not refund them; refund them yourself.`
         : `${orderRef} stays on pickup and its payment link stops working.`,
-      confirmLabel: 'Cancel switch',
-      // "Cancel" beside "Cancel switch" would read as the same thing twice.
-      cancelLabel: 'Keep it',
+      confirmLabel: 'Cancel Switch',
+      // "Cancel" beside "Cancel Switch" would read as the same thing twice.
+      cancelLabel: 'Keep It',
     });
     if (!ok) return;
     setCancelling(true);
@@ -207,12 +207,12 @@ export default function WaitingSwitchActions({
           disabled={cancelling}
           className="btn-filter is-compact gap-1.5"
         >
-          <Mail size={14} aria-hidden="true" /> Send email by hand
+          <Mail size={14} aria-hidden="true" /> Send Email by Hand
         </button>
       )}
       {permissions.edit && (
         <button type="button" onClick={press(cancel)} disabled={cancelling} className="btn-filter is-compact is-danger gap-1.5">
-          <XCircle size={14} aria-hidden="true" /> {cancelling ? <BusyLabel>Cancelling</BusyLabel> : 'Cancel switch'}
+          <XCircle size={14} aria-hidden="true" /> {cancelling ? <BusyLabel>Cancelling</BusyLabel> : 'Cancel Switch'}
         </button>
       )}
     </div>

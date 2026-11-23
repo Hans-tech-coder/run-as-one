@@ -212,7 +212,7 @@ export default function RunnerRefundModal({ runner, onClose }: { runner: Registr
         >
           <div className="p-6 max-sm:px-4 max-sm:py-3 border-b border-[var(--dash-border)] flex justify-between items-start gap-4 shrink-0">
             <div className="min-w-0">
-              <h3 id={ids.title} className="text-xl font-semibold text-primary m-0">Refund runner</h3>
+              <h3 id={ids.title} className="text-xl font-semibold text-primary m-0">Refund Runner</h3>
               <p className="text-sm text-secondary mt-1 m-0 [overflow-wrap:anywhere]">{runner.runnerRef} &middot; {runner.name}</p>
             </div>
             <button
@@ -226,26 +226,26 @@ export default function RunnerRefundModal({ runner, onClose }: { runner: Registr
           </div>
 
           <div className="admin-modal-body p-6 max-sm:p-4 space-y-5 overflow-y-auto">
-            {data === 'loading' && <p role="status" className="m-0 text-sm text-secondary"><BusyLabel>Working out the refund</BusyLabel></p>}
+            {data === 'loading' && <p role="status" className="m-0 text-sm text-secondary"><BusyLabel>Working Out the Refund</BusyLabel></p>}
             {data === 'failed' && <FieldError id="refund-load-error" message="The refund figures could not be loaded. Close this and try again." />}
             {data !== 'loading' && data !== 'failed' && data.blocked && <FieldError id="refund-blocked" message={data.blocked} />}
 
             {ready && quote && typeof data === 'object' && (
               <>
                 <section className="space-y-2 rounded-lg border border-[var(--dash-border)] bg-[var(--dash-sunken)] px-4 py-3">
-                  <h4 className="m-0 text-sm font-semibold text-primary">Refunded to the runner</h4>
-                  <Row label={quote.freeEntry ? 'Entry (free seat)' : 'Entry as paid'} centavos={entry ?? 0} />
-                  {quote.addOnOrganizerAmount > 0 && <Row label="Add-ons sold by the organizer" centavos={quote.addOnOrganizerAmount} />}
-                  {quote.addOnRunAsOneAmount > 0 && <Row label="Add-ons sold by Run As One" centavos={quote.addOnRunAsOneAmount} />}
-                  <Row label="Total refund" centavos={total} strong />
+                  <h4 className="m-0 text-sm font-semibold text-primary">Refunded to the Runner</h4>
+                  <Row label={quote.freeEntry ? 'Entry (Free Seat)' : 'Entry as Paid'} centavos={entry ?? 0} />
+                  {quote.addOnOrganizerAmount > 0 && <Row label="Add-Ons Sold by the Organizer" centavos={quote.addOnOrganizerAmount} />}
+                  {quote.addOnRunAsOneAmount > 0 && <Row label="Add-Ons Sold by Run As One" centavos={quote.addOnRunAsOneAmount} />}
+                  <Row label="Total Refund" centavos={total} strong />
                 </section>
 
                 <section className="space-y-2 rounded-lg border border-[var(--dash-border)] px-4 py-3">
-                  <h4 className="m-0 text-sm font-semibold text-primary">Not returned</h4>
-                  <Row label="Platform fee" centavos={quote.keptAdminFee} />
-                  {quote.keptDeliveryFee > 0 && <Row label="Delivery fee" centavos={quote.keptDeliveryFee} />}
-                  {quote.keptTransactionFee > 0 && <Row label="Transaction fee" centavos={quote.keptTransactionFee} />}
-                  {kept > 0 && <Row label="Stays with the organizer" centavos={kept} />}
+                  <h4 className="m-0 text-sm font-semibold text-primary">Not Returned</h4>
+                  <Row label="Platform Fee" centavos={quote.keptAdminFee} />
+                  {quote.keptDeliveryFee > 0 && <Row label="Delivery Fee" centavos={quote.keptDeliveryFee} />}
+                  {quote.keptTransactionFee > 0 && <Row label="Transaction Fee" centavos={quote.keptTransactionFee} />}
+                  {kept > 0 && <Row label="Stays with the Organizer" centavos={kept} />}
                   {data.promos.map(promo => (
                     <p key={promo.code} className="m-0 text-xs text-[var(--text-muted)] [overflow-wrap:anywhere]">
                       {promo.returns
@@ -257,7 +257,7 @@ export default function RunnerRefundModal({ runner, onClose }: { runner: Registr
 
                 {quote.editable && (
                   <div className="form-group min-w-0 m-0">
-                    <label htmlFor={ids.amount} className="form-label">Entry to refund</label>
+                    <label htmlFor={ids.amount} className="form-label">Entry to Refund</label>
                     <input
                       id={ids.amount}
                       className="form-input text-base sm:text-sm"
@@ -276,7 +276,7 @@ export default function RunnerRefundModal({ runner, onClose }: { runner: Registr
                 )}
 
                 <fieldset className="m-0 border-0 p-0 min-w-0">
-                  <legend className="form-label">Who pays the runner</legend>
+                  <legend className="form-label">Who Pays the Runner</legend>
                   <div className="grid gap-2 sm:grid-cols-2">
                     {([REFUND_PAID_BY.RUN_AS_ONE, REFUND_PAID_BY.ORGANIZER] as RefundPaidBy[]).map(option => (
                       <label key={option} className="flex items-start gap-3 rounded-lg border border-[var(--dash-border)] px-3 py-2.5 min-h-11 cursor-pointer">
@@ -307,7 +307,7 @@ export default function RunnerRefundModal({ runner, onClose }: { runner: Registr
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="form-group min-w-0 m-0">
-                    <label htmlFor={ids.approver} className="form-label">Approved by (organizer)</label>
+                    <label htmlFor={ids.approver} className="form-label">Approved By (Organizer)</label>
                     <input
                       id={ids.approver}
                       className="form-input text-base sm:text-sm"
@@ -320,7 +320,7 @@ export default function RunnerRefundModal({ runner, onClose }: { runner: Registr
                     <FieldError id="refund-approver-error" message={errors.approverName} />
                   </div>
                   <AdminDatePicker
-                    label="Date approved"
+                    label="Date Approved"
                     value={approvedOn}
                     onChange={setApprovedOn}
                     max={today()}
@@ -329,7 +329,7 @@ export default function RunnerRefundModal({ runner, onClose }: { runner: Registr
                 </div>
 
                 <div className="min-w-0">
-                  <span className="form-label">Organizer&apos;s approval</span>
+                  <span className="form-label">Organizer&apos;s Approval</span>
                   {proof ? (
                     <div className="flex items-center justify-between gap-3 rounded-lg border border-[var(--dash-border)] px-3 py-2">
                       <span className="min-w-0 text-sm text-primary [overflow-wrap:anywhere]">{proof.name}</span>
@@ -349,12 +349,12 @@ export default function RunnerRefundModal({ runner, onClose }: { runner: Registr
                       />
                       <div className="file-upload-content">
                         <UploadCloud size={24} className="text-accent-blue-ink" aria-hidden="true" />
-                        <div className="text-sm text-primary">Upload a screenshot of the approval</div>
+                        <div className="text-sm text-primary">Upload a Screenshot of the Approval</div>
                         <div className="text-xs">{describeUploadTypes('proof')}, up to {MAX_UPLOAD_MB} MB.</div>
                       </div>
                     </div>
                   )}
-                  {optimizing && <p role="status" className="m-0 text-sm text-secondary"><BusyLabel>Optimizing image</BusyLabel></p>}
+                  {optimizing && <p role="status" className="m-0 text-sm text-secondary"><BusyLabel>Optimizing Image</BusyLabel></p>}
                   <FieldError id="refund-proof-error" message={errors.approvalProof} />
                 </div>
 
@@ -372,7 +372,7 @@ export default function RunnerRefundModal({ runner, onClose }: { runner: Registr
             </button>
             <button type="button" className="btn-light" onClick={save} disabled={!ready || saving || optimizing}>
               <Undo2 size={16} aria-hidden="true" />
-              {saving ? <BusyLabel>Saving</BusyLabel> : 'Confirm and refund'}
+              {saving ? <BusyLabel>Saving</BusyLabel> : 'Confirm and Refund'}
             </button>
           </div>
         </div>

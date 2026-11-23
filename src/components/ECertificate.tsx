@@ -105,7 +105,7 @@ export function ECertificateModal({ result, event, pdfUrl, sharePath, onClose }:
       // outcome in one step, where the old dialog told the runner to go and
       // copy it themselves.
       await navigator.clipboard.writeText(url);
-      toast({ variant: 'success', title: 'Link copied', message: 'Your result link is ready to paste.' });
+      toast({ variant: 'success', title: 'Link Copied', message: 'Your result link is ready to paste.' });
     } catch (error) {
       // A dismissed share sheet rejects too; that is the runner changing
       // their mind, not a failure worth a dialog.
@@ -176,7 +176,7 @@ export function ECertificateModal({ result, event, pdfUrl, sharePath, onClose }:
         <div className="site-modal__head">
           <h3 id="ecert-title" className="site-modal__title flex items-center gap-2.5">
             <FileText className="text-site-accent shrink-0" size={20} aria-hidden="true" />
-            <span className="truncate">Your e-certificate</span>
+            <span className="truncate">Your E-Certificate</span>
           </h3>
           <button type="button" onClick={onClose} aria-label="Close certificate" className="site-modal__close">
             <X size={20} />
@@ -215,7 +215,7 @@ export function ECertificateModal({ result, event, pdfUrl, sharePath, onClose }:
           ) : (
             <div className="w-full rounded-[12px] border border-site-line bg-site-card px-5 py-7 text-center">
               <CheckCircle2 size={28} className="mx-auto mb-3 text-[var(--status-success)]" aria-hidden="true" />
-              <p className="text-sm font-semibold text-site-muted mb-2">Certificate of completion</p>
+              <p className="text-sm font-semibold text-site-muted mb-2">Certificate of Completion</p>
               <p className="site-modal__title text-[1.375rem] text-balance break-words">{result.name}</p>
               <p className="mt-3 font-mono text-2xl font-bold text-site-ink tabular-nums">{toWholeSeconds(result.chipTime)}</p>
               <p className="mt-1 text-sm text-site-muted break-words">{result.category.name} · {event.title}</p>
@@ -231,7 +231,7 @@ export function ECertificateModal({ result, event, pdfUrl, sharePath, onClose }:
             <Download size={18} aria-hidden="true" /> Download PDF
           </button>
           <button type="button" onClick={handleShare} className="site-btn site-btn--quiet w-full sm:w-auto">
-            <Share2 size={18} aria-hidden="true" /> Share result
+            <Share2 size={18} aria-hidden="true" /> Share Result
           </button>
         </div>
       </div>

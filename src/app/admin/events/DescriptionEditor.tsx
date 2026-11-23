@@ -127,8 +127,8 @@ export default function DescriptionEditor({
     { label: 'Bold (Ctrl+B)', icon: Bold, run: () => wrap('**', 'bold text') },
     { label: 'Italic (Ctrl+I)', icon: Italic, run: () => wrap('*', 'italic text') },
     { label: 'Heading', icon: Heading2, run: () => styleLines('heading') },
-    { label: 'Bulleted list', icon: List, run: () => styleLines('bullets') },
-    { label: 'Numbered list', icon: ListOrdered, run: () => styleLines('numbers') },
+    { label: 'Bulleted List', icon: List, run: () => styleLines('bullets') },
+    { label: 'Numbered List', icon: ListOrdered, run: () => styleLines('numbers') },
   ];
 
   return (

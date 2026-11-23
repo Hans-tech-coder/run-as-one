@@ -27,7 +27,7 @@ export const metadata: Metadata = {
 /** The contact address is a platform setting, so the sections are built per request. */
 const sections = (contactEmail: string): LegalSection[] => [
   {
-    heading: `What ${SITE_NAME} is`,
+    heading: `What ${SITE_NAME} Is`,
     body: [
       `${SITE_NAME} is a registration platform. We list running events, take your entry and your payment, and pass your details to the organizer who is actually putting on the race.`,
       'We do not organize, marshal, time, or insure any event on this site. Each event is run by an independent organizer, and the route, the start time, the race kit, the water stations, the safety marshals and the results are theirs.',
@@ -35,7 +35,7 @@ const sections = (contactEmail: string): LegalSection[] => [
     ],
   },
   {
-    heading: 'Who can register',
+    heading: 'Who Can Register',
     body: [
       'You may register yourself, or register other people as part of your group, provided you have their permission and the details you give for them are accurate.',
       'When you register someone else you are confirming that they have read the event waiver and agreed to it. Their entry is treated exactly as if they had filled the form in themselves.',
@@ -43,7 +43,7 @@ const sections = (contactEmail: string): LegalSection[] => [
     ],
   },
   {
-    heading: 'Accurate details',
+    heading: 'Accurate Details',
     body: [
       'Your entry is only as good as what you type. Names go onto race bibs, results and e-certificates; emergency contacts get called if something goes wrong on the course; shirt sizes get ordered in bulk weeks before race day.',
       'Check your details before you pay. Once an organizer has ordered kits or closed their list, a correction may no longer be possible.',
@@ -67,7 +67,7 @@ const sections = (contactEmail: string): LegalSection[] => [
     ],
   },
   {
-    heading: 'Refunds, transfers and cancellations',
+    heading: 'Refunds, Transfers and Cancellations',
     body: [
       'Refund and transfer policies belong to the organizer of each event, not to us. If a race is postponed, moved, or called off, the organizer decides what happens to entries and announces it.',
       'We will help you reach the organizer and will pass on a refund they approve, but we cannot grant one over their head.',
@@ -75,41 +75,41 @@ const sections = (contactEmail: string): LegalSection[] => [
     ],
   },
   {
-    heading: 'Race kits, pickup and delivery',
+    heading: 'Race Kits, Pickup and Delivery',
     body: [
       'Each event says whether kits are collected in person, delivered, or both. Where delivery is offered, the fee depends on whether the address is inside or outside the event’s province, and you declare which when you register.',
       'Deliveries are dispatched by the organizer or their courier. An address you typed incorrectly is not something we can recover a kit from.',
     ],
   },
   {
-    heading: 'Liability and the event waiver',
+    heading: 'Liability and the Event Waiver',
     body: [
       'Running carries real risk — exhaustion, heat, falls, traffic, and pre-existing conditions among them. Before you can complete a registration you are shown that event’s waiver in full and must tick to accept it. That waiver, not this page, is what governs your participation in the race.',
       'Our own liability is limited to the registration service: taking your entry, taking your payment, and passing both to the organizer correctly. We are not liable for injury, loss or damage arising from taking part in an event.',
     ],
   },
   {
-    heading: 'Results and e-certificates',
+    heading: 'Results and E-Certificates',
     body: [
       'Official times, rankings and e-certificates are published here after the organizer uploads them, usually within a few days of race day. The timing data is the organizer’s; we publish what they give us.',
       'If your time or ranking looks wrong, it is the organizer who can correct it. Reach them through the event page and the correction shows up here once they make it.',
     ],
   },
   {
-    heading: 'Organizer accounts',
+    heading: 'Organizer Accounts',
     body: [
       'Organizers who sign up to publish events are responsible for the accuracy of everything on their event page, for honouring what they advertise, for the bank accounts they ask runners to pay into, and for handling the personal data of their registrants lawfully.',
       'We may suspend an account that misrepresents an event, collects money for a race it does not run, or misuses runner data.',
     ],
   },
   {
-    heading: 'Acceptable use',
+    heading: 'Acceptable Use',
     body: [
       'Do not submit entries you have no intention of honouring, use payment details that are not yours, attempt to reach admin or organizer areas you have no account for, scrape runner data from results pages, or interfere with the running of the site.',
     ],
   },
   {
-    heading: 'Changes to these terms',
+    heading: 'Changes to These Terms',
     body: [
       'We will update this page as the platform changes, and the date at the top of it always tells you when it was last rewritten. Registrations you have already completed are governed by the terms in force at the time you made them.',
     ],

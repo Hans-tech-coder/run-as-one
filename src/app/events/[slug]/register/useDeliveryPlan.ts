@@ -130,21 +130,21 @@ export function useDeliveryPlan({
     // it, the area follows the province, which the address list covers.
     if (!autoZone && zone === null) {
       return {
-        title: "Choose a delivery area",
+        title: "Choose a Delivery Area",
         message: "Please choose whether delivery is inside or outside the province.",
       };
     }
     const missing = missingAddressParts(address);
     if (missing.length > 0) {
       return {
-        title: "Delivery address incomplete",
+        title: "Delivery Address Incomplete",
         message: `Please fill in: ${missing.map((p) => ADDRESS_PART_LABELS[p]).join(", ")}.`,
         focusId: addressPartFieldId(missing[0]),
       };
     }
     if (!offersZone(event, zone)) {
       return {
-        title: "Delivery not available",
+        title: "Delivery Not Available",
         message: zoneNote?.error ?? "",
         focusId: ownAddress ? addressPartFieldId("province") : undefined,
       };

@@ -105,7 +105,7 @@ export default function FiltersMenu({
               onClick={onClear}
               className="mt-1 w-full flex items-center px-2 py-1.5 rounded-md text-sm text-secondary bg-transparent border-0 border-t border-[var(--dash-hairline)] hover:bg-[var(--dash-hover)] hover:text-primary transition-colors cursor-pointer"
             >
-              Clear filters
+              Clear Filters
             </button>
           )}
         </div>

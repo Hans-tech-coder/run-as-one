@@ -104,7 +104,7 @@ export default function PromoCodeField({
 
   return (
     <div className="input-group full-width mb-6">
-      <label htmlFor={inputId}>Promo Code (optional)</label>
+      <label htmlFor={inputId}>Promo Code (Optional)</label>
 
       {promo ? (
         <div

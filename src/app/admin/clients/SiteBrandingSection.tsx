@@ -145,7 +145,7 @@ export default function SiteBrandingSection({
   return (
     <section className="min-w-0">
       <h4 className="m-0 mb-3 text-xs font-bold uppercase tracking-wider text-secondary">
-        Site &amp; branding
+        Site &amp; Branding
       </h4>
       <form
         className="rounded-[12px] border border-[var(--dash-border)] bg-[var(--dash-surface)] p-4 flex flex-col gap-4"

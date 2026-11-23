@@ -370,7 +370,7 @@ export default function NotificationsCenter() {
                 className="btn-filter notif-mark-all"
               >
                 <CheckCheck size={16} aria-hidden="true" />
-                <span>Mark all as read</span>
+                <span>Mark All as Read</span>
               </button>
             </div>
 
@@ -395,7 +395,7 @@ export default function NotificationsCenter() {
                       <BellOff size={22} />
                     </span>
                     <p className="m-0 font-medium text-primary">
-                      {tab === 'unread' ? 'No unread notifications' : 'Nothing new yet'}
+                      {tab === 'unread' ? 'No Unread Notifications' : 'Nothing New Yet'}
                     </p>
                     <p className="m-0 text-sm text-secondary">
                       {tab === 'unread'
@@ -454,7 +454,7 @@ function NotificationRow({
         <span className="notif-text">
           <span className="notif-title">
             {item.title}
-            {item.actionable && <span className="notif-action-chip">Needs action</span>}
+            {item.actionable && <span className="notif-action-chip">Needs Action</span>}
           </span>
           <span className="notif-sentence">{item.body}</span>
         </span>

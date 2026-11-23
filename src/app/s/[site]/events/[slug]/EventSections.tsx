@@ -23,11 +23,11 @@ export function AddOnsBlock({
 }) {
   return (
     <section className="event-block" aria-labelledby="add-ons">
-      <h2 id="add-ons" className="event-block__title mb-1">Add-ons</h2>
+      <h2 id="add-ons" className="event-block__title mb-1">Add-Ons</h2>
       <p className="m-0 mb-5 text-site-muted">Optional extras, picked per runner when you register.</p>
       <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4 list-none p-0 m-0">
         {addOns.map((addOn) => {
-          const status = addOn.soldOut ? 'Sold out' : addOnSalesClosed(addOn) ? 'Sales closed' : null;
+          const status = addOn.soldOut ? 'Sold Out' : addOnSalesClosed(addOn) ? 'Sales Closed' : null;
           const only = addOn.categoryIds
             .map((id) => categories.find((category) => category.id === id)?.name)
             .filter(Boolean);

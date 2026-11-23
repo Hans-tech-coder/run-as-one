@@ -11,13 +11,13 @@ type Choice = 'existing' | 'results-only';
 const CHOICES: { value: Choice; title: string; description: string; icon: typeof CalendarCheck }[] = [
   {
     value: 'existing',
-    title: 'Event is already in the system',
+    title: 'Event Is Already in the System',
     description: 'Runners registered here. Pick the race, and its details and categories come with it.',
     icon: CalendarCheck,
   },
   {
     value: 'results-only',
-    title: 'Results only, registration was elsewhere',
+    title: 'Results Only, Registration Was Elsewhere',
     description: 'The client took sign-ups on their own. Enter the race details, then upload its results.',
     icon: FileSpreadsheet,
   },
@@ -51,7 +51,7 @@ export default function NewResultsClient({
     <div className="admin-form">
       <div className="admin-panel">
         <div className="admin-panel-header">
-          <h2 className="admin-panel-title">Where did runners register?</h2>
+          <h2 className="admin-panel-title">Where Did Runners Register?</h2>
         </div>
         <div className="admin-panel-content">
           <div className="grid gap-4 md:grid-cols-2" role="radiogroup" aria-label="Where did runners register?">

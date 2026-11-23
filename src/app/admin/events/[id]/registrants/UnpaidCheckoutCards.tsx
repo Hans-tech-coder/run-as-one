@@ -30,7 +30,7 @@ export default function UnpaidCheckoutCards({
     <AdminCardList
       items={table.getRowModel().rows}
       getKey={row => row.id}
-      label="Unpaid checkouts"
+      label="Unpaid Checkouts"
       className="is-flush"
       selection={{
         isSelected: row => row.getIsSelected(),
@@ -40,7 +40,7 @@ export default function UnpaidCheckoutCards({
       selectAll={{
         checked: table.getIsAllPageRowsSelected(),
         toggle: () => table.toggleAllPageRowsSelected(!table.getIsAllPageRowsSelected()),
-        label: `Select all ${table.getRowModel().rows.length} on this page`,
+        label: `Select All ${table.getRowModel().rows.length} on This Page`,
       }}
       leading={row => <span className="font-mono">{row.original.listNo}</span>}
       title={row => <span className="block truncate">{row.original.contactName}</span>}
@@ -57,7 +57,7 @@ export default function UnpaidCheckoutCards({
         { label: 'Phone', value: row.original.contactPhone },
         { label: 'Payment', value: row.original.paymentMethod },
         { label: 'Amount', value: `₱${formatPesos(row.original.totalAmount)}` },
-        { label: 'Follow-up', value: <FollowUpSummary followUp={row.original.followUp} />, full: true },
+        { label: 'Follow-Up', value: <FollowUpSummary followUp={row.original.followUp} />, full: true },
       ]}
       actions={row => actions(row.original)}
       empty={empty}

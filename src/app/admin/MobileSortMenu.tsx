@@ -104,7 +104,7 @@ export default function MobileSortMenu<T>({
           className="toolbar-popover absolute left-0 mt-2 w-72 bg-[var(--dash-popover)] border border-[var(--dash-border)] rounded-md p-2 z-50 shadow-2xl"
         >
           <p className="m-0 px-2 pt-1 pb-2 text-xs font-semibold uppercase tracking-wider text-secondary">
-            Sort by
+            Sort By
           </p>
           <ul className="m-0 p-0 list-none flex flex-col">
             {columns.map(column => {
@@ -154,7 +154,7 @@ export default function MobileSortMenu<T>({
               }}
               className="mt-1 w-full flex items-center px-2 py-1.5 rounded-md text-sm text-secondary bg-transparent border-0 border-t border-[var(--dash-hairline)] hover:bg-[var(--dash-hover)] hover:text-primary transition-colors cursor-pointer"
             >
-              Clear sort
+              Clear Sort
             </button>
           )}
         </div>

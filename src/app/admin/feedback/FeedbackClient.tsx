@@ -252,7 +252,7 @@ export default function FeedbackClient() {
           </div>
           <div className="metric-card">
             <div className="metric-header">
-              <span className="metric-title">Messages In Total</span>
+              <span className="metric-title">Messages in Total</span>
               <span className="metric-icon">
                 <MessageSquare size={18} />
               </span>
@@ -343,7 +343,7 @@ export default function FeedbackClient() {
               <AdminCardList
                 items={table.getRowModel().rows.map(row => row.original)}
                 getKey={row => row.id}
-                label="Feedback messages"
+                label="Feedback Messages"
                 className="is-flush"
                 // Three lines of the words themselves: what a message is about
                 // is the title, and the whole of it opens below.
@@ -381,7 +381,7 @@ export default function FeedbackClient() {
                         aria-expanded={isOpen}
                         className="t-acc-head btn-filter w-full justify-between min-h-11"
                       >
-                        <span>{isOpen ? 'Hide message' : 'Read message'}</span>
+                        <span>{isOpen ? 'Hide Message' : 'Read Message'}</span>
                         <span className="t-acc-chevron" aria-hidden="true">
                           <svg
                             viewBox="0 0 16 16"
@@ -594,7 +594,7 @@ function FeedbackKindLabel({ kind }: { kind: string }) {
 function FeedbackStatus({ isNew }: { isNew: boolean }) {
   return (
     <span className={`status-badge ${isNew ? 'pending' : 'success'}`}>
-      {isNew ? 'NEW' : 'REVIEWED'}
+      {isNew ? 'New' : 'Reviewed'}
     </span>
   );
 }

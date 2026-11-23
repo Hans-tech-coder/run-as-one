@@ -150,7 +150,7 @@ export function useFeedbackForm(pagePath: string | null) {
         } else {
           alert({
             variant: "danger",
-            title: "We could not send that",
+            title: "We Could Not Send That",
             message: data?.error || "Please try again in a moment.",
           });
         }

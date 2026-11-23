@@ -26,9 +26,9 @@
 
 import { isVirtual } from './event-format';
 
-/** "On-site Pickup", or "Kit Pickup" for a virtual run. */
+/** "On-Site Pickup", or "Kit Pickup" for a virtual run. */
 export function pickupLabel(event: { format?: unknown }): string {
-  return isVirtual(event) ? 'Kit Pickup' : 'On-site Pickup';
+  return isVirtual(event) ? 'Kit Pickup' : 'On-Site Pickup';
 }
 
 /** The wizards' line when pick-up is the only way to get a kit. */

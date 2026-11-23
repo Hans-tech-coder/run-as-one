@@ -52,7 +52,7 @@ export default function EventHighlightsGallery({
               {/* Hover notice; see EventHighlightsGallery.css for why not hover:. */}
               <span className="hl-tile-notice pointer-events-none absolute inset-0 flex items-center justify-center bg-site-ink/35">
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-site-card px-3 py-1.5 text-xs font-semibold text-site-ink">
-                  <Maximize2 size={14} aria-hidden="true" /> Click to view full screen
+                  <Maximize2 size={14} aria-hidden="true" /> Click to View Full Screen
                 </span>
               </span>
               {/* Touch screens cannot hover: a standing badge says it opens. */}

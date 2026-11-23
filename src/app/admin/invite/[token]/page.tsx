@@ -60,7 +60,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
         <div className="auth-card">
           <div className="auth-header">
             <RunAsOneLogo variant="stacked" className="[--rao-logo-size:64px] mb-5" />
-            <h1 className="auth-title">This link has expired</h1>
+            <h1 className="auth-title">This Link Has Expired</h1>
             <p className="auth-subtitle">
               Invitation links work once and only for a week. Ask the person who invited you to
               send a new one — it will arrive as a fresh email.
@@ -68,7 +68,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
           </div>
 
           <Link href="/admin/login" className="btn-gradient auth-submit text-white font-medium">
-            Go to sign in
+            Go to Sign In
           </Link>
         </div>
       </div>

@@ -104,7 +104,7 @@ function DeliveryFeeNote({
         </span>
         <div className="min-w-0 flex-1">
           <p id="delivery-fee-note-title" className="text-sm font-semibold text-white m-0">
-            Delivery fee depends on your province
+            Delivery Fee Depends on Your Province
           </p>
           <p className="text-xs text-secondary mt-1 mb-0">
             This event is in {province}.
@@ -131,7 +131,7 @@ function DeliveryFeeNote({
                     {active && (
                       <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-accent-blue/15 px-2 py-0.5 text-[11px] font-semibold text-accent-blue">
                         <Check size={12} strokeWidth={3} aria-hidden="true" />
-                        Your fee
+                        Your Fee
                       </span>
                     )}
                   </dt>

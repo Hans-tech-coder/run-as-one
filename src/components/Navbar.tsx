@@ -26,9 +26,8 @@ export default function Navbar({ site }: { site: SiteClient | null }) {
     { href: "/events", label: "Events" },
     { href: "/results", label: "Results" },
     // TRACK_PAGE_PLAN.md D8: "am I paid?" answered without messaging staff.
-    // One word beside Events and Results (the owner, 2026-10-23); the page's
-    // own heading and the Footer say "Track My Registration" in full.
-    { href: "/track", label: "Track" }
+    // Named "Track Registration" beside Events and Results (owner, 2026-11-23).
+    { href: "/track", label: "Track Registration" }
   ];
 
   // Below md the links have nowhere to sit in the bar, so they move into a
@@ -88,7 +87,7 @@ export default function Navbar({ site }: { site: SiteClient | null }) {
           )}
         </Link>
 
-        <nav aria-label="Main" className="hidden md:flex items-center gap-6 lg:gap-8">
+        <nav aria-label="Main" className="hidden md:flex shrink-0 items-center gap-6 lg:gap-8">
           {links.map(link => (
             <Link
               key={link.href}

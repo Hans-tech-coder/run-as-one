@@ -151,7 +151,7 @@ export default function CategoryChangeModal({
             <p role="alert" className="m-0 text-[var(--status-danger)]">{loadError}</p>
           )}
           {!preview && !loadError && (
-            <p className="m-0 text-[var(--text-muted)]"><BusyLabel>Loading this runner</BusyLabel></p>
+            <p className="m-0 text-[var(--text-muted)]"><BusyLabel>Loading This Runner</BusyLabel></p>
           )}
 
           {preview && refused && (
@@ -165,7 +165,7 @@ export default function CategoryChangeModal({
             <>
               {/* mx-0, not m-0: m-0 would cancel the body's space-y gap below it. */}
               <fieldset className="p-0 border-none mx-0">
-                <legend className="block text-secondary mb-2 p-0">Move to</legend>
+                <legend className="block text-secondary mb-2 p-0">Move To</legend>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {preview.categories.map(category => {
                     const isCurrent = category.id === preview.runner.categoryId;
@@ -271,13 +271,13 @@ export default function CategoryChangeModal({
                       onClick={() => setAdjusting(true)}
                       className="min-h-11 text-sm font-medium text-accent-blue-ink hover:underline bg-transparent border-none p-0 cursor-pointer"
                     >
-                      Runner paid a different amount?
+                      Runner Paid a Different Amount?
                     </button>
                   ) : (
                     <div className="space-y-3 rounded-lg border border-[var(--dash-border)] p-3">
                       <div className="space-y-1.5">
                         <label htmlFor="category-change-basis" className="block text-secondary">
-                          What the runner really paid for {current.name} (₱)
+                          What the Runner Really Paid for {current.name} (₱)
                         </label>
                         <input
                           id="category-change-basis"
@@ -295,7 +295,7 @@ export default function CategoryChangeModal({
                       </div>
                       <div className="space-y-1.5">
                         <label htmlFor="category-change-basis-reason" className="block text-secondary">
-                          Why is it different from {peso(quote.computedBasis)}?
+                          Why Is It Different from {peso(quote.computedBasis)}?
                         </label>
                         <input
                           id="category-change-basis-reason"
@@ -323,14 +323,14 @@ export default function CategoryChangeModal({
                         }}
                         className="min-h-11 text-sm text-secondary hover:text-primary bg-transparent border-none p-0 cursor-pointer"
                       >
-                        Never mind, keep {peso(quote.computedBasis)}
+                        Never Mind, Keep {peso(quote.computedBasis)}
                       </button>
                     </div>
                   )}
 
                   <div className="space-y-1.5">
                     <label htmlFor="category-change-reason" className="block text-secondary">
-                      What the runner asked for <span className="text-[var(--text-muted)]">(optional)</span>
+                      What the Runner Asked For <span className="text-[var(--text-muted)]">(Optional)</span>
                     </label>
                     <input
                       id="category-change-reason"
@@ -363,7 +363,7 @@ export default function CategoryChangeModal({
               disabled={!canSave}
               className="px-6 py-2 min-h-11 bg-[var(--dash-inverse-bg)] text-[var(--dash-inverse-fg)] rounded-lg text-sm font-medium hover:bg-[var(--dash-inverse-hover)] transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
             >
-              {isSaving ? <BusyLabel>{needsPayment && paymentChoice !== CHANGE_PAYMENT_CHOICES.OUTSIDE_PAID ? 'Holding seat' : 'Changing'}</BusyLabel> : saveLabel}
+              {isSaving ? <BusyLabel>{needsPayment && paymentChoice !== CHANGE_PAYMENT_CHOICES.OUTSIDE_PAID ? 'Holding Seat' : 'Changing'}</BusyLabel> : saveLabel}
             </button>
           )}
         </div>

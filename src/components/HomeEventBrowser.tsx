@@ -61,8 +61,8 @@ export default function HomeEventBrowser({
         <div>
           <h2 id="open-races-title" className="site-h2">
             {trimmed
-              ? `${matches.length} ${matches.length === 1 ? 'race matches' : 'races match'}`
-              : 'Open for registration'}
+              ? `${matches.length} ${matches.length === 1 ? 'Race Matches' : 'Races Match'}`
+              : 'Open for Registration'}
           </h2>
           {!trimmed && events.length > 0 && (
             <p className="site-section__sub">
@@ -76,7 +76,7 @@ export default function HomeEventBrowser({
             <div className="flex h-12 w-full items-center gap-2 rounded-[10px] border border-site-line bg-site-card px-3 focus-within:border-site-ink sm:w-72">
               <Search className="shrink-0 text-site-muted" size={18} aria-hidden="true" />
               <label htmlFor="home-event-search" className="sr-only">
-                Search races by name or place
+                Search Races by Name or Place
               </label>
               <input
                 id="home-event-search"
@@ -102,7 +102,7 @@ export default function HomeEventBrowser({
               everything there is. */}
           {totalEvents > events.length && (
             <Link href="/events" className="site-link site-link--arrow shrink-0">
-              <span>See all {totalEvents} races</span>
+              <span>See All {totalEvents} Races</span>
               <LinkPendingIcon>
                 <ArrowRight size={18} />
               </LinkPendingIcon>
@@ -140,7 +140,7 @@ function EmptyState({
       <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-site-surface text-site-ink" aria-hidden="true">
         {query ? <SearchX size={22} /> : <Calendar size={22} />}
       </span>
-      <h3 className="site-h3">{query ? 'No races match that' : 'No races posted yet'}</h3>
+      <h3 className="site-h3">{query ? 'No Races Match That' : 'No Races Posted Yet'}</h3>
       <p className="site-lead mt-2 max-w-md">
         {query ? (
           <>
@@ -153,7 +153,7 @@ function EmptyState({
       </p>
       {query && (
         <button type="button" onClick={onClear} className="site-btn site-btn--quiet mt-6">
-          Clear search
+          Clear Search
         </button>
       )}
     </div>

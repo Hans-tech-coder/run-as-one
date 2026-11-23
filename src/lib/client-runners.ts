@@ -86,7 +86,7 @@ export type ClientRunnerRow = {
    * item whatever its seller, because every one is packed.
    */
   addOns: string;
-  status: 'Paid' | 'Awaiting verification';
+  status: 'Paid' | 'Awaiting Verification';
   kit: 'Pickup' | 'Delivery';
   phone: string;
   email: string;
@@ -220,7 +220,7 @@ export async function clientRunners(actor: Actor, eventId: string): Promise<Clie
         size: chartSize(runner.singletSize),
         addOns: addOnItemsText(runner.addOns),
         // `registrantOrders` admits only PAID and awaiting-verification orders.
-        status: order.status === 'PAID' ? 'Paid' : 'Awaiting verification',
+        status: order.status === 'PAID' ? 'Paid' : 'Awaiting Verification',
         kit: delivered ? 'Delivery' : 'Pickup',
         phone: runner.phone,
         email: runner.email,

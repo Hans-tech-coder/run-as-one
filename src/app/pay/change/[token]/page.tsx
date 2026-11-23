@@ -72,7 +72,7 @@ export default async function ChangePayPage({
     return (
       <Notice
         icon={<Clock size={30} aria-hidden="true" />}
-        eyebrow="Please wait"
+        eyebrow="Please Wait"
         title="Too Many Tries"
         body="This link was opened many times from your connection in the last minute. Wait a minute, then open it again."
       />
@@ -87,7 +87,7 @@ export default async function ChangePayPage({
     return (
       <Notice
         icon={<Link2Off size={30} aria-hidden="true" />}
-        eyebrow="Payment link"
+        eyebrow="Payment Link"
         title="This Link Has Expired"
         body="A category change's payment link lasts only as long as your seat in the new category is held. Email us if you still want to change, and we will help you."
         actions={
@@ -141,22 +141,22 @@ export default async function ChangePayPage({
 
   const rows: [string, React.ReactNode][] = [
     ['Race', change.event.title],
-    ['Race day', formatEventDay(change.event.date)],
+    ['Race Day', formatEventDay(change.event.date)],
     ['Change', change.changeRef],
     ['Move', move],
     ...(outside
-      ? [['Payment method', 'GCash or bank transfer'] as [string, string]]
+      ? [['Payment Method', 'GCash or Bank Transfer'] as [string, string]]
       : method
-        ? [['Payment method', paymentMethodLabel(method)] as [string, string]]
+        ? [['Payment Method', paymentMethodLabel(method)] as [string, string]]
         : []),
     // With the proof in, the hold no longer closes it (`changeHeldUntil`).
-    ...(change.holdUntil && !proofIn ? [['Pay by', formatEventInstant(change.holdUntil)] as [string, string]] : []),
+    ...(change.holdUntil && !proofIn ? [['Pay By', formatEventInstant(change.holdUntil)] as [string, string]] : []),
   ];
   const money: [string, number][] = [
-    [`${change.toCategory.name} price`, change.toPrice],
-    [`Already paid for ${change.fromCategory.name}`, -change.basis],
-    ...(change.changeFee > 0 ? [['Change fee', change.changeFee] as [string, number]] : []),
-    ...(transactionFee > 0 ? [['Transaction fee', transactionFee] as [string, number]] : []),
+    [`${change.toCategory.name} Price`, change.toPrice],
+    [`Already Paid for ${change.fromCategory.name}`, -change.basis],
+    ...(change.changeFee > 0 ? [['Change Fee', change.changeFee] as [string, number]] : []),
+    ...(transactionFee > 0 ? [['Transaction Fee', transactionFee] as [string, number]] : []),
   ];
 
   return (
@@ -166,7 +166,7 @@ export default async function ChangePayPage({
           <IconBadge>
             <Shuffle size={30} aria-hidden="true" />
           </IconBadge>
-          <p className="mb-2 mt-6 text-sm font-semibold text-site-accent">Category change</p>
+          <p className="mb-2 mt-6 text-sm font-semibold text-site-accent">Category Change</p>
           <h1 className="site-h2 mb-3">
             Your New Seat Is Held
           </h1>
@@ -196,7 +196,7 @@ export default async function ChangePayPage({
             </div>
           ))}
           <div className="flex items-baseline justify-between gap-4 bg-site-surface px-4 py-4">
-            <dt className="text-sm font-semibold text-site-ink">Amount due</dt>
+            <dt className="text-sm font-semibold text-site-ink">Amount Due</dt>
             <dd className="m-0 text-xl font-semibold tabular-nums text-site-ink">{peso(total)}</dd>
           </div>
         </dl>

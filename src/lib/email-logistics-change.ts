@@ -81,11 +81,11 @@ function kitsLabel(kits: number): string {
 
 /** Where a switch to delivery ships, in the customer's words: the place, the landmark, who receives it. */
 function deliveryRows(change: SwitchForEmail): Row[] {
-  if (change.deliverySplit) return [{ kind: 'info', label: 'Ships to', value: 'Each runner’s home address on file' }];
-  if (!change.deliveryAddress) return [{ kind: 'info', label: 'Ships to', value: 'The address you gave us' }];
+  if (change.deliverySplit) return [{ kind: 'info', label: 'Ships To', value: 'Each runner’s home address on file' }];
+  if (!change.deliveryAddress) return [{ kind: 'info', label: 'Ships To', value: 'The address you gave us' }];
   const { place, landmark, receiver } = deliveryAddressDetails(change.deliveryAddress);
   return [
-    { kind: 'info', label: 'Ships to', value: place },
+    { kind: 'info', label: 'Ships To', value: place },
     ...(landmark ? [{ kind: 'info' as const, label: 'Landmark', value: landmark }] : []),
     ...(receiver
       ? [
@@ -99,9 +99,9 @@ function deliveryRows(change: SwitchForEmail): Row[] {
 /** The fee, line by line, adding up to what is paid, under `total`. */
 function moneyRows(change: SwitchForEmail, total = 'To Pay'): Row[] {
   return [
-    { kind: 'amount', label: 'Delivery fee', centavos: change.fee },
+    { kind: 'amount', label: 'Delivery Fee', centavos: change.fee },
     ...(change.transactionFee > 0
-      ? [{ kind: 'amount' as const, label: 'Transaction fee', centavos: change.transactionFee }]
+      ? [{ kind: 'amount' as const, label: 'Transaction Fee', centavos: change.transactionFee }]
       : []),
     { kind: 'rule' },
     { kind: 'total', label: total, centavos: change.totalCharged },
@@ -175,7 +175,7 @@ export function logisticsChangeCreatedEmail(change: SwitchForEmail, url: string 
                 {
                   kind: 'info' as const,
                   label: 'Payment',
-                  value: outside ? 'GCash or bank transfer' : paymentMethodLabel(change.paymentMethod),
+                  value: outside ? 'GCash or Bank Transfer' : paymentMethodLabel(change.paymentMethod),
                 },
               ]
             : []),
@@ -255,7 +255,7 @@ function addressFirstEmail(change: SwitchForEmail, url: string | null, until: st
                 {
                   kind: 'info' as const,
                   label: 'Payment',
-                  value: isOutsidePayment(change.paymentMethod) ? 'GCash or bank transfer' : paymentMethodLabel(change.paymentMethod),
+                  value: isOutsidePayment(change.paymentMethod) ? 'GCash or Bank Transfer' : paymentMethodLabel(change.paymentMethod),
                 },
               ]
             : []),
@@ -340,7 +340,7 @@ export function logisticsChangeAppliedEmail(change: SwitchForEmail): Promise<Ema
           ...(location ? [{ kind: 'info' as const, label: 'Where', value: location }] : []),
           ...(schedule ? [{ kind: 'info' as const, label: 'When', value: schedule }] : []),
         ]
-      : [{ kind: 'info', label: 'Where and when', value: PICKUP_FALLBACK }];
+      : [{ kind: 'info', label: 'Where and When', value: PICKUP_FALLBACK }];
 
   const money = toDelivery
     ? change.totalCharged > 0

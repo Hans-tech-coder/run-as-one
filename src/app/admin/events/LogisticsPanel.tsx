@@ -82,7 +82,7 @@ export default function LogisticsPanel({
           <div className="form-group form-group-full">
             <AdminSwitch
               on={draft.logisticsPickup}
-              label="On-site pickup"
+              label="On-Site Pickup"
               hint="Runners collect their race kit for free."
               onToggle={() => onChange({ logisticsPickup: !draft.logisticsPickup })}
             />
@@ -188,7 +188,7 @@ export default function LogisticsPanel({
                 max={draft.date || undefined}
                 clearable
                 placeholder="7 days before race day"
-                dialogLabel="Choose the last day a paid order may switch between pickup and delivery"
+                dialogLabel="Choose the Last Day a Paid Order May Switch Between Pickup and Delivery"
                 hint="Philippine time. The last moment staff may switch a paid order between pickup and delivery. Leave blank for 7 days before race day, so the courier has time."
               />
             </>

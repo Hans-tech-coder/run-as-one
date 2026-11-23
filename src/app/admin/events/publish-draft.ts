@@ -50,7 +50,7 @@ export function publishProblem(draft: PublishDraft): string | null {
 
 /** The create form's submit label, so the button says what pressing it does. */
 export function publishSubmitLabel(draft: PublishDraft): string {
-  return draft.mode === 'DRAFT' ? 'Save As Draft' : draft.mode === 'NOW' ? 'Publish Event' : 'Schedule Event';
+  return draft.mode === 'DRAFT' ? 'Save as Draft' : draft.mode === 'NOW' ? 'Publish Event' : 'Schedule Event';
 }
 
 /**

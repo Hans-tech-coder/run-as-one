@@ -84,7 +84,7 @@ export default function PosterField({
               <UploadCloud size={32} />
             </div>
             <div className="file-upload-title">
-              {uploading ? <BusyLabel>Uploading</BusyLabel> : 'Click to upload poster'}
+              {uploading ? <BusyLabel>Uploading</BusyLabel> : 'Click to Upload Poster'}
             </div>
             <div className="file-upload-desc">
               PNG or JPG • {hint}

@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 /** Another client's race, a removed one and a made-up id all read alike (§7). */
 const RACE_NOT_FOUND = {
   title: 'Race Not Found',
-  heading: 'Race not found.',
+  heading: 'Race Not Found',
   body: 'The link may be an old one, or the race is no longer linked to your organization.',
   homeHref: '/admin',
   homeLabel: 'Back to Your Events',

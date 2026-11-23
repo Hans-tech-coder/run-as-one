@@ -330,7 +330,7 @@ export default function TeamClient({
         // and a panel that times out could be missed.
         await alert({
           variant: 'error',
-          title: 'Saved, but the email did not go out',
+          title: 'Saved, but the Email Did Not Go Out',
           message: `${data.emailError ?? 'The email could not be sent.'} ${who} is on your team list as Invited — use Resend Invitation on their row once email is working again.`,
         });
       }
@@ -359,7 +359,7 @@ export default function TeamClient({
         status.clear();
         await alert({
           variant: 'error',
-          title: 'The email did not go out',
+          title: 'The Email Did Not Go Out',
           message: `${data.emailError ?? 'The email could not be sent.'} The earlier link has stopped working, so resend again once email is working.`,
         });
       }
@@ -410,13 +410,13 @@ export default function TeamClient({
     const ok = await confirm(
       member.accepted
         ? {
-            title: `Remove ${member.name} from the team?`,
+            title: `Remove ${member.name} from the Team?`,
             message: `They lose access to every ${organizerName} event right away. Everything they already did stays in the activity trail under their name. To bring them back later, invite them again.`,
             confirmLabel: 'Remove',
             variant: 'danger',
           }
         : {
-            title: `Revoke the invitation to ${member.name}?`,
+            title: `Revoke the Invitation to ${member.name}?`,
             message: 'The link in their email will stop working. You can invite them again at any time.',
             confirmLabel: 'Revoke',
             variant: 'danger',
@@ -443,7 +443,7 @@ export default function TeamClient({
   // first, because it weakens somebody else's account and signs them out.
   const handleResetTwoFactor = async (member: TeamMemberRow) => {
     const ok = await confirm({
-      title: `Reset two-step sign-in for ${member.name}?`,
+      title: `Reset Two-Step Sign-In for ${member.name}?`,
       message: `Do this only when you are sure it is ${member.name} asking — usually a lost phone with no recovery codes left. Two-step sign-in is turned off on their account, they are signed out everywhere, and they get an email saying you did it. Until they turn it on again in Settings › Security, their password alone signs them in.`,
       confirmLabel: 'Reset',
       variant: 'danger',
@@ -749,7 +749,7 @@ export default function TeamClient({
           <AdminCardList
             items={table.getRowModel().rows}
             getKey={row => row.id}
-            label="Team members"
+            label="Team Members"
             className="is-flush"
             leading={row => (
               <span className="font-mono">
@@ -920,7 +920,7 @@ export default function TeamClient({
 
               {draft.role === 'STAFF' && (
                 <fieldset className="form-group border-0 p-0 m-0 min-w-0">
-                  <legend className="form-label mb-1">Events and roles</legend>
+                  <legend className="form-label mb-1">Events and Roles</legend>
                   <p className="text-xs text-secondary m-0 mb-2">
                     They reach only these races. Each can carry a different role.
                   </p>
@@ -949,7 +949,7 @@ export default function TeamClient({
                               error={errors[assignmentField(index, 'event')]}
                             />
                             <AdminSelect
-                              label="Role on this event"
+                              label="Role on This Event"
                               listboxLabel={`Role on event ${index + 1}`}
                               placeholder="Choose a role"
                               value={assignment.role}
@@ -985,7 +985,7 @@ export default function TeamClient({
 
                       {draft.assignments.length < events.length && (
                         <button type="button" className="btn-add self-start" onClick={addAssignment}>
-                          <Plus size={16} aria-hidden="true" /> Assign another event
+                          <Plus size={16} aria-hidden="true" /> Assign Another Event
                         </button>
                       )}
                     </div>

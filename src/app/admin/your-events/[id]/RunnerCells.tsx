@@ -8,7 +8,7 @@ import React from 'react';
 import type { ClientRunnerRow } from '@/lib/client-runners';
 import { KitChangedChip } from '../../events/[id]/registrants/category-change-display';
 
-export const NO_SHIRT = 'No shirt';
+export const NO_SHIRT = 'No Shirt';
 
 /**
  * The category now, "(from 5K)" when a change moved the runner, and the *Kit
@@ -113,7 +113,7 @@ export function AddressLine({ runner, labelled = false }: { runner: ClientRunner
   if (!address) return <span className="text-secondary">Not given</span>;
   return (
     <span className="flex flex-col">
-      {runner.kit === 'Delivery' && !labelled && <span className="text-xs text-secondary">Ship to</span>}
+      {runner.kit === 'Delivery' && !labelled && <span className="text-xs text-secondary">Ship To</span>}
       <span>{address}</span>
     </span>
   );

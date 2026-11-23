@@ -59,8 +59,8 @@ export default function LegalPage({
         <div className="legal-layout">
           {/* Jump list. A runner arriving from a support reply usually wants
               one clause, not the whole document. */}
-          <nav aria-label="On this page" className="legal-toc">
-            <h2 className="legal-toc__title">On this page</h2>
+          <nav aria-label="On This Page" className="legal-toc">
+            <h2 className="legal-toc__title">On This Page</h2>
             <ol className="legal-toc__list">
               {sections.map((section, index) => (
                 <li key={section.heading}>
@@ -102,7 +102,7 @@ export default function LegalPage({
             </ol>
 
             <aside className="legal-ask">
-              <h2 className="site-h3">Questions about this page?</h2>
+              <h2 className="site-h3">Questions About This Page?</h2>
               <p className="m-0 mt-3 max-w-[56ch] leading-relaxed text-site-muted">
                 Email us and a real person will answer. For anything specific to a
                 single race — refunds, kit collection, start times — the organizer
@@ -115,7 +115,7 @@ export default function LegalPage({
                   <span className="min-w-0 break-all">{contactEmail}</span>
                 </a>
                 <Link href="/events" className="site-btn site-btn--action site-btn--block-sm">
-                  Browse events
+                  Browse Events
                   <ArrowRight size={18} aria-hidden="true" className="shrink-0" />
                 </Link>
               </div>

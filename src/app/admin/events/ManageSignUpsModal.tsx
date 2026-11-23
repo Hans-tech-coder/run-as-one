@@ -153,7 +153,7 @@ export default function ManageSignUpsModal({
 
           <section className="flex flex-col gap-3" aria-labelledby="manage-sign-ups-open">
             <h4 id="manage-sign-ups-open" className="text-base font-semibold text-primary m-0">
-              When can runners register?
+              When Can Runners Register?
             </h4>
             <RegistrationOpeningPicker
               value={opening}
@@ -168,7 +168,7 @@ export default function ManageSignUpsModal({
 
           <section className="flex flex-col gap-3" aria-labelledby="manage-sign-ups-close">
             <h4 id="manage-sign-ups-close" className="text-base font-semibold text-primary m-0">
-              When does registration close?
+              When Does Registration Close?
             </h4>
             <RegistrationOpeningPicker
               kind="closing"

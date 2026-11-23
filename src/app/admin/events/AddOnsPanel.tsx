@@ -105,12 +105,12 @@ export default function AddOnsPanel({ eventId }: { eventId: string }) {
   const remove = async (addOn: PanelAddOn) => {
     const ok = await confirm({
       variant: 'danger',
-      title: 'Delete this add-on?',
+      title: 'Delete This Add-On?',
       message: `${addOn.name} will be removed from this event. Nobody has bought it yet, so no order changes.`,
-      confirmLabel: 'Delete Add-on',
+      confirmLabel: 'Delete Add-On',
     });
     if (!ok) return;
-    if (await send(addOn, { method: 'DELETE' })) toast({ title: 'Add-on deleted', message: addOn.name });
+    if (await send(addOn, { method: 'DELETE' })) toast({ title: 'Add-On Deleted', message: addOn.name });
   };
 
   const categoryName = (id: string) => categories.find(category => category.id === id)?.name;
@@ -118,9 +118,9 @@ export default function AddOnsPanel({ eventId }: { eventId: string }) {
   return (
     <div className="admin-panel">
       <div className="admin-panel-header">
-        <h2 className="admin-panel-title">Add-ons</h2>
+        <h2 className="admin-panel-title">Add-Ons</h2>
         <button type="button" className="btn-light" onClick={() => setEditing(null)} disabled={addOns === null}>
-          <Plus size={16} /> Add Add-on
+          <Plus size={16} /> Add Add-On
         </button>
       </div>
       <div className="admin-panel-content">
@@ -135,7 +135,7 @@ export default function AddOnsPanel({ eventId }: { eventId: string }) {
           </p>
         ) : addOns === null ? (
           <p className="text-sm text-secondary m-0">
-            <BusyLabel>Loading add-ons</BusyLabel>
+            <BusyLabel>Loading Add-Ons</BusyLabel>
           </p>
         ) : addOns.length === 0 ? (
           <div className="rounded-xl border border-dashed border-[var(--ink-15)] bg-[var(--ink-02)] p-6 max-sm:p-4 text-center">
@@ -182,9 +182,9 @@ export default function AddOnsPanel({ eventId }: { eventId: string }) {
                           {!addOn.active ? (
                             <span className="status-badge neutral whitespace-nowrap">Off</span>
                           ) : left === 0 ? (
-                            <span className="status-badge danger whitespace-nowrap">Sold out</span>
+                            <span className="status-badge danger whitespace-nowrap">Sold Out</span>
                           ) : closed ? (
-                            <span className="status-badge pending whitespace-nowrap">Sales closed</span>
+                            <span className="status-badge pending whitespace-nowrap">Sales Closed</span>
                           ) : null}
                         </span>
                       </div>
@@ -208,7 +208,7 @@ export default function AddOnsPanel({ eventId }: { eventId: string }) {
                   <div className="mt-3">
                     <AdminSwitch
                       on={addOn.active}
-                      label="On sale"
+                      label="On Sale"
                       hint={
                         addOn.active
                           ? 'Offered to runners registering now.'

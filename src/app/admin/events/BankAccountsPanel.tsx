@@ -222,7 +222,7 @@ function QrField({
               <UploadCloud size={32} />
             </div>
             <div className="file-upload-title">
-              {uploading ? <BusyLabel>Uploading</BusyLabel> : 'Click to upload QR'}
+              {uploading ? <BusyLabel>Uploading</BusyLabel> : 'Click to Upload QR'}
             </div>
             <div className="file-upload-desc">
               PNG or JPG • the QR runners scan to pay this account

@@ -62,7 +62,7 @@ export default function ConsentWaiverField({
         </p>
         <div className="flex items-center gap-3">
           <button type="button" className="btn-filter max-lg:min-h-11" onClick={loadStandard}>
-            Load the standard wording
+            Load the Standard Wording
           </button>
           {!isUsingDefault && (
             <button
@@ -70,7 +70,7 @@ export default function ConsentWaiverField({
               className="text-xs opacity-70 hover:opacity-100 underline max-lg:min-h-11 max-lg:px-2"
               onClick={() => onChange('')}
             >
-              Reset to standard
+              Reset to Standard
             </button>
           )}
         </div>

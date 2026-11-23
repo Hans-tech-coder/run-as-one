@@ -108,7 +108,7 @@ export default async function EventsPage({ params }: { params: Promise<{ site: s
   const heading = (view: EventsView) => (
     <div>
       <Title className={hero ? 'site-h2' : 'site-h1'}>
-        {view === 'past' ? 'Past races' : 'Upcoming races'}
+        {view === 'past' ? 'Past Races' : 'Upcoming Races'}
       </Title>
       <p className="site-section__sub max-w-[60ch]">
         {view === 'past'

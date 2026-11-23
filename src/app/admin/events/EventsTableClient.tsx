@@ -175,7 +175,7 @@ export default function EventsTableClient({ events, canCreate = true, canFilterB
     const options = [...byId]
       .map(([value, label]) => ({ value, label }))
       .sort((a, b) => a.label.localeCompare(b.label));
-    return unlinked ? [...options, { value: NO_CLIENT, label: 'No client yet' }] : options;
+    return unlinked ? [...options, { value: NO_CLIENT, label: 'No Client Yet' }] : options;
   }, [tableEvents]);
   const stateOptions = (Object.keys(REGISTRATION_STATES) as (keyof typeof REGISTRATION_STATES)[])
     .map(key => ({ value: key, label: REGISTRATION_STATES[key].label }));
