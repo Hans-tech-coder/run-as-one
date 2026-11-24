@@ -134,8 +134,11 @@ event on `/admin/remittances` (`ADMIN_MERGE_PLAN.md` Batch 6, §5
   promotion, the `pre-deploy-qa` skill runs the gates, a review of
   `origin/main..dev`, and a registration walkthrough on localhost; its Strix
   scan is run by the owner in their own terminal, never by an agent.
-- **Hosting budget matters.** Vercel + Neon's free 0.5 GB Postgres tier. Weigh
-  storage cost before proposing schema growth, and say so when you do.
+- **Hosting budget matters.** Vercel + Neon's free tier (0.5 GB storage, 100
+  CU-hours/month compute). Weigh storage cost before proposing schema growth,
+  and say so when you do. Neon compute usage here is **wake-bound** (each DB
+  hit wakes compute for ≥5 min), not query-size-bound — avoid frequent polling
+  or uncached `force-dynamic` DB reads on public pages.
 
 ### Commands
 
@@ -183,18 +186,18 @@ destroyed real customer orders — including bank-transfer registrations sitting
 `PENDING` while a runner waits for their slot to be confirmed.
 
 Neon project **`run-as-one`** (`wispy-rain-76789112`, free tier, 10 branches,
-0.5 GB):
+0.5 GB, 100 CU-h/month):
 
 | Branch | Endpoint | Used by |
 | --- | --- | --- |
-| `dev` — **this is production**, `br-calm-darkness-b3tqh63k` | `ep-still-pine-b3n210bs` | The live site (Vercel Production). Holds every real registration and all 2,149 race results. |
-| `local-dev`, `br-dry-grass-b3ubrfhy` | `ep-shiny-sunset-b3gzfro9` | The local checkout's `.env`. A copy-on-write branch of production. |
-| `legacy-empty-root`/`production`, `br-spring-pine-b35lahiy` | `ep-silent-pond-b38yfoxa` | Nothing. The original root branch, **it has no tables at all** and never held data. Kept only because Neon cannot delete a root branch. |
+| `production`, `br-calm-darkness-b3tqh63k` | `ep-still-pine-b3n210bs` | The live site (`runasone.ph`, Vercel Production). Holds every real registration and race result. |
+| `local-dev`, `br-dry-grass-b3ubrfhy` | `ep-shiny-sunset-b3gzfro9` | Both the local checkout's `.env` **and** git `dev`'s Vercel Preview deployments. A copy-on-write branch of production. |
+| `legacy-empty-root`, `br-spring-pine-b35lahiy` | `ep-silent-pond-b38yfoxa` | Nothing. The original root branch, **it has no tables at all** and never held data. Kept only because Neon cannot delete a root branch. |
 
-**The branch named `dev` is the production database.** The names are backwards
-because the project was built on the branch Neon created second, and the
-rename is a console-only step that has not been taken. Go by the endpoint, not
-by the name: `ep-still-pine-b3n210bs` is live.
+Always verify by endpoint (`ep-still-pine-b3n210bs` is live; Vercel Production's
+`DATABASE_URL` and `DIRECT_URL` both hold the `-pooler` host, so strip
+`-pooler` / `-pvg` when running `prisma migrate deploy` — see
+`pre-deploy-qa/deploy-commands.md`).
 
 **Syncing production data down is a Neon branch reset, not a feature.** To
 refresh `local-dev` with what production holds now, reset it from its parent in
@@ -312,8 +315,7 @@ src/
 prisma/schema.prisma        # the data model, heavily commented
 vercel.json                 # scheduled work (crons) — see §2
 scripts/                    # seed + one-off maintenance scripts
-.claude/skills/             # active project skills — task→skill table in AGENTS.md
-.claude/skills-archive/     # parked skills no agent reads (same for .agents/)
+.agents/skills/             # active project skills (linked from .claude/skills/) — task→skill table in AGENTS.md
 ```
 
 ---
@@ -338,21 +340,29 @@ These are the user's own standing preferences. Follow them without being asked.
    read why not.
 3. **Consult the `ui-ux-pro-max` skill for UI/UX work** rather than designing
    ad hoc; for the look of the public pages, `design-taste-frontend` leads. Both,
-   with `transitions-dev`, are installed globally because the owner uses them in
-   every project; every other skill stays project-scoped in `.claude/skills/`.
+   with `transitions-dev` and `gsap-*`, are installed globally (`~/.agents/skills/`,
+   linked into `~/.claude/skills/` and `~/.gemini/config/skills/`) because the
+   owner uses them across projects; every project-only skill stays in
+   `.agents/skills/` (linked from `.claude/skills/`).
 4. **Validation messages must be specific.** Name exactly what is missing and
    highlight the offending fields; never a generic catch-all. See
    `app/events/[slug]/register/validation.ts` and `FieldError`.
 5. **The home page exists to showcase events.** Events stay the focal point.
-6. **Table action icons align under their column header**, never pushed to the
-   row's right edge.
+6. **Table action controls align under their column header and state what they
+   do.** Never push actions to the row's right edge, and never use a bare
+   chevron (`>`) or hover-only `title` (phones have no hover) — pair an
+   established icon with a short text label (e.g. eye + *View Details*), or use
+   the shared `RowActionsMenu` (`⋮`).
 7. **Site-wide contact and social details live in `lib/site-contact.ts`**, or in
    `lib/site-settings.ts` once staff can edit them (the admin email and the
    social links already are) — never inline in a component.
-8. **Work must reach the user's dev server.** They test on their own
-   `localhost:3000` running the **main checkout**, so anything left in a git
-   worktree is invisible to them. Edit in the main checkout — that alone is
-   enough for them to see the change.
+8. **Work in the main local checkout (`dev`), never an unsolicited worktree.**
+   The owner tests on `localhost:3000` running the main checkout, so anything
+   left in a git worktree is invisible and bloats disk. Do not create or hand
+   off to a worktree unless risky work must be isolated first; if a worktree is
+   truly needed, serve it on `:3001` with `next dev --webpack` (`Turbopack`
+   fails without local `node_modules`) and bring uncommitted changes back to the
+   main checkout when done.
 9. **Never commit or push until the user says so.** Finish the work, verify it,
    report it, and leave it uncommitted in the working tree. `git commit` and
    `git push` wait for the user's explicit command or `"push the changes"` — say
@@ -366,10 +376,11 @@ These are the user's own standing preferences. Follow them without being asked.
      logs, or unknown untracked files without asking.
    - **Staged diff check:** Inspect `git diff --staged` to catch stray debug
      code, secrets, or unintended deletions.
-   - **Commit & push:** Format the commit message with
-     `@.claude/skills/caveman-commit` and push **only** to `dev`
-     (`git push origin dev`), never `main`.
-10. **Weigh storage cost** (Neon's free 0.5 GB tier) before growing the schema.
+   - **Commit & push:** Format the commit message with the `caveman-commit`
+     skill and push **only** to `dev` (`git push origin dev`), never `main`.
+10. **Weigh storage and wake-up cost** (Neon's free 0.5 GB storage and wake-bound
+    100 CU-h/month compute) before growing the schema or adding polling /
+    uncached dynamic DB reads.
 11. **Comment the *why*.** This codebase's header comments explain the reasoning
     behind a decision, not what the code does. Match that voice.
 12. **Every screen ships mobile responsive, and a fix never breaks another
@@ -405,6 +416,18 @@ These are the user's own standing preferences. Follow them without being asked.
     or after punctuation). Multi-word lead paragraphs, explanatory descriptions,
     field hints, instructional placeholders, validation errors, toast/alert body
     copy and full-sentence consent checkboxes stay Sentence case for readability.
+14. **Clients hire Run As One; never frame them as partners.** Public and
+    onboarding copy aimed at organizers frames race services as hiring a service
+    (*Our Services* / *Inquire About Our Race Services*), never as a partnership
+    (*Work With Us*) or self-serve dashboard work (client sign-in is view-only).
+15. **Never advertise category changes or pickup↔delivery switches on public
+    pages.** Those admin flows exist only for staff-handled special cases; keep
+    change deadlines, change fees, and refund rules off public runner-facing
+    pages unless asked.
+16. **Never let local or preview tests email a real registrant.** `local-dev`
+    holds copies of real runners' emails and Resend is live locally with no
+    test-recipient code guard (never add one to app code). Trigger email-sending
+    actions only on test orders addressed to the owner's own email.
 
 ---
 

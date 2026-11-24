@@ -14,7 +14,7 @@ When the owner says **"push the changes"** (or explicitly commands a commit and 
 1. **Branch & sync check (`git status -sb`):** Verify the current branch is `dev` (`git branch --show-current`). If on `main` or any other branch, **stop immediately** and report it. Check if `dev` is behind `origin/dev` before pushing.
 2. **Explicit staging (never blind `git add .` / `git add -A`):** Inspect `git status` and stage only the intended files by path. Never stage `.env*`, credentials, logs, SQL dumps, or stray untracked files — flag anything questionable to the owner first.
 3. **Staged diff sanity check (`git diff --staged`):** Inspect the staged diff to verify no secrets, debug leftovers, or unintended deletions are included.
-4. **Commit & push to `dev` only:** Write the commit message using the `@.claude/skills/caveman-commit` skill, then push **only** to `dev` (`git push origin dev`), never `main`.
+4. **Commit & push to `dev` only:** Write the commit message using the `caveman-commit` skill (`.agents/skills/caveman-commit`), then push **only** to `dev` (`git push origin dev`), never `main`.
 
 (The same rule as `PROJECT_GUIDE.md` §8 rule 9, here so no session can miss it.)
 
@@ -50,11 +50,13 @@ oriented" is the most expensive possible way to start, and it is never necessary
 
 # Which skill for which task
 
-The project's own skills live flat in `.claude/skills/` (Claude Code) and
-`.agents/skills/` (other agents). The three design skills — `ui-ux-pro-max`,
-`design-taste-frontend` and `transitions-dev` — are installed globally
-(`~/.agents/skills/`, linked from `~/.claude/skills/`) because the owner uses
-them in every project. Pick from this table instead of browsing the list; one
+The project's own skills live flat in `.agents/skills/` (tracked in git,
+junction-linked from `.claude/skills/` for Claude Code). Cross-project skills —
+`ui-ux-pro-max`, `design-taste-frontend`, `transitions-dev`, `gsap-*`, and
+companions — live globally in `~/.agents/skills/` (junction-linked from both
+`~/.claude/skills/` and `~/.gemini/config/skills/`) so both Claude Code and
+Antigravity load the exact same copies. Never install a project-only skill
+globally without asking. Pick from this table instead of browsing the list; one
 or two skills per task is the norm.
 
 | Task | Skill |
@@ -67,16 +69,32 @@ or two skills per task is the norm.
 | Prisma CLI / schema migration | `prisma-cli`, `migration` |
 | Checking finished work | `verify-and-stop`; `caveman-review` for a diff review |
 | Stress-testing a plan | `grilling` |
-| Ending a session mid-work | `/handoff` |
+| Ending a session mid-work | `handoff` (`/handoff` — writes to `docs/plans/`) |
 | Merge conflict (dev → main) | `resolving-merge-conflicts` |
 | QA before promoting `dev` to `main` | `pre-deploy-qa` (the owner runs its Strix step by hand) |
-| Security audit | built-in `/security-review`; the Strix skills only on request, **never against the production URL** |
+| Security audit | `/security-review` (Claude Code) or code security audit (Antigravity); the Strix skills only on request, **never against the production URL** |
 | Saving tokens | `caveman*`, `cavecrew` |
 | Committing and pushing ("push the changes") | `caveman-commit` (run `git status` first, push only to `dev`) |
 
-Skills that do not fit this stack or duplicate the ones above are parked in
-`.agents/skills-archive/` and `.claude/skills-archive/`, which no agent reads.
-Move one back into the active folder only when a task needs it.
+# Cross-agent continuity (Claude Code & Antigravity)
+
+The owner switches freely between **Claude Code** (`CLAUDE.md` → `@AGENTS.md`)
+and **Antigravity** (`AGENTS.md`) on this checkout. Keep both agents aligned:
+
+1. **Never trap project knowledge in agent-private storage.** Do not save
+   standing rules, architectural decisions, or session handoffs *only* inside
+   `~/.claude/projects/.../memory/` or Antigravity's `brain/` directory. Put
+   standing rules in `AGENTS.md` / `PROJECT_GUIDE.md` §8, active multi-session
+   plans and mid-work handoffs in `docs/plans/<NAME>_PLAN.md` (gitignored, in
+   the main checkout where both agents see them), and parked items in
+   `ON_HOLD.md`.
+2. **Work in the main local checkout (`dev`), not a worktree.** Do not create or
+   hand off to a git worktree (`git worktree`, `.claude/worktrees`, or T3
+   `t3_worktree_handoff`) unless risky work must be isolated before touching
+   local.
+3. **Scratch work goes to `C:\Users\user\Web Projects\Claude Scratch`.** Put
+   cloned reference repos, throwaway test scripts, and skill backups there —
+   never in OS/agent temp folders or inside `run-as-one`.
 
 # Keep the guide accurate
 

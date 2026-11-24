@@ -25,22 +25,40 @@ skip to step 3.
 
 ## 2. Only if there is a migration: migrate production first
 
-Take the **direct** (not pooled) connection string of the production branch from
-the Neon console: branch `dev`, endpoint `ep-still-pine-b3n210bs`. It is set for this
+Which Neon branch is which (project `run-as-one`):
+
+| Runs on | Neon branch | Endpoint |
+|---|---|---|
+| runasone.ph (git `main`, Vercel Production) | `production` | `ep-still-pine-b3n210bs` |
+| localhost (`.env`) and git `dev` (Vercel Preview) | `local-dev` | `ep-shiny-sunset-b3gzfro9` |
+
+So git `dev` is **not** the production database: migrating "dev" never touches
+production. Take the production connection string from the Neon console (branch
+`production`) or from Vercel's Production `DIRECT_URL`. It is set for this
 terminal only; `.env` is not touched, and a variable set here wins over `.env`.
 
 Use **single quotes** (a `$` in the password is expanded inside double quotes) and
 only the `postgresql://…` string itself (Neon's copy button can wrap it in
-`psql '…'`, which fails with P1013). Check it before running anything:
+`psql '…'`, which fails with P1013).
+
+`prisma migrate` needs the **direct** host, and the strings you can copy are often
+not it. Vercel's Production `DATABASE_URL` and `DIRECT_URL` both hold the
+**pooled** host (`ep-still-pine-b3n210bs-pooler.…`), and the Neon console can
+hand out the compute's own host (`ep-still-pine-b3n210bs-pvg.…`). All of them are
+the same production database. The second line below rewrites either one to the
+direct host, and the credentials stay the same. Check it before running anything:
 
 ```powershell
-$env:DIRECT_URL = '<production direct connection string>'
+$env:DIRECT_URL = '<production connection string>'
+$env:DIRECT_URL = $env:DIRECT_URL -replace 'ep-still-pine-b3n210bs(-pvg)?(-pooler)?\.', 'ep-still-pine-b3n210bs.'
 $env:DIRECT_URL -match 'ep-still-pine-b3n210bs\.' -and $env:DIRECT_URL -notmatch '-pooler'
 npx prisma migrate status
 ```
 
-The check must print `True`. `migrate status` names the host it connected to and
-lists the migrations not yet applied. Then:
+The check must print `True`. If it prints `False`, show the host with the password
+masked, and paste that, never the string itself:
+`$env:DIRECT_URL -replace '://[^@]*@', '://***@'`. `migrate status` names the host
+it connected to and lists the migrations not yet applied. Then:
 
 ```powershell
 npx prisma migrate deploy

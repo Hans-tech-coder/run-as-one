@@ -21,8 +21,7 @@ in step 6.
   A bad test order is cancelled by status, never deleted.
 - **Blob stores are shared with production.** A proof upload during testing lands in
   the live private store; never delete a blob from local.
-- **Token budget:** read pages with `get_page_text` / `read_page`, screenshot only
-  for final proof. Test only the rows the diff touches plus the core happy paths.
+- **Token budget:** read pages via snapshot/text tools (`get_page_text` / `read_page` in Claude Code, or `preview_snapshot` / `preview_evaluate` in T3 Code / Antigravity); screenshot only for final proof. Test only the rows the diff touches plus the core happy paths.
 
 ## Steps
 
@@ -57,7 +56,7 @@ A failing build is an automatic no-go.
 
 ### 3. Code review of the release
 
-Run `/code-review` (medium) on `origin/main..dev`. Every correctness finding in
+Run `/code-review` (in Claude Code) or a `caveman-review` / subagent diff review (in Antigravity) on `origin/main..dev`. Every correctness finding in
 `src/app/api/checkout/**`, `src/app/api/webhooks/paymongo/**`,
 `src/app/events/[slug]/register/**`, or a `src/lib` rule module
 (`registration-gate`, `discount`, `free-checkout`, `minor-consent`, `pending-expiry`)
@@ -65,7 +64,7 @@ is a blocker until the owner rules on it.
 
 ### 4. Registration walkthrough (browser, localhost:3000)
 
-Start the dev server with `preview_start` (never a raw shell server). Run each row
+Attach to the owner's running `:3000` dev server first (check its start time is newer than `.env`'s last edit), or start one via the IDE preview tool (`preview_start` in Claude Code; `preview_status` / `preview_open` with `target:{kind:'environment-port', port:3000}` in T3 Code / Antigravity — never leave a stray background shell server). Because `local-dev` has no permanent dedicated test event, ask the owner before placing QA orders on `local-dev` copies of real events (typically `32km-beyond-21` for row A online QR Ph and `run-and-reachout-2026` for row B bank transfer, always as `QA TESTER` with the owner's own email). Run each row
 the diff touches, plus rows A and B always. Also run each touched row at 375px.
 
 | # | Scenario | Pass when |
@@ -81,16 +80,16 @@ the diff touches, plus rows A and B always. Also run each touched row at 375px.
 | I | Admin manual registration `/admin/register` | Creates the row; appears in the event's registrants table |
 | J | Confirmation email | Arrives at the owner's inbox (Resend is live locally) with correct event, category, and amount |
 
-Check `read_console_messages` and `preview_logs` for errors after each row.
+Check browser console and dev-server logs (`read_console_messages` / `preview_logs` in Claude Code, or `preview_snapshot` diagnostics in T3 Code / Antigravity) for errors after each row.
 
 ### 5. Strix vulnerability scan (the owner runs it)
 
 Do **not** run Strix yourself. Give the owner the commands in
-[strix-commands.md](strix-commands.md), filled in for this release, and wait. When
+[strix-commands.md](strix-commands.md), filled in for this release, and wait. Note when handing them over that Strix's `--max-budget` flag is soft and routinely overruns (e.g. ~$12–$18 on a `$10` cap), so hard spending caps must be set at the LLM provider. When
 they say it finished, read
 `C:\Users\user\Web Projects\Claude Scratch\run-as-one-scan\strix_runs\<latest>\penetration_test_report.md`,
 then each file in `vulnerabilities\`. Confirm each PoC actually shows impact before
-you report it. Check `run.json`: a `stopped` status or a cost at the budget cap means
+you report it. Check `run.json` (and report `llm_usage.cost` against the cap when present): a `stopped` status or a cost at the budget cap means
 the scan did not finish; say so. Fixes go through `fix-security-vulnerabilities-with-strix`,
 one finding per session.
 
