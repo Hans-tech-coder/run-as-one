@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
 import { RunAsOneLogo } from './RunAsOneLogo';
 import { ClientSiteLogo } from './ClientSiteLogo';
+import { ThemeToggle } from './ThemeToggle';
 import type { SiteClient } from '@/lib/site-client';
 
 /**
@@ -87,6 +88,7 @@ export default function Navbar({ site }: { site: SiteClient | null }) {
           )}
         </Link>
 
+        <div className="flex shrink-0 items-center gap-1 md:gap-3 lg:gap-4">
         <nav aria-label="Main" className="hidden md:flex shrink-0 items-center gap-6 lg:gap-8">
           {links.map(link => (
             <Link
@@ -100,6 +102,8 @@ export default function Navbar({ site }: { site: SiteClient | null }) {
           ))}
         </nav>
 
+        <ThemeToggle />
+
         <button
           type="button"
           onClick={toggle}
@@ -110,6 +114,7 @@ export default function Navbar({ site }: { site: SiteClient | null }) {
         >
           {isOpen ? <X size={22} /> : <Menu size={22} />}
         </button>
+        </div>
       </header>
 
       <div

@@ -11,8 +11,12 @@
    below now reach no public page; they stay as the fallback a non-Paper
    frame would get, and as the start of a dark Paper.
 
+   Light and dark: the hues are not here but in paper-tokens.css (`--paper-*`,
+   flipped by `<html data-color-theme>` for a frame marked
+   `data-follows-theme`); the blocks below only map `--site-*` onto them.
+
    How the two looks coexist: `ClientLayoutWrapper` puts `.site-paper` (with
-   `data-theme="light"`) on the frame of a redesigned page only. The
+   `data-theme` = the visitor's theme) on the frame of a redesigned page only. The
    `data-theme` half re-runs globals.css's light block there — the logo's
    deepened inks, the ink ramp, the status colours — so a shared component
    that reads those names (StatusPanel, the runner loader, LinkPendingIcon)
@@ -21,9 +25,9 @@
    components read; their dark defaults on `:root` are what the shared navbar
    and footer wear on the pages that are still dark.
 
-   Theme-ready on purpose (the owner asked, 2026-11-21): a dark Paper is one
-   more block that sets the same `--site-*` names (and drops `data-theme`), not
-   a second set of components. Never write a hex or a `white/…` utility in a
+   Theme-ready on purpose (the owner asked, 2026-11-21; dark Paper landed
+   2026-11-24): dark is the `--paper-*` dark block, not a second set of
+   components. Never write a hex or a `white/…` utility in a
    redesigned component; read a token.
 
    Contrast, measured: action #c2530a under white text 4.6:1; accent text
@@ -58,20 +62,20 @@
 }
 
 .site-paper[data-theme] {
-  --site-bg: #f6f3ee;
-  --site-surface: #ebe5da;
-  --site-card: #fffdf9;
-  --site-ink: #14192b;
-  --site-muted: #5d606c;
-  --site-line: #e2dacd;
-  --site-line-strong: #cbc1b1;
-  --site-field-line: #8f887d;
-  --site-action: #c2530a;
-  --site-action-hover: #a8460a;
-  --site-action-ink: #ffffff;
-  --site-accent-text: #a8460a;
-  --site-blue-text: #0057c2;
-  --site-focus: #0057c2;
+  --site-bg: var(--paper-bg);
+  --site-surface: var(--paper-surface);
+  --site-card: var(--paper-card);
+  --site-ink: var(--paper-ink);
+  --site-muted: var(--paper-muted);
+  --site-line: var(--paper-line);
+  --site-line-strong: var(--paper-line-strong);
+  --site-field-line: var(--paper-field-line);
+  --site-action: var(--paper-action);
+  --site-action-hover: var(--paper-action-hover);
+  --site-action-ink: var(--paper-action-ink);
+  --site-accent-text: var(--paper-accent-text);
+  --site-blue-text: var(--paper-blue-text);
+  --site-focus: var(--paper-focus);
   --site-display: var(--font-archivo), system-ui, sans-serif;
   --site-text: var(--font-archivo), system-ui, sans-serif;
   --site-display-stretch: 110%;
@@ -88,6 +92,34 @@
   --font-sans: var(--site-display);
   --font-body: var(--site-text);
 
+  /* What globals.css's `[data-theme="light"]` block sets on this frame (the
+     logo, the status inks, the accents as text, the browser's controls),
+     pointed at Paper so the same names follow the theme switch
+     (paper-tokens.css). */
+  --logo-ink: var(--paper-logo-ink);
+  --logo-mid: var(--paper-logo-mid);
+  --logo-accent: var(--paper-logo-accent);
+  --logo-muted: var(--paper-logo-muted);
+  --status-success: var(--paper-success);
+  --status-warning: var(--paper-warning);
+  --status-danger: var(--paper-danger);
+  --accent-blue-text: var(--site-blue-text);
+  --accent-orange-text: var(--site-accent-text);
+  --accent-blue-ink: var(--site-blue-text);
+  --accent-orange-ink: var(--site-accent-text);
+  --glass-bg: color-mix(in srgb, var(--site-card) 70%, transparent);
+  --bg-secondary: color-mix(in srgb, var(--site-ink) 3%, transparent);
+  --dash-surface: var(--site-card);
+  --dash-field: var(--site-card);
+  --dash-field-focus: var(--site-card);
+  --dash-panel: var(--site-card);
+  --dash-panel-solid: var(--site-card);
+  --dash-popover: var(--site-card);
+  --dash-scrim: var(--paper-scrim);
+  --dash-shadow: rgb(var(--paper-shadow-rgb) / 0.16);
+  --color-scheme: var(--paper-scheme);
+  color-scheme: var(--paper-scheme);
+
   /* The floating navbar is gone: the bar is a solid strip at the top, so the
      clearance under it is its own height. .event-hero still reads this. */
   --nav-offset: var(--site-nav-h);
@@ -98,8 +130,9 @@
   font-family: var(--site-text);
 }
 
-/* The overscroll bounce shows <html>; on a Paper page it should be paper. */
-html:has(.site-paper) { background-color: #f6f3ee; }
+/* The overscroll bounce shows <html>; on a Paper page it should be paper
+   (paper-tokens.css paints it for a frame that follows the theme). */
+html:has(.site-paper) { background-color: var(--paper-bg); }
 
 /* No page-arrival fade on a redesigned page: the hero has its own one entrance
    (`data-enter`), and the audit caught whole sections blank mid-fade. */
@@ -382,7 +415,7 @@ button.site-link:disabled { opacity: 0.5; cursor: not-allowed; }
 .site-card:hover {
   transform: translateY(-2px);
   border-color: var(--site-line-strong);
-  box-shadow: 0 10px 24px -14px rgb(20 25 43 / 0.28);
+  box-shadow: 0 10px 24px -14px rgb(var(--paper-shadow-rgb) / 0.28);
 }
 /* The shared poster frame (components/PosterFrame, docs/conventions.md §9):
    the poster whole on top, and behind it the same image cover-fit and blurred,
@@ -648,6 +681,35 @@ button.site-link:disabled { opacity: 0.5; cursor: not-allowed; }
   color: var(--site-ink);
 }
 .site-nav__toggle:hover { background: var(--site-surface); }
+/* The light/dark switch (ThemeToggle): a bare icon, no tile. Hover turns it
+   to the ink and gives it a small turn; the hit area stays 44px tall (40px
+   wide on a wide screen, so it sits close to the links). */
+.site-theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--site-muted);
+  cursor: pointer;
+  transition: color var(--duration-quick, 150ms) ease;
+}
+@media (min-width: 768px) { .site-theme-toggle { width: 40px; } }
+.site-theme-toggle svg {
+  transition: transform 300ms var(--ease-smooth-out, cubic-bezier(0.22, 1, 0.36, 1));
+}
+.site-theme-toggle:hover { color: var(--site-ink); }
+.site-theme-toggle:hover svg { transform: rotate(20deg); }
+.site-theme-toggle:active svg { transform: rotate(20deg) scale(0.92); }
+.site-theme-toggle:focus-visible { outline: 2px solid var(--site-focus); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .site-theme-toggle svg { transition: none; }
+  .site-theme-toggle:hover svg { transform: none; }
+}
 @media (min-width: 768px) { .site-nav__toggle { display: none; } }
 /* The phone menu: a full-width sheet under the bar. */
 .site-nav__sheet {
@@ -657,7 +719,7 @@ button.site-link:disabled { opacity: 0.5; cursor: not-allowed; }
   right: 0;
   background: var(--site-bg);
   border-bottom: 1px solid var(--site-line);
-  box-shadow: 0 18px 30px -20px rgb(0 0 0 / 0.35);
+  box-shadow: 0 18px 30px -20px rgb(var(--paper-shadow-rgb) / 0.35);
 }
 .site-nav__sheet a {
   display: flex;
@@ -676,15 +738,17 @@ button.site-link:disabled { opacity: 0.5; cursor: not-allowed; }
    The ink band that closes every page: the one inverted ground the site has. */
 .site-footer {
   margin-top: 0;
-  background: var(--site-ink);
-  color: var(--site-bg);
+  background: var(--paper-band);
+  color: var(--paper-band-ink);
 }
-/* The logo on the ink band: paper arcs, the brand pair lifted for the dark
-   ground. Only on Paper; a dark page's footer keeps the dark logo it had. */
+/* On Carbon the navy band needs an edge to read as a band, not a smudge. */
+:root[data-color-theme="dark"] .site-paper .site-footer { border-top: 1px solid var(--site-line); }
+/* The logo on the ink band: paper arcs and the brand pair, as the
+   `poster-badge-*` lockups draw them on Race Navy (brand guide §2.2). Only on Paper; a dark page's footer keeps the dark logo it had. */
 .site-paper .site-footer {
-  --logo-ink: var(--site-bg);
-  --logo-mid: #5aa9ff;
-  --logo-accent: #ff7a1a;
+  --logo-ink: var(--paper-band-ink);
+  --logo-mid: var(--paper-logo-mid);
+  --logo-accent: var(--paper-logo-accent);
 }
 /* On a page that is still dark, the ink band would be a white slab: it keeps
    a dark ground with a hairline instead. */
@@ -1023,7 +1087,7 @@ button.site-link:disabled { opacity: 0.5; cursor: not-allowed; }
   justify-content: center;
   border-radius: var(--radius-panel);
   background: var(--status-success);
-  color: #ffffff;
+  color: var(--paper-on-status);
 }
 
 /* /feedback: the heading beside the form on a wide screen. */
@@ -1262,7 +1326,7 @@ button.site-link[aria-busy="true"] { opacity: 1; cursor: wait; }
   border: 1px solid var(--site-line);
   border-radius: var(--radius-panel);
   background: var(--site-card);
-  box-shadow: 0 16px 36px -18px rgb(20 25 43 / 0.35);
+  box-shadow: 0 16px 36px -18px rgb(var(--paper-shadow-rgb) / 0.35);
 }
 .lb-menu__item {
   border-radius: calc(var(--radius-panel) - 4px);
@@ -1297,7 +1361,7 @@ button.site-link[aria-busy="true"] { opacity: 1; cursor: wait; }
 .lb-card:hover {
   transform: translateY(-2px);
   border-color: var(--site-line-strong);
-  box-shadow: 0 10px 24px -14px rgb(20 25 43 / 0.28);
+  box-shadow: 0 10px 24px -14px rgb(var(--paper-shadow-rgb) / 0.28);
 }
 .lb-card:active { transform: translateY(0); box-shadow: none; }
 .lb-card:focus-visible { outline: 2px solid var(--site-focus); outline-offset: 2px; }
@@ -1323,28 +1387,28 @@ button.site-link[aria-busy="true"] { opacity: 1; cursor: wait; }
    variable reaches <body> from ClientLayoutWrapper. checkout-paper.css's
    older bridge still covers the checkout's own modals on top of this. */
 body:has(.site-paper[data-theme]) :is(.site-portal, .alert-modal, .toast-rail, .zoom-lightbox) {
-  --site-bg: #f6f3ee;
-  --site-surface: #ebe5da;
-  --site-card: #fffdf9;
-  --site-ink: #14192b;
-  --site-muted: #5d606c;
-  --site-line: #e2dacd;
-  --site-line-strong: #cbc1b1;
-  --site-field-line: #8f887d;
-  --site-action: #c2530a;
-  --site-action-hover: #a8460a;
-  --site-action-ink: #ffffff;
-  --site-accent-text: #a8460a;
-  --site-blue-text: #0057c2;
-  --site-focus: #0057c2;
+  --site-bg: var(--paper-bg);
+  --site-surface: var(--paper-surface);
+  --site-card: var(--paper-card);
+  --site-ink: var(--paper-ink);
+  --site-muted: var(--paper-muted);
+  --site-line: var(--paper-line);
+  --site-line-strong: var(--paper-line-strong);
+  --site-field-line: var(--paper-field-line);
+  --site-action: var(--paper-action);
+  --site-action-hover: var(--paper-action-hover);
+  --site-action-ink: var(--paper-action-ink);
+  --site-accent-text: var(--paper-accent-text);
+  --site-blue-text: var(--paper-blue-text);
+  --site-focus: var(--paper-focus);
   --site-display: var(--font-archivo), system-ui, sans-serif;
   --site-text: var(--font-archivo), system-ui, sans-serif;
   --site-display-stretch: 110%;
-  --site-scrim: rgb(20 25 43 / 0.42);
-  --site-lift: 0 24px 50px -20px rgb(20 25 43 / 0.4);
-  --status-success: #2f7d0f;
-  --status-warning: #9a5b00;
-  --status-danger: #c8282b;
+  --site-scrim: var(--paper-scrim);
+  --site-lift: 0 24px 50px -20px rgb(var(--paper-shadow-rgb) / 0.4);
+  --status-success: var(--paper-success);
+  --status-warning: var(--paper-warning);
+  --status-danger: var(--paper-danger);
   /* The names the shared alert and toast read (AlertModal's variant table). */
   --ink: var(--site-ink);
   --text-primary: var(--site-ink);
@@ -1354,9 +1418,9 @@ body:has(.site-paper[data-theme]) :is(.site-portal, .alert-modal, .toast-rail, .
   --accent-blue: var(--site-blue-text);
   --accent-orange: var(--site-accent-text);
   --color-red-500: var(--status-danger);
-  --color-red-600: #a31f22;
+  --color-red-600: var(--paper-danger-strong);
   --color-green-500: var(--status-success);
-  --color-green-600: #256509;
+  --color-green-600: var(--paper-success-strong);
   --dash-panel-solid: var(--site-card);
   --dash-scrim: var(--site-scrim);
   --dash-hairline: var(--site-line);
@@ -1364,7 +1428,8 @@ body:has(.site-paper[data-theme]) :is(.site-portal, .alert-modal, .toast-rail, .
   --ink-05: color-mix(in srgb, var(--site-ink) 5%, transparent);
   --ink-10: color-mix(in srgb, var(--site-ink) 10%, transparent);
   --ink-85: color-mix(in srgb, var(--site-ink) 85%, transparent);
-  color-scheme: light;
+  --color-scheme: var(--paper-scheme);
+  color-scheme: var(--paper-scheme);
   font-family: var(--site-text);
 }
 
@@ -1444,7 +1509,7 @@ body:has(.site-paper[data-theme]) .alert-modal h3 {
 }
 body:has(.site-paper[data-theme]) .toast-rail .t-toast {
   border-color: var(--site-line);
-  box-shadow: 0 16px 36px -18px rgb(20 25 43 / 0.35);
+  box-shadow: 0 16px 36px -18px rgb(var(--paper-shadow-rgb) / 0.35);
 }
 
 /* The photo viewer (components/ui/ZoomLightbox) on Paper: the photo on the

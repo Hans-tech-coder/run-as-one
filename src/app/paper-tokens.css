@@ -1,0 +1,122 @@
+/* Paper's palette in both themes — the rule this file owns: every Paper hue
+   is named here once, light on `:root` and dark under the switch, and every
+   Paper surface (the public `--site-*` names in site.css, the checkout bridge,
+   and the dashboard when it moves onto Paper) reads these names instead of a
+   hex. Brand source: brand/brand-guide.md §3 (Paper & Ink, Carbon Dark, the
+   dark status inks, the lockup inks of `horizontal-light` / `-dark`).
+
+   The switch: `<html data-color-theme="dark">`, written before paint by the
+   inline script in the root layout (lib/color-theme.ts). It only turns a
+   frame dark when that frame opts in with `data-follows-theme` — today the
+   public frame (ClientLayoutWrapper). The dashboard and the sign-in screens
+   carry no marker yet, so they stay exactly as they are.
+
+   Contrast, measured (WCAG 2.x):
+   Light — ink #14192b on the ground 15.8:1; muted #5d606c 5.6:1 (6.2:1 on a
+   card); accent text #a8460a 5.2:1; link blue #0057c2 6.5:1; field edge
+   #8f887d on a card 3.5:1; white on the action #c2530a 4.6:1.
+   Dark — ink #f6f3ee on Carbon #050505 18.4:1 (17.0:1 on the #111114 card);
+   muted #a29d94 7.0:1 on a card; accent text = Blaze #e05a00 5.5:1 on the
+   ground, 5.1:1 on a card, 4.6:1 on the surface; link blue #388bfd 5.6:1 on a
+   card; field edge #6e6a64 on a card 3.5:1; status inks #52c41a 8.3:1,
+   #faad14 9.9:1, #ff4d4f 5.8:1 on a card. The action keeps the brand's one
+   button pair in both themes: #c2530a under white 4.6:1, hover #a8460a. */
+
+:root {
+  --paper-scheme: light;
+
+  /* Ground, sheets, ink */
+  --paper-bg: #f6f3ee;            /* Warm Paper */
+  --paper-surface: #ebe5da;       /* Warm Surface */
+  --paper-card: #fffdf9;          /* Card Sheet */
+  --paper-ink: #14192b;           /* Race Navy */
+  --paper-muted: #5d606c;         /* Slate Muted */
+  --paper-line: #e2dacd;          /* Paper Hairline */
+  --paper-line-strong: #cbc1b1;   /* Strong Line */
+  --paper-field-line: #8f887d;    /* Field Edge */
+
+  /* Accents */
+  --paper-action: #c2530a;        /* Action Orange */
+  --paper-action-hover: #a8460a;  /* Deep Accent Orange */
+  --paper-action-ink: #ffffff;
+  --paper-accent-text: #a8460a;
+  --paper-blue-text: #0057c2;     /* Focus / Link Blue */
+  --paper-focus: #0057c2;
+
+  /* Status */
+  --paper-success: #2f7d0f;
+  --paper-warning: #9a5b00;
+  --paper-danger: #c8282b;
+  --paper-success-strong: #256509; /* text on a doubled tint, hover of a green fill */
+  --paper-danger-strong: #a31f22;  /* hover of a red fill */
+  --paper-on-status: #ffffff;      /* a glyph on a solid status fill */
+
+  /* The footer's ink band: Race Navy in both themes. */
+  --paper-band: #14192b;
+  --paper-band-ink: #f6f3ee;
+
+  /* The lockup inks: `horizontal-light` on a light page. The brand pair is
+     the same in both themes (`horizontal-dark` keeps #1d6fe8 / #e05a00). */
+  --paper-logo-ink: #14192b;
+  --paper-logo-mid: #1d6fe8;
+  --paper-logo-accent: #e05a00;
+  --paper-logo-muted: #5d606c;
+
+  /* Depth: shadows are tinted navy on paper, plain black on Carbon. */
+  --paper-shadow-rgb: 20 25 43;
+  --paper-scrim: rgb(20 25 43 / 0.42);
+}
+
+:root[data-color-theme="dark"]:has([data-follows-theme]) {
+  --paper-scheme: dark;
+
+  --paper-bg: #050505;            /* Carbon Dark */
+  --paper-surface: #1c1b1f;
+  --paper-card: #111114;          /* the brand's elevated dark card */
+  --paper-ink: #f6f3ee;           /* Warm Paper as ink */
+  --paper-muted: #a29d94;
+  --paper-line: #2b2926;
+  --paper-line-strong: #403c37;
+  --paper-field-line: #6e6a64;
+
+  --paper-action: #c2530a;
+  --paper-action-hover: #a8460a;
+  --paper-action-ink: #ffffff;
+  --paper-accent-text: #e05a00;   /* Blaze: the brand's dark-UI accent */
+  --paper-blue-text: #388bfd;     /* the favicon badge's lifted blue */
+  --paper-focus: #388bfd;
+
+  --paper-success: #52c41a;
+  --paper-warning: #faad14;
+  --paper-danger: #ff4d4f;
+  --paper-success-strong: #73d13d;
+  --paper-danger-strong: #ff7875;
+  --paper-on-status: #050505;     /* white on #52c41a is 2.3:1; Carbon is 9:1 */
+
+  --paper-band: #14192b;
+  --paper-band-ink: #f6f3ee;
+
+  --paper-logo-ink: #ffffff;
+  --paper-logo-mid: #1d6fe8;
+  --paper-logo-accent: #e05a00;
+  --paper-logo-muted: #a29d94;
+
+  --paper-shadow-rgb: 0 0 0;
+  --paper-scrim: rgb(0 0 0 / 0.62);
+}
+
+/* The overscroll bounce shows <html>: Paper's ground in either theme. */
+html:has([data-follows-theme]) {
+  background-color: var(--paper-bg);
+  color-scheme: var(--paper-scheme);
+}
+
+/* The switch itself repaints a whole page; a short cross-fade on the big
+   grounds reads as one change instead of a flicker. Only while switching
+   (`data-theme-switching`, set by ThemeToggle for one frame's worth). */
+:root[data-theme-switching] :is(body, .site-paper, .site-nav, .site-footer, .site-card) {
+  transition: background-color 200ms ease, color 200ms ease, border-color 200ms ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme-switching] * { transition: none !important; }
+}

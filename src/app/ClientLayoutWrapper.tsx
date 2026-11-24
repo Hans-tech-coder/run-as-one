@@ -6,6 +6,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import type { SiteClient } from "@/lib/site-client";
 import { isPaperPath, wearsPaletteBridge } from "@/lib/site-look";
+import { useColorTheme } from "@/components/useColorTheme";
 
 /**
  * `site` is the client whose subdomain this is, or null on the main site
@@ -13,7 +14,11 @@ import { isPaperPath, wearsPaletteBridge } from "@/lib/site-look";
  * the server; the navbar and footer only wear it.
  *
  * Every public page (lib/site-look.ts) gets the Paper frame: `.site-paper`
- * with `data-theme="light"`, which site.css explains. The checkout (the
+ * with `data-theme` set to the visitor's light/dark theme, which site.css
+ * explains, and `data-follows-theme`, the marker that lets paper-tokens.css
+ * flip Paper's palette (lib/color-theme.ts). The palette itself is right on
+ * the first paint (the <head> script); `data-theme` catches up on hydration
+ * and only steers globals.css's older light-block leftovers. The checkout (the
  * register wizard and /pay) and the Our Services inquiry are also marked
  * `.site-checkout`, the scope checkout-paper.css repoints their older palette
  * utilities inside.
@@ -33,6 +38,7 @@ export default function ClientLayoutWrapper({
   const pathname = usePathname();
   const isAdmin = pathname?.startsWith('/admin');
   const paper = isPaperPath(pathname);
+  const { theme } = useColorTheme();
 
   // What a Paper page renders into <body> — the e-certificate, the alert and
   // toasts, the photo viewer — sits outside this frame, so it would not see
@@ -54,7 +60,8 @@ export default function ClientLayoutWrapper({
   return (
     <div
       className={paper ? `site-paper${checkout ? ' site-checkout' : ''} ${fontClass}` : fontClass}
-      data-theme={paper ? 'light' : undefined}
+      data-theme={paper ? theme : undefined}
+      data-follows-theme={paper ? '' : undefined}
     >
       {/* The navbar is fixed, so it sits outside the column and contributes no
           height — the clearance under it comes from --nav-offset below. */}

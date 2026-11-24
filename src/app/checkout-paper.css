@@ -35,30 +35,31 @@
    bridge below has something to point at. Only while a checkout page is up. */
 body:has(.site-checkout) :is(.modal-overlay, .date-sheet, .date-sheet-backdrop, .runner-overlay, .alert-modal),
 body:has(.site-checkout) > .t-dropdown {
-  --site-bg: #f6f3ee;
-  --site-surface: #ebe5da;
-  --site-card: #fffdf9;
-  --site-ink: #14192b;
-  --site-muted: #5d606c;
-  --site-line: #e2dacd;
-  --site-line-strong: #cbc1b1;
-  --site-field-line: #8f887d;
-  --site-action: #c2530a;
-  --site-action-hover: #a8460a;
-  --site-action-ink: #ffffff;
-  --site-accent-text: #a8460a;
-  --site-blue-text: #0057c2;
-  --site-focus: #0057c2;
-  --status-success: #2f7d0f;
-  --status-warning: #9a5b00;
-  --status-danger: #c8282b;
+  --site-bg: var(--paper-bg);
+  --site-surface: var(--paper-surface);
+  --site-card: var(--paper-card);
+  --site-ink: var(--paper-ink);
+  --site-muted: var(--paper-muted);
+  --site-line: var(--paper-line);
+  --site-line-strong: var(--paper-line-strong);
+  --site-field-line: var(--paper-field-line);
+  --site-action: var(--paper-action);
+  --site-action-hover: var(--paper-action-hover);
+  --site-action-ink: var(--paper-action-ink);
+  --site-accent-text: var(--paper-accent-text);
+  --site-blue-text: var(--paper-blue-text);
+  --site-focus: var(--paper-focus);
+  --status-success: var(--paper-success);
+  --status-warning: var(--paper-warning);
+  --status-danger: var(--paper-danger);
   --ink: var(--site-ink);
   --bg-dark: var(--site-bg);
   --text-primary: var(--site-ink);
   --text-secondary: var(--site-muted);
   --text-muted: var(--site-muted);
   --glass-border: var(--site-line);
-  color-scheme: light;
+  --color-scheme: var(--paper-scheme);
+  color-scheme: var(--paper-scheme);
 }
 
 /* ── The palette bridge ──────────────────────────────────────── */
@@ -70,12 +71,12 @@ body:has(.site-checkout) > .t-dropdown {
   --color-gray-500: var(--site-muted);
   --color-red-400: var(--status-danger);
   --color-red-500: var(--status-danger);
-  --color-red-600: #a31f22;
+  --color-red-600: var(--paper-danger-strong);
   --color-green-500: var(--status-success);
-  --color-green-600: #256509;
+  --color-green-600: var(--paper-success-strong);
   /* Text only (an applied promo's label, the free-slot button), which sits
      on a doubled green tint: one step deeper than the icons to keep 4.5:1. */
-  --color-emerald-300: #256509;
+  --color-emerald-300: var(--paper-success-strong);
   --color-emerald-400: var(--status-success);
   --color-amber-100: var(--status-warning);
   --color-amber-300: var(--status-warning);
@@ -99,7 +100,7 @@ body:has(.site-checkout) > .t-dropdown {
   --ink-15: color-mix(in srgb, var(--site-ink) 15%, transparent);
   --ink-30: color-mix(in srgb, var(--site-ink) 45%, transparent);
   --ink-50: color-mix(in srgb, var(--site-ink) 55%, transparent);
-  --dash-shadow: rgb(20 25 43 / 0.16);
+  --dash-shadow: rgb(var(--paper-shadow-rgb) / 0.16);
   --ink-85: color-mix(in srgb, var(--site-ink) 85%, transparent);
   --dash-hairline: var(--ink-08);
   --dash-border: var(--ink-12);
@@ -108,7 +109,7 @@ body:has(.site-checkout) > .t-dropdown {
      picker draws its month and year triggers with it. */
   --dash-field: var(--site-card);
   --dash-field-focus: var(--site-card);
-  --dash-scrim: rgb(20 25 43 / 0.42);
+  --dash-scrim: var(--paper-scrim);
 }
 
 /* A label meant to stay white on a solid fill: the remap above would turn it
@@ -218,7 +219,7 @@ body:has(.site-checkout) [class*="backdrop-blur"] {
 body:has(.site-checkout) .bg-\[\#0d0d0f\] {
   background-color: var(--site-card);
   border-color: var(--site-line-strong);
-  box-shadow: 0 18px 40px -18px rgb(20 25 43 / 0.32);
+  box-shadow: 0 18px 40px -18px rgb(var(--paper-shadow-rgb) / 0.32);
 }
 
 /* ── The step rail (components/ui/StepRail.css) ─────────────────
@@ -291,7 +292,7 @@ body:has(.site-checkout) .bg-\[\#0d0d0f\] {
 /* ── Modals ──────────────────────────────────────────────────
    The bank details, the size chart and the poster: a card on a navy scrim. */
 body:has(.site-checkout) .modal-overlay {
-  background: rgb(20 25 43 / 0.42);
+  background: var(--paper-scrim);
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
@@ -300,19 +301,19 @@ body:has(.site-checkout) :is(.modal-content, .poster-lightbox) {
   border-color: var(--site-line);
   border-radius: var(--radius-panel);
   color: var(--site-ink);
-  box-shadow: 0 24px 50px -20px rgb(20 25 43 / 0.4);
+  box-shadow: 0 24px 50px -20px rgb(var(--paper-shadow-rgb) / 0.4);
 }
 body:has(.site-checkout) .poster-lightbox-body { background: var(--site-surface); }
 /* A QR code keeps a white quiet zone on any ground. */
 .site-checkout .qr-image { border-color: #ffffff; }
 
 /* The "submitting" overlay (components/ui/RunnerOverlay). */
-body:has(.site-checkout) .runner-overlay { background: rgb(246 243 238 / 0.78); }
+body:has(.site-checkout) .runner-overlay { background: color-mix(in srgb, var(--paper-bg) 78%, transparent); }
 body:has(.site-checkout) .runner-overlay__panel {
   background: var(--site-card);
   border-color: var(--site-line);
   border-radius: var(--radius-panel);
-  box-shadow: 0 24px 50px -20px rgb(20 25 43 / 0.35);
+  box-shadow: 0 24px 50px -20px rgb(var(--paper-shadow-rgb) / 0.35);
   --runner-far: color-mix(in srgb, var(--site-blue-text) 55%, var(--site-card));
   --shimmer-base: var(--site-muted);
   --shimmer-highlight: var(--site-ink);
@@ -322,10 +323,10 @@ body:has(.site-checkout) .runner-overlay__hint { color: var(--site-muted); }
 /* The alert modal (components/ui/AlertModal): its panel is the card. */
 body:has(.site-checkout) .alert-modal .t-modal {
   border-radius: var(--radius-panel);
-  box-shadow: 0 24px 50px -20px rgb(20 25 43 / 0.4);
+  box-shadow: 0 24px 50px -20px rgb(var(--paper-shadow-rgb) / 0.4);
 }
 
 /* The birthdate calendar's phone sheet: its edge on paper, and the navy
    scrim behind it (its `bg-black/60` would bridge to a white veil). */
 body:has(.site-checkout) .date-sheet { border-color: var(--site-line); }
-body:has(.site-checkout) .date-sheet-backdrop { background-color: rgb(20 25 43 / 0.42); }
+body:has(.site-checkout) .date-sheet-backdrop { background-color: var(--paper-scrim); }

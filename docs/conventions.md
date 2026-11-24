@@ -963,8 +963,33 @@
     **every public page** (since 2026-11-21: every path outside `/admin`, so a
     404 at any address is Paper too) **plus the Our Services inquiry**
     (`/admin/register`, `isInquiryPath`), which renders `SiteFrame` itself.
-    `ClientLayoutWrapper` puts `.site-paper` with `data-theme="light"` on the
-    frame. **No public page is dark any more.**
+    `ClientLayoutWrapper` puts `.site-paper` on the frame, with `data-theme`
+    set to the visitor's theme and the `data-follows-theme` marker.
+  - **Light/dark Paper (2026-11-24).** Public pages follow a light/dark switch;
+    the dashboard and sign-in screens do not yet (they carry no marker).
+    - **One palette, two themes:** `src/app/paper-tokens.css` (imported by the
+      root layout) names every Paper hue once as `--paper-*` — light on
+      `:root`, dark under `:root[data-color-theme="dark"]:has([data-follows-theme])`
+      (Carbon `#050505` ground, `#111114` card, Warm Paper `#f6f3ee` ink,
+      Blaze `#e05a00` accent text, `#388bfd` link blue, the brand's dark
+      status inks — brand-guide §3, contrast listed in the file's header).
+      site.css's `--site-*` blocks (frame, portals) and checkout-paper.css's
+      bridge read `--paper-*`, never a hex, so both themes come from one place.
+      The footer band is Race Navy in both themes (`--paper-band`); shadows use
+      `rgb(var(--paper-shadow-rgb) / a)`; a glyph on a solid status fill reads
+      `--paper-on-status`.
+    - **The switch:** `lib/color-theme.ts` — localStorage `rao-color-theme`
+      ("light"/"dark"; absent = follow the system). An inline script in the
+      root layout's `<head>` writes `data-color-theme` on `<html>` before paint,
+      so there is no flash and no request API (pages stay static). The
+      frame's `data-theme` follows after hydration (`useColorTheme`), which
+      switches globals.css's older `[data-theme="light"]` leftovers (date-field
+      glyphs, select chevron). `ThemeToggle` sits in the navbar (desktop and
+      phone): one 44px icon button naming the theme it switches to.
+    - **Admin pass, later:** give the dashboard frame `data-follows-theme`,
+      point its `--dash-*` names at `--paper-*`, and fold `dash_theme`
+      (`admin/dashboard-theme.ts`) into `lib/color-theme.ts`. Nothing in the
+      public files needs to change for that.
   - **The sign-in pages are Paper too** (2026-11-22): sign in, two-step,
     forgot / reset password, the invitation, and `AuthRouteLoading`.
     `AdminShell` draws `admin/AuthPaperFrame.tsx` round every bare path
@@ -1070,11 +1095,11 @@
     `--site-line(-strong)`, `--site-action(-hover/-ink)`, `--site-accent-text`,
     as utilities `text-site-ink`, `bg-site-card`, `border-site-line`,
     `bg-site-action`, `text-site-accent` (`@theme inline` in `globals.css`).
-    Their **dark defaults sit on `:root`**, which is what lets the one navbar and
-    footer serve both looks. **A dark Paper is one more token block**, not new
-    components (the owner asked for that to stay possible): never write a hex,
-    `text-white` or `white/…` in a redesigned component.
-  - The `data-theme="light"` half re-runs globals.css's light block on Paper —
+    The values come from `--paper-*` (paper-tokens.css), so **dark Paper needs
+    no component changes**: never write a hex, `text-white` or `white/…` in a
+    redesigned component — read a `--site-*` token, and add a `--paper-*` pair
+    (light and dark) when a new hue is truly needed.
+  - The `data-theme` half re-runs globals.css's light block on light Paper —
     the logo's deepened inks, the ink ramp, the status colours — so a shared
     component reading those names (StatusPanel, RunnerLoader, LinkPendingIcon,
     CategoryPrice's sale chip via `--status-success`) turns light untouched.

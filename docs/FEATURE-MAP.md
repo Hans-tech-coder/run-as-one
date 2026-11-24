@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-51 pages · 101 API routes · 175 modules in `src/lib` · 733 files · 126,588 lines
+51 pages · 101 API routes · 176 modules in `src/lib` · 738 files · 126,992 lines
 
 ---
 
@@ -228,6 +228,7 @@ the file itself.
 | [`client-store.ts`](../src/lib/client-store.ts) | Reading clients out of the database, and the one write every event form makes about one: which client a race is for. |
 | [`client-summary.ts`](../src/lib/client-summary.ts) | What a client viewer is shown about its own races (ADMIN_MERGE_PLAN.md, Batch 4) — and, by what this module leaves out, what it is not. |
 | [`client.ts`](../src/lib/client.ts) | Where a client stands, and which moves between standings are allowed. |
+| [`color-theme.ts`](../src/lib/color-theme.ts) | The visitor's light/dark choice for the Paper look — the one rule: an explicit choice ("light" / "dark", kept in localStorage) outranks the system … |
 | [`consent-signature.ts`](../src/lib/consent-signature.ts) | The typed signature under the consent waiver, and what counts as one. |
 | [`consent-waiver.ts`](../src/lib/consent-waiver.ts) | The liability, media, and data-privacy waiver every runner agrees to. |
 | [`contact-inquiry.ts`](../src/lib/contact-inquiry.ts) | **What the Contact Us form (`/contact`) accepts**, read the same way by the form and by `/api/contact`, so a message the form lets through is never… |

@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import { Inter, Outfit } from "next/font/google";
 import "./globals.css";
+import "./paper-tokens.css";
 import { getSiteSettings } from "@/lib/site-settings";
 import { siteMetadata } from "@/lib/site-metadata";
 import { deploymentOrigin } from "@/lib/site-host";
+import { THEME_INIT_SCRIPT } from "@/lib/color-theme";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-body" });
 const outfit = Outfit({ subsets: ["latin"], variable: "--font-sans" });
@@ -37,7 +39,13 @@ export default async function RootLayout({
   const { contactEmail, socialLinks } = await getSiteSettings();
 
   return (
-    <html lang="en">
+    // suppressHydrationWarning: the inline script writes the visitor's
+    // light/dark theme onto <html> before paint (lib/color-theme.ts), so the
+    // DOM's attributes differ from the server's on purpose.
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body className={`${inter.variable} ${outfit.variable} antialiased bg-[var(--bg-primary)] text-primary`} suppressHydrationWarning>
         {/* Outside the site frame: that is drawn by the layouts below this
             one, and skipped for /admin, so a provider mounted inside it would
