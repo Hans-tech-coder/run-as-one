@@ -2,6 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import { ArrowRight, Mail } from 'lucide-react';
 import { LEGAL_LAST_UPDATED, supportMailto } from '@/lib/site-contact';
+import LegalToc from '@/components/LegalToc';
 
 export type LegalSection = {
   heading: string;
@@ -22,10 +23,15 @@ export type LegalSection = {
  * The bullets are a plain list, not a stack of boxed cards — a card per
  * sentence turned a list into a wall of tiles.
  *
- * The jump list sits beside the text on a wide screen (sticky, so it is there
- * at the twelfth clause too) and above it on a phone. Sections carry anchor
- * ids so a support reply can link straight at the clause it is answering
- * about, and scroll-mt clears the navbar when one is followed.
+ * The whole page is one centred column set (`.legal-shell`): the header, the
+ * jump list and the text share it, so on a wide screen the rail and the text
+ * sit as one block with even margins instead of a narrow column pushed left
+ * with a blank strip beside it. The jump list (LegalToc) is a sticky rail from
+ * `lg` that marks the clause being read, and a folded list above the text on a
+ * tablet or a phone. Sections carry anchor ids so a support reply can link
+ * straight at the clause it is answering about, and scroll-mt clears the
+ * navbar when one is followed. No entrance fade: a legal page is read, and it
+ * should simply be there.
  */
 export default function LegalPage({
   eyebrow,
@@ -43,35 +49,25 @@ export default function LegalPage({
   /** The saved contact address (lib/site-settings.ts), read by the page. */
   contactEmail: string;
 }) {
-  return (
-    <>
-      <section className="legal-intro site-section site-wrap" data-enter>
-        <p className="m-0 mb-4 flex items-center gap-2 text-[0.9375rem] font-semibold text-site-accent">
-          {icon}
-          {eyebrow}
-        </p>
-        <h1 className="site-h1 max-w-[16ch]">{title}</h1>
-        <p className="site-lead max-w-[60ch]">{intro}</p>
-        <p className="m-0 mt-5 text-sm text-site-muted">Last updated {LEGAL_LAST_UPDATED}</p>
-      </section>
+  const toc = sections.map(section => ({ id: anchorFor(section.heading), heading: section.heading }));
 
-      <div className="site-section site-wrap">
+  return (
+    <div className="site-wrap">
+      <div className="legal-shell">
+        <header className="legal-head">
+          <p className="m-0 mb-4 flex items-center gap-2 text-[0.9375rem] font-semibold text-site-accent">
+            {icon}
+            {eyebrow}
+          </p>
+          <h1 className="site-h1">{title}</h1>
+          <p className="site-lead max-w-[60ch]">{intro}</p>
+          <p className="legal-head__updated">Last updated {LEGAL_LAST_UPDATED}</p>
+        </header>
+
         <div className="legal-layout">
           {/* Jump list. A runner arriving from a support reply usually wants
               one clause, not the whole document. */}
-          <nav aria-label="On This Page" className="legal-toc">
-            <h2 className="legal-toc__title">On This Page</h2>
-            <ol className="legal-toc__list">
-              {sections.map((section, index) => (
-                <li key={section.heading}>
-                  <a href={`#${anchorFor(section.heading)}`} className="legal-toc__link">
-                    <span className="legal-toc__num" aria-hidden="true">{index + 1}</span>
-                    {section.heading}
-                  </a>
-                </li>
-              ))}
-            </ol>
-          </nav>
+          <LegalToc items={toc} />
 
           <div className="min-w-0">
             <ol className="legal-body">
@@ -123,7 +119,7 @@ export default function LegalPage({
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }
 

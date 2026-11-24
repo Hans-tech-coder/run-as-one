@@ -942,9 +942,16 @@
     left rule on a box**, owner 2026-11-22; *Back to Run As One* is the
     last line inside the card, with no rule above it, Google's **light**
     button, the keep box on tokens. Only the dashboard keeps the dark look.
-  - **The last pages (2026-11-21):** the legal pages (`LegalPage`: a 68ch
-    column of ink at 17px/1.7, numbered clauses on hairlines, the jump list
-    sticky beside the text from `lg`, `.legal-*` in site.css); `/coming-soon`
+  - **The last pages (2026-11-21):** the legal pages (`LegalPage`: one
+    centred column set, `.legal-shell` — the text measure alone below `lg`,
+    the 15rem jump-list rail plus the 40rem text from `lg` — so the header,
+    rail and text sit as one block with even margins and no blank strip on
+    the right (owner, 2026-11-24); a 40rem column of ink at 17px/1.7,
+    numbered clauses on hairlines, no entrance fade. The jump list is
+    `LegalToc`: a sticky rail from `lg` marking the clause being read
+    (`aria-current="location"`, a navy bar; an IntersectionObserver, no
+    scroll listener), a folded `<details>` above the text below `lg` that
+    folds again when a link is followed. `.legal-*` in site.css); `/coming-soon`
     and the 404 (`.site-notice`: code line, `.site-h1`, lead, the button
     pair; the 404's three onward links are relative, so a client's subdomain
     keeps its own pages); `/feedback` and the inquiry (heading and lead beside

@@ -641,45 +641,100 @@ button.site-link:disabled { opacity: 0.5; cursor: not-allowed; }
    `.site-lead` sets `margin: 0` unlayered, which beats a Tailwind `mt-*`
    beside it, so these intros space it here. Named, not `.site-h1 + .site-lead`,
    so the home and listing heroes keep the spacing they were built with. */
-:is(.legal-intro, .site-notice, .feedback-layout__intro, .inquiry__intro) .site-lead { margin-top: 1.25rem; }
+:is(.legal-head, .site-notice, .feedback-layout__intro, .inquiry__intro) .site-lead { margin-top: 1.25rem; }
 .site-done-mark + .site-h3 { margin-top: 1.25rem; }
 
-/* ── The legal pages (components/LegalPage) ─────────────────────
-   Set for reading: a 68ch column of ink at 17px/1.7, each clause a numbered
-   heading on a hairline, and the jump list beside the text on a wide screen
-   (sticky under the navbar) or above it on a phone. */
+/* ── The legal pages (components/LegalPage, LegalToc) ───────────
+   One centred column set, so nothing reads as leftover space: the header,
+   the jump list and the text share `.legal-shell`, which is the text measure
+   alone below `lg` and the rail plus the measure from `lg`, centred in the
+   page either way. The text is a 40rem column of ink at 17px/1.7 (about 70
+   characters a line), each clause a numbered heading on a hairline. The jump
+   list is a sticky rail beside it from `lg`, with the clause being read marked
+   by a navy bar, and a folded <details> above the first clause below it. */
+.legal-shell {
+  max-width: 40rem;
+  margin-inline: auto;
+  padding-block: 3rem 4rem;
+}
+@media (min-width: 768px) { .legal-shell { padding-block: 4rem 5rem; } }
+@media (min-width: 1024px) { .legal-shell { max-width: calc(15rem + 4rem + 40rem); } }
+
+.legal-head { padding-bottom: 2rem; margin-bottom: 2rem; border-bottom: 1px solid var(--site-line); }
+@media (min-width: 768px) { .legal-head { padding-bottom: 2.5rem; margin-bottom: 3rem; } }
+.legal-head__updated { margin: 1.25rem 0 0; font-size: 0.875rem; color: var(--site-muted); }
+
 .legal-layout { display: grid; gap: 2rem; }
 @media (min-width: 1024px) {
-  .legal-layout { grid-template-columns: 16rem minmax(0, 1fr); gap: 4rem; align-items: start; }
-  .legal-toc { position: sticky; top: calc(var(--nav-offset) + 1.5rem); }
+  .legal-layout { grid-template-columns: 15rem minmax(0, 40rem); gap: 4rem; align-items: start; }
 }
-.legal-toc {
-  padding: 1rem 1.125rem;
+
+/* The jump list. Folded below `lg`; a rail, always open, from `lg`. */
+.legal-toc__title { display: none; }
+.legal-toc__fold {
   border: 1px solid var(--site-line);
   border-radius: var(--radius-panel);
   background: var(--site-card);
 }
-@media (min-width: 1024px) { .legal-toc { padding: 0; border: 0; background: none; } }
-.legal-toc__title { margin: 0 0 0.5rem; font-size: 0.875rem; font-weight: 600; color: var(--site-muted); }
-.legal-toc__list { margin: 0; padding: 0; list-style: none; display: grid; }
+.legal-toc__summary {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 48px;
+  padding: 0.75rem 1rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--site-ink);
+  cursor: pointer;
+  list-style: none;
+}
+.legal-toc__summary::-webkit-details-marker { display: none; }
+.legal-toc__summary:focus-visible { outline: 2px solid var(--site-ink); outline-offset: 2px; border-radius: var(--radius-panel); }
+.legal-toc__count { font-weight: 400; color: var(--site-muted); }
+.legal-toc__chevron { margin-left: auto; flex-shrink: 0; color: var(--site-muted); }
+.legal-toc__fold[open] .legal-toc__chevron { transform: rotate(180deg); }
+.legal-toc__list { margin: 0; padding: 0 1rem 0.5rem; list-style: none; display: grid; border-top: 1px solid var(--site-line); }
 @media (min-width: 640px) and (max-width: 1023px) { .legal-toc__list { grid-template-columns: 1fr 1fr; column-gap: 1.5rem; } }
 .legal-toc__link {
   display: flex;
   align-items: baseline;
   gap: 0.625rem;
   min-height: 44px;
-  padding: 0.6rem 0;
+  padding: 0.65rem 0;
   font-size: 0.9375rem;
   line-height: 1.35;
   color: var(--site-ink);
   text-decoration: none;
   transition: color var(--duration-quick) ease;
 }
-@media (min-width: 1024px) { .legal-toc__link { min-height: 0; padding: 0.4rem 0; } }
 .legal-toc__link:hover { color: var(--site-accent-text); }
+.legal-toc__link:focus-visible { outline: 2px solid var(--site-ink); outline-offset: 2px; border-radius: var(--radius-chip); }
 .legal-toc__num { min-width: 1.25rem; font-size: 0.8125rem; font-variant-numeric: tabular-nums; color: var(--site-muted); }
 
-.legal-body { margin: 0; padding: 0; list-style: none; max-width: 68ch; }
+@media (min-width: 1024px) {
+  .legal-toc {
+    position: sticky;
+    top: calc(var(--nav-offset) + 2rem);
+    max-height: calc(100vh - var(--nav-offset) - 4rem);
+    overflow-y: auto;
+  }
+  .legal-toc__title { display: block; margin: 0 0 0.75rem; font-size: 0.875rem; font-weight: 600; color: var(--site-ink); }
+  .legal-toc__fold { border: 0; border-radius: 0; background: none; }
+  .legal-toc__fold::details-content { content-visibility: visible; block-size: auto; }
+  .legal-toc__summary { display: none; }
+  .legal-toc__list { padding: 0; border-top: 0; border-left: 1px solid var(--site-line); }
+  .legal-toc__link {
+    min-height: 0;
+    margin-left: -1px;
+    padding: 0.4rem 0 0.4rem 1rem;
+    border-left: 2px solid transparent;
+    color: var(--site-muted);
+  }
+  .legal-toc__link:hover { color: var(--site-ink); }
+  .legal-toc__link[aria-current="location"] { border-left-color: var(--site-ink); color: var(--site-ink); }
+}
+
+.legal-body { margin: 0; padding: 0; list-style: none; }
 .legal-clause { padding-block: 2rem; border-top: 1px solid var(--site-line); }
 .legal-clause:first-child { padding-top: 0; border-top: 0; }
 .legal-clause__head {
@@ -695,7 +750,7 @@ button.site-link:disabled { opacity: 0.5; cursor: not-allowed; }
   letter-spacing: -0.01em;
   color: var(--site-ink);
 }
-.legal-clause__num { font-size: 0.875rem; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--site-accent-text); }
+.legal-clause__num { min-width: 1.5rem; font-size: 0.875rem; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--site-accent-text); }
 .legal-clause p,
 .legal-clause li { font-size: 1.0625rem; line-height: 1.7; color: var(--site-ink); }
 .legal-clause p { margin: 0 0 1rem; }
@@ -713,7 +768,6 @@ button.site-link:disabled { opacity: 0.5; cursor: not-allowed; }
   background: var(--site-action);
 }
 .legal-ask {
-  max-width: 68ch;
   margin-top: 1rem;
   padding: 1.5rem;
   border: 1px solid var(--site-line);
