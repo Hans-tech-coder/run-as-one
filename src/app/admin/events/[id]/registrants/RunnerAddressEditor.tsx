@@ -39,10 +39,13 @@ export default function RunnerAddressEditor({
   value,
   onChange,
   errors = {},
+  idPrefix = 'edit-runner-address',
 }: {
   value: RunnerAddress;
   onChange: (patch: Partial<RunnerAddress>) => void;
   errors?: Partial<Record<RunnerAddressField, string>>;
+  /** Field ids are `${idPrefix}-province` etc.; unique per runner on a page with several. */
+  idPrefix?: string;
 }) {
   const province = findProvince(value.addressProvince);
 
@@ -85,7 +88,7 @@ export default function RunnerAddressEditor({
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <AdminSelect
-        id="edit-runner-address-province"
+        id={`${idPrefix}-province`}
         label={RUNNER_ADDRESS_LABELS.addressProvince}
         value={value.addressProvince}
         options={provinceOptions}
@@ -103,7 +106,7 @@ export default function RunnerAddressEditor({
 
       {typeCity ? (
         <TextField
-          id="edit-runner-address-city"
+          id={`${idPrefix}-city`}
           label={RUNNER_ADDRESS_LABELS.addressCity}
           value={value.addressCity}
           placeholder="e.g. TARLAC CITY"
@@ -113,7 +116,7 @@ export default function RunnerAddressEditor({
         />
       ) : (
         <AdminSelect
-          id="edit-runner-address-city"
+          id={`${idPrefix}-city`}
           label={RUNNER_ADDRESS_LABELS.addressCity}
           value={value.addressCity}
           options={cityOptions}
@@ -134,7 +137,7 @@ export default function RunnerAddressEditor({
 
       {typeBarangay ? (
         <TextField
-          id="edit-runner-address-barangay"
+          id={`${idPrefix}-barangay`}
           label={RUNNER_ADDRESS_LABELS.addressBarangay}
           value={value.addressBarangay}
           placeholder="e.g. SAN ISIDRO"
@@ -143,7 +146,7 @@ export default function RunnerAddressEditor({
         />
       ) : (
         <AdminSelect
-          id="edit-runner-address-barangay"
+          id={`${idPrefix}-barangay`}
           label={RUNNER_ADDRESS_LABELS.addressBarangay}
           value={value.addressBarangay}
           options={barangayOptions}
@@ -155,7 +158,7 @@ export default function RunnerAddressEditor({
       )}
 
       <TextField
-        id="edit-runner-address-street"
+        id={`${idPrefix}-street`}
         label={RUNNER_ADDRESS_LABELS.addressStreet}
         value={value.addressStreet}
         placeholder="e.g. BLK 5 LOT 12 RIZAL ST."

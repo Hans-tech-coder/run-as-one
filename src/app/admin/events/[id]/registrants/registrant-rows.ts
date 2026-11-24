@@ -264,6 +264,10 @@ export function buildRegistrantRows({
         // this says how it was settled, and it is what stops the detail modal
         // printing a bare COMPLIMENTARY nobody can interpret.
         isComplimentary: isComplimentary(reg.paymentMethod),
+        // Who encoded the order, when staff took it over Messenger or a call
+        // (STAFF_REGISTRATION_PLAN.md): the "Encoded by" chip, so a validator
+        // knows the slip came through staff and not the runner. Null on WEB.
+        encodedBy: reg.source === 'STAFF' ? reg.createdByName || 'staff' : null,
         proofOfPayment: reg.proofOfPayment,
         // Whether that proof is a PDF rather than a photo. Decided here, off
         // the stored pathname, because the module that knows the rule imports

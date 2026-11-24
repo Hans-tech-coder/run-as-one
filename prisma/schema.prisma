@@ -534,6 +534,17 @@ model Registration {
   /// the migration to carry once; see STAFF_ACCESS_PLAN.md §4.5.
   deletedAt               DateTime?
   deletedById             String?
+  /// Which door the order came through: "WEB" (the runner's own checkout) or
+  /// "STAFF" (a validator encoding a runner who registered over Messenger or
+  /// a call, STAFF_REGISTRATION_PLAN.md). Every row before it is WEB, which is
+  /// what they all were.
+  source                  String                 @default("WEB")
+  /// The staff member who encoded a STAFF order: their Organizer or
+  /// StaffAccount id, and their name as a snapshot like remarksBy, so the
+  /// "Encoded by" tag keeps reading correctly after the account is removed.
+  /// Null on every WEB order.
+  createdById             String?
+  createdByName           String?
   event                   Event                  @relation(fields: [eventId], references: [id])
   runners                 Runner[]
   /// Category changes made to this order's runners. The order itself is

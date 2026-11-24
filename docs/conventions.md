@@ -411,8 +411,16 @@
     one-chip-per-value toggles or a menu per column** — the owner's call, so
     every screen filters the same way; `FilterChip` was deleted with the last
     of those. The one exception is a **work queue** (registrants' *Needs
-    Validation*, *Unsent Email*): a single question asked all day, coloured
-    like what it collects, stays its own chip beside Filters. The public
+    Validation*, *Unsent Email*): what still needs doing, not what a row is.
+    Since 2026-11-25 (the owner) a screen's queues are **one *Needs
+    Attention* chip** beside Filters (`registrants/NeedsAttentionMenu.tsx`),
+    never a chip each: closed it shows the total waiting in the most urgent
+    queue's colour (red for a failure, amber for a wait), open it lists each
+    queue with its count and a line on what it collects; one queue at a time,
+    named on the chip with its own ✕. A new queue is a row in its `queues`,
+    so the toolbar does not grow. Occasional actions go in a ***More*** chip
+    (`registrants/ToolbarMoreMenu.tsx`, icon + label, items with a note), so
+    the toolbar keeps one filled button. The public
     `/results/[slug]/full` keeps its own Category / Gender menus.
   - **A single-event screen's miss is `AdminNotFound`**, worded from
     `admin/events/event-not-found.ts`, identical for a missing event and one
@@ -484,7 +492,7 @@
   first) and hold it: a row must never move because of an action just taken on
   it, or the person loses their place and the sight of the change landing where
   they clicked. Work queues are therefore **filters**, not sorts — the
-  registrants screen's *Needs Validation* and *Unsent Email* chips, the feedback
+  registrants screen's *Needs Validation* and *Unsent Email* queues, the feedback
   screen's triage filter. And when the number in the `No.` column is worth
   quoting outside the screen, assign it on the server from that order and carry
   it on the row (registrants' `regNo`) instead of using the row's position,
@@ -861,8 +869,9 @@
   the 40px of the `.btn-filter` chips sharing its row. A table toolbar holds
   exactly one `.btn-light` — its page's primary action, and the four are
   peers that must look alike: Create Event, New Promotion, Upload results,
-  Export to CSV. Everything else in that row (Category, Logistics, Payment,
-  View, Unsent Email) stays a dark `.btn-filter` chip, and a destructive one
+  and the registrants' Add Registration (whose Export to CSV moved into its
+  *More* chip, 2026-11-25). Everything else in that row (Filters, Needs
+  Attention, View, More) stays a dark `.btn-filter` chip, and a destructive one
   like Delete Selected keeps its red. The orange gradient
   (`.btn-gradient`) keeps the dark surfaces a runner sees: the legal,
   feedback and 404 pages, and the `/admin/login` and `/admin/register`

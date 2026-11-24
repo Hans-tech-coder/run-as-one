@@ -28,6 +28,7 @@ import RegistrantGuardianConsent from './RegistrantGuardianConsent';
 import { CategoryWithChange } from './category-change-display';
 import {
   MinorBadge,
+  EncodedByBadge,
   PacerBadge,
   canValidatePayment,
 } from './registrant-display';
@@ -98,6 +99,7 @@ export default function RegistrantDetailModal({
                       {runner.name}
                       {runner.isMinor && <MinorBadge />}
                     {runner.isPacer && <PacerBadge />}
+                    {runner.encodedBy && <EncodedByBadge name={runner.encodedBy} />}
                     </span>
                   </p>
                   <p className="flex flex-col"><span className="text-[var(--text-muted)]">Email</span> <span className="text-primary font-medium">{runner.email}</span></p>

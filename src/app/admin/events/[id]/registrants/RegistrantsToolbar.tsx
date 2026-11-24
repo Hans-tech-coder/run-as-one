@@ -13,10 +13,13 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { Search, Download, X, Trash2, MailWarning, Hourglass } from 'lucide-react';
+import Link from 'next/link';
+import { Search, Download, X, Trash2, MailWarning, Hourglass, UserPlus } from 'lucide-react';
 import type { Table } from '@tanstack/react-table';
 import MobileSortMenu from '../../../MobileSortMenu';
 import ColumnsViewMenu from './ColumnsViewMenu';
+import NeedsAttentionMenu, { type AttentionQueue } from './NeedsAttentionMenu';
+import ToolbarMoreMenu from './ToolbarMoreMenu';
 import FiltersMenu, { type FilterGroup } from '../../../FiltersMenu';
 import { GUARDIAN_CONSENT_MAX_AGE } from '@/lib/minor-consent';
 import { compareCategoryNames } from '@/lib/category-distance';
@@ -94,6 +97,7 @@ export default function RegistrantsToolbar({
   selectedCount,
   onBulkDelete,
   onExport,
+  addRegistrationHref,
 }: {
   table: Table<RegistrantRow>;
   runners: RegistrantRow[];
@@ -104,6 +108,11 @@ export default function RegistrantsToolbar({
   selectedCount: number;
   onBulkDelete: () => void;
   onExport: () => void;
+  /**
+   * Where *Add Registration* goes (STAFF_REGISTRATION_PLAN.md), or undefined
+   * for anyone without `registration:create`, who is not shown it.
+   */
+  addRegistrationHref?: string;
 }) {
   const {
     showOnlyUnsentEmail, setShowOnlyUnsentEmail,
@@ -120,6 +129,26 @@ export default function RegistrantsToolbar({
   );
 
   const hasMinors = useMemo(() => runners.some(r => r.isMinor), [runners]);
+
+  const attentionQueues: AttentionQueue[] = [
+    {
+      id: 'validation',
+      label: 'Needs Validation',
+      hint: 'Bank transfers and delivery fee proofs waiting to be checked.',
+      count: needsValidationCount,
+      tone: 'pending',
+      icon: <Hourglass size={16} aria-hidden="true" />,
+    },
+    {
+      id: 'email',
+      label: 'Unsent Email',
+      hint: 'Registrants whose email never went out.',
+      count: unsentEmailCount,
+      tone: 'danger',
+      icon: <MailWarning size={16} aria-hidden="true" />,
+    },
+  ];
+  const activeQueue = showOnlyNeedsValidation ? 'validation' : showOnlyUnsentEmail ? 'email' : null;
 
   const hasPacers = useMemo(() => runners.some(r => r.isPacer), [runners]);
 
@@ -279,9 +308,9 @@ export default function RegistrantsToolbar({
 
         {/*
           The Filters chip, at every width — the events list's filter. Its
-          sheet holds Category, Logistics and Payment; the two work-queue
-          chips beside it stay chips, because each is one question a
-          validator asks all day and wears the colour of what it collects.
+          sheet holds what a runner *is* (category, logistics, payment…);
+          the work queues — what still needs doing — are the Needs Attention
+          chip beside it.
         */}
         <FiltersMenu
           groups={filterGroups}
@@ -289,49 +318,19 @@ export default function RegistrantsToolbar({
           empty="Nothing to filter yet. The categories, logistics and payment methods appear here as runners register."
         />
 
-        {/*
-          The payment queue, in one click.
-
-          Validating deposit slips is the job this screen is opened for most
-          days, and before this the only way to gather them was to search
-          "PENDING" and hope nothing else on the row said the same word. It
-          sits first among the chips because it is the first thing asked for,
-          and it wears the amber of the PENDING badge it collects so the
-          colour means the same thing in both places.
-        */}
-        <button
-          onClick={() => setShowOnlyNeedsValidation(!showOnlyNeedsValidation)}
-          disabled={needsValidationCount === 0 && !showOnlyNeedsValidation}
-          aria-pressed={showOnlyNeedsValidation}
-          className={`btn-filter ${showOnlyNeedsValidation ? 'is-pending' : ''} disabled:opacity-50 disabled:cursor-not-allowed`}
-          title={needsValidationCount === 0
-            ? 'No bank transfer or delivery fee proof here is waiting on a payment check'
-            : 'Show only the bank transfers and delivery fee proofs waiting to be checked'}
-        >
-          <Hourglass size={16} /> Needs Validation
-          {needsValidationCount > 0 && <span className="ml-1 px-1 bg-[var(--ink-10)] rounded-chip">{needsValidationCount}</span>}
-        </button>
-
-        {/*
-          The email backlog, in one click.
-
-          On a day the daily send quota runs out this is the difference
-          between a staff member working a list and hunting a table for the
-          rows nobody was emailed. It is a toggle rather than a dropdown
-          because there is exactly one thing to ask for.
-        */}
-        <button
-          onClick={() => setShowOnlyUnsentEmail(!showOnlyUnsentEmail)}
-          disabled={unsentEmailCount === 0 && !showOnlyUnsentEmail}
-          aria-pressed={showOnlyUnsentEmail}
-          className={`btn-filter ${showOnlyUnsentEmail ? 'is-danger is-active' : ''} disabled:opacity-50 disabled:cursor-not-allowed`}
-          title={unsentEmailCount === 0
-            ? 'Every registrant here has had their email'
-            : 'Show only the registrants whose email never went out'}
-        >
-          <MailWarning size={16} /> Unsent Email
-          {unsentEmailCount > 0 && <span className="ml-1 px-1 bg-[var(--ink-10)] rounded-chip">{unsentEmailCount}</span>}
-        </button>
+        {/* The work queues — payments to check, emails that never went
+            out — as one chip with the total waiting (NeedsAttentionMenu.tsx).
+            Validating slips is the job this screen is opened for most days,
+            so the chip shows its count even closed. A new queue is a row
+            here, not another chip. */}
+        <NeedsAttentionMenu
+          queues={attentionQueues}
+          active={activeQueue}
+          onChange={id => {
+            setShowOnlyNeedsValidation(id === 'validation');
+            setShowOnlyUnsentEmail(id === 'email');
+          }}
+        />
 
         {/* Which columns the table shows. Cards have no columns to hide, so
             below `lg` the chip goes and Sort (which the headers did) comes. */}
@@ -351,9 +350,29 @@ export default function RegistrantsToolbar({
             <Trash2 size={16} /> Delete Selected ({selectedCount})
           </button>
         )}
-        <button onClick={onExport} className="btn-light">
-          <Download size={16} /> Export to CSV
-        </button>
+        <ToolbarMoreMenu
+          items={[
+            {
+              id: 'export',
+              label: 'Export to CSV',
+              icon: <Download size={16} aria-hidden="true" />,
+              note: selectedCount > 0
+                ? `The ${selectedCount} ticked ${selectedCount === 1 ? 'runner' : 'runners'}.`
+                : 'Every runner the search and filters show.',
+              onSelect: onExport,
+            },
+          ]}
+        />
+        {/* Last, and the one filled button: the row's main action. Beside
+            Export rather than in the page header, so every action on these
+            registrants sits on one line above them. */}
+        {addRegistrationHref && (
+          // On a phone it fills the row beside More rather than taking a
+          // row of its own (the toolbar's `.btn-light` rule is full width).
+          <Link href={addRegistrationHref} className="btn-light max-sm:!flex-[1_1_0%]">
+            <UserPlus size={16} aria-hidden="true" /> Add Registration
+          </Link>
+        )}
       </div>
     </div>
   );

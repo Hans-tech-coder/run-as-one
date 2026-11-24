@@ -1,69 +1,42 @@
 import { NextResponse } from 'next/server';
-import { isPublished } from '@/lib/event-visibility';
 import { participantCountError } from '@/lib/order-size';
 import prisma from '@/lib/db';
 import { newOrderRef } from '@/lib/order-ref';
-import { recordWriteInCommunities, runnerCommunity } from '@/lib/running-community-store';
+import { recordWriteInCommunities } from '@/lib/running-community-store';
 import {
   PAYMENT_METHODS,
   asLogisticsMethod,
   asPaymentMethod,
   paymentMethodLabel,
 } from '@/lib/registration-codes';
-import { storedShirtSize } from '@/lib/shirt-size';
-import { hasFinished } from '@/lib/event-schedule';
 import { eventOrigin } from '@/lib/site-host';
 import { EVENT_SITE_CLIENT } from '@/lib/site-client';
-import {
-  participantBirthdateError,
-  participantGuardianError,
-  storedGuardianConsent,
-} from '@/lib/minor-consent';
-import {
-  closedMessage,
-  RESULTS_ONLY_MESSAGE,
-  SlotsUnavailableError,
-  isClosed,
-  lockEventForRegistration,
-  openingNote,
-  opensLater,
-  participantCategoryError,
-  pauseNote,
-  reserveSlots,
-} from '@/lib/registration-gate';
+import { participantBirthdateError } from '@/lib/minor-consent';
+import { SlotsUnavailableError } from '@/lib/registration-gate';
 import { deliverConfirmationEmail } from '@/lib/email-delivery';
 import { discardFailedCheckout } from '@/lib/pending-expiry';
-import {
-  FREE_ORDER_COLUMNS,
-  OFFERED_PAYMONGO_METHODS,
-  isPayMongoMethod,
-} from '@/lib/free-checkout';
+import { OFFERED_PAYMONGO_METHODS, isPayMongoMethod } from '@/lib/free-checkout';
 import {
   optionalUpperCaseForStorage,
   upperCaseForStorage,
 } from '@/lib/text-case';
 import { consentSignatureError } from '@/lib/consent-signature';
-import { participantAddressError, storedRunnerAddress } from '@/lib/runner-address';
 import {
   emailAddressError,
   normalizeEmailAddress,
   participantEmailError,
 } from '@/lib/email-address';
-import {
-  PromoUnavailableError,
-  categorySeatsClaimed,
-  redeemPromoCode,
-  runnersDiscounted,
-} from '@/lib/discount';
+import { PromoUnavailableError } from '@/lib/discount';
 import { priceCheckout } from '@/lib/checkout-pricing';
-import { ADD_ON_ORDER, reserveAddOnStock } from '@/lib/add-on-stock';
+import { ADD_ON_ORDER } from '@/lib/add-on-stock';
 import { logHeldPrice } from '@/lib/price-lock';
 import { priceChangedBody } from '@/lib/price-changed';
 import { discountParts } from '@/lib/promo-winner';
 import { openPaymongoPage } from '@/lib/paymongo-session';
 import { CHECKOUT_RULE, allowRequest, callerKey } from '@/lib/rate-limit';
-import { EMAIL_RUNNER_INCLUDE } from '@/lib/email';
-import { RunnerAlreadyRegisteredError, assertRunnersNotRegistered } from '@/lib/runner-match';
+import { RunnerAlreadyRegisteredError } from '@/lib/runner-match';
+import { checkoutGateRefusal } from '@/lib/order-gates';
+import { placeOrder } from '@/lib/place-order';
 
 export async function POST(request: Request) {
   // Before the body is read or a slot is touched: every order placed here holds
@@ -182,76 +155,16 @@ export async function POST(request: Request) {
       include: { categories: true, addOns: { orderBy: ADD_ON_ORDER }, client: EVENT_SITE_CLIENT }
     });
 
-    // A draft or scheduled event reads as missing: nothing is sold on an
-    // event the public cannot see yet (lib/event-visibility.ts).
-    if (!event || !isPublished(event)) {
-      return NextResponse.json({ error: 'Event not found' }, { status: 404 });
-    }
-
-    // A results-only event takes no registrations here at all: its client runs
-    // sign-ups elsewhere (RESULTS_ONLY_EVENT_PLAN.md). Refused before anything
-    // else is checked, because no answer about this order is worth giving —
-    // and never left to the event page hiding its button.
-    if (event.resultsOnly) {
-      return NextResponse.json({ error: RESULTS_ONLY_MESSAGE }, { status: 400 });
-    }
-
-    // Every runner must be entered into one of this event's own options: one
-    // from another event would be priced at ₱0 and skip the slot caps (see
-    // participantCategoryError in lib/registration-gate.ts).
-    const categoryProblem = participantCategoryError(participants, event.categories);
-    if (categoryProblem) {
-      return NextResponse.json({ error: categoryProblem }, { status: 400 });
-    }
-
-    // A runner 12 or under on race day needs a parent or guardian's name,
-    // relationship and tick (lib/minor-consent.ts). Checked here as well as in
-    // the wizard, and only now, because the age is taken on this event's date.
-    const guardianProblem = participantGuardianError(participants, event.date);
-    if (guardianProblem) {
-      return NextResponse.json({ error: guardianProblem }, { status: 400 });
-    }
-
-    // Every runner's home address, pickup or delivery (lib/runner-address.ts).
-    // The wizard posts each runner's resolved copy, "same as Runner 1"
-    // included, so each one is checked and stored on its own row.
-    const addressProblem = participantAddressError(participants);
-    if (addressProblem) {
-      return NextResponse.json({ error: addressProblem }, { status: 400 });
-    }
-
-    // The event page stops offering registration once a race has been run, but
-    // a tab left open the day before would still post here. Taking money for a
-    // race that is over is not something the UI alone should be trusted to
-    // prevent.
-    if (hasFinished(event)) {
+    // Published, not results-only, every runner's option, guardian and
+    // address, and the race neither held, closed, paused nor yet to open —
+    // the same checks in the same order as the bank-transfer route
+    // (lib/order-gates.ts).
+    const gate = checkoutGateRefusal(event, participants);
+    if (gate || !event) {
       return NextResponse.json(
-        { error: 'This race has already been held, so registration is closed.' },
-        { status: 409 }
+        { error: gate?.error ?? 'Event not found' },
+        { status: gate?.status ?? 404 }
       );
-    }
-
-    // The organizer closed sign-ups for good. Checked before the hold so a
-    // closed race never tells a runner that slots may open again.
-    if (isClosed(event)) {
-      return NextResponse.json({ error: closedMessage(event) }, { status: 409 });
-    }
-
-    // The organizer's manual hold. Same reasoning as the finished check and
-    // the consent gate: the event page and the wizard both stop offering
-    // registration, and neither of them is the last word — a tab opened before
-    // the hold went on will still post. The runner gets the organizer's own
-    // wording, not a bare refusal.
-    if (event.registrationPaused) {
-      return NextResponse.json({ error: pauseNote(event) }, { status: 409 });
-    }
-
-    // A race listed before it opens. Same reasoning again, with one addition
-    // of its own: this hold lifts on a clock rather than on a decision, so the
-    // gap between "the page said closed" and "the post arrived" is a gap a
-    // runner sitting on the page waiting for the opening will actually be in.
-    if (opensLater(event)) {
-      return NextResponse.json({ error: openingNote(event) }, { status: 409 });
     }
 
     // The client sends both the zone and the fee. They are two ways of saying
@@ -282,15 +195,12 @@ export async function POST(request: Request) {
       return NextResponse.json(pricing.refusal.body, { status: pricing.refusal.status });
     }
     const {
-      zone,
       promoOrder,
       lockedAt,
       discount,
       discountAmount,
       free,
       addOnLines,
-      addOnTotal,
-      addOnRunAsOneTotal,
       subtotal: expectedSubtotal,
       transactionFee: expectedTransactionFee,
       total: expectedTotal,
@@ -343,144 +253,29 @@ export async function POST(request: Request) {
 
     const orderRef = newOrderRef();
 
-    // Slot limits are checked inside the write, not before it: a count taken
-    // before the create is a count two simultaneous orders can both pass. See
-    // reserveSlots, which locks the capped options first.
-    const registration = await prisma.$transaction(async (tx) => {
-      await lockEventForRegistration(tx, event.id);
-      // A runner already on a PAID order or a pending bank transfer here is
-      // not registered twice (lib/runner-match.ts). An abandoned QRPh order
-      // does not count, so retrying QRPh after walking away still works.
-      await assertRunnersNotRegistered(tx, event.id, participants);
-      await reserveSlots(tx, event.categories, participants);
-      // The add-ons' stock and cutoff, read again under their own row locks
-      // (lib/add-on-stock.ts): two runners buying the last shirt cannot both
-      // pass, and an item switched off a second ago is not sold.
-      await reserveAddOnStock(tx, addOnLines.flat());
-
-      // Spent when the order is placed, not when it is paid — the same moment
-      // a slot is taken, and for the same reason: a voucher that only counted
-      // on payment could be attached to any number of pending orders at once.
-      if (discount.promo && discountAmount > 0) {
-        await redeemPromoCode(
-          tx,
-          discount.promo.id,
-          discount.promo.code,
-          // The seats at the promotion price this order claims, from the same
-          // walk that priced it — so the seats spent and the money taken off
-          // can never describe different orders.
-          categorySeatsClaimed(discount.promo, promoOrder),
-            discount.promo.automatic,
-            runnersDiscounted(discount.promo, promoOrder)
-          );
-      }
-      // The group deal it was combined with, spent as the one order it always
-      // counts. Always after the price promotion, so two combined orders lock
-      // the two rows in the same order (lib/promo-winner.ts).
-      if (discount.combinedPromo && discount.applied?.combined) {
-        await redeemPromoCode(
-          tx,
-          discount.combinedPromo.id,
-          discount.combinedPromo.code,
-          new Map(),
-          discount.combinedPromo.automatic,
-        );
-      }
-
-      return tx.registration.create({
-        data: {
-          eventId,
-          orderRef,
+    // Event lock, duplicate runners, slots, add-on stock and promos, then the
+    // row itself (lib/place-order.ts). No reference to claim: PayMongo's.
+    const registration = await prisma.$transaction((tx) =>
+      placeOrder(tx, {
+        event,
+        orderRef,
+        participants,
+        pricing,
+        order: {
           customerEmail: storedCustomerEmail,
           customerName: storedCustomerName,
           logisticsMethod: storedLogisticsMethod,
-          // Only meaningful for delivery; pickup leaves it null.
-          deliveryZone: zone,
-          // Split orders ship to each runner's own row address instead.
           deliveryAddress: storedDeliveryAddress,
           deliveryFee: deliveryFeeCents,
           subtotal: subtotalCents,
           platformFee: platformFeeCents,
           transactionFee: transactionFeeCents,
           totalAmount: amountCents,
-          // What the code took off and which code it was, snapshotted onto the
-          // order: the PromoCode row can be edited or deleted, and a receipt
-          // has to keep saying what this runner was actually charged.
-          discountAmount,
-          promoCode: discountAmount > 0 ? discount.applied?.code ?? null : null,
-          // Snapshotted beside the code, and for the same reason: the receipt
-          // is rendered from this row long after the PromoCode it came from
-          // may have been edited or deleted, and it has to know whether the
-          // discount was a price the goods were sold at or a deduction from
-          // them. See isPricedIn in lib/discount.ts.
-          discountType: discountAmount > 0 ? discount.applied?.type ?? null : null,
-          // The group deal it was combined with, and its share of
-          // discountAmount — which stays the whole discount. See
-          // Registration.combinedPromoCode.
-          combinedPromoCode: discount.applied?.combined?.code ?? null,
-          combinedDiscountAmount: discount.applied?.combined?.amount ?? 0,
-          // When the lock was taken, only on an order the lock priced — the
-          // same condition as the log line below. See Registration.priceLockedAt.
-          priceLockedAt: lockedAt && discount.heldByLock ? lockedAt : null,
-          // Every add-on line on the order, and Run As One's part of it (D1),
-          // from the lines priced above. Zero on an order with none.
-          addOnTotal,
-          addOnRunAsOneTotal,
           paymentMethod: storedPaymentMethod,
-          status: 'PENDING', // All payments start as PENDING until verified by webhook or admin
-          // Nothing to collect, so nothing to wait for. Spread *after* the two
-          // lines above so it has the last word: a free order is written PAID
-          // and COMPLIMENTARY, with its three chargeable amounts forced to
-          // zero rather than copied from a request that was only checked
-          // against them. See lib/free-checkout.ts.
-          ...(free ? FREE_ORDER_COLUMNS : {}),
-          // Checked above; recorded here as the organizer's evidence that the
-          // waiver was agreed to at the moment of this specific submission.
-          consentGiven: true,
-          consentGivenAt: new Date(),
-          // Already uppercase by the time it is checked, and stored that way
-          // like every other registrant field.
           consentSignature: storedConsentSignature,
-          runners: {
-            create: participants.map((p: any, index: number) => ({
-              // 1..n, in the order the wizard collected them. This is the tail
-              // of the reference this runner quotes back at us — see
-              // lib/order-ref.ts — so it is written now and never recomputed.
-              runnerNo: index + 1,
-              categoryId: p.categoryId,
-              firstName: upperCaseForStorage(p.firstName),
-              lastName: upperCaseForStorage(p.lastName),
-              // Trimmed but never cased: the local part of an address is
-              // case-sensitive on some mail servers, so touching it can stop
-              // delivery, while a stray space stops it outright.
-              email: normalizeEmailAddress(p.email),
-              phone: p.phone,
-              gender: upperCaseForStorage(p.gender),
-              birthdate: p.birthdate,
-              singletSize: storedShirtSize(p, event.categories),
-              // The promotion price this runner got a seat at, or null. A
-              // snapshot for the same reason promoCode is, and the thing the
-              // expiry sweep counts to hand back exactly the seats this order
-              // took — see lib/pending-expiry.ts.
-              promoPrice: discount.applied?.salePriceByRunner[index] ?? null,
-              emergencyContactName: upperCaseForStorage(p.emergencyContactName),
-              emergencyContactPhone: p.emergencyContactPhone,
-              medicalConditions: optionalUpperCaseForStorage(p.medicalConditions),
-              // Blank answers land on INDEPENDENT RUNNER; the field is optional.
-              runningCommunity: runnerCommunity(p),
-              // Nulls for a runner who does not need consent, whatever the
-              // client sent; the timestamp is always the server's.
-              ...storedGuardianConsent(p, event.date),
-              ...storedRunnerAddress(p),
-              // This runner's add-ons, each a snapshot of the item as sold
-              // (name, price, seller), so a later edit never rewrites a receipt.
-              addOns: { create: addOnLines[index] },
-            }))
-          }
         },
-        include: { event: true, runners: { include: EMAIL_RUNNER_INCLUDE } },
-      });
-    });
+      }),
+    );
 
     if (lockedAt && discount.heldByLock) {
       logHeldPrice({

@@ -111,6 +111,11 @@ export const AUDIT_ACTIONS = [
   // Results deleted by hand from the Results workspace, one from a row's menu
   // or many from a selection, naming each runner; the race is re-ranked.
   'results.deleted',
+  // An order a staff member encoded for a runner who registered over
+  // Messenger or a call (STAFF_REGISTRATION_PLAN.md): who confirmed the
+  // runner's waiver consent is the summary, `changes` holds the source,
+  // the reference and the paid-to account.
+  'registration.created',
   'registration.status.changed',
   'registration.remarks.changed',
   // A manual order's Transaction No., proof or method fixed after checkout

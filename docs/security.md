@@ -541,6 +541,17 @@
   (worded as a warning), every success `auth.step_up_confirmed` with the
   method, action, target and the token's `jti`. Who may do the action is
   still the guarded route's own question.
+- **Encoding a runner's order is `registration:create`** (`STAFF_REGISTRATION_PLAN.md`):
+  OWNER, ADMIN, EVENT_MANAGER and VALIDATOR, the holders of
+  `registration:validate`, since the order lands PENDING with its slip and goes
+  through validation anyway. `POST /api/admin/events/[id]/registrations` and its
+  `/quote` check it on the race (403); the page and the header button hide for
+  anyone else. Staff get no override of price, promo, slots or the event's
+  state, and the duplicate guard applies; unlike the public doors, its
+  refusals name the other order ref or the reference's holder (M4, R5). The
+  staff member's tick stands in for the runner's waiver and is on the record:
+  the audit row names who confirmed consent, and `Registration.createdById/Name`
+  who encoded it.
 - **Correcting a payment is its own permission, and a PAID order needs a
   step-up** (`PAYMENT_CORRECTION_PLAN.md` C2a, C3). `POST
   /api/admin/registrations/[id]/payment` asks `registration:correct-payment`

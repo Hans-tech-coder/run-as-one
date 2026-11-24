@@ -73,8 +73,13 @@ export interface CheckoutPricingInput {
   priceLock: unknown;
   /** The stored method (`asPaymentMethod`), which decides the transaction fee. */
   paymentMethod: string | null | undefined;
-  /** What the tab posted, in centavos. */
-  posted: { subtotal: number; deliveryFee: number; platformFee: number };
+  /**
+   * What the tab posted, in centavos. Null asks for a **quote**: the same
+   * walk with the posted-figure refusals skipped, for a screen that shows the
+   * server's own total before anything is posted (the staff registration
+   * form, STAFF_REGISTRATION_PLAN.md). No checkout passes null.
+   */
+  posted: { subtotal: number; deliveryFee: number; platformFee: number } | null;
 }
 
 /** A checkout the pricing refused: hand it back as `NextResponse.json(body, { status })`. */
@@ -138,8 +143,8 @@ export async function priceCheckout(
   // code can waive it (lib/free-checkout.ts) and the code has to be resolved
   // before we know what the fee should be.
   if (
-    posted.deliveryFee !== expectedDeliveryFee ||
-    posted.subtotal !== expectedSubtotal
+    posted &&
+    (posted.deliveryFee !== expectedDeliveryFee || posted.subtotal !== expectedSubtotal)
   ) {
     return {
       refusal: {
@@ -230,7 +235,7 @@ export async function priceCheckout(
     transactionFee: expectedTransactionFee,
     total: expectedTotal,
   };
-  if (posted.platformFee !== expectedPlatformFee) {
+  if (posted && posted.platformFee !== expectedPlatformFee) {
     return { refusal: { status: 409, body: priceChangedBody(figures) } };
   }
 

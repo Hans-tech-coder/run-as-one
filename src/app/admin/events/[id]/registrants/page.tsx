@@ -128,6 +128,9 @@ export default async function RegistrantsPage({
     refund: can(actor, 'registration:refund', reach),
     activity: can(actor, 'activity:view', { organizerId: actor.orgId }),
   };
+  // Encoding a runner's order by hand (STAFF_REGISTRATION_PLAN.md): the same
+  // holders as validating. A results-only race takes no registrations at all.
+  const canCreate = can(actor, 'registration:create', reach) && !event.resultsOnly;
 
   // Who last moved each order's status, from the trail — the detail modal's
   // "Validated by Ana Cruz" line. One query for the whole screen.
@@ -307,6 +310,7 @@ export default async function RegistrantsPage({
               initialPaidTo={paidTo}
               permissions={permissions}
               switching={switching}
+              addRegistrationHref={canCreate ? `/admin/events/${id}/registrants/new` : undefined}
             />
             </PaidToAccountsProvider>
           }

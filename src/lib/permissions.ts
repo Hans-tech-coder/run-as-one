@@ -60,6 +60,11 @@ export const PERMISSIONS = [
   'event:delete',
   'registration:view',
   'registration:validate',
+  // Encode a runner's order by hand, for one who registered over Messenger or
+  // a call (STAFF_REGISTRATION_PLAN.md). The same holders as validating: the
+  // order still lands PENDING with its slip and goes through validation, so
+  // whoever may accept a transfer may enter the one they were sent.
+  'registration:create',
   'registration:remark',
   // Fix a manual order's Transaction No., proof or method after checkout
   // (PAYMENT_CORRECTION_PLAN.md C3, lib/payment-correction.ts). Its own line,
@@ -231,6 +236,7 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   'event:delete': 'Delete an event',
   'registration:view': 'See registrants',
   'registration:validate': 'Validate payments',
+  'registration:create': 'Add a registration by hand',
   'registration:remark': 'Write payment remarks',
   'registration:correct-payment': 'Correct a payment reference or proof',
   'registration:email': 'Send a missing email by hand',
@@ -263,6 +269,7 @@ const MATRIX: Record<Permission, readonly Role[]> = {
   'event:delete': ['OWNER'],
   'registration:view': ALL,
   'registration:validate': ['OWNER', 'ADMIN', 'EVENT_MANAGER', 'VALIDATOR'],
+  'registration:create': ['OWNER', 'ADMIN', 'EVENT_MANAGER', 'VALIDATOR'],
   'registration:remark': ['OWNER', 'ADMIN', 'EVENT_MANAGER', 'VALIDATOR'],
   'registration:correct-payment': ['OWNER', 'ADMIN', 'EVENT_MANAGER', 'VALIDATOR'],
   'registration:email': ['OWNER', 'ADMIN', 'EVENT_MANAGER', 'VALIDATOR'],

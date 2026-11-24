@@ -118,6 +118,8 @@ interface RegistrantsTableProps {
    * here with `untagged`, so tagging old orders starts on the ones left.
    */
   initialPaidTo?: string;
+  /** *Add Registration*'s page, for `registration:create` holders only. */
+  addRegistrationHref?: string;
 }
 
 /** One row as page.tsx builds it; named so the files split from this one can say so. */
@@ -132,6 +134,7 @@ export default function RegistrantsTable({
   initialPaidTo,
   permissions,
   switching,
+  addRegistrationHref,
 }: RegistrantsTableProps) {
   const [runners, setRunners] = useState(initialRunners);
   // A delivery switch re-reads the page (router.refresh), and the rows it
@@ -344,6 +347,7 @@ export default function RegistrantsTable({
         selectedCount={selectedCount}
         onBulkDelete={bulkDelete.open}
         onExport={handleExportCSV}
+        addRegistrationHref={addRegistrationHref}
       />
 
       {/* From `lg` up; the cards below take its place under it. */}

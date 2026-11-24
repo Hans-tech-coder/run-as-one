@@ -146,6 +146,20 @@ export function MinorBadge() {
  * anyone else, while the money beside them reads like an order that was never
  * paid — the chip is what says why.
  */
+/**
+ * *Encoded by {name}* (STAFF_REGISTRATION_PLAN.md): staff entered this order
+ * for a runner who registered over Messenger or a call, so the slip came
+ * through them, not the website. Neutral tone: where it came from, not a
+ * problem with it.
+ */
+export function EncodedByBadge({ name }: { name: string }) {
+  return (
+    <span className="status-badge neutral" title={`${name} entered this order from the runner's message or call.`}>
+      Encoded by {name}
+    </span>
+  );
+}
+
 export function PacerBadge() {
   return (
     <span
@@ -217,6 +231,7 @@ export function RegistrantStatusBadges({ runner }: { runner: RegistrantRow }) {
           record (PACER_DISCOUNT_PLAN.md Batch 3). Drawn here, so the table
           cell and the card's badge row carry it alike. */}
       {runner.isPacer && <PacerBadge />}
+      {runner.encodedBy && <EncodedByBadge name={runner.encodedBy} />}
       <DuplicateBadges refs={runner.duplicateOf} />
       {runner.emailPending && (
         /* The project's own badge rather than a new one (standing rule

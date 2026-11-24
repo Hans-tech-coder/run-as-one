@@ -159,7 +159,13 @@ shape:
   (the name typed under the tick — any non-empty text is accepted, see
   `consent-signature.ts`), and `remarks` + `remarksBy` + `remarksAt` (the
   payment validator's **internal** notes; the runner never sees them and no
-  email is built on them). **Email delivery** is recorded on the same row:
+  email is built on them). **Which door the order came through**
+  (`STAFF_REGISTRATION_PLAN.md`, migration `20261124090000_registration_source`):
+  `source` (`WEB` by default and on every older row, `STAFF` when a validator
+  encoded it from a runner's Messenger message or call) and, on STAFF orders
+  only, `createdById` + `createdByName` (the staff member's Organizer or
+  StaffAccount id and a name snapshot, like `remarksBy`, for the registrants'
+  *Encoded by* chip). **Email delivery** is recorded on the same row:
   `receivedEmailSentAt` / `confirmationEmailSentAt` (null = the runner never
   got it), `lastEmailError` (Resend's own reason for the last failure) and
   `manualEmailSentAt` + `manualEmailSentBy` (who sent an outstanding one by
